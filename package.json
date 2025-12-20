@@ -1,0 +1,12 @@
+{
+  "name": "shared-trip-planner",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "server",
+    "app"
+  ],
+  "scripts": {
+    "lint": "echo \"Add linters per workspace\""
+  }
+}
