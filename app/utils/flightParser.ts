@@ -82,7 +82,14 @@ const parseTravelerNames = (text: string): string[] => {
       expanded.push(entry);
     }
   });
-  const finalList = expanded.length ? expanded : results;
+  let finalList = expanded.length ? expanded : results;
+  // Fallback: extract multiple "First Last" tokens when we still have <=1 name parsed
+  if (finalList.length <= 1) {
+    const nameTokens = Array.from(text.matchAll(/\b([A-Z][a-z]+ [A-Z][a-z]+)\b/g)).map((m) => cleanName(m[1]));
+    if (nameTokens.length > 1) {
+      finalList = finalList.concat(nameTokens);
+    }
+  }
   const unique = Array.from(new Set(finalList.map((m) => m.replace(/\s+/g, ' ').trim()))).filter(Boolean);
   return unique.length ? unique : finalList;
 };
@@ -103,10 +110,19 @@ const parseFlightSegments = (
       arriveTime: arrTime ? arrTime.toUpperCase() : undefined,
     });
   }
-  if (!segments.length) {
-    const codes = filterAirportCodes(Array.from(text.matchAll(/\b([A-Z]{3})\b/g)).map((m) => m[1].toUpperCase()));
-    for (let i = 0; i + 1 < codes.length; i += 2) {
-      segments.push({ departure: codes[i], arrival: codes[i + 1] });
+
+  if (segments.length) return segments;
+
+  const codes = filterAirportCodes(Array.from(text.matchAll(/\b([A-Z]{3})\b/g)).map((m) => m[1].toUpperCase()));
+  const seen = new Set<string>();
+  const maxSegments = 3;
+  for (let i = 0; i + 1 < codes.length && segments.length < maxSegments; i += 2) {
+    const dep = codes[i];
+    const arr = codes[i + 1];
+    const key = `${dep}-${arr}`;
+    if (dep && arr && dep !== arr && !seen.has(key)) {
+      segments.push({ departure: dep, arrival: arr });
+      seen.add(key);
     }
   }
   return segments;
@@ -118,7 +134,21 @@ const parseFlightNumbers = (text: string): string[] => {
 };
 
 const filterAirportCodes = (codes: string[]): string[] => {
-  const banned = new Set(['UTC', 'GMT', 'PST', 'EST', 'CST', 'MST', 'EDT', 'PDT', 'CDT', 'MDT']);
+  const banned = new Set([
+    'UTC',
+    'GMT',
+    'PST',
+    'EST',
+    'CST',
+    'MST',
+    'EDT',
+    'PDT',
+    'CDT',
+    'MDT',
+    'NON', // from "non stop"
+    'STO', // from "stop"
+    'INT', // generic tokens like "int'l"
+  ]);
   return codes.filter((c) => !banned.has(c));
 };
 
@@ -245,6 +275,14 @@ export const parseFlightText = (text: string): { primary: Partial<ParsedFlight>;
 
   const travelersForBulk = travelerNames.length ? travelerNames : parseTravelerNames(text);
   const segments = parseFlightSegments(text);
+  if (!segments.length && parsed.departureAirportCode && parsed.arrivalAirportCode) {
+    segments.push({
+      departure: parsed.departureAirportCode,
+      arrival: parsed.arrivalAirportCode,
+      departTime: parsed.departureTime,
+      arriveTime: parsed.arrivalTime,
+    });
+  }
   const bulk: ParsedFlight[] = [];
   if (travelersForBulk.length && segments.length && parsed.departureDate) {
     const totalCost = parsed.cost ? Number(parsed.cost) || 0 : 0;
@@ -276,6 +314,25 @@ export const parseFlightText = (text: string): { primary: Partial<ParsedFlight>;
         });
       });
     });
+  }
+
+  // If multiple travelers were found but bulk only contains one copy per segment, duplicate for each traveler.
+  if (travelersForBulk.length > 1 && bulk.length === segments.length) {
+    const duplicated: ParsedFlight[] = [];
+    travelersForBulk.forEach((traveler, travelerIdx) => {
+      segments.forEach((segment, segIdx) => {
+        const base = bulk[segIdx] ?? {};
+        duplicated.push({
+          ...base,
+          passengerName: traveler,
+          cost:
+            parsed.cost && segments.length && travelersForBulk.length
+              ? (Number(parsed.cost) / (segments.length * travelersForBulk.length)).toFixed(2)
+              : base.cost,
+        });
+      });
+    });
+    return { primary: parsed, bulk: duplicated };
   }
 
   return { primary: parsed, bulk };
