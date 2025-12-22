@@ -1,7 +1,7 @@
 // server/src/db.ts
 import { Pool } from 'pg';
 import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
-import { Flight, Group, GroupMember, Trait, Trip, User, WebUser } from './types';
+import { Flight, Group, GroupMember, Trait, Trip, User, WebUser, Lodging } from './types';
 import fetch from 'node-fetch';
 
 
@@ -163,6 +163,28 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE flights ADD COLUMN IF NOT EXISTS arrival_airport_code TEXT;`);
   await p.query(`ALTER TABLE flights ADD COLUMN IF NOT EXISTS layover_location_code TEXT;`);
   await p.query(`ALTER TABLE flights ADD COLUMN IF NOT EXISTS trip_id UUID REFERENCES trips(id) ON DELETE SET NULL;`);
+
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS lodgings (
+      id UUID PRIMARY KEY,
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      trip_id UUID REFERENCES trips(id) ON DELETE SET NULL,
+      name TEXT NOT NULL,
+      check_in_date DATE NOT NULL,
+      check_out_date DATE NOT NULL,
+      rooms INTEGER NOT NULL DEFAULT 1,
+      refund_by DATE,
+      total_cost NUMERIC NOT NULL DEFAULT 0,
+      cost_per_night NUMERIC NOT NULL DEFAULT 0,
+      address TEXT,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+  await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS rooms INTEGER NOT NULL DEFAULT 1;`);
+  await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS refund_by DATE;`);
+  await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS total_cost NUMERIC NOT NULL DEFAULT 0;`);
+  await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS cost_per_night NUMERIC NOT NULL DEFAULT 0;`);
+  await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS address TEXT;`);
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS airports (
@@ -545,6 +567,92 @@ export const listFlights = async (userId: string, tripId?: string): Promise<Flig
 
 
   return rows;
+};
+
+export const listLodgings = async (userId: string, tripId?: string | null): Promise<Lodging[]> => {
+  const p = getPool();
+  const params: any[] = [userId];
+  let where = 'user_id = $1';
+  if (tripId) {
+    params.push(tripId);
+    where += ` AND trip_id = $${params.length}`;
+  }
+  const { rows } = await p.query(
+    `
+      SELECT id,
+             user_id as "userId",
+             trip_id as "tripId",
+             name,
+             check_in_date as "checkInDate",
+             check_out_date as "checkOutDate",
+             rooms,
+             refund_by as "refundBy",
+             total_cost as "totalCost",
+             cost_per_night as "costPerNight",
+             address,
+             created_at as "createdAt"
+      FROM lodgings
+      WHERE ${where}
+      ORDER BY check_in_date ASC
+    `,
+    params
+  );
+  return rows;
+};
+
+export const insertLodging = async (lodging: {
+  userId: string;
+  tripId: string;
+  name: string;
+  checkInDate: string;
+  checkOutDate: string;
+  rooms: number;
+  refundBy?: string | null;
+  totalCost: number;
+  costPerNight: number;
+  address?: string;
+}): Promise<Lodging> => {
+  const p = getPool();
+  const id = randomUUID();
+  const { rows } = await p.query(
+    `
+      INSERT INTO lodgings (
+        id, user_id, trip_id, name, check_in_date, check_out_date, rooms, refund_by, total_cost, cost_per_night, address
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      RETURNING id,
+                user_id as "userId",
+                trip_id as "tripId",
+                name,
+                check_in_date as "checkInDate",
+                check_out_date as "checkOutDate",
+                rooms,
+                refund_by as "refundBy",
+                total_cost as "totalCost",
+                cost_per_night as "costPerNight",
+                address,
+                created_at as "createdAt"
+    `,
+    [
+      id,
+      lodging.userId,
+      lodging.tripId,
+      lodging.name,
+      lodging.checkInDate,
+      lodging.checkOutDate,
+      lodging.rooms,
+      lodging.refundBy ?? null,
+      lodging.totalCost,
+      lodging.costPerNight,
+      lodging.address ?? '',
+    ]
+  );
+  return rows[0];
+};
+
+export const deleteLodging = async (lodgingId: string, userId: string): Promise<void> => {
+  const p = getPool();
+  await p.query(`DELETE FROM lodgings WHERE id = $1 AND user_id = $2`, [lodgingId, userId]);
 };
 
 

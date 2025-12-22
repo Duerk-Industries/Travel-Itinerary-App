@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Constants from 'expo-constants';
 import { formatDateLong } from './utils/formatDateLong';
 import { parseFlightText, type ParsedFlight } from './utils/flightParser';
@@ -80,7 +81,7 @@ interface Trait {
   createdAt: string;
 }
 
-type Page = 'menu' | 'flights' | 'groups' | 'trips' | 'traits' | 'itinerary';
+type Page = 'menu' | 'flights' | 'lodging' | 'groups' | 'trips' | 'traits' | 'itinerary';
 
 type FlightDraft = {
   passengerName: string;
@@ -118,6 +119,30 @@ type FlightEditDraft = {
   bookingReference: string;
 };
 
+type Lodging = {
+  id: string;
+  tripId?: string;
+  name: string;
+  checkInDate: string;
+  checkOutDate: string;
+  rooms: string;
+  refundBy: string;
+  totalCost: string;
+  costPerNight: string;
+  address: string;
+};
+
+type LodgingDraft = {
+  name: string;
+  checkInDate: string;
+  checkOutDate: string;
+  rooms: string;
+  refundBy: string;
+  totalCost: string;
+  costPerNight: string;
+  address: string;
+};
+
 const createInitialFlightState = (): FlightDraft => ({
   passengerName: '',
   departureDate: new Date().toISOString().slice(0, 10),
@@ -134,6 +159,17 @@ const createInitialFlightState = (): FlightDraft => ({
   carrier: '',
   flightNumber: '',
   bookingReference: '',
+});
+
+const createInitialLodgingState = (): LodgingDraft => ({
+  name: '',
+  checkInDate: new Date().toISOString().slice(0, 10),
+  checkOutDate: new Date().toISOString().slice(0, 10),
+  rooms: '1',
+  refundBy: '',
+  totalCost: '',
+  costPerNight: '',
+  address: '',
 });
 
 
@@ -217,6 +253,10 @@ const App: React.FC = () => {
   const [showPassengerSuggestions, setShowPassengerSuggestions] = useState(false);
   const [editingFlightId, setEditingFlightId] = useState<string | null>(null);
   const [editingFlight, setEditingFlight] = useState<FlightEditDraft | null>(null);
+  const [lodgings, setLodgings] = useState<Lodging[]>([]);
+  const [lodgingDraft, setLodgingDraft] = useState<LodgingDraft>(createInitialLodgingState());
+  const [lodgingDateField, setLodgingDateField] = useState<'checkIn' | 'checkOut' | 'refund' | null>(null);
+  const [lodgingDateValue, setLodgingDateValue] = useState<Date>(new Date());
   const [airports, setAirports] = useState<Airport[]>([]);
   const [airportSuggestions, setAirportSuggestions] = useState<Airport[]>([]);
   const [airportAnchor, setAirportAnchor] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
@@ -280,6 +320,35 @@ const App: React.FC = () => {
     const d = new Date(value);
     return Number.isNaN(d.getTime()) ? value : d.toISOString().slice(0, 10);
   };
+
+  const calculateNights = (checkIn: string, checkOut: string): number => {
+    const start = new Date(checkIn).getTime();
+    const end = new Date(checkOut).getTime();
+    if (Number.isNaN(start) || Number.isNaN(end) || end <= start) return 0;
+    return Math.round((end - start) / (1000 * 60 * 60 * 24));
+  };
+
+  const lodgingTotal = useMemo(
+    () => lodgings.reduce((sum, l) => sum + (Number(l.totalCost) || 0), 0),
+    [lodgings]
+  );
+
+  const openMaps = (address: string) => {
+    if (!address) return;
+    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.open(url, '_blank');
+    } else {
+      Linking.openURL(url);
+    }
+  };
+
+  useEffect(() => {
+    const nights = calculateNights(lodgingDraft.checkInDate, lodgingDraft.checkOutDate);
+    const totalNum = Number(lodgingDraft.totalCost) || 0;
+    const computed = nights > 0 && totalNum ? (totalNum / nights).toFixed(2) : '';
+    setLodgingDraft((prev) => ({ ...prev, costPerNight: computed }));
+  }, [lodgingDraft.checkInDate, lodgingDraft.checkOutDate, lodgingDraft.totalCost]);
 
   const filterAirports = (query: string): Airport[] => {
     const q = query.trim().toLowerCase();
@@ -396,6 +465,47 @@ const App: React.FC = () => {
     } finally {
       setIsParsingPdf(false);
     }
+  };
+
+  const addLodging = async () => {
+    if (!lodgingDraft.name.trim() || !activeTripId) {
+      alert('Please enter a lodging name and select an active trip.');
+      return;
+    }
+    const nights = calculateNights(lodgingDraft.checkInDate, lodgingDraft.checkOutDate);
+    if (nights <= 0) {
+      alert('Check-out must be after check-in.');
+      return;
+    }
+    const totalNum = Number(lodgingDraft.totalCost) || 0;
+    const rooms = Number(lodgingDraft.rooms) || 1;
+    const costPerNight = totalNum && rooms > 0 ? (totalNum / (nights * rooms)).toFixed(2) : '0';
+    const res = await fetch(`${backendUrl}/api/lodgings`, {
+      method: 'POST',
+      headers: jsonHeaders,
+      body: JSON.stringify({
+        ...lodgingDraft,
+        tripId: activeTripId,
+        rooms,
+        costPerNight,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      alert(data.error || 'Unable to save lodging');
+      return;
+    }
+    setLodgingDraft(createInitialLodgingState());
+    fetchLodgings();
+  };
+
+  const removeLodging = async (id: string) => {
+    const res = await fetch(`${backendUrl}/api/lodgings/${id}`, { method: 'DELETE', headers: jsonHeaders });
+    if (!res.ok) {
+      alert('Unable to delete lodging');
+      return;
+    }
+    fetchLodgings();
   };
 
   const loadAirports = async () => {
@@ -587,6 +697,10 @@ const App: React.FC = () => {
     () => (userToken ? { Authorization: `Bearer ${userToken}` } : ({} as Record<string, string>)),
     [userToken]
   );
+  const jsonHeaders = useMemo<Record<string, string>>(
+    () => ({ 'Content-Type': 'application/json', ...(userToken ? { Authorization: `Bearer ${userToken}` } : {}) }),
+    [userToken]
+  );
   const logout = () => {
     setUserToken(null);
     setUserName(null);
@@ -626,6 +740,7 @@ const App: React.FC = () => {
     setUserName(name);
     saveSession(data.token, name, 'menu');
     fetchFlights(data.token);
+    fetchLodgings(data.token);
     fetchInvites(data.token);
     setActivePage('menu');
   };
@@ -651,6 +766,7 @@ const App: React.FC = () => {
     setUserName(name);
     saveSession(data.token, name, 'menu');
     fetchFlights(data.token);
+    fetchLodgings(data.token);
     fetchInvites(data.token);
     setActivePage('menu');
   };
@@ -663,6 +779,27 @@ const App: React.FC = () => {
     const res = await fetch(`${backendUrl}/api/flights?tripId=${activeTripId}`, { headers: { Authorization: `Bearer ${token ?? userToken}` } });
     const data = await res.json();
     setFlights(data);
+  };
+
+  const fetchLodgings = async (token?: string) => {
+    if (!activeTripId) {
+      setLodgings([]);
+      return;
+    }
+    const res = await fetch(`${backendUrl}/api/lodgings?tripId=${activeTripId}`, {
+      headers: { Authorization: `Bearer ${token ?? userToken}` },
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    setLodgings(
+      (data as any[]).map((l) => ({
+        ...l,
+        rooms: String(l.rooms ?? ''),
+        totalCost: String(l.totalCost ?? ''),
+        costPerNight: String(l.costPerNight ?? ''),
+        refundBy: l.refundBy ?? '',
+      }))
+    );
   };
 
   const fetchGroups = async (sort?: 'created' | 'name') => {
@@ -909,6 +1046,7 @@ const App: React.FC = () => {
   useEffect(() => {
     if (userToken) {
       fetchFlights();
+      fetchLodgings();
       fetchInvites();
       fetchGroups();
       fetchTrips();
@@ -923,7 +1061,7 @@ const App: React.FC = () => {
       setUserToken(session.token);
       setUserName(session.name);
       const sessionPage = session.page;
-      if (sessionPage === 'flights' || sessionPage === 'groups' || sessionPage === 'trips' || sessionPage === 'traits' || sessionPage === 'itinerary') {
+      if (sessionPage === 'flights' || sessionPage === 'lodging' || sessionPage === 'groups' || sessionPage === 'trips' || sessionPage === 'traits' || sessionPage === 'itinerary') {
         setActivePage(sessionPage as Page);
       } else {
         setActivePage('menu');
@@ -939,6 +1077,7 @@ const App: React.FC = () => {
   useEffect(() => {
     if (userToken) {
       fetchFlights();
+      fetchLodgings();
     }
   }, [activeTripId]);
 
@@ -1243,6 +1382,9 @@ const App: React.FC = () => {
               <TouchableOpacity style={[styles.button, activePage === 'flights' && styles.toggleActive]} onPress={() => setActivePage('flights')}>
                 <Text style={styles.buttonText}>Flights</Text>
               </TouchableOpacity>
+              <TouchableOpacity style={[styles.button, activePage === 'lodging' && styles.toggleActive]} onPress={() => setActivePage('lodging')}>
+                <Text style={styles.buttonText}>Lodging</Text>
+              </TouchableOpacity>
               <TouchableOpacity style={[styles.button, activePage === 'groups' && styles.toggleActive]} onPress={() => setActivePage('groups')}>
                 <Text style={styles.buttonText}>Groups</Text>
               </TouchableOpacity>
@@ -1447,6 +1589,209 @@ const App: React.FC = () => {
                 )}
               </View>
             </>
+          ) : null}
+
+          {activePage === 'lodging' ? (
+            <View style={styles.card}>
+              <Text style={styles.sectionTitle}>Lodging</Text>
+              {Platform.OS !== 'web' && lodgingDateField ? (
+                <DateTimePicker
+                  value={lodgingDateValue}
+                  mode="date"
+                  onChange={(_, date) => {
+                    if (!date) {
+                      setLodgingDateField(null);
+                      return;
+                    }
+                    const iso = date.toISOString().slice(0, 10);
+                    if (lodgingDateField === 'checkIn') setLodgingDraft((p) => ({ ...p, checkInDate: iso }));
+                    if (lodgingDateField === 'checkOut') setLodgingDraft((p) => ({ ...p, checkOutDate: iso }));
+                    if (lodgingDateField === 'refund') setLodgingDraft((p) => ({ ...p, refundBy: iso }));
+                    setLodgingDateField(null);
+                  }}
+                />
+              ) : null}
+              <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
+                <View style={styles.table}>
+                  <View style={[styles.tableRow, styles.tableHeader]}>
+                    <View style={[styles.cell, styles.lodgingNameCol]}>
+                      <Text style={styles.headerText}>Name</Text>
+                    </View>
+                    <View style={[styles.cell, styles.lodgingDateCol]}>
+                      <Text style={styles.headerText}>Check-in</Text>
+                    </View>
+                    <View style={[styles.cell, styles.lodgingDateCol]}>
+                      <Text style={styles.headerText}>Check-out</Text>
+                    </View>
+                    <View style={[styles.cell, styles.lodgingRoomsCol]}>
+                      <Text style={styles.headerText}>Rooms</Text>
+                    </View>
+                    <View style={[styles.cell, styles.lodgingRefundCol]}>
+                      <Text style={styles.headerText}>Refund By</Text>
+                    </View>
+                    <View style={[styles.cell, styles.lodgingCostCol]}>
+                      <Text style={styles.headerText}>Total</Text>
+                    </View>
+                    <View style={[styles.cell, styles.lodgingCostCol]}>
+                      <Text style={styles.headerText}>Per Night</Text>
+                    </View>
+                    <View style={[styles.cell, styles.lastCell, styles.lodgingAddressCol]}>
+                      <Text style={styles.headerText}>Address</Text>
+                    </View>
+                  </View>
+
+                  <View style={[styles.tableRow, styles.inputRow]}>
+                    <View style={[styles.cell, styles.lodgingNameCol]}>
+                      <TextInput
+                        style={styles.cellInput}
+                        placeholder="Lodging name"
+                        value={lodgingDraft.name}
+                        onChangeText={(text) => setLodgingDraft((p) => ({ ...p, name: text }))}
+                      />
+                    </View>
+                    <View style={[styles.cell, styles.lodgingDateCol]}>
+                      {Platform.OS === 'web' ? (
+                        <input
+                          style={{ ...StyleSheet.flatten(styles.cellInput), width: '100%' }}
+                          type="date"
+                          value={lodgingDraft.checkInDate}
+                          onChange={(e) => setLodgingDraft((p) => ({ ...p, checkInDate: e.target.value }))}
+                        />
+                      ) : (
+                        <TouchableOpacity
+                          style={[styles.cellInput, { justifyContent: 'center' }]}
+                          onPress={() => {
+                            setLodgingDateField('checkIn');
+                            setLodgingDateValue(new Date(lodgingDraft.checkInDate));
+                          }}
+                        >
+                          <Text>{lodgingDraft.checkInDate}</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                    <View style={[styles.cell, styles.lodgingDateCol]}>
+                      {Platform.OS === 'web' ? (
+                        <input
+                          style={{ ...StyleSheet.flatten(styles.cellInput), width: '100%' }}
+                          type="date"
+                          value={lodgingDraft.checkOutDate}
+                          onChange={(e) => setLodgingDraft((p) => ({ ...p, checkOutDate: e.target.value }))}
+                        />
+                      ) : (
+                        <TouchableOpacity
+                          style={[styles.cellInput, { justifyContent: 'center' }]}
+                          onPress={() => {
+                            setLodgingDateField('checkOut');
+                            setLodgingDateValue(new Date(lodgingDraft.checkOutDate));
+                          }}
+                        >
+                          <Text>{lodgingDraft.checkOutDate}</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                    <View style={[styles.cell, styles.lodgingRoomsCol]}>
+                      <TextInput
+                        style={styles.cellInput}
+                        keyboardType="numeric"
+                        value={lodgingDraft.rooms}
+                        onChangeText={(text) => setLodgingDraft((p) => ({ ...p, rooms: text }))}
+                      />
+                    </View>
+                    <View style={[styles.cell, styles.lodgingRefundCol]}>
+                      {Platform.OS === 'web' ? (
+                        <input
+                          style={{ ...StyleSheet.flatten(styles.cellInput), width: '100%' }}
+                          type="date"
+                          value={lodgingDraft.refundBy}
+                          onChange={(e) => setLodgingDraft((p) => ({ ...p, refundBy: e.target.value }))}
+                        />
+                      ) : (
+                        <TouchableOpacity
+                          style={[styles.cellInput, { justifyContent: 'center' }]}
+                          onPress={() => {
+                            setLodgingDateField('refund');
+                            setLodgingDateValue(
+                              lodgingDraft.refundBy ? new Date(lodgingDraft.refundBy) : new Date(lodgingDraft.checkInDate)
+                            );
+                          }}
+                        >
+                          <Text>{lodgingDraft.refundBy || 'Select'}</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                    <View style={[styles.cell, styles.lodgingCostCol]}>
+                      <TextInput
+                        style={styles.cellInput}
+                        keyboardType="numeric"
+                        value={lodgingDraft.totalCost}
+                        onChangeText={(text) => setLodgingDraft((p) => ({ ...p, totalCost: text }))}
+                        placeholder="Total cost"
+                      />
+                    </View>
+                    <View style={[styles.cell, styles.lodgingCostCol]}>
+                      <Text style={styles.cellText}>${lodgingDraft.costPerNight || '-'}</Text>
+                    </View>
+                    <View style={[styles.cell, styles.lastCell, styles.lodgingAddressCol]}>
+                      <TextInput
+                        style={styles.cellInput}
+                        value={lodgingDraft.address}
+                        onChangeText={(text) => setLodgingDraft((p) => ({ ...p, address: text }))}
+                        placeholder="Address"
+                      />
+                    </View>
+                  </View>
+                  <View style={styles.tableFooter}>
+                    <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={addLodging}>
+                      <Text style={styles.buttonText}>Add lodging</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {lodgings.map((l) => (
+                    <View key={l.id} style={styles.tableRow}>
+                      <View style={[styles.cell, styles.lodgingNameCol]}>
+                        <Text style={styles.cellText}>{l.name}</Text>
+                      </View>
+                      <View style={[styles.cell, styles.lodgingDateCol]}>
+                        <Text style={styles.cellText}>{formatDateLong(l.checkInDate)}</Text>
+                      </View>
+                      <View style={[styles.cell, styles.lodgingDateCol]}>
+                        <Text style={styles.cellText}>{formatDateLong(l.checkOutDate)}</Text>
+                      </View>
+                      <View style={[styles.cell, styles.lodgingRoomsCol]}>
+                        <Text style={styles.cellText}>{l.rooms}</Text>
+                      </View>
+                      <View style={[styles.cell, styles.lodgingRefundCol]}>
+                        <Text style={styles.cellText}>{l.refundBy ? formatDateLong(l.refundBy) : 'Non-refundable'}</Text>
+                      </View>
+                      <View style={[styles.cell, styles.lodgingCostCol]}>
+                        <Text style={styles.cellText}>${l.totalCost || '-'}</Text>
+                      </View>
+                      <View style={[styles.cell, styles.lodgingCostCol]}>
+                        <Text style={styles.cellText}>${l.costPerNight || '-'}</Text>
+                      </View>
+                      <View
+                        style={[
+                          styles.cell,
+                          styles.lastCell,
+                          styles.lodgingAddressCol,
+                          { flexDirection: 'row', justifyContent: 'space-between' },
+                        ]}
+                      >
+                        <Text style={[styles.cellText, styles.linkText]} onPress={() => openMaps(l.address)}>
+                          {l.address || '-'}
+                        </Text>
+                        <TouchableOpacity onPress={() => removeLodging(l.id)}>
+                          <Text style={styles.removeText}>Remove</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </ScrollView>
+              <View style={{ marginTop: 8 }}>
+                <Text style={styles.flightTitle}>Total lodging cost: ${lodgingTotal.toFixed(2)}</Text>
+              </View>
+            </View>
           ) : null}
 
           {activePage === 'groups' ? (
@@ -2423,6 +2768,28 @@ const styles = StyleSheet.create({
   removeText: {
     color: '#dc2626',
     fontWeight: '600',
+  },
+  linkText: {
+    color: '#0d6efd',
+    textDecorationLine: 'underline',
+  },
+  lodgingNameCol: {
+    minWidth: 180,
+  },
+  lodgingDateCol: {
+    minWidth: 130,
+  },
+  lodgingRoomsCol: {
+    minWidth: 80,
+  },
+  lodgingRefundCol: {
+    minWidth: 150,
+  },
+  lodgingCostCol: {
+    minWidth: 120,
+  },
+  lodgingAddressCol: {
+    minWidth: 240,
   },
   addRow: {
     flexDirection: 'row',
