@@ -1,0 +1,14 @@
+{
+  "hotelName": "MOOONS Vienna",
+  "guestName": "Qiang Lai",
+  "checkOutDate": "2024-11-01",
+  "checkInDate": "2024-10-31",
+  "freeCancelBy": "2024-10-29",
+  "rooms": "2",
+  "breakfastIncluded": true,
+  "phone": "+43 1 96226",
+  "totalCost": "329.40",
+  "currency": "EUR",
+  "paid": false,
+  "address": "16 Wiedner Gürtel, 04. Wieden, Vienna, 1040, Austria"
+}
