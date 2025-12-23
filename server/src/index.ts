@@ -11,6 +11,7 @@ const webAuthRoutes = require('./routes/webAuthRoutes').default;
 const groupRoutes = require('./routes/groupRoutes').default;
 const tripRoutes = require('./routes/tripRoutes').default;
 const itineraryRoutes = require('./routes/itineraryRoutes').default;
+const itineraryDataRoutes = require('./routes/itineraryDataRoutes').default;
 const traitRoutes = require('./routes/traitRoutes').default;
 
 // Import db AFTER dotenv has run
@@ -35,6 +36,7 @@ app.use('/api/flights', flightRoutes);
 app.use('/api/groups', groupRoutes);
 app.use('/api/trips', tripRoutes);
 app.use('/api/itinerary', itineraryRoutes);
+app.use('/api/itineraries', itineraryDataRoutes);
 app.use('/api/traits', traitRoutes);
 
 const port = Number(process.env.PORT) || 4000;

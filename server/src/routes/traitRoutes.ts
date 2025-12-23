@@ -1,7 +1,14 @@
 import { Router } from 'express';
 import bodyParser from 'body-parser';
 import { authenticate } from '../auth';
-import { createTrait, deleteTrait, listTraits, updateTrait } from '../db';
+import {
+  createTrait,
+  deleteTrait,
+  listTraits,
+  updateTrait,
+  getUserDemographics,
+  saveUserDemographics,
+} from '../db';
 
 const router = Router();
 router.use(bodyParser.json());
@@ -59,6 +66,25 @@ router.delete('/:id', async (req, res) => {
     const status = msg === 'Trait not found' ? 404 : 400;
     res.status(status).json({ error: msg });
   }
+});
+
+router.get('/profile/demographics', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const data = await getUserDemographics(userId);
+  res.json(data);
+});
+
+router.post('/profile/demographics', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const { age, gender } = req.body ?? {};
+  const parsedAge = age != null ? Number(age) : null;
+  const safeAge = parsedAge !== null && Number.isFinite(parsedAge) && parsedAge > 0 ? parsedAge : null;
+  const safeGender =
+    gender === 'female' || gender === 'male' || gender === 'nonbinary' || gender === 'prefer-not'
+      ? gender
+      : null;
+  await saveUserDemographics(userId, safeAge, safeGender);
+  res.status(204).send();
 });
 
 export default router;
