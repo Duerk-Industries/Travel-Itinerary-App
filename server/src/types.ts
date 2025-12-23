@@ -80,6 +80,21 @@ export interface Trait {
   createdAt: string;
 }
 
+export interface Lodging {
+  id: string;
+  userId: string;
+  tripId: string;
+  name: string;
+  checkInDate: string;
+  checkOutDate: string;
+  rooms: number;
+  refundBy?: string | null;
+  totalCost: number;
+  costPerNight: number;
+  address: string;
+  createdAt: string;
+}
+
 export interface Itinerary {
   id: string;
   tripId: string;

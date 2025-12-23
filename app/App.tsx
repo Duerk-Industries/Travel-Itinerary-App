@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Constants from 'expo-constants';
 import { formatDateLong } from './utils/formatDateLong';
+import { parseFlightText, type ParsedFlight } from './utils/flightParser';
 
 interface Flight {
   id: string;
@@ -98,7 +100,7 @@ interface ItineraryDetailRecord {
   cost?: number | null;
 }
 
-type Page = 'menu' | 'flights' | 'groups' | 'trips' | 'traits' | 'itinerary';
+type Page = 'menu' | 'flights' | 'lodging' | 'groups' | 'trips' | 'traits' | 'itinerary';
 
 type FlightDraft = {
   passengerName: string;
@@ -136,6 +138,30 @@ type FlightEditDraft = {
   bookingReference: string;
 };
 
+type Lodging = {
+  id: string;
+  tripId?: string;
+  name: string;
+  checkInDate: string;
+  checkOutDate: string;
+  rooms: string;
+  refundBy: string;
+  totalCost: string;
+  costPerNight: string;
+  address: string;
+};
+
+type LodgingDraft = {
+  name: string;
+  checkInDate: string;
+  checkOutDate: string;
+  rooms: string;
+  refundBy: string;
+  totalCost: string;
+  costPerNight: string;
+  address: string;
+};
+
 const createInitialFlightState = (): FlightDraft => ({
   passengerName: '',
   departureDate: new Date().toISOString().slice(0, 10),
@@ -152,6 +178,17 @@ const createInitialFlightState = (): FlightDraft => ({
   carrier: '',
   flightNumber: '',
   bookingReference: '',
+});
+
+const createInitialLodgingState = (): LodgingDraft => ({
+  name: '',
+  checkInDate: new Date().toISOString().slice(0, 10),
+  checkOutDate: new Date().toISOString().slice(0, 10),
+  rooms: '1',
+  refundBy: '',
+  totalCost: '',
+  costPerNight: '',
+  address: '',
 });
 
 
@@ -236,6 +273,10 @@ const App: React.FC = () => {
   const [passengerAnchor, setPassengerAnchor] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const [editingFlightId, setEditingFlightId] = useState<string | null>(null);
   const [editingFlight, setEditingFlight] = useState<FlightEditDraft | null>(null);
+  const [lodgings, setLodgings] = useState<Lodging[]>([]);
+  const [lodgingDraft, setLodgingDraft] = useState<LodgingDraft>(createInitialLodgingState());
+  const [lodgingDateField, setLodgingDateField] = useState<'checkIn' | 'checkOut' | 'refund' | null>(null);
+  const [lodgingDateValue, setLodgingDateValue] = useState<Date>(new Date());
   const [airports, setAirports] = useState<Airport[]>([]);
   const [airportSuggestions, setAirportSuggestions] = useState<Airport[]>([]);
   const [airportAnchor, setAirportAnchor] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
@@ -275,6 +316,19 @@ const App: React.FC = () => {
   const arrLocationRef = useRef<TextInput | null>(null);
   const modalDepLocationRef = useRef<TextInput | null>(null);
   const modalArrLocationRef = useRef<TextInput | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [isParsingPdf, setIsParsingPdf] = useState(false);
+  const [pdfParseMessage, setPdfParseMessage] = useState<string | null>(null);
+  const [parsedFlights, setParsedFlights] = useState<FlightEditDraft[]>([]);
+  const [isSavingParsedFlights, setIsSavingParsedFlights] = useState(false);
+  const normalizePassengerName = (name: string): string => {
+    const trimmed = name.trim().replace(/\s+/g, ' ');
+    const parts = trimmed.toLowerCase().split(' ').filter(Boolean);
+    if (parts.length >= 2) {
+      return `${parts[0]} ${parts[parts.length - 1]}`;
+    }
+    return trimmed.toLowerCase();
+  };
 
   const formatMemberName = (member: GroupMemberOption): string => {
     if (member.guestName) return member.guestName;
@@ -296,6 +350,35 @@ const App: React.FC = () => {
     const d = new Date(value);
     return Number.isNaN(d.getTime()) ? value : d.toISOString().slice(0, 10);
   };
+
+  const calculateNights = (checkIn: string, checkOut: string): number => {
+    const start = new Date(checkIn).getTime();
+    const end = new Date(checkOut).getTime();
+    if (Number.isNaN(start) || Number.isNaN(end) || end <= start) return 0;
+    return Math.round((end - start) / (1000 * 60 * 60 * 24));
+  };
+
+  const lodgingTotal = useMemo(
+    () => lodgings.reduce((sum, l) => sum + (Number(l.totalCost) || 0), 0),
+    [lodgings]
+  );
+
+  const openMaps = (address: string) => {
+    if (!address) return;
+    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.open(url, '_blank');
+    } else {
+      Linking.openURL(url);
+    }
+  };
+
+  useEffect(() => {
+    const nights = calculateNights(lodgingDraft.checkInDate, lodgingDraft.checkOutDate);
+    const totalNum = Number(lodgingDraft.totalCost) || 0;
+    const computed = nights > 0 && totalNum ? (totalNum / nights).toFixed(2) : '';
+    setLodgingDraft((prev) => ({ ...prev, costPerNight: computed }));
+  }, [lodgingDraft.checkInDate, lodgingDraft.checkOutDate, lodgingDraft.totalCost]);
 
   const filterAirports = (query: string): Airport[] => {
     const q = query.trim().toLowerCase();
@@ -343,6 +426,116 @@ const App: React.FC = () => {
       return rawValue;
     }
     return formatLocationDisplay(rawValue);
+  };
+
+  // Parsing handled in utils/flightParser.parseFlightText.
+
+  const mergeParsedFlight = (current: FlightEditDraft, parsed: Partial<FlightEditDraft>): FlightEditDraft => {
+    const next = { ...current };
+    (Object.entries(parsed) as [keyof FlightEditDraft, string][]).forEach(([key, value]) => {
+      if (value && (!current[key] || current[key].trim().length === 0)) {
+        next[key] = value;
+      }
+    });
+    return next;
+  };
+
+  const extractTextFromPdf = async (file: File): Promise<string> => {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdfjs = await import('pdfjs-dist/build/pdf');
+    (pdfjs as any).GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${(pdfjs as any).version}/pdf.worker.min.js`;
+    const loadingTask = (pdfjs as any).getDocument({ data: arrayBuffer });
+    const pdf = await loadingTask.promise;
+    let combined = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      combined += content.items.map((item: any) => item.str).join(' ') + '\n';
+    }
+    return combined;
+  };
+
+  const extractTextFromImage = async (file: File): Promise<string> => {
+    const { createWorker } = await import('tesseract.js');
+    const worker = await createWorker('eng');
+    const url = URL.createObjectURL(file);
+    try {
+      const { data } = await worker.recognize(url);
+      return data.text ?? '';
+    } finally {
+      URL.revokeObjectURL(url);
+      await worker.terminate();
+    }
+  };
+
+  const handleFlightFile = async (file: File) => {
+    if (Platform.OS !== 'web') {
+      alert('File upload is available on web right now.');
+      return;
+    }
+    if (!activeTripId) {
+      alert('Select an active trip before uploading a flight.');
+      return;
+    }
+    setIsParsingPdf(true);
+    setPdfParseMessage(null);
+    try {
+      const type = file.type || '';
+      const isPdf = type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf');
+      const text = isPdf ? await extractTextFromPdf(file) : await extractTextFromImage(file);
+      const { primary, bulk } = parseFlightText(text);
+      const flightsToSave = (bulk.length ? bulk : [primary]).map((flight) =>
+        mergeParsedFlight(createInitialFlightState(), flight as Partial<FlightEditDraft>)
+      );
+      setParsedFlights(flightsToSave);
+      await saveParsedFlights(flightsToSave);
+    } catch (err) {
+      console.error('File parse failed', err);
+      alert('Could not read that file. Please upload a legible flight confirmation PDF or image.');
+    } finally {
+      setIsParsingPdf(false);
+    }
+  };
+
+  const addLodging = async () => {
+    if (!lodgingDraft.name.trim() || !activeTripId) {
+      alert('Please enter a lodging name and select an active trip.');
+      return;
+    }
+    const nights = calculateNights(lodgingDraft.checkInDate, lodgingDraft.checkOutDate);
+    if (nights <= 0) {
+      alert('Check-out must be after check-in.');
+      return;
+    }
+    const totalNum = Number(lodgingDraft.totalCost) || 0;
+    const rooms = Number(lodgingDraft.rooms) || 1;
+    const costPerNight = totalNum && rooms > 0 ? (totalNum / (nights * rooms)).toFixed(2) : '0';
+    const res = await fetch(`${backendUrl}/api/lodgings`, {
+      method: 'POST',
+      headers: jsonHeaders,
+      body: JSON.stringify({
+        ...lodgingDraft,
+        tripId: activeTripId,
+        rooms,
+        costPerNight,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      alert(data.error || 'Unable to save lodging');
+      return;
+    }
+    setLodgingDraft(createInitialLodgingState());
+    fetchLodgings();
+  };
+
+  const removeLodging = async (id: string) => {
+    const res = await fetch(`${backendUrl}/api/lodgings/${id}`, { method: 'DELETE', headers: jsonHeaders });
+    if (!res.ok) {
+      alert('Unable to delete lodging');
+      return;
+    }
+    fetchLodgings();
   };
 
   const loadAirports = async () => {
@@ -416,15 +609,10 @@ const App: React.FC = () => {
   };
 
   const selectAirport = (target: 'dep' | 'arr' | 'modal-dep' | 'modal-arr', airport: Airport) => {
-    const label = formatAirportLabel(airport);
     const code = airport.iata_code ?? '';
-    if (target === 'dep') {
-      setNewFlight((prev) => ({ ...prev, departureLocation: code, departureAirportCode: code }));
-    } else if (target === 'arr') {
-      setNewFlight((prev) => ({ ...prev, arrivalLocation: code, arrivalAirportCode: code }));
-    } else if (target === 'modal-dep' && editingFlight) {
+    if ((target === 'dep' || target === 'modal-dep') && editingFlight) {
       setEditingFlight((prev) => (prev ? { ...prev, departureLocation: code, departureAirportCode: code } : prev));
-    } else if (target === 'modal-arr' && editingFlight) {
+    } else if ((target === 'arr' || target === 'modal-arr') && editingFlight) {
       setEditingFlight((prev) => (prev ? { ...prev, arrivalLocation: code, arrivalAirportCode: code } : prev));
     }
     hideAirportDropdown();
@@ -528,7 +716,14 @@ const App: React.FC = () => {
     fetchFlights();
   };
 
-  const headers = useMemo(() => (userToken ? { Authorization: `Bearer ${userToken}` } : {}), [userToken]);
+  const headers = useMemo<Record<string, string>>(
+    () => (userToken ? { Authorization: `Bearer ${userToken}` } : ({} as Record<string, string>)),
+    [userToken]
+  );
+  const jsonHeaders = useMemo<Record<string, string>>(
+    () => ({ 'Content-Type': 'application/json', ...(userToken ? { Authorization: `Bearer ${userToken}` } : {}) }),
+    [userToken]
+  );
   const logout = () => {
     setUserToken(null);
     setUserName(null);
@@ -570,7 +765,8 @@ const App: React.FC = () => {
       setUserName(name);
       saveSession(data.token, name, 'menu');
       fetchFlights(data.token);
-      fetchInvites(data.token);
+      fetchLodgings(data.token);
+    fetchInvites(data.token);
       setActivePage('menu');
     } catch (err) {
       alert((err as Error).message || 'Login failed');
@@ -599,6 +795,7 @@ const App: React.FC = () => {
       setUserName(name);
       saveSession(data.token, name, 'menu');
       fetchFlights(data.token);
+    fetchLodgings(data.token);
       fetchInvites(data.token);
       setActivePage('menu');
     } catch (err) {
@@ -614,6 +811,27 @@ const App: React.FC = () => {
     const res = await fetch(`${backendUrl}/api/flights?tripId=${activeTripId}`, { headers: { Authorization: `Bearer ${token ?? userToken}` } });
     const data = await res.json();
     setFlights(data);
+  };
+
+  const fetchLodgings = async (token?: string) => {
+    if (!activeTripId) {
+      setLodgings([]);
+      return;
+    }
+    const res = await fetch(`${backendUrl}/api/lodgings?tripId=${activeTripId}`, {
+      headers: { Authorization: `Bearer ${token ?? userToken}` },
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    setLodgings(
+      (data as any[]).map((l) => ({
+        ...l,
+        rooms: String(l.rooms ?? ''),
+        totalCost: String(l.totalCost ?? ''),
+        costPerNight: String(l.costPerNight ?? ''),
+        refundBy: l.refundBy ?? '',
+      }))
+    );
   };
 
   const fetchGroups = async (sort?: 'created' | 'name') => {
@@ -1096,6 +1314,7 @@ const App: React.FC = () => {
   useEffect(() => {
     if (userToken) {
       fetchFlights();
+      fetchLodgings();
       fetchInvites();
       fetchGroups();
       fetchTrips();
@@ -1112,7 +1331,7 @@ const App: React.FC = () => {
       setUserToken(session.token);
       setUserName(session.name);
       const sessionPage = session.page;
-      if (sessionPage === 'flights' || sessionPage === 'groups' || sessionPage === 'trips' || sessionPage === 'traits' || sessionPage === 'itinerary') {
+      if (sessionPage === 'flights' || sessionPage === 'lodging' || sessionPage === 'groups' || sessionPage === 'trips' || sessionPage === 'traits' || sessionPage === 'itinerary') {
         setActivePage(sessionPage as Page);
       } else {
         setActivePage('menu');
@@ -1128,6 +1347,7 @@ const App: React.FC = () => {
   useEffect(() => {
     if (userToken) {
       fetchFlights();
+      fetchLodgings();
     }
   }, [activeTripId]);
 
@@ -1138,12 +1358,193 @@ const App: React.FC = () => {
   }, [userToken, activeTripId, trips]);
 
   const handleAddPress = async () => {
-    if (isAddingRow) {
-      const saved = await addFlight();
-      if (saved) setIsAddingRow(false);
-    } else {
-      setNewFlight(createInitialFlightState());
-      setIsAddingRow(true);
+    if (!activeTripId) {
+      alert('Select an active trip before adding a flight.');
+      return;
+    } 
+    setEditingFlightId('new');
+    setEditingFlight(createInitialFlightState());
+    setAirportTarget(null);
+    setAirportAnchor(null);
+    setAirportSuggestions([]);
+    setLocationTarget(null);
+    setLocationSuggestions([]);
+    setShowPassengerSuggestions(false);
+    setPassengerSuggestions([]);
+    
+  };
+
+  const findActiveTrip = () => trips.find((t) => t.id === activeTripId);
+
+  const ensurePassengerInGroup = async (passengerName: string) => {
+    if (!userToken) return;
+    const activeTrip = findActiveTrip();
+    if (!activeTrip?.groupId) return;
+    const normalizedTarget = normalizePassengerName(passengerName);
+    const alreadyInGroup = groupMembers.some((m) => normalizePassengerName(formatMemberName(m)) === normalizedTarget);
+    if (alreadyInGroup) return;
+    try {
+      await fetch(`${backendUrl}/api/groups/${activeTrip.groupId}/members`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...headers },
+        body: JSON.stringify({ guestName: passengerName }),
+      });
+      await fetchGroupMembersForActiveTrip();
+    } catch {
+      // non-blocking
+    }
+  };
+
+  const saveParsedFlights = async (flightsOverride?: FlightEditDraft[]) => {
+    const flightsToSave = flightsOverride ?? parsedFlights;
+    if (!userToken || !activeTripId || !flightsToSave.length) {
+      alert('No parsed flights to add.');
+      return;
+    }
+    setIsSavingParsedFlights(true);
+    try {
+      let saved = 0;
+      const failures: string[] = [];
+      for (const flight of flightsToSave) {
+        const enriched: FlightEditDraft = {
+          ...flight,
+          passengerName: flight.passengerName?.trim() || 'Traveler',
+          departureLocation: flight.departureLocation?.trim() || flight.departureAirportCode || '',
+          departureAirportCode: flight.departureAirportCode?.trim() || flight.departureLocation || '',
+          arrivalLocation: flight.arrivalLocation?.trim() || flight.arrivalAirportCode || '',
+          arrivalAirportCode: flight.arrivalAirportCode?.trim() || flight.arrivalLocation || '',
+          departureDate: flight.departureDate?.trim() || new Date().toISOString().slice(0, 10),
+          departureTime: flight.departureTime?.trim() || '00:00',
+          arrivalTime: flight.arrivalTime?.trim() || '00:00',
+          carrier: flight.carrier?.trim() || 'UNKNOWN',
+          flightNumber: flight.flightNumber?.trim() || 'UNKNOWN',
+          bookingReference: flight.bookingReference?.trim() || 'UNKNOWN',
+        };
+        if (!enriched.departureLocation || !enriched.arrivalLocation) {
+          failures.push('Missing departure or arrival location.');
+          continue;
+        }
+        await ensurePassengerInGroup(flight.passengerName);
+        const res = await fetch(`${backendUrl}/api/flights`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...headers },
+          body: JSON.stringify({
+            ...enriched,
+            cost: Number(flight.cost) || 0,
+            tripId: activeTripId,
+            departureDate: enriched.departureDate,
+          }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          failures.push(data.error || 'Failed to save flight');
+          continue;
+        }
+        saved += 1;
+      }
+      // Keep parsed flights visible so the user can review what was parsed.
+      setParsedFlights(flightsToSave);
+      if (saved) {
+        const baseMsg =
+          saved === 1 ? 'Added 1 flight to this trip.' : `Added ${saved} flights to this trip.`;
+        const failMsg = failures.length ? ` ${failures.length} failed. First error: ${failures[0]}` : '';
+        setPdfParseMessage(baseMsg + failMsg);
+      } else {
+        const failMsg = failures.length ? `Reason: ${failures[0]}` : '';
+        setPdfParseMessage(`No flights added. Please review the upload. ${failMsg}`);
+      }
+      fetchFlights();
+    } catch {
+      alert('Unable to add parsed flights. Please review and add manually.');
+    } finally {
+      setIsSavingParsedFlights(false);
+    }
+  };
+
+  const findActiveTrip = () => trips.find((t) => t.id === activeTripId);
+
+  const ensurePassengerInGroup = async (passengerName: string) => {
+    if (!userToken) return;
+    const activeTrip = findActiveTrip();
+    if (!activeTrip?.groupId) return;
+    const normalizedTarget = normalizePassengerName(passengerName);
+    const alreadyInGroup = groupMembers.some((m) => normalizePassengerName(formatMemberName(m)) === normalizedTarget);
+    if (alreadyInGroup) return;
+    try {
+      await fetch(`${backendUrl}/api/groups/${activeTrip.groupId}/members`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...headers },
+        body: JSON.stringify({ guestName: passengerName }),
+      });
+      await fetchGroupMembersForActiveTrip();
+    } catch {
+      // non-blocking
+    }
+  };
+
+  const saveParsedFlights = async (flightsOverride?: FlightEditDraft[]) => {
+    const flightsToSave = flightsOverride ?? parsedFlights;
+    if (!userToken || !activeTripId || !flightsToSave.length) {
+      alert('No parsed flights to add.');
+      return;
+    }
+    setIsSavingParsedFlights(true);
+    try {
+      let saved = 0;
+      const failures: string[] = [];
+      for (const flight of flightsToSave) {
+        const enriched: FlightEditDraft = {
+          ...flight,
+          passengerName: flight.passengerName?.trim() || 'Traveler',
+          departureLocation: flight.departureLocation?.trim() || flight.departureAirportCode || '',
+          departureAirportCode: flight.departureAirportCode?.trim() || flight.departureLocation || '',
+          arrivalLocation: flight.arrivalLocation?.trim() || flight.arrivalAirportCode || '',
+          arrivalAirportCode: flight.arrivalAirportCode?.trim() || flight.arrivalLocation || '',
+          departureDate: flight.departureDate?.trim() || new Date().toISOString().slice(0, 10),
+          departureTime: flight.departureTime?.trim() || '00:00',
+          arrivalTime: flight.arrivalTime?.trim() || '00:00',
+          carrier: flight.carrier?.trim() || 'UNKNOWN',
+          flightNumber: flight.flightNumber?.trim() || 'UNKNOWN',
+          bookingReference: flight.bookingReference?.trim() || 'UNKNOWN',
+        };
+        if (!enriched.departureLocation || !enriched.arrivalLocation) {
+          failures.push('Missing departure or arrival location.');
+          continue;
+        }
+        await ensurePassengerInGroup(flight.passengerName);
+        const res = await fetch(`${backendUrl}/api/flights`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...headers },
+          body: JSON.stringify({
+            ...enriched,
+            cost: Number(flight.cost) || 0,
+            tripId: activeTripId,
+            departureDate: enriched.departureDate,
+          }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          failures.push(data.error || 'Failed to save flight');
+          continue;
+        }
+        saved += 1;
+      }
+      // Keep parsed flights visible so the user can review what was parsed.
+      setParsedFlights(flightsToSave);
+      if (saved) {
+        const baseMsg =
+          saved === 1 ? 'Added 1 flight to this trip.' : `Added ${saved} flights to this trip.`;
+        const failMsg = failures.length ? ` ${failures.length} failed. First error: ${failures[0]}` : '';
+        setPdfParseMessage(baseMsg + failMsg);
+      } else {
+        const failMsg = failures.length ? `Reason: ${failures[0]}` : '';
+        setPdfParseMessage(`No flights added. Please review the upload. ${failMsg}`);
+      }
+      fetchFlights();
+    } catch {
+      alert('Unable to add parsed flights. Please review and add manually.');
+    } finally {
+      setIsSavingParsedFlights(false);
     }
   };
 
@@ -1332,6 +1733,9 @@ const App: React.FC = () => {
               <TouchableOpacity style={[styles.button, activePage === 'flights' && styles.toggleActive]} onPress={() => setActivePage('flights')}>
                 <Text style={styles.buttonText}>Flights</Text>
               </TouchableOpacity>
+              <TouchableOpacity style={[styles.button, activePage === 'lodging' && styles.toggleActive]} onPress={() => setActivePage('lodging')}>
+                <Text style={styles.buttonText}>Lodging</Text>
+              </TouchableOpacity>
               <TouchableOpacity style={[styles.button, activePage === 'groups' && styles.toggleActive]} onPress={() => setActivePage('groups')}>
                 <Text style={styles.buttonText}>Groups</Text>
               </TouchableOpacity>
@@ -1478,157 +1882,92 @@ const App: React.FC = () => {
                 <Text style={styles.buttonText}>Save Itinerary Info</Text>
               </TouchableOpacity>
 
-              {itineraryError ? <Text style={styles.warningText}>{itineraryError}</Text> : null}
-              {itineraryPlan ? (
-                <View style={styles.planBox}>
-                  <Text style={styles.sectionTitle}>Suggested Plan</Text>
-                  <Text style={styles.bodyText}>{itineraryPlan}</Text>
-                </View>
-              ) : null}
+          {itineraryError ? <Text style={styles.warningText}>{itineraryError}</Text> : null}
+          {itineraryPlan ? (
+            <View style={styles.planBox}>
+              <Text style={styles.sectionTitle}>Suggested Plan</Text>
+              <Text style={styles.bodyText}>{itineraryPlan}</Text>
+            </View>
+          ) : null}
+        </View>
+      ) : null}
 
-              <View style={styles.card}>
-                <Text style={styles.sectionTitle}>Saved Itineraries</Text>
-                {!itineraryRecords.length ? (
-                  <Text style={styles.helperText}>No itineraries saved yet.</Text>
-                ) : (
-                  <View style={styles.table}>
-                    <View style={[styles.tableRow, styles.tableHeader]}>
-                      {['Destination', 'Trip Name', 'Days', 'Budget'].map((h) => (
-                        <View key={h} style={[styles.cell, { flex: 1 }]}>
-                          <Text style={styles.headerText}>{h}</Text>
-                        </View>
-                      ))}
-                    </View>
-                    {itineraryRecords.map((it) => (
-                      <TouchableOpacity
-                        key={it.id}
-                        style={styles.tableRow}
-                        onPress={() => {
-                          setSelectedItineraryId(it.id);
-                          fetchItineraryDetails(it.id);
-                        }}
-                      >
-                        <View style={[styles.cell, { flex: 1 }]}>
-                          <Text style={styles.cellText}>{it.destination}</Text>
-                        </View>
-                        <View style={[styles.cell, { flex: 1 }]}>
-                          <Text style={styles.cellText}>{it.tripName}</Text>
-                        </View>
-                        <View style={[styles.cell, { flex: 1 }]}>
-                          <Text style={styles.cellText}>{it.days}</Text>
-                        </View>
-                        <View style={[styles.cell, { flex: 1 }]}>
-                          <Text style={styles.cellText}>{it.budget != null ? `$${it.budget}` : '—'}</Text>
-                        </View>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
+      {activePage === 'traits' ? (
+            <>
+              <View style={[styles.card, styles.traitsSection]}>
+                <Text style={styles.sectionTitle}>Traits</Text>
+                <Text style={styles.helperText}>Capture travel personality markers to tailor itinerary ideas (e.g., Adventurous, Coffee Lover, Beach Bum).</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Trait name"
+                  value={newTraitName}
+                  onChangeText={setNewTraitName}
+                />
+                <View style={styles.addRow}>
+                  <TextInput
+                    style={[styles.input, styles.inlineInput]}
+                    placeholder="Level (1-5)"
+                    keyboardType="numeric"
+                    value={newTraitLevel}
+                    onChangeText={setNewTraitLevel}
+                  />
+                  <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={createTrait}>
+                    <Text style={styles.buttonText}>Save Trait</Text>
+                  </TouchableOpacity>
+                </View>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Notes (optional, e.g., loves sunrise hikes or third-wave cafes)"
+                  value={newTraitNotes}
+                  onChangeText={setNewTraitNotes}
+                  multiline
+                />
               </View>
 
-              {selectedItineraryId ? (
-                <View style={styles.card}>
-                  <Text style={styles.sectionTitle}>Itinerary Details</Text>
-                  <View style={styles.row}>
-                    <TextInput
-                      style={[styles.input, styles.inlineInput]}
-                      placeholder="Day"
-                      keyboardType="numeric"
-                      value={detailDraft.day}
-                      onChangeText={(text) => setDetailDraft((d) => ({ ...d, day: text }))}
-                    />
-                    <TextInput
-                      style={[styles.input, styles.inlineInput]}
-                      placeholder="Time"
-                      value={detailDraft.time}
-                      onChangeText={(text) => setDetailDraft((d) => ({ ...d, time: text }))}
-                    />
-                  </View>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Activity"
-                    value={detailDraft.activity}
-                    onChangeText={(text) => setDetailDraft((d) => ({ ...d, activity: text }))}
-                  />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Cost"
-                    keyboardType="numeric"
-                    value={detailDraft.cost}
-                    onChangeText={(text) => setDetailDraft((d) => ({ ...d, cost: text }))}
-                  />
-                  <TouchableOpacity style={styles.button} onPress={addDetail}>
-                    <Text style={styles.buttonText}>Add Detail</Text>
-                  </TouchableOpacity>
-
-                  <View style={styles.table}>
-                    <View style={[styles.tableRow, styles.tableHeader]}>
-                      {['Day', 'Time', 'Activity', 'Cost'].map((h) => (
-                        <View key={h} style={[styles.cell, { flex: 1 }]}>
-                          <Text style={styles.headerText}>{h}</Text>
-                        </View>
-                      ))}
-                    </View>
-                    {(itineraryDetails[selectedItineraryId] ?? []).map((d) => (
-                      <View key={d.id} style={styles.tableRow}>
-                        <View style={[styles.cell, { flex: 1 }]}>
-                          <Text style={styles.cellText}>{d.day}</Text>
-                        </View>
-                        <View style={[styles.cell, { flex: 1 }]}>
-                          <Text style={styles.cellText}>{d.time || '-'}</Text>
-                        </View>
-                        <View style={[styles.cell, { flex: 2 }]}>
-                          <Text style={styles.cellText}>{d.activity}</Text>
-                        </View>
-                        <View style={[styles.cell, { flex: 1 }]}>
-                          <Text style={styles.cellText}>{d.cost != null ? `$${d.cost}` : '-'}</Text>
-                        </View>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              ) : null}
-
-              {selectedItineraryId ? (
-                <View style={styles.card}>
-                  <Text style={styles.sectionTitle}>Itinerary Details</Text>
-                  <View style={styles.row}>
-                    <TextInput
-                      style={[styles.input, styles.inlineInput]}
-                      placeholder="Day"
-                      keyboardType="numeric"
-                      value={detailDraft.day}
-                      onChangeText={(text) => setDetailDraft((d) => ({ ...d, day: text }))}
-                    />
-                    <TextInput
-                      style={[styles.input, styles.inlineInput]}
-                      placeholder="Time"
-                      value={detailDraft.time}
-                      onChangeText={(text) => setDetailDraft((d) => ({ ...d, time: text }))}
-                    />
-                  </View>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Activity"
-                    value={detailDraft.activity}
-                    onChangeText={(text) => setDetailDraft((d) => ({ ...d, activity: text }))}
-                  />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Cost"
-                    keyboardType="numeric"
-                    value={detailDraft.cost}
-                    onChangeText={(text) => setDetailDraft((d) => ({ ...d, cost: text }))}
-                  />
-                  <TouchableOpacity style={styles.button} onPress={addDetail}>
-                    <Text style={styles.buttonText}>Add Detail</Text>
-                  </TouchableOpacity>
-
-                  <View style={styles.table}>
-                    <View style={[styles.tableRow, styles.tableHeader]}>
-                      {['Day', 'Time', 'Activity', 'Cost'].map((h) => (
-                        <View key={h} style={[styles.cell, { flex: 1 }]}>
-                          <Text style={styles.headerText}>{h}</Text>
+              <View style={styles.card}>
+                <Text style={styles.sectionTitle}>Your profile traits</Text>
+                {!traits.length ? (
+                  <Text style={styles.helperText}>No traits yet. Add one above to start personalizing trip ideas.</Text>
+                ) : (
+                  traits.map((trait) => {
+                    const draft = traitDrafts[trait.id] ?? { level: String(trait.level ?? 1), notes: trait.notes ?? '' };
+                    return (
+                      <View key={trait.id} style={styles.traitRow}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.flightTitle}>{trait.name}</Text>
+                          <Text style={styles.helperText}>Level {draft.level || trait.level} • Added {formatDateLong(trait.createdAt)}</Text>
+                          <View style={styles.addRow}>
+                            <TextInput
+                              style={[styles.input, styles.inlineInput]}
+                              value={draft.level}
+                              keyboardType="numeric"
+                              placeholder="1-5"
+                              onChangeText={(text) =>
+                                setTraitDrafts((prev) => ({
+                                  ...prev,
+                                  [trait.id]: { level: text, notes: prev[trait.id]?.notes ?? draft.notes },
+                                }))
+                              }
+                            />
+                            <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => updateTrait(trait.id)}>
+                              <Text style={styles.buttonText}>Update</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => deleteTrait(trait.id)}>
+                              <Text style={styles.buttonText}>Delete</Text>
+                            </TouchableOpacity>
+                          </View>
+                          <TextInput
+                            style={[styles.input, styles.traitNoteInput]}
+                            placeholder="Notes (optional)"
+                            value={draft.notes}
+                            onChangeText={(text) =>
+                              setTraitDrafts((prev) => ({
+                                ...prev,
+                                [trait.id]: { level: prev[trait.id]?.level ?? draft.level, notes: text },
+                              }))
+                            }
+                            multiline
+                          />
                         </View>
                       ))}
                     </View>
@@ -1863,6 +2202,57 @@ const App: React.FC = () => {
           {activePage === 'flights' ? (
             <View style={[styles.card, styles.flightsSection]}>
               <Text style={styles.sectionTitle}>Flights</Text>
+              {Platform.OS === 'web' ? (
+                <View style={styles.pdfRow}>
+                  <input
+                    ref={fileInputRef as any}
+                    type="file"
+                    accept="application/pdf,image/*"
+                    style={styles.hiddenInput as any}
+                    onChange={(e: any) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        handleFlightFile(file);
+                      }
+                      e.target.value = '';
+                    }}
+                  />
+                  <TouchableOpacity
+                    style={[styles.button, isParsingPdf && styles.disabledButton]}
+                    disabled={isParsingPdf}
+                    onPress={() => fileInputRef.current?.click()}
+                  >
+                    <Text style={styles.buttonText}>{isParsingPdf ? 'Reading...' : 'Upload Flight PDF'}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.button, styles.smallButton, isSavingParsedFlights && styles.disabledButton]}
+                    disabled={isSavingParsedFlights || parsedFlights.length === 0}
+                    onPress={() => saveParsedFlights()}
+                  >
+                    <Text style={styles.buttonText}>
+                      {isSavingParsedFlights
+                        ? 'Adding flights...'
+                        : parsedFlights.length
+                          ? `Add parsed flights (${parsedFlights.length})`
+                          : 'Add parsed flights'}
+                    </Text>
+                  </TouchableOpacity>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.helperText}>
+                      {pdfParseMessage ?? 'Upload a confirmation email PDF or image to auto-add flights.'}
+                    </Text>
+                    {parsedFlights.length ? (
+                      <View style={styles.parsedList}>
+                        {parsedFlights.map((f, idx) => (
+                          <Text key={`${f.passengerName}-${idx}`} style={styles.helperText}>
+                            {`${f.passengerName || 'Traveler'} | ${f.departureDate || 'Date?'} | ${f.departureLocation} -> ${f.arrivalLocation} | ${f.departureTime || '?'} / Arr ${f.arrivalTime || '?'} | Cost ${f.cost || '0'} | Ref ${f.bookingReference || '-'}`}
+                          </Text>
+                        ))}
+                      </View>
+                    ) : null}
+                  </View>
+                </View>
+              ) : null}
               <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
                 <View style={styles.table}>
                   <View style={[styles.tableRow, styles.tableHeader]}>
@@ -2705,6 +3095,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#0f172a',
   },
+  flightTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
   actionCell: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2737,6 +3132,22 @@ const styles = StyleSheet.create({
   helperText: {
     color: '#6b7280',
     fontSize: 12,
+  },
+  parsedList: {
+    marginTop: 4,
+    gap: 2,
+  },
+  pdfRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 8,
+  },
+  hiddenInput: {
+    display: 'none',
+  },
+  disabledButton: {
+    backgroundColor: '#94a3b8',
   },
   shareInput: {
     flex: 1,
@@ -2775,6 +3186,28 @@ const styles = StyleSheet.create({
   removeText: {
     color: '#dc2626',
     fontWeight: '600',
+  },
+  linkText: {
+    color: '#0d6efd',
+    textDecorationLine: 'underline',
+  },
+  lodgingNameCol: {
+    minWidth: 180,
+  },
+  lodgingDateCol: {
+    minWidth: 130,
+  },
+  lodgingRoomsCol: {
+    minWidth: 80,
+  },
+  lodgingRefundCol: {
+    minWidth: 150,
+  },
+  lodgingCostCol: {
+    minWidth: 120,
+  },
+  lodgingAddressCol: {
+    minWidth: 240,
   },
   addRow: {
     flexDirection: 'row',
