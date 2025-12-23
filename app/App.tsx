@@ -284,6 +284,10 @@ const App: React.FC = () => {
   const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
   const [locationTarget, setLocationTarget] = useState<'dep' | 'arr' | 'modal-dep' | 'modal-arr' | 'modal-layover' | null>(null);
   const [traits, setTraits] = useState<Trait[]>([]);
+  const [traitDrafts, setTraitDrafts] = useState<Record<string, { level: string; notes: string }>>({});
+  const [newTraitName, setNewTraitName] = useState('');
+  const [newTraitLevel, setNewTraitLevel] = useState('3');
+  const [newTraitNotes, setNewTraitNotes] = useState('');
   const [selectedTraitNames, setSelectedTraitNames] = useState<Set<string>>(new Set());
   const [activePage, setActivePage] = useState<Page>('menu');
   const [itineraryCountry, setItineraryCountry] = useState('');
@@ -916,6 +920,11 @@ const App: React.FC = () => {
     if (!res.ok) return;
     const data = (await res.json()) as Trait[];
     setTraits(data);
+    const drafts: Record<string, { level: string; notes: string }> = {};
+    for (const t of data) {
+      drafts[t.id] = { level: String(t.level ?? 1), notes: t.notes ?? '' };
+    }
+    setTraitDrafts(drafts);
     setSelectedTraitNames(new Set(data.map((t) => t.name)));
   };
 
@@ -930,6 +939,65 @@ const App: React.FC = () => {
         setTraitGender(data.gender);
       }
     }
+  };
+
+  const createTrait = async () => {
+    if (!userToken) return;
+    const name = newTraitName.trim();
+    if (!name) {
+      alert('Enter a trait name');
+      return;
+    }
+    const level = Math.min(Math.max(Number(newTraitLevel) || 1, 1), 5);
+    const notes = newTraitNotes.trim();
+    const res = await fetch(`${backendUrl}/api/traits`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...headers },
+      body: JSON.stringify({ name, level, notes: notes || undefined }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      alert(data.error || 'Unable to save trait');
+      return;
+    }
+    setNewTraitName('');
+    setNewTraitLevel('3');
+    setNewTraitNotes('');
+    fetchTraits();
+  };
+
+  const updateTrait = async (traitId: string) => {
+    if (!userToken) return;
+    const draft = traitDrafts[traitId];
+    const level = Math.min(Math.max(Number(draft?.level ?? '') || 1, 1), 5);
+    const notes = draft?.notes?.trim() ?? '';
+    const res = await fetch(`${backendUrl}/api/traits/${traitId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', ...headers },
+      body: JSON.stringify({ level, notes: notes || null }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      alert(data.error || 'Unable to update trait');
+      return;
+    }
+    fetchTraits();
+  };
+
+  const deleteTrait = async (traitId: string) => {
+    if (!userToken) return;
+    const res = await fetch(`${backendUrl}/api/traits/${traitId}`, { method: 'DELETE', headers });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      alert(data.error || 'Unable to delete trait');
+      return;
+    }
+    setTraitDrafts((prev) => {
+      const next = { ...prev };
+      delete next[traitId];
+      return next;
+    });
+    fetchTraits();
   };
 
   const fetchItineraryAirports = async (q: string) => {
@@ -1461,93 +1529,6 @@ const App: React.FC = () => {
     }
   };
 
-  const findActiveTrip = () => trips.find((t) => t.id === activeTripId);
-
-  const ensurePassengerInGroup = async (passengerName: string) => {
-    if (!userToken) return;
-    const activeTrip = findActiveTrip();
-    if (!activeTrip?.groupId) return;
-    const normalizedTarget = normalizePassengerName(passengerName);
-    const alreadyInGroup = groupMembers.some((m) => normalizePassengerName(formatMemberName(m)) === normalizedTarget);
-    if (alreadyInGroup) return;
-    try {
-      await fetch(`${backendUrl}/api/groups/${activeTrip.groupId}/members`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...headers },
-        body: JSON.stringify({ guestName: passengerName }),
-      });
-      await fetchGroupMembersForActiveTrip();
-    } catch {
-      // non-blocking
-    }
-  };
-
-  const saveParsedFlights = async (flightsOverride?: FlightEditDraft[]) => {
-    const flightsToSave = flightsOverride ?? parsedFlights;
-    if (!userToken || !activeTripId || !flightsToSave.length) {
-      alert('No parsed flights to add.');
-      return;
-    }
-    setIsSavingParsedFlights(true);
-    try {
-      let saved = 0;
-      const failures: string[] = [];
-      for (const flight of flightsToSave) {
-        const enriched: FlightEditDraft = {
-          ...flight,
-          passengerName: flight.passengerName?.trim() || 'Traveler',
-          departureLocation: flight.departureLocation?.trim() || flight.departureAirportCode || '',
-          departureAirportCode: flight.departureAirportCode?.trim() || flight.departureLocation || '',
-          arrivalLocation: flight.arrivalLocation?.trim() || flight.arrivalAirportCode || '',
-          arrivalAirportCode: flight.arrivalAirportCode?.trim() || flight.arrivalLocation || '',
-          departureDate: flight.departureDate?.trim() || new Date().toISOString().slice(0, 10),
-          departureTime: flight.departureTime?.trim() || '00:00',
-          arrivalTime: flight.arrivalTime?.trim() || '00:00',
-          carrier: flight.carrier?.trim() || 'UNKNOWN',
-          flightNumber: flight.flightNumber?.trim() || 'UNKNOWN',
-          bookingReference: flight.bookingReference?.trim() || 'UNKNOWN',
-        };
-        if (!enriched.departureLocation || !enriched.arrivalLocation) {
-          failures.push('Missing departure or arrival location.');
-          continue;
-        }
-        await ensurePassengerInGroup(flight.passengerName);
-        const res = await fetch(`${backendUrl}/api/flights`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...headers },
-          body: JSON.stringify({
-            ...enriched,
-            cost: Number(flight.cost) || 0,
-            tripId: activeTripId,
-            departureDate: enriched.departureDate,
-          }),
-        });
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          failures.push(data.error || 'Failed to save flight');
-          continue;
-        }
-        saved += 1;
-      }
-      // Keep parsed flights visible so the user can review what was parsed.
-      setParsedFlights(flightsToSave);
-      if (saved) {
-        const baseMsg =
-          saved === 1 ? 'Added 1 flight to this trip.' : `Added ${saved} flights to this trip.`;
-        const failMsg = failures.length ? ` ${failures.length} failed. First error: ${failures[0]}` : '';
-        setPdfParseMessage(baseMsg + failMsg);
-      } else {
-        const failMsg = failures.length ? `Reason: ${failures[0]}` : '';
-        setPdfParseMessage(`No flights added. Please review the upload. ${failMsg}`);
-      }
-      fetchFlights();
-    } catch {
-      alert('Unable to add parsed flights. Please review and add manually.');
-    } finally {
-      setIsSavingParsedFlights(false);
-    }
-  };
-
   const addMemberToGroup = async (groupId: string, type: 'user' | 'guest') => {
     if (!userToken) return;
     const email = groupAddEmail[groupId] ?? '';
@@ -1893,172 +1874,152 @@ const App: React.FC = () => {
       ) : null}
 
       {activePage === 'traits' ? (
-            <>
-              <View style={[styles.card, styles.traitsSection]}>
-                <Text style={styles.sectionTitle}>Traits</Text>
-                <Text style={styles.helperText}>Capture travel personality markers to tailor itinerary ideas (e.g., Adventurous, Coffee Lover, Beach Bum).</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Trait name"
-                  value={newTraitName}
-                  onChangeText={setNewTraitName}
-                />
-                <View style={styles.addRow}>
-                  <TextInput
-                    style={[styles.input, styles.inlineInput]}
-                    placeholder="Level (1-5)"
-                    keyboardType="numeric"
-                    value={newTraitLevel}
-                    onChangeText={setNewTraitLevel}
-                  />
-                  <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={createTrait}>
-                    <Text style={styles.buttonText}>Save Trait</Text>
-                  </TouchableOpacity>
-                </View>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Notes (optional, e.g., loves sunrise hikes or third-wave cafes)"
-                  value={newTraitNotes}
-                  onChangeText={setNewTraitNotes}
-                  multiline
-                />
-              </View>
-
-              <View style={styles.card}>
-                <Text style={styles.sectionTitle}>Your profile traits</Text>
-                {!traits.length ? (
-                  <Text style={styles.helperText}>No traits yet. Add one above to start personalizing trip ideas.</Text>
-                ) : (
-                  traits.map((trait) => {
-                    const draft = traitDrafts[trait.id] ?? { level: String(trait.level ?? 1), notes: trait.notes ?? '' };
-                    return (
-                      <View key={trait.id} style={styles.traitRow}>
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.flightTitle}>{trait.name}</Text>
-                          <Text style={styles.helperText}>Level {draft.level || trait.level} • Added {formatDateLong(trait.createdAt)}</Text>
-                          <View style={styles.addRow}>
-                            <TextInput
-                              style={[styles.input, styles.inlineInput]}
-                              value={draft.level}
-                              keyboardType="numeric"
-                              placeholder="1-5"
-                              onChangeText={(text) =>
-                                setTraitDrafts((prev) => ({
-                                  ...prev,
-                                  [trait.id]: { level: text, notes: prev[trait.id]?.notes ?? draft.notes },
-                                }))
-                              }
-                            />
-                            <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => updateTrait(trait.id)}>
-                              <Text style={styles.buttonText}>Update</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => deleteTrait(trait.id)}>
-                              <Text style={styles.buttonText}>Delete</Text>
-                            </TouchableOpacity>
-                          </View>
-                          <TextInput
-                            style={[styles.input, styles.traitNoteInput]}
-                            placeholder="Notes (optional)"
-                            value={draft.notes}
-                            onChangeText={(text) =>
-                              setTraitDrafts((prev) => ({
-                                ...prev,
-                                [trait.id]: { level: prev[trait.id]?.level ?? draft.level, notes: text },
-                              }))
-                            }
-                            multiline
-                          />
-                        </View>
-                      ))}
-                    </View>
-                    {(itineraryDetails[selectedItineraryId] ?? []).map((d) => (
-                      <View key={d.id} style={styles.tableRow}>
-                        <View style={[styles.cell, { flex: 1 }]}>
-                          <Text style={styles.cellText}>{d.day}</Text>
-                        </View>
-                        <View style={[styles.cell, { flex: 1 }]}>
-                          <Text style={styles.cellText}>{d.time || '-'}</Text>
-                        </View>
-                        <View style={[styles.cell, { flex: 2 }]}>
-                          <Text style={styles.cellText}>{d.activity}</Text>
-                        </View>
-                        <View style={[styles.cell, { flex: 1 }]}>
-                          <Text style={styles.cellText}>{d.cost != null ? `$${d.cost}` : '-'}</Text>
-                        </View>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              ) : null}
+        <>
+          <View style={[styles.card, styles.traitsSection]}>
+            <Text style={styles.sectionTitle}>Traits</Text>
+            <Text style={styles.helperText}>Capture travel personality markers to tailor itinerary ideas (e.g., Adventurous, Coffee Lover, Beach Bum).</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Trait name"
+              value={newTraitName}
+              onChangeText={setNewTraitName}
+            />
+            <View style={styles.addRow}>
+              <TextInput
+                style={[styles.input, styles.inlineInput]}
+                placeholder="Level (1-5)"
+                keyboardType="numeric"
+                value={newTraitLevel}
+                onChangeText={setNewTraitLevel}
+              />
+              <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={createTrait}>
+                <Text style={styles.buttonText}>Save Trait</Text>
+              </TouchableOpacity>
             </View>
-          ) : null}
+            <TextInput
+              style={styles.input}
+              placeholder="Notes (optional, e.g., loves sunrise hikes or third-wave cafes)"
+              value={newTraitNotes}
+              onChangeText={setNewTraitNotes}
+              multiline
+            />
+          </View>
 
-          {activePage === 'traits' ? (
-            <>
-              <View style={[styles.card, styles.traitsSection]}>
-                <Text style={styles.sectionTitle}>Select as many user traits that fit your travel style</Text>
-                <Text style={styles.helperText}>These help personalize suggestions and itineraries.</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Age"
-                  keyboardType="numeric"
-                  value={traitAge}
-                  onChangeText={(text) => setTraitAge(text.replace(/[^0-9]/g, ''))}
-                />
-                <View style={styles.traitGrid}>
-                  {[
-                    { key: 'female', label: 'Female' },
-                    { key: 'male', label: 'Male' },
-                    { key: 'nonbinary', label: 'Non-binary' },
-                    { key: 'prefer-not', label: 'Prefer not to say' },
-                  ].map((opt) => {
-                    const selected = traitGender === opt.key;
-                    return (
-                      <TouchableOpacity
-                        key={opt.key}
-                        style={[styles.traitChip, selected && styles.traitChipSelected]}
-                        onPress={() => setTraitGender(opt.key as typeof traitGender)}
-                      >
-                        <Text style={[styles.traitChipText, selected && styles.traitChipTextSelected]}>{opt.label}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-                <View style={styles.traitGrid}>
-                  {traitOptions.map((name) => {
-                    const selected = selectedTraitNames.has(name);
-                    return (
-                      <TouchableOpacity
-                        key={name}
-                        style={[styles.traitChip, selected && styles.traitChipSelected]}
-                        onPress={() => toggleTrait(name)}
-                      >
-                        <Text style={[styles.traitChipText, selected && styles.traitChipTextSelected]}>{name}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-                <TouchableOpacity style={styles.button} onPress={saveTraitSelections}>
-                  <Text style={styles.buttonText}>Save Traits</Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.card}>
-                <Text style={styles.sectionTitle}>Your profile traits</Text>
-                {!traits.length ? (
-                  <Text style={styles.helperText}>No traits saved yet.</Text>
-                ) : (
-                  <View style={styles.traitGrid}>
-                    {traits.map((trait) => (
-                      <View key={trait.id} style={[styles.traitChip, styles.traitChipSelected]}>
-                        <Text style={[styles.traitChipText, styles.traitChipTextSelected]}>{trait.name}</Text>
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Your profile traits</Text>
+            {!traits.length ? (
+              <Text style={styles.helperText}>No traits yet. Add one above to start personalizing trip ideas.</Text>
+            ) : (
+              traits.map((trait) => {
+                const draft = traitDrafts[trait.id] ?? { level: String(trait.level ?? 1), notes: trait.notes ?? '' };
+                return (
+                  <View key={trait.id} style={styles.traitRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.flightTitle}>{trait.name}</Text>
+                      <Text style={styles.helperText}>Level {draft.level || trait.level} • Added {formatDateLong(trait.createdAt)}</Text>
+                      <View style={styles.addRow}>
+                        <TextInput
+                          style={[styles.input, styles.inlineInput]}
+                          value={draft.level}
+                          keyboardType="numeric"
+                          placeholder="1-5"
+                          onChangeText={(text) =>
+                            setTraitDrafts((prev) => ({
+                              ...prev,
+                              [trait.id]: { level: text, notes: prev[trait.id]?.notes ?? draft.notes },
+                            }))
+                          }
+                        />
+                        <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => updateTrait(trait.id)}>
+                          <Text style={styles.buttonText}>Update</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => deleteTrait(trait.id)}>
+                          <Text style={styles.buttonText}>Delete</Text>
+                        </TouchableOpacity>
                       </View>
-                    ))}
+                      <TextInput
+                        style={[styles.input, styles.traitNoteInput]}
+                        placeholder="Notes (optional)"
+                        value={draft.notes}
+                        onChangeText={(text) =>
+                          setTraitDrafts((prev) => ({
+                            ...prev,
+                            [trait.id]: { level: prev[trait.id]?.level ?? draft.level, notes: text },
+                          }))
+                        }
+                        multiline
+                      />
+                    </View>
                   </View>
-                )}
+                );
+              })
+            )}
+          </View>
+
+          <View style={[styles.card, styles.traitsSection]}>
+            <Text style={styles.sectionTitle}>Select as many user traits that fit your travel style</Text>
+            <Text style={styles.helperText}>These help personalize suggestions and itineraries.</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Age"
+              keyboardType="numeric"
+              value={traitAge}
+              onChangeText={(text) => setTraitAge(text.replace(/[^0-9]/g, ''))}
+            />
+            <View style={styles.traitGrid}>
+              {[
+                { key: 'female', label: 'Female' },
+                { key: 'male', label: 'Male' },
+                { key: 'nonbinary', label: 'Non-binary' },
+                { key: 'prefer-not', label: 'Prefer not to say' },
+              ].map((opt) => {
+                const selected = traitGender === opt.key;
+                return (
+                  <TouchableOpacity
+                    key={opt.key}
+                    style={[styles.traitChip, selected && styles.traitChipSelected]}
+                    onPress={() => setTraitGender(opt.key as typeof traitGender)}
+                  >
+                    <Text style={[styles.traitChipText, selected && styles.traitChipTextSelected]}>{opt.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <View style={styles.traitGrid}>
+              {traitOptions.map((name) => {
+                const selected = selectedTraitNames.has(name);
+                return (
+                  <TouchableOpacity
+                    key={name}
+                    style={[styles.traitChip, selected && styles.traitChipSelected]}
+                    onPress={() => toggleTrait(name)}
+                  >
+                    <Text style={[styles.traitChipText, selected && styles.traitChipTextSelected]}>{name}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <TouchableOpacity style={styles.button} onPress={saveTraitSelections}>
+              <Text style={styles.buttonText}>Save Traits</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Your profile traits</Text>
+            {!traits.length ? (
+              <Text style={styles.helperText}>No traits saved yet.</Text>
+            ) : (
+              <View style={styles.traitGrid}>
+                {traits.map((trait) => (
+                  <View key={trait.id} style={[styles.traitChip, styles.traitChipSelected]}>
+                    <Text style={[styles.traitChipText, styles.traitChipTextSelected]}>{trait.name}</Text>
+                  </View>
+                ))}
               </View>
-            </>
-          ) : null}
+            )}
+          </View>
+        </>
+      ) : null}
 
           {activePage === 'groups' ? (
             <>
@@ -2195,13 +2156,161 @@ const App: React.FC = () => {
                   Users found in the system will receive an invite email (if SMTP is configured) or see it above after logging in.
                   Guest members are added directly without needing a login.
                 </Text>
-              </View>
-            </>
-          ) : null}
+          </View>
+        </>
+      ) : null}
 
-          {activePage === 'flights' ? (
-            <View style={[styles.card, styles.flightsSection]}>
-              <Text style={styles.sectionTitle}>Flights</Text>
+      {activePage === 'lodging' ? (
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Lodging</Text>
+          <Text style={styles.helperText}>Track stays for your active trip. Total: ${lodgingTotal.toFixed(2)}</Text>
+          <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
+            <View style={styles.table}>
+              <View style={[styles.tableRow, styles.tableHeader]}>
+                <View style={[styles.cell, styles.lodgingNameCol]}>
+                  <Text style={styles.headerText}>Name</Text>
+                </View>
+                <View style={[styles.cell, styles.lodgingDateCol]}>
+                  <Text style={styles.headerText}>Check-in</Text>
+                </View>
+                <View style={[styles.cell, styles.lodgingDateCol]}>
+                  <Text style={styles.headerText}>Check-out</Text>
+                </View>
+                <View style={[styles.cell, styles.lodgingRoomsCol]}>
+                  <Text style={styles.headerText}>Rooms</Text>
+                </View>
+                <View style={[styles.cell, styles.lodgingRefundCol]}>
+                  <Text style={styles.headerText}>Refundable By</Text>
+                </View>
+                <View style={[styles.cell, styles.lodgingCostCol]}>
+                  <Text style={styles.headerText}>Total Cost</Text>
+                </View>
+                <View style={[styles.cell, styles.lodgingCostCol]}>
+                  <Text style={styles.headerText}>Per Night</Text>
+                </View>
+                <View style={[styles.cell, styles.lodgingAddressCol]}>
+                  <Text style={styles.headerText}>Address</Text>
+                </View>
+                <View style={[styles.cell, styles.actionCell, styles.lodgingCostCol]}>
+                  <Text style={styles.headerText}>Actions</Text>
+                </View>
+              </View>
+
+              {lodgings.map((l) => (
+                <View key={l.id} style={styles.tableRow}>
+                  <View style={[styles.cell, styles.lodgingNameCol]}>
+                    <Text style={styles.cellText}>{l.name}</Text>
+                  </View>
+                  <View style={[styles.cell, styles.lodgingDateCol]}>
+                    <Text style={styles.cellText}>{formatDateLong(normalizeDateString(l.checkInDate))}</Text>
+                  </View>
+                  <View style={[styles.cell, styles.lodgingDateCol]}>
+                    <Text style={styles.cellText}>{formatDateLong(normalizeDateString(l.checkOutDate))}</Text>
+                  </View>
+                  <View style={[styles.cell, styles.lodgingRoomsCol]}>
+                    <Text style={styles.cellText}>{l.rooms || '-'}</Text>
+                  </View>
+                  <View style={[styles.cell, styles.lodgingRefundCol]}>
+                    <Text style={styles.cellText}>{l.refundBy ? formatDateLong(normalizeDateString(l.refundBy)) : '—'}</Text>
+                  </View>
+                  <View style={[styles.cell, styles.lodgingCostCol]}>
+                    <Text style={styles.cellText}>{l.totalCost ? `$${l.totalCost}` : '-'}</Text>
+                  </View>
+                  <View style={[styles.cell, styles.lodgingCostCol]}>
+                    <Text style={styles.cellText}>{l.costPerNight ? `$${l.costPerNight}` : '-'}</Text>
+                  </View>
+                  <View style={[styles.cell, styles.lodgingAddressCol]}>
+                    <Text style={styles.cellText}>{l.address || '-'}</Text>
+                  </View>
+                  <View style={[styles.cell, styles.actionCell, styles.lodgingCostCol]}>
+                    {l.address ? (
+                      <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => openMaps(l.address)}>
+                        <Text style={styles.buttonText}>Map</Text>
+                      </TouchableOpacity>
+                    ) : null}
+                    <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => removeLodging(l.id)}>
+                      <Text style={styles.buttonText}>Delete</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+
+              <View style={[styles.tableRow, styles.inputRow]}>
+                <View style={[styles.cell, styles.lodgingNameCol]}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Hotel / Airbnb"
+                    value={lodgingDraft.name}
+                    onChangeText={(text) => setLodgingDraft((prev) => ({ ...prev, name: text }))}
+                  />
+                </View>
+                <View style={[styles.cell, styles.lodgingDateCol]}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="YYYY-MM-DD"
+                    value={lodgingDraft.checkInDate}
+                    onChangeText={(text) => setLodgingDraft((prev) => ({ ...prev, checkInDate: normalizeDateString(text) }))}
+                  />
+                </View>
+                <View style={[styles.cell, styles.lodgingDateCol]}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="YYYY-MM-DD"
+                    value={lodgingDraft.checkOutDate}
+                    onChangeText={(text) => setLodgingDraft((prev) => ({ ...prev, checkOutDate: normalizeDateString(text) }))}
+                  />
+                </View>
+                <View style={[styles.cell, styles.lodgingRoomsCol]}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Rooms"
+                    keyboardType="numeric"
+                    value={lodgingDraft.rooms}
+                    onChangeText={(text) => setLodgingDraft((prev) => ({ ...prev, rooms: text }))}
+                  />
+                </View>
+                <View style={[styles.cell, styles.lodgingRefundCol]}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Refund by (YYYY-MM-DD)"
+                    value={lodgingDraft.refundBy}
+                    onChangeText={(text) => setLodgingDraft((prev) => ({ ...prev, refundBy: normalizeDateString(text) }))}
+                  />
+                </View>
+                <View style={[styles.cell, styles.lodgingCostCol]}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Total $"
+                    keyboardType="numeric"
+                    value={lodgingDraft.totalCost}
+                    onChangeText={(text) => setLodgingDraft((prev) => ({ ...prev, totalCost: text }))}
+                  />
+                </View>
+                <View style={[styles.cell, styles.lodgingCostCol]}>
+                  <Text style={styles.cellText}>{lodgingDraft.costPerNight ? `$${lodgingDraft.costPerNight}` : '-'}</Text>
+                </View>
+                <View style={[styles.cell, styles.lodgingAddressCol]}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Address"
+                    value={lodgingDraft.address}
+                    onChangeText={(text) => setLodgingDraft((prev) => ({ ...prev, address: text }))}
+                  />
+                </View>
+                <View style={[styles.cell, styles.actionCell, styles.lodgingCostCol]}>
+                  <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={addLodging}>
+                    <Text style={styles.buttonText}>Add</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </ScrollView>
+        </View>
+      ) : null}
+
+      {activePage === 'flights' ? (
+        <View style={[styles.card, styles.flightsSection]}>
+          <Text style={styles.sectionTitle}>Flights</Text>
               {Platform.OS === 'web' ? (
                 <View style={styles.pdfRow}>
                   <input
