@@ -83,6 +83,25 @@ interface Trait {
   createdAt: string;
 }
 
+interface ItineraryRecord {
+  id: string;
+  tripId: string;
+  tripName: string;
+  destination: string;
+  days: number;
+  budget?: number | null;
+  createdAt: string;
+}
+
+interface ItineraryDetailRecord {
+  id: string;
+  itineraryId: string;
+  day: number;
+  time?: string | null;
+  activity: string;
+  cost?: number | null;
+}
+
 type Page = 'menu' | 'flights' | 'lodging' | 'tours' | 'groups' | 'trips' | 'traits' | 'itinerary' | 'cost';
 
 type FlightDraft = {
@@ -282,6 +301,7 @@ const App: React.FC = () => {
   const [email, setEmail] = useState('');
   const [userName, setUserName] = useState<string | null>(null);
   const [flights, setFlights] = useState<Flight[]>([]);
+  const [newFlight, setNewFlight] = useState<FlightDraft>(createInitialFlightState());
   const [invites, setInvites] = useState<GroupInvite[]>([]);
   const [groupName, setGroupName] = useState('');
   const [groupUserEmails, setGroupUserEmails] = useState('');
@@ -299,8 +319,8 @@ const App: React.FC = () => {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [showActiveTripDropdown, setShowActiveTripDropdown] = useState(false);
   const [groupMembers, setGroupMembers] = useState<GroupMemberOption[]>([]);
-  const [passengerSuggestions, setPassengerSuggestions] = useState<GroupMemberOption[]>([]);
-  const [showPassengerSuggestions, setShowPassengerSuggestions] = useState(false);
+  const [showPassengerDropdown, setShowPassengerDropdown] = useState(false);
+  const [passengerAnchor, setPassengerAnchor] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const [editingFlightId, setEditingFlightId] = useState<string | null>(null);
   const [editingFlight, setEditingFlight] = useState<FlightEditDraft | null>(null);
   const [lodgings, setLodgings] = useState<Lodging[]>([]);
@@ -324,14 +344,28 @@ const App: React.FC = () => {
   const [newTraitName, setNewTraitName] = useState('');
   const [newTraitLevel, setNewTraitLevel] = useState('3');
   const [newTraitNotes, setNewTraitNotes] = useState('');
+  const [selectedTraitNames, setSelectedTraitNames] = useState<Set<string>>(new Set());
   const [activePage, setActivePage] = useState<Page>('menu');
   const [itineraryCountry, setItineraryCountry] = useState('');
   const [itineraryDays, setItineraryDays] = useState('5');
   const [budgetMin, setBudgetMin] = useState(500);
   const [budgetMax, setBudgetMax] = useState(2500);
+  const [itineraryAirport, setItineraryAirport] = useState('');
+  const [itineraryAirportOptions, setItineraryAirportOptions] = useState<string[]>([]);
+  const [showItineraryAirportDropdown, setShowItineraryAirportDropdown] = useState(false);
   const [itineraryPlan, setItineraryPlan] = useState('');
+  const [itineraryTripStyle, setItineraryTripStyle] = useState('');
   const [itineraryLoading, setItineraryLoading] = useState(false);
   const [itineraryError, setItineraryError] = useState('');
+  const [itineraryRecords, setItineraryRecords] = useState<ItineraryRecord[]>([]);
+  const [itineraryDetails, setItineraryDetails] = useState<Record<string, ItineraryDetailRecord[]>>({});
+  const [selectedItineraryId, setSelectedItineraryId] = useState<string | null>(null);
+  const [editingItineraryId, setEditingItineraryId] = useState<string | null>(null);
+  const [editingDetailId, setEditingDetailId] = useState<string | null>(null);
+  const [detailDraft, setDetailDraft] = useState({ day: '1', time: '', activity: '', cost: '' });
+  const [traitAge, setTraitAge] = useState('');
+  const [traitGender, setTraitGender] = useState<'female' | 'male' | 'nonbinary' | 'prefer-not'>('prefer-not');
+  const [showGenderDropdown, setShowGenderDropdown] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [authForm, setAuthForm] = useState({
     firstName: '',
@@ -339,6 +373,10 @@ const App: React.FC = () => {
     email: '',
     password: '',
   });
+  const [isAddingRow, setIsAddingRow] = useState(false);
+  const passengerDropdownRef = useRef<TouchableOpacity | null>(null);
+  const depLocationRef = useRef<TextInput | null>(null);
+  const arrLocationRef = useRef<TextInput | null>(null);
   const modalDepLocationRef = useRef<TextInput | null>(null);
   const modalArrLocationRef = useRef<TextInput | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -356,18 +394,17 @@ const App: React.FC = () => {
   };
 
   const formatMemberName = (member: GroupMemberOption): string => {
-    if (member.firstName || member.lastName) {
-      return `${member.firstName ?? ''} ${member.lastName ?? ''}`.trim();
-    }
     if (member.guestName) return member.guestName;
-    if (member.email) return member.email;
+    const first = member.firstName?.trim();
+    const last = member.lastName?.trim();
+    if (first || last) return `${first ?? ''} ${last ?? ''}`.trim();
+    if (member.email) {
+      const local = member.email.split('@')[0] ?? '';
+      const parts = local.split(/[._-]+/).filter(Boolean);
+      if (parts.length >= 2) return `${parts[0]} ${parts.slice(1).join(' ')}`.trim();
+      return member.email;
+    }
     return 'Member';
-  };
-
-  const filterPassengers = (query: string): GroupMemberOption[] => {
-    const q = query.trim().toLowerCase();
-    if (!q) return groupMembers;
-    return groupMembers.filter((m) => formatMemberName(m).toLowerCase().includes(q));
   };
 
   const normalizeDateString = (value: string): string => {
@@ -397,6 +434,35 @@ const App: React.FC = () => {
   const toursTotal = useMemo(() => tours.reduce((sum, t) => sum + (Number(t.cost) || 0), 0), [tours]);
 
   const overallCost = useMemo(() => flightsTotal + lodgingTotal + toursTotal, [flightsTotal, lodgingTotal, toursTotal]);
+
+  const findExistingItinerary = (
+    tripId: string,
+    destination: string,
+    days: number,
+    excludeId?: string | null,
+    budget?: number | null
+  ) => {
+    const dest = destination.trim().toLowerCase();
+    const normalizedBudget = budget != null ? Number(budget) : null;
+    return itineraryRecords.find(
+      (i) =>
+        i.id !== excludeId &&
+        i.tripId === tripId &&
+        i.destination.trim().toLowerCase() === dest &&
+        i.days === days &&
+        (i.budget ?? null) === (normalizedBudget ?? null)
+    );
+  };
+
+  const beginEditItinerary = (it: ItineraryRecord) => {
+    setEditingItineraryId(it.id);
+    setSelectedItineraryId(it.id);
+    setActiveTripId(it.tripId);
+    setItineraryCountry(it.destination);
+    setItineraryDays(String(it.days));
+    if (it.budget != null) setBudgetMax(Number(it.budget));
+    fetchItineraryDetails(it.id);
+  };
 
   const openMaps = (address: string) => {
     if (!address) return;
@@ -766,6 +832,22 @@ const App: React.FC = () => {
     loadAirports();
   }, []);
 
+  const togglePassengerDropdown = () => {
+    if (showPassengerDropdown) {
+      setShowPassengerDropdown(false);
+      return;
+    }
+    const node = passengerDropdownRef.current as any;
+    if (node?.measureInWindow) {
+      node.measureInWindow((x: number, y: number, width: number, height: number) => {
+        setPassengerAnchor({ x, y, width, height });
+        setShowPassengerDropdown(true);
+      });
+    } else {
+      setShowPassengerDropdown(true);
+    }
+  };
+
   const showAirportDropdown = (
     target: 'dep' | 'arr' | 'modal-dep' | 'modal-arr',
     node: any,
@@ -871,15 +953,11 @@ const App: React.FC = () => {
       base.paidBy = [defaultPayerId];
     }
     setEditingFlight(base);
-    setShowPassengerSuggestions(false);
-    setPassengerSuggestions([]);
   };
 
   const closeFlightDetails = () => {
     setEditingFlightId(null);
     setEditingFlight(null);
-    setShowPassengerSuggestions(false);
-    setPassengerSuggestions([]);
   };
 
   const saveFlightDetails = async () => {
@@ -932,14 +1010,13 @@ const App: React.FC = () => {
     }
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      alert(data.error || (editingFlightId === 'new' ? 'Unable to save flight' : 'Unable to update flight'));
+      alert(data.error || 'Unable to update flight');
       return;
     }
     closeFlightDetails();
     fetchFlights();
   };
 
-  const isCreatingFlight = editingFlightId === 'new';
   const headers = useMemo<Record<string, string>>(
     () => (userToken ? { Authorization: `Bearer ${userToken}` } : ({} as Record<string, string>)),
     [userToken]
@@ -957,73 +1034,82 @@ const App: React.FC = () => {
     setInvites([]);
     setGroups([]);
     setTraits([]);
-    setTraitDrafts({});
-    setNewTraitName('');
-    setNewTraitLevel('3');
-    setNewTraitNotes('');
+    setSelectedTraitNames(new Set());
+    setTraitAge('');
+    setTraitGender('prefer-not');
     setItineraryCountry('');
     setItineraryDays('5');
     setBudgetMin(500);
     setBudgetMax(2500);
+    setItineraryAirport('');
+    setItineraryAirportOptions([]);
+    setShowItineraryAirportDropdown(false);
     setItineraryPlan('');
     setItineraryError('');
     setItineraryLoading(false);
-    setGroupMembers([]);
     setActivePage('menu');
     clearSession();
   };
 
   const loginWithPassword = async () => {
-    const res = await fetch(`${backendUrl}/api/web-auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: authForm.email.trim(), password: authForm.password }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      alert(data.error || 'Login failed');
-      return;
-    }
-    const name = `${data.user.firstName} ${data.user.lastName}`;
-    const email = authForm.email.trim();
+    try {
+      const res = await fetch(`${backendUrl}/api/web-auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: authForm.email.trim(), password: authForm.password }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data.error || 'Login failed');
+        return;
+      }
+      const name = `${data.user.firstName} ${data.user.lastName}`;
+      const email = authForm.email.trim();
     setUserToken(data.token);
-    setUserName(name);
-    setUserEmail(email);
+      setUserName(name);
+      setUserEmail(email);
     saveSession(data.token, name, 'menu', email);
-    fetchFlights(data.token);
-    fetchLodgings(data.token);
+      fetchFlights(data.token);
+      fetchLodgings(data.token);
     fetchTours(data.token);
     fetchInvites(data.token);
-    setActivePage('menu');
+      setActivePage('menu');
+    } catch (err) {
+      alert((err as Error).message || 'Login failed');
+    }
   };
 
   const register = async () => {
-    const res = await fetch(`${backendUrl}/api/web-auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        firstName: authForm.firstName.trim(),
-        lastName: authForm.lastName.trim(),
-        email: authForm.email.trim(),
-        password: authForm.password,
-      }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      alert(data.error || 'Registration failed');
-      return;
-    }
-    const name = `${data.user.firstName} ${data.user.lastName}`;
-    const email = authForm.email.trim();
+    try {
+      const res = await fetch(`${backendUrl}/api/web-auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName: authForm.firstName.trim(),
+          lastName: authForm.lastName.trim(),
+          email: authForm.email.trim(),
+          password: authForm.password,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data.error || 'Registration failed');
+        return;
+      }
+      const name = `${data.user.firstName} ${data.user.lastName}`;
+      const email = authForm.email.trim();
     setUserToken(data.token);
-    setUserName(name);
-    setUserEmail(email);
+      setUserName(name);
+      setUserEmail(email);
     saveSession(data.token, name, 'menu', email);
-    fetchFlights(data.token);
+      fetchFlights(data.token);
     fetchLodgings(data.token);
     fetchTours(data.token);
-    fetchInvites(data.token);
-    setActivePage('menu');
+      fetchInvites(data.token);
+      setActivePage('menu');
+    } catch (err) {
+      alert((err as Error).message || 'Registration failed');
+    }
   };
 
   const fetchFlights = async (token?: string) => {
@@ -1114,19 +1200,50 @@ const App: React.FC = () => {
     return Math.min(Math.max(Math.round(num), 1), 5);
   };
 
+  const parsePlanToDetails = (plan: string): Array<{ day: number; activity: string; cost?: number | null }> => {
+    const lines = plan.split('\n');
+    let currentDay: number | null = null;
+    const details: Array<{ day: number; activity: string; cost?: number | null }> = [];
+    for (const raw of lines) {
+      const line = raw.trim();
+      if (!line) continue;
+      const dayMatch = line.match(/day\s+(\d+)/i);
+      if (dayMatch) {
+        currentDay = Number(dayMatch[1]);
+        continue;
+      }
+      if (currentDay === null) continue;
+      const activity = line.replace(/^[-*•]\s*/, '').trim();
+      if (!activity) continue;
+      // If activity looks like a generic encouragement, treat cost as null (show "-")
+      const looksGeneric = /enjoy|welcome|adventure/i.test(activity);
+      // Explicit "free" (or free time) gets cost 0
+      const isFree = /(^|\s)free(\s|$)/i.test(activity);
+      const costMatch = activity.match(/\$?([\d][\d,]*(?:\.\d+)?)/);
+      const cost = costMatch ? Number(costMatch[1].replace(/,/g, '')) : null;
+      const numericCost = isFree
+        ? 0
+        : looksGeneric || !Number.isFinite(cost as number)
+          ? null
+          : (cost as number);
+      details.push({ day: currentDay, activity, cost: numericCost });
+    }
+    return details;
+  };
+
+  const dedupeDetails = (list: ItineraryDetailRecord[]) => {
+    const seen = new Set<string>();
+    return list.filter((d) => {
+      const key = `${d.day}|${(d.activity || '').toLowerCase().trim()}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
+
   const clampBudget = (val: number) => {
     if (!Number.isFinite(val)) return 0;
     return Math.min(Math.max(Math.round(val), 0), 20000);
-  };
-
-  const syncTraitDrafts = (data: Trait[]) => {
-    setTraitDrafts((prev) => {
-      const next: Record<string, { level: string; notes: string }> = {};
-      data.forEach((trait) => {
-        next[trait.id] = prev[trait.id] ?? { level: String(trait.level ?? 1), notes: trait.notes ?? '' };
-      });
-      return next;
-    });
   };
 
   const fetchTraits = async () => {
@@ -1135,21 +1252,40 @@ const App: React.FC = () => {
     if (!res.ok) return;
     const data = (await res.json()) as Trait[];
     setTraits(data);
-    syncTraitDrafts(data);
+    const drafts: Record<string, { level: string; notes: string }> = {};
+    for (const t of data) {
+      drafts[t.id] = { level: String(t.level ?? 1), notes: t.notes ?? '' };
+    }
+    setTraitDrafts(drafts);
+    setSelectedTraitNames(new Set(data.map((t) => t.name)));
+  };
+
+  const fetchTraitProfile = async () => {
+    if (!userToken) return;
+    const res = await fetch(`${backendUrl}/api/traits/profile/demographics`, { headers });
+    if (!res.ok) return;
+    const data = await res.json().catch(() => ({}));
+    if (data.age != null) setTraitAge(String(data.age));
+    if (data.gender) {
+      if (data.gender === 'female' || data.gender === 'male' || data.gender === 'nonbinary' || data.gender === 'prefer-not') {
+        setTraitGender(data.gender);
+      }
+    }
   };
 
   const createTrait = async () => {
     if (!userToken) return;
     const name = newTraitName.trim();
     if (!name) {
-      alert('Enter a trait name (e.g., Adventurous)');
+      alert('Enter a trait name');
       return;
     }
-    const level = clampTraitLevelInput(newTraitLevel);
+    const level = Math.min(Math.max(Number(newTraitLevel) || 1, 1), 5);
+    const notes = newTraitNotes.trim();
     const res = await fetch(`${backendUrl}/api/traits`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...headers },
-      body: JSON.stringify({ name, level, notes: newTraitNotes.trim() || undefined }),
+      body: JSON.stringify({ name, level, notes: notes || undefined }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -1157,19 +1293,20 @@ const App: React.FC = () => {
       return;
     }
     setNewTraitName('');
-    setNewTraitNotes('');
     setNewTraitLevel('3');
+    setNewTraitNotes('');
     fetchTraits();
   };
 
   const updateTrait = async (traitId: string) => {
     if (!userToken) return;
-    const draft = traitDrafts[traitId] ?? { level: '1', notes: '' };
-    const level = clampTraitLevelInput(draft.level);
+    const draft = traitDrafts[traitId];
+    const level = Math.min(Math.max(Number(draft?.level ?? '') || 1, 1), 5);
+    const notes = draft?.notes?.trim() ?? '';
     const res = await fetch(`${backendUrl}/api/traits/${traitId}`, {
-      method: 'PATCH',
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json', ...headers },
-      body: JSON.stringify({ level, notes: draft.notes }),
+      body: JSON.stringify({ level, notes: notes || null }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -1181,41 +1318,63 @@ const App: React.FC = () => {
 
   const deleteTrait = async (traitId: string) => {
     if (!userToken) return;
-    const res = await fetch(`${backendUrl}/api/traits/${traitId}`, {
-      method: 'DELETE',
-      headers,
-    });
+    const res = await fetch(`${backendUrl}/api/traits/${traitId}`, { method: 'DELETE', headers });
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
       alert(data.error || 'Unable to delete trait');
       return;
     }
+    setTraitDrafts((prev) => {
+      const next = { ...prev };
+      delete next[traitId];
+      return next;
+    });
     fetchTraits();
+  };
+
+  const fetchItineraryAirports = async (q: string) => {
+    if (!userToken || !q.trim()) {
+      setItineraryAirportOptions([]);
+      return;
+    }
+    const res = await fetch(`${backendUrl}/api/flights/locations?q=${encodeURIComponent(q.trim())}`, {
+      headers: { Authorization: `Bearer ${userToken}` },
+    });
+    if (!res.ok) {
+      setItineraryAirportOptions([]);
+      return;
+    }
+    const data = await res.json();
+    setItineraryAirportOptions(data);
+    setShowItineraryAirportDropdown(true);
   };
 
   const generateItinerary = async () => {
     if (!userToken) return;
     const country = itineraryCountry.trim();
     const days = itineraryDays.trim();
-    if (!country || !days) {
-      alert('Enter a country and number of days');
+    if (!country || !days || !activeTripId) {
+      alert('Enter a country, number of days, and select an active trip.');
       return;
     }
     setItineraryLoading(true);
     setItineraryError('');
     setItineraryPlan('');
     try {
-      const res = await fetch(`${backendUrl}/api/itinerary`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...headers },
-        body: JSON.stringify({
-          country,
-          days: Number(days),
-          budgetMin,
-          budgetMax,
-          traits: traits.map((t) => ({ name: t.name, level: t.level, notes: t.notes })),
-        }),
-      });
+    const res = await fetch(`${backendUrl}/api/itinerary`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...headers },
+      body: JSON.stringify({
+        country,
+        days: Number(days),
+        budgetMin,
+        budgetMax,
+        departureAirport: itineraryAirport.trim() || undefined,
+        tripStyle: itineraryTripStyle.trim() || undefined,
+        tripId: activeTripId,
+        traits: traits.map((t) => ({ name: t.name, level: t.level, notes: t.notes })),
+      }),
+    });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         const detail = data.detail ? ` (${data.detail})` : '';
@@ -1223,6 +1382,7 @@ const App: React.FC = () => {
         return;
       }
       setItineraryPlan(data.plan || '');
+      await saveGeneratedItinerary(data.plan || '');
     } catch (err) {
       setItineraryError((err as Error).message);
     } finally {
@@ -1230,15 +1390,211 @@ const App: React.FC = () => {
     }
   };
 
-  const fetchInvites = async (token?: string) => {
-    const res = await fetch(`${backendUrl}/api/groups/invites`, { headers: { Authorization: `Bearer ${token ?? userToken}` } });
-    if (!res.ok) return;
-    const data = await res.json();
-    setInvites(data);
+  const saveItineraryRecord = async () => {
+    if (!userToken) return;
+    if (!activeTripId) {
+      alert('Choose an active trip before saving an itinerary.');
+      return;
+    }
+    if (!itineraryCountry.trim() || !itineraryDays.trim()) {
+      alert('Enter destination and days first.');
+      return;
+    }
+    const destination = itineraryCountry.trim();
+    const daysNum = Number(itineraryDays);
+    const existing = findExistingItinerary(activeTripId, destination, daysNum, editingItineraryId, budgetMax);
+    if (existing) {
+      alert('Itinerary already exists for this trip');
+      return;
+    }
+    const method = editingItineraryId ? 'PUT' : 'POST';
+    const url = editingItineraryId ? `${backendUrl}/api/itineraries/${editingItineraryId}` : `${backendUrl}/api/itineraries`;
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json', ...headers },
+      body: JSON.stringify({
+        tripId: activeTripId,
+        destination,
+        days: daysNum,
+        budget: budgetMax, // store upper budget bound
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      alert(data.error || 'Unable to save itinerary');
+      return;
+    }
+    if (data.id) {
+      setSelectedItineraryId(data.id);
+      fetchItineraryDetails(data.id);
+    }
+    setEditingItineraryId(null);
+    fetchItineraries();
+  };
+
+  const saveDetail = async () => {
+    if (!userToken || !selectedItineraryId) {
+      alert('Select an itinerary to add details');
+      return;
+    }
+    if (!detailDraft.activity.trim()) {
+      alert('Enter an activity');
+      return;
+    }
+    const payload = {
+      day: Number(detailDraft.day || '1'),
+      time: detailDraft.time || null,
+      activity: detailDraft.activity.trim(),
+      cost: detailDraft.cost ? Number(detailDraft.cost) : null,
+    };
+    const url = editingDetailId
+      ? `${backendUrl}/api/itineraries/details/${editingDetailId}`
+      : `${backendUrl}/api/itineraries/${selectedItineraryId}/details`;
+    const method = editingDetailId ? 'PUT' : 'POST';
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json', ...headers },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      alert(data.error || 'Unable to save detail');
+      return;
+    }
+    setDetailDraft({ day: '1', time: '', activity: '', cost: '' });
+    setEditingDetailId(null);
+    fetchItineraryDetails(selectedItineraryId);
+  };
+
+  const saveGeneratedItinerary = async (plan: string) => {
+    if (!activeTripId) {
+      setItineraryError('Select an active trip before saving the itinerary.');
+      return;
+    }
+    const destination = itineraryCountry.trim() || 'Unknown';
+    const daysNum = Number(itineraryDays || '1');
+    const existing = findExistingItinerary(activeTripId, destination, daysNum, null, budgetMax);
+    let itineraryId = existing?.id;
+    if (!itineraryId) {
+      const createRes = await fetch(`${backendUrl}/api/itineraries`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...headers },
+        body: JSON.stringify({
+          tripId: activeTripId,
+          destination,
+          days: daysNum,
+          budget: budgetMax,
+        }),
+      });
+      const created = await createRes.json().catch(() => ({}));
+      if (!createRes.ok) {
+        const message = (created.error || '').toLowerCase();
+        if (message.includes('already exists')) {
+          const existingRecord = itineraryRecords.find((i) => i.tripId === activeTripId);
+          itineraryId = existingRecord?.id;
+        }
+        if (!itineraryId) {
+          setItineraryError(created.error || 'Unable to save itinerary');
+          return;
+        }
+      } else {
+        itineraryId = created.id as string;
+        fetchItineraries();
+      }
+      setSelectedItineraryId(itineraryId);
+    } else {
+      setItineraryError('');
+      setSelectedItineraryId(itineraryId);
+    }
+    const parsedDetails = parsePlanToDetails(plan);
+    if (parsedDetails.length) {
+      // avoid posting duplicate day+activity pairs
+      const uniqueKeys = new Set<string>();
+      for (const d of parsedDetails) {
+        const key = `${d.day}|${d.activity.toLowerCase().trim()}`;
+        if (uniqueKeys.has(key)) continue;
+        uniqueKeys.add(key);
+        await fetch(`${backendUrl}/api/itineraries/${itineraryId}/details`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...headers },
+          body: JSON.stringify({
+            day: d.day,
+            activity: d.activity,
+            cost: d.cost ?? null,
+          }),
+        }).catch(() => undefined);
+      }
+      fetchItineraryDetails(itineraryId);
+    }
+  };
+
+  const traitOptions = [
+    'Adventurous',
+    'Hiking',
+    'Cafes',
+    'Relaxing',
+    'Beaches',
+    'Nightlife',
+    'Cultural',
+    'Foodie',
+    'Road Trips',
+    'Museums',
+    'Luxury',
+    'Budget',
+    'Outdoorsy',
+    'Photography',
+    'Family Friendly',
+    'Solo Travel',
+  ];
+
+  const toggleTrait = (name: string) => {
+    setSelectedTraitNames((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) {
+        next.delete(name);
+      } else {
+        next.add(name);
+      }
+      return next;
+    });
+  };
+
+  const saveTraitSelections = async () => {
+    if (!userToken) return;
+    const selected = new Set(selectedTraitNames);
+    const existingByName = new Map(traits.map((t) => [t.name, t]));
+    // Delete unselected
+    for (const t of traits) {
+      if (!selected.has(t.name)) {
+        await fetch(`${backendUrl}/api/traits/${t.id}`, { method: 'DELETE', headers }).catch(() => undefined);
+      }
+    }
+    // Create new selections not yet stored
+    for (const name of selected) {
+      if (!existingByName.has(name)) {
+        await fetch(`${backendUrl}/api/traits`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...headers },
+          body: JSON.stringify({ name, level: 3 }),
+        }).catch(() => undefined);
+      }
+    }
+    // Save age/gender without blocking UI if it fails
+    await fetch(`${backendUrl}/api/traits/profile/demographics`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...headers },
+      body: JSON.stringify({
+        age: traitAge ? Number(traitAge) : null,
+        gender: traitGender,
+      }),
+    }).catch(() => undefined);
+    fetchTraitProfile();
+    fetchTraits();
+    alert('Traits saved');
   };
 
   const fetchGroupMembersForActiveTrip = async () => {
-    if (!activeTripId || !userToken) {
+    if (!activeTripId) {
       setGroupMembers([]);
       return;
     }
@@ -1256,6 +1612,57 @@ const App: React.FC = () => {
     }
     const data = await res.json();
     setGroupMembers(data);
+  };
+
+  const fetchInvites = async (token?: string) => {
+    const res = await fetch(`${backendUrl}/api/groups/invites`, { headers: { Authorization: `Bearer ${token ?? userToken}` } });
+    if (!res.ok) return;
+    const data = await res.json();
+    setInvites(data);
+  };
+
+  const addFlight = async () => {
+    if (!userToken) return false;
+    if (!activeTripId) {
+      alert('Select an active trip before adding a flight.');
+      return false;
+    }
+
+    const required = [
+      newFlight.passengerName,
+      newFlight.departureDate,
+      newFlight.departureTime,
+      newFlight.arrivalTime,
+      newFlight.carrier,
+      newFlight.flightNumber,
+      newFlight.bookingReference,
+    ];
+
+    if (required.some((val) => !val || !val.trim())) {
+      alert('Please fill out all required fields before adding a flight.');
+      return false;
+    }
+
+    const res = await fetch(`${backendUrl}/api/flights`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...headers },
+      body: JSON.stringify({
+        ...newFlight,
+        tripId: activeTripId,
+        departureDate: newFlight.departureDate,
+        cost: Number(newFlight.cost) || 0,
+      }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'Unable to save flight');
+      return false;
+    }
+
+    setNewFlight(createInitialFlightState());
+    await fetchFlights();
+    return true;
   };
 
   const removeFlight = async (id: string) => {
@@ -1309,6 +1716,48 @@ const App: React.FC = () => {
     fetchGroups();
   };
 
+  const fetchItineraries = async () => {
+    if (!userToken) return;
+    const res = await fetch(`${backendUrl}/api/itineraries`, { headers });
+    if (!res.ok) return;
+    const data = await res.json();
+    setItineraryRecords(data);
+  };
+
+  const fetchItineraryDetails = async (itineraryId: string) => {
+    if (!userToken) return;
+    const res = await fetch(`${backendUrl}/api/itineraries/${itineraryId}/details`, { headers });
+    if (!res.ok) return;
+    const data = await res.json();
+    setItineraryDetails((prev) => ({ ...prev, [itineraryId]: dedupeDetails(data) }));
+  };
+
+  const deleteItinerary = async (itineraryId: string) => {
+    if (!userToken) return;
+    const res = await fetch(`${backendUrl}/api/itineraries/${itineraryId}`, {
+      method: 'DELETE',
+      headers,
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'Unable to delete itinerary');
+      return;
+    }
+    setItineraryRecords((prev) => prev.filter((i) => i.id !== itineraryId));
+    setItineraryDetails((prev) => {
+      const next = { ...prev };
+      delete next[itineraryId];
+      return next;
+    });
+    if (selectedItineraryId === itineraryId) {
+      setSelectedItineraryId(null);
+    }
+    if (editingItineraryId === itineraryId) {
+      setEditingItineraryId(null);
+    }
+    setEditingDetailId(null);
+  };
+
   const acceptInvite = async (inviteId: string) => {
     if (!userToken) return;
     const res = await fetch(`${backendUrl}/api/groups/invites/${inviteId}/accept`, {
@@ -1334,6 +1783,8 @@ const App: React.FC = () => {
       fetchGroups();
       fetchTrips();
       fetchTraits();
+      fetchTraitProfile();
+      fetchItineraries();
     }
   }, [userToken]);
 
@@ -1367,23 +1818,16 @@ const App: React.FC = () => {
   }, [activeTripId]);
 
   useEffect(() => {
-    if (!userToken) {
-      setGroupMembers([]);
-      return;
+    if (userToken) {
+      fetchGroupMembersForActiveTrip();
     }
-    fetchGroupMembersForActiveTrip();
   }, [userToken, activeTripId, trips]);
 
-  useEffect(() => {
-    if (!showPassengerSuggestions || !editingFlight) return;
-    setPassengerSuggestions(filterPassengers(editingFlight.passengerName));
-  }, [groupMembers, showPassengerSuggestions, editingFlight]);
-
-  const handleAddPress = () => {
+  const handleAddPress = async () => {
     if (!activeTripId) {
       alert('Select an active trip before adding a flight.');
       return;
-    }
+    } 
     setEditingFlightId('new');
     const init = createInitialFlightState();
     if (defaultPayerId && !init.paidBy.includes(defaultPayerId)) {
@@ -1397,6 +1841,7 @@ const App: React.FC = () => {
     setLocationSuggestions([]);
     setShowPassengerSuggestions(false);
     setPassengerSuggestions([]);
+    
   };
 
   const findActiveTrip = () => trips.find((t) => t.id === activeTripId);
@@ -1669,7 +2114,7 @@ const App: React.FC = () => {
         ) : null}
       </View>
       {userToken ? (
-        <>
+        <ScrollView style={styles.contentScroll} contentContainerStyle={styles.contentScrollContent}>
             <View style={styles.card}>
               <Text style={styles.sectionTitle}>Choose a section</Text>
               <View style={styles.navRow}>
@@ -1712,12 +2157,48 @@ const App: React.FC = () => {
                 onChangeText={setItineraryCountry}
               />
 
+              <View style={styles.dropdown}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Departure airport (e.g., JFK, LAX, CDG)"
+                  value={itineraryAirport}
+                  onFocus={() => fetchItineraryAirports(itineraryAirport)}
+                  onChangeText={(text) => {
+                    setItineraryAirport(text);
+                    fetchItineraryAirports(text);
+                  }}
+                />
+                {showItineraryAirportDropdown && itineraryAirportOptions.length ? (
+                  <View style={[styles.dropdownList, styles.itineraryDropdown]}>
+                    {itineraryAirportOptions.map((opt) => (
+                      <TouchableOpacity
+                        key={opt}
+                        style={styles.dropdownOption}
+                        onPress={() => {
+                          setItineraryAirport(opt);
+                          setShowItineraryAirportDropdown(false);
+                        }}
+                      >
+                        <Text style={styles.cellText}>{opt}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                ) : null}
+              </View>
+
               <TextInput
                 style={styles.input}
                 placeholder="How many days will your vacation be?"
                 keyboardType="numeric"
                 value={itineraryDays}
                 onChangeText={(text) => setItineraryDays(text.replace(/[^0-9]/g, ''))}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="What kind of trip do you want? (e.g., foodie weekend, outdoor adventure, museum crawl)"
+                value={itineraryTripStyle}
+                onChangeText={setItineraryTripStyle}
+                multiline
               />
 
               <Text style={styles.modalLabel}>Budget range</Text>
@@ -1777,24 +2258,33 @@ const App: React.FC = () => {
             </View>
           )}
 
-          <View style={styles.itinerarySummary}>
-            <Text style={styles.bodyText}>
-              Destination: {itineraryCountry.trim() || '—'}
-            </Text>
-            <Text style={styles.bodyText}>
+              <View style={styles.itinerarySummary}>
+                <Text style={styles.bodyText}>
+                  Destination: {itineraryCountry.trim() || '—'}
+                </Text>
+                <Text style={styles.bodyText}>
               Days: {itineraryDays.trim() || '—'}
             </Text>
             <Text style={styles.bodyText}>
               Budget: ${budgetMin} – ${budgetMax}
+            </Text>
+            <Text style={styles.bodyText}>
+              Departure airport: {itineraryAirport.trim() || '—'}
             </Text>
             <Text style={styles.helperText}>
               Traits will help recommend activities (e.g., hikes for Adventurous, cafes for Coffee Lovers).
             </Text>
           </View>
 
-          <TouchableOpacity style={styles.button} onPress={generateItinerary} disabled={itineraryLoading}>
-            <Text style={styles.buttonText}>{itineraryLoading ? 'Generating…' : 'Generate Itinerary'}</Text>
-          </TouchableOpacity>
+              <TouchableOpacity style={styles.button} onPress={generateItinerary} disabled={itineraryLoading}>
+                <Text style={styles.buttonText}>{itineraryLoading ? 'Generating…' : 'Generate Itinerary'}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={saveItineraryRecord}>
+                <Text style={styles.buttonText}>{editingItineraryId ? 'Update Itinerary' : 'Save Itinerary Info'}</Text>
+              </TouchableOpacity>
+              {editingItineraryId ? (
+                <Text style={styles.helperText}>Editing itinerary — tap Save to update, or select another to cancel.</Text>
+              ) : null}
 
           {itineraryError ? <Text style={styles.warningText}>{itineraryError}</Text> : null}
           {itineraryPlan ? (
@@ -1806,38 +2296,291 @@ const App: React.FC = () => {
         </View>
       ) : null}
 
-      {activePage === 'traits' ? (
-            <>
-              <View style={[styles.card, styles.traitsSection]}>
-                <Text style={styles.sectionTitle}>Traits</Text>
-                <Text style={styles.helperText}>Capture travel personality markers to tailor itinerary ideas (e.g., Adventurous, Coffee Lover, Beach Bum).</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Trait name"
-                  value={newTraitName}
-                  onChangeText={setNewTraitName}
-                />
-                <View style={styles.addRow}>
-                  <TextInput
-                    style={[styles.input, styles.inlineInput]}
-                    placeholder="Level (1-5)"
-                    keyboardType="numeric"
-                    value={newTraitLevel}
-                    onChangeText={setNewTraitLevel}
-                  />
-                  <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={createTrait}>
-                    <Text style={styles.buttonText}>Save Trait</Text>
+      {activePage === 'itinerary' ? (
+        <>
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Saved Itineraries</Text>
+            {!itineraryRecords.length ? (
+              <Text style={styles.helperText}>No itineraries saved yet.</Text>
+            ) : (
+              itineraryRecords.map((it) => {
+                const isSelected = selectedItineraryId === it.id;
+                return (
+                  <TouchableOpacity
+                    key={it.id}
+                    style={[styles.row, { alignItems: 'center', paddingVertical: 6 }]}
+                    onPress={() => {
+                      setEditingItineraryId(null);
+                      setSelectedItineraryId(it.id);
+                      if (!itineraryDetails[it.id]) {
+                        fetchItineraryDetails(it.id);
+                      }
+                    }}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.flightTitle}>{it.tripName || 'Trip'}</Text>
+                      <Text style={styles.helperText}>
+                        {it.destination} • {it.days} days • Budget ${it.budget ?? '—'} • Created {formatDateLong(it.createdAt)}
+                      </Text>
+                    </View>
+                    <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => beginEditItinerary(it)}>
+                      <Text style={styles.buttonText}>Edit</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => deleteItinerary(it.id)}>
+                      <Text style={styles.buttonText}>Delete</Text>
+                    </TouchableOpacity>
+                    <View style={[styles.button, isSelected && styles.toggleActive]}>
+                      <Text style={styles.buttonText}>{isSelected ? 'Selected' : 'View'}</Text>
+                    </View>
                   </TouchableOpacity>
-                </View>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Notes (optional, e.g., loves sunrise hikes or third-wave cafes)"
-                  value={newTraitNotes}
-                  onChangeText={setNewTraitNotes}
-                  multiline
-                />
-              </View>
+                );
+              })
+            )}
+          </View>
 
+          {selectedItineraryId ? (
+            <View style={styles.card}>
+              <Text style={styles.sectionTitle}>Itinerary Details</Text>
+              <View style={styles.table}>
+                <View style={[styles.tableRow, styles.tableHeader]}>
+                  <View style={[styles.cell, { flex: 1 }]}>
+                    <Text style={styles.headerText}>Day</Text>
+                  </View>
+                  <View style={[styles.cell, { flex: 1 }]}>
+                    <Text style={styles.headerText}>Time</Text>
+                  </View>
+                  <View style={[styles.cell, { flex: 2 }]}>
+                    <Text style={styles.headerText}>Activity</Text>
+                  </View>
+                  <View style={[styles.cell, { flex: 1 }]}>
+                    <Text style={styles.headerText}>Cost</Text>
+                  </View>
+                  <View style={[styles.cell, styles.actionCell, { flex: 1 }]}>
+                    <Text style={styles.headerText}>Actions</Text>
+                  </View>
+                </View>
+                {(itineraryDetails[selectedItineraryId] ?? []).map((d) => (
+                  <View key={d.id} style={styles.tableRow}>
+                    <View style={[styles.cell, { flex: 1 }]}>
+                      <Text style={styles.cellText}>{d.day}</Text>
+                    </View>
+                    <View style={[styles.cell, { flex: 1 }]}>
+                      <Text style={styles.cellText}>{d.time || '-'}</Text>
+                    </View>
+                    <View style={[styles.cell, { flex: 2 }]}>
+                      <Text style={styles.cellText}>{d.activity}</Text>
+                    </View>
+                    <View style={[styles.cell, { flex: 1 }]}>
+                      <Text style={styles.cellText}>{d.cost != null ? `$${d.cost}` : '-'}</Text>
+                    </View>
+                    <View style={[styles.cell, styles.actionCell, { flex: 1 }]}>
+                      <TouchableOpacity
+                        style={[styles.button, styles.smallButton]}
+                        onPress={() => {
+                          setEditingDetailId(d.id);
+                          setDetailDraft({
+                            day: String(d.day ?? '1'),
+                            time: d.time ?? '',
+                            activity: d.activity ?? '',
+                            cost: d.cost != null ? String(d.cost) : '',
+                          });
+                        }}
+                      >
+                        <Text style={styles.buttonText}>Edit</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.button, styles.smallButton, styles.dangerButton]}
+                        onPress={async () => {
+                          await fetch(`${backendUrl}/api/itineraries/details/${d.id}`, {
+                            method: 'DELETE',
+                            headers,
+                          });
+                          if (editingDetailId === d.id) setEditingDetailId(null);
+                          fetchItineraryDetails(selectedItineraryId);
+                        }}
+                      >
+                        <Text style={styles.buttonText}>Delete</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))}
+                <View style={[styles.tableRow, styles.inputRow]}>
+                  <View style={[styles.cell, { flex: 1 }]}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Day"
+                      keyboardType="numeric"
+                      value={detailDraft.day}
+                      onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, day: text }))}
+                    />
+                  </View>
+                  <View style={[styles.cell, { flex: 1 }]}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Time"
+                      value={detailDraft.time}
+                      onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, time: text }))}
+                    />
+                  </View>
+                  <View style={[styles.cell, { flex: 2 }]}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Activity"
+                      value={detailDraft.activity}
+                      onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, activity: text }))}
+                    />
+                  </View>
+                  <View style={[styles.cell, { flex: 1 }]}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Cost"
+                      keyboardType="numeric"
+                      value={detailDraft.cost}
+                      onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, cost: text }))}
+                    />
+                  </View>
+                  <View style={[styles.cell, styles.actionCell, { flex: 1 }]}>
+                    <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={saveDetail}>
+                      <Text style={styles.buttonText}>{editingDetailId ? 'Update' : 'Add'}</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            </View>
+          ) : null}
+        </>
+      ) : null}
+
+      {activePage === 'traits' ? (
+        <>
+          <View style={[styles.card, styles.traitsSection]}>
+            <Text style={styles.sectionTitle}>Traits</Text>
+            <Text style={styles.helperText}>Capture travel personality markers to tailor itinerary ideas (e.g., Adventurous, Coffee Lover, Beach Bum).</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Trait name"
+              value={newTraitName}
+              onChangeText={setNewTraitName}
+            />
+            <View style={styles.addRow}>
+              <TextInput
+                style={[styles.input, styles.inlineInput]}
+                placeholder="Level (1-5)"
+                keyboardType="numeric"
+                value={newTraitLevel}
+                onChangeText={setNewTraitLevel}
+              />
+              <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={createTrait}>
+                <Text style={styles.buttonText}>Save Trait</Text>
+              </TouchableOpacity>
+            </View>
+            <TextInput
+              style={styles.input}
+              placeholder="Notes (optional, e.g., loves sunrise hikes or third-wave cafes)"
+              value={newTraitNotes}
+              onChangeText={setNewTraitNotes}
+              multiline
+            />
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Your profile traits</Text>
+            {!traits.length ? (
+              <Text style={styles.helperText}>No traits yet. Add one above to start personalizing trip ideas.</Text>
+            ) : (
+              traits.map((trait) => {
+                const draft = traitDrafts[trait.id] ?? { level: String(trait.level ?? 1), notes: trait.notes ?? '' };
+                return (
+                  <View key={trait.id} style={styles.traitRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.flightTitle}>{trait.name}</Text>
+                      <Text style={styles.helperText}>Level {draft.level || trait.level} • Added {formatDateLong(trait.createdAt)}</Text>
+                      <View style={styles.addRow}>
+                        <TextInput
+                          style={[styles.input, styles.inlineInput]}
+                          value={draft.level}
+                          keyboardType="numeric"
+                          placeholder="1-5"
+                          onChangeText={(text) =>
+                            setTraitDrafts((prev) => ({
+                              ...prev,
+                              [trait.id]: { level: text, notes: prev[trait.id]?.notes ?? draft.notes },
+                            }))
+                          }
+                        />
+                        <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => updateTrait(trait.id)}>
+                          <Text style={styles.buttonText}>Update</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => deleteTrait(trait.id)}>
+                          <Text style={styles.buttonText}>Delete</Text>
+                        </TouchableOpacity>
+                      </View>
+                      <TextInput
+                        style={[styles.input, styles.traitNoteInput]}
+                        placeholder="Notes (optional)"
+                        value={draft.notes}
+                        onChangeText={(text) =>
+                          setTraitDrafts((prev) => ({
+                            ...prev,
+                            [trait.id]: { level: prev[trait.id]?.level ?? draft.level, notes: text },
+                          }))
+                        }
+                        multiline
+                      />
+                    </View>
+                  </View>
+                );
+              })
+            )}
+          </View>
+
+          <View style={[styles.card, styles.traitsSection]}>
+            <Text style={styles.sectionTitle}>Select as many user traits that fit your travel style</Text>
+            <Text style={styles.helperText}>These help personalize suggestions and itineraries.</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Age"
+              keyboardType="numeric"
+              value={traitAge}
+              onChangeText={(text) => setTraitAge(text.replace(/[^0-9]/g, ''))}
+            />
+            <View style={styles.traitGrid}>
+              {[
+                { key: 'female', label: 'Female' },
+                { key: 'male', label: 'Male' },
+                { key: 'nonbinary', label: 'Non-binary' },
+                { key: 'prefer-not', label: 'Prefer not to say' },
+              ].map((opt) => {
+                const selected = traitGender === opt.key;
+                return (
+                  <TouchableOpacity
+                    key={opt.key}
+                    style={[styles.traitChip, selected && styles.traitChipSelected]}
+                    onPress={() => setTraitGender(opt.key as typeof traitGender)}
+                  >
+                    <Text style={[styles.traitChipText, selected && styles.traitChipTextSelected]}>{opt.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <View style={styles.traitGrid}>
+              {traitOptions.map((name) => {
+                const selected = selectedTraitNames.has(name);
+                return (
+                  <TouchableOpacity
+                    key={name}
+                    style={[styles.traitChip, selected && styles.traitChipSelected]}
+                    onPress={() => toggleTrait(name)}
+                  >
+                    <Text style={[styles.traitChipText, selected && styles.traitChipTextSelected]}>{name}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <TouchableOpacity style={styles.button} onPress={saveTraitSelections}>
+              <Text style={styles.buttonText}>Save Traits</Text>
+            </TouchableOpacity>
+          </View>
               <View style={styles.card}>
                 <Text style={styles.sectionTitle}>Your profile traits</Text>
                 {!traits.length ? (
@@ -2586,13 +3329,161 @@ const App: React.FC = () => {
                   Users found in the system will receive an invite email (if SMTP is configured) or see it above after logging in.
                   Guest members are added directly without needing a login.
                 </Text>
-              </View>
-            </>
-          ) : null}
+          </View>
+        </>
+      ) : null}
 
-          {activePage === 'flights' ? (
-            <View style={[styles.card, styles.flightsSection]}>
-              <Text style={styles.sectionTitle}>Flights</Text>
+      {activePage === 'lodging' ? (
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Lodging</Text>
+          <Text style={styles.helperText}>Track stays for your active trip. Total: ${lodgingTotal.toFixed(2)}</Text>
+          <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
+            <View style={styles.table}>
+              <View style={[styles.tableRow, styles.tableHeader]}>
+                <View style={[styles.cell, styles.lodgingNameCol]}>
+                  <Text style={styles.headerText}>Name</Text>
+                </View>
+                <View style={[styles.cell, styles.lodgingDateCol]}>
+                  <Text style={styles.headerText}>Check-in</Text>
+                </View>
+                <View style={[styles.cell, styles.lodgingDateCol]}>
+                  <Text style={styles.headerText}>Check-out</Text>
+                </View>
+                <View style={[styles.cell, styles.lodgingRoomsCol]}>
+                  <Text style={styles.headerText}>Rooms</Text>
+                </View>
+                <View style={[styles.cell, styles.lodgingRefundCol]}>
+                  <Text style={styles.headerText}>Refundable By</Text>
+                </View>
+                <View style={[styles.cell, styles.lodgingCostCol]}>
+                  <Text style={styles.headerText}>Total Cost</Text>
+                </View>
+                <View style={[styles.cell, styles.lodgingCostCol]}>
+                  <Text style={styles.headerText}>Per Night</Text>
+                </View>
+                <View style={[styles.cell, styles.lodgingAddressCol]}>
+                  <Text style={styles.headerText}>Address</Text>
+                </View>
+                <View style={[styles.cell, styles.actionCell, styles.lodgingCostCol]}>
+                  <Text style={styles.headerText}>Actions</Text>
+                </View>
+              </View>
+
+              {lodgings.map((l) => (
+                <View key={l.id} style={styles.tableRow}>
+                  <View style={[styles.cell, styles.lodgingNameCol]}>
+                    <Text style={styles.cellText}>{l.name}</Text>
+                  </View>
+                  <View style={[styles.cell, styles.lodgingDateCol]}>
+                    <Text style={styles.cellText}>{formatDateLong(normalizeDateString(l.checkInDate))}</Text>
+                  </View>
+                  <View style={[styles.cell, styles.lodgingDateCol]}>
+                    <Text style={styles.cellText}>{formatDateLong(normalizeDateString(l.checkOutDate))}</Text>
+                  </View>
+                  <View style={[styles.cell, styles.lodgingRoomsCol]}>
+                    <Text style={styles.cellText}>{l.rooms || '-'}</Text>
+                  </View>
+                  <View style={[styles.cell, styles.lodgingRefundCol]}>
+                    <Text style={styles.cellText}>{l.refundBy ? formatDateLong(normalizeDateString(l.refundBy)) : '—'}</Text>
+                  </View>
+                  <View style={[styles.cell, styles.lodgingCostCol]}>
+                    <Text style={styles.cellText}>{l.totalCost ? `$${l.totalCost}` : '-'}</Text>
+                  </View>
+                  <View style={[styles.cell, styles.lodgingCostCol]}>
+                    <Text style={styles.cellText}>{l.costPerNight ? `$${l.costPerNight}` : '-'}</Text>
+                  </View>
+                  <View style={[styles.cell, styles.lodgingAddressCol]}>
+                    <Text style={styles.cellText}>{l.address || '-'}</Text>
+                  </View>
+                  <View style={[styles.cell, styles.actionCell, styles.lodgingCostCol]}>
+                    {l.address ? (
+                      <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => openMaps(l.address)}>
+                        <Text style={styles.buttonText}>Map</Text>
+                      </TouchableOpacity>
+                    ) : null}
+                    <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => removeLodging(l.id)}>
+                      <Text style={styles.buttonText}>Delete</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+
+              <View style={[styles.tableRow, styles.inputRow]}>
+                <View style={[styles.cell, styles.lodgingNameCol]}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Hotel / Airbnb"
+                    value={lodgingDraft.name}
+                    onChangeText={(text) => setLodgingDraft((prev) => ({ ...prev, name: text }))}
+                  />
+                </View>
+                <View style={[styles.cell, styles.lodgingDateCol]}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="YYYY-MM-DD"
+                    value={lodgingDraft.checkInDate}
+                    onChangeText={(text) => setLodgingDraft((prev) => ({ ...prev, checkInDate: normalizeDateString(text) }))}
+                  />
+                </View>
+                <View style={[styles.cell, styles.lodgingDateCol]}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="YYYY-MM-DD"
+                    value={lodgingDraft.checkOutDate}
+                    onChangeText={(text) => setLodgingDraft((prev) => ({ ...prev, checkOutDate: normalizeDateString(text) }))}
+                  />
+                </View>
+                <View style={[styles.cell, styles.lodgingRoomsCol]}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Rooms"
+                    keyboardType="numeric"
+                    value={lodgingDraft.rooms}
+                    onChangeText={(text) => setLodgingDraft((prev) => ({ ...prev, rooms: text }))}
+                  />
+                </View>
+                <View style={[styles.cell, styles.lodgingRefundCol]}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Refund by (YYYY-MM-DD)"
+                    value={lodgingDraft.refundBy}
+                    onChangeText={(text) => setLodgingDraft((prev) => ({ ...prev, refundBy: normalizeDateString(text) }))}
+                  />
+                </View>
+                <View style={[styles.cell, styles.lodgingCostCol]}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Total $"
+                    keyboardType="numeric"
+                    value={lodgingDraft.totalCost}
+                    onChangeText={(text) => setLodgingDraft((prev) => ({ ...prev, totalCost: text }))}
+                  />
+                </View>
+                <View style={[styles.cell, styles.lodgingCostCol]}>
+                  <Text style={styles.cellText}>{lodgingDraft.costPerNight ? `$${lodgingDraft.costPerNight}` : '-'}</Text>
+                </View>
+                <View style={[styles.cell, styles.lodgingAddressCol]}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Address"
+                    value={lodgingDraft.address}
+                    onChangeText={(text) => setLodgingDraft((prev) => ({ ...prev, address: text }))}
+                  />
+                </View>
+                <View style={[styles.cell, styles.actionCell, styles.lodgingCostCol]}>
+                  <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={addLodging}>
+                    <Text style={styles.buttonText}>Add</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </ScrollView>
+        </View>
+      ) : null}
+
+      {activePage === 'flights' ? (
+        <View style={[styles.card, styles.flightsSection]}>
+          <Text style={styles.sectionTitle}>Flights</Text>
               {Platform.OS === 'web' ? (
                 <View style={styles.pdfRow}>
                   <input
@@ -2720,6 +3611,150 @@ const App: React.FC = () => {
                       })}
                     </View>
               ))}
+                  {isAddingRow ? (
+                    <View style={[styles.tableRow, styles.inputRow]}>
+                      {columns.map((col, idx) => {
+                        const isLast = idx === columns.length - 1;
+                        if (col.key === 'actions') {
+                          return (
+                            <View
+                              key={`input-${col.key}`}
+                              style={[
+                                styles.cell,
+                                styles.actionCell,
+                                { minWidth: col.minWidth ?? 120, flex: 1 },
+                                isLast && styles.lastCell,
+                              ]}
+                            >
+                              <Text style={styles.helperText}>Tap OK below to save</Text>
+                            </View>
+                          );
+                        }
+                        const valueMap: Record<string, string> = {
+                          passenger_name: newFlight.passengerName,
+                          departure_date: newFlight.departureDate,
+                          departure_location: newFlight.departureLocation,
+                          departure_time: newFlight.departureTime,
+                          arrival_location: newFlight.arrivalLocation,
+                          arrival_time: newFlight.arrivalTime,
+                          layover_duration: newFlight.layoverDuration,
+                          cost: newFlight.cost,
+                          carrier: newFlight.carrier,
+                          flight_number: newFlight.flightNumber,
+                          booking_reference: newFlight.bookingReference,
+                        };
+
+                        const setters: Record<string, (text: string) => void> = {
+                          passenger_name: (text) => setNewFlight((prev) => ({ ...prev, passengerName: text })),
+                          departure_date: (text) => setNewFlight((prev) => ({ ...prev, departureDate: text })),
+                          departure_location: (text) => setNewFlight((prev) => ({ ...prev, departureLocation: text })),
+                          departure_time: (text) => setNewFlight((prev) => ({ ...prev, departureTime: text })),
+                          arrival_location: (text) => setNewFlight((prev) => ({ ...prev, arrivalLocation: text })),
+                          arrival_time: (text) => setNewFlight((prev) => ({ ...prev, arrivalTime: text })),
+                          layover_duration: (text) => setNewFlight((prev) => ({ ...prev, layoverDuration: text })),
+                          cost: (text) => setNewFlight((prev) => ({ ...prev, cost: text })),
+                          carrier: (text) => setNewFlight((prev) => ({ ...prev, carrier: text })),
+                          flight_number: (text) => setNewFlight((prev) => ({ ...prev, flightNumber: text })),
+                          booking_reference: (text) => setNewFlight((prev) => ({ ...prev, bookingReference: text.toUpperCase() })),
+                        };
+
+                      if (col.key === 'passenger_name') {
+                        const displayName = valueMap.passenger_name || 'Select passenger';
+                        return (
+                          <View
+                            key={`input-${col.key}`}
+                            style={[
+                              styles.cell,
+                              { minWidth: col.minWidth ?? 120, flex: 1 },
+                              isLast && styles.lastCell,
+                            ]}
+                          >
+                            <TouchableOpacity
+                              style={[styles.input, styles.inlineInput, styles.dropdown, styles.passengerDropdown]}
+                              onPress={togglePassengerDropdown}
+                              ref={passengerDropdownRef}
+                            >
+                              <Text style={styles.cellText}>{displayName}</Text>
+                            </TouchableOpacity>
+                          </View>
+                        );
+                      }
+
+                      if (col.key === 'departure_location' || col.key === 'arrival_location') {
+                        const isDeparture = col.key === 'departure_location';
+                        const rawValue = valueMap[col.key];
+                        const label = rawValue || (isDeparture ? 'Departure location' : 'Arrival location');
+                        const suggestions = locationTarget === (isDeparture ? 'dep' : 'arr') ? locationSuggestions : [];
+                        const displayValue = getLocationInputValue(rawValue, isDeparture ? 'dep' : 'arr', locationTarget);
+                        return (
+                          <View
+                            key={`input-${col.key}`}
+                            style={[
+                              styles.cell,
+                              styles.locationField,
+                              { minWidth: col.minWidth ?? 120, flex: 1 },
+                              isLast && styles.lastCell,
+                            ]}
+                          >
+                              <TextInput
+                            style={styles.input}
+                            value={displayValue}
+                            placeholder={label}
+                            // Location autocomplete (hits GET /api/flights/locations)
+                            onFocus={() => fetchLocationSuggestions(isDeparture ? 'dep' : 'arr', rawValue)}
+                            onChangeText={(text) => {
+                              setters[col.key](text);
+                              fetchLocationSuggestions(isDeparture ? 'dep' : 'arr', text);
+                            }}
+                            />
+                            {suggestions.length ? (
+                              <View style={styles.inlineDropdownList}>
+                                {suggestions.map((loc) => (
+                                  <TouchableOpacity
+                                    key={`${col.key}-${loc}`}
+                                    style={styles.dropdownOption}
+                                    onPress={() => {
+                                      const codeMatch = loc.match(/\(([A-Za-z]{3})\)/i);
+                                      const code = codeMatch ? codeMatch[1].toUpperCase() : loc;
+                                      if (isDeparture) {
+                                        setNewFlight((prev) => ({ ...prev, departureLocation: code, departureAirportCode: code }));
+                                      } else {
+                                        setNewFlight((prev) => ({ ...prev, arrivalLocation: code, arrivalAirportCode: code }));
+                                      }
+                                      setLocationSuggestions([]);
+                                      setLocationTarget(null);
+                                    }}
+                                  >
+                                    <Text style={styles.cellText}>{loc}</Text>
+                                  </TouchableOpacity>
+                                ))}
+                              </View>
+                            ) : null}
+                          </View>
+                        );
+                      }
+
+                      return (
+                        <View
+                          key={`input-${col.key}`}
+                          style={[
+                              styles.cell,
+                              { minWidth: col.minWidth ?? 120, flex: 1 },
+                              isLast && styles.lastCell,
+                            ]}
+                          >
+                            <TextInput
+                              placeholder={col.label}
+                              style={styles.cellInput}
+                              value={valueMap[col.key]}
+                              keyboardType={col.key === 'cost' ? 'numeric' : 'default'}
+                              onChangeText={setters[col.key]}
+                            />
+                          </View>
+                        );
+                      })}
+                    </View>
+                  ) : null}
                 </View>
               </ScrollView>
               <View style={styles.totalRow}>
@@ -2727,7 +3762,7 @@ const App: React.FC = () => {
               </View>
               <View style={styles.tableFooter}>
                 <TouchableOpacity style={styles.button} onPress={handleAddPress}>
-                  <Text style={styles.buttonText}>Add</Text>
+                  <Text style={styles.buttonText}>{isAddingRow ? 'OK' : 'Add'}</Text>
                 </TouchableOpacity>
               </View>
               <View style={styles.shareRow}>
@@ -2740,6 +3775,37 @@ const App: React.FC = () => {
                 />
                 <Text style={styles.helperText}>Enter an email, then press Share on a row.</Text>
               </View>
+              {showPassengerDropdown && passengerAnchor ? (
+                <View style={styles.passengerOverlay}>
+                  <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={() => setShowPassengerDropdown(false)} />
+                  <View
+                    style={[
+                      styles.passengerOverlayList,
+                      {
+                        left: passengerAnchor.x,
+                        top: passengerAnchor.y + passengerAnchor.height,
+                        width: passengerAnchor.width,
+                      },
+                    ]}
+                  >
+                    {groupMembers.map((member) => {
+                      const name = formatMemberName(member);
+                      return (
+                        <TouchableOpacity
+                          key={member.id}
+                          style={styles.dropdownOption}
+                          onPress={() => {
+                            setNewFlight((prev) => ({ ...prev, passengerName: name }));
+                            setShowPassengerDropdown(false);
+                          }}
+                        >
+                          <Text style={styles.cellText}>{name}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+              ) : null}
               {airportTarget && !airportTarget.startsWith('modal') && airportAnchor ? (
                 <View style={styles.passengerOverlay}>
                   <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={hideAirportDropdown} />
@@ -2771,46 +3837,17 @@ const App: React.FC = () => {
                 <View style={styles.passengerOverlay}>
                   <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={closeFlightDetails} />
                   <View style={styles.modalCard}>
-                    <Text style={styles.sectionTitle}>{isCreatingFlight ? 'Add Flight' : 'Flight Details'}</Text>
+                    <Text style={styles.sectionTitle}>Flight Details</Text>
                     <Text style={styles.helperText}>
-                      {isCreatingFlight
-                        ? 'Fill out the flight details, then tap Add.'
-                        : `Current Departure: ${formatDateLong(editingFlight.departureDate)} at ${editingFlight.departureTime || 'Time not set'}`}
+                      Current Departure: {formatDateLong(editingFlight.departureDate)} at {editingFlight.departureTime || '—'}
                     </Text>
                     <ScrollView style={{ maxHeight: 420 }}>
                       <Text style={styles.modalLabel}>Passenger</Text>
                       <TextInput
                         style={styles.input}
                         value={editingFlight.passengerName}
-                        onFocus={() => {
-                          setShowPassengerSuggestions(true);
-                          setPassengerSuggestions(filterPassengers(editingFlight.passengerName));
-                        }}
-                        onChangeText={(text) => {
-                          setEditingFlight((prev) => (prev ? { ...prev, passengerName: text } : prev));
-                          setShowPassengerSuggestions(true);
-                          setPassengerSuggestions(filterPassengers(text));
-                        }}
+                        onChangeText={(text) => setEditingFlight((prev) => (prev ? { ...prev, passengerName: text } : prev))}
                       />
-                      {showPassengerSuggestions && passengerSuggestions.length ? (
-                        <View style={styles.inlineDropdownList}>
-                          {passengerSuggestions.map((member) => {
-                            const name = formatMemberName(member);
-                            return (
-                              <TouchableOpacity
-                                key={member.id}
-                                style={styles.dropdownOption}
-                                onPress={() => {
-                                  setEditingFlight((prev) => (prev ? { ...prev, passengerName: name } : prev));
-                                  setShowPassengerSuggestions(false);
-                                }}
-                              >
-                                <Text style={styles.cellText}>{name}</Text>
-                              </TouchableOpacity>
-                            );
-                          })}
-                        </View>
-                      ) : null}
                       <Text style={styles.modalLabel}>Departure</Text>
                       <View style={styles.modalRow}>
                         <View style={styles.modalField}>
@@ -3082,7 +4119,7 @@ const App: React.FC = () => {
                         <Text style={styles.buttonText}>Cancel</Text>
                       </TouchableOpacity>
                       <TouchableOpacity style={styles.button} onPress={saveFlightDetails}>
-                        <Text style={styles.buttonText}>{isCreatingFlight ? 'Add Flight' : 'Save'}</Text>
+                        <Text style={styles.buttonText}>Save</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -3164,7 +4201,7 @@ const App: React.FC = () => {
               </View>
             </View>
           ) : null}
-        </>
+        </ScrollView>
       ) : (
         <View style={styles.auth}>
           <View style={styles.toggleRow}>
@@ -3230,6 +4267,12 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
     backgroundColor: '#f7f7f7',
+  },
+  contentScroll: {
+    flex: 1,
+  },
+  contentScrollContent: {
+    paddingBottom: 120,
   },
   title: {
     fontSize: 24,
@@ -3697,6 +4740,34 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e2e8f0',
     borderRadius: 8,
+  },
+  itineraryDropdown: {
+    zIndex: 6000,
+  },
+  traitGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 8,
+  },
+  traitChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    backgroundColor: '#fff',
+  },
+  traitChipSelected: {
+    backgroundColor: '#0d6efd',
+    borderColor: '#0d6efd',
+  },
+  traitChipText: {
+    color: '#0f172a',
+    fontWeight: '600',
+  },
+  traitChipTextSelected: {
+    color: '#fff',
   },
 });
 

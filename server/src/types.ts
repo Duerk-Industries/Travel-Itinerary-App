@@ -114,6 +114,24 @@ export interface Tour {
   createdAt: string;
 }
 
+export interface Itinerary {
+  id: string;
+  tripId: string;
+  destination: string;
+  days: number;
+  budget?: number | null;
+  createdAt: string;
+}
+
+export interface ItineraryDetail {
+  id: string;
+  itineraryId: string;
+  day: number;
+  time?: string | null;
+  activity: string;
+  cost?: number | null;
+}
+
 export interface GroupInvite {
   id: string;
   groupId: string;

@@ -1,7 +1,7 @@
 // server/src/db.ts
 import { Pool } from 'pg';
 import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
-import { Flight, Group, GroupMember, Trait, Trip, User, WebUser, Lodging, Tour } from './types';
+import { Flight, Group, GroupMember, Trait, Trip, User, WebUser, Lodging, Tour, Itinerary, ItineraryDetail } from './types';
 import fetch from 'node-fetch';
 
 
@@ -63,6 +63,8 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS password_hash TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS salt TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();`);
+  await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS age INTEGER;`);
+  await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS gender TEXT;`);
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS traits (
@@ -223,6 +225,29 @@ export const initDb = async (): Promise<void> => {
   `);
   await p.query(`ALTER TABLE airports ADD COLUMN IF NOT EXISTS iata_code TEXT;`);
   await p.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_airports_iata_code ON airports(iata_code);`);
+
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS itineraries (
+      id UUID PRIMARY KEY,
+      trip_id UUID NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+      destination TEXT NOT NULL,
+      days INTEGER NOT NULL,
+      budget NUMERIC,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+  await p.query(`ALTER TABLE itineraries ADD COLUMN IF NOT EXISTS budget NUMERIC;`);
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS itinerary_details (
+      id UUID PRIMARY KEY,
+      itinerary_id UUID NOT NULL REFERENCES itineraries(id) ON DELETE CASCADE,
+      day INTEGER NOT NULL,
+      time TEXT,
+      activity TEXT NOT NULL,
+      cost NUMERIC,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
 };
 
 
@@ -1431,6 +1456,274 @@ export const searchUsersByEmail = async (query: string): Promise<User[]> => {
     [like]
   );
   return rows;
+};
+
+export const listTraitsForGroupTrip = async (
+  userId: string,
+  tripId: string
+): Promise<Array<{ userId: string; name: string; traits: string[] }>> => {
+  const p = getPool();
+  const tripRows = await p.query<{ groupId: string }>(`SELECT group_id as "groupId" FROM trips WHERE id = $1`, [tripId]);
+  if (!tripRows.rowCount) throw new Error('Trip not found');
+  const membership = await p.query(`SELECT 1 FROM group_members WHERE group_id = $1 AND user_id = $2`, [
+    tripRows.rows[0].groupId,
+    userId,
+  ]);
+  if (!membership.rowCount) throw new Error('Not authorized for this trip');
+
+  const { rows } = await p.query<
+    { userId: string; email: string | null; firstName: string | null; lastName: string | null; trait: string | null }
+  >(
+    `SELECT gm.user_id as "userId",
+            u.email,
+            wu.first_name as "firstName",
+            wu.last_name as "lastName",
+            t.name as trait
+     FROM group_members gm
+     JOIN trips t2 ON t2.group_id = gm.group_id AND t2.id = $1
+     LEFT JOIN users u ON u.id = gm.user_id
+     LEFT JOIN web_users wu ON wu.id = gm.user_id
+     LEFT JOIN traits t ON t.user_id = gm.user_id
+     ORDER BY gm.created_at ASC`,
+    [tripId]
+  );
+
+  const map = new Map<string, { userId: string; name: string; traits: string[] }>();
+  for (const row of rows) {
+    const displayName = row.firstName?.trim() || row.email || 'Traveler';
+    if (!map.has(row.userId)) {
+      map.set(row.userId, { userId: row.userId, name: displayName, traits: [] });
+    }
+    if (row.trait) {
+      map.get(row.userId)!.traits.push(row.trait);
+    }
+  }
+  return Array.from(map.values());
+};
+
+export const getUserDemographics = async (
+  userId: string
+): Promise<{ age: number | null; gender: string | null }> => {
+  const p = getPool();
+  const { rows } = await p.query<{ age: number | null; gender: string | null }>(
+    `SELECT age, gender FROM web_users WHERE id = $1 LIMIT 1`,
+    [userId]
+  );
+  return rows[0] ?? { age: null, gender: null };
+};
+
+export const saveUserDemographics = async (
+  userId: string,
+  age?: number | null,
+  gender?: string | null
+): Promise<void> => {
+  const p = getPool();
+  await p.query(
+    `UPDATE web_users SET age = $1, gender = $2 WHERE id = $3`,
+    [age ?? null, gender ?? null, userId]
+  );
+};
+
+export const listItineraries = async (userId: string): Promise<Array<Itinerary & { tripName: string }>> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `SELECT i.id,
+            i.trip_id as "tripId",
+            i.destination,
+            i.days,
+            i.budget,
+            i.created_at as "createdAt",
+            t.name as "tripName"
+     FROM itineraries i
+     JOIN trips t ON t.id = i.trip_id
+     JOIN groups g ON g.id = t.group_id
+     JOIN group_members gm ON gm.group_id = g.id AND gm.user_id = $1
+     ORDER BY i.created_at DESC`,
+    [userId]
+  );
+  return rows;
+};
+
+export const createItineraryRecord = async (
+  userId: string,
+  tripId: string,
+  destination: string,
+  days: number,
+  budget?: number | null
+): Promise<Itinerary & { tripName: string }> => {
+  const p = getPool();
+  const membership = await ensureUserInTrip(tripId, userId);
+  if (!membership) throw new Error('You must belong to the trip group to save an itinerary');
+  const dupe = await p.query(
+    `SELECT 1 FROM itineraries
+     WHERE trip_id = $1 AND LOWER(destination) = LOWER($2) AND days = $3 AND COALESCE(budget,0) = COALESCE($4,0)
+     LIMIT 1`,
+    [tripId, destination.trim(), Math.max(1, Math.round(days)), budget ?? null]
+  );
+  if (dupe.rowCount) {
+    const err = new Error('Itinerary already exists for this trip');
+    (err as any).code = 'ITINERARY_EXISTS';
+    throw err;
+  }
+  const { rows } = await p.query(
+    `INSERT INTO itineraries (id, trip_id, destination, days, budget)
+     VALUES ($1, $2, $3, $4, $5)
+     RETURNING id, trip_id as "tripId", destination, days, budget, created_at as "createdAt",
+               (SELECT name FROM trips WHERE id = $2) as "tripName"`,
+    [randomUUID(), tripId, destination.trim(), Math.max(1, Math.round(days)), budget ?? null]
+  );
+  return rows[0];
+};
+
+export const deleteItineraryRecord = async (userId: string, itineraryId: string): Promise<void> => {
+  const p = getPool();
+  const { rows } = await p.query<{ tripId: string }>(
+    `SELECT trip_id as "tripId" FROM itineraries WHERE id = $1`,
+    [itineraryId]
+  );
+  if (!rows.length) throw new Error('Itinerary not found');
+  const membership = await ensureUserInTrip(rows[0].tripId, userId);
+  if (!membership) throw new Error('Not authorized to delete this itinerary');
+  await p.query(`DELETE FROM itineraries WHERE id = $1`, [itineraryId]);
+};
+
+export const updateItineraryRecord = async (
+  userId: string,
+  itineraryId: string,
+  destination: string,
+  days: number,
+  budget?: number | null
+): Promise<Itinerary & { tripName: string }> => {
+  const p = getPool();
+  const { rows } = await p.query<{ tripId: string }>(
+    `SELECT trip_id as "tripId" FROM itineraries WHERE id = $1`,
+    [itineraryId]
+  );
+  if (!rows.length) throw new Error('Itinerary not found');
+  const tripId = rows[0].tripId;
+  const membership = await ensureUserInTrip(tripId, userId);
+  if (!membership) throw new Error('Not authorized to edit this itinerary');
+
+  const dupe = await p.query(
+    `SELECT 1 FROM itineraries
+     WHERE trip_id = $1 AND LOWER(destination) = LOWER($2) AND days = $3 AND COALESCE(budget,0) = COALESCE($4,0)
+       AND id <> $5
+     LIMIT 1`,
+    [tripId, destination.trim(), Math.max(1, Math.round(days)), budget ?? null, itineraryId]
+  );
+  if (dupe.rowCount) {
+    const err = new Error('Itinerary already exists for this trip');
+    (err as any).code = 'ITINERARY_EXISTS';
+    throw err;
+  }
+
+  const { rows: updated } = await p.query(
+    `UPDATE itineraries
+     SET destination = $1, days = $2, budget = $3
+     WHERE id = $4
+     RETURNING id, trip_id as "tripId", destination, days, budget, created_at as "createdAt",
+               (SELECT name FROM trips WHERE id = trip_id) as "tripName"`,
+    [destination.trim(), Math.max(1, Math.round(days)), budget ?? null, itineraryId]
+  );
+  return updated[0];
+};
+
+export const listItineraryDetails = async (userId: string, itineraryId: string): Promise<ItineraryDetail[]> => {
+  const p = getPool();
+  const { rows } = await p.query<{ tripId: string }>(
+    `SELECT trip_id as "tripId" FROM itineraries WHERE id = $1`,
+    [itineraryId]
+  );
+  if (!rows.length) throw new Error('Itinerary not found');
+  const membership = await ensureUserInTrip(rows[0].tripId, userId);
+  if (!membership) throw new Error('Not authorized to view this itinerary');
+  const details = await p.query<ItineraryDetail>(
+    `SELECT id,
+            itinerary_id as "itineraryId",
+            day,
+            time,
+            activity,
+            cost
+     FROM itinerary_details
+     WHERE itinerary_id = $1
+     ORDER BY day ASC, time ASC NULLS LAST, created_at ASC`,
+    [itineraryId]
+  );
+  return details.rows;
+};
+
+export const addItineraryDetail = async (
+  userId: string,
+  itineraryId: string,
+  detail: { day: number; time?: string | null; activity: string; cost?: number | null }
+): Promise<ItineraryDetail> => {
+  const p = getPool();
+  const { rows } = await p.query<{ tripId: string }>(
+    `SELECT trip_id as "tripId" FROM itineraries WHERE id = $1`,
+    [itineraryId]
+  );
+  if (!rows.length) throw new Error('Itinerary not found');
+  const membership = await ensureUserInTrip(rows[0].tripId, userId);
+  if (!membership) throw new Error('Not authorized to edit this itinerary');
+  const { rows: inserted } = await p.query<ItineraryDetail>(
+    `INSERT INTO itinerary_details (id, itinerary_id, day, time, activity, cost)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     RETURNING id, itinerary_id as "itineraryId", day, time, activity, cost`,
+    [randomUUID(), itineraryId, Math.max(1, Math.round(detail.day)), detail.time ?? null, detail.activity.trim(), detail.cost ?? null]
+  );
+  return inserted[0];
+};
+
+export const deleteItineraryDetail = async (userId: string, detailId: string): Promise<void> => {
+  const p = getPool();
+  const { rows } = await p.query<{ itineraryId: string; tripId: string }>(
+    `SELECT d.itinerary_id as "itineraryId", i.trip_id as "tripId"
+     FROM itinerary_details d
+     JOIN itineraries i ON i.id = d.itinerary_id
+     WHERE d.id = $1`,
+    [detailId]
+  );
+  if (!rows.length) throw new Error('Itinerary detail not found');
+  const membership = await ensureUserInTrip(rows[0].tripId, userId);
+  if (!membership) throw new Error('Not authorized to edit this itinerary');
+  await p.query(`DELETE FROM itinerary_details WHERE id = $1`, [detailId]);
+};
+
+export const updateItineraryDetail = async (
+  userId: string,
+  detailId: string,
+  detail: Partial<ItineraryDetail>
+): Promise<ItineraryDetail> => {
+  const p = getPool();
+  const { rows } = await p.query<{ itineraryId: string; tripId: string }>(
+    `SELECT d.itinerary_id as "itineraryId", i.trip_id as "tripId"
+     FROM itinerary_details d
+     JOIN itineraries i ON i.id = d.itinerary_id
+     WHERE d.id = $1`,
+    [detailId]
+  );
+  if (!rows.length) throw new Error('Itinerary detail not found');
+  const membership = await ensureUserInTrip(rows[0].tripId, userId);
+  if (!membership) throw new Error('Not authorized to edit this itinerary');
+
+  const day = detail.day != null ? Math.max(1, Math.round(detail.day)) : undefined;
+  const time = detail.time ?? null;
+  const activity = detail.activity?.trim();
+  const cost = detail.cost != null ? Number(detail.cost) : null;
+
+  if (!activity) throw new Error('Activity is required');
+
+  const { rows: updated } = await p.query(
+    `UPDATE itinerary_details
+     SET day = COALESCE($1, day),
+         time = $2,
+         activity = $3,
+         cost = $4
+     WHERE id = $5
+     RETURNING id, itinerary_id as "itineraryId", day, time, activity, cost`,
+    [day ?? null, time, activity, cost, detailId]
+  );
+  return updated[0];
 };
 
 
