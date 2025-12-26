@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Constants from 'expo-constants';
 import { formatDateLong } from './utils/formatDateLong';
+import { parseFlightText, type ParsedFlight } from './utils/flightParser';
 
 interface Flight {
   id: string;
@@ -79,7 +81,7 @@ interface Trait {
   createdAt: string;
 }
 
-type Page = 'menu' | 'flights' | 'groups' | 'trips' | 'traits' | 'itinerary';
+type Page = 'menu' | 'flights' | 'lodging' | 'groups' | 'trips' | 'traits' | 'itinerary';
 
 type FlightDraft = {
   passengerName: string;
@@ -117,6 +119,30 @@ type FlightEditDraft = {
   bookingReference: string;
 };
 
+type Lodging = {
+  id: string;
+  tripId?: string;
+  name: string;
+  checkInDate: string;
+  checkOutDate: string;
+  rooms: string;
+  refundBy: string;
+  totalCost: string;
+  costPerNight: string;
+  address: string;
+};
+
+type LodgingDraft = {
+  name: string;
+  checkInDate: string;
+  checkOutDate: string;
+  rooms: string;
+  refundBy: string;
+  totalCost: string;
+  costPerNight: string;
+  address: string;
+};
+
 const createInitialFlightState = (): FlightDraft => ({
   passengerName: '',
   departureDate: new Date().toISOString().slice(0, 10),
@@ -133,6 +159,17 @@ const createInitialFlightState = (): FlightDraft => ({
   carrier: '',
   flightNumber: '',
   bookingReference: '',
+});
+
+const createInitialLodgingState = (): LodgingDraft => ({
+  name: '',
+  checkInDate: new Date().toISOString().slice(0, 10),
+  checkOutDate: new Date().toISOString().slice(0, 10),
+  rooms: '1',
+  refundBy: '',
+  totalCost: '',
+  costPerNight: '',
+  address: '',
 });
 
 
@@ -216,6 +253,10 @@ const App: React.FC = () => {
   const [showPassengerSuggestions, setShowPassengerSuggestions] = useState(false);
   const [editingFlightId, setEditingFlightId] = useState<string | null>(null);
   const [editingFlight, setEditingFlight] = useState<FlightEditDraft | null>(null);
+  const [lodgings, setLodgings] = useState<Lodging[]>([]);
+  const [lodgingDraft, setLodgingDraft] = useState<LodgingDraft>(createInitialLodgingState());
+  const [lodgingDateField, setLodgingDateField] = useState<'checkIn' | 'checkOut' | 'refund' | null>(null);
+  const [lodgingDateValue, setLodgingDateValue] = useState<Date>(new Date());
   const [airports, setAirports] = useState<Airport[]>([]);
   const [airportSuggestions, setAirportSuggestions] = useState<Airport[]>([]);
   const [airportAnchor, setAirportAnchor] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
@@ -244,6 +285,19 @@ const App: React.FC = () => {
   });
   const modalDepLocationRef = useRef<TextInput | null>(null);
   const modalArrLocationRef = useRef<TextInput | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [isParsingPdf, setIsParsingPdf] = useState(false);
+  const [pdfParseMessage, setPdfParseMessage] = useState<string | null>(null);
+  const [parsedFlights, setParsedFlights] = useState<FlightEditDraft[]>([]);
+  const [isSavingParsedFlights, setIsSavingParsedFlights] = useState(false);
+  const normalizePassengerName = (name: string): string => {
+    const trimmed = name.trim().replace(/\s+/g, ' ');
+    const parts = trimmed.toLowerCase().split(' ').filter(Boolean);
+    if (parts.length >= 2) {
+      return `${parts[0]} ${parts[parts.length - 1]}`;
+    }
+    return trimmed.toLowerCase();
+  };
 
   const formatMemberName = (member: GroupMemberOption): string => {
     if (member.firstName || member.lastName) {
@@ -266,6 +320,35 @@ const App: React.FC = () => {
     const d = new Date(value);
     return Number.isNaN(d.getTime()) ? value : d.toISOString().slice(0, 10);
   };
+
+  const calculateNights = (checkIn: string, checkOut: string): number => {
+    const start = new Date(checkIn).getTime();
+    const end = new Date(checkOut).getTime();
+    if (Number.isNaN(start) || Number.isNaN(end) || end <= start) return 0;
+    return Math.round((end - start) / (1000 * 60 * 60 * 24));
+  };
+
+  const lodgingTotal = useMemo(
+    () => lodgings.reduce((sum, l) => sum + (Number(l.totalCost) || 0), 0),
+    [lodgings]
+  );
+
+  const openMaps = (address: string) => {
+    if (!address) return;
+    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.open(url, '_blank');
+    } else {
+      Linking.openURL(url);
+    }
+  };
+
+  useEffect(() => {
+    const nights = calculateNights(lodgingDraft.checkInDate, lodgingDraft.checkOutDate);
+    const totalNum = Number(lodgingDraft.totalCost) || 0;
+    const computed = nights > 0 && totalNum ? (totalNum / nights).toFixed(2) : '';
+    setLodgingDraft((prev) => ({ ...prev, costPerNight: computed }));
+  }, [lodgingDraft.checkInDate, lodgingDraft.checkOutDate, lodgingDraft.totalCost]);
 
   const filterAirports = (query: string): Airport[] => {
     const q = query.trim().toLowerCase();
@@ -313,6 +396,116 @@ const App: React.FC = () => {
       return rawValue;
     }
     return formatLocationDisplay(rawValue);
+  };
+
+  // Parsing handled in utils/flightParser.parseFlightText.
+
+  const mergeParsedFlight = (current: FlightEditDraft, parsed: Partial<FlightEditDraft>): FlightEditDraft => {
+    const next = { ...current };
+    (Object.entries(parsed) as [keyof FlightEditDraft, string][]).forEach(([key, value]) => {
+      if (value && (!current[key] || current[key].trim().length === 0)) {
+        next[key] = value;
+      }
+    });
+    return next;
+  };
+
+  const extractTextFromPdf = async (file: File): Promise<string> => {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdfjs = await import('pdfjs-dist/build/pdf');
+    (pdfjs as any).GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${(pdfjs as any).version}/pdf.worker.min.js`;
+    const loadingTask = (pdfjs as any).getDocument({ data: arrayBuffer });
+    const pdf = await loadingTask.promise;
+    let combined = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      combined += content.items.map((item: any) => item.str).join(' ') + '\n';
+    }
+    return combined;
+  };
+
+  const extractTextFromImage = async (file: File): Promise<string> => {
+    const { createWorker } = await import('tesseract.js');
+    const worker = await createWorker('eng');
+    const url = URL.createObjectURL(file);
+    try {
+      const { data } = await worker.recognize(url);
+      return data.text ?? '';
+    } finally {
+      URL.revokeObjectURL(url);
+      await worker.terminate();
+    }
+  };
+
+  const handleFlightFile = async (file: File) => {
+    if (Platform.OS !== 'web') {
+      alert('File upload is available on web right now.');
+      return;
+    }
+    if (!activeTripId) {
+      alert('Select an active trip before uploading a flight.');
+      return;
+    }
+    setIsParsingPdf(true);
+    setPdfParseMessage(null);
+    try {
+      const type = file.type || '';
+      const isPdf = type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf');
+      const text = isPdf ? await extractTextFromPdf(file) : await extractTextFromImage(file);
+      const { primary, bulk } = parseFlightText(text);
+      const flightsToSave = (bulk.length ? bulk : [primary]).map((flight) =>
+        mergeParsedFlight(createInitialFlightState(), flight as Partial<FlightEditDraft>)
+      );
+      setParsedFlights(flightsToSave);
+      await saveParsedFlights(flightsToSave);
+    } catch (err) {
+      console.error('File parse failed', err);
+      alert('Could not read that file. Please upload a legible flight confirmation PDF or image.');
+    } finally {
+      setIsParsingPdf(false);
+    }
+  };
+
+  const addLodging = async () => {
+    if (!lodgingDraft.name.trim() || !activeTripId) {
+      alert('Please enter a lodging name and select an active trip.');
+      return;
+    }
+    const nights = calculateNights(lodgingDraft.checkInDate, lodgingDraft.checkOutDate);
+    if (nights <= 0) {
+      alert('Check-out must be after check-in.');
+      return;
+    }
+    const totalNum = Number(lodgingDraft.totalCost) || 0;
+    const rooms = Number(lodgingDraft.rooms) || 1;
+    const costPerNight = totalNum && rooms > 0 ? (totalNum / (nights * rooms)).toFixed(2) : '0';
+    const res = await fetch(`${backendUrl}/api/lodgings`, {
+      method: 'POST',
+      headers: jsonHeaders,
+      body: JSON.stringify({
+        ...lodgingDraft,
+        tripId: activeTripId,
+        rooms,
+        costPerNight,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      alert(data.error || 'Unable to save lodging');
+      return;
+    }
+    setLodgingDraft(createInitialLodgingState());
+    fetchLodgings();
+  };
+
+  const removeLodging = async (id: string) => {
+    const res = await fetch(`${backendUrl}/api/lodgings/${id}`, { method: 'DELETE', headers: jsonHeaders });
+    if (!res.ok) {
+      alert('Unable to delete lodging');
+      return;
+    }
+    fetchLodgings();
   };
 
   const loadAirports = async () => {
@@ -370,15 +563,10 @@ const App: React.FC = () => {
   };
 
   const selectAirport = (target: 'dep' | 'arr' | 'modal-dep' | 'modal-arr', airport: Airport) => {
-    const label = formatAirportLabel(airport);
     const code = airport.iata_code ?? '';
-    if (target === 'dep') {
-      setNewFlight((prev) => ({ ...prev, departureLocation: code, departureAirportCode: code }));
-    } else if (target === 'arr') {
-      setNewFlight((prev) => ({ ...prev, arrivalLocation: code, arrivalAirportCode: code }));
-    } else if (target === 'modal-dep' && editingFlight) {
+    if ((target === 'dep' || target === 'modal-dep') && editingFlight) {
       setEditingFlight((prev) => (prev ? { ...prev, departureLocation: code, departureAirportCode: code } : prev));
-    } else if (target === 'modal-arr' && editingFlight) {
+    } else if ((target === 'arr' || target === 'modal-arr') && editingFlight) {
       setEditingFlight((prev) => (prev ? { ...prev, arrivalLocation: code, arrivalAirportCode: code } : prev));
     }
     hideAirportDropdown();
@@ -505,7 +693,14 @@ const App: React.FC = () => {
   };
 
   const isCreatingFlight = editingFlightId === 'new';
-  const headers = useMemo(() => (userToken ? { Authorization: `Bearer ${userToken}` } : {}), [userToken]);
+  const headers = useMemo<Record<string, string>>(
+    () => (userToken ? { Authorization: `Bearer ${userToken}` } : ({} as Record<string, string>)),
+    [userToken]
+  );
+  const jsonHeaders = useMemo<Record<string, string>>(
+    () => ({ 'Content-Type': 'application/json', ...(userToken ? { Authorization: `Bearer ${userToken}` } : {}) }),
+    [userToken]
+  );
   const logout = () => {
     setUserToken(null);
     setUserName(null);
@@ -545,6 +740,7 @@ const App: React.FC = () => {
     setUserName(name);
     saveSession(data.token, name, 'menu');
     fetchFlights(data.token);
+    fetchLodgings(data.token);
     fetchInvites(data.token);
     setActivePage('menu');
   };
@@ -570,6 +766,7 @@ const App: React.FC = () => {
     setUserName(name);
     saveSession(data.token, name, 'menu');
     fetchFlights(data.token);
+    fetchLodgings(data.token);
     fetchInvites(data.token);
     setActivePage('menu');
   };
@@ -582,6 +779,27 @@ const App: React.FC = () => {
     const res = await fetch(`${backendUrl}/api/flights?tripId=${activeTripId}`, { headers: { Authorization: `Bearer ${token ?? userToken}` } });
     const data = await res.json();
     setFlights(data);
+  };
+
+  const fetchLodgings = async (token?: string) => {
+    if (!activeTripId) {
+      setLodgings([]);
+      return;
+    }
+    const res = await fetch(`${backendUrl}/api/lodgings?tripId=${activeTripId}`, {
+      headers: { Authorization: `Bearer ${token ?? userToken}` },
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    setLodgings(
+      (data as any[]).map((l) => ({
+        ...l,
+        rooms: String(l.rooms ?? ''),
+        totalCost: String(l.totalCost ?? ''),
+        costPerNight: String(l.costPerNight ?? ''),
+        refundBy: l.refundBy ?? '',
+      }))
+    );
   };
 
   const fetchGroups = async (sort?: 'created' | 'name') => {
@@ -828,6 +1046,7 @@ const App: React.FC = () => {
   useEffect(() => {
     if (userToken) {
       fetchFlights();
+      fetchLodgings();
       fetchInvites();
       fetchGroups();
       fetchTrips();
@@ -842,7 +1061,7 @@ const App: React.FC = () => {
       setUserToken(session.token);
       setUserName(session.name);
       const sessionPage = session.page;
-      if (sessionPage === 'flights' || sessionPage === 'groups' || sessionPage === 'trips' || sessionPage === 'traits' || sessionPage === 'itinerary') {
+      if (sessionPage === 'flights' || sessionPage === 'lodging' || sessionPage === 'groups' || sessionPage === 'trips' || sessionPage === 'traits' || sessionPage === 'itinerary') {
         setActivePage(sessionPage as Page);
       } else {
         setActivePage('menu');
@@ -858,6 +1077,7 @@ const App: React.FC = () => {
   useEffect(() => {
     if (userToken) {
       fetchFlights();
+      fetchLodgings();
     }
   }, [activeTripId]);
 
@@ -888,6 +1108,93 @@ const App: React.FC = () => {
     setLocationSuggestions([]);
     setShowPassengerSuggestions(false);
     setPassengerSuggestions([]);
+  };
+
+  const findActiveTrip = () => trips.find((t) => t.id === activeTripId);
+
+  const ensurePassengerInGroup = async (passengerName: string) => {
+    if (!userToken) return;
+    const activeTrip = findActiveTrip();
+    if (!activeTrip?.groupId) return;
+    const normalizedTarget = normalizePassengerName(passengerName);
+    const alreadyInGroup = groupMembers.some((m) => normalizePassengerName(formatMemberName(m)) === normalizedTarget);
+    if (alreadyInGroup) return;
+    try {
+      await fetch(`${backendUrl}/api/groups/${activeTrip.groupId}/members`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...headers },
+        body: JSON.stringify({ guestName: passengerName }),
+      });
+      await fetchGroupMembersForActiveTrip();
+    } catch {
+      // non-blocking
+    }
+  };
+
+  const saveParsedFlights = async (flightsOverride?: FlightEditDraft[]) => {
+    const flightsToSave = flightsOverride ?? parsedFlights;
+    if (!userToken || !activeTripId || !flightsToSave.length) {
+      alert('No parsed flights to add.');
+      return;
+    }
+    setIsSavingParsedFlights(true);
+    try {
+      let saved = 0;
+      const failures: string[] = [];
+      for (const flight of flightsToSave) {
+        const enriched: FlightEditDraft = {
+          ...flight,
+          passengerName: flight.passengerName?.trim() || 'Traveler',
+          departureLocation: flight.departureLocation?.trim() || flight.departureAirportCode || '',
+          departureAirportCode: flight.departureAirportCode?.trim() || flight.departureLocation || '',
+          arrivalLocation: flight.arrivalLocation?.trim() || flight.arrivalAirportCode || '',
+          arrivalAirportCode: flight.arrivalAirportCode?.trim() || flight.arrivalLocation || '',
+          departureDate: flight.departureDate?.trim() || new Date().toISOString().slice(0, 10),
+          departureTime: flight.departureTime?.trim() || '00:00',
+          arrivalTime: flight.arrivalTime?.trim() || '00:00',
+          carrier: flight.carrier?.trim() || 'UNKNOWN',
+          flightNumber: flight.flightNumber?.trim() || 'UNKNOWN',
+          bookingReference: flight.bookingReference?.trim() || 'UNKNOWN',
+        };
+        if (!enriched.departureLocation || !enriched.arrivalLocation) {
+          failures.push('Missing departure or arrival location.');
+          continue;
+        }
+        await ensurePassengerInGroup(flight.passengerName);
+        const res = await fetch(`${backendUrl}/api/flights`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...headers },
+          body: JSON.stringify({
+            ...enriched,
+            cost: Number(flight.cost) || 0,
+            tripId: activeTripId,
+            departureDate: enriched.departureDate,
+          }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          failures.push(data.error || 'Failed to save flight');
+          continue;
+        }
+        saved += 1;
+      }
+      // Keep parsed flights visible so the user can review what was parsed.
+      setParsedFlights(flightsToSave);
+      if (saved) {
+        const baseMsg =
+          saved === 1 ? 'Added 1 flight to this trip.' : `Added ${saved} flights to this trip.`;
+        const failMsg = failures.length ? ` ${failures.length} failed. First error: ${failures[0]}` : '';
+        setPdfParseMessage(baseMsg + failMsg);
+      } else {
+        const failMsg = failures.length ? `Reason: ${failures[0]}` : '';
+        setPdfParseMessage(`No flights added. Please review the upload. ${failMsg}`);
+      }
+      fetchFlights();
+    } catch {
+      alert('Unable to add parsed flights. Please review and add manually.');
+    } finally {
+      setIsSavingParsedFlights(false);
+    }
   };
 
   const addMemberToGroup = async (groupId: string, type: 'user' | 'guest') => {
@@ -1074,6 +1381,9 @@ const App: React.FC = () => {
             <View style={styles.navRow}>
               <TouchableOpacity style={[styles.button, activePage === 'flights' && styles.toggleActive]} onPress={() => setActivePage('flights')}>
                 <Text style={styles.buttonText}>Flights</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.button, activePage === 'lodging' && styles.toggleActive]} onPress={() => setActivePage('lodging')}>
+                <Text style={styles.buttonText}>Lodging</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.button, activePage === 'groups' && styles.toggleActive]} onPress={() => setActivePage('groups')}>
                 <Text style={styles.buttonText}>Groups</Text>
@@ -1281,6 +1591,209 @@ const App: React.FC = () => {
             </>
           ) : null}
 
+          {activePage === 'lodging' ? (
+            <View style={styles.card}>
+              <Text style={styles.sectionTitle}>Lodging</Text>
+              {Platform.OS !== 'web' && lodgingDateField ? (
+                <DateTimePicker
+                  value={lodgingDateValue}
+                  mode="date"
+                  onChange={(_, date) => {
+                    if (!date) {
+                      setLodgingDateField(null);
+                      return;
+                    }
+                    const iso = date.toISOString().slice(0, 10);
+                    if (lodgingDateField === 'checkIn') setLodgingDraft((p) => ({ ...p, checkInDate: iso }));
+                    if (lodgingDateField === 'checkOut') setLodgingDraft((p) => ({ ...p, checkOutDate: iso }));
+                    if (lodgingDateField === 'refund') setLodgingDraft((p) => ({ ...p, refundBy: iso }));
+                    setLodgingDateField(null);
+                  }}
+                />
+              ) : null}
+              <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
+                <View style={styles.table}>
+                  <View style={[styles.tableRow, styles.tableHeader]}>
+                    <View style={[styles.cell, styles.lodgingNameCol]}>
+                      <Text style={styles.headerText}>Name</Text>
+                    </View>
+                    <View style={[styles.cell, styles.lodgingDateCol]}>
+                      <Text style={styles.headerText}>Check-in</Text>
+                    </View>
+                    <View style={[styles.cell, styles.lodgingDateCol]}>
+                      <Text style={styles.headerText}>Check-out</Text>
+                    </View>
+                    <View style={[styles.cell, styles.lodgingRoomsCol]}>
+                      <Text style={styles.headerText}>Rooms</Text>
+                    </View>
+                    <View style={[styles.cell, styles.lodgingRefundCol]}>
+                      <Text style={styles.headerText}>Refund By</Text>
+                    </View>
+                    <View style={[styles.cell, styles.lodgingCostCol]}>
+                      <Text style={styles.headerText}>Total</Text>
+                    </View>
+                    <View style={[styles.cell, styles.lodgingCostCol]}>
+                      <Text style={styles.headerText}>Per Night</Text>
+                    </View>
+                    <View style={[styles.cell, styles.lastCell, styles.lodgingAddressCol]}>
+                      <Text style={styles.headerText}>Address</Text>
+                    </View>
+                  </View>
+
+                  <View style={[styles.tableRow, styles.inputRow]}>
+                    <View style={[styles.cell, styles.lodgingNameCol]}>
+                      <TextInput
+                        style={styles.cellInput}
+                        placeholder="Lodging name"
+                        value={lodgingDraft.name}
+                        onChangeText={(text) => setLodgingDraft((p) => ({ ...p, name: text }))}
+                      />
+                    </View>
+                    <View style={[styles.cell, styles.lodgingDateCol]}>
+                      {Platform.OS === 'web' ? (
+                        <input
+                          style={{ ...StyleSheet.flatten(styles.cellInput), width: '100%' }}
+                          type="date"
+                          value={lodgingDraft.checkInDate}
+                          onChange={(e) => setLodgingDraft((p) => ({ ...p, checkInDate: e.target.value }))}
+                        />
+                      ) : (
+                        <TouchableOpacity
+                          style={[styles.cellInput, { justifyContent: 'center' }]}
+                          onPress={() => {
+                            setLodgingDateField('checkIn');
+                            setLodgingDateValue(new Date(lodgingDraft.checkInDate));
+                          }}
+                        >
+                          <Text>{lodgingDraft.checkInDate}</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                    <View style={[styles.cell, styles.lodgingDateCol]}>
+                      {Platform.OS === 'web' ? (
+                        <input
+                          style={{ ...StyleSheet.flatten(styles.cellInput), width: '100%' }}
+                          type="date"
+                          value={lodgingDraft.checkOutDate}
+                          onChange={(e) => setLodgingDraft((p) => ({ ...p, checkOutDate: e.target.value }))}
+                        />
+                      ) : (
+                        <TouchableOpacity
+                          style={[styles.cellInput, { justifyContent: 'center' }]}
+                          onPress={() => {
+                            setLodgingDateField('checkOut');
+                            setLodgingDateValue(new Date(lodgingDraft.checkOutDate));
+                          }}
+                        >
+                          <Text>{lodgingDraft.checkOutDate}</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                    <View style={[styles.cell, styles.lodgingRoomsCol]}>
+                      <TextInput
+                        style={styles.cellInput}
+                        keyboardType="numeric"
+                        value={lodgingDraft.rooms}
+                        onChangeText={(text) => setLodgingDraft((p) => ({ ...p, rooms: text }))}
+                      />
+                    </View>
+                    <View style={[styles.cell, styles.lodgingRefundCol]}>
+                      {Platform.OS === 'web' ? (
+                        <input
+                          style={{ ...StyleSheet.flatten(styles.cellInput), width: '100%' }}
+                          type="date"
+                          value={lodgingDraft.refundBy}
+                          onChange={(e) => setLodgingDraft((p) => ({ ...p, refundBy: e.target.value }))}
+                        />
+                      ) : (
+                        <TouchableOpacity
+                          style={[styles.cellInput, { justifyContent: 'center' }]}
+                          onPress={() => {
+                            setLodgingDateField('refund');
+                            setLodgingDateValue(
+                              lodgingDraft.refundBy ? new Date(lodgingDraft.refundBy) : new Date(lodgingDraft.checkInDate)
+                            );
+                          }}
+                        >
+                          <Text>{lodgingDraft.refundBy || 'Select'}</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                    <View style={[styles.cell, styles.lodgingCostCol]}>
+                      <TextInput
+                        style={styles.cellInput}
+                        keyboardType="numeric"
+                        value={lodgingDraft.totalCost}
+                        onChangeText={(text) => setLodgingDraft((p) => ({ ...p, totalCost: text }))}
+                        placeholder="Total cost"
+                      />
+                    </View>
+                    <View style={[styles.cell, styles.lodgingCostCol]}>
+                      <Text style={styles.cellText}>${lodgingDraft.costPerNight || '-'}</Text>
+                    </View>
+                    <View style={[styles.cell, styles.lastCell, styles.lodgingAddressCol]}>
+                      <TextInput
+                        style={styles.cellInput}
+                        value={lodgingDraft.address}
+                        onChangeText={(text) => setLodgingDraft((p) => ({ ...p, address: text }))}
+                        placeholder="Address"
+                      />
+                    </View>
+                  </View>
+                  <View style={styles.tableFooter}>
+                    <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={addLodging}>
+                      <Text style={styles.buttonText}>Add lodging</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {lodgings.map((l) => (
+                    <View key={l.id} style={styles.tableRow}>
+                      <View style={[styles.cell, styles.lodgingNameCol]}>
+                        <Text style={styles.cellText}>{l.name}</Text>
+                      </View>
+                      <View style={[styles.cell, styles.lodgingDateCol]}>
+                        <Text style={styles.cellText}>{formatDateLong(l.checkInDate)}</Text>
+                      </View>
+                      <View style={[styles.cell, styles.lodgingDateCol]}>
+                        <Text style={styles.cellText}>{formatDateLong(l.checkOutDate)}</Text>
+                      </View>
+                      <View style={[styles.cell, styles.lodgingRoomsCol]}>
+                        <Text style={styles.cellText}>{l.rooms}</Text>
+                      </View>
+                      <View style={[styles.cell, styles.lodgingRefundCol]}>
+                        <Text style={styles.cellText}>{l.refundBy ? formatDateLong(l.refundBy) : 'Non-refundable'}</Text>
+                      </View>
+                      <View style={[styles.cell, styles.lodgingCostCol]}>
+                        <Text style={styles.cellText}>${l.totalCost || '-'}</Text>
+                      </View>
+                      <View style={[styles.cell, styles.lodgingCostCol]}>
+                        <Text style={styles.cellText}>${l.costPerNight || '-'}</Text>
+                      </View>
+                      <View
+                        style={[
+                          styles.cell,
+                          styles.lastCell,
+                          styles.lodgingAddressCol,
+                          { flexDirection: 'row', justifyContent: 'space-between' },
+                        ]}
+                      >
+                        <Text style={[styles.cellText, styles.linkText]} onPress={() => openMaps(l.address)}>
+                          {l.address || '-'}
+                        </Text>
+                        <TouchableOpacity onPress={() => removeLodging(l.id)}>
+                          <Text style={styles.removeText}>Remove</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              </ScrollView>
+              <View style={{ marginTop: 8 }}>
+                <Text style={styles.flightTitle}>Total lodging cost: ${lodgingTotal.toFixed(2)}</Text>
+              </View>
+            </View>
+          ) : null}
+
           {activePage === 'groups' ? (
             <>
               {invites.length ? (
@@ -1423,6 +1936,57 @@ const App: React.FC = () => {
           {activePage === 'flights' ? (
             <View style={[styles.card, styles.flightsSection]}>
               <Text style={styles.sectionTitle}>Flights</Text>
+              {Platform.OS === 'web' ? (
+                <View style={styles.pdfRow}>
+                  <input
+                    ref={fileInputRef as any}
+                    type="file"
+                    accept="application/pdf,image/*"
+                    style={styles.hiddenInput as any}
+                    onChange={(e: any) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        handleFlightFile(file);
+                      }
+                      e.target.value = '';
+                    }}
+                  />
+                  <TouchableOpacity
+                    style={[styles.button, isParsingPdf && styles.disabledButton]}
+                    disabled={isParsingPdf}
+                    onPress={() => fileInputRef.current?.click()}
+                  >
+                    <Text style={styles.buttonText}>{isParsingPdf ? 'Reading...' : 'Upload Flight PDF'}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.button, styles.smallButton, isSavingParsedFlights && styles.disabledButton]}
+                    disabled={isSavingParsedFlights || parsedFlights.length === 0}
+                    onPress={() => saveParsedFlights()}
+                  >
+                    <Text style={styles.buttonText}>
+                      {isSavingParsedFlights
+                        ? 'Adding flights...'
+                        : parsedFlights.length
+                          ? `Add parsed flights (${parsedFlights.length})`
+                          : 'Add parsed flights'}
+                    </Text>
+                  </TouchableOpacity>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.helperText}>
+                      {pdfParseMessage ?? 'Upload a confirmation email PDF or image to auto-add flights.'}
+                    </Text>
+                    {parsedFlights.length ? (
+                      <View style={styles.parsedList}>
+                        {parsedFlights.map((f, idx) => (
+                          <Text key={`${f.passengerName}-${idx}`} style={styles.helperText}>
+                            {`${f.passengerName || 'Traveler'} | ${f.departureDate || 'Date?'} | ${f.departureLocation} -> ${f.arrivalLocation} | ${f.departureTime || '?'} / Arr ${f.arrivalTime || '?'} | Cost ${f.cost || '0'} | Ref ${f.bookingReference || '-'}`}
+                          </Text>
+                        ))}
+                      </View>
+                    ) : null}
+                  </View>
+                </View>
+              ) : null}
               <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
                 <View style={styles.table}>
                   <View style={[styles.tableRow, styles.tableHeader]}>
@@ -2113,6 +2677,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#0f172a',
   },
+  flightTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
   actionCell: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2145,6 +2714,22 @@ const styles = StyleSheet.create({
   helperText: {
     color: '#6b7280',
     fontSize: 12,
+  },
+  parsedList: {
+    marginTop: 4,
+    gap: 2,
+  },
+  pdfRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 8,
+  },
+  hiddenInput: {
+    display: 'none',
+  },
+  disabledButton: {
+    backgroundColor: '#94a3b8',
   },
   shareInput: {
     flex: 1,
@@ -2183,6 +2768,28 @@ const styles = StyleSheet.create({
   removeText: {
     color: '#dc2626',
     fontWeight: '600',
+  },
+  linkText: {
+    color: '#0d6efd',
+    textDecorationLine: 'underline',
+  },
+  lodgingNameCol: {
+    minWidth: 180,
+  },
+  lodgingDateCol: {
+    minWidth: 130,
+  },
+  lodgingRoomsCol: {
+    minWidth: 80,
+  },
+  lodgingRefundCol: {
+    minWidth: 150,
+  },
+  lodgingCostCol: {
+    minWidth: 120,
+  },
+  lodgingAddressCol: {
+    minWidth: 240,
   },
   addRow: {
     flexDirection: 'row',

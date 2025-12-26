@@ -8,5 +8,8 @@
   ],
   "scripts": {
     "lint": "echo \"Add linters per workspace\""
+  },
+  "devDependencies": {
+    "canvas": "^3.2.0"
   }
 }
