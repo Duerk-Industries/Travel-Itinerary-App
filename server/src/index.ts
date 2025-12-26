@@ -14,6 +14,7 @@ const itineraryRoutes = require('./routes/itineraryRoutes').default;
 const itineraryDataRoutes = require('./routes/itineraryDataRoutes').default;
 const traitRoutes = require('./routes/traitRoutes').default;
 const lodgingRoutes = require('./routes/lodgingRoutes').default;
+const tourRoutes = require('./routes/tourRoutes').default;
 
 // Import db AFTER dotenv has run
 const { initDb, refreshAirportsDaily } = require('./db');
@@ -40,6 +41,7 @@ app.use('/api/itinerary', itineraryRoutes);
 app.use('/api/itineraries', itineraryDataRoutes);
 app.use('/api/traits', traitRoutes);
 app.use('/api/lodgings', lodgingRoutes);
+app.use('/api/tours', tourRoutes);
 
 const port = Number(process.env.PORT) || 4000;
 

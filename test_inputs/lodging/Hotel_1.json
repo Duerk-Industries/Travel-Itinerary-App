@@ -1,0 +1,13 @@
+{
+  "hotelName": "Chic stay HANA Boutique hotel",
+  "guestName": "Bryan Duerk",
+  "checkOutDate": "2025-12-03",
+  "checkInDate": "2025-11-30",
+  "freeCancelBy": "2025-11-23",
+  "rooms": "1",
+  "breakfastIncluded": true,
+  "totalCost": "321.39",
+  "currency": "USD",
+  "paid": true,
+  "address": "Kisalat RD Ban Visoun Luangprabang, 06000 Luang Prabang, Laos"
+}

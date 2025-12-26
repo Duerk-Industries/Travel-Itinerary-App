@@ -8,7 +8,10 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "parse:debug": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" ./scripts/parse-debug.ts"
+    "parse:debug": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" ./scripts/parse-debug.ts",
+    "parse:lodging": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" ./scripts/parse-lodging-debug.ts",
+    "test:lodging-parser": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" ./scripts/test-lodging-parser.ts",
+    "test:lodging-suite": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" ./scripts/test-lodging-suite.ts"
   },
   "dependencies": {
     "@expo/metro-runtime": "~3.2.3",

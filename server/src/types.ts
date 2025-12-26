@@ -30,6 +30,7 @@ export interface Flight {
   carrier: string;
   flightNumber: string;
   bookingReference: string;
+  paidBy: string[];
   sharedWith?: string[];
   groupId?: string;
   passengerInGroup?: boolean;
@@ -92,6 +93,24 @@ export interface Lodging {
   totalCost: number;
   costPerNight: number;
   address: string;
+  paidBy: string[];
+  createdAt: string;
+}
+
+export interface Tour {
+  id: string;
+  userId: string;
+  tripId: string;
+  date: string;
+  name: string;
+  startLocation: string;
+  startTime: string;
+  duration: string;
+  cost: number;
+  freeCancelBy?: string | null;
+  bookedOn: string;
+  reference: string;
+  paidBy: string[];
   createdAt: string;
 }
 
