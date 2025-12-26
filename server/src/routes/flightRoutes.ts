@@ -45,6 +45,7 @@ router.post('/', async (req, res) => {
     flightNumber,
     bookingReference,
     tripId,
+    paidBy,
   } = req.body;
   if (!passengerName || !departureDate || !departureTime || !arrivalTime || !carrier || !flightNumber || !bookingReference || !tripId) {
     res.status(400).json({ error: 'Missing required fields' });
@@ -73,6 +74,7 @@ router.post('/', async (req, res) => {
     carrier,
     flightNumber,
     bookingReference,
+    paidBy: Array.isArray(paidBy) ? paidBy : [],
   });
   res.status(201).json(flight);
 });
@@ -95,6 +97,7 @@ router.patch('/:id', async (req, res) => {
     carrier,
     flightNumber,
     bookingReference,
+    paidBy,
   } = req.body;
   if (!passengerName || !departureDate || !departureTime || !arrivalTime || !carrier || !flightNumber || !bookingReference) {
     res.status(400).json({ error: 'Missing required fields' });
@@ -117,6 +120,7 @@ router.patch('/:id', async (req, res) => {
       carrier,
       flightNumber,
       bookingReference,
+      paidBy: Array.isArray(paidBy) ? paidBy : [],
     });
     res.json(updated);
   } catch (err) {

@@ -1,7 +1,7 @@
 // server/src/db.ts
 import { Pool } from 'pg';
 import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
-import { Flight, Group, GroupMember, Trait, Trip, User, WebUser, Lodging } from './types';
+import { Flight, Group, GroupMember, Trait, Trip, User, WebUser, Lodging, Tour } from './types';
 import fetch from 'node-fetch';
 
 
@@ -163,6 +163,7 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE flights ADD COLUMN IF NOT EXISTS arrival_airport_code TEXT;`);
   await p.query(`ALTER TABLE flights ADD COLUMN IF NOT EXISTS layover_location_code TEXT;`);
   await p.query(`ALTER TABLE flights ADD COLUMN IF NOT EXISTS trip_id UUID REFERENCES trips(id) ON DELETE SET NULL;`);
+  await p.query(`ALTER TABLE flights ADD COLUMN IF NOT EXISTS paid_by JSONB DEFAULT '[]'::jsonb;`);
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS lodgings (
@@ -177,6 +178,7 @@ export const initDb = async (): Promise<void> => {
       total_cost NUMERIC NOT NULL DEFAULT 0,
       cost_per_night NUMERIC NOT NULL DEFAULT 0,
       address TEXT,
+      paid_by JSONB DEFAULT '[]'::jsonb,
       created_at TIMESTAMP DEFAULT NOW()
     );
   `);
@@ -185,6 +187,28 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS total_cost NUMERIC NOT NULL DEFAULT 0;`);
   await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS cost_per_night NUMERIC NOT NULL DEFAULT 0;`);
   await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS address TEXT;`);
+  await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS paid_by JSONB DEFAULT '[]'::jsonb;`);
+
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS tours (
+      id UUID PRIMARY KEY,
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      trip_id UUID REFERENCES trips(id) ON DELETE SET NULL,
+      date DATE NOT NULL,
+      name TEXT NOT NULL,
+      start_location TEXT,
+      start_time TEXT,
+      duration TEXT,
+      cost NUMERIC NOT NULL DEFAULT 0,
+      free_cancel_by DATE,
+      booked_on TEXT,
+      reference TEXT,
+      paid_by JSONB DEFAULT '[]'::jsonb,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+  await p.query(`ALTER TABLE tours ADD COLUMN IF NOT EXISTS paid_by JSONB DEFAULT '[]'::jsonb;`);
+  await p.query(`ALTER TABLE tours ADD COLUMN IF NOT EXISTS booked_on TEXT;`);
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS airports (
@@ -362,8 +386,8 @@ export const insertFlight = async (
   const query = `INSERT INTO flights (
     id, user_id, trip_id, passenger_name, departure_date, departure_location, departure_airport_code, departure_time,
     arrival_location, arrival_airport_code, layover_location, layover_location_code, layover_duration,
-    arrival_time, cost, carrier, flight_number, booking_reference
-  ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) RETURNING *`;
+    arrival_time, cost, carrier, flight_number, booking_reference, paid_by
+  ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19) RETURNING *`;
 
 
   const values = [
@@ -385,10 +409,12 @@ export const insertFlight = async (
     flight.carrier,
     flight.flightNumber,
     flight.bookingReference,
+    JSON.stringify(flight.paidBy ?? []),
   ];
 
   const { rows } = await p.query<Flight>(query, values);
-  return rows[0];
+  const row = rows[0] as any;
+  return { ...(row as Flight), paidBy: Array.isArray(row.paid_by) ? row.paid_by : [] };
 };
 
 
@@ -424,8 +450,9 @@ export const updateFlight = async (
          cost = $12,
          carrier = $13,
          flight_number = $14,
-         booking_reference = $15
-     WHERE id = $16 AND user_id = $17
+         booking_reference = $15,
+         paid_by = COALESCE($16, paid_by)
+     WHERE id = $17 AND user_id = $18
      RETURNING *`,
     [
       updates.passengerName,
@@ -443,12 +470,14 @@ export const updateFlight = async (
       updates.carrier,
       updates.flightNumber,
       updates.bookingReference,
+      updates.paidBy ? JSON.stringify(updates.paidBy) : null,
       flightId,
       userId,
     ]
   );
   if (!rows.length) throw new Error('Flight not found');
-  return rows[0];
+  const row = rows[0] as any;
+  return { ...(row as Flight), paidBy: Array.isArray(row.paid_by) ? row.paid_by : [] };
 };
 
 export const ensureUserInTrip = async (tripId: string, userId: string): Promise<{ groupId: string } | null> => {
@@ -553,7 +582,8 @@ export const listFlights = async (userId: string, tripId?: string): Promise<Flig
         WHEN apl.iata_code IS NOT NULL THEN
           COALESCE(NULLIF(apl.city, ''), apl.name, apl.iata_code) || ' (' || apl.iata_code || ')'
         ELSE f.layover_location
-      END as layover_airport_label
+      END as layover_airport_label,
+      COALESCE(f.paid_by, '[]'::jsonb) as "paidBy"
      FROM flights f
      JOIN trips t ON f.trip_id = t.id
      LEFT JOIN airports apd ON apd.iata_code = f.departure_location
@@ -561,12 +591,12 @@ export const listFlights = async (userId: string, tripId?: string): Promise<Flig
      LEFT JOIN airports apl ON apl.iata_code = f.layover_location
      WHERE f.user_id = $1
        AND ($2::uuid IS NULL OR f.trip_id = $2)
-     ORDER BY f.departure_date DESC`,
+      ORDER BY f.departure_date DESC`,
     [userId, tripId ?? null]
   );
 
 
-  return rows;
+  return rows.map((r: any) => ({ ...(r as Flight), paidBy: Array.isArray(r.paidBy) ? r.paidBy : [] }));
 };
 
 export const listLodgings = async (userId: string, tripId?: string | null): Promise<Lodging[]> => {
@@ -590,6 +620,7 @@ export const listLodgings = async (userId: string, tripId?: string | null): Prom
              total_cost as "totalCost",
              cost_per_night as "costPerNight",
              address,
+             COALESCE(paid_by, '[]'::jsonb) as "paidBy",
              created_at as "createdAt"
       FROM lodgings
       WHERE ${where}
@@ -597,7 +628,10 @@ export const listLodgings = async (userId: string, tripId?: string | null): Prom
     `,
     params
   );
-  return rows;
+  return rows.map((r: any) => ({
+    ...(r as Lodging),
+    paidBy: Array.isArray(r.paidBy) ? r.paidBy : [],
+  }));
 };
 
 export const insertLodging = async (lodging: {
@@ -611,15 +645,16 @@ export const insertLodging = async (lodging: {
   totalCost: number;
   costPerNight: number;
   address?: string;
+  paidBy?: string[];
 }): Promise<Lodging> => {
   const p = getPool();
   const id = randomUUID();
   const { rows } = await p.query(
     `
       INSERT INTO lodgings (
-        id, user_id, trip_id, name, check_in_date, check_out_date, rooms, refund_by, total_cost, cost_per_night, address
+        id, user_id, trip_id, name, check_in_date, check_out_date, rooms, refund_by, total_cost, cost_per_night, address, paid_by
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING id,
                 user_id as "userId",
                 trip_id as "tripId",
@@ -631,6 +666,7 @@ export const insertLodging = async (lodging: {
                 total_cost as "totalCost",
                 cost_per_night as "costPerNight",
                 address,
+                COALESCE(paid_by, '[]'::jsonb) as "paidBy",
                 created_at as "createdAt"
     `,
     [
@@ -645,14 +681,151 @@ export const insertLodging = async (lodging: {
       lodging.totalCost,
       lodging.costPerNight,
       lodging.address ?? '',
+      JSON.stringify(lodging.paidBy ?? []),
     ]
   );
-  return rows[0];
+  const row = rows[0] as any;
+  return { ...(row as Lodging), paidBy: Array.isArray(row.paidBy) ? row.paidBy : [] };
 };
 
 export const deleteLodging = async (lodgingId: string, userId: string): Promise<void> => {
   const p = getPool();
   await p.query(`DELETE FROM lodgings WHERE id = $1 AND user_id = $2`, [lodgingId, userId]);
+};
+
+export const listTours = async (userId: string, tripId?: string): Promise<Tour[]> => {
+  const p = getPool();
+  const { rows } = await p.query<Tour>(
+    `
+    SELECT
+      id,
+      user_id as "userId",
+      trip_id as "tripId",
+      to_char(date, 'YYYY-MM-DD') as date,
+      name,
+      start_location as "startLocation",
+      start_time as "startTime",
+      duration,
+      cost::float8 as cost,
+      to_char(free_cancel_by, 'YYYY-MM-DD') as "freeCancelBy",
+      booked_on as "bookedOn",
+      reference,
+      COALESCE(paid_by, '[]'::jsonb) as "paidBy",
+      created_at as "createdAt"
+    FROM tours
+    WHERE user_id = $1
+      ${tripId ? 'AND trip_id = $2' : ''}
+    ORDER BY date ASC, created_at DESC
+    `,
+    tripId ? [userId, tripId] : [userId]
+  );
+  return rows.map((r) => ({ ...r, paidBy: Array.isArray((r as any).paidBy) ? (r as any).paidBy : [] }));
+};
+
+export const insertTour = async (tour: Omit<Tour, 'id' | 'createdAt'>): Promise<Tour> => {
+  const p = getPool();
+  const id = randomUUID();
+  const paidBy = JSON.stringify(tour.paidBy ?? []);
+  const { rows } = await p.query<Tour>(
+    `
+    INSERT INTO tours (
+      id, user_id, trip_id, date, name, start_location, start_time, duration, cost, free_cancel_by, booked_on, reference, paid_by
+    ) VALUES (
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
+    )
+    RETURNING
+      id,
+      user_id as "userId",
+      trip_id as "tripId",
+      to_char(date, 'YYYY-MM-DD') as date,
+      name,
+      start_location as "startLocation",
+      start_time as "startTime",
+      duration,
+      cost::float8 as cost,
+      to_char(free_cancel_by, 'YYYY-MM-DD') as "freeCancelBy",
+      booked_on as "bookedOn",
+      reference,
+      COALESCE(paid_by, '[]'::jsonb) as "paidBy",
+      created_at as "createdAt"
+    `,
+    [
+      id,
+      tour.userId,
+      tour.tripId,
+      tour.date,
+      tour.name,
+      tour.startLocation,
+      tour.startTime,
+      tour.duration,
+      tour.cost,
+      tour.freeCancelBy ?? null,
+      tour.bookedOn,
+      tour.reference,
+      paidBy,
+    ]
+  );
+  const row = rows[0];
+  return { ...row, paidBy: Array.isArray((row as any).paidBy) ? (row as any).paidBy : [] };
+};
+
+export const updateTour = async (id: string, userId: string, tour: Partial<Tour>): Promise<Tour | null> => {
+  const p = getPool();
+  const paidBy = tour.paidBy ? JSON.stringify(tour.paidBy) : undefined;
+  const { rows } = await p.query<Tour>(
+    `
+    UPDATE tours
+    SET
+      date = COALESCE($3, date),
+      name = COALESCE($4, name),
+      start_location = COALESCE($5, start_location),
+      start_time = COALESCE($6, start_time),
+      duration = COALESCE($7, duration),
+      cost = COALESCE($8, cost),
+      free_cancel_by = COALESCE($9, free_cancel_by),
+      booked_on = COALESCE($10, booked_on),
+      reference = COALESCE($11, reference),
+      paid_by = COALESCE($12, paid_by)
+    WHERE id = $1 AND user_id = $2
+    RETURNING
+      id,
+      user_id as "userId",
+      trip_id as "tripId",
+      to_char(date, 'YYYY-MM-DD') as date,
+      name,
+      start_location as "startLocation",
+      start_time as "startTime",
+      duration,
+      cost::float8 as cost,
+      to_char(free_cancel_by, 'YYYY-MM-DD') as "freeCancelBy",
+      booked_on as "bookedOn",
+      reference,
+      COALESCE(paid_by, '[]'::jsonb) as "paidBy",
+      created_at as "createdAt"
+    `,
+    [
+      id,
+      userId,
+      tour.date ?? null,
+      tour.name ?? null,
+      tour.startLocation ?? null,
+      tour.startTime ?? null,
+      tour.duration ?? null,
+      tour.cost ?? null,
+      tour.freeCancelBy ?? null,
+      tour.bookedOn ?? null,
+      tour.reference ?? null,
+      paidBy ?? null,
+    ]
+  );
+  if (!rows.length) return null;
+  const row = rows[0];
+  return { ...row, paidBy: Array.isArray((row as any).paidBy) ? (row as any).paidBy : [] };
+};
+
+export const deleteTour = async (tourId: string, userId: string): Promise<void> => {
+  const p = getPool();
+  await p.query(`DELETE FROM tours WHERE id = $1 AND user_id = $2`, [tourId, userId]);
 };
 
 
