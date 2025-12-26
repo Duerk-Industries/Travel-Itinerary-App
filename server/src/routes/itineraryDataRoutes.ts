@@ -8,6 +8,8 @@ import {
   deleteItineraryRecord,
   listItineraries,
   listItineraryDetails,
+  updateItineraryDetail,
+  updateItineraryRecord,
 } from '../db';
 
 const router = Router();
@@ -40,6 +42,27 @@ router.delete('/:id', async (req, res) => {
   try {
     await deleteItineraryRecord(userId, req.params.id);
     res.status(204).send();
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.put('/:id', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const { destination, days, budget } = req.body ?? {};
+  if (!destination || !days) {
+    res.status(400).json({ error: 'destination and days are required' });
+    return;
+  }
+  try {
+    const updated = await updateItineraryRecord(
+      userId,
+      req.params.id,
+      destination,
+      Number(days),
+      budget != null ? Number(budget) : null
+    );
+    res.json(updated);
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });
   }
@@ -80,6 +103,26 @@ router.delete('/details/:detailId', async (req, res) => {
   try {
     await deleteItineraryDetail(userId, req.params.detailId);
     res.status(204).send();
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.put('/details/:detailId', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const { day, time, activity, cost } = req.body ?? {};
+  if (!activity) {
+    res.status(400).json({ error: 'activity is required' });
+    return;
+  }
+  try {
+    const updated = await updateItineraryDetail(userId, req.params.detailId, {
+      day: day != null ? Number(day) : undefined,
+      time: time ?? null,
+      activity,
+      cost: cost != null ? Number(cost) : null,
+    });
+    res.json(updated);
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });
   }

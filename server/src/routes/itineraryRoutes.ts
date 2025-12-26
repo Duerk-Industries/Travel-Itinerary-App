@@ -19,7 +19,7 @@ router.post('/', async (req, res) => {
     return;
   }
 
-  const { country, days, budgetMin, budgetMax, traits, departureAirport, tripId } = req.body ?? {};
+  const { country, days, budgetMin, budgetMax, traits, departureAirport, tripId, tripStyle } = req.body ?? {};
   const userId = (req as any).user.userId as string;
   if (!country || !String(country).trim()) {
     res.status(400).json({ error: 'country is required' });
@@ -43,6 +43,9 @@ router.post('/', async (req, res) => {
   }
 
   const origin = departureAirport && String(departureAirport).trim();
+  const styleLine = tripStyle && String(tripStyle).trim()
+    ? `Traveler's requested vibe/style: ${String(tripStyle).trim()}`
+    : '';
 
   let groupTraits: Array<{ userId: string; name: string; traits: string[] }> = [];
   try {
@@ -70,6 +73,7 @@ router.post('/', async (req, res) => {
     `Trip length: ${daysNum} day(s)`,
     `Budget range: $${min} - $${max}`,
     origin ? `Departure airport: ${origin}` : '',
+    styleLine,
     `Traveler traits/preferences (requesting user):`,
     traitLines,
     `Group members and their traits (consider everyone when planning shared activities):`,

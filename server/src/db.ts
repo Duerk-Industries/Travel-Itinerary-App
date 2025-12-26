@@ -1414,6 +1414,47 @@ export const deleteItineraryRecord = async (userId: string, itineraryId: string)
   await p.query(`DELETE FROM itineraries WHERE id = $1`, [itineraryId]);
 };
 
+export const updateItineraryRecord = async (
+  userId: string,
+  itineraryId: string,
+  destination: string,
+  days: number,
+  budget?: number | null
+): Promise<Itinerary & { tripName: string }> => {
+  const p = getPool();
+  const { rows } = await p.query<{ tripId: string }>(
+    `SELECT trip_id as "tripId" FROM itineraries WHERE id = $1`,
+    [itineraryId]
+  );
+  if (!rows.length) throw new Error('Itinerary not found');
+  const tripId = rows[0].tripId;
+  const membership = await ensureUserInTrip(tripId, userId);
+  if (!membership) throw new Error('Not authorized to edit this itinerary');
+
+  const dupe = await p.query(
+    `SELECT 1 FROM itineraries
+     WHERE trip_id = $1 AND LOWER(destination) = LOWER($2) AND days = $3 AND COALESCE(budget,0) = COALESCE($4,0)
+       AND id <> $5
+     LIMIT 1`,
+    [tripId, destination.trim(), Math.max(1, Math.round(days)), budget ?? null, itineraryId]
+  );
+  if (dupe.rowCount) {
+    const err = new Error('Itinerary already exists for this trip');
+    (err as any).code = 'ITINERARY_EXISTS';
+    throw err;
+  }
+
+  const { rows: updated } = await p.query(
+    `UPDATE itineraries
+     SET destination = $1, days = $2, budget = $3
+     WHERE id = $4
+     RETURNING id, trip_id as "tripId", destination, days, budget, created_at as "createdAt",
+               (SELECT name FROM trips WHERE id = trip_id) as "tripName"`,
+    [destination.trim(), Math.max(1, Math.round(days)), budget ?? null, itineraryId]
+  );
+  return updated[0];
+};
+
 export const listItineraryDetails = async (userId: string, itineraryId: string): Promise<ItineraryDetail[]> => {
   const p = getPool();
   const { rows } = await p.query<{ tripId: string }>(
@@ -1473,6 +1514,43 @@ export const deleteItineraryDetail = async (userId: string, detailId: string): P
   const membership = await ensureUserInTrip(rows[0].tripId, userId);
   if (!membership) throw new Error('Not authorized to edit this itinerary');
   await p.query(`DELETE FROM itinerary_details WHERE id = $1`, [detailId]);
+};
+
+export const updateItineraryDetail = async (
+  userId: string,
+  detailId: string,
+  detail: Partial<ItineraryDetail>
+): Promise<ItineraryDetail> => {
+  const p = getPool();
+  const { rows } = await p.query<{ itineraryId: string; tripId: string }>(
+    `SELECT d.itinerary_id as "itineraryId", i.trip_id as "tripId"
+     FROM itinerary_details d
+     JOIN itineraries i ON i.id = d.itinerary_id
+     WHERE d.id = $1`,
+    [detailId]
+  );
+  if (!rows.length) throw new Error('Itinerary detail not found');
+  const membership = await ensureUserInTrip(rows[0].tripId, userId);
+  if (!membership) throw new Error('Not authorized to edit this itinerary');
+
+  const day = detail.day != null ? Math.max(1, Math.round(detail.day)) : undefined;
+  const time = detail.time ?? null;
+  const activity = detail.activity?.trim();
+  const cost = detail.cost != null ? Number(detail.cost) : null;
+
+  if (!activity) throw new Error('Activity is required');
+
+  const { rows: updated } = await p.query(
+    `UPDATE itinerary_details
+     SET day = COALESCE($1, day),
+         time = $2,
+         activity = $3,
+         cost = $4
+     WHERE id = $5
+     RETURNING id, itinerary_id as "itineraryId", day, time, activity, cost`,
+    [day ?? null, time, activity, cost, detailId]
+  );
+  return updated[0];
 };
 
 

@@ -298,11 +298,14 @@ const App: React.FC = () => {
   const [itineraryAirportOptions, setItineraryAirportOptions] = useState<string[]>([]);
   const [showItineraryAirportDropdown, setShowItineraryAirportDropdown] = useState(false);
   const [itineraryPlan, setItineraryPlan] = useState('');
+  const [itineraryTripStyle, setItineraryTripStyle] = useState('');
   const [itineraryLoading, setItineraryLoading] = useState(false);
   const [itineraryError, setItineraryError] = useState('');
   const [itineraryRecords, setItineraryRecords] = useState<ItineraryRecord[]>([]);
   const [itineraryDetails, setItineraryDetails] = useState<Record<string, ItineraryDetailRecord[]>>({});
   const [selectedItineraryId, setSelectedItineraryId] = useState<string | null>(null);
+  const [editingItineraryId, setEditingItineraryId] = useState<string | null>(null);
+  const [editingDetailId, setEditingDetailId] = useState<string | null>(null);
   const [detailDraft, setDetailDraft] = useState({ day: '1', time: '', activity: '', cost: '' });
   const [traitAge, setTraitAge] = useState('');
   const [traitGender, setTraitGender] = useState<'female' | 'male' | 'nonbinary' | 'prefer-not'>('prefer-not');
@@ -366,6 +369,35 @@ const App: React.FC = () => {
     () => lodgings.reduce((sum, l) => sum + (Number(l.totalCost) || 0), 0),
     [lodgings]
   );
+
+  const findExistingItinerary = (
+    tripId: string,
+    destination: string,
+    days: number,
+    excludeId?: string | null,
+    budget?: number | null
+  ) => {
+    const dest = destination.trim().toLowerCase();
+    const normalizedBudget = budget != null ? Number(budget) : null;
+    return itineraryRecords.find(
+      (i) =>
+        i.id !== excludeId &&
+        i.tripId === tripId &&
+        i.destination.trim().toLowerCase() === dest &&
+        i.days === days &&
+        (i.budget ?? null) === (normalizedBudget ?? null)
+    );
+  };
+
+  const beginEditItinerary = (it: ItineraryRecord) => {
+    setEditingItineraryId(it.id);
+    setSelectedItineraryId(it.id);
+    setActiveTripId(it.tripId);
+    setItineraryCountry(it.destination);
+    setItineraryDays(String(it.days));
+    if (it.budget != null) setBudgetMax(Number(it.budget));
+    fetchItineraryDetails(it.id);
+  };
 
   const openMaps = (address: string) => {
     if (!address) return;
@@ -1038,6 +1070,7 @@ const App: React.FC = () => {
         budgetMin,
         budgetMax,
         departureAirport: itineraryAirport.trim() || undefined,
+        tripStyle: itineraryTripStyle.trim() || undefined,
         tripId: activeTripId,
         traits: traits.map((t) => ({ name: t.name, level: t.level, notes: t.notes })),
       }),
@@ -1067,14 +1100,22 @@ const App: React.FC = () => {
       alert('Enter destination and days first.');
       return;
     }
-    // Avoid saving duplicates: check existing by destination+days+budget+trip
-    const res = await fetch(`${backendUrl}/api/itineraries`, {
-      method: 'POST',
+    const destination = itineraryCountry.trim();
+    const daysNum = Number(itineraryDays);
+    const existing = findExistingItinerary(activeTripId, destination, daysNum, editingItineraryId, budgetMax);
+    if (existing) {
+      alert('Itinerary already exists for this trip');
+      return;
+    }
+    const method = editingItineraryId ? 'PUT' : 'POST';
+    const url = editingItineraryId ? `${backendUrl}/api/itineraries/${editingItineraryId}` : `${backendUrl}/api/itineraries`;
+    const res = await fetch(url, {
+      method,
       headers: { 'Content-Type': 'application/json', ...headers },
       body: JSON.stringify({
         tripId: activeTripId,
-        destination: itineraryCountry.trim(),
-        days: Number(itineraryDays),
+        destination,
+        days: daysNum,
         budget: budgetMax, // store upper budget bound
       }),
     });
@@ -1083,10 +1124,15 @@ const App: React.FC = () => {
       alert(data.error || 'Unable to save itinerary');
       return;
     }
+    if (data.id) {
+      setSelectedItineraryId(data.id);
+      fetchItineraryDetails(data.id);
+    }
+    setEditingItineraryId(null);
     fetchItineraries();
   };
 
-  const addDetail = async () => {
+  const saveDetail = async () => {
     if (!userToken || !selectedItineraryId) {
       alert('Select an itinerary to add details');
       return;
@@ -1095,22 +1141,28 @@ const App: React.FC = () => {
       alert('Enter an activity');
       return;
     }
-    const res = await fetch(`${backendUrl}/api/itineraries/${selectedItineraryId}/details`, {
-      method: 'POST',
+    const payload = {
+      day: Number(detailDraft.day || '1'),
+      time: detailDraft.time || null,
+      activity: detailDraft.activity.trim(),
+      cost: detailDraft.cost ? Number(detailDraft.cost) : null,
+    };
+    const url = editingDetailId
+      ? `${backendUrl}/api/itineraries/details/${editingDetailId}`
+      : `${backendUrl}/api/itineraries/${selectedItineraryId}/details`;
+    const method = editingDetailId ? 'PUT' : 'POST';
+    const res = await fetch(url, {
+      method,
       headers: { 'Content-Type': 'application/json', ...headers },
-      body: JSON.stringify({
-        day: Number(detailDraft.day || '1'),
-        time: detailDraft.time || null,
-        activity: detailDraft.activity.trim(),
-        cost: detailDraft.cost ? Number(detailDraft.cost) : null,
-      }),
+      body: JSON.stringify(payload),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      alert(data.error || 'Unable to add detail');
+      alert(data.error || 'Unable to save detail');
       return;
     }
     setDetailDraft({ day: '1', time: '', activity: '', cost: '' });
+    setEditingDetailId(null);
     fetchItineraryDetails(selectedItineraryId);
   };
 
@@ -1119,24 +1171,41 @@ const App: React.FC = () => {
       setItineraryError('Select an active trip before saving the itinerary.');
       return;
     }
-    const createRes = await fetch(`${backendUrl}/api/itineraries`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...headers },
-      body: JSON.stringify({
-        tripId: activeTripId,
-        destination: itineraryCountry.trim() || 'Unknown',
-        days: Number(itineraryDays || '1'),
-        budget: budgetMax,
-      }),
-    });
-    const created = await createRes.json().catch(() => ({}));
-    if (!createRes.ok) {
-      setItineraryError(created.error || 'Unable to save itinerary');
-      return;
+    const destination = itineraryCountry.trim() || 'Unknown';
+    const daysNum = Number(itineraryDays || '1');
+    const existing = findExistingItinerary(activeTripId, destination, daysNum, null, budgetMax);
+    let itineraryId = existing?.id;
+    if (!itineraryId) {
+      const createRes = await fetch(`${backendUrl}/api/itineraries`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...headers },
+        body: JSON.stringify({
+          tripId: activeTripId,
+          destination,
+          days: daysNum,
+          budget: budgetMax,
+        }),
+      });
+      const created = await createRes.json().catch(() => ({}));
+      if (!createRes.ok) {
+        const message = (created.error || '').toLowerCase();
+        if (message.includes('already exists')) {
+          const existingRecord = itineraryRecords.find((i) => i.tripId === activeTripId);
+          itineraryId = existingRecord?.id;
+        }
+        if (!itineraryId) {
+          setItineraryError(created.error || 'Unable to save itinerary');
+          return;
+        }
+      } else {
+        itineraryId = created.id as string;
+        fetchItineraries();
+      }
+      setSelectedItineraryId(itineraryId);
+    } else {
+      setItineraryError('');
+      setSelectedItineraryId(itineraryId);
     }
-    const itineraryId = created.id as string;
-    setSelectedItineraryId(itineraryId);
-    fetchItineraries();
     const parsedDetails = parsePlanToDetails(plan);
     if (parsedDetails.length) {
       // avoid posting duplicate day+activity pairs
@@ -1361,6 +1430,32 @@ const App: React.FC = () => {
     if (!res.ok) return;
     const data = await res.json();
     setItineraryDetails((prev) => ({ ...prev, [itineraryId]: dedupeDetails(data) }));
+  };
+
+  const deleteItinerary = async (itineraryId: string) => {
+    if (!userToken) return;
+    const res = await fetch(`${backendUrl}/api/itineraries/${itineraryId}`, {
+      method: 'DELETE',
+      headers,
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'Unable to delete itinerary');
+      return;
+    }
+    setItineraryRecords((prev) => prev.filter((i) => i.id !== itineraryId));
+    setItineraryDetails((prev) => {
+      const next = { ...prev };
+      delete next[itineraryId];
+      return next;
+    });
+    if (selectedItineraryId === itineraryId) {
+      setSelectedItineraryId(null);
+    }
+    if (editingItineraryId === itineraryId) {
+      setEditingItineraryId(null);
+    }
+    setEditingDetailId(null);
   };
 
   const acceptInvite = async (inviteId: string) => {
@@ -1780,6 +1875,13 @@ const App: React.FC = () => {
                 value={itineraryDays}
                 onChangeText={(text) => setItineraryDays(text.replace(/[^0-9]/g, ''))}
               />
+              <TextInput
+                style={styles.input}
+                placeholder="What kind of trip do you want? (e.g., foodie weekend, outdoor adventure, museum crawl)"
+                value={itineraryTripStyle}
+                onChangeText={setItineraryTripStyle}
+                multiline
+              />
 
               <Text style={styles.modalLabel}>Budget range</Text>
               {Platform.OS === 'web' ? (
@@ -1860,8 +1962,11 @@ const App: React.FC = () => {
                 <Text style={styles.buttonText}>{itineraryLoading ? 'Generating…' : 'Generate Itinerary'}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={saveItineraryRecord}>
-                <Text style={styles.buttonText}>Save Itinerary Info</Text>
+                <Text style={styles.buttonText}>{editingItineraryId ? 'Update Itinerary' : 'Save Itinerary Info'}</Text>
               </TouchableOpacity>
+              {editingItineraryId ? (
+                <Text style={styles.helperText}>Editing itinerary — tap Save to update, or select another to cancel.</Text>
+              ) : null}
 
           {itineraryError ? <Text style={styles.warningText}>{itineraryError}</Text> : null}
           {itineraryPlan ? (
@@ -1871,6 +1976,161 @@ const App: React.FC = () => {
             </View>
           ) : null}
         </View>
+      ) : null}
+
+      {activePage === 'itinerary' ? (
+        <>
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Saved Itineraries</Text>
+            {!itineraryRecords.length ? (
+              <Text style={styles.helperText}>No itineraries saved yet.</Text>
+            ) : (
+              itineraryRecords.map((it) => {
+                const isSelected = selectedItineraryId === it.id;
+                return (
+                  <TouchableOpacity
+                    key={it.id}
+                    style={[styles.row, { alignItems: 'center', paddingVertical: 6 }]}
+                    onPress={() => {
+                      setEditingItineraryId(null);
+                      setSelectedItineraryId(it.id);
+                      if (!itineraryDetails[it.id]) {
+                        fetchItineraryDetails(it.id);
+                      }
+                    }}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.flightTitle}>{it.tripName || 'Trip'}</Text>
+                      <Text style={styles.helperText}>
+                        {it.destination} • {it.days} days • Budget ${it.budget ?? '—'} • Created {formatDateLong(it.createdAt)}
+                      </Text>
+                    </View>
+                    <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => beginEditItinerary(it)}>
+                      <Text style={styles.buttonText}>Edit</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => deleteItinerary(it.id)}>
+                      <Text style={styles.buttonText}>Delete</Text>
+                    </TouchableOpacity>
+                    <View style={[styles.button, isSelected && styles.toggleActive]}>
+                      <Text style={styles.buttonText}>{isSelected ? 'Selected' : 'View'}</Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })
+            )}
+          </View>
+
+          {selectedItineraryId ? (
+            <View style={styles.card}>
+              <Text style={styles.sectionTitle}>Itinerary Details</Text>
+              <View style={styles.table}>
+                <View style={[styles.tableRow, styles.tableHeader]}>
+                  <View style={[styles.cell, { flex: 1 }]}>
+                    <Text style={styles.headerText}>Day</Text>
+                  </View>
+                  <View style={[styles.cell, { flex: 1 }]}>
+                    <Text style={styles.headerText}>Time</Text>
+                  </View>
+                  <View style={[styles.cell, { flex: 2 }]}>
+                    <Text style={styles.headerText}>Activity</Text>
+                  </View>
+                  <View style={[styles.cell, { flex: 1 }]}>
+                    <Text style={styles.headerText}>Cost</Text>
+                  </View>
+                  <View style={[styles.cell, styles.actionCell, { flex: 1 }]}>
+                    <Text style={styles.headerText}>Actions</Text>
+                  </View>
+                </View>
+                {(itineraryDetails[selectedItineraryId] ?? []).map((d) => (
+                  <View key={d.id} style={styles.tableRow}>
+                    <View style={[styles.cell, { flex: 1 }]}>
+                      <Text style={styles.cellText}>{d.day}</Text>
+                    </View>
+                    <View style={[styles.cell, { flex: 1 }]}>
+                      <Text style={styles.cellText}>{d.time || '-'}</Text>
+                    </View>
+                    <View style={[styles.cell, { flex: 2 }]}>
+                      <Text style={styles.cellText}>{d.activity}</Text>
+                    </View>
+                    <View style={[styles.cell, { flex: 1 }]}>
+                      <Text style={styles.cellText}>{d.cost != null ? `$${d.cost}` : '-'}</Text>
+                    </View>
+                    <View style={[styles.cell, styles.actionCell, { flex: 1 }]}>
+                      <TouchableOpacity
+                        style={[styles.button, styles.smallButton]}
+                        onPress={() => {
+                          setEditingDetailId(d.id);
+                          setDetailDraft({
+                            day: String(d.day ?? '1'),
+                            time: d.time ?? '',
+                            activity: d.activity ?? '',
+                            cost: d.cost != null ? String(d.cost) : '',
+                          });
+                        }}
+                      >
+                        <Text style={styles.buttonText}>Edit</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.button, styles.smallButton, styles.dangerButton]}
+                        onPress={async () => {
+                          await fetch(`${backendUrl}/api/itineraries/details/${d.id}`, {
+                            method: 'DELETE',
+                            headers,
+                          });
+                          if (editingDetailId === d.id) setEditingDetailId(null);
+                          fetchItineraryDetails(selectedItineraryId);
+                        }}
+                      >
+                        <Text style={styles.buttonText}>Delete</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))}
+                <View style={[styles.tableRow, styles.inputRow]}>
+                  <View style={[styles.cell, { flex: 1 }]}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Day"
+                      keyboardType="numeric"
+                      value={detailDraft.day}
+                      onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, day: text }))}
+                    />
+                  </View>
+                  <View style={[styles.cell, { flex: 1 }]}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Time"
+                      value={detailDraft.time}
+                      onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, time: text }))}
+                    />
+                  </View>
+                  <View style={[styles.cell, { flex: 2 }]}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Activity"
+                      value={detailDraft.activity}
+                      onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, activity: text }))}
+                    />
+                  </View>
+                  <View style={[styles.cell, { flex: 1 }]}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Cost"
+                      keyboardType="numeric"
+                      value={detailDraft.cost}
+                      onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, cost: text }))}
+                    />
+                  </View>
+                  <View style={[styles.cell, styles.actionCell, { flex: 1 }]}>
+                    <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={saveDetail}>
+                      <Text style={styles.buttonText}>{editingDetailId ? 'Update' : 'Add'}</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            </View>
+          ) : null}
+        </>
       ) : null}
 
       {activePage === 'traits' ? (
