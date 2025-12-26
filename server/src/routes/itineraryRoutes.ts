@@ -2,6 +2,7 @@ import { Router } from 'express';
 import bodyParser from 'body-parser';
 import { authenticate } from '../auth';
 import fetch from 'node-fetch';
+import { listTraitsForGroupTrip } from '../db';
 
 const router = Router();
 router.use(bodyParser.json());
@@ -18,7 +19,8 @@ router.post('/', async (req, res) => {
     return;
   }
 
-  const { country, days, budgetMin, budgetMax, traits } = req.body ?? {};
+  const { country, days, budgetMin, budgetMax, traits, departureAirport, tripId, tripStyle } = req.body ?? {};
+  const userId = (req as any).user.userId as string;
   if (!country || !String(country).trim()) {
     res.status(400).json({ error: 'country is required' });
     return;
@@ -32,6 +34,24 @@ router.post('/', async (req, res) => {
   const max = Number(budgetMax);
   if (!Number.isFinite(min) || !Number.isFinite(max) || min < 0 || max < min) {
     res.status(400).json({ error: 'budget range is invalid' });
+    return;
+  }
+
+  if (!tripId || typeof tripId !== 'string') {
+    res.status(400).json({ error: 'tripId is required to tailor by group traits' });
+    return;
+  }
+
+  const origin = departureAirport && String(departureAirport).trim();
+  const styleLine = tripStyle && String(tripStyle).trim()
+    ? `Traveler's requested vibe/style: ${String(tripStyle).trim()}`
+    : '';
+
+  let groupTraits: Array<{ userId: string; name: string; traits: string[] }> = [];
+  try {
+    groupTraits = await listTraitsForGroupTrip(userId, tripId);
+  } catch (err: any) {
+    res.status(400).json({ error: err?.message || 'Unable to fetch group traits' });
     return;
   }
 
@@ -52,12 +72,23 @@ router.post('/', async (req, res) => {
     `Destination country: ${String(country).trim()}`,
     `Trip length: ${daysNum} day(s)`,
     `Budget range: $${min} - $${max}`,
-    `Traveler traits/preferences:`,
+    origin ? `Departure airport: ${origin}` : '',
+    styleLine,
+    `Traveler traits/preferences (requesting user):`,
     traitLines,
+    `Group members and their traits (consider everyone when planning shared activities):`,
+    groupTraits.length
+      ? groupTraits
+          .map((g) => `- ${g.name}: ${g.traits.length ? g.traits.join(', ') : 'No traits provided'}`)
+          .join('\n')
+      : '- No group traits available',
     ``,
     `Rules:`,
     `- Return a short markdown-style itinerary with headings per day.`,
     `- Include 2-3 activities per day, tailored to budget and traits.`,
+    `- EVERY activity line MUST include a cost with a leading $ (estimate if needed). Do not omit costs.`,
+    `- If a departure airport is provided, estimate a reasonable round-trip flight cost from that airport to the destination, state it explicitly, and treat it as a budget line item (round trip).`,
+    `- Show a quick budget summary noting flight cost and remaining on-the-ground budget for activities/food/lodging.`,
     `- Mention rough budget cues (e.g., "budget lunch", "free museum day").`,
     `- Keep total response under 250 words.`,
   ].join('\n');
