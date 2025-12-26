@@ -16,7 +16,7 @@ router.get('/', async (req, res) => {
 
 router.post('/', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const { name, checkInDate, checkOutDate, rooms, refundBy, totalCost, costPerNight, address, tripId } = req.body;
+  const { name, checkInDate, checkOutDate, rooms, refundBy, totalCost, costPerNight, address, tripId, paidBy } = req.body;
   if (!name || !checkInDate || !checkOutDate || !tripId) {
     res.status(400).json({ error: 'Missing required fields' });
     return;
@@ -37,6 +37,7 @@ router.post('/', async (req, res) => {
     totalCost: Number(totalCost) || 0,
     costPerNight: Number(costPerNight) || 0,
     address,
+    paidBy: Array.isArray(paidBy) ? paidBy : [],
   });
   res.status(201).json(lodging);
 });
