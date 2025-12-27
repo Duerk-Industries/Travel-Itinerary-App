@@ -1,7 +1,24 @@
 import path from 'path';
+import fs from 'fs';
 import dotenv from 'dotenv';
 
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
+// Load env vars from server/.env if present, otherwise fall back to repo root .env or existing process env
+const envPaths = [
+  path.resolve(__dirname, '../.env'),
+  path.resolve(__dirname, '../../.env'),
+];
+let envLoadedFrom: string | null = null;
+for (const envPath of envPaths) {
+  if (fs.existsSync(envPath)) {
+    dotenv.config({ path: envPath });
+    envLoadedFrom = envPath;
+    break;
+  }
+}
+if (!envLoadedFrom) {
+  dotenv.config(); // default search (process cwd)
+  envLoadedFrom = 'process.env/default';
+}
 
 const express = require('express');
 const cors = require('cors');
@@ -19,7 +36,7 @@ const tourRoutes = require('./routes/tourRoutes').default;
 // Import db AFTER dotenv has run
 const { initDb, refreshAirportsDaily } = require('./db');
 
-console.log('DATABASE_URL loaded:', process.env.DATABASE_URL); // should print the URL
+console.log('DATABASE_URL loaded:', process.env.DATABASE_URL, 'from', envLoadedFrom); // should print the URL
 
 const app = express();
 app.use(cors());

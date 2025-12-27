@@ -16,7 +16,9 @@ function getPool(): Pool {
     // Fail fast with a clear error instead of the SCRAM message
     if (typeof cs !== 'string' || cs.trim().length === 0) {
       throw new Error(
-        `DATABASE_URL is missing or not a string. Got type=${typeof cs}, value=${String(cs)}`
+        `DATABASE_URL is missing or not a string. Got type=${typeof cs}, value=${String(
+          cs
+        )}. Set DATABASE_URL in server/.env (or root .env) before starting the server.`
       );
     }
 
