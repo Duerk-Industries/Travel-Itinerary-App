@@ -325,6 +325,7 @@ const App: React.FC = () => {
   const [editingFlight, setEditingFlight] = useState<FlightEditDraft | null>(null);
   const [lodgings, setLodgings] = useState<Lodging[]>([]);
   const [lodgingDraft, setLodgingDraft] = useState<LodgingDraft>(createInitialLodgingState());
+  const [editingLodgingId, setEditingLodgingId] = useState<string | null>(null);
   const [lodgingDateField, setLodgingDateField] = useState<'checkIn' | 'checkOut' | 'refund' | null>(null);
   const [lodgingDateValue, setLodgingDateValue] = useState<Date>(new Date());
 
@@ -695,7 +696,7 @@ const App: React.FC = () => {
     }
   };
 
-  const addLodging = async () => {
+  const saveLodging = async () => {
     if (!lodgingDraft.name.trim() || !activeTripId) {
       alert('Please enter a lodging name and select an active trip.');
       return;
@@ -709,16 +710,19 @@ const App: React.FC = () => {
     const rooms = Number(lodgingDraft.rooms) || 1;
     const costPerNight = totalNum && rooms > 0 ? (totalNum / (nights * rooms)).toFixed(2) : '0';
     const paidBy = lodgingDraft.paidBy.length ? lodgingDraft.paidBy : defaultPayerId ? [defaultPayerId] : [];
-    const res = await fetch(`${backendUrl}/api/lodgings`, {
-      method: 'POST',
+    const payload = {
+      ...lodgingDraft,
+      tripId: activeTripId,
+      rooms,
+      costPerNight,
+      paidBy,
+    };
+    const url = editingLodgingId ? `${backendUrl}/api/lodgings/${editingLodgingId}` : `${backendUrl}/api/lodgings`;
+    const method = editingLodgingId ? 'PUT' : 'POST';
+    const res = await fetch(url, {
+      method,
       headers: jsonHeaders,
-      body: JSON.stringify({
-        ...lodgingDraft,
-        tripId: activeTripId,
-        rooms,
-        costPerNight,
-        paidBy,
-      }),
+      body: JSON.stringify(payload),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -726,6 +730,7 @@ const App: React.FC = () => {
       return;
     }
     setLodgingDraft(createInitialLodgingState());
+    setEditingLodgingId(null);
     fetchLodgings();
   };
 

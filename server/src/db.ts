@@ -720,6 +720,61 @@ export const deleteLodging = async (lodgingId: string, userId: string): Promise<
   await p.query(`DELETE FROM lodgings WHERE id = $1 AND user_id = $2`, [lodgingId, userId]);
 };
 
+export const updateLodging = async (
+  lodgingId: string,
+  userId: string,
+  updates: Partial<Lodging>
+): Promise<Lodging | null> => {
+  const p = getPool();
+  const { rows } = await p.query<Lodging>(
+    `
+    UPDATE lodgings
+    SET
+      name = COALESCE($3, name),
+      check_in_date = COALESCE($4, check_in_date),
+      check_out_date = COALESCE($5, check_out_date),
+      rooms = COALESCE($6, rooms),
+      refund_by = COALESCE($7, refund_by),
+      total_cost = COALESCE($8, total_cost),
+      cost_per_night = COALESCE($9, cost_per_night),
+      address = COALESCE($10, address),
+      paid_by = COALESCE($11, paid_by),
+      trip_id = COALESCE($12, trip_id)
+    WHERE id = $1 AND user_id = $2
+    RETURNING
+      id,
+      user_id as "userId",
+      trip_id as "tripId",
+      name,
+      check_in_date as "checkInDate",
+      check_out_date as "checkOutDate",
+      rooms,
+      refund_by as "refundBy",
+      total_cost as "totalCost",
+      cost_per_night as "costPerNight",
+      address,
+      COALESCE(paid_by, '[]'::jsonb) as "paidBy",
+      created_at as "createdAt"
+    `,
+    [
+      lodgingId,
+      userId,
+      updates.name ?? null,
+      updates.checkInDate ?? null,
+      updates.checkOutDate ?? null,
+      updates.rooms ?? null,
+      typeof updates.refundBy === 'undefined' ? null : updates.refundBy,
+      updates.totalCost ?? null,
+      updates.costPerNight ?? null,
+      updates.address ?? null,
+      updates.paidBy ? JSON.stringify(updates.paidBy) : null,
+      updates.tripId ?? null,
+    ]
+  );
+  if (!rows.length) return null;
+  const row = rows[0] as any;
+  return { ...(row as Lodging), paidBy: Array.isArray(row.paidBy) ? row.paidBy : [] };
+};
 export const listTours = async (userId: string, tripId?: string): Promise<Tour[]> => {
   const p = getPool();
   const { rows } = await p.query<Tour>(
