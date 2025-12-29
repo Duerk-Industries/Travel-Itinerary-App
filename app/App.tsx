@@ -258,6 +258,307 @@ const fallbackAirports: Airport[] = [
   { name: 'Dubai International', city: 'Dubai', country: 'UAE', iata_code: 'DXB' },
 ];
 
+const countryOptions = [
+  'Afghanistan',
+  'Albania',
+  'Algeria',
+  'Andorra',
+  'Angola',
+  'Antigua and Barbuda',
+  'Argentina',
+  'Armenia',
+  'Australia',
+  'Austria',
+  'Azerbaijan',
+  'Bahamas',
+  'Bahrain',
+  'Bangladesh',
+  'Barbados',
+  'Belarus',
+  'Belgium',
+  'Belize',
+  'Benin',
+  'Bhutan',
+  'Bolivia',
+  'Bosnia and Herzegovina',
+  'Botswana',
+  'Brazil',
+  'Brunei',
+  'Bulgaria',
+  'Burkina Faso',
+  'Burundi',
+  'Cabo Verde',
+  'Cambodia',
+  'Cameroon',
+  'Canada',
+  'Central African Republic',
+  'Chad',
+  'Chile',
+  'China',
+  'Colombia',
+  'Comoros',
+  'Congo',
+  'Costa Rica',
+  'Cote d Ivoire',
+  'Croatia',
+  'Cuba',
+  'Cyprus',
+  'Czechia',
+  'Democratic Republic of the Congo',
+  'Denmark',
+  'Djibouti',
+  'Dominica',
+  'Dominican Republic',
+  'Ecuador',
+  'Egypt',
+  'El Salvador',
+  'Equatorial Guinea',
+  'Eritrea',
+  'Estonia',
+  'Eswatini',
+  'Ethiopia',
+  'Fiji',
+  'Finland',
+  'France',
+  'Gabon',
+  'Gambia',
+  'Georgia',
+  'Germany',
+  'Ghana',
+  'Greece',
+  'Grenada',
+  'Guatemala',
+  'Guinea',
+  'Guinea-Bissau',
+  'Guyana',
+  'Haiti',
+  'Honduras',
+  'Hungary',
+  'Iceland',
+  'India',
+  'Indonesia',
+  'Iran',
+  'Iraq',
+  'Ireland',
+  'Israel',
+  'Italy',
+  'Jamaica',
+  'Japan',
+  'Jordan',
+  'Kazakhstan',
+  'Kenya',
+  'Kiribati',
+  'Kuwait',
+  'Kyrgyzstan',
+  'Laos',
+  'Latvia',
+  'Lebanon',
+  'Lesotho',
+  'Liberia',
+  'Libya',
+  'Liechtenstein',
+  'Lithuania',
+  'Luxembourg',
+  'Madagascar',
+  'Malawi',
+  'Malaysia',
+  'Maldives',
+  'Mali',
+  'Malta',
+  'Marshall Islands',
+  'Mauritania',
+  'Mauritius',
+  'Mexico',
+  'Micronesia',
+  'Moldova',
+  'Monaco',
+  'Mongolia',
+  'Montenegro',
+  'Morocco',
+  'Mozambique',
+  'Myanmar',
+  'Namibia',
+  'Nauru',
+  'Nepal',
+  'Netherlands',
+  'New Zealand',
+  'Nicaragua',
+  'Niger',
+  'Nigeria',
+  'North Korea',
+  'North Macedonia',
+  'Norway',
+  'Oman',
+  'Pakistan',
+  'Palau',
+  'Panama',
+  'Papua New Guinea',
+  'Paraguay',
+  'Peru',
+  'Philippines',
+  'Poland',
+  'Portugal',
+  'Qatar',
+  'Romania',
+  'Russia',
+  'Rwanda',
+  'Saint Kitts and Nevis',
+  'Saint Lucia',
+  'Saint Vincent and the Grenadines',
+  'Samoa',
+  'San Marino',
+  'Sao Tome and Principe',
+  'Saudi Arabia',
+  'Senegal',
+  'Serbia',
+  'Seychelles',
+  'Sierra Leone',
+  'Singapore',
+  'Slovakia',
+  'Slovenia',
+  'Solomon Islands',
+  'Somalia',
+  'South Africa',
+  'South Korea',
+  'South Sudan',
+  'Spain',
+  'Sri Lanka',
+  'Sudan',
+  'Suriname',
+  'Sweden',
+  'Switzerland',
+  'Syria',
+  'Taiwan',
+  'Tajikistan',
+  'Tanzania',
+  'Thailand',
+  'Timor-Leste',
+  'Togo',
+  'Tonga',
+  'Trinidad and Tobago',
+  'Tunisia',
+  'Turkey',
+  'Turkmenistan',
+  'Tuvalu',
+  'Uganda',
+  'Ukraine',
+  'United Arab Emirates',
+  'United Kingdom',
+  'United States',
+  'Uruguay',
+  'Uzbekistan',
+  'Vanuatu',
+  'Vatican City',
+  'Venezuela',
+  'Vietnam',
+  'Yemen',
+  'Zambia',
+  'Zimbabwe',
+];
+
+const countryRegions: Record<string, string[]> = {
+  'United States': [
+    'Alabama',
+    'Alaska',
+    'Arizona',
+    'Arkansas',
+    'California',
+    'Colorado',
+    'Connecticut',
+    'Delaware',
+    'Florida',
+    'Georgia',
+    'Hawaii',
+    'Idaho',
+    'Illinois',
+    'Indiana',
+    'Iowa',
+    'Kansas',
+    'Kentucky',
+    'Louisiana',
+    'Maine',
+    'Maryland',
+    'Massachusetts',
+    'Michigan',
+    'Minnesota',
+    'Mississippi',
+    'Missouri',
+    'Montana',
+    'Nebraska',
+    'Nevada',
+    'New Hampshire',
+    'New Jersey',
+    'New Mexico',
+    'New York',
+    'North Carolina',
+    'North Dakota',
+    'Ohio',
+    'Oklahoma',
+    'Oregon',
+    'Pennsylvania',
+    'Rhode Island',
+    'South Carolina',
+    'South Dakota',
+    'Tennessee',
+    'Texas',
+    'Utah',
+    'Vermont',
+    'Virginia',
+    'Washington',
+    'West Virginia',
+    'Wisconsin',
+    'Wyoming',
+  ],
+  Canada: [
+    'Alberta',
+    'British Columbia',
+    'Manitoba',
+    'New Brunswick',
+    'Newfoundland and Labrador',
+    'Northwest Territories',
+    'Nova Scotia',
+    'Nunavut',
+    'Ontario',
+    'Prince Edward Island',
+    'Quebec',
+    'Saskatchewan',
+    'Yukon',
+  ],
+  Australia: ['Australian Capital Territory', 'New South Wales', 'Northern Territory', 'Queensland', 'South Australia', 'Tasmania', 'Victoria', 'Western Australia'],
+  India: [
+    'Andhra Pradesh',
+    'Assam',
+    'Bihar',
+    'Chhattisgarh',
+    'Delhi',
+    'Goa',
+    'Gujarat',
+    'Haryana',
+    'Himachal Pradesh',
+    'Jammu and Kashmir',
+    'Jharkhand',
+    'Karnataka',
+    'Kerala',
+    'Madhya Pradesh',
+    'Maharashtra',
+    'Manipur',
+    'Meghalaya',
+    'Mizoram',
+    'Nagaland',
+    'Odisha',
+    'Punjab',
+    'Rajasthan',
+    'Sikkim',
+    'Tamil Nadu',
+    'Telangana',
+    'Tripura',
+    'Uttar Pradesh',
+    'Uttarakhand',
+    'West Bengal',
+  ],
+  'United Kingdom': ['England', 'Northern Ireland', 'Scotland', 'Wales'],
+};
+
 const backendUrl = Constants.expoConfig?.extra?.backendUrl ?? 'http://localhost:4000';
 const sessionKey = 'stp.session';
 const sessionDurationMs = 12 * 60 * 60 * 1000;
@@ -347,6 +648,11 @@ const App: React.FC = () => {
   const [selectedTraitNames, setSelectedTraitNames] = useState<Set<string>>(new Set());
   const [activePage, setActivePage] = useState<Page>('menu');
   const [itineraryCountry, setItineraryCountry] = useState('');
+  const [itineraryRegion, setItineraryRegion] = useState('');
+  const [countrySearch, setCountrySearch] = useState('');
+  const [regionSearch, setRegionSearch] = useState('');
+  const [showItineraryCountryDropdown, setShowItineraryCountryDropdown] = useState(false);
+  const [showItineraryRegionDropdown, setShowItineraryRegionDropdown] = useState(false);
   const [itineraryDays, setItineraryDays] = useState('5');
   const [budgetMin, setBudgetMin] = useState(500);
   const [budgetMax, setBudgetMax] = useState(2500);
@@ -434,6 +740,21 @@ const App: React.FC = () => {
   const toursTotal = useMemo(() => tours.reduce((sum, t) => sum + (Number(t.cost) || 0), 0), [tours]);
 
   const overallCost = useMemo(() => flightsTotal + lodgingTotal + toursTotal, [flightsTotal, lodgingTotal, toursTotal]);
+
+  const filteredCountries = useMemo(() => {
+    const query = (showItineraryCountryDropdown ? countrySearch : itineraryCountry).trim().toLowerCase();
+    if (!query) return countryOptions;
+    return countryOptions.filter((c) => c.toLowerCase().includes(query));
+  }, [countrySearch, itineraryCountry, showItineraryCountryDropdown]);
+
+  const regionOptions = useMemo(() => countryRegions[itineraryCountry] ?? [], [itineraryCountry]);
+
+  const filteredRegions = useMemo(() => {
+    if (!regionOptions.length) return [];
+    const query = (showItineraryRegionDropdown ? regionSearch : itineraryRegion).trim().toLowerCase();
+    if (!query) return regionOptions;
+    return regionOptions.filter((r) => r.toLowerCase().includes(query));
+  }, [itineraryRegion, regionOptions, regionSearch, showItineraryRegionDropdown]);
 
   const findExistingItinerary = (
     tripId: string,
@@ -832,6 +1153,12 @@ const App: React.FC = () => {
     loadAirports();
   }, []);
 
+  useEffect(() => {
+    setItineraryRegion('');
+    setRegionSearch('');
+    setShowItineraryRegionDropdown(false);
+  }, [itineraryCountry]);
+
   const togglePassengerDropdown = () => {
     if (showPassengerDropdown) {
       setShowPassengerDropdown(false);
@@ -1038,6 +1365,11 @@ const App: React.FC = () => {
     setTraitAge('');
     setTraitGender('prefer-not');
     setItineraryCountry('');
+    setItineraryRegion('');
+    setCountrySearch('');
+    setRegionSearch('');
+    setShowItineraryCountryDropdown(false);
+    setShowItineraryRegionDropdown(false);
     setItineraryDays('5');
     setBudgetMin(500);
     setBudgetMax(2500);
@@ -1357,6 +1689,8 @@ const App: React.FC = () => {
       alert('Enter a country, number of days, and select an active trip.');
       return;
     }
+    setShowItineraryCountryDropdown(false);
+    setShowItineraryRegionDropdown(false);
     setItineraryLoading(true);
     setItineraryError('');
     setItineraryPlan('');
@@ -2150,12 +2484,40 @@ const App: React.FC = () => {
               <Text style={styles.sectionTitle}>Create Itinerary</Text>
               <Text style={styles.helperText}>Capture the basics and we’ll use your traits to shape trip ideas.</Text>
 
-              <TextInput
-                style={styles.input}
-                placeholder="What country are you trying to visit?"
-                value={itineraryCountry}
-                onChangeText={setItineraryCountry}
-              />
+              <View>
+                <TouchableOpacity
+                  style={[styles.input, styles.selectButton]}
+                  onPress={() => {
+                    setCountrySearch('');
+                    setShowItineraryCountryDropdown(true);
+                    setShowItineraryRegionDropdown(false);
+                  }}
+                >
+                  <View style={styles.selectButtonRow}>
+                    <Text style={itineraryCountry ? styles.cellText : styles.placeholderText}>
+                      {itineraryCountry || 'Select a country'}
+                    </Text>
+                    <Text style={styles.selectCaret}>v</Text>
+                  </View>
+                </TouchableOpacity>
+                {regionOptions.length ? (
+                  <TouchableOpacity
+                    style={[styles.input, styles.selectButton]}
+                    onPress={() => {
+                      setRegionSearch('');
+                      setShowItineraryRegionDropdown(true);
+                      setShowItineraryCountryDropdown(false);
+                    }}
+                  >
+                    <View style={styles.selectButtonRow}>
+                      <Text style={itineraryRegion ? styles.cellText : styles.placeholderText}>
+                        {itineraryRegion || 'Select a region / state'}
+                      </Text>
+                      <Text style={styles.selectCaret}>v</Text>
+                    </View>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
 
               <View style={styles.dropdown}>
                 <TextInput
@@ -2258,23 +2620,26 @@ const App: React.FC = () => {
             </View>
           )}
 
-              <View style={styles.itinerarySummary}>
+                            <View style={styles.itinerarySummary}>
                 <Text style={styles.bodyText}>
-                  Destination: {itineraryCountry.trim() || '—'}
+                  Destination: {itineraryCountry.trim() || "-"}
                 </Text>
                 <Text style={styles.bodyText}>
-              Days: {itineraryDays.trim() || '—'}
-            </Text>
-            <Text style={styles.bodyText}>
-              Budget: ${budgetMin} – ${budgetMax}
-            </Text>
-            <Text style={styles.bodyText}>
-              Departure airport: {itineraryAirport.trim() || '—'}
-            </Text>
-            <Text style={styles.helperText}>
-              Traits will help recommend activities (e.g., hikes for Adventurous, cafes for Coffee Lovers).
-            </Text>
-          </View>
+                  Region: {itineraryRegion.trim() || "-"}
+                </Text>
+                <Text style={styles.bodyText}>
+                  Days: {itineraryDays.trim() || "-"}
+                </Text>
+                <Text style={styles.bodyText}>
+                  Budget: ${budgetMin} - ${budgetMax}
+                </Text>
+                <Text style={styles.bodyText}>
+                  Departure airport: {itineraryAirport.trim() || "-"}
+                </Text>
+                <Text style={styles.helperText}>
+                  Traits will help recommend activities (e.g., hikes for Adventurous, cafes for Coffee Lovers).
+                </Text>
+              </View>
 
               <TouchableOpacity style={styles.button} onPress={generateItinerary} disabled={itineraryLoading}>
                 <Text style={styles.buttonText}>{itineraryLoading ? 'Generating…' : 'Generate Itinerary'}</Text>
@@ -4258,6 +4623,73 @@ const App: React.FC = () => {
           </TouchableOpacity>
         </View>
       )}
+      {showItineraryCountryDropdown ? (
+        <View style={styles.dropdownOverlay}>
+          <TouchableOpacity
+            style={styles.dropdownBackdrop}
+            onPress={() => setShowItineraryCountryDropdown(false)}
+          />
+          <View style={styles.dropdownPortal}>
+            <TextInput
+              style={[styles.input, styles.inlineInput]}
+              placeholder="Search countries"
+              value={countrySearch}
+              onChangeText={setCountrySearch}
+              autoFocus
+            />
+            <ScrollView style={styles.dropdownScroll}>
+              {filteredCountries.map((name) => (
+                <TouchableOpacity
+                  key={name}
+                  style={styles.dropdownOption}
+                  onPress={() => {
+                    setItineraryCountry(name);
+                    setItineraryRegion('');
+                    setCountrySearch('');
+                    setRegionSearch('');
+                    setShowItineraryCountryDropdown(false);
+                    setShowItineraryRegionDropdown(false);
+                  }}
+                >
+                  <Text style={styles.cellText}>{name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      ) : null}
+      {showItineraryRegionDropdown && regionOptions.length ? (
+        <View style={styles.dropdownOverlay}>
+          <TouchableOpacity
+            style={styles.dropdownBackdrop}
+            onPress={() => setShowItineraryRegionDropdown(false)}
+          />
+          <View style={styles.dropdownPortal}>
+            <TextInput
+              style={[styles.input, styles.inlineInput]}
+              placeholder="Search regions / states"
+              value={regionSearch}
+              onChangeText={setRegionSearch}
+              autoFocus
+            />
+            <ScrollView style={styles.dropdownScroll}>
+              {filteredRegions.map((name) => (
+                <TouchableOpacity
+                  key={name}
+                  style={styles.dropdownOption}
+                  onPress={() => {
+                    setItineraryRegion(name);
+                    setRegionSearch('');
+                    setShowItineraryRegionDropdown(false);
+                  }}
+                >
+                  <Text style={styles.cellText}>{name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 };
@@ -4603,6 +5035,25 @@ const styles = StyleSheet.create({
   dropdown: {
     position: 'relative',
   },
+  selectButton: {
+    justifyContent: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  selectButtonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  placeholderText: {
+    color: '#9ca3af',
+  },
+  selectCaret: {
+    color: '#6b7280',
+    fontSize: 12,
+    marginLeft: 8,
+  },
   dropdownList: {
     position: 'absolute',
     top: 40,
@@ -4744,6 +5195,43 @@ const styles = StyleSheet.create({
   itineraryDropdown: {
     zIndex: 6000,
   },
+  dropdownOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 40000,
+    elevation: 40,
+  },
+  dropdownBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.15)',
+  },
+  dropdownPortal: {
+    position: 'absolute',
+    top: 80,
+    left: 16,
+    right: 16,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    padding: 8,
+    maxHeight: 360,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 42,
+  },
+  dropdownScroll: {
+    maxHeight: 300,
+  },
   traitGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -4772,3 +5260,4 @@ const styles = StyleSheet.create({
 });
 
 export default App;
+
