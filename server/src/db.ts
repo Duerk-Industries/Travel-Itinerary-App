@@ -398,6 +398,168 @@ export const verifyWebUserCredentials = async (
   return null;
 };
 
+export const getWebUserProfile = async (
+  userId: string
+): Promise<{ id: string; email: string; firstName: string; lastName: string } | null> => {
+  const p = getPool();
+  const { rows } = await p.query<{ id: string; email: string; first_name: string; last_name: string }>(
+    `SELECT id, email, first_name, last_name FROM web_users WHERE id = $1 LIMIT 1`,
+    [userId]
+  );
+  if (!rows.length) return null;
+  const row = rows[0];
+  return { id: row.id, email: row.email, firstName: row.first_name, lastName: row.last_name };
+};
+
+export const updateWebUserProfile = async (
+  userId: string,
+  updates: { firstName?: string; lastName?: string; email?: string }
+): Promise<{ id: string; email: string; firstName: string; lastName: string }> => {
+  const p = getPool();
+  const client = await p.connect();
+  try {
+    await client.query('BEGIN');
+    if (updates.email) {
+      const emailInUse = await client.query(`SELECT 1 FROM web_users WHERE email = $1 AND id <> $2`, [
+        updates.email,
+        userId,
+      ]);
+      if (emailInUse.rowCount) {
+        const err = new Error('Email already in use');
+        (err as any).code = 'EMAIL_TAKEN';
+        throw err;
+      }
+    }
+
+    const { rows } = await client.query(
+      `
+      UPDATE web_users
+      SET
+        first_name = COALESCE($2, first_name),
+        last_name = COALESCE($3, last_name),
+        email = COALESCE($4, email)
+      WHERE id = $1
+      RETURNING id, email, first_name as "firstName", last_name as "lastName"
+    `,
+      [userId, updates.firstName ?? null, updates.lastName ?? null, updates.email ?? null]
+    );
+
+    if (!rows.length) {
+      throw new Error('User not found');
+    }
+
+    if (updates.email) {
+      await client.query(`UPDATE users SET email = $2 WHERE id = $1`, [userId, updates.email]);
+    }
+
+    await client.query('COMMIT');
+    return rows[0];
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
+export const updateWebUserPassword = async (
+  userId: string,
+  currentPassword: string,
+  newPassword: string
+): Promise<void> => {
+  const p = getPool();
+  const { rows } = await p.query<{
+    password_hash: string;
+    salt: string;
+  }>(
+    `SELECT password_hash, salt
+     FROM web_users
+     WHERE id = $1
+     LIMIT 1`,
+    [userId]
+  );
+  if (!rows.length) {
+    throw new Error('User not found');
+  }
+  const { password_hash, salt } = rows[0];
+  const expected = Buffer.from(password_hash, 'hex');
+  const provided = Buffer.from(hashPassword(currentPassword, salt), 'hex');
+  if (expected.length !== provided.length || !timingSafeEqual(expected, provided)) {
+    const err = new Error('Invalid current password');
+    (err as any).code = 'INVALID_PASSWORD';
+    throw err;
+  }
+
+  const newSalt = randomBytes(16).toString('hex');
+  const newHash = hashPassword(newPassword, newSalt);
+  await p.query(`UPDATE web_users SET password_hash = $1, salt = $2 WHERE id = $3`, [newHash, newSalt, userId]);
+};
+
+export const deleteWebUserAndCleanup = async (userId: string): Promise<void> => {
+  const p = getPool();
+  const client = await p.connect();
+  try {
+    await client.query('BEGIN');
+
+    // Move ownership to another member for shared groups; solo groups will be deleted via cascade when the user is removed.
+    const { rows: ownedGroups } = await client.query<{ id: string; newOwner: string | null }>(
+      `
+      SELECT g.id,
+        (
+          SELECT gm.user_id
+          FROM group_members gm
+          WHERE gm.group_id = g.id AND gm.user_id IS NOT NULL AND gm.user_id <> $1
+          ORDER BY gm.created_at ASC
+          LIMIT 1
+        ) as "newOwner"
+      FROM groups g
+      WHERE g.owner_id = $1
+    `,
+      [userId]
+    );
+    for (const g of ownedGroups) {
+      if (g.newOwner) {
+        await client.query(`UPDATE groups SET owner_id = $2 WHERE id = $1`, [g.id, g.newOwner]);
+      }
+    }
+
+    // Trips where this user is the only non-guest member should be removed entirely.
+    const { rows: soloTrips } = await client.query<{ id: string }>(
+      `
+      SELECT t.id
+      FROM trips t
+      WHERE t.group_id IN (SELECT group_id FROM group_members WHERE user_id = $1)
+        AND NOT EXISTS (
+          SELECT 1 FROM group_members gm
+          WHERE gm.group_id = t.group_id
+            AND gm.user_id IS NOT NULL
+            AND gm.user_id <> $1
+        )
+    `,
+      [userId]
+    );
+    const tripIds = soloTrips.map((t) => t.id);
+    if (tripIds.length) {
+      await client.query(`DELETE FROM flights WHERE trip_id = ANY($1::uuid[])`, [tripIds]);
+      await client.query(`DELETE FROM lodgings WHERE trip_id = ANY($1::uuid[])`, [tripIds]);
+      await client.query(`DELETE FROM tours WHERE trip_id = ANY($1::uuid[])`, [tripIds]);
+      await client.query(`DELETE FROM itineraries WHERE trip_id = ANY($1::uuid[])`, [tripIds]);
+      await client.query(`DELETE FROM trips WHERE id = ANY($1::uuid[])`, [tripIds]);
+    }
+
+    // Remove auth rows last so cascades clean up related data.
+    await client.query(`DELETE FROM web_users WHERE id = $1`, [userId]);
+    await client.query(`DELETE FROM users WHERE id = $1`, [userId]);
+
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
 
 // Insert a new flight row, normalizing airport codes and returning the created flight.
 export const insertFlight = async (
