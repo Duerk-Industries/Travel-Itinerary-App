@@ -29,6 +29,7 @@ function getPool(): Pool {
 }
 
 
+// Initialize database schema, migrations, and seed airport data on startup.
 export const initDb = async (): Promise<void> => {
   const p = getPool();
 
@@ -398,6 +399,7 @@ export const verifyWebUserCredentials = async (
 };
 
 
+// Insert a new flight row, normalizing airport codes and returning the created flight.
 export const insertFlight = async (
   flight: Omit<Flight, 'id' | 'sharedWith'>
 ): Promise<Flight> => {
@@ -453,6 +455,7 @@ export const deleteFlight = async (flightId: string, userId: string): Promise<vo
       USING trips t
       WHERE f.id = $1
         AND t.id = f.trip_id
+        -- allow deletion by any member of the trip's group
         AND EXISTS (
           SELECT 1 FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $2
         )
@@ -493,6 +496,7 @@ export const updateFlight = async (
      FROM trips t
      WHERE f.id = $17
        AND t.id = f.trip_id
+       -- allow edits by any member of the trip's group
        AND t.group_id IN (SELECT group_id FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $18)
      RETURNING f.*`,
     [
@@ -585,6 +589,7 @@ export const getFlightForUser = async (flightId: string, userId: string): Promis
 
 
 export const listFlights = async (userId: string, tripId?: string): Promise<Flight[]> => {
+  // Return flights for the given trip that the requesting user can see (anyone in the trip's group).
   const p = getPool();
 
   const { rows } = await p.query<Flight>(
@@ -630,6 +635,7 @@ export const listFlights = async (userId: string, tripId?: string): Promise<Flig
      LEFT JOIN airports apa ON apa.iata_code = f.arrival_location
      LEFT JOIN airports apl ON apl.iata_code = f.layover_location
      WHERE ($2::uuid IS NULL OR f.trip_id = $2)
+       -- authorize by shared trip membership, not owner
        AND t.group_id IN (SELECT group_id FROM group_members WHERE user_id = $1)
      ORDER BY f.departure_date DESC`,
     [userId, tripId ?? null]
@@ -659,6 +665,7 @@ export const listLodgings = async (userId: string, tripId?: string | null): Prom
       FROM lodgings l
       JOIN trips t ON l.trip_id = t.id
       WHERE ($2::uuid IS NULL OR l.trip_id = $2)
+        -- authorize by shared trip membership, not owner
         AND t.group_id IN (SELECT group_id FROM group_members WHERE user_id = $1)
       ORDER BY l.check_in_date ASC
     `,
@@ -724,6 +731,7 @@ export const insertLodging = async (lodging: {
   return { ...(row as Lodging), paidBy: Array.isArray(row.paidBy) ? row.paidBy : [] };
 };
 
+// Delete a lodging row when the caller belongs to the trip's group.
 export const deleteLodging = async (lodgingId: string, userId: string): Promise<void> => {
   const p = getPool();
   await p.query(
@@ -732,6 +740,7 @@ export const deleteLodging = async (lodgingId: string, userId: string): Promise<
       USING trips t
       WHERE l.id = $1
         AND t.id = l.trip_id
+        -- allow deletion by any member of the trip's group
         AND EXISTS (
           SELECT 1 FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $2
         )
@@ -740,6 +749,7 @@ export const deleteLodging = async (lodgingId: string, userId: string): Promise<
   );
 };
 
+// Update lodging fields when the caller belongs to the trip's group.
 export const updateLodging = async (
   lodgingId: string,
   userId: string,
@@ -763,6 +773,7 @@ export const updateLodging = async (
     FROM trips t
     WHERE l.id = $1
       AND t.id = COALESCE($12, l.trip_id)
+      -- allow edits by any member of the trip's group
       AND t.group_id IN (SELECT group_id FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $2)
     RETURNING
       l.id,
@@ -799,6 +810,7 @@ export const updateLodging = async (
   return { ...(row as Lodging), paidBy: Array.isArray(row.paidBy) ? row.paidBy : [] };
 };
 export const listTours = async (userId: string, tripId?: string): Promise<Tour[]> => {
+  // Return tours for the given trip that the requesting user can see (anyone in the trip's group).
   const p = getPool();
   const { rows } = await p.query<Tour>(
     `
@@ -820,6 +832,7 @@ export const listTours = async (userId: string, tripId?: string): Promise<Tour[]
     FROM tours tu
     JOIN trips t ON tu.trip_id = t.id
     WHERE ($2::uuid IS NULL OR tu.trip_id = $2)
+      -- authorize by shared trip membership, not owner
       AND t.group_id IN (SELECT group_id FROM group_members WHERE user_id = $1)
     ORDER BY tu.date ASC, tu.created_at DESC
     `,

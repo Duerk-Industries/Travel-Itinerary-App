@@ -12,6 +12,7 @@ type ChatCompletionResponse = {
   }>;
 };
 
+// Itineraries API: manage itineraries, details, and sharing helpers.
 const router = Router();
 router.use(bodyParser.json());
 router.use(authenticate);

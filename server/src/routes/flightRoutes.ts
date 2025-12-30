@@ -4,6 +4,7 @@ import { authenticate } from '../auth';
 import { deleteFlight, ensureUserInTrip, getFlightForUser, insertFlight, listFlights, searchFlightLocations, shareFlight, updateFlight } from '../db';
 import { isEmailConfigured, sendShareEmail } from '../mailer';
 
+// Flights API: CRUD for flights scoped to the authenticated user / their group trips.
 const router = Router();
 router.use(bodyParser.json());
 router.use(authenticate);

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import bodyParser from 'body-parser';
 import { handleLogin } from '../auth';
 
+// Auth routes for device-based auth tokens (non-web).
 const router = Router();
 router.use(bodyParser.json());
 

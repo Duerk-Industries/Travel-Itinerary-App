@@ -1,3 +1,15 @@
+/**
+ * Main client app for Shared Trip Planner.
+ *
+ * This single-file implementation manages:
+ * - Auth/session bootstrap and persistence
+ * - Fetching and editing flights, lodgings, tours, traits, itineraries, groups, trips
+ * - Cost sharing logic (per-user totals) and rendering the sectioned UI
+ * - Web/mobile specific inputs (date/time pickers) and file parsing helpers
+ *
+ * State is grouped near the top; data fetchers and helpers are defined next;
+ * then UI sections render conditionally based on the active page.
+ */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Constants from 'expo-constants';

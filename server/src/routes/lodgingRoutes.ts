@@ -3,6 +3,7 @@ import bodyParser from 'body-parser';
 import { authenticate } from '../auth';
 import { deleteLodging, ensureUserInTrip, insertLodging, listLodgings, updateLodging } from '../db';
 
+// Lodgings API: CRUD for lodgings scoped to the authenticated user / their group trips.
 const router = Router();
 router.use(bodyParser.json());
 router.use(authenticate);

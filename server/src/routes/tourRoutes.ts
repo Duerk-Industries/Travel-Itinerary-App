@@ -3,6 +3,7 @@ import bodyParser from 'body-parser';
 import { authenticate } from '../auth';
 import { deleteTour, ensureUserInTrip, insertTour, listTours, updateTour } from '../db';
 
+// Tours API: CRUD for tours scoped to the authenticated user / their group trips.
 const router = Router();
 router.use(bodyParser.json());
 router.use(authenticate);
