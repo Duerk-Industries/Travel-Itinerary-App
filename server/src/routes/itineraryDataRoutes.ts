@@ -12,6 +12,7 @@ import {
   updateItineraryRecord,
 } from '../db';
 
+// Itinerary data helpers: AI-generated plans, search, and summaries.
 const router = Router();
 router.use(bodyParser.json());
 router.use(authenticate);

@@ -15,6 +15,7 @@ import {
 } from '../db';
 import { isEmailConfigured, sendShareEmail } from '../mailer';
 
+// Groups API: manage groups, members, invites, and sharing.
 const router = Router();
 router.use(bodyParser.json());
 router.use(authenticate);

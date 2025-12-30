@@ -1,9 +1,32 @@
+/**
+ * Main client app for Shared Trip Planner.
+ *
+ * This single-file implementation manages:
+ * - Auth/session bootstrap and persistence
+ * - Fetching and editing flights, lodgings, tours, traits, itineraries, groups, trips
+ * - Cost sharing logic (per-user totals) and rendering the sectioned UI
+ * - Web/mobile specific inputs (date/time pickers) and file parsing helpers
+ *
+ * State is grouped near the top; data fetchers and helpers are defined next;
+ * then UI sections render conditionally based on the active page.
+ */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Constants from 'expo-constants';
 import { formatDateLong } from './utils/formatDateLong';
 import { parseFlightText, type ParsedFlight } from './utils/flightParser';
+
+type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
+let NativeDateTimePicker: NativeDateTimePickerType | null = null;
+if (Platform.OS !== 'web') {
+  try {
+    const mod = require('@react-native-community/datetimepicker');
+    NativeDateTimePicker = (mod?.default ?? mod) as NativeDateTimePickerType;
+  } catch (err) {
+    console.warn('DateTimePicker unavailable, falling back to text inputs');
+    NativeDateTimePicker = null;
+  }
+}
 
 interface Flight {
   id: string;
@@ -102,7 +125,7 @@ interface ItineraryDetailRecord {
   cost?: number | null;
 }
 
-type Page = 'menu' | 'flights' | 'lodging' | 'tours' | 'groups' | 'trips' | 'traits' | 'itinerary' | 'cost';
+type Page = 'menu' | 'flights' | 'lodging' | 'tours' | 'groups' | 'trips' | 'traits' | 'itinerary' | 'cost' | 'account';
 
 type FlightDraft = {
   passengerName: string;
@@ -195,6 +218,7 @@ type TourDraft = {
   paidBy: string[];
 };
 
+// Build a blank flight draft with sensible defaults (current date, empty strings).
 const createInitialFlightState = (): FlightDraft => ({
   passengerName: '',
   departureDate: new Date().toISOString().slice(0, 10),
@@ -214,6 +238,7 @@ const createInitialFlightState = (): FlightDraft => ({
   paidBy: [],
 });
 
+// Build a blank lodging draft with today's dates and default room count.
 const createInitialLodgingState = (): LodgingDraft => ({
   name: '',
   checkInDate: new Date().toISOString().slice(0, 10),
@@ -226,6 +251,7 @@ const createInitialLodgingState = (): LodgingDraft => ({
   paidBy: [],
 });
 
+// Build a blank tour draft with today's date and zero cost.
 const createInitialTourState = (): TourDraft => ({
   date: new Date().toISOString().slice(0, 10),
   name: '',
@@ -626,6 +652,8 @@ const App: React.FC = () => {
   const [editingFlight, setEditingFlight] = useState<FlightEditDraft | null>(null);
   const [lodgings, setLodgings] = useState<Lodging[]>([]);
   const [lodgingDraft, setLodgingDraft] = useState<LodgingDraft>(createInitialLodgingState());
+  const [editingLodgingId, setEditingLodgingId] = useState<string | null>(null);
+  const [editingLodging, setEditingLodging] = useState<LodgingDraft | null>(null);
   const [lodgingDateField, setLodgingDateField] = useState<'checkIn' | 'checkOut' | 'refund' | null>(null);
   const [lodgingDateValue, setLodgingDateValue] = useState<Date>(new Date());
 
@@ -677,6 +705,10 @@ const App: React.FC = () => {
     email: '',
     password: '',
   });
+  const [accountProfile, setAccountProfile] = useState({ firstName: '', lastName: '', email: '' });
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '' });
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [accountMessage, setAccountMessage] = useState<string | null>(null);
   const [isAddingRow, setIsAddingRow] = useState(false);
   const passengerDropdownRef = useRef<TouchableOpacity | null>(null);
   const depLocationRef = useRef<TextInput | null>(null);
@@ -711,14 +743,45 @@ const App: React.FC = () => {
     return 'Member';
   };
 
-  const normalizeDateString = (value: string): string => {
-    if (!value) return value;
-    if (value.includes('-') && value.length === 10) return value;
-    const d = new Date(value);
-    return Number.isNaN(d.getTime()) ? value : d.toISOString().slice(0, 10);
-  };
+// Normalize a date-ish string to YYYY-MM-DD if possible.
+const normalizeDateString = (value: string): string => {
+  if (!value) return value;
+  if (value.includes('-') && value.length === 10) return value;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? value : d.toISOString().slice(0, 10);
+};
 
-  const calculateNights = (checkIn: string, checkOut: string): number => {
+// Normalize and backfill flight fields before sending to the backend.
+const buildFlightPayload = (flight: FlightEditDraft, tripId?: string, defaultPayerId?: string) => {
+  const trim = (v: string | null | undefined) => (v ?? '').trim();
+  const departureDate = normalizeDateString(trim(flight.departureDate)) || new Date().toISOString().slice(0, 10);
+  const departureLocation = trim(flight.departureLocation) || trim(flight.departureAirportCode);
+  const arrivalLocation = trim(flight.arrivalLocation) || trim(flight.arrivalAirportCode);
+  const layoverLocation = trim(flight.layoverLocation);
+  const layoverLocationCode = trim(flight.layoverLocationCode);
+  return {
+    passengerName: trim(flight.passengerName) || 'Traveler',
+    departureDate,
+    departureLocation,
+    departureAirportCode: trim(flight.departureAirportCode) || departureLocation,
+    departureTime: trim(flight.departureTime) || '00:00',
+    arrivalLocation,
+    arrivalAirportCode: trim(flight.arrivalAirportCode) || arrivalLocation,
+    layoverLocation,
+    layoverLocationCode,
+    layoverDuration: trim(flight.layoverDuration),
+    arrivalTime: trim(flight.arrivalTime) || '00:00',
+    cost: Number(flight.cost) || 0,
+    carrier: trim(flight.carrier) || 'UNKNOWN',
+    flightNumber: trim(flight.flightNumber) || 'UNKNOWN',
+    bookingReference: trim(flight.bookingReference) || 'UNKNOWN',
+    paidBy: flight.paidBy?.length ? flight.paidBy : defaultPayerId ? [defaultPayerId] : [],
+    ...(tripId ? { tripId } : {}),
+  };
+};
+
+// Calculate whole-night stay length; returns 0 if invalid or checkout <= checkin.
+const calculateNights = (checkIn: string, checkOut: string): number => {
     const start = new Date(checkIn).getTime();
     const end = new Date(checkOut).getTime();
     if (Number.isNaN(start) || Number.isNaN(end) || end <= start) return 0;
@@ -793,25 +856,73 @@ const App: React.FC = () => {
     }
   };
 
+  // Resolve a member id to a human-friendly name for payer chips.
   const payerName = (id: string): string => {
     const member = groupMembers.find((m) => m.id === id);
     return member ? formatMemberName(member) : 'Unknown';
   };
 
-  const payerTotals = useMemo(() => {
+  const userMembers = useMemo(() => groupMembers.filter((m) => !m.guestName), [groupMembers]);
+
+  /**
+   * Shared payer accumulator:
+   * - Zeros out every user's total each run so removals clear prior shares
+   * - Splits cost evenly across payers (or falls back to provided defaults)
+   * - Applies any rounding remainder to the first payer to keep sums aligned
+   */
+  const computePayerTotals = <T,>(
+    items: T[],
+    getCost: (item: T) => number,
+    getPayers: (item: T) => string[] | undefined,
+    fallbackPayers: string[],
+    options?: { fallbackOnEmpty?: boolean }
+  ): Record<string, number> => {
+    // Start with every user's total at 0 so removed payers don't retain old shares.
     const totals: Record<string, number> = {};
-    tours.forEach((t) => {
-      const costNum = Number(t.cost) || 0;
-      if (!costNum || !t.paidBy.length) return;
-      const share = costNum / t.paidBy.length;
-      t.paidBy.forEach((id) => {
+    fallbackPayers.forEach((id) => {
+      totals[id] = 0;
+    });
+
+    // For each item, figure out who pays and how to split.
+    items.forEach((item) => {
+      const cost = getCost(item);
+      const payersRaw = getPayers(item);
+      const payers = (payersRaw ?? []).filter(Boolean);
+
+      // If the item explicitly has an empty payer list, we do NOT fall back to everyone.
+      // Only when payers are truly missing/undefined (legacy data) do we fall back.
+      const shouldFallback = options?.fallbackOnEmpty ? payers.length === 0 : payersRaw == null;
+      const effective = payers.length ? payers : shouldFallback ? fallbackPayers : [];
+      if (!cost || !effective.length) return;
+
+      // Split evenly across effective payers.
+      const share = cost / effective.length;
+      effective.forEach((id) => {
         totals[id] = (totals[id] ?? 0) + share;
       });
+
+      // Push any rounding residue onto the first payer to keep sums aligned with the item cost.
+      const remainder = cost - share * effective.length;
+      if (Math.abs(remainder) > 1e-6 && effective[0]) {
+        totals[effective[0]] = (totals[effective[0]] ?? 0) + remainder;
+      }
     });
     return totals;
-  }, [tours]);
+  };
 
-  const userMembers = useMemo(() => groupMembers.filter((m) => !m.guestName), [groupMembers]);
+  // Per-user tour totals via shared helper. Note: if a tour has an explicit empty payer list,
+  // we leave it unsplit (no cost assigned) so non-payers stay at $0.
+  const payerTotals = useMemo(
+    () =>
+      computePayerTotals(
+        tours,
+        (t) => Number(t.cost) || 0,
+        (t) => (Array.isArray(t.paidBy) ? t.paidBy : []),
+        userMembers.map((m) => m.id),
+        { fallbackOnEmpty: false }
+      ),
+    [tours, userMembers]
+  );
 
   const currentUserMemberId = useMemo(() => {
     if (!userEmail) return null;
@@ -836,34 +947,45 @@ const App: React.FC = () => {
     setBudgetMax(preset.max);
   }, [budgetLevel]);
 
-  const flightsPayerTotals = useMemo(() => {
-    const totals: Record<string, number> = {};
-    flights.forEach((f) => {
-      const paidBy = (f as any).paidBy ?? (f as any).paid_by;
-      const payers: string[] = Array.isArray(paidBy) ? paidBy : [];
-      const costNum = Number((f as any).cost) || 0;
-      if (!costNum || !payers.length) return;
-      const share = costNum / payers.length;
-      payers.forEach((id) => {
-        totals[id] = (totals[id] ?? 0) + share;
-      });
-    });
-    return totals;
-  }, [flights]);
+  useEffect(() => {
+    const presets: Record<typeof budgetLevel, { min: number; max: number }> = {
+      cheap: { min: 500, max: 1500 },
+      middle: { min: 1500, max: 4000 },
+      expensive: { min: 4000, max: 8000 },
+    };
+    const preset = presets[budgetLevel];
+    setBudgetMin(preset.min);
+    setBudgetMax(preset.max);
+  }, [budgetLevel]);
 
-  const lodgingPayerTotals = useMemo(() => {
-    const totals: Record<string, number> = {};
-    lodgings.forEach((l) => {
-      const payers: string[] = Array.isArray(l.paidBy) ? l.paidBy : [];
-      const costNum = Number(l.totalCost) || 0;
-      if (!costNum || !payers.length) return;
-      const share = costNum / payers.length;
-      payers.forEach((id) => {
-        totals[id] = (totals[id] ?? 0) + share;
-      });
-    });
-    return totals;
-  }, [lodgings]);
+  // Per-user flight totals via shared helper. Explicitly empty paidBy means no split, so removed users go to $0.
+  const flightsPayerTotals = useMemo(
+    () =>
+      computePayerTotals(
+        flights,
+        (f) => Number((f as any).cost) || 0,
+        (f) => {
+          const paidBy = (f as any).paidBy ?? (f as any).paid_by;
+          return Array.isArray(paidBy) ? paidBy : [];
+        },
+        userMembers.map((m) => m.id),
+        { fallbackOnEmpty: false }
+      ),
+    [flights, userMembers]
+  );
+
+  // Per-user lodging totals via shared helper. Explicitly empty paidBy means no split, so removed users go to $0.
+  const lodgingPayerTotals = useMemo(
+    () =>
+      computePayerTotals(
+        lodgings,
+        (l) => Number(l.totalCost) || 0,
+        (l) => (Array.isArray(l.paidBy) ? l.paidBy : []),
+        userMembers.map((m) => m.id),
+        { fallbackOnEmpty: false }
+      ),
+    [lodgings, userMembers]
+  );
 
   useEffect(() => {
     if (defaultPayerId && (!lodgingDraft.paidBy || lodgingDraft.paidBy.length === 0)) {
@@ -876,6 +998,7 @@ const App: React.FC = () => {
     }
   }, [defaultPayerId]);
 
+  // Set which tour date/time picker to edit and seed the current value.
   const openTourDatePicker = (field: 'date' | 'bookedOn' | 'freeCancel' | 'startTime') => {
     setTourDateField(field);
     const current = editingTour
@@ -908,6 +1031,17 @@ const App: React.FC = () => {
     setLodgingDraft((prev) => ({ ...prev, costPerNight: computed }));
   }, [lodgingDraft.checkInDate, lodgingDraft.checkOutDate, lodgingDraft.totalCost]);
 
+  useEffect(() => {
+    if (!editingLodging) return;
+    const nights = calculateNights(editingLodging.checkInDate, editingLodging.checkOutDate);
+    const totalNum = Number(editingLodging.totalCost) || 0;
+    const computed = nights > 0 && totalNum ? (totalNum / nights).toFixed(2) : '';
+    if (computed !== editingLodging.costPerNight) {
+      setEditingLodging((prev) => (prev ? { ...prev, costPerNight: computed } : prev));
+    }
+  }, [editingLodging?.checkInDate, editingLodging?.checkOutDate, editingLodging?.totalCost]);
+
+  // Filter the local airport list for quick suggestions.
   const filterAirports = (query: string): Airport[] => {
     const q = query.trim().toLowerCase();
     if (q.length < 1) return [];
@@ -920,12 +1054,14 @@ const App: React.FC = () => {
       .slice(0, 8);
   };
 
+  // Pretty-print an airport with city + IATA code when present.
   const formatAirportLabel = (a: Airport): string => {
     const city = a.city || a.name;
     const code = a.iata_code ? ` (${a.iata_code})` : '';
     return `${city}${code}`;
   };
 
+  // Extract "Hh Mm" parts from a stored layover duration string.
   const parseLayoverDuration = (value: string | null | undefined): { hours: string; minutes: string } => {
     const safe = value ?? '';
     const hoursMatch = safe.match(/(\d+)\s*h/i);
@@ -935,6 +1071,7 @@ const App: React.FC = () => {
     return { hours, minutes };
   };
 
+  // Prefer a friendly label; otherwise show the uppercased location code.
   const formatLocationDisplay = (code?: string | null, label?: string | null): string => {
     if (label && label.trim().length) return label;
     const normalized = code ? code.toUpperCase() : '';
@@ -958,6 +1095,7 @@ const App: React.FC = () => {
 
   // Parsing handled in utils/flightParser.parseFlightText.
 
+  // Merge parsed flight data into the current draft without overwriting existing fields.
   const mergeParsedFlight = (current: FlightEditDraft, parsed: Partial<FlightEditDraft>): FlightEditDraft => {
     const next = { ...current };
     (Object.entries(parsed) as [keyof FlightEditDraft, string][]).forEach(([key, value]) => {
@@ -968,6 +1106,7 @@ const App: React.FC = () => {
     return next;
   };
 
+  // Read PDF text via pdfjs.
   const extractTextFromPdf = async (file: File): Promise<string> => {
     const arrayBuffer = await file.arrayBuffer();
     const pdfjs = await import('pdfjs-dist/build/pdf');
@@ -983,6 +1122,7 @@ const App: React.FC = () => {
     return combined;
   };
 
+  // OCR image to text via tesseract.
   const extractTextFromImage = async (file: File): Promise<string> => {
     const { createWorker } = await import('tesseract.js');
     const worker = await createWorker('eng');
@@ -996,6 +1136,7 @@ const App: React.FC = () => {
     }
   };
 
+  // Parse an uploaded flight confirmation (PDF/image) and queue parsed flights.
   const handleFlightFile = async (file: File) => {
     if (Platform.OS !== 'web') {
       alert('File upload is available on web right now.');
@@ -1025,37 +1166,46 @@ const App: React.FC = () => {
     }
   };
 
-  const addLodging = async () => {
-    if (!lodgingDraft.name.trim() || !activeTripId) {
+  // Create or update a lodging; computes cost-per-night and applies default payer.
+  const saveLodging = async (draft: LodgingDraft, lodgingId?: string | null) => {
+    if (!draft.name.trim() || !activeTripId) {
       alert('Please enter a lodging name and select an active trip.');
       return;
     }
-    const nights = calculateNights(lodgingDraft.checkInDate, lodgingDraft.checkOutDate);
+    const nights = calculateNights(draft.checkInDate, draft.checkOutDate);
     if (nights <= 0) {
       alert('Check-out must be after check-in.');
       return;
     }
-    const totalNum = Number(lodgingDraft.totalCost) || 0;
-    const rooms = Number(lodgingDraft.rooms) || 1;
+    const totalNum = Number(draft.totalCost) || 0;
+    const rooms = Number(draft.rooms) || 1;
     const costPerNight = totalNum && rooms > 0 ? (totalNum / (nights * rooms)).toFixed(2) : '0';
-    const paidBy = lodgingDraft.paidBy.length ? lodgingDraft.paidBy : defaultPayerId ? [defaultPayerId] : [];
-    const res = await fetch(`${backendUrl}/api/lodgings`, {
-      method: 'POST',
+    const paidBy = draft.paidBy.length ? draft.paidBy : defaultPayerId ? [defaultPayerId] : [];
+    const payload = {
+      ...draft,
+      tripId: activeTripId,
+      rooms,
+      costPerNight,
+      paidBy,
+    };
+    const url = lodgingId ? `${backendUrl}/api/lodgings/${lodgingId}` : `${backendUrl}/api/lodgings`;
+    const method = lodgingId ? 'PUT' : 'POST';
+    const res = await fetch(url, {
+      method,
       headers: jsonHeaders,
-      body: JSON.stringify({
-        ...lodgingDraft,
-        tripId: activeTripId,
-        rooms,
-        costPerNight,
-        paidBy,
-      }),
+      body: JSON.stringify(payload),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       alert(data.error || 'Unable to save lodging');
       return;
     }
-    setLodgingDraft(createInitialLodgingState());
+    if (lodgingId) {
+      setEditingLodgingId(null);
+      setEditingLodging(null);
+    } else {
+      setLodgingDraft(createInitialLodgingState());
+    }
     fetchLodgings();
   };
 
@@ -1066,6 +1216,29 @@ const App: React.FC = () => {
       return;
     }
     fetchLodgings();
+  };
+
+  // Populate the lodging edit modal with the selected row.
+  const openLodgingEditor = (lodging: Lodging) => {
+    setEditingLodgingId(lodging.id);
+    const base: LodgingDraft = {
+      name: lodging.name,
+      checkInDate: normalizeDateString(lodging.checkInDate),
+      checkOutDate: normalizeDateString(lodging.checkOutDate),
+      rooms: lodging.rooms || '1',
+      refundBy: lodging.refundBy ? normalizeDateString(lodging.refundBy) : '',
+      totalCost: lodging.totalCost || '',
+      costPerNight: lodging.costPerNight || '',
+      address: lodging.address || '',
+      paidBy: Array.isArray(lodging.paidBy) && lodging.paidBy.length ? lodging.paidBy : defaultPayerId ? [defaultPayerId] : [],
+    };
+    setEditingLodging(base);
+  };
+
+  // Close the lodging edit modal.
+  const closeLodgingEditor = () => {
+    setEditingLodgingId(null);
+    setEditingLodging(null);
   };
 
   const openTourEditor = (tour?: Tour) => {
@@ -1298,34 +1471,11 @@ const App: React.FC = () => {
 
   const saveFlightDetails = async () => {
     if (!userToken || !editingFlightId || !editingFlight) return;
-    const required = [
-      editingFlight.passengerName,
-      editingFlight.departureDate,
-      editingFlight.departureTime,
-      editingFlight.arrivalTime,
-      editingFlight.carrier,
-      editingFlight.flightNumber,
-      editingFlight.bookingReference,
-    ];
-    const hasAllRequired = required.every((val) => {
-      const s = val == null ? '' : String(val);
-      return s.trim().length > 0;
-    });
-    if (!hasAllRequired) {
-      alert('Please fill out all required fields before saving.');
-      return;
-    }
     if (editingFlightId === 'new' && !activeTripId) {
       alert('Select an active trip before adding a flight.');
       return;
     }
-    let payload = {
-      ...editingFlight,
-      cost: Number(editingFlight.cost) || 0,
-    };
-    if ((!payload.paidBy || payload.paidBy.length === 0) && defaultPayerId) {
-      payload = { ...payload, paidBy: [defaultPayerId] };
-    }
+    const payload = buildFlightPayload(editingFlight, editingFlightId === 'new' ? activeTripId ?? undefined : undefined, defaultPayerId);
     let res: Response;
     if (editingFlightId === 'new') {
       res = await fetch(`${backendUrl}/api/flights`, {
@@ -1333,8 +1483,6 @@ const App: React.FC = () => {
         headers: { 'Content-Type': 'application/json', ...headers },
         body: JSON.stringify({
           ...payload,
-          tripId: activeTripId,
-          departureDate: editingFlight.departureDate,
         }),
       });
     } else {
@@ -1388,6 +1536,10 @@ const App: React.FC = () => {
     setItineraryPlan('');
     setItineraryError('');
     setItineraryLoading(false);
+    setAccountProfile({ firstName: '', lastName: '', email: '' });
+    setPasswordForm({ currentPassword: '', newPassword: '' });
+    setAccountMessage(null);
+    setShowDeleteConfirm(false);
     setActivePage('menu');
     clearSession();
   };
@@ -1406,14 +1558,20 @@ const App: React.FC = () => {
       }
       const name = `${data.user.firstName} ${data.user.lastName}`;
       const email = authForm.email.trim();
-    setUserToken(data.token);
+      setUserToken(data.token);
       setUserName(name);
       setUserEmail(email);
-    saveSession(data.token, name, 'menu', email);
+      setAccountProfile({
+        firstName: data.user.firstName ?? '',
+        lastName: data.user.lastName ?? '',
+        email,
+      });
+      saveSession(data.token, name, 'menu', email);
       fetchFlights(data.token);
       fetchLodgings(data.token);
-    fetchTours(data.token);
-    fetchInvites(data.token);
+      fetchTours(data.token);
+      fetchInvites(data.token);
+      fetchAccountProfile(data.token);
       setActivePage('menu');
     } catch (err) {
       alert((err as Error).message || 'Login failed');
@@ -1429,9 +1587,9 @@ const App: React.FC = () => {
           firstName: authForm.firstName.trim(),
           lastName: authForm.lastName.trim(),
           email: authForm.email.trim(),
-          password: authForm.password,
-        }),
-      });
+        password: authForm.password,
+      }),
+    });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         alert(data.error || 'Registration failed');
@@ -1439,26 +1597,118 @@ const App: React.FC = () => {
       }
       const name = `${data.user.firstName} ${data.user.lastName}`;
       const email = authForm.email.trim();
-    setUserToken(data.token);
+      setUserToken(data.token);
       setUserName(name);
       setUserEmail(email);
-    saveSession(data.token, name, 'menu', email);
+      setAccountProfile({
+        firstName: data.user.firstName ?? '',
+        lastName: data.user.lastName ?? '',
+        email,
+      });
+      saveSession(data.token, name, 'menu', email);
       fetchFlights(data.token);
-    fetchLodgings(data.token);
-    fetchTours(data.token);
+      fetchLodgings(data.token);
+      fetchTours(data.token);
       fetchInvites(data.token);
+      fetchAccountProfile(data.token);
       setActivePage('menu');
     } catch (err) {
       alert((err as Error).message || 'Registration failed');
     }
   };
 
+  const fetchAccountProfile = async (token?: string) => {
+    const auth = token ?? userToken;
+    if (!auth) return;
+    try {
+      const res = await fetch(`${backendUrl}/api/account`, {
+        headers: { Authorization: `Bearer ${auth}` },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const fullName = `${data.firstName ?? ''} ${data.lastName ?? ''}`.trim() || 'Traveler';
+      setAccountProfile({
+        firstName: data.firstName ?? '',
+        lastName: data.lastName ?? '',
+        email: data.email ?? '',
+      });
+      setUserName(fullName);
+      setUserEmail(data.email ?? null);
+    } catch {
+      // best-effort fetch; ignore errors so other data loads.
+    }
+  };
+
+  const updateAccountProfile = async () => {
+    if (!userToken) return;
+    setAccountMessage(null);
+    const res = await fetch(`${backendUrl}/api/account/profile`, {
+      method: 'PATCH',
+      headers: jsonHeaders,
+      body: JSON.stringify(accountProfile),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      alert(data.error || 'Unable to update profile');
+      return;
+    }
+    const updatedUser = data.user ?? accountProfile;
+    const fullName = `${updatedUser.firstName ?? ''} ${updatedUser.lastName ?? ''}`.trim() || 'Traveler';
+    if (data.token) {
+      setUserToken(data.token);
+      saveSession(data.token, fullName, activePage, updatedUser.email ?? accountProfile.email);
+    }
+    setUserName(fullName);
+    setUserEmail(updatedUser.email ?? null);
+    setAccountProfile({
+      firstName: updatedUser.firstName ?? '',
+      lastName: updatedUser.lastName ?? '',
+      email: updatedUser.email ?? '',
+    });
+    setAccountMessage('Profile updated');
+  };
+
+  const updateAccountPassword = async () => {
+    if (!userToken) return;
+    setAccountMessage(null);
+    const res = await fetch(`${backendUrl}/api/account/password`, {
+      method: 'PATCH',
+      headers: jsonHeaders,
+      body: JSON.stringify(passwordForm),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      alert(data.error || 'Unable to update password');
+      return;
+    }
+    setAccountMessage('Password updated');
+    setPasswordForm({ currentPassword: '', newPassword: '' });
+  };
+
+  const deleteAccount = async () => {
+    if (!userToken) return;
+    const res = await fetch(`${backendUrl}/api/account`, {
+      method: 'DELETE',
+      headers,
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'Unable to delete account');
+      return;
+    }
+    setShowDeleteConfirm(false);
+    logout();
+  };
+
+  // Fetch flights for the active trip; normalize paidBy casing.
   const fetchFlights = async (token?: string) => {
     if (!activeTripId) {
       setFlights([]);
       return;
     }
-    const res = await fetch(`${backendUrl}/api/flights?tripId=${activeTripId}`, { headers: { Authorization: `Bearer ${token ?? userToken}` } });
+    const res = await fetch(`${backendUrl}/api/flights?tripId=${activeTripId}`, {
+      headers: { Authorization: `Bearer ${token ?? userToken}` },
+    });
     const data = await res.json();
     setFlights(
       (data as any[]).map((f) => ({
@@ -1468,6 +1718,7 @@ const App: React.FC = () => {
     );
   };
 
+  // Fetch lodgings for the active trip; normalize nullable fields.
   const fetchLodgings = async (token?: string) => {
     if (!activeTripId) {
       setLodgings([]);
@@ -1490,6 +1741,7 @@ const App: React.FC = () => {
     );
   };
 
+  // Fetch tours for the active trip; normalize string fields.
   const fetchTours = async (token?: string) => {
     if (!activeTripId) {
       setTours([]);
@@ -1942,6 +2194,7 @@ const App: React.FC = () => {
     setInvites(data);
   };
 
+  // Create a new flight row for the active trip using the quick-add table inputs.
   const addFlight = async () => {
     if (!userToken) return false;
     if (!activeTripId) {
@@ -1949,29 +2202,12 @@ const App: React.FC = () => {
       return false;
     }
 
-    const required = [
-      newFlight.passengerName,
-      newFlight.departureDate,
-      newFlight.departureTime,
-      newFlight.arrivalTime,
-      newFlight.carrier,
-      newFlight.flightNumber,
-      newFlight.bookingReference,
-    ];
-
-    if (required.some((val) => !val || !val.trim())) {
-      alert('Please fill out all required fields before adding a flight.');
-      return false;
-    }
-
+    const payload = buildFlightPayload(newFlight, activeTripId, defaultPayerId);
     const res = await fetch(`${backendUrl}/api/flights`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...headers },
       body: JSON.stringify({
-        ...newFlight,
-        tripId: activeTripId,
-        departureDate: newFlight.departureDate,
-        cost: Number(newFlight.cost) || 0,
+        ...payload,
       }),
     });
 
@@ -1992,6 +2228,7 @@ const App: React.FC = () => {
     fetchFlights();
   };
 
+  // Share a flight with an email address (server sends invite/email if configured).
   const shareFlight = async (id: string) => {
     if (!userToken) return;
     if (!email.trim()) {
@@ -2097,6 +2334,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (userToken) {
+      fetchAccountProfile();
       fetchFlights();
       fetchLodgings();
       fetchTours();
@@ -2117,7 +2355,7 @@ const App: React.FC = () => {
       setUserName(session.name);
       setUserEmail(session.email ?? null);
       const sessionPage = session.page;
-      if (sessionPage === 'flights' || sessionPage === 'lodging' || sessionPage === 'groups' || sessionPage === 'trips' || sessionPage === 'traits' || sessionPage === 'itinerary' || sessionPage === 'tours' || sessionPage === 'cost') {
+      if (sessionPage === 'flights' || sessionPage === 'lodging' || sessionPage === 'groups' || sessionPage === 'trips' || sessionPage === 'traits' || sessionPage === 'itinerary' || sessionPage === 'tours' || sessionPage === 'cost' || sessionPage === 'account') {
         setActivePage(sessionPage as Page);
       } else {
         setActivePage('menu');
@@ -2144,6 +2382,7 @@ const App: React.FC = () => {
     }
   }, [userToken, activeTripId, trips]);
 
+  // Start adding a new flight row in the table; seeds default payer and clears suggestions.
   const handleAddPress = async () => {
     if (!activeTripId) {
       alert('Select an active trip before adding a flight.');
@@ -2186,6 +2425,7 @@ const App: React.FC = () => {
     }
   };
 
+  // Persist parsed flights (or an override list) for the active trip.
   const saveParsedFlights = async (flightsOverride?: FlightEditDraft[]) => {
     const flightsToSave = flightsOverride ?? parsedFlights;
     if (!userToken || !activeTripId || !flightsToSave.length) {
@@ -2456,6 +2696,9 @@ const App: React.FC = () => {
               </TouchableOpacity>
               <TouchableOpacity style={[styles.button, activePage === 'trips' && styles.toggleActive]} onPress={() => setActivePage('trips')}>
                 <Text style={styles.buttonText}>Trips</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.button, activePage === 'account' && styles.toggleActive]} onPress={() => setActivePage('account')}>
+                <Text style={styles.buttonText}>Account</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.button, activePage === 'traits' && styles.toggleActive]} onPress={() => setActivePage('traits')}>
                 <Text style={styles.buttonText}>Traits</Text>
@@ -2813,8 +3056,8 @@ const App: React.FC = () => {
           {activePage === 'lodging' ? (
             <View style={styles.card}>
               <Text style={styles.sectionTitle}>Lodging</Text>
-              {Platform.OS !== 'web' && lodgingDateField ? (
-                <DateTimePicker
+              {Platform.OS !== 'web' && lodgingDateField && NativeDateTimePicker ? (
+                <NativeDateTimePicker
                   value={lodgingDateValue}
                   mode="date"
                   onChange={(_, date) => {
@@ -2988,7 +3231,7 @@ const App: React.FC = () => {
                     </View>
                   </View>
                   <View style={styles.tableFooter}>
-                    <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={addLodging}>
+                    <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => saveLodging(lodgingDraft)}>
                       <Text style={styles.buttonText}>Add lodging</Text>
                     </TouchableOpacity>
                   </View>
@@ -3030,6 +3273,9 @@ const App: React.FC = () => {
                         <Text style={[styles.cellText, styles.linkText]} onPress={() => openMaps(l.address)}>
                           {l.address || '-'}
                         </Text>
+                        <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => openLodgingEditor(l)}>
+                          <Text style={styles.buttonText}>Edit</Text>
+                        </TouchableOpacity>
                         <TouchableOpacity onPress={() => removeLodging(l.id)}>
                           <Text style={styles.removeText}>Remove</Text>
                         </TouchableOpacity>
@@ -3044,6 +3290,141 @@ const App: React.FC = () => {
             </View>
           ) : null}
 
+          {editingLodging && editingLodgingId ? (
+            <View style={styles.passengerOverlay}>
+              <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={closeLodgingEditor} />
+              <View style={styles.modalCard}>
+                <Text style={styles.sectionTitle}>Edit Lodging</Text>
+                <ScrollView style={{ maxHeight: 420 }}>
+                  <Text style={styles.modalLabel}>Name</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editingLodging.name}
+                    onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, name: text } : prev))}
+                  />
+                  <Text style={styles.modalLabel}>Check-in</Text>
+                  {Platform.OS === 'web' ? (
+                    <input
+                      type="date"
+                      value={editingLodging.checkInDate}
+                      onChange={(e) => setEditingLodging((prev) => (prev ? { ...prev, checkInDate: e.target.value } : prev))}
+                      style={styles.input as any}
+                    />
+                  ) : (
+                    <TextInput
+                      style={styles.input}
+                      value={editingLodging.checkInDate}
+                      onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, checkInDate: normalizeDateString(text) } : prev))}
+                    />
+                  )}
+                  <Text style={styles.modalLabel}>Check-out</Text>
+                  {Platform.OS === 'web' ? (
+                    <input
+                      type="date"
+                      value={editingLodging.checkOutDate}
+                      onChange={(e) => setEditingLodging((prev) => (prev ? { ...prev, checkOutDate: e.target.value } : prev))}
+                      style={styles.input as any}
+                    />
+                  ) : (
+                    <TextInput
+                      style={styles.input}
+                      value={editingLodging.checkOutDate}
+                      onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, checkOutDate: normalizeDateString(text) } : prev))}
+                    />
+                  )}
+                  <Text style={styles.modalLabel}>Rooms</Text>
+                  <TextInput
+                    style={styles.input}
+                    keyboardType="numeric"
+                    value={editingLodging.rooms}
+                    onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, rooms: text } : prev))}
+                  />
+                  <Text style={styles.modalLabel}>Refund by</Text>
+                  {Platform.OS === 'web' ? (
+                    <input
+                      type="date"
+                      value={editingLodging.refundBy}
+                      onChange={(e) => setEditingLodging((prev) => (prev ? { ...prev, refundBy: e.target.value } : prev))}
+                      style={styles.input as any}
+                    />
+                  ) : (
+                    <TextInput
+                      style={styles.input}
+                      value={editingLodging.refundBy}
+                      placeholder="YYYY-MM-DD"
+                      onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, refundBy: normalizeDateString(text) } : prev))}
+                    />
+                  )}
+                  <Text style={styles.modalLabel}>Total cost</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editingLodging.totalCost}
+                    keyboardType="numeric"
+                    onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, totalCost: text } : prev))}
+                  />
+                  <Text style={styles.modalLabel}>Cost per night</Text>
+                  <Text style={styles.helperText}>{editingLodging.costPerNight ? `$${editingLodging.costPerNight}` : '-'}</Text>
+
+                  <Text style={styles.modalLabel}>Paid by</Text>
+                  <View style={[styles.input, styles.payerBox]}>
+                    <View style={styles.payerChips}>
+                      {editingLodging.paidBy.map((id) => (
+                        <View key={id} style={styles.payerChip}>
+                          <Text style={styles.cellText}>{payerName(id)}</Text>
+                          <TouchableOpacity
+                            onPress={() =>
+                              setEditingLodging((p) =>
+                                p
+                                  ? {
+                                      ...p,
+                                      paidBy: p.paidBy.filter((x) => x !== id),
+                                    }
+                                  : p
+                              )
+                            }
+                          >
+                            <Text style={styles.removeText}>x</Text>
+                          </TouchableOpacity>
+                        </View>
+                      ))}
+                    </View>
+                    <View style={styles.payerOptions}>
+                      {userMembers
+                        .filter((m) => !editingLodging.paidBy.includes(m.id))
+                        .map((m) => (
+                          <TouchableOpacity
+                            key={m.id}
+                            style={styles.smallButton}
+                            onPress={() => setEditingLodging((p) => (p ? { ...p, paidBy: [...p.paidBy, m.id] } : p))}
+                          >
+                            <Text style={styles.buttonText}>Add {formatMemberName(m)}</Text>
+                          </TouchableOpacity>
+                        ))}
+                    </View>
+                  </View>
+
+                  <Text style={styles.modalLabel}>Address</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editingLodging.address}
+                    onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, address: text } : prev))}
+                  />
+                </ScrollView>
+                <View style={styles.row}>
+                  <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={closeLodgingEditor}>
+                    <Text style={styles.buttonText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.button}
+                    onPress={() => editingLodging && saveLodging(editingLodging, editingLodgingId)}
+                  >
+                    <Text style={styles.buttonText}>Save</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          ) : null}
+
           {activePage === 'tours' ? (
             <View style={styles.card}>
               <View style={styles.sectionHeaderRow}>
@@ -3052,8 +3433,8 @@ const App: React.FC = () => {
                   <Text style={styles.buttonText}>+ Add Tour</Text>
                 </TouchableOpacity>
               </View>
-              {Platform.OS !== 'web' && tourDateField && editingTour ? (
-                <DateTimePicker
+              {Platform.OS !== 'web' && tourDateField && editingTour && NativeDateTimePicker ? (
+                <NativeDateTimePicker
                   value={tourDateValue}
                   mode={tourDateField === 'startTime' ? 'time' : 'date'}
                   onChange={(_, date) => {
@@ -3370,6 +3751,84 @@ const App: React.FC = () => {
             </View>
           ) : null}
 
+          {activePage === 'account' ? (
+            <View style={[styles.card, styles.accountSection]}>
+              <Text style={styles.sectionTitle}>Account</Text>
+              <Text style={styles.helperText}>Update your profile, change your password, or remove your account.</Text>
+              {accountMessage ? (
+                <View style={styles.successCard}>
+                  <Text style={styles.bodyText}>{accountMessage}</Text>
+                </View>
+              ) : null}
+              <View style={styles.row}>
+                <TextInput
+                  style={[styles.input, { flex: 1 }]}
+                  placeholder="First name"
+                  value={accountProfile.firstName}
+                  onChangeText={(text) => setAccountProfile((p) => ({ ...p, firstName: text }))}
+                />
+                <TextInput
+                  style={[styles.input, { flex: 1 }]}
+                  placeholder="Last name"
+                  value={accountProfile.lastName}
+                  onChangeText={(text) => setAccountProfile((p) => ({ ...p, lastName: text }))}
+                />
+              </View>
+              <TextInput
+                style={styles.input}
+                placeholder="Email"
+                autoCapitalize="none"
+                keyboardType="email-address"
+                value={accountProfile.email}
+                onChangeText={(text) => setAccountProfile((p) => ({ ...p, email: text }))}
+              />
+              <TouchableOpacity style={styles.button} onPress={updateAccountProfile}>
+                <Text style={styles.buttonText}>Save Profile</Text>
+              </TouchableOpacity>
+
+              <View style={styles.divider} />
+              <Text style={styles.modalLabel}>Change password</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Current password"
+                secureTextEntry
+                value={passwordForm.currentPassword}
+                onChangeText={(text) => setPasswordForm((p) => ({ ...p, currentPassword: text }))}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="New password"
+                secureTextEntry
+                value={passwordForm.newPassword}
+                onChangeText={(text) => setPasswordForm((p) => ({ ...p, newPassword: text }))}
+              />
+              <TouchableOpacity style={styles.button} onPress={updateAccountPassword}>
+                <Text style={styles.buttonText}>Update Password</Text>
+              </TouchableOpacity>
+
+              <View style={styles.divider} />
+              <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={() => setShowDeleteConfirm(true)}>
+                <Text style={styles.buttonText}>Delete Account</Text>
+              </TouchableOpacity>
+              {showDeleteConfirm ? (
+                <View style={styles.modalOverlay}>
+                  <View style={styles.confirmModal}>
+                    <Text style={styles.sectionTitle}>Delete account?</Text>
+                    <Text style={styles.helperText}>This cannot be undone. All solo trips and data will be removed.</Text>
+                    <View style={styles.row}>
+                      <TouchableOpacity style={[styles.button, { flex: 1 }]} onPress={() => setShowDeleteConfirm(false)}>
+                        <Text style={styles.buttonText}>Cancel</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[styles.button, styles.dangerButton, { flex: 1 }]} onPress={deleteAccount}>
+                        <Text style={styles.buttonText}>Delete</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+              ) : null}
+            </View>
+          ) : null}
+
           {activePage === 'groups' ? (
             <>
               {invites.length ? (
@@ -3577,6 +4036,9 @@ const App: React.FC = () => {
                         <Text style={styles.buttonText}>Map</Text>
                       </TouchableOpacity>
                     ) : null}
+                    <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => openLodgingEditor(l)}>
+                      <Text style={styles.buttonText}>Edit</Text>
+                    </TouchableOpacity>
                     <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => removeLodging(l.id)}>
                       <Text style={styles.buttonText}>Delete</Text>
                     </TouchableOpacity>
@@ -3647,7 +4109,7 @@ const App: React.FC = () => {
                   />
                 </View>
                 <View style={[styles.cell, styles.actionCell, styles.lodgingCostCol]}>
-                  <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={addLodging}>
+                  <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => saveLodging(lodgingDraft)}>
                     <Text style={styles.buttonText}>Add</Text>
                   </TouchableOpacity>
                 </View>
@@ -4568,6 +5030,14 @@ const styles = StyleSheet.create({
     borderColor: '#bfdbfe',
     borderWidth: 1,
   },
+  divider: {
+    height: 1,
+    backgroundColor: '#e5e7eb',
+    marginVertical: 12,
+  },
+  accountSection: {
+    gap: 6,
+  },
   button: {
     backgroundColor: '#0d6efd',
     padding: 10,
@@ -5081,6 +5551,29 @@ const styles = StyleSheet.create({
   },
   traitChipTextSelected: {
     color: '#fff',
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+    zIndex: 20000,
+  },
+  confirmModal: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 10,
+    width: '100%',
+    maxWidth: 420,
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
   },
 });
 

@@ -2,9 +2,10 @@
   "expo": {
     "extra": {
       "eas": {
-        "projectId": "0e16383d-9e22-438a-8b95-2a0564a90ebf"
+        "projectId": "06966c0b-d878-4346-850c-090c762f1916"
       }
     },
-    "owner": "duerk-industries"
+    "owner": "duerk-industries",
+    "slug": "travel-itinerary-planner"
   }
 }

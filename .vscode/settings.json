@@ -1,3 +1,8 @@
 {
-    "chatgpt.runCodexInWindowsSubsystemForLinux": true
+    "chatgpt.runCodexInWindowsSubsystemForLinux": true,
+    "cSpell.words": [
+        "datetimepicker",
+        "tesseract",
+        "travelitineraryplanner"
+    ]
 }

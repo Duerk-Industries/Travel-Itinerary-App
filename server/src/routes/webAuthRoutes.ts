@@ -3,6 +3,7 @@ import bodyParser from 'body-parser';
 import { claimInvitesForUser, createWebUser, ensureDefaultGroupForUser, verifyWebUserCredentials } from '../db';
 import { createToken } from '../auth';
 
+// Web auth routes for email/password login/registration.
 const router = Router();
 router.use(bodyParser.json());
 

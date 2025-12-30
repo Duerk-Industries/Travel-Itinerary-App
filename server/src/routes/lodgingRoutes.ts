@@ -1,8 +1,9 @@
 import { Router } from 'express';
 import bodyParser from 'body-parser';
 import { authenticate } from '../auth';
-import { deleteLodging, ensureUserInTrip, insertLodging, listLodgings } from '../db';
+import { deleteLodging, ensureUserInTrip, insertLodging, listLodgings, updateLodging } from '../db';
 
+// Lodgings API: CRUD for lodgings scoped to the authenticated user / their group trips.
 const router = Router();
 router.use(bodyParser.json());
 router.use(authenticate);
@@ -40,6 +41,53 @@ router.post('/', async (req, res) => {
     paidBy: Array.isArray(paidBy) ? paidBy : [],
   });
   res.status(201).json(lodging);
+});
+
+router.put('/:id', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const { name, checkInDate, checkOutDate, rooms, refundBy, totalCost, costPerNight, address, tripId, paidBy } = req.body;
+  const normalizedPaidBy = Array.isArray(paidBy) ? (paidBy.length ? paidBy : undefined) : undefined;
+  const updated = await updateLodging(req.params.id, userId, {
+    name,
+    checkInDate,
+    checkOutDate,
+    rooms: rooms ? Number(rooms) : undefined,
+    refundBy: typeof refundBy === 'undefined' ? undefined : refundBy || null,
+    totalCost: typeof totalCost === 'undefined' ? undefined : Number(totalCost) || 0,
+    costPerNight: typeof costPerNight === 'undefined' ? undefined : Number(costPerNight) || 0,
+    address,
+    paidBy: normalizedPaidBy,
+    tripId,
+  });
+  if (!updated) {
+    res.status(404).json({ error: 'Lodging not found' });
+    return;
+  }
+  res.json(updated);
+});
+
+// Support partial updates via PATCH for parity with tests/client expectations.
+router.patch('/:id', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const { name, checkInDate, checkOutDate, rooms, refundBy, totalCost, costPerNight, address, tripId, paidBy } = req.body;
+  const normalizedPaidBy = Array.isArray(paidBy) ? (paidBy.length ? paidBy : undefined) : undefined;
+  const updated = await updateLodging(req.params.id, userId, {
+    name,
+    checkInDate,
+    checkOutDate,
+    rooms: rooms ? Number(rooms) : undefined,
+    refundBy: typeof refundBy === 'undefined' ? undefined : refundBy || null,
+    totalCost: typeof totalCost === 'undefined' ? undefined : Number(totalCost) || 0,
+    costPerNight: typeof costPerNight === 'undefined' ? undefined : Number(costPerNight) || 0,
+    address,
+    paidBy: normalizedPaidBy,
+    tripId,
+  });
+  if (!updated) {
+    res.status(404).json({ error: 'Lodging not found' });
+    return;
+  }
+  res.json(updated);
 });
 
 router.delete('/:id', async (req, res) => {
