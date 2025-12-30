@@ -48,6 +48,7 @@ router.put('/:id', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const id = req.params.id;
   const { date, name, startLocation, startTime, duration, cost, freeCancelBy, bookedOn, reference, paidBy } = req.body;
+  const normalizedPaidBy = Array.isArray(paidBy) ? (paidBy.length ? paidBy : undefined) : undefined;
   const updated = await updateTour(id, userId, {
     date,
     name,
@@ -58,7 +59,32 @@ router.put('/:id', async (req, res) => {
     freeCancelBy,
     bookedOn,
     reference,
-    paidBy: Array.isArray(paidBy) ? paidBy : undefined,
+    paidBy: normalizedPaidBy,
+  });
+  if (!updated) {
+    res.status(404).json({ error: 'Tour not found' });
+    return;
+  }
+  res.json(updated);
+});
+
+// Allow partial updates via PATCH (used by client/tests for payer updates).
+router.patch('/:id', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const id = req.params.id;
+  const { date, name, startLocation, startTime, duration, cost, freeCancelBy, bookedOn, reference, paidBy } = req.body;
+  const normalizedPaidBy = Array.isArray(paidBy) ? (paidBy.length ? paidBy : undefined) : undefined;
+  const updated = await updateTour(id, userId, {
+    date,
+    name,
+    startLocation,
+    startTime,
+    duration,
+    cost: typeof cost === 'undefined' ? undefined : Number(cost),
+    freeCancelBy,
+    bookedOn,
+    reference,
+    paidBy: normalizedPaidBy,
   });
   if (!updated) {
     res.status(404).json({ error: 'Tour not found' });

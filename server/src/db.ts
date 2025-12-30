@@ -28,6 +28,13 @@ function getPool(): Pool {
   return pool;
 }
 
+export const closePool = async (): Promise<void> => {
+  if (pool) {
+    await pool.end();
+    pool = null;
+  }
+};
+
 
 // Initialize database schema, migrations, and seed airport data on startup.
 export const initDb = async (): Promise<void> => {
@@ -523,6 +530,20 @@ export const deleteWebUserAndCleanup = async (userId: string): Promise<void> => 
       }
     }
 
+    // Ensure memberships added by this user are retained by reassigning added_by to the new owner (or the member themself).
+    await client.query(
+      `
+      UPDATE group_members gm
+      SET added_by = COALESCE(
+        (SELECT owner_id FROM groups g WHERE g.id = gm.group_id),
+        gm.user_id,
+        gm.added_by
+      )
+      WHERE gm.added_by = $1
+    `,
+      [userId]
+    );
+
     // Trips where this user is the only non-guest member should be removed entirely.
     const { rows: soloTrips } = await client.query<{ id: string }>(
       `
@@ -930,7 +951,7 @@ export const updateLodging = async (
       total_cost = COALESCE($8, l.total_cost),
       cost_per_night = COALESCE($9, l.cost_per_night),
       address = COALESCE($10, l.address),
-      paid_by = COALESCE($11, l.paid_by),
+      paid_by = COALESCE($11::jsonb, l.paid_by),
       trip_id = COALESCE($12, l.trip_id)
     FROM trips t
     WHERE l.id = $1
@@ -1066,7 +1087,7 @@ export const updateTour = async (id: string, userId: string, tour: Partial<Tour>
       free_cancel_by = COALESCE($9, free_cancel_by),
       booked_on = COALESCE($10, booked_on),
       reference = COALESCE($11, reference),
-      paid_by = COALESCE($12, paid_by)
+      paid_by = COALESCE($12::jsonb, paid_by)
     WHERE id = $1 AND user_id = $2
     RETURNING
       id,

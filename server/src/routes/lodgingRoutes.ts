@@ -46,6 +46,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const { name, checkInDate, checkOutDate, rooms, refundBy, totalCost, costPerNight, address, tripId, paidBy } = req.body;
+  const normalizedPaidBy = Array.isArray(paidBy) ? (paidBy.length ? paidBy : undefined) : undefined;
   const updated = await updateLodging(req.params.id, userId, {
     name,
     checkInDate,
@@ -55,7 +56,31 @@ router.put('/:id', async (req, res) => {
     totalCost: typeof totalCost === 'undefined' ? undefined : Number(totalCost) || 0,
     costPerNight: typeof costPerNight === 'undefined' ? undefined : Number(costPerNight) || 0,
     address,
-    paidBy: Array.isArray(paidBy) ? paidBy : undefined,
+    paidBy: normalizedPaidBy,
+    tripId,
+  });
+  if (!updated) {
+    res.status(404).json({ error: 'Lodging not found' });
+    return;
+  }
+  res.json(updated);
+});
+
+// Support partial updates via PATCH for parity with tests/client expectations.
+router.patch('/:id', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const { name, checkInDate, checkOutDate, rooms, refundBy, totalCost, costPerNight, address, tripId, paidBy } = req.body;
+  const normalizedPaidBy = Array.isArray(paidBy) ? (paidBy.length ? paidBy : undefined) : undefined;
+  const updated = await updateLodging(req.params.id, userId, {
+    name,
+    checkInDate,
+    checkOutDate,
+    rooms: rooms ? Number(rooms) : undefined,
+    refundBy: typeof refundBy === 'undefined' ? undefined : refundBy || null,
+    totalCost: typeof totalCost === 'undefined' ? undefined : Number(totalCost) || 0,
+    costPerNight: typeof costPerNight === 'undefined' ? undefined : Number(costPerNight) || 0,
+    address,
+    paidBy: normalizedPaidBy,
     tripId,
   });
   if (!updated) {
