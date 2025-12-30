@@ -1,9 +1,20 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Constants from 'expo-constants';
 import { formatDateLong } from './utils/formatDateLong';
 import { parseFlightText, type ParsedFlight } from './utils/flightParser';
+
+type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
+let NativeDateTimePicker: NativeDateTimePickerType | null = null;
+if (Platform.OS !== 'web') {
+  try {
+    const mod = require('@react-native-community/datetimepicker');
+    NativeDateTimePicker = (mod?.default ?? mod) as NativeDateTimePickerType;
+  } catch (err) {
+    console.warn('DateTimePicker unavailable, falling back to text inputs');
+    NativeDateTimePicker = null;
+  }
+}
 
 interface Flight {
   id: string;
@@ -326,6 +337,7 @@ const App: React.FC = () => {
   const [lodgings, setLodgings] = useState<Lodging[]>([]);
   const [lodgingDraft, setLodgingDraft] = useState<LodgingDraft>(createInitialLodgingState());
   const [editingLodgingId, setEditingLodgingId] = useState<string | null>(null);
+  const [editingLodging, setEditingLodging] = useState<LodgingDraft | null>(null);
   const [lodgingDateField, setLodgingDateField] = useState<'checkIn' | 'checkOut' | 'refund' | null>(null);
   const [lodgingDateValue, setLodgingDateValue] = useState<Date>(new Date());
 
@@ -408,12 +420,40 @@ const App: React.FC = () => {
     return 'Member';
   };
 
-  const normalizeDateString = (value: string): string => {
-    if (!value) return value;
-    if (value.includes('-') && value.length === 10) return value;
-    const d = new Date(value);
-    return Number.isNaN(d.getTime()) ? value : d.toISOString().slice(0, 10);
+const normalizeDateString = (value: string): string => {
+  if (!value) return value;
+  if (value.includes('-') && value.length === 10) return value;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? value : d.toISOString().slice(0, 10);
+};
+
+const buildFlightPayload = (flight: FlightEditDraft, tripId?: string, defaultPayerId?: string) => {
+  const trim = (v: string | null | undefined) => (v ?? '').trim();
+  const departureDate = normalizeDateString(trim(flight.departureDate)) || new Date().toISOString().slice(0, 10);
+  const departureLocation = trim(flight.departureLocation) || trim(flight.departureAirportCode);
+  const arrivalLocation = trim(flight.arrivalLocation) || trim(flight.arrivalAirportCode);
+  const layoverLocation = trim(flight.layoverLocation);
+  const layoverLocationCode = trim(flight.layoverLocationCode);
+  return {
+    passengerName: trim(flight.passengerName) || 'Traveler',
+    departureDate,
+    departureLocation,
+    departureAirportCode: trim(flight.departureAirportCode) || departureLocation,
+    departureTime: trim(flight.departureTime) || '00:00',
+    arrivalLocation,
+    arrivalAirportCode: trim(flight.arrivalAirportCode) || arrivalLocation,
+    layoverLocation,
+    layoverLocationCode,
+    layoverDuration: trim(flight.layoverDuration),
+    arrivalTime: trim(flight.arrivalTime) || '00:00',
+    cost: Number(flight.cost) || 0,
+    carrier: trim(flight.carrier) || 'UNKNOWN',
+    flightNumber: trim(flight.flightNumber) || 'UNKNOWN',
+    bookingReference: trim(flight.bookingReference) || 'UNKNOWN',
+    paidBy: flight.paidBy?.length ? flight.paidBy : defaultPayerId ? [defaultPayerId] : [],
+    ...(tripId ? { tripId } : {}),
   };
+};
 
   const calculateNights = (checkIn: string, checkOut: string): number => {
     const start = new Date(checkIn).getTime();
@@ -480,20 +520,21 @@ const App: React.FC = () => {
     return member ? formatMemberName(member) : 'Unknown';
   };
 
+  const userMembers = useMemo(() => groupMembers.filter((m) => !m.guestName), [groupMembers]);
+
   const payerTotals = useMemo(() => {
     const totals: Record<string, number> = {};
     tours.forEach((t) => {
       const costNum = Number(t.cost) || 0;
-      if (!costNum || !t.paidBy.length) return;
-      const share = costNum / t.paidBy.length;
-      t.paidBy.forEach((id) => {
+      const payers = t.paidBy && t.paidBy.length ? t.paidBy : userMembers.map((m) => m.id);
+      if (!costNum || !payers.length) return;
+      const share = costNum / payers.length;
+      payers.forEach((id) => {
         totals[id] = (totals[id] ?? 0) + share;
       });
     });
     return totals;
-  }, [tours]);
-
-  const userMembers = useMemo(() => groupMembers.filter((m) => !m.guestName), [groupMembers]);
+  }, [tours, userMembers]);
 
   const currentUserMemberId = useMemo(() => {
     if (!userEmail) return null;
@@ -513,28 +554,30 @@ const App: React.FC = () => {
       const paidBy = (f as any).paidBy ?? (f as any).paid_by;
       const payers: string[] = Array.isArray(paidBy) ? paidBy : [];
       const costNum = Number((f as any).cost) || 0;
-      if (!costNum || !payers.length) return;
-      const share = costNum / payers.length;
-      payers.forEach((id) => {
+      const effectivePayers = payers.length ? payers : userMembers.map((m) => m.id);
+      if (!costNum || !effectivePayers.length) return;
+      const share = costNum / effectivePayers.length;
+      effectivePayers.forEach((id) => {
         totals[id] = (totals[id] ?? 0) + share;
       });
     });
     return totals;
-  }, [flights]);
+  }, [flights, userMembers]);
 
   const lodgingPayerTotals = useMemo(() => {
     const totals: Record<string, number> = {};
     lodgings.forEach((l) => {
       const payers: string[] = Array.isArray(l.paidBy) ? l.paidBy : [];
       const costNum = Number(l.totalCost) || 0;
-      if (!costNum || !payers.length) return;
-      const share = costNum / payers.length;
-      payers.forEach((id) => {
+      const effectivePayers = payers.length ? payers : userMembers.map((m) => m.id);
+      if (!costNum || !effectivePayers.length) return;
+      const share = costNum / effectivePayers.length;
+      effectivePayers.forEach((id) => {
         totals[id] = (totals[id] ?? 0) + share;
       });
     });
     return totals;
-  }, [lodgings]);
+  }, [lodgings, userMembers]);
 
   useEffect(() => {
     if (defaultPayerId && (!lodgingDraft.paidBy || lodgingDraft.paidBy.length === 0)) {
@@ -578,6 +621,16 @@ const App: React.FC = () => {
     const computed = nights > 0 && totalNum ? (totalNum / nights).toFixed(2) : '';
     setLodgingDraft((prev) => ({ ...prev, costPerNight: computed }));
   }, [lodgingDraft.checkInDate, lodgingDraft.checkOutDate, lodgingDraft.totalCost]);
+
+  useEffect(() => {
+    if (!editingLodging) return;
+    const nights = calculateNights(editingLodging.checkInDate, editingLodging.checkOutDate);
+    const totalNum = Number(editingLodging.totalCost) || 0;
+    const computed = nights > 0 && totalNum ? (totalNum / nights).toFixed(2) : '';
+    if (computed !== editingLodging.costPerNight) {
+      setEditingLodging((prev) => (prev ? { ...prev, costPerNight: computed } : prev));
+    }
+  }, [editingLodging?.checkInDate, editingLodging?.checkOutDate, editingLodging?.totalCost]);
 
   const filterAirports = (query: string): Airport[] => {
     const q = query.trim().toLowerCase();
@@ -696,29 +749,29 @@ const App: React.FC = () => {
     }
   };
 
-  const saveLodging = async () => {
-    if (!lodgingDraft.name.trim() || !activeTripId) {
+  const saveLodging = async (draft: LodgingDraft, lodgingId?: string | null) => {
+    if (!draft.name.trim() || !activeTripId) {
       alert('Please enter a lodging name and select an active trip.');
       return;
     }
-    const nights = calculateNights(lodgingDraft.checkInDate, lodgingDraft.checkOutDate);
+    const nights = calculateNights(draft.checkInDate, draft.checkOutDate);
     if (nights <= 0) {
       alert('Check-out must be after check-in.');
       return;
     }
-    const totalNum = Number(lodgingDraft.totalCost) || 0;
-    const rooms = Number(lodgingDraft.rooms) || 1;
+    const totalNum = Number(draft.totalCost) || 0;
+    const rooms = Number(draft.rooms) || 1;
     const costPerNight = totalNum && rooms > 0 ? (totalNum / (nights * rooms)).toFixed(2) : '0';
-    const paidBy = lodgingDraft.paidBy.length ? lodgingDraft.paidBy : defaultPayerId ? [defaultPayerId] : [];
+    const paidBy = draft.paidBy.length ? draft.paidBy : defaultPayerId ? [defaultPayerId] : [];
     const payload = {
-      ...lodgingDraft,
+      ...draft,
       tripId: activeTripId,
       rooms,
       costPerNight,
       paidBy,
     };
-    const url = editingLodgingId ? `${backendUrl}/api/lodgings/${editingLodgingId}` : `${backendUrl}/api/lodgings`;
-    const method = editingLodgingId ? 'PUT' : 'POST';
+    const url = lodgingId ? `${backendUrl}/api/lodgings/${lodgingId}` : `${backendUrl}/api/lodgings`;
+    const method = lodgingId ? 'PUT' : 'POST';
     const res = await fetch(url, {
       method,
       headers: jsonHeaders,
@@ -729,8 +782,12 @@ const App: React.FC = () => {
       alert(data.error || 'Unable to save lodging');
       return;
     }
-    setLodgingDraft(createInitialLodgingState());
-    setEditingLodgingId(null);
+    if (lodgingId) {
+      setEditingLodgingId(null);
+      setEditingLodging(null);
+    } else {
+      setLodgingDraft(createInitialLodgingState());
+    }
     fetchLodgings();
   };
 
@@ -741,6 +798,27 @@ const App: React.FC = () => {
       return;
     }
     fetchLodgings();
+  };
+
+  const openLodgingEditor = (lodging: Lodging) => {
+    setEditingLodgingId(lodging.id);
+    const base: LodgingDraft = {
+      name: lodging.name,
+      checkInDate: normalizeDateString(lodging.checkInDate),
+      checkOutDate: normalizeDateString(lodging.checkOutDate),
+      rooms: lodging.rooms || '1',
+      refundBy: lodging.refundBy ? normalizeDateString(lodging.refundBy) : '',
+      totalCost: lodging.totalCost || '',
+      costPerNight: lodging.costPerNight || '',
+      address: lodging.address || '',
+      paidBy: Array.isArray(lodging.paidBy) && lodging.paidBy.length ? lodging.paidBy : defaultPayerId ? [defaultPayerId] : [],
+    };
+    setEditingLodging(base);
+  };
+
+  const closeLodgingEditor = () => {
+    setEditingLodgingId(null);
+    setEditingLodging(null);
   };
 
   const openTourEditor = (tour?: Tour) => {
@@ -967,34 +1045,11 @@ const App: React.FC = () => {
 
   const saveFlightDetails = async () => {
     if (!userToken || !editingFlightId || !editingFlight) return;
-    const required = [
-      editingFlight.passengerName,
-      editingFlight.departureDate,
-      editingFlight.departureTime,
-      editingFlight.arrivalTime,
-      editingFlight.carrier,
-      editingFlight.flightNumber,
-      editingFlight.bookingReference,
-    ];
-    const hasAllRequired = required.every((val) => {
-      const s = val == null ? '' : String(val);
-      return s.trim().length > 0;
-    });
-    if (!hasAllRequired) {
-      alert('Please fill out all required fields before saving.');
-      return;
-    }
     if (editingFlightId === 'new' && !activeTripId) {
       alert('Select an active trip before adding a flight.');
       return;
     }
-    let payload = {
-      ...editingFlight,
-      cost: Number(editingFlight.cost) || 0,
-    };
-    if ((!payload.paidBy || payload.paidBy.length === 0) && defaultPayerId) {
-      payload = { ...payload, paidBy: [defaultPayerId] };
-    }
+    const payload = buildFlightPayload(editingFlight, editingFlightId === 'new' ? activeTripId ?? undefined : undefined, defaultPayerId);
     let res: Response;
     if (editingFlightId === 'new') {
       res = await fetch(`${backendUrl}/api/flights`, {
@@ -1002,8 +1057,6 @@ const App: React.FC = () => {
         headers: { 'Content-Type': 'application/json', ...headers },
         body: JSON.stringify({
           ...payload,
-          tripId: activeTripId,
-          departureDate: editingFlight.departureDate,
         }),
       });
     } else {
@@ -1633,29 +1686,12 @@ const App: React.FC = () => {
       return false;
     }
 
-    const required = [
-      newFlight.passengerName,
-      newFlight.departureDate,
-      newFlight.departureTime,
-      newFlight.arrivalTime,
-      newFlight.carrier,
-      newFlight.flightNumber,
-      newFlight.bookingReference,
-    ];
-
-    if (required.some((val) => !val || !val.trim())) {
-      alert('Please fill out all required fields before adding a flight.');
-      return false;
-    }
-
+    const payload = buildFlightPayload(newFlight, activeTripId, defaultPayerId);
     const res = await fetch(`${backendUrl}/api/flights`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...headers },
       body: JSON.stringify({
-        ...newFlight,
-        tripId: activeTripId,
-        departureDate: newFlight.departureDate,
-        cost: Number(newFlight.cost) || 0,
+        ...payload,
       }),
     });
 
@@ -2642,8 +2678,8 @@ const App: React.FC = () => {
           {activePage === 'lodging' ? (
             <View style={styles.card}>
               <Text style={styles.sectionTitle}>Lodging</Text>
-              {Platform.OS !== 'web' && lodgingDateField ? (
-                <DateTimePicker
+              {Platform.OS !== 'web' && lodgingDateField && NativeDateTimePicker ? (
+                <NativeDateTimePicker
                   value={lodgingDateValue}
                   mode="date"
                   onChange={(_, date) => {
@@ -2817,7 +2853,7 @@ const App: React.FC = () => {
                     </View>
                   </View>
                   <View style={styles.tableFooter}>
-                    <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={addLodging}>
+                    <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => saveLodging(lodgingDraft)}>
                       <Text style={styles.buttonText}>Add lodging</Text>
                     </TouchableOpacity>
                   </View>
@@ -2859,6 +2895,9 @@ const App: React.FC = () => {
                         <Text style={[styles.cellText, styles.linkText]} onPress={() => openMaps(l.address)}>
                           {l.address || '-'}
                         </Text>
+                        <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => openLodgingEditor(l)}>
+                          <Text style={styles.buttonText}>Edit</Text>
+                        </TouchableOpacity>
                         <TouchableOpacity onPress={() => removeLodging(l.id)}>
                           <Text style={styles.removeText}>Remove</Text>
                         </TouchableOpacity>
@@ -2873,6 +2912,141 @@ const App: React.FC = () => {
             </View>
           ) : null}
 
+          {editingLodging && editingLodgingId ? (
+            <View style={styles.passengerOverlay}>
+              <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={closeLodgingEditor} />
+              <View style={styles.modalCard}>
+                <Text style={styles.sectionTitle}>Edit Lodging</Text>
+                <ScrollView style={{ maxHeight: 420 }}>
+                  <Text style={styles.modalLabel}>Name</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editingLodging.name}
+                    onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, name: text } : prev))}
+                  />
+                  <Text style={styles.modalLabel}>Check-in</Text>
+                  {Platform.OS === 'web' ? (
+                    <input
+                      type="date"
+                      value={editingLodging.checkInDate}
+                      onChange={(e) => setEditingLodging((prev) => (prev ? { ...prev, checkInDate: e.target.value } : prev))}
+                      style={styles.input as any}
+                    />
+                  ) : (
+                    <TextInput
+                      style={styles.input}
+                      value={editingLodging.checkInDate}
+                      onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, checkInDate: normalizeDateString(text) } : prev))}
+                    />
+                  )}
+                  <Text style={styles.modalLabel}>Check-out</Text>
+                  {Platform.OS === 'web' ? (
+                    <input
+                      type="date"
+                      value={editingLodging.checkOutDate}
+                      onChange={(e) => setEditingLodging((prev) => (prev ? { ...prev, checkOutDate: e.target.value } : prev))}
+                      style={styles.input as any}
+                    />
+                  ) : (
+                    <TextInput
+                      style={styles.input}
+                      value={editingLodging.checkOutDate}
+                      onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, checkOutDate: normalizeDateString(text) } : prev))}
+                    />
+                  )}
+                  <Text style={styles.modalLabel}>Rooms</Text>
+                  <TextInput
+                    style={styles.input}
+                    keyboardType="numeric"
+                    value={editingLodging.rooms}
+                    onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, rooms: text } : prev))}
+                  />
+                  <Text style={styles.modalLabel}>Refund by</Text>
+                  {Platform.OS === 'web' ? (
+                    <input
+                      type="date"
+                      value={editingLodging.refundBy}
+                      onChange={(e) => setEditingLodging((prev) => (prev ? { ...prev, refundBy: e.target.value } : prev))}
+                      style={styles.input as any}
+                    />
+                  ) : (
+                    <TextInput
+                      style={styles.input}
+                      value={editingLodging.refundBy}
+                      placeholder="YYYY-MM-DD"
+                      onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, refundBy: normalizeDateString(text) } : prev))}
+                    />
+                  )}
+                  <Text style={styles.modalLabel}>Total cost</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editingLodging.totalCost}
+                    keyboardType="numeric"
+                    onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, totalCost: text } : prev))}
+                  />
+                  <Text style={styles.modalLabel}>Cost per night</Text>
+                  <Text style={styles.helperText}>{editingLodging.costPerNight ? `$${editingLodging.costPerNight}` : '-'}</Text>
+
+                  <Text style={styles.modalLabel}>Paid by</Text>
+                  <View style={[styles.input, styles.payerBox]}>
+                    <View style={styles.payerChips}>
+                      {editingLodging.paidBy.map((id) => (
+                        <View key={id} style={styles.payerChip}>
+                          <Text style={styles.cellText}>{payerName(id)}</Text>
+                          <TouchableOpacity
+                            onPress={() =>
+                              setEditingLodging((p) =>
+                                p
+                                  ? {
+                                      ...p,
+                                      paidBy: p.paidBy.filter((x) => x !== id),
+                                    }
+                                  : p
+                              )
+                            }
+                          >
+                            <Text style={styles.removeText}>x</Text>
+                          </TouchableOpacity>
+                        </View>
+                      ))}
+                    </View>
+                    <View style={styles.payerOptions}>
+                      {userMembers
+                        .filter((m) => !editingLodging.paidBy.includes(m.id))
+                        .map((m) => (
+                          <TouchableOpacity
+                            key={m.id}
+                            style={styles.smallButton}
+                            onPress={() => setEditingLodging((p) => (p ? { ...p, paidBy: [...p.paidBy, m.id] } : p))}
+                          >
+                            <Text style={styles.buttonText}>Add {formatMemberName(m)}</Text>
+                          </TouchableOpacity>
+                        ))}
+                    </View>
+                  </View>
+
+                  <Text style={styles.modalLabel}>Address</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editingLodging.address}
+                    onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, address: text } : prev))}
+                  />
+                </ScrollView>
+                <View style={styles.row}>
+                  <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={closeLodgingEditor}>
+                    <Text style={styles.buttonText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.button}
+                    onPress={() => editingLodging && saveLodging(editingLodging, editingLodgingId)}
+                  >
+                    <Text style={styles.buttonText}>Save</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          ) : null}
+
           {activePage === 'tours' ? (
             <View style={styles.card}>
               <View style={styles.sectionHeaderRow}>
@@ -2881,8 +3055,8 @@ const App: React.FC = () => {
                   <Text style={styles.buttonText}>+ Add Tour</Text>
                 </TouchableOpacity>
               </View>
-              {Platform.OS !== 'web' && tourDateField && editingTour ? (
-                <DateTimePicker
+              {Platform.OS !== 'web' && tourDateField && editingTour && NativeDateTimePicker ? (
+                <NativeDateTimePicker
                   value={tourDateValue}
                   mode={tourDateField === 'startTime' ? 'time' : 'date'}
                   onChange={(_, date) => {
@@ -3406,6 +3580,9 @@ const App: React.FC = () => {
                         <Text style={styles.buttonText}>Map</Text>
                       </TouchableOpacity>
                     ) : null}
+                    <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => openLodgingEditor(l)}>
+                      <Text style={styles.buttonText}>Edit</Text>
+                    </TouchableOpacity>
                     <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => removeLodging(l.id)}>
                       <Text style={styles.buttonText}>Delete</Text>
                     </TouchableOpacity>
@@ -3476,7 +3653,7 @@ const App: React.FC = () => {
                   />
                 </View>
                 <View style={[styles.cell, styles.actionCell, styles.lodgingCostCol]}>
-                  <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={addLodging}>
+                  <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => saveLodging(lodgingDraft)}>
                     <Text style={styles.buttonText}>Add</Text>
                   </TouchableOpacity>
                 </View>

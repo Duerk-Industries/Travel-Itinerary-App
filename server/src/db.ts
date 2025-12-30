@@ -447,7 +447,18 @@ export const insertFlight = async (
 
 export const deleteFlight = async (flightId: string, userId: string): Promise<void> => {
   const p = getPool();
-  await p.query(`DELETE FROM flights WHERE id = $1 AND user_id = $2`, [flightId, userId]);
+  await p.query(
+    `
+      DELETE FROM flights f
+      USING trips t
+      WHERE f.id = $1
+        AND t.id = f.trip_id
+        AND EXISTS (
+          SELECT 1 FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $2
+        )
+    `,
+    [flightId, userId]
+  );
 };
 
 export const updateFlight = async (
@@ -462,7 +473,7 @@ export const updateFlight = async (
   const layoverCode = normalizeCode(updates.layoverLocation ?? updates.layoverLocationCode);
 
   const { rows } = await p.query<Flight>(
-    `UPDATE flights
+    `UPDATE flights f
      SET passenger_name = $1,
          departure_date = $2,
          departure_location = $3,
@@ -478,9 +489,12 @@ export const updateFlight = async (
          carrier = $13,
          flight_number = $14,
          booking_reference = $15,
-         paid_by = COALESCE($16, paid_by)
-     WHERE id = $17 AND user_id = $18
-     RETURNING *`,
+         paid_by = COALESCE($16, f.paid_by)
+     FROM trips t
+     WHERE f.id = $17
+       AND t.id = f.trip_id
+       AND t.group_id IN (SELECT group_id FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $18)
+     RETURNING f.*`,
     [
       updates.passengerName,
       updates.departureDate,
@@ -573,7 +587,6 @@ export const getFlightForUser = async (flightId: string, userId: string): Promis
 export const listFlights = async (userId: string, tripId?: string): Promise<Flight[]> => {
   const p = getPool();
 
-
   const { rows } = await p.query<Flight>(
     `SELECT f.*,
       t.group_id as "groupId",
@@ -616,9 +629,9 @@ export const listFlights = async (userId: string, tripId?: string): Promise<Flig
      LEFT JOIN airports apd ON apd.iata_code = f.departure_location
      LEFT JOIN airports apa ON apa.iata_code = f.arrival_location
      LEFT JOIN airports apl ON apl.iata_code = f.layover_location
-     WHERE f.user_id = $1
-       AND ($2::uuid IS NULL OR f.trip_id = $2)
-      ORDER BY f.departure_date DESC`,
+     WHERE ($2::uuid IS NULL OR f.trip_id = $2)
+       AND t.group_id IN (SELECT group_id FROM group_members WHERE user_id = $1)
+     ORDER BY f.departure_date DESC`,
     [userId, tripId ?? null]
   );
 
@@ -628,32 +641,28 @@ export const listFlights = async (userId: string, tripId?: string): Promise<Flig
 
 export const listLodgings = async (userId: string, tripId?: string | null): Promise<Lodging[]> => {
   const p = getPool();
-  const params: any[] = [userId];
-  let where = 'user_id = $1';
-  if (tripId) {
-    params.push(tripId);
-    where += ` AND trip_id = $${params.length}`;
-  }
   const { rows } = await p.query(
     `
-      SELECT id,
-             user_id as "userId",
-             trip_id as "tripId",
-             name,
-             check_in_date as "checkInDate",
-             check_out_date as "checkOutDate",
-             rooms,
-             refund_by as "refundBy",
-             total_cost as "totalCost",
-             cost_per_night as "costPerNight",
-             address,
-             COALESCE(paid_by, '[]'::jsonb) as "paidBy",
-             created_at as "createdAt"
-      FROM lodgings
-      WHERE ${where}
-      ORDER BY check_in_date ASC
+      SELECT l.id,
+             l.user_id as "userId",
+             l.trip_id as "tripId",
+             l.name,
+             l.check_in_date as "checkInDate",
+             l.check_out_date as "checkOutDate",
+             l.rooms,
+             l.refund_by as "refundBy",
+             l.total_cost as "totalCost",
+             l.cost_per_night as "costPerNight",
+             l.address,
+             COALESCE(l.paid_by, '[]'::jsonb) as "paidBy",
+             l.created_at as "createdAt"
+      FROM lodgings l
+      JOIN trips t ON l.trip_id = t.id
+      WHERE ($2::uuid IS NULL OR l.trip_id = $2)
+        AND t.group_id IN (SELECT group_id FROM group_members WHERE user_id = $1)
+      ORDER BY l.check_in_date ASC
     `,
-    params
+    [userId, tripId ?? null]
   );
   return rows.map((r: any) => ({
     ...(r as Lodging),
@@ -717,7 +726,18 @@ export const insertLodging = async (lodging: {
 
 export const deleteLodging = async (lodgingId: string, userId: string): Promise<void> => {
   const p = getPool();
-  await p.query(`DELETE FROM lodgings WHERE id = $1 AND user_id = $2`, [lodgingId, userId]);
+  await p.query(
+    `
+      DELETE FROM lodgings l
+      USING trips t
+      WHERE l.id = $1
+        AND t.id = l.trip_id
+        AND EXISTS (
+          SELECT 1 FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $2
+        )
+    `,
+    [lodgingId, userId]
+  );
 };
 
 export const updateLodging = async (
@@ -728,33 +748,36 @@ export const updateLodging = async (
   const p = getPool();
   const { rows } = await p.query<Lodging>(
     `
-    UPDATE lodgings
+    UPDATE lodgings l
     SET
-      name = COALESCE($3, name),
-      check_in_date = COALESCE($4, check_in_date),
-      check_out_date = COALESCE($5, check_out_date),
-      rooms = COALESCE($6, rooms),
-      refund_by = COALESCE($7, refund_by),
-      total_cost = COALESCE($8, total_cost),
-      cost_per_night = COALESCE($9, cost_per_night),
-      address = COALESCE($10, address),
-      paid_by = COALESCE($11, paid_by),
-      trip_id = COALESCE($12, trip_id)
-    WHERE id = $1 AND user_id = $2
+      name = COALESCE($3, l.name),
+      check_in_date = COALESCE($4, l.check_in_date),
+      check_out_date = COALESCE($5, l.check_out_date),
+      rooms = COALESCE($6, l.rooms),
+      refund_by = COALESCE($7, l.refund_by),
+      total_cost = COALESCE($8, l.total_cost),
+      cost_per_night = COALESCE($9, l.cost_per_night),
+      address = COALESCE($10, l.address),
+      paid_by = COALESCE($11, l.paid_by),
+      trip_id = COALESCE($12, l.trip_id)
+    FROM trips t
+    WHERE l.id = $1
+      AND t.id = COALESCE($12, l.trip_id)
+      AND t.group_id IN (SELECT group_id FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $2)
     RETURNING
-      id,
-      user_id as "userId",
-      trip_id as "tripId",
-      name,
-      check_in_date as "checkInDate",
-      check_out_date as "checkOutDate",
-      rooms,
-      refund_by as "refundBy",
-      total_cost as "totalCost",
-      cost_per_night as "costPerNight",
-      address,
-      COALESCE(paid_by, '[]'::jsonb) as "paidBy",
-      created_at as "createdAt"
+      l.id,
+      l.user_id as "userId",
+      l.trip_id as "tripId",
+      l.name,
+      l.check_in_date as "checkInDate",
+      l.check_out_date as "checkOutDate",
+      l.rooms,
+      l.refund_by as "refundBy",
+      l.total_cost as "totalCost",
+      l.cost_per_night as "costPerNight",
+      l.address,
+      COALESCE(l.paid_by, '[]'::jsonb) as "paidBy",
+      l.created_at as "createdAt"
     `,
     [
       lodgingId,
@@ -780,26 +803,27 @@ export const listTours = async (userId: string, tripId?: string): Promise<Tour[]
   const { rows } = await p.query<Tour>(
     `
     SELECT
-      id,
-      user_id as "userId",
-      trip_id as "tripId",
-      to_char(date, 'YYYY-MM-DD') as date,
-      name,
-      start_location as "startLocation",
-      start_time as "startTime",
-      duration,
-      cost::float8 as cost,
-      to_char(free_cancel_by, 'YYYY-MM-DD') as "freeCancelBy",
-      booked_on as "bookedOn",
-      reference,
-      COALESCE(paid_by, '[]'::jsonb) as "paidBy",
-      created_at as "createdAt"
-    FROM tours
-    WHERE user_id = $1
-      ${tripId ? 'AND trip_id = $2' : ''}
-    ORDER BY date ASC, created_at DESC
+      tu.id,
+      tu.user_id as "userId",
+      tu.trip_id as "tripId",
+      to_char(tu.date, 'YYYY-MM-DD') as date,
+      tu.name,
+      tu.start_location as "startLocation",
+      tu.start_time as "startTime",
+      tu.duration,
+      tu.cost::float8 as cost,
+      to_char(tu.free_cancel_by, 'YYYY-MM-DD') as "freeCancelBy",
+      tu.booked_on as "bookedOn",
+      tu.reference,
+      COALESCE(tu.paid_by, '[]'::jsonb) as "paidBy",
+      tu.created_at as "createdAt"
+    FROM tours tu
+    JOIN trips t ON tu.trip_id = t.id
+    WHERE ($2::uuid IS NULL OR tu.trip_id = $2)
+      AND t.group_id IN (SELECT group_id FROM group_members WHERE user_id = $1)
+    ORDER BY tu.date ASC, tu.created_at DESC
     `,
-    tripId ? [userId, tripId] : [userId]
+    [userId, tripId ?? null]
   );
   return rows.map((r) => ({ ...r, paidBy: Array.isArray((r as any).paidBy) ? (r as any).paidBy : [] }));
 };
