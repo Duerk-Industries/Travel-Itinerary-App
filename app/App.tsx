@@ -400,9 +400,11 @@ const App: React.FC = () => {
     lastName: '',
     email: '',
     password: '',
+    passwordConfirm: '',
   });
   const [accountProfile, setAccountProfile] = useState({ firstName: '', lastName: '', email: '' });
-  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '' });
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', newPasswordConfirm: '' });
+  const [showPasswordEditor, setShowPasswordEditor] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [accountMessage, setAccountMessage] = useState<string | null>(null);
   const [isAddingRow, setIsAddingRow] = useState(false);
@@ -1185,9 +1187,10 @@ const calculateNights = (checkIn: string, checkOut: string): number => {
     setItineraryError('');
     setItineraryLoading(false);
     setAccountProfile({ firstName: '', lastName: '', email: '' });
-    setPasswordForm({ currentPassword: '', newPassword: '' });
+    setPasswordForm({ currentPassword: '', newPassword: '', newPasswordConfirm: '' });
     setAccountMessage(null);
     setShowDeleteConfirm(false);
+    setShowPasswordEditor(false);
     setActivePage('menu');
     clearSession();
   };
@@ -1227,6 +1230,10 @@ const calculateNights = (checkIn: string, checkOut: string): number => {
   };
 
   const register = async () => {
+    if (authForm.password !== authForm.passwordConfirm) {
+      alert('Passwords do not match');
+      return;
+    }
     try {
       const res = await fetch(`${backendUrl}/api/web-auth/register`, {
         method: 'POST',
@@ -1235,9 +1242,10 @@ const calculateNights = (checkIn: string, checkOut: string): number => {
           firstName: authForm.firstName.trim(),
           lastName: authForm.lastName.trim(),
           email: authForm.email.trim(),
-        password: authForm.password,
-      }),
-    });
+          password: authForm.password,
+          passwordConfirm: authForm.passwordConfirm,
+        }),
+      });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         alert(data.error || 'Registration failed');
@@ -1318,6 +1326,10 @@ const calculateNights = (checkIn: string, checkOut: string): number => {
 
   const updateAccountPassword = async () => {
     if (!userToken) return;
+    if (passwordForm.newPassword !== passwordForm.newPasswordConfirm) {
+      alert('New passwords do not match');
+      return;
+    }
     setAccountMessage(null);
     const res = await fetch(`${backendUrl}/api/account/password`, {
       method: 'PATCH',
@@ -1330,7 +1342,8 @@ const calculateNights = (checkIn: string, checkOut: string): number => {
       return;
     }
     setAccountMessage('Password updated');
-    setPasswordForm({ currentPassword: '', newPassword: '' });
+    setPasswordForm({ currentPassword: '', newPassword: '', newPasswordConfirm: '' });
+    setShowPasswordEditor(false);
   };
 
   const deleteAccount = async () => {
@@ -3600,24 +3613,47 @@ const calculateNights = (checkIn: string, checkOut: string): number => {
               </TouchableOpacity>
 
               <View style={styles.divider} />
-              <Text style={styles.modalLabel}>Change password</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Current password"
-                secureTextEntry
-                value={passwordForm.currentPassword}
-                onChangeText={(text) => setPasswordForm((p) => ({ ...p, currentPassword: text }))}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="New password"
-                secureTextEntry
-                value={passwordForm.newPassword}
-                onChangeText={(text) => setPasswordForm((p) => ({ ...p, newPassword: text }))}
-              />
-              <TouchableOpacity style={styles.button} onPress={updateAccountPassword}>
-                <Text style={styles.buttonText}>Update Password</Text>
-              </TouchableOpacity>
+              {!showPasswordEditor ? (
+                <TouchableOpacity style={styles.button} onPress={() => setShowPasswordEditor(true)}>
+                  <Text style={styles.buttonText}>Change Password</Text>
+                </TouchableOpacity>
+              ) : (
+                <>
+                  <Text style={styles.modalLabel}>Change password</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Current password"
+                    secureTextEntry
+                    value={passwordForm.currentPassword}
+                    onChangeText={(text) => setPasswordForm((p) => ({ ...p, currentPassword: text }))}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="New password"
+                    secureTextEntry
+                    value={passwordForm.newPassword}
+                    onChangeText={(text) => setPasswordForm((p) => ({ ...p, newPassword: text }))}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Confirm new password"
+                    secureTextEntry
+                    value={passwordForm.newPasswordConfirm}
+                    onChangeText={(text) => setPasswordForm((p) => ({ ...p, newPasswordConfirm: text }))}
+                  />
+                  <View style={styles.row}>
+                    <TouchableOpacity style={[styles.button, styles.dangerButton, { flex: 1 }]} onPress={() => {
+                      setPasswordForm({ currentPassword: '', newPassword: '', newPasswordConfirm: '' });
+                      setShowPasswordEditor(false);
+                    }}>
+                      <Text style={styles.buttonText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.button, { flex: 1 }]} onPress={updateAccountPassword}>
+                      <Text style={styles.buttonText}>Update Password</Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              )}
 
               <View style={styles.divider} />
               <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={() => setShowDeleteConfirm(true)}>
@@ -4701,6 +4737,15 @@ const calculateNights = (checkIn: string, checkOut: string): number => {
             value={authForm.password}
             onChangeText={(text) => setAuthForm((p) => ({ ...p, password: text }))}
           />
+          {authMode === 'register' ? (
+            <TextInput
+              style={styles.input}
+              placeholder="Confirm password"
+              secureTextEntry
+              value={authForm.passwordConfirm}
+              onChangeText={(text) => setAuthForm((p) => ({ ...p, passwordConfirm: text }))}
+            />
+          ) : null}
           <TouchableOpacity
             style={styles.button}
             onPress={authMode === 'login' ? loginWithPassword : register}

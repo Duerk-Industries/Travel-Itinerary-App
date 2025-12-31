@@ -657,6 +657,7 @@ export const updateFlight = async (
   const departureCode = normalizeCode(updates.departureLocation ?? updates.departureAirportCode);
   const arrivalCode = normalizeCode(updates.arrivalLocation ?? updates.arrivalAirportCode);
   const layoverCode = normalizeCode(updates.layoverLocation ?? updates.layoverLocationCode);
+  const safePaidBy = Array.isArray(updates.paidBy) ? updates.paidBy.filter(Boolean) : null;
 
   const { rows } = await p.query<Flight>(
     `UPDATE flights f
@@ -698,7 +699,7 @@ export const updateFlight = async (
       updates.carrier ?? null,
       updates.flightNumber ?? null,
       updates.bookingReference ?? null,
-      Array.isArray(updates.paidBy) ? JSON.stringify(updates.paidBy) : null,
+      safePaidBy && safePaidBy.length ? JSON.stringify(safePaidBy) : null,
       flightId,
       userId,
     ]
@@ -1716,7 +1717,6 @@ export const refreshAirportsDaily = async (): Promise<void> => {
       );
     }
     await client.query('COMMIT');
-    console.log(`[airports] refreshed ${filtered.length} airports`);
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('Failed to refresh airports', err);
