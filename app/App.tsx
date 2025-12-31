@@ -15,6 +15,18 @@ import { Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInpu
 import Constants from 'expo-constants';
 import { formatDateLong } from './utils/formatDateLong';
 import { parseFlightText, type ParsedFlight } from './utils/flightParser';
+import { computePayerTotals } from './utils/costReport';
+import {
+  Lodging,
+  LodgingDraft,
+  buildLodgingPayload,
+  calculateNights,
+  createInitialLodgingState,
+  fetchLodgingsApi,
+  removeLodgingApi,
+  saveLodgingApi,
+  toLodgingDraft,
+} from './utils/lodging';
 
 type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
 let NativeDateTimePicker: NativeDateTimePickerType | null = null;
@@ -165,32 +177,6 @@ type FlightEditDraft = {
   paidBy: string[];
 };
 
-type Lodging = {
-  id: string;
-  tripId?: string;
-  name: string;
-  checkInDate: string;
-  checkOutDate: string;
-  rooms: string;
-  refundBy: string;
-  totalCost: string;
-  costPerNight: string;
-  address: string;
-  paidBy?: string[];
-};
-
-type LodgingDraft = {
-  name: string;
-  checkInDate: string;
-  checkOutDate: string;
-  rooms: string;
-  refundBy: string;
-  totalCost: string;
-  costPerNight: string;
-  address: string;
-  paidBy: string[];
-};
-
 type Tour = {
   id: string;
   date: string;
@@ -235,19 +221,6 @@ const createInitialFlightState = (): FlightDraft => ({
   carrier: '',
   flightNumber: '',
   bookingReference: '',
-  paidBy: [],
-});
-
-// Build a blank lodging draft with today's dates and default room count.
-const createInitialLodgingState = (): LodgingDraft => ({
-  name: '',
-  checkInDate: new Date().toISOString().slice(0, 10),
-  checkOutDate: new Date().toISOString().slice(0, 10),
-  rooms: '1',
-  refundBy: '',
-  totalCost: '',
-  costPerNight: '',
-  address: '',
   paidBy: [],
 });
 
@@ -782,14 +755,6 @@ const buildFlightPayload = (flight: FlightEditDraft, tripId?: string, defaultPay
   };
 };
 
-// Calculate whole-night stay length; returns 0 if invalid or checkout <= checkin.
-const calculateNights = (checkIn: string, checkOut: string): number => {
-    const start = new Date(checkIn).getTime();
-    const end = new Date(checkOut).getTime();
-    if (Number.isNaN(start) || Number.isNaN(end) || end <= start) return 0;
-    return Math.round((end - start) / (1000 * 60 * 60 * 24));
-  };
-
   const flightsTotal = useMemo(
     () => flights.reduce((sum, f) => sum + (Number(f.cost) || 0), 0),
     [flights]
@@ -866,52 +831,6 @@ const calculateNights = (checkIn: string, checkOut: string): number => {
 
   const userMembers = useMemo(() => groupMembers.filter((m) => !m.guestName), [groupMembers]);
 
-  /**
-   * Shared payer accumulator:
-   * - Zeros out every user's total each run so removals clear prior shares
-   * - Splits cost evenly across payers (or falls back to provided defaults)
-   * - Applies any rounding remainder to the first payer to keep sums aligned
-   */
-  const computePayerTotals = <T,>(
-    items: T[],
-    getCost: (item: T) => number,
-    getPayers: (item: T) => string[] | undefined,
-    fallbackPayers: string[],
-    options?: { fallbackOnEmpty?: boolean }
-  ): Record<string, number> => {
-    // Start with every user's total at 0 so removed payers don't retain old shares.
-    const totals: Record<string, number> = {};
-    fallbackPayers.forEach((id) => {
-      totals[id] = 0;
-    });
-
-    // For each item, figure out who pays and how to split.
-    items.forEach((item) => {
-      const cost = getCost(item);
-      const payersRaw = getPayers(item);
-      const payers = (payersRaw ?? []).filter(Boolean);
-
-      // If the item explicitly has an empty payer list, we do NOT fall back to everyone.
-      // Only when payers are truly missing/undefined (legacy data) do we fall back.
-      const shouldFallback = options?.fallbackOnEmpty ? payers.length === 0 : payersRaw == null;
-      const effective = payers.length ? payers : shouldFallback ? fallbackPayers : [];
-      if (!cost || !effective.length) return;
-
-      // Split evenly across effective payers.
-      const share = cost / effective.length;
-      effective.forEach((id) => {
-        totals[id] = (totals[id] ?? 0) + share;
-      });
-
-      // Push any rounding residue onto the first payer to keep sums aligned with the item cost.
-      const remainder = cost - share * effective.length;
-      if (Math.abs(remainder) > 1e-6 && effective[0]) {
-        totals[effective[0]] = (totals[effective[0]] ?? 0) + remainder;
-      }
-    });
-    return totals;
-  };
-
   // Per-user tour totals via shared helper. Note: if a tour has an explicit empty payer list,
   // we leave it unsplit (no cost assigned) so non-payers stay at $0.
   const payerTotals = useMemo(
@@ -987,6 +906,33 @@ const calculateNights = (checkIn: string, checkOut: string): number => {
         { fallbackOnEmpty: false }
       ),
     [lodgings, userMembers]
+  );
+
+  const lodgingTotalsBalanced = useMemo(() => {
+    const totals: Record<string, number> = {};
+    userMembers.forEach((m) => {
+      totals[m.id] = lodgingPayerTotals[m.id] ?? 0;
+    });
+    const assigned = Object.values(totals).reduce((sum, v) => sum + v, 0);
+    const remainder = lodgingTotal - assigned;
+    if (userMembers.length && Math.abs(remainder) > 1e-6) {
+      const evenShare = remainder / userMembers.length;
+      userMembers.forEach((m) => {
+        totals[m.id] = (totals[m.id] ?? 0) + evenShare;
+      });
+      const afterEven = Object.values(totals).reduce((sum, v) => sum + v, 0);
+      const adjust = lodgingTotal - afterEven;
+      if (Math.abs(adjust) > 1e-6) {
+        const first = userMembers[0]?.id;
+        if (first) totals[first] = (totals[first] ?? 0) + adjust;
+      }
+    }
+    return totals;
+  }, [lodgingPayerTotals, lodgingTotal, userMembers]);
+
+  const lodgingBreakdownSum = useMemo(
+    () => Object.values(lodgingTotalsBalanced).reduce((sum, v) => sum + v, 0),
+    [lodgingTotalsBalanced]
   );
 
   useEffect(() => {
@@ -1170,36 +1116,18 @@ const calculateNights = (checkIn: string, checkOut: string): number => {
 
   // Create or update a lodging; computes cost-per-night and applies default payer.
   const saveLodging = async (draft: LodgingDraft, lodgingId?: string | null) => {
-    if (!draft.name.trim() || !activeTripId) {
+    if (!activeTripId) {
       alert('Please enter a lodging name and select an active trip.');
       return;
     }
-    const nights = calculateNights(draft.checkInDate, draft.checkOutDate);
-    if (nights <= 0) {
-      alert('Check-out must be after check-in.');
+    const { payload, error } = buildLodgingPayload(draft, activeTripId, defaultPayerId);
+    if (error || !payload) {
+      alert(error);
       return;
     }
-    const totalNum = Number(draft.totalCost) || 0;
-    const rooms = Number(draft.rooms) || 1;
-    const costPerNight = totalNum && rooms > 0 ? (totalNum / (nights * rooms)).toFixed(2) : '0';
-    const paidBy = draft.paidBy.length ? draft.paidBy : defaultPayerId ? [defaultPayerId] : [];
-    const payload = {
-      ...draft,
-      tripId: activeTripId,
-      rooms,
-      costPerNight,
-      paidBy,
-    };
-    const url = lodgingId ? `${backendUrl}/api/lodgings/${lodgingId}` : `${backendUrl}/api/lodgings`;
-    const method = lodgingId ? 'PUT' : 'POST';
-    const res = await fetch(url, {
-      method,
-      headers: jsonHeaders,
-      body: JSON.stringify(payload),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      alert(data.error || 'Unable to save lodging');
+    const result = await saveLodgingApi(backendUrl, jsonHeaders, payload, lodgingId);
+    if (!result.ok) {
+      alert(result.error || 'Unable to save lodging');
       return;
     }
     if (lodgingId) {
@@ -1212,9 +1140,9 @@ const calculateNights = (checkIn: string, checkOut: string): number => {
   };
 
   const removeLodging = async (id: string) => {
-    const res = await fetch(`${backendUrl}/api/lodgings/${id}`, { method: 'DELETE', headers: jsonHeaders });
-    if (!res.ok) {
-      alert('Unable to delete lodging');
+    const result = await removeLodgingApi(backendUrl, jsonHeaders, id);
+    if (!result.ok) {
+      alert(result.error || 'Unable to delete lodging');
       return;
     }
     fetchLodgings();
@@ -1223,18 +1151,7 @@ const calculateNights = (checkIn: string, checkOut: string): number => {
   // Populate the lodging edit modal with the selected row.
   const openLodgingEditor = (lodging: Lodging) => {
     setEditingLodgingId(lodging.id);
-    const base: LodgingDraft = {
-      name: lodging.name,
-      checkInDate: normalizeDateString(lodging.checkInDate),
-      checkOutDate: normalizeDateString(lodging.checkOutDate),
-      rooms: lodging.rooms || '1',
-      refundBy: lodging.refundBy ? normalizeDateString(lodging.refundBy) : '',
-      totalCost: lodging.totalCost || '',
-      costPerNight: lodging.costPerNight || '',
-      address: lodging.address || '',
-      paidBy: Array.isArray(lodging.paidBy) && lodging.paidBy.length ? lodging.paidBy : defaultPayerId ? [defaultPayerId] : [],
-    };
-    setEditingLodging(base);
+    setEditingLodging(toLodgingDraft(lodging, { normalize: normalizeDateString, defaultPayerId }));
   };
 
   // Close the lodging edit modal.
@@ -1737,21 +1654,8 @@ const calculateNights = (checkIn: string, checkOut: string): number => {
       setLodgings([]);
       return;
     }
-    const res = await fetch(`${backendUrl}/api/lodgings?tripId=${activeTripId}`, {
-      headers: { Authorization: `Bearer ${token ?? userToken}` },
-    });
-    if (!res.ok) return;
-    const data = await res.json();
-    setLodgings(
-      (data as any[]).map((l) => ({
-        ...l,
-        rooms: String(l.rooms ?? ''),
-        totalCost: String(l.totalCost ?? ''),
-        costPerNight: String(l.costPerNight ?? ''),
-        refundBy: l.refundBy ?? '',
-        paidBy: Array.isArray(l.paidBy) ? l.paidBy : [],
-      }))
-    );
+    const data = await fetchLodgingsApi(backendUrl, activeTripId, token ?? userToken);
+    setLodgings(data);
   };
 
   // Fetch tours for the active trip; normalize string fields.
@@ -3066,378 +2970,6 @@ const calculateNights = (checkIn: string, checkOut: string): number => {
         </>
       ) : null}
 
-          {activePage === 'lodging' ? (
-            <View style={styles.card}>
-              <Text style={styles.sectionTitle}>Lodging</Text>
-              {Platform.OS !== 'web' && lodgingDateField && NativeDateTimePicker ? (
-                <NativeDateTimePicker
-                  value={lodgingDateValue}
-                  mode="date"
-                  onChange={(_, date) => {
-                    if (!date) {
-                      setLodgingDateField(null);
-                      return;
-                    }
-                    const iso = date.toISOString().slice(0, 10);
-                    if (lodgingDateField === 'checkIn') setLodgingDraft((p) => ({ ...p, checkInDate: iso }));
-                    if (lodgingDateField === 'checkOut') setLodgingDraft((p) => ({ ...p, checkOutDate: iso }));
-                    if (lodgingDateField === 'refund') setLodgingDraft((p) => ({ ...p, refundBy: iso }));
-                    setLodgingDateField(null);
-                  }}
-                />
-              ) : null}
-              <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
-                <View style={styles.table}>
-                  <View style={[styles.tableRow, styles.tableHeader]}>
-                    <View style={[styles.cell, styles.lodgingNameCol]}>
-                      <Text style={styles.headerText}>Name</Text>
-                    </View>
-                    <View style={[styles.cell, styles.lodgingDateCol]}>
-                      <Text style={styles.headerText}>Check-in</Text>
-                    </View>
-                    <View style={[styles.cell, styles.lodgingDateCol]}>
-                      <Text style={styles.headerText}>Check-out</Text>
-                    </View>
-                    <View style={[styles.cell, styles.lodgingRoomsCol]}>
-                      <Text style={styles.headerText}>Rooms</Text>
-                    </View>
-                    <View style={[styles.cell, styles.lodgingRefundCol]}>
-                      <Text style={styles.headerText}>Refund By</Text>
-                    </View>
-                    <View style={[styles.cell, styles.lodgingCostCol]}>
-                      <Text style={styles.headerText}>Total</Text>
-                    </View>
-                    <View style={[styles.cell, styles.lodgingCostCol]}>
-                      <Text style={styles.headerText}>Per Night</Text>
-                    </View>
-                    <View style={[styles.cell, styles.lodgingCostCol]}>
-                      <Text style={styles.headerText}>Paid By</Text>
-                    </View>
-                    <View style={[styles.cell, styles.lastCell, styles.lodgingAddressCol]}>
-                      <Text style={styles.headerText}>Address</Text>
-                    </View>
-                  </View>
-
-                  <View style={[styles.tableRow, styles.inputRow]}>
-                    <View style={[styles.cell, styles.lodgingNameCol]}>
-                      <TextInput
-                        style={styles.cellInput}
-                        placeholder="Lodging name"
-                        value={lodgingDraft.name}
-                        onChangeText={(text) => setLodgingDraft((p) => ({ ...p, name: text }))}
-                      />
-                    </View>
-                    <View style={[styles.cell, styles.lodgingDateCol]}>
-                      {Platform.OS === 'web' ? (
-                        <input
-                          style={{ ...StyleSheet.flatten(styles.cellInput), width: '100%' }}
-                          type="date"
-                          value={lodgingDraft.checkInDate}
-                          onChange={(e) => setLodgingDraft((p) => ({ ...p, checkInDate: e.target.value }))}
-                        />
-                      ) : (
-                        <TouchableOpacity
-                          style={[styles.cellInput, { justifyContent: 'center' }]}
-                          onPress={() => {
-                            setLodgingDateField('checkIn');
-                            setLodgingDateValue(new Date(lodgingDraft.checkInDate));
-                          }}
-                        >
-                          <Text>{lodgingDraft.checkInDate}</Text>
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                    <View style={[styles.cell, styles.lodgingDateCol]}>
-                      {Platform.OS === 'web' ? (
-                        <input
-                          style={{ ...StyleSheet.flatten(styles.cellInput), width: '100%' }}
-                          type="date"
-                          value={lodgingDraft.checkOutDate}
-                          onChange={(e) => setLodgingDraft((p) => ({ ...p, checkOutDate: e.target.value }))}
-                        />
-                      ) : (
-                        <TouchableOpacity
-                          style={[styles.cellInput, { justifyContent: 'center' }]}
-                          onPress={() => {
-                            setLodgingDateField('checkOut');
-                            setLodgingDateValue(new Date(lodgingDraft.checkOutDate));
-                          }}
-                        >
-                          <Text>{lodgingDraft.checkOutDate}</Text>
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                    <View style={[styles.cell, styles.lodgingRoomsCol]}>
-                      <TextInput
-                        style={styles.cellInput}
-                        keyboardType="numeric"
-                        value={lodgingDraft.rooms}
-                        onChangeText={(text) => setLodgingDraft((p) => ({ ...p, rooms: text }))}
-                      />
-                    </View>
-                    <View style={[styles.cell, styles.lodgingRefundCol]}>
-                      {Platform.OS === 'web' ? (
-                        <input
-                          style={{ ...StyleSheet.flatten(styles.cellInput), width: '100%' }}
-                          type="date"
-                          value={lodgingDraft.refundBy}
-                          onChange={(e) => setLodgingDraft((p) => ({ ...p, refundBy: e.target.value }))}
-                        />
-                      ) : (
-                        <TouchableOpacity
-                          style={[styles.cellInput, { justifyContent: 'center' }]}
-                          onPress={() => {
-                            setLodgingDateField('refund');
-                            setLodgingDateValue(
-                              lodgingDraft.refundBy ? new Date(lodgingDraft.refundBy) : new Date(lodgingDraft.checkInDate)
-                            );
-                          }}
-                        >
-                          <Text>{lodgingDraft.refundBy || 'Select'}</Text>
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                    <View style={[styles.cell, styles.lodgingCostCol]}>
-                      <TextInput
-                        style={styles.cellInput}
-                        keyboardType="numeric"
-                        value={lodgingDraft.totalCost}
-                        onChangeText={(text) => setLodgingDraft((p) => ({ ...p, totalCost: text }))}
-                        placeholder="Total cost"
-                      />
-                    </View>
-                    <View style={[styles.cell, styles.lodgingCostCol]}>
-                      <Text style={styles.cellText}>${lodgingDraft.costPerNight || '-'}</Text>
-                    </View>
-                    <View style={[styles.cell, styles.lodgingCostCol]}>
-                      <View style={styles.payerChips}>
-                        {lodgingDraft.paidBy.map((id) => (
-                          <View key={id} style={styles.payerChip}>
-                            <Text style={styles.cellText}>{payerName(id)}</Text>
-                            <TouchableOpacity onPress={() => setLodgingDraft((p) => ({ ...p, paidBy: p.paidBy.filter((x) => x !== id) }))}>
-                              <Text style={styles.removeText}>ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬</Text>
-                            </TouchableOpacity>
-                          </View>
-                        ))}
-                      </View>
-                      <View style={styles.payerOptions}>
-                        {userMembers
-                          .filter((m) => !lodgingDraft.paidBy.includes(m.id))
-                          .map((m) => (
-                            <TouchableOpacity
-                              key={m.id}
-                              style={styles.smallButton}
-                              onPress={() => setLodgingDraft((p) => ({ ...p, paidBy: [...p.paidBy, m.id] }))}
-                            >
-                              <Text style={styles.buttonText}>Add {formatMemberName(m)}</Text>
-                            </TouchableOpacity>
-                          ))}
-                      </View>
-                    </View>
-                    <View style={[styles.cell, styles.lastCell, styles.lodgingAddressCol]}>
-                      <TextInput
-                        style={styles.cellInput}
-                        value={lodgingDraft.address}
-                        onChangeText={(text) => setLodgingDraft((p) => ({ ...p, address: text }))}
-                        placeholder="Address"
-                      />
-                    </View>
-                  </View>
-                  <View style={styles.tableFooter}>
-                    <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => saveLodging(lodgingDraft)}>
-                      <Text style={styles.buttonText}>Add lodging</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  {lodgings.map((l) => (
-                    <View key={l.id} style={styles.tableRow}>
-                      <View style={[styles.cell, styles.lodgingNameCol]}>
-                        <Text style={styles.cellText}>{l.name}</Text>
-                      </View>
-                      <View style={[styles.cell, styles.lodgingDateCol]}>
-                        <Text style={styles.cellText}>{formatDateLong(l.checkInDate)}</Text>
-                      </View>
-                      <View style={[styles.cell, styles.lodgingDateCol]}>
-                        <Text style={styles.cellText}>{formatDateLong(l.checkOutDate)}</Text>
-                      </View>
-                      <View style={[styles.cell, styles.lodgingRoomsCol]}>
-                        <Text style={styles.cellText}>{l.rooms}</Text>
-                      </View>
-                      <View style={[styles.cell, styles.lodgingRefundCol]}>
-                        <Text style={styles.cellText}>{l.refundBy ? formatDateLong(l.refundBy) : 'Non-refundable'}</Text>
-                      </View>
-                      <View style={[styles.cell, styles.lodgingCostCol]}>
-                        <Text style={styles.cellText}>${l.totalCost || '-'}</Text>
-                      </View>
-                      <View style={[styles.cell, styles.lodgingCostCol]}>
-                        <Text style={styles.cellText}>${l.costPerNight || '-'}</Text>
-                      </View>
-                      <View style={[styles.cell, styles.lodgingCostCol]}>
-                        <Text style={styles.cellText}>{l.paidBy && l.paidBy.length ? l.paidBy.map(payerName).join(', ') : '-'}</Text>
-                      </View>
-                      <View
-                        style={[
-                          styles.cell,
-                          styles.lastCell,
-                          styles.lodgingAddressCol,
-                          { flexDirection: 'row', justifyContent: 'space-between' },
-                        ]}
-                      >
-                        <Text style={[styles.cellText, styles.linkText]} onPress={() => openMaps(l.address)}>
-                          {l.address || '-'}
-                        </Text>
-                        <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => openLodgingEditor(l)}>
-                          <Text style={styles.buttonText}>Edit</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => removeLodging(l.id)}>
-                          <Text style={styles.removeText}>Remove</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  ))}
-                </View>
-              </ScrollView>
-              <View style={{ marginTop: 8 }}>
-                <Text style={styles.flightTitle}>Total lodging cost: ${lodgingTotal.toFixed(2)}</Text>
-              </View>
-            </View>
-          ) : null}
-
-          {editingLodging && editingLodgingId ? (
-            <View style={styles.passengerOverlay}>
-              <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={closeLodgingEditor} />
-              <View style={styles.modalCard}>
-                <Text style={styles.sectionTitle}>Edit Lodging</Text>
-                <ScrollView style={{ maxHeight: 420 }}>
-                  <Text style={styles.modalLabel}>Name</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={editingLodging.name}
-                    onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, name: text } : prev))}
-                  />
-                  <Text style={styles.modalLabel}>Check-in</Text>
-                  {Platform.OS === 'web' ? (
-                    <input
-                      type="date"
-                      value={editingLodging.checkInDate}
-                      onChange={(e) => setEditingLodging((prev) => (prev ? { ...prev, checkInDate: e.target.value } : prev))}
-                      style={styles.input as any}
-                    />
-                  ) : (
-                    <TextInput
-                      style={styles.input}
-                      value={editingLodging.checkInDate}
-                      onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, checkInDate: normalizeDateString(text) } : prev))}
-                    />
-                  )}
-                  <Text style={styles.modalLabel}>Check-out</Text>
-                  {Platform.OS === 'web' ? (
-                    <input
-                      type="date"
-                      value={editingLodging.checkOutDate}
-                      onChange={(e) => setEditingLodging((prev) => (prev ? { ...prev, checkOutDate: e.target.value } : prev))}
-                      style={styles.input as any}
-                    />
-                  ) : (
-                    <TextInput
-                      style={styles.input}
-                      value={editingLodging.checkOutDate}
-                      onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, checkOutDate: normalizeDateString(text) } : prev))}
-                    />
-                  )}
-                  <Text style={styles.modalLabel}>Rooms</Text>
-                  <TextInput
-                    style={styles.input}
-                    keyboardType="numeric"
-                    value={editingLodging.rooms}
-                    onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, rooms: text } : prev))}
-                  />
-                  <Text style={styles.modalLabel}>Refund by</Text>
-                  {Platform.OS === 'web' ? (
-                    <input
-                      type="date"
-                      value={editingLodging.refundBy}
-                      onChange={(e) => setEditingLodging((prev) => (prev ? { ...prev, refundBy: e.target.value } : prev))}
-                      style={styles.input as any}
-                    />
-                  ) : (
-                    <TextInput
-                      style={styles.input}
-                      value={editingLodging.refundBy}
-                      placeholder="YYYY-MM-DD"
-                      onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, refundBy: normalizeDateString(text) } : prev))}
-                    />
-                  )}
-                  <Text style={styles.modalLabel}>Total cost</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={editingLodging.totalCost}
-                    keyboardType="numeric"
-                    onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, totalCost: text } : prev))}
-                  />
-                  <Text style={styles.modalLabel}>Cost per night</Text>
-                  <Text style={styles.helperText}>{editingLodging.costPerNight ? `$${editingLodging.costPerNight}` : '-'}</Text>
-
-                  <Text style={styles.modalLabel}>Paid by</Text>
-                  <View style={[styles.input, styles.payerBox]}>
-                    <View style={styles.payerChips}>
-                      {editingLodging.paidBy.map((id) => (
-                        <View key={id} style={styles.payerChip}>
-                          <Text style={styles.cellText}>{payerName(id)}</Text>
-                          <TouchableOpacity
-                            onPress={() =>
-                              setEditingLodging((p) =>
-                                p
-                                  ? {
-                                      ...p,
-                                      paidBy: p.paidBy.filter((x) => x !== id),
-                                    }
-                                  : p
-                              )
-                            }
-                          >
-                            <Text style={styles.removeText}>x</Text>
-                          </TouchableOpacity>
-                        </View>
-                      ))}
-                    </View>
-                    <View style={styles.payerOptions}>
-                      {userMembers
-                        .filter((m) => !editingLodging.paidBy.includes(m.id))
-                        .map((m) => (
-                          <TouchableOpacity
-                            key={m.id}
-                            style={styles.smallButton}
-                            onPress={() => setEditingLodging((p) => (p ? { ...p, paidBy: [...p.paidBy, m.id] } : p))}
-                          >
-                            <Text style={styles.buttonText}>Add {formatMemberName(m)}</Text>
-                          </TouchableOpacity>
-                        ))}
-                    </View>
-                  </View>
-
-                  <Text style={styles.modalLabel}>Address</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={editingLodging.address}
-                    onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, address: text } : prev))}
-                  />
-                </ScrollView>
-                <View style={styles.row}>
-                  <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={closeLodgingEditor}>
-                    <Text style={styles.buttonText}>Cancel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.button}
-                    onPress={() => editingLodging && saveLodging(editingLodging, editingLodgingId)}
-                  >
-                    <Text style={styles.buttonText}>Save</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-          ) : null}
-
           {activePage === 'tours' ? (
             <View style={styles.card}>
               <View style={styles.sectionHeaderRow}>
@@ -3649,7 +3181,7 @@ const calculateNights = (checkIn: string, checkOut: string): number => {
                             <View key={id} style={styles.payerChip}>
                               <Text style={styles.cellText}>{payerName(id)}</Text>
                               <TouchableOpacity onPress={() => setEditingTour((p) => (p ? { ...p, paidBy: p.paidBy.filter((x) => x !== id) } : p))}>
-                                <Text style={styles.removeText}>ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬</Text>
+                                <Text style={styles.removeText}>x</Text>
                               </TouchableOpacity>
                             </View>
                           ))}
@@ -3719,8 +3251,8 @@ const calculateNights = (checkIn: string, checkOut: string): number => {
                           const pay = flightsPayerTotals[m.id];
                           share = typeof pay === 'number' && pay > 0 ? pay : row.total / (userMembers.length || 1);
                         } else if (row.label === 'Lodging') {
-                          const pay = lodgingPayerTotals[m.id];
-                          share = typeof pay === 'number' && pay > 0 ? pay : row.total / (userMembers.length || 1);
+                          const pay = lodgingTotalsBalanced[m.id];
+                          share = typeof pay === 'number' ? pay : row.total / (userMembers.length || 1);
                         }
                         return (
                           <View key={`${row.label}-${m.id}`} style={[styles.cell, { minWidth: 120, flex: 1 }]}>
@@ -3744,8 +3276,8 @@ const calculateNights = (checkIn: string, checkOut: string): number => {
                         return typeof pay === 'number' && pay > 0 ? pay : flightsTotal / divisor;
                       })();
                       const lodgingShare = (() => {
-                        const pay = lodgingPayerTotals[m.id];
-                        return typeof pay === 'number' && pay > 0 ? pay : lodgingTotal / divisor;
+                        const pay = lodgingTotalsBalanced[m.id];
+                        return typeof pay === 'number' ? pay : lodgingTotal / divisor;
                       })();
                       const tourShare = payerTotals[m.id] || 0;
                       const total = flightsShare + lodgingShare + tourShare;
@@ -4007,7 +3539,7 @@ const calculateNights = (checkIn: string, checkOut: string): number => {
       {activePage === 'lodging' ? (
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Lodging</Text>
-          <Text style={styles.helperText}>Track stays for your active trip. Total: ${lodgingTotal.toFixed(2)}</Text>
+          <Text style={styles.helperText}>Track stays for your active trip.</Text>
           <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
             <View style={styles.table}>
               <View style={[styles.tableRow, styles.tableHeader]}>
@@ -4032,10 +3564,13 @@ const calculateNights = (checkIn: string, checkOut: string): number => {
                 <View style={[styles.cell, styles.lodgingCostCol]}>
                   <Text style={styles.headerText}>Per Night</Text>
                 </View>
+                <View style={[styles.cell, styles.lodgingPayerCol]}>
+                  <Text style={styles.headerText}>Paid By</Text>
+                </View>
                 <View style={[styles.cell, styles.lodgingAddressCol]}>
                   <Text style={styles.headerText}>Address</Text>
                 </View>
-                <View style={[styles.cell, styles.actionCell, styles.lodgingCostCol]}>
+                <View style={[styles.cell, styles.actionCell, styles.lodgingActionCol, styles.lastCell]}>
                   <Text style={styles.headerText}>Actions</Text>
                 </View>
               </View>
@@ -4043,30 +3578,35 @@ const calculateNights = (checkIn: string, checkOut: string): number => {
               {lodgings.map((l) => (
                 <View key={l.id} style={styles.tableRow}>
                   <View style={[styles.cell, styles.lodgingNameCol]}>
-                    <Text style={styles.cellText}>{l.name}</Text>
+                    <Text style={[styles.cellText, styles.cellTextWrap]}>{l.name}</Text>
                   </View>
                   <View style={[styles.cell, styles.lodgingDateCol]}>
-                    <Text style={styles.cellText}>{formatDateLong(normalizeDateString(l.checkInDate))}</Text>
+                    <Text style={[styles.cellText, styles.cellTextWrap]}>{formatDateLong(normalizeDateString(l.checkInDate))}</Text>
                   </View>
                   <View style={[styles.cell, styles.lodgingDateCol]}>
-                    <Text style={styles.cellText}>{formatDateLong(normalizeDateString(l.checkOutDate))}</Text>
+                    <Text style={[styles.cellText, styles.cellTextWrap]}>{formatDateLong(normalizeDateString(l.checkOutDate))}</Text>
                   </View>
                   <View style={[styles.cell, styles.lodgingRoomsCol]}>
-                    <Text style={styles.cellText}>{l.rooms || '-'}</Text>
+                    <Text style={[styles.cellText, styles.cellTextWrap]}>{l.rooms || '-'}</Text>
                   </View>
                   <View style={[styles.cell, styles.lodgingRefundCol]}>
-                    <Text style={styles.cellText}>{l.refundBy ? formatDateLong(normalizeDateString(l.refundBy)) : 'ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¾ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¾ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¾ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¾ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬'}</Text>
+                    <Text style={[styles.cellText, styles.cellTextWrap]}>
+                      {l.refundBy ? formatDateLong(normalizeDateString(l.refundBy)) : 'Non-refundable'}
+                    </Text>
                   </View>
                   <View style={[styles.cell, styles.lodgingCostCol]}>
-                    <Text style={styles.cellText}>{l.totalCost ? `$${l.totalCost}` : '-'}</Text>
+                    <Text style={[styles.cellText, styles.cellTextWrap]}>{l.totalCost ? `$${l.totalCost}` : '-'}</Text>
                   </View>
                   <View style={[styles.cell, styles.lodgingCostCol]}>
-                    <Text style={styles.cellText}>{l.costPerNight ? `$${l.costPerNight}` : '-'}</Text>
+                    <Text style={[styles.cellText, styles.cellTextWrap]}>{l.costPerNight ? `$${l.costPerNight}` : '-'}</Text>
+                  </View>
+                  <View style={[styles.cell, styles.lodgingPayerCol]}>
+                    <Text style={[styles.cellText, styles.cellTextWrap]}>{l.paidBy?.length ? l.paidBy.map(payerName).join(', ') : '-'}</Text>
                   </View>
                   <View style={[styles.cell, styles.lodgingAddressCol]}>
-                    <Text style={styles.cellText}>{l.address || '-'}</Text>
+                    <Text style={[styles.cellText, styles.cellTextWrap]}>{l.address || '-'}</Text>
                   </View>
-                  <View style={[styles.cell, styles.actionCell, styles.lodgingCostCol]}>
+                  <View style={[styles.cell, styles.actionCell, styles.lodgingActionCol, styles.lastCell]}>
                     {l.address ? (
                       <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => openMaps(l.address)}>
                         <Text style={styles.buttonText}>Map</Text>
@@ -4082,7 +3622,7 @@ const calculateNights = (checkIn: string, checkOut: string): number => {
                 </View>
               ))}
 
-              <View style={[styles.tableRow, styles.inputRow]}>
+              <View style={[styles.tableRow, styles.inputRow, styles.lastRow]}>
                 <View style={[styles.cell, styles.lodgingNameCol]}>
                   <TextInput
                     style={styles.input}
@@ -4136,6 +3676,31 @@ const calculateNights = (checkIn: string, checkOut: string): number => {
                 <View style={[styles.cell, styles.lodgingCostCol]}>
                   <Text style={styles.cellText}>{lodgingDraft.costPerNight ? `$${lodgingDraft.costPerNight}` : '-'}</Text>
                 </View>
+                <View style={[styles.cell, styles.lodgingPayerCol]}>
+                  <View style={styles.payerChips}>
+                    {lodgingDraft.paidBy.map((id) => (
+                      <View key={id} style={styles.payerChip}>
+                        <Text style={styles.cellText}>{payerName(id)}</Text>
+                        <TouchableOpacity onPress={() => setLodgingDraft((prev) => ({ ...prev, paidBy: prev.paidBy.filter((x) => x !== id) }))}>
+                          <Text style={styles.removeText}>x</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                  <View style={styles.payerOptions}>
+                    {userMembers
+                      .filter((m) => !lodgingDraft.paidBy.includes(m.id))
+                      .map((m) => (
+                        <TouchableOpacity
+                          key={m.id}
+                          style={styles.smallButton}
+                          onPress={() => setLodgingDraft((prev) => ({ ...prev, paidBy: [...prev.paidBy, m.id] }))}
+                        >
+                          <Text style={styles.buttonText}>Add {formatMemberName(m)}</Text>
+                        </TouchableOpacity>
+                      ))}
+                  </View>
+                </View>
                 <View style={[styles.cell, styles.lodgingAddressCol]}>
                   <TextInput
                     style={styles.input}
@@ -4144,7 +3709,7 @@ const calculateNights = (checkIn: string, checkOut: string): number => {
                     onChangeText={(text) => setLodgingDraft((prev) => ({ ...prev, address: text }))}
                   />
                 </View>
-                <View style={[styles.cell, styles.actionCell, styles.lodgingCostCol]}>
+                <View style={[styles.cell, styles.actionCell, styles.lodgingActionCol, styles.lastCell]}>
                   <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => saveLodging(lodgingDraft)}>
                     <Text style={styles.buttonText}>Add</Text>
                   </TouchableOpacity>
@@ -4152,9 +3717,153 @@ const calculateNights = (checkIn: string, checkOut: string): number => {
               </View>
             </View>
           </ScrollView>
+          <View style={{ marginTop: 12 }}>
+            <Text style={styles.flightTitle}>Total lodging cost: ${lodgingTotal.toFixed(2)}</Text>
+            <Text style={styles.helperText}>Breakdown (aligned with total even when no payers are set):</Text>
+            {userMembers.map((m) => (
+              <Text key={m.id} style={styles.helperText}>
+                {formatMemberName(m)}: ${Number(lodgingTotalsBalanced[m.id] ?? 0).toFixed(2)}
+              </Text>
+            ))}
+            <Text style={[styles.helperText, { marginTop: 4 }]}>Subtotal across payers: ${lodgingBreakdownSum.toFixed(2)}</Text>
+          </View>
         </View>
       ) : null}
 
+      {editingLodging && editingLodgingId ? (
+        <View style={styles.passengerOverlay}>
+          <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={closeLodgingEditor} />
+          <View style={styles.modalCard}>
+            <Text style={styles.sectionTitle}>Edit Lodging</Text>
+            <ScrollView style={{ maxHeight: 420 }}>
+              <Text style={styles.modalLabel}>Name</Text>
+              <TextInput
+                style={styles.input}
+                value={editingLodging.name}
+                onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, name: text } : prev))}
+              />
+              <Text style={styles.modalLabel}>Check-in</Text>
+              {Platform.OS === 'web' ? (
+                <input
+                  type="date"
+                  value={editingLodging.checkInDate}
+                  onChange={(e) => setEditingLodging((prev) => (prev ? { ...prev, checkInDate: e.target.value } : prev))}
+                  style={styles.input as any}
+                />
+              ) : (
+                <TextInput
+                  style={styles.input}
+                  value={editingLodging.checkInDate}
+                  onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, checkInDate: normalizeDateString(text) } : prev))}
+                />
+              )}
+              <Text style={styles.modalLabel}>Check-out</Text>
+              {Platform.OS === 'web' ? (
+                <input
+                  type="date"
+                  value={editingLodging.checkOutDate}
+                  onChange={(e) => setEditingLodging((prev) => (prev ? { ...prev, checkOutDate: e.target.value } : prev))}
+                  style={styles.input as any}
+                />
+              ) : (
+                <TextInput
+                  style={styles.input}
+                  value={editingLodging.checkOutDate}
+                  onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, checkOutDate: normalizeDateString(text) } : prev))}
+                />
+              )}
+              <Text style={styles.modalLabel}>Rooms</Text>
+              <TextInput
+                style={styles.input}
+                keyboardType="numeric"
+                value={editingLodging.rooms}
+                onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, rooms: text } : prev))}
+              />
+              <Text style={styles.modalLabel}>Refund by</Text>
+              {Platform.OS === 'web' ? (
+                <input
+                  type="date"
+                  value={editingLodging.refundBy}
+                  onChange={(e) => setEditingLodging((prev) => (prev ? { ...prev, refundBy: e.target.value } : prev))}
+                  style={styles.input as any}
+                />
+              ) : (
+                <TextInput
+                  style={styles.input}
+                  value={editingLodging.refundBy}
+                  placeholder="YYYY-MM-DD"
+                  onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, refundBy: normalizeDateString(text) } : prev))}
+                />
+              )}
+              <Text style={styles.modalLabel}>Total cost</Text>
+              <TextInput
+                style={styles.input}
+                value={editingLodging.totalCost}
+                keyboardType="numeric"
+                onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, totalCost: text } : prev))}
+              />
+              <Text style={styles.modalLabel}>Cost per night</Text>
+              <Text style={styles.helperText}>{editingLodging.costPerNight ? `$${editingLodging.costPerNight}` : '-'}</Text>
+
+              <Text style={styles.modalLabel}>Paid by</Text>
+              <View style={[styles.input, styles.payerBox]}>
+                <View style={styles.payerChips}>
+                  {editingLodging.paidBy.map((id) => (
+                    <View key={id} style={styles.payerChip}>
+                      <Text style={styles.cellText}>{payerName(id)}</Text>
+                      <TouchableOpacity
+                        onPress={() =>
+                          setEditingLodging((p) =>
+                            p
+                              ? {
+                                  ...p,
+                                  paidBy: p.paidBy.filter((x) => x !== id),
+                                }
+                              : p
+                          )
+                        }
+                      >
+                        <Text style={styles.removeText}>x</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+                <View style={styles.payerOptions}>
+                  {userMembers
+                    .filter((m) => !editingLodging.paidBy.includes(m.id))
+                    .map((m) => (
+                      <TouchableOpacity
+                        key={m.id}
+                        style={styles.smallButton}
+                        onPress={() => setEditingLodging((p) => (p ? { ...p, paidBy: [...p.paidBy, m.id] } : p))}
+                      >
+                        <Text style={styles.buttonText}>Add {formatMemberName(m)}</Text>
+                      </TouchableOpacity>
+                    ))}
+                </View>
+              </View>
+
+              <Text style={styles.modalLabel}>Address</Text>
+              <TextInput
+                style={styles.input}
+                value={editingLodging.address}
+                onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, address: text } : prev))}
+              />
+            </ScrollView>
+            <View style={styles.row}>
+              <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={closeLodgingEditor}>
+                <Text style={styles.buttonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.button}
+                onPress={() => editingLodging && saveLodging(editingLodging, editingLodgingId)}
+              >
+                <Text style={styles.buttonText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      ) : null}
       {activePage === 'flights' ? (
         <View style={[styles.card, styles.flightsSection]}>
           <Text style={styles.sectionTitle}>Flights</Text>
@@ -4761,7 +4470,7 @@ const calculateNights = (checkIn: string, checkOut: string): number => {
                                   )
                                 }
                               >
-                                <Text style={styles.removeText}>ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¾ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¾ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¾ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¾ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬</Text>
+                                <Text style={styles.removeText}>x</Text>
                               </TouchableOpacity>
                             </View>
                           ))}
@@ -5346,26 +5055,17 @@ const styles = StyleSheet.create({
     color: '#0d6efd',
     textDecorationLine: 'underline',
   },
-  lodgingNameCol: {
-    minWidth: 180,
-  },
-  lodgingDateCol: {
-    minWidth: 130,
-  },
-  lodgingRoomsCol: {
-    minWidth: 80,
-  },
-  lodgingRefundCol: {
-    minWidth: 150,
-  },
-  lodgingCostCol: {
-    minWidth: 120,
-  },
-  lodgingPayerCol: {
-    minWidth: 150,
-  },
-  lodgingAddressCol: {
-    minWidth: 240,
+  lodgingNameCol: { minWidth: 120, maxWidth: 320, flex: 1 },
+  lodgingDateCol: { minWidth: 120, maxWidth: 320, flex: 1 },
+  lodgingRoomsCol: { minWidth: 80, maxWidth: 320, flex: 1 },
+  lodgingRefundCol: { minWidth: 120, maxWidth: 320, flex: 1 },
+  lodgingCostCol: { minWidth: 100, maxWidth: 320, flex: 1 },
+  lodgingPayerCol: { minWidth: 140, maxWidth: 320, flex: 1 },
+  lodgingAddressCol: { minWidth: 140, maxWidth: 320, flex: 1 },
+  lodgingActionCol: { minWidth: 140, maxWidth: 320, flex: 1 },
+  cellTextWrap: {
+    flexWrap: 'wrap',
+    whiteSpace: 'normal',
   },
   addRow: {
     flexDirection: 'row',
@@ -5623,21 +5323,3 @@ const styles = StyleSheet.create({
 });
 
 export default App;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
