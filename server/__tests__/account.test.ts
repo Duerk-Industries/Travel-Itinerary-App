@@ -360,6 +360,151 @@ describe('Account lifecycle API with shared trip', () => {
     expect(totals[memberId2]).toBeCloseTo(750);
   });
 
+  it('adds first flight split evenly between payers', async () => {
+    const flightRes = await request(app)
+      .post('/api/flights')
+      .set('Authorization', `Bearer ${token1}`)
+      .send({
+        tripId,
+        passengerName: 'Test Passenger',
+        departureDate: '2025-03-01',
+        departureLocation: 'AAA',
+        departureTime: '08:00',
+        arrivalLocation: 'BBB',
+        arrivalTime: '10:00',
+        cost: 500,
+        carrier: 'AA',
+        flightNumber: '100',
+        bookingReference: 'REF1',
+        paidBy: [memberId1, memberId2],
+      })
+      .expect(201);
+    expect(flightRes.body.id).toBeTruthy();
+
+    const flights = await request(app).get(`/api/flights?tripId=${tripId}`).set('Authorization', `Bearer ${token1}`).expect(200);
+    const totals = { [memberId1]: 0, [memberId2]: 0 };
+    flights.body.forEach((f: any) => {
+      const payers: string[] = Array.isArray(f.paidBy) ? f.paidBy : [];
+      const cost = Number(f.cost ?? 0);
+      if (!cost || !payers.length) return;
+      const share = cost / payers.length;
+      payers.forEach((p) => {
+        totals[p] = (totals[p] ?? 0) + share;
+      });
+      const remainder = cost - share * payers.length;
+      if (Math.abs(remainder) > 1e-6 && payers[0]) {
+        totals[payers[0]] += remainder;
+      }
+    });
+
+    expect(totals[memberId1]).toBeCloseTo(250);
+    expect(totals[memberId2]).toBeCloseTo(250);
+  });
+
+  it('adds second flight with single payer and verifies totals', async () => {
+    await request(app)
+      .post('/api/flights')
+      .set('Authorization', `Bearer ${token1}`)
+      .send({
+        tripId,
+        passengerName: 'Test Passenger 2',
+        departureDate: '2025-03-02',
+        departureLocation: 'AAA',
+        departureTime: '09:00',
+        arrivalLocation: 'BBB',
+        arrivalTime: '11:00',
+        cost: 500,
+        carrier: 'AA',
+        flightNumber: '101',
+        bookingReference: 'REF2',
+        paidBy: [memberId2],
+      })
+      .expect(201);
+
+    const flights = await request(app).get(`/api/flights?tripId=${tripId}`).set('Authorization', `Bearer ${token1}`).expect(200);
+    const totals = { [memberId1]: 0, [memberId2]: 0 };
+    flights.body.forEach((f: any) => {
+      const payers: string[] = Array.isArray(f.paidBy) ? f.paidBy : [];
+      const cost = Number(f.cost ?? 0);
+      if (!cost || !payers.length) return;
+      const share = cost / payers.length;
+      payers.forEach((p) => {
+        totals[p] = (totals[p] ?? 0) + share;
+      });
+      const remainder = cost - share * payers.length;
+      if (Math.abs(remainder) > 1e-6 && payers[0]) {
+        totals[payers[0]] += remainder;
+      }
+    });
+
+    expect(totals[memberId1]).toBeCloseTo(250);
+    expect(totals[memberId2]).toBeCloseTo(750);
+  });
+
+  it('adds third flight and adjusts payers like lodging logic', async () => {
+    const flightRes = await request(app)
+      .post('/api/flights')
+      .set('Authorization', `Bearer ${token1}`)
+      .send({
+        tripId,
+        passengerName: 'Test Passenger 3',
+        departureDate: '2025-03-03',
+        departureLocation: 'AAA',
+        departureTime: '07:00',
+        arrivalLocation: 'BBB',
+        arrivalTime: '09:00',
+        cost: 500,
+        carrier: 'AA',
+        flightNumber: '102',
+        bookingReference: 'REF3',
+        paidBy: [memberId1, memberId2],
+      })
+      .expect(201);
+    const flightId = flightRes.body.id;
+    expect(flightId).toBeTruthy();
+
+    const computeFlightTotals = async () => {
+      const flights = await request(app).get(`/api/flights?tripId=${tripId}`).set('Authorization', `Bearer ${token1}`).expect(200);
+      const totals = { [memberId1]: 0, [memberId2]: 0 };
+      flights.body.forEach((f: any) => {
+        const payers: string[] = Array.isArray(f.paidBy) ? f.paidBy : [];
+        const cost = Number(f.cost ?? 0);
+        if (!cost || !payers.length) return;
+        const share = cost / payers.length;
+        payers.forEach((p) => {
+          totals[p] = (totals[p] ?? 0) + share;
+        });
+        const remainder = cost - share * payers.length;
+        if (Math.abs(remainder) > 1e-6 && payers[0]) {
+          totals[payers[0]] += remainder;
+        }
+      });
+      return totals;
+    };
+
+    let totals = await computeFlightTotals();
+    expect(totals[memberId1]).toBeCloseTo(500);
+    expect(totals[memberId2]).toBeCloseTo(1000);
+
+    await request(app)
+      .patch(`/api/flights/${flightId}`)
+      .set('Authorization', `Bearer ${token1}`)
+      .send({ paidBy: [memberId1] })
+      .expect(200);
+    totals = await computeFlightTotals();
+    expect(totals[memberId1]).toBeCloseTo(750);
+    expect(totals[memberId2]).toBeCloseTo(750);
+
+    await request(app)
+      .patch(`/api/flights/${flightId}`)
+      .set('Authorization', `Bearer ${token1}`)
+      .send({ paidBy: [] })
+      .expect(200);
+    totals = await computeFlightTotals();
+    expect(totals[memberId1]).toBeCloseTo(750);
+    expect(totals[memberId2]).toBeCloseTo(750);
+  });
+
   it('keeps trip after deleting first user', async () => {
     await request(app).delete('/api/account').set('Authorization', `Bearer ${token1}`).expect(204);
     const user1Check = await pool.query('SELECT 1 FROM users WHERE email = $1', [user1.email]);

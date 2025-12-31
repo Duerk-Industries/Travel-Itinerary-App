@@ -650,7 +650,7 @@ export const deleteFlight = async (flightId: string, userId: string): Promise<vo
 export const updateFlight = async (
   flightId: string,
   userId: string,
-  updates: Omit<Flight, 'id' | 'userId' | 'sharedWith' | 'tripId' | 'groupId' | 'passengerInGroup'>
+  updates: Partial<Flight>
 ): Promise<Flight> => {
   const p = getPool();
   const normalizeCode = (code?: string | null) => (code ? code.toUpperCase() : null);
@@ -660,29 +660,29 @@ export const updateFlight = async (
 
   const { rows } = await p.query<Flight>(
     `UPDATE flights f
-     SET passenger_name = $1,
-         departure_date = $2,
-         departure_location = $3,
-         departure_airport_code = $4,
-         departure_time = $5,
-         arrival_location = $6,
-         arrival_airport_code = $7,
-         layover_location = $8,
-         layover_location_code = $9,
-         layover_duration = $10,
-         arrival_time = $11,
-         cost = $12,
-         carrier = $13,
-         flight_number = $14,
-         booking_reference = $15,
-         paid_by = COALESCE($16, f.paid_by)
-     FROM trips t
-     WHERE f.id = $17
-       AND t.id = f.trip_id
-       -- allow edits by any member of the trip's group
-       AND t.group_id IN (SELECT group_id FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $18)
-     RETURNING f.*`,
-    [
+     SET passenger_name = COALESCE($1, f.passenger_name),
+         departure_date = COALESCE($2, f.departure_date),
+         departure_location = COALESCE($3, f.departure_location),
+         departure_airport_code = COALESCE($4, f.departure_airport_code),
+         departure_time = COALESCE($5, f.departure_time),
+         arrival_location = COALESCE($6, f.arrival_location),
+         arrival_airport_code = COALESCE($7, f.arrival_airport_code),
+         layover_location = COALESCE($8, f.layover_location),
+         layover_location_code = COALESCE($9, f.layover_location_code),
+         layover_duration = COALESCE($10, f.layover_duration),
+         arrival_time = COALESCE($11, f.arrival_time),
+         cost = COALESCE($12, f.cost),
+         carrier = COALESCE($13, f.carrier),
+         flight_number = COALESCE($14, f.flight_number),
+         booking_reference = COALESCE($15, f.booking_reference),
+         paid_by = COALESCE($16::jsonb, f.paid_by)
+    FROM trips t
+    WHERE f.id = $17
+      AND t.id = f.trip_id
+      -- allow edits by any member of the trip's group
+      AND t.group_id IN (SELECT group_id FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $18)
+    RETURNING f.*`,
+   [
       updates.passengerName,
       updates.departureDate,
       departureCode,
@@ -693,12 +693,12 @@ export const updateFlight = async (
       layoverCode,
       layoverCode,
       updates.layoverDuration ?? null,
-      updates.arrivalTime,
-      updates.cost,
-      updates.carrier,
-      updates.flightNumber,
-      updates.bookingReference,
-      updates.paidBy ? JSON.stringify(updates.paidBy) : null,
+      updates.arrivalTime ?? null,
+      typeof updates.cost === 'number' ? updates.cost : null,
+      updates.carrier ?? null,
+      updates.flightNumber ?? null,
+      updates.bookingReference ?? null,
+      Array.isArray(updates.paidBy) ? JSON.stringify(updates.paidBy) : null,
       flightId,
       userId,
     ]
