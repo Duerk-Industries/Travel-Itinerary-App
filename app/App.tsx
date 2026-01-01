@@ -499,7 +499,7 @@ const App: React.FC = () => {
   const [groupUserEmails, setGroupUserEmails] = useState('');
   const [groupGuestNames, setGroupGuestNames] = useState('');
   const [groupAddEmail, setGroupAddEmail] = useState<Record<string, string>>({});
-  const [groupAddGuest, setGroupAddGuest] = useState<Record<string, string>>({});
+  const [groupAddRelationship, setGroupAddRelationship] = useState<Record<string, string>>({});
   const [groups, setGroups] = useState<GroupView[]>([]);
   const [groupSort, setGroupSort] = useState<'created' | 'name'>('created');
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -566,6 +566,24 @@ const App: React.FC = () => {
   const [showPasswordEditor, setShowPasswordEditor] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [accountMessage, setAccountMessage] = useState<string | null>(null);
+  const [familyRelationships, setFamilyRelationships] = useState<any[]>([]);
+  const [familyForm, setFamilyForm] = useState({ givenName: '', middleName: '', familyName: '', email: '', relationship: 'Not Applicable' });
+  const [editingFamilyId, setEditingFamilyId] = useState<string | null>(null);
+  const [editingFamilyDraft, setEditingFamilyDraft] = useState<{ givenName: string; middleName: string; familyName: string; email: string; relationship: string } | null>(null);
+  const [showRelationshipDropdown, setShowRelationshipDropdown] = useState(false);
+  const relationshipOptions = [
+    'Not Applicable',
+    'Parent',
+    'Child',
+    'Sibling',
+    'Spouse/Partner',
+    'Grandparent',
+    'Grandchild',
+    'Aunt/Uncle',
+    'Niece/Nephew',
+    'Cousin',
+    'Friend',
+  ];
   const formatMemberName = (member: GroupMemberOption): string => {
     if (member.guestName) return member.guestName;
     const first = member.firstName?.trim();
@@ -948,6 +966,8 @@ const App: React.FC = () => {
     setTours([]);
     setInvites([]);
     setGroups([]);
+    setGroupAddEmail({});
+    setGroupAddRelationship({});
     setTraits([]);
     setSelectedTraitNames(new Set());
     setTraitAge('');
@@ -972,6 +992,10 @@ const App: React.FC = () => {
     setAccountMessage(null);
     setShowDeleteConfirm(false);
     setShowPasswordEditor(false);
+    setFamilyRelationships([]);
+    setFamilyForm({ givenName: '', middleName: '', familyName: '', email: '', relationship: 'Not Applicable' });
+    setEditingFamilyId(null);
+    setEditingFamilyDraft(null);
     setActivePage('menu');
     clearSession();
   };
@@ -1004,6 +1028,7 @@ const App: React.FC = () => {
       fetchTours(data.token);
       fetchInvites(data.token);
       fetchAccountProfile(data.token);
+      fetchFamilyRelationships(data.token);
       setActivePage('menu');
     } catch (err) {
       alert((err as Error).message || 'Login failed');
@@ -1048,6 +1073,7 @@ const App: React.FC = () => {
       fetchTours(data.token);
       fetchInvites(data.token);
       fetchAccountProfile(data.token);
+      fetchFamilyRelationships(data.token);
       setActivePage('menu');
     } catch (err) {
       alert((err as Error).message || 'Registration failed');
@@ -1140,6 +1166,99 @@ const App: React.FC = () => {
     }
     setShowDeleteConfirm(false);
     logout();
+  };
+
+  const fetchFamilyRelationships = async (token?: string) => {
+    const auth = token ?? userToken;
+    if (!auth) return;
+    try {
+      const res = await fetch(`${backendUrl}/api/account/family`, { headers: { Authorization: `Bearer ${auth}` } });
+      if (!res.ok) return;
+      const data = await res.json();
+      setFamilyRelationships(data);
+    } catch {
+      // ignore
+    }
+  };
+
+  const addFamilyMember = async () => {
+    if (!userToken) return;
+    const { givenName, familyName, relationship } = familyForm;
+    if (!givenName.trim() || !familyName.trim()) {
+      alert('Fill out given and family name');
+      return;
+    }
+    const payload = {
+      ...familyForm,
+      relationship: relationship?.trim() || 'Not Applicable',
+    };
+    const res = await fetch(`${backendUrl}/api/account/family`, {
+      method: 'POST',
+      headers: jsonHeaders,
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json().catch(() => ([]));
+    if (!res.ok) {
+      alert((data as any).error || 'Unable to add family member');
+      return;
+    }
+    setFamilyRelationships(data);
+    setFamilyForm({ givenName: '', middleName: '', familyName: '', email: '', relationship: 'Not Applicable' });
+    setShowRelationshipDropdown(false);
+  };
+
+  const acceptFamilyLink = async (id: string) => {
+    if (!userToken) return;
+    const res = await fetch(`${backendUrl}/api/account/family/${id}/accept`, { method: 'PATCH', headers });
+    const data = await res.json().catch(() => ([]));
+    if (!res.ok) {
+      alert((data as any).error || 'Unable to accept relationship');
+      return;
+    }
+    setFamilyRelationships(data);
+  };
+
+  const rejectFamilyLink = async (id: string) => {
+    if (!userToken) return;
+    const res = await fetch(`${backendUrl}/api/account/family/${id}/reject`, { method: 'PATCH', headers });
+    const data = await res.json().catch(() => ([]));
+    if (!res.ok) {
+      alert((data as any).error || 'Unable to reject relationship');
+      return;
+    }
+    setFamilyRelationships(data);
+  };
+
+  const removeFamilyLink = async (id: string) => {
+    if (!userToken) return;
+    const res = await fetch(`${backendUrl}/api/account/family/${id}`, { method: 'DELETE', headers });
+    const data = await res.json().catch(() => ([]));
+    if (!res.ok) {
+      alert((data as any).error || 'Unable to remove relationship');
+      return;
+    }
+    setFamilyRelationships(data);
+    if (editingFamilyId === id) {
+      setEditingFamilyId(null);
+      setEditingFamilyDraft(null);
+    }
+  };
+
+  const saveFamilyProfile = async () => {
+    if (!userToken || !editingFamilyId || !editingFamilyDraft) return;
+    const res = await fetch(`${backendUrl}/api/account/family/${editingFamilyId}/profile`, {
+      method: 'PATCH',
+      headers: jsonHeaders,
+      body: JSON.stringify(editingFamilyDraft),
+    });
+    const data = await res.json().catch(() => ([]));
+    if (!res.ok) {
+      alert((data as any).error || 'Unable to update family profile');
+      return;
+    }
+    setFamilyRelationships(data);
+    setEditingFamilyId(null);
+    setEditingFamilyDraft(null);
   };
 
   // Fetch flights for the active trip; normalize paidBy casing.
@@ -1754,30 +1873,52 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (userToken) {
+      fetchFamilyRelationships();
+    }
+  }, [userToken]);
+
+  useEffect(() => {
+    if (userToken) {
       fetchGroupMembersForActiveTrip();
     }
   }, [userToken, activeTripId, trips]);
 
   const findActiveTrip = () => trips.find((t) => t.id === activeTripId);
 
-  const addMemberToGroup = async (groupId: string, type: 'user' | 'guest') => {
+  const addMemberToGroup = async (groupId: string, type: 'user' | 'relationship') => {
     if (!userToken) return;
     const email = groupAddEmail[groupId] ?? '';
-    const guest = groupAddGuest[groupId] ?? '';
+    const relationshipId = groupAddRelationship[groupId] ?? '';
 
     if (type === 'user' && !email.trim()) {
       alert('Enter an email to add a user');
       return;
     }
-    if (type === 'guest' && !guest.trim()) {
-      alert('Enter a guest name');
+    if (type === 'relationship' && !relationshipId) {
+      alert('Select a relationship');
       return;
+    }
+
+    let payload: any = {};
+    if (type === 'user') {
+      payload = { email };
+    } else {
+      const rel = familyRelationships.find((r) => r.id === relationshipId);
+      if (!rel) {
+        alert('Select a relationship');
+        return;
+      }
+      const relEmail = rel.relative?.email?.trim();
+      const relName = `${rel.relative?.firstName ?? ''} ${rel.relative?.middleName ?? ''} ${rel.relative?.lastName ?? ''}`
+        .replace(/\s+/g, ' ')
+        .trim();
+      payload = relEmail ? { email: relEmail } : { guestName: relName || 'Relationship' };
     }
 
     const res = await fetch(`${backendUrl}/api/groups/${groupId}/members`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...headers },
-      body: JSON.stringify(type === 'user' ? { email } : { guestName: guest }),
+      body: JSON.stringify(payload),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -1785,7 +1926,7 @@ const App: React.FC = () => {
       return;
     }
     setGroupAddEmail((prev) => ({ ...prev, [groupId]: '' }));
-    setGroupAddGuest((prev) => ({ ...prev, [groupId]: '' }));
+    setGroupAddRelationship((prev) => ({ ...prev, [groupId]: '' }));
     fetchGroups();
     fetchInvites();
   };
@@ -2706,6 +2847,175 @@ const App: React.FC = () => {
               )}
 
               <View style={styles.divider} />
+              <Text style={styles.sectionTitle}>Family & Relationships</Text>
+              <Text style={styles.helperText}>Add relatives, accept invites, and manage non-user profiles.</Text>
+              <View style={styles.row}>
+                <TextInput
+                  style={[styles.input, { flex: 1 }]}
+                  placeholder="Given name"
+                  value={familyForm.givenName}
+                  onChangeText={(text) => setFamilyForm((p) => ({ ...p, givenName: text }))}
+                />
+                <TextInput
+                  style={[styles.input, { flex: 1 }]}
+                  placeholder="Middle name"
+                  value={familyForm.middleName}
+                  onChangeText={(text) => setFamilyForm((p) => ({ ...p, middleName: text }))}
+                />
+              </View>
+              <View style={styles.row}>
+                <TextInput
+                  style={[styles.input, { flex: 1 }]}
+                  placeholder="Family name"
+                  value={familyForm.familyName}
+                  onChangeText={(text) => setFamilyForm((p) => ({ ...p, familyName: text }))}
+                />
+                <View style={[styles.input, styles.dropdown, { flex: 1 }]}>
+                  <TouchableOpacity onPress={() => setShowRelationshipDropdown((s) => !s)}>
+                    <View style={styles.selectButtonRow}>
+                      <Text style={familyForm.relationship ? styles.cellText : styles.placeholderText}>
+                        {familyForm.relationship || 'Not Applicable'}
+                      </Text>
+                      <Text style={styles.selectCaret}>v</Text>
+                    </View>
+                  </TouchableOpacity>
+                  {showRelationshipDropdown ? (
+                    <View style={styles.dropdownList}>
+                      {relationshipOptions.map((opt) => (
+                        <TouchableOpacity
+                          key={opt}
+                          style={styles.dropdownOption}
+                          onPress={() => {
+                            setFamilyForm((p) => ({ ...p, relationship: opt }));
+                            setShowRelationshipDropdown(false);
+                          }}
+                        >
+                          <Text style={styles.cellText}>{opt}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  ) : null}
+                </View>
+              </View>
+              <TextInput
+                style={styles.input}
+                placeholder="Email"
+                autoCapitalize="none"
+                keyboardType="email-address"
+                value={familyForm.email}
+                onChangeText={(text) => setFamilyForm((p) => ({ ...p, email: text }))}
+              />
+              <TouchableOpacity style={styles.button} onPress={addFamilyMember}>
+                <Text style={styles.buttonText}>Add Family Member</Text>
+              </TouchableOpacity>
+
+              {familyRelationships.length ? (
+                <View style={{ marginTop: 12 }}>
+                  {familyRelationships.map((rel) => {
+                    const name = `${rel.relative.firstName ?? ''} ${rel.relative.middleName ?? ''} ${rel.relative.lastName ?? ''}`.replace(/\s+/g, ' ').trim();
+                    const isPendingInbound = rel.status === 'pending' && rel.direction === 'inbound';
+                    const isEditable = rel.editableProfile;
+                    const isEditing = editingFamilyId === rel.id;
+                    return (
+                      <View key={rel.id} style={styles.familyRow}>
+                        <Text style={styles.bodyText}>{name || 'Unknown'} ({rel.relative.email || 'No email'})</Text>
+                        <Text style={styles.helperText}>Relationship: {rel.relationship} • Status: {rel.status}</Text>
+                        {isPendingInbound ? (
+                          <View style={styles.row}>
+                            <TouchableOpacity style={[styles.button, { flex: 1 }]} onPress={() => acceptFamilyLink(rel.id)}>
+                              <Text style={styles.buttonText}>Accept</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[styles.button, styles.dangerButton, { flex: 1 }]} onPress={() => rejectFamilyLink(rel.id)}>
+                              <Text style={styles.buttonText}>Reject</Text>
+                            </TouchableOpacity>
+                          </View>
+                        ) : (
+                          <View style={styles.row}>
+                            <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => removeFamilyLink(rel.id)}>
+                              <Text style={styles.buttonText}>Remove</Text>
+                            </TouchableOpacity>
+                            {isEditable && !isEditing ? (
+                              <TouchableOpacity
+                                style={[styles.button, styles.smallButton]}
+                                onPress={() => {
+                                  setEditingFamilyId(rel.id);
+                                  setEditingFamilyDraft({
+                                    givenName: rel.relative.firstName ?? '',
+                                    middleName: rel.relative.middleName ?? '',
+                                    familyName: rel.relative.lastName ?? '',
+                                    email: rel.relative.email ?? '',
+                                    relationship: rel.relationship ?? '',
+                                  });
+                                }}
+                              >
+                                <Text style={styles.buttonText}>Edit profile</Text>
+                              </TouchableOpacity>
+                            ) : null}
+                          </View>
+                        )}
+
+                        {isEditable && isEditing && editingFamilyDraft ? (
+                          <View style={{ marginTop: 8 }}>
+                            <Text style={styles.modalLabel}>Edit profile</Text>
+                            <View style={styles.row}>
+                              <TextInput
+                                style={[styles.input, { flex: 1 }]}
+                                placeholder="Given"
+                                value={editingFamilyDraft.givenName}
+                                onChangeText={(text) => setEditingFamilyDraft((p) => (p ? { ...p, givenName: text } : p))}
+                              />
+                              <TextInput
+                                style={[styles.input, { flex: 1 }]}
+                                placeholder="Middle"
+                                value={editingFamilyDraft.middleName}
+                                onChangeText={(text) => setEditingFamilyDraft((p) => (p ? { ...p, middleName: text } : p))}
+                              />
+                            </View>
+                            <TextInput
+                              style={styles.input}
+                              placeholder="Family"
+                              value={editingFamilyDraft.familyName}
+                              onChangeText={(text) => setEditingFamilyDraft((p) => (p ? { ...p, familyName: text } : p))}
+                            />
+                            <TextInput
+                              style={styles.input}
+                              placeholder="Email"
+                              autoCapitalize="none"
+                              keyboardType="email-address"
+                              value={editingFamilyDraft.email}
+                              onChangeText={(text) => setEditingFamilyDraft((p) => (p ? { ...p, email: text } : p))}
+                            />
+                            <TextInput
+                              style={styles.input}
+                              placeholder="Relationship"
+                              value={editingFamilyDraft.relationship}
+                              onChangeText={(text) => setEditingFamilyDraft((p) => (p ? { ...p, relationship: text } : p))}
+                            />
+                            <View style={styles.row}>
+                              <TouchableOpacity style={[styles.button, { flex: 1 }]} onPress={saveFamilyProfile}>
+                                <Text style={styles.buttonText}>Save</Text>
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                style={[styles.button, styles.dangerButton, { flex: 1 }]}
+                                onPress={() => {
+                                  setEditingFamilyId(null);
+                                  setEditingFamilyDraft(null);
+                                }}
+                              >
+                                <Text style={styles.buttonText}>Cancel</Text>
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                        ) : null}
+                      </View>
+                    );
+                  })}
+                </View>
+              ) : (
+                <Text style={styles.helperText}>No family members added yet.</Text>
+              )}
+
+              <View style={styles.divider} />
               <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={() => setShowDeleteConfirm(true)}>
                 <Text style={styles.buttonText}>Delete Account</Text>
               </TouchableOpacity>
@@ -2761,8 +3071,8 @@ const App: React.FC = () => {
                   </TouchableOpacity>
                 </View>
                 {groups.map((group) => {
-                  const userMembers = group.members.filter((m) => m.userId);
-                  const guestMembers = group.members.filter((m) => !m.userId);
+                  const allMembers = group.members;
+                  const acceptedRelationships = familyRelationships.filter((r) => r.status === 'accepted');
                   const created = formatDateLong(group.createdAt);
                   return (
                     <View key={group.id} style={styles.groupRow}>
@@ -2774,7 +3084,7 @@ const App: React.FC = () => {
                         <Text style={styles.buttonText}>Delete Group</Text>
                       </TouchableOpacity>
                       <View style={[styles.groupColumn, { flex: 1 }]}>
-                        <Text style={styles.headerText}>Users</Text>
+                        <Text style={styles.headerText}>Members & Relationships</Text>
                         {group.invites.length ? (
                           <View style={styles.pendingBlock}>
                             {group.invites.map((inv) => (
@@ -2787,9 +3097,9 @@ const App: React.FC = () => {
                             ))}
                           </View>
                         ) : null}
-                        {userMembers.map((m) => (
+                        {allMembers.map((m) => (
                           <View key={m.id} style={styles.memberPill}>
-                            <Text style={styles.cellText}>{m.userEmail ?? 'User'}</Text>
+                            <Text style={styles.cellText}>{m.userEmail ?? m.email ?? m.guestName ?? 'Member'}</Text>
                             <TouchableOpacity onPress={() => removeMemberFromGroup(group.id, m.id)}>
                               <Text style={styles.removeText}>Remove</Text>
                             </TouchableOpacity>
@@ -2804,29 +3114,48 @@ const App: React.FC = () => {
                             autoCapitalize="none"
                           />
                           <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => addMemberToGroup(group.id, 'user')}>
-                            <Text style={styles.buttonText}>Add</Text>
+                            <Text style={styles.buttonText}>Invite by Email</Text>
                           </TouchableOpacity>
                         </View>
-                      </View>
-                      <View style={[styles.groupColumn, { flex: 1 }]}>
-                        <Text style={styles.headerText}>Guests</Text>
-                        {guestMembers.map((m) => (
-                          <View key={m.id} style={styles.memberPill}>
-                            <Text style={styles.cellText}>{m.guestName ?? 'Guest'}</Text>
-                            <TouchableOpacity onPress={() => removeMemberFromGroup(group.id, m.id)}>
-                              <Text style={styles.removeText}>Remove</Text>
-                            </TouchableOpacity>
-                          </View>
-                        ))}
                         <View style={styles.addRow}>
-                          <TextInput
-                            placeholder="guest name"
-                            style={[styles.input, styles.inlineInput]}
-                            value={groupAddGuest[group.id] ?? ''}
-                            onChangeText={(text) => setGroupAddGuest((prev) => ({ ...prev, [group.id]: text }))}
-                          />
-                          <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => addMemberToGroup(group.id, 'guest')}>
-                            <Text style={styles.buttonText}>Add</Text>
+                          <View style={[styles.input, styles.inlineInput, styles.dropdown, { flex: 1 }]}>
+                            <TouchableOpacity onPress={() => setShowRelationshipDropdown((s) => !s)}>
+                              <View style={styles.selectButtonRow}>
+                                <Text style={styles.cellText}>
+                                  {(() => {
+                                    const relId = groupAddRelationship[group.id];
+                                    const rel = acceptedRelationships.find((r) => r.id === relId);
+                                    if (!rel) return 'Select Relationship';
+                                    const name = `${rel.relative?.firstName ?? ''} ${rel.relative?.middleName ?? ''} ${rel.relative?.lastName ?? ''}`
+                                      .replace(/\s+/g, ' ')
+                                      .trim();
+                                    return name || rel.relative?.email || 'Relationship';
+                                  })()}
+                                </Text>
+                                <Text style={styles.selectCaret}>v</Text>
+                              </View>
+                            </TouchableOpacity>
+                            {showRelationshipDropdown ? (
+                              <View style={styles.dropdownList}>
+                                {acceptedRelationships.map((rel) => {
+                                  const name = `${rel.relative?.firstName ?? ''} ${rel.relative?.middleName ?? ''} ${rel.relative?.lastName ?? ''}`
+                                    .replace(/\s+/g, ' ')
+                                    .trim() || rel.relative?.email || 'Relationship';
+                                  return (
+                                    <TouchableOpacity
+                                      key={rel.id}
+                                      style={styles.dropdownOption}
+                                      onPress={() => setGroupAddRelationship((prev) => ({ ...prev, [group.id]: rel.id }))}
+                                    >
+                                      <Text style={styles.cellText}>{name}</Text>
+                                    </TouchableOpacity>
+                                  );
+                                })}
+                              </View>
+                            ) : null}
+                          </View>
+                          <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => addMemberToGroup(group.id, 'relationship')}>
+                            <Text style={styles.buttonText}>Add Relationship</Text>
                           </TouchableOpacity>
                         </View>
                       </View>
@@ -2852,7 +3181,7 @@ const App: React.FC = () => {
                 />
                 <TextInput
                   style={styles.input}
-                  placeholder="Add guest members by name (comma separated)"
+                  placeholder="Add relationships by name (comma separated)"
                   value={groupGuestNames}
                   onChangeText={setGroupGuestNames}
                 />
@@ -2861,7 +3190,7 @@ const App: React.FC = () => {
                 </TouchableOpacity>
                 <Text style={styles.helperText}>
                   Users found in the system will receive an invite email (if SMTP is configured) or see it above after logging in.
-                  Guest members are added directly without needing a login.
+                  Relationships are added directly without needing a login.
                 </Text>
           </View>
         </>
@@ -3551,6 +3880,12 @@ const styles = StyleSheet.create({
   shareRow: {
     marginTop: 12,
     gap: 6,
+  },
+  familyRow: {
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderColor: '#e5e7eb',
+    gap: 4,
   },
   toggleRow: {
     flexDirection: 'row',

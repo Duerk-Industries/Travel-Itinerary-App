@@ -143,3 +143,12 @@ export interface GroupInvite {
   groupName: string;
   inviterEmail: string;
 }
+
+export interface FamilyRelationship {
+  id: string;
+  requesterId: string;
+  relativeId: string;
+  relationship: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  createdAt: string;
+}

@@ -69,6 +69,103 @@ describe('Password validation', () => {
   });
 });
 
+describe('Family relationships', () => {
+  const owner = { email: 'family-owner@example.com', firstName: 'Owner', lastName: 'Test', password: 'testtest' };
+  const member = { email: 'family-member@example.com', firstName: 'Member', lastName: 'User', password: 'testtest' };
+  const guestEmail = 'family-guest@example.com';
+  let pool: Pool;
+  let ownerToken: string;
+  let memberToken: string;
+  let guestRelationshipId: string;
+  let userRelationshipId: string;
+
+  beforeAll(async () => {
+    process.env.NODE_ENV = 'test';
+    await initDb();
+    pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    await pool.query('DELETE FROM users WHERE email IN ($1, $2, $3)', [owner.email, member.email, guestEmail]);
+  });
+
+  afterAll(async () => {
+    if (pool) {
+      await pool.query('DELETE FROM users WHERE email IN ($1, $2, $3)', [owner.email, member.email, guestEmail]);
+      await pool.end();
+    }
+    await closePool();
+  });
+
+  it('creates relationships, accepts, edits, and removes', async () => {
+    const regOwner = await request(app)
+      .post('/api/web-auth/register')
+      .send({ firstName: owner.firstName, lastName: owner.lastName, email: owner.email, password: owner.password, passwordConfirm: owner.password })
+      .expect(201);
+    ownerToken = regOwner.body.token as string;
+
+    const regMember = await request(app)
+      .post('/api/web-auth/register')
+      .send({ firstName: member.firstName, lastName: member.lastName, email: member.email, password: member.password, passwordConfirm: member.password })
+      .expect(201);
+    memberToken = regMember.body.token as string;
+
+    // Add a non-user family profile (auto-accepted, editable)
+    const addGuest = await request(app)
+      .post('/api/account/family')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ givenName: 'Grand', middleName: 'G', familyName: 'Parent', email: guestEmail, relationship: 'Grandparent' })
+      .expect(201);
+    const guestEntry = addGuest.body.find((r: any) => r.relative?.email === guestEmail);
+    expect(guestEntry).toBeTruthy();
+    expect(guestEntry.editableProfile).toBe(true);
+    guestRelationshipId = guestEntry.id;
+
+    // Edit the non-user profile
+    const updatedGuest = await request(app)
+      .patch(`/api/account/family/${guestRelationshipId}/profile`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ givenName: 'Updated', familyName: 'Relative', relationship: 'Sibling' })
+      .expect(200);
+    const guestUpdatedRow = updatedGuest.body.find((r: any) => r.id === guestRelationshipId);
+    expect(guestUpdatedRow.relative.firstName).toBe('Updated');
+    expect(guestUpdatedRow.relationship).toBe('Sibling');
+
+    // Request relationship with an existing user (requires acceptance)
+    const addMemberRel = await request(app)
+      .post('/api/account/family')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ givenName: member.firstName, familyName: member.lastName, email: member.email, relationship: 'Sibling' })
+      .expect(201);
+    const pending = addMemberRel.body.find((r: any) => r.relative?.email === member.email);
+    expect(pending.status).toBe('pending');
+    userRelationshipId = pending.id;
+
+    // Member sees pending inbound request
+    const memberPending = await request(app)
+      .get('/api/account/family')
+      .set('Authorization', `Bearer ${memberToken}`)
+      .expect(200);
+    const inbound = memberPending.body.find((r: any) => r.relative?.email === owner.email);
+    expect(inbound.status).toBe('pending');
+    expect(inbound.direction).toBe('inbound');
+
+    // Accept request
+    await request(app)
+      .patch(`/api/account/family/${inbound.id}/accept`)
+      .set('Authorization', `Bearer ${memberToken}`)
+      .expect(200);
+
+    const ownerAfterAccept = await request(app).get('/api/account/family').set('Authorization', `Bearer ${ownerToken}`).expect(200);
+    const accepted = ownerAfterAccept.body.find((r: any) => r.relative?.email === member.email);
+    expect(accepted.status).toBe('accepted');
+
+    // Remove relationship
+    const ownerAfterRemove = await request(app)
+      .delete(`/api/account/family/${accepted.id}`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+    expect(ownerAfterRemove.body.some((r: any) => r.relative?.email === member.email)).toBe(false);
+  });
+});
+
 describe('Account lifecycle API with shared trip', () => {
   const user1 = { email: 'acct-user1@example.com', firstName: 'Acct', lastName: 'One', password: 'testtest' };
   const user2 = { email: 'acct-user2@example.com', firstName: 'Acct', lastName: 'Two', password: 'testtest' };

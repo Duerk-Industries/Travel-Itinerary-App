@@ -59,6 +59,7 @@ export const initDb = async (): Promise<void> => {
       id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
       email TEXT UNIQUE NOT NULL,
       first_name TEXT NOT NULL,
+      middle_name TEXT,
       last_name TEXT NOT NULL,
       password_hash TEXT NOT NULL,
       salt TEXT NOT NULL,
@@ -69,6 +70,7 @@ export const initDb = async (): Promise<void> => {
   // Backward compatibility if the table already exists
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS email TEXT UNIQUE;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS first_name TEXT;`);
+  await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS middle_name TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS last_name TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS password_hash TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS salt TEXT;`);
@@ -127,6 +129,18 @@ export const initDb = async (): Promise<void> => {
   `);
 
   await p.query(`ALTER TABLE group_invites ALTER COLUMN invitee_user_id DROP NOT NULL;`);
+
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS family_relationships (
+      id UUID PRIMARY KEY,
+      requester_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      relative_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      relationship TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      created_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE (requester_id, relative_id)
+    );
+  `);
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS trips (
@@ -2001,6 +2015,296 @@ export const updateItineraryDetail = async (
     [day ?? null, time, activity, cost, detailId]
   );
   return updated[0];
+};
+
+
+// Family relationship helpers
+
+type FamilyProfile = {
+  id: string;
+  email: string;
+  firstName: string;
+  middleName: string | null;
+  lastName: string;
+  provider: string;
+};
+
+const mapFamilyView = (row: any, userId: string) => {
+  const direction = row.requester_id === userId ? 'outbound' : 'inbound';
+  const profile: FamilyProfile = {
+    id: row.other_id,
+    email: row.other_email,
+    firstName: row.other_first_name,
+    middleName: row.other_middle_name,
+    lastName: row.other_last_name,
+    provider: row.other_provider,
+  };
+  return {
+    id: row.id,
+    relationship: row.relationship,
+    status: row.status as 'pending' | 'accepted' | 'rejected',
+    direction,
+    relative: profile,
+    editableProfile: profile.provider === 'family',
+  };
+};
+
+export const listFamilyRelationships = async (userId: string) => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `
+      SELECT fr.id,
+             fr.requester_id,
+             fr.relative_id,
+             fr.relationship,
+             fr.status,
+             fr.created_at,
+             u.id as other_id,
+             u.email as other_email,
+             u.provider as other_provider,
+             wu.first_name as other_first_name,
+             wu.middle_name as other_middle_name,
+             wu.last_name as other_last_name
+      FROM family_relationships fr
+      JOIN users u ON (CASE WHEN fr.requester_id = $1 THEN fr.relative_id ELSE fr.requester_id END) = u.id
+      LEFT JOIN web_users wu ON wu.id = u.id
+      WHERE fr.requester_id = $1 OR (fr.relative_id = $1 AND fr.status = 'pending')
+    `,
+    [userId]
+  );
+  return rows.map((row) => mapFamilyView(row, userId));
+};
+
+export const createFamilyRelationship = async (
+  ownerId: string,
+  payload: { givenName: string; middleName?: string | null; familyName: string; email: string; relationship: string }
+) => {
+  const p = getPool();
+  const client = await p.connect();
+  try {
+    await client.query('BEGIN');
+    const given = (payload.givenName || '').trim();
+    const family = (payload.familyName || '').trim();
+    const rawEmail = (payload.email || '').trim().toLowerCase();
+    const relationship = (payload.relationship || '').trim() || 'Not Applicable';
+    if (!given || !family) {
+      throw new Error('givenName and familyName are required');
+    }
+
+    let relativeId: string | null = null;
+    let status: 'pending' | 'accepted' = 'accepted';
+
+    if (rawEmail) {
+      const existing = await client.query<{ id: string; provider: string }>('SELECT id, provider FROM users WHERE email = $1', [rawEmail]);
+      relativeId = existing.rows[0]?.id ?? null;
+      status = existing.rows.length ? 'pending' : 'accepted';
+    }
+    if (relativeId === ownerId) {
+      throw new Error('Cannot add yourself as a family member');
+    }
+
+    if (!relativeId) {
+      relativeId = randomUUID();
+      const salt = randomBytes(16).toString('hex');
+      const passwordHash = hashPassword(randomBytes(12).toString('hex'), salt);
+      const emailToUse = rawEmail || `family-${relativeId}@placeholder.local`;
+      await client.query(`INSERT INTO users (id, email, provider) VALUES ($1, $2, 'family')`, [relativeId, emailToUse]);
+      await client.query(
+        `INSERT INTO web_users (id, email, first_name, middle_name, last_name, password_hash, salt)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [relativeId, emailToUse, given, payload.middleName ?? null, family, passwordHash, salt]
+      );
+    }
+
+    const relationshipId = randomUUID();
+    const { rows: relRows } = await client.query(
+      `INSERT INTO family_relationships (id, requester_id, relative_id, relationship, status)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (requester_id, relative_id)
+       DO UPDATE SET relationship = EXCLUDED.relationship, status = EXCLUDED.status
+       RETURNING id, status`,
+      [relationshipId, ownerId, relativeId, relationship, status]
+    );
+
+    if (status === 'accepted') {
+      await client.query(
+        `INSERT INTO family_relationships (id, requester_id, relative_id, relationship, status)
+         VALUES ($1, $2, $3, $4, 'accepted')
+         ON CONFLICT (requester_id, relative_id)
+         DO UPDATE SET relationship = EXCLUDED.relationship, status = 'accepted'`,
+        [randomUUID(), relativeId, ownerId, relationship]
+      );
+    }
+
+    await client.query('COMMIT');
+    return { id: relRows[0].id as string, status, relativeId, needsAcceptance: status === 'pending' };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
+export const acceptFamilyRelationship = async (userId: string, relationshipId: string) => {
+  const p = getPool();
+  const client = await p.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      `SELECT requester_id, relative_id, relationship, status FROM family_relationships WHERE id = $1 FOR UPDATE`,
+      [relationshipId]
+    );
+    if (!rows.length) throw new Error('Relationship not found');
+    const rel = rows[0];
+    if (rel.relative_id !== userId) throw new Error('Not authorized to accept this relationship');
+    if (rel.status !== 'pending') throw new Error('Relationship already handled');
+
+    await client.query(`UPDATE family_relationships SET status = 'accepted' WHERE id = $1`, [relationshipId]);
+    await client.query(
+      `INSERT INTO family_relationships (id, requester_id, relative_id, relationship, status)
+       VALUES ($1, $2, $3, $4, 'accepted')
+       ON CONFLICT (requester_id, relative_id)
+       DO UPDATE SET relationship = EXCLUDED.relationship, status = 'accepted'`,
+      [randomUUID(), userId, rel.requester_id, rel.relationship]
+    );
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
+export const rejectFamilyRelationship = async (userId: string, relationshipId: string) => {
+  const p = getPool();
+  const client = await p.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      `SELECT requester_id, relative_id FROM family_relationships WHERE id = $1 FOR UPDATE`,
+      [relationshipId]
+    );
+    if (!rows.length) throw new Error('Relationship not found');
+    const rel = rows[0];
+    if (rel.relative_id !== userId) throw new Error('Not authorized to reject this relationship');
+    await client.query(`DELETE FROM family_relationships WHERE requester_id = $1 AND relative_id = $2`, [
+      rel.requester_id,
+      rel.relative_id,
+    ]);
+    await client.query(`DELETE FROM family_relationships WHERE requester_id = $1 AND relative_id = $2`, [
+      rel.relative_id,
+      rel.requester_id,
+    ]);
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
+export const removeFamilyRelationship = async (userId: string, relationshipId: string) => {
+  const p = getPool();
+  const client = await p.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      `SELECT requester_id, relative_id FROM family_relationships WHERE id = $1`,
+      [relationshipId]
+    );
+    if (!rows.length) throw new Error('Relationship not found');
+    const rel = rows[0];
+    if (rel.requester_id !== userId && rel.relative_id !== userId) throw new Error('Not authorized to remove');
+    await client.query(`DELETE FROM family_relationships WHERE requester_id = $1 AND relative_id = $2`, [
+      rel.requester_id,
+      rel.relative_id,
+    ]);
+    await client.query(`DELETE FROM family_relationships WHERE requester_id = $1 AND relative_id = $2`, [
+      rel.relative_id,
+      rel.requester_id,
+    ]);
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
+export const updateFamilyProfile = async (
+  userId: string,
+  relationshipId: string,
+  updates: { givenName?: string; middleName?: string | null; familyName?: string; email?: string; relationship?: string }
+) => {
+  const p = getPool();
+  const client = await p.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      `SELECT requester_id, relative_id, relationship FROM family_relationships WHERE id = $1 FOR UPDATE`,
+      [relationshipId]
+    );
+    if (!rows.length) throw new Error('Relationship not found');
+    const rel = rows[0];
+    if (rel.requester_id !== userId) throw new Error('Not authorized to edit this relationship');
+
+    const { rows: userRows } = await client.query<{ provider: string }>(
+      `SELECT provider FROM users WHERE id = $1`,
+      [rel.relative_id]
+    );
+    if (!userRows.length || userRows[0].provider !== 'family') {
+      throw new Error('Only non-user family profiles can be edited');
+    }
+
+    if (updates.email) {
+      const emailExists = await client.query(
+        `SELECT 1 FROM web_users WHERE email = $1 AND id <> $2`,
+        [updates.email.toLowerCase(), rel.relative_id]
+      );
+      if (emailExists.rowCount) {
+        const err = new Error('Email already in use');
+        (err as any).code = 'EMAIL_TAKEN';
+        throw err;
+      }
+    }
+
+    await client.query(
+      `UPDATE web_users
+       SET first_name = COALESCE($2, first_name),
+           middle_name = COALESCE($3, middle_name),
+           last_name = COALESCE($4, last_name),
+           email = COALESCE($5, email)
+       WHERE id = $1`,
+      [
+        rel.relative_id,
+        updates.givenName ?? null,
+        updates.middleName ?? null,
+        updates.familyName ?? null,
+        updates.email ? updates.email.toLowerCase() : null,
+      ]
+    );
+    if (updates.email) {
+      await client.query(`UPDATE users SET email = $2 WHERE id = $1`, [rel.relative_id, updates.email.toLowerCase()]);
+    }
+    if (updates.relationship) {
+      await client.query(`UPDATE family_relationships SET relationship = $2 WHERE requester_id = $1 AND relative_id = $3`, [
+        userId,
+        updates.relationship,
+        rel.relative_id,
+      ]);
+    }
+
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
 };
 
 
