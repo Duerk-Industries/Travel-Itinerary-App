@@ -1,4 +1,4 @@
-import { parseLodgingText } from '../utils/lodgingParser';
+import { parseLodgingText } from '../utils/parsers/lodgingParser';
 import fs from 'fs';
 import path from 'path';
 

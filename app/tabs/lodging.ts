@@ -1,4 +1,4 @@
-import { formatDateLong } from './formatDateLong';
+import { formatDateLong } from '../utils/formatDateLong';
 
 export type Lodging = {
   id: string;
