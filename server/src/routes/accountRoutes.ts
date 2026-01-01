@@ -49,13 +49,17 @@ router.patch('/profile', async (req, res) => {
 
 router.patch('/password', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const { currentPassword, newPassword } = req.body ?? {};
-  if (!currentPassword || !newPassword) {
-    res.status(400).json({ error: 'currentPassword and newPassword are required' });
+  const { currentPassword, newPassword, newPasswordConfirm } = req.body ?? {};
+  if (!currentPassword || !newPassword || !newPasswordConfirm) {
+    res.status(400).json({ error: 'currentPassword, newPassword, and newPasswordConfirm are required' });
     return;
   }
   if (String(newPassword).length < 6) {
     res.status(400).json({ error: 'New password must be at least 6 characters' });
+    return;
+  }
+  if (newPassword !== newPasswordConfirm) {
+    res.status(400).json({ error: 'Passwords do not match' });
     return;
   }
   try {
