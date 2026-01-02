@@ -157,6 +157,7 @@ export const initDb = async (): Promise<void> => {
       user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       trip_id UUID REFERENCES trips(id) ON DELETE SET NULL,
       passenger_name TEXT NOT NULL,
+      passenger_ids JSONB DEFAULT '[]'::jsonb,
       departure_date DATE NOT NULL,
       departure_location TEXT,
       departure_airport_code TEXT,
@@ -190,6 +191,7 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE flights ADD COLUMN IF NOT EXISTS layover_location_code TEXT;`);
   await p.query(`ALTER TABLE flights ADD COLUMN IF NOT EXISTS trip_id UUID REFERENCES trips(id) ON DELETE SET NULL;`);
   await p.query(`ALTER TABLE flights ADD COLUMN IF NOT EXISTS paid_by JSONB DEFAULT '[]'::jsonb;`);
+  await p.query(`ALTER TABLE flights ADD COLUMN IF NOT EXISTS passenger_ids JSONB DEFAULT '[]'::jsonb;`);
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS lodgings (
@@ -610,10 +612,10 @@ export const insertFlight = async (
 
   const id = randomUUID();
   const query = `INSERT INTO flights (
-    id, user_id, trip_id, passenger_name, departure_date, departure_location, departure_airport_code, departure_time,
+    id, user_id, trip_id, passenger_name, passenger_ids, departure_date, departure_location, departure_airport_code, departure_time,
     arrival_location, arrival_airport_code, layover_location, layover_location_code, layover_duration,
     arrival_time, cost, carrier, flight_number, booking_reference, paid_by
-  ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19) RETURNING *`;
+  ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20) RETURNING *`;
 
 
   const values = [
@@ -621,6 +623,7 @@ export const insertFlight = async (
     flight.userId,
     flight.tripId,
     flight.passengerName,
+    JSON.stringify(flight.passengerIds ?? []),
     flight.departureDate,
     departureCode,
     departureCode,
@@ -640,7 +643,11 @@ export const insertFlight = async (
 
   const { rows } = await p.query<Flight>(query, values);
   const row = rows[0] as any;
-  return { ...(row as Flight), paidBy: Array.isArray(row.paid_by) ? row.paid_by : [] };
+  return {
+    ...(row as Flight),
+    paidBy: Array.isArray(row.paid_by) ? row.paid_by : [],
+    passengerIds: Array.isArray(row.passenger_ids) ? row.passenger_ids : [],
+  };
 };
 
 
@@ -690,12 +697,13 @@ export const updateFlight = async (
          carrier = COALESCE($13, f.carrier),
          flight_number = COALESCE($14, f.flight_number),
          booking_reference = COALESCE($15, f.booking_reference),
-         paid_by = COALESCE($16::jsonb, f.paid_by)
+         paid_by = COALESCE($16::jsonb, f.paid_by),
+         passenger_ids = COALESCE($17::jsonb, f.passenger_ids)
     FROM trips t
-    WHERE f.id = $17
+    WHERE f.id = $18
       AND t.id = f.trip_id
       -- allow edits by any member of the trip's group
-      AND t.group_id IN (SELECT group_id FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $18)
+      AND t.group_id IN (SELECT group_id FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $19)
     RETURNING f.*`,
    [
       updates.passengerName,
@@ -714,13 +722,14 @@ export const updateFlight = async (
       updates.flightNumber ?? null,
       updates.bookingReference ?? null,
       safePaidBy && safePaidBy.length ? JSON.stringify(safePaidBy) : null,
+      Array.isArray(updates.passengerIds) ? JSON.stringify(updates.passengerIds) : null,
       flightId,
       userId,
     ]
   );
   if (!rows.length) throw new Error('Flight not found');
   const row = rows[0] as any;
-  return { ...(row as Flight), paidBy: Array.isArray(row.paid_by) ? row.paid_by : [] };
+  return { ...(row as Flight), paidBy: Array.isArray(row.paid_by) ? row.paid_by : [], passengerIds: Array.isArray(row.passenger_ids) ? row.passenger_ids : [] };
 };
 
 export const ensureUserInTrip = async (tripId: string, userId: string): Promise<{ groupId: string } | null> => {
@@ -806,7 +815,12 @@ export const listFlights = async (userId: string, tripId?: string): Promise<Flig
         LEFT JOIN web_users wu ON gm.user_id = wu.id
         WHERE gm.group_id = t.group_id
           AND (
-            LOWER(gm.guest_name) = LOWER(f.passenger_name)
+            EXISTS (
+              SELECT 1
+              FROM jsonb_array_elements_text(COALESCE(f.passenger_ids, '[]'::jsonb)) pid(val)
+              WHERE gm.id = pid.val::uuid
+            )
+            OR LOWER(gm.guest_name) = LOWER(f.passenger_name)
             OR LOWER(u.email) = LOWER(f.passenger_name)
             OR LOWER(CONCAT(wu.first_name, ' ', wu.last_name)) = LOWER(f.passenger_name)
           )
@@ -826,7 +840,8 @@ export const listFlights = async (userId: string, tripId?: string): Promise<Flig
           COALESCE(NULLIF(apl.city, ''), apl.name, apl.iata_code) || ' (' || apl.iata_code || ')'
         ELSE f.layover_location
       END as layover_airport_label,
-      COALESCE(f.paid_by, '[]'::jsonb) as "paidBy"
+      COALESCE(f.paid_by, '[]'::jsonb) as "paidBy",
+      COALESCE(f.passenger_ids, '[]'::jsonb) as passenger_ids
      FROM flights f
      JOIN trips t ON f.trip_id = t.id
      LEFT JOIN airports apd ON apd.iata_code = f.departure_location
@@ -840,7 +855,11 @@ export const listFlights = async (userId: string, tripId?: string): Promise<Flig
   );
 
 
-  return rows.map((r: any) => ({ ...(r as Flight), paidBy: Array.isArray(r.paidBy) ? r.paidBy : [] }));
+  return rows.map((r: any) => ({
+    ...(r as Flight),
+    paidBy: Array.isArray(r.paidBy) ? r.paidBy : [],
+    passengerIds: Array.isArray(r.passenger_ids) ? r.passenger_ids : [],
+  }));
 };
 
 export const listLodgings = async (userId: string, tripId?: string | null): Promise<Lodging[]> => {

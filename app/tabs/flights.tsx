@@ -7,6 +7,7 @@ import { parseFlightText, type ParsedFlight } from '../utils/parsers/flightParse
 export interface Flight {
   id: string;
   passenger_name: string;
+  passenger_ids?: string[];
   trip_id: string;
   departure_date: string;
   departure_location?: string;
@@ -36,6 +37,7 @@ export interface Flight {
 
 export type FlightDraft = {
   passengerName: string;
+  passengerIds: string[];
   departureDate: string;
   departureLocation: string;
   departureAirportCode: string;
@@ -55,6 +57,7 @@ export type FlightDraft = {
 
 export type FlightEditDraft = {
   passengerName: string;
+  passengerIds: string[];
   departureDate: string;
   departureLocation: string;
   departureAirportCode: string;
@@ -90,6 +93,7 @@ export type Trip = {
 
 export const createInitialFlightState = (): FlightDraft => ({
   passengerName: '',
+  passengerIds: [],
   departureDate: new Date().toISOString().slice(0, 10),
   departureLocation: '',
   departureAirportCode: '',
@@ -114,8 +118,10 @@ export const buildFlightPayload = (flight: FlightEditDraft, tripId?: string | nu
   const arrivalLocation = trim(flight.arrivalLocation) || trim(flight.arrivalAirportCode);
   const layoverLocation = trim(flight.layoverLocation);
   const layoverLocationCode = trim(flight.layoverLocationCode);
+  const passengerIds = Array.isArray(flight.passengerIds) ? flight.passengerIds.filter(Boolean) : [];
   return {
     passengerName: trim(flight.passengerName) || 'Traveler',
+    passengerIds,
     departureDate,
     departureLocation,
     departureAirportCode: trim(flight.departureAirportCode) || departureLocation,
@@ -152,6 +158,7 @@ export const fetchFlightsForTrip = async ({
   const data = await res.json();
   return (data as any[]).map((f) => ({
     ...f,
+    passenger_ids: Array.isArray((f as any).passenger_ids) ? (f as any).passenger_ids : [],
     paidBy: Array.isArray(f.paidBy) ? f.paidBy : Array.isArray(f.paid_by) ? f.paid_by : [],
   }));
 };
@@ -191,7 +198,7 @@ const fallbackAirports: Airport[] = [
   { name: 'Dubai International', city: 'Dubai', country: 'UAE', iata_code: 'DXB' },
 ];
 
-const columns: { key: keyof Flight | 'actions'; label: string; minWidth?: number }[] = [
+const columns: { key: keyof Flight | 'actions' | 'costPerPerson'; label: string; minWidth?: number }[] = [
   { key: 'passenger_name', label: 'Passenger', minWidth: 130 },
   { key: 'departure_date', label: 'Departure Date' },
   { key: 'departure_location', label: 'Departure Location' },
@@ -200,6 +207,7 @@ const columns: { key: keyof Flight | 'actions'; label: string; minWidth?: number
   { key: 'arrival_time', label: 'Arrival Time' },
   { key: 'layover_duration', label: 'Layover' },
   { key: 'cost', label: 'Cost' },
+  { key: 'costPerPerson', label: 'Cost / Person', minWidth: 140 },
   { key: 'carrier', label: 'Carrier' },
   { key: 'flight_number', label: 'Flight #' },
   { key: 'booking_reference', label: 'Booking Ref' },
@@ -224,6 +232,17 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   fetchGroupMembersForActiveTrip,
   styles,
 }) => {
+  const memberNames = useMemo(() => {
+    const map = new Map<string, string>();
+    groupMembers.forEach((m) => map.set(m.id, formatMemberName(m)));
+    return map;
+  }, [groupMembers, formatMemberName]);
+
+  const buildPassengerName = (ids: string[]) => {
+    const names = ids.map((id) => memberNames.get(id)).filter(Boolean) as string[];
+    return names.join(', ');
+  };
+
   const [newFlight, setNewFlight] = useState<FlightDraft>(createInitialFlightState());
   const [showPassengerDropdown, setShowPassengerDropdown] = useState(false);
   const [passengerAnchor, setPassengerAnchor] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
@@ -306,6 +325,22 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     return formatLocationDisplay(rawValue);
   };
 
+  const setNewFlightPassengers = (ids: string[]) => {
+    const unique = Array.from(new Set(ids.filter(Boolean)));
+    setNewFlight((prev) => ({
+      ...prev,
+      passengerIds: unique,
+      passengerName: buildPassengerName(unique),
+    }));
+  };
+
+  const setEditingFlightPassengers = (ids: string[]) => {
+    const unique = Array.from(new Set(ids.filter(Boolean)));
+    setEditingFlight((prev) =>
+      prev ? { ...prev, passengerIds: unique, passengerName: buildPassengerName(unique) } : prev
+    );
+  };
+
 
   const mergeParsedFlight = (current: FlightEditDraft, parsed: Partial<FlightEditDraft>): FlightEditDraft => {
     const next = { ...current };
@@ -383,25 +418,6 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     }
   };
 
-  const ensurePassengerInGroup = async (passengerName: string) => {
-    if (!userToken) return;
-    const activeTrip = findActiveTrip();
-    if (!activeTrip?.groupId) return;
-    const normalizedTarget = normalizePassengerName(passengerName);
-    const alreadyInGroup = groupMembers.some((m) => normalizePassengerName(formatMemberName(m)) === normalizedTarget);
-    if (alreadyInGroup) return;
-    try {
-      await fetch(`${backendUrl}/api/groups/${activeTrip.groupId}/members`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...headers },
-        body: JSON.stringify({ guestName: passengerName }),
-      });
-      await fetchGroupMembersForActiveTrip();
-    } catch {
-      // non-blocking
-    }
-  };
-
   const saveParsedFlights = async (flightsOverride?: FlightEditDraft[]) => {
     const flightsToSave = flightsOverride ?? parsedFlights;
     if (!userToken || !activeTripId || !flightsToSave.length) {
@@ -415,6 +431,12 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       for (const flight of flightsToSave) {
         const enriched: FlightEditDraft = {
           ...flight,
+          passengerIds:
+            flight.passengerIds && flight.passengerIds.length
+              ? flight.passengerIds
+              : groupMembers.length
+                ? [groupMembers[0].id]
+                : [],
           passengerName: flight.passengerName?.trim() || 'Traveler',
           departureLocation: flight.departureLocation?.trim() || flight.departureAirportCode || '',
           departureAirportCode: flight.departureAirportCode?.trim() || flight.departureLocation || '',
@@ -434,7 +456,11 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
           failures.push('Missing departure or arrival location.');
           continue;
         }
-        await ensurePassengerInGroup(flight.passengerName);
+        if (!enriched.passengerIds.length) {
+          failures.push('No passengers selected for a parsed flight.');
+          continue;
+        }
+        enriched.passengerName = buildPassengerName(enriched.passengerIds) || enriched.passengerName;
         const res = await fetch(`${backendUrl}/api/flights`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...headers },
@@ -559,6 +585,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     setEditingFlightId(flight.id);
     const base: FlightEditDraft = {
       passengerName: flight.passenger_name,
+      passengerIds: Array.isArray(flight.passenger_ids) ? flight.passenger_ids : [],
       departureDate: normalizeDateString(flight.departure_date),
       departureLocation: flight.departure_location ?? '',
       departureAirportCode: flight.departure_airport_code ?? '',
@@ -578,6 +605,9 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     if (base.paidBy.length === 0 && defaultPayerId) {
       base.paidBy = [defaultPayerId];
     }
+    if (base.passengerIds.length) {
+      base.passengerName = buildPassengerName(base.passengerIds) || base.passengerName;
+    }
     setEditingFlight(base);
   };
 
@@ -588,12 +618,16 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
 
   const saveFlightDetails = async () => {
     if (!userToken || !editingFlightId || !editingFlight) return;
+    if (!editingFlight.passengerIds.length) {
+      alert('Select at least one passenger');
+      return;
+    }
     if (editingFlightId === 'new' && !activeTripId) {
       alert('Select an active trip before adding a flight.');
       return;
     }
     const payload = buildFlightPayload(
-      editingFlight,
+      { ...editingFlight, passengerName: buildPassengerName(editingFlight.passengerIds) || editingFlight.passengerName },
       editingFlightId === 'new' ? activeTripId ?? undefined : undefined,
       defaultPayerId
     );
@@ -630,7 +664,15 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       return false;
     }
 
-    const payload = buildFlightPayload(newFlight, activeTripId, defaultPayerId);
+    if (!newFlight.passengerIds.length) {
+      alert('Select at least one passenger');
+      return false;
+    }
+    const payload = buildFlightPayload(
+      { ...newFlight, passengerName: buildPassengerName(newFlight.passengerIds) || newFlight.passengerName },
+      activeTripId,
+      defaultPayerId
+    );
     const res = await fetch(`${backendUrl}/api/flights`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...headers },
@@ -816,19 +858,31 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                 const value = item[col.key as keyof Flight];
                 const baseDisplay = value != null ? String(value) : '-';
                 const display =
-                  col.key === 'cost'
-                    ? `$${value}`
-                    : col.key === 'booking_reference'
-                      ? baseDisplay.toUpperCase()
-                      : col.key === 'paidBy'
-                        ? Array.isArray(item.paidBy) && item.paidBy.length ? item.paidBy.map(payerName).join(', ') : '-'
-                        : col.key === 'departure_date'
-                          ? formatDateLong(baseDisplay)
-                          : col.key === 'departure_location'
-                            ? formatLocationDisplay(item.departure_location, item.departure_airport_label || item.departureAirportLabel)
-                            : col.key === 'arrival_location'
-                              ? formatLocationDisplay(item.arrival_location, item.arrival_airport_label || item.arrivalAirportLabel)
-                              : baseDisplay;
+                  col.key === 'passenger_name'
+                    ? (() => {
+                        const ids = Array.isArray(item.passenger_ids) ? item.passenger_ids : [];
+                        const names = ids.map((id) => memberNames.get(id)).filter(Boolean) as string[];
+                        return names.length ? names.join(', ') : baseDisplay;
+                      })()
+                    : col.key === 'cost'
+                      ? `$${value}`
+                      : col.key === 'costPerPerson'
+                        ? (() => {
+                            const count = Array.isArray(item.passenger_ids) ? item.passenger_ids.length : 0;
+                            const per = count ? (Number(item.cost) || 0) / count : Number(item.cost) || 0;
+                            return `$${per.toFixed(2)}`;
+                          })()
+                        : col.key === 'booking_reference'
+                          ? baseDisplay.toUpperCase()
+                          : col.key === 'paidBy'
+                            ? Array.isArray(item.paidBy) && item.paidBy.length ? item.paidBy.map(payerName).join(', ') : '-'
+                            : col.key === 'departure_date'
+                              ? formatDateLong(baseDisplay)
+                              : col.key === 'departure_location'
+                                ? formatLocationDisplay(item.departure_location, item.departure_airport_label || item.departureAirportLabel)
+                                : col.key === 'arrival_location'
+                                  ? formatLocationDisplay(item.arrival_location, item.arrival_airport_label || item.arrivalAirportLabel)
+                                  : baseDisplay;
                 return (
                   <View
                     key={`${item.id}-${col.key}`}
@@ -863,8 +917,24 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                     </View>
                   );
                 }
+                if (col.key === 'costPerPerson') {
+                  const count = newFlight.passengerIds.length || 1;
+                  const per = (Number(newFlight.cost) || 0) / count;
+                  return (
+                    <View
+                      key={`input-${col.key}`}
+                      style={[
+                        styles.cell,
+                        { minWidth: col.minWidth ?? 120, flex: 1 },
+                        isLast && styles.lastCell,
+                      ]}
+                    >
+                      <Text style={styles.cellText}>{`$${per.toFixed(2)}`}</Text>
+                    </View>
+                  );
+                }
                 const valueMap: Record<string, string> = {
-                  passenger_name: newFlight.passengerName,
+                  passenger_name: buildPassengerName(newFlight.passengerIds) || 'Select passengers',
                   departure_date: newFlight.departureDate,
                   departure_location: newFlight.departureLocation,
                   departure_time: newFlight.departureTime,
@@ -878,7 +948,6 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                 };
 
                 const setters: Record<string, (text: string) => void> = {
-                  passenger_name: (text) => setNewFlight((prev) => ({ ...prev, passengerName: text })),
                   departure_date: (text) => setNewFlight((prev) => ({ ...prev, departureDate: text })),
                   departure_location: (text) => setNewFlight((prev) => ({ ...prev, departureLocation: text })),
                   departure_time: (text) => setNewFlight((prev) => ({ ...prev, departureTime: text })),
@@ -892,7 +961,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                 };
 
                 if (col.key === 'passenger_name') {
-                  const displayName = valueMap.passenger_name || 'Select passenger';
+                  const displayName = valueMap.passenger_name || 'Select passengers';
                   return (
                     <View
                       key={`input-${col.key}`}
@@ -1017,16 +1086,19 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
           >
             {groupMembers.map((member) => {
               const name = formatMemberName(member);
+              const selected = newFlight.passengerIds.includes(member.id);
               return (
                 <TouchableOpacity
                   key={member.id}
                   style={styles.dropdownOption}
                   onPress={() => {
-                    setNewFlight((prev) => ({ ...prev, passengerName: name }));
-                    setShowPassengerDropdown(false);
+                    const next = selected
+                      ? newFlight.passengerIds.filter((id) => id !== member.id)
+                      : [...newFlight.passengerIds, member.id];
+                    setNewFlightPassengers(next);
                   }}
                 >
-                  <Text style={styles.cellText}>{name}</Text>
+                  <Text style={styles.cellText}>{`${selected ? '[x] ' : ''}${name}`}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -1065,12 +1137,27 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
               Current Departure: {formatDateLong(editingFlight.departureDate)} at {editingFlight.departureTime || '?'}
             </Text>
             <ScrollView style={{ maxHeight: 420 }}>
-              <Text style={styles.modalLabel}>Passenger</Text>
-              <TextInput
-                style={styles.input}
-                value={editingFlight.passengerName}
-                onChangeText={(text) => setEditingFlight((prev) => (prev ? { ...prev, passengerName: text } : prev))}
-              />
+                      <Text style={styles.modalLabel}>Passengers (tap to toggle)</Text>
+                      <View style={styles.payerChips}>
+                        {groupMembers.map((m) => {
+                          const selected = editingFlight.passengerIds.includes(m.id);
+                          const name = formatMemberName(m);
+                          return (
+                            <TouchableOpacity
+                              key={m.id}
+                              style={[styles.payerChip, selected && styles.toggleActive]}
+                              onPress={() => {
+                                const next = selected
+                                  ? editingFlight.passengerIds.filter((id) => id !== m.id)
+                                  : [...editingFlight.passengerIds, m.id];
+                                setEditingFlightPassengers(next);
+                              }}
+                            >
+                              <Text style={styles.cellText}>{name}</Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
               <Text style={styles.modalLabel}>Departure</Text>
               <View style={styles.modalRow}>
                 <View style={styles.modalField}>

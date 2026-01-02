@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import bodyParser from 'body-parser';
 import { authenticate } from '../auth';
-import { deleteFlight, ensureUserInTrip, getFlightForUser, insertFlight, listFlights, searchFlightLocations, shareFlight, updateFlight } from '../db';
+import { deleteFlight, ensureUserInTrip, getFlightForUser, insertFlight, listFlights, searchFlightLocations, shareFlight, updateFlight, poolClient } from '../db';
 import { isEmailConfigured, sendShareEmail } from '../mailer';
 
 // Flights API: CRUD for flights scoped to the authenticated user / their group trips.
@@ -30,7 +30,7 @@ router.get('/locations', async (req, res) => {
 router.post('/', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const {
-    passengerName,
+    passengerIds,
     departureDate,
     departureLocation,
     departureAirportCode,
@@ -48,8 +48,8 @@ router.post('/', async (req, res) => {
     tripId,
     paidBy,
   } = req.body;
-  if (!passengerName || !departureDate || !departureTime || !arrivalTime || !carrier || !flightNumber || !bookingReference || !tripId) {
-    res.status(400).json({ error: 'Missing required fields' });
+  if (!Array.isArray(passengerIds) || passengerIds.length === 0 || !departureDate || !departureTime || !arrivalTime || !carrier || !flightNumber || !bookingReference || !tripId) {
+    res.status(400).json({ error: 'Missing required fields (need at least one passenger)' });
     return;
   }
   const tripGroup = await ensureUserInTrip(tripId, userId);
@@ -57,10 +57,27 @@ router.post('/', async (req, res) => {
     res.status(403).json({ error: 'You must be in the group for this trip' });
     return;
   }
+  const pool = poolClient();
+  const { rows: memberRows } = await pool.query(
+    `SELECT gm.id, gm.guest_name, wu.first_name, wu.last_name, u.email
+     FROM group_members gm
+     LEFT JOIN users u ON gm.user_id = u.id
+     LEFT JOIN web_users wu ON gm.user_id = wu.id
+     WHERE gm.group_id = $1 AND gm.id = ANY($2::uuid[])`,
+    [tripGroup.groupId, passengerIds]
+  );
+  if (memberRows.length !== passengerIds.length) {
+    res.status(400).json({ error: 'Passengers must be members of the trip group' });
+    return;
+  }
+  const passengerName = memberRows
+    .map((m) => m.guest_name || `${m.first_name ?? ''} ${m.last_name ?? ''}`.trim() || m.email || 'Passenger')
+    .join(', ');
   const flight = await insertFlight({
     userId,
     tripId,
     passengerName,
+    passengerIds,
     departureDate,
     departureLocation,
     departureAirportCode,
@@ -100,10 +117,36 @@ router.patch('/:id', async (req, res) => {
     bookingReference,
     paidBy,
   } = req.body;
+  const passengerIds = Array.isArray(req.body.passengerIds) ? req.body.passengerIds : null;
   const normalizedPaidBy = Array.isArray(paidBy) ? (paidBy.length ? paidBy : undefined) : undefined;
   try {
+    if (passengerIds && passengerIds.length === 0) {
+      throw new Error('At least one passenger is required');
+    }
+    let passengerName: string | undefined;
+    if (passengerIds) {
+      const pool = poolClient();
+      const { rows: memberRows } = await pool.query(
+        `SELECT gm.id, gm.guest_name, wu.first_name, wu.last_name, u.email, t.group_id
+         FROM flights f
+         JOIN trips t ON f.trip_id = t.id
+         JOIN group_members gm ON gm.group_id = t.group_id AND gm.id = ANY($1::uuid[])
+         LEFT JOIN users u ON gm.user_id = u.id
+         LEFT JOIN web_users wu ON gm.user_id = wu.id
+         WHERE f.id = $2`,
+        [passengerIds, req.params.id]
+      );
+      if (memberRows.length !== passengerIds.length) {
+        throw new Error('Passengers must be members of the trip group');
+      }
+      passengerName = memberRows
+        .map((m) => m.guest_name || `${m.first_name ?? ''} ${m.last_name ?? ''}`.trim() || m.email || 'Passenger')
+        .join(', ');
+    }
+
     const updated = await updateFlight(req.params.id, userId, {
       passengerName,
+      passengerIds: passengerIds ?? undefined,
       departureDate,
       departureLocation,
       departureAirportCode,
