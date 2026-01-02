@@ -10,6 +10,7 @@ import {
   saveUserDemographics,
 } from '../db';
 
+// Traits API: profile traits and selections for the authenticated user.
 const router = Router();
 router.use(bodyParser.json());
 router.use(authenticate);

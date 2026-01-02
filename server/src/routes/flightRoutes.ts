@@ -4,6 +4,7 @@ import { authenticate } from '../auth';
 import { deleteFlight, ensureUserInTrip, getFlightForUser, insertFlight, listFlights, searchFlightLocations, shareFlight, updateFlight } from '../db';
 import { isEmailConfigured, sendShareEmail } from '../mailer';
 
+// Flights API: CRUD for flights scoped to the authenticated user / their group trips.
 const router = Router();
 router.use(bodyParser.json());
 router.use(authenticate);
@@ -74,7 +75,7 @@ router.post('/', async (req, res) => {
     carrier,
     flightNumber,
     bookingReference,
-    paidBy: Array.isArray(paidBy) ? paidBy : [],
+    paidBy: Array.isArray(paidBy) ? (paidBy.length ? paidBy : []) : [],
   });
   res.status(201).json(flight);
 });
@@ -99,10 +100,7 @@ router.patch('/:id', async (req, res) => {
     bookingReference,
     paidBy,
   } = req.body;
-  if (!passengerName || !departureDate || !departureTime || !arrivalTime || !carrier || !flightNumber || !bookingReference) {
-    res.status(400).json({ error: 'Missing required fields' });
-    return;
-  }
+  const normalizedPaidBy = Array.isArray(paidBy) ? (paidBy.length ? paidBy : undefined) : undefined;
   try {
     const updated = await updateFlight(req.params.id, userId, {
       passengerName,
@@ -116,11 +114,57 @@ router.patch('/:id', async (req, res) => {
       layoverLocationCode,
       layoverDuration,
       arrivalTime,
-      cost: Number(cost) ?? 0,
+      cost: typeof cost === 'undefined' ? undefined : Number(cost),
       carrier,
       flightNumber,
       bookingReference,
-      paidBy: Array.isArray(paidBy) ? paidBy : [],
+      paidBy: normalizedPaidBy,
+    });
+    res.json(updated);
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.put('/:id', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const {
+    passengerName,
+    departureDate,
+    departureLocation,
+    departureAirportCode,
+    departureTime,
+    arrivalLocation,
+    arrivalAirportCode,
+    layoverLocation,
+    layoverLocationCode,
+    layoverDuration,
+    arrivalTime,
+    cost,
+    carrier,
+    flightNumber,
+    bookingReference,
+    paidBy,
+  } = req.body;
+  const normalizedPaidBy = Array.isArray(paidBy) ? (paidBy.length ? paidBy : undefined) : undefined;
+  try {
+    const updated = await updateFlight(req.params.id, userId, {
+      passengerName,
+      departureDate,
+      departureLocation,
+      departureAirportCode,
+      departureTime,
+      arrivalLocation,
+      arrivalAirportCode,
+      layoverLocation,
+      layoverLocationCode,
+      layoverDuration,
+      arrivalTime,
+      cost: typeof cost === 'undefined' ? undefined : Number(cost),
+      carrier,
+      flightNumber,
+      bookingReference,
+      paidBy: normalizedPaidBy,
     });
     res.json(updated);
   } catch (err) {

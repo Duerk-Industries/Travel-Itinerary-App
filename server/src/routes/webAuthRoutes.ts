@@ -3,6 +3,7 @@ import bodyParser from 'body-parser';
 import { claimInvitesForUser, createWebUser, ensureDefaultGroupForUser, verifyWebUserCredentials } from '../db';
 import { createToken } from '../auth';
 
+// Web auth routes for email/password login/registration.
 const router = Router();
 router.use(bodyParser.json());
 
@@ -11,10 +12,16 @@ const isInvalid = (value?: unknown, min = 2): boolean => {
 };
 
 router.post('/register', async (req, res) => {
-  const { firstName, lastName, email, password } = req.body ?? {};
+  const { firstName, lastName, email, password, passwordConfirm } = req.body ?? {};
+  const confirmValue = typeof passwordConfirm === 'string' ? passwordConfirm : password;
 
   if (isInvalid(firstName) || isInvalid(lastName) || isInvalid(email, 5) || isInvalid(password, 6)) {
     res.status(400).json({ error: 'firstName, lastName, email (min 5 chars), and password (min 6 chars) are required' });
+    return;
+  }
+
+  if (password !== confirmValue) {
+    res.status(400).json({ error: 'Passwords do not match' });
     return;
   }
 

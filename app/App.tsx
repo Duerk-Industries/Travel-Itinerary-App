@@ -1,38 +1,44 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import DateTimePicker from '@react-native-community/datetimepicker';
+/**
+ * Main client app for Shared Trip Planner.
+ *
+ * This single-file implementation manages:
+ * - Auth/session bootstrap and persistence
+ * - Fetching and editing flights, lodgings, tours, traits, itineraries, groups, trips
+ * - Cost sharing logic (per-user totals) and rendering the sectioned UI
+ * - Web/mobile specific inputs (date/time pickers) and file parsing helpers
+ *
+ * State is grouped near the top; data fetchers and helpers are defined next;
+ * then UI sections render conditionally based on the active page.
+ */
+import React, { useEffect, useMemo, useState } from 'react';
 import { Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Constants from 'expo-constants';
 import { formatDateLong } from './utils/formatDateLong';
-import { parseFlightText, type ParsedFlight } from './utils/flightParser';
+import { normalizeDateString } from './utils/normalizeDateString';
+import { FlightsTab, type Flight, fetchFlightsForTrip } from './tabs/flights';
+import { computePayerTotals } from './tabs/costReport';
+import {
+  Lodging,
+  LodgingDraft,
+  buildLodgingPayload,
+  calculateNights,
+  createInitialLodgingState,
+  fetchLodgingsApi,
+  removeLodgingApi,
+  saveLodgingApi,
+  toLodgingDraft,
+} from './tabs/lodging';
 
-interface Flight {
-  id: string;
-  passenger_name: string;
-  trip_id: string;
-  departure_date: string;
-  departure_location?: string;
-  departure_airport_code?: string;
-  departure_time: string;
-  arrival_location?: string;
-  arrival_airport_code?: string;
-  layover_location?: string;
-  layover_location_code?: string;
-  layover_duration?: string;
-  arrival_time: string;
-  cost: number;
-  carrier: string;
-  flight_number: string;
-  booking_reference: string;
-  paid_by?: string[];
-  paidBy?: string[];
-  sharedWith?: string[];
-  passengerInGroup?: boolean;
-  departure_airport_label?: string;
-  arrival_airport_label?: string;
-  layover_airport_label?: string;
-  departureAirportLabel?: string;
-  arrivalAirportLabel?: string;
-  layoverAirportLabel?: string;
+type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
+let NativeDateTimePicker: NativeDateTimePickerType | null = null;
+if (Platform.OS !== 'web') {
+  try {
+    const mod = require('@react-native-community/datetimepicker');
+    NativeDateTimePicker = (mod?.default ?? mod) as NativeDateTimePickerType;
+  } catch (err) {
+    console.warn('DateTimePicker unavailable, falling back to text inputs');
+    NativeDateTimePicker = null;
+  }
 }
 
 interface GroupInvite {
@@ -102,71 +108,7 @@ interface ItineraryDetailRecord {
   cost?: number | null;
 }
 
-type Page = 'menu' | 'flights' | 'lodging' | 'tours' | 'groups' | 'trips' | 'traits' | 'itinerary' | 'cost';
-
-type FlightDraft = {
-  passengerName: string;
-  departureDate: string;
-  departureLocation: string;
-  departureAirportCode: string;
-  departureTime: string;
-  arrivalLocation: string;
-  arrivalAirportCode: string;
-  layoverLocation: string;
-  layoverLocationCode: string;
-  layoverDuration: string;
-  arrivalTime: string;
-  cost: string;
-  carrier: string;
-  flightNumber: string;
-  bookingReference: string;
-  paidBy: string[];
-};
-
-type FlightEditDraft = {
-  passengerName: string;
-  departureDate: string;
-  departureLocation: string;
-  departureAirportCode: string;
-  departureTime: string;
-  arrivalLocation: string;
-  arrivalAirportCode: string;
-  layoverLocation: string;
-  layoverLocationCode: string;
-  layoverDuration: string;
-  arrivalTime: string;
-  cost: string;
-  carrier: string;
-  flightNumber: string;
-  bookingReference: string;
-  paidBy: string[];
-};
-
-type Lodging = {
-  id: string;
-  tripId?: string;
-  name: string;
-  checkInDate: string;
-  checkOutDate: string;
-  rooms: string;
-  refundBy: string;
-  totalCost: string;
-  costPerNight: string;
-  address: string;
-  paidBy?: string[];
-};
-
-type LodgingDraft = {
-  name: string;
-  checkInDate: string;
-  checkOutDate: string;
-  rooms: string;
-  refundBy: string;
-  totalCost: string;
-  costPerNight: string;
-  address: string;
-  paidBy: string[];
-};
+type Page = 'menu' | 'flights' | 'lodging' | 'tours' | 'groups' | 'trips' | 'traits' | 'itinerary' | 'cost' | 'account';
 
 type Tour = {
   id: string;
@@ -195,37 +137,7 @@ type TourDraft = {
   paidBy: string[];
 };
 
-const createInitialFlightState = (): FlightDraft => ({
-  passengerName: '',
-  departureDate: new Date().toISOString().slice(0, 10),
-  departureLocation: '',
-  departureAirportCode: '',
-  departureTime: '',
-  arrivalLocation: '',
-  arrivalAirportCode: '',
-  layoverLocation: '',
-  layoverLocationCode: '',
-  layoverDuration: '',
-  arrivalTime: '',
-  cost: '',
-  carrier: '',
-  flightNumber: '',
-  bookingReference: '',
-  paidBy: [],
-});
-
-const createInitialLodgingState = (): LodgingDraft => ({
-  name: '',
-  checkInDate: new Date().toISOString().slice(0, 10),
-  checkOutDate: new Date().toISOString().slice(0, 10),
-  rooms: '1',
-  refundBy: '',
-  totalCost: '',
-  costPerNight: '',
-  address: '',
-  paidBy: [],
-});
-
+// Build a blank tour draft with today's date and zero cost.
 const createInitialTourState = (): TourDraft => ({
   date: new Date().toISOString().slice(0, 10),
   name: '',
@@ -239,24 +151,306 @@ const createInitialTourState = (): TourDraft => ({
   paidBy: [],
 });
 
-
-interface Airport {
-  name: string;
-  city?: string;
-  country?: string;
-  iata_code?: string;
-}
-
-const fallbackAirports: Airport[] = [
-  { name: 'John F. Kennedy International', city: 'New York', country: 'USA', iata_code: 'JFK' },
-  { name: 'Los Angeles International', city: 'Los Angeles', country: 'USA', iata_code: 'LAX' },
-  { name: 'Chicago O Hare International', city: 'Chicago', country: 'USA', iata_code: 'ORD' },
-  { name: 'London Heathrow', city: 'London', country: 'UK', iata_code: 'LHR' },
-  { name: 'Paris Charles de Gaulle', city: 'Paris', country: 'France', iata_code: 'CDG' },
-  { name: 'Frankfurt Airport', city: 'Frankfurt', country: 'Germany', iata_code: 'FRA' },
-  { name: 'Tokyo Haneda', city: 'Tokyo', country: 'Japan', iata_code: 'HND' },
-  { name: 'Dubai International', city: 'Dubai', country: 'UAE', iata_code: 'DXB' },
+const countryOptions = [
+  'Afghanistan',
+  'Albania',
+  'Algeria',
+  'Andorra',
+  'Angola',
+  'Antigua and Barbuda',
+  'Argentina',
+  'Armenia',
+  'Australia',
+  'Austria',
+  'Azerbaijan',
+  'Bahamas',
+  'Bahrain',
+  'Bangladesh',
+  'Barbados',
+  'Belarus',
+  'Belgium',
+  'Belize',
+  'Benin',
+  'Bhutan',
+  'Bolivia',
+  'Bosnia and Herzegovina',
+  'Botswana',
+  'Brazil',
+  'Brunei',
+  'Bulgaria',
+  'Burkina Faso',
+  'Burundi',
+  'Cabo Verde',
+  'Cambodia',
+  'Cameroon',
+  'Canada',
+  'Central African Republic',
+  'Chad',
+  'Chile',
+  'China',
+  'Colombia',
+  'Comoros',
+  'Congo',
+  'Costa Rica',
+  'Cote d Ivoire',
+  'Croatia',
+  'Cuba',
+  'Cyprus',
+  'Czechia',
+  'Democratic Republic of the Congo',
+  'Denmark',
+  'Djibouti',
+  'Dominica',
+  'Dominican Republic',
+  'Ecuador',
+  'Egypt',
+  'El Salvador',
+  'Equatorial Guinea',
+  'Eritrea',
+  'Estonia',
+  'Eswatini',
+  'Ethiopia',
+  'Fiji',
+  'Finland',
+  'France',
+  'Gabon',
+  'Gambia',
+  'Georgia',
+  'Germany',
+  'Ghana',
+  'Greece',
+  'Grenada',
+  'Guatemala',
+  'Guinea',
+  'Guinea-Bissau',
+  'Guyana',
+  'Haiti',
+  'Honduras',
+  'Hungary',
+  'Iceland',
+  'India',
+  'Indonesia',
+  'Iran',
+  'Iraq',
+  'Ireland',
+  'Israel',
+  'Italy',
+  'Jamaica',
+  'Japan',
+  'Jordan',
+  'Kazakhstan',
+  'Kenya',
+  'Kiribati',
+  'Kuwait',
+  'Kyrgyzstan',
+  'Laos',
+  'Latvia',
+  'Lebanon',
+  'Lesotho',
+  'Liberia',
+  'Libya',
+  'Liechtenstein',
+  'Lithuania',
+  'Luxembourg',
+  'Madagascar',
+  'Malawi',
+  'Malaysia',
+  'Maldives',
+  'Mali',
+  'Malta',
+  'Marshall Islands',
+  'Mauritania',
+  'Mauritius',
+  'Mexico',
+  'Micronesia',
+  'Moldova',
+  'Monaco',
+  'Mongolia',
+  'Montenegro',
+  'Morocco',
+  'Mozambique',
+  'Myanmar',
+  'Namibia',
+  'Nauru',
+  'Nepal',
+  'Netherlands',
+  'New Zealand',
+  'Nicaragua',
+  'Niger',
+  'Nigeria',
+  'North Korea',
+  'North Macedonia',
+  'Norway',
+  'Oman',
+  'Pakistan',
+  'Palau',
+  'Panama',
+  'Papua New Guinea',
+  'Paraguay',
+  'Peru',
+  'Philippines',
+  'Poland',
+  'Portugal',
+  'Qatar',
+  'Romania',
+  'Russia',
+  'Rwanda',
+  'Saint Kitts and Nevis',
+  'Saint Lucia',
+  'Saint Vincent and the Grenadines',
+  'Samoa',
+  'San Marino',
+  'Sao Tome and Principe',
+  'Saudi Arabia',
+  'Senegal',
+  'Serbia',
+  'Seychelles',
+  'Sierra Leone',
+  'Singapore',
+  'Slovakia',
+  'Slovenia',
+  'Solomon Islands',
+  'Somalia',
+  'South Africa',
+  'South Korea',
+  'South Sudan',
+  'Spain',
+  'Sri Lanka',
+  'Sudan',
+  'Suriname',
+  'Sweden',
+  'Switzerland',
+  'Syria',
+  'Taiwan',
+  'Tajikistan',
+  'Tanzania',
+  'Thailand',
+  'Timor-Leste',
+  'Togo',
+  'Tonga',
+  'Trinidad and Tobago',
+  'Tunisia',
+  'Turkey',
+  'Turkmenistan',
+  'Tuvalu',
+  'Uganda',
+  'Ukraine',
+  'United Arab Emirates',
+  'United Kingdom',
+  'United States',
+  'Uruguay',
+  'Uzbekistan',
+  'Vanuatu',
+  'Vatican City',
+  'Venezuela',
+  'Vietnam',
+  'Yemen',
+  'Zambia',
+  'Zimbabwe',
 ];
+
+const countryRegions: Record<string, string[]> = {
+  'United States': [
+    'Alabama',
+    'Alaska',
+    'Arizona',
+    'Arkansas',
+    'California',
+    'Colorado',
+    'Connecticut',
+    'Delaware',
+    'Florida',
+    'Georgia',
+    'Hawaii',
+    'Idaho',
+    'Illinois',
+    'Indiana',
+    'Iowa',
+    'Kansas',
+    'Kentucky',
+    'Louisiana',
+    'Maine',
+    'Maryland',
+    'Massachusetts',
+    'Michigan',
+    'Minnesota',
+    'Mississippi',
+    'Missouri',
+    'Montana',
+    'Nebraska',
+    'Nevada',
+    'New Hampshire',
+    'New Jersey',
+    'New Mexico',
+    'New York',
+    'North Carolina',
+    'North Dakota',
+    'Ohio',
+    'Oklahoma',
+    'Oregon',
+    'Pennsylvania',
+    'Rhode Island',
+    'South Carolina',
+    'South Dakota',
+    'Tennessee',
+    'Texas',
+    'Utah',
+    'Vermont',
+    'Virginia',
+    'Washington',
+    'West Virginia',
+    'Wisconsin',
+    'Wyoming',
+  ],
+  Canada: [
+    'Alberta',
+    'British Columbia',
+    'Manitoba',
+    'New Brunswick',
+    'Newfoundland and Labrador',
+    'Northwest Territories',
+    'Nova Scotia',
+    'Nunavut',
+    'Ontario',
+    'Prince Edward Island',
+    'Quebec',
+    'Saskatchewan',
+    'Yukon',
+  ],
+  Australia: ['Australian Capital Territory', 'New South Wales', 'Northern Territory', 'Queensland', 'South Australia', 'Tasmania', 'Victoria', 'Western Australia'],
+  India: [
+    'Andhra Pradesh',
+    'Assam',
+    'Bihar',
+    'Chhattisgarh',
+    'Delhi',
+    'Goa',
+    'Gujarat',
+    'Haryana',
+    'Himachal Pradesh',
+    'Jammu and Kashmir',
+    'Jharkhand',
+    'Karnataka',
+    'Kerala',
+    'Madhya Pradesh',
+    'Maharashtra',
+    'Manipur',
+    'Meghalaya',
+    'Mizoram',
+    'Nagaland',
+    'Odisha',
+    'Punjab',
+    'Rajasthan',
+    'Sikkim',
+    'Tamil Nadu',
+    'Telangana',
+    'Tripura',
+    'Uttar Pradesh',
+    'Uttarakhand',
+    'West Bengal',
+  ],
+  'United Kingdom': ['England', 'Northern Ireland', 'Scotland', 'Wales'],
+};
 
 const backendUrl = Constants.expoConfig?.extra?.backendUrl ?? 'http://localhost:4000';
 const sessionKey = 'stp.session';
@@ -298,10 +492,8 @@ const clearSession = () => {
 
 const App: React.FC = () => {
   const [userToken, setUserToken] = useState<string | null>(null);
-  const [email, setEmail] = useState('');
   const [userName, setUserName] = useState<string | null>(null);
   const [flights, setFlights] = useState<Flight[]>([]);
-  const [newFlight, setNewFlight] = useState<FlightDraft>(createInitialFlightState());
   const [invites, setInvites] = useState<GroupInvite[]>([]);
   const [groupName, setGroupName] = useState('');
   const [groupUserEmails, setGroupUserEmails] = useState('');
@@ -319,12 +511,10 @@ const App: React.FC = () => {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [showActiveTripDropdown, setShowActiveTripDropdown] = useState(false);
   const [groupMembers, setGroupMembers] = useState<GroupMemberOption[]>([]);
-  const [showPassengerDropdown, setShowPassengerDropdown] = useState(false);
-  const [passengerAnchor, setPassengerAnchor] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
-  const [editingFlightId, setEditingFlightId] = useState<string | null>(null);
-  const [editingFlight, setEditingFlight] = useState<FlightEditDraft | null>(null);
   const [lodgings, setLodgings] = useState<Lodging[]>([]);
   const [lodgingDraft, setLodgingDraft] = useState<LodgingDraft>(createInitialLodgingState());
+  const [editingLodgingId, setEditingLodgingId] = useState<string | null>(null);
+  const [editingLodging, setEditingLodging] = useState<LodgingDraft | null>(null);
   const [lodgingDateField, setLodgingDateField] = useState<'checkIn' | 'checkOut' | 'refund' | null>(null);
   const [lodgingDateValue, setLodgingDateValue] = useState<Date>(new Date());
 
@@ -333,23 +523,20 @@ const App: React.FC = () => {
   const [editingTourId, setEditingTourId] = useState<string | null>(null);
   const [tourDateField, setTourDateField] = useState<'date' | 'bookedOn' | 'freeCancel' | 'startTime' | null>(null);
   const [tourDateValue, setTourDateValue] = useState<Date>(new Date());
-  const [airports, setAirports] = useState<Airport[]>([]);
-  const [airportSuggestions, setAirportSuggestions] = useState<Airport[]>([]);
-  const [airportAnchor, setAirportAnchor] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
-  const [airportTarget, setAirportTarget] = useState<'dep' | 'arr' | 'modal-dep' | 'modal-arr' | null>(null);
-  const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
-  const [locationTarget, setLocationTarget] = useState<'dep' | 'arr' | 'modal-dep' | 'modal-arr' | 'modal-layover' | null>(null);
   const [traits, setTraits] = useState<Trait[]>([]);
-  const [traitDrafts, setTraitDrafts] = useState<Record<string, { level: string; notes: string }>>({});
   const [newTraitName, setNewTraitName] = useState('');
-  const [newTraitLevel, setNewTraitLevel] = useState('3');
-  const [newTraitNotes, setNewTraitNotes] = useState('');
   const [selectedTraitNames, setSelectedTraitNames] = useState<Set<string>>(new Set());
   const [activePage, setActivePage] = useState<Page>('menu');
   const [itineraryCountry, setItineraryCountry] = useState('');
+  const [itineraryRegion, setItineraryRegion] = useState('');
+  const [countrySearch, setCountrySearch] = useState('');
+  const [regionSearch, setRegionSearch] = useState('');
+  const [showItineraryCountryDropdown, setShowItineraryCountryDropdown] = useState(false);
+  const [showItineraryRegionDropdown, setShowItineraryRegionDropdown] = useState(false);
   const [itineraryDays, setItineraryDays] = useState('5');
   const [budgetMin, setBudgetMin] = useState(500);
   const [budgetMax, setBudgetMax] = useState(2500);
+  const [budgetLevel, setBudgetLevel] = useState<'cheap' | 'middle' | 'expensive'>('middle');
   const [itineraryAirport, setItineraryAirport] = useState('');
   const [itineraryAirportOptions, setItineraryAirportOptions] = useState<string[]>([]);
   const [showItineraryAirportDropdown, setShowItineraryAirportDropdown] = useState(false);
@@ -372,27 +559,13 @@ const App: React.FC = () => {
     lastName: '',
     email: '',
     password: '',
+    passwordConfirm: '',
   });
-  const [isAddingRow, setIsAddingRow] = useState(false);
-  const passengerDropdownRef = useRef<TouchableOpacity | null>(null);
-  const depLocationRef = useRef<TextInput | null>(null);
-  const arrLocationRef = useRef<TextInput | null>(null);
-  const modalDepLocationRef = useRef<TextInput | null>(null);
-  const modalArrLocationRef = useRef<TextInput | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [isParsingPdf, setIsParsingPdf] = useState(false);
-  const [pdfParseMessage, setPdfParseMessage] = useState<string | null>(null);
-  const [parsedFlights, setParsedFlights] = useState<FlightEditDraft[]>([]);
-  const [isSavingParsedFlights, setIsSavingParsedFlights] = useState(false);
-  const normalizePassengerName = (name: string): string => {
-    const trimmed = name.trim().replace(/\s+/g, ' ');
-    const parts = trimmed.toLowerCase().split(' ').filter(Boolean);
-    if (parts.length >= 2) {
-      return `${parts[0]} ${parts[parts.length - 1]}`;
-    }
-    return trimmed.toLowerCase();
-  };
-
+  const [accountProfile, setAccountProfile] = useState({ firstName: '', lastName: '', email: '' });
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', newPasswordConfirm: '' });
+  const [showPasswordEditor, setShowPasswordEditor] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [accountMessage, setAccountMessage] = useState<string | null>(null);
   const formatMemberName = (member: GroupMemberOption): string => {
     if (member.guestName) return member.guestName;
     const first = member.firstName?.trim();
@@ -405,20 +578,6 @@ const App: React.FC = () => {
       return member.email;
     }
     return 'Member';
-  };
-
-  const normalizeDateString = (value: string): string => {
-    if (!value) return value;
-    if (value.includes('-') && value.length === 10) return value;
-    const d = new Date(value);
-    return Number.isNaN(d.getTime()) ? value : d.toISOString().slice(0, 10);
-  };
-
-  const calculateNights = (checkIn: string, checkOut: string): number => {
-    const start = new Date(checkIn).getTime();
-    const end = new Date(checkOut).getTime();
-    if (Number.isNaN(start) || Number.isNaN(end) || end <= start) return 0;
-    return Math.round((end - start) / (1000 * 60 * 60 * 24));
   };
 
   const flightsTotal = useMemo(
@@ -434,6 +593,21 @@ const App: React.FC = () => {
   const toursTotal = useMemo(() => tours.reduce((sum, t) => sum + (Number(t.cost) || 0), 0), [tours]);
 
   const overallCost = useMemo(() => flightsTotal + lodgingTotal + toursTotal, [flightsTotal, lodgingTotal, toursTotal]);
+
+  const filteredCountries = useMemo(() => {
+    const query = (showItineraryCountryDropdown ? countrySearch : itineraryCountry).trim().toLowerCase();
+    if (!query) return countryOptions;
+    return countryOptions.filter((c) => c.toLowerCase().includes(query));
+  }, [countrySearch, itineraryCountry, showItineraryCountryDropdown]);
+
+  const regionOptions = useMemo(() => countryRegions[itineraryCountry] ?? [], [itineraryCountry]);
+
+  const filteredRegions = useMemo(() => {
+    if (!regionOptions.length) return [];
+    const query = (showItineraryRegionDropdown ? regionSearch : itineraryRegion).trim().toLowerCase();
+    if (!query) return regionOptions;
+    return regionOptions.filter((r) => r.toLowerCase().includes(query));
+  }, [itineraryRegion, regionOptions, regionSearch, showItineraryRegionDropdown]);
 
   const findExistingItinerary = (
     tripId: string,
@@ -474,25 +648,27 @@ const App: React.FC = () => {
     }
   };
 
+  // Resolve a member id to a human-friendly name for payer chips.
   const payerName = (id: string): string => {
     const member = groupMembers.find((m) => m.id === id);
     return member ? formatMemberName(member) : 'Unknown';
   };
 
-  const payerTotals = useMemo(() => {
-    const totals: Record<string, number> = {};
-    tours.forEach((t) => {
-      const costNum = Number(t.cost) || 0;
-      if (!costNum || !t.paidBy.length) return;
-      const share = costNum / t.paidBy.length;
-      t.paidBy.forEach((id) => {
-        totals[id] = (totals[id] ?? 0) + share;
-      });
-    });
-    return totals;
-  }, [tours]);
-
   const userMembers = useMemo(() => groupMembers.filter((m) => !m.guestName), [groupMembers]);
+
+  // Per-user tour totals via shared helper. Note: if a tour has an explicit empty payer list,
+  // we leave it unsplit (no cost assigned) so non-payers stay at $0.
+  const payerTotals = useMemo(
+    () =>
+      computePayerTotals(
+        tours,
+        (t) => Number(t.cost) || 0,
+        (t) => (Array.isArray(t.paidBy) ? t.paidBy : []),
+        userMembers.map((m) => m.id),
+        { fallbackOnEmpty: false }
+      ),
+    [tours, userMembers]
+  );
 
   const currentUserMemberId = useMemo(() => {
     if (!userEmail) return null;
@@ -506,46 +682,97 @@ const App: React.FC = () => {
     return null;
   }, [currentUserMemberId, userMembers]);
 
-  const flightsPayerTotals = useMemo(() => {
-    const totals: Record<string, number> = {};
-    flights.forEach((f) => {
-      const paidBy = (f as any).paidBy ?? (f as any).paid_by;
-      const payers: string[] = Array.isArray(paidBy) ? paidBy : [];
-      const costNum = Number((f as any).cost) || 0;
-      if (!costNum || !payers.length) return;
-      const share = costNum / payers.length;
-      payers.forEach((id) => {
-        totals[id] = (totals[id] ?? 0) + share;
-      });
-    });
-    return totals;
-  }, [flights]);
+  useEffect(() => {
+    const presets: Record<typeof budgetLevel, { min: number; max: number }> = {
+      cheap: { min: 500, max: 1500 },
+      middle: { min: 1500, max: 4000 },
+      expensive: { min: 4000, max: 8000 },
+    };
+    const preset = presets[budgetLevel];
+    setBudgetMin(preset.min);
+    setBudgetMax(preset.max);
+  }, [budgetLevel]);
 
-  const lodgingPayerTotals = useMemo(() => {
+  useEffect(() => {
+    const presets: Record<typeof budgetLevel, { min: number; max: number }> = {
+      cheap: { min: 500, max: 1500 },
+      middle: { min: 1500, max: 4000 },
+      expensive: { min: 4000, max: 8000 },
+    };
+    const preset = presets[budgetLevel];
+    setBudgetMin(preset.min);
+    setBudgetMax(preset.max);
+  }, [budgetLevel]);
+
+  useEffect(() => {
+    setItineraryRegion('');
+    setRegionSearch('');
+    setShowItineraryRegionDropdown(false);
+  }, [itineraryCountry]);
+
+  // Per-user flight totals via shared helper. Explicitly empty paidBy means no split, so removed users go to $0.
+  const flightsPayerTotals = useMemo(
+    () =>
+      computePayerTotals(
+        flights,
+        (f) => Number((f as any).cost) || 0,
+        (f) => {
+          const paidBy = (f as any).paidBy ?? (f as any).paid_by;
+          return Array.isArray(paidBy) ? paidBy : [];
+        },
+        userMembers.map((m) => m.id),
+        { fallbackOnEmpty: false }
+      ),
+    [flights, userMembers]
+  );
+
+  // Per-user lodging totals via shared helper. Explicitly empty paidBy means no split, so removed users go to $0.
+  const lodgingPayerTotals = useMemo(
+    () =>
+      computePayerTotals(
+        lodgings,
+        (l) => Number(l.totalCost) || 0,
+        (l) => (Array.isArray(l.paidBy) ? l.paidBy : []),
+        userMembers.map((m) => m.id),
+        { fallbackOnEmpty: false }
+      ),
+    [lodgings, userMembers]
+  );
+
+  const lodgingTotalsBalanced = useMemo(() => {
     const totals: Record<string, number> = {};
-    lodgings.forEach((l) => {
-      const payers: string[] = Array.isArray(l.paidBy) ? l.paidBy : [];
-      const costNum = Number(l.totalCost) || 0;
-      if (!costNum || !payers.length) return;
-      const share = costNum / payers.length;
-      payers.forEach((id) => {
-        totals[id] = (totals[id] ?? 0) + share;
-      });
+    userMembers.forEach((m) => {
+      totals[m.id] = lodgingPayerTotals[m.id] ?? 0;
     });
+    const assigned = Object.values(totals).reduce((sum, v) => sum + v, 0);
+    const remainder = lodgingTotal - assigned;
+    if (userMembers.length && Math.abs(remainder) > 1e-6) {
+      const evenShare = remainder / userMembers.length;
+      userMembers.forEach((m) => {
+        totals[m.id] = (totals[m.id] ?? 0) + evenShare;
+      });
+      const afterEven = Object.values(totals).reduce((sum, v) => sum + v, 0);
+      const adjust = lodgingTotal - afterEven;
+      if (Math.abs(adjust) > 1e-6) {
+        const first = userMembers[0]?.id;
+        if (first) totals[first] = (totals[first] ?? 0) + adjust;
+      }
+    }
     return totals;
-  }, [lodgings]);
+  }, [lodgingPayerTotals, lodgingTotal, userMembers]);
+
+  const lodgingBreakdownSum = useMemo(
+    () => Object.values(lodgingTotalsBalanced).reduce((sum, v) => sum + v, 0),
+    [lodgingTotalsBalanced]
+  );
 
   useEffect(() => {
     if (defaultPayerId && (!lodgingDraft.paidBy || lodgingDraft.paidBy.length === 0)) {
       setLodgingDraft((p) => ({ ...p, paidBy: [defaultPayerId] }));
     }
-    if (defaultPayerId && (!editingFlight || editingFlight.paidBy?.length)) {
-      // no-op
-    } else if (defaultPayerId && editingFlight && editingFlight.paidBy.length === 0) {
-      setEditingFlight((p) => (p ? { ...p, paidBy: [defaultPayerId] } : p));
-    }
   }, [defaultPayerId]);
 
+  // Set which tour date/time picker to edit and seed the current value.
   const openTourDatePicker = (field: 'date' | 'bookedOn' | 'freeCancel' | 'startTime') => {
     setTourDateField(field);
     const current = editingTour
@@ -578,164 +805,60 @@ const App: React.FC = () => {
     setLodgingDraft((prev) => ({ ...prev, costPerNight: computed }));
   }, [lodgingDraft.checkInDate, lodgingDraft.checkOutDate, lodgingDraft.totalCost]);
 
-  const filterAirports = (query: string): Airport[] => {
-    const q = query.trim().toLowerCase();
-    if (q.length < 1) return [];
-    return airports
-      .filter((a) => a.iata_code && a.iata_code.length === 3)
-      .filter((a) => {
-        const target = `${a.name ?? ''} ${a.city ?? ''} ${a.iata_code ?? ''}`.toLowerCase();
-        return target.includes(q);
-      })
-      .slice(0, 8);
-  };
-
-  const formatAirportLabel = (a: Airport): string => {
-    const city = a.city || a.name;
-    const code = a.iata_code ? ` (${a.iata_code})` : '';
-    return `${city}${code}`;
-  };
-
-  const parseLayoverDuration = (value: string | null | undefined): { hours: string; minutes: string } => {
-    const safe = value ?? '';
-    const hoursMatch = safe.match(/(\d+)\s*h/i);
-    const minutesMatch = safe.match(/(\d+)\s*m/i);
-    const hours = hoursMatch ? hoursMatch[1] : '';
-    const minutes = minutesMatch ? minutesMatch[1] : '';
-    return { hours, minutes };
-  };
-
-  const formatLocationDisplay = (code?: string | null, label?: string | null): string => {
-    if (label && label.trim().length) return label;
-    const normalized = code ? code.toUpperCase() : '';
-    if (!normalized) return '-';
-    const match = airports.find((a) => (a.iata_code ?? '').toUpperCase() === normalized);
-    if (match) return formatAirportLabel(match);
-    return normalized;
-  };
-
-  const getLocationInputValue = (
-    rawValue: string,
-    activeTarget: 'dep' | 'arr' | 'modal-dep' | 'modal-arr' | 'modal-layover' | null,
-    currentTarget: typeof locationTarget | typeof airportTarget
-  ): string => {
-    // While the user is actively typing in this input, show the raw text.
-    if (currentTarget === activeTarget) {
-      return rawValue;
+  useEffect(() => {
+    if (!editingLodging) return;
+    const nights = calculateNights(editingLodging.checkInDate, editingLodging.checkOutDate);
+    const totalNum = Number(editingLodging.totalCost) || 0;
+    const computed = nights > 0 && totalNum ? (totalNum / nights).toFixed(2) : '';
+    if (computed !== editingLodging.costPerNight) {
+      setEditingLodging((prev) => (prev ? { ...prev, costPerNight: computed } : prev));
     }
-    return formatLocationDisplay(rawValue);
-  };
+  }, [editingLodging?.checkInDate, editingLodging?.checkOutDate, editingLodging?.totalCost]);
 
-  // Parsing handled in utils/flightParser.parseFlightText.
-
-  const mergeParsedFlight = (current: FlightEditDraft, parsed: Partial<FlightEditDraft>): FlightEditDraft => {
-    const next = { ...current };
-    (Object.entries(parsed) as [keyof FlightEditDraft, string][]).forEach(([key, value]) => {
-      if (value && (!current[key] || current[key].trim().length === 0)) {
-        next[key] = value;
-      }
-    });
-    return next;
-  };
-
-  const extractTextFromPdf = async (file: File): Promise<string> => {
-    const arrayBuffer = await file.arrayBuffer();
-    const pdfjs = await import('pdfjs-dist/build/pdf');
-    (pdfjs as any).GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${(pdfjs as any).version}/pdf.worker.min.js`;
-    const loadingTask = (pdfjs as any).getDocument({ data: arrayBuffer });
-    const pdf = await loadingTask.promise;
-    let combined = '';
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const content = await page.getTextContent();
-      combined += content.items.map((item: any) => item.str).join(' ') + '\n';
-    }
-    return combined;
-  };
-
-  const extractTextFromImage = async (file: File): Promise<string> => {
-    const { createWorker } = await import('tesseract.js');
-    const worker = await createWorker('eng');
-    const url = URL.createObjectURL(file);
-    try {
-      const { data } = await worker.recognize(url);
-      return data.text ?? '';
-    } finally {
-      URL.revokeObjectURL(url);
-      await worker.terminate();
-    }
-  };
-
-  const handleFlightFile = async (file: File) => {
-    if (Platform.OS !== 'web') {
-      alert('File upload is available on web right now.');
-      return;
-    }
+  // Create or update a lodging; computes cost-per-night and applies default payer.
+  const saveLodging = async (draft: LodgingDraft, lodgingId?: string | null) => {
     if (!activeTripId) {
-      alert('Select an active trip before uploading a flight.');
-      return;
-    }
-    setIsParsingPdf(true);
-    setPdfParseMessage(null);
-    try {
-      const type = file.type || '';
-      const isPdf = type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf');
-      const text = isPdf ? await extractTextFromPdf(file) : await extractTextFromImage(file);
-      const { primary, bulk } = parseFlightText(text);
-      const flightsToSave = (bulk.length ? bulk : [primary]).map((flight) =>
-        mergeParsedFlight(createInitialFlightState(), flight as Partial<FlightEditDraft>)
-      );
-      setParsedFlights(flightsToSave);
-      await saveParsedFlights(flightsToSave);
-    } catch (err) {
-      console.error('File parse failed', err);
-      alert('Could not read that file. Please upload a legible flight confirmation PDF or image.');
-    } finally {
-      setIsParsingPdf(false);
-    }
-  };
-
-  const addLodging = async () => {
-    if (!lodgingDraft.name.trim() || !activeTripId) {
       alert('Please enter a lodging name and select an active trip.');
       return;
     }
-    const nights = calculateNights(lodgingDraft.checkInDate, lodgingDraft.checkOutDate);
-    if (nights <= 0) {
-      alert('Check-out must be after check-in.');
+    const { payload, error } = buildLodgingPayload(draft, activeTripId, defaultPayerId);
+    if (error || !payload) {
+      alert(error);
       return;
     }
-    const totalNum = Number(lodgingDraft.totalCost) || 0;
-    const rooms = Number(lodgingDraft.rooms) || 1;
-    const costPerNight = totalNum && rooms > 0 ? (totalNum / (nights * rooms)).toFixed(2) : '0';
-    const paidBy = lodgingDraft.paidBy.length ? lodgingDraft.paidBy : defaultPayerId ? [defaultPayerId] : [];
-    const res = await fetch(`${backendUrl}/api/lodgings`, {
-      method: 'POST',
-      headers: jsonHeaders,
-      body: JSON.stringify({
-        ...lodgingDraft,
-        tripId: activeTripId,
-        rooms,
-        costPerNight,
-        paidBy,
-      }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      alert(data.error || 'Unable to save lodging');
+    const result = await saveLodgingApi(backendUrl, jsonHeaders, payload, lodgingId);
+    if (!result.ok) {
+      alert(result.error || 'Unable to save lodging');
       return;
     }
-    setLodgingDraft(createInitialLodgingState());
+    if (lodgingId) {
+      setEditingLodgingId(null);
+      setEditingLodging(null);
+    } else {
+      setLodgingDraft(createInitialLodgingState());
+    }
     fetchLodgings();
   };
 
   const removeLodging = async (id: string) => {
-    const res = await fetch(`${backendUrl}/api/lodgings/${id}`, { method: 'DELETE', headers: jsonHeaders });
-    if (!res.ok) {
-      alert('Unable to delete lodging');
+    const result = await removeLodgingApi(backendUrl, jsonHeaders, id);
+    if (!result.ok) {
+      alert(result.error || 'Unable to delete lodging');
       return;
     }
     fetchLodgings();
+  };
+
+  // Populate the lodging edit modal with the selected row.
+  const openLodgingEditor = (lodging: Lodging) => {
+    setEditingLodgingId(lodging.id);
+    setEditingLodging(toLodgingDraft(lodging, { normalize: normalizeDateString, defaultPayerId }));
+  };
+
+  // Close the lodging edit modal.
+  const closeLodgingEditor = () => {
+    setEditingLodgingId(null);
+    setEditingLodging(null);
   };
 
   const openTourEditor = (tour?: Tour) => {
@@ -809,214 +932,6 @@ const App: React.FC = () => {
       .catch((err) => alert(err.message));
   };
 
-  const loadAirports = async () => {
-    try {
-      const res = await fetch('https://raw.githubusercontent.com/algolia/datasets/master/airports/airports.json');
-      const data = await res.json();
-      setAirports(
-        (data as any[])
-          .filter((a) => a.iata_code && a.iata_code.length === 3)
-          .map((a) => ({
-            name: a.name,
-            city: a.city,
-            country: a.country,
-            iata_code: a.iata_code,
-          }))
-      );
-    } catch {
-      setAirports(fallbackAirports);
-    }
-  };
-
-  useEffect(() => {
-    loadAirports();
-  }, []);
-
-  const togglePassengerDropdown = () => {
-    if (showPassengerDropdown) {
-      setShowPassengerDropdown(false);
-      return;
-    }
-    const node = passengerDropdownRef.current as any;
-    if (node?.measureInWindow) {
-      node.measureInWindow((x: number, y: number, width: number, height: number) => {
-        setPassengerAnchor({ x, y, width, height });
-        setShowPassengerDropdown(true);
-      });
-    } else {
-      setShowPassengerDropdown(true);
-    }
-  };
-
-  const showAirportDropdown = (
-    target: 'dep' | 'arr' | 'modal-dep' | 'modal-arr',
-    node: any,
-    query: string
-  ) => {
-    setAirportTarget(target);
-    setAirportSuggestions(filterAirports(query));
-    if (target.startsWith('modal')) {
-      // inline dropdown inside modal; no global anchor
-      setAirportAnchor(null);
-      return;
-    }
-    // sensible default in case measurement fails
-    let fallbackAnchor = { x: 16, y: 120, width: 260, height: 40 };
-    if (node?.measureInWindow) {
-      node.measureInWindow((x: number, y: number, width: number, height: number) => {
-        setAirportAnchor({ x, y, width, height });
-      });
-    } else if (typeof node?.getBoundingClientRect === 'function') {
-      const rect = node.getBoundingClientRect();
-      fallbackAnchor = { x: rect.left, y: rect.top, width: rect.width, height: rect.height };
-    }
-    setAirportAnchor((prev) => prev ?? fallbackAnchor);
-  };
-
-  const hideAirportDropdown = () => {
-    setAirportTarget(null);
-    setAirportAnchor(null);
-    setAirportSuggestions([]);
-  };
-
-  const selectAirport = (target: 'dep' | 'arr' | 'modal-dep' | 'modal-arr', airport: Airport) => {
-    const code = airport.iata_code ?? '';
-    if ((target === 'dep' || target === 'modal-dep') && editingFlight) {
-      setEditingFlight((prev) => (prev ? { ...prev, departureLocation: code, departureAirportCode: code } : prev));
-    } else if ((target === 'arr' || target === 'modal-arr') && editingFlight) {
-      setEditingFlight((prev) => (prev ? { ...prev, arrivalLocation: code, arrivalAirportCode: code } : prev));
-    }
-    hideAirportDropdown();
-  };
-
-  const fetchLocationSuggestions = async (
-    target: 'dep' | 'arr' | 'modal-dep' | 'modal-arr' | 'modal-layover',
-    text: string
-  ) => {
-    setLocationTarget(target);
-    if (!userToken) {
-      setLocationSuggestions([]);
-      return;
-    }
-    const q = text.trim();
-    if (!q) {
-      setLocationSuggestions([]);
-      return;
-    }
-    // Debug: note when we invoke the location search endpoint from a location input
-    console.log('[locations] fetching suggestions', { target, q });
-    try {
-      const res = await fetch(`${backendUrl}/api/flights/locations?q=${encodeURIComponent(q)}`, {
-        headers: { Authorization: `Bearer ${userToken}` },
-      });
-      if (!res.ok) {
-        setLocationSuggestions([]);
-        return;
-      }
-      const data = (await res.json()) as string[];
-      if (data.length) {
-        setLocationSuggestions(data);
-      } else {
-        // fallback to airport list if no history matches
-        setLocationSuggestions(
-          filterAirports(q).map(
-            (a) => formatAirportLabel(a)
-          )
-        );
-      }
-    } catch {
-      setLocationSuggestions([]);
-    }
-  };
-
-  const openFlightDetails = (flight: Flight) => {
-    setEditingFlightId(flight.id);
-    const base: FlightEditDraft = {
-      passengerName: flight.passenger_name,
-      departureDate: normalizeDateString(flight.departure_date),
-      departureLocation: flight.departure_location ?? '',
-      departureAirportCode: flight.departure_airport_code ?? '',
-      departureTime: flight.departure_time,
-      arrivalLocation: flight.arrival_location ?? '',
-      arrivalAirportCode: flight.arrival_airport_code ?? '',
-      layoverLocation: flight.layover_location ?? '',
-      layoverLocationCode: flight.layover_location_code ?? '',
-      layoverDuration: flight.layover_duration ?? '',
-      arrivalTime: flight.arrival_time,
-      cost: String(flight.cost ?? ''),
-      carrier: flight.carrier,
-      flightNumber: flight.flight_number,
-      bookingReference: flight.booking_reference,
-      paidBy: Array.isArray(flight.paidBy) ? flight.paidBy : Array.isArray(flight.paid_by) ? flight.paid_by : [],
-    };
-    if (base.paidBy.length === 0 && defaultPayerId) {
-      base.paidBy = [defaultPayerId];
-    }
-    setEditingFlight(base);
-  };
-
-  const closeFlightDetails = () => {
-    setEditingFlightId(null);
-    setEditingFlight(null);
-  };
-
-  const saveFlightDetails = async () => {
-    if (!userToken || !editingFlightId || !editingFlight) return;
-    const required = [
-      editingFlight.passengerName,
-      editingFlight.departureDate,
-      editingFlight.departureTime,
-      editingFlight.arrivalTime,
-      editingFlight.carrier,
-      editingFlight.flightNumber,
-      editingFlight.bookingReference,
-    ];
-    const hasAllRequired = required.every((val) => {
-      const s = val == null ? '' : String(val);
-      return s.trim().length > 0;
-    });
-    if (!hasAllRequired) {
-      alert('Please fill out all required fields before saving.');
-      return;
-    }
-    if (editingFlightId === 'new' && !activeTripId) {
-      alert('Select an active trip before adding a flight.');
-      return;
-    }
-    let payload = {
-      ...editingFlight,
-      cost: Number(editingFlight.cost) || 0,
-    };
-    if ((!payload.paidBy || payload.paidBy.length === 0) && defaultPayerId) {
-      payload = { ...payload, paidBy: [defaultPayerId] };
-    }
-    let res: Response;
-    if (editingFlightId === 'new') {
-      res = await fetch(`${backendUrl}/api/flights`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...headers },
-        body: JSON.stringify({
-          ...payload,
-          tripId: activeTripId,
-          departureDate: editingFlight.departureDate,
-        }),
-      });
-    } else {
-      res = await fetch(`${backendUrl}/api/flights/${editingFlightId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', ...headers },
-        body: JSON.stringify(payload),
-      });
-    }
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      alert(data.error || 'Unable to update flight');
-      return;
-    }
-    closeFlightDetails();
-    fetchFlights();
-  };
-
   const headers = useMemo<Record<string, string>>(
     () => (userToken ? { Authorization: `Bearer ${userToken}` } : ({} as Record<string, string>)),
     [userToken]
@@ -1038,6 +953,11 @@ const App: React.FC = () => {
     setTraitAge('');
     setTraitGender('prefer-not');
     setItineraryCountry('');
+    setItineraryRegion('');
+    setCountrySearch('');
+    setRegionSearch('');
+    setShowItineraryCountryDropdown(false);
+    setShowItineraryRegionDropdown(false);
     setItineraryDays('5');
     setBudgetMin(500);
     setBudgetMax(2500);
@@ -1047,6 +967,11 @@ const App: React.FC = () => {
     setItineraryPlan('');
     setItineraryError('');
     setItineraryLoading(false);
+    setAccountProfile({ firstName: '', lastName: '', email: '' });
+    setPasswordForm({ currentPassword: '', newPassword: '', newPasswordConfirm: '' });
+    setAccountMessage(null);
+    setShowDeleteConfirm(false);
+    setShowPasswordEditor(false);
     setActivePage('menu');
     clearSession();
   };
@@ -1065,14 +990,20 @@ const App: React.FC = () => {
       }
       const name = `${data.user.firstName} ${data.user.lastName}`;
       const email = authForm.email.trim();
-    setUserToken(data.token);
+      setUserToken(data.token);
       setUserName(name);
       setUserEmail(email);
-    saveSession(data.token, name, 'menu', email);
+      setAccountProfile({
+        firstName: data.user.firstName ?? '',
+        lastName: data.user.lastName ?? '',
+        email,
+      });
+      saveSession(data.token, name, 'menu', email);
       fetchFlights(data.token);
       fetchLodgings(data.token);
-    fetchTours(data.token);
-    fetchInvites(data.token);
+      fetchTours(data.token);
+      fetchInvites(data.token);
+      fetchAccountProfile(data.token);
       setActivePage('menu');
     } catch (err) {
       alert((err as Error).message || 'Login failed');
@@ -1080,6 +1011,10 @@ const App: React.FC = () => {
   };
 
   const register = async () => {
+    if (authForm.password !== authForm.passwordConfirm) {
+      alert('Passwords do not match');
+      return;
+    }
     try {
       const res = await fetch(`${backendUrl}/api/web-auth/register`, {
         method: 'POST',
@@ -1089,6 +1024,7 @@ const App: React.FC = () => {
           lastName: authForm.lastName.trim(),
           email: authForm.email.trim(),
           password: authForm.password,
+          passwordConfirm: authForm.passwordConfirm,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -1098,57 +1034,139 @@ const App: React.FC = () => {
       }
       const name = `${data.user.firstName} ${data.user.lastName}`;
       const email = authForm.email.trim();
-    setUserToken(data.token);
+      setUserToken(data.token);
       setUserName(name);
       setUserEmail(email);
-    saveSession(data.token, name, 'menu', email);
+      setAccountProfile({
+        firstName: data.user.firstName ?? '',
+        lastName: data.user.lastName ?? '',
+        email,
+      });
+      saveSession(data.token, name, 'menu', email);
       fetchFlights(data.token);
-    fetchLodgings(data.token);
-    fetchTours(data.token);
+      fetchLodgings(data.token);
+      fetchTours(data.token);
       fetchInvites(data.token);
+      fetchAccountProfile(data.token);
       setActivePage('menu');
     } catch (err) {
       alert((err as Error).message || 'Registration failed');
     }
   };
 
+  const fetchAccountProfile = async (token?: string) => {
+    const auth = token ?? userToken;
+    if (!auth) return;
+    try {
+      const res = await fetch(`${backendUrl}/api/account`, {
+        headers: { Authorization: `Bearer ${auth}` },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const fullName = `${data.firstName ?? ''} ${data.lastName ?? ''}`.trim() || 'Traveler';
+      setAccountProfile({
+        firstName: data.firstName ?? '',
+        lastName: data.lastName ?? '',
+        email: data.email ?? '',
+      });
+      setUserName(fullName);
+      setUserEmail(data.email ?? null);
+    } catch {
+      // best-effort fetch; ignore errors so other data loads.
+    }
+  };
+
+  const updateAccountProfile = async () => {
+    if (!userToken) return;
+    setAccountMessage(null);
+    const res = await fetch(`${backendUrl}/api/account/profile`, {
+      method: 'PATCH',
+      headers: jsonHeaders,
+      body: JSON.stringify(accountProfile),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      alert(data.error || 'Unable to update profile');
+      return;
+    }
+    const updatedUser = data.user ?? accountProfile;
+    const fullName = `${updatedUser.firstName ?? ''} ${updatedUser.lastName ?? ''}`.trim() || 'Traveler';
+    if (data.token) {
+      setUserToken(data.token);
+      saveSession(data.token, fullName, activePage, updatedUser.email ?? accountProfile.email);
+    }
+    setUserName(fullName);
+    setUserEmail(updatedUser.email ?? null);
+    setAccountProfile({
+      firstName: updatedUser.firstName ?? '',
+      lastName: updatedUser.lastName ?? '',
+      email: updatedUser.email ?? '',
+    });
+    setAccountMessage('Profile updated');
+  };
+
+  const updateAccountPassword = async () => {
+    if (!userToken) return;
+    if (passwordForm.newPassword !== passwordForm.newPasswordConfirm) {
+      alert('New passwords do not match');
+      return;
+    }
+    setAccountMessage(null);
+    const res = await fetch(`${backendUrl}/api/account/password`, {
+      method: 'PATCH',
+      headers: jsonHeaders,
+      body: JSON.stringify(passwordForm),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      alert(data.error || 'Unable to update password');
+      return;
+    }
+    setAccountMessage('Password updated');
+    setPasswordForm({ currentPassword: '', newPassword: '', newPasswordConfirm: '' });
+    setShowPasswordEditor(false);
+  };
+
+  const deleteAccount = async () => {
+    if (!userToken) return;
+    const res = await fetch(`${backendUrl}/api/account`, {
+      method: 'DELETE',
+      headers,
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'Unable to delete account');
+      return;
+    }
+    setShowDeleteConfirm(false);
+    logout();
+  };
+
+  // Fetch flights for the active trip; normalize paidBy casing.
   const fetchFlights = async (token?: string) => {
     if (!activeTripId) {
       setFlights([]);
       return;
     }
-    const res = await fetch(`${backendUrl}/api/flights?tripId=${activeTripId}`, { headers: { Authorization: `Bearer ${token ?? userToken}` } });
-    const data = await res.json();
-    setFlights(
-      (data as any[]).map((f) => ({
-        ...f,
-        paidBy: Array.isArray(f.paidBy) ? f.paidBy : Array.isArray(f.paid_by) ? f.paid_by : [],
-      }))
-    );
+    try {
+      const data = await fetchFlightsForTrip(backendUrl, activeTripId, token ?? userToken);
+      setFlights(data);
+    } catch {
+      setFlights([]);
+    }
   };
 
+  // Fetch lodgings for the active trip; normalize nullable fields.
   const fetchLodgings = async (token?: string) => {
     if (!activeTripId) {
       setLodgings([]);
       return;
     }
-    const res = await fetch(`${backendUrl}/api/lodgings?tripId=${activeTripId}`, {
-      headers: { Authorization: `Bearer ${token ?? userToken}` },
-    });
-    if (!res.ok) return;
-    const data = await res.json();
-    setLodgings(
-      (data as any[]).map((l) => ({
-        ...l,
-        rooms: String(l.rooms ?? ''),
-        totalCost: String(l.totalCost ?? ''),
-        costPerNight: String(l.costPerNight ?? ''),
-        refundBy: l.refundBy ?? '',
-        paidBy: Array.isArray(l.paidBy) ? l.paidBy : [],
-      }))
-    );
+    const data = await fetchLodgingsApi(backendUrl, activeTripId, token ?? userToken);
+    setLodgings(data);
   };
 
+  // Fetch tours for the active trip; normalize string fields.
   const fetchTours = async (token?: string) => {
     if (!activeTripId) {
       setTours([]);
@@ -1194,12 +1212,6 @@ const App: React.FC = () => {
     }
   };
 
-  const clampTraitLevelInput = (val: string) => {
-    const num = Number(val);
-    if (!Number.isFinite(num)) return 1;
-    return Math.min(Math.max(Math.round(num), 1), 5);
-  };
-
   const parsePlanToDetails = (plan: string): Array<{ day: number; activity: string; cost?: number | null }> => {
     const lines = plan.split('\n');
     let currentDay: number | null = null;
@@ -1213,7 +1225,7 @@ const App: React.FC = () => {
         continue;
       }
       if (currentDay === null) continue;
-      const activity = line.replace(/^[-*•]\s*/, '').trim();
+      const activity = line.replace(/^[-*ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¾ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¾ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¾ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¾ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢]\s*/, '').trim();
       if (!activity) continue;
       // If activity looks like a generic encouragement, treat cost as null (show "-")
       const looksGeneric = /enjoy|welcome|adventure/i.test(activity);
@@ -1252,11 +1264,6 @@ const App: React.FC = () => {
     if (!res.ok) return;
     const data = (await res.json()) as Trait[];
     setTraits(data);
-    const drafts: Record<string, { level: string; notes: string }> = {};
-    for (const t of data) {
-      drafts[t.id] = { level: String(t.level ?? 1), notes: t.notes ?? '' };
-    }
-    setTraitDrafts(drafts);
     setSelectedTraitNames(new Set(data.map((t) => t.name)));
   };
 
@@ -1280,39 +1287,23 @@ const App: React.FC = () => {
       alert('Enter a trait name');
       return;
     }
-    const level = Math.min(Math.max(Number(newTraitLevel) || 1, 1), 5);
-    const notes = newTraitNotes.trim();
     const res = await fetch(`${backendUrl}/api/traits`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...headers },
-      body: JSON.stringify({ name, level, notes: notes || undefined }),
+      body: JSON.stringify({ name, level: 3 }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       alert(data.error || 'Unable to save trait');
       return;
     }
-    setNewTraitName('');
-    setNewTraitLevel('3');
-    setNewTraitNotes('');
-    fetchTraits();
-  };
-
-  const updateTrait = async (traitId: string) => {
-    if (!userToken) return;
-    const draft = traitDrafts[traitId];
-    const level = Math.min(Math.max(Number(draft?.level ?? '') || 1, 1), 5);
-    const notes = draft?.notes?.trim() ?? '';
-    const res = await fetch(`${backendUrl}/api/traits/${traitId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', ...headers },
-      body: JSON.stringify({ level, notes: notes || null }),
+    setTraits((prev) => [...prev, { id: data.id ?? name, name } as Trait]);
+    setSelectedTraitNames((prev) => {
+      const next = new Set(prev);
+      next.add(name);
+      return next;
     });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      alert(data.error || 'Unable to update trait');
-      return;
-    }
+    setNewTraitName('');
     fetchTraits();
   };
 
@@ -1324,11 +1315,6 @@ const App: React.FC = () => {
       alert(data.error || 'Unable to delete trait');
       return;
     }
-    setTraitDrafts((prev) => {
-      const next = { ...prev };
-      delete next[traitId];
-      return next;
-    });
     fetchTraits();
   };
 
@@ -1357,6 +1343,8 @@ const App: React.FC = () => {
       alert('Enter a country, number of days, and select an active trip.');
       return;
     }
+    setShowItineraryCountryDropdown(false);
+    setShowItineraryRegionDropdown(false);
     setItineraryLoading(true);
     setItineraryError('');
     setItineraryPlan('');
@@ -1372,7 +1360,7 @@ const App: React.FC = () => {
         departureAirport: itineraryAirport.trim() || undefined,
         tripStyle: itineraryTripStyle.trim() || undefined,
         tripId: activeTripId,
-        traits: traits.map((t) => ({ name: t.name, level: t.level, notes: t.notes })),
+        traits: traits.map((t) => ({ name: t.name })),
       }),
     });
       const data = await res.json().catch(() => ({}));
@@ -1547,16 +1535,26 @@ const App: React.FC = () => {
     'Solo Travel',
   ];
 
-  const toggleTrait = (name: string) => {
+  const toggleTrait = async (name: string) => {
+    const isBase = traitOptions.includes(name);
+    const existing = traits.find((t) => t.name === name);
+    let removed = false;
     setSelectedTraitNames((prev) => {
       const next = new Set(prev);
       if (next.has(name)) {
         next.delete(name);
+        removed = true;
+        if (!isBase) {
+          setTraits((list) => list.filter((t) => t.name !== name));
+        }
       } else {
         next.add(name);
       }
       return next;
     });
+    if (removed && existing?.id) {
+      await deleteTrait(existing.id);
+    }
   };
 
   const saveTraitSelections = async () => {
@@ -1619,70 +1617,6 @@ const App: React.FC = () => {
     if (!res.ok) return;
     const data = await res.json();
     setInvites(data);
-  };
-
-  const addFlight = async () => {
-    if (!userToken) return false;
-    if (!activeTripId) {
-      alert('Select an active trip before adding a flight.');
-      return false;
-    }
-
-    const required = [
-      newFlight.passengerName,
-      newFlight.departureDate,
-      newFlight.departureTime,
-      newFlight.arrivalTime,
-      newFlight.carrier,
-      newFlight.flightNumber,
-      newFlight.bookingReference,
-    ];
-
-    if (required.some((val) => !val || !val.trim())) {
-      alert('Please fill out all required fields before adding a flight.');
-      return false;
-    }
-
-    const res = await fetch(`${backendUrl}/api/flights`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...headers },
-      body: JSON.stringify({
-        ...newFlight,
-        tripId: activeTripId,
-        departureDate: newFlight.departureDate,
-        cost: Number(newFlight.cost) || 0,
-      }),
-    });
-
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      alert(data.error || 'Unable to save flight');
-      return false;
-    }
-
-    setNewFlight(createInitialFlightState());
-    await fetchFlights();
-    return true;
-  };
-
-  const removeFlight = async (id: string) => {
-    if (!userToken) return;
-    await fetch(`${backendUrl}/api/flights/${id}`, { method: 'DELETE', headers });
-    fetchFlights();
-  };
-
-  const shareFlight = async (id: string) => {
-    if (!userToken) return;
-    if (!email.trim()) {
-      alert('Enter an email to share this flight.');
-      return;
-    }
-    await fetch(`${backendUrl}/api/flights/${id}/share`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...headers },
-      body: JSON.stringify({ email }),
-    });
-    fetchFlights();
   };
 
   const createGroup = async () => {
@@ -1776,6 +1710,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (userToken) {
+      fetchAccountProfile();
       fetchFlights();
       fetchLodgings();
       fetchTours();
@@ -1796,7 +1731,7 @@ const App: React.FC = () => {
       setUserName(session.name);
       setUserEmail(session.email ?? null);
       const sessionPage = session.page;
-      if (sessionPage === 'flights' || sessionPage === 'lodging' || sessionPage === 'groups' || sessionPage === 'trips' || sessionPage === 'traits' || sessionPage === 'itinerary' || sessionPage === 'tours' || sessionPage === 'cost') {
+      if (sessionPage === 'flights' || sessionPage === 'lodging' || sessionPage === 'groups' || sessionPage === 'trips' || sessionPage === 'traits' || sessionPage === 'itinerary' || sessionPage === 'tours' || sessionPage === 'cost' || sessionPage === 'account') {
         setActivePage(sessionPage as Page);
       } else {
         setActivePage('menu');
@@ -1823,117 +1758,7 @@ const App: React.FC = () => {
     }
   }, [userToken, activeTripId, trips]);
 
-  const handleAddPress = async () => {
-    if (!activeTripId) {
-      alert('Select an active trip before adding a flight.');
-      return;
-    } 
-    setEditingFlightId('new');
-    const init = createInitialFlightState();
-    if (defaultPayerId && !init.paidBy.includes(defaultPayerId)) {
-      init.paidBy.push(defaultPayerId);
-    }
-    setEditingFlight(init);
-    setAirportTarget(null);
-    setAirportAnchor(null);
-    setAirportSuggestions([]);
-    setLocationTarget(null);
-    setLocationSuggestions([]);
-    setShowPassengerSuggestions(false);
-    setPassengerSuggestions([]);
-    
-  };
-
   const findActiveTrip = () => trips.find((t) => t.id === activeTripId);
-
-  const ensurePassengerInGroup = async (passengerName: string) => {
-    if (!userToken) return;
-    const activeTrip = findActiveTrip();
-    if (!activeTrip?.groupId) return;
-    const normalizedTarget = normalizePassengerName(passengerName);
-    const alreadyInGroup = groupMembers.some((m) => normalizePassengerName(formatMemberName(m)) === normalizedTarget);
-    if (alreadyInGroup) return;
-    try {
-      await fetch(`${backendUrl}/api/groups/${activeTrip.groupId}/members`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...headers },
-        body: JSON.stringify({ guestName: passengerName }),
-      });
-      await fetchGroupMembersForActiveTrip();
-    } catch {
-      // non-blocking
-    }
-  };
-
-  const saveParsedFlights = async (flightsOverride?: FlightEditDraft[]) => {
-    const flightsToSave = flightsOverride ?? parsedFlights;
-    if (!userToken || !activeTripId || !flightsToSave.length) {
-      alert('No parsed flights to add.');
-      return;
-    }
-    setIsSavingParsedFlights(true);
-    try {
-      let saved = 0;
-      const failures: string[] = [];
-      for (const flight of flightsToSave) {
-        const enriched: FlightEditDraft = {
-          ...flight,
-          passengerName: flight.passengerName?.trim() || 'Traveler',
-          departureLocation: flight.departureLocation?.trim() || flight.departureAirportCode || '',
-          departureAirportCode: flight.departureAirportCode?.trim() || flight.departureLocation || '',
-          arrivalLocation: flight.arrivalLocation?.trim() || flight.arrivalAirportCode || '',
-          arrivalAirportCode: flight.arrivalAirportCode?.trim() || flight.arrivalLocation || '',
-          departureDate: flight.departureDate?.trim() || new Date().toISOString().slice(0, 10),
-          departureTime: flight.departureTime?.trim() || '00:00',
-          arrivalTime: flight.arrivalTime?.trim() || '00:00',
-          carrier: flight.carrier?.trim() || 'UNKNOWN',
-          flightNumber: flight.flightNumber?.trim() || 'UNKNOWN',
-          bookingReference: flight.bookingReference?.trim() || 'UNKNOWN',
-        };
-        if ((!enriched.paidBy || enriched.paidBy.length === 0) && defaultPayerId) {
-          enriched.paidBy = [defaultPayerId];
-        }
-        if (!enriched.departureLocation || !enriched.arrivalLocation) {
-          failures.push('Missing departure or arrival location.');
-          continue;
-        }
-        await ensurePassengerInGroup(flight.passengerName);
-        const res = await fetch(`${backendUrl}/api/flights`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...headers },
-          body: JSON.stringify({
-            ...enriched,
-            cost: Number(flight.cost) || 0,
-            tripId: activeTripId,
-            departureDate: enriched.departureDate,
-            paidBy: enriched.paidBy,
-          }),
-        });
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          failures.push(data.error || 'Failed to save flight');
-          continue;
-        }
-        saved += 1;
-      }
-      // Keep parsed flights visible so the user can review what was parsed.
-      setParsedFlights(flightsToSave);
-      if (saved) {
-        const baseMsg =
-          saved === 1 ? 'Added 1 flight to this trip.' : `Added ${saved} flights to this trip.`;
-        const failMsg = failures.length ? ` ${failures.length} failed. First error: ${failures[0]}` : '';
-        setPdfParseMessage(baseMsg + failMsg);
-      } else {
-        const failMsg = failures.length ? `Reason: ${failures[0]}` : '';
-        setPdfParseMessage(`No flights added. Please review the upload. ${failMsg}`);
-      }
-      fetchFlights();
-    } catch {
-      alert('Unable to add parsed flights. Please review and add manually.');
-    } finally {
-      setIsSavingParsedFlights(false);
-    }
-  };
 
   const addMemberToGroup = async (groupId: string, type: 'user' | 'guest') => {
     if (!userToken) return;
@@ -2055,22 +1880,6 @@ const App: React.FC = () => {
     fetchTrips();
   };
 
-  const columns: { key: keyof Flight | 'actions'; label: string; minWidth?: number }[] = [
-    { key: 'passenger_name', label: 'Passenger', minWidth: 130 },
-    { key: 'departure_date', label: 'Departure Date' },
-    { key: 'departure_location', label: 'Departure Location' },
-    { key: 'departure_time', label: 'Departure Time' },
-    { key: 'arrival_location', label: 'Arrival Location' },
-    { key: 'arrival_time', label: 'Arrival Time' },
-    { key: 'layover_duration', label: 'Layover Duration' },
-    { key: 'cost', label: 'Cost' },
-    { key: 'carrier', label: 'Carrier' },
-    { key: 'flight_number', label: 'Flight #' },
-    { key: 'booking_reference', label: 'Booking Ref' },
-    { key: 'paidBy', label: 'Paid By', minWidth: 160 },
-    { key: 'actions', label: 'Actions', minWidth: 180 },
-  ];
-
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.topBar}>
@@ -2136,6 +1945,9 @@ const App: React.FC = () => {
               <TouchableOpacity style={[styles.button, activePage === 'trips' && styles.toggleActive]} onPress={() => setActivePage('trips')}>
                 <Text style={styles.buttonText}>Trips</Text>
               </TouchableOpacity>
+              <TouchableOpacity style={[styles.button, activePage === 'account' && styles.toggleActive]} onPress={() => setActivePage('account')}>
+                <Text style={styles.buttonText}>Account</Text>
+              </TouchableOpacity>
               <TouchableOpacity style={[styles.button, activePage === 'traits' && styles.toggleActive]} onPress={() => setActivePage('traits')}>
                 <Text style={styles.buttonText}>Traits</Text>
               </TouchableOpacity>
@@ -2148,14 +1960,42 @@ const App: React.FC = () => {
           {activePage === 'itinerary' ? (
             <View style={[styles.card, styles.itinerarySection]}>
               <Text style={styles.sectionTitle}>Create Itinerary</Text>
-              <Text style={styles.helperText}>Capture the basics and we’ll use your traits to shape trip ideas.</Text>
+              <Text style={styles.helperText}>Capture the basics and we'll use your traits to shape trip ideas.</Text>
 
-              <TextInput
-                style={styles.input}
-                placeholder="What country are you trying to visit?"
-                value={itineraryCountry}
-                onChangeText={setItineraryCountry}
-              />
+              <View>
+                <TouchableOpacity
+                  style={[styles.input, styles.selectButton]}
+                  onPress={() => {
+                    setCountrySearch('');
+                    setShowItineraryCountryDropdown(true);
+                    setShowItineraryRegionDropdown(false);
+                  }}
+                >
+                  <View style={styles.selectButtonRow}>
+                    <Text style={itineraryCountry ? styles.cellText : styles.placeholderText}>
+                      {itineraryCountry || 'Select a country'}
+                    </Text>
+                    <Text style={styles.selectCaret}>v</Text>
+                  </View>
+                </TouchableOpacity>
+                {regionOptions.length ? (
+                  <TouchableOpacity
+                    style={[styles.input, styles.selectButton]}
+                    onPress={() => {
+                      setRegionSearch('');
+                      setShowItineraryRegionDropdown(true);
+                      setShowItineraryCountryDropdown(false);
+                    }}
+                  >
+                    <View style={styles.selectButtonRow}>
+                      <Text style={itineraryRegion ? styles.cellText : styles.placeholderText}>
+                        {itineraryRegion || 'Select a region / state'}
+                      </Text>
+                      <Text style={styles.selectCaret}>v</Text>
+                    </View>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
 
               <View style={styles.dropdown}>
                 <TextInput
@@ -2201,92 +2041,33 @@ const App: React.FC = () => {
                 multiline
               />
 
-              <Text style={styles.modalLabel}>Budget range</Text>
-              {Platform.OS === 'web' ? (
-                <View style={styles.rangeContainer}>
-                  <View style={styles.rangeLabels}>
-                    <Text style={styles.helperText}>${budgetMin} min</Text>
-                    <Text style={styles.helperText}>${budgetMax} max</Text>
-                  </View>
-                  {React.createElement('input', {
-                    type: 'range',
-                    min: 0,
-                    max: 20000,
-                    step: 100,
-                    value: budgetMin,
-                    style: { width: '100%' },
-                    onChange: (e: any) => {
-                      const next = clampBudget(Number(e.target.value));
-                      setBudgetMin(Math.min(next, budgetMax));
-                    },
-                  })}
-                  {React.createElement('input', {
-                    type: 'range',
-                    min: 0,
-                    max: 20000,
-                    step: 100,
-                    value: budgetMax,
-                    style: { width: '100%' },
-                    onChange: (e: any) => {
-                      const next = clampBudget(Number(e.target.value));
-                      setBudgetMax(Math.max(next, budgetMin));
-                    },
-                  })}
-                </View>
-              ) : (
-                <View style={styles.addRow}>
-                  <TextInput
-                    style={[styles.input, styles.inlineInput]}
-                    placeholder="Min"
-                    keyboardType="numeric"
-                    value={String(budgetMin)}
-                    onChangeText={(text) => {
-                      const num = clampBudget(Number(text));
-                      setBudgetMin(Math.min(num, budgetMax));
-                    }}
-                  />
-                  <TextInput
-                    style={[styles.input, styles.inlineInput]}
-                    placeholder="Max"
-                    keyboardType="numeric"
-                    value={String(budgetMax)}
-                onChangeText={(text) => {
-                  const num = clampBudget(Number(text));
-                  setBudgetMax(Math.max(num, budgetMin));
-                }}
-              />
-            </View>
-          )}
-
-              <View style={styles.itinerarySummary}>
-                <Text style={styles.bodyText}>
-                  Destination: {itineraryCountry.trim() || '—'}
-                </Text>
-                <Text style={styles.bodyText}>
-              Days: {itineraryDays.trim() || '—'}
-            </Text>
-            <Text style={styles.bodyText}>
-              Budget: ${budgetMin} – ${budgetMax}
-            </Text>
-            <Text style={styles.bodyText}>
-              Departure airport: {itineraryAirport.trim() || '—'}
-            </Text>
-            <Text style={styles.helperText}>
-              Traits will help recommend activities (e.g., hikes for Adventurous, cafes for Coffee Lovers).
-            </Text>
-          </View>
+              <Text style={styles.modalLabel}>Budget</Text>
+              <View style={styles.addRow}>
+                {(['cheap', 'middle', 'expensive'] as const).map((level) => (
+                  <TouchableOpacity
+                    key={level}
+                    style={[
+                      styles.button,
+                      styles.smallButton,
+                      budgetLevel === level && styles.toggleActive,
+                      { flex: 1 },
+                    ]}
+                    onPress={() => setBudgetLevel(level)}
+                  >
+                    <View style={styles.budgetRow}>
+                      <Text style={styles.buttonText}>
+                        {level === 'cheap' ? 'Cheap' : level === 'middle' ? 'Middle' : 'Expensive'}
+                      </Text>
+                      <View style={[styles.budgetIndicator, budgetLevel === level && styles.budgetIndicatorActive]} />
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <Text style={styles.helperText}>Cheap ~$500-$1,500 | Middle ~$1,500-$4,000 | Expensive ~$4,000-$8,000</Text>
 
               <TouchableOpacity style={styles.button} onPress={generateItinerary} disabled={itineraryLoading}>
-                <Text style={styles.buttonText}>{itineraryLoading ? 'Generating…' : 'Generate Itinerary'}</Text>
+                <Text style={styles.buttonText}>{itineraryLoading ? 'Generating...' : 'Generate Itinerary'}</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={saveItineraryRecord}>
-                <Text style={styles.buttonText}>{editingItineraryId ? 'Update Itinerary' : 'Save Itinerary Info'}</Text>
-              </TouchableOpacity>
-              {editingItineraryId ? (
-                <Text style={styles.helperText}>Editing itinerary — tap Save to update, or select another to cancel.</Text>
-              ) : null}
-
-          {itineraryError ? <Text style={styles.warningText}>{itineraryError}</Text> : null}
           {itineraryPlan ? (
             <View style={styles.planBox}>
               <Text style={styles.sectionTitle}>Suggested Plan</Text>
@@ -2319,8 +2100,8 @@ const App: React.FC = () => {
                   >
                     <View style={{ flex: 1 }}>
                       <Text style={styles.flightTitle}>{it.tripName || 'Trip'}</Text>
-                      <Text style={styles.helperText}>
-                        {it.destination} • {it.days} days • Budget ${it.budget ?? '—'} • Created {formatDateLong(it.createdAt)}
+                                            <Text style={styles.helperText}>
+                        {`${it.destination || 'Destination'} | ${it.days} days | Budget ${it.budget ?? 'N/A'} | Created ${formatDateLong(it.createdAt)}`}
                       </Text>
                     </View>
                     <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => beginEditItinerary(it)}>
@@ -2462,76 +2243,9 @@ const App: React.FC = () => {
               value={newTraitName}
               onChangeText={setNewTraitName}
             />
-            <View style={styles.addRow}>
-              <TextInput
-                style={[styles.input, styles.inlineInput]}
-                placeholder="Level (1-5)"
-                keyboardType="numeric"
-                value={newTraitLevel}
-                onChangeText={setNewTraitLevel}
-              />
-              <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={createTrait}>
-                <Text style={styles.buttonText}>Save Trait</Text>
-              </TouchableOpacity>
-            </View>
-            <TextInput
-              style={styles.input}
-              placeholder="Notes (optional, e.g., loves sunrise hikes or third-wave cafes)"
-              value={newTraitNotes}
-              onChangeText={setNewTraitNotes}
-              multiline
-            />
-          </View>
-
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Your profile traits</Text>
-            {!traits.length ? (
-              <Text style={styles.helperText}>No traits yet. Add one above to start personalizing trip ideas.</Text>
-            ) : (
-              traits.map((trait) => {
-                const draft = traitDrafts[trait.id] ?? { level: String(trait.level ?? 1), notes: trait.notes ?? '' };
-                return (
-                  <View key={trait.id} style={styles.traitRow}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.flightTitle}>{trait.name}</Text>
-                      <Text style={styles.helperText}>Level {draft.level || trait.level} • Added {formatDateLong(trait.createdAt)}</Text>
-                      <View style={styles.addRow}>
-                        <TextInput
-                          style={[styles.input, styles.inlineInput]}
-                          value={draft.level}
-                          keyboardType="numeric"
-                          placeholder="1-5"
-                          onChangeText={(text) =>
-                            setTraitDrafts((prev) => ({
-                              ...prev,
-                              [trait.id]: { level: text, notes: prev[trait.id]?.notes ?? draft.notes },
-                            }))
-                          }
-                        />
-                        <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => updateTrait(trait.id)}>
-                          <Text style={styles.buttonText}>Update</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => deleteTrait(trait.id)}>
-                          <Text style={styles.buttonText}>Delete</Text>
-                        </TouchableOpacity>
-                      </View>
-                      <TextInput
-                        style={[styles.input, styles.traitNoteInput]}
-                        placeholder="Notes (optional)"
-                        value={draft.notes}
-                        onChangeText={(text) =>
-                          setTraitDrafts((prev) => ({
-                            ...prev,
-                            [trait.id]: { level: prev[trait.id]?.level ?? draft.level, notes: text },
-                          }))
-                        }
-                        multiline
-                      />
-                    </View>
-                  </View>
-                );
-              })
-            )}
+            <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={createTrait}>
+              <Text style={styles.buttonText}>Save Trait</Text>
+            </TouchableOpacity>
           </View>
 
           <View style={[styles.card, styles.traitsSection]}>
@@ -2564,15 +2278,18 @@ const App: React.FC = () => {
               })}
             </View>
             <View style={styles.traitGrid}>
-              {traitOptions.map((name) => {
+              {[...traitOptions, ...traits.filter((t) => !traitOptions.includes(t.name)).map((t) => t.name)].map((name) => {
                 const selected = selectedTraitNames.has(name);
+                const isCustom = !traitOptions.includes(name);
                 return (
                   <TouchableOpacity
                     key={name}
                     style={[styles.traitChip, selected && styles.traitChipSelected]}
                     onPress={() => toggleTrait(name)}
                   >
-                    <Text style={[styles.traitChipText, selected && styles.traitChipTextSelected]}>{name}</Text>
+                    <Text style={[styles.traitChipText, selected && styles.traitChipTextSelected]}>
+                      {isCustom ? `${name} (custom*)` : name}
+                    </Text>
                   </TouchableOpacity>
                 );
               })}
@@ -2581,292 +2298,8 @@ const App: React.FC = () => {
               <Text style={styles.buttonText}>Save Traits</Text>
             </TouchableOpacity>
           </View>
-              <View style={styles.card}>
-                <Text style={styles.sectionTitle}>Your profile traits</Text>
-                {!traits.length ? (
-                  <Text style={styles.helperText}>No traits yet. Add one above to start personalizing trip ideas.</Text>
-                ) : (
-                  traits.map((trait) => {
-                    const draft = traitDrafts[trait.id] ?? { level: String(trait.level ?? 1), notes: trait.notes ?? '' };
-                    return (
-                      <View key={trait.id} style={styles.traitRow}>
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.flightTitle}>{trait.name}</Text>
-                          <Text style={styles.helperText}>Level {draft.level || trait.level} • Added {formatDateLong(trait.createdAt)}</Text>
-                          <View style={styles.addRow}>
-                            <TextInput
-                              style={[styles.input, styles.inlineInput]}
-                              value={draft.level}
-                              keyboardType="numeric"
-                              placeholder="1-5"
-                              onChangeText={(text) =>
-                                setTraitDrafts((prev) => ({
-                                  ...prev,
-                                  [trait.id]: { level: text, notes: prev[trait.id]?.notes ?? draft.notes },
-                                }))
-                              }
-                            />
-                            <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => updateTrait(trait.id)}>
-                              <Text style={styles.buttonText}>Update</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => deleteTrait(trait.id)}>
-                              <Text style={styles.buttonText}>Delete</Text>
-                            </TouchableOpacity>
-                          </View>
-                          <TextInput
-                            style={[styles.input, styles.traitNoteInput]}
-                            placeholder="Notes (optional)"
-                            value={draft.notes}
-                            onChangeText={(text) =>
-                              setTraitDrafts((prev) => ({
-                                ...prev,
-                                [trait.id]: { level: prev[trait.id]?.level ?? draft.level, notes: text },
-                              }))
-                            }
-                            multiline
-                          />
-                        </View>
-                      </View>
-                    );
-                  })
-                )}
-              </View>
-            </>
-          ) : null}
-
-          {activePage === 'lodging' ? (
-            <View style={styles.card}>
-              <Text style={styles.sectionTitle}>Lodging</Text>
-              {Platform.OS !== 'web' && lodgingDateField ? (
-                <DateTimePicker
-                  value={lodgingDateValue}
-                  mode="date"
-                  onChange={(_, date) => {
-                    if (!date) {
-                      setLodgingDateField(null);
-                      return;
-                    }
-                    const iso = date.toISOString().slice(0, 10);
-                    if (lodgingDateField === 'checkIn') setLodgingDraft((p) => ({ ...p, checkInDate: iso }));
-                    if (lodgingDateField === 'checkOut') setLodgingDraft((p) => ({ ...p, checkOutDate: iso }));
-                    if (lodgingDateField === 'refund') setLodgingDraft((p) => ({ ...p, refundBy: iso }));
-                    setLodgingDateField(null);
-                  }}
-                />
-              ) : null}
-              <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
-                <View style={styles.table}>
-                  <View style={[styles.tableRow, styles.tableHeader]}>
-                    <View style={[styles.cell, styles.lodgingNameCol]}>
-                      <Text style={styles.headerText}>Name</Text>
-                    </View>
-                    <View style={[styles.cell, styles.lodgingDateCol]}>
-                      <Text style={styles.headerText}>Check-in</Text>
-                    </View>
-                    <View style={[styles.cell, styles.lodgingDateCol]}>
-                      <Text style={styles.headerText}>Check-out</Text>
-                    </View>
-                    <View style={[styles.cell, styles.lodgingRoomsCol]}>
-                      <Text style={styles.headerText}>Rooms</Text>
-                    </View>
-                    <View style={[styles.cell, styles.lodgingRefundCol]}>
-                      <Text style={styles.headerText}>Refund By</Text>
-                    </View>
-                    <View style={[styles.cell, styles.lodgingCostCol]}>
-                      <Text style={styles.headerText}>Total</Text>
-                    </View>
-                    <View style={[styles.cell, styles.lodgingCostCol]}>
-                      <Text style={styles.headerText}>Per Night</Text>
-                    </View>
-                    <View style={[styles.cell, styles.lodgingCostCol]}>
-                      <Text style={styles.headerText}>Paid By</Text>
-                    </View>
-                    <View style={[styles.cell, styles.lastCell, styles.lodgingAddressCol]}>
-                      <Text style={styles.headerText}>Address</Text>
-                    </View>
-                  </View>
-
-                  <View style={[styles.tableRow, styles.inputRow]}>
-                    <View style={[styles.cell, styles.lodgingNameCol]}>
-                      <TextInput
-                        style={styles.cellInput}
-                        placeholder="Lodging name"
-                        value={lodgingDraft.name}
-                        onChangeText={(text) => setLodgingDraft((p) => ({ ...p, name: text }))}
-                      />
-                    </View>
-                    <View style={[styles.cell, styles.lodgingDateCol]}>
-                      {Platform.OS === 'web' ? (
-                        <input
-                          style={{ ...StyleSheet.flatten(styles.cellInput), width: '100%' }}
-                          type="date"
-                          value={lodgingDraft.checkInDate}
-                          onChange={(e) => setLodgingDraft((p) => ({ ...p, checkInDate: e.target.value }))}
-                        />
-                      ) : (
-                        <TouchableOpacity
-                          style={[styles.cellInput, { justifyContent: 'center' }]}
-                          onPress={() => {
-                            setLodgingDateField('checkIn');
-                            setLodgingDateValue(new Date(lodgingDraft.checkInDate));
-                          }}
-                        >
-                          <Text>{lodgingDraft.checkInDate}</Text>
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                    <View style={[styles.cell, styles.lodgingDateCol]}>
-                      {Platform.OS === 'web' ? (
-                        <input
-                          style={{ ...StyleSheet.flatten(styles.cellInput), width: '100%' }}
-                          type="date"
-                          value={lodgingDraft.checkOutDate}
-                          onChange={(e) => setLodgingDraft((p) => ({ ...p, checkOutDate: e.target.value }))}
-                        />
-                      ) : (
-                        <TouchableOpacity
-                          style={[styles.cellInput, { justifyContent: 'center' }]}
-                          onPress={() => {
-                            setLodgingDateField('checkOut');
-                            setLodgingDateValue(new Date(lodgingDraft.checkOutDate));
-                          }}
-                        >
-                          <Text>{lodgingDraft.checkOutDate}</Text>
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                    <View style={[styles.cell, styles.lodgingRoomsCol]}>
-                      <TextInput
-                        style={styles.cellInput}
-                        keyboardType="numeric"
-                        value={lodgingDraft.rooms}
-                        onChangeText={(text) => setLodgingDraft((p) => ({ ...p, rooms: text }))}
-                      />
-                    </View>
-                    <View style={[styles.cell, styles.lodgingRefundCol]}>
-                      {Platform.OS === 'web' ? (
-                        <input
-                          style={{ ...StyleSheet.flatten(styles.cellInput), width: '100%' }}
-                          type="date"
-                          value={lodgingDraft.refundBy}
-                          onChange={(e) => setLodgingDraft((p) => ({ ...p, refundBy: e.target.value }))}
-                        />
-                      ) : (
-                        <TouchableOpacity
-                          style={[styles.cellInput, { justifyContent: 'center' }]}
-                          onPress={() => {
-                            setLodgingDateField('refund');
-                            setLodgingDateValue(
-                              lodgingDraft.refundBy ? new Date(lodgingDraft.refundBy) : new Date(lodgingDraft.checkInDate)
-                            );
-                          }}
-                        >
-                          <Text>{lodgingDraft.refundBy || 'Select'}</Text>
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                    <View style={[styles.cell, styles.lodgingCostCol]}>
-                      <TextInput
-                        style={styles.cellInput}
-                        keyboardType="numeric"
-                        value={lodgingDraft.totalCost}
-                        onChangeText={(text) => setLodgingDraft((p) => ({ ...p, totalCost: text }))}
-                        placeholder="Total cost"
-                      />
-                    </View>
-                    <View style={[styles.cell, styles.lodgingCostCol]}>
-                      <Text style={styles.cellText}>${lodgingDraft.costPerNight || '-'}</Text>
-                    </View>
-                    <View style={[styles.cell, styles.lodgingCostCol]}>
-                      <View style={styles.payerChips}>
-                        {lodgingDraft.paidBy.map((id) => (
-                          <View key={id} style={styles.payerChip}>
-                            <Text style={styles.cellText}>{payerName(id)}</Text>
-                            <TouchableOpacity onPress={() => setLodgingDraft((p) => ({ ...p, paidBy: p.paidBy.filter((x) => x !== id) }))}>
-                              <Text style={styles.removeText}>×</Text>
-                            </TouchableOpacity>
-                          </View>
-                        ))}
-                      </View>
-                      <View style={styles.payerOptions}>
-                        {userMembers
-                          .filter((m) => !lodgingDraft.paidBy.includes(m.id))
-                          .map((m) => (
-                            <TouchableOpacity
-                              key={m.id}
-                              style={styles.smallButton}
-                              onPress={() => setLodgingDraft((p) => ({ ...p, paidBy: [...p.paidBy, m.id] }))}
-                            >
-                              <Text style={styles.buttonText}>Add {formatMemberName(m)}</Text>
-                            </TouchableOpacity>
-                          ))}
-                      </View>
-                    </View>
-                    <View style={[styles.cell, styles.lastCell, styles.lodgingAddressCol]}>
-                      <TextInput
-                        style={styles.cellInput}
-                        value={lodgingDraft.address}
-                        onChangeText={(text) => setLodgingDraft((p) => ({ ...p, address: text }))}
-                        placeholder="Address"
-                      />
-                    </View>
-                  </View>
-                  <View style={styles.tableFooter}>
-                    <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={addLodging}>
-                      <Text style={styles.buttonText}>Add lodging</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  {lodgings.map((l) => (
-                    <View key={l.id} style={styles.tableRow}>
-                      <View style={[styles.cell, styles.lodgingNameCol]}>
-                        <Text style={styles.cellText}>{l.name}</Text>
-                      </View>
-                      <View style={[styles.cell, styles.lodgingDateCol]}>
-                        <Text style={styles.cellText}>{formatDateLong(l.checkInDate)}</Text>
-                      </View>
-                      <View style={[styles.cell, styles.lodgingDateCol]}>
-                        <Text style={styles.cellText}>{formatDateLong(l.checkOutDate)}</Text>
-                      </View>
-                      <View style={[styles.cell, styles.lodgingRoomsCol]}>
-                        <Text style={styles.cellText}>{l.rooms}</Text>
-                      </View>
-                      <View style={[styles.cell, styles.lodgingRefundCol]}>
-                        <Text style={styles.cellText}>{l.refundBy ? formatDateLong(l.refundBy) : 'Non-refundable'}</Text>
-                      </View>
-                      <View style={[styles.cell, styles.lodgingCostCol]}>
-                        <Text style={styles.cellText}>${l.totalCost || '-'}</Text>
-                      </View>
-                      <View style={[styles.cell, styles.lodgingCostCol]}>
-                        <Text style={styles.cellText}>${l.costPerNight || '-'}</Text>
-                      </View>
-                      <View style={[styles.cell, styles.lodgingCostCol]}>
-                        <Text style={styles.cellText}>{l.paidBy && l.paidBy.length ? l.paidBy.map(payerName).join(', ') : '-'}</Text>
-                      </View>
-                      <View
-                        style={[
-                          styles.cell,
-                          styles.lastCell,
-                          styles.lodgingAddressCol,
-                          { flexDirection: 'row', justifyContent: 'space-between' },
-                        ]}
-                      >
-                        <Text style={[styles.cellText, styles.linkText]} onPress={() => openMaps(l.address)}>
-                          {l.address || '-'}
-                        </Text>
-                        <TouchableOpacity onPress={() => removeLodging(l.id)}>
-                          <Text style={styles.removeText}>Remove</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  ))}
-                </View>
-              </ScrollView>
-              <View style={{ marginTop: 8 }}>
-                <Text style={styles.flightTitle}>Total lodging cost: ${lodgingTotal.toFixed(2)}</Text>
-              </View>
-            </View>
-          ) : null}
+        </>
+      ) : null}
 
           {activePage === 'tours' ? (
             <View style={styles.card}>
@@ -2876,8 +2309,8 @@ const App: React.FC = () => {
                   <Text style={styles.buttonText}>+ Add Tour</Text>
                 </TouchableOpacity>
               </View>
-              {Platform.OS !== 'web' && tourDateField && editingTour ? (
-                <DateTimePicker
+              {Platform.OS !== 'web' && tourDateField && editingTour && NativeDateTimePicker ? (
+                <NativeDateTimePicker
                   value={tourDateValue}
                   mode={tourDateField === 'startTime' ? 'time' : 'date'}
                   onChange={(_, date) => {
@@ -3079,7 +2512,7 @@ const App: React.FC = () => {
                             <View key={id} style={styles.payerChip}>
                               <Text style={styles.cellText}>{payerName(id)}</Text>
                               <TouchableOpacity onPress={() => setEditingTour((p) => (p ? { ...p, paidBy: p.paidBy.filter((x) => x !== id) } : p))}>
-                                <Text style={styles.removeText}>×</Text>
+                                <Text style={styles.removeText}>x</Text>
                               </TouchableOpacity>
                             </View>
                           ))}
@@ -3149,8 +2582,8 @@ const App: React.FC = () => {
                           const pay = flightsPayerTotals[m.id];
                           share = typeof pay === 'number' && pay > 0 ? pay : row.total / (userMembers.length || 1);
                         } else if (row.label === 'Lodging') {
-                          const pay = lodgingPayerTotals[m.id];
-                          share = typeof pay === 'number' && pay > 0 ? pay : row.total / (userMembers.length || 1);
+                          const pay = lodgingTotalsBalanced[m.id];
+                          share = typeof pay === 'number' ? pay : row.total / (userMembers.length || 1);
                         }
                         return (
                           <View key={`${row.label}-${m.id}`} style={[styles.cell, { minWidth: 120, flex: 1 }]}>
@@ -3174,8 +2607,8 @@ const App: React.FC = () => {
                         return typeof pay === 'number' && pay > 0 ? pay : flightsTotal / divisor;
                       })();
                       const lodgingShare = (() => {
-                        const pay = lodgingPayerTotals[m.id];
-                        return typeof pay === 'number' && pay > 0 ? pay : lodgingTotal / divisor;
+                        const pay = lodgingTotalsBalanced[m.id];
+                        return typeof pay === 'number' ? pay : lodgingTotal / divisor;
                       })();
                       const tourShare = payerTotals[m.id] || 0;
                       const total = flightsShare + lodgingShare + tourShare;
@@ -3191,6 +2624,107 @@ const App: React.FC = () => {
                   </View>
                 </View>
               </ScrollView>
+            </View>
+          ) : null}
+
+          {activePage === 'account' ? (
+            <View style={[styles.card, styles.accountSection]}>
+              <Text style={styles.sectionTitle}>Account</Text>
+              <Text style={styles.helperText}>Update your profile, change your password, or remove your account.</Text>
+              {accountMessage ? (
+                <View style={styles.successCard}>
+                  <Text style={styles.bodyText}>{accountMessage}</Text>
+                </View>
+              ) : null}
+              <View style={styles.row}>
+                <TextInput
+                  style={[styles.input, { flex: 1 }]}
+                  placeholder="First name"
+                  value={accountProfile.firstName}
+                  onChangeText={(text) => setAccountProfile((p) => ({ ...p, firstName: text }))}
+                />
+                <TextInput
+                  style={[styles.input, { flex: 1 }]}
+                  placeholder="Last name"
+                  value={accountProfile.lastName}
+                  onChangeText={(text) => setAccountProfile((p) => ({ ...p, lastName: text }))}
+                />
+              </View>
+              <TextInput
+                style={styles.input}
+                placeholder="Email"
+                autoCapitalize="none"
+                keyboardType="email-address"
+                value={accountProfile.email}
+                onChangeText={(text) => setAccountProfile((p) => ({ ...p, email: text }))}
+              />
+              <TouchableOpacity style={styles.button} onPress={updateAccountProfile}>
+                <Text style={styles.buttonText}>Save Profile</Text>
+              </TouchableOpacity>
+
+              <View style={styles.divider} />
+              {!showPasswordEditor ? (
+                <TouchableOpacity style={styles.button} onPress={() => setShowPasswordEditor(true)}>
+                  <Text style={styles.buttonText}>Change Password</Text>
+                </TouchableOpacity>
+              ) : (
+                <>
+                  <Text style={styles.modalLabel}>Change password</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Current password"
+                    secureTextEntry
+                    value={passwordForm.currentPassword}
+                    onChangeText={(text) => setPasswordForm((p) => ({ ...p, currentPassword: text }))}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="New password"
+                    secureTextEntry
+                    value={passwordForm.newPassword}
+                    onChangeText={(text) => setPasswordForm((p) => ({ ...p, newPassword: text }))}
+                  />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Confirm new password"
+                    secureTextEntry
+                    value={passwordForm.newPasswordConfirm}
+                    onChangeText={(text) => setPasswordForm((p) => ({ ...p, newPasswordConfirm: text }))}
+                  />
+                  <View style={styles.row}>
+                    <TouchableOpacity style={[styles.button, styles.dangerButton, { flex: 1 }]} onPress={() => {
+                      setPasswordForm({ currentPassword: '', newPassword: '', newPasswordConfirm: '' });
+                      setShowPasswordEditor(false);
+                    }}>
+                      <Text style={styles.buttonText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.button, { flex: 1 }]} onPress={updateAccountPassword}>
+                      <Text style={styles.buttonText}>Update Password</Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              )}
+
+              <View style={styles.divider} />
+              <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={() => setShowDeleteConfirm(true)}>
+                <Text style={styles.buttonText}>Delete Account</Text>
+              </TouchableOpacity>
+              {showDeleteConfirm ? (
+                <View style={styles.modalOverlay}>
+                  <View style={styles.confirmModal}>
+                    <Text style={styles.sectionTitle}>Delete account?</Text>
+                    <Text style={styles.helperText}>This cannot be undone. All solo trips and data will be removed.</Text>
+                    <View style={styles.row}>
+                      <TouchableOpacity style={[styles.button, { flex: 1 }]} onPress={() => setShowDeleteConfirm(false)}>
+                        <Text style={styles.buttonText}>Cancel</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[styles.button, styles.dangerButton, { flex: 1 }]} onPress={deleteAccount}>
+                        <Text style={styles.buttonText}>Delete</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+              ) : null}
             </View>
           ) : null}
 
@@ -3336,7 +2870,7 @@ const App: React.FC = () => {
       {activePage === 'lodging' ? (
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Lodging</Text>
-          <Text style={styles.helperText}>Track stays for your active trip. Total: ${lodgingTotal.toFixed(2)}</Text>
+          <Text style={styles.helperText}>Track stays for your active trip.</Text>
           <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
             <View style={styles.table}>
               <View style={[styles.tableRow, styles.tableHeader]}>
@@ -3361,10 +2895,13 @@ const App: React.FC = () => {
                 <View style={[styles.cell, styles.lodgingCostCol]}>
                   <Text style={styles.headerText}>Per Night</Text>
                 </View>
+                <View style={[styles.cell, styles.lodgingPayerCol]}>
+                  <Text style={styles.headerText}>Paid By</Text>
+                </View>
                 <View style={[styles.cell, styles.lodgingAddressCol]}>
                   <Text style={styles.headerText}>Address</Text>
                 </View>
-                <View style={[styles.cell, styles.actionCell, styles.lodgingCostCol]}>
+                <View style={[styles.cell, styles.actionCell, styles.lodgingActionCol, styles.lastCell]}>
                   <Text style={styles.headerText}>Actions</Text>
                 </View>
               </View>
@@ -3372,35 +2909,43 @@ const App: React.FC = () => {
               {lodgings.map((l) => (
                 <View key={l.id} style={styles.tableRow}>
                   <View style={[styles.cell, styles.lodgingNameCol]}>
-                    <Text style={styles.cellText}>{l.name}</Text>
+                    <Text style={[styles.cellText, styles.cellTextWrap]}>{l.name}</Text>
                   </View>
                   <View style={[styles.cell, styles.lodgingDateCol]}>
-                    <Text style={styles.cellText}>{formatDateLong(normalizeDateString(l.checkInDate))}</Text>
+                    <Text style={[styles.cellText, styles.cellTextWrap]}>{formatDateLong(normalizeDateString(l.checkInDate))}</Text>
                   </View>
                   <View style={[styles.cell, styles.lodgingDateCol]}>
-                    <Text style={styles.cellText}>{formatDateLong(normalizeDateString(l.checkOutDate))}</Text>
+                    <Text style={[styles.cellText, styles.cellTextWrap]}>{formatDateLong(normalizeDateString(l.checkOutDate))}</Text>
                   </View>
                   <View style={[styles.cell, styles.lodgingRoomsCol]}>
-                    <Text style={styles.cellText}>{l.rooms || '-'}</Text>
+                    <Text style={[styles.cellText, styles.cellTextWrap]}>{l.rooms || '-'}</Text>
                   </View>
                   <View style={[styles.cell, styles.lodgingRefundCol]}>
-                    <Text style={styles.cellText}>{l.refundBy ? formatDateLong(normalizeDateString(l.refundBy)) : '—'}</Text>
+                    <Text style={[styles.cellText, styles.cellTextWrap]}>
+                      {l.refundBy ? formatDateLong(normalizeDateString(l.refundBy)) : 'Non-refundable'}
+                    </Text>
                   </View>
                   <View style={[styles.cell, styles.lodgingCostCol]}>
-                    <Text style={styles.cellText}>{l.totalCost ? `$${l.totalCost}` : '-'}</Text>
+                    <Text style={[styles.cellText, styles.cellTextWrap]}>{l.totalCost ? `$${l.totalCost}` : '-'}</Text>
                   </View>
                   <View style={[styles.cell, styles.lodgingCostCol]}>
-                    <Text style={styles.cellText}>{l.costPerNight ? `$${l.costPerNight}` : '-'}</Text>
+                    <Text style={[styles.cellText, styles.cellTextWrap]}>{l.costPerNight ? `$${l.costPerNight}` : '-'}</Text>
+                  </View>
+                  <View style={[styles.cell, styles.lodgingPayerCol]}>
+                    <Text style={[styles.cellText, styles.cellTextWrap]}>{l.paidBy?.length ? l.paidBy.map(payerName).join(', ') : '-'}</Text>
                   </View>
                   <View style={[styles.cell, styles.lodgingAddressCol]}>
-                    <Text style={styles.cellText}>{l.address || '-'}</Text>
+                    <Text style={[styles.cellText, styles.cellTextWrap]}>{l.address || '-'}</Text>
                   </View>
-                  <View style={[styles.cell, styles.actionCell, styles.lodgingCostCol]}>
+                  <View style={[styles.cell, styles.actionCell, styles.lodgingActionCol, styles.lastCell]}>
                     {l.address ? (
                       <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => openMaps(l.address)}>
                         <Text style={styles.buttonText}>Map</Text>
                       </TouchableOpacity>
                     ) : null}
+                    <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => openLodgingEditor(l)}>
+                      <Text style={styles.buttonText}>Edit</Text>
+                    </TouchableOpacity>
                     <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => removeLodging(l.id)}>
                       <Text style={styles.buttonText}>Delete</Text>
                     </TouchableOpacity>
@@ -3408,7 +2953,7 @@ const App: React.FC = () => {
                 </View>
               ))}
 
-              <View style={[styles.tableRow, styles.inputRow]}>
+              <View style={[styles.tableRow, styles.inputRow, styles.lastRow]}>
                 <View style={[styles.cell, styles.lodgingNameCol]}>
                   <TextInput
                     style={styles.input}
@@ -3462,6 +3007,31 @@ const App: React.FC = () => {
                 <View style={[styles.cell, styles.lodgingCostCol]}>
                   <Text style={styles.cellText}>{lodgingDraft.costPerNight ? `$${lodgingDraft.costPerNight}` : '-'}</Text>
                 </View>
+                <View style={[styles.cell, styles.lodgingPayerCol]}>
+                  <View style={styles.payerChips}>
+                    {lodgingDraft.paidBy.map((id) => (
+                      <View key={id} style={styles.payerChip}>
+                        <Text style={styles.cellText}>{payerName(id)}</Text>
+                        <TouchableOpacity onPress={() => setLodgingDraft((prev) => ({ ...prev, paidBy: prev.paidBy.filter((x) => x !== id) }))}>
+                          <Text style={styles.removeText}>x</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                  <View style={styles.payerOptions}>
+                    {userMembers
+                      .filter((m) => !lodgingDraft.paidBy.includes(m.id))
+                      .map((m) => (
+                        <TouchableOpacity
+                          key={m.id}
+                          style={styles.smallButton}
+                          onPress={() => setLodgingDraft((prev) => ({ ...prev, paidBy: [...prev.paidBy, m.id] }))}
+                        >
+                          <Text style={styles.buttonText}>Add {formatMemberName(m)}</Text>
+                        </TouchableOpacity>
+                      ))}
+                  </View>
+                </View>
                 <View style={[styles.cell, styles.lodgingAddressCol]}>
                   <TextInput
                     style={styles.input}
@@ -3470,665 +3040,180 @@ const App: React.FC = () => {
                     onChangeText={(text) => setLodgingDraft((prev) => ({ ...prev, address: text }))}
                   />
                 </View>
-                <View style={[styles.cell, styles.actionCell, styles.lodgingCostCol]}>
-                  <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={addLodging}>
+                <View style={[styles.cell, styles.actionCell, styles.lodgingActionCol, styles.lastCell]}>
+                  <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => saveLodging(lodgingDraft)}>
                     <Text style={styles.buttonText}>Add</Text>
                   </TouchableOpacity>
                 </View>
               </View>
             </View>
           </ScrollView>
+          <View style={{ marginTop: 12 }}>
+            <Text style={styles.flightTitle}>Total lodging cost: ${lodgingTotal.toFixed(2)}</Text>
+            <Text style={styles.helperText}>Breakdown (aligned with total even when no payers are set):</Text>
+            {userMembers.map((m) => (
+              <Text key={m.id} style={styles.helperText}>
+                {formatMemberName(m)}: ${Number(lodgingTotalsBalanced[m.id] ?? 0).toFixed(2)}
+              </Text>
+            ))}
+            <Text style={[styles.helperText, { marginTop: 4 }]}>Subtotal across payers: ${lodgingBreakdownSum.toFixed(2)}</Text>
+          </View>
         </View>
       ) : null}
 
-      {activePage === 'flights' ? (
-        <View style={[styles.card, styles.flightsSection]}>
-          <Text style={styles.sectionTitle}>Flights</Text>
+      {editingLodging && editingLodgingId ? (
+        <View style={styles.passengerOverlay}>
+          <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={closeLodgingEditor} />
+          <View style={styles.modalCard}>
+            <Text style={styles.sectionTitle}>Edit Lodging</Text>
+            <ScrollView style={{ maxHeight: 420 }}>
+              <Text style={styles.modalLabel}>Name</Text>
+              <TextInput
+                style={styles.input}
+                value={editingLodging.name}
+                onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, name: text } : prev))}
+              />
+              <Text style={styles.modalLabel}>Check-in</Text>
               {Platform.OS === 'web' ? (
-                <View style={styles.pdfRow}>
-                  <input
-                    ref={fileInputRef as any}
-                    type="file"
-                    accept="application/pdf,image/*"
-                    style={styles.hiddenInput as any}
-                    onChange={(e: any) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        handleFlightFile(file);
-                      }
-                      e.target.value = '';
-                    }}
-                  />
-                  <TouchableOpacity
-                    style={[styles.button, isParsingPdf && styles.disabledButton]}
-                    disabled={isParsingPdf}
-                    onPress={() => fileInputRef.current?.click()}
-                  >
-                    <Text style={styles.buttonText}>{isParsingPdf ? 'Reading...' : 'Upload Flight PDF'}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.button, styles.smallButton, isSavingParsedFlights && styles.disabledButton]}
-                    disabled={isSavingParsedFlights || parsedFlights.length === 0}
-                    onPress={() => saveParsedFlights()}
-                  >
-                    <Text style={styles.buttonText}>
-                      {isSavingParsedFlights
-                        ? 'Adding flights...'
-                        : parsedFlights.length
-                          ? `Add parsed flights (${parsedFlights.length})`
-                          : 'Add parsed flights'}
-                    </Text>
-                  </TouchableOpacity>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.helperText}>
-                      {pdfParseMessage ?? 'Upload a confirmation email PDF or image to auto-add flights.'}
-                    </Text>
-                    {parsedFlights.length ? (
-                      <View style={styles.parsedList}>
-                        {parsedFlights.map((f, idx) => (
-                          <Text key={`${f.passengerName}-${idx}`} style={styles.helperText}>
-                            {`${f.passengerName || 'Traveler'} | ${f.departureDate || 'Date?'} | ${f.departureLocation} -> ${f.arrivalLocation} | ${f.departureTime || '?'} / Arr ${f.arrivalTime || '?'} | Cost ${f.cost || '0'} | Ref ${f.bookingReference || '-'}`}
-                          </Text>
-                        ))}
-                      </View>
-                    ) : null}
-                  </View>
-                </View>
-              ) : null}
-              <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
-                <View style={styles.table}>
-                  <View style={[styles.tableRow, styles.tableHeader]}>
-                    {columns.map((col, idx) => (
-                      <View
-                        key={col.key}
-                        style={[
-                          styles.cell,
-                          { minWidth: col.minWidth ?? 120, flex: 1 },
-                          idx === columns.length - 1 && styles.lastCell,
-                        ]}
-                      >
-                        <Text style={styles.headerText}>{col.label}</Text>
-                      </View>
-                    ))}
-                  </View>
-                  {flights.map((item) => (
-                    <View key={item.id} style={styles.tableRow}>
-                    {columns.map((col, idx) => {
-                      const isLast = idx === columns.length - 1;
-                      if (col.key === 'actions') {
-                        return (
-                          <View
-                            key={`${item.id}-${col.key}`}
-                            style={[
-                              styles.cell,
-                              styles.actionCell,
-                              { minWidth: col.minWidth ?? 120, flex: 1 },
-                              isLast && styles.lastCell,
-                            ]}
-                          >
-                            {!item.passengerInGroup ? (
-                              <Text style={styles.warningText}>Passenger not in trip group</Text>
-                            ) : null}
-                            <TouchableOpacity style={styles.smallButton} onPress={() => openFlightDetails(item)}>
-                              <Text style={styles.buttonText}>Details</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={[styles.smallButton, styles.dangerButton]} onPress={() => removeFlight(item.id)}>
-                              <Text style={styles.buttonText}>Delete</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.smallButton} onPress={() => shareFlight(item.id)}>
-                              <Text style={styles.buttonText}>Share</Text>
-                              </TouchableOpacity>
-                            </View>
-                          );
-                        }
-                        const value = item[col.key as keyof Flight];
-                        const baseDisplay = value != null ? String(value) : '-';
-                        const display = col.key === 'cost'
-                          ? `$${value}`
-                          : col.key === 'booking_reference'
-                            ? baseDisplay.toUpperCase()
-                            : col.key === 'paidBy'
-                              ? (Array.isArray(item.paidBy) && item.paidBy.length ? item.paidBy.map(payerName).join(', ') : '-')
-                            : col.key === 'departure_date'
-                              ? formatDateLong(baseDisplay)
-                              : col.key === 'departure_location'
-                                ? formatLocationDisplay(item.departure_location, item.departure_airport_label || item.departureAirportLabel)
-                                : col.key === 'arrival_location'
-                                  ? formatLocationDisplay(item.arrival_location, item.arrival_airport_label || item.arrivalAirportLabel)
-                                  : baseDisplay;
-                        return (
-                          <View
-                            key={`${item.id}-${col.key}`}
-                            style={[
-                              styles.cell,
-                              { minWidth: col.minWidth ?? 120, flex: 1 },
-                              isLast && styles.lastCell,
-                            ]}
-                          >
-                            <Text style={styles.cellText}>{display as string}</Text>
-                          </View>
-                        );
-                      })}
-                    </View>
-              ))}
-                  {isAddingRow ? (
-                    <View style={[styles.tableRow, styles.inputRow]}>
-                      {columns.map((col, idx) => {
-                        const isLast = idx === columns.length - 1;
-                        if (col.key === 'actions') {
-                          return (
-                            <View
-                              key={`input-${col.key}`}
-                              style={[
-                                styles.cell,
-                                styles.actionCell,
-                                { minWidth: col.minWidth ?? 120, flex: 1 },
-                                isLast && styles.lastCell,
-                              ]}
-                            >
-                              <Text style={styles.helperText}>Tap OK below to save</Text>
-                            </View>
-                          );
-                        }
-                        const valueMap: Record<string, string> = {
-                          passenger_name: newFlight.passengerName,
-                          departure_date: newFlight.departureDate,
-                          departure_location: newFlight.departureLocation,
-                          departure_time: newFlight.departureTime,
-                          arrival_location: newFlight.arrivalLocation,
-                          arrival_time: newFlight.arrivalTime,
-                          layover_duration: newFlight.layoverDuration,
-                          cost: newFlight.cost,
-                          carrier: newFlight.carrier,
-                          flight_number: newFlight.flightNumber,
-                          booking_reference: newFlight.bookingReference,
-                        };
-
-                        const setters: Record<string, (text: string) => void> = {
-                          passenger_name: (text) => setNewFlight((prev) => ({ ...prev, passengerName: text })),
-                          departure_date: (text) => setNewFlight((prev) => ({ ...prev, departureDate: text })),
-                          departure_location: (text) => setNewFlight((prev) => ({ ...prev, departureLocation: text })),
-                          departure_time: (text) => setNewFlight((prev) => ({ ...prev, departureTime: text })),
-                          arrival_location: (text) => setNewFlight((prev) => ({ ...prev, arrivalLocation: text })),
-                          arrival_time: (text) => setNewFlight((prev) => ({ ...prev, arrivalTime: text })),
-                          layover_duration: (text) => setNewFlight((prev) => ({ ...prev, layoverDuration: text })),
-                          cost: (text) => setNewFlight((prev) => ({ ...prev, cost: text })),
-                          carrier: (text) => setNewFlight((prev) => ({ ...prev, carrier: text })),
-                          flight_number: (text) => setNewFlight((prev) => ({ ...prev, flightNumber: text })),
-                          booking_reference: (text) => setNewFlight((prev) => ({ ...prev, bookingReference: text.toUpperCase() })),
-                        };
-
-                      if (col.key === 'passenger_name') {
-                        const displayName = valueMap.passenger_name || 'Select passenger';
-                        return (
-                          <View
-                            key={`input-${col.key}`}
-                            style={[
-                              styles.cell,
-                              { minWidth: col.minWidth ?? 120, flex: 1 },
-                              isLast && styles.lastCell,
-                            ]}
-                          >
-                            <TouchableOpacity
-                              style={[styles.input, styles.inlineInput, styles.dropdown, styles.passengerDropdown]}
-                              onPress={togglePassengerDropdown}
-                              ref={passengerDropdownRef}
-                            >
-                              <Text style={styles.cellText}>{displayName}</Text>
-                            </TouchableOpacity>
-                          </View>
-                        );
-                      }
-
-                      if (col.key === 'departure_location' || col.key === 'arrival_location') {
-                        const isDeparture = col.key === 'departure_location';
-                        const rawValue = valueMap[col.key];
-                        const label = rawValue || (isDeparture ? 'Departure location' : 'Arrival location');
-                        const suggestions = locationTarget === (isDeparture ? 'dep' : 'arr') ? locationSuggestions : [];
-                        const displayValue = getLocationInputValue(rawValue, isDeparture ? 'dep' : 'arr', locationTarget);
-                        return (
-                          <View
-                            key={`input-${col.key}`}
-                            style={[
-                              styles.cell,
-                              styles.locationField,
-                              { minWidth: col.minWidth ?? 120, flex: 1 },
-                              isLast && styles.lastCell,
-                            ]}
-                          >
-                              <TextInput
-                            style={styles.input}
-                            value={displayValue}
-                            placeholder={label}
-                            // Location autocomplete (hits GET /api/flights/locations)
-                            onFocus={() => fetchLocationSuggestions(isDeparture ? 'dep' : 'arr', rawValue)}
-                            onChangeText={(text) => {
-                              setters[col.key](text);
-                              fetchLocationSuggestions(isDeparture ? 'dep' : 'arr', text);
-                            }}
-                            />
-                            {suggestions.length ? (
-                              <View style={styles.inlineDropdownList}>
-                                {suggestions.map((loc) => (
-                                  <TouchableOpacity
-                                    key={`${col.key}-${loc}`}
-                                    style={styles.dropdownOption}
-                                    onPress={() => {
-                                      const codeMatch = loc.match(/\(([A-Za-z]{3})\)/i);
-                                      const code = codeMatch ? codeMatch[1].toUpperCase() : loc;
-                                      if (isDeparture) {
-                                        setNewFlight((prev) => ({ ...prev, departureLocation: code, departureAirportCode: code }));
-                                      } else {
-                                        setNewFlight((prev) => ({ ...prev, arrivalLocation: code, arrivalAirportCode: code }));
-                                      }
-                                      setLocationSuggestions([]);
-                                      setLocationTarget(null);
-                                    }}
-                                  >
-                                    <Text style={styles.cellText}>{loc}</Text>
-                                  </TouchableOpacity>
-                                ))}
-                              </View>
-                            ) : null}
-                          </View>
-                        );
-                      }
-
-                      return (
-                        <View
-                          key={`input-${col.key}`}
-                          style={[
-                              styles.cell,
-                              { minWidth: col.minWidth ?? 120, flex: 1 },
-                              isLast && styles.lastCell,
-                            ]}
-                          >
-                            <TextInput
-                              placeholder={col.label}
-                              style={styles.cellInput}
-                              value={valueMap[col.key]}
-                              keyboardType={col.key === 'cost' ? 'numeric' : 'default'}
-                              onChangeText={setters[col.key]}
-                            />
-                          </View>
-                        );
-                      })}
-                    </View>
-                  ) : null}
-                </View>
-              </ScrollView>
-              <View style={styles.totalRow}>
-                <Text style={styles.flightTitle}>Total flight cost: ${flightsTotal.toFixed(2)}</Text>
-              </View>
-              <View style={styles.tableFooter}>
-                <TouchableOpacity style={styles.button} onPress={handleAddPress}>
-                  <Text style={styles.buttonText}>{isAddingRow ? 'OK' : 'Add'}</Text>
-                </TouchableOpacity>
-              </View>
-              <View style={styles.shareRow}>
-                <TextInput
-                  placeholder="Share with email"
-                  value={email}
-                  onChangeText={setEmail}
-                  style={[styles.input, styles.shareInput]}
-                  autoCapitalize="none"
+                <input
+                  type="date"
+                  value={editingLodging.checkInDate}
+                  onChange={(e) => setEditingLodging((prev) => (prev ? { ...prev, checkInDate: e.target.value } : prev))}
+                  style={styles.input as any}
                 />
-                <Text style={styles.helperText}>Enter an email, then press Share on a row.</Text>
-              </View>
-              {showPassengerDropdown && passengerAnchor ? (
-                <View style={styles.passengerOverlay}>
-                  <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={() => setShowPassengerDropdown(false)} />
-                  <View
-                    style={[
-                      styles.passengerOverlayList,
-                      {
-                        left: passengerAnchor.x,
-                        top: passengerAnchor.y + passengerAnchor.height,
-                        width: passengerAnchor.width,
-                      },
-                    ]}
-                  >
-                    {groupMembers.map((member) => {
-                      const name = formatMemberName(member);
-                      return (
-                        <TouchableOpacity
-                          key={member.id}
-                          style={styles.dropdownOption}
-                          onPress={() => {
-                            setNewFlight((prev) => ({ ...prev, passengerName: name }));
-                            setShowPassengerDropdown(false);
-                          }}
-                        >
-                          <Text style={styles.cellText}>{name}</Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                </View>
-              ) : null}
-              {airportTarget && !airportTarget.startsWith('modal') && airportAnchor ? (
-                <View style={styles.passengerOverlay}>
-                  <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={hideAirportDropdown} />
-                  <View
-                    style={[
-                      styles.passengerOverlayList,
-                      airportAnchor
-                        ? {
-                            left: airportAnchor.x,
-                            top: airportAnchor.y + airportAnchor.height,
-                            width: airportAnchor.width,
-                          }
-                        : { left: 20, top: 120, width: 260 },
-                    ]}
-                  >
-                    {airportSuggestions.map((airport) => (
-                      <TouchableOpacity
-                        key={`${airport.iata_code}-${airport.name}`}
-                        style={styles.dropdownOption}
-                        onPress={() => selectAirport(airportTarget, airport)}
-                      >
-                        <Text style={styles.cellText}>{formatAirportLabel(airport)}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-              ) : null}
-              {editingFlight && editingFlightId ? (
-                <View style={styles.passengerOverlay}>
-                  <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={closeFlightDetails} />
-                  <View style={styles.modalCard}>
-                    <Text style={styles.sectionTitle}>Flight Details</Text>
-                    <Text style={styles.helperText}>
-                      Current Departure: {formatDateLong(editingFlight.departureDate)} at {editingFlight.departureTime || '—'}
-                    </Text>
-                    <ScrollView style={{ maxHeight: 420 }}>
-                      <Text style={styles.modalLabel}>Passenger</Text>
-                      <TextInput
-                        style={styles.input}
-                        value={editingFlight.passengerName}
-                        onChangeText={(text) => setEditingFlight((prev) => (prev ? { ...prev, passengerName: text } : prev))}
-                      />
-                      <Text style={styles.modalLabel}>Departure</Text>
-                      <View style={styles.modalRow}>
-                        <View style={styles.modalField}>
-                          <Text style={styles.modalLabelSmall}>Date</Text>
-                          {Platform.OS === 'web' ? (
-                            <input
-                              type="date"
-                              value={editingFlight.departureDate}
-                              onChange={(e) =>
-                                setEditingFlight((prev) => (prev ? { ...prev, departureDate: e.target.value } : prev))
-                              }
-                              style={styles.input as any}
-                            />
-                          ) : (
-                            <TextInput
-                              style={styles.input}
-                              value={editingFlight.departureDate}
-                              placeholder="Date"
-                              onChangeText={(text) => setEditingFlight((prev) => (prev ? { ...prev, departureDate: text } : prev))}
-                            />
-                          )}
-                        </View>
-                        <View style={styles.modalField}>
-                          <Text style={styles.modalLabelSmall}>Location</Text>
-                          <TextInput
-                            style={styles.input}
-                            value={getLocationInputValue(editingFlight.departureLocation, 'modal-dep', airportTarget)}
-                            placeholder="Location"
-                            ref={modalDepLocationRef}
-                            // Location autocomplete (hits GET /api/flights/locations)
-                            onFocus={() => showAirportDropdown('modal-dep', modalDepLocationRef.current, editingFlight.departureLocation)}
-                            onChangeText={(text) => {
-                              setEditingFlight((prev) => (prev ? { ...prev, departureLocation: text } : prev));
-                              showAirportDropdown('modal-dep', modalDepLocationRef.current, text);
-                            }}
-                        />
-                        {airportTarget === 'modal-dep' && airportSuggestions.length ? (
-                          <View style={styles.inlineDropdownList}>
-                            {airportSuggestions.map((airport) => (
-                              <TouchableOpacity
-                                key={`${airport.iata_code}-${airport.name}-dep`}
-                                style={styles.dropdownOption}
-                                onPress={() => selectAirport('modal-dep', airport)}
-                              >
-                                <Text style={styles.cellText}>{formatAirportLabel(airport)}</Text>
-                              </TouchableOpacity>
-                            ))}
-                          </View>
-                        ) : null}
-                      </View>
-                        <View style={styles.modalField}>
-                          <Text style={styles.modalLabelSmall}>Time</Text>
-                          {Platform.OS === 'web' ? (
-                            <input
-                              type="time"
-                              value={editingFlight.departureTime}
-                              onChange={(e) =>
-                                setEditingFlight((prev) => (prev ? { ...prev, departureTime: e.target.value } : prev))
-                              }
-                              style={styles.input as any}
-                            />
-                          ) : (
-                            <TextInput
-                              style={styles.input}
-                              value={editingFlight.departureTime}
-                              placeholder="Time"
-                              onChangeText={(text) => setEditingFlight((prev) => (prev ? { ...prev, departureTime: text } : prev))}
-                            />
-                          )}
-                        </View>
-                      </View>
-                      <Text style={styles.modalLabel}>Arrival</Text>
-                      <View style={styles.modalRow}>
-                        <View style={styles.modalField}>
-                          <Text style={styles.modalLabelSmall}>Location</Text>
-                          <TextInput
-                            style={styles.input}
-                            value={getLocationInputValue(editingFlight.arrivalLocation, 'modal-arr', airportTarget)}
-                            placeholder="Location"
-                            ref={modalArrLocationRef}
-                            // Location autocomplete (hits GET /api/flights/locations)
-                            onFocus={() => showAirportDropdown('modal-arr', modalArrLocationRef.current, editingFlight.arrivalLocation)}
-                            onChangeText={(text) => {
-                              setEditingFlight((prev) => (prev ? { ...prev, arrivalLocation: text } : prev));
-                              showAirportDropdown('modal-arr', modalArrLocationRef.current, text);
-                            }}
-                          />
-                          {airportTarget === 'modal-arr' && airportSuggestions.length ? (
-                            <View style={styles.inlineDropdownList}>
-                              {airportSuggestions.map((airport) => (
-                                <TouchableOpacity
-                                  key={`${airport.iata_code}-${airport.name}-arr`}
-                                  style={styles.dropdownOption}
-                                  onPress={() => selectAirport('modal-arr', airport)}
-                                >
-                                  <Text style={styles.cellText}>{formatAirportLabel(airport)}</Text>
-                                </TouchableOpacity>
-                              ))}
-                            </View>
-                          ) : null}
-                        </View>
-                        <View style={styles.modalField}>
-                          <Text style={styles.modalLabelSmall}>Time</Text>
-                          {Platform.OS === 'web' ? (
-                            <input
-                              type="time"
-                              value={editingFlight.arrivalTime}
-                              onChange={(e) => setEditingFlight((prev) => (prev ? { ...prev, arrivalTime: e.target.value } : prev))}
-                              style={styles.input as any}
-                            />
-                          ) : (
-                            <TextInput
-                              style={styles.input}
-                              value={editingFlight.arrivalTime}
-                              placeholder="Time"
-                              onChangeText={(text) => setEditingFlight((prev) => (prev ? { ...prev, arrivalTime: text } : prev))}
-                            />
-                          )}
-                        </View>
-                      </View>
+              ) : (
+                <TextInput
+                  style={styles.input}
+                  value={editingLodging.checkInDate}
+                  onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, checkInDate: normalizeDateString(text) } : prev))}
+                />
+              )}
+              <Text style={styles.modalLabel}>Check-out</Text>
+              {Platform.OS === 'web' ? (
+                <input
+                  type="date"
+                  value={editingLodging.checkOutDate}
+                  onChange={(e) => setEditingLodging((prev) => (prev ? { ...prev, checkOutDate: e.target.value } : prev))}
+                  style={styles.input as any}
+                />
+              ) : (
+                <TextInput
+                  style={styles.input}
+                  value={editingLodging.checkOutDate}
+                  onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, checkOutDate: normalizeDateString(text) } : prev))}
+                />
+              )}
+              <Text style={styles.modalLabel}>Rooms</Text>
+              <TextInput
+                style={styles.input}
+                keyboardType="numeric"
+                value={editingLodging.rooms}
+                onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, rooms: text } : prev))}
+              />
+              <Text style={styles.modalLabel}>Refund by</Text>
+              {Platform.OS === 'web' ? (
+                <input
+                  type="date"
+                  value={editingLodging.refundBy}
+                  onChange={(e) => setEditingLodging((prev) => (prev ? { ...prev, refundBy: e.target.value } : prev))}
+                  style={styles.input as any}
+                />
+              ) : (
+                <TextInput
+                  style={styles.input}
+                  value={editingLodging.refundBy}
+                  placeholder="YYYY-MM-DD"
+                  onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, refundBy: normalizeDateString(text) } : prev))}
+                />
+              )}
+              <Text style={styles.modalLabel}>Total cost</Text>
+              <TextInput
+                style={styles.input}
+                value={editingLodging.totalCost}
+                keyboardType="numeric"
+                onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, totalCost: text } : prev))}
+              />
+              <Text style={styles.modalLabel}>Cost per night</Text>
+              <Text style={styles.helperText}>{editingLodging.costPerNight ? `$${editingLodging.costPerNight}` : '-'}</Text>
 
-                      <Text style={styles.modalLabel}>Layover</Text>
-                      <View style={styles.modalRow}>
-                        <View style={styles.modalField}>
-                          <Text style={styles.modalLabelSmall}>Location</Text>
-                          <TextInput
-                            style={styles.input}
-                            value={getLocationInputValue(editingFlight.layoverLocation, 'modal-layover', locationTarget)}
-                            placeholder="Layover location"
-                            // Location autocomplete (hits GET /api/flights/locations)
-                            onFocus={() => fetchLocationSuggestions('modal-layover', editingFlight.layoverLocation)}
-                            onChangeText={(text) => {
-                              setEditingFlight((prev) => (prev ? { ...prev, layoverLocation: text } : prev));
-                              fetchLocationSuggestions('modal-layover', text);
-                            }}
-                        />
-                          {locationTarget === 'modal-layover' && locationSuggestions.length ? (
-                            <View style={styles.inlineDropdownList}>
-                              {locationSuggestions.map((loc) => (
-                                <TouchableOpacity
-                                  key={`layover-${loc}`}
-                                  style={styles.dropdownOption}
-                                  onPress={() => {
-                                  const codeMatch = loc.match(/\(([A-Za-z]{3})\)/i);
-                                  const code = codeMatch ? codeMatch[1].toUpperCase() : loc;
-                                  setEditingFlight((prev) => (prev ? { ...prev, layoverLocation: code, layoverLocationCode: code } : prev));
-                                  setLocationSuggestions([]);
-                                  setLocationTarget(null);
-                                }}
-                                >
-                                  <Text style={styles.cellText}>{loc}</Text>
-                                </TouchableOpacity>
-                              ))}
-                          </View>
-                        ) : null}
-                        </View>
-                        <View style={styles.modalField}>
-                          <Text style={styles.modalLabelSmall}>Duration</Text>
-                          <View style={{ flexDirection: 'row', gap: 8 }}>
-                            {(() => {
-                              const { hours, minutes } = parseLayoverDuration(editingFlight.layoverDuration);
-                              return (
-                                <>
-                                  <TextInput
-                                    style={[styles.input, { flex: 1 }]}
-                                    keyboardType="numeric"
-                                    placeholder="Hours"
-                                    value={hours}
-                                    onChangeText={(text) => {
-                                      const { minutes: currentMinutes } = parseLayoverDuration(editingFlight.layoverDuration);
-                                      setEditingFlight((prev) =>
-                                        prev ? { ...prev, layoverDuration: `${text}h ${currentMinutes || '0'}m` } : prev
-                                      );
-                                    }}
-                                  />
-                                  <TextInput
-                                    style={[styles.input, { flex: 1 }]}
-                                    keyboardType="numeric"
-                                    placeholder="Minutes"
-                                    value={minutes}
-                                    onChangeText={(text) => {
-                                      const { hours: currentHours } = parseLayoverDuration(editingFlight.layoverDuration);
-                                      setEditingFlight((prev) =>
-                                        prev ? { ...prev, layoverDuration: `${currentHours || '0'}h ${text}m` } : prev
-                                      );
-                                    }}
-                                  />
-                                </>
-                              );
-                            })()}
-                          </View>
-                        </View>
-                      </View>
-                      <Text style={styles.modalLabel}>Flight</Text>
-                      <View style={styles.modalRow}>
-                        <View style={styles.modalField}>
-                          <Text style={styles.modalLabelSmall}>Carrier</Text>
-                          <TextInput
-                            style={styles.input}
-                            value={editingFlight.carrier}
-                            onChangeText={(text) => setEditingFlight((prev) => (prev ? { ...prev, carrier: text } : prev))}
-                          />
-                        </View>
-                        <View style={styles.modalField}>
-                          <Text style={styles.modalLabelSmall}>Flight #</Text>
-                          <TextInput
-                            style={styles.input}
-                            value={editingFlight.flightNumber}
-                            onChangeText={(text) => setEditingFlight((prev) => (prev ? { ...prev, flightNumber: text } : prev))}
-                          />
-                        </View>
-                        <View style={styles.modalField}>
-                          <Text style={styles.modalLabelSmall}>Booking Ref</Text>
-                          <TextInput
-                            style={styles.input}
-                            value={editingFlight.bookingReference}
-                            onChangeText={(text) => setEditingFlight((prev) => (prev ? { ...prev, bookingReference: text.toUpperCase() } : prev))}
-                          />
-                        </View>
-                      </View>
-                      <Text style={styles.modalLabel}>Paid by</Text>
-                      <View style={[styles.input, styles.payerBox]}>
-                        <View style={styles.payerChips}>
-                          {editingFlight.paidBy.map((id) => (
-                            <View key={id} style={styles.payerChip}>
-                              <Text style={styles.cellText}>{payerName(id)}</Text>
-                              <TouchableOpacity
-                                onPress={() =>
-                                  setEditingFlight((p) =>
-                                    p
-                                      ? {
-                                          ...p,
-                                          paidBy: p.paidBy.filter((x) => x !== id),
-                                          cost: String(Number(p.cost) || 0),
-                                        }
-                                      : p
-                                  )
+              <Text style={styles.modalLabel}>Paid by</Text>
+              <View style={[styles.input, styles.payerBox]}>
+                <View style={styles.payerChips}>
+                  {editingLodging.paidBy.map((id) => (
+                    <View key={id} style={styles.payerChip}>
+                      <Text style={styles.cellText}>{payerName(id)}</Text>
+                      <TouchableOpacity
+                        onPress={() =>
+                          setEditingLodging((p) =>
+                            p
+                              ? {
+                                  ...p,
+                                  paidBy: p.paidBy.filter((x) => x !== id),
                                 }
-                              >
-                                <Text style={styles.removeText}>×</Text>
-                              </TouchableOpacity>
-                            </View>
-                          ))}
-                        </View>
-                        <View style={styles.payerOptions}>
-                          {userMembers
-                            .filter((m) => !editingFlight.paidBy.includes(m.id))
-                            .map((m) => (
-                              <TouchableOpacity
-                                key={m.id}
-                                style={styles.smallButton}
-                                onPress={() => setEditingFlight((p) => (p ? { ...p, paidBy: [...p.paidBy, m.id] } : p))}
-                              >
-                                <Text style={styles.buttonText}>Add {formatMemberName(m)}</Text>
-                              </TouchableOpacity>
-                            ))}
-                        </View>
-                      </View>
-                      <Text style={styles.modalLabel}>Cost</Text>
-                      <TextInput
-                        style={styles.input}
-                        value={editingFlight.cost}
-                        keyboardType="numeric"
-                        onChangeText={(text) => setEditingFlight((prev) => (prev ? { ...prev, cost: text } : prev))}
-                      />
-                    </ScrollView>
-                    <View style={styles.row}>
-                      <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={closeFlightDetails}>
-                        <Text style={styles.buttonText}>Cancel</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={styles.button} onPress={saveFlightDetails}>
-                        <Text style={styles.buttonText}>Save</Text>
+                              : p
+                          )
+                        }
+                      >
+                        <Text style={styles.removeText}>x</Text>
                       </TouchableOpacity>
                     </View>
-                  </View>
+                  ))}
                 </View>
-              ) : null}
-            </View>
-          ) : null}
+                <View style={styles.payerOptions}>
+                  {userMembers
+                    .filter((m) => !editingLodging.paidBy.includes(m.id))
+                    .map((m) => (
+                      <TouchableOpacity
+                        key={m.id}
+                        style={styles.smallButton}
+                        onPress={() => setEditingLodging((p) => (p ? { ...p, paidBy: [...p.paidBy, m.id] } : p))}
+                      >
+                        <Text style={styles.buttonText}>Add {formatMemberName(m)}</Text>
+                      </TouchableOpacity>
+                    ))}
+                </View>
+              </View>
 
-          {activePage === 'trips' ? (
+              <Text style={styles.modalLabel}>Address</Text>
+              <TextInput
+                style={styles.input}
+                value={editingLodging.address}
+                onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, address: text } : prev))}
+              />
+            </ScrollView>
+            <View style={styles.row}>
+              <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={closeLodgingEditor}>
+                <Text style={styles.buttonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.button}
+                onPress={() => editingLodging && saveLodging(editingLodging, editingLodgingId)}
+              >
+                <Text style={styles.buttonText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      ) : null}
+      {activePage === 'flights' ? (
+        <FlightsTab
+          backendUrl={backendUrl}
+          userToken={userToken}
+          activeTripId={activeTripId}
+          flights={flights}
+          setFlights={setFlights}
+          groupMembers={groupMembers}
+          defaultPayerId={defaultPayerId}
+          formatMemberName={formatMemberName}
+          payerName={payerName}
+          headers={headers}
+          jsonHeaders={jsonHeaders}
+          findActiveTrip={findActiveTrip}
+          fetchGroupMembersForActiveTrip={fetchGroupMembersForActiveTrip}
+          styles={styles}
+        />
+      ) : null}
+      {activePage === 'trips' ? (
             <View style={styles.card}>
               <Text style={styles.sectionTitle}>Trips</Text>
               <View style={styles.addRow}>
@@ -4250,6 +3335,15 @@ const App: React.FC = () => {
             value={authForm.password}
             onChangeText={(text) => setAuthForm((p) => ({ ...p, password: text }))}
           />
+          {authMode === 'register' ? (
+            <TextInput
+              style={styles.input}
+              placeholder="Confirm password"
+              secureTextEntry
+              value={authForm.passwordConfirm}
+              onChangeText={(text) => setAuthForm((p) => ({ ...p, passwordConfirm: text }))}
+            />
+          ) : null}
           <TouchableOpacity
             style={styles.button}
             onPress={authMode === 'login' ? loginWithPassword : register}
@@ -4258,6 +3352,73 @@ const App: React.FC = () => {
           </TouchableOpacity>
         </View>
       )}
+      {showItineraryCountryDropdown ? (
+        <View style={styles.dropdownOverlay}>
+          <TouchableOpacity
+            style={styles.dropdownBackdrop}
+            onPress={() => setShowItineraryCountryDropdown(false)}
+          />
+          <View style={styles.dropdownPortal}>
+            <TextInput
+              style={[styles.input, styles.inlineInput]}
+              placeholder="Search countries"
+              value={countrySearch}
+              onChangeText={setCountrySearch}
+              autoFocus
+            />
+            <ScrollView style={styles.dropdownScroll}>
+              {filteredCountries.map((name) => (
+                <TouchableOpacity
+                  key={name}
+                  style={styles.dropdownOption}
+                  onPress={() => {
+                    setItineraryCountry(name);
+                    setItineraryRegion('');
+                    setCountrySearch('');
+                    setRegionSearch('');
+                    setShowItineraryCountryDropdown(false);
+                    setShowItineraryRegionDropdown(false);
+                  }}
+                >
+                  <Text style={styles.cellText}>{name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      ) : null}
+      {showItineraryRegionDropdown && regionOptions.length ? (
+        <View style={styles.dropdownOverlay}>
+          <TouchableOpacity
+            style={styles.dropdownBackdrop}
+            onPress={() => setShowItineraryRegionDropdown(false)}
+          />
+          <View style={styles.dropdownPortal}>
+            <TextInput
+              style={[styles.input, styles.inlineInput]}
+              placeholder="Search regions / states"
+              value={regionSearch}
+              onChangeText={setRegionSearch}
+              autoFocus
+            />
+            <ScrollView style={styles.dropdownScroll}>
+              {filteredRegions.map((name) => (
+                <TouchableOpacity
+                  key={name}
+                  style={styles.dropdownOption}
+                  onPress={() => {
+                    setItineraryRegion(name);
+                    setRegionSearch('');
+                    setShowItineraryRegionDropdown(false);
+                  }}
+                >
+                  <Text style={styles.cellText}>{name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 };
@@ -4325,12 +3486,38 @@ const styles = StyleSheet.create({
     borderColor: '#bfdbfe',
     borderWidth: 1,
   },
+  divider: {
+    height: 1,
+    backgroundColor: '#e5e7eb',
+    marginVertical: 12,
+  },
+  accountSection: {
+    gap: 6,
+  },
   button: {
     backgroundColor: '#0d6efd',
     padding: 10,
     borderRadius: 6,
     alignItems: 'center',
     marginVertical: 6,
+  },
+  budgetRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  budgetIndicator: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#0d6efd',
+    backgroundColor: 'transparent',
+  },
+  budgetIndicatorActive: {
+    backgroundColor: '#fff',
+    borderColor: '#fff',
   },
   buttonText: {
     color: '#fff',
@@ -4570,26 +3757,17 @@ const styles = StyleSheet.create({
     color: '#0d6efd',
     textDecorationLine: 'underline',
   },
-  lodgingNameCol: {
-    minWidth: 180,
-  },
-  lodgingDateCol: {
-    minWidth: 130,
-  },
-  lodgingRoomsCol: {
-    minWidth: 80,
-  },
-  lodgingRefundCol: {
-    minWidth: 150,
-  },
-  lodgingCostCol: {
-    minWidth: 120,
-  },
-  lodgingPayerCol: {
-    minWidth: 150,
-  },
-  lodgingAddressCol: {
-    minWidth: 240,
+  lodgingNameCol: { minWidth: 120, maxWidth: 320, flex: 1 },
+  lodgingDateCol: { minWidth: 120, maxWidth: 320, flex: 1 },
+  lodgingRoomsCol: { minWidth: 80, maxWidth: 320, flex: 1 },
+  lodgingRefundCol: { minWidth: 120, maxWidth: 320, flex: 1 },
+  lodgingCostCol: { minWidth: 100, maxWidth: 320, flex: 1 },
+  lodgingPayerCol: { minWidth: 140, maxWidth: 320, flex: 1 },
+  lodgingAddressCol: { minWidth: 140, maxWidth: 320, flex: 1 },
+  lodgingActionCol: { minWidth: 140, maxWidth: 320, flex: 1 },
+  cellTextWrap: {
+    flexWrap: 'wrap',
+    whiteSpace: 'normal',
   },
   addRow: {
     flexDirection: 'row',
@@ -4602,6 +3780,25 @@ const styles = StyleSheet.create({
   },
   dropdown: {
     position: 'relative',
+  },
+  selectButton: {
+    justifyContent: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  selectButtonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  placeholderText: {
+    color: '#9ca3af',
+  },
+  selectCaret: {
+    color: '#6b7280',
+    fontSize: 12,
+    marginLeft: 8,
   },
   dropdownList: {
     position: 'absolute',
@@ -4717,11 +3914,7 @@ const styles = StyleSheet.create({
   },
   tableScrollContent: {
     overflow: 'visible',
-  },
-  traitNoteInput: {
-    minHeight: 60,
-  },
-  rangeContainer: {
+  },  rangeContainer: {
     gap: 6,
     marginBottom: 8,
   },
@@ -4743,6 +3936,43 @@ const styles = StyleSheet.create({
   },
   itineraryDropdown: {
     zIndex: 6000,
+  },
+  dropdownOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 40000,
+    elevation: 40,
+  },
+  dropdownBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.15)',
+  },
+  dropdownPortal: {
+    position: 'absolute',
+    top: 80,
+    left: 16,
+    right: 16,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    padding: 8,
+    maxHeight: 360,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 42,
+  },
+  dropdownScroll: {
+    maxHeight: 300,
   },
   traitGrid: {
     flexDirection: 'row',
@@ -4768,6 +3998,29 @@ const styles = StyleSheet.create({
   },
   traitChipTextSelected: {
     color: '#fff',
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+    zIndex: 20000,
+  },
+  confirmModal: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 10,
+    width: '100%',
+    maxWidth: 420,
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
   },
 });
 

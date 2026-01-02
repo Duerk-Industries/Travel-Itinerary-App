@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.js';
 import { createWorker } from 'tesseract.js';
-import { parseFlightText } from '../utils/flightParser';
+import { parseFlightText } from '../utils/parsers/flightParser';
 
 const resolvePdfWorker = () => {
   const pdfMain = require.resolve('pdfjs-dist/legacy/build/pdf.js');

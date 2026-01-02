@@ -4,6 +4,15 @@ import { authenticate } from '../auth';
 import fetch from 'node-fetch';
 import { listTraitsForGroupTrip } from '../db';
 
+type ChatCompletionResponse = {
+  choices?: Array<{
+    message?: {
+      content?: string;
+    };
+  }>;
+};
+
+// Itineraries API: manage itineraries, details, and sharing helpers.
 const router = Router();
 router.use(bodyParser.json());
 router.use(authenticate);
@@ -118,7 +127,7 @@ router.post('/', async (req, res) => {
       return;
     }
 
-    const data = await aiRes.json();
+    const data = (await aiRes.json()) as ChatCompletionResponse;
     const content = data?.choices?.[0]?.message?.content;
     if (!content) {
       res.status(500).json({ error: 'No itinerary returned' });

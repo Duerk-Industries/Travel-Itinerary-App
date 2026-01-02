@@ -3,6 +3,7 @@ import bodyParser from 'body-parser';
 import { authenticate } from '../auth';
 import { createTrip, deleteTrip, listTrips, updateTripGroup } from '../db';
 
+// Trips API: create/list/delete trips for the authenticated user.
 const router = Router();
 router.use(bodyParser.json());
 router.use(authenticate);
