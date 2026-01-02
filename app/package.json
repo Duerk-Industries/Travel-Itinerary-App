@@ -11,7 +11,10 @@
     "parse:debug": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" ./scripts/parse-debug.ts",
     "parse:lodging": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" ./scripts/parse-lodging-debug.ts",
     "test:lodging-parser": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" ./scripts/test-lodging-parser.ts",
-    "test:lodging-suite": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" ./scripts/test-lodging-suite.ts"
+    "test:lodging-suite": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" ./scripts/test-lodging-suite.ts",
+    "test:invite": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" ./scripts/test-invite-follow.ts",
+    "test:itinerary": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" ./scripts/test-itinerary-generate.ts",
+    "test:trait": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" ./scripts/test-trait-create-delete.ts"
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",
