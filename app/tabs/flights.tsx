@@ -171,6 +171,8 @@ type FlightsTabProps = {
   findActiveTrip: () => Trip | undefined;
   fetchGroupMembersForActiveTrip: () => Promise<void>;
   styles: Record<string, any>;
+  airportOptions: string[];
+  onSearchAirports: (q: string) => Promise<void> | void;
 };
 
 type Airport = {
@@ -223,7 +225,10 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   findActiveTrip,
   fetchGroupMembersForActiveTrip,
   styles,
+  airportOptions,
+  onSearchAirports,
 }) => {
+  const containerRef = useRef<View | null>(null);
   const [newFlight, setNewFlight] = useState<FlightDraft>(createInitialFlightState());
   const [showPassengerDropdown, setShowPassengerDropdown] = useState(false);
   const [passengerAnchor, setPassengerAnchor] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
@@ -232,9 +237,13 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   const [airports, setAirports] = useState<Airport[]>([]);
   const [airportSuggestions, setAirportSuggestions] = useState<Airport[]>([]);
   const [airportAnchor, setAirportAnchor] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
-  const [airportTarget, setAirportTarget] = useState<'dep' | 'arr' | 'modal-dep' | 'modal-arr' | null>(null);
+  const [airportTarget, setAirportTarget] = useState<'dep' | 'arr' | 'modal-dep' | 'modal-arr' | 'modal-layover' | null>(null);
+  const [airportQuery, setAirportQuery] = useState('');
   const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
   const [locationTarget, setLocationTarget] = useState<'dep' | 'arr' | 'modal-dep' | 'modal-arr' | 'modal-layover' | null>(null);
+  const [showLocationOverlay, setShowLocationOverlay] = useState(false);
+  const [locationFieldTarget, setLocationFieldTarget] = useState<'dep' | 'arr' | null>(null);
+  const [locationSearch, setLocationSearch] = useState('');
   const [email, setEmail] = useState('');
   const [isParsingPdf, setIsParsingPdf] = useState(false);
   const [pdfParseMessage, setPdfParseMessage] = useState<string | null>(null);
@@ -244,7 +253,9 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   const passengerDropdownRef = useRef<TouchableOpacity | null>(null);
   const modalDepLocationRef = useRef<TextInput | null>(null);
   const modalArrLocationRef = useRef<TextInput | null>(null);
+  const modalLayoverLocationRef = useRef<TextInput | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [containerOffset, setContainerOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
   const normalizePassengerName = (name: string): string => {
     const trimmed = name.trim().replace(/\s+/g, ' ');
@@ -269,6 +280,44 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
         return target.includes(q);
       })
       .slice(0, 8);
+  };
+
+  const parseAirportLabel = (label: string): Airport => {
+    const codeMatch = label.match(/\(([A-Za-z0-9]{3,4})\)/);
+    const code = codeMatch ? codeMatch[1].toUpperCase() : '';
+    const city = label.replace(/\([^)]+\)/, '').trim() || label;
+    return { name: label, city, country: undefined, iata_code: code };
+  };
+
+  const buildAirportSuggestions = (query: string): Airport[] => {
+    const q = query.trim().toLowerCase();
+    if (!q) {
+      if (airportOptions.length) {
+        return airportOptions.map(parseAirportLabel).slice(0, 15);
+      }
+      if (airports.length) return airports.slice(0, 15);
+      return fallbackAirports;
+    }
+    if (airportOptions.length) {
+      const parsed = airportOptions.map(parseAirportLabel);
+      const filtered = parsed.filter((a) => `${a.name ?? ''} ${a.city ?? ''} ${a.iata_code ?? ''}`.toLowerCase().includes(q));
+      return (filtered.length ? filtered : parsed).slice(0, 8);
+    }
+    return filterAirports(query);
+  };
+
+  const measureContainerOffset = () => {
+    const node = containerRef.current as any;
+    if (!node) return;
+    if (node.measureInWindow) {
+      node.measureInWindow((x: number, y: number) => setContainerOffset({ x, y }));
+    } else if (typeof node.getBoundingClientRect === 'function') {
+      const rect = node.getBoundingClientRect();
+      setContainerOffset({
+        x: rect.left + (typeof window !== 'undefined' ? window.scrollX : 0),
+        y: rect.top + (typeof window !== 'undefined' ? window.scrollY : 0),
+      });
+    }
   };
 
   const formatAirportLabel = (a: Airport): string => {
@@ -476,6 +525,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     text: string
   ) => {
     setLocationTarget(target);
+    setLocationSearch(text);
     if (!userToken) {
       setLocationSuggestions([]);
       return;
@@ -484,6 +534,16 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     if (!q) {
       setLocationSuggestions([]);
       return;
+    }
+    try {
+      await onSearchAirports(q);
+      const filtered = airportOptions.filter((opt) => opt.toLowerCase().includes(q.toLowerCase()));
+      if (filtered.length) {
+        setLocationSuggestions(filtered);
+        return;
+      }
+    } catch {
+      // fall through to local fetch
     }
     try {
       const res = await fetch(`${backendUrl}/api/flights/locations?q=${encodeURIComponent(q)}`, {
@@ -520,37 +580,53 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     }
   };
 
-  const showAirportDropdown = (target: 'dep' | 'arr' | 'modal-dep' | 'modal-arr', node: any, query: string) => {
+  const showAirportDropdown = (target: 'dep' | 'arr' | 'modal-dep' | 'modal-arr' | 'modal-layover', node: any, query: string) => {
     setAirportTarget(target);
-    setAirportSuggestions(filterAirports(query));
-    if (target.startsWith('modal')) {
-      setAirportAnchor(null);
-      return;
+    setAirportQuery(query);
+    setAirportSuggestions(buildAirportSuggestions(query));
+    measureContainerOffset();
+    if (query.trim()) {
+      try {
+        void onSearchAirports(query);
+      } catch {
+        // ignore background errors
+      }
     }
-    let fallbackAnchor = { x: 16, y: 120, width: 260, height: 40 };
+    let nextAnchor = { x: 16, y: 120, width: 260, height: 40 };
     if (node?.measureInWindow) {
       node.measureInWindow((x: number, y: number, width: number, height: number) => {
-        setAirportAnchor({ x, y, width, height });
+        setAirportAnchor({ x: x - containerOffset.x, y: y - containerOffset.y, width, height });
       });
     } else if (typeof node?.getBoundingClientRect === 'function') {
       const rect = node.getBoundingClientRect();
-      fallbackAnchor = { x: rect.left, y: rect.top, width: rect.width, height: rect.height };
+      const containerRect = (containerRef.current as any)?.getBoundingClientRect?.();
+      const containerLeft = (containerRect?.left ?? 0) + (typeof window !== 'undefined' ? window.scrollX : 0);
+      const containerTop = (containerRect?.top ?? 0) + (typeof window !== 'undefined' ? window.scrollY : 0);
+      nextAnchor = {
+        x: rect.left + (typeof window !== 'undefined' ? window.scrollX : 0) - containerLeft,
+        y: rect.top + (typeof window !== 'undefined' ? window.scrollY : 0) - containerTop,
+        width: rect.width,
+        height: rect.height,
+      };
     }
-    setAirportAnchor((prev) => prev ?? fallbackAnchor);
+    setAirportAnchor(nextAnchor);
   };
 
   const hideAirportDropdown = () => {
     setAirportTarget(null);
     setAirportAnchor(null);
     setAirportSuggestions([]);
+    setAirportQuery('');
   };
 
-  const selectAirport = (target: 'dep' | 'arr' | 'modal-dep' | 'modal-arr', airport: Airport) => {
+  const selectAirport = (target: 'dep' | 'arr' | 'modal-dep' | 'modal-arr' | 'modal-layover', airport: Airport) => {
     const code = airport.iata_code ?? '';
     if ((target === 'dep' || target === 'modal-dep') && editingFlight) {
       setEditingFlight((prev) => (prev ? { ...prev, departureLocation: code, departureAirportCode: code } : prev));
     } else if ((target === 'arr' || target === 'modal-arr') && editingFlight) {
       setEditingFlight((prev) => (prev ? { ...prev, arrivalLocation: code, arrivalAirportCode: code } : prev));
+    } else if (target === 'modal-layover' && editingFlight) {
+      setEditingFlight((prev) => (prev ? { ...prev, layoverLocation: code, layoverLocationCode: code } : prev));
     }
     hideAirportDropdown();
   };
@@ -670,6 +746,22 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     fetchFlights();
   };
 
+  const openLocationOverlay = (target: 'dep' | 'arr', initialValue: string) => {
+    setLocationFieldTarget(target);
+    setLocationTarget(target);
+    setLocationSearch(initialValue || '');
+    setShowLocationOverlay(true);
+    fetchLocationSuggestions(target, initialValue || '');
+  };
+
+  const closeLocationOverlay = () => {
+    setShowLocationOverlay(false);
+    setLocationSuggestions([]);
+    setLocationTarget(null);
+    setLocationFieldTarget(null);
+    setLocationSearch('');
+  };
+
   const handleAddPress = () => {
     if (!activeTripId) {
       alert('Select an active trip before adding a flight.');
@@ -714,7 +806,21 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       }
     };
     loadAirports();
+    measureContainerOffset();
   }, []);
+
+  useEffect(() => {
+    if (!locationTarget || !locationSearch.trim()) return;
+    if (airportOptions.length) {
+      const filtered = airportOptions.filter((opt) => opt.toLowerCase().includes(locationSearch.trim().toLowerCase()));
+      if (filtered.length) setLocationSuggestions(filtered);
+    }
+  }, [airportOptions, locationTarget, locationSearch]);
+
+  useEffect(() => {
+    if (!airportTarget) return;
+    setAirportSuggestions(buildAirportSuggestions(airportQuery));
+  }, [airportOptions, airportQuery, airportTarget]);
 
   useEffect(() => {
     fetchFlights();
@@ -722,7 +828,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
 
 
   return (
-    <View style={[styles.card, styles.flightsSection]}>
+    <View style={[styles.card, styles.flightsSection]} ref={containerRef as any}>
       <Text style={styles.sectionTitle}>Flights</Text>
       {Platform.OS === 'web' ? (
         <View style={styles.pdfRow}>
@@ -917,7 +1023,6 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                   const isDeparture = col.key === 'departure_location';
                   const rawValue = valueMap[col.key];
                   const label = rawValue || (isDeparture ? 'Departure location' : 'Arrival location');
-                  const suggestions = locationTarget === (isDeparture ? 'dep' : 'arr') ? locationSuggestions : [];
                   const displayValue = getLocationInputValue(rawValue, isDeparture ? 'dep' : 'arr', locationTarget);
                   return (
                     <View
@@ -925,43 +1030,18 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                       style={[
                         styles.cell,
                         styles.locationField,
-                        { minWidth: col.minWidth ?? 120, flex: 1 },
+                        { minWidth: col.minWidth ?? 120, flex: 1, position: 'relative' },
                         isLast && styles.lastCell,
                       ]}
                     >
-                      <TextInput
-                        style={styles.input}
-                        value={displayValue}
-                        placeholder={label}
-                        onFocus={() => fetchLocationSuggestions(isDeparture ? 'dep' : 'arr', rawValue)}
-                        onChangeText={(text) => {
-                          setters[col.key](text);
-                          fetchLocationSuggestions(isDeparture ? 'dep' : 'arr', text);
-                        }}
-                      />
-                      {suggestions.length ? (
-                        <View style={styles.inlineDropdownList}>
-                          {suggestions.map((loc) => (
-                            <TouchableOpacity
-                              key={`${col.key}-${loc}`}
-                              style={styles.dropdownOption}
-                              onPress={() => {
-                                const codeMatch = loc.match(/\(([A-Za-z]{3})\)/i);
-                                const code = codeMatch ? codeMatch[1].toUpperCase() : loc;
-                                if (isDeparture) {
-                                  setNewFlight((prev) => ({ ...prev, departureLocation: code, departureAirportCode: code }));
-                                } else {
-                                  setNewFlight((prev) => ({ ...prev, arrivalLocation: code, arrivalAirportCode: code }));
-                                }
-                                setLocationSuggestions([]);
-                                setLocationTarget(null);
-                              }}
-                            >
-                              <Text style={styles.cellText}>{loc}</Text>
-                            </TouchableOpacity>
-                          ))}
-                        </View>
-                      ) : null}
+                      <TouchableOpacity
+                        style={[styles.input, { justifyContent: 'center' }]}
+                        onPress={() => openLocationOverlay(isDeparture ? 'dep' : 'arr', rawValue)}
+                      >
+                        <Text style={[styles.cellText, !displayValue ? { color: '#9ca3af' } : null]}>
+                          {displayValue || (isDeparture ? 'Select departure airport' : 'Select arrival airport')}
+                        </Text>
+                      </TouchableOpacity>
                     </View>
                   );
                 }
@@ -1002,6 +1082,45 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
         <Text style={styles.helperText}>Enter an email, then press Share on a row.</Text>
       </View>
 
+      {showLocationOverlay ? (
+        <View style={styles.dropdownOverlay}>
+          <TouchableOpacity style={styles.dropdownBackdrop} onPress={closeLocationOverlay} />
+          <View style={styles.dropdownPortal}>
+            <TextInput
+              style={[styles.input, styles.inlineInput]}
+              placeholder="Search airports or cities"
+              value={locationSearch}
+              onChangeText={(text) => {
+                setLocationSearch(text);
+                if (locationFieldTarget) fetchLocationSuggestions(locationFieldTarget, text);
+              }}
+              autoFocus
+            />
+            <ScrollView style={styles.dropdownScroll}>
+              {locationSuggestions.map((loc) => (
+                <TouchableOpacity
+                  key={`overlay-${loc}`}
+                  style={styles.dropdownOption}
+                  onPress={() => {
+                    const codeMatch = loc.match(/\(([A-Za-z]{3})\)/i);
+                    const code = codeMatch ? codeMatch[1].toUpperCase() : loc;
+                    if (locationFieldTarget === 'dep') {
+                      setNewFlight((prev) => ({ ...prev, departureLocation: code, departureAirportCode: code }));
+                    } else if (locationFieldTarget === 'arr') {
+                      setNewFlight((prev) => ({ ...prev, arrivalLocation: code, arrivalAirportCode: code }));
+                    }
+                    closeLocationOverlay();
+                  }}
+                >
+                  <Text style={styles.cellText}>{loc}</Text>
+                </TouchableOpacity>
+              ))}
+              {!locationSuggestions.length ? <Text style={styles.helperText}>Type to search airports</Text> : null}
+            </ScrollView>
+          </View>
+        </View>
+      ) : null}
+
       {showPassengerDropdown && passengerAnchor ? (
         <View style={styles.passengerOverlay}>
           <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={() => setShowPassengerDropdown(false)} />
@@ -1033,23 +1152,34 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
           </View>
         </View>
       ) : null}
-      {airportTarget && !airportTarget.startsWith('modal') && airportAnchor ? (
-        <View style={styles.passengerOverlay}>
-          <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={hideAirportDropdown} />
+      {airportTarget && airportAnchor ? (
+        <View
+          style={[
+            styles.passengerOverlay,
+            { backgroundColor: 'transparent', zIndex: 52000, elevation: 80, pointerEvents: 'box-none' },
+          ]}
+          pointerEvents="box-none"
+        >
+          <TouchableOpacity style={[styles.passengerOverlayBackdrop, { backgroundColor: 'transparent' }]} onPress={hideAirportDropdown} />
           <View
             style={[
               styles.passengerOverlayList,
-              airportAnchor
-                ? {
-                    left: airportAnchor.x,
-                    top: airportAnchor.y + airportAnchor.height,
-                    width: airportAnchor.width,
-                  }
-                : { left: 20, top: 120, width: 260 },
+              {
+                zIndex: 53000,
+                elevation: 84,
+                left: airportAnchor.x,
+                top: airportAnchor.y + airportAnchor.height,
+                width: airportAnchor.width || 280,
+              },
             ]}
+            pointerEvents="box-none"
           >
             {airportSuggestions.map((airport) => (
-              <TouchableOpacity key={`${airport.iata_code}-${airport.name}`} style={styles.dropdownOption} onPress={() => selectAirport(airportTarget, airport)}>
+              <TouchableOpacity
+                key={`${airport.iata_code}-${airport.name}`}
+                style={styles.dropdownOption}
+                onPress={() => selectAirport(airportTarget, airport)}
+              >
                 <Text style={styles.cellText}>{formatAirportLabel(airport)}</Text>
               </TouchableOpacity>
             ))}
@@ -1093,26 +1223,25 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                 </View>
                 <View style={styles.modalField}>
                   <Text style={styles.modalLabelSmall}>Location</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={getLocationInputValue(editingFlight.departureLocation, 'modal-dep', airportTarget)}
-                    placeholder="Location"
-                    ref={modalDepLocationRef}
-                    onFocus={() => showAirportDropdown('modal-dep', modalDepLocationRef.current, editingFlight.departureLocation)}
-                    onChangeText={(text) => {
-                      setEditingFlight((prev) => (prev ? { ...prev, departureLocation: text } : prev));
-                      showAirportDropdown('modal-dep', modalDepLocationRef.current, text);
-                    }}
-                  />
-                  {airportTarget === 'modal-dep' && airportSuggestions.length ? (
-                    <View style={styles.inlineDropdownList}>
-                      {airportSuggestions.map((airport) => (
-                        <TouchableOpacity key={`${airport.iata_code}-${airport.name}-dep`} style={styles.dropdownOption} onPress={() => selectAirport('modal-dep', airport)}>
-                          <Text style={styles.cellText}>{formatAirportLabel(airport)}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  ) : null}
+                  <View style={{ position: 'relative' }}>
+                    <TextInput
+                      style={styles.input}
+                      value={getLocationInputValue(editingFlight.departureLocation, 'modal-dep', airportTarget)}
+                      placeholder="Location"
+                      ref={modalDepLocationRef}
+                      onFocus={() => showAirportDropdown('modal-dep', modalDepLocationRef.current, editingFlight.departureLocation)}
+                      onChangeText={(text) => {
+                        setEditingFlight((prev) => (prev ? { ...prev, departureLocation: text } : prev));
+                        showAirportDropdown('modal-dep', modalDepLocationRef.current, text);
+                      }}
+                    />
+                    <TouchableOpacity
+                      style={{ position: 'absolute', right: 8, top: 10, padding: 6 }}
+                      onPress={() => showAirportDropdown('modal-dep', modalDepLocationRef.current, editingFlight.departureLocation)}
+                    >
+                      <Text style={styles.selectCaret}>▼</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
                 <View style={styles.modalField}>
                   <Text style={styles.modalLabelSmall}>Time</Text>
@@ -1137,26 +1266,25 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
               <View style={styles.modalRow}>
                 <View style={styles.modalField}>
                   <Text style={styles.modalLabelSmall}>Location</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={getLocationInputValue(editingFlight.arrivalLocation, 'modal-arr', airportTarget)}
-                    placeholder="Location"
-                    ref={modalArrLocationRef}
-                    onFocus={() => showAirportDropdown('modal-arr', modalArrLocationRef.current, editingFlight.arrivalLocation)}
-                    onChangeText={(text) => {
-                      setEditingFlight((prev) => (prev ? { ...prev, arrivalLocation: text } : prev));
-                      showAirportDropdown('modal-arr', modalArrLocationRef.current, text);
-                    }}
-                  />
-                  {airportTarget === 'modal-arr' && airportSuggestions.length ? (
-                    <View style={styles.inlineDropdownList}>
-                      {airportSuggestions.map((airport) => (
-                        <TouchableOpacity key={`${airport.iata_code}-${airport.name}-arr`} style={styles.dropdownOption} onPress={() => selectAirport('modal-arr', airport)}>
-                          <Text style={styles.cellText}>{formatAirportLabel(airport)}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  ) : null}
+                  <View style={{ position: 'relative' }}>
+                    <TextInput
+                      style={styles.input}
+                      value={getLocationInputValue(editingFlight.arrivalLocation, 'modal-arr', airportTarget)}
+                      placeholder="Location"
+                      ref={modalArrLocationRef}
+                      onFocus={() => showAirportDropdown('modal-arr', modalArrLocationRef.current, editingFlight.arrivalLocation)}
+                      onChangeText={(text) => {
+                        setEditingFlight((prev) => (prev ? { ...prev, arrivalLocation: text } : prev));
+                        showAirportDropdown('modal-arr', modalArrLocationRef.current, text);
+                      }}
+                    />
+                    <TouchableOpacity
+                      style={{ position: 'absolute', right: 8, top: 10, padding: 6 }}
+                      onPress={() => showAirportDropdown('modal-arr', modalArrLocationRef.current, editingFlight.arrivalLocation)}
+                    >
+                      <Text style={styles.selectCaret}>▼</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
                 <View style={styles.modalField}>
                   <Text style={styles.modalLabelSmall}>Time</Text>
@@ -1182,35 +1310,25 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
               <View style={styles.modalRow}>
                 <View style={styles.modalField}>
                   <Text style={styles.modalLabelSmall}>Location</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={getLocationInputValue(editingFlight.layoverLocation, 'modal-layover', locationTarget)}
-                    placeholder="Layover location"
-                    onFocus={() => fetchLocationSuggestions('modal-layover', editingFlight.layoverLocation)}
-                    onChangeText={(text) => {
-                      setEditingFlight((prev) => (prev ? { ...prev, layoverLocation: text } : prev));
-                      fetchLocationSuggestions('modal-layover', text);
-                    }}
-                  />
-                  {locationTarget === 'modal-layover' && locationSuggestions.length ? (
-                    <View style={styles.inlineDropdownList}>
-                      {locationSuggestions.map((loc) => (
-                        <TouchableOpacity
-                          key={`layover-${loc}`}
-                          style={styles.dropdownOption}
-                          onPress={() => {
-                            const codeMatch = loc.match(/\(([A-Za-z]{3})\)/i);
-                            const code = codeMatch ? codeMatch[1].toUpperCase() : loc;
-                            setEditingFlight((prev) => (prev ? { ...prev, layoverLocation: code, layoverLocationCode: code } : prev));
-                            setLocationSuggestions([]);
-                            setLocationTarget(null);
-                          }}
-                        >
-                          <Text style={styles.cellText}>{loc}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  ) : null}
+                  <View style={{ position: 'relative' }}>
+                    <TextInput
+                      style={styles.input}
+                      value={getLocationInputValue(editingFlight.layoverLocation, 'modal-layover', airportTarget)}
+                      placeholder="Layover location"
+                      ref={modalLayoverLocationRef}
+                      onFocus={() => showAirportDropdown('modal-layover', modalLayoverLocationRef.current, editingFlight.layoverLocation)}
+                      onChangeText={(text) => {
+                        setEditingFlight((prev) => (prev ? { ...prev, layoverLocation: text } : prev));
+                        showAirportDropdown('modal-layover', modalLayoverLocationRef.current, text);
+                      }}
+                    />
+                    <TouchableOpacity
+                      style={{ position: 'absolute', right: 8, top: 10, padding: 6 }}
+                      onPress={() => showAirportDropdown('modal-layover', modalLayoverLocationRef.current, editingFlight.layoverLocation)}
+                    >
+                      <Text style={styles.selectCaret}>▼</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
                 <View style={styles.modalField}>
                   <Text style={styles.modalLabelSmall}>Duration</Text>

@@ -10,7 +10,7 @@
  * State is grouped near the top; data fetchers and helpers are defined next;
  * then UI sections render conditionally based on the active page.
  */
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Constants from 'expo-constants';
 import { formatDateLong } from './utils/formatDateLong';
@@ -575,7 +575,12 @@ const App: React.FC = () => {
   const [editingLodgingId, setEditingLodgingId] = useState<string | null>(null);
   const [editingLodging, setEditingLodging] = useState<LodgingDraft | null>(null);
   const [lodgingDateField, setLodgingDateField] = useState<'checkIn' | 'checkOut' | 'refund' | null>(null);
+  const [lodgingDateContext, setLodgingDateContext] = useState<'draft' | 'edit'>('draft');
   const [lodgingDateValue, setLodgingDateValue] = useState<Date>(new Date());
+  const lodgingCheckInRef = useRef<HTMLInputElement | null>(null);
+  const lodgingCheckOutRef = useRef<HTMLInputElement | null>(null);
+  const editLodgingCheckInRef = useRef<HTMLInputElement | null>(null);
+  const editLodgingCheckOutRef = useRef<HTMLInputElement | null>(null);
 
   const [tours, setTours] = useState<Tour[]>([]);
   const [editingTour, setEditingTour] = useState<TourDraft | null>(null);
@@ -599,6 +604,7 @@ const App: React.FC = () => {
   const [itineraryAirport, setItineraryAirport] = useState('');
   const [itineraryAirportOptions, setItineraryAirportOptions] = useState<string[]>([]);
   const [showItineraryAirportDropdown, setShowItineraryAirportDropdown] = useState(false);
+  const [flightAirportOptions, setFlightAirportOptions] = useState<string[]>([]);
   const [itineraryPlan, setItineraryPlan] = useState('');
   const [itineraryTripStyle, setItineraryTripStyle] = useState('');
   const [itineraryLoading, setItineraryLoading] = useState(false);
@@ -705,6 +711,41 @@ const App: React.FC = () => {
     } else {
       Linking.openURL(url);
     }
+  };
+
+  const applyLodgingDate = (field: 'checkIn' | 'checkOut', value: string, context: 'draft' | 'edit') => {
+    if (context === 'edit') {
+      setEditingLodging((prev) => (prev ? { ...prev, [field === 'checkIn' ? 'checkInDate' : 'checkOutDate']: value } : prev));
+    } else {
+      setLodgingDraft((prev) => ({ ...prev, [field === 'checkIn' ? 'checkInDate' : 'checkOutDate']: value }));
+    }
+  };
+
+  const openLodgingDatePicker = (field: 'checkIn' | 'checkOut', context: 'draft' | 'edit', current?: string) => {
+    setLodgingDateContext(context);
+    if (Platform.OS !== 'web' && NativeDateTimePicker) {
+      const base = current && current.trim() ? new Date(current) : new Date();
+      setLodgingDateValue(base);
+      setLodgingDateField(field);
+      return;
+    }
+    const ref =
+      context === 'edit'
+        ? field === 'checkIn'
+          ? editLodgingCheckInRef.current
+          : editLodgingCheckOutRef.current
+        : field === 'checkIn'
+          ? lodgingCheckInRef.current
+          : lodgingCheckOutRef.current;
+    if (ref?.showPicker) {
+      (ref as any).showPicker();
+      return;
+    }
+    if (typeof ref?.click === 'function') {
+      ref.click();
+      return;
+    }
+    ref?.focus();
   };
 
   // Resolve a member id to a human-friendly name for payer chips.
@@ -1401,6 +1442,26 @@ const App: React.FC = () => {
     const data = await res.json();
     setItineraryAirportOptions(data);
     setShowItineraryAirportDropdown(true);
+  };
+
+  const fetchFlightAirports = async (q: string) => {
+    if (!userToken || !q.trim()) {
+      setFlightAirportOptions([]);
+      return;
+    }
+    try {
+      const res = await fetch(`${backendUrl}/api/flights/locations?q=${encodeURIComponent(q.trim())}`, {
+        headers: { Authorization: `Bearer ${userToken}` },
+      });
+      if (!res.ok) {
+        setFlightAirportOptions([]);
+        return;
+      }
+      const data = await res.json();
+      setFlightAirportOptions(data);
+    } catch {
+      setFlightAirportOptions([]);
+    }
   };
 
   const generateItinerary = async () => {
@@ -3275,20 +3336,60 @@ const App: React.FC = () => {
                   />
                 </View>
                 <View style={[styles.cell, styles.lodgingDateCol]}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="YYYY-MM-DD"
-                    value={lodgingDraft.checkInDate}
-                    onChangeText={(text) => setLodgingDraft((prev) => ({ ...prev, checkInDate: normalizeDateString(text) }))}
-                  />
+                  <View style={styles.dateInputWrap}>
+                    {Platform.OS === 'web' ? (
+                      <input
+                        ref={lodgingCheckInRef as any}
+                        type="date"
+                        value={lodgingDraft.checkInDate}
+                        onChange={(e) =>
+                          setLodgingDraft((prev) => ({ ...prev, checkInDate: normalizeDateString(e.target.value) }))
+                        }
+                        style={styles.input as any}
+                      />
+                    ) : (
+                      <TouchableOpacity
+                        style={[styles.input, styles.dateTouchable]}
+                        onPress={() => openLodgingDatePicker('checkIn', 'draft', lodgingDraft.checkInDate)}
+                      >
+                        <Text style={styles.cellText}>{lodgingDraft.checkInDate || 'YYYY-MM-DD'}</Text>
+                      </TouchableOpacity>
+                    )}
+                    <TouchableOpacity
+                      style={styles.dateIcon}
+                      onPress={() => openLodgingDatePicker('checkIn', 'draft', lodgingDraft.checkInDate)}
+                    >
+                      <Text style={styles.selectCaret}>📅</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
                 <View style={[styles.cell, styles.lodgingDateCol]}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="YYYY-MM-DD"
-                    value={lodgingDraft.checkOutDate}
-                    onChangeText={(text) => setLodgingDraft((prev) => ({ ...prev, checkOutDate: normalizeDateString(text) }))}
-                  />
+                  <View style={styles.dateInputWrap}>
+                    {Platform.OS === 'web' ? (
+                      <input
+                        ref={lodgingCheckOutRef as any}
+                        type="date"
+                        value={lodgingDraft.checkOutDate}
+                        onChange={(e) =>
+                          setLodgingDraft((prev) => ({ ...prev, checkOutDate: normalizeDateString(e.target.value) }))
+                        }
+                        style={styles.input as any}
+                      />
+                    ) : (
+                      <TouchableOpacity
+                        style={[styles.input, styles.dateTouchable]}
+                        onPress={() => openLodgingDatePicker('checkOut', 'draft', lodgingDraft.checkOutDate)}
+                      >
+                        <Text style={styles.cellText}>{lodgingDraft.checkOutDate || 'YYYY-MM-DD'}</Text>
+                      </TouchableOpacity>
+                    )}
+                    <TouchableOpacity
+                      style={styles.dateIcon}
+                      onPress={() => openLodgingDatePicker('checkOut', 'draft', lodgingDraft.checkOutDate)}
+                    >
+                      <Text style={styles.selectCaret}>📅</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
                 <View style={[styles.cell, styles.lodgingRoomsCol]}>
                   <TextInput
@@ -3370,6 +3471,21 @@ const App: React.FC = () => {
             ))}
             <Text style={[styles.helperText, { marginTop: 4 }]}>Subtotal across payers: ${lodgingBreakdownSum.toFixed(2)}</Text>
           </View>
+          {Platform.OS !== 'web' && lodgingDateField && NativeDateTimePicker ? (
+            <NativeDateTimePicker
+              value={lodgingDateValue}
+              mode="date"
+              onChange={(_, date) => {
+                if (!date) {
+                  setLodgingDateField(null);
+                  return;
+                }
+                const iso = date.toISOString().slice(0, 10);
+                applyLodgingDate(lodgingDateField, iso, lodgingDateContext);
+                setLodgingDateField(null);
+              }}
+            />
+          ) : null}
         </View>
       ) : null}
 
@@ -3386,35 +3502,59 @@ const App: React.FC = () => {
                 onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, name: text } : prev))}
               />
               <Text style={styles.modalLabel}>Check-in</Text>
-              {Platform.OS === 'web' ? (
-                <input
-                  type="date"
-                  value={editingLodging.checkInDate}
-                  onChange={(e) => setEditingLodging((prev) => (prev ? { ...prev, checkInDate: e.target.value } : prev))}
-                  style={styles.input as any}
-                />
-              ) : (
-                <TextInput
-                  style={styles.input}
-                  value={editingLodging.checkInDate}
-                  onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, checkInDate: normalizeDateString(text) } : prev))}
-                />
-              )}
+              <View style={styles.dateInputWrap}>
+                {Platform.OS === 'web' ? (
+                  <input
+                    ref={editLodgingCheckInRef as any}
+                    type="date"
+                    value={editingLodging.checkInDate}
+                    onChange={(e) =>
+                      setEditingLodging((prev) => (prev ? { ...prev, checkInDate: normalizeDateString(e.target.value) } : prev))
+                    }
+                    style={styles.input as any}
+                  />
+                ) : (
+                  <TouchableOpacity
+                    style={[styles.input, styles.dateTouchable]}
+                    onPress={() => openLodgingDatePicker('checkIn', 'edit', editingLodging.checkInDate)}
+                  >
+                    <Text style={styles.cellText}>{editingLodging.checkInDate || 'YYYY-MM-DD'}</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  style={styles.dateIcon}
+                  onPress={() => openLodgingDatePicker('checkIn', 'edit', editingLodging.checkInDate)}
+                >
+                  <Text style={styles.selectCaret}>📅</Text>
+                </TouchableOpacity>
+              </View>
               <Text style={styles.modalLabel}>Check-out</Text>
-              {Platform.OS === 'web' ? (
-                <input
-                  type="date"
-                  value={editingLodging.checkOutDate}
-                  onChange={(e) => setEditingLodging((prev) => (prev ? { ...prev, checkOutDate: e.target.value } : prev))}
-                  style={styles.input as any}
-                />
-              ) : (
-                <TextInput
-                  style={styles.input}
-                  value={editingLodging.checkOutDate}
-                  onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, checkOutDate: normalizeDateString(text) } : prev))}
-                />
-              )}
+              <View style={styles.dateInputWrap}>
+                {Platform.OS === 'web' ? (
+                  <input
+                    ref={editLodgingCheckOutRef as any}
+                    type="date"
+                    value={editingLodging.checkOutDate}
+                    onChange={(e) =>
+                      setEditingLodging((prev) => (prev ? { ...prev, checkOutDate: normalizeDateString(e.target.value) } : prev))
+                    }
+                    style={styles.input as any}
+                  />
+                ) : (
+                  <TouchableOpacity
+                    style={[styles.input, styles.dateTouchable]}
+                    onPress={() => openLodgingDatePicker('checkOut', 'edit', editingLodging.checkOutDate)}
+                  >
+                    <Text style={styles.cellText}>{editingLodging.checkOutDate || 'YYYY-MM-DD'}</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  style={styles.dateIcon}
+                  onPress={() => openLodgingDatePicker('checkOut', 'edit', editingLodging.checkOutDate)}
+                >
+                  <Text style={styles.selectCaret}>📅</Text>
+                </TouchableOpacity>
+              </View>
               <Text style={styles.modalLabel}>Rooms</Text>
               <TextInput
                 style={styles.input}
@@ -3523,6 +3663,8 @@ const App: React.FC = () => {
           findActiveTrip={findActiveTrip}
           fetchGroupMembersForActiveTrip={fetchGroupMembersForActiveTrip}
           styles={styles}
+          airportOptions={flightAirportOptions}
+          onSearchAirports={fetchFlightAirports}
         />
       ) : null}
       {activePage === 'trips' ? (
@@ -4239,6 +4381,20 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb',
     backgroundColor: '#fff',
   },
+  dateInputWrap: {
+    position: 'relative',
+    justifyContent: 'center',
+  },
+  dateIcon: {
+    position: 'absolute',
+    right: 8,
+    top: 10,
+    padding: 6,
+    zIndex: 2,
+  },
+  dateTouchable: {
+    justifyContent: 'center',
+  },
   activeTrip: {
     minWidth: 180,
     position: 'relative',
@@ -4321,7 +4477,8 @@ const styles = StyleSheet.create({
     borderColor: '#d1d5db',
     borderRadius: 6,
     zIndex: 14000,
-    elevation: 30, // keep above other inputs on native
+    pointerEvents: 'auto',
+    elevation: 40, // keep above other inputs on native
     shadowColor: '#000',
     shadowOpacity: 0.2,
     shadowRadius: 8,
@@ -4364,6 +4521,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+    backgroundColor: 'rgba(255,255,255,0.98)',
     zIndex: 40000,
     elevation: 40,
   },
@@ -4386,11 +4544,12 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 8,
     maxHeight: 360,
+    zIndex: 41000,
     shadowColor: '#000',
     shadowOpacity: 0.2,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 6 },
-    elevation: 42,
+    elevation: 60,
   },
   dropdownScroll: {
     maxHeight: 300,
