@@ -5,5 +5,7 @@
         "tesseract",
         "travelitineraryplanner"
     ],
-    "diffEditor.codeLens": true
+    "diffEditor.codeLens": true,
+    "geminicodeassist.codeGenerationPaneViewEnabled": true,
+    "geminicodeassist.updateChannel": "Insiders"
 }
