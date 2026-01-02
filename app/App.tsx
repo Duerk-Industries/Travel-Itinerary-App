@@ -1268,7 +1268,11 @@ const App: React.FC = () => {
       return;
     }
     try {
-      const data = await fetchFlightsForTrip(backendUrl, activeTripId, token ?? userToken);
+      const data = await fetchFlightsForTrip({
+        backendUrl,
+        activeTripId,
+        token: token ?? userToken,
+      });
       setFlights(data);
     } catch {
       setFlights([]);
