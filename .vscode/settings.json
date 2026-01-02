@@ -4,5 +4,6 @@
         "datetimepicker",
         "tesseract",
         "travelitineraryplanner"
-    ]
+    ],
+    "diffEditor.codeLens": true
 }
