@@ -627,6 +627,11 @@ const App: React.FC = () => {
     notes: '',
     paidBy: [],
   });
+  const [carDateField, setCarDateField] = useState<'pickup' | 'dropoff' | null>(null);
+  const [carDateValue, setCarDateValue] = useState<Date>(new Date());
+  const [carPrepaidOpen, setCarPrepaidOpen] = useState(false);
+  const carPickupDateRef = useRef<HTMLInputElement | null>(null);
+  const carDropoffDateRef = useRef<HTMLInputElement | null>(null);
   const [traits, setTraits] = useState<Trait[]>([]);
   const [newTraitName, setNewTraitName] = useState('');
   const [selectedTraitNames, setSelectedTraitNames] = useState<Set<string>>(new Set());
@@ -779,6 +784,10 @@ const App: React.FC = () => {
     }
   };
 
+  const applyCarDate = (field: 'pickup' | 'dropoff', value: string) => {
+    setCarDraft((prev) => ({ ...prev, [field === 'pickup' ? 'pickupDate' : 'dropoffDate']: value }));
+  };
+
   const addCarRental = () => {
     if (!activeTripId) {
       alert('Select an active trip before adding a car rental.');
@@ -821,6 +830,26 @@ const App: React.FC = () => {
 
   const removeCarRental = (id: string) => {
     setCarRentals((prev) => prev.filter((c) => c.id !== id));
+  };
+
+  const openCarDatePicker = (field: 'pickup' | 'dropoff') => {
+    if (Platform.OS !== 'web' && NativeDateTimePicker) {
+      const base = (field === 'pickup' ? carDraft.pickupDate : carDraft.dropoffDate) || '';
+      const date = base ? new Date(base) : new Date();
+      setCarDateValue(date);
+      setCarDateField(field);
+      return;
+    }
+    const ref = field === 'pickup' ? carPickupDateRef.current : carDropoffDateRef.current;
+    if ((ref as any)?.showPicker) {
+      (ref as any).showPicker();
+      return;
+    }
+    if (typeof ref?.click === 'function') {
+      ref.click();
+      return;
+    }
+    ref?.focus();
   };
 
   const openLodgingDatePicker = (field: 'checkIn' | 'checkOut', context: 'draft' | 'edit', current?: string) => {
@@ -3644,12 +3673,30 @@ const App: React.FC = () => {
                   />
                 </View>
                 <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Pick up date"
-                    value={carDraft.pickupDate}
-                    onChangeText={(text) => setCarDraft((p) => ({ ...p, pickupDate: text }))}
-                  />
+                  <View style={styles.dateInputWrap}>
+                    {Platform.OS === 'web' ? (
+                      <input
+                        ref={carPickupDateRef as any}
+                        type="date"
+                        value={carDraft.pickupDate}
+                        onChange={(e) => setCarDraft((p) => ({ ...p, pickupDate: e.target.value }))}
+                        style={styles.input as any}
+                      />
+                    ) : (
+                      <TouchableOpacity
+                        style={[styles.input, styles.dateTouchable]}
+                        onPress={() => openCarDatePicker('pickup')}
+                      >
+                        <Text style={styles.cellText}>{carDraft.pickupDate || 'YYYY-MM-DD'}</Text>
+                      </TouchableOpacity>
+                    )}
+                    <TouchableOpacity
+                      style={styles.dateIcon}
+                      onPress={() => openCarDatePicker('pickup')}
+                    >
+                      <Text style={styles.selectCaret}>📅</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
                 <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
                   <TextInput
@@ -3660,13 +3707,31 @@ const App: React.FC = () => {
                   />
                 </View>
                 <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Drop off date"
-                    value={carDraft.dropoffDate}
-                    onChangeText={(text) => setCarDraft((p) => ({ ...p, dropoffDate: text }))}
-                  />
-                </View>
+                  <View style={styles.dateInputWrap}>
+                    {Platform.OS === 'web' ? (
+                      <input
+                        ref={carDropoffDateRef as any}
+                        type="date"
+                        value={carDraft.dropoffDate}
+                        onChange={(e) => setCarDraft((p) => ({ ...p, dropoffDate: e.target.value }))}
+                        style={styles.input as any}
+                      />
+                    ) : (
+                      <TouchableOpacity
+                    style={[styles.input, styles.dateTouchable]}
+                    onPress={() => openCarDatePicker('dropoff')}
+                  >
+                    <Text style={styles.cellText}>{carDraft.dropoffDate || 'YYYY-MM-DD'}</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  style={styles.dateIcon}
+                  onPress={() => openCarDatePicker('dropoff')}
+                >
+                  <Text style={styles.selectCaret}>📅</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
                 <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
                   <TextInput
                     style={styles.input}
@@ -3684,12 +3749,31 @@ const App: React.FC = () => {
                   />
                 </View>
                 <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Prepaid?"
-                    value={carDraft.prepaid}
-                    onChangeText={(text) => setCarDraft((p) => ({ ...p, prepaid: text }))}
-                  />
+                  <View style={[styles.dropdown, { width: '100%' }]}>
+                    <TouchableOpacity
+                      style={[styles.input, styles.selectButtonRow]}
+                      onPress={() => setCarPrepaidOpen((s) => !s)}
+                    >
+                      <Text style={styles.cellText}>{carDraft.prepaid || 'Select Yes/No'}</Text>
+                      <Text style={styles.selectCaret}>▾</Text>
+                    </TouchableOpacity>
+                    {carPrepaidOpen ? (
+                      <View style={[styles.dropdownList, { position: 'relative', top: 0 }]}>
+                        {['Yes', 'No'].map((opt) => (
+                          <TouchableOpacity
+                            key={opt}
+                            style={styles.dropdownOption}
+                            onPress={() => {
+                              setCarDraft((p) => ({ ...p, prepaid: opt }));
+                              setCarPrepaidOpen(false);
+                            }}
+                          >
+                            <Text style={styles.cellText}>{opt}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    ) : null}
+                  </View>
                 </View>
                 <View style={[styles.cell, { minWidth: 120, flex: 1 }]}>
                   <TextInput
@@ -3751,6 +3835,22 @@ const App: React.FC = () => {
             </View>
           </ScrollView>
         </View>
+      ) : null}
+
+      {Platform.OS !== 'web' && carDateField && NativeDateTimePicker ? (
+        <NativeDateTimePicker
+          value={carDateValue}
+          mode="date"
+          onChange={(_, date) => {
+            if (!date) {
+              setCarDateField(null);
+              return;
+            }
+            const iso = date.toISOString().slice(0, 10);
+            applyCarDate(carDateField, iso);
+            setCarDateField(null);
+          }}
+        />
       ) : null}
 
       {editingLodging && editingLodgingId ? (
