@@ -16,7 +16,7 @@ import Constants from 'expo-constants';
 import { formatDateLong } from './utils/formatDateLong';
 import { normalizeDateString } from './utils/normalizeDateString';
 import { FlightsTab, type Flight, fetchFlightsForTrip } from './tabs/flights';
-import { Tour, TourTab, fetchToursForTrip } from './tabs/tour';
+import { Tour, TourTab, fetchToursForTrip } from './tabs/tours';
 import { computePayerTotals } from './tabs/costReport';
 import {
   Lodging,

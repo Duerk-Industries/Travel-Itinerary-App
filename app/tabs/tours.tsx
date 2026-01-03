@@ -116,6 +116,7 @@ export const TourTab: React.FC<TourTabProps> = ({
   const [editingTourId, setEditingTourId] = useState<string | null>(null);
   const [tourDateField, setTourDateField] = useState<'date' | 'bookedOn' | 'freeCancel' | 'startTime' | null>(null);
   const [tourDateValue, setTourDateValue] = useState<Date>(new Date());
+  const DateTimePickerComponent = nativeDateTimePicker;
 
   const openTourEditor = (tour?: Tour) => {
     if (!activeTripId) {
@@ -223,8 +224,8 @@ export const TourTab: React.FC<TourTabProps> = ({
           <Text style={styles.buttonText}>+ Add Tour</Text>
         </TouchableOpacity>
       </View>
-      {Platform.OS !== 'web' && tourDateField && editingTour && nativeDateTimePicker ? (
-        <nativeDateTimePicker
+      {Platform.OS !== 'web' && tourDateField && editingTour && DateTimePickerComponent ? (
+        <DateTimePickerComponent
           value={tourDateValue}
           mode={tourDateField === 'startTime' ? 'time' : 'date'}
           onChange={(_, date) => {
@@ -460,4 +461,3 @@ export const TourTab: React.FC<TourTabProps> = ({
     </View>
   );
 };
-
