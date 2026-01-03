@@ -117,7 +117,7 @@ interface ItineraryDetailRecord {
   cost?: number | null;
 }
 
-type Page = 'menu' | 'flights' | 'lodging' | 'tours' | 'groups' | 'trips' | 'traits' | 'itinerary' | 'cost' | 'account' | 'follow';
+type Page = 'menu' | 'flights' | 'lodging' | 'tours' | 'car' | 'groups' | 'trips' | 'traits' | 'itinerary' | 'cost' | 'account' | 'follow';
 
 type Tour = {
   id: string;
@@ -143,6 +143,35 @@ type TourDraft = {
   freeCancelBy: string;
   bookedOn: string;
   reference: string;
+  paidBy: string[];
+};
+
+type CarRental = {
+  id: string;
+  pickupLocation: string;
+  pickupDate: string;
+  dropoffLocation: string;
+  dropoffDate: string;
+  reference: string;
+  vendor: string;
+  prepaid: string;
+  cost: string;
+  model: string;
+  notes: string;
+  paidBy: string[];
+};
+
+type CarRentalDraft = {
+  pickupLocation: string;
+  pickupDate: string;
+  dropoffLocation: string;
+  dropoffDate: string;
+  reference: string;
+  vendor: string;
+  prepaid: string;
+  cost: string;
+  model: string;
+  notes: string;
   paidBy: string[];
 };
 
@@ -587,6 +616,20 @@ const App: React.FC = () => {
   const [editingTourId, setEditingTourId] = useState<string | null>(null);
   const [tourDateField, setTourDateField] = useState<'date' | 'bookedOn' | 'freeCancel' | 'startTime' | null>(null);
   const [tourDateValue, setTourDateValue] = useState<Date>(new Date());
+  const [carRentals, setCarRentals] = useState<CarRental[]>([]);
+  const [carDraft, setCarDraft] = useState<CarRentalDraft>({
+    pickupLocation: '',
+    pickupDate: '',
+    dropoffLocation: '',
+    dropoffDate: '',
+    reference: '',
+    vendor: '',
+    prepaid: '',
+    cost: '',
+    model: '',
+    notes: '',
+    paidBy: [],
+  });
   const [traits, setTraits] = useState<Trait[]>([]);
   const [newTraitName, setNewTraitName] = useState('');
   const [selectedTraitNames, setSelectedTraitNames] = useState<Set<string>>(new Set());
@@ -719,6 +762,50 @@ const App: React.FC = () => {
     } else {
       setLodgingDraft((prev) => ({ ...prev, [field === 'checkIn' ? 'checkInDate' : 'checkOutDate']: value }));
     }
+  };
+
+  const addCarRental = () => {
+    if (!activeTripId) {
+      alert('Select an active trip before adding a car rental.');
+      return;
+    }
+    if (!carDraft.vendor.trim() && !carDraft.model.trim() && !carDraft.pickupLocation.trim()) {
+      alert('Enter at least a pickup location, vendor, or car model.');
+      return;
+    }
+    const paidBy = carDraft.paidBy.length ? carDraft.paidBy : defaultPayerId ? [defaultPayerId] : [];
+    const newRental: CarRental = {
+      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      pickupLocation: carDraft.pickupLocation.trim(),
+      pickupDate: carDraft.pickupDate.trim(),
+      dropoffLocation: carDraft.dropoffLocation.trim(),
+      dropoffDate: carDraft.dropoffDate.trim(),
+      reference: carDraft.reference.trim(),
+      vendor: carDraft.vendor.trim(),
+      prepaid: carDraft.prepaid.trim(),
+      cost: carDraft.cost.trim(),
+      model: carDraft.model.trim(),
+      notes: carDraft.notes.trim(),
+      paidBy,
+    };
+    setCarRentals((prev) => [...prev, newRental]);
+    setCarDraft({
+      pickupLocation: '',
+      pickupDate: '',
+      dropoffLocation: '',
+      dropoffDate: '',
+      reference: '',
+      vendor: '',
+      prepaid: '',
+      cost: '',
+      model: '',
+      notes: '',
+      paidBy: [],
+    });
+  };
+
+  const removeCarRental = (id: string) => {
+    setCarRentals((prev) => prev.filter((c) => c.id !== id));
   };
 
   const openLodgingDatePicker = (field: 'checkIn' | 'checkOut', context: 'draft' | 'edit', current?: string) => {
@@ -2303,6 +2390,9 @@ const App: React.FC = () => {
                 <TouchableOpacity style={[styles.button, activePage === 'lodging' && styles.toggleActive]} onPress={() => setActivePage('lodging')}>
                   <Text style={styles.buttonText}>Lodging</Text>
                 </TouchableOpacity>
+                <TouchableOpacity style={[styles.button, activePage === 'car' && styles.toggleActive]} onPress={() => setActivePage('car')}>
+                  <Text style={styles.buttonText}>Car Rentals</Text>
+                </TouchableOpacity>
                 <TouchableOpacity style={[styles.button, activePage === 'tours' && styles.toggleActive]} onPress={() => setActivePage('tours')}>
                   <Text style={styles.buttonText}>Tours</Text>
                 </TouchableOpacity>
@@ -3486,6 +3576,184 @@ const App: React.FC = () => {
               }}
             />
           ) : null}
+        </View>
+      ) : null}
+
+      {activePage === 'car' ? (
+        <View style={styles.card}>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>Car Rentals</Text>
+          </View>
+          <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
+            <View style={styles.table}>
+              <View style={[styles.tableRow, styles.tableHeader]}>
+                {['Pick Up Location', 'Pick Up Date', 'Drop Off Location', 'Drop Off Date', 'Reference', 'Vendor', 'Prepaid?', 'Cost', 'Car Model', 'Notes', 'Paid By', 'Actions'].map((label, idx, arr) => (
+                  <View
+                    key={label}
+                    style={[styles.cell, { minWidth: 140, flex: 1 }, idx === arr.length - 1 && styles.lastCell]}
+                  >
+                    <Text style={styles.headerText}>{label}</Text>
+                  </View>
+                ))}
+              </View>
+              {carRentals.map((car) => (
+                <View key={car.id} style={styles.tableRow}>
+                  <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                    <Text style={[styles.cellText, styles.cellTextWrap]}>{car.pickupLocation || '-'}</Text>
+                  </View>
+                  <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                    <Text style={styles.cellText}>{car.pickupDate || '-'}</Text>
+                  </View>
+                  <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                    <Text style={[styles.cellText, styles.cellTextWrap]}>{car.dropoffLocation || '-'}</Text>
+                  </View>
+                  <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                    <Text style={styles.cellText}>{car.dropoffDate || '-'}</Text>
+                  </View>
+                  <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                    <Text style={styles.cellText}>{car.reference || '-'}</Text>
+                  </View>
+                  <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                    <Text style={styles.cellText}>{car.vendor || '-'}</Text>
+                  </View>
+                  <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                    <Text style={styles.cellText}>{car.prepaid || '-'}</Text>
+                  </View>
+                  <View style={[styles.cell, { minWidth: 120, flex: 1 }]}>
+                    <Text style={styles.cellText}>{car.cost ? `$${car.cost}` : '-'}</Text>
+                  </View>
+                  <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
+                    <Text style={styles.cellText}>{car.model || '-'}</Text>
+                  </View>
+                  <View style={[styles.cell, { minWidth: 220, flex: 1 }]}>
+                    <Text style={[styles.cellText, styles.cellTextWrap]}>{car.notes || '-'}</Text>
+                  </View>
+                  <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
+                    <Text style={styles.cellText}>{car.paidBy.length ? car.paidBy.map(payerName).join(', ') : '-'}</Text>
+                  </View>
+                  <View style={[styles.cell, styles.actionCell, { minWidth: 160, flex: 1 }, styles.lastCell]}>
+                    <TouchableOpacity style={[styles.smallButton, styles.dangerButton]} onPress={() => removeCarRental(car.id)}>
+                      <Text style={styles.buttonText}>Delete</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+              <View style={[styles.tableRow, styles.inputRow, styles.lastRow]}>
+                <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Pick up location"
+                    value={carDraft.pickupLocation}
+                    onChangeText={(text) => setCarDraft((p) => ({ ...p, pickupLocation: text }))}
+                  />
+                </View>
+                <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Pick up date"
+                    value={carDraft.pickupDate}
+                    onChangeText={(text) => setCarDraft((p) => ({ ...p, pickupDate: text }))}
+                  />
+                </View>
+                <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Drop off location"
+                    value={carDraft.dropoffLocation}
+                    onChangeText={(text) => setCarDraft((p) => ({ ...p, dropoffLocation: text }))}
+                  />
+                </View>
+                <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Drop off date"
+                    value={carDraft.dropoffDate}
+                    onChangeText={(text) => setCarDraft((p) => ({ ...p, dropoffDate: text }))}
+                  />
+                </View>
+                <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Reference"
+                    value={carDraft.reference}
+                    onChangeText={(text) => setCarDraft((p) => ({ ...p, reference: text }))}
+                  />
+                </View>
+                <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Vendor"
+                    value={carDraft.vendor}
+                    onChangeText={(text) => setCarDraft((p) => ({ ...p, vendor: text }))}
+                  />
+                </View>
+                <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Prepaid?"
+                    value={carDraft.prepaid}
+                    onChangeText={(text) => setCarDraft((p) => ({ ...p, prepaid: text }))}
+                  />
+                </View>
+                <View style={[styles.cell, { minWidth: 120, flex: 1 }]}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Cost"
+                    keyboardType="numeric"
+                    value={carDraft.cost}
+                    onChangeText={(text) => setCarDraft((p) => ({ ...p, cost: text }))}
+                  />
+                </View>
+                <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Car model"
+                    value={carDraft.model}
+                    onChangeText={(text) => setCarDraft((p) => ({ ...p, model: text }))}
+                  />
+                </View>
+                <View style={[styles.cell, { minWidth: 220, flex: 1 }]}>
+                  <TextInput
+                    style={[styles.input, styles.cellTextWrap]}
+                    placeholder="Notes"
+                    value={carDraft.notes}
+                    onChangeText={(text) => setCarDraft((p) => ({ ...p, notes: text }))}
+                    multiline
+                  />
+                </View>
+                <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
+                  <View style={styles.payerChips}>
+                    {carDraft.paidBy.map((id) => (
+                      <View key={id} style={styles.payerChip}>
+                        <Text style={styles.cellText}>{payerName(id)}</Text>
+                        <TouchableOpacity onPress={() => setCarDraft((prev) => ({ ...prev, paidBy: prev.paidBy.filter((x) => x !== id) }))}>
+                          <Text style={styles.removeText}>x</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                  <View style={styles.payerOptions}>
+                    {userMembers
+                      .filter((m) => !carDraft.paidBy.includes(m.id))
+                      .map((m) => (
+                        <TouchableOpacity
+                          key={m.id}
+                          style={styles.smallButton}
+                          onPress={() => setCarDraft((prev) => ({ ...prev, paidBy: [...prev.paidBy, m.id] }))}
+                        >
+                          <Text style={styles.buttonText}>Add {formatMemberName(m)}</Text>
+                        </TouchableOpacity>
+                      ))}
+                  </View>
+                </View>
+                <View style={[styles.cell, styles.actionCell, { minWidth: 160, flex: 1 }, styles.lastCell]}>
+                  <TouchableOpacity style={styles.button} onPress={addCarRental}>
+                    <Text style={styles.buttonText}>Add</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </ScrollView>
         </View>
       ) : null}
 
