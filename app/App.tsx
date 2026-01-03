@@ -18,6 +18,7 @@ import { normalizeDateString } from './utils/normalizeDateString';
 import { FlightsTab, type Flight, fetchFlightsForTrip } from './tabs/flights';
 import { Tour, TourTab, fetchToursForTrip } from './tabs/tours';
 import { computePayerTotals } from './tabs/costReport';
+import { Trait, TraitsTab } from './tabs/traits';
 import {
   Lodging,
   LodgingDraft,
@@ -89,14 +90,6 @@ interface GroupMemberOption {
   email?: string;
   firstName?: string;
   lastName?: string;
-}
-
-interface Trait {
-  id: string;
-  name: string;
-  level: number;
-  notes?: string | null;
-  createdAt: string;
 }
 
 interface ItineraryRecord {
@@ -1359,44 +1352,6 @@ const App: React.FC = () => {
     }
   };
 
-  const createTrait = async () => {
-    if (!userToken) return;
-    const name = newTraitName.trim();
-    if (!name) {
-      alert('Enter a trait name');
-      return;
-    }
-    const res = await fetch(`${backendUrl}/api/traits`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...headers },
-      body: JSON.stringify({ name, level: 3 }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      alert(data.error || 'Unable to save trait');
-      return;
-    }
-    setTraits((prev) => [...prev, { id: data.id ?? name, name } as Trait]);
-    setSelectedTraitNames((prev) => {
-      const next = new Set(prev);
-      next.add(name);
-      return next;
-    });
-    setNewTraitName('');
-    fetchTraits();
-  };
-
-  const deleteTrait = async (traitId: string) => {
-    if (!userToken) return;
-    const res = await fetch(`${backendUrl}/api/traits/${traitId}`, { method: 'DELETE', headers });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      alert(data.error || 'Unable to delete trait');
-      return;
-    }
-    fetchTraits();
-  };
-
   const fetchItineraryAirports = async (q: string) => {
     if (!userToken || !q.trim()) {
       setItineraryAirportOptions([]);
@@ -1613,81 +1568,6 @@ const App: React.FC = () => {
       }
       fetchItineraryDetails(itineraryId);
     }
-  };
-
-  const traitOptions = [
-    'Adventurous',
-    'Hiking',
-    'Cafes',
-    'Relaxing',
-    'Beaches',
-    'Nightlife',
-    'Cultural',
-    'Foodie',
-    'Road Trips',
-    'Museums',
-    'Luxury',
-    'Budget',
-    'Outdoorsy',
-    'Photography',
-    'Family Friendly',
-    'Solo Travel',
-  ];
-
-  const toggleTrait = async (name: string) => {
-    const isBase = traitOptions.includes(name);
-    const existing = traits.find((t) => t.name === name);
-    let removed = false;
-    setSelectedTraitNames((prev) => {
-      const next = new Set(prev);
-      if (next.has(name)) {
-        next.delete(name);
-        removed = true;
-        if (!isBase) {
-          setTraits((list) => list.filter((t) => t.name !== name));
-        }
-      } else {
-        next.add(name);
-      }
-      return next;
-    });
-    if (removed && existing?.id) {
-      await deleteTrait(existing.id);
-    }
-  };
-
-  const saveTraitSelections = async () => {
-    if (!userToken) return;
-    const selected = new Set(selectedTraitNames);
-    const existingByName = new Map(traits.map((t) => [t.name, t]));
-    // Delete unselected
-    for (const t of traits) {
-      if (!selected.has(t.name)) {
-        await fetch(`${backendUrl}/api/traits/${t.id}`, { method: 'DELETE', headers }).catch(() => undefined);
-      }
-    }
-    // Create new selections not yet stored
-    for (const name of selected) {
-      if (!existingByName.has(name)) {
-        await fetch(`${backendUrl}/api/traits`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...headers },
-          body: JSON.stringify({ name, level: 3 }),
-        }).catch(() => undefined);
-      }
-    }
-    // Save age/gender without blocking UI if it fails
-    await fetch(`${backendUrl}/api/traits/profile/demographics`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...headers },
-      body: JSON.stringify({
-        age: traitAge ? Number(traitAge) : null,
-        gender: traitGender,
-      }),
-    }).catch(() => undefined);
-    fetchTraitProfile();
-    fetchTraits();
-    alert('Traits saved');
   };
 
   const fetchGroupMembersForActiveTrip = async () => {
@@ -2598,72 +2478,25 @@ const App: React.FC = () => {
       ) : null}
 
       {activePage === 'traits' ? (
-        <>
-          <View style={[styles.card, styles.traitsSection]}>
-            <Text style={styles.sectionTitle}>Traits</Text>
-            <Text style={styles.helperText}>Capture travel personality markers to tailor itinerary ideas (e.g., Adventurous, Coffee Lover, Beach Bum).</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Trait name"
-              value={newTraitName}
-              onChangeText={setNewTraitName}
-            />
-            <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={createTrait}>
-              <Text style={styles.buttonText}>Save Trait</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={[styles.card, styles.traitsSection]}>
-            <Text style={styles.sectionTitle}>Select as many user traits that fit your travel style</Text>
-            <Text style={styles.helperText}>These help personalize suggestions and itineraries.</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Age"
-              keyboardType="numeric"
-              value={traitAge}
-              onChangeText={(text) => setTraitAge(text.replace(/[^0-9]/g, ''))}
-            />
-            <View style={styles.traitGrid}>
-              {[
-                { key: 'female', label: 'Female' },
-                { key: 'male', label: 'Male' },
-                { key: 'nonbinary', label: 'Non-binary' },
-                { key: 'prefer-not', label: 'Prefer not to say' },
-              ].map((opt) => {
-                const selected = traitGender === opt.key;
-                return (
-                  <TouchableOpacity
-                    key={opt.key}
-                    style={[styles.traitChip, selected && styles.traitChipSelected]}
-                    onPress={() => setTraitGender(opt.key as typeof traitGender)}
-                  >
-                    <Text style={[styles.traitChipText, selected && styles.traitChipTextSelected]}>{opt.label}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-            <View style={styles.traitGrid}>
-              {[...traitOptions, ...traits.filter((t) => !traitOptions.includes(t.name)).map((t) => t.name)].map((name) => {
-                const selected = selectedTraitNames.has(name);
-                const isCustom = !traitOptions.includes(name);
-                return (
-                  <TouchableOpacity
-                    key={name}
-                    style={[styles.traitChip, selected && styles.traitChipSelected]}
-                    onPress={() => toggleTrait(name)}
-                  >
-                    <Text style={[styles.traitChipText, selected && styles.traitChipTextSelected]}>
-                      {isCustom ? `${name} (custom*)` : name}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-            <TouchableOpacity style={styles.button} onPress={saveTraitSelections}>
-              <Text style={styles.buttonText}>Save Traits</Text>
-            </TouchableOpacity>
-          </View>
-        </>
+        <TraitsTab
+          backendUrl={backendUrl}
+          userToken={userToken}
+          traits={traits}
+          setTraits={setTraits}
+          selectedTraitNames={selectedTraitNames}
+          setSelectedTraitNames={setSelectedTraitNames}
+          traitAge={traitAge}
+          setTraitAge={setTraitAge}
+          traitGender={traitGender}
+          setTraitGender={setTraitGender}
+          newTraitName={newTraitName}
+          setNewTraitName={setNewTraitName}
+          headers={headers}
+          jsonHeaders={jsonHeaders}
+          fetchTraits={fetchTraits}
+          fetchTraitProfile={fetchTraitProfile}
+          styles={styles}
+        />
       ) : null}
 
           {activePage === 'tours' ? (
