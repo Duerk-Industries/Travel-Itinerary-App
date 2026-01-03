@@ -6,6 +6,15 @@
       }
     },
     "owner": "duerk-industries",
-    "slug": "travel-itinerary-planner"
+    "slug": "travel-itinerary-planner",
+    "android": {
+      "package": "com.duerkindustries.travelitineraryplanner"
+    },
+    "ios": {
+      "bundleIdentifier": "com.duerkindustries.travelitineraryplanner",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    }
   }
 }

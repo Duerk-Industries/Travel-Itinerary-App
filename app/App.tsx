@@ -16,6 +16,7 @@ import Constants from 'expo-constants';
 import { formatDateLong } from './utils/formatDateLong';
 import { normalizeDateString } from './utils/normalizeDateString';
 import { FlightsTab, type Flight, fetchFlightsForTrip } from './tabs/flights';
+import { Tour, TourTab, fetchToursForTrip } from './tabs/tours';
 import { computePayerTotals } from './tabs/costReport';
 import {
   Lodging,
@@ -587,7 +588,7 @@ const App: React.FC = () => {
   const [groupUserEmails, setGroupUserEmails] = useState('');
   const [groupGuestNames, setGroupGuestNames] = useState('');
   const [groupAddEmail, setGroupAddEmail] = useState<Record<string, string>>({});
-  const [groupAddGuest, setGroupAddGuest] = useState<Record<string, string>>({});
+  const [groupAddRelationship, setGroupAddRelationship] = useState<Record<string, string>>({});
   const [groups, setGroups] = useState<GroupView[]>([]);
   const [groupSort, setGroupSort] = useState<'created' | 'name'>('created');
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -612,10 +613,6 @@ const App: React.FC = () => {
   const editLodgingCheckOutRef = useRef<HTMLInputElement | null>(null);
 
   const [tours, setTours] = useState<Tour[]>([]);
-  const [editingTour, setEditingTour] = useState<TourDraft | null>(null);
-  const [editingTourId, setEditingTourId] = useState<string | null>(null);
-  const [tourDateField, setTourDateField] = useState<'date' | 'bookedOn' | 'freeCancel' | 'startTime' | null>(null);
-  const [tourDateValue, setTourDateValue] = useState<Date>(new Date());
   const [carRentals, setCarRentals] = useState<CarRental[]>([]);
   const [carDraft, setCarDraft] = useState<CarRentalDraft>({
     pickupLocation: '',
@@ -674,6 +671,24 @@ const App: React.FC = () => {
   const [showPasswordEditor, setShowPasswordEditor] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [accountMessage, setAccountMessage] = useState<string | null>(null);
+  const [familyRelationships, setFamilyRelationships] = useState<any[]>([]);
+  const [familyForm, setFamilyForm] = useState({ givenName: '', middleName: '', familyName: '', email: '', relationship: 'Not Applicable' });
+  const [editingFamilyId, setEditingFamilyId] = useState<string | null>(null);
+  const [editingFamilyDraft, setEditingFamilyDraft] = useState<{ givenName: string; middleName: string; familyName: string; email: string; relationship: string } | null>(null);
+  const [showRelationshipDropdown, setShowRelationshipDropdown] = useState(false);
+  const relationshipOptions = [
+    'Not Applicable',
+    'Parent',
+    'Child',
+    'Sibling',
+    'Spouse/Partner',
+    'Grandparent',
+    'Grandchild',
+    'Aunt/Uncle',
+    'Niece/Nephew',
+    'Cousin',
+    'Friend',
+  ];
   const formatMemberName = (member: GroupMemberOption): string => {
     if (member.guestName) return member.guestName;
     const first = member.firstName?.trim();
@@ -959,32 +974,6 @@ const App: React.FC = () => {
     }
   }, [defaultPayerId]);
 
-  // Set which tour date/time picker to edit and seed the current value.
-  const openTourDatePicker = (field: 'date' | 'bookedOn' | 'freeCancel' | 'startTime') => {
-    setTourDateField(field);
-    const current = editingTour
-      ? field === 'date'
-        ? editingTour.date
-        : field === 'bookedOn'
-          ? editingTour.bookedOn
-          : field === 'freeCancel'
-            ? editingTour.freeCancelBy
-            : editingTour.startTime
-      : null;
-    if (field === 'startTime') {
-      const base = new Date();
-      if (current && /^\d{1,2}:\d{2}/.test(current)) {
-        const [h, m] = current.split(':').map(Number);
-        if (!Number.isNaN(h) && !Number.isNaN(m)) {
-          base.setHours(h, m, 0, 0);
-        }
-      }
-      setTourDateValue(base);
-    } else {
-      setTourDateValue(current ? new Date(current) : new Date());
-    }
-  };
-
   useEffect(() => {
     const nights = calculateNights(lodgingDraft.checkInDate, lodgingDraft.checkOutDate);
     const totalNum = Number(lodgingDraft.totalCost) || 0;
@@ -1048,77 +1037,6 @@ const App: React.FC = () => {
     setEditingLodging(null);
   };
 
-  const openTourEditor = (tour?: Tour) => {
-    if (!activeTripId) {
-      alert('Select an active trip before adding a tour.');
-      return;
-    }
-    const base = tour ? { ...tour } : createInitialTourState();
-    if (!tour && defaultPayerId && !base.paidBy.includes(defaultPayerId)) {
-      base.paidBy = [...base.paidBy, defaultPayerId];
-    }
-    setEditingTour(base);
-    setEditingTourId(tour?.id ?? null);
-    const baseDate = tour?.date ?? new Date().toISOString().slice(0, 10);
-    setTourDateValue(baseDate ? new Date(baseDate) : new Date());
-  };
-
-  const closeTourEditor = () => {
-    setEditingTour(null);
-    setEditingTourId(null);
-    setTourDateField(null);
-  };
-
-  const saveTour = () => {
-    if (!editingTour) return;
-    if (!editingTour.name.trim()) {
-      alert('Please enter a tour name.');
-      return;
-    }
-    const cleanCost = (editingTour.cost || '').replace(/[^0-9.]/g, '');
-    let payload: TourDraft = { ...editingTour, cost: cleanCost };
-    if ((!payload.paidBy || payload.paidBy.length === 0) && defaultPayerId) {
-      payload = { ...payload, paidBy: [defaultPayerId] };
-    }
-    if (!activeTripId) {
-      alert('Select an active trip before saving a tour.');
-      return;
-    }
-    const method = editingTourId ? 'PUT' : 'POST';
-    const url = editingTourId ? `${backendUrl}/api/tours/${editingTourId}` : `${backendUrl}/api/tours`;
-    (async () => {
-      try {
-        const res = await fetch(url, {
-          method,
-          headers: jsonHeaders,
-          body: JSON.stringify({
-            ...payload,
-            tripId: activeTripId,
-            freeCancelBy: payload.freeCancelBy?.trim() || null,
-          }),
-        });
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data.error || `Unable to save tour (status ${res.status})`);
-        }
-        await fetchTours();
-        closeTourEditor();
-      } catch (err: any) {
-        console.error('saveTour failed', err);
-        alert(err.message || 'Unable to save tour');
-      }
-    })();
-  };
-
-  const removeTour = (id: string) => {
-    fetch(`${backendUrl}/api/tours/${id}`, { method: 'DELETE', headers: jsonHeaders })
-      .then((res) => {
-        if (!res.ok) throw new Error('Unable to delete tour');
-        fetchTours();
-      })
-      .catch((err) => alert(err.message));
-  };
-
   const headers = useMemo<Record<string, string>>(
     () => (userToken ? { Authorization: `Bearer ${userToken}` } : ({} as Record<string, string>)),
     [userToken]
@@ -1139,6 +1057,8 @@ const App: React.FC = () => {
     setFollowError('');
     setFollowCodes({});
     setGroups([]);
+    setGroupAddEmail({});
+    setGroupAddRelationship({});
     setTraits([]);
     setSelectedTraitNames(new Set());
     setTraitAge('');
@@ -1163,6 +1083,10 @@ const App: React.FC = () => {
     setAccountMessage(null);
     setShowDeleteConfirm(false);
     setShowPasswordEditor(false);
+    setFamilyRelationships([]);
+    setFamilyForm({ givenName: '', middleName: '', familyName: '', email: '', relationship: 'Not Applicable' });
+    setEditingFamilyId(null);
+    setEditingFamilyDraft(null);
     setActivePage('menu');
     clearSession();
   };
@@ -1195,6 +1119,7 @@ const App: React.FC = () => {
       fetchTours(data.token);
       fetchInvites(data.token);
       fetchAccountProfile(data.token);
+      fetchFamilyRelationships(data.token);
       setActivePage('menu');
     } catch (err) {
       alert((err as Error).message || 'Login failed');
@@ -1239,6 +1164,7 @@ const App: React.FC = () => {
       fetchTours(data.token);
       fetchInvites(data.token);
       fetchAccountProfile(data.token);
+      fetchFamilyRelationships(data.token);
       setActivePage('menu');
     } catch (err) {
       alert((err as Error).message || 'Registration failed');
@@ -1338,6 +1264,99 @@ const App: React.FC = () => {
     logout();
   };
 
+  const fetchFamilyRelationships = async (token?: string) => {
+    const auth = token ?? userToken;
+    if (!auth) return;
+    try {
+      const res = await fetch(`${backendUrl}/api/account/family`, { headers: { Authorization: `Bearer ${auth}` } });
+      if (!res.ok) return;
+      const data = await res.json();
+      setFamilyRelationships(data);
+    } catch {
+      // ignore
+    }
+  };
+
+  const addFamilyMember = async () => {
+    if (!userToken) return;
+    const { givenName, familyName, relationship } = familyForm;
+    if (!givenName.trim() || !familyName.trim()) {
+      alert('Fill out given and family name');
+      return;
+    }
+    const payload = {
+      ...familyForm,
+      relationship: relationship?.trim() || 'Not Applicable',
+    };
+    const res = await fetch(`${backendUrl}/api/account/family`, {
+      method: 'POST',
+      headers: jsonHeaders,
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json().catch(() => ([]));
+    if (!res.ok) {
+      alert((data as any).error || 'Unable to add family member');
+      return;
+    }
+    setFamilyRelationships(data);
+    setFamilyForm({ givenName: '', middleName: '', familyName: '', email: '', relationship: 'Not Applicable' });
+    setShowRelationshipDropdown(false);
+  };
+
+  const acceptFamilyLink = async (id: string) => {
+    if (!userToken) return;
+    const res = await fetch(`${backendUrl}/api/account/family/${id}/accept`, { method: 'PATCH', headers });
+    const data = await res.json().catch(() => ([]));
+    if (!res.ok) {
+      alert((data as any).error || 'Unable to accept relationship');
+      return;
+    }
+    setFamilyRelationships(data);
+  };
+
+  const rejectFamilyLink = async (id: string) => {
+    if (!userToken) return;
+    const res = await fetch(`${backendUrl}/api/account/family/${id}/reject`, { method: 'PATCH', headers });
+    const data = await res.json().catch(() => ([]));
+    if (!res.ok) {
+      alert((data as any).error || 'Unable to reject relationship');
+      return;
+    }
+    setFamilyRelationships(data);
+  };
+
+  const removeFamilyLink = async (id: string) => {
+    if (!userToken) return;
+    const res = await fetch(`${backendUrl}/api/account/family/${id}`, { method: 'DELETE', headers });
+    const data = await res.json().catch(() => ([]));
+    if (!res.ok) {
+      alert((data as any).error || 'Unable to remove relationship');
+      return;
+    }
+    setFamilyRelationships(data);
+    if (editingFamilyId === id) {
+      setEditingFamilyId(null);
+      setEditingFamilyDraft(null);
+    }
+  };
+
+  const saveFamilyProfile = async () => {
+    if (!userToken || !editingFamilyId || !editingFamilyDraft) return;
+    const res = await fetch(`${backendUrl}/api/account/family/${editingFamilyId}/profile`, {
+      method: 'PATCH',
+      headers: jsonHeaders,
+      body: JSON.stringify(editingFamilyDraft),
+    });
+    const data = await res.json().catch(() => ([]));
+    if (!res.ok) {
+      alert((data as any).error || 'Unable to update family profile');
+      return;
+    }
+    setFamilyRelationships(data);
+    setEditingFamilyId(null);
+    setEditingFamilyDraft(null);
+  };
+
   // Fetch flights for the active trip; normalize paidBy casing.
   const fetchFlights = async (token?: string) => {
     if (!activeTripId) {
@@ -1345,7 +1364,11 @@ const App: React.FC = () => {
       return;
     }
     try {
-      const data = await fetchFlightsForTrip(backendUrl, activeTripId, token ?? userToken);
+      const data = await fetchFlightsForTrip({
+        backendUrl,
+        activeTripId,
+        token: token ?? userToken,
+      });
       setFlights(data);
     } catch {
       setFlights([]);
@@ -1364,24 +1387,12 @@ const App: React.FC = () => {
 
   // Fetch tours for the active trip; normalize string fields.
   const fetchTours = async (token?: string) => {
-    if (!activeTripId) {
+    if (!activeTripId || !(token ?? userToken)) {
       setTours([]);
       return;
     }
-    const res = await fetch(`${backendUrl}/api/tours?tripId=${activeTripId}`, {
-      headers: { Authorization: `Bearer ${token ?? userToken}` },
-    });
-    if (!res.ok) return;
-    const data = await res.json();
-    setTours(
-      (data as any[]).map((t) => ({
-        ...t,
-        cost: String(t.cost ?? ''),
-        paidBy: Array.isArray(t.paidBy) ? t.paidBy : [],
-        bookedOn: t.bookedOn ?? '',
-        freeCancelBy: t.freeCancelBy ?? '',
-      }))
-    );
+    const data = await fetchToursForTrip({ backendUrl, activeTripId, token: token ?? userToken });
+    setTours(data);
   };
 
   const fetchGroups = async (sort?: 'created' | 'name') => {
@@ -2211,30 +2222,52 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (userToken) {
+      fetchFamilyRelationships();
+    }
+  }, [userToken]);
+
+  useEffect(() => {
+    if (userToken) {
       fetchGroupMembersForActiveTrip();
     }
   }, [userToken, activeTripId, trips]);
 
   const findActiveTrip = () => trips.find((t) => t.id === activeTripId);
 
-  const addMemberToGroup = async (groupId: string, type: 'user' | 'guest') => {
+  const addMemberToGroup = async (groupId: string, type: 'user' | 'relationship') => {
     if (!userToken) return;
     const email = groupAddEmail[groupId] ?? '';
-    const guest = groupAddGuest[groupId] ?? '';
+    const relationshipId = groupAddRelationship[groupId] ?? '';
 
     if (type === 'user' && !email.trim()) {
       alert('Enter an email to add a user');
       return;
     }
-    if (type === 'guest' && !guest.trim()) {
-      alert('Enter a guest name');
+    if (type === 'relationship' && !relationshipId) {
+      alert('Select a relationship');
       return;
+    }
+
+    let payload: any = {};
+    if (type === 'user') {
+      payload = { email };
+    } else {
+      const rel = familyRelationships.find((r) => r.id === relationshipId);
+      if (!rel) {
+        alert('Select a relationship');
+        return;
+      }
+      const relEmail = rel.relative?.email?.trim();
+      const relName = `${rel.relative?.firstName ?? ''} ${rel.relative?.middleName ?? ''} ${rel.relative?.lastName ?? ''}`
+        .replace(/\s+/g, ' ')
+        .trim();
+      payload = relEmail ? { email: relEmail } : { guestName: relName || 'Relationship' };
     }
 
     const res = await fetch(`${backendUrl}/api/groups/${groupId}/members`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...headers },
-      body: JSON.stringify(type === 'user' ? { email } : { guestName: guest }),
+      body: JSON.stringify(payload),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -2242,7 +2275,7 @@ const App: React.FC = () => {
       return;
     }
     setGroupAddEmail((prev) => ({ ...prev, [groupId]: '' }));
-    setGroupAddGuest((prev) => ({ ...prev, [groupId]: '' }));
+    setGroupAddRelationship((prev) => ({ ...prev, [groupId]: '' }));
     fetchGroups();
     fetchInvites();
   };
@@ -2765,248 +2798,23 @@ const App: React.FC = () => {
       ) : null}
 
           {activePage === 'tours' ? (
-            <View style={styles.card}>
-              <View style={styles.sectionHeaderRow}>
-                <Text style={styles.sectionTitle}>Tours</Text>
-                <TouchableOpacity style={styles.button} onPress={() => openTourEditor()}>
-                  <Text style={styles.buttonText}>+ Add Tour</Text>
-                </TouchableOpacity>
-              </View>
-              {Platform.OS !== 'web' && tourDateField && editingTour && NativeDateTimePicker ? (
-                <NativeDateTimePicker
-                  value={tourDateValue}
-                  mode={tourDateField === 'startTime' ? 'time' : 'date'}
-                  onChange={(_, date) => {
-                    if (!date) {
-                      setTourDateField(null);
-                      return;
-                    }
-                    const iso = date.toISOString().slice(0, 10);
-                    setEditingTour((prev) => {
-                      if (!prev) return prev;
-                      if (tourDateField === 'startTime') {
-                        const hours = String(date.getHours()).padStart(2, '0');
-                        const mins = String(date.getMinutes()).padStart(2, '0');
-                        return { ...prev, startTime: `${hours}:${mins}` };
-                      }
-                      if (tourDateField === 'date') return { ...prev, date: iso };
-                      if (tourDateField === 'bookedOn') return { ...prev, bookedOn: iso };
-                      return { ...prev, freeCancelBy: iso };
-                    });
-                    setTourDateField(null);
-                  }}
-                />
-              ) : null}
-              <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
-                <View style={styles.table}>
-                  <View style={[styles.tableRow, styles.tableHeader]}>
-                    {[
-                      { label: 'Date', width: 140 },
-                      { label: 'Tour', width: 180 },
-                      { label: 'Start Location', width: 180 },
-                      { label: 'Start Time', width: 120 },
-                      { label: 'Duration', width: 120 },
-                      { label: 'Cost', width: 120 },
-                      { label: 'Free Cancel By', width: 160 },
-                      { label: 'Platform Booked On', width: 140 },
-                      { label: 'Reference', width: 140 },
-                      { label: 'Paid By', width: 180 },
-                      { label: 'Actions', width: 160 },
-                    ].map((col, idx, arr) => (
-                      <View key={col.label} style={[styles.cell, { minWidth: col.width, flex: 1 }, idx === arr.length - 1 && styles.lastCell]}>
-                        <Text style={styles.headerText}>{col.label}</Text>
-                      </View>
-                    ))}
-                  </View>
-                  {tours.map((t) => (
-                    <View key={t.id} style={styles.tableRow}>
-                      <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                        <Text style={styles.cellText}>{formatDateLong(t.date)}</Text>
-                      </View>
-                      <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
-                        <Text style={styles.cellText}>{t.name || '-'}</Text>
-                      </View>
-                      <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
-                        <Text style={styles.cellText}>{t.startLocation || '-'}</Text>
-                      </View>
-                      <View style={[styles.cell, { minWidth: 120, flex: 1 }]}>
-                        <Text style={styles.cellText}>{t.startTime || '-'}</Text>
-                      </View>
-                      <View style={[styles.cell, { minWidth: 120, flex: 1 }]}>
-                        <Text style={styles.cellText}>{t.duration || '-'}</Text>
-                      </View>
-                      <View style={[styles.cell, { minWidth: 120, flex: 1 }]}>
-                        <Text style={styles.cellText}>{t.cost ? `$${t.cost}` : '-'}</Text>
-                      </View>
-                      <View style={[styles.cell, { minWidth: 160, flex: 1 }]}>
-                        <Text style={styles.cellText}>{t.freeCancelBy ? formatDateLong(t.freeCancelBy) : '-'}</Text>
-                      </View>
-                      <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                        <Text style={styles.cellText}>{t.bookedOn || '-'}</Text>
-                      </View>
-                      <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                        <Text style={styles.cellText}>{t.reference || '-'}</Text>
-                      </View>
-                      <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
-                        <Text style={styles.cellText}>{t.paidBy.length ? t.paidBy.map(payerName).join(', ') : '-'}</Text>
-                      </View>
-                      <View style={[styles.cell, styles.actionCell, styles.lastCell, { minWidth: 160, flex: 1 }]}>
-                        <TouchableOpacity style={[styles.smallButton]} onPress={() => openTourEditor(t)}>
-                          <Text style={styles.buttonText}>Edit</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.smallButton, styles.dangerButton]} onPress={() => removeTour(t.id)}>
-                          <Text style={styles.buttonText}>Delete</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  ))}
-                </View>
-              </ScrollView>
-              <View style={{ marginTop: 8 }}>
-                <Text style={styles.flightTitle}>Total tour cost: ${toursTotal.toFixed(2)}</Text>
-                {Object.keys(payerTotals).length ? (
-                  <View style={{ marginTop: 4 }}>
-                    {Object.entries(payerTotals).map(([id, total]) => (
-                      <Text key={id} style={styles.helperText}>
-                        {payerName(id)}: ${total.toFixed(2)}
-                      </Text>
-                    ))}
-                  </View>
-                ) : null}
-              </View>
-              {editingTour ? (
-                <View style={styles.passengerOverlay}>
-                  <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={closeTourEditor} />
-                  <View style={styles.modalCard}>
-                    <Text style={styles.sectionTitle}>{editingTourId ? 'Edit Tour' : 'Add Tour'}</Text>
-                    <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ paddingRight: 12 }}>
-                      <Text style={styles.modalLabel}>Date</Text>
-                      {Platform.OS === 'web' ? (
-                        <input
-                          style={{ ...StyleSheet.flatten(styles.input), width: '100%' }}
-                          type="date"
-                          value={editingTour.date}
-                          onChange={(e) => setEditingTour((p) => (p ? { ...p, date: e.target.value } : p))}
-                        />
-                      ) : (
-                        <TouchableOpacity style={styles.input} onPress={() => openTourDatePicker('date')}>
-                          <Text style={styles.cellText}>{formatDateLong(editingTour.date)}</Text>
-                        </TouchableOpacity>
-                      )}
-                      <Text style={styles.modalLabel}>Tour</Text>
-                      <TextInput
-                        style={styles.input}
-                        placeholder="Tour name"
-                        value={editingTour.name}
-                        onChangeText={(text) => setEditingTour((p) => (p ? { ...p, name: text } : p))}
-                      />
-                      <Text style={styles.modalLabel}>Start location</Text>
-                      <TextInput
-                        style={styles.input}
-                        placeholder="Start location"
-                        value={editingTour.startLocation}
-                        onChangeText={(text) => setEditingTour((p) => (p ? { ...p, startLocation: text } : p))}
-                      />
-                      <Text style={styles.modalLabel}>Start time</Text>
-                      {Platform.OS === 'web' ? (
-                        <input
-                          style={{ ...StyleSheet.flatten(styles.input), width: '100%' }}
-                          type="time"
-                          value={editingTour.startTime}
-                          onChange={(e) => setEditingTour((p) => (p ? { ...p, startTime: e.target.value } : p))}
-                        />
-                      ) : (
-                        <TouchableOpacity style={styles.input} onPress={() => openTourDatePicker('startTime')}>
-                          <Text style={styles.cellText}>{editingTour.startTime || 'Select time'}</Text>
-                        </TouchableOpacity>
-                      )}
-                      <Text style={styles.modalLabel}>Duration</Text>
-                      <TextInput
-                        style={styles.input}
-                        placeholder="Duration"
-                        value={editingTour.duration}
-                        onChangeText={(text) => setEditingTour((p) => (p ? { ...p, duration: text } : p))}
-                      />
-                      <Text style={styles.modalLabel}>Cost</Text>
-                      <TextInput
-                        style={styles.input}
-                        placeholder="Cost"
-                        keyboardType="numeric"
-                        value={editingTour.cost}
-                        onChangeText={(text) => setEditingTour((p) => (p ? { ...p, cost: text.replace(/[^0-9.]/g, '') } : p))}
-                      />
-                      <View style={styles.modalRow}>
-                        <Text style={styles.modalLabel}>Free cancellation by</Text>
-                        <TouchableOpacity onPress={() => setEditingTour((p) => (p ? { ...p, freeCancelBy: '' } : p))}>
-                          <Text style={styles.linkText}>Clear</Text>
-                        </TouchableOpacity>
-                      </View>
-                      {Platform.OS === 'web' ? (
-                        <input
-                          style={{ ...StyleSheet.flatten(styles.input), width: '100%' }}
-                          type="date"
-                          value={editingTour.freeCancelBy}
-                          onChange={(e) => setEditingTour((p) => (p ? { ...p, freeCancelBy: e.target.value } : p))}
-                        />
-                      ) : (
-                        <TouchableOpacity style={styles.input} onPress={() => openTourDatePicker('freeCancel')}>
-                          <Text style={styles.cellText}>{editingTour.freeCancelBy ? formatDateLong(editingTour.freeCancelBy) : 'Select date'}</Text>
-                        </TouchableOpacity>
-                      )}
-                      <Text style={styles.modalLabel}>Platform Booked On</Text>
-                      <View style={{ flexDirection: 'row', gap: 8 }}>
-                        <TextInput
-                          style={[styles.input, { flex: 1 }]}
-                          placeholder="Viator, Get Your Guide, Klook, etc."
-                          value={editingTour.bookedOn}
-                          onChangeText={(text) => setEditingTour((p) => (p ? { ...p, bookedOn: text } : p))}
-                        />
-                        <TextInput
-                          style={[styles.input, { flex: 1 }]}
-                          placeholder="Reference"
-                          value={editingTour.reference}
-                          onChangeText={(text) => setEditingTour((p) => (p ? { ...p, reference: text } : p))}
-                        />
-                      </View>
-                      <Text style={styles.modalLabel}>Paid by</Text>
-                      <View style={[styles.input, styles.payerBox]}>
-                        <View style={styles.payerChips}>
-                          {editingTour.paidBy.map((id) => (
-                            <View key={id} style={styles.payerChip}>
-                              <Text style={styles.cellText}>{payerName(id)}</Text>
-                              <TouchableOpacity onPress={() => setEditingTour((p) => (p ? { ...p, paidBy: p.paidBy.filter((x) => x !== id) } : p))}>
-                                <Text style={styles.removeText}>x</Text>
-                              </TouchableOpacity>
-                            </View>
-                          ))}
-                        </View>
-                        <View style={styles.payerOptions}>
-                          {userMembers
-                            .filter((m) => !editingTour.paidBy.includes(m.id))
-                            .map((m) => (
-                              <TouchableOpacity
-                                key={m.id}
-                                style={styles.smallButton}
-                                onPress={() => setEditingTour((p) => (p ? { ...p, paidBy: [...p.paidBy, m.id] } : p))}
-                              >
-                                <Text style={styles.buttonText}>Add {formatMemberName(m)}</Text>
-                              </TouchableOpacity>
-                            ))}
-                        </View>
-                      </View>
-                    </ScrollView>
-                    <View style={[styles.tableFooter, { justifyContent: 'space-between' }]}>
-                      <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={closeTourEditor}>
-                        <Text style={styles.buttonText}>Cancel</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={styles.button} onPress={saveTour}>
-                        <Text style={styles.buttonText}>Save</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </View>
-              ) : null}
-            </View>
+            <TourTab
+              backendUrl={backendUrl}
+              userToken={userToken}
+              activeTripId={activeTripId}
+              tours={tours}
+              setTours={setTours}
+              defaultPayerId={defaultPayerId}
+              payerName={payerName}
+              formatMemberName={formatMemberName}
+              userMembers={userMembers}
+              jsonHeaders={jsonHeaders}
+              payerTotals={payerTotals}
+              toursTotal={toursTotal}
+              styles={styles}
+              nativeDateTimePicker={NativeDateTimePicker}
+              fetchTours={fetchTours}
+            />
           ) : null}
 
           {activePage === 'cost' ? (
@@ -3169,6 +2977,175 @@ const App: React.FC = () => {
               )}
 
               <View style={styles.divider} />
+              <Text style={styles.sectionTitle}>Family & Relationships</Text>
+              <Text style={styles.helperText}>Add relatives, accept invites, and manage non-user profiles.</Text>
+              <View style={styles.row}>
+                <TextInput
+                  style={[styles.input, { flex: 1 }]}
+                  placeholder="Given name"
+                  value={familyForm.givenName}
+                  onChangeText={(text) => setFamilyForm((p) => ({ ...p, givenName: text }))}
+                />
+                <TextInput
+                  style={[styles.input, { flex: 1 }]}
+                  placeholder="Middle name"
+                  value={familyForm.middleName}
+                  onChangeText={(text) => setFamilyForm((p) => ({ ...p, middleName: text }))}
+                />
+              </View>
+              <View style={styles.row}>
+                <TextInput
+                  style={[styles.input, { flex: 1 }]}
+                  placeholder="Family name"
+                  value={familyForm.familyName}
+                  onChangeText={(text) => setFamilyForm((p) => ({ ...p, familyName: text }))}
+                />
+                <View style={[styles.input, styles.dropdown, { flex: 1 }]}>
+                  <TouchableOpacity onPress={() => setShowRelationshipDropdown((s) => !s)}>
+                    <View style={styles.selectButtonRow}>
+                      <Text style={familyForm.relationship ? styles.cellText : styles.placeholderText}>
+                        {familyForm.relationship || 'Not Applicable'}
+                      </Text>
+                      <Text style={styles.selectCaret}>v</Text>
+                    </View>
+                  </TouchableOpacity>
+                  {showRelationshipDropdown ? (
+                    <View style={styles.dropdownList}>
+                      {relationshipOptions.map((opt) => (
+                        <TouchableOpacity
+                          key={opt}
+                          style={styles.dropdownOption}
+                          onPress={() => {
+                            setFamilyForm((p) => ({ ...p, relationship: opt }));
+                            setShowRelationshipDropdown(false);
+                          }}
+                        >
+                          <Text style={styles.cellText}>{opt}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  ) : null}
+                </View>
+              </View>
+              <TextInput
+                style={styles.input}
+                placeholder="Email"
+                autoCapitalize="none"
+                keyboardType="email-address"
+                value={familyForm.email}
+                onChangeText={(text) => setFamilyForm((p) => ({ ...p, email: text }))}
+              />
+              <TouchableOpacity style={styles.button} onPress={addFamilyMember}>
+                <Text style={styles.buttonText}>Add Family Member</Text>
+              </TouchableOpacity>
+
+              {familyRelationships.length ? (
+                <View style={{ marginTop: 12 }}>
+                  {familyRelationships.map((rel) => {
+                    const name = `${rel.relative.firstName ?? ''} ${rel.relative.middleName ?? ''} ${rel.relative.lastName ?? ''}`.replace(/\s+/g, ' ').trim();
+                    const isPendingInbound = rel.status === 'pending' && rel.direction === 'inbound';
+                    const isEditable = rel.editableProfile;
+                    const isEditing = editingFamilyId === rel.id;
+                    return (
+                      <View key={rel.id} style={styles.familyRow}>
+                        <Text style={styles.bodyText}>{name || 'Unknown'} ({rel.relative.email || 'No email'})</Text>
+                        <Text style={styles.helperText}>Relationship: {rel.relationship} • Status: {rel.status}</Text>
+                        {isPendingInbound ? (
+                          <View style={styles.row}>
+                            <TouchableOpacity style={[styles.button, { flex: 1 }]} onPress={() => acceptFamilyLink(rel.id)}>
+                              <Text style={styles.buttonText}>Accept</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[styles.button, styles.dangerButton, { flex: 1 }]} onPress={() => rejectFamilyLink(rel.id)}>
+                              <Text style={styles.buttonText}>Reject</Text>
+                            </TouchableOpacity>
+                          </View>
+                        ) : (
+                          <View style={styles.row}>
+                            <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => removeFamilyLink(rel.id)}>
+                              <Text style={styles.buttonText}>Remove</Text>
+                            </TouchableOpacity>
+                            {isEditable && !isEditing ? (
+                              <TouchableOpacity
+                                style={[styles.button, styles.smallButton]}
+                                onPress={() => {
+                                  setEditingFamilyId(rel.id);
+                                  setEditingFamilyDraft({
+                                    givenName: rel.relative.firstName ?? '',
+                                    middleName: rel.relative.middleName ?? '',
+                                    familyName: rel.relative.lastName ?? '',
+                                    email: rel.relative.email ?? '',
+                                    relationship: rel.relationship ?? '',
+                                  });
+                                }}
+                              >
+                                <Text style={styles.buttonText}>Edit profile</Text>
+                              </TouchableOpacity>
+                            ) : null}
+                          </View>
+                        )}
+
+                        {isEditable && isEditing && editingFamilyDraft ? (
+                          <View style={{ marginTop: 8 }}>
+                            <Text style={styles.modalLabel}>Edit profile</Text>
+                            <View style={styles.row}>
+                              <TextInput
+                                style={[styles.input, { flex: 1 }]}
+                                placeholder="Given"
+                                value={editingFamilyDraft.givenName}
+                                onChangeText={(text) => setEditingFamilyDraft((p) => (p ? { ...p, givenName: text } : p))}
+                              />
+                              <TextInput
+                                style={[styles.input, { flex: 1 }]}
+                                placeholder="Middle"
+                                value={editingFamilyDraft.middleName}
+                                onChangeText={(text) => setEditingFamilyDraft((p) => (p ? { ...p, middleName: text } : p))}
+                              />
+                            </View>
+                            <TextInput
+                              style={styles.input}
+                              placeholder="Family"
+                              value={editingFamilyDraft.familyName}
+                              onChangeText={(text) => setEditingFamilyDraft((p) => (p ? { ...p, familyName: text } : p))}
+                            />
+                            <TextInput
+                              style={styles.input}
+                              placeholder="Email"
+                              autoCapitalize="none"
+                              keyboardType="email-address"
+                              value={editingFamilyDraft.email}
+                              onChangeText={(text) => setEditingFamilyDraft((p) => (p ? { ...p, email: text } : p))}
+                            />
+                            <TextInput
+                              style={styles.input}
+                              placeholder="Relationship"
+                              value={editingFamilyDraft.relationship}
+                              onChangeText={(text) => setEditingFamilyDraft((p) => (p ? { ...p, relationship: text } : p))}
+                            />
+                            <View style={styles.row}>
+                              <TouchableOpacity style={[styles.button, { flex: 1 }]} onPress={saveFamilyProfile}>
+                                <Text style={styles.buttonText}>Save</Text>
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                style={[styles.button, styles.dangerButton, { flex: 1 }]}
+                                onPress={() => {
+                                  setEditingFamilyId(null);
+                                  setEditingFamilyDraft(null);
+                                }}
+                              >
+                                <Text style={styles.buttonText}>Cancel</Text>
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                        ) : null}
+                      </View>
+                    );
+                  })}
+                </View>
+              ) : (
+                <Text style={styles.helperText}>No family members added yet.</Text>
+              )}
+
+              <View style={styles.divider} />
               <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={() => setShowDeleteConfirm(true)}>
                 <Text style={styles.buttonText}>Delete Account</Text>
               </TouchableOpacity>
@@ -3224,8 +3201,8 @@ const App: React.FC = () => {
                   </TouchableOpacity>
                 </View>
                 {groups.map((group) => {
-                  const userMembers = group.members.filter((m) => m.userId);
-                  const guestMembers = group.members.filter((m) => !m.userId);
+                  const allMembers = group.members;
+                  const acceptedRelationships = familyRelationships.filter((r) => r.status === 'accepted');
                   const created = formatDateLong(group.createdAt);
                   return (
                     <View key={group.id} style={styles.groupRow}>
@@ -3237,7 +3214,7 @@ const App: React.FC = () => {
                         <Text style={styles.buttonText}>Delete Group</Text>
                       </TouchableOpacity>
                       <View style={[styles.groupColumn, { flex: 1 }]}>
-                        <Text style={styles.headerText}>Users</Text>
+                        <Text style={styles.headerText}>Members & Relationships</Text>
                         {group.invites.length ? (
                           <View style={styles.pendingBlock}>
                             {group.invites.map((inv) => (
@@ -3250,9 +3227,9 @@ const App: React.FC = () => {
                             ))}
                           </View>
                         ) : null}
-                        {userMembers.map((m) => (
+                        {allMembers.map((m) => (
                           <View key={m.id} style={styles.memberPill}>
-                            <Text style={styles.cellText}>{m.userEmail ?? 'User'}</Text>
+                            <Text style={styles.cellText}>{m.userEmail ?? m.email ?? m.guestName ?? 'Member'}</Text>
                             <TouchableOpacity onPress={() => removeMemberFromGroup(group.id, m.id)}>
                               <Text style={styles.removeText}>Remove</Text>
                             </TouchableOpacity>
@@ -3267,29 +3244,48 @@ const App: React.FC = () => {
                             autoCapitalize="none"
                           />
                           <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => addMemberToGroup(group.id, 'user')}>
-                            <Text style={styles.buttonText}>Add</Text>
+                            <Text style={styles.buttonText}>Invite by Email</Text>
                           </TouchableOpacity>
                         </View>
-                      </View>
-                      <View style={[styles.groupColumn, { flex: 1 }]}>
-                        <Text style={styles.headerText}>Guests</Text>
-                        {guestMembers.map((m) => (
-                          <View key={m.id} style={styles.memberPill}>
-                            <Text style={styles.cellText}>{m.guestName ?? 'Guest'}</Text>
-                            <TouchableOpacity onPress={() => removeMemberFromGroup(group.id, m.id)}>
-                              <Text style={styles.removeText}>Remove</Text>
-                            </TouchableOpacity>
-                          </View>
-                        ))}
                         <View style={styles.addRow}>
-                          <TextInput
-                            placeholder="guest name"
-                            style={[styles.input, styles.inlineInput]}
-                            value={groupAddGuest[group.id] ?? ''}
-                            onChangeText={(text) => setGroupAddGuest((prev) => ({ ...prev, [group.id]: text }))}
-                          />
-                          <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => addMemberToGroup(group.id, 'guest')}>
-                            <Text style={styles.buttonText}>Add</Text>
+                          <View style={[styles.input, styles.inlineInput, styles.dropdown, { flex: 1 }]}>
+                            <TouchableOpacity onPress={() => setShowRelationshipDropdown((s) => !s)}>
+                              <View style={styles.selectButtonRow}>
+                                <Text style={styles.cellText}>
+                                  {(() => {
+                                    const relId = groupAddRelationship[group.id];
+                                    const rel = acceptedRelationships.find((r) => r.id === relId);
+                                    if (!rel) return 'Select Relationship';
+                                    const name = `${rel.relative?.firstName ?? ''} ${rel.relative?.middleName ?? ''} ${rel.relative?.lastName ?? ''}`
+                                      .replace(/\s+/g, ' ')
+                                      .trim();
+                                    return name || rel.relative?.email || 'Relationship';
+                                  })()}
+                                </Text>
+                                <Text style={styles.selectCaret}>v</Text>
+                              </View>
+                            </TouchableOpacity>
+                            {showRelationshipDropdown ? (
+                              <View style={styles.dropdownList}>
+                                {acceptedRelationships.map((rel) => {
+                                  const name = `${rel.relative?.firstName ?? ''} ${rel.relative?.middleName ?? ''} ${rel.relative?.lastName ?? ''}`
+                                    .replace(/\s+/g, ' ')
+                                    .trim() || rel.relative?.email || 'Relationship';
+                                  return (
+                                    <TouchableOpacity
+                                      key={rel.id}
+                                      style={styles.dropdownOption}
+                                      onPress={() => setGroupAddRelationship((prev) => ({ ...prev, [group.id]: rel.id }))}
+                                    >
+                                      <Text style={styles.cellText}>{name}</Text>
+                                    </TouchableOpacity>
+                                  );
+                                })}
+                              </View>
+                            ) : null}
+                          </View>
+                          <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => addMemberToGroup(group.id, 'relationship')}>
+                            <Text style={styles.buttonText}>Add Relationship</Text>
                           </TouchableOpacity>
                         </View>
                       </View>
@@ -3315,7 +3311,7 @@ const App: React.FC = () => {
                 />
                 <TextInput
                   style={styles.input}
-                  placeholder="Add guest members by name (comma separated)"
+                  placeholder="Add relationships by name (comma separated)"
                   value={groupGuestNames}
                   onChangeText={setGroupGuestNames}
                 />
@@ -3324,7 +3320,7 @@ const App: React.FC = () => {
                 </TouchableOpacity>
                 <Text style={styles.helperText}>
                   Users found in the system will receive an invite email (if SMTP is configured) or see it above after logging in.
-                  Guest members are added directly without needing a login.
+                  Relationships are added directly without needing a login.
                 </Text>
           </View>
         </>
@@ -4367,6 +4363,12 @@ const styles = StyleSheet.create({
   shareRow: {
     marginTop: 12,
     gap: 6,
+  },
+  familyRow: {
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderColor: '#e5e7eb',
+    gap: 4,
   },
   toggleRow: {
     flexDirection: 'row',

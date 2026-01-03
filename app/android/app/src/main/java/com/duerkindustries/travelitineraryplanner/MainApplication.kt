@@ -1,4 +1,4 @@
-package com.example.sharedtripplanner
+package com.duerkindustries.travelitineraryplanner
 
 import android.app.Application
 import android.content.res.Configuration

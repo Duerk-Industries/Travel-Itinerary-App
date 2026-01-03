@@ -4,5 +4,8 @@
         "datetimepicker",
         "tesseract",
         "travelitineraryplanner"
-    ]
+    ],
+    "diffEditor.codeLens": true,
+    "geminicodeassist.codeGenerationPaneViewEnabled": true,
+    "geminicodeassist.updateChannel": "Insiders"
 }

@@ -15,6 +15,7 @@ export interface Flight {
   id: string;
   userId: string;
   passengerName: string;
+  passengerIds?: string[];
   departureDate: string;
   tripId: string;
   departureLocation?: string;
@@ -142,4 +143,13 @@ export interface GroupInvite {
   createdAt: string;
   groupName: string;
   inviterEmail: string;
+}
+
+export interface FamilyRelationship {
+  id: string;
+  requesterId: string;
+  relativeId: string;
+  relationship: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  createdAt: string;
 }
