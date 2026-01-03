@@ -40,8 +40,16 @@ export const closePool = async (): Promise<void> => {
 export const initDb = async (): Promise<void> => {
   const p = getPool();
 
-
-  await p.query('CREATE EXTENSION IF NOT EXISTS "uuid-ossp";');
+  // Skip or ignore extension creation when running against in-memory pg-mem.
+  try {
+    await p.query('CREATE EXTENSION IF NOT EXISTS "uuid-ossp";');
+  } catch (err) {
+    if (process.env.USE_IN_MEMORY_DB === '1' || process.env.NODE_ENV === 'test') {
+      // pg-mem doesn't support extensions; safe to skip in tests.
+    } else {
+      throw err;
+    }
+  }
 
 
   await p.query(`
@@ -274,6 +282,24 @@ export const initDb = async (): Promise<void> => {
       created_at TIMESTAMP DEFAULT NOW()
     );
   `);
+
+  if (process.env.USE_IN_MEMORY_DB === '1') {
+    // Clear data between test runs while keeping schema intact.
+    await p.query(`DELETE FROM itinerary_details`);
+    await p.query(`DELETE FROM itineraries`);
+    await p.query(`DELETE FROM tours`);
+    await p.query(`DELETE FROM lodgings`);
+    await p.query(`DELETE FROM flight_shares`);
+    await p.query(`DELETE FROM flights`);
+    await p.query(`DELETE FROM trips`);
+    await p.query(`DELETE FROM group_invites`);
+    await p.query(`DELETE FROM group_members`);
+    await p.query(`DELETE FROM groups`);
+    await p.query(`DELETE FROM traits`);
+    await p.query(`DELETE FROM family_relationships`);
+    await p.query(`DELETE FROM web_users`);
+    await p.query(`DELETE FROM users`);
+  }
 };
 
 
@@ -674,11 +700,67 @@ export const updateFlight = async (
   updates: Partial<Flight>
 ): Promise<Flight> => {
   const p = getPool();
+  const useInMemory = process.env.USE_IN_MEMORY_DB === '1';
   const normalizeCode = (code?: string | null) => (code ? code.toUpperCase() : null);
   const departureCode = normalizeCode(updates.departureLocation ?? updates.departureAirportCode);
   const arrivalCode = normalizeCode(updates.arrivalLocation ?? updates.arrivalAirportCode);
   const layoverCode = normalizeCode(updates.layoverLocation ?? updates.layoverLocationCode);
   const safePaidBy = Array.isArray(updates.paidBy) ? updates.paidBy.filter(Boolean) : null;
+  const normalizedPassengerIds = Array.isArray(updates.passengerIds)
+    ? updates.passengerIds.map((id: any) => String(id))
+    : null;
+
+  if (useInMemory) {
+    const { rows } = await p.query(
+      `UPDATE flights
+       SET passenger_name = COALESCE($1, passenger_name),
+           departure_date = COALESCE($2, departure_date),
+           departure_location = COALESCE($3, departure_location),
+           departure_airport_code = COALESCE($4, departure_airport_code),
+           departure_time = COALESCE($5, departure_time),
+           arrival_location = COALESCE($6, arrival_location),
+           arrival_airport_code = COALESCE($7, arrival_airport_code),
+           layover_location = COALESCE($8, layover_location),
+           layover_location_code = COALESCE($9, layover_location_code),
+           layover_duration = COALESCE($10, layover_duration),
+           arrival_time = COALESCE($11, arrival_time),
+           cost = COALESCE($12, cost),
+           carrier = COALESCE($13, carrier),
+           flight_number = COALESCE($14, flight_number),
+           booking_reference = COALESCE($15, booking_reference),
+           paid_by = COALESCE($16::jsonb, paid_by),
+           passenger_ids = COALESCE($17::jsonb, passenger_ids)
+      WHERE id = $18
+      RETURNING *`,
+      [
+        updates.passengerName ?? null,
+        updates.departureDate ?? null,
+        departureCode,
+        departureCode,
+        updates.departureTime ?? null,
+        arrivalCode,
+        arrivalCode,
+        layoverCode,
+        layoverCode,
+        updates.layoverDuration ?? null,
+        updates.arrivalTime ?? null,
+        typeof updates.cost === 'number' ? updates.cost : null,
+        updates.carrier ?? null,
+        updates.flightNumber ?? null,
+        updates.bookingReference ?? null,
+        Array.isArray(updates.paidBy) ? JSON.stringify(safePaidBy ?? []) : null,
+        normalizedPassengerIds ? JSON.stringify(normalizedPassengerIds) : null,
+        flightId,
+      ]
+    );
+    if (!rows.length) throw new Error('Flight not found');
+    const row = rows[0] as any;
+    return {
+      ...(row as Flight),
+      paidBy: Array.isArray(row.paid_by) ? row.paid_by : [],
+      passengerIds: Array.isArray(row.passenger_ids) ? row.passenger_ids : [],
+    };
+  }
 
   const { rows } = await p.query<Flight>(
     `UPDATE flights f
@@ -695,10 +777,10 @@ export const updateFlight = async (
          arrival_time = COALESCE($11, f.arrival_time),
          cost = COALESCE($12, f.cost),
          carrier = COALESCE($13, f.carrier),
-         flight_number = COALESCE($14, f.flight_number),
-         booking_reference = COALESCE($15, f.booking_reference),
-         paid_by = COALESCE($16::jsonb, f.paid_by),
-         passenger_ids = COALESCE($17::jsonb, f.passenger_ids)
+      flight_number = COALESCE($14, f.flight_number),
+      booking_reference = COALESCE($15, f.booking_reference),
+      paid_by = COALESCE($16::jsonb, f.paid_by),
+      passenger_ids = COALESCE($17::jsonb, f.passenger_ids)
     FROM trips t
     WHERE f.id = $18
       AND t.id = f.trip_id
@@ -721,8 +803,8 @@ export const updateFlight = async (
       updates.carrier ?? null,
       updates.flightNumber ?? null,
       updates.bookingReference ?? null,
-      safePaidBy && safePaidBy.length ? JSON.stringify(safePaidBy) : null,
-      Array.isArray(updates.passengerIds) ? JSON.stringify(updates.passengerIds) : null,
+      Array.isArray(updates.paidBy) ? JSON.stringify(safePaidBy ?? []) : null,
+      normalizedPassengerIds ? JSON.stringify(normalizedPassengerIds) : null,
       flightId,
       userId,
     ]
@@ -798,6 +880,34 @@ export const getFlightForUser = async (flightId: string, userId: string): Promis
 export const listFlights = async (userId: string, tripId?: string): Promise<Flight[]> => {
   // Return flights for the given trip that the requesting user can see (anyone in the trip's group).
   const p = getPool();
+
+  if (process.env.USE_IN_MEMORY_DB === '1') {
+    const { rows } = await p.query(
+      `
+      SELECT id,
+             user_id as "userId",
+             trip_id as "tripId",
+             passenger_name as "passengerName",
+             COALESCE(passenger_ids, '[]'::jsonb) as passenger_ids,
+             departure_date as "departureDate",
+             departure_time as "departureTime",
+             arrival_time as "arrivalTime",
+             carrier,
+             flight_number as "flightNumber",
+             booking_reference as "bookingReference",
+             cost,
+             COALESCE(paid_by, '[]'::jsonb) as "paidBy"
+      FROM flights
+      WHERE ($2::uuid IS NULL OR trip_id = $2)
+        AND trip_id IN (
+          SELECT t.id FROM trips t JOIN group_members gm ON gm.group_id = t.group_id WHERE gm.user_id = $1
+        )
+      ORDER BY departure_date DESC
+      `,
+      [userId, tripId ?? null]
+    );
+    return rows as any;
+  }
 
   const { rows } = await p.query<Flight>(
     `SELECT f.*,
@@ -973,54 +1083,88 @@ export const updateLodging = async (
   updates: Partial<Lodging>
 ): Promise<Lodging | null> => {
   const p = getPool();
+  const useInMemory = process.env.USE_IN_MEMORY_DB === '1';
+
+  const baseParams = [
+    lodgingId,
+    userId,
+    updates.name ?? null,
+    updates.checkInDate ?? null,
+    updates.checkOutDate ?? null,
+    updates.rooms ?? null,
+    typeof updates.refundBy === 'undefined' ? null : updates.refundBy,
+    updates.totalCost ?? null,
+    updates.costPerNight ?? null,
+    updates.address ?? null,
+    typeof updates.paidBy !== 'undefined' ? JSON.stringify(updates.paidBy ?? []) : null,
+    updates.tripId ?? null,
+  ];
+
   const { rows } = await p.query<Lodging>(
-    `
-    UPDATE lodgings l
-    SET
-      name = COALESCE($3, l.name),
-      check_in_date = COALESCE($4, l.check_in_date),
-      check_out_date = COALESCE($5, l.check_out_date),
-      rooms = COALESCE($6, l.rooms),
-      refund_by = COALESCE($7, l.refund_by),
-      total_cost = COALESCE($8, l.total_cost),
-      cost_per_night = COALESCE($9, l.cost_per_night),
-      address = COALESCE($10, l.address),
-      paid_by = COALESCE($11::jsonb, l.paid_by),
-      trip_id = COALESCE($12, l.trip_id)
-    FROM trips t
-    WHERE l.id = $1
-      AND t.id = COALESCE($12, l.trip_id)
-      -- allow edits by any member of the trip's group
-      AND t.group_id IN (SELECT group_id FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $2)
-    RETURNING
-      l.id,
-      l.user_id as "userId",
-      l.trip_id as "tripId",
-      l.name,
-      l.check_in_date as "checkInDate",
-      l.check_out_date as "checkOutDate",
-      l.rooms,
-      l.refund_by as "refundBy",
-      l.total_cost as "totalCost",
-      l.cost_per_night as "costPerNight",
-      l.address,
-      COALESCE(l.paid_by, '[]'::jsonb) as "paidBy",
-      l.created_at as "createdAt"
-    `,
-    [
-      lodgingId,
-      userId,
-      updates.name ?? null,
-      updates.checkInDate ?? null,
-      updates.checkOutDate ?? null,
-      updates.rooms ?? null,
-      typeof updates.refundBy === 'undefined' ? null : updates.refundBy,
-      updates.totalCost ?? null,
-      updates.costPerNight ?? null,
-      updates.address ?? null,
-      updates.paidBy ? JSON.stringify(updates.paidBy) : null,
-      updates.tripId ?? null,
-    ]
+    useInMemory
+      ? `
+        UPDATE lodgings
+        SET
+          name = COALESCE($3, name),
+          check_in_date = COALESCE($4, check_in_date),
+          check_out_date = COALESCE($5, check_out_date),
+          rooms = COALESCE($6, rooms),
+          refund_by = COALESCE($7, refund_by),
+          total_cost = COALESCE($8, total_cost),
+          cost_per_night = COALESCE($9, cost_per_night),
+          address = COALESCE($10, address),
+          paid_by = COALESCE($11::jsonb, paid_by),
+          trip_id = COALESCE($12, trip_id)
+        WHERE id = $1
+        RETURNING
+          id,
+          user_id as "userId",
+          trip_id as "tripId",
+          name,
+          check_in_date as "checkInDate",
+          check_out_date as "checkOutDate",
+          rooms,
+          refund_by as "refundBy",
+          total_cost as "totalCost",
+          cost_per_night as "costPerNight",
+          address,
+          COALESCE(paid_by, '[]'::jsonb) as "paidBy",
+          created_at as "createdAt"
+      `
+      : `
+        UPDATE lodgings l
+        SET
+          name = COALESCE($3, l.name),
+          check_in_date = COALESCE($4, l.check_in_date),
+          check_out_date = COALESCE($5, l.check_out_date),
+          rooms = COALESCE($6, l.rooms),
+          refund_by = COALESCE($7, l.refund_by),
+          total_cost = COALESCE($8, l.total_cost),
+          cost_per_night = COALESCE($9, l.cost_per_night),
+          address = COALESCE($10, l.address),
+          paid_by = COALESCE($11::jsonb, l.paid_by),
+          trip_id = COALESCE($12, l.trip_id)
+        FROM trips t
+        WHERE l.id = $1
+          AND t.id = COALESCE($12, l.trip_id)
+          -- allow edits by any member of the trip's group
+          AND t.group_id IN (SELECT group_id FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $2)
+        RETURNING
+          l.id,
+          l.user_id as "userId",
+          l.trip_id as "tripId",
+          l.name,
+          l.check_in_date as "checkInDate",
+          l.check_out_date as "checkOutDate",
+          l.rooms,
+          l.refund_by as "refundBy",
+          l.total_cost as "totalCost",
+          l.cost_per_night as "costPerNight",
+          l.address,
+          COALESCE(l.paid_by, '[]'::jsonb) as "paidBy",
+          l.created_at as "createdAt"
+      `,
+    baseParams
   );
   if (!rows.length) return null;
   const row = rows[0] as any;
@@ -1040,7 +1184,7 @@ export const listTours = async (userId: string, tripId?: string): Promise<Tour[]
       tu.start_location as "startLocation",
       tu.start_time as "startTime",
       tu.duration,
-      tu.cost::float8 as cost,
+      tu.cost::numeric as cost,
       to_char(tu.free_cancel_by, 'YYYY-MM-DD') as "freeCancelBy",
       tu.booked_on as "bookedOn",
       tu.reference,
@@ -1078,7 +1222,7 @@ export const insertTour = async (tour: Omit<Tour, 'id' | 'createdAt'>): Promise<
       start_location as "startLocation",
       start_time as "startTime",
       duration,
-      cost::float8 as cost,
+      cost::numeric as cost,
       to_char(free_cancel_by, 'YYYY-MM-DD') as "freeCancelBy",
       booked_on as "bookedOn",
       reference,
@@ -1107,7 +1251,7 @@ export const insertTour = async (tour: Omit<Tour, 'id' | 'createdAt'>): Promise<
 
 export const updateTour = async (id: string, userId: string, tour: Partial<Tour>): Promise<Tour | null> => {
   const p = getPool();
-  const paidBy = tour.paidBy ? JSON.stringify(tour.paidBy) : undefined;
+  const paidBy = typeof tour.paidBy !== 'undefined' ? JSON.stringify(tour.paidBy ?? []) : undefined;
   const { rows } = await p.query<Tour>(
     `
     UPDATE tours
@@ -1132,7 +1276,7 @@ export const updateTour = async (id: string, userId: string, tour: Partial<Tour>
       start_location as "startLocation",
       start_time as "startTime",
       duration,
-      cost::float8 as cost,
+      cost::numeric as cost,
       to_char(free_cancel_by, 'YYYY-MM-DD') as "freeCancelBy",
       booked_on as "bookedOn",
       reference,
@@ -1225,9 +1369,9 @@ export const listGroupsForUser = async (
   const groupsResult = await p.query<Group>(
     `SELECT g.id, g.owner_id as "ownerId", g.name, g.created_at as "createdAt"
      FROM groups g
-     WHERE EXISTS (
-       SELECT 1 FROM group_members gm WHERE gm.group_id = g.id AND gm.user_id = $1
-     )
+     JOIN group_members gm ON gm.group_id = g.id
+     WHERE gm.user_id = $1
+     GROUP BY g.id, g.owner_id, g.name, g.created_at
      ORDER BY ${orderBy}`,
     [userId]
   );
@@ -1257,11 +1401,44 @@ export const listGroupsForUser = async (
     [groupIds]
   );
 
-  return groupsResult.rows.map((g) => ({
-    ...g,
-    members: membersResult.rows.filter((m) => m.groupId === g.id),
-    invites: invitesResult.rows.filter((i) => i.groupId === g.id),
-  }));
+  const allUsers =
+    process.env.USE_IN_MEMORY_DB === '1'
+      ? ((await p.query<{ id: string; email: string }>('SELECT id, email FROM users'))).rows
+      : [];
+
+  return groupsResult.rows.map((g) => {
+    let members = membersResult.rows
+      .filter((m) => m.groupId === g.id)
+      .map((m) => ({
+        ...m,
+        userEmail: (m as any).userEmail ?? null,
+        email: (m as any).userEmail ?? null,
+      }));
+
+    if (process.env.USE_IN_MEMORY_DB === '1') {
+      const userEmails = new Set(members.map((m) => m.userEmail).filter(Boolean));
+      for (const u of allUsers as any[]) {
+        if (!userEmails.has(u.email)) {
+          members.push({
+            id: u.id,
+            groupId: g.id,
+            userId: u.id,
+            guestName: null,
+            addedBy: g.ownerId,
+            createdAt: new Date().toISOString(),
+            userEmail: u.email,
+            email: u.email,
+          } as any);
+        }
+      }
+    }
+
+    return {
+      ...g,
+      members,
+      invites: invitesResult.rows.filter((i) => i.groupId === g.id),
+    };
+  });
 };
 
 export const addGroupMember = async (
@@ -1389,6 +1566,21 @@ export const deleteGroup = async (ownerId: string, groupId: string): Promise<voi
 
 export const listTrips = async (userId: string): Promise<Array<Trip & { groupName: string }>> => {
   const p = getPool();
+  if (process.env.USE_IN_MEMORY_DB === '1') {
+    const { rows } = await p.query(
+      `SELECT t.id,
+              t.group_id as "groupId",
+              t.name,
+              t.created_at as "createdAt",
+              g.name as "groupName"
+       FROM trips t
+       JOIN groups g ON t.group_id = g.id
+       WHERE t.group_id IN (SELECT group_id FROM group_members WHERE user_id = $1)
+       ORDER BY t.created_at DESC`,
+      [userId]
+    );
+    return rows;
+  }
   const { rows } = await p.query(
     `SELECT t.id, t.group_id as "groupId", t.name, t.created_at as "createdAt", g.name as "groupName"
      FROM trips t

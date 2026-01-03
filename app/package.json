@@ -14,7 +14,8 @@
     "test:lodging-suite": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" ./scripts/test-lodging-suite.ts",
     "test:invite": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" ./scripts/test-invite-follow.ts",
     "test:itinerary": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" ./scripts/test-itinerary-generate.ts",
-    "test:trait": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" ./scripts/test-trait-create-delete.ts"
+    "test:trait": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" ./scripts/test-trait-create-delete.ts",
+    "test:tours": "node --require ts-node/register --test ./tests/**/*.test.ts"
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",
