@@ -19,6 +19,7 @@ import { FlightsTab, type Flight, fetchFlightsForTrip } from './tabs/flights';
 import { Tour, TourTab, fetchToursForTrip } from './tabs/tours';
 import { computePayerTotals } from './tabs/costReport';
 import { Trait, TraitsTab } from './tabs/traits';
+import { FollowTab, fetchFollowedTripsApi, loadFollowCodes, loadFollowPayloads, saveFollowCodes, saveFollowPayloads, type FollowedTrip } from './tabs/follow';
 import {
   Lodging,
   LodgingDraft,
@@ -30,7 +31,7 @@ import {
   saveLodgingApi,
   toLodgingDraft,
 } from './tabs/lodging';
-import { encodeInviteCode, generateInviteGuid, InvitePayload } from './utils/inviteCodes';
+import { InvitePayload } from './utils/inviteCodes';
 
 type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
 let NativeDateTimePicker: NativeDateTimePickerType | null = null;
@@ -74,14 +75,6 @@ interface Trip {
   groupName: string;
   name: string;
   createdAt: string;
-}
-
-interface FollowedTrip {
-  tripId: string;
-  tripName: string;
-  inviterName?: string;
-  destination?: string;
-  todayDetails: Array<{ id?: string; day?: number; time?: string | null; activity: string }>;
 }
 
 interface GroupMemberOption {
@@ -417,8 +410,6 @@ const countryRegions: Record<string, string[]> = {
 const backendUrl = Constants.expoConfig?.extra?.backendUrl ?? 'http://localhost:4000';
 const sessionKey = 'stp.session';
 const sessionDurationMs = 12 * 60 * 60 * 1000;
-const followCodesKey = 'stp.followCodes';
-const followPayloadsKey = 'stp.followPayloads';
 
 const loadSession = (): { token: string; name: string; email?: string; page?: string } | null => {
   if (Platform.OS !== 'web' || typeof window === 'undefined') return null;
@@ -452,46 +443,6 @@ const saveSession = (token: string, name: string, page?: string, email?: string 
 const clearSession = () => {
   if (Platform.OS !== 'web' || typeof window === 'undefined') return;
   window.localStorage.removeItem(sessionKey);
-};
-
-const loadFollowCodes = (): Record<string, string> => {
-  if (Platform.OS !== 'web' || typeof window === 'undefined') return {};
-  try {
-    const raw = window.localStorage.getItem(followCodesKey);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed === 'object') {
-      return parsed as Record<string, string>;
-    }
-    return {};
-  } catch {
-    return {};
-  }
-};
-
-const saveFollowCodes = (codes: Record<string, string>) => {
-  if (Platform.OS !== 'web' || typeof window === 'undefined') return;
-  window.localStorage.setItem(followCodesKey, JSON.stringify(codes));
-};
-
-const loadFollowPayloads = (): Record<string, InvitePayload> => {
-  if (Platform.OS !== 'web' || typeof window === 'undefined') return {};
-  try {
-    const raw = window.localStorage.getItem(followPayloadsKey);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed === 'object') {
-      return parsed as Record<string, InvitePayload>;
-    }
-    return {};
-  } catch {
-    return {};
-  }
-};
-
-const saveFollowPayloads = (payloads: Record<string, InvitePayload>) => {
-  if (Platform.OS !== 'web' || typeof window === 'undefined') return;
-  window.localStorage.setItem(followPayloadsKey, JSON.stringify(payloads));
 };
 
 const App: React.FC = () => {
@@ -1598,224 +1549,6 @@ const App: React.FC = () => {
     setInvites(data);
   };
 
-  const fetchFollowedTrips = async () => {
-    if (!userToken) return;
-    const res = await fetch(`${backendUrl}/api/trips/followed`, { headers });
-    if (res.status === 401 || res.status === 403) {
-      logout();
-      return;
-    }
-    if (!res.ok) {
-      setFollowedTrips([]);
-      return;
-    }
-    const data = await res.json().catch(() => []);
-    if (!Array.isArray(data)) {
-      setFollowedTrips([]);
-      return;
-    }
-    const mapped: FollowedTrip[] = data.map((item: any) => ({
-      tripId: item.tripId ?? item.id ?? '',
-      tripName: item.tripName ?? item.name ?? 'Trip',
-      inviterName: item.inviterName ?? item.invitedBy,
-      destination: item.destination,
-      todayDetails: Array.isArray(item.todayDetails) ? item.todayDetails : [],
-    }));
-    setFollowedTrips(mapped.filter((t) => t.tripId));
-  };
-
-  const followTripByInvite = async () => {
-    if (!userToken) return;
-    const code = followInviteCode.trim();
-    if (!code) {
-      setFollowError('Enter an invite code');
-      return;
-    }
-    // Decode invite payload (local or shared)
-    const decoded = decodeInviteCode(code);
-    const payload =
-      followCodePayloads[code] ??
-      decoded ??
-      null;
-    const resolvedTripId =
-      Object.entries(followCodes).find(([, c]) => c === code)?.[0] ??
-      payload?.tripId ??
-      null;
-    const resolvedName =
-      payload?.tripName ?? trips.find((t) => t.id === resolvedTripId)?.name ?? 'Trip';
-    if (resolvedTripId) {
-      setFollowedTrips((prev) => {
-        const filtered = prev.filter((t) => t.tripId !== resolvedTripId);
-        return [
-          ...filtered,
-          {
-            tripId: resolvedTripId,
-            tripName: resolvedName,
-            destination: payload?.destination,
-            inviterName: payload ? 'Shared' : 'You',
-            todayDetails: [],
-          },
-        ];
-      });
-      if (payload && payload.tripId) {
-        setFollowCodes((prev) => {
-          const next = { ...prev, [payload.tripId]: code };
-          saveFollowCodes(next);
-          return next;
-        });
-        setFollowCodePayloads((prev) => {
-          const next = { ...prev, [code]: payload };
-          saveFollowPayloads(next);
-          return next;
-        });
-      }
-      setFollowInviteCode('');
-      setFollowError('');
-      return;
-    }
-    setFollowLoading(true);
-    setFollowError('');
-    try {
-      const res = await fetch(`${backendUrl}/api/trips/follow`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...headers },
-        body: JSON.stringify({ inviteCode: code }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (res.status === 401 || res.status === 403) {
-        logout();
-        return;
-      }
-      if (!res.ok) {
-        setFollowError(data.error || 'Unable to follow trip');
-        return;
-      }
-      const tripData = data.trip ?? data;
-      const todayDetailsRaw = Array.isArray(data.todayDetails)
-        ? data.todayDetails
-        : Array.isArray(data.details)
-          ? data.details
-          : [];
-      const normalizeDetails = todayDetailsRaw
-        .filter((d: any) => d && d.activity)
-        .map((d: any, idx: number) => ({
-          id: d.id ?? `${tripData.id ?? code}-${idx}`,
-          day: d.day,
-          time: d.time,
-          activity: d.activity,
-        }));
-      const tripId = tripData.id ?? tripData.tripId ?? code;
-      if (!tripId) {
-        setFollowError('Missing trip id from invite');
-        return;
-      }
-      const tripName = tripData.name ?? tripData.tripName ?? 'Trip';
-      setFollowedTrips((prev) => {
-        const filtered = prev.filter((t) => t.tripId !== tripId);
-        return [
-          ...filtered,
-          {
-            tripId,
-            tripName,
-            inviterName: data.inviterName ?? tripData.inviterName,
-            destination: tripData.destination,
-            todayDetails: normalizeDetails,
-          },
-        ];
-      });
-      setFollowInviteCode('');
-    } catch (err) {
-      setFollowError((err as Error).message);
-    } finally {
-      setFollowLoading(false);
-    }
-  };
-
-  const fetchFollowCode = async (tripId: string) => {
-    if (!userToken) return;
-    setFollowCodeError(null);
-    setFollowCodeLoading((prev) => ({ ...prev, [tripId]: true }));
-    const extractCode = (data: any, text?: string) => {
-      return (
-        data?.inviteCode ??
-        data?.invite_code ??
-        data?.code ??
-        data?.followCode ??
-        (typeof text === 'string' && text.trim() ? text.trim() : '')
-      );
-    };
-    // Try only the most likely endpoints; if none work, surface a single clear error instead of spamming requests.
-    const attempts: Array<{ url: string; method: 'GET'; body?: any }> = [
-      { url: `${backendUrl}/api/trips/${tripId}/invite-code`, method: 'GET' },
-      { url: `${backendUrl}/api/trips/${tripId}/invite`, method: 'GET' },
-      { url: `${backendUrl}/api/trips/${tripId}/follow-code`, method: 'GET' },
-    ];
-    try {
-      let code: string | null = null;
-      let lastError: Error | null = null;
-      for (const att of attempts) {
-        try {
-          const res = await fetch(att.url, { headers });
-          const text = await res.text();
-          let data: any = {};
-          try {
-            data = JSON.parse(text);
-          } catch {
-            data = {};
-          }
-          if (res.status === 401 || res.status === 403) {
-            logout();
-            throw new Error('Unauthorized');
-          }
-          if (!res.ok) {
-            throw new Error(data.error || text || 'Unable to fetch invite code');
-          }
-          const extracted =
-            extractCode(data, text) ||
-            (typeof text === 'string'
-              ? (text.match(/[A-Z0-9]{6,}/)?.[0] ?? '')
-              : '');
-          if (!extracted) {
-            throw new Error('No invite code returned');
-          }
-          code = extracted;
-          break;
-        } catch (err) {
-          lastError = err as Error;
-          continue;
-        }
-      }
-      if (code) {
-        setFollowCodes((prev) => ({ ...prev, [tripId]: code }));
-      } else {
-        throw lastError ?? new Error('Invite codes are not enabled for this server.');
-      }
-    } catch (err) {
-      const msg = (err as Error).message;
-      setFollowCodeError(msg);
-    } finally {
-      setFollowCodeLoading((prev) => ({ ...prev, [tripId]: false }));
-    }
-  };
-
-  const generateLocalFollowCode = (tripId: string, tripName: string) => {
-    const destination = trips.find((t) => t.id === tripId)?.name;
-    const payload: InvitePayload = { tripId, tripName, destination };
-    const code = encodeInviteCode(payload);
-    setFollowCodeError(null);
-    setFollowCodes((prev) => {
-      const next = { ...prev, [tripId]: code };
-      saveFollowCodes(next);
-      return next;
-    });
-    setFollowCodePayloads((prev) => {
-      const next = { ...prev, [code]: payload };
-      saveFollowPayloads(next);
-      return next;
-    });
-    return code;
-  };
-
   const createGroup = async () => {
     if (!userToken) return;
     if (!groupName.trim()) {
@@ -1916,13 +1649,22 @@ const App: React.FC = () => {
         fetchInvites();
         fetchGroups();
         fetchTrips();
-        fetchFollowedTrips();
+        try {
+          const trips = await fetchFollowedTripsApi(backendUrl, headers);
+          setFollowedTrips(trips);
+        } catch (err) {
+          if ((err as any).code === 'UNAUTHORIZED') {
+            logout();
+            return;
+          }
+          setFollowedTrips([]);
+        }
         fetchTraits();
         fetchTraitProfile();
         fetchItineraries();
       })();
     }
-  }, [userToken]);
+  }, [userToken, headers]);
 
   useEffect(() => {
     if (userToken) return;
@@ -3530,97 +3272,30 @@ const App: React.FC = () => {
           ) : null}
 
           {activePage === 'follow' ? (
-            <>
-              <View style={styles.card}>
-                <Text style={styles.sectionTitle}>Follow a Trip</Text>
-                <Text style={styles.helperText}>Enter an invite code to view a shared trip and today's itinerary.</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Invite code"
-                  value={followInviteCode}
-                  onChangeText={setFollowInviteCode}
-                  autoCapitalize="none"
-                />
-                {followError ? <Text style={styles.errorText}>{followError}</Text> : null}
-                <TouchableOpacity style={styles.button} onPress={followTripByInvite} disabled={followLoading}>
-                  <Text style={styles.buttonText}>{followLoading ? 'Following...' : 'Follow Trip'}</Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.card}>
-                <Text style={styles.sectionTitle}>Followed Trips</Text>
-                {!followedTrips.length ? (
-                  <Text style={styles.helperText}>No followed trips yet.</Text>
-                ) : (
-                  followedTrips.map((f) => (
-                    <View key={f.tripId} style={styles.followTripItem}>
-                      <Text style={styles.flightTitle}>{f.tripName}</Text>
-                      <Text style={styles.helperText}>
-                        {(f.destination ? `${f.destination} • ` : '') + (f.inviterName ? `Invited by ${f.inviterName}` : 'Shared')}
-                      </Text>
-                      <Text style={[styles.bodyText, { fontWeight: '700', marginTop: 6 }]}>Today's itinerary</Text>
-                      {f.todayDetails && f.todayDetails.length ? (
-                        f.todayDetails.map((d) => (
-                          <View key={d.id ?? `${f.tripId}-${d.activity}`} style={{ marginTop: 4 }}>
-                            <Text style={styles.bodyText}>
-                              {d.time ? `${d.time} • ` : ''}
-                              {d.activity}
-                            </Text>
-                          </View>
-                        ))
-                      ) : (
-                        <Text style={styles.helperText}>No shared activities for today.</Text>
-                      )}
-                    </View>
-                  ))
-                )}
-              </View>
-
-              <View style={styles.card}>
-                <Text style={styles.sectionTitle}>Share your trips</Text>
-                <Text style={styles.helperText}>Grab an invite code to share so others can follow along.</Text>
-                {followCodeError ? <Text style={styles.errorText}>{followCodeError}</Text> : null}
-                {!trips.length ? (
-                  <Text style={styles.helperText}>No trips available. Create one first.</Text>
-                ) : (
-                  trips.map((trip) => {
-                    const code = followCodes[trip.id];
-                    const loading = followCodeLoading[trip.id];
-                    return (
-                      <View key={trip.id} style={styles.followTripItem}>
-                        <Text style={styles.flightTitle}>{trip.name}</Text>
-                        <Text style={styles.helperText}>Group: {trip.groupName || 'N/A'}</Text>
-                        <View style={{ marginTop: 6, gap: 6 }}>
-                          {code ? (
-                            <View style={[styles.codeRow]}>
-                              <Text style={[styles.bodyText, { fontWeight: '700' }]}>Code: {code}</Text>
-                              <TouchableOpacity
-                                style={[styles.button, styles.smallButton]}
-                                onPress={() => {
-                                  const text = code;
-                                  if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-                                    navigator.clipboard.writeText(text).catch(() => undefined);
-                                  }
-                                }}
-                              >
-                                <Text style={styles.buttonText}>Copy</Text>
-                              </TouchableOpacity>
-                            </View>
-                          ) : null}
-                          <TouchableOpacity
-                            style={[styles.button, styles.smallButton]}
-                            onPress={() => generateLocalFollowCode(trip.id, trip.name)}
-                            disabled={loading}
-                          >
-                            <Text style={styles.buttonText}>Get invite code</Text>
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-                    );
-                  })
-                )}
-              </View>
-            </>
+            <FollowTab
+              backendUrl={backendUrl}
+              userToken={userToken}
+              trips={trips}
+              headers={headers}
+              followInviteCode={followInviteCode}
+              setFollowInviteCode={setFollowInviteCode}
+              followLoading={followLoading}
+              setFollowLoading={setFollowLoading}
+              followError={followError}
+              setFollowError={setFollowError}
+              followedTrips={followedTrips}
+              setFollowedTrips={setFollowedTrips}
+              followCodes={followCodes}
+              setFollowCodes={setFollowCodes}
+              followCodeLoading={followCodeLoading}
+              setFollowCodeLoading={setFollowCodeLoading}
+              followCodeError={followCodeError}
+              setFollowCodeError={setFollowCodeError}
+              followCodePayloads={followCodePayloads}
+              setFollowCodePayloads={setFollowCodePayloads}
+              styles={styles}
+              logout={logout}
+            />
           ) : null}
         </ScrollView>
       ) : (
