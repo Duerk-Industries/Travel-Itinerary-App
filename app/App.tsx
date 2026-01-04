@@ -21,7 +21,9 @@ import { computePayerTotals } from './tabs/costReport';
 import { Trait, TraitsTab } from './tabs/traits';
 import { FollowTab, fetchFollowedTripsApi, loadFollowCodes, loadFollowPayloads, saveFollowCodes, saveFollowPayloads, type FollowedTrip } from './tabs/follow';
 import ItinerariesTab from './tabs/itineraries';
-import AccountTab, { fetchAccountProfile, fetchFamilyRelationships } from './tabs/account';
+import CreateTripWizard from './tabs/createTripWizard';
+import TripDetailsTab from './tabs/tripDetails';
+import AccountTab, { fetchAccountProfile, fetchFamilyRelationships, fetchFellowTravelers, type FellowTraveler } from './tabs/account';
 import {
   Lodging,
   LodgingDraft,
@@ -76,6 +78,10 @@ interface Trip {
   groupId: string;
   groupName: string;
   name: string;
+  description?: string | null;
+  destination?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
   createdAt: string;
 }
 
@@ -87,7 +93,20 @@ interface GroupMemberOption {
   lastName?: string;
 }
 
-type Page = 'menu' | 'flights' | 'lodging' | 'tours' | 'groups' | 'trips' | 'traits' | 'itinerary' | 'cost' | 'account' | 'follow';
+type Page =
+  | 'menu'
+  | 'flights'
+  | 'lodging'
+  | 'tours'
+  | 'groups'
+  | 'trips'
+  | 'create-trip'
+  | 'trip-details'
+  | 'traits'
+  | 'itinerary'
+  | 'cost'
+  | 'account'
+  | 'follow';
 
 const backendUrl = Constants.expoConfig?.extra?.backendUrl ?? 'http://localhost:4000';
 const sessionKey = 'stp.session';
@@ -156,6 +175,7 @@ const App: React.FC = () => {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [showActiveTripDropdown, setShowActiveTripDropdown] = useState(false);
   const [groupMembers, setGroupMembers] = useState<GroupMemberOption[]>([]);
+  const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
   const [lodgings, setLodgings] = useState<Lodging[]>([]);
   const [lodgingDraft, setLodgingDraft] = useState<LodgingDraft>(createInitialLodgingState());
   const [editingLodgingId, setEditingLodgingId] = useState<string | null>(null);
@@ -187,6 +207,7 @@ const App: React.FC = () => {
   });
   const [accountProfile, setAccountProfile] = useState({ firstName: '', lastName: '', email: '' });
   const [familyRelationships, setFamilyRelationships] = useState<any[]>([]);
+  const [fellowTravelers, setFellowTravelers] = useState<FellowTraveler[]>([]);
   const [showRelationshipDropdown, setShowRelationshipDropdown] = useState(false);
   const formatMemberName = (member: GroupMemberOption): string => {
     if (member.guestName) return member.guestName;
@@ -449,6 +470,7 @@ const App: React.FC = () => {
     setTraitGender('prefer-not');
     setAccountProfile({ firstName: '', lastName: '', email: '' });
     setFamilyRelationships([]);
+    setFellowTravelers([]);
     setActivePage('menu');
     clearSession();
   };
@@ -474,6 +496,16 @@ const App: React.FC = () => {
         setFamilyRelationships,
       }),
     [backendUrl, setFamilyRelationships, userToken]
+  );
+
+  const loadFellowTravelers = useCallback(
+    (token?: string) =>
+      fetchFellowTravelers({
+        backendUrl,
+        token: token ?? userToken,
+        setFellowTravelers,
+      }),
+    [backendUrl, setFellowTravelers, userToken]
   );
 
   const loginWithPassword = async () => {
@@ -505,6 +537,7 @@ const App: React.FC = () => {
       fetchInvites(data.token);
       loadAccountProfile(data.token);
       loadFamilyRelationships(data.token);
+      loadFellowTravelers(data.token);
       setActivePage('menu');
     } catch (err) {
       alert((err as Error).message || 'Login failed');
@@ -550,6 +583,7 @@ const App: React.FC = () => {
       fetchInvites(data.token);
       loadAccountProfile(data.token);
       loadFamilyRelationships(data.token);
+      loadFellowTravelers(data.token);
       setActivePage('menu');
     } catch (err) {
       alert((err as Error).message || 'Registration failed');
@@ -745,7 +779,7 @@ const App: React.FC = () => {
       setUserName(session.name);
       setUserEmail(session.email ?? null);
       const sessionPage = session.page;
-      if (sessionPage === 'flights' || sessionPage === 'lodging' || sessionPage === 'groups' || sessionPage === 'trips' || sessionPage === 'traits' || sessionPage === 'itinerary' || sessionPage === 'tours' || sessionPage === 'cost' || sessionPage === 'account' || sessionPage === 'follow') {
+      if (sessionPage === 'flights' || sessionPage === 'lodging' || sessionPage === 'groups' || sessionPage === 'trips' || sessionPage === 'create-trip' || sessionPage === 'trip-details' || sessionPage === 'traits' || sessionPage === 'itinerary' || sessionPage === 'tours' || sessionPage === 'cost' || sessionPage === 'account' || sessionPage === 'follow') {
         setActivePage(sessionPage as Page);
       } else {
         setActivePage('menu');
@@ -788,8 +822,9 @@ const App: React.FC = () => {
   useEffect(() => {
     if (userToken) {
       loadFamilyRelationships();
+      loadFellowTravelers();
     }
-  }, [loadFamilyRelationships, userToken]);
+  }, [loadFamilyRelationships, loadFellowTravelers, userToken]);
 
   useEffect(() => {
     if (userToken) {
@@ -1000,6 +1035,9 @@ const App: React.FC = () => {
               <TouchableOpacity style={[styles.button, activePage === 'trips' && styles.toggleActive]} onPress={() => setActivePage('trips')}>
                 <Text style={styles.buttonText}>Trips</Text>
               </TouchableOpacity>
+              <TouchableOpacity style={[styles.button, activePage === 'create-trip' && styles.toggleActive]} onPress={() => setActivePage('create-trip')}>
+                <Text style={styles.buttonText}>Create Trip</Text>
+              </TouchableOpacity>
               <TouchableOpacity style={[styles.button, activePage === 'account' && styles.toggleActive]} onPress={() => setActivePage('account')}>
                 <Text style={styles.buttonText}>Account</Text>
               </TouchableOpacity>
@@ -1020,6 +1058,7 @@ const App: React.FC = () => {
               backendUrl={backendUrl}
               userToken={userToken}
               activeTripId={activeTripId}
+              activeTrip={findActiveTrip() ?? null}
               traits={traits}
               headers={headers}
               setActiveTripId={setActiveTripId}
@@ -1159,6 +1198,8 @@ const App: React.FC = () => {
               setAccountProfile={setAccountProfile}
               familyRelationships={familyRelationships}
               setFamilyRelationships={setFamilyRelationships}
+              fellowTravelers={fellowTravelers}
+              setFellowTravelers={setFellowTravelers}
               showRelationshipDropdown={showRelationshipDropdown}
               setShowRelationshipDropdown={setShowRelationshipDropdown}
               setUserToken={setUserToken}
@@ -1759,7 +1800,29 @@ const App: React.FC = () => {
       ) : null}
       {activePage === 'trips' ? (
             <View style={styles.card}>
-              <Text style={styles.sectionTitle}>Trips</Text>
+              <View style={styles.row}>
+                <Text style={styles.sectionTitle}>Trips</Text>
+                <TouchableOpacity
+                  style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
+                  onPress={() => setActivePage('create-trip')}
+                >
+                  <Text style={styles.buttonText}>Open Wizard</Text>
+                </TouchableOpacity>
+              </View>
+              {(() => {
+                const inviteEmails = groups.flatMap((g) => g.invites.map((inv) => inv.inviteeEmail));
+                if (!inviteEmails.length) return null;
+                return (
+                  <View style={[styles.row, { flexWrap: 'wrap', gap: 8 }]}>
+                    <Text style={styles.helperText}>Pending invites:</Text>
+                    {inviteEmails.map((email) => (
+                      <View key={email} style={[styles.memberPill, { paddingHorizontal: 8, paddingVertical: 2 }]}>
+                        <Text style={styles.cellText}>{email}</Text>
+                      </View>
+                    ))}
+                  </View>
+                );
+              })()}
               <View style={styles.addRow}>
                 <TextInput
                   placeholder="Trip name"
@@ -1803,6 +1866,16 @@ const App: React.FC = () => {
                     <View style={{ flex: 1 }}>
                       <Text style={styles.flightTitle}>{trip.name}</Text>
                       <Text style={styles.helperText}>Created: {formatDateLong(trip.createdAt)}</Text>
+                      {(() => {
+                        const group = groups.find((g) => g.id === trip.groupId);
+                        const pending = group?.invites ?? [];
+                        if (!pending.length) return null;
+                        return (
+                          <Text style={styles.helperText}>
+                            Pending invites: {pending.map((p) => p.inviteeEmail).join(', ')}
+                          </Text>
+                        );
+                      })()}
                     </View>
                     <View style={[styles.input, styles.inlineInput, styles.dropdown, { maxWidth: 200 }]}>
                       <TouchableOpacity onPress={() => setTripDropdownOpenId((prev) => (prev === trip.id ? null : trip.id))}>
@@ -1822,6 +1895,15 @@ const App: React.FC = () => {
                         </View>
                       )}
                     </View>
+                    <TouchableOpacity
+                      style={[styles.button, styles.smallButton]}
+                      onPress={() => {
+                        setSelectedTripId(trip.id);
+                        setActivePage('trip-details');
+                      }}
+                    >
+                      <Text style={styles.buttonText}>View</Text>
+                    </TouchableOpacity>
                     <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={() => deleteTrip(trip.id)}>
                       <Text style={styles.buttonText}>Delete</Text>
                     </TouchableOpacity>
@@ -1829,6 +1911,39 @@ const App: React.FC = () => {
                 ))}
               </View>
             </View>
+          ) : null}
+
+          {activePage === 'create-trip' ? (
+            <CreateTripWizard
+              backendUrl={backendUrl}
+              userToken={userToken}
+              headers={headers}
+              traits={traits}
+              styles={styles}
+              onCancel={() => setActivePage('trips')}
+              onTripCreated={(tripId) => {
+                setActiveTripId(tripId);
+                setSelectedTripId(tripId);
+                fetchTrips();
+                fetchGroups();
+                fetchInvites();
+                setActivePage('trip-details');
+              }}
+            />
+          ) : null}
+
+          {activePage === 'trip-details' ? (
+            <TripDetailsTab
+              trip={trips.find((t) => t.id === selectedTripId) ?? null}
+              group={groups.find((g) => g.id === trips.find((t) => t.id === selectedTripId)?.groupId) ?? null}
+              styles={styles}
+              onBack={() => setActivePage('trips')}
+              onSetActive={(tripId) => setActiveTripId(tripId)}
+              onOpenItinerary={(tripId) => {
+                setActiveTripId(tripId);
+                setActivePage('itinerary');
+              }}
+            />
           ) : null}
 
           {activePage === 'follow' ? (

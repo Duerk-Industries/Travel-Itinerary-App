@@ -12,6 +12,10 @@ import {
   updateWebUserPassword,
   updateFamilyProfile,
   updateWebUserProfile,
+  listFellowTravelers,
+  createFellowTraveler,
+  updateFellowTraveler,
+  removeFellowTraveler,
 } from '../db';
 
 // Account management (profile, password, deletion) for authenticated web users.
@@ -84,6 +88,47 @@ router.get('/family', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const relationships = await listFamilyRelationships(userId);
   res.json(relationships);
+});
+
+router.get('/fellow-travelers', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const travelers = await listFellowTravelers(userId);
+  res.json(travelers);
+});
+
+router.post('/fellow-travelers', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const { firstName, lastName } = req.body ?? {};
+  try {
+    await createFellowTraveler(userId, String(firstName ?? ''), String(lastName ?? ''));
+    const travelers = await listFellowTravelers(userId);
+    res.status(201).json(travelers);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.patch('/fellow-travelers/:id', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const { firstName, lastName } = req.body ?? {};
+  try {
+    await updateFellowTraveler(userId, req.params.id, String(firstName ?? ''), String(lastName ?? ''));
+    const travelers = await listFellowTravelers(userId);
+    res.json(travelers);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.delete('/fellow-travelers/:id', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  try {
+    await removeFellowTraveler(userId, req.params.id);
+    const travelers = await listFellowTravelers(userId);
+    res.json(travelers);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
 router.post('/family', async (req, res) => {

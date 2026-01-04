@@ -2,6 +2,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { formatDateLong } from '../utils/formatDateLong';
+import { renderRichTextBlocks } from '../utils/richText';
+import { parsePlanToDetails } from '../utils/itineraryParser';
 import type { Trait } from './traits';
 
 type Styles = ReturnType<typeof StyleSheet.create>;
@@ -30,6 +32,13 @@ interface ItinerariesTabProps {
   backendUrl: string;
   userToken: string | null;
   activeTripId: string | null;
+  activeTrip?: {
+    name: string;
+    description?: string | null;
+    destination?: string | null;
+    startDate?: string | null;
+    endDate?: string | null;
+  } | null;
   traits: Trait[];
   headers: Record<string, string>;
   setActiveTripId: Setter<string | null>;
@@ -338,6 +347,7 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
   backendUrl,
   userToken,
   activeTripId,
+  activeTrip,
   traits,
   headers,
   setActiveTripId,
@@ -453,32 +463,6 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
     setItineraryAirportOptions(data);
     setShowItineraryAirportDropdown(true);
   };
-  const parsePlanToDetails = (plan: string): Array<{ day: number; activity: string; cost?: number | null }> => {
-    const details: Array<{ day: number; activity: string; cost?: number | null }> = [];
-    let currentDay: number | null = null;
-
-    for (const raw of plan.split('\n')) {
-      const line = raw.trim();
-      if (!line) continue;
-
-      const dayMatch = line.match(/day\s*(\d+)/i);
-      if (dayMatch) {
-        currentDay = Number(dayMatch[1]);
-        continue;
-      }
-      if (currentDay == null) continue;
-
-      const activity = line.replace(/^[-*]\s*/, '').trim();
-      if (!activity) continue;
-
-      const costMatch = activity.match(/\$([\d.,]+)/);
-      const cost = costMatch ? Number(costMatch[1].replace(/,/g, '')) : null;
-      details.push({ day: currentDay, activity, cost: Number.isFinite(cost as number) ? (cost as number) : null });
-    }
-
-    return details;
-  };
-
   const saveGeneratedItinerary = async (plan: string) => {
     if (!activeTripId) {
       setItineraryError('Select an active trip before saving the itinerary.');
@@ -703,8 +687,38 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
     setRegionSearch('');
     setShowItineraryRegionDropdown(false);
   }, [itineraryCountry]);
+
+  const tripDateRange = useMemo(() => {
+    if (!activeTrip?.startDate && !activeTrip?.endDate) return null;
+    const start = activeTrip?.startDate ? formatDateLong(activeTrip.startDate) : 'Start date';
+    const end = activeTrip?.endDate ? formatDateLong(activeTrip.endDate) : 'End date';
+    return `${start} - ${end}`;
+  }, [activeTrip]);
+
   return (
     <>
+      {activeTrip ? (
+        <View style={[styles.card, styles.itinerarySection]}>
+          <Text style={styles.sectionTitle}>{activeTrip.name}</Text>
+          {activeTrip.destination ? (
+            <Text style={styles.helperText}>Destination: {activeTrip.destination}</Text>
+          ) : null}
+          {tripDateRange ? <Text style={styles.helperText}>Dates: {tripDateRange}</Text> : null}
+          {activeTrip.description ? (
+            <View style={{ marginTop: 8 }}>
+              {renderRichTextBlocks(activeTrip.description, {
+                base: styles.bodyText,
+                bold: styles.headerText,
+                italic: styles.helperText,
+                link: styles.linkText ?? styles.buttonText,
+                listItem: styles.helperText,
+              })}
+            </View>
+          ) : (
+            <Text style={styles.helperText}>Add a description in the trip wizard to see it here.</Text>
+          )}
+        </View>
+      ) : null}
       <View style={[styles.card, styles.itinerarySection]}>
         <Text style={styles.sectionTitle}>Create Itinerary</Text>
         <Text style={styles.helperText}>Capture the basics and we'll use your traits to shape trip ideas.</Text>

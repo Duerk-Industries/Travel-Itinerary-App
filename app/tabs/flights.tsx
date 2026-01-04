@@ -88,6 +88,10 @@ export type Trip = {
   groupId: string;
   groupName: string;
   name: string;
+  description?: string | null;
+  destination?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
   createdAt: string;
 };
 

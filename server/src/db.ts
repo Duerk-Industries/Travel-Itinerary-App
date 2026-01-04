@@ -151,13 +151,32 @@ export const initDb = async (): Promise<void> => {
   `);
 
   await p.query(`
+    CREATE TABLE IF NOT EXISTS fellow_travelers (
+      id UUID PRIMARY KEY,
+      owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      first_name TEXT NOT NULL,
+      last_name TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+  await p.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_fellow_travelers_owner_name ON fellow_travelers(owner_id, LOWER(first_name), LOWER(last_name));`);
+
+  await p.query(`
     CREATE TABLE IF NOT EXISTS trips (
       id UUID PRIMARY KEY,
       group_id UUID NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
       name TEXT NOT NULL,
+      description TEXT,
+      destination TEXT,
+      start_date DATE,
+      end_date DATE,
       created_at TIMESTAMP DEFAULT NOW()
     );
   `);
+  await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS description TEXT;`);
+  await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS destination TEXT;`);
+  await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS start_date DATE;`);
+  await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS end_date DATE;`);
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS flights (
@@ -297,6 +316,7 @@ export const initDb = async (): Promise<void> => {
     await p.query(`DELETE FROM groups`);
     await p.query(`DELETE FROM traits`);
     await p.query(`DELETE FROM family_relationships`);
+    await p.query(`DELETE FROM fellow_travelers`);
     await p.query(`DELETE FROM web_users`);
     await p.query(`DELETE FROM users`);
   }
@@ -609,6 +629,8 @@ export const deleteWebUserAndCleanup = async (userId: string): Promise<void> => 
       await client.query(`DELETE FROM itineraries WHERE trip_id = ANY($1::uuid[])`, [tripIds]);
       await client.query(`DELETE FROM trips WHERE id = ANY($1::uuid[])`, [tripIds]);
     }
+
+    await client.query(`DELETE FROM fellow_travelers WHERE owner_id = $1`, [userId]);
 
     // Remove auth rows last so cascades clean up related data.
     await client.query(`DELETE FROM web_users WHERE id = $1`, [userId]);
@@ -1571,6 +1593,10 @@ export const listTrips = async (userId: string): Promise<Array<Trip & { groupNam
       `SELECT t.id,
               t.group_id as "groupId",
               t.name,
+              t.description,
+              t.destination,
+              t.start_date as "startDate",
+              t.end_date as "endDate",
               t.created_at as "createdAt",
               g.name as "groupName"
        FROM trips t
@@ -1582,7 +1608,15 @@ export const listTrips = async (userId: string): Promise<Array<Trip & { groupNam
     return rows;
   }
   const { rows } = await p.query(
-    `SELECT t.id, t.group_id as "groupId", t.name, t.created_at as "createdAt", g.name as "groupName"
+    `SELECT t.id,
+            t.group_id as "groupId",
+            t.name,
+            t.description,
+            t.destination,
+            t.start_date as "startDate",
+            t.end_date as "endDate",
+            t.created_at as "createdAt",
+            g.name as "groupName"
      FROM trips t
      JOIN groups g ON t.group_id = g.id
      WHERE EXISTS (
@@ -1594,7 +1628,12 @@ export const listTrips = async (userId: string): Promise<Array<Trip & { groupNam
   return rows;
 };
 
-export const createTrip = async (userId: string, groupId: string, name: string): Promise<Trip> => {
+export const createTrip = async (
+  userId: string,
+  groupId: string,
+  name: string,
+  details?: { description?: string | null; destination?: string | null; startDate?: string | null; endDate?: string | null }
+): Promise<Trip> => {
   const p = getPool();
   const membership = await p.query(
     `SELECT 1 FROM group_members WHERE group_id = $1 AND user_id = $2`,
@@ -1604,8 +1643,25 @@ export const createTrip = async (userId: string, groupId: string, name: string):
 
   const id = randomUUID();
   const { rows } = await p.query<Trip>(
-    `INSERT INTO trips (id, group_id, name) VALUES ($1, $2, $3) RETURNING id, group_id as "groupId", name, created_at as "createdAt"`,
-    [id, groupId, name]
+    `INSERT INTO trips (id, group_id, name, description, destination, start_date, end_date)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     RETURNING id,
+               group_id as "groupId",
+               name,
+               description,
+               destination,
+               start_date as "startDate",
+               end_date as "endDate",
+               created_at as "createdAt"`,
+    [
+      id,
+      groupId,
+      name,
+      details?.description ?? null,
+      details?.destination ?? null,
+      details?.startDate ?? null,
+      details?.endDate ?? null,
+    ]
   );
   return rows[0];
 };
@@ -1651,7 +1707,14 @@ export const updateTripGroup = async (userId: string, tripId: string, newGroupId
     `UPDATE trips
      SET group_id = $1
      WHERE id = $2
-     RETURNING id, group_id as "groupId", name, created_at as "createdAt",
+     RETURNING id,
+       group_id as "groupId",
+       name,
+       description,
+       destination,
+       start_date as "startDate",
+       end_date as "endDate",
+       created_at as "createdAt",
        (SELECT name FROM groups WHERE id = $1) as "groupName"`,
     [newGroupId, tripId]
   );
@@ -1717,6 +1780,100 @@ export const createGroupWithMembers = async (
 
     await client.query('COMMIT');
     return { groupId, invites };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
+export const createTripWithGroupAndMembers = async (payload: {
+  ownerId: string;
+  tripName: string;
+  description?: string | null;
+  destination?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  members: Array<{ email?: string; guestName?: string }>;
+}): Promise<{ trip: Trip; groupId: string; invites: { id: string; email: string }[] }> => {
+  const p = getPool();
+  const client = await p.connect();
+  try {
+    await client.query('BEGIN');
+    const groupId = randomUUID();
+    const groupName = `Trip: ${payload.tripName} Group`;
+
+    await client.query(`INSERT INTO groups (id, owner_id, name) VALUES ($1, $2, $3)`, [
+      groupId,
+      payload.ownerId,
+      groupName,
+    ]);
+    await client.query(
+      `INSERT INTO group_members (id, group_id, user_id, added_by) VALUES ($1, $2, $3, $4)`,
+      [randomUUID(), groupId, payload.ownerId, payload.ownerId]
+    );
+
+    const invites: { id: string; email: string }[] = [];
+    for (const member of payload.members) {
+      if (member.guestName && member.guestName.trim().length) {
+        await client.query(
+          `INSERT INTO group_members (id, group_id, guest_name, added_by) VALUES ($1, $2, $3, $4)`,
+          [randomUUID(), groupId, member.guestName.trim(), payload.ownerId]
+        );
+        continue;
+      }
+
+      if (member.email && member.email.trim().length) {
+        const email = member.email.trim().toLowerCase();
+        const userRes = await client.query<User>('SELECT id, email FROM users WHERE email = $1', [email]);
+        const user = userRes.rows[0] ?? null;
+        if (user) {
+          await client.query(
+            `INSERT INTO group_members (id, group_id, user_id, added_by)
+             VALUES ($1, $2, $3, $4)
+             ON CONFLICT (group_id, user_id) DO NOTHING`,
+            [randomUUID(), groupId, user.id, payload.ownerId]
+          );
+          await client.query(`DELETE FROM group_invites WHERE group_id = $1 AND invitee_email = $2`, [groupId, user.email]);
+        } else {
+          const inviteId = randomUUID();
+          await client.query(
+            `INSERT INTO group_invites (id, group_id, inviter_id, invitee_user_id, invitee_email, status)
+             VALUES ($1, $2, $3, $4, $5, 'pending')
+             ON CONFLICT DO NOTHING`,
+            [inviteId, groupId, payload.ownerId, null, email]
+          );
+          invites.push({ id: inviteId, email });
+        }
+      }
+    }
+
+    const tripId = randomUUID();
+    const { rows } = await client.query<Trip>(
+      `INSERT INTO trips (id, group_id, name, description, destination, start_date, end_date)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING id,
+                 group_id as "groupId",
+                 name,
+                 description,
+                 destination,
+                 start_date as "startDate",
+                 end_date as "endDate",
+                 created_at as "createdAt"`,
+      [
+        tripId,
+        groupId,
+        payload.tripName,
+        payload.description ?? null,
+        payload.destination ?? null,
+        payload.startDate ?? null,
+        payload.endDate ?? null,
+      ]
+    );
+
+    await client.query('COMMIT');
+    return { trip: rows[0], groupId, invites };
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;
@@ -2284,6 +2441,105 @@ export const listFamilyRelationships = async (userId: string) => {
     [userId]
   );
   return rows.map((row) => mapFamilyView(row, userId));
+};
+
+export const listFellowTravelers = async (ownerId: string) => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `SELECT id, first_name as "firstName", last_name as "lastName", created_at as "createdAt"
+     FROM fellow_travelers
+     WHERE owner_id = $1
+     ORDER BY created_at DESC`,
+    [ownerId]
+  );
+  return rows;
+};
+
+export const createFellowTraveler = async (ownerId: string, firstName: string, lastName: string) => {
+  const p = getPool();
+  const given = firstName.trim();
+  const family = lastName.trim();
+  if (!given || !family) throw new Error('firstName and lastName are required');
+  const id = randomUUID();
+  await p.query(
+    `INSERT INTO fellow_travelers (id, owner_id, first_name, last_name)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (owner_id, LOWER(first_name), LOWER(last_name)) DO NOTHING`,
+    [id, ownerId, given, family]
+  );
+  return id;
+};
+
+export const updateFellowTraveler = async (
+  ownerId: string,
+  travelerId: string,
+  firstName: string,
+  lastName: string
+) => {
+  const p = getPool();
+  const given = firstName.trim();
+  const family = lastName.trim();
+  if (!given || !family) throw new Error('firstName and lastName are required');
+  const { rowCount } = await p.query(
+    `UPDATE fellow_travelers
+     SET first_name = $1, last_name = $2
+     WHERE id = $3 AND owner_id = $4`,
+    [given, family, travelerId, ownerId]
+  );
+  if (!rowCount) throw new Error('Fellow traveler not found');
+};
+
+export const removeFellowTraveler = async (ownerId: string, travelerId: string) => {
+  const p = getPool();
+  const { rowCount } = await p.query(`DELETE FROM fellow_travelers WHERE id = $1 AND owner_id = $2`, [
+    travelerId,
+    ownerId,
+  ]);
+  if (!rowCount) throw new Error('Fellow traveler not found');
+};
+
+export const searchTripContacts = async (ownerId: string, query: string) => {
+  const p = getPool();
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+  const like = `%${q}%`;
+
+  const fellowResult = await p.query(
+    `SELECT id,
+            first_name as "firstName",
+            last_name as "lastName",
+            NULL::text as "email",
+            'fellow' as "source"
+     FROM fellow_travelers
+     WHERE owner_id = $1
+       AND (LOWER(first_name) LIKE $2 OR LOWER(last_name) LIKE $2 OR LOWER(first_name || ' ' || last_name) LIKE $2)
+     ORDER BY created_at DESC`,
+    [ownerId, like]
+  );
+
+  const memberResult = await p.query(
+    `SELECT DISTINCT u.id as "id",
+            wu.first_name as "firstName",
+            wu.last_name as "lastName",
+            u.email as "email",
+            'user' as "source"
+     FROM group_members gm
+     JOIN group_members gm_self ON gm_self.group_id = gm.group_id AND gm_self.user_id = $1
+     JOIN users u ON gm.user_id = u.id
+     LEFT JOIN web_users wu ON wu.id = u.id
+     WHERE gm.user_id <> $1
+       AND (LOWER(wu.first_name) LIKE $2 OR LOWER(wu.last_name) LIKE $2 OR LOWER(wu.first_name || ' ' || wu.last_name) LIKE $2 OR LOWER(u.email) LIKE $2)`,
+    [ownerId, like]
+  );
+
+  const combined = [...fellowResult.rows, ...memberResult.rows];
+  const seen = new Set<string>();
+  return combined.filter((row) => {
+    const key = `${row.source}:${row.id}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 };
 
 export const createFamilyRelationship = async (

@@ -70,6 +70,10 @@ export interface Trip {
   id: string;
   groupId: string;
   name: string;
+  description?: string | null;
+  destination?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
   createdAt: string;
 }
 
