@@ -440,6 +440,7 @@ const App: React.FC = () => {
     setFollowError('');
     setFollowCodes({});
     setGroups([]);
+    setGroupMembers([]);
     setGroupAddEmail({});
     setGroupAddRelationship({});
     setTraits([]);
@@ -614,6 +615,39 @@ const App: React.FC = () => {
       setActiveTripId(data[0].id);
     } else if (activeTripId && !data.find((t: Trip) => t.id === activeTripId)) {
       setActiveTripId(data[0]?.id ?? null);
+    }
+  };
+
+  const fetchGroupMembersForActiveTrip = async () => {
+    if (!userToken || !activeTripId) {
+      setGroupMembers([]);
+      return;
+    }
+    const trip = trips.find((t) => t.id === activeTripId);
+    const groupId = trip?.groupId;
+    if (!groupId) {
+      setGroupMembers([]);
+      return;
+    }
+    try {
+      const res = await fetch(`${backendUrl}/api/groups/${groupId}/members`, {
+        headers: { Authorization: `Bearer ${userToken}` },
+      });
+      if (!res.ok) {
+        setGroupMembers([]);
+        return;
+      }
+      const data = await res.json();
+      const normalized = (Array.isArray(data) ? data : []).map((m) => ({
+        id: m.id,
+        guestName: m.guestName ?? m.guest_name ?? undefined,
+        email: m.email ?? undefined,
+        firstName: m.firstName ?? m.first_name ?? undefined,
+        lastName: m.lastName ?? m.last_name ?? undefined,
+      }));
+      setGroupMembers(normalized);
+    } catch {
+      setGroupMembers([]);
     }
   };
 
