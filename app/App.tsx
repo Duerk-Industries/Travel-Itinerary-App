@@ -99,6 +99,7 @@ type Page =
   | 'overview'
   | 'flights'
   | 'lodging'
+  | 'car'
   | 'tours'
   | 'groups'
   | 'trips'
@@ -191,6 +192,25 @@ const App: React.FC = () => {
   const editLodgingCheckOutRef = useRef<HTMLInputElement | null>(null);
 
   const [tours, setTours] = useState<Tour[]>([]);
+  const [carRentals, setCarRentals] = useState<CarRental[]>([]);
+  const [carDraft, setCarDraft] = useState<CarRentalDraft>({
+    pickupLocation: '',
+    pickupDate: '',
+    dropoffLocation: '',
+    dropoffDate: '',
+    reference: '',
+    vendor: '',
+    prepaid: '',
+    cost: '',
+    model: '',
+    notes: '',
+    paidBy: [],
+  });
+  const [carDateField, setCarDateField] = useState<'pickup' | 'dropoff' | null>(null);
+  const [carDateValue, setCarDateValue] = useState<Date>(new Date());
+  const [carPrepaidOpen, setCarPrepaidOpen] = useState(false);
+  const carPickupDateRef = useRef<HTMLInputElement | null>(null);
+  const carDropoffDateRef = useRef<HTMLInputElement | null>(null);
   const [traits, setTraits] = useState<Trait[]>([]);
   const [newTraitName, setNewTraitName] = useState('');
   const [selectedTraitNames, setSelectedTraitNames] = useState<Set<string>>(new Set());
@@ -255,6 +275,74 @@ const App: React.FC = () => {
     } else {
       setLodgingDraft((prev) => ({ ...prev, [field === 'checkIn' ? 'checkInDate' : 'checkOutDate']: value }));
     }
+  };
+
+  const applyCarDate = (field: 'pickup' | 'dropoff', value: string) => {
+    setCarDraft((prev) => ({ ...prev, [field === 'pickup' ? 'pickupDate' : 'dropoffDate']: value }));
+  };
+
+  const addCarRental = () => {
+    if (!activeTripId) {
+      alert('Select an active trip before adding a car rental.');
+      return;
+    }
+    if (!carDraft.vendor.trim() && !carDraft.model.trim() && !carDraft.pickupLocation.trim()) {
+      alert('Enter at least a pickup location, vendor, or car model.');
+      return;
+    }
+    const paidBy = carDraft.paidBy.length ? carDraft.paidBy : defaultPayerId ? [defaultPayerId] : [];
+    const newRental: CarRental = {
+      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      pickupLocation: carDraft.pickupLocation.trim(),
+      pickupDate: carDraft.pickupDate.trim(),
+      dropoffLocation: carDraft.dropoffLocation.trim(),
+      dropoffDate: carDraft.dropoffDate.trim(),
+      reference: carDraft.reference.trim(),
+      vendor: carDraft.vendor.trim(),
+      prepaid: carDraft.prepaid.trim(),
+      cost: carDraft.cost.trim(),
+      model: carDraft.model.trim(),
+      notes: carDraft.notes.trim(),
+      paidBy,
+    };
+    setCarRentals((prev) => [...prev, newRental]);
+    setCarDraft({
+      pickupLocation: '',
+      pickupDate: '',
+      dropoffLocation: '',
+      dropoffDate: '',
+      reference: '',
+      vendor: '',
+      prepaid: '',
+      cost: '',
+      model: '',
+      notes: '',
+      paidBy: [],
+    });
+  };
+
+  const removeCarRental = (id: string) => {
+    setCarRentals((prev) => prev.filter((c) => c.id !== id));
+  };
+
+  const openCarDatePicker = (field: 'pickup' | 'dropoff') => {
+    if (Platform.OS !== 'web' && NativeDateTimePicker) {
+      const base = (field === 'pickup' ? carDraft.pickupDate : carDraft.dropoffDate) || '';
+      const date = base ? new Date(base) : new Date();
+      setCarDateValue(date);
+      setCarDateField(field);
+      return;
+    }
+    const ref = field === 'pickup' ? carPickupDateRef.current : carDropoffDateRef.current;
+    if ((ref as any)?.showPicker) {
+      (ref as any).showPicker();
+      return;
+    }
+    if (typeof ref?.click === 'function') {
+      ref.click();
+      return;
+    }
+    ref?.focus();
   };
 
   const openLodgingDatePicker = (field: 'checkIn' | 'checkOut', context: 'draft' | 'edit', current?: string) => {
@@ -1028,6 +1116,9 @@ const App: React.FC = () => {
                 <TouchableOpacity style={[styles.button, activePage === 'lodging' && styles.toggleActive]} onPress={() => setActivePage('lodging')}>
                   <Text style={styles.buttonText}>Lodging</Text>
                 </TouchableOpacity>
+                <TouchableOpacity style={[styles.button, activePage === 'car' && styles.toggleActive]} onPress={() => setActivePage('car')}>
+                  <Text style={styles.buttonText}>Car Rentals</Text>
+                </TouchableOpacity>
                 <TouchableOpacity style={[styles.button, activePage === 'tours' && styles.toggleActive]} onPress={() => setActivePage('tours')}>
                   <Text style={styles.buttonText}>Tours</Text>
                 </TouchableOpacity>
@@ -1623,6 +1714,255 @@ const App: React.FC = () => {
             />
           ) : null}
         </View>
+      ) : null}
+
+      {activePage === 'car' ? (
+        <View style={styles.card}>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>Car Rentals</Text>
+          </View>
+          <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
+            <View style={styles.table}>
+              <View style={[styles.tableRow, styles.tableHeader]}>
+                {['Pick Up Location', 'Pick Up Date', 'Drop Off Location', 'Drop Off Date', 'Reference', 'Vendor', 'Prepaid?', 'Cost', 'Car Model', 'Notes', 'Paid By', 'Actions'].map((label, idx, arr) => (
+                  <View
+                    key={label}
+                    style={[styles.cell, { minWidth: 140, flex: 1 }, idx === arr.length - 1 && styles.lastCell]}
+                  >
+                    <Text style={styles.headerText}>{label}</Text>
+                  </View>
+                ))}
+              </View>
+              {carRentals.map((car) => (
+                <View key={car.id} style={styles.tableRow}>
+                  <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                    <Text style={[styles.cellText, styles.cellTextWrap]}>{car.pickupLocation || '-'}</Text>
+                  </View>
+                  <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                    <Text style={styles.cellText}>{car.pickupDate || '-'}</Text>
+                  </View>
+                  <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                    <Text style={[styles.cellText, styles.cellTextWrap]}>{car.dropoffLocation || '-'}</Text>
+                  </View>
+                  <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                    <Text style={styles.cellText}>{car.dropoffDate || '-'}</Text>
+                  </View>
+                  <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                    <Text style={styles.cellText}>{car.reference || '-'}</Text>
+                  </View>
+                  <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                    <Text style={styles.cellText}>{car.vendor || '-'}</Text>
+                  </View>
+                  <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                    <Text style={styles.cellText}>{car.prepaid || '-'}</Text>
+                  </View>
+                  <View style={[styles.cell, { minWidth: 120, flex: 1 }]}>
+                    <Text style={styles.cellText}>{car.cost ? `$${car.cost}` : '-'}</Text>
+                  </View>
+                  <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
+                    <Text style={styles.cellText}>{car.model || '-'}</Text>
+                  </View>
+                  <View style={[styles.cell, { minWidth: 220, flex: 1 }]}>
+                    <Text style={[styles.cellText, styles.cellTextWrap]}>{car.notes || '-'}</Text>
+                  </View>
+                  <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
+                    <Text style={styles.cellText}>{car.paidBy.length ? car.paidBy.map(payerName).join(', ') : '-'}</Text>
+                  </View>
+                  <View style={[styles.cell, styles.actionCell, { minWidth: 160, flex: 1 }, styles.lastCell]}>
+                    <TouchableOpacity style={[styles.smallButton, styles.dangerButton]} onPress={() => removeCarRental(car.id)}>
+                      <Text style={styles.buttonText}>Delete</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+              <View style={[styles.tableRow, styles.inputRow, styles.lastRow]}>
+                <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Pick up location"
+                    value={carDraft.pickupLocation}
+                    onChangeText={(text) => setCarDraft((p) => ({ ...p, pickupLocation: text }))}
+                  />
+                </View>
+                <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                  <View style={styles.dateInputWrap}>
+                    {Platform.OS === 'web' ? (
+                      <input
+                        ref={carPickupDateRef as any}
+                        type="date"
+                        value={carDraft.pickupDate}
+                        onChange={(e) => setCarDraft((p) => ({ ...p, pickupDate: e.target.value }))}
+                        style={styles.input as any}
+                      />
+                    ) : (
+                      <TouchableOpacity
+                        style={[styles.input, styles.dateTouchable]}
+                        onPress={() => openCarDatePicker('pickup')}
+                      >
+                        <Text style={styles.cellText}>{carDraft.pickupDate || 'YYYY-MM-DD'}</Text>
+                      </TouchableOpacity>
+                    )}
+                    <TouchableOpacity
+                      style={styles.dateIcon}
+                      onPress={() => openCarDatePicker('pickup')}
+                    >
+                      <Text style={styles.selectCaret}>📅</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Drop off location"
+                    value={carDraft.dropoffLocation}
+                    onChangeText={(text) => setCarDraft((p) => ({ ...p, dropoffLocation: text }))}
+                  />
+                </View>
+                <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                  <View style={styles.dateInputWrap}>
+                    {Platform.OS === 'web' ? (
+                      <input
+                        ref={carDropoffDateRef as any}
+                        type="date"
+                        value={carDraft.dropoffDate}
+                        onChange={(e) => setCarDraft((p) => ({ ...p, dropoffDate: e.target.value }))}
+                        style={styles.input as any}
+                      />
+                    ) : (
+                      <TouchableOpacity
+                    style={[styles.input, styles.dateTouchable]}
+                    onPress={() => openCarDatePicker('dropoff')}
+                  >
+                    <Text style={styles.cellText}>{carDraft.dropoffDate || 'YYYY-MM-DD'}</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  style={styles.dateIcon}
+                  onPress={() => openCarDatePicker('dropoff')}
+                >
+                  <Text style={styles.selectCaret}>📅</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+                <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Reference"
+                    value={carDraft.reference}
+                    onChangeText={(text) => setCarDraft((p) => ({ ...p, reference: text }))}
+                  />
+                </View>
+                <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Vendor"
+                    value={carDraft.vendor}
+                    onChangeText={(text) => setCarDraft((p) => ({ ...p, vendor: text }))}
+                  />
+                </View>
+                <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                  <View style={[styles.dropdown, { width: '100%' }]}>
+                    <TouchableOpacity
+                      style={[styles.input, styles.selectButtonRow]}
+                      onPress={() => setCarPrepaidOpen((s) => !s)}
+                    >
+                      <Text style={styles.cellText}>{carDraft.prepaid || 'Select Yes/No'}</Text>
+                      <Text style={styles.selectCaret}>▾</Text>
+                    </TouchableOpacity>
+                    {carPrepaidOpen ? (
+                      <View style={[styles.dropdownList, { position: 'relative', top: 0 }]}>
+                        {['Yes', 'No'].map((opt) => (
+                          <TouchableOpacity
+                            key={opt}
+                            style={styles.dropdownOption}
+                            onPress={() => {
+                              setCarDraft((p) => ({ ...p, prepaid: opt }));
+                              setCarPrepaidOpen(false);
+                            }}
+                          >
+                            <Text style={styles.cellText}>{opt}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    ) : null}
+                  </View>
+                </View>
+                <View style={[styles.cell, { minWidth: 120, flex: 1 }]}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Cost"
+                    keyboardType="numeric"
+                    value={carDraft.cost}
+                    onChangeText={(text) => setCarDraft((p) => ({ ...p, cost: text }))}
+                  />
+                </View>
+                <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Car model"
+                    value={carDraft.model}
+                    onChangeText={(text) => setCarDraft((p) => ({ ...p, model: text }))}
+                  />
+                </View>
+                <View style={[styles.cell, { minWidth: 220, flex: 1 }]}>
+                  <TextInput
+                    style={[styles.input, styles.cellTextWrap]}
+                    placeholder="Notes"
+                    value={carDraft.notes}
+                    onChangeText={(text) => setCarDraft((p) => ({ ...p, notes: text }))}
+                    multiline
+                  />
+                </View>
+                <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
+                  <View style={styles.payerChips}>
+                    {carDraft.paidBy.map((id) => (
+                      <View key={id} style={styles.payerChip}>
+                        <Text style={styles.cellText}>{payerName(id)}</Text>
+                        <TouchableOpacity onPress={() => setCarDraft((prev) => ({ ...prev, paidBy: prev.paidBy.filter((x) => x !== id) }))}>
+                          <Text style={styles.removeText}>x</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                  <View style={styles.payerOptions}>
+                    {userMembers
+                      .filter((m) => !carDraft.paidBy.includes(m.id))
+                      .map((m) => (
+                        <TouchableOpacity
+                          key={m.id}
+                          style={styles.smallButton}
+                          onPress={() => setCarDraft((prev) => ({ ...prev, paidBy: [...prev.paidBy, m.id] }))}
+                        >
+                          <Text style={styles.buttonText}>Add {formatMemberName(m)}</Text>
+                        </TouchableOpacity>
+                      ))}
+                  </View>
+                </View>
+                <View style={[styles.cell, styles.actionCell, { minWidth: 160, flex: 1 }, styles.lastCell]}>
+                  <TouchableOpacity style={styles.button} onPress={addCarRental}>
+                    <Text style={styles.buttonText}>Add</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </ScrollView>
+        </View>
+      ) : null}
+
+      {Platform.OS !== 'web' && carDateField && NativeDateTimePicker ? (
+        <NativeDateTimePicker
+          value={carDateValue}
+          mode="date"
+          onChange={(_, date) => {
+            if (!date) {
+              setCarDateField(null);
+              return;
+            }
+            const iso = date.toISOString().slice(0, 10);
+            applyCarDate(carDateField, iso);
+            setCarDateField(null);
+          }}
+        />
       ) : null}
 
       {editingLodging && editingLodgingId ? (
