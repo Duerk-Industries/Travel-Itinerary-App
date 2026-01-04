@@ -848,6 +848,42 @@ export const ensureUserInTrip = async (tripId: string, userId: string): Promise<
   return rows[0] ?? null;
 };
 
+export const updateTripDetails = async (
+  userId: string,
+  tripId: string,
+  updates: { description?: string | null; destination?: string | null; startDate?: string | null; endDate?: string | null }
+): Promise<Trip> => {
+  const p = getPool();
+  const membership = await ensureUserInTrip(tripId, userId);
+  if (!membership) throw new Error('Not authorized to update this trip');
+
+  const { rows } = await p.query<Trip>(
+    `UPDATE trips
+     SET description = COALESCE($1, description),
+         destination = COALESCE($2, destination),
+         start_date = COALESCE($3::date, start_date),
+         end_date = COALESCE($4::date, end_date)
+     WHERE id = $5
+     RETURNING id,
+       group_id as "groupId",
+       name,
+       description,
+       destination,
+       start_date as "startDate",
+       end_date as "endDate",
+       created_at as "createdAt"`,
+    [
+      updates.description ?? null,
+      updates.destination ?? null,
+      updates.startDate ?? null,
+      updates.endDate ?? null,
+      tripId,
+    ]
+  );
+  if (!rows.length) throw new Error('Trip not found');
+  return rows[0];
+};
+
 export const getFlightForUser = async (flightId: string, userId: string): Promise<Flight | null> => {
   const p = getPool();
 

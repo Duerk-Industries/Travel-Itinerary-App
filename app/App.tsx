@@ -21,6 +21,7 @@ import { computePayerTotals } from './tabs/costReport';
 import { Trait, TraitsTab } from './tabs/traits';
 import { FollowTab, fetchFollowedTripsApi, loadFollowCodes, loadFollowPayloads, saveFollowCodes, saveFollowPayloads, type FollowedTrip } from './tabs/follow';
 import ItinerariesTab from './tabs/itineraries';
+import OverviewTab from './tabs/overview';
 import CreateTripWizard from './tabs/createTripWizard';
 import TripDetailsTab from './tabs/tripDetails';
 import AccountTab, { fetchAccountProfile, fetchFamilyRelationships, fetchFellowTravelers, type FellowTraveler } from './tabs/account';
@@ -95,6 +96,7 @@ interface GroupMemberOption {
 
 type Page =
   | 'menu'
+  | 'overview'
   | 'flights'
   | 'lodging'
   | 'tours'
@@ -779,7 +781,7 @@ const App: React.FC = () => {
       setUserName(session.name);
       setUserEmail(session.email ?? null);
       const sessionPage = session.page;
-      if (sessionPage === 'flights' || sessionPage === 'lodging' || sessionPage === 'groups' || sessionPage === 'trips' || sessionPage === 'create-trip' || sessionPage === 'trip-details' || sessionPage === 'traits' || sessionPage === 'itinerary' || sessionPage === 'tours' || sessionPage === 'cost' || sessionPage === 'account' || sessionPage === 'follow') {
+      if (sessionPage === 'overview' || sessionPage === 'flights' || sessionPage === 'lodging' || sessionPage === 'groups' || sessionPage === 'trips' || sessionPage === 'create-trip' || sessionPage === 'trip-details' || sessionPage === 'traits' || sessionPage === 'itinerary' || sessionPage === 'tours' || sessionPage === 'cost' || sessionPage === 'account' || sessionPage === 'follow') {
         setActivePage(sessionPage as Page);
       } else {
         setActivePage('menu');
@@ -1016,10 +1018,13 @@ const App: React.FC = () => {
         <ScrollView style={styles.contentScroll} contentContainerStyle={styles.contentScrollContent}>
             <View style={styles.card}>
               <Text style={styles.sectionTitle}>Choose a section</Text>
-              <View style={styles.navRow}>
-                <TouchableOpacity style={[styles.button, activePage === 'flights' && styles.toggleActive]} onPress={() => setActivePage('flights')}>
-                  <Text style={styles.buttonText}>Flights</Text>
-                </TouchableOpacity>
+            <View style={styles.navRow}>
+              <TouchableOpacity style={[styles.button, activePage === 'overview' && styles.toggleActive]} onPress={() => setActivePage('overview')}>
+                <Text style={styles.buttonText}>Overview</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.button, activePage === 'flights' && styles.toggleActive]} onPress={() => setActivePage('flights')}>
+                <Text style={styles.buttonText}>Flights</Text>
+              </TouchableOpacity>
                 <TouchableOpacity style={[styles.button, activePage === 'lodging' && styles.toggleActive]} onPress={() => setActivePage('lodging')}>
                   <Text style={styles.buttonText}>Lodging</Text>
                 </TouchableOpacity>
@@ -1929,6 +1934,21 @@ const App: React.FC = () => {
                 fetchInvites();
                 setActivePage('trip-details');
               }}
+            />
+          ) : null}
+
+          {activePage === 'overview' ? (
+            <OverviewTab
+              backendUrl={backendUrl}
+              headers={headers}
+              trip={findActiveTrip() ?? null}
+              group={groups.find((g) => g.id === findActiveTrip()?.groupId) ?? null}
+              flights={flights}
+              lodgings={lodgings}
+              tours={tours}
+              styles={styles}
+              onRefreshTrips={fetchTrips}
+              onRefreshGroups={fetchGroups}
             />
           ) : null}
 

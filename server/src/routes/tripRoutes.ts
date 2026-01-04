@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import bodyParser from 'body-parser';
 import { authenticate } from '../auth';
-import { createFellowTraveler, createTrip, createTripWithGroupAndMembers, deleteTrip, listTrips, searchTripContacts, updateTripGroup } from '../db';
+import { createFellowTraveler, createTrip, createTripWithGroupAndMembers, deleteTrip, listTrips, searchTripContacts, updateTripDetails, updateTripGroup } from '../db';
 
 // Trips API: create/list/delete trips for the authenticated user.
 const router = Router();
@@ -121,6 +121,26 @@ router.patch('/:id/group', async (req, res) => {
   }
   try {
     const updated = await updateTripGroup(userId, req.params.id, groupId);
+    res.json(updated);
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.patch('/:id', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const { description, destination, startDate, endDate } = req.body ?? {};
+  if (description == null && destination == null && startDate == null && endDate == null) {
+    res.status(400).json({ error: 'At least one field is required' });
+    return;
+  }
+  try {
+    const updated = await updateTripDetails(userId, req.params.id, {
+      description: typeof description === 'string' ? description : null,
+      destination: typeof destination === 'string' ? destination : null,
+      startDate: typeof startDate === 'string' ? startDate : null,
+      endDate: typeof endDate === 'string' ? endDate : null,
+    });
     res.json(updated);
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });
