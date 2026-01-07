@@ -8,6 +8,19 @@ const router = Router();
 router.use(bodyParser.json());
 router.use(authenticate);
 
+// Following is not yet implemented server-side; return empty data instead of 404s for client calls.
+router.get('/followed', async (_req, res) => {
+  res.json([]);
+});
+
+router.post('/follow', async (_req, res) => {
+  res.status(501).json({ error: 'Trip following is not implemented server-side yet.' });
+});
+
+router.get('/:id/follow-code', async (_req, res) => {
+  res.status(501).json({ error: 'Trip follow codes are not implemented server-side yet.' });
+});
+
 router.get('/', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const trips = await listTrips(userId);

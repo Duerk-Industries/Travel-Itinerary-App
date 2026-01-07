@@ -101,7 +101,6 @@ type Page =
   | 'lodging'
   | 'car'
   | 'tours'
-  | 'groups'
   | 'trips'
   | 'create-trip'
   | 'trip-details'
@@ -111,7 +110,19 @@ type Page =
   | 'account'
   | 'follow';
 
-const backendUrl = Constants.expoConfig?.extra?.backendUrl ?? 'http://localhost:4000';
+// Resolve backend URL; keep Expo web on localhost hitting the local API over HTTP to avoid HTTPS upgrades/CORS issues.
+const resolveBackendUrl = (): string => {
+  const raw = Constants.expoConfig?.extra?.backendUrl ?? 'http://localhost:4000';
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if (host === 'localhost' || host === '127.0.0.1' || host === '::1') {
+      return `http://${host}:4000`;
+    }
+  }
+  return raw.startsWith('http://') || raw.startsWith('https://') ? raw : `http://${raw}`;
+};
+
+const backendUrl = resolveBackendUrl();
 const sessionKey = 'stp.session';
 const sessionDurationMs = 12 * 60 * 60 * 1000;
 
@@ -718,6 +729,35 @@ const App: React.FC = () => {
     setTours(data);
   };
 
+  // Fetch itineraries for the current user; ItinerariesTab also fetches within its own lifecycle,
+  // but this keeps the call from blowing up when invoked from shared effects.
+  const fetchItineraries = async (token?: string) => {
+    const authToken = token ?? userToken;
+    if (!authToken) return;
+    await fetch(`${backendUrl}/api/itineraries`, { headers }).catch(() => undefined);
+  };
+
+  const fetchInvites = async (token?: string) => {
+    const authToken = token ?? userToken;
+    if (!authToken) {
+      setInvites([]);
+      return;
+    }
+    try {
+      const res = await fetch(`${backendUrl}/api/groups/invites`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      if (!res.ok) {
+        setInvites([]);
+        return;
+      }
+      const data = await res.json();
+      setInvites(data);
+    } catch {
+      setInvites([]);
+    }
+  };
+
   const fetchGroups = async (sort?: 'created' | 'name') => {
     const res = await fetch(`${backendUrl}/api/groups?sort=${sort ?? groupSort}`, {
       headers: { Authorization: `Bearer ${userToken}` },
@@ -869,7 +909,7 @@ const App: React.FC = () => {
       setUserName(session.name);
       setUserEmail(session.email ?? null);
       const sessionPage = session.page;
-      if (sessionPage === 'overview' || sessionPage === 'flights' || sessionPage === 'lodging' || sessionPage === 'groups' || sessionPage === 'trips' || sessionPage === 'create-trip' || sessionPage === 'trip-details' || sessionPage === 'traits' || sessionPage === 'itinerary' || sessionPage === 'tours' || sessionPage === 'cost' || sessionPage === 'account' || sessionPage === 'follow') {
+      if (sessionPage === 'overview' || sessionPage === 'flights' || sessionPage === 'lodging' || sessionPage === 'trips' || sessionPage === 'create-trip' || sessionPage === 'trip-details' || sessionPage === 'traits' || sessionPage === 'itinerary' || sessionPage === 'tours' || sessionPage === 'cost' || sessionPage === 'account' || sessionPage === 'follow') {
         setActivePage(sessionPage as Page);
       } else {
         setActivePage('menu');
@@ -1125,9 +1165,6 @@ const App: React.FC = () => {
                 <TouchableOpacity style={[styles.button, activePage === 'cost' && styles.toggleActive]} onPress={() => setActivePage('cost')}>
                   <Text style={styles.buttonText}>Cost Report</Text>
                 </TouchableOpacity>
-              <TouchableOpacity style={[styles.button, activePage === 'groups' && styles.toggleActive]} onPress={() => setActivePage('groups')}>
-                <Text style={styles.buttonText}>Groups</Text>
-              </TouchableOpacity>
               <TouchableOpacity style={[styles.button, activePage === 'trips' && styles.toggleActive]} onPress={() => setActivePage('trips')}>
                 <Text style={styles.buttonText}>Trips</Text>
               </TouchableOpacity>
@@ -1308,164 +1345,6 @@ const App: React.FC = () => {
               styles={styles}
             />
           ) : null}
-
-          {activePage === 'groups' ? (
-            <>
-              {invites.length ? (
-                <View style={styles.card}>
-                  <Text style={styles.sectionTitle}>Group Invitations</Text>
-                  {invites.map((invite) => (
-                    <View key={invite.id} style={styles.inviteRow}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.bodyText}>{invite.inviterEmail} invited you to "{invite.groupName}"</Text>
-                        <Text style={styles.helperText}>Tap accept to join this group.</Text>
-                      </View>
-                      <TouchableOpacity style={styles.button} onPress={() => acceptInvite(invite.id)}>
-                        <Text style={styles.buttonText}>Accept</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                </View>
-              ) : null}
-              <View style={styles.card}>
-                <View style={styles.row}>
-                  <Text style={styles.sectionTitle}>Groups</Text>
-                  <TouchableOpacity
-                    style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
-                    onPress={() => {
-                      const nextSort = groupSort === 'created' ? 'name' : 'created';
-                      setGroupSort(nextSort);
-                      fetchGroups(nextSort);
-                    }}
-                  >
-                    <Text style={styles.buttonText}>Sort: {groupSort === 'created' ? 'Newest' : 'Name'}</Text>
-                  </TouchableOpacity>
-                </View>
-                {groups.map((group) => {
-                  const allMembers = group.members;
-                  const acceptedRelationships = familyRelationships.filter((r) => r.status === 'accepted');
-                  const created = formatDateLong(group.createdAt);
-                  return (
-                    <View key={group.id} style={styles.groupRow}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.flightTitle}>{group.name}</Text>
-                        <Text style={styles.helperText}>Created: {created}</Text>
-                      </View>
-                      <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={() => deleteGroupApi(group.id)}>
-                        <Text style={styles.buttonText}>Delete Group</Text>
-                      </TouchableOpacity>
-                      <View style={[styles.groupColumn, { flex: 1 }]}>
-                        <Text style={styles.headerText}>Members & Relationships</Text>
-                        {group.invites.length ? (
-                          <View style={styles.pendingBlock}>
-                            {group.invites.map((inv) => (
-                              <View key={inv.id} style={styles.memberPill}>
-                                <Text style={styles.cellText}>{inv.inviteeEmail} (Pending)</Text>
-                                <TouchableOpacity onPress={() => cancelInvite(inv.id)}>
-                                  <Text style={styles.removeText}>Cancel</Text>
-                                </TouchableOpacity>
-                              </View>
-                            ))}
-                          </View>
-                        ) : null}
-                        {allMembers.map((m) => (
-                          <View key={m.id} style={styles.memberPill}>
-                            <Text style={styles.cellText}>{m.userEmail ?? m.email ?? m.guestName ?? 'Member'}</Text>
-                            <TouchableOpacity onPress={() => removeMemberFromGroup(group.id, m.id)}>
-                              <Text style={styles.removeText}>Remove</Text>
-                            </TouchableOpacity>
-                          </View>
-                        ))}
-                        <View style={styles.addRow}>
-                          <TextInput
-                            placeholder="user email"
-                            style={[styles.input, styles.inlineInput]}
-                            value={groupAddEmail[group.id] ?? ''}
-                            onChangeText={(text) => setGroupAddEmail((prev) => ({ ...prev, [group.id]: text }))}
-                            autoCapitalize="none"
-                          />
-                          <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => addMemberToGroup(group.id, 'user')}>
-                            <Text style={styles.buttonText}>Invite by Email</Text>
-                          </TouchableOpacity>
-                        </View>
-                        <View style={styles.addRow}>
-                          <View style={[styles.input, styles.inlineInput, styles.dropdown, { flex: 1 }]}>
-                            <TouchableOpacity onPress={() => setShowRelationshipDropdown((s) => !s)}>
-                              <View style={styles.selectButtonRow}>
-                                <Text style={styles.cellText}>
-                                  {(() => {
-                                    const relId = groupAddRelationship[group.id];
-                                    const rel = acceptedRelationships.find((r) => r.id === relId);
-                                    if (!rel) return 'Select Relationship';
-                                    const name = `${rel.relative?.firstName ?? ''} ${rel.relative?.middleName ?? ''} ${rel.relative?.lastName ?? ''}`
-                                      .replace(/\s+/g, ' ')
-                                      .trim();
-                                    return name || rel.relative?.email || 'Relationship';
-                                  })()}
-                                </Text>
-                                <Text style={styles.selectCaret}>v</Text>
-                              </View>
-                            </TouchableOpacity>
-                            {showRelationshipDropdown ? (
-                              <View style={styles.dropdownList}>
-                                {acceptedRelationships.map((rel) => {
-                                  const name = `${rel.relative?.firstName ?? ''} ${rel.relative?.middleName ?? ''} ${rel.relative?.lastName ?? ''}`
-                                    .replace(/\s+/g, ' ')
-                                    .trim() || rel.relative?.email || 'Relationship';
-                                  return (
-                                    <TouchableOpacity
-                                      key={rel.id}
-                                      style={styles.dropdownOption}
-                                      onPress={() => setGroupAddRelationship((prev) => ({ ...prev, [group.id]: rel.id }))}
-                                    >
-                                      <Text style={styles.cellText}>{name}</Text>
-                                    </TouchableOpacity>
-                                  );
-                                })}
-                              </View>
-                            ) : null}
-                          </View>
-                          <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => addMemberToGroup(group.id, 'relationship')}>
-                            <Text style={styles.buttonText}>Add Relationship</Text>
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-                    </View>
-                  );
-                })}
-              </View>
-
-              <View style={styles.card}>
-                <Text style={styles.sectionTitle}>Create Group</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Group name"
-                  value={groupName}
-                  onChangeText={setGroupName}
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Add users by email (comma separated)"
-                  value={groupUserEmails}
-                  onChangeText={setGroupUserEmails}
-                  autoCapitalize="none"
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Add relationships by name (comma separated)"
-                  value={groupGuestNames}
-                  onChangeText={setGroupGuestNames}
-                />
-                <TouchableOpacity style={styles.button} onPress={createGroup}>
-                  <Text style={styles.buttonText}>Create Group</Text>
-                </TouchableOpacity>
-                <Text style={styles.helperText}>
-                  Users found in the system will receive an invite email (if SMTP is configured) or see it above after logging in.
-                  Relationships are added directly without needing a login.
-                </Text>
-          </View>
-        </>
-      ) : null}
 
       {activePage === 'lodging' ? (
         <View style={styles.card}>
@@ -2452,10 +2331,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 8,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
   },
   successCard: {
     padding: 12,
@@ -2914,12 +2790,8 @@ const styles = StyleSheet.create({
     borderColor: '#d1d5db',
     borderRadius: 6,
     zIndex: 14000,
-    pointerEvents: 'auto',
     elevation: 40, // keep above other inputs on native
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
+    boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
   },
   locationField: {
     position: 'relative',
@@ -2982,10 +2854,7 @@ const styles = StyleSheet.create({
     padding: 8,
     maxHeight: 360,
     zIndex: 41000,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
+    boxShadow: '0 6px 10px rgba(0,0,0,0.2)',
     elevation: 60,
   },
   dropdownScroll: {
@@ -3034,10 +2903,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     width: '100%',
     maxWidth: 420,
-    shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
+    boxShadow: '0 4px 10px rgba(0,0,0,0.25)',
   },
 });
 

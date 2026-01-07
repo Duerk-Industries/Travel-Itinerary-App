@@ -16,7 +16,19 @@ import {
   createFellowTraveler,
   updateFellowTraveler,
   removeFellowTraveler,
+  addGroupMember,
+  createGroupWithMembers,
+  listGroupInvitesForUser,
+  listGroupsForUser,
+  removeGroupMember,
+  searchUsersByEmail,
+  deleteGroup,
+  listGroupMembers,
+  ensureUserInTrip,
+  removeGroupInvite,
+  acceptGroupInvite,
 } from '../db';
+import { isEmailConfigured, sendShareEmail } from '../mailer';
 
 // Account management (profile, password, deletion) for authenticated web users.
 const router = Router();
@@ -260,6 +272,180 @@ router.delete('/', async (req, res) => {
     }
 
     await deleteWebUserAndCleanup(userId);
+    res.status(204).send();
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.get('/trips/:tripId/members', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const membership = await ensureUserInTrip(req.params.tripId, userId);
+  if (!membership) {
+    res.status(403).json({ error: 'Not authorized to view members for this trip' });
+    return;
+  }
+  try {
+    const members = await listGroupMembers(membership.groupId, userId);
+    res.json(members);
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.post('/trips/:tripId/members', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const membership = await ensureUserInTrip(req.params.tripId, userId);
+  if (!membership) {
+    res.status(403).json({ error: 'Not authorized to add members to this trip' });
+    return;
+  }
+  const { email, guestName } = req.body as { email?: string; guestName?: string };
+  try {
+    const result = await addGroupMember(userId, membership.groupId, { email, guestName });
+    res.status(201).json(result);
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.delete('/trips/:tripId/members/:memberId', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const membership = await ensureUserInTrip(req.params.tripId, userId);
+  if (!membership) {
+    res.status(403).json({ error: 'Not authorized to remove members from this trip' });
+    return;
+  }
+  try {
+    await removeGroupMember(userId, membership.groupId, req.params.memberId);
+    res.status(204).send();
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+// Groups API (moved from groupRoutes.ts) for managing groups, members, invites, and sharing.
+export const groupsRouter = Router();
+groupsRouter.use(bodyParser.json());
+groupsRouter.use(authenticate);
+
+groupsRouter.get('/invites', async (req, res) => {
+  const user = (req as any).user as { userId: string; email: string };
+  const invites = await listGroupInvitesForUser(user.userId, user.email);
+  res.json(invites);
+});
+
+groupsRouter.post('/invites/:id/accept', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  try {
+    await acceptGroupInvite(req.params.id, userId);
+    res.status(204).send();
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+groupsRouter.get('/search-users', async (req, res) => {
+  const q = String(req.query.q ?? '').trim();
+  if (!q) {
+    res.json([]);
+    return;
+  }
+  const users = await searchUsersByEmail(q);
+  res.json(users);
+});
+
+groupsRouter.get('/', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const sort = String(req.query.sort ?? 'created') === 'name' ? 'name' : 'created';
+  const groups = await listGroupsForUser(userId, sort as any);
+  res.json(groups);
+});
+
+groupsRouter.post('/', async (req, res) => {
+  const user = (req as any).user as { userId: string; email: string };
+  const { name, members } = req.body as { name?: string; members?: Array<{ email?: string; guestName?: string }> };
+
+  if (!name || !name.trim()) {
+    res.status(400).json({ error: 'Group name is required' });
+    return;
+  }
+
+  const normalizedMembers = Array.isArray(members) ? members : [];
+  try {
+    const { groupId, invites } = await createGroupWithMembers(user.userId, name.trim(), normalizedMembers);
+
+    if (isEmailConfigured()) {
+      await Promise.all(
+        invites.map(({ email }) => {
+          const subject = `${user.email} invited you to a group: ${name}`;
+          const body = [
+            `Hi,`,
+            ``,
+            `${user.email} invited you to join the group "${name}".`,
+            `Log in to Shared Trip Planner to accept this invitation.`,
+          ].join('\n');
+          return sendShareEmail(email, subject, body).catch(() => undefined);
+        })
+      );
+    }
+
+    res.status(201).json({ id: groupId, invites });
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+groupsRouter.post('/:id/members', async (req, res) => {
+  const user = (req as any).user as { userId: string; email: string };
+  const { email, guestName } = req.body as { email?: string; guestName?: string };
+  try {
+    const result = await addGroupMember(user.userId, req.params.id, { email, guestName });
+    if (result.email && result.inviteId && isEmailConfigured()) {
+      const subject = `${user.email} invited you to a group`;
+      const body = `${user.email} invited you to join a group. Log in to accept.`;
+      await sendShareEmail(result.email, subject, body);
+    }
+    res.status(201).json(result);
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+groupsRouter.delete('/:groupId/members/:memberId', async (req, res) => {
+  const user = (req as any).user as { userId: string };
+  try {
+    await removeGroupMember(user.userId, req.params.groupId, req.params.memberId);
+    res.status(204).send();
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+groupsRouter.get('/:id/members', async (req, res) => {
+  const user = (req as any).user as { userId: string };
+  try {
+    const members = await listGroupMembers(req.params.id, user.userId);
+    res.json(members);
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+groupsRouter.delete('/invites/:id', async (req, res) => {
+  const user = (req as any).user as { userId: string };
+  try {
+    await removeGroupInvite(user.userId, req.params.id);
+    res.status(204).send();
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+groupsRouter.delete('/:id', async (req, res) => {
+  const user = (req as any).user as { userId: string };
+  try {
+    await deleteGroup(user.userId, req.params.id);
     res.status(204).send();
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });

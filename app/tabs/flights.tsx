@@ -1233,9 +1233,8 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
         <View
           style={[
             styles.passengerOverlay,
-            { backgroundColor: 'transparent', zIndex: 52000, elevation: 80, pointerEvents: 'box-none' },
+            { backgroundColor: 'transparent', zIndex: 52000, elevation: 80 },
           ]}
-          pointerEvents="box-none"
         >
           <TouchableOpacity style={[styles.passengerOverlayBackdrop, { backgroundColor: 'transparent' }]} onPress={hideAirportDropdown} />
           <View
@@ -1249,7 +1248,6 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                 width: airportAnchor.width || 280,
               },
             ]}
-            pointerEvents="box-none"
           >
             {airportSuggestions.map((airport) => (
               <TouchableOpacity

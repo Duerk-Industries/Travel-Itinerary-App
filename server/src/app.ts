@@ -6,14 +6,13 @@ import cors from 'cors';
 import authRoutes from './routes/authRoutes';
 import flightRoutes from './routes/flightRoutes';
 import webAuthRoutes from './routes/webAuthRoutes';
-import groupRoutes from './routes/groupRoutes';
 import tripRoutes from './routes/tripRoutes';
 import itineraryRoutes from './routes/itineraryRoutes';
 import itineraryDataRoutes from './routes/itineraryDataRoutes';
 import traitRoutes from './routes/traitRoutes';
 import lodgingRoutes from './routes/lodgingRoutes';
 import tourRoutes from './routes/tourRoutes';
-import accountRoutes from './routes/accountRoutes';
+import accountRoutes, { groupsRouter } from './routes/accountRoutes';
 
 // Load env vars from server/.env if present, otherwise fall back to repo root .env or existing process env
 const envPaths = [path.resolve(__dirname, '../.env'), path.resolve(__dirname, '../../.env')];
@@ -46,7 +45,7 @@ app.get('/', (_req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/web-auth', webAuthRoutes);
 app.use('/api/flights', flightRoutes);
-app.use('/api/groups', groupRoutes);
+app.use('/api/groups', groupsRouter);
 app.use('/api/trips', tripRoutes);
 app.use('/api/itinerary', itineraryRoutes);
 app.use('/api/itineraries', itineraryDataRoutes);
