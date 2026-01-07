@@ -745,16 +745,6 @@ const App: React.FC = () => {
     }
   };
 
-  const fetchInvites = async (token?: string) => {
-    if (!userToken && !token) return;
-    const res = await fetch(`${backendUrl}/api/groups/invites`, {
-      headers: { Authorization: `Bearer ${token ?? userToken}` },
-    });
-    if (!res.ok) return;
-    const data = await res.json();
-    setInvites(Array.isArray(data) ? data : []);
-  };
-
   const fetchTrips = async () => {
     const res = await fetch(`${backendUrl}/api/trips`, { headers: { Authorization: `Bearer ${userToken}` } });
     if (!res.ok) return;

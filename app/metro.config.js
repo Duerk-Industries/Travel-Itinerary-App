@@ -2,6 +2,9 @@ const fs = require('fs');
 const path = require('path');
 const { getDefaultConfig } = require('expo/metro-config');
 
+const projectRoot = __dirname;
+const workspaceRoot = path.resolve(__dirname, '..');
+
 const config = getDefaultConfig(__dirname);
 const { resolver } = config;
 
@@ -26,10 +29,16 @@ config.resolver = {
       (field) => !['react-native', 'browser', 'module', 'main'].includes(field),
     )),
   ],
+  extraNodeModules: {
+    ...(resolver.extraNodeModules || {}),
+    'pdfjs-dist': path.join(workspaceRoot, 'node_modules', 'pdfjs-dist'),
+  },
 };
 
 const installHookMapPath = path.join(__dirname, 'installHook.js.map');
 const existingEnhanceMiddleware = config.server?.enhanceMiddleware;
+
+config.watchFolders = Array.from(new Set([...(config.watchFolders || []), workspaceRoot, projectRoot]));
 
 config.server = {
   ...(config.server || {}),
