@@ -4,6 +4,17 @@ import { formatDateLong } from '../utils/formatDateLong';
 import { normalizeDateString } from '../utils/normalizeDateString';
 import { parseFlightText, type ParsedFlight } from '../utils/parsers/flightParser';
 
+type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
+let NativeDateTimePicker: NativeDateTimePickerType | null = null;
+if (Platform.OS !== 'web') {
+  try {
+    const mod = require('@react-native-community/datetimepicker');
+    NativeDateTimePicker = (mod?.default ?? mod) as NativeDateTimePickerType;
+  } catch {
+    NativeDateTimePicker = null;
+  }
+}
+
 export interface Flight {
   id: string;
   passenger_name: string;
@@ -89,6 +100,14 @@ export type FlightCreateDraft = {
   carrier: string;
   flightNumber: string;
   bookingReference: string;
+};
+
+const isValidTime = (value: string): boolean => {
+  const match = value.match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return false;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  return hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60;
 };
 
 export const createInitialFlightCreateDraft = (): FlightCreateDraft => ({
@@ -188,6 +207,7 @@ export const buildFlightPayloadForCreate = (
   if (!tripId) return { error: 'Select an active trip before adding a flight.' };
   if (!draft.departureDate.trim()) return { error: 'Departure date is required.' };
   if (!draft.departureTime.trim() || !draft.arrivalTime.trim()) return { error: 'Departure and arrival times are required.' };
+  if (!isValidTime(draft.departureTime) || !isValidTime(draft.arrivalTime)) return { error: 'Enter valid departure and arrival times (HH:MM).' };
   if (!draft.carrier.trim() || !draft.flightNumber.trim()) return { error: 'Carrier and flight number are required.' };
   if (!draft.bookingReference.trim()) return { error: 'Booking reference is required.' };
   const payload = buildFlightPayload(
@@ -370,6 +390,8 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   const modalLayoverLocationRef = useRef<React.ElementRef<typeof TextInput> | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [containerOffset, setContainerOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [timePickerTarget, setTimePickerTarget] = useState<'edit-dep' | 'edit-arr' | 'new-dep' | 'new-arr' | null>(null);
+  const [timePickerValue, setTimePickerValue] = useState<Date>(new Date());
 
   const normalizePassengerName = (name: string): string => {
     const trimmed = name.trim().replace(/\s+/g, ' ');
@@ -756,6 +778,20 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     hideAirportDropdown();
   };
 
+  const openTimePicker = (target: 'edit-dep' | 'edit-arr' | 'new-dep' | 'new-arr', current: string) => {
+    if (Platform.OS !== 'web' && NativeDateTimePicker) {
+      const base = new Date();
+      const match = current.match(/(\d{1,2}):(\d{2})/);
+      if (match) {
+        base.setHours(Number(match[1]), Number(match[2]), 0, 0);
+      } else {
+        base.setHours(0, 0, 0, 0);
+      }
+      setTimePickerValue(base);
+      setTimePickerTarget(target);
+    }
+  };
+
   const openFlightDetails = (flight: Flight) => {
     setEditingFlightId(flight.id);
     const base: FlightEditDraft = {
@@ -793,6 +829,10 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
 
   const saveFlightDetails = async () => {
     if (!userToken || !editingFlightId || !editingFlight) return;
+    if (!isValidTime(editingFlight.departureTime) || !isValidTime(editingFlight.arrivalTime)) {
+      alert('Enter valid departure and arrival times (HH:MM).');
+      return;
+    }
     if (!editingFlight.passengerIds.length) {
       alert('Select at least one passenger');
       return;
@@ -1214,6 +1254,47 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                   );
                 }
 
+                if (col.key === 'departure_time' || col.key === 'arrival_time') {
+                  const display = valueMap[col.key] || 'HH:MM';
+                  const target = col.key === 'departure_time' ? 'new-dep' : 'new-arr';
+                  if (Platform.OS === 'web') {
+                    return (
+                      <View
+                        key={`input-${col.key}`}
+                        style={[
+                          styles.cell,
+                          { minWidth: col.minWidth ?? 120, flex: 1 },
+                          isLast && styles.lastCell,
+                        ]}
+                      >
+                        <input
+                          type="time"
+                          value={valueMap[col.key]}
+                          onChange={(e) => setters[col.key](e.target.value)}
+                          style={styles.input as any}
+                        />
+                      </View>
+                    );
+                  }
+                  return (
+                    <View
+                      key={`input-${col.key}`}
+                      style={[
+                        styles.cell,
+                        { minWidth: col.minWidth ?? 120, flex: 1 },
+                        isLast && styles.lastCell,
+                      ]}
+                    >
+                      <TouchableOpacity
+                        style={[styles.input, { justifyContent: 'center' }]}
+                        onPress={() => openTimePicker(target, valueMap[col.key])}
+                      >
+                        <Text style={styles.cellText}>{display}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  );
+                }
+
                 return (
                   <View
                     key={`input-${col.key}`}
@@ -1355,6 +1436,33 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
           </View>
         </View>
       ) : null}
+      {Platform.OS !== 'web' && timePickerTarget && NativeDateTimePicker ? (
+        <NativeDateTimePicker
+          value={timePickerValue}
+          mode="time"
+          display="spinner"
+          onChange={(event, date) => {
+            if (event?.type === 'dismissed') {
+              setTimePickerTarget(null);
+              return;
+            }
+            if (!date) return;
+            const hh = String(date.getHours()).padStart(2, '0');
+            const mm = String(date.getMinutes()).padStart(2, '0');
+            const value = `${hh}:${mm}`;
+            if (timePickerTarget === 'edit-dep') {
+              setEditingFlight((prev) => (prev ? { ...prev, departureTime: value } : prev));
+            } else if (timePickerTarget === 'edit-arr') {
+              setEditingFlight((prev) => (prev ? { ...prev, arrivalTime: value } : prev));
+            } else if (timePickerTarget === 'new-dep') {
+              setNewFlight((prev) => ({ ...prev, departureTime: value }));
+            } else if (timePickerTarget === 'new-arr') {
+              setNewFlight((prev) => ({ ...prev, arrivalTime: value }));
+            }
+            setTimePickerTarget(null);
+          }}
+        />
+      ) : null}
       {editingFlight && editingFlightId ? (
         <View style={styles.passengerOverlay}>
           <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={closeFlightDetails} />
@@ -1437,12 +1545,12 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                       style={styles.input as any}
                     />
                   ) : (
-                    <TextInput
-                      style={styles.input}
-                      value={editingFlight.departureTime}
-                      placeholder="Time"
-                      onChangeText={(text: string) => setEditingFlight((prev) => (prev ? { ...prev, departureTime: text } : prev))}
-                    />
+                    <TouchableOpacity
+                      style={[styles.input, { justifyContent: 'center' }]}
+                      onPress={() => openTimePicker('edit-dep', editingFlight.departureTime)}
+                    >
+                      <Text style={styles.cellText}>{editingFlight.departureTime || 'HH:MM'}</Text>
+                    </TouchableOpacity>
                   )}
                 </View>
               </View>
@@ -1480,12 +1588,12 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                       style={styles.input as any}
                     />
                   ) : (
-                    <TextInput
-                      style={styles.input}
-                      value={editingFlight.arrivalTime}
-                      placeholder="Time"
-                      onChangeText={(text: string) => setEditingFlight((prev) => (prev ? { ...prev, arrivalTime: text } : prev))}
-                    />
+                    <TouchableOpacity
+                      style={[styles.input, { justifyContent: 'center' }]}
+                      onPress={() => openTimePicker('edit-arr', editingFlight.arrivalTime)}
+                    >
+                      <Text style={styles.cellText}>{editingFlight.arrivalTime || 'HH:MM'}</Text>
+                    </TouchableOpacity>
                   )}
                 </View>
               </View>

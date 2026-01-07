@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { computeTripDays, validateTripDates } from '../utils/createTripWizard';
-import { formatDateLong } from '../utils/formatDateLong';
 import { renderRichTextBlocks } from '../utils/richText';
 import {
   buildOverviewRows,
@@ -210,6 +209,9 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
   const endDateRef = useRef<HTMLInputElement | null>(null);
   const [modalDateField, setModalDateField] = useState<ModalDateField | null>(null);
   const [modalDateValue, setModalDateValue] = useState<Date>(new Date());
+
+  const formatFriendlyDate = (dateStr?: string | null, timeStr?: string | null): string | null =>
+    require('../utils/overviewBuilder').formatFriendlyDate(dateStr, timeStr);
 
   const resetDrafts = () => {
     if (!trip) return;
@@ -541,9 +543,11 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
     );
   }
 
-  const dateRange = displayStartDate || displayEndDate
-    ? `${displayStartDate ? formatDateLong(displayStartDate) : 'Start'} - ${displayEndDate ? formatDateLong(displayEndDate) : 'End'}`
-    : null;
+  const startLabel = formatFriendlyDate(displayStartDate);
+  const endLabel = formatFriendlyDate(displayEndDate);
+  const dateRange = startLabel || endLabel ? `${startLabel ?? 'Start'} - ${endLabel ?? 'End'}` : null;
+  const dayColStyle = { minWidth: 90, width: 90 };
+  const dateColStyle = { minWidth: 240, width: 240 };
   const attendeeLabel = (member: OverviewTabProps['attendees'][number]) => {
     const first = member.firstName?.trim() ?? '';
     const last = member.lastName?.trim() ?? '';
@@ -793,10 +797,10 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       {rows.length ? (
         <View>
           <View style={[styles.tableRow, styles.tableHeader]}>
-            <View style={[styles.cell, { minWidth: 70 }]}>
+            <View style={[styles.cell, dayColStyle]}>
               <Text style={styles.headerText}>Day</Text>
             </View>
-            <View style={[styles.cell, { minWidth: 110 }]}>
+            <View style={[styles.cell, dateColStyle]}>
               <Text style={styles.headerText}>Date</Text>
             </View>
             <View style={[styles.cell, { flex: 1 }]}>
@@ -806,13 +810,14 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
           {rows.map((row, idx) => {
             const prev = rows[idx - 1];
             const showDay = !prev || prev.dayLabel !== row.dayLabel || prev.dateLabel !== row.dateLabel;
+            const renderedDate = showDay ? formatFriendlyDate(row.dateLabel, row.time) ?? row.dateLabel : null;
             return (
               <View key={`${row.type}-${row.label}-${idx}`} style={styles.tableRow}>
-                <View style={[styles.cell, { minWidth: 70 }]}>
+                <View style={[styles.cell, dayColStyle]}>
                   {showDay ? <Text style={styles.cellText}>{row.dayLabel}</Text> : null}
                 </View>
-                <View style={[styles.cell, { minWidth: 110 }]}>
-                  {showDay ? <Text style={styles.cellText}>{row.dateLabel}</Text> : null}
+                <View style={[styles.cell, dateColStyle]}>
+                  {renderedDate ? <Text style={styles.cellText}>{renderedDate}</Text> : null}
                 </View>
                 <View style={[styles.cell, { flex: 1 }]}>
                   <Text style={styles.cellText}>{row.label}</Text>

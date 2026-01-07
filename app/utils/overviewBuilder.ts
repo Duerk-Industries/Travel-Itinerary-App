@@ -98,6 +98,28 @@ const compareByTimeThenLabel = (a: OverviewRow, b: OverviewRow) => {
   return a.label.localeCompare(b.label);
 };
 
+export const formatFriendlyDate = (dateStr?: string | null, timeStr?: string | null): string | null => {
+  if (!dateStr) return null;
+  const date = new Date(dateStr);
+  if (Number.isNaN(date.valueOf())) return dateStr;
+  const dateText = date.toLocaleDateString(undefined, {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+  if (timeStr) {
+    const match = timeStr.match(/(\d{1,2}):(\d{2})/);
+    if (match) {
+      const withTime = new Date(date);
+      withTime.setHours(Number(match[1]), Number(match[2]), 0, 0);
+      const timeText = withTime.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+      return `${dateText} at ${timeText}`;
+    }
+  }
+  return dateText;
+};
+
 export const formatFlightSummary = (flight: FlightLike): string => {
   const carrier = flight.carrier || 'Carrier';
   const number = flight.flight_number || flight.flightNumber || '';
@@ -115,8 +137,14 @@ export const formatFlightDetails = (flight: FlightLike): Array<{ label: string; 
   details.push({ label: 'Flight Number', value: flight.flight_number || flight.flightNumber || 'N/A' });
   details.push({ label: 'Departure', value: flight.departure_airport_code || flight.departureAirportCode || 'N/A' });
   details.push({ label: 'Arrival', value: flight.arrival_airport_code || flight.arrivalAirportCode || 'N/A' });
-  details.push({ label: 'Departure Time', value: flight.departure_time || flight.departureTime || 'N/A' });
-  details.push({ label: 'Arrival Time', value: flight.arrival_time || flight.arrivalTime || 'N/A' });
+  details.push({
+    label: 'Departure Date',
+    value: formatFriendlyDate(flight.departure_date || flight.departureDate || '', flight.departure_time || flight.departureTime || '') || 'N/A',
+  });
+  details.push({
+    label: 'Arrival Time',
+    value: formatFriendlyDate(flight.departure_date || flight.departureDate || '', flight.arrival_time || flight.arrivalTime || '') || flight.arrival_time || flight.arrivalTime || 'N/A',
+  });
   if (flight.layover_location || flight.layover_location_code) {
     details.push({
       label: 'Layover',
@@ -132,17 +160,17 @@ export const formatFlightDetails = (flight: FlightLike): Array<{ label: string; 
 };
 
 export const formatLodgingSummary = (lodging: LodgingLike): string => {
-  const checkIn = lodging.checkInDate || 'Check-in';
+  const checkIn = formatFriendlyDate(lodging.checkInDate) || lodging.checkInDate || 'Check-in';
   return `${lodging.name} at ${checkIn}`;
 };
 
 export const formatLodgingDetails = (lodging: LodgingLike): Array<{ label: string; value: string }> => {
   return [
     { label: 'Name', value: lodging.name },
-    { label: 'Check-in', value: lodging.checkInDate || 'N/A' },
-    { label: 'Check-out', value: lodging.checkOutDate || 'N/A' },
+    { label: 'Check-in', value: formatFriendlyDate(lodging.checkInDate) || lodging.checkInDate || 'N/A' },
+    { label: 'Check-out', value: formatFriendlyDate(lodging.checkOutDate) || lodging.checkOutDate || 'N/A' },
     { label: 'Rooms', value: lodging.rooms || 'N/A' },
-    { label: 'Refund By', value: lodging.refundBy || 'N/A' },
+    { label: 'Refund By', value: formatFriendlyDate(lodging.refundBy) || lodging.refundBy || 'N/A' },
     { label: 'Address', value: lodging.address || 'N/A' },
     { label: 'Total Cost', value: lodging.totalCost ? `$${lodging.totalCost}` : 'N/A' },
     { label: 'Cost Per Night', value: lodging.costPerNight ? `$${lodging.costPerNight}` : 'N/A' },
@@ -150,7 +178,7 @@ export const formatLodgingDetails = (lodging: LodgingLike): Array<{ label: strin
 };
 
 export const formatTourSummary = (tour: TourLike): string => {
-  const time = tour.startTime || 'Time TBD';
+  const time = formatFriendlyDate(tour.date, tour.startTime) || tour.startTime || 'Time TBD';
   const location = tour.startLocation || 'Location TBD';
   return `${tour.name} at ${time} at ${location}`;
 };
@@ -158,13 +186,13 @@ export const formatTourSummary = (tour: TourLike): string => {
 export const formatTourDetails = (tour: TourLike): Array<{ label: string; value: string }> => {
   return [
     { label: 'Name', value: tour.name },
-    { label: 'Date', value: tour.date || 'N/A' },
+    { label: 'Date', value: formatFriendlyDate(tour.date, tour.startTime) || tour.date || 'N/A' },
     { label: 'Start Time', value: tour.startTime || 'N/A' },
     { label: 'Start Location', value: tour.startLocation || 'N/A' },
     { label: 'Duration', value: tour.duration || 'N/A' },
     { label: 'Booking Reference', value: tour.reference || 'N/A' },
-    { label: 'Booked On', value: tour.bookedOn || 'N/A' },
-    { label: 'Free Cancel By', value: tour.freeCancelBy || 'N/A' },
+    { label: 'Booked On', value: formatFriendlyDate(tour.bookedOn) || tour.bookedOn || 'N/A' },
+    { label: 'Free Cancel By', value: formatFriendlyDate(tour.freeCancelBy) || tour.freeCancelBy || 'N/A' },
     { label: 'Cost', value: tour.cost ? `$${tour.cost}` : 'N/A' },
   ];
 };
@@ -172,9 +200,11 @@ export const formatTourDetails = (tour: TourLike): Array<{ label: string; value:
 export const formatRentalSummary = (rental: CarRentalLike, kind: 'pickup' | 'dropoff'): string => {
   const carType = rental.model || rental.vendor || 'Rental car';
   if (kind === 'pickup') {
-    return `${carType} from ${rental.pickupLocation || 'Pickup location'} at ${rental.pickupDate || 'Pickup date'}`;
+    const dateText = formatFriendlyDate(rental.pickupDate) || rental.pickupDate || 'Pickup date';
+    return `${carType} from ${rental.pickupLocation || 'Pickup location'} at ${dateText}`;
   }
-  return `Return ${carType} to ${rental.dropoffLocation || 'Dropoff location'} at ${rental.dropoffDate || 'Dropoff date'}`;
+  const dateText = formatFriendlyDate(rental.dropoffDate) || rental.dropoffDate || 'Dropoff date';
+  return `Return ${carType} to ${rental.dropoffLocation || 'Dropoff location'} at ${dateText}`;
 };
 
 export const buildOverviewRows = (params: {
