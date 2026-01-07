@@ -74,6 +74,9 @@ export interface Trip {
   destination?: string | null;
   startDate?: string | null;
   endDate?: string | null;
+  startMonth?: number | null;
+  startYear?: number | null;
+  durationDays?: number | null;
   createdAt: string;
 }
 

@@ -1,5 +1,6 @@
 import { describe, expect, test } from '@jest/globals';
 import { computePayerTotals } from '../tabs/costReport';
+import { buildTourPayload } from '../tabs/tours';
 
 type Tour = {
   id: string;
@@ -59,5 +60,25 @@ describe('Tours', () => {
 
     const totals = payerTotalsForTours(tours, payers);
     expect(totals).toEqual({ alice: 30, bob: 30, charlie: 30 });
+  });
+
+  test('buildTourPayload cleans cost and applies default payer', () => {
+    const result = buildTourPayload(
+      {
+        date: '2025-04-10',
+        name: 'Food Tour',
+        startLocation: 'Downtown',
+        startTime: '10:00',
+        duration: '2h',
+        cost: '$120',
+        freeCancelBy: '',
+        bookedOn: '',
+        reference: 'REF',
+        paidBy: [],
+      },
+      'payer-1'
+    );
+    expect(result.payload?.cost).toBe('120');
+    expect(result.payload?.paidBy).toEqual(['payer-1']);
   });
 });

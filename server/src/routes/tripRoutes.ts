@@ -27,7 +27,7 @@ router.get('/participants/search', async (req, res) => {
 
 router.post('/', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const { name, groupId, description, destination, startDate, endDate } = req.body ?? {};
+  const { name, groupId, description, destination, startDate, endDate, startMonth, startYear, durationDays } = req.body ?? {};
   if (!name || !groupId) {
     res.status(400).json({ error: 'name and groupId are required' });
     return;
@@ -38,6 +38,9 @@ router.post('/', async (req, res) => {
       destination: typeof destination === 'string' ? destination.trim() || null : null,
       startDate: typeof startDate === 'string' ? startDate : null,
       endDate: typeof endDate === 'string' ? endDate : null,
+      startMonth: Number.isFinite(Number(startMonth)) ? Number(startMonth) : null,
+      startYear: Number.isFinite(Number(startYear)) ? Number(startYear) : null,
+      durationDays: Number.isFinite(Number(durationDays)) ? Number(durationDays) : null,
     });
     res.status(201).json(trip);
   } catch (err) {
@@ -47,7 +50,7 @@ router.post('/', async (req, res) => {
 
 router.post('/wizard', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const { name, description, destination, startDate, endDate, participants } = req.body ?? {};
+  const { name, description, destination, startDate, endDate, startMonth, startYear, durationDays, participants } = req.body ?? {};
   if (!name || !String(name).trim()) {
     res.status(400).json({ error: 'Trip name is required' });
     return;
@@ -82,6 +85,9 @@ router.post('/wizard', async (req, res) => {
       destination: typeof destination === 'string' ? destination.trim() || null : null,
       startDate: typeof startDate === 'string' ? startDate : null,
       endDate: typeof endDate === 'string' ? endDate : null,
+      startMonth: Number.isFinite(Number(startMonth)) ? Number(startMonth) : null,
+      startYear: Number.isFinite(Number(startYear)) ? Number(startYear) : null,
+      durationDays: Number.isFinite(Number(durationDays)) ? Number(durationDays) : null,
       members,
     });
 
@@ -129,8 +135,8 @@ router.patch('/:id/group', async (req, res) => {
 
 router.patch('/:id', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const { description, destination, startDate, endDate } = req.body ?? {};
-  if (description == null && destination == null && startDate == null && endDate == null) {
+  const { description, destination, startDate, endDate, startMonth, startYear, durationDays, dateMode } = req.body ?? {};
+  if (description == null && destination == null && startDate == null && endDate == null && startMonth == null && startYear == null && durationDays == null) {
     res.status(400).json({ error: 'At least one field is required' });
     return;
   }
@@ -140,6 +146,10 @@ router.patch('/:id', async (req, res) => {
       destination: typeof destination === 'string' ? destination : null,
       startDate: typeof startDate === 'string' ? startDate : null,
       endDate: typeof endDate === 'string' ? endDate : null,
+      startMonth: Number.isFinite(Number(startMonth)) ? Number(startMonth) : null,
+      startYear: Number.isFinite(Number(startYear)) ? Number(startYear) : null,
+      durationDays: Number.isFinite(Number(durationDays)) ? Number(durationDays) : null,
+      dateMode: dateMode === 'month' || dateMode === 'range' ? dateMode : undefined,
     });
     res.json(updated);
   } catch (err) {

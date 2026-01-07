@@ -25,6 +25,7 @@ import OverviewTab from './tabs/overview';
 import CreateTripWizard from './tabs/createTripWizard';
 import TripDetailsTab from './tabs/tripDetails';
 import AccountTab, { fetchAccountProfile, fetchFamilyRelationships, fetchFellowTravelers, type FellowTraveler } from './tabs/account';
+import { CarRental, CarRentalDraft, buildCarRentalFromDraft, createInitialCarRentalDraft } from './tabs/carRentals';
 import {
   Lodging,
   LodgingDraft,
@@ -83,6 +84,9 @@ interface Trip {
   destination?: string | null;
   startDate?: string | null;
   endDate?: string | null;
+  startMonth?: number | null;
+  startYear?: number | null;
+  durationDays?: number | null;
   createdAt: string;
 }
 
@@ -115,30 +119,31 @@ const backendUrl = Constants.expoConfig?.extra?.backendUrl ?? 'http://localhost:
 const sessionKey = 'stp.session';
 const sessionDurationMs = 12 * 60 * 60 * 1000;
 
-const loadSession = (): { token: string; name: string; email?: string; page?: string } | null => {
+const loadSession = (): { token: string; name: string; email?: string; page?: string; tripId?: string | null } | null => {
   if (Platform.OS !== 'web' || typeof window === 'undefined') return null;
   try {
     const raw = window.localStorage.getItem(sessionKey);
     if (!raw) return null;
-    const data = JSON.parse(raw) as { token: string; name: string; email?: string; expiresAt: number; page?: string };
+    const data = JSON.parse(raw) as { token: string; name: string; email?: string; expiresAt: number; page?: string; tripId?: string | null };
     if (!data?.token || !data?.name || !data?.expiresAt) return null;
     if (Date.now() > data.expiresAt) {
       window.localStorage.removeItem(sessionKey);
       return null;
     }
-    return { token: data.token, name: data.name, email: data.email, page: data.page };
+    return { token: data.token, name: data.name, email: data.email, page: data.page, tripId: data.tripId ?? null };
   } catch {
     return null;
   }
 };
 
-const saveSession = (token: string, name: string, page?: string, email?: string | null) => {
+const saveSession = (token: string, name: string, page?: string, email?: string | null, tripId?: string | null) => {
   if (Platform.OS !== 'web' || typeof window === 'undefined') return;
   const payload = {
     token,
     name,
     email: email ?? undefined,
     page,
+    tripId: tripId ?? undefined,
     expiresAt: Date.now() + sessionDurationMs,
   };
   window.localStorage.setItem(sessionKey, JSON.stringify(payload));
@@ -193,19 +198,7 @@ const App: React.FC = () => {
 
   const [tours, setTours] = useState<Tour[]>([]);
   const [carRentals, setCarRentals] = useState<CarRental[]>([]);
-  const [carDraft, setCarDraft] = useState<CarRentalDraft>({
-    pickupLocation: '',
-    pickupDate: '',
-    dropoffLocation: '',
-    dropoffDate: '',
-    reference: '',
-    vendor: '',
-    prepaid: '',
-    cost: '',
-    model: '',
-    notes: '',
-    paidBy: [],
-  });
+  const [carDraft, setCarDraft] = useState<CarRentalDraft>(createInitialCarRentalDraft());
   const [carDateField, setCarDateField] = useState<'pickup' | 'dropoff' | null>(null);
   const [carDateValue, setCarDateValue] = useState<Date>(new Date());
   const [carPrepaidOpen, setCarPrepaidOpen] = useState(false);
@@ -286,39 +279,21 @@ const App: React.FC = () => {
       alert('Select an active trip before adding a car rental.');
       return;
     }
-    if (!carDraft.vendor.trim() && !carDraft.model.trim() && !carDraft.pickupLocation.trim()) {
-      alert('Enter at least a pickup location, vendor, or car model.');
+    const result = buildCarRentalFromDraft(carDraft, defaultPayerId);
+    if (result.error || !result.rental) {
+      alert(result.error || 'Unable to add car rental.');
       return;
     }
-    const paidBy = carDraft.paidBy.length ? carDraft.paidBy : defaultPayerId ? [defaultPayerId] : [];
-    const newRental: CarRental = {
-      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-      pickupLocation: carDraft.pickupLocation.trim(),
-      pickupDate: carDraft.pickupDate.trim(),
-      dropoffLocation: carDraft.dropoffLocation.trim(),
-      dropoffDate: carDraft.dropoffDate.trim(),
-      reference: carDraft.reference.trim(),
-      vendor: carDraft.vendor.trim(),
-      prepaid: carDraft.prepaid.trim(),
-      cost: carDraft.cost.trim(),
-      model: carDraft.model.trim(),
-      notes: carDraft.notes.trim(),
-      paidBy,
-    };
-    setCarRentals((prev) => [...prev, newRental]);
-    setCarDraft({
-      pickupLocation: '',
-      pickupDate: '',
-      dropoffLocation: '',
-      dropoffDate: '',
-      reference: '',
-      vendor: '',
-      prepaid: '',
-      cost: '',
-      model: '',
-      notes: '',
-      paidBy: [],
-    });
+    setCarRentals((prev) => [...prev, result.rental as CarRental]);
+    setCarDraft(createInitialCarRentalDraft());
+  };
+
+  const addCarRentalFromOverview = (rental: CarRental) => {
+    if (!activeTripId) {
+      alert('Select an active trip before adding a car rental.');
+      return;
+    }
+    setCarRentals((prev) => [...prev, rental]);
   };
 
   const removeCarRental = (id: string) => {
@@ -620,7 +595,7 @@ const App: React.FC = () => {
         lastName: data.user.lastName ?? '',
         email,
       });
-      saveSession(data.token, name, 'menu', email);
+      saveSession(data.token, name, 'menu', email, activeTripId);
       fetchFlights(data.token);
       fetchLodgings(data.token);
       fetchTours(data.token);
@@ -666,7 +641,7 @@ const App: React.FC = () => {
         lastName: data.user.lastName ?? '',
         email,
       });
-      saveSession(data.token, name, 'menu', email);
+      saveSession(data.token, name, 'menu', email, activeTripId);
       fetchFlights(data.token);
       fetchLodgings(data.token);
       fetchTours(data.token);
@@ -728,6 +703,16 @@ const App: React.FC = () => {
     if (!newTripGroupId && data.length) {
       setNewTripGroupId(data[0].id);
     }
+  };
+
+  const fetchInvites = async (token?: string) => {
+    if (!userToken && !token) return;
+    const res = await fetch(`${backendUrl}/api/groups/invites`, {
+      headers: { Authorization: `Bearer ${token ?? userToken}` },
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    setInvites(Array.isArray(data) ? data : []);
   };
 
   const fetchTrips = async () => {
@@ -868,6 +853,7 @@ const App: React.FC = () => {
       setUserToken(session.token);
       setUserName(session.name);
       setUserEmail(session.email ?? null);
+      if (session.tripId) setActiveTripId(session.tripId);
       const sessionPage = session.page;
       if (sessionPage === 'overview' || sessionPage === 'flights' || sessionPage === 'lodging' || sessionPage === 'groups' || sessionPage === 'trips' || sessionPage === 'create-trip' || sessionPage === 'trip-details' || sessionPage === 'traits' || sessionPage === 'itinerary' || sessionPage === 'tours' || sessionPage === 'cost' || sessionPage === 'account' || sessionPage === 'follow') {
         setActivePage(sessionPage as Page);
@@ -898,8 +884,8 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (!userToken) return;
-    saveSession(userToken, userName ?? 'Traveler', activePage, userEmail);
-  }, [userToken, userName, userEmail, activePage]);
+    saveSession(userToken, userName ?? 'Traveler', activePage, userEmail, activeTripId);
+  }, [userToken, userName, userEmail, activePage, activeTripId]);
 
   useEffect(() => {
     if (userToken) {
@@ -2281,14 +2267,22 @@ const App: React.FC = () => {
             <OverviewTab
               backendUrl={backendUrl}
               headers={headers}
+              jsonHeaders={jsonHeaders}
               trip={findActiveTrip() ?? null}
               group={groups.find((g) => g.id === findActiveTrip()?.groupId) ?? null}
+              attendees={groupMembers}
               flights={flights}
               lodgings={lodgings}
               tours={tours}
+              carRentals={carRentals}
+              defaultPayerId={defaultPayerId}
               styles={styles}
               onRefreshTrips={fetchTrips}
               onRefreshGroups={fetchGroups}
+              onRefreshFlights={fetchFlights}
+              onRefreshLodgings={fetchLodgings}
+              onRefreshTours={fetchTours}
+              onAddCarRental={addCarRentalFromOverview}
             />
           ) : null}
 

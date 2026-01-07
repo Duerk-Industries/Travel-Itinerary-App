@@ -51,6 +51,41 @@ export const createInitialTourState = (): TourDraft => ({
   paidBy: [],
 });
 
+export const buildTourPayload = (draft: TourDraft, defaultPayerId?: string | null): { payload?: TourDraft; error?: string } => {
+  if (!draft.name.trim()) return { error: 'Please enter a tour name.' };
+  const cleanCost = (draft.cost || '').replace(/[^0-9.]/g, '');
+  let payload: TourDraft = { ...draft, cost: cleanCost };
+  if ((!payload.paidBy || payload.paidBy.length === 0) && defaultPayerId) {
+    payload = { ...payload, paidBy: [defaultPayerId] };
+  }
+  return { payload };
+};
+
+export const createTourForTrip = async (params: {
+  backendUrl: string;
+  jsonHeaders: Record<string, string>;
+  draft: TourDraft;
+  activeTripId: string | null;
+  defaultPayerId?: string | null;
+}): Promise<{ ok: boolean; error?: string }> => {
+  const { backendUrl, jsonHeaders, draft, activeTripId, defaultPayerId } = params;
+  if (!activeTripId) return { ok: false, error: 'Select an active trip before saving a tour.' };
+  const { payload, error } = buildTourPayload(draft, defaultPayerId);
+  if (error || !payload) return { ok: false, error };
+  const res = await fetch(`${backendUrl}/api/tours`, {
+    method: 'POST',
+    headers: jsonHeaders,
+    body: JSON.stringify({
+      ...payload,
+      tripId: activeTripId,
+      freeCancelBy: payload.freeCancelBy?.trim() || null,
+    }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) return { ok: false, error: data.error || 'Unable to save tour' };
+  return { ok: true };
+};
+
 export const fetchToursForTrip = async ({
   backendUrl,
   activeTripId,
@@ -350,14 +385,14 @@ export const TourTab: React.FC<TourTabProps> = ({
                 style={styles.input}
                 placeholder="Tour name"
                 value={editingTour.name}
-                onChangeText={(text) => setEditingTour((p) => (p ? { ...p, name: text } : p))}
+                onChangeText={(text: string) => setEditingTour((p) => (p ? { ...p, name: text } : p))}
               />
               <Text style={styles.modalLabel}>Start location</Text>
               <TextInput
                 style={styles.input}
                 placeholder="Start location"
                 value={editingTour.startLocation}
-                onChangeText={(text) => setEditingTour((p) => (p ? { ...p, startLocation: text } : p))}
+                onChangeText={(text: string) => setEditingTour((p) => (p ? { ...p, startLocation: text } : p))}
               />
               <Text style={styles.modalLabel}>Start time</Text>
               {Platform.OS === 'web' ? (
@@ -377,7 +412,7 @@ export const TourTab: React.FC<TourTabProps> = ({
                 style={styles.input}
                 placeholder="Duration"
                 value={editingTour.duration}
-                onChangeText={(text) => setEditingTour((p) => (p ? { ...p, duration: text } : p))}
+                onChangeText={(text: string) => setEditingTour((p) => (p ? { ...p, duration: text } : p))}
               />
               <Text style={styles.modalLabel}>Cost</Text>
               <TextInput
@@ -385,7 +420,7 @@ export const TourTab: React.FC<TourTabProps> = ({
                 placeholder="Cost"
                 keyboardType="numeric"
                 value={editingTour.cost}
-                onChangeText={(text) => setEditingTour((p) => (p ? { ...p, cost: text.replace(/[^0-9.]/g, '') } : p))}
+                onChangeText={(text: string) => setEditingTour((p) => (p ? { ...p, cost: text.replace(/[^0-9.]/g, '') } : p))}
               />
               <View style={styles.modalRow}>
                 <Text style={styles.modalLabel}>Free cancellation by</Text>
@@ -411,13 +446,13 @@ export const TourTab: React.FC<TourTabProps> = ({
                   style={[styles.input, { flex: 1 }]}
                   placeholder="Viator, Get Your Guide, Klook, etc."
                   value={editingTour.bookedOn}
-                  onChangeText={(text) => setEditingTour((p) => (p ? { ...p, bookedOn: text } : p))}
+                  onChangeText={(text: string) => setEditingTour((p) => (p ? { ...p, bookedOn: text } : p))}
                 />
                 <TextInput
                   style={[styles.input, { flex: 1 }]}
                   placeholder="Reference"
                   value={editingTour.reference}
-                  onChangeText={(text) => setEditingTour((p) => (p ? { ...p, reference: text } : p))}
+                  onChangeText={(text: string) => setEditingTour((p) => (p ? { ...p, reference: text } : p))}
                 />
               </View>
               <Text style={styles.modalLabel}>Paid by</Text>

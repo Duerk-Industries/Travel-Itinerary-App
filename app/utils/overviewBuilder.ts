@@ -46,6 +46,16 @@ type TourLike = {
   reference?: string;
 };
 
+type CarRentalLike = {
+  id: string;
+  pickupLocation: string;
+  pickupDate: string;
+  dropoffLocation: string;
+  dropoffDate: string;
+  vendor?: string;
+  model?: string;
+};
+
 type ItineraryDetail = {
   id: string;
   day: number;
@@ -159,14 +169,24 @@ export const formatTourDetails = (tour: TourLike): Array<{ label: string; value:
   ];
 };
 
+export const formatRentalSummary = (rental: CarRentalLike, kind: 'pickup' | 'dropoff'): string => {
+  const carType = rental.model || rental.vendor || 'Rental car';
+  if (kind === 'pickup') {
+    return `${carType} from ${rental.pickupLocation || 'Pickup location'} at ${rental.pickupDate || 'Pickup date'}`;
+  }
+  return `Return ${carType} to ${rental.dropoffLocation || 'Dropoff location'} at ${rental.dropoffDate || 'Dropoff date'}`;
+};
+
 export const buildOverviewRows = (params: {
   tripStartDate?: string | null;
+  tripMonthLabel?: string | null;
   itineraryDetails: ItineraryDetail[];
   flights: FlightLike[];
   lodgings: LodgingLike[];
   tours: TourLike[];
+  rentals?: CarRentalLike[];
 }): OverviewRow[] => {
-  const { tripStartDate, itineraryDetails, flights, lodgings, tours } = params;
+  const { tripStartDate, tripMonthLabel, itineraryDetails, flights, lodgings, tours, rentals = [] } = params;
   const startDate = parseDate(tripStartDate);
 
   const dayBuckets = new Map<string, { dayLabel: string; dateLabel: string; items: OverviewRow[] }>();
@@ -188,7 +208,7 @@ export const buildOverviewRows = (params: {
   for (const detail of itineraryDetails) {
     const dateLabel = startDate
       ? new Date(startDate.getTime() + (detail.day - 1) * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
-      : `Day ${detail.day}`;
+      : tripMonthLabel ?? `Day ${detail.day}`;
     const bucket = ensureBucket(`Day ${detail.day}`, dateLabel);
     bucket.items.push({
       dayLabel: bucket.dayLabel,
@@ -237,6 +257,31 @@ export const buildOverviewRows = (params: {
       time: tour.startTime || null,
       meta: tour,
     });
+  }
+
+  for (const rental of rentals) {
+    if (rental.pickupDate) {
+      const bucket = ensureBucket(getDayLabelForDate(rental.pickupDate), rental.pickupDate || 'Date TBD');
+      bucket.items.push({
+        dayLabel: bucket.dayLabel,
+        dateLabel: bucket.dateLabel,
+        type: 'rental',
+        label: formatRentalSummary(rental, 'pickup'),
+        time: null,
+        meta: rental,
+      });
+    }
+    if (rental.dropoffDate) {
+      const bucket = ensureBucket(getDayLabelForDate(rental.dropoffDate), rental.dropoffDate || 'Date TBD');
+      bucket.items.push({
+        dayLabel: bucket.dayLabel,
+        dateLabel: bucket.dateLabel,
+        type: 'rental',
+        label: formatRentalSummary(rental, 'dropoff'),
+        time: null,
+        meta: rental,
+      });
+    }
   }
 
   const orderedBuckets = Array.from(dayBuckets.values()).sort((a, b) => {

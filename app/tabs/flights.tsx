@@ -75,6 +75,38 @@ export type FlightEditDraft = {
   paidBy: string[];
 };
 
+export type FlightCreateDraft = {
+  passengerName: string;
+  departureDate: string;
+  departureAirportCode: string;
+  departureTime: string;
+  arrivalAirportCode: string;
+  arrivalTime: string;
+  layoverLocation: string;
+  layoverLocationCode: string;
+  layoverDuration: string;
+  cost: string;
+  carrier: string;
+  flightNumber: string;
+  bookingReference: string;
+};
+
+export const createInitialFlightCreateDraft = (): FlightCreateDraft => ({
+  passengerName: '',
+  departureDate: new Date().toISOString().slice(0, 10),
+  departureAirportCode: '',
+  departureTime: '',
+  arrivalAirportCode: '',
+  arrivalTime: '',
+  layoverLocation: '',
+  layoverLocationCode: '',
+  layoverDuration: '',
+  cost: '',
+  carrier: '',
+  flightNumber: '',
+  bookingReference: '',
+});
+
 export type GroupMemberOption = {
   id: string;
   guestName?: string;
@@ -92,6 +124,9 @@ export type Trip = {
   destination?: string | null;
   startDate?: string | null;
   endDate?: string | null;
+  startMonth?: number | null;
+  startYear?: number | null;
+  durationDays?: number | null;
   createdAt: string;
 };
 
@@ -143,6 +178,62 @@ export const buildFlightPayload = (flight: FlightEditDraft, tripId?: string | nu
     paidBy: flight.paidBy?.length ? flight.paidBy : defaultPayerId ? [defaultPayerId] : [],
     ...(tripId ? { tripId } : {}),
   };
+};
+
+export const buildFlightPayloadForCreate = (
+  draft: FlightCreateDraft,
+  tripId?: string | null,
+  defaultPayerId?: string | null
+): { payload?: any; error?: string } => {
+  if (!tripId) return { error: 'Select an active trip before adding a flight.' };
+  if (!draft.departureDate.trim()) return { error: 'Departure date is required.' };
+  if (!draft.departureTime.trim() || !draft.arrivalTime.trim()) return { error: 'Departure and arrival times are required.' };
+  if (!draft.carrier.trim() || !draft.flightNumber.trim()) return { error: 'Carrier and flight number are required.' };
+  if (!draft.bookingReference.trim()) return { error: 'Booking reference is required.' };
+  const payload = buildFlightPayload(
+    {
+      passengerName: draft.passengerName.trim() || 'Traveler',
+      passengerIds: [],
+      departureDate: draft.departureDate.trim(),
+      departureLocation: '',
+      departureAirportCode: draft.departureAirportCode.trim(),
+      departureTime: draft.departureTime.trim(),
+      arrivalLocation: '',
+      arrivalAirportCode: draft.arrivalAirportCode.trim(),
+      layoverLocation: draft.layoverLocation.trim(),
+      layoverLocationCode: draft.layoverLocationCode.trim(),
+      layoverDuration: draft.layoverDuration.trim(),
+      arrivalTime: draft.arrivalTime.trim(),
+      cost: draft.cost.trim(),
+      carrier: draft.carrier.trim(),
+      flightNumber: draft.flightNumber.trim(),
+      bookingReference: draft.bookingReference.trim(),
+      paidBy: [],
+    },
+    tripId,
+    defaultPayerId
+  );
+  return { payload };
+};
+
+export const createFlightForTrip = async (params: {
+  backendUrl: string;
+  headers: Record<string, string>;
+  draft: FlightCreateDraft;
+  tripId: string | null;
+  defaultPayerId?: string | null;
+}): Promise<{ ok: boolean; error?: string }> => {
+  const { backendUrl, headers, draft, tripId, defaultPayerId } = params;
+  const { payload, error } = buildFlightPayloadForCreate(draft, tripId, defaultPayerId);
+  if (error || !payload) return { ok: false, error };
+  const res = await fetch(`${backendUrl}/api/flights`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...headers },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) return { ok: false, error: data.error || 'Unable to save flight' };
+  return { ok: true };
 };
 
 export const fetchFlightsForTrip = async ({
@@ -240,7 +331,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   airportOptions,
   onSearchAirports,
 }) => {
-  const containerRef = useRef<View | null>(null);
+  const containerRef = useRef<React.ElementRef<typeof View> | null>(null);
   const memberNames = useMemo(() => {
     const map = new Map<string, string>();
     groupMembers.forEach((m) => map.set(m.id, formatMemberName(m)));
@@ -273,10 +364,10 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   const [parsedFlights, setParsedFlights] = useState<FlightEditDraft[]>([]);
   const [isSavingParsedFlights, setIsSavingParsedFlights] = useState(false);
   const [isAddingRow] = useState(false);
-  const passengerDropdownRef = useRef<TouchableOpacity | null>(null);
-  const modalDepLocationRef = useRef<TextInput | null>(null);
-  const modalArrLocationRef = useRef<TextInput | null>(null);
-  const modalLayoverLocationRef = useRef<TextInput | null>(null);
+  const passengerDropdownRef = useRef<React.ElementRef<typeof TouchableOpacity> | null>(null);
+  const modalDepLocationRef = useRef<React.ElementRef<typeof TextInput> | null>(null);
+  const modalArrLocationRef = useRef<React.ElementRef<typeof TextInput> | null>(null);
+  const modalLayoverLocationRef = useRef<React.ElementRef<typeof TextInput> | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [containerOffset, setContainerOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
@@ -396,12 +487,15 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
 
 
   const mergeParsedFlight = (current: FlightEditDraft, parsed: Partial<FlightEditDraft>): FlightEditDraft => {
-    const next = { ...current };
-    (Object.entries(parsed) as [keyof FlightEditDraft, string][]).forEach(([key, value]) => {
-      if (value && (!current[key] || current[key].trim().length === 0)) {
-        next[key] = value;
+    const next = { ...current } as FlightEditDraft;
+    (Object.entries(parsed) as Array<[keyof FlightEditDraft, FlightEditDraft[keyof FlightEditDraft]]>).forEach(
+      ([key, value]) => {
+        if (typeof value !== 'string') return;
+        const existing = current[key];
+        if (typeof existing === 'string' && existing.trim().length > 0) return;
+        (next as unknown as Record<string, string>)[key as string] = value;
       }
-    });
+    );
     return next;
   };
 
@@ -1164,7 +1258,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
               style={[styles.input, styles.inlineInput]}
               placeholder="Search airports or cities"
               value={locationSearch}
-              onChangeText={(text) => {
+              onChangeText={(text: string) => {
                 setLocationSearch(text);
                 if (locationFieldTarget) fetchLocationSuggestions(locationFieldTarget, text);
               }}
@@ -1309,7 +1403,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                       style={styles.input}
                       value={editingFlight.departureDate}
                       placeholder="Date"
-                      onChangeText={(text) => setEditingFlight((prev) => (prev ? { ...prev, departureDate: text } : prev))}
+                      onChangeText={(text: string) => setEditingFlight((prev) => (prev ? { ...prev, departureDate: text } : prev))}
                     />
                   )}
                 </View>
@@ -1322,7 +1416,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                       placeholder="Location"
                       ref={modalDepLocationRef}
                       onFocus={() => showAirportDropdown('modal-dep', modalDepLocationRef.current, editingFlight.departureLocation)}
-                      onChangeText={(text) => {
+                      onChangeText={(text: string) => {
                         setEditingFlight((prev) => (prev ? { ...prev, departureLocation: text } : prev));
                         showAirportDropdown('modal-dep', modalDepLocationRef.current, text);
                       }}
@@ -1349,7 +1443,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                       style={styles.input}
                       value={editingFlight.departureTime}
                       placeholder="Time"
-                      onChangeText={(text) => setEditingFlight((prev) => (prev ? { ...prev, departureTime: text } : prev))}
+                      onChangeText={(text: string) => setEditingFlight((prev) => (prev ? { ...prev, departureTime: text } : prev))}
                     />
                   )}
                 </View>
@@ -1365,7 +1459,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                       placeholder="Location"
                       ref={modalArrLocationRef}
                       onFocus={() => showAirportDropdown('modal-arr', modalArrLocationRef.current, editingFlight.arrivalLocation)}
-                      onChangeText={(text) => {
+                      onChangeText={(text: string) => {
                         setEditingFlight((prev) => (prev ? { ...prev, arrivalLocation: text } : prev));
                         showAirportDropdown('modal-arr', modalArrLocationRef.current, text);
                       }}
@@ -1392,7 +1486,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                       style={styles.input}
                       value={editingFlight.arrivalTime}
                       placeholder="Time"
-                      onChangeText={(text) => setEditingFlight((prev) => (prev ? { ...prev, arrivalTime: text } : prev))}
+                      onChangeText={(text: string) => setEditingFlight((prev) => (prev ? { ...prev, arrivalTime: text } : prev))}
                     />
                   )}
                 </View>
@@ -1409,7 +1503,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                       placeholder="Layover location"
                       ref={modalLayoverLocationRef}
                       onFocus={() => showAirportDropdown('modal-layover', modalLayoverLocationRef.current, editingFlight.layoverLocation)}
-                      onChangeText={(text) => {
+                      onChangeText={(text: string) => {
                         setEditingFlight((prev) => (prev ? { ...prev, layoverLocation: text } : prev));
                         showAirportDropdown('modal-layover', modalLayoverLocationRef.current, text);
                       }}
@@ -1434,7 +1528,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                             keyboardType="numeric"
                             placeholder="Hours"
                             value={hours}
-                            onChangeText={(text) => {
+                            onChangeText={(text: string) => {
                               const { minutes: currentMinutes } = parseLayoverDuration(editingFlight.layoverDuration);
                               setEditingFlight((prev) =>
                                 prev ? { ...prev, layoverDuration: `${text}h ${currentMinutes || '0'}m` } : prev
@@ -1446,7 +1540,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                             keyboardType="numeric"
                             placeholder="Minutes"
                             value={minutes}
-                            onChangeText={(text) => {
+                            onChangeText={(text: string) => {
                               const { hours: currentHours } = parseLayoverDuration(editingFlight.layoverDuration);
                               setEditingFlight((prev) =>
                                 prev ? { ...prev, layoverDuration: `${currentHours || '0'}h ${text}m` } : prev
@@ -1466,7 +1560,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                   <TextInput
                     style={styles.input}
                     value={editingFlight.carrier}
-                    onChangeText={(text) => setEditingFlight((prev) => (prev ? { ...prev, carrier: text } : prev))}
+                    onChangeText={(text: string) => setEditingFlight((prev) => (prev ? { ...prev, carrier: text } : prev))}
                   />
                 </View>
                 <View style={styles.modalField}>
@@ -1474,7 +1568,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                   <TextInput
                     style={styles.input}
                     value={editingFlight.flightNumber}
-                    onChangeText={(text) => setEditingFlight((prev) => (prev ? { ...prev, flightNumber: text } : prev))}
+                    onChangeText={(text: string) => setEditingFlight((prev) => (prev ? { ...prev, flightNumber: text } : prev))}
                   />
                 </View>
                 <View style={styles.modalField}>
@@ -1482,7 +1576,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                   <TextInput
                     style={styles.input}
                     value={editingFlight.bookingReference}
-                    onChangeText={(text) => setEditingFlight((prev) => (prev ? { ...prev, bookingReference: text.toUpperCase() } : prev))}
+                    onChangeText={(text: string) => setEditingFlight((prev) => (prev ? { ...prev, bookingReference: text.toUpperCase() } : prev))}
                   />
                 </View>
               </View>
@@ -1491,7 +1585,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                 style={styles.input}
                 value={editingFlight.cost}
                 keyboardType="numeric"
-                onChangeText={(text) => setEditingFlight((prev) => (prev ? { ...prev, cost: text } : prev))}
+                onChangeText={(text: string) => setEditingFlight((prev) => (prev ? { ...prev, cost: text } : prev))}
               />
               <Text style={styles.modalLabel}>Paid by</Text>
               <View style={[styles.input, styles.payerBox]}>

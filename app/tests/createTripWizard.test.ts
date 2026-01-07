@@ -15,13 +15,50 @@ describe('Create Trip Wizard helpers', () => {
   });
 
   test('validates trip dates', () => {
-    expect(validateTripDates({ startDate: '2025-02-10', endDate: '2025-02-01' })).toBe(
+    expect(
+      validateTripDates({
+        mode: 'range',
+        startDate: '2025-02-10',
+        endDate: '2025-02-01',
+        startMonth: '',
+        startYear: '',
+        durationDays: '',
+      })
+    ).toBe(
       'End date cannot be before start date.'
     );
-    expect(validateTripDates({ startDate: 'bad-date', endDate: '2025-02-10' })).toBe(
+    expect(
+      validateTripDates({
+        mode: 'range',
+        startDate: 'bad-date',
+        endDate: '2025-02-10',
+        startMonth: '',
+        startYear: '',
+        durationDays: '',
+      })
+    ).toBe(
       'Invalid start or end date.'
     );
-    expect(validateTripDates({ startDate: '2025-02-01', endDate: '2025-02-10' })).toBeNull();
+    expect(
+      validateTripDates({
+        mode: 'range',
+        startDate: '2025-02-01',
+        endDate: '2025-02-10',
+        startMonth: '',
+        startYear: '',
+        durationDays: '',
+      })
+    ).toBeNull();
+    expect(
+      validateTripDates({
+        mode: 'month',
+        startDate: '',
+        endDate: '',
+        startMonth: '4',
+        startYear: '2025',
+        durationDays: '5',
+      })
+    ).toBeNull();
   });
 
   test('validates participants and unique emails', () => {

@@ -1,8 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import type { Trait } from './traits';
 import { renderRichTextBlocks } from '../utils/richText';
 import { parsePlanToDetails } from '../utils/itineraryParser';
+import { computeDurationFromRange, formatMonthYear } from '../utils/tripDates';
+import { normalizeDateString } from '../utils/normalizeDateString';
 import {
   TripDetails,
   TripDates,
@@ -44,6 +46,18 @@ const steps = [
   'Review & Confirm',
 ];
 
+type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
+let NativeDateTimePicker: NativeDateTimePickerType | null = null;
+if (Platform.OS !== 'web') {
+  try {
+    const mod = require('@react-native-community/datetimepicker');
+    NativeDateTimePicker = (mod?.default ?? mod) as NativeDateTimePickerType;
+  } catch (err) {
+    console.warn('DateTimePicker unavailable, falling back to text inputs');
+    NativeDateTimePicker = null;
+  }
+}
+
 const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   backendUrl,
   userToken,
@@ -55,7 +69,14 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
 }) => {
   const [stepIndex, setStepIndex] = useState(0);
   const [details, setDetails] = useState<TripDetails>({ name: '', description: '', destination: '' });
-  const [dates, setDates] = useState<TripDates>({ startDate: '', endDate: '' });
+  const [dates, setDates] = useState<TripDates>({
+    startDate: '',
+    endDate: '',
+    startMonth: '',
+    startYear: '',
+    durationDays: '',
+    mode: 'range',
+  });
   const [participants, setParticipants] = useState<ParticipantInput[]>([]);
   const [participantDraft, setParticipantDraft] = useState<ParticipantInput>({ firstName: '', lastName: '', email: '' });
   const [participantSearch, setParticipantSearch] = useState('');
@@ -73,9 +94,18 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   const [wizardError, setWizardError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdTripId, setCreatedTripId] = useState<string | null>(null);
+  const [dateField, setDateField] = useState<'start' | 'end' | 'itinerary' | null>(null);
+  const [dateValue, setDateValue] = useState<Date>(new Date());
+  const startDateRef = useRef<HTMLInputElement | null>(null);
+  const endDateRef = useRef<HTMLInputElement | null>(null);
+  const itineraryDateRef = useRef<HTMLInputElement | null>(null);
 
   const totalSteps = steps.length;
-  const computedDays = useMemo(() => computeTripDays(dates.startDate, dates.endDate), [dates]);
+  const computedDays = useMemo(() => computeTripDays(dates.startDate, dates.endDate), [dates.startDate, dates.endDate]);
+  const monthLabel = useMemo(
+    () => formatMonthYear(Number(dates.startMonth), Number(dates.startYear)),
+    [dates.startMonth, dates.startYear]
+  );
 
   useEffect(() => {
     if (!userToken) return;
@@ -131,6 +161,31 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     setWizardError('');
   };
 
+  const openDatePicker = (field: 'start' | 'end' | 'itinerary') => {
+    if (Platform.OS !== 'web' && NativeDateTimePicker) {
+      const base =
+        field === 'start'
+          ? dates.startDate
+          : field === 'end'
+            ? dates.endDate
+            : itineraryDraft.date;
+      const date = base ? new Date(base) : new Date();
+      setDateValue(date);
+      setDateField(field);
+      return;
+    }
+    const ref = field === 'start' ? startDateRef.current : field === 'end' ? endDateRef.current : itineraryDateRef.current;
+    if ((ref as any)?.showPicker) {
+      (ref as any).showPicker();
+      return;
+    }
+    if (typeof ref?.click === 'function') {
+      ref.click();
+      return;
+    }
+    ref?.focus();
+  };
+
   const canMoveNext = () => {
     if (stepIndex === 0) return !validateTripDetails(details);
     if (stepIndex === 1) return !validateTripDates(dates);
@@ -183,8 +238,11 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           name: details.name.trim(),
           description: description.trim() || undefined,
           destination: details.destination.trim() || undefined,
-          startDate: dates.startDate || undefined,
-          endDate: dates.endDate || undefined,
+          startDate: dates.mode === 'range' ? dates.startDate || undefined : undefined,
+          endDate: dates.mode === 'range' ? dates.endDate || undefined : undefined,
+          startMonth: dates.mode === 'month' ? Number(dates.startMonth) || undefined : undefined,
+          startYear: dates.mode === 'month' ? Number(dates.startYear) || undefined : undefined,
+          durationDays: dates.mode === 'month' ? Number(dates.durationDays) || undefined : undefined,
           participants,
         }),
       });
@@ -201,9 +259,10 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
       }
 
       if (itineraryEnabled && (itineraryItems.length || generateItinerary)) {
+        const rangeDays = computeDurationFromRange(dates.startDate, dates.endDate);
         const days =
-          computedDays ??
-          (Number(itineraryDays) > 0 ? Number(itineraryDays) : 1);
+          (dates.mode === 'range' ? rangeDays : null) ??
+          (Number(itineraryDays) > 0 ? Number(itineraryDays) : Number(dates.durationDays) || 1);
         const destination = details.destination.trim() || details.name.trim() || 'Trip';
         const createRes = await fetch(`${backendUrl}/api/itineraries`, {
           method: 'POST',
@@ -221,7 +280,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           if (itineraryItems.length) {
             for (const item of itineraryItems) {
               let day = 1;
-              if (dates.startDate && item.date) {
+              if (dates.mode === 'range' && dates.startDate && item.date) {
                 const start = new Date(dates.startDate);
                 const itemDate = new Date(item.date);
                 const diff = Math.floor((itemDate.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
@@ -327,20 +386,93 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
         return (
           <>
             <Text style={styles.sectionTitle}>Dates</Text>
-            <Text style={styles.helperText}>Add dates if you already know them (optional).</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Start date (YYYY-MM-DD)"
-              value={dates.startDate}
-              onChangeText={(text) => setDates((prev) => ({ ...prev, startDate: text }))}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="End date (YYYY-MM-DD)"
-              value={dates.endDate}
-              onChangeText={(text) => setDates((prev) => ({ ...prev, endDate: text }))}
-            />
-            {computedDays ? <Text style={styles.helperText}>Trip length: {computedDays} day(s)</Text> : null}
+            <Text style={styles.helperText}>Choose exact dates or a month and duration (optional).</Text>
+            <View style={styles.row}>
+              <TouchableOpacity
+                style={[styles.button, dates.mode === 'range' && styles.toggleActive, styles.smallButton]}
+                onPress={() => setDates((prev) => ({ ...prev, mode: 'range' }))}
+              >
+                <Text style={styles.buttonText}>Start + End</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, dates.mode === 'month' && styles.toggleActive, styles.smallButton]}
+                onPress={() => setDates((prev) => ({ ...prev, mode: 'month' }))}
+              >
+                <Text style={styles.buttonText}>Month + Days</Text>
+              </TouchableOpacity>
+            </View>
+            {dates.mode === 'range' ? (
+              <>
+                <View style={styles.dateInputWrap}>
+                  {Platform.OS === 'web' ? (
+                    <input
+                      ref={startDateRef as any}
+                      type="date"
+                      value={dates.startDate}
+                      onChange={(e) => setDates((prev) => ({ ...prev, startDate: normalizeDateString(e.target.value) }))}
+                      style={styles.input as any}
+                    />
+                  ) : (
+                    <TouchableOpacity style={[styles.input, styles.dateTouchable]} onPress={() => openDatePicker('start')}>
+                      <Text style={styles.cellText}>{dates.startDate || 'YYYY-MM-DD'}</Text>
+                    </TouchableOpacity>
+                  )}
+                  <TouchableOpacity style={styles.dateIcon} onPress={() => openDatePicker('start')}>
+                    <Text style={styles.selectCaret}>v</Text>
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.dateInputWrap}>
+                  {Platform.OS === 'web' ? (
+                    <input
+                      ref={endDateRef as any}
+                      type="date"
+                      value={dates.endDate}
+                      onChange={(e) => setDates((prev) => ({ ...prev, endDate: normalizeDateString(e.target.value) }))}
+                      style={styles.input as any}
+                    />
+                  ) : (
+                    <TouchableOpacity style={[styles.input, styles.dateTouchable]} onPress={() => openDatePicker('end')}>
+                      <Text style={styles.cellText}>{dates.endDate || 'YYYY-MM-DD'}</Text>
+                    </TouchableOpacity>
+                  )}
+                  <TouchableOpacity style={styles.dateIcon} onPress={() => openDatePicker('end')}>
+                    <Text style={styles.selectCaret}>v</Text>
+                  </TouchableOpacity>
+                </View>
+                {computedDays ? <Text style={styles.helperText}>Trip length: {computedDays} day(s)</Text> : null}
+              </>
+            ) : (
+              <>
+                <View style={styles.row}>
+                  <TextInput
+                    style={[styles.input, { flex: 1 }]}
+                    placeholder="Month (1-12)"
+                    keyboardType="numeric"
+                    value={dates.startMonth}
+                    onChangeText={(text) => setDates((prev) => ({ ...prev, startMonth: text }))}
+                  />
+                  <TextInput
+                    style={[styles.input, { flex: 1 }]}
+                    placeholder="Year (YYYY)"
+                    keyboardType="numeric"
+                    value={dates.startYear}
+                    onChangeText={(text) => setDates((prev) => ({ ...prev, startYear: text }))}
+                  />
+                </View>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Number of days"
+                  keyboardType="numeric"
+                  value={dates.durationDays}
+                  onChangeText={(text) => setDates((prev) => ({ ...prev, durationDays: text }))}
+                />
+                {monthLabel && dates.durationDays ? (
+                  <Text style={styles.helperText}>
+                    {monthLabel} · {dates.durationDays} day(s)
+                  </Text>
+                ) : null}
+              </>
+            )}
           </>
         );
       case 2:
@@ -475,12 +607,26 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                   </TouchableOpacity>
                 </View>
                 <Text style={styles.headerText}>Manual itinerary items</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Date (YYYY-MM-DD)"
-                  value={itineraryDraft.date}
-                  onChangeText={(text) => setItineraryDraft((prev) => ({ ...prev, date: text }))}
-                />
+                <View style={styles.dateInputWrap}>
+                  {Platform.OS === 'web' ? (
+                    <input
+                      ref={itineraryDateRef as any}
+                      type="date"
+                      value={itineraryDraft.date}
+                      onChange={(e) =>
+                        setItineraryDraft((prev) => ({ ...prev, date: normalizeDateString(e.target.value) }))
+                      }
+                      style={styles.input as any}
+                    />
+                  ) : (
+                    <TouchableOpacity style={[styles.input, styles.dateTouchable]} onPress={() => openDatePicker('itinerary')}>
+                      <Text style={styles.cellText}>{itineraryDraft.date || 'YYYY-MM-DD'}</Text>
+                    </TouchableOpacity>
+                  )}
+                  <TouchableOpacity style={styles.dateIcon} onPress={() => openDatePicker('itinerary')}>
+                    <Text style={styles.selectCaret}>v</Text>
+                  </TouchableOpacity>
+                </View>
                 <TextInput
                   style={styles.input}
                   placeholder="Time (optional)"
@@ -570,8 +716,13 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             <Text style={styles.headerText}>Trip</Text>
             <Text style={styles.bodyText}>Name: {details.name || 'Untitled trip'}</Text>
             {details.destination ? <Text style={styles.bodyText}>Destination: {details.destination}</Text> : null}
-            {dates.startDate || dates.endDate ? (
+            {dates.mode === 'range' && (dates.startDate || dates.endDate) ? (
               <Text style={styles.bodyText}>Dates: {dates.startDate || 'TBD'} - {dates.endDate || 'TBD'}</Text>
+            ) : null}
+            {dates.mode === 'month' && monthLabel && dates.durationDays ? (
+              <Text style={styles.bodyText}>
+                Dates: {monthLabel} · {dates.durationDays} day(s)
+              </Text>
             ) : null}
             {details.description ? (
               <View style={{ marginTop: 8 }}>
@@ -659,6 +810,27 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           </TouchableOpacity>
         )}
       </View>
+      {Platform.OS !== 'web' && dateField && NativeDateTimePicker ? (
+        <NativeDateTimePicker
+          value={dateValue}
+          mode="date"
+          onChange={(_, date) => {
+            if (!date) {
+              setDateField(null);
+              return;
+            }
+            const iso = date.toISOString().slice(0, 10);
+            if (dateField === 'start') {
+              setDates((prev) => ({ ...prev, startDate: iso }));
+            } else if (dateField === 'end') {
+              setDates((prev) => ({ ...prev, endDate: iso }));
+            } else {
+              setItineraryDraft((prev) => ({ ...prev, date: iso }));
+            }
+            setDateField(null);
+          }}
+        />
+      ) : null}
     </ScrollView>
   );
 };

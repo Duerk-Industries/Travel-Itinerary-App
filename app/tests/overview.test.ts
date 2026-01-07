@@ -44,6 +44,7 @@ describe('Overview helpers', () => {
   test('builds rows for each category in order', () => {
     const rows = buildOverviewRows({
       tripStartDate: '2025-04-10',
+      tripMonthLabel: null,
       itineraryDetails: [{ id: 'i1', day: 1, time: '09:00', activity: 'Breakfast' }],
       flights: [
         {
@@ -86,14 +87,26 @@ describe('Overview helpers', () => {
           reference: 'REF',
         },
       ],
+      rentals: [
+        {
+          id: 'r1',
+          pickupLocation: 'Airport',
+          pickupDate: '2025-04-10',
+          dropoffLocation: 'Hotel',
+          dropoffDate: '2025-04-12',
+          vendor: 'Hertz',
+          model: 'SUV',
+        },
+      ],
     });
     const types = rows.map((r) => r.type);
-    expect(types).toEqual(['activity', 'flight', 'lodging', 'tour']);
+    expect(types).toEqual(['activity', 'flight', 'lodging', 'tour', 'rental', 'rental']);
   });
 
   test('orders items within a category by time', () => {
     const rows = buildOverviewRows({
       tripStartDate: '2025-04-10',
+      tripMonthLabel: null,
       itineraryDetails: [
         { id: 'i1', day: 1, time: '10:00', activity: 'Museum' },
         { id: 'i2', day: 1, time: '08:00', activity: 'Breakfast' },
@@ -104,5 +117,18 @@ describe('Overview helpers', () => {
     });
     expect(rows[0].label).toBe('Breakfast');
     expect(rows[1].label).toBe('Museum');
+  });
+
+  test('uses month label when no start date', () => {
+    const rows = buildOverviewRows({
+      tripStartDate: null,
+      tripMonthLabel: 'April 2025',
+      itineraryDetails: [{ id: 'i1', day: 1, time: null, activity: 'Check-in' }],
+      flights: [],
+      lodgings: [],
+      tours: [],
+    });
+    expect(rows[0].dateLabel).toBe('April 2025');
+    expect(rows[0].dayLabel).toBe('Day 1');
   });
 });
