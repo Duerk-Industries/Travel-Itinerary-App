@@ -91,26 +91,35 @@
 <body>
   <div class="panel">
     <h1>Shared Trip Planner</h1>
-    <p>Login with a username and password or add a new account. Duplicate usernames are blocked.</p>
+    <p>Login with your email and password or add a new account. Passwords must be at least 6 characters.</p>
 
     <form id="loginForm">
       <h2>Login</h2>
-      <label for="login-username">Username</label>
-      <input id="login-username" name="username" autocomplete="username" required minlength="3" />
+      <label for="login-email">Email</label>
+      <input id="login-email" name="email" type="email" autocomplete="email" required minlength="5" />
 
       <label for="login-password">Password</label>
-      <input id="login-password" type="password" name="password" autocomplete="current-password" required minlength="3" />
+      <input id="login-password" type="password" name="password" autocomplete="current-password" required minlength="6" />
 
       <button type="submit">Login</button>
     </form>
 
     <form id="registerForm">
       <h2>Create Account</h2>
-      <label for="register-username">Username</label>
-      <input id="register-username" name="username" autocomplete="username" required minlength="3" />
+      <label for="register-firstName">First Name</label>
+      <input id="register-firstName" name="firstName" autocomplete="given-name" required minlength="2" />
+
+      <label for="register-lastName">Last Name</label>
+      <input id="register-lastName" name="lastName" autocomplete="family-name" required minlength="2" />
+
+      <label for="register-email">Email</label>
+      <input id="register-email" name="email" type="email" autocomplete="email" required minlength="5" />
 
       <label for="register-password">Password</label>
-      <input id="register-password" type="password" name="password" autocomplete="new-password" required minlength="3" />
+      <input id="register-password" type="password" name="password" autocomplete="new-password" required minlength="6" />
+
+      <label for="register-password-confirm">Confirm Password</label>
+      <input id="register-password-confirm" type="password" name="passwordConfirm" autocomplete="new-password" required minlength="6" />
 
       <button type="submit">Add User</button>
     </form>
@@ -146,7 +155,7 @@
           return;
         }
 
-        setStatus(`${body.message} (username: ${body.username})`);
+        setStatus(body.message || 'Success');
       } catch (err) {
         console.error(err);
         setStatus('Network error. Is the API server running?', true);

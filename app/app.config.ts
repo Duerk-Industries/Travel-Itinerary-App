@@ -31,6 +31,7 @@ const config: ExpoConfig = {
   },
   extra: {
     backendUrl: process.env.BACKEND_URL || 'http://192.168.50.200:4000',
+    refreshIntervalMs: Number(process.env.REFRESH_INTERVAL_MS) || 60000,
     eas: {
         projectId: "06966c0b-d878-4346-850c-090c762f1916"
     }

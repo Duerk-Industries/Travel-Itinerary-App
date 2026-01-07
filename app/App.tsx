@@ -126,7 +126,15 @@ const resolveBackendUrl = (): string => {
   return raw.startsWith('http://') || raw.startsWith('https://') ? raw : `http://${raw}`;
 };
 
+const resolveRefreshIntervalMs = (): number => {
+  const raw = Constants.expoConfig?.extra?.refreshIntervalMs;
+  const value = typeof raw === 'number' ? raw : typeof raw === 'string' ? Number(raw) : NaN;
+  if (!Number.isFinite(value) || value <= 0) return 60000;
+  return Math.floor(value);
+};
+
 const backendUrl = resolveBackendUrl();
+const refreshIntervalMs = resolveRefreshIntervalMs();
 const sessionKey = 'stp.session';
 const sessionDurationMs = 12 * 60 * 60 * 1000;
 
@@ -168,6 +176,10 @@ const clearSession = () => {
 const App: React.FC = () => {
   const [userToken, setUserToken] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
+  const [lastRefreshAt, setLastRefreshAt] = useState<number | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const refreshInFlightRef = useRef(false);
   const [flights, setFlights] = useState<Flight[]>([]);
   const [invites, setInvites] = useState<GroupInvite[]>([]);
   const [followInviteCode, setFollowInviteCode] = useState('');
@@ -525,7 +537,7 @@ const App: React.FC = () => {
     () => ({ 'Content-Type': 'application/json', ...(userToken ? { Authorization: `Bearer ${userToken}` } : {}) }),
     [userToken]
   );
-  const logout = () => {
+  const logout = useCallback(() => {
     setUserToken(null);
     setUserName(null);
     setUserEmail(null);
@@ -548,8 +560,11 @@ const App: React.FC = () => {
     setFamilyRelationships([]);
     setFellowTravelers([]);
     setActivePage('menu');
+    setLastRefreshAt(null);
+    setIsRefreshing(false);
+    refreshInFlightRef.current = false;
     clearSession();
-  };
+  }, []);
 
   const loadAccountProfile = useCallback(
     (token?: string) =>
@@ -848,33 +863,47 @@ const App: React.FC = () => {
     fetchTrips();
   };
 
+  const refreshAllData = async (tokenOverride?: string) => {
+    const authToken = tokenOverride ?? userToken;
+    if (!authToken || refreshInFlightRef.current) return;
+    refreshInFlightRef.current = true;
+    setIsRefreshing(true);
+    try {
+      const ok = await loadAccountProfile(authToken);
+      if (!ok) return;
+      fetchFlights(authToken);
+      fetchLodgings(authToken);
+      fetchTours(authToken);
+      fetchInvites(authToken);
+      fetchGroups();
+      fetchTrips();
+      fetchTraits();
+      fetchTraitProfile();
+      fetchItineraries(authToken);
+      loadFamilyRelationships(authToken);
+      loadFellowTravelers(authToken);
+      try {
+        const trips = await fetchFollowedTripsApi(backendUrl, { Authorization: `Bearer ${authToken}` });
+        setFollowedTrips(trips);
+      } catch (err) {
+        if ((err as any).code === 'UNAUTHORIZED') {
+          logout();
+          return;
+        }
+        setFollowedTrips([]);
+      }
+    } finally {
+      refreshInFlightRef.current = false;
+      setIsRefreshing(false);
+      setLastRefreshAt(Date.now());
+    }
+  };
+
   useEffect(() => {
     if (userToken) {
-      (async () => {
-        const ok = await loadAccountProfile();
-        if (!ok) return;
-        fetchFlights();
-        fetchLodgings();
-        fetchTours();
-        fetchInvites();
-        fetchGroups();
-        fetchTrips();
-        try {
-          const trips = await fetchFollowedTripsApi(backendUrl, headers);
-          setFollowedTrips(trips);
-        } catch (err) {
-          if ((err as any).code === 'UNAUTHORIZED') {
-            logout();
-            return;
-          }
-          setFollowedTrips([]);
-        }
-        fetchTraits();
-        fetchTraitProfile();
-        fetchItineraries();
-      })();
+      refreshAllData();
     }
-  }, [headers, loadAccountProfile, userToken]);
+  }, [userToken]);
 
   useEffect(() => {
     if (userToken) return;
@@ -916,6 +945,26 @@ const App: React.FC = () => {
     if (!userToken) return;
     saveSession(userToken, userName ?? 'Traveler', activePage, userEmail, activeTripId);
   }, [userToken, userName, userEmail, activePage, activeTripId]);
+
+  useEffect(() => {
+    if (!userToken) return;
+    if (!Number.isFinite(refreshIntervalMs) || refreshIntervalMs <= 0) return;
+    const now = Date.now();
+    const last = lastRefreshAt ?? now;
+    const delay = Math.max(0, refreshIntervalMs - (now - last));
+    if (refreshTimerRef.current) {
+      clearTimeout(refreshTimerRef.current);
+    }
+    refreshTimerRef.current = setTimeout(() => {
+      refreshAllData();
+    }, delay);
+    return () => {
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
+        refreshTimerRef.current = null;
+      }
+    };
+  }, [activeTripId, lastRefreshAt, userToken, refreshIntervalMs]);
 
   useEffect(() => {
     if (userToken) {
@@ -1111,6 +1160,13 @@ const App: React.FC = () => {
             ) : null}
             <View style={styles.topRight}>
               <Text style={styles.bodyText}>{userName ?? 'Traveler'}</Text>
+              <TouchableOpacity
+                style={[styles.button, styles.smallButton, isRefreshing && styles.disabledButton]}
+                onPress={() => refreshAllData()}
+                disabled={isRefreshing}
+              >
+                <Text style={styles.buttonText}>{isRefreshing ? 'Refreshing...' : 'Refresh'}</Text>
+              </TouchableOpacity>
               <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={logout}>
                 <Text style={styles.buttonText}>Logout</Text>
               </TouchableOpacity>
