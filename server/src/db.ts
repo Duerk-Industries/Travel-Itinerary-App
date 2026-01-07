@@ -3,6 +3,7 @@ import { Pool } from 'pg';
 import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
 import { Flight, Group, GroupMember, Trait, Trip, User, WebUser, Lodging, Tour, Itinerary, ItineraryDetail } from './types';
 import fetch from 'node-fetch';
+import { logError } from './logger';
 
 
 let pool: Pool | null = null;
@@ -2149,7 +2150,7 @@ export const refreshAirportsDaily = async (): Promise<void> => {
     const res = await fetch(url);
     data = (await res.json()) as any[];
   } catch (err) {
-    console.error('Failed to download airports dataset', err);
+    logError('Failed to download airports dataset', err);
     return;
   }
 
@@ -2194,7 +2195,7 @@ export const refreshAirportsDaily = async (): Promise<void> => {
     await client.query('COMMIT');
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error('Failed to refresh airports', err);
+    logError('Failed to refresh airports', err);
   } finally {
     client.release();
   }

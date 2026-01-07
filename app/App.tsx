@@ -621,7 +621,7 @@ const App: React.FC = () => {
         lastName: data.user.lastName ?? '',
         email,
       });
-      saveSession(data.token, name, 'menu', email, activeTripId);
+      saveSession(data.token, name, 'overview', email, activeTripId);
       fetchFlights(data.token);
       fetchLodgings(data.token);
       fetchTours(data.token);
@@ -629,7 +629,7 @@ const App: React.FC = () => {
       loadAccountProfile(data.token);
       loadFamilyRelationships(data.token);
       loadFellowTravelers(data.token);
-      setActivePage('menu');
+      setActivePage('overview');
     } catch (err) {
       alert((err as Error).message || 'Login failed');
     }
@@ -667,7 +667,7 @@ const App: React.FC = () => {
         lastName: data.user.lastName ?? '',
         email,
       });
-      saveSession(data.token, name, 'menu', email, activeTripId);
+      saveSession(data.token, name, 'create-trip', email, activeTripId);
       fetchFlights(data.token);
       fetchLodgings(data.token);
       fetchTours(data.token);
@@ -675,7 +675,7 @@ const App: React.FC = () => {
       loadAccountProfile(data.token);
       loadFamilyRelationships(data.token);
       loadFellowTravelers(data.token);
-      setActivePage('menu');
+      setActivePage('create-trip');
     } catch (err) {
       alert((err as Error).message || 'Registration failed');
     }

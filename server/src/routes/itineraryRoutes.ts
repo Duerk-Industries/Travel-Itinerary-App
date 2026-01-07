@@ -3,6 +3,7 @@ import bodyParser from 'body-parser';
 import { authenticate } from '../auth';
 import fetch from 'node-fetch';
 import { listTraitsForGroupTrip } from '../db';
+import { logError } from '../logger';
 
 type ChatCompletionResponse = {
   choices?: Array<{
@@ -122,7 +123,7 @@ router.post('/', async (req, res) => {
 
     if (!aiRes.ok) {
       const text = await aiRes.text();
-      console.error('[itinerary] OpenAI API error', aiRes.status, text);
+      logError(`[itinerary] OpenAI API error ${aiRes.status}`, text);
       res.status(500).json({ error: 'Failed to generate itinerary', detail: text });
       return;
     }
@@ -136,7 +137,7 @@ router.post('/', async (req, res) => {
 
     res.json({ plan: content });
   } catch (err) {
-    console.error('[itinerary] Unexpected error', err);
+    logError('[itinerary] Unexpected error', err);
     res.status(500).json({ error: 'Failed to generate itinerary', detail: (err as Error).message });
   }
 });
