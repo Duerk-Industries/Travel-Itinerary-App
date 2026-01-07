@@ -54,11 +54,21 @@ app.use((req, res, next) => {
 });
 
 const publicDir = path.join(__dirname, '..', 'public');
-app.use(express.static(publicDir));
+const loginPath = path.join(publicDir, 'login.html');
+const webIndexPath = path.join(publicDir, 'index.html');
+const hasWebApp = fs.existsSync(webIndexPath);
 
-app.get('/', (_req, res) => {
-  res.sendFile(path.join(publicDir, 'login.html'));
+app.get('/login', (_req, res) => {
+  res.sendFile(loginPath);
 });
+
+if (!hasWebApp) {
+  app.get('/', (_req, res) => {
+    res.sendFile(loginPath);
+  });
+}
+
+app.use(express.static(publicDir));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/web-auth', webAuthRoutes);
@@ -71,5 +81,18 @@ app.use('/api/traits', traitRoutes);
 app.use('/api/lodgings', lodgingRoutes);
 app.use('/api/tours', tourRoutes);
 app.use('/api/account', accountRoutes);
+
+if (hasWebApp) {
+  app.get(['/app', '/app/*', '/'], (_req, res) => {
+    res.sendFile(webIndexPath);
+  });
+  app.get('*', (req, res) => {
+    if (req.path.startsWith('/api') || req.path === '/login') {
+      res.status(404).end();
+      return;
+    }
+    res.sendFile(webIndexPath);
+  });
+}
 
 export default app;

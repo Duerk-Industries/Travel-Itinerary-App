@@ -118,7 +118,12 @@ type Page =
 const resolveBackendUrl = (): string => {
   const raw = Constants.expoConfig?.extra?.backendUrl ?? 'http://localhost:4000';
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    const origin = window.location.origin;
     const host = window.location.hostname;
+    // On web, prefer same-origin to avoid mixed-content/CORS when served behind HTTPS/proxy.
+    if (origin.startsWith('http')) {
+      return origin;
+    }
     if (host === 'localhost' || host === '127.0.0.1' || host === '::1') {
       return `http://${host}:4000`;
     }
