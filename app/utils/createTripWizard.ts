@@ -7,6 +7,10 @@ export type TripDetails = {
 export type TripDates = {
   startDate: string;
   endDate: string;
+  startMonth: string;
+  startYear: string;
+  durationDays: string;
+  mode: 'range' | 'month';
 };
 
 export type ParticipantInput = {
@@ -36,15 +40,29 @@ export const validateTripDetails = (details: TripDetails): string | null => {
 };
 
 export const validateTripDates = (dates: TripDates): string | null => {
-  const { startDate, endDate } = dates;
-  if (startDate && endDate) {
+  if (dates.mode === 'range') {
+    const { startDate, endDate } = dates;
+    if (!startDate && !endDate) return null;
+    if (!startDate || !endDate) return 'Enter both a start and end date.';
     const start = new Date(startDate);
     const end = new Date(endDate);
     if (Number.isNaN(start.valueOf()) || Number.isNaN(end.valueOf())) {
       return 'Invalid start or end date.';
     }
     if (end < start) return 'End date cannot be before start date.';
+    return null;
   }
+  const { startMonth, startYear, durationDays } = dates;
+  if (!startMonth && !startYear && !durationDays) return null;
+  if (!startMonth || !startYear || !durationDays) {
+    return 'Enter month, year, and number of days.';
+  }
+  const monthNum = Number(startMonth);
+  const yearNum = Number(startYear);
+  const daysNum = Number(durationDays);
+  if (!Number.isFinite(monthNum) || monthNum < 1 || monthNum > 12) return 'Enter a valid month (1-12).';
+  if (!Number.isFinite(yearNum) || yearNum < 1900) return 'Enter a valid year.';
+  if (!Number.isFinite(daysNum) || daysNum <= 0) return 'Enter a valid number of days.';
   return null;
 };
 

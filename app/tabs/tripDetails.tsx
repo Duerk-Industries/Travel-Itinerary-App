@@ -2,6 +2,7 @@ import React from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { formatDateLong } from '../utils/formatDateLong';
 import { renderRichTextBlocks } from '../utils/richText';
+import { formatMonthYear } from '../utils/tripDates';
 
 type Trip = {
   id: string;
@@ -11,6 +12,9 @@ type Trip = {
   destination?: string | null;
   startDate?: string | null;
   endDate?: string | null;
+  startMonth?: number | null;
+  startYear?: number | null;
+  durationDays?: number | null;
   createdAt: string;
 };
 
@@ -46,6 +50,7 @@ const TripDetailsTab: React.FC<TripDetailsTabProps> = ({ trip, group, styles, on
   const dateRange = trip.startDate || trip.endDate
     ? `${trip.startDate ? formatDateLong(trip.startDate) : 'Start'} - ${trip.endDate ? formatDateLong(trip.endDate) : 'End'}`
     : null;
+  const monthLabel = formatMonthYear(trip.startMonth ?? null, trip.startYear ?? null);
   const pendingInvites = group?.invites ?? [];
   const members = group?.members ?? [];
 
@@ -61,6 +66,11 @@ const TripDetailsTab: React.FC<TripDetailsTabProps> = ({ trip, group, styles, on
       <Text style={styles.helperText}>Created: {formatDateLong(trip.createdAt)}</Text>
       {trip.destination ? <Text style={styles.helperText}>Destination: {trip.destination}</Text> : null}
       {dateRange ? <Text style={styles.helperText}>Dates: {dateRange}</Text> : null}
+      {!dateRange && monthLabel && trip.durationDays ? (
+        <Text style={styles.helperText}>
+          Dates: {monthLabel} · {trip.durationDays} day(s)
+        </Text>
+      ) : null}
       {trip.description ? (
         <View style={{ marginTop: 8 }}>
           {renderRichTextBlocks(trip.description, {

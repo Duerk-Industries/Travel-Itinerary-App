@@ -7,6 +7,9 @@ module.exports = {
   transform: {
     '^.+\\.(ts|tsx)$': 'ts-jest',
   },
+  moduleNameMapper: {
+    '^react-native$': '<rootDir>/tests/__mocks__/react-native.ts',
+  },
   globals: {
     'ts-jest': {
       tsconfig: './tsconfig.json',

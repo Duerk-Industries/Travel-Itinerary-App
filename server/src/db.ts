@@ -170,6 +170,9 @@ export const initDb = async (): Promise<void> => {
       destination TEXT,
       start_date DATE,
       end_date DATE,
+      start_month INTEGER,
+      start_year INTEGER,
+      duration_days INTEGER,
       created_at TIMESTAMP DEFAULT NOW()
     );
   `);
@@ -177,6 +180,9 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS destination TEXT;`);
   await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS start_date DATE;`);
   await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS end_date DATE;`);
+  await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS start_month INTEGER;`);
+  await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS start_year INTEGER;`);
+  await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS duration_days INTEGER;`);
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS flights (
@@ -851,7 +857,16 @@ export const ensureUserInTrip = async (tripId: string, userId: string): Promise<
 export const updateTripDetails = async (
   userId: string,
   tripId: string,
-  updates: { description?: string | null; destination?: string | null; startDate?: string | null; endDate?: string | null }
+  updates: {
+    description?: string | null;
+    destination?: string | null;
+    startDate?: string | null;
+    endDate?: string | null;
+    startMonth?: number | null;
+    startYear?: number | null;
+    durationDays?: number | null;
+    dateMode?: 'range' | 'month';
+  }
 ): Promise<Trip> => {
   const p = getPool();
   const membership = await ensureUserInTrip(tripId, userId);
@@ -861,8 +876,11 @@ export const updateTripDetails = async (
     `UPDATE trips
      SET description = COALESCE($1, description),
          destination = COALESCE($2, destination),
-         start_date = COALESCE($3::date, start_date),
-         end_date = COALESCE($4::date, end_date)
+         start_date = CASE WHEN $6 = 'range' THEN $3::date WHEN $6 = 'month' THEN NULL ELSE start_date END,
+         end_date = CASE WHEN $6 = 'range' THEN $4::date WHEN $6 = 'month' THEN NULL ELSE end_date END,
+         start_month = CASE WHEN $6 = 'month' THEN $7::int WHEN $6 = 'range' THEN NULL ELSE start_month END,
+         start_year = CASE WHEN $6 = 'month' THEN $8::int WHEN $6 = 'range' THEN NULL ELSE start_year END,
+         duration_days = CASE WHEN $6 = 'month' THEN $9::int WHEN $6 = 'range' THEN NULL ELSE duration_days END
      WHERE id = $5
      RETURNING id,
        group_id as "groupId",
@@ -871,6 +889,9 @@ export const updateTripDetails = async (
        destination,
        start_date as "startDate",
        end_date as "endDate",
+       start_month as "startMonth",
+       start_year as "startYear",
+       duration_days as "durationDays",
        created_at as "createdAt"`,
     [
       updates.description ?? null,
@@ -878,6 +899,10 @@ export const updateTripDetails = async (
       updates.startDate ?? null,
       updates.endDate ?? null,
       tripId,
+      updates.dateMode ?? null,
+      updates.startMonth ?? null,
+      updates.startYear ?? null,
+      updates.durationDays ?? null,
     ]
   );
   if (!rows.length) throw new Error('Trip not found');
@@ -1626,13 +1651,16 @@ export const listTrips = async (userId: string): Promise<Array<Trip & { groupNam
   const p = getPool();
   if (process.env.USE_IN_MEMORY_DB === '1') {
     const { rows } = await p.query(
-      `SELECT t.id,
+       `SELECT t.id,
               t.group_id as "groupId",
               t.name,
               t.description,
               t.destination,
               t.start_date as "startDate",
               t.end_date as "endDate",
+              t.start_month as "startMonth",
+              t.start_year as "startYear",
+              t.duration_days as "durationDays",
               t.created_at as "createdAt",
               g.name as "groupName"
        FROM trips t
@@ -1651,6 +1679,9 @@ export const listTrips = async (userId: string): Promise<Array<Trip & { groupNam
             t.destination,
             t.start_date as "startDate",
             t.end_date as "endDate",
+            t.start_month as "startMonth",
+            t.start_year as "startYear",
+            t.duration_days as "durationDays",
             t.created_at as "createdAt",
             g.name as "groupName"
      FROM trips t
@@ -1668,7 +1699,15 @@ export const createTrip = async (
   userId: string,
   groupId: string,
   name: string,
-  details?: { description?: string | null; destination?: string | null; startDate?: string | null; endDate?: string | null }
+  details?: {
+    description?: string | null;
+    destination?: string | null;
+    startDate?: string | null;
+    endDate?: string | null;
+    startMonth?: number | null;
+    startYear?: number | null;
+    durationDays?: number | null;
+  }
 ): Promise<Trip> => {
   const p = getPool();
   const membership = await p.query(
@@ -1679,8 +1718,8 @@ export const createTrip = async (
 
   const id = randomUUID();
   const { rows } = await p.query<Trip>(
-    `INSERT INTO trips (id, group_id, name, description, destination, start_date, end_date)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `INSERT INTO trips (id, group_id, name, description, destination, start_date, end_date, start_month, start_year, duration_days)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
      RETURNING id,
                group_id as "groupId",
                name,
@@ -1688,6 +1727,9 @@ export const createTrip = async (
                destination,
                start_date as "startDate",
                end_date as "endDate",
+               start_month as "startMonth",
+               start_year as "startYear",
+               duration_days as "durationDays",
                created_at as "createdAt"`,
     [
       id,
@@ -1697,6 +1739,9 @@ export const createTrip = async (
       details?.destination ?? null,
       details?.startDate ?? null,
       details?.endDate ?? null,
+      details?.startMonth ?? null,
+      details?.startYear ?? null,
+      details?.durationDays ?? null,
     ]
   );
   return rows[0];
@@ -1750,6 +1795,9 @@ export const updateTripGroup = async (userId: string, tripId: string, newGroupId
        destination,
        start_date as "startDate",
        end_date as "endDate",
+       start_month as "startMonth",
+       start_year as "startYear",
+       duration_days as "durationDays",
        created_at as "createdAt",
        (SELECT name FROM groups WHERE id = $1) as "groupName"`,
     [newGroupId, tripId]
@@ -1831,6 +1879,9 @@ export const createTripWithGroupAndMembers = async (payload: {
   destination?: string | null;
   startDate?: string | null;
   endDate?: string | null;
+  startMonth?: number | null;
+  startYear?: number | null;
+  durationDays?: number | null;
   members: Array<{ email?: string; guestName?: string }>;
 }): Promise<{ trip: Trip; groupId: string; invites: { id: string; email: string }[] }> => {
   const p = getPool();
@@ -1887,8 +1938,8 @@ export const createTripWithGroupAndMembers = async (payload: {
 
     const tripId = randomUUID();
     const { rows } = await client.query<Trip>(
-      `INSERT INTO trips (id, group_id, name, description, destination, start_date, end_date)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO trips (id, group_id, name, description, destination, start_date, end_date, start_month, start_year, duration_days)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING id,
                  group_id as "groupId",
                  name,
@@ -1896,6 +1947,9 @@ export const createTripWithGroupAndMembers = async (payload: {
                  destination,
                  start_date as "startDate",
                  end_date as "endDate",
+                 start_month as "startMonth",
+                 start_year as "startYear",
+                 duration_days as "durationDays",
                  created_at as "createdAt"`,
       [
         tripId,
@@ -1905,6 +1959,9 @@ export const createTripWithGroupAndMembers = async (payload: {
         payload.destination ?? null,
         payload.startDate ?? null,
         payload.endDate ?? null,
+        payload.startMonth ?? null,
+        payload.startYear ?? null,
+        payload.durationDays ?? null,
       ]
     );
 
