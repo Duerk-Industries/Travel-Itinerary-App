@@ -22,3 +22,4 @@ logs
 .gradle
 patches
 build
+.gradle/8.14.3/fileHashes/fileHashes.lock
