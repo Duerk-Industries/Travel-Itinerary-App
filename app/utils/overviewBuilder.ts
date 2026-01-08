@@ -1,3 +1,5 @@
+import { MapApp, buildMapUrl } from './mapLinks';
+
 type FlightLike = {
   id: string;
   departure_date?: string;
@@ -63,6 +65,8 @@ type ItineraryDetail = {
   activity: string;
   cost?: number | null;
 };
+
+export type DetailItem = { label: string; value: string; onPress?: () => void; linkUrl?: string | null };
 
 export type OverviewRow = {
   dayLabel: string;
@@ -133,8 +137,8 @@ export const formatFlightSummary = (flight: FlightLike): string => {
   return `${carrier}${flightNum} from ${depCode} to ${arrCode} at ${depTime} - ${arrTime}`;
 };
 
-export const formatFlightDetails = (flight: FlightLike): Array<{ label: string; value: string }> => {
-  const details: Array<{ label: string; value: string }> = [];
+export const formatFlightDetails = (flight: FlightLike): DetailItem[] => {
+  const details: DetailItem[] = [];
   details.push({ label: 'Carrier', value: flight.carrier || 'N/A' });
   details.push({ label: 'Flight Number', value: flight.flight_number || flight.flightNumber || 'N/A' });
   details.push({ label: 'Departure', value: flight.departure_airport_code || flight.departureAirportCode || 'N/A' });
@@ -162,17 +166,21 @@ export const formatFlightDetails = (flight: FlightLike): Array<{ label: string; 
 };
 
 export const formatLodgingSummary = (lodging: LodgingLike): string => {
+  if (lodging.checkInDate) return `${lodging.name} at ${lodging.checkInDate}`;
+  if (lodging.checkOutDate) return `${lodging.name} at ${lodging.checkOutDate}`;
   return lodging.name;
 };
 
-export const formatLodgingDetails = (lodging: LodgingLike): Array<{ label: string; value: string }> => {
+export const formatLodgingDetails = (lodging: LodgingLike, mapApp: MapApp = 'google'): DetailItem[] => {
+  const address = lodging.address?.trim() ?? '';
+  const addressLink = address ? buildMapUrl(address, mapApp) : null;
   return [
     { label: 'Name', value: lodging.name },
     { label: 'Check-in', value: formatFriendlyDate(lodging.checkInDate) || lodging.checkInDate || 'N/A' },
     { label: 'Check-out', value: formatFriendlyDate(lodging.checkOutDate) || lodging.checkOutDate || 'N/A' },
     { label: 'Rooms', value: lodging.rooms || 'N/A' },
     { label: 'Refund By', value: formatFriendlyDate(lodging.refundBy) || lodging.refundBy || 'N/A' },
-    { label: 'Address', value: lodging.address || 'N/A' },
+    { label: 'Address', value: address || 'N/A', linkUrl: addressLink ?? undefined },
     { label: 'Total Cost', value: lodging.totalCost ? `$${lodging.totalCost}` : 'N/A' },
     { label: 'Cost Per Night', value: lodging.costPerNight ? `$${lodging.costPerNight}` : 'N/A' },
   ];
@@ -180,12 +188,11 @@ export const formatLodgingDetails = (lodging: LodgingLike): Array<{ label: strin
 
 export const formatTourSummary = (tour: TourLike): string => {
   const location = tour.startLocation || 'Location TBD';
-  const time = tour.startTime || '';
-  const timePart = time ? ` • ${time}` : '';
-  return `${tour.name} @ ${location}${timePart}`;
+  const time = tour.startTime ? ` at ${tour.startTime}` : '';
+  return time ? `${tour.name}${time} at ${location}` : `${tour.name} at ${location}`;
 };
 
-export const formatTourDetails = (tour: TourLike): Array<{ label: string; value: string }> => {
+export const formatTourDetails = (tour: TourLike): DetailItem[] => {
   return [
     { label: 'Name', value: tour.name },
     { label: 'Date', value: formatFriendlyDate(tour.date, tour.startTime) || tour.date || 'N/A' },

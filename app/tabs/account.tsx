@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { type MapApp, isMapApp, mapAppOptions } from '../utils/mapLinks';
 
 type Setter<T> = React.Dispatch<React.SetStateAction<T>>;
 
@@ -7,6 +8,7 @@ export interface AccountProfile {
   firstName: string;
   lastName: string;
   email: string;
+  mapPreference?: MapApp;
 }
 
 export interface FellowTraveler {
@@ -28,6 +30,7 @@ interface FetchAccountProfileParams {
   token?: string | null;
   logout: () => void;
   setAccountProfile: Setter<AccountProfile>;
+  setMapPreference?: (pref: MapApp) => void;
   setUserName: Setter<string | null>;
   setUserEmail: Setter<string | null>;
 }
@@ -37,6 +40,7 @@ export const fetchAccountProfile = async ({
   token,
   logout,
   setAccountProfile,
+  setMapPreference,
   setUserName,
   setUserEmail,
 }: FetchAccountProfileParams): Promise<boolean> => {
@@ -52,11 +56,14 @@ export const fetchAccountProfile = async ({
     if (!res.ok) return false;
     const data = await res.json();
     const fullName = `${data.firstName ?? ''} ${data.lastName ?? ''}`.trim() || 'Traveler';
-    setAccountProfile({
+    const mapPreference = isMapApp(data.mapPreference) ? data.mapPreference : undefined;
+    if (mapPreference && setMapPreference) setMapPreference(mapPreference);
+    setAccountProfile((prev) => ({
       firstName: data.firstName ?? '',
       lastName: data.lastName ?? '',
       email: data.email ?? '',
-    });
+      mapPreference: mapPreference ?? prev.mapPreference ?? 'google',
+    }));
     setUserName(fullName);
     setUserEmail(data.email ?? null);
     return true;
@@ -116,6 +123,8 @@ interface AccountTabProps {
   setUserToken: Setter<string | null>;
   setUserName: Setter<string | null>;
   setUserEmail: Setter<string | null>;
+  mapApp: MapApp;
+  onChangeMapApp: (pref: MapApp) => void;
   saveSession: (token: string, name: string, page?: string, email?: string | null) => void;
   headers: Headers;
   jsonHeaders: Headers;
@@ -152,6 +161,8 @@ const AccountTab: React.FC<AccountTabProps> = ({
   setUserToken,
   setUserName,
   setUserEmail,
+  mapApp,
+  onChangeMapApp,
   saveSession,
   headers,
   jsonHeaders,
@@ -175,7 +186,7 @@ const AccountTab: React.FC<AccountTabProps> = ({
     const res = await fetch(`${backendUrl}/api/account/profile`, {
       method: 'PATCH',
       headers: jsonHeaders,
-      body: JSON.stringify(accountProfile),
+      body: JSON.stringify({ ...accountProfile, mapPreference: accountProfile.mapPreference ?? mapApp }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
@@ -183,6 +194,10 @@ const AccountTab: React.FC<AccountTabProps> = ({
       return;
     }
     const updatedUser = data.user ?? accountProfile;
+    const nextMapPreference = isMapApp(updatedUser.mapPreference)
+      ? updatedUser.mapPreference
+      : accountProfile.mapPreference ?? mapApp;
+    onChangeMapApp(nextMapPreference);
     const fullName = `${updatedUser.firstName ?? ''} ${updatedUser.lastName ?? ''}`.trim() || 'Traveler';
     if (data.token) {
       setUserToken(data.token);
@@ -194,6 +209,7 @@ const AccountTab: React.FC<AccountTabProps> = ({
       firstName: updatedUser.firstName ?? '',
       lastName: updatedUser.lastName ?? '',
       email: updatedUser.email ?? '',
+      mapPreference: nextMapPreference,
     });
     setAccountMessage('Profile updated');
   };
@@ -401,6 +417,21 @@ const AccountTab: React.FC<AccountTabProps> = ({
         value={accountProfile.email}
         onChangeText={(text) => setAccountProfile((p) => ({ ...p, email: text }))}
       />
+      <Text style={styles.modalLabel}>Preferred maps app</Text>
+      <View style={[styles.row, { flexWrap: 'wrap' }]}>
+        {mapAppOptions.map((opt) => (
+          <TouchableOpacity
+            key={opt.key}
+            style={[styles.button, styles.smallButton, mapApp === opt.key && styles.toggleActive, { marginRight: 8, marginTop: 4 }]}
+            onPress={() => {
+              onChangeMapApp(opt.key);
+              setAccountProfile((p) => ({ ...p, mapPreference: opt.key }));
+            }}
+          >
+            <Text style={styles.buttonText}>{opt.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
       <TouchableOpacity style={styles.button} onPress={updateAccountProfile}>
         <Text style={styles.buttonText}>Save Profile</Text>
       </TouchableOpacity>

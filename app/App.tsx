@@ -38,6 +38,7 @@ import {
   toLodgingDraft,
 } from './tabs/lodging';
 import { InvitePayload } from './utils/inviteCodes';
+import { type MapApp, buildMapUrl, loadStoredMapPreference, persistMapPreference } from './utils/mapLinks';
 
 type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
 let NativeDateTimePicker: NativeDateTimePickerType | null = null;
@@ -273,7 +274,8 @@ const App: React.FC = () => {
     password: '',
     passwordConfirm: '',
   });
-  const [accountProfile, setAccountProfile] = useState({ firstName: '', lastName: '', email: '' });
+  const [mapApp, setMapApp] = useState<MapApp>(loadStoredMapPreference());
+  const [accountProfile, setAccountProfile] = useState({ firstName: '', lastName: '', email: '', mapPreference: mapApp });
   const [familyRelationships, setFamilyRelationships] = useState<any[]>([]);
   const [fellowTravelers, setFellowTravelers] = useState<FellowTraveler[]>([]);
   const [showRelationshipDropdown, setShowRelationshipDropdown] = useState(false);
@@ -305,9 +307,18 @@ const App: React.FC = () => {
 
   const overallCost = useMemo(() => flightsTotal + lodgingTotal + toursTotal, [flightsTotal, lodgingTotal, toursTotal]);
 
+  const updateMapPreference = useCallback(
+    (pref: MapApp) => {
+      setMapApp(pref);
+      persistMapPreference(pref);
+      setAccountProfile((prev) => ({ ...prev, mapPreference: pref }));
+    },
+    [setAccountProfile]
+  );
+
   const openMaps = (address: string) => {
-    if (!address) return;
-    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+    const url = buildMapUrl(address, mapApp);
+    if (!url) return;
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       window.open(url, '_blank');
     } else {
@@ -586,7 +597,7 @@ const App: React.FC = () => {
     setSelectedTraitNames(new Set());
     setTraitAge('');
     setTraitGender('prefer-not');
-    setAccountProfile({ firstName: '', lastName: '', email: '' });
+    setAccountProfile({ firstName: '', lastName: '', email: '', mapPreference: mapApp });
     setFamilyRelationships([]);
     setFellowTravelers([]);
     setActivePage('menu');
@@ -603,10 +614,11 @@ const App: React.FC = () => {
         token: token ?? userToken,
         logout,
         setAccountProfile,
+        setMapPreference: updateMapPreference,
         setUserName,
         setUserEmail,
       }),
-    [backendUrl, logout, setAccountProfile, setUserEmail, setUserName, userToken]
+    [backendUrl, logout, setAccountProfile, setUserEmail, setUserName, updateMapPreference, userToken]
   );
 
   const loadFamilyRelationships = useCallback(
@@ -1408,6 +1420,8 @@ const App: React.FC = () => {
               setUserToken={setUserToken}
               setUserName={setUserName}
               setUserEmail={setUserEmail}
+              mapApp={mapApp}
+              onChangeMapApp={updateMapPreference}
               saveSession={saveSession}
               headers={headers}
               jsonHeaders={jsonHeaders}
@@ -2240,6 +2254,8 @@ const App: React.FC = () => {
               carRentals={carRentals}
               defaultPayerId={defaultPayerId}
               styles={styles}
+              mapApp={mapApp}
+              onOpenAddress={openMaps}
               onRefreshTrips={fetchTrips}
               onRefreshGroups={fetchGroups}
               onRefreshFlights={fetchFlights}

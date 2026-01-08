@@ -317,8 +317,18 @@ router.delete('/trips/:tripId/members/:memberId', async (req, res) => {
     return;
   }
   try {
-    await removeGroupMember(userId, membership.groupId, req.params.memberId);
-    res.status(204).send();
+    try {
+      await removeGroupMember(userId, membership.groupId, req.params.memberId);
+      res.status(204).send();
+      return;
+    } catch (err) {
+      if ((err as Error).message === 'Member not found') {
+        await removeGroupInvite(userId, req.params.memberId);
+        res.status(204).send();
+        return;
+      }
+      throw err;
+    }
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });
   }
@@ -418,6 +428,11 @@ groupsRouter.delete('/:groupId/members/:memberId', async (req, res) => {
     await removeGroupMember(user.userId, req.params.groupId, req.params.memberId);
     res.status(204).send();
   } catch (err) {
+    if ((err as Error).message === 'Member not found') {
+      await removeGroupInvite(user.userId, req.params.memberId);
+      res.status(204).send();
+      return;
+    }
     res.status(400).json({ error: (err as Error).message });
   }
 });

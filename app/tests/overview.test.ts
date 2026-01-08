@@ -5,6 +5,11 @@ import {
   formatLodgingSummary,
   formatTourSummary,
 } from '../utils/overviewBuilder';
+import {
+  buildFlightDraftFromRow,
+  buildRentalDraftFromRow,
+  buildTourDraftFromRow,
+} from '../utils/overviewEditing';
 
 describe('Overview helpers', () => {
   test('formats flight summary', () => {
@@ -39,6 +44,59 @@ describe('Overview helpers', () => {
       startLocation: 'Downtown',
     });
     expect(summary).toBe('City Tour at 10:00 at Downtown');
+  });
+
+  test('builds editing drafts from rows', () => {
+    const flight = {
+      id: 'f2',
+      passenger_name: 'Claire',
+      departure_date: '2026-05-01',
+      departure_airport_code: 'SFO',
+      departure_time: '09:00',
+      arrival_airport_code: 'SEA',
+      arrival_time: '11:00',
+      layover_location: 'PDX',
+      layover_location_code: 'PDX',
+      layover_duration: '1h',
+      cost: 120,
+      carrier: 'Alaska',
+      flight_number: 'AS200',
+      booking_reference: 'REF200',
+    };
+    const flightDraft = buildFlightDraftFromRow(flight as any);
+    expect(flightDraft.carrier).toBe('Alaska');
+    expect(flightDraft.cost).toBe('120');
+    const tour = {
+      id: 'tour-1',
+      date: '2026-05-02',
+      name: 'Harbor Cruise',
+      startLocation: 'Pier 55',
+      startTime: '14:00',
+      duration: '2h',
+      cost: '80',
+      freeCancelBy: '2026-04-30',
+      bookedOn: '2026-04-15',
+      reference: 'HC-01',
+      paidBy: ['payer-1'],
+    };
+    const tourDraft = buildTourDraftFromRow(tour as any);
+    expect(tourDraft.reference).toBe('HC-01');
+    const rental = {
+      id: 'car-1',
+      pickupLocation: 'Airport',
+      pickupDate: '2026-05-02',
+      dropoffLocation: 'Hotel',
+      dropoffDate: '2026-05-04',
+      reference: 'CR-01',
+      vendor: 'Hertz',
+      prepaid: 'Yes',
+      cost: '200',
+      model: 'Sedan',
+      notes: 'WiFi included',
+      paidBy: ['payer-1'],
+    };
+    const rentalDraft = buildRentalDraftFromRow(rental as any);
+    expect(rentalDraft.vendor).toBe('Hertz');
   });
 
   test('builds rows for each category in order', () => {
@@ -100,7 +158,7 @@ describe('Overview helpers', () => {
       ],
     });
     const types = rows.map((r) => r.type);
-    expect(types).toEqual(['activity', 'flight', 'lodging', 'tour', 'rental', 'rental']);
+    expect(types).toEqual(['activity', 'flight', 'lodging', 'tour', 'rental', 'activity', 'rental']);
   });
 
   test('orders items within a category by time', () => {

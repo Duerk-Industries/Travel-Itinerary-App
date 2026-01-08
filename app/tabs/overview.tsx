@@ -1,14 +1,16 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Linking, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { computeTripDays, validateTripDates } from '../utils/createTripWizard';
 import { renderRichTextBlocks } from '../utils/richText';
 import {
   buildOverviewRows,
+  type DetailItem,
   formatFlightDetails,
   formatLodgingDetails,
   formatTourDetails,
   type OverviewRow,
 } from '../utils/overviewBuilder';
+import { type MapApp } from '../utils/mapLinks';
 import {
   adjustStartDateForEarliest,
   formatMonthYear,
@@ -16,16 +18,21 @@ import {
 } from '../utils/tripDates';
 import { normalizeDateString } from '../utils/normalizeDateString';
 import {
+  buildFlightPayloadForCreate,
   createInitialFlightCreateDraft,
   createFlightForTrip,
   type FlightCreateDraft,
 } from '../tabs/flights';
 import {
+  buildLodgingPayload,
   createInitialLodgingState,
   createLodgingForTrip,
+  saveLodgingApi,
+  toLodgingDraft,
   type LodgingDraft,
 } from '../tabs/lodging';
 import {
+  buildTourPayload,
   createInitialTourState,
   createTourForTrip,
   type TourDraft,
@@ -36,6 +43,11 @@ import {
   type CarRental,
   type CarRentalDraft,
 } from '../tabs/carRentals';
+import {
+  buildFlightDraftFromRow,
+  buildRentalDraftFromRow,
+  buildTourDraftFromRow,
+} from '../utils/overviewEditing';
 
 type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
 let NativeDateTimePicker: NativeDateTimePickerType | null = null;
@@ -138,6 +150,8 @@ type OverviewTabProps = {
   carRentals: CarRental[];
   defaultPayerId: string | null;
   styles: Record<string, any>;
+  mapApp: MapApp;
+  onOpenAddress: (address: string) => void;
   onRefreshTrips: () => void;
   onRefreshGroups: () => void;
   onRefreshFlights: () => void;
@@ -170,6 +184,8 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
   carRentals,
   defaultPayerId,
   styles,
+  mapApp,
+  onOpenAddress,
   onRefreshTrips,
   onRefreshGroups,
   onRefreshFlights,
@@ -202,6 +218,10 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
   const [lodgingDraft, setLodgingDraft] = useState<LodgingDraft>(createInitialLodgingState());
   const [tourDraft, setTourDraft] = useState<TourDraft>(createInitialTourState());
   const [rentalDraft, setRentalDraft] = useState<CarRentalDraft>(createInitialCarRentalDraft());
+  const [editingFlightId, setEditingFlightId] = useState<string | null>(null);
+  const [editingLodgingId, setEditingLodgingId] = useState<string | null>(null);
+  const [editingTourId, setEditingTourId] = useState<string | null>(null);
+  const [editingRentalId, setEditingRentalId] = useState<string | null>(null);
   const autoAdjustedRef = useRef<string | null>(null);
   const [dateField, setDateField] = useState<'start' | 'end' | null>(null);
   const [dateValue, setDateValue] = useState<Date>(new Date());
@@ -241,6 +261,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
     if (!trip) return;
     resetDrafts();
   }, [trip]);
+
 
   useEffect(() => {
     const loadItinerary = async () => {
@@ -417,7 +438,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
   };
 
   const removeTraveler = async (memberId: string) => {
-    if (!group?.id) return;
+    if (!isEditing || !group?.id) return;
     const res = await fetch(`${backendUrl}/api/groups/${group.id}/members/${memberId}`, {
       method: 'DELETE',
       headers,
@@ -455,7 +476,31 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
     onRefreshGroups();
   };
 
-  const saveNewFlight = async () => {
+  const saveFlight = async () => {
+    if (editingFlightId) {
+      if (!trip?.id) {
+        alert('Select an active trip before editing a flight.');
+        return;
+      }
+      const { payload, error } = buildFlightPayloadForCreate(flightDraft, trip.id, defaultPayerId);
+      if (error || !payload) {
+        alert(error || 'Unable to update flight');
+        return;
+      }
+      const res = await fetch(`${backendUrl}/api/flights/${editingFlightId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...headers },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data.error || 'Unable to update flight');
+        return;
+      }
+      closeFlightModal();
+      onRefreshFlights();
+      return;
+    }
     const result = await createFlightForTrip({
       backendUrl,
       headers,
@@ -467,29 +512,66 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       alert(result.error || 'Unable to save flight');
       return;
     }
-    setShowAddFlight(false);
-    setFlightDraft(createInitialFlightCreateDraft());
+    closeFlightModal();
     onRefreshFlights();
   };
 
-  const saveNewLodging = async () => {
+  const saveLodging = async () => {
+    if (!trip?.id) {
+      alert('Select an active trip before saving lodging.');
+      return;
+    }
+    const { payload, error } = buildLodgingPayload(lodgingDraft, trip.id, defaultPayerId);
+    if (error || !payload) {
+      alert(error || 'Unable to save lodging');
+      return;
+    }
+    if (editingLodgingId) {
+      const result = await saveLodgingApi(backendUrl, jsonHeaders, payload, editingLodgingId);
+      if (!result.ok) {
+        alert(result.error || 'Unable to save lodging');
+        return;
+      }
+      closeLodgingModal();
+      onRefreshLodgings();
+      return;
+    }
     const result = await createLodgingForTrip({
       backendUrl,
       jsonHeaders,
       draft: lodgingDraft,
-      activeTripId: trip?.id ?? null,
+      activeTripId: trip.id,
       defaultPayerId,
     });
     if (!result.ok) {
       alert(result.error || 'Unable to save lodging');
       return;
     }
-    setShowAddLodging(false);
-    setLodgingDraft(createInitialLodgingState());
+    closeLodgingModal();
     onRefreshLodgings();
   };
 
-  const saveNewTour = async () => {
+  const saveTour = async () => {
+    if (editingTourId) {
+      const { payload, error } = buildTourPayload(tourDraft, defaultPayerId);
+      if (error || !payload) {
+        alert(error || 'Unable to save tour');
+        return;
+      }
+      const res = await fetch(`${backendUrl}/api/tours/${editingTourId}`, {
+        method: 'PUT',
+        headers: jsonHeaders,
+        body: JSON.stringify({ ...payload, tripId: trip?.id }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data.error || 'Unable to save tour');
+        return;
+      }
+      closeTourModal();
+      onRefreshTours();
+      return;
+    }
     const result = await createTourForTrip({
       backendUrl,
       jsonHeaders,
@@ -501,32 +583,135 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       alert(result.error || 'Unable to save tour');
       return;
     }
-    setShowAddTour(false);
-    setTourDraft(createInitialTourState());
+    closeTourModal();
     onRefreshTours();
   };
 
-  const saveNewRental = () => {
+  const saveRental = () => {
+    if (editingRentalId) {
+      setCarRentals((prev) =>
+        prev.map((item) =>
+          item.id === editingRentalId
+            ? {
+                ...item,
+                ...rentalDraft,
+              }
+            : item
+        )
+      );
+      closeRentalModal();
+      return;
+    }
     const result = buildCarRentalFromDraft(rentalDraft, defaultPayerId);
     if (!result.rental || result.error) {
       alert(result.error || 'Unable to save rental car');
       return;
     }
     onAddCarRental(result.rental);
+    closeRentalModal();
+  };
+
+  const closeFlightModal = () => {
+    setShowAddFlight(false);
+    setEditingFlightId(null);
+    setFlightDraft(createInitialFlightCreateDraft());
+  };
+
+  const closeLodgingModal = () => {
+    setShowAddLodging(false);
+    setEditingLodgingId(null);
+    setLodgingDraft(createInitialLodgingState());
+  };
+
+  const closeTourModal = () => {
+    setShowAddTour(false);
+    setEditingTourId(null);
+    setTourDraft(createInitialTourState());
+  };
+
+  const closeRentalModal = () => {
     setShowAddRental(false);
+    setEditingRentalId(null);
     setRentalDraft(createInitialCarRentalDraft());
   };
 
-  const renderDetailModal = (title: string, items: Array<{ label: string; value: string }>, onClose: () => void) => (
+  useEffect(() => {
+    if (!isEditing) {
+      closeFlightModal();
+      closeLodgingModal();
+      closeTourModal();
+      closeRentalModal();
+    }
+  }, [isEditing]);
+
+  const openFlightEditor = (flight: Flight) => {
+    if (!isEditing) {
+      setSelectedFlight(flight);
+      return;
+    }
+    setEditingFlightId(flight.id);
+    setFlightDraft(buildFlightDraftFromRow(flight));
+    setShowAddFlight(true);
+  };
+
+  const openLodgingEditor = (lodging: Lodging) => {
+    if (!isEditing) {
+      setSelectedLodging(lodging);
+      return;
+    }
+    setEditingLodgingId(lodging.id);
+    setLodgingDraft(toLodgingDraft(lodging, { normalize: normalizeDateString, defaultPayerId }));
+    setShowAddLodging(true);
+  };
+
+  const openTourEditor = (tour: Tour) => {
+    if (!isEditing) {
+      setSelectedTour(tour);
+      return;
+    }
+    setEditingTourId(tour.id);
+    setTourDraft(buildTourDraftFromRow(tour));
+    setShowAddTour(true);
+  };
+
+  const openRentalEditor = (rental: CarRental) => {
+    if (!isEditing) {
+      return;
+    }
+    setEditingRentalId(rental.id);
+    setRentalDraft(buildRentalDraftFromRow(rental));
+    setShowAddRental(true);
+  };
+
+  const openDetailLink = (url?: string | null) => {
+    if (!url) return;
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.open(url, '_blank');
+    } else {
+      Linking.openURL(url);
+    }
+  };
+
+  const renderDetailModal = (title: string, items: DetailItem[], onClose: () => void) => (
     <View style={styles.modalOverlay}>
       <View style={styles.confirmModal}>
         <Text style={styles.sectionTitle}>{title}</Text>
-        {items.map((item) => (
-          <View key={item.label} style={styles.row}>
-            <Text style={styles.headerText}>{item.label}:</Text>
+        {items.map((item) => {
+          const handler = item.onPress ?? (item.linkUrl ? () => openDetailLink(item.linkUrl) : undefined);
+          const content = handler ? (
+            <TouchableOpacity onPress={handler}>
+              <Text style={styles.linkText ?? styles.buttonText}>{item.value}</Text>
+            </TouchableOpacity>
+          ) : (
             <Text style={[styles.bodyText, { marginLeft: 6 }]}>{item.value}</Text>
-          </View>
-        ))}
+          );
+          return (
+            <View key={item.label} style={[styles.row, { alignItems: 'center' }]}>
+              <Text style={styles.headerText}>{item.label}:</Text>
+              <View style={{ marginLeft: 6, flex: 1 }}>{content}</View>
+            </View>
+          );
+        })}
         <TouchableOpacity style={styles.button} onPress={onClose}>
           <Text style={styles.buttonText}>Close</Text>
         </TouchableOpacity>
@@ -722,13 +907,23 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
         ) : null}
       </View>
       <View style={[styles.row, { flexWrap: 'wrap', gap: 8 }]}>
-        {(attendees ?? []).map((m) => (
-          <TouchableOpacity key={m.id} style={[styles.button, styles.smallButton]} onPress={() => removeTraveler(m.id)}>
+        {(attendees ?? []).map((m) => {
+          const label = (
             <Text style={styles.buttonText}>
-              {attendeeLabel(m)} <Text style={styles.removeText}>x</Text>
+              {attendeeLabel(m)}
+              {isEditing ? <Text style={styles.removeText}> x</Text> : null}
             </Text>
-          </TouchableOpacity>
-        ))}
+          );
+          return isEditing ? (
+            <TouchableOpacity key={m.id} style={[styles.button, styles.smallButton]} onPress={() => removeTraveler(m.id)}>
+              {label}
+            </TouchableOpacity>
+          ) : (
+            <View key={m.id} style={[styles.button, styles.smallButton]}>
+              {label}
+            </View>
+          );
+        })}
       </View>
       {isEditing && showAddTraveler ? (
         <View style={{ marginTop: 8 }}>
@@ -774,16 +969,40 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
         <View style={{ marginTop: 12 }}>
           <Text style={styles.headerText}>Add Trip Items</Text>
           <View style={[styles.row, { flexWrap: 'wrap' }]}>
-            <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => setShowAddFlight(true)}>
+            <TouchableOpacity
+              style={[styles.button, styles.smallButton]}
+              onPress={() => {
+                closeFlightModal();
+                setShowAddFlight(true);
+              }}
+            >
               <Text style={styles.buttonText}>Add Flight</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => setShowAddLodging(true)}>
+            <TouchableOpacity
+              style={[styles.button, styles.smallButton]}
+              onPress={() => {
+                closeLodgingModal();
+                setShowAddLodging(true);
+              }}
+            >
               <Text style={styles.buttonText}>Add Lodging</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => setShowAddRental(true)}>
+            <TouchableOpacity
+              style={[styles.button, styles.smallButton]}
+              onPress={() => {
+                closeRentalModal();
+                setShowAddRental(true);
+              }}
+            >
               <Text style={styles.buttonText}>Add Rental Car</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => setShowAddTour(true)}>
+            <TouchableOpacity
+              style={[styles.button, styles.smallButton]}
+              onPress={() => {
+                closeTourModal();
+                setShowAddTour(true);
+              }}
+            >
               <Text style={styles.buttonText}>Add Tour</Text>
             </TouchableOpacity>
           </View>
@@ -823,9 +1042,10 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
                   <Text style={styles.cellText}>{content}</Text>
                 );
               let onPress: (() => void) | undefined;
-              if (row.type === 'flight') onPress = () => setSelectedFlight(row.meta);
-              if (row.type === 'lodging') onPress = () => setSelectedLodging(row.meta);
-              if (row.type === 'tour') onPress = () => setSelectedTour(row.meta);
+              if (row.type === 'flight') onPress = () => openFlightEditor(row.meta as Flight);
+              if (row.type === 'lodging') onPress = () => openLodgingEditor(row.meta as Lodging);
+              if (row.type === 'tour') onPress = () => openTourEditor(row.meta as Tour);
+              if (row.type === 'rental') onPress = () => openRentalEditor(row.meta as CarRental);
               return (
                 <View key={`${row.type}-${row.label}-${idx}`} style={styles.tableRow}>
                   <View style={[styles.cell, dayColStyle]}>{showDay ? <Text style={styles.cellText}>{dayCounter}</Text> : null}</View>
@@ -842,13 +1062,21 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
         ? renderDetailModal('Flight Details', formatFlightDetails(selectedFlight), () => setSelectedFlight(null))
         : null}
       {selectedLodging
-        ? renderDetailModal('Lodging Details', formatLodgingDetails(selectedLodging), () => setSelectedLodging(null))
+        ? renderDetailModal(
+            'Lodging Details',
+            formatLodgingDetails(selectedLodging, mapApp).map((item) =>
+              item.label === 'Address' && selectedLodging.address
+                ? { ...item, onPress: () => onOpenAddress(selectedLodging.address) }
+                : item
+            ),
+            () => setSelectedLodging(null)
+          )
         : null}
       {selectedTour ? renderDetailModal('Tour Details', formatTourDetails(selectedTour), () => setSelectedTour(null)) : null}
       {showAddFlight ? (
         <View style={styles.modalOverlay}>
           <View style={styles.confirmModal}>
-            <Text style={styles.sectionTitle}>Add Flight</Text>
+            <Text style={styles.sectionTitle}>{editingFlightId ? 'Edit Flight' : 'Add Flight'}</Text>
             <ScrollView style={{ maxHeight: 420 }}>
               <Text style={styles.modalLabel}>Passenger</Text>
               <TextInput
@@ -970,10 +1198,10 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
               />
             </ScrollView>
             <View style={styles.row}>
-              <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={() => setShowAddFlight(false)}>
+              <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={closeFlightModal}>
                 <Text style={styles.buttonText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.button} onPress={saveNewFlight}>
+              <TouchableOpacity style={styles.button} onPress={saveFlight}>
                 <Text style={styles.buttonText}>Save</Text>
               </TouchableOpacity>
             </View>
@@ -983,7 +1211,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       {showAddLodging ? (
         <View style={styles.modalOverlay}>
           <View style={styles.confirmModal}>
-            <Text style={styles.sectionTitle}>Add Lodging</Text>
+            <Text style={styles.sectionTitle}>{editingLodgingId ? 'Edit Lodging' : 'Add Lodging'}</Text>
             <ScrollView style={{ maxHeight: 420 }}>
               <Text style={styles.modalLabel}>Name</Text>
               <TextInput
@@ -1067,10 +1295,10 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
               />
             </ScrollView>
             <View style={styles.row}>
-              <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={() => setShowAddLodging(false)}>
+              <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={closeLodgingModal}>
                 <Text style={styles.buttonText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.button} onPress={saveNewLodging}>
+              <TouchableOpacity style={styles.button} onPress={saveLodging}>
                 <Text style={styles.buttonText}>Save</Text>
               </TouchableOpacity>
             </View>
@@ -1080,7 +1308,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       {showAddTour ? (
         <View style={styles.modalOverlay}>
           <View style={styles.confirmModal}>
-            <Text style={styles.sectionTitle}>Add Tour</Text>
+            <Text style={styles.sectionTitle}>{editingTourId ? 'Edit Tour' : 'Add Tour'}</Text>
             <ScrollView style={{ maxHeight: 420 }}>
               <Text style={styles.modalLabel}>Date</Text>
               {Platform.OS === 'web' ? (
@@ -1191,10 +1419,10 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
               />
             </ScrollView>
             <View style={styles.row}>
-              <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={() => setShowAddTour(false)}>
+              <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={closeTourModal}>
                 <Text style={styles.buttonText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.button} onPress={saveNewTour}>
+              <TouchableOpacity style={styles.button} onPress={saveTour}>
                 <Text style={styles.buttonText}>Save</Text>
               </TouchableOpacity>
             </View>
@@ -1204,7 +1432,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       {showAddRental ? (
         <View style={styles.modalOverlay}>
           <View style={styles.confirmModal}>
-            <Text style={styles.sectionTitle}>Add Rental Car</Text>
+            <Text style={styles.sectionTitle}>{editingRentalId ? 'Edit Rental Car' : 'Add Rental Car'}</Text>
             <ScrollView style={{ maxHeight: 420 }}>
               <Text style={styles.modalLabel}>Pickup location</Text>
               <TextInput
@@ -1296,10 +1524,10 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
               />
             </ScrollView>
             <View style={styles.row}>
-              <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={() => setShowAddRental(false)}>
+              <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={closeRentalModal}>
                 <Text style={styles.buttonText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.button} onPress={saveNewRental}>
+              <TouchableOpacity style={styles.button} onPress={saveRental}>
                 <Text style={styles.buttonText}>Save</Text>
               </TouchableOpacity>
             </View>

@@ -1584,7 +1584,7 @@ export const addGroupMember = async (
 };
 
 export const removeGroupMember = async (
-  ownerId: string,
+  requesterId: string,
   groupId: string,
   memberId: string
 ): Promise<void> => {
@@ -1596,16 +1596,67 @@ export const removeGroupMember = async (
       `SELECT owner_id as "ownerId" FROM groups WHERE id = $1`,
       [groupId]
     );
-    if (!groupRows.length || groupRows[0].ownerId !== ownerId) throw new Error('Group not found or not owner');
+    if (!groupRows.length) throw new Error('Group not found');
+
+    const { rowCount: isAuthorized } = await client.query(
+      `SELECT 1 FROM group_members WHERE group_id = $1 AND user_id = $2`,
+      [groupId, requesterId]
+    );
+    if (!isAuthorized) throw new Error('Not authorized to remove members');
 
     const { rows: memberRows } = await client.query(
       `SELECT user_id as "userId" FROM group_members WHERE id = $1 AND group_id = $2`,
       [memberId, groupId]
     );
     if (!memberRows.length) throw new Error('Member not found');
-    if (memberRows[0].userId === ownerId) throw new Error('Owner cannot be removed');
+    if (memberRows[0].userId === groupRows[0].ownerId) throw new Error('Owner cannot be removed');
 
     await client.query(`DELETE FROM group_members WHERE id = $1 AND group_id = $2`, [memberId, groupId]);
+
+    const { rows: remainingMemberRows } = await client.query(
+      `SELECT id FROM group_members WHERE group_id = $1`,
+      [groupId]
+    );
+    const remainingIds = remainingMemberRows.map((r) => r.id);
+    const { rows: tripRows } = await client.query(`SELECT id FROM trips WHERE group_id = $1`, [groupId]);
+    const tripIds = tripRows.map((r) => r.id);
+
+    if (tripIds.length) {
+      const updatePaidByForTable = async (table: 'flights' | 'lodgings' | 'tours') => {
+        await client.query(
+          `
+          UPDATE ${table}
+          SET paid_by = COALESCE(
+            (
+              SELECT jsonb_agg(elem.value) FROM (
+                SELECT value
+                FROM jsonb_array_elements_text(COALESCE(paid_by, '[]'::jsonb)) value
+                WHERE value <> $2
+              ) elem
+            ),
+            '[]'::jsonb
+          )
+          WHERE trip_id = ANY($1::uuid[])
+          `,
+          [tripIds, memberId]
+        );
+        if (remainingIds.length) {
+          await client.query(
+            `
+            UPDATE ${table}
+            SET paid_by = $3::jsonb
+            WHERE trip_id = ANY($1::uuid[])
+              AND jsonb_array_length(COALESCE(paid_by, '[]'::jsonb)) = 0
+            `,
+            [tripIds, memberId, JSON.stringify(remainingIds)]
+          );
+        }
+      };
+      await updatePaidByForTable('flights');
+      await updatePaidByForTable('lodgings');
+      await updatePaidByForTable('tours');
+    }
+
     await client.query('COMMIT');
   } catch (err) {
     await client.query('ROLLBACK');
