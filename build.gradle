@@ -1,0 +1,24 @@
+import javax.inject.Inject
+import org.gradle.api.tasks.TaskAction
+import org.gradle.internal.os.OperatingSystem
+import org.gradle.process.ExecOperations
+
+abstract class BuildWebTask extends DefaultTask {
+    @Inject
+    abstract ExecOperations getExecOps()
+
+    @TaskAction
+    void run() {
+        def appDir = project.file('app')
+        def npxCmd = OperatingSystem.current().isWindows() ? 'npx.cmd' : 'npx'
+        getExecOps().exec { spec ->
+            spec.workingDir(appDir)
+            spec.commandLine(npxCmd, 'expo', 'export', '--platform', 'web', '--output-dir', '../server/public')
+        }
+    }
+}
+
+tasks.register('buildWeb', BuildWebTask) {
+    group = 'build'
+    description = 'Build the Expo web app into server/public.'
+}

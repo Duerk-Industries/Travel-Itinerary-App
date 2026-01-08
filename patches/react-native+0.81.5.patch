@@ -1,0 +1,26 @@
+diff --git a/node_modules/react-native/src/private/components/virtualview/VirtualView.js b/node_modules/react-native/src/private/components/virtualview/VirtualView.js
+new file mode 100644
+index 0000000..a2720f6
+--- /dev/null
++++ b/node_modules/react-native/src/private/components/virtualview/VirtualView.js
+@@ -0,0 +1,20 @@
++'use strict';
++
++const React = require('react');
++const { View } = require('../../../../Libraries/Components/View/View');
++
++const VirtualViewMode = Object.freeze({
++  Unknown: 'unknown',
++  Visible: 'visible',
++  Hidden: 'hidden',
++  Prerender: 'prerender',
++});
++
++const VirtualView = React.forwardRef((props, ref) =>
++  React.createElement(View, { ...props, ref }),
++);
++
++module.exports = {
++  default: VirtualView,
++  VirtualViewMode,
++};

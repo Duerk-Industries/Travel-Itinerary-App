@@ -10,16 +10,28 @@ const config: ExpoConfig = {
   },
   ios: {
     supportsTablet: true,
-    bundleIdentifier: 'com.duerk-industries.travelitineraryplanner',
+    bundleIdentifier: 'com.duerkindustries.travelitineraryplanner',
     infoPlist: {
-      "ITSAppUsesNonExemptEncryption": false
+      "ITSAppUsesNonExemptEncryption": false,
+      // Allow plain HTTP calls to the local backend while developing on LAN.
+      NSAppTransportSecurity: {
+        NSAllowsArbitraryLoads: true,
+        NSExceptionDomains: {
+          '192.168.50.200': {
+            NSIncludesSubdomains: true,
+            NSExceptionAllowsInsecureHTTPLoads: true,
+          },
+        },
+      },
     }
   },
   android: {
-    package: 'com.duerk-industries.travelitineraryplanner'
+    // Android appId must avoid hyphens; use a dot/alpha-only identifier.
+    package: 'com.duerkindustries.travelitineraryplanner'
   },
   extra: {
-    backendUrl: process.env.BACKEND_URL || 'http://localhost:4000',
+    backendUrl: process.env.BACKEND_URL || 'http://192.168.50.200:4000',
+    refreshIntervalMs: Number(process.env.REFRESH_INTERVAL_MS) || 60000,
     eas: {
         projectId: "06966c0b-d878-4346-850c-090c762f1916"
     }

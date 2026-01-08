@@ -251,6 +251,7 @@ describe('Cost report calculations across lodging, tours, and flights', () => {
         carrier: 'AA',
         flightNumber: 'C1',
         bookingReference: 'CRF1',
+        passengerIds: [memberA],
         paidBy: [memberA, memberB],
       })
       .expect(201);
@@ -270,6 +271,7 @@ describe('Cost report calculations across lodging, tours, and flights', () => {
         carrier: 'AA',
         flightNumber: 'C2',
         bookingReference: 'CRF2',
+        passengerIds: [memberB],
         paidBy: [memberB],
       })
       .expect(201);
@@ -289,6 +291,7 @@ describe('Cost report calculations across lodging, tours, and flights', () => {
         carrier: 'AA',
         flightNumber: 'C3',
         bookingReference: 'CRF3',
+        passengerIds: [memberA, memberB],
         paidBy: [memberA, memberB],
       })
       .expect(201);

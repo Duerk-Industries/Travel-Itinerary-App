@@ -116,6 +116,20 @@ export const saveLodgingApi = async (
   return { ok: true };
 };
 
+export const createLodgingForTrip = async (params: {
+  backendUrl: string;
+  jsonHeaders: Record<string, string>;
+  draft: LodgingDraft;
+  activeTripId: string | null;
+  defaultPayerId?: string | null;
+}): Promise<{ ok: boolean; error?: string }> => {
+  const { backendUrl, jsonHeaders, draft, activeTripId, defaultPayerId } = params;
+  if (!activeTripId) return { ok: false, error: 'Select an active trip before adding lodging.' };
+  const { payload, error } = buildLodgingPayload(draft, activeTripId, defaultPayerId);
+  if (error || !payload) return { ok: false, error };
+  return saveLodgingApi(backendUrl, jsonHeaders, payload);
+};
+
 export const removeLodgingApi = async (
   backendUrl: string,
   jsonHeaders: Record<string, string>,
@@ -163,4 +177,3 @@ const normalizeDate = (date: string) => {
   if (/^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
   return new Date(date).toISOString().slice(0, 10);
 };
-
