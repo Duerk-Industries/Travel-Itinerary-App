@@ -71,6 +71,8 @@ export type OverviewRow = {
   label: string;
   time?: string | null;
   meta?: any;
+  detailUrl?: string | null;
+  detailLabel?: string | null;
 };
 
 const parseDate = (value?: string | null): Date | null => {
@@ -160,8 +162,7 @@ export const formatFlightDetails = (flight: FlightLike): Array<{ label: string; 
 };
 
 export const formatLodgingSummary = (lodging: LodgingLike): string => {
-  const checkIn = formatFriendlyDate(lodging.checkInDate) || lodging.checkInDate || 'Check-in';
-  return `${lodging.name} at ${checkIn}`;
+  return lodging.name;
 };
 
 export const formatLodgingDetails = (lodging: LodgingLike): Array<{ label: string; value: string }> => {
@@ -178,9 +179,10 @@ export const formatLodgingDetails = (lodging: LodgingLike): Array<{ label: strin
 };
 
 export const formatTourSummary = (tour: TourLike): string => {
-  const time = formatFriendlyDate(tour.date, tour.startTime) || tour.startTime || 'Time TBD';
   const location = tour.startLocation || 'Location TBD';
-  return `${tour.name} at ${time} at ${location}`;
+  const time = tour.startTime || '';
+  const timePart = time ? ` • ${time}` : '';
+  return `${tour.name} @ ${location}${timePart}`;
 };
 
 export const formatTourDetails = (tour: TourLike): Array<{ label: string; value: string }> => {
@@ -200,11 +202,9 @@ export const formatTourDetails = (tour: TourLike): Array<{ label: string; value:
 export const formatRentalSummary = (rental: CarRentalLike, kind: 'pickup' | 'dropoff'): string => {
   const carType = rental.model || rental.vendor || 'Rental car';
   if (kind === 'pickup') {
-    const dateText = formatFriendlyDate(rental.pickupDate) || rental.pickupDate || 'Pickup date';
-    return `${carType} from ${rental.pickupLocation || 'Pickup location'} at ${dateText}`;
+    return `${carType} pickup at ${rental.pickupLocation || 'Pickup location'}`;
   }
-  const dateText = formatFriendlyDate(rental.dropoffDate) || rental.dropoffDate || 'Dropoff date';
-  return `Return ${carType} to ${rental.dropoffLocation || 'Dropoff location'} at ${dateText}`;
+  return `Return ${carType} to ${rental.dropoffLocation || 'Dropoff location'}`;
 };
 
 export const buildOverviewRows = (params: {
@@ -323,7 +323,41 @@ export const buildOverviewRows = (params: {
 
   const categoryOrder: OverviewRow['type'][] = ['activity', 'flight', 'lodging', 'tour', 'rental'];
   const rows: OverviewRow[] = [];
+  let currentDayNumber = 1;
+  const dayMs = 24 * 60 * 60 * 1000;
+  const firstBucketDate = orderedBuckets.length ? parseDate(orderedBuckets[0].dateLabel) : null;
+  let currentDate: Date | null = startDate ? new Date(startDate) : firstBucketDate;
+
+  const addFreeDay = (dayNumber: number, date: Date) => {
+    const dateLabel = date.toISOString().slice(0, 10);
+    rows.push({
+      dayLabel: `Day ${dayNumber}`,
+      dateLabel,
+      type: 'activity',
+      label: 'Free Day',
+      time: null,
+      meta: { day: dayNumber },
+    });
+  };
+
   for (const bucket of orderedBuckets) {
+    const bucketDate = parseDate(bucket.dateLabel);
+    if (currentDate && bucketDate) {
+      while (bucketDate.getTime() - currentDate.getTime() >= dayMs) {
+        addFreeDay(currentDayNumber, currentDate);
+        currentDayNumber++;
+        currentDate = new Date(currentDate.getTime() + dayMs);
+      }
+      bucket.dayLabel = `Day ${currentDayNumber}`;
+      // Normalize all items to the reassigned day/date
+      bucket.items = bucket.items.map((item) => ({
+        ...item,
+        dayLabel: bucket.dayLabel,
+        dateLabel: bucket.dateLabel,
+      }));
+      currentDate = new Date(bucketDate.getTime() + dayMs);
+    }
+
     const grouped: Record<string, OverviewRow[]> = {};
     bucket.items.forEach((item) => {
       const key = item.type;
@@ -335,6 +369,7 @@ export const buildOverviewRows = (params: {
       items.sort(compareByTimeThenLabel);
       rows.push(...items);
     }
+    currentDayNumber++;
   }
 
   return rows;

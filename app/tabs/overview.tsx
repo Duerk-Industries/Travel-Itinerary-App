@@ -547,7 +547,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
   const endLabel = formatFriendlyDate(displayEndDate);
   const dateRange = startLabel || endLabel ? `${startLabel ?? 'Start'} - ${endLabel ?? 'End'}` : null;
   const dayColStyle = { minWidth: 90, width: 90 };
-  const dateColStyle = { minWidth: 240, width: 240 };
+  const dateColStyle = { minWidth: 200, width: 200 };
   const attendeeLabel = (member: OverviewTabProps['attendees'][number]) => {
     const first = member.firstName?.trim() ?? '';
     const last = member.lastName?.trim() ?? '';
@@ -804,42 +804,37 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
               <Text style={styles.headerText}>Date</Text>
             </View>
             <View style={[styles.cell, { flex: 1 }]}>
-              <Text style={styles.headerText}>Item</Text>
+              <Text style={styles.headerText}>Description</Text>
             </View>
           </View>
-          {rows.map((row, idx) => {
-            const prev = rows[idx - 1];
-            const showDay = !prev || prev.dayLabel !== row.dayLabel || prev.dateLabel !== row.dateLabel;
-            const renderedDate = showDay ? formatFriendlyDate(row.dateLabel, row.time) ?? row.dateLabel : null;
-            return (
-              <View key={`${row.type}-${row.label}-${idx}`} style={styles.tableRow}>
-                <View style={[styles.cell, dayColStyle]}>
-                  {showDay ? <Text style={styles.cellText}>{row.dayLabel}</Text> : null}
+          {(() => {
+            let dayCounter = 0;
+            return rows.map((row, idx) => {
+              const prev = rows[idx - 1];
+              const showDay = !prev || prev.dayLabel !== row.dayLabel || prev.dateLabel !== row.dateLabel;
+              if (showDay) dayCounter += 1;
+              const renderedDate = formatFriendlyDate(row.dateLabel, row.time) ?? row.dateLabel;
+              const renderDescription = (content: React.ReactNode, onPress?: () => void) =>
+                onPress ? (
+                  <TouchableOpacity onPress={onPress}>
+                    <Text style={styles.linkText}>{content}</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <Text style={styles.cellText}>{content}</Text>
+                );
+              let onPress: (() => void) | undefined;
+              if (row.type === 'flight') onPress = () => setSelectedFlight(row.meta);
+              if (row.type === 'lodging') onPress = () => setSelectedLodging(row.meta);
+              if (row.type === 'tour') onPress = () => setSelectedTour(row.meta);
+              return (
+                <View key={`${row.type}-${row.label}-${idx}`} style={styles.tableRow}>
+                  <View style={[styles.cell, dayColStyle]}>{showDay ? <Text style={styles.cellText}>{dayCounter}</Text> : null}</View>
+                  <View style={[styles.cell, dateColStyle]}>{showDay ? <Text style={styles.cellText}>{renderedDate}</Text> : null}</View>
+                  <View style={[styles.cell, { flex: 1 }]}>{renderDescription(row.label, onPress)}</View>
                 </View>
-                <View style={[styles.cell, dateColStyle]}>
-                  {renderedDate ? <Text style={styles.cellText}>{renderedDate}</Text> : null}
-                </View>
-                <View style={[styles.cell, { flex: 1 }]}>
-                  <Text style={styles.cellText}>{row.label}</Text>
-                  {row.type === 'flight' ? (
-                    <TouchableOpacity onPress={() => setSelectedFlight(row.meta)}>
-                      <Text style={styles.linkText}>View details</Text>
-                    </TouchableOpacity>
-                  ) : null}
-                  {row.type === 'lodging' ? (
-                    <TouchableOpacity onPress={() => setSelectedLodging(row.meta)}>
-                      <Text style={styles.linkText}>View details</Text>
-                    </TouchableOpacity>
-                  ) : null}
-                  {row.type === 'tour' ? (
-                    <TouchableOpacity onPress={() => setSelectedTour(row.meta)}>
-                      <Text style={styles.linkText}>View details</Text>
-                    </TouchableOpacity>
-                  ) : null}
-                </View>
-              </View>
-            );
-          })}
+              );
+            });
+          })()}
         </View>
       ) : null}
 

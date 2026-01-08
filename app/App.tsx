@@ -116,19 +116,39 @@ type Page =
 
 // Resolve backend URL; keep Expo web on localhost hitting the local API over HTTP to avoid HTTPS upgrades/CORS issues.
 const resolveBackendUrl = (): string => {
-  const raw = Constants.expoConfig?.extra?.backendUrl ?? 'http://localhost:4000';
+  const envConfigured =
+    (typeof process !== 'undefined' && (process.env.EXPO_PUBLIC_BACKEND_URL ?? process.env.REACT_NATIVE_APP_BACKEND_URL)) || '';
+  const appConfigured = Constants.expoConfig?.extra?.backendUrl;
+  const raw = [envConfigured, appConfigured, 'http://localhost:4000'].find(
+    (val) => typeof val === 'string' && val.trim().length > 0
+  ) as string;
+  const normalizedRaw = raw.startsWith('http://') || raw.startsWith('https://') ? raw.trim() : `http://${raw.trim()}`;
+
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    const origin = window.location.origin;
-    const host = window.location.hostname;
-    // On web, prefer same-origin to avoid mixed-content/CORS when served behind HTTPS/proxy.
+    const { origin, hostname, port, protocol } = window.location;
+    const isExpoDevServer = port === '19006' || port === '19000';
+    const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+    const scheme = protocol === 'https:' ? 'https' : 'http';
+
+    if (envConfigured || appConfigured) {
+      return normalizedRaw;
+    }
+
+    // On Expo web dev server, target the same host on port 4000 so LAN devices can reach the API.
+    if (isExpoDevServer) {
+      return `${scheme}://${hostname}:4000`;
+    }
+
+    // When hosted behind a proxy/server (non-Expo dev), use same-origin to avoid mixed-content/CORS.
     if (origin.startsWith('http')) {
       return origin;
     }
-    if (host === 'localhost' || host === '127.0.0.1' || host === '::1') {
-      return `http://${host}:4000`;
+    if (isLocalHost) {
+      return `${scheme}://${hostname}:4000`;
     }
   }
-  return raw.startsWith('http://') || raw.startsWith('https://') ? raw : `http://${raw}`;
+
+  return normalizedRaw;
 };
 
 const resolveRefreshIntervalMs = (): number => {
@@ -142,6 +162,11 @@ const backendUrl = resolveBackendUrl();
 const refreshIntervalMs = resolveRefreshIntervalMs();
 const sessionKey = 'stp.session';
 const sessionDurationMs = 12 * 60 * 60 * 1000;
+
+if (Platform.OS === 'web') {
+  // Surface the selected backend in the browser console to simplify network debugging.
+  console.info('[STP] Backend URL:', backendUrl);
+}
 
 const loadSession = (): { token: string; name: string; email?: string; page?: string; tripId?: string | null } | null => {
   if (Platform.OS !== 'web' || typeof window === 'undefined') return null;
@@ -616,7 +641,11 @@ const App: React.FC = () => {
         alert(data.error || 'Login failed');
         return;
       }
-      const name = `${data.user.firstName} ${data.user.lastName}`;
+      if (!data?.user || typeof data.token !== 'string') {
+        alert(data.error || 'Login failed');
+        return;
+      }
+      const name = `${data.user.firstName ?? ''} ${data.user.lastName ?? ''}`.trim() || 'Traveler';
       const email = authForm.email.trim();
       setUserToken(data.token);
       setUserName(name);
@@ -662,7 +691,11 @@ const App: React.FC = () => {
         alert(data.error || 'Registration failed');
         return;
       }
-      const name = `${data.user.firstName} ${data.user.lastName}`;
+      if (!data?.user || typeof data.token !== 'string') {
+        alert(data.error || 'Registration failed');
+        return;
+      }
+      const name = `${data.user.firstName ?? ''} ${data.user.lastName ?? ''}`.trim() || 'Traveler';
       const email = authForm.email.trim();
       setUserToken(data.token);
       setUserName(name);

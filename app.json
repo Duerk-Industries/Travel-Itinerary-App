@@ -1,6 +1,7 @@
 {
   "expo": {
     "extra": {
+      "backendUrl": "https://duerkhome.asuscomm.com",
       "eas": {
         "projectId": "06966c0b-d878-4346-850c-090c762f1916"
       }

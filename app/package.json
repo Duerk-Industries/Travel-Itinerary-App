@@ -8,6 +8,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
+    "web:local-api": "set EXPO_PUBLIC_BACKEND_URL=http://localhost:4000 && expo start --web",
     "parse:debug": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" ./scripts/parse-debug.ts",
     "parse:lodging": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" ./scripts/parse-lodging-debug.ts",
     "test:lodging-parser": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" ./scripts/test-lodging-parser.ts",
