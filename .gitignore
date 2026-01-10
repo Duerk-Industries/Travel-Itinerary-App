@@ -7,6 +7,8 @@ dist
 .DS_Store
 .idea
 *.iml
+.gradle
+.gradle/8.14.3/fileHashes/fileHashes.lock
 server/.env
 server/logs
 server/public/_expo
@@ -19,7 +21,5 @@ app/android/.gradle
 app/node_modules
 /android
 logs
-.gradle
 patches
 build
-.gradle/8.14.3/fileHashes/fileHashes.lock
