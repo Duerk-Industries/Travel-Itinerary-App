@@ -2,8 +2,10 @@ import { type CarRental, type CarRentalDraft } from '../tabs/carRentals';
 import { type Flight, type FlightCreateDraft } from '../tabs/flights';
 import { type Tour, type TourDraft } from '../tabs/tours';
 
-export const buildFlightDraftFromRow = (flight: Flight): FlightCreateDraft => ({
+export const buildFlightDraftFromRow = (flight: Flight): FlightCreateDraft & { passengerIds: string[]; paidBy?: string[] } => ({
   passengerName: flight.passenger_name,
+  arrivalDate: (flight as any).arrival_date || (flight as any).arrivalDate || flight.departure_date,
+  passengerIds: Array.isArray(flight.passenger_ids) ? flight.passenger_ids : Array.isArray((flight as any).passengerIds) ? (flight as any).passengerIds : [],
   departureDate: flight.departure_date,
   departureAirportCode: flight.departure_airport_code ?? '',
   departureTime: flight.departure_time,
@@ -16,6 +18,7 @@ export const buildFlightDraftFromRow = (flight: Flight): FlightCreateDraft => ({
   carrier: flight.carrier,
   flightNumber: flight.flight_number,
   bookingReference: flight.booking_reference,
+  paidBy: Array.isArray(flight.paidBy) ? flight.paidBy : Array.isArray(flight.paid_by) ? flight.paid_by : [],
 });
 
 export const buildTourDraftFromRow = (tour: Tour): TourDraft => ({

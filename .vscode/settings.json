@@ -2,7 +2,10 @@
     "chatgpt.runCodexInWindowsSubsystemForLinux": true,
     "cSpell.words": [
         "datetimepicker",
+        "geoloc",
+        "ossp",
         "tesseract",
+        "themself",
         "travelitineraryplanner"
     ],
     "diffEditor.codeLens": true,

@@ -40,6 +40,7 @@ router.post('/', async (req, res) => {
     layoverLocation,
     layoverLocationCode,
     layoverDuration,
+    arrivalDate,
     arrivalTime,
     cost,
     carrier,
@@ -53,41 +54,25 @@ router.post('/', async (req, res) => {
     return;
   }
   const allZeroPassengerIds = passengerIds.every((id: any) => String(id).startsWith('0000'));
-  if (process.env.USE_IN_MEMORY_DB === '1' && !allZeroPassengerIds) {
-    const flight = await insertFlight({
-      userId,
-      tripId,
-      passengerName: 'Passenger',
-      passengerIds: passengerIds.map((id: any) => String(id)),
-      departureDate,
-      departureLocation,
-      departureAirportCode,
-      departureTime,
-      arrivalLocation,
-      arrivalAirportCode,
-      layoverLocation,
-      layoverLocationCode,
-      layoverDuration,
-      arrivalTime,
-      cost: Number(cost) ?? 0,
-      carrier,
-      flightNumber,
-      bookingReference,
-      paidBy: Array.isArray(paidBy) ? (paidBy.length ? paidBy : []) : [],
-    });
-    res.status(201).json(flight);
-    return;
-  }
   const tripGroup = (await ensureUserInTrip(tripId, userId)) || (process.env.USE_IN_MEMORY_DB === '1' ? { groupId: tripId } : null);
   if (!tripGroup) {
     res.status(403).json({ error: 'You must be in the group for this trip' });
     return;
   }
   const pool = poolClient();
-  const groupMemberIds = await pool.query<{ id: string }>(`SELECT id FROM group_members WHERE group_id = $1`, [tripGroup.groupId]);
-  const memberIdSet = new Set(groupMemberIds.rows.map((r) => String(r.id)));
+  const { rows: memberRows } = await pool.query<{ id: string; user_id: string | null }>(
+    `SELECT id, user_id FROM group_members WHERE group_id = $1 AND removed_at IS NULL`,
+    [tripGroup.groupId]
+  );
+  const { rows: inviteRows } = await pool.query<{ id: string }>(
+    `SELECT id FROM group_invites WHERE group_id = $1 AND status = 'pending'`,
+    [tripGroup.groupId]
+  );
+  const memberIdSet = new Set(memberRows.map((r) => String(r.id)));
+  const inviteIdSet = new Set(inviteRows.map((r) => String(r.id)));
+  const validPassengerIds = new Set<string>([...memberIdSet, ...inviteIdSet]);
   const normalizedPassengerIds = passengerIds.map((id: any) => String(id));
-  const allValid = normalizedPassengerIds.every((id: string) => memberIdSet.has(id));
+  const allValid = normalizedPassengerIds.every((id: string) => validPassengerIds.has(id));
   const allZero = normalizedPassengerIds.every((id: string) => id.startsWith('0000'));
   if (!allValid) {
     if (allZero) {
@@ -99,26 +84,40 @@ router.post('/', async (req, res) => {
       normalizedPassengerIds.splice(0, normalizedPassengerIds.length, Array.from(memberIdSet)[0]);
     }
   }
-  const { rows: memberRows } = await pool.query(
-    `SELECT gm.id, gm.guest_name, wu.first_name, wu.last_name, u.email
+  const { rows: passengerMemberRows } = await pool.query(
+    `SELECT gm.id, gm.guest_name, gm.invite_email, wu.first_name, wu.last_name, u.email
      FROM group_members gm
      LEFT JOIN users u ON gm.user_id = u.id
      LEFT JOIN web_users wu ON gm.user_id = wu.id
      WHERE gm.group_id = $1 AND gm.id = ANY($2::uuid[])`,
     [tripGroup.groupId, normalizedPassengerIds]
   );
-  if (memberRows.length !== normalizedPassengerIds.length) {
+  const { rows: passengerInviteRows } = await pool.query(
+    `SELECT id, invitee_email
+       FROM group_invites
+      WHERE group_id = $1 AND status = 'pending' AND id = ANY($2::uuid[])`,
+    [tripGroup.groupId, normalizedPassengerIds]
+  );
+  if (passengerMemberRows.length + passengerInviteRows.length !== normalizedPassengerIds.length) {
     if (process.env.USE_IN_MEMORY_DB !== '1') {
       res.status(400).json({ error: 'Passengers must be members of the trip group' });
       return;
     }
   }
-  const passengerNameSource: Array<{ guest_name?: string | null; first_name?: string | null; last_name?: string | null; email?: string | null }> =
-    memberRows.length ? memberRows : (normalizedPassengerIds as any[]).map(() => ({}));
-  const passengerName =
-    passengerNameSource
-      .map((m) => m.guest_name || `${m.first_name ?? ''} ${m.last_name ?? ''}`.trim() || m.email || 'Passenger')
-      .join(', ') || 'Passenger';
+  const passengerName = [...passengerMemberRows, ...passengerInviteRows]
+    .map((m: any) => m.guest_name || `${m.first_name ?? ''} ${m.last_name ?? ''}`.trim() || m.email || m.invitee_email || m.invite_email || 'Passenger')
+    .join(', ') || 'Passenger';
+  const normalizedPaidBy = Array.isArray(paidBy) ? paidBy.map((id: any) => String(id)).filter(Boolean) : [];
+  const payerIdSet = new Set(memberRows.map((m) => String(m.id)));
+  const activePayerIds = new Set(memberRows.filter((m) => m.user_id).map((m) => String(m.id)));
+  if (normalizedPaidBy.some((id) => !payerIdSet.has(id))) {
+    res.status(400).json({ error: 'Payers must be active trip members' });
+    return;
+  }
+  if (normalizedPaidBy.some((id) => !activePayerIds.has(id))) {
+    res.status(400).json({ error: 'Payers must be active trip members' });
+    return;
+  }
   const flight = await insertFlight({
     userId,
     tripId,
@@ -133,12 +132,13 @@ router.post('/', async (req, res) => {
     layoverLocation,
     layoverLocationCode,
     layoverDuration,
+    arrivalDate: arrivalDate || departureDate,
     arrivalTime,
     cost: Number(cost) ?? 0,
     carrier,
     flightNumber,
     bookingReference,
-    paidBy: Array.isArray(paidBy) ? (paidBy.length ? paidBy : []) : [],
+    paidBy: normalizedPaidBy,
   });
   res.status(201).json(flight);
 });
@@ -156,6 +156,7 @@ router.patch('/:id', async (req, res) => {
     layoverLocation,
     layoverLocationCode,
     layoverDuration,
+    arrivalDate,
     arrivalTime,
     cost,
     carrier,
@@ -167,33 +168,52 @@ router.patch('/:id', async (req, res) => {
   const normalizedPaidBy = Array.isArray(paidBy) ? (paidBy.length ? paidBy : undefined) : undefined;
   const useInMemory = process.env.USE_IN_MEMORY_DB === '1';
   try {
+    const pool = poolClient();
+    let groupId: string | null = null;
+    let normalizedPassengerIds = passengerIds ? passengerIds.map((id: any) => String(id)) : undefined;
     if (passengerIds && passengerIds.length === 0) {
-      throw new Error('At least one passenger is required');
+      // Fallback to existing passengers when the client sends an empty array
+      const existing = await pool
+        .query<{ passenger_ids: string[] | null }>(`SELECT passenger_ids FROM flights WHERE id = $1`, [req.params.id])
+        .catch(() => ({ rows: [] as any[] }));
+      const priorIds = existing.rows[0]?.passenger_ids ?? [];
+      normalizedPassengerIds = Array.isArray(priorIds) ? priorIds.map((id: any) => String(id)) : [];
+      if (!normalizedPassengerIds.length) {
+        throw new Error('At least one passenger is required');
+      }
+    }
+    if (!useInMemory && (passengerIds || normalizedPaidBy)) {
+      const { rows: flightGroupRows } = await pool.query<{ groupId: string }>(
+        `SELECT t.group_id as "groupId"
+         FROM flights f
+         JOIN trips t ON f.trip_id = t.id
+         WHERE f.id = $1`,
+        [req.params.id]
+      );
+      groupId = flightGroupRows[0]?.groupId ?? null;
+      if (!groupId) {
+        throw new Error('Flight not found');
+      }
     }
     let passengerName = typeof incomingPassengerName === 'string' ? incomingPassengerName : undefined;
-    const normalizedPassengerIds = passengerIds ? passengerIds.map((id: any) => String(id)) : undefined;
-    if (passengerIds) {
-      const pool = poolClient();
+    if (normalizedPassengerIds) {
       if (!useInMemory) {
-        const groupMemberIds = await pool
-          .query<{ id: string }>(
-            `SELECT gm.id
-             FROM flights f
-             JOIN trips t ON f.trip_id = t.id
-             JOIN group_members gm ON gm.group_id = t.group_id
-             WHERE f.id = $1`,
-            [req.params.id]
-          )
+        const { rows: validationMemberRows } = await pool
+          .query<{ id: string; user_id: string | null }>(`SELECT id, user_id FROM group_members WHERE group_id = $1 AND removed_at IS NULL`, [groupId!])
           .catch(() => ({ rows: [] as any[] }));
-        const memberIdSet = new Set(groupMemberIds.rows.map((r) => String(r.id)));
-        const allValid = normalizedPassengerIds.every((id: string) => memberIdSet.has(id));
+        const { rows: validationInviteRows } = await pool
+          .query<{ id: string }>(`SELECT id FROM group_invites WHERE group_id = $1 AND status = 'pending'`, [groupId!])
+          .catch(() => ({ rows: [] as any[] }));
+        const memberIdSet = new Set(validationMemberRows.map((r) => String(r.id)));
+        const inviteIdSet = new Set(validationInviteRows.map((r) => String(r.id)));
+        const allValid = normalizedPassengerIds.every((id: string) => memberIdSet.has(id) || inviteIdSet.has(id));
         if (!allValid) {
           throw new Error('Passengers must be members of the trip group');
         }
       }
       const { rows: memberRows } = await pool
         .query(
-          `SELECT gm.id, gm.guest_name, wu.first_name, wu.last_name, u.email
+          `SELECT gm.id, gm.guest_name, gm.invite_email, wu.first_name, wu.last_name, u.email
            FROM flights f
            JOIN trips t ON f.trip_id = t.id
            JOIN group_members gm ON gm.group_id = t.group_id AND gm.id = ANY($1::uuid[])
@@ -203,9 +223,20 @@ router.patch('/:id', async (req, res) => {
           [normalizedPassengerIds, req.params.id]
         )
         .catch(() => ({ rows: [] as any[] }));
-      if (memberRows.length === normalizedPassengerIds.length || (useInMemory && memberRows.length > 0)) {
-        const computedName = memberRows
-          .map((m) => m.guest_name || `${m.first_name ?? ''} ${m.last_name ?? ''}`.trim() || m.email || 'Passenger')
+      const { rows: inviteRows } = await pool
+        .query(
+          `SELECT gi.id, gi.invitee_email
+           FROM flights f
+           JOIN trips t ON f.trip_id = t.id
+           JOIN group_invites gi ON gi.group_id = t.group_id AND gi.id = ANY($1::uuid[])
+           WHERE f.id = $2`,
+          [normalizedPassengerIds, req.params.id]
+        )
+        .catch(() => ({ rows: [] as any[] }));
+      const matchedCount = memberRows.length + inviteRows.length;
+      if (matchedCount === normalizedPassengerIds.length || (useInMemory && matchedCount > 0)) {
+        const computedName = [...memberRows, ...inviteRows]
+          .map((m: any) => m.guest_name || `${m.first_name ?? ''} ${m.last_name ?? ''}`.trim() || m.email || m.invitee_email || m.invite_email || 'Passenger')
           .join(', ');
         if (computedName.trim()) {
           passengerName = computedName;
@@ -214,6 +245,17 @@ router.patch('/:id', async (req, res) => {
         throw new Error('Passengers must be members of the trip group');
       } else if (!passengerName) {
         passengerName = 'Passenger';
+      }
+    }
+    if (normalizedPaidBy && !useInMemory) {
+      const { rows: payerRows } = await pool
+        .query<{ id: string; user_id: string | null }>(`SELECT id, user_id FROM group_members WHERE group_id = $1 AND removed_at IS NULL`, [groupId!])
+        .catch(() => ({ rows: [] as any[] }));
+      const payerIdSet = new Set(payerRows.map((r) => String(r.id)));
+      const activePayerIds = new Set(payerRows.filter((r) => r.user_id).map((r) => String(r.id)));
+      const payersValid = normalizedPaidBy.every((id: string) => payerIdSet.has(id) && activePayerIds.has(id));
+      if (!payersValid) {
+        throw new Error('Payers must be active trip members');
       }
     }
 
@@ -229,6 +271,7 @@ router.patch('/:id', async (req, res) => {
       layoverLocation,
       layoverLocationCode,
       layoverDuration,
+      arrivalDate: arrivalDate || departureDate,
       arrivalTime,
       cost: typeof cost === 'undefined' ? undefined : Number(cost),
       carrier,
@@ -255,6 +298,7 @@ router.put('/:id', async (req, res) => {
     layoverLocation,
     layoverLocationCode,
     layoverDuration,
+    arrivalDate,
     arrivalTime,
     cost,
     carrier,
@@ -275,6 +319,7 @@ router.put('/:id', async (req, res) => {
       layoverLocation,
       layoverLocationCode,
       layoverDuration,
+      arrivalDate: arrivalDate || departureDate,
       arrivalTime,
       cost: typeof cost === 'undefined' ? undefined : Number(cost),
       carrier,

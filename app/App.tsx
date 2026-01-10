@@ -17,7 +17,7 @@ import { formatDateLong } from './utils/formatDateLong';
 import { normalizeDateString } from './utils/normalizeDateString';
 import { FlightsTab, type Flight, fetchFlightsForTrip } from './tabs/flights';
 import { Tour, TourTab, fetchToursForTrip } from './tabs/tours';
-import { computePayerTotals } from './tabs/costReport';
+import { balanceCategoryTotals, computePayerTotals } from './tabs/costReport';
 import { Trait, TraitsTab } from './tabs/traits';
 import { FollowTab, fetchFollowedTripsApi, loadFollowCodes, loadFollowPayloads, saveFollowCodes, saveFollowPayloads, type FollowedTrip } from './tabs/follow';
 import ItinerariesTab from './tabs/itineraries';
@@ -97,6 +97,8 @@ interface GroupMemberOption {
   email?: string;
   firstName?: string;
   lastName?: string;
+  status?: 'active' | 'pending' | 'removed';
+  removedAt?: string | null;
 }
 
 type Page =
@@ -212,6 +214,7 @@ const App: React.FC = () => {
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const refreshInFlightRef = useRef(false);
   const [flights, setFlights] = useState<Flight[]>([]);
+  const [externalFlightEditId, setExternalFlightEditId] = useState<string | null>(null);
   const [invites, setInvites] = useState<GroupInvite[]>([]);
   const [followInviteCode, setFollowInviteCode] = useState('');
   const [followLoading, setFollowLoading] = useState(false);
@@ -281,16 +284,23 @@ const App: React.FC = () => {
   const [showRelationshipDropdown, setShowRelationshipDropdown] = useState(false);
   const formatMemberName = (member: GroupMemberOption): string => {
     if (member.guestName) return member.guestName;
-    const first = member.firstName?.trim();
-    const last = member.lastName?.trim();
+    const norm = (val?: string | null) => {
+      const t = val?.trim();
+      if (!t || t.toLowerCase() === 'unknown') return '';
+      return t;
+    };
+    const first = norm(member.firstName);
+    const last = norm(member.lastName);
+    const email = member.email?.trim();
+    const status = member.status;
     if (first || last) return `${first ?? ''} ${last ?? ''}`.trim();
-    if (member.email) {
-      const local = member.email.split('@')[0] ?? '';
+    if (email) {
+      const local = email.split('@')[0] ?? '';
       const parts = local.split(/[._-]+/).filter(Boolean);
-      if (parts.length >= 2) return `${parts[0]} ${parts.slice(1).join(' ')}`.trim();
-      return member.email;
+      const base = parts.length >= 2 ? `${parts[0]} ${parts.slice(1).join(' ')}`.trim() : email;
+      return status === 'pending' ? `${base} (pending)` : base;
     }
-    return 'Member';
+    return status === 'pending' ? 'Pending member' : 'Member';
   };
 
   const flightsTotal = useMemo(
@@ -324,6 +334,10 @@ const App: React.FC = () => {
     } else {
       Linking.openURL(url);
     }
+  };
+
+  const openFlightInFlightsTab = (flightId: string) => {
+    setExternalFlightEditId(flightId);
   };
 
   const applyLodgingDate = (field: 'checkIn' | 'checkOut', value: string, context: 'draft' | 'edit') => {
@@ -417,7 +431,12 @@ const App: React.FC = () => {
     return member ? formatMemberName(member) : 'Unknown';
   };
 
-  const userMembers = useMemo(() => groupMembers.filter((m) => !m.guestName), [groupMembers]);
+  const userMembers = useMemo(
+    () => groupMembers.filter((m) => !m.guestName && m.status !== 'pending' && m.status !== 'removed'),
+    [groupMembers]
+  );
+
+  const memberIds = useMemo(() => userMembers.map((m) => m.id), [userMembers]);
 
   // Per-user tour totals via shared helper. Note: if a tour has an explicit empty payer list,
   // we leave it unsplit (no cost assigned) so non-payers stay at $0.
@@ -461,6 +480,11 @@ const App: React.FC = () => {
     [flights, userMembers]
   );
 
+  const flightShares = useMemo(
+    () => balanceCategoryTotals(flightsTotal, flightsPayerTotals, memberIds),
+    [flightsTotal, flightsPayerTotals, memberIds]
+  );
+
   // Per-user lodging totals via shared helper. Explicitly empty paidBy means no split, so removed users go to $0.
   const lodgingPayerTotals = useMemo(
     () =>
@@ -474,27 +498,23 @@ const App: React.FC = () => {
     [lodgings, userMembers]
   );
 
-  const lodgingTotalsBalanced = useMemo(() => {
+  const lodgingTotalsBalanced = useMemo(
+    () => balanceCategoryTotals(lodgingTotal, lodgingPayerTotals, memberIds),
+    [lodgingPayerTotals, lodgingTotal, memberIds]
+  );
+
+  const tourShares = useMemo(
+    () => balanceCategoryTotals(toursTotal, payerTotals, memberIds),
+    [toursTotal, payerTotals, memberIds]
+  );
+
+  const overallShares = useMemo(() => {
     const totals: Record<string, number> = {};
-    userMembers.forEach((m) => {
-      totals[m.id] = lodgingPayerTotals[m.id] ?? 0;
+    memberIds.forEach((id) => {
+      totals[id] = (flightShares[id] ?? 0) + (lodgingTotalsBalanced[id] ?? 0) + (tourShares[id] ?? 0);
     });
-    const assigned = Object.values(totals).reduce((sum, v) => sum + v, 0);
-    const remainder = lodgingTotal - assigned;
-    if (userMembers.length && Math.abs(remainder) > 1e-6) {
-      const evenShare = remainder / userMembers.length;
-      userMembers.forEach((m) => {
-        totals[m.id] = (totals[m.id] ?? 0) + evenShare;
-      });
-      const afterEven = Object.values(totals).reduce((sum, v) => sum + v, 0);
-      const adjust = lodgingTotal - afterEven;
-      if (Math.abs(adjust) > 1e-6) {
-        const first = userMembers[0]?.id;
-        if (first) totals[first] = (totals[first] ?? 0) + adjust;
-      }
-    }
     return totals;
-  }, [lodgingPayerTotals, lodgingTotal, userMembers]);
+  }, [flightShares, lodgingTotalsBalanced, memberIds, tourShares]);
 
   const lodgingBreakdownSum = useMemo(
     () => Object.values(lodgingTotalsBalanced).reduce((sum, v) => sum + v, 0),
@@ -848,8 +868,10 @@ const App: React.FC = () => {
         email: m.email ?? undefined,
         firstName: m.firstName ?? m.first_name ?? undefined,
         lastName: m.lastName ?? m.last_name ?? undefined,
+        status: m.status ?? undefined,
+        removedAt: m.removedAt ?? undefined,
       }));
-      setGroupMembers(normalized);
+      setGroupMembers(normalized.filter((m) => m.status !== 'removed'));
     } catch {
       setGroupMembers([]);
     }
@@ -1352,16 +1374,12 @@ const App: React.FC = () => {
                         <Text style={styles.cellText}>{row.label}</Text>
                       </View>
                       {userMembers.map((m) => {
-                        let share = 0;
-                        if (row.label === 'Tours') {
-                          share = payerTotals[m.id] || 0;
-                        } else if (row.label === 'Flights') {
-                          const pay = flightsPayerTotals[m.id];
-                          share = typeof pay === 'number' && pay > 0 ? pay : row.total / (userMembers.length || 1);
-                        } else if (row.label === 'Lodging') {
-                          const pay = lodgingTotalsBalanced[m.id];
-                          share = typeof pay === 'number' ? pay : row.total / (userMembers.length || 1);
-                        }
+                        const share =
+                          row.label === 'Tours'
+                            ? tourShares[m.id] ?? 0
+                            : row.label === 'Flights'
+                              ? flightShares[m.id] ?? 0
+                              : lodgingTotalsBalanced[m.id] ?? 0;
                         return (
                           <View key={`${row.label}-${m.id}`} style={[styles.cell, { minWidth: 120, flex: 1 }]}>
                             <Text style={styles.cellText}>${share.toFixed(2)}</Text>
@@ -1378,17 +1396,7 @@ const App: React.FC = () => {
                       <Text style={styles.headerText}>Overall</Text>
                     </View>
                     {userMembers.map((m) => {
-                      const divisor = userMembers.length || 1;
-                      const flightsShare = (() => {
-                        const pay = flightsPayerTotals[m.id];
-                        return typeof pay === 'number' && pay > 0 ? pay : flightsTotal / divisor;
-                      })();
-                      const lodgingShare = (() => {
-                        const pay = lodgingTotalsBalanced[m.id];
-                        return typeof pay === 'number' ? pay : lodgingTotal / divisor;
-                      })();
-                      const tourShare = payerTotals[m.id] || 0;
-                      const total = flightsShare + lodgingShare + tourShare;
+                      const total = overallShares[m.id] ?? 0;
                       return (
                         <View key={`overall-${m.id}`} style={[styles.cell, { minWidth: 120, flex: 1 }]}>
                           <Text style={styles.headerText}>${total.toFixed(2)}</Text>
@@ -2086,7 +2094,7 @@ const App: React.FC = () => {
           </View>
         </View>
       ) : null}
-      {activePage === 'flights' ? (
+      {activePage === 'flights' || externalFlightEditId ? (
         <FlightsTab
           backendUrl={backendUrl}
           userToken={userToken}
@@ -2104,6 +2112,9 @@ const App: React.FC = () => {
           styles={styles}
           airportOptions={flightAirportOptions}
           onSearchAirports={fetchFlightAirports}
+          externalEditFlightId={externalFlightEditId}
+          onExternalEditHandled={() => setExternalFlightEditId(null)}
+          showList={activePage === 'flights'}
         />
       ) : null}
       {activePage === 'trips' ? (
@@ -2262,6 +2273,7 @@ const App: React.FC = () => {
               onRefreshLodgings={fetchLodgings}
               onRefreshTours={fetchTours}
               onAddCarRental={addCarRentalFromOverview}
+              openFlightInFlightsTab={openFlightInFlightsTab}
             />
           ) : null}
 
@@ -2978,6 +2990,28 @@ const styles = StyleSheet.create({
   },
   traitChipTextSelected: {
     color: '#fff',
+  },
+  attendeeChipContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  badge: {
+    marginLeft: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+    backgroundColor: '#e0e0e0',
+  },
+  badgePending: {
+    backgroundColor: '#f6c851',
+  },
+  badgeRemoved: {
+    backgroundColor: '#c7c7c7',
+  },
+  badgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#2b2b2b',
   },
   modalOverlay: {
     position: 'absolute',

@@ -3,6 +3,7 @@ import { Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'r
 import { formatDateLong } from '../utils/formatDateLong';
 import { normalizeDateString } from '../utils/normalizeDateString';
 import { parseFlightText, type ParsedFlight } from '../utils/parsers/flightParser';
+import { FlightEditingForm } from '../components/FlightEditingForm';
 
 type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
 let NativeDateTimePicker: NativeDateTimePickerType | null = null;
@@ -19,6 +20,7 @@ export interface Flight {
   id: string;
   passenger_name: string;
   passenger_ids?: string[];
+  arrival_date?: string | null;
   trip_id: string;
   departure_date: string;
   departure_location?: string;
@@ -50,6 +52,7 @@ export type FlightDraft = {
   passengerName: string;
   passengerIds: string[];
   departureDate: string;
+  arrivalDate: string;
   departureLocation: string;
   departureAirportCode: string;
   departureTime: string;
@@ -70,6 +73,7 @@ export type FlightEditDraft = {
   passengerName: string;
   passengerIds: string[];
   departureDate: string;
+  arrivalDate: string;
   departureLocation: string;
   departureAirportCode: string;
   departureTime: string;
@@ -89,6 +93,7 @@ export type FlightEditDraft = {
 export type FlightCreateDraft = {
   passengerName: string;
   departureDate: string;
+  arrivalDate: string;
   departureAirportCode: string;
   departureTime: string;
   arrivalAirportCode: string;
@@ -113,6 +118,7 @@ const isValidTime = (value: string): boolean => {
 export const createInitialFlightCreateDraft = (): FlightCreateDraft => ({
   passengerName: '',
   departureDate: new Date().toISOString().slice(0, 10),
+  arrivalDate: new Date().toISOString().slice(0, 10),
   departureAirportCode: '',
   departureTime: '',
   arrivalAirportCode: '',
@@ -132,6 +138,8 @@ export type GroupMemberOption = {
   email?: string;
   firstName?: string;
   lastName?: string;
+   status?: 'active' | 'pending' | 'removed';
+   removedAt?: string | null;
 };
 
 export type Trip = {
@@ -153,6 +161,7 @@ export const createInitialFlightState = (): FlightDraft => ({
   passengerName: '',
   passengerIds: [],
   departureDate: new Date().toISOString().slice(0, 10),
+  arrivalDate: new Date().toISOString().slice(0, 10),
   departureLocation: '',
   departureAirportCode: '',
   departureTime: '',
@@ -172,6 +181,7 @@ export const createInitialFlightState = (): FlightDraft => ({
 export const buildFlightPayload = (flight: FlightEditDraft, tripId?: string | null, defaultPayerId?: string | null) => {
   const trim = (v: string | null | undefined) => (v ?? '').trim();
   const departureDate = normalizeDateString(trim(flight.departureDate)) || new Date().toISOString().slice(0, 10);
+  const arrivalDate = normalizeDateString(trim((flight as any).arrivalDate)) || departureDate;
   const departureLocation = trim(flight.departureLocation) || trim(flight.departureAirportCode);
   const arrivalLocation = trim(flight.arrivalLocation) || trim(flight.arrivalAirportCode);
   const layoverLocation = trim(flight.layoverLocation);
@@ -189,6 +199,7 @@ export const buildFlightPayload = (flight: FlightEditDraft, tripId?: string | nu
     layoverLocation,
     layoverLocationCode,
     layoverDuration: trim(flight.layoverDuration),
+    arrivalDate,
     arrivalTime: trim(flight.arrivalTime) || '00:00',
     cost: Number(flight.cost) || 0,
     carrier: trim(flight.carrier) || 'UNKNOWN',
@@ -215,6 +226,7 @@ export const buildFlightPayloadForCreate = (
       passengerName: draft.passengerName.trim() || 'Traveler',
       passengerIds: [],
       departureDate: draft.departureDate.trim(),
+      arrivalDate: draft.arrivalDate.trim() || draft.departureDate.trim(),
       departureLocation: '',
       departureAirportCode: draft.departureAirportCode.trim(),
       departureTime: draft.departureTime.trim(),
@@ -275,6 +287,8 @@ export const fetchFlightsForTrip = async ({
     ...f,
     passenger_ids: Array.isArray((f as any).passenger_ids) ? (f as any).passenger_ids : [],
     paidBy: Array.isArray(f.paidBy) ? f.paidBy : Array.isArray(f.paid_by) ? f.paid_by : [],
+    arrival_date: (f as any).arrival_date || (f as any).arrivalDate || null,
+    arrivalDate: (f as any).arrival_date || (f as any).arrivalDate || null,
   }));
 };
 
@@ -295,6 +309,9 @@ type FlightsTabProps = {
   styles: Record<string, any>;
   airportOptions: string[];
   onSearchAirports: (q: string) => Promise<void> | void;
+  externalEditFlightId?: string | null;
+  onExternalEditHandled?: () => void;
+  showList?: boolean;
 };
 
 type Airport = {
@@ -320,6 +337,7 @@ const columns: { key: keyof Flight | 'actions' | 'costPerPerson'; label: string;
   { key: 'departure_date', label: 'Departure Date' },
   { key: 'departure_location', label: 'Departure Location' },
   { key: 'departure_time', label: 'Departure Time' },
+  { key: 'arrival_date', label: 'Arrival Date' },
   { key: 'arrival_location', label: 'Arrival Location' },
   { key: 'arrival_time', label: 'Arrival Time' },
   { key: 'layover_duration', label: 'Layover' },
@@ -350,6 +368,9 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   styles,
   airportOptions,
   onSearchAirports,
+  externalEditFlightId,
+  onExternalEditHandled,
+  showList = true,
 }) => {
   const containerRef = useRef<React.ElementRef<typeof View> | null>(null);
   const memberNames = useMemo(() => {
@@ -404,7 +425,10 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
 
   const flightsTotal = useMemo(() => flights.reduce((sum, f) => sum + (Number(f.cost) || 0), 0), [flights]);
 
-  const userMembers = useMemo(() => groupMembers.filter((m) => !m.guestName), [groupMembers]);
+  const userMembers = useMemo(
+    () => groupMembers.filter((m) => !m.guestName && m.status !== 'pending' && m.status !== 'removed'),
+    [groupMembers]
+  );
 
   const filterAirports = (query: string): Airport[] => {
     const q = query.trim().toLowerCase();
@@ -798,6 +822,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       passengerName: flight.passenger_name,
       passengerIds: Array.isArray(flight.passenger_ids) ? flight.passenger_ids : [],
       departureDate: normalizeDateString(flight.departure_date),
+      arrivalDate: normalizeDateString(flight.arrival_date || (flight as any).arrivalDate || flight.departure_date),
       departureLocation: flight.departure_location ?? '',
       departureAirportCode: flight.departure_airport_code ?? '',
       departureTime: flight.departure_time,
@@ -825,7 +850,16 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   const closeFlightDetails = () => {
     setEditingFlightId(null);
     setEditingFlight(null);
+    onExternalEditHandled?.();
   };
+
+  useEffect(() => {
+    if (!externalEditFlightId) return;
+    const target = flights.find((f) => f.id === externalEditFlightId);
+    if (target) {
+      openFlightDetails(target);
+    }
+  }, [externalEditFlightId, flights]);
 
   const saveFlightDetails = async () => {
     if (!userToken || !editingFlightId || !editingFlight) return;
@@ -1008,8 +1042,27 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   }, [activeTripId, userToken]);
 
 
+  const containerStyle = showList
+    ? [styles.card, styles.flightsSection]
+    : [
+        styles.flightsSection,
+        {
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          padding: 0,
+          margin: 0,
+          zIndex: 50000,
+          elevation: 50,
+        },
+      ];
+
   return (
-    <View style={[styles.card, styles.flightsSection]} ref={containerRef as any}>
+    <View style={containerStyle} ref={containerRef as any} pointerEvents={showList ? 'auto' : 'box-none'}>
+      {showList ? (
+        <>
       <Text style={styles.sectionTitle}>Flights</Text>
       {Platform.OS === 'web' ? (
         <View style={styles.pdfRow}>
@@ -1184,6 +1237,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                   departure_location: newFlight.departureLocation,
                   departure_time: newFlight.departureTime,
                   arrival_location: newFlight.arrivalLocation,
+                  arrival_date: newFlight.arrivalDate,
                   arrival_time: newFlight.arrivalTime,
                   layover_duration: newFlight.layoverDuration,
                   cost: newFlight.cost,
@@ -1193,10 +1247,15 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                 };
 
                 const setters: Record<string, (text: string) => void> = {
-                  departure_date: (text) => setNewFlight((prev) => ({ ...prev, departureDate: text })),
+                  departure_date: (text) =>
+                    setNewFlight((prev) => {
+                      const nextArrival = !prev.arrivalDate || prev.arrivalDate === prev.departureDate ? text : prev.arrivalDate;
+                      return { ...prev, departureDate: text, arrivalDate: nextArrival };
+                    }),
                   departure_location: (text) => setNewFlight((prev) => ({ ...prev, departureLocation: text })),
                   departure_time: (text) => setNewFlight((prev) => ({ ...prev, departureTime: text })),
                   arrival_location: (text) => setNewFlight((prev) => ({ ...prev, arrivalLocation: text })),
+                  arrival_date: (text) => setNewFlight((prev) => ({ ...prev, arrivalDate: text })),
                   arrival_time: (text) => setNewFlight((prev) => ({ ...prev, arrivalTime: text })),
                   layover_duration: (text) => setNewFlight((prev) => ({ ...prev, layoverDuration: text })),
                   cost: (text) => setNewFlight((prev) => ({ ...prev, cost: text })),
@@ -1331,6 +1390,9 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
         <Text style={styles.helperText}>Enter an email, then press Share on a row.</Text>
       </View>
 
+        </>
+      ) : null}
+
       {showLocationOverlay ? (
         <View style={styles.dropdownOverlay}>
           <TouchableOpacity style={styles.dropdownBackdrop} onPress={closeLocationOverlay} />
@@ -1463,281 +1525,28 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
           }}
         />
       ) : null}
-      {editingFlight && editingFlightId ? (
-        <View style={styles.passengerOverlay}>
-          <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={closeFlightDetails} />
-          <View style={styles.modalCard}>
-            <Text style={styles.sectionTitle}>Flight Details</Text>
-            <Text style={styles.helperText}>
-              Current Departure: {formatDateLong(editingFlight.departureDate)} at {editingFlight.departureTime || '?'}
-            </Text>
-            <ScrollView style={{ maxHeight: 420 }}>
-                      <Text style={styles.modalLabel}>Passengers (tap to toggle)</Text>
-                      <View style={styles.payerChips}>
-                        {groupMembers.map((m) => {
-                          const selected = editingFlight.passengerIds.includes(m.id);
-                          const name = formatMemberName(m);
-                          return (
-                            <TouchableOpacity
-                              key={m.id}
-                              style={[styles.payerChip, selected && styles.toggleActive]}
-                              onPress={() => {
-                                const next = selected
-                                  ? editingFlight.passengerIds.filter((id) => id !== m.id)
-                                  : [...editingFlight.passengerIds, m.id];
-                                setEditingFlightPassengers(next);
-                              }}
-                            >
-                              <Text style={styles.cellText}>{name}</Text>
-                            </TouchableOpacity>
-                          );
-                        })}
-                      </View>
-              <Text style={styles.modalLabel}>Departure</Text>
-              <View style={styles.modalRow}>
-                <View style={styles.modalField}>
-                  <Text style={styles.modalLabelSmall}>Date</Text>
-                  {Platform.OS === 'web' ? (
-                    <input
-                      type="date"
-                      value={editingFlight.departureDate}
-                      onChange={(e) => setEditingFlight((prev) => (prev ? { ...prev, departureDate: e.target.value } : prev))}
-                      style={styles.input as any}
-                    />
-                  ) : (
-                    <TextInput
-                      style={styles.input}
-                      value={editingFlight.departureDate}
-                      placeholder="Date"
-                      onChangeText={(text: string) => setEditingFlight((prev) => (prev ? { ...prev, departureDate: text } : prev))}
-                    />
-                  )}
-                </View>
-                <View style={styles.modalField}>
-                  <Text style={styles.modalLabelSmall}>Location</Text>
-                  <View style={{ position: 'relative' }}>
-                    <TextInput
-                      style={styles.input}
-                      value={getLocationInputValue(editingFlight.departureLocation, 'modal-dep', airportTarget)}
-                      placeholder="Location"
-                      ref={modalDepLocationRef}
-                      onFocus={() => showAirportDropdown('modal-dep', modalDepLocationRef.current, editingFlight.departureLocation)}
-                      onChangeText={(text: string) => {
-                        setEditingFlight((prev) => (prev ? { ...prev, departureLocation: text } : prev));
-                        showAirportDropdown('modal-dep', modalDepLocationRef.current, text);
-                      }}
-                    />
-                    <TouchableOpacity
-                      style={{ position: 'absolute', right: 8, top: 10, padding: 6 }}
-                      onPress={() => showAirportDropdown('modal-dep', modalDepLocationRef.current, editingFlight.departureLocation)}
-                    >
-                      <Text style={styles.selectCaret}>▼</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-                <View style={styles.modalField}>
-                  <Text style={styles.modalLabelSmall}>Time</Text>
-                  {Platform.OS === 'web' ? (
-                    <input
-                      type="time"
-                      value={editingFlight.departureTime}
-                      onChange={(e) => setEditingFlight((prev) => (prev ? { ...prev, departureTime: e.target.value } : prev))}
-                      style={styles.input as any}
-                    />
-                  ) : (
-                    <TouchableOpacity
-                      style={[styles.input, { justifyContent: 'center' }]}
-                      onPress={() => openTimePicker('edit-dep', editingFlight.departureTime)}
-                    >
-                      <Text style={styles.cellText}>{editingFlight.departureTime || 'HH:MM'}</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
-              <Text style={styles.modalLabel}>Arrival</Text>
-              <View style={styles.modalRow}>
-                <View style={styles.modalField}>
-                  <Text style={styles.modalLabelSmall}>Location</Text>
-                  <View style={{ position: 'relative' }}>
-                    <TextInput
-                      style={styles.input}
-                      value={getLocationInputValue(editingFlight.arrivalLocation, 'modal-arr', airportTarget)}
-                      placeholder="Location"
-                      ref={modalArrLocationRef}
-                      onFocus={() => showAirportDropdown('modal-arr', modalArrLocationRef.current, editingFlight.arrivalLocation)}
-                      onChangeText={(text: string) => {
-                        setEditingFlight((prev) => (prev ? { ...prev, arrivalLocation: text } : prev));
-                        showAirportDropdown('modal-arr', modalArrLocationRef.current, text);
-                      }}
-                    />
-                    <TouchableOpacity
-                      style={{ position: 'absolute', right: 8, top: 10, padding: 6 }}
-                      onPress={() => showAirportDropdown('modal-arr', modalArrLocationRef.current, editingFlight.arrivalLocation)}
-                    >
-                      <Text style={styles.selectCaret}>▼</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-                <View style={styles.modalField}>
-                  <Text style={styles.modalLabelSmall}>Time</Text>
-                  {Platform.OS === 'web' ? (
-                    <input
-                      type="time"
-                      value={editingFlight.arrivalTime}
-                      onChange={(e) => setEditingFlight((prev) => (prev ? { ...prev, arrivalTime: e.target.value } : prev))}
-                      style={styles.input as any}
-                    />
-                  ) : (
-                    <TouchableOpacity
-                      style={[styles.input, { justifyContent: 'center' }]}
-                      onPress={() => openTimePicker('edit-arr', editingFlight.arrivalTime)}
-                    >
-                      <Text style={styles.cellText}>{editingFlight.arrivalTime || 'HH:MM'}</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
-
-              <Text style={styles.modalLabel}>Layover</Text>
-              <View style={styles.modalRow}>
-                <View style={styles.modalField}>
-                  <Text style={styles.modalLabelSmall}>Location</Text>
-                  <View style={{ position: 'relative' }}>
-                    <TextInput
-                      style={styles.input}
-                      value={getLocationInputValue(editingFlight.layoverLocation, 'modal-layover', airportTarget)}
-                      placeholder="Layover location"
-                      ref={modalLayoverLocationRef}
-                      onFocus={() => showAirportDropdown('modal-layover', modalLayoverLocationRef.current, editingFlight.layoverLocation)}
-                      onChangeText={(text: string) => {
-                        setEditingFlight((prev) => (prev ? { ...prev, layoverLocation: text } : prev));
-                        showAirportDropdown('modal-layover', modalLayoverLocationRef.current, text);
-                      }}
-                    />
-                    <TouchableOpacity
-                      style={{ position: 'absolute', right: 8, top: 10, padding: 6 }}
-                      onPress={() => showAirportDropdown('modal-layover', modalLayoverLocationRef.current, editingFlight.layoverLocation)}
-                    >
-                      <Text style={styles.selectCaret}>▼</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-                <View style={styles.modalField}>
-                  <Text style={styles.modalLabelSmall}>Duration</Text>
-                  <View style={{ flexDirection: 'row', gap: 8 }}>
-                    {(() => {
-                      const { hours, minutes } = parseLayoverDuration(editingFlight.layoverDuration);
-                      return (
-                        <>
-                          <TextInput
-                            style={[styles.input, { flex: 1 }]}
-                            keyboardType="numeric"
-                            placeholder="Hours"
-                            value={hours}
-                            onChangeText={(text: string) => {
-                              const { minutes: currentMinutes } = parseLayoverDuration(editingFlight.layoverDuration);
-                              setEditingFlight((prev) =>
-                                prev ? { ...prev, layoverDuration: `${text}h ${currentMinutes || '0'}m` } : prev
-                              );
-                            }}
-                          />
-                          <TextInput
-                            style={[styles.input, { flex: 1 }]}
-                            keyboardType="numeric"
-                            placeholder="Minutes"
-                            value={minutes}
-                            onChangeText={(text: string) => {
-                              const { hours: currentHours } = parseLayoverDuration(editingFlight.layoverDuration);
-                              setEditingFlight((prev) =>
-                                prev ? { ...prev, layoverDuration: `${currentHours || '0'}h ${text}m` } : prev
-                              );
-                            }}
-                          />
-                        </>
-                      );
-                    })()}
-                  </View>
-                </View>
-              </View>
-              <Text style={styles.modalLabel}>Flight</Text>
-              <View style={styles.modalRow}>
-                <View style={styles.modalField}>
-                  <Text style={styles.modalLabelSmall}>Carrier</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={editingFlight.carrier}
-                    onChangeText={(text: string) => setEditingFlight((prev) => (prev ? { ...prev, carrier: text } : prev))}
-                  />
-                </View>
-                <View style={styles.modalField}>
-                  <Text style={styles.modalLabelSmall}>Flight #</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={editingFlight.flightNumber}
-                    onChangeText={(text: string) => setEditingFlight((prev) => (prev ? { ...prev, flightNumber: text } : prev))}
-                  />
-                </View>
-                <View style={styles.modalField}>
-                  <Text style={styles.modalLabelSmall}>Booking Ref</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={editingFlight.bookingReference}
-                    onChangeText={(text: string) => setEditingFlight((prev) => (prev ? { ...prev, bookingReference: text.toUpperCase() } : prev))}
-                  />
-                </View>
-              </View>
-              <Text style={styles.modalLabel}>Cost</Text>
-              <TextInput
-                style={styles.input}
-                value={editingFlight.cost}
-                keyboardType="numeric"
-                onChangeText={(text: string) => setEditingFlight((prev) => (prev ? { ...prev, cost: text } : prev))}
-              />
-              <Text style={styles.modalLabel}>Paid by</Text>
-              <View style={[styles.input, styles.payerBox]}>
-                <View style={styles.payerChips}>
-                  {editingFlight.paidBy.map((id) => (
-                    <View key={id} style={styles.payerChip}>
-                      <Text style={styles.cellText}>{payerName(id)}</Text>
-                      <TouchableOpacity
-                        onPress={() =>
-                          setEditingFlight((p) =>
-                            p
-                              ? {
-                                  ...p,
-                                  paidBy: p.paidBy.filter((x) => x !== id),
-                                }
-                              : p
-                          )
-                        }
-                      >
-                        <Text style={styles.removeText}>x</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                </View>
-                <View style={styles.payerOptions}>
-                  {userMembers
-                    .filter((m) => !editingFlight.paidBy.includes(m.id))
-                    .map((m) => (
-                      <TouchableOpacity key={m.id} style={styles.smallButton} onPress={() => setEditingFlight((p) => (p ? { ...p, paidBy: [...p.paidBy, m.id] } : p))}>
-                        <Text style={styles.buttonText}>Add {formatMemberName(m)}</Text>
-                      </TouchableOpacity>
-                    ))}
-                </View>
-              </View>
-            </ScrollView>
-            <View style={styles.row}>
-              <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={closeFlightDetails}>
-                <Text style={styles.buttonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.button} onPress={saveFlightDetails}>
-                <Text style={styles.buttonText}>Save</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      ) : null}
+      <FlightEditingForm
+        visible={Boolean(editingFlight && editingFlightId)}
+        flightId={editingFlightId}
+        flight={editingFlight}
+        groupMembers={groupMembers}
+        userMembers={userMembers}
+        styles={styles}
+        formatMemberName={formatMemberName}
+        payerName={payerName}
+        airportTarget={airportTarget}
+        getLocationInputValue={getLocationInputValue}
+        showAirportDropdown={showAirportDropdown}
+        parseLayoverDuration={parseLayoverDuration}
+        openTimePicker={openTimePicker}
+        setFlight={setEditingFlight}
+        setPassengerIds={setEditingFlightPassengers}
+        modalDepLocationRef={modalDepLocationRef}
+        modalArrLocationRef={modalArrLocationRef}
+        modalLayoverLocationRef={modalLayoverLocationRef}
+        onClose={closeFlightDetails}
+        onSave={saveFlightDetails}
+      />
     </View>
   );
 };

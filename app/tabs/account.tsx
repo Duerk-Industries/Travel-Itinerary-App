@@ -548,14 +548,23 @@ const AccountTab: React.FC<AccountTabProps> = ({
       {familyRelationships.length ? (
         <View style={{ marginTop: 12 }}>
           {familyRelationships.map((rel) => {
-            const name = `${rel.relative.firstName ?? ''} ${rel.relative.middleName ?? ''} ${rel.relative.lastName ?? ''}`.replace(/\s+/g, ' ').trim();
+            const normalize = (val?: string | null) => {
+              const t = String(val ?? '').trim();
+              if (!t || t.toLowerCase() === 'unknown') return '';
+              return t;
+            };
+            const first = normalize(rel.relative.firstName);
+            const middle = normalize(rel.relative.middleName);
+            const last = normalize(rel.relative.lastName);
+            const emailLabel = rel.relative.email || 'No email';
+            const name = `${first} ${middle} ${last}`.replace(/\s+/g, ' ').trim();
             const isPendingInbound = rel.status === 'pending' && rel.direction === 'inbound';
             const isEditable = rel.editableProfile;
             const isEditing = editingFamilyId === rel.id;
             return (
               <View key={rel.id} style={styles.familyRow}>
                 <Text style={styles.bodyText}>
-                  {name || 'Unknown'} ({rel.relative.email || 'No email'})
+                  {name || emailLabel} ({emailLabel})
                 </Text>
                 <Text style={styles.helperText}>Relationship: {rel.relationship} | Status: {rel.status}</Text>
                 {isPendingInbound ? (

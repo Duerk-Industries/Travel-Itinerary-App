@@ -6,6 +6,8 @@ type FlightLike = {
   departureDate?: string;
   departure_time?: string;
   departureTime?: string;
+  arrival_date?: string | null;
+  arrivalDate?: string | null;
   arrival_time?: string;
   arrivalTime?: string;
   departure_airport_code?: string;
@@ -143,13 +145,23 @@ export const formatFlightDetails = (flight: FlightLike): DetailItem[] => {
   details.push({ label: 'Flight Number', value: flight.flight_number || flight.flightNumber || 'N/A' });
   details.push({ label: 'Departure', value: flight.departure_airport_code || flight.departureAirportCode || 'N/A' });
   details.push({ label: 'Arrival', value: flight.arrival_airport_code || flight.arrivalAirportCode || 'N/A' });
+  const depDate = flight.departure_date || flight.departureDate || '';
+  const arrDate = flight.arrival_date || flight.arrivalDate || '';
   details.push({
     label: 'Departure Date',
-    value: formatFriendlyDate(flight.departure_date || flight.departureDate || '', flight.departure_time || flight.departureTime || '') || 'N/A',
+    value: formatFriendlyDate(depDate, flight.departure_time || flight.departureTime || '') || 'N/A',
   });
+  const arrivalDateUsed = arrDate || depDate;
+  if (arrDate && arrDate !== depDate) {
+    details.push({ label: 'Arrival Date', value: formatFriendlyDate(arrDate) || arrDate || 'N/A' });
+  }
   details.push({
     label: 'Arrival Time',
-    value: formatFriendlyDate(flight.departure_date || flight.departureDate || '', flight.arrival_time || flight.arrivalTime || '') || flight.arrival_time || flight.arrivalTime || 'N/A',
+    value:
+      formatFriendlyDate(arrivalDateUsed, flight.arrival_time || flight.arrivalTime || '') ||
+      flight.arrival_time ||
+      flight.arrivalTime ||
+      'N/A',
   });
   if (flight.layover_location || flight.layover_location_code) {
     details.push({

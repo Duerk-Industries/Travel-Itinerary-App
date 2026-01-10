@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Linking, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Linking, Platform, ScrollView, Text, TextInput, TouchableOpacity, View, type LayoutChangeEvent } from 'react-native';
 import { computeTripDays, validateTripDates } from '../utils/createTripWizard';
 import { renderRichTextBlocks } from '../utils/richText';
 import {
@@ -18,10 +18,15 @@ import {
 } from '../utils/tripDates';
 import { normalizeDateString } from '../utils/normalizeDateString';
 import {
+  buildFlightPayload,
   buildFlightPayloadForCreate,
   createInitialFlightCreateDraft,
+  createInitialFlightState,
   createFlightForTrip,
+  type Flight,
   type FlightCreateDraft,
+  type FlightEditDraft,
+  type GroupMemberOption,
 } from '../tabs/flights';
 import {
   buildLodgingPayload,
@@ -43,11 +48,8 @@ import {
   type CarRental,
   type CarRentalDraft,
 } from '../tabs/carRentals';
-import {
-  buildFlightDraftFromRow,
-  buildRentalDraftFromRow,
-  buildTourDraftFromRow,
-} from '../utils/overviewEditing';
+import { buildRentalDraftFromRow, buildTourDraftFromRow } from '../utils/overviewEditing';
+import { FlightEditingForm } from '../components/FlightEditingForm';
 
 type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
 let NativeDateTimePicker: NativeDateTimePickerType | null = null;
@@ -79,22 +81,6 @@ type GroupView = {
   id: string;
   name: string;
   members: Array<{ id: string; userEmail?: string; email?: string; guestName?: string }>;
-};
-
-type Flight = {
-  id: string;
-  departure_date: string;
-  departure_time: string;
-  arrival_time: string;
-  departure_airport_code?: string;
-  arrival_airport_code?: string;
-  carrier: string;
-  flight_number: string;
-  booking_reference: string;
-  layover_location?: string;
-  layover_location_code?: string;
-  layover_duration?: string;
-  cost: number;
 };
 
 type Lodging = {
@@ -143,6 +129,8 @@ type OverviewTabProps = {
     userEmail?: string;
     firstName?: string;
     lastName?: string;
+    status?: 'active' | 'pending' | 'removed';
+    removedAt?: string | null;
   }>;
   flights: Flight[];
   lodgings: Lodging[];
@@ -158,6 +146,7 @@ type OverviewTabProps = {
   onRefreshLodgings: () => void;
   onRefreshTours: () => void;
   onAddCarRental: (rental: CarRental) => void;
+  openFlightInFlightsTab: (flightId: string) => void;
 };
 
 type ModalDateField =
@@ -192,6 +181,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
   onRefreshLodgings,
   onRefreshTours,
   onAddCarRental,
+  openFlightInFlightsTab: _openFlightInFlightsTab,
 }) => {
   const [itineraryDetails, setItineraryDetails] = useState<ItineraryDetail[]>([]);
   const [itineraryLoading, setItineraryLoading] = useState(false);
@@ -219,14 +209,25 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
   const [tourDraft, setTourDraft] = useState<TourDraft>(createInitialTourState());
   const [rentalDraft, setRentalDraft] = useState<CarRentalDraft>(createInitialCarRentalDraft());
   const [editingFlightId, setEditingFlightId] = useState<string | null>(null);
+  const [editingFlightDraft, setEditingFlightDraft] = useState<FlightEditDraft | null>(null);
+  const [showFlightEditor, setShowFlightEditor] = useState(false);
+  const [flightEditorAnchor, setFlightEditorAnchor] = useState(0);
   const [editingLodgingId, setEditingLodgingId] = useState<string | null>(null);
   const [editingTourId, setEditingTourId] = useState<string | null>(null);
   const [editingRentalId, setEditingRentalId] = useState<string | null>(null);
   const autoAdjustedRef = useRef<string | null>(null);
   const [dateField, setDateField] = useState<'start' | 'end' | null>(null);
   const [dateValue, setDateValue] = useState<Date>(new Date());
+  const [timePickerTarget, setTimePickerTarget] = useState<'edit-dep' | 'edit-arr' | null>(null);
+  const [timePickerValue, setTimePickerValue] = useState<Date>(new Date());
+  const [scrollY, setScrollY] = useState(0);
+  const [flightRowOffsets, setFlightRowOffsets] = useState<Record<string, number>>({});
   const startDateRef = useRef<HTMLInputElement | null>(null);
   const endDateRef = useRef<HTMLInputElement | null>(null);
+  const editDepLocationRef = useRef<TextInput | null>(null);
+  const editArrLocationRef = useRef<TextInput | null>(null);
+  const editLayoverLocationRef = useRef<TextInput | null>(null);
+  const scrollRef = useRef<ScrollView | null>(null);
   const [modalDateField, setModalDateField] = useState<ModalDateField | null>(null);
   const [modalDateValue, setModalDateValue] = useState<Date>(new Date());
 
@@ -314,6 +315,59 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
     [trip?.startDate, trip?.endDate, earliestEventDate]
   );
 
+  const formatMemberName = (member: GroupMemberOption) => {
+    const full = `${member.firstName ?? ''} ${member.lastName ?? ''}`.trim();
+    if (full) return full;
+    if (member.guestName) return member.guestName;
+    if (member.email) return member.email;
+    // @ts-expect-error legacy field
+    if (member.userEmail) return member.userEmail as string;
+    return 'Traveler';
+  };
+
+  const groupMembers: GroupMemberOption[] = useMemo(
+    () => attendees.map((a) => ({ ...a })),
+    [attendees]
+  );
+
+  const memberNames = useMemo(() => {
+    const map = new Map<string, string>();
+    groupMembers.forEach((m) => map.set(m.id, formatMemberName(m)));
+    return map;
+  }, [groupMembers]);
+
+  const buildPassengerName = (ids: string[]) => ids.map((id) => memberNames.get(id)).filter(Boolean).join(', ');
+
+  const userMembers = useMemo(
+    () => groupMembers.filter((m) => !m.guestName && m.status !== 'pending' && m.status !== 'removed'),
+    [groupMembers]
+  );
+
+  const payerName = (id: string) => memberNames.get(id) ?? 'Unknown';
+
+  const parseLayoverDuration = (value: string | null | undefined): { hours: string; minutes: string } => {
+    const safe = value ?? '';
+    const hoursMatch = safe.match(/(\d+)\s*h/i);
+    const minutesMatch = safe.match(/(\d+)\s*m/i);
+    const hours = hoursMatch ? hoursMatch[1] : '';
+    const minutes = minutesMatch ? minutesMatch[1] : '';
+    return { hours, minutes };
+  };
+
+  const getLocationInputValue = (
+    rawValue: string,
+    _activeTarget: 'dep' | 'arr' | 'modal-dep' | 'modal-arr' | 'modal-layover' | null,
+    _currentTarget: 'dep' | 'arr' | 'modal-dep' | 'modal-arr' | 'modal-layover' | null
+  ): string => {
+    return rawValue;
+  };
+
+  const showAirportDropdown = (
+    _target: 'dep' | 'arr' | 'modal-dep' | 'modal-arr' | 'modal-layover',
+    _node: any,
+    _query: string
+  ) => undefined;
+
   const displayStartDate = effectiveRangeDates.startDate ?? trip?.startDate ?? null;
   const displayEndDate = effectiveRangeDates.endDate ?? trip?.endDate ?? null;
   const monthLabel = useMemo(
@@ -389,6 +443,22 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       const base = current?.trim() ? new Date(current) : new Date();
       setModalDateValue(base);
       setModalDateField(field);
+    }
+  };
+
+  const openTimePicker = (target: 'edit-dep' | 'edit-arr' | 'new-dep' | 'new-arr', current: string) => {
+    if (Platform.OS !== 'web' && NativeDateTimePicker) {
+      const base = new Date();
+      const match = current?.match(/(\d{1,2}):(\d{2})/);
+      if (match) {
+        base.setHours(Number(match[1]), Number(match[2]), 0, 0);
+      } else {
+        base.setHours(0, 0, 0, 0);
+      }
+      setTimePickerValue(base);
+      if (target === 'edit-dep' || target === 'edit-arr') {
+        setTimePickerTarget(target);
+      }
     }
   };
 
@@ -516,6 +586,77 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
     onRefreshFlights();
   };
 
+  const toFlightEditDraft = (flight: Flight): FlightEditDraft => {
+    const base = createInitialFlightState();
+    const draft: FlightEditDraft = {
+      ...base,
+      passengerName: (flight as any).passenger_name || (flight as any).passengerName || base.passengerName,
+      passengerIds: Array.isArray((flight as any).passenger_ids) ? (flight as any).passenger_ids : [],
+      departureDate: normalizeDateString(flight.departure_date),
+      arrivalDate: normalizeDateString((flight as any).arrival_date || (flight as any).arrivalDate || flight.departure_date),
+      departureLocation: (flight as any).departure_location ?? '',
+      departureAirportCode: flight.departure_airport_code ?? (flight as any).departureAirportCode ?? '',
+      departureTime: flight.departure_time,
+      arrivalLocation: (flight as any).arrival_location ?? '',
+      arrivalAirportCode: flight.arrival_airport_code ?? (flight as any).arrivalAirportCode ?? '',
+      layoverLocation: flight.layover_location ?? '',
+      layoverLocationCode: flight.layover_location_code ?? '',
+      layoverDuration: flight.layover_duration ?? '',
+      arrivalTime: flight.arrival_time,
+      cost: String((flight as any).cost ?? ''),
+      carrier: flight.carrier,
+      flightNumber: flight.flight_number,
+      bookingReference: flight.booking_reference,
+      paidBy: Array.isArray((flight as any).paidBy) ? (flight as any).paidBy : Array.isArray((flight as any).paid_by) ? (flight as any).paid_by : [],
+    };
+    if (!draft.passengerIds.length && groupMembers.length) {
+      draft.passengerIds = [groupMembers[0].id];
+    }
+    if (!draft.paidBy.length && defaultPayerId) {
+      draft.paidBy = [defaultPayerId];
+    }
+    if (draft.passengerIds.length) {
+      draft.passengerName = buildPassengerName(draft.passengerIds) || draft.passengerName;
+    }
+    return draft;
+  };
+
+  const setEditingFlightPassengers = (ids: string[]) => {
+    const unique = Array.from(new Set(ids.filter(Boolean)));
+    setEditingFlightDraft((prev) => (prev ? { ...prev, passengerIds: unique, passengerName: buildPassengerName(unique) } : prev));
+  };
+
+  const saveFlightEdit = async () => {
+    if (!editingFlightId || !editingFlightDraft) return;
+    if (!trip?.id) {
+      alert('Select an active trip before editing a flight.');
+      return;
+    }
+    if (!editingFlightDraft.passengerIds.length) {
+      alert('Select at least one passenger');
+      return;
+    }
+    const payload = buildFlightPayload(
+      { ...editingFlightDraft, passengerName: buildPassengerName(editingFlightDraft.passengerIds) || editingFlightDraft.passengerName },
+      trip.id,
+      defaultPayerId
+    );
+    const res = await fetch(`${backendUrl}/api/flights/${editingFlightId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...headers },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      alert(data.error || 'Unable to update flight');
+      return;
+    }
+    setShowFlightEditor(false);
+    setEditingFlightDraft(null);
+    setEditingFlightId(null);
+    onRefreshFlights();
+  };
+
   const saveLodging = async () => {
     if (!trip?.id) {
       alert('Select an active trip before saving lodging.');
@@ -617,6 +758,14 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
     setFlightDraft(createInitialFlightCreateDraft());
   };
 
+  const closeFlightEditor = () => {
+    setShowFlightEditor(false);
+    setEditingFlightId(null);
+    setEditingFlightDraft(null);
+    setTimePickerTarget(null);
+    setFlightEditorAnchor(0);
+  };
+
   const closeLodgingModal = () => {
     setShowAddLodging(false);
     setEditingLodgingId(null);
@@ -638,6 +787,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
   useEffect(() => {
     if (!isEditing) {
       closeFlightModal();
+      closeFlightEditor();
       closeLodgingModal();
       closeTourModal();
       closeRentalModal();
@@ -649,9 +799,19 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       setSelectedFlight(flight);
       return;
     }
+    setSelectedFlight(null);
+    setShowAddFlight(false);
     setEditingFlightId(flight.id);
-    setFlightDraft(buildFlightDraftFromRow(flight));
-    setShowAddFlight(true);
+    setEditingFlightDraft(toFlightEditDraft(flight));
+    const anchor = flightRowOffsets[flight.id];
+    if (typeof anchor === 'number') {
+      setFlightEditorAnchor(anchor);
+      scrollRef.current?.scrollTo({ y: Math.max(anchor - 60, 0), animated: true });
+    } else {
+      setFlightEditorAnchor(scrollY + 80);
+      scrollRef.current?.scrollTo({ y: Math.max(scrollY - 40, 0), animated: true });
+    }
+    setShowFlightEditor(true);
   };
 
   const openLodgingEditor = (lodging: Lodging) => {
@@ -737,13 +897,17 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
     const first = member.firstName?.trim() ?? '';
     const last = member.lastName?.trim() ?? '';
     const combined = `${first} ${last}`.trim();
-    if (combined) return combined;
-    if (member.guestName?.trim()) return member.guestName.trim();
-    return 'Traveler';
+    return combined || member.guestName?.trim() || 'Traveler';
   };
 
   return (
-    <ScrollView style={styles.card} contentContainerStyle={{ gap: 12 }}>
+    <ScrollView
+      ref={scrollRef}
+      style={styles.card}
+      contentContainerStyle={{ gap: 12 }}
+      onScroll={(e) => setScrollY(e.nativeEvent.contentOffset.y)}
+      scrollEventThrottle={16}
+    >
       <View style={styles.row}>
         <Text style={styles.sectionTitle}>Overview</Text>
         {!isEditing ? (
@@ -908,19 +1072,34 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       </View>
       <View style={[styles.row, { flexWrap: 'wrap', gap: 8 }]}>
         {(attendees ?? []).map((m) => {
-          const label = (
-            <Text style={styles.buttonText}>
-              {attendeeLabel(m)}
-              {isEditing ? <Text style={styles.removeText}> x</Text> : null}
-            </Text>
+          const label = attendeeLabel(m);
+          const badge =
+            m.status === 'pending' || m.status === 'removed' ? (
+              <View
+                style={[
+                  styles.badge,
+                  m.status === 'pending' ? styles.badgePending : styles.badgeRemoved,
+                ]}
+              >
+                <Text style={styles.badgeText}>{m.status === 'pending' ? 'Pending' : 'Removed'}</Text>
+              </View>
+            ) : null;
+          const content = (
+            <View style={styles.attendeeChipContent}>
+              <Text style={styles.buttonText}>
+                {label}
+                {isEditing ? <Text style={styles.removeText}> x</Text> : null}
+              </Text>
+              {badge}
+            </View>
           );
           return isEditing ? (
             <TouchableOpacity key={m.id} style={[styles.button, styles.smallButton]} onPress={() => removeTraveler(m.id)}>
-              {label}
+              {content}
             </TouchableOpacity>
           ) : (
             <View key={m.id} style={[styles.button, styles.smallButton]}>
-              {label}
+              {content}
             </View>
           );
         })}
@@ -1047,7 +1226,18 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
               if (row.type === 'tour') onPress = () => openTourEditor(row.meta as Tour);
               if (row.type === 'rental') onPress = () => openRentalEditor(row.meta as CarRental);
               return (
-                <View key={`${row.type}-${row.label}-${idx}`} style={styles.tableRow}>
+                <View
+                  key={`${row.type}-${row.label}-${idx}`}
+                  style={styles.tableRow}
+                  onLayout={(e: LayoutChangeEvent) => {
+                    if (row.type === 'flight' && (row.meta as Flight)?.id) {
+                      setFlightRowOffsets((prev) => ({
+                        ...prev,
+                        [(row.meta as Flight).id]: e.nativeEvent.layout.y,
+                      }));
+                    }
+                  }}
+                >
                   <View style={[styles.cell, dayColStyle]}>{showDay ? <Text style={styles.cellText}>{dayCounter}</Text> : null}</View>
                   <View style={[styles.cell, dateColStyle]}>{showDay ? <Text style={styles.cellText}>{renderedDate}</Text> : null}</View>
                   <View style={[styles.cell, { flex: 1 }]}>{renderDescription(row.label, onPress)}</View>
@@ -1073,6 +1263,32 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
           )
         : null}
       {selectedTour ? renderDetailModal('Tour Details', formatTourDetails(selectedTour), () => setSelectedTour(null)) : null}
+      <FlightEditingForm
+        visible={showFlightEditor && Boolean(editingFlightDraft && editingFlightId)}
+        flightId={editingFlightId}
+        flight={editingFlightDraft}
+        overlayStyle={{
+          justifyContent: 'flex-start',
+          paddingTop: Math.max(16, flightEditorAnchor - scrollY + 12),
+        }}
+        groupMembers={groupMembers}
+        userMembers={userMembers}
+        styles={styles}
+        formatMemberName={formatMemberName}
+        payerName={payerName}
+        airportTarget={null}
+        getLocationInputValue={getLocationInputValue}
+        showAirportDropdown={showAirportDropdown}
+        parseLayoverDuration={parseLayoverDuration}
+        openTimePicker={openTimePicker}
+        setFlight={setEditingFlightDraft}
+        setPassengerIds={setEditingFlightPassengers}
+        modalDepLocationRef={editDepLocationRef}
+        modalArrLocationRef={editArrLocationRef}
+        modalLayoverLocationRef={editLayoverLocationRef}
+        onClose={closeFlightEditor}
+        onSave={saveFlightEdit}
+      />
       {showAddFlight ? (
         <View style={styles.modalOverlay}>
           <View style={styles.confirmModal}>
@@ -1533,6 +1749,29 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
             </View>
           </View>
         </View>
+      ) : null}
+      {Platform.OS !== 'web' && timePickerTarget && NativeDateTimePicker ? (
+        <NativeDateTimePicker
+          value={timePickerValue}
+          mode="time"
+          display="spinner"
+          onChange={(event, date) => {
+            if (event?.type === 'dismissed') {
+              setTimePickerTarget(null);
+              return;
+            }
+            if (!date) return;
+            const hh = String(date.getHours()).padStart(2, '0');
+            const mm = String(date.getMinutes()).padStart(2, '0');
+            const value = `${hh}:${mm}`;
+            if (timePickerTarget === 'edit-dep') {
+              setEditingFlightDraft((prev) => (prev ? { ...prev, departureTime: value } : prev));
+            } else if (timePickerTarget === 'edit-arr') {
+              setEditingFlightDraft((prev) => (prev ? { ...prev, arrivalTime: value } : prev));
+            }
+            setTimePickerTarget(null);
+          }}
+        />
       ) : null}
       {Platform.OS !== 'web' && dateField && NativeDateTimePicker ? (
         <NativeDateTimePicker
