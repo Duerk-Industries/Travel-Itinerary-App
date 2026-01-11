@@ -1,9 +1,11 @@
 import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
-import express from 'express';
+import express, { type RequestHandler } from 'express';
 import cors from 'cors';
+import passport from 'passport';
 import authRoutes from './routes/authRoutes';
+import authGoogleRoutes from './routes/authGoogle';
 import flightRoutes from './routes/flightRoutes';
 import webAuthRoutes from './routes/webAuthRoutes';
 import groupRoutes from './routes/groupRoutes';
@@ -32,9 +34,13 @@ if (!envLoadedFrom) {
 
 export { envLoadedFrom };
 
+require('./auth/googlePassport');
+
 export const app = express();
 app.use(cors());
 app.use(express.json());
+
+app.use(passport.initialize() as unknown as RequestHandler);
 
 const publicDir = path.join(__dirname, '..', 'public');
 app.use(express.static(publicDir));
@@ -43,6 +49,7 @@ app.get('/', (_req, res) => {
   res.sendFile(path.join(publicDir, 'login.html'));
 });
 
+app.use('/auth', authGoogleRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/web-auth', webAuthRoutes);
 app.use('/api/flights', flightRoutes);

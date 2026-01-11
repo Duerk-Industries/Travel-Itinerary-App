@@ -57,9 +57,16 @@ export const initDb = async (): Promise<void> => {
       id UUID PRIMARY KEY,
       email TEXT UNIQUE NOT NULL,
       provider TEXT NOT NULL,
+      google_id TEXT UNIQUE,
+      name TEXT,
+      photo TEXT,
       created_at TIMESTAMP DEFAULT NOW()
     );
   `);
+  await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id TEXT;`);
+  await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS name TEXT;`);
+  await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS photo TEXT;`);
+  await p.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id);`);
 
 
   await p.query(`
@@ -337,6 +344,45 @@ export const findOrCreateUser = async (
   const id = randomUUID();
   await p.query(`INSERT INTO users (id, email, provider) VALUES ($1, $2, $3)`, [id, email, provider]);
   return { id, email, provider };
+};
+
+export const upsertGoogleUser = async (
+  googleId: string,
+  email: string,
+  name: string | null,
+  photo: string | null
+): Promise<User> => {
+  const p = getPool();
+  const trimmedEmail = email.trim();
+  const { rows } = await p.query<User & { googleId: string | null }>(
+    `SELECT id, email, provider, google_id as "googleId", name, photo
+     FROM users
+     WHERE google_id = $1 OR LOWER(email) = LOWER($2)
+     LIMIT 1`,
+    [googleId, trimmedEmail]
+  );
+  if (rows.length) {
+    const existing = rows[0];
+    await p.query(
+      `UPDATE users SET email = $2, google_id = $3, name = $4, photo = $5 WHERE id = $1`,
+      [existing.id, trimmedEmail, googleId, name, photo]
+    );
+    return {
+      ...existing,
+      email: trimmedEmail,
+      googleId,
+      name,
+      photo,
+    };
+  }
+
+  const id = randomUUID();
+  await p.query(
+    `INSERT INTO users (id, email, provider, google_id, name, photo)
+     VALUES ($1, $2, 'google', $3, $4, $5)`,
+    [id, trimmedEmail, googleId, name, photo]
+  );
+  return { id, email: trimmedEmail, provider: 'google', googleId, name, photo };
 };
 
 export const ensureDefaultGroupForUser = async (userId: string, email: string): Promise<void> => {

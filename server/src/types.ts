@@ -2,6 +2,9 @@ export interface User {
   id: string;
   email: string;
   provider: 'google' | 'apple' | 'email';
+  googleId?: string | null;
+  name?: string | null;
+  photo?: string | null;
 }
 
 export interface WebUser {

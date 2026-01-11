@@ -3,7 +3,8 @@ import { Request, Response, NextFunction } from 'express';
 import { findOrCreateUser } from './db';
 import { User } from './types';
 
-const secret = process.env.AUTH_SECRET || 'development-secret';
+const secret = process.env.JWT_SECRET || process.env.AUTH_SECRET || 'development-secret';
+export const authCookieName = 'auth_token';
 
 interface TokenPayload {
   userId: string;
@@ -21,11 +22,27 @@ export const createWebUserToken = (payload: { userId: string; username: string }
 
 export const authenticate = (req: Request, res: Response, next: NextFunction): void => {
   const authHeader = req.headers.authorization;
-  if (!authHeader) {
+  let token: string | undefined;
+  if (authHeader?.toLowerCase().startsWith('bearer ')) {
+    token = authHeader.slice(7).trim();
+  }
+  if (!token) {
+    const cookieHeader = req.headers.cookie;
+    if (cookieHeader) {
+      const cookies = cookieHeader.split(';');
+      for (const cookie of cookies) {
+        const [name, ...rest] = cookie.trim().split('=');
+        if (name === authCookieName) {
+          token = decodeURIComponent(rest.join('='));
+          break;
+        }
+      }
+    }
+  }
+  if (!token) {
     res.status(401).json({ error: 'Missing authorization header' });
     return;
   }
-  const [, token] = authHeader.split(' ');
   try {
     const decoded = jwt.verify(token, secret) as TokenPayload;
     (req as Request & { user?: TokenPayload }).user = decoded;

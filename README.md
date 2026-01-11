@@ -31,6 +31,24 @@ A starter shared trip planner stack with a TypeScript/Node.js API backed by Post
    npm run web # or npm run ios / npm run android
    ```
 
+## Test Google login locally
+1. Start the backend on port 4000:
+   ```bash
+   cd server
+   npm run dev
+   ```
+2. Start the frontend on port 8081:
+   ```bash
+   cd app
+   npm run web
+   ```
+3. Click the Google login button on the login screen.
+4. After the redirect completes, visit `http://localhost:4000/auth/me` and confirm you see user JSON.
+
+Troubleshooting:
+- If `req.user` is undefined after the callback, confirm `express-session` and `passport.session()` are registered before routes.
+- For local dev, set the session cookie to `sameSite: 'lax'` (already applied in `server/src/app.ts`).
+
 ## API quick reference
 - `POST /api/auth/email { email }` → create/login a user via email, returning a JWT.
 - `POST /api/auth/oauth { email, provider }` → Google or Apple login using the provider name and email claim.

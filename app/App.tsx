@@ -112,6 +112,7 @@ type Page =
   | 'follow';
 
 const backendUrl = Constants.expoConfig?.extra?.backendUrl ?? 'http://localhost:4000';
+const googleAuthUrl = `${backendUrl}/auth/google`;
 const sessionKey = 'stp.session';
 const sessionDurationMs = 12 * 60 * 60 * 1000;
 
@@ -231,6 +232,13 @@ const App: React.FC = () => {
   const [familyRelationships, setFamilyRelationships] = useState<any[]>([]);
   const [fellowTravelers, setFellowTravelers] = useState<FellowTraveler[]>([]);
   const [showRelationshipDropdown, setShowRelationshipDropdown] = useState(false);
+  const openGoogleLogin = () => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.location.href = googleAuthUrl;
+      return;
+    }
+    Linking.openURL(googleAuthUrl);
+  };
   const formatMemberName = (member: GroupMemberOption): string => {
     if (member.guestName) return member.guestName;
     const first = member.firstName?.trim();
@@ -2395,6 +2403,9 @@ const App: React.FC = () => {
             onPress={authMode === 'login' ? loginWithPassword : register}
           >
             <Text style={styles.buttonText}>{authMode === 'login' ? 'Login' : 'Create account'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.button} onPress={openGoogleLogin}>
+            <Text style={styles.buttonText}>Continue with Google</Text>
           </TouchableOpacity>
         </View>
       )}
