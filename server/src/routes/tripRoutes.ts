@@ -87,7 +87,7 @@ router.post('/wizard', async (req, res) => {
   const members = memberInputs.map((p) => {
     const email = String(p.email ?? '').trim().toLowerCase();
     const guestName = `${String(p.firstName ?? '').trim()} ${String(p.lastName ?? '').trim()}`.trim();
-    return email ? { email } : { guestName };
+    return email ? { email, guestName: guestName || undefined } : { guestName };
   });
 
   try {

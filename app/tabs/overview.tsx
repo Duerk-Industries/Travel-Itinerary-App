@@ -142,6 +142,7 @@ type OverviewTabProps = {
   onOpenAddress: (address: string) => void;
   onRefreshTrips: () => void;
   onRefreshGroups: () => void;
+  onRefreshGroupMembers: () => void;
   onRefreshFlights: () => void;
   onRefreshLodgings: () => void;
   onRefreshTours: () => void;
@@ -177,6 +178,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
   onOpenAddress,
   onRefreshTrips,
   onRefreshGroups,
+  onRefreshGroupMembers,
   onRefreshFlights,
   onRefreshLodgings,
   onRefreshTours,
@@ -200,6 +202,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
   const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
   const [showAddTraveler, setShowAddTraveler] = useState(false);
   const [travelerDraft, setTravelerDraft] = useState({ firstName: '', lastName: '', email: '' });
+  const [pendingRemovalIds, setPendingRemovalIds] = useState<string[]>([]);
   const [showAddFlight, setShowAddFlight] = useState(false);
   const [showAddLodging, setShowAddLodging] = useState(false);
   const [showAddTour, setShowAddTour] = useState(false);
@@ -462,6 +465,42 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
     }
   };
 
+  const monthOptions = useMemo(
+    () =>
+      Array.from({ length: 12 }).map((_, idx) => ({
+        label: new Date(2000, idx, 1).toLocaleString('default', { month: 'long' }),
+        value: String(idx + 1).padStart(2, '0'),
+      })),
+    []
+  );
+
+  const yearOptions = useMemo(() => {
+    const current = new Date().getFullYear();
+    return Array.from({ length: 12 }).map((_, idx) => String(current - 1 + idx));
+  }, []);
+
+  const dayOptions = useMemo(() => Array.from({ length: 31 }).map((_, idx) => String(idx + 1).padStart(2, '0')), []);
+  const durationOptions = useMemo(() => Array.from({ length: 365 }).map((_, idx) => String(idx + 1)), []);
+
+  const parseDateParts = (value: string | null | undefined) => {
+    const safe = (value ?? '').trim();
+    const [year, month, day] = safe.split('-');
+    return { year: year || '', month: month || '', day: day || '' };
+  };
+
+  const setDatePart = (which: 'start' | 'end', part: 'year' | 'month' | 'day', value: string) => {
+    setDateDraft((prev) => {
+      const current = which === 'start' ? prev.startDate : prev.endDate;
+      const parts = parseDateParts(current);
+      const next = { ...parts, [part]: value };
+      const year = (next.year || '').padStart(4, '0');
+      const month = (next.month || '').padStart(2, '0');
+      const day = (next.day || '').padStart(2, '0');
+      const formatted = year && month && day ? `${year}-${month}-${day}` : '';
+      return which === 'start' ? { ...prev, startDate: formatted } : { ...prev, endDate: formatted };
+    });
+  };
+
   const saveOverviewEdits = async () => {
     if (!trip?.id) return;
     const validationError = validateTripDates({
@@ -503,22 +542,28 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       alert(data.error || 'Unable to update trip');
       return;
     }
+    if (pendingRemovalIds.length && group?.id) {
+      for (const memberId of pendingRemovalIds) {
+        const removeRes = await fetch(`${backendUrl}/api/groups/${group.id}/members/${memberId}`, {
+          method: 'DELETE',
+          headers,
+        });
+        if (!removeRes.ok) {
+          const removeData = await removeRes.json().catch(() => ({}));
+          alert(removeData.error || 'Unable to remove member');
+          return;
+        }
+      }
+      setPendingRemovalIds([]);
+      onRefreshGroups();
+    }
     setIsEditing(false);
     onRefreshTrips();
   };
 
-  const removeTraveler = async (memberId: string) => {
-    if (!isEditing || !group?.id) return;
-    const res = await fetch(`${backendUrl}/api/groups/${group.id}/members/${memberId}`, {
-      method: 'DELETE',
-      headers,
-    });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      alert(data.error || 'Unable to remove member');
-      return;
-    }
-    onRefreshGroups();
+  const removeTraveler = (memberId: string) => {
+    if (!isEditing) return;
+    setPendingRemovalIds((prev) => (prev.includes(memberId) ? prev.filter((id) => id !== memberId) : [...prev, memberId]));
   };
 
   const addTraveler = async () => {
@@ -530,7 +575,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       alert('Enter first and last name');
       return;
     }
-    const payload = email ? { email } : { guestName: `${first} ${last}`.trim() };
+    const payload = email ? { email, firstName: first, lastName: last } : { guestName: `${first} ${last}`.trim() };
     const res = await fetch(`${backendUrl}/api/groups/${group.id}/members`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...headers },
@@ -541,6 +586,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       alert(data.error || 'Unable to add member');
       return;
     }
+    onRefreshGroupMembers();
     setTravelerDraft({ firstName: '', lastName: '', email: '' });
     setShowAddTraveler(false);
     onRefreshGroups();
@@ -791,6 +837,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       closeLodgingModal();
       closeTourModal();
       closeRentalModal();
+      setPendingRemovalIds([]);
     }
   }, [isEditing]);
 
@@ -962,72 +1009,179 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
           </View>
           {dateDraft.mode === 'range' ? (
             <>
-              <View style={styles.dateInputWrap}>
+              <View style={[styles.row, { gap: 8 }]}>
                 {Platform.OS === 'web' ? (
-                  <input
-                    ref={startDateRef as any}
-                    type="date"
-                    value={dateDraft.startDate}
-                    onChange={(e) =>
-                      setDateDraft((prev) => ({ ...prev, startDate: normalizeDateString(e.target.value) }))
-                    }
-                    style={styles.input as any}
-                  />
+                  <>
+                    <select
+                      value={parseDateParts(dateDraft.startDate).month}
+                      onChange={(e) => setDatePart('start', 'month', e.target.value)}
+                      style={{ minWidth: 140, maxWidth: 160, padding: 8, borderRadius: 6, borderColor: '#ccc', borderWidth: 1 }}
+                    >
+                      <option value="">Month</option>
+                      {monthOptions.map((m) => (
+                        <option key={`start-${m.value}`} value={m.value}>
+                          {m.label}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      value={parseDateParts(dateDraft.startDate).day}
+                      onChange={(e) => setDatePart('start', 'day', e.target.value)}
+                      style={{ minWidth: 120, maxWidth: 140, padding: 8, borderRadius: 6, borderColor: '#ccc', borderWidth: 1 }}
+                    >
+                      <option value="">Day</option>
+                      {dayOptions.map((d) => (
+                        <option key={`start-day-${d}`} value={d}>
+                          {d}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      value={parseDateParts(dateDraft.startDate).year}
+                      onChange={(e) => setDatePart('start', 'year', e.target.value)}
+                      style={{ minWidth: 140, maxWidth: 160, padding: 8, borderRadius: 6, borderColor: '#ccc', borderWidth: 1 }}
+                    >
+                      <option value="">Year</option>
+                      {yearOptions.map((y) => (
+                        <option key={`start-year-${y}`} value={y}>
+                          {y}
+                        </option>
+                      ))}
+                    </select>
+                  </>
                 ) : (
-                  <TouchableOpacity style={[styles.input, styles.dateTouchable]} onPress={() => openDatePicker('start')}>
-                    <Text style={styles.cellText}>{dateDraft.startDate || 'YYYY-MM-DD'}</Text>
-                  </TouchableOpacity>
+                  <>
+                    <TouchableOpacity style={[styles.input, styles.dateTouchable, { maxWidth: 200 }]} onPress={() => openDatePicker('start')}>
+                      <Text style={styles.cellText}>{dateDraft.startDate || 'YYYY-MM-DD'}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.dateIcon} onPress={() => openDatePicker('start')}>
+                      <Text style={styles.selectCaret}>v</Text>
+                    </TouchableOpacity>
+                  </>
                 )}
-                <TouchableOpacity style={styles.dateIcon} onPress={() => openDatePicker('start')}>
-                  <Text style={styles.selectCaret}>v</Text>
-                </TouchableOpacity>
               </View>
-              <View style={styles.dateInputWrap}>
+              <View style={[styles.row, { gap: 8 }]}>
                 {Platform.OS === 'web' ? (
-                  <input
-                    ref={endDateRef as any}
-                    type="date"
-                    value={dateDraft.endDate}
-                    onChange={(e) =>
-                      setDateDraft((prev) => ({ ...prev, endDate: normalizeDateString(e.target.value) }))
-                    }
-                    style={styles.input as any}
-                  />
+                  <>
+                    <select
+                      value={parseDateParts(dateDraft.endDate).month}
+                      onChange={(e) => setDatePart('end', 'month', e.target.value)}
+                      style={{ minWidth: 140, maxWidth: 160, padding: 8, borderRadius: 6, borderColor: '#ccc', borderWidth: 1 }}
+                    >
+                      <option value="">Month</option>
+                      {monthOptions.map((m) => (
+                        <option key={`end-${m.value}`} value={m.value}>
+                          {m.label}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      value={parseDateParts(dateDraft.endDate).day}
+                      onChange={(e) => setDatePart('end', 'day', e.target.value)}
+                      style={{ minWidth: 120, maxWidth: 140, padding: 8, borderRadius: 6, borderColor: '#ccc', borderWidth: 1 }}
+                    >
+                      <option value="">Day</option>
+                      {dayOptions.map((d) => (
+                        <option key={`end-day-${d}`} value={d}>
+                          {d}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      value={parseDateParts(dateDraft.endDate).year}
+                      onChange={(e) => setDatePart('end', 'year', e.target.value)}
+                      style={{ minWidth: 140, maxWidth: 160, padding: 8, borderRadius: 6, borderColor: '#ccc', borderWidth: 1 }}
+                    >
+                      <option value="">Year</option>
+                      {yearOptions.map((y) => (
+                        <option key={`end-year-${y}`} value={y}>
+                          {y}
+                        </option>
+                      ))}
+                    </select>
+                  </>
                 ) : (
-                  <TouchableOpacity style={[styles.input, styles.dateTouchable]} onPress={() => openDatePicker('end')}>
-                    <Text style={styles.cellText}>{dateDraft.endDate || 'YYYY-MM-DD'}</Text>
-                  </TouchableOpacity>
+                  <>
+                    <TouchableOpacity style={[styles.input, styles.dateTouchable, { maxWidth: 200 }]} onPress={() => openDatePicker('end')}>
+                      <Text style={styles.cellText}>{dateDraft.endDate || 'YYYY-MM-DD'}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.dateIcon} onPress={() => openDatePicker('end')}>
+                      <Text style={styles.selectCaret}>v</Text>
+                    </TouchableOpacity>
+                  </>
                 )}
-                <TouchableOpacity style={styles.dateIcon} onPress={() => openDatePicker('end')}>
-                  <Text style={styles.selectCaret}>v</Text>
-                </TouchableOpacity>
               </View>
             </>
           ) : (
             <>
-              <View style={styles.row}>
-                <TextInput
-                  style={[styles.input, { flex: 1 }]}
-                  placeholder="Month (1-12)"
-                  keyboardType="numeric"
-                  value={dateDraft.startMonth}
-                  onChangeText={(text) => setDateDraft((prev) => ({ ...prev, startMonth: text }))}
-                />
-                <TextInput
-                  style={[styles.input, { flex: 1 }]}
-                  placeholder="Year (YYYY)"
-                  keyboardType="numeric"
-                  value={dateDraft.startYear}
-                  onChangeText={(text) => setDateDraft((prev) => ({ ...prev, startYear: text }))}
-                />
-              </View>
-              <TextInput
-                style={styles.input}
-                placeholder="Number of days"
-                keyboardType="numeric"
-                value={dateDraft.durationDays}
-                onChangeText={(text) => setDateDraft((prev) => ({ ...prev, durationDays: text }))}
-              />
+              {Platform.OS === 'web' ? (
+                <>
+                  <View style={[styles.row, { gap: 8 }]}>
+                    <select
+                      value={dateDraft.startMonth}
+                      onChange={(e) => setDateDraft((prev) => ({ ...prev, startMonth: e.target.value }))}
+                      style={{ minWidth: 160, maxWidth: 180, padding: 8, borderRadius: 6, borderColor: '#ccc', borderWidth: 1 }}
+                    >
+                      <option value="">Select month</option>
+                      {monthOptions.map((m) => (
+                        <option key={m.value} value={m.value}>
+                          {m.label}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      value={dateDraft.startYear}
+                      onChange={(e) => setDateDraft((prev) => ({ ...prev, startYear: e.target.value }))}
+                      style={{ minWidth: 140, maxWidth: 160, padding: 8, borderRadius: 6, borderColor: '#ccc', borderWidth: 1 }}
+                    >
+                      <option value="">Year</option>
+                      {yearOptions.map((y) => (
+                        <option key={y} value={y}>
+                          {y}
+                        </option>
+                      ))}
+                    </select>
+                  </View>
+                  <select
+                    value={dateDraft.durationDays}
+                    onChange={(e) => setDateDraft((prev) => ({ ...prev, durationDays: e.target.value }))}
+                    style={{ minWidth: 180, maxWidth: 220, padding: 8, borderRadius: 6, borderColor: '#ccc', borderWidth: 1, marginTop: 8 }}
+                  >
+                    <option value="">Number of days</option>
+                    {durationOptions.map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                  </select>
+                </>
+              ) : (
+                <>
+                  <View style={styles.row}>
+                    <TextInput
+                      style={[styles.input, { flex: 1, maxWidth: 160 }]}
+                      placeholder="Month (1-12)"
+                      keyboardType="numeric"
+                      value={dateDraft.startMonth}
+                      onChangeText={(text) => setDateDraft((prev) => ({ ...prev, startMonth: text }))}
+                    />
+                    <TextInput
+                      style={[styles.input, { flex: 1, maxWidth: 160 }]}
+                      placeholder="Year (YYYY)"
+                      keyboardType="numeric"
+                      value={dateDraft.startYear}
+                      onChangeText={(text) => setDateDraft((prev) => ({ ...prev, startYear: text }))}
+                    />
+                  </View>
+                  <TextInput
+                    style={[styles.input, { maxWidth: 200 }]}
+                    placeholder="Number of days"
+                    keyboardType="numeric"
+                    value={dateDraft.durationDays}
+                    onChangeText={(text) => setDateDraft((prev) => ({ ...prev, durationDays: text }))}
+                  />
+                </>
+              )}
             </>
           )}
         </View>
@@ -1073,6 +1227,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       <View style={[styles.row, { flexWrap: 'wrap', gap: 8 }]}>
         {(attendees ?? []).map((m) => {
           const label = attendeeLabel(m);
+          const pendingRemoval = pendingRemovalIds.includes(m.id);
           const badge =
             m.status === 'pending' || m.status === 'removed' ? (
               <View
@@ -1088,6 +1243,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
             <View style={styles.attendeeChipContent}>
               <Text style={styles.buttonText}>
                 {label}
+                {pendingRemoval ? <Text style={styles.removeText}> (removes on save)</Text> : null}
                 {isEditing ? <Text style={styles.removeText}> x</Text> : null}
               </Text>
               {badge}

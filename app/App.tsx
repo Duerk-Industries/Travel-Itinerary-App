@@ -2269,6 +2269,7 @@ const App: React.FC = () => {
               onOpenAddress={openMaps}
               onRefreshTrips={fetchTrips}
               onRefreshGroups={fetchGroups}
+              onRefreshGroupMembers={fetchGroupMembersForActiveTrip}
               onRefreshFlights={fetchFlights}
               onRefreshLodgings={fetchLodgings}
               onRefreshTours={fetchTours}

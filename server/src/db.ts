@@ -1496,8 +1496,8 @@ export const listGroupMembers = async (
     `SELECT gm.id,
             gm.guest_name as "guestName",
             COALESCE(u.email, gm.invite_email) as "email",
-            wu.first_name as "firstName",
-            wu.last_name as "lastName",
+            COALESCE(wu.first_name, wu_pending.first_name) as "firstName",
+            COALESCE(wu.last_name, wu_pending.last_name) as "lastName",
             gm.removed_at as "removedAt",
             CASE
               WHEN gm.removed_at IS NOT NULL THEN 'removed'
@@ -1508,6 +1508,8 @@ export const listGroupMembers = async (
      FROM group_members gm
      LEFT JOIN users u ON gm.user_id = u.id
      LEFT JOIN web_users wu ON gm.user_id = wu.id
+     LEFT JOIN users u_pending ON gm.user_id IS NULL AND LOWER(u_pending.email) = LOWER(gm.invite_email)
+     LEFT JOIN web_users wu_pending ON u_pending.id = wu_pending.id
      WHERE gm.group_id = $1 AND gm.removed_at IS NULL
      ORDER BY gm.created_at DESC`,
     [groupId]
@@ -1516,15 +1518,27 @@ export const listGroupMembers = async (
     `SELECT gi.id,
             gi.invitee_email as "guestName",
             gi.invitee_email as "email",
-            NULL::text as "firstName",
-            NULL::text as "lastName",
+            wu.first_name as "firstName",
+            wu.last_name as "lastName",
             gi.status
      FROM group_invites gi
+     LEFT JOIN users u ON LOWER(u.email) = LOWER(gi.invitee_email)
+     LEFT JOIN web_users wu ON u.id = wu.id
      WHERE gi.group_id = $1 AND gi.status = 'pending'
      ORDER BY gi.created_at DESC`,
     [groupId]
   );
-  return [...rows, ...inviteRows];
+  const combined = [...rows, ...inviteRows];
+  combined.forEach((m) => {
+    if (!m.firstName && !m.lastName && m.guestName) {
+      const parts = m.guestName.trim().split(/\s+/);
+      if (parts.length >= 2) {
+        m.firstName = parts[0];
+        m.lastName = parts.slice(1).join(' ');
+      }
+    }
+  });
+  return combined;
 };
 
 export const listGroupsForUser = async (
@@ -1659,13 +1673,16 @@ export const addGroupMember = async (
       );
       if (!existingPending.rowCount) {
         await client.query(
-          `INSERT INTO group_members (id, group_id, invite_email, added_by)
-           VALUES ($1, $2, $3, $4)
+          `INSERT INTO group_members (id, group_id, invite_email, guest_name, added_by)
+           VALUES ($1, $2, $3, $4, $5)
            ON CONFLICT DO NOTHING`,
-          [randomUUID(), groupId, normalizedEmail, ownerId]
+          [randomUUID(), groupId, normalizedEmail, member.guestName ?? null, ownerId]
         );
       } else {
-        await client.query(`UPDATE group_members SET removed_at = NULL WHERE id = $1`, [existingPending.rows[0].id]);
+        await client.query(`UPDATE group_members SET removed_at = NULL, guest_name = COALESCE($1, guest_name) WHERE id = $2`, [
+          member.guestName ?? null,
+          existingPending.rows[0].id,
+        ]);
       }
 
       const inviteId = randomUUID();
@@ -2053,43 +2070,44 @@ export const createGroupWithMembers = async (
     const invites: { id: string; email: string }[] = [];
 
     for (const member of members) {
-    if (member.guestName && member.guestName.trim().length) {
-      await client.query(
-        `INSERT INTO group_members (id, group_id, guest_name, added_by) VALUES ($1, $2, $3, $4)`,
-        [randomUUID(), groupId, member.guestName.trim(), ownerId]
-      );
-      continue;
-    }
+      const guestName = member.guestName?.trim();
+      if (guestName) {
+        await client.query(
+          `INSERT INTO group_members (id, group_id, guest_name, added_by) VALUES ($1, $2, $3, $4)`,
+          [randomUUID(), groupId, guestName, ownerId]
+        );
+        continue;
+      }
 
-    if (member.email && member.email.trim().length) {
-      const normalizedEmail = member.email.trim().toLowerCase();
-      const user = await findUserByEmail(normalizedEmail);
-      if (user) {
-        await client.query(
-          `INSERT INTO group_members (id, group_id, user_id, added_by, invite_email, claimed_at)
-           VALUES ($1, $2, $3, $4, NULL, NOW())
-           ON CONFLICT (group_id, user_id) DO NOTHING`,
-          [randomUUID(), groupId, user.id, ownerId]
-        );
-        await client.query(`DELETE FROM group_invites WHERE group_id = $1 AND invitee_email = $2`, [groupId, user.email]);
-      } else {
-        const inviteId = randomUUID();
-        await client.query(
-          `INSERT INTO group_invites (id, group_id, inviter_id, invitee_user_id, invitee_email, status)
-           VALUES ($1, $2, $3, $4, $5, 'pending')
-           ON CONFLICT DO NOTHING`,
-          [inviteId, groupId, ownerId, null, normalizedEmail]
-        );
-        await client.query(
-          `INSERT INTO group_members (id, group_id, invite_email, added_by)
-           VALUES ($1, $2, $3, $4)
-           ON CONFLICT DO NOTHING`,
-          [randomUUID(), groupId, normalizedEmail, ownerId]
-        );
-        invites.push({ id: inviteId, email: normalizedEmail });
+      if (member.email && member.email.trim().length) {
+        const normalizedEmail = member.email.trim().toLowerCase();
+        const user = await findUserByEmail(normalizedEmail);
+        if (user) {
+          await client.query(
+            `INSERT INTO group_members (id, group_id, user_id, guest_name, added_by, invite_email, claimed_at)
+             VALUES ($1, $2, $3, $4, $5, NULL, NOW())
+             ON CONFLICT (group_id, user_id) DO NOTHING`,
+            [randomUUID(), groupId, user.id, guestName ?? null, ownerId]
+          );
+          await client.query(`DELETE FROM group_invites WHERE group_id = $1 AND invitee_email = $2`, [groupId, user.email]);
+        } else {
+          const inviteId = randomUUID();
+          await client.query(
+            `INSERT INTO group_invites (id, group_id, inviter_id, invitee_user_id, invitee_email, status)
+             VALUES ($1, $2, $3, $4, $5, 'pending')
+             ON CONFLICT DO NOTHING`,
+            [inviteId, groupId, ownerId, null, normalizedEmail]
+          );
+          await client.query(
+            `INSERT INTO group_members (id, group_id, invite_email, guest_name, added_by)
+             VALUES ($1, $2, $3, $4, $5)
+             ON CONFLICT DO NOTHING`,
+            [randomUUID(), groupId, normalizedEmail, guestName ?? null, ownerId]
+          );
+          invites.push({ id: inviteId, email: normalizedEmail });
+        }
       }
     }
-  }
 
     await client.query('COMMIT');
     return { groupId, invites };
