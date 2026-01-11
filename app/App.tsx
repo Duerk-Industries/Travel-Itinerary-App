@@ -18,7 +18,7 @@ import { normalizeDateString } from './utils/normalizeDateString';
 import { FlightsTab, type Flight, fetchFlightsForTrip } from './tabs/flights';
 import { Tour, TourTab, fetchToursForTrip } from './tabs/tours';
 import { balanceCategoryTotals, computePayerTotals } from './tabs/costReport';
-import { Trait, TraitsTab } from './tabs/traits';
+import { Trait } from './tabs/traits';
 import { FollowTab, fetchFollowedTripsApi, loadFollowCodes, loadFollowPayloads, saveFollowCodes, saveFollowPayloads, type FollowedTrip } from './tabs/follow';
 import ItinerariesTab from './tabs/itineraries';
 import OverviewTab from './tabs/overview';
@@ -277,8 +277,7 @@ const App: React.FC = () => {
     password: '',
     passwordConfirm: '',
   });
-  const [mapApp, setMapApp] = useState<MapApp>(loadStoredMapPreference());
-  const [accountProfile, setAccountProfile] = useState({ firstName: '', lastName: '', email: '', mapPreference: mapApp });
+  const [accountProfile, setAccountProfile] = useState({ firstName: '', lastName: '', email: '' });
   const [familyRelationships, setFamilyRelationships] = useState<any[]>([]);
   const [fellowTravelers, setFellowTravelers] = useState<FellowTraveler[]>([]);
   const [showRelationshipDropdown, setShowRelationshipDropdown] = useState(false);
@@ -986,7 +985,7 @@ const App: React.FC = () => {
       setUserEmail(session.email ?? null);
       if (session.tripId) setActiveTripId(session.tripId);
       const sessionPage = session.page;
-      if (sessionPage === 'overview' || sessionPage === 'flights' || sessionPage === 'lodging' || sessionPage === 'trips' || sessionPage === 'create-trip' || sessionPage === 'trip-details' || sessionPage === 'traits' || sessionPage === 'itinerary' || sessionPage === 'tours' || sessionPage === 'cost' || sessionPage === 'account' || sessionPage === 'follow') {
+      if (sessionPage === 'overview' || sessionPage === 'flights' || sessionPage === 'lodging' || sessionPage === 'trips' || sessionPage === 'create-trip' || sessionPage === 'trip-details' || sessionPage === 'itinerary' || sessionPage === 'tours' || sessionPage === 'cost' || sessionPage === 'account' || sessionPage === 'follow') {
         setActivePage(sessionPage as Page);
       } else {
         setActivePage('menu');
@@ -1060,6 +1059,7 @@ const App: React.FC = () => {
   }, [userToken, activeTripId, trips]);
 
   const findActiveTrip = () => trips.find((t) => t.id === activeTripId);
+
 
   const addMemberToGroup = async (groupId: string, type: 'user' | 'relationship') => {
     if (!userToken) return;
@@ -1232,13 +1232,6 @@ const App: React.FC = () => {
             ) : null}
             <View style={styles.topRight}>
               <Text style={styles.bodyText}>{userName ?? 'Traveler'}</Text>
-              <TouchableOpacity
-                style={[styles.button, styles.smallButton, isRefreshing && styles.disabledButton]}
-                onPress={() => refreshAllData()}
-                disabled={isRefreshing}
-              >
-                <Text style={styles.buttonText}>{isRefreshing ? 'Refreshing...' : 'Refresh'}</Text>
-              </TouchableOpacity>
               <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={logout}>
                 <Text style={styles.buttonText}>Logout</Text>
               </TouchableOpacity>
@@ -1278,17 +1271,14 @@ const App: React.FC = () => {
               <TouchableOpacity style={[styles.button, activePage === 'account' && styles.toggleActive]} onPress={() => setActivePage('account')}>
                 <Text style={styles.buttonText}>Account</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.button, activePage === 'traits' && styles.toggleActive]} onPress={() => setActivePage('traits')}>
-                <Text style={styles.buttonText}>Traits</Text>
-              </TouchableOpacity>
               <TouchableOpacity style={[styles.button, activePage === 'follow' && styles.toggleActive]} onPress={() => setActivePage('follow')}>
                 <Text style={styles.buttonText}>Follow Trip</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.button, activePage === 'itinerary' && styles.toggleActive]} onPress={() => setActivePage('itinerary')}>
-                <Text style={styles.buttonText}>Create Itinerary</Text>
-              </TouchableOpacity>
+                <TouchableOpacity style={[styles.button, activePage === 'itinerary' && styles.toggleActive]} onPress={() => setActivePage('itinerary')}>
+                  <Text style={styles.buttonText}>Create Itinerary</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
 
           {activePage === 'itinerary' ? (
             <ItinerariesTab
@@ -1302,28 +1292,6 @@ const App: React.FC = () => {
               styles={styles}
             />
           ) : null}
-
-      {activePage === 'traits' ? (
-        <TraitsTab
-          backendUrl={backendUrl}
-          userToken={userToken}
-          traits={traits}
-          setTraits={setTraits}
-          selectedTraitNames={selectedTraitNames}
-          setSelectedTraitNames={setSelectedTraitNames}
-          traitAge={traitAge}
-          setTraitAge={setTraitAge}
-          traitGender={traitGender}
-          setTraitGender={setTraitGender}
-          newTraitName={newTraitName}
-          setNewTraitName={setNewTraitName}
-          headers={headers}
-          jsonHeaders={jsonHeaders}
-          fetchTraits={fetchTraits}
-          fetchTraitProfile={fetchTraitProfile}
-          styles={styles}
-        />
-      ) : null}
 
           {activePage === 'tours' ? (
             <TourTab
@@ -1428,8 +1396,6 @@ const App: React.FC = () => {
               setUserToken={setUserToken}
               setUserName={setUserName}
               setUserEmail={setUserEmail}
-              mapApp={mapApp}
-              onChangeMapApp={updateMapPreference}
               saveSession={saveSession}
               headers={headers}
               jsonHeaders={jsonHeaders}
@@ -2376,12 +2342,12 @@ const App: React.FC = () => {
               onChangeText={(text) => setAuthForm((p) => ({ ...p, passwordConfirm: text }))}
             />
           ) : null}
-          <TouchableOpacity
-            style={styles.button}
-            onPress={authMode === 'login' ? loginWithPassword : register}
-          >
-            <Text style={styles.buttonText}>{authMode === 'login' ? 'Login' : 'Create account'}</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={authMode === 'login' ? loginWithPassword : register}
+            >
+              <Text style={styles.buttonText}>{authMode === 'login' ? 'Login' : 'Create account'}</Text>
+            </TouchableOpacity>
         </View>
       )}
     </SafeAreaView>

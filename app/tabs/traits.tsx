@@ -96,6 +96,18 @@ export function TraitsTab<T extends TraitRecord>({
 
   const saveTraitSelections = async () => {
     if (!userToken) return;
+    if (!traitAge.trim() || Number(traitAge) <= 0) {
+      alert('Enter your age to continue.');
+      return;
+    }
+    if (!traitGender) {
+      alert('Select a gender option.');
+      return;
+    }
+    if (selectedTraitNames.size < 3) {
+      alert('Please select at least 3 traits.');
+      return;
+    }
     const selected = new Set(selectedTraitNames);
     const existingByName = new Map(traits.map((t) => [t.name, t]));
     for (const t of traits) {
