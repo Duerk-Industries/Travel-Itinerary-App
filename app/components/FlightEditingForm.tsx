@@ -23,9 +23,9 @@ export type FlightEditingFormProps = {
   openTimePicker: (target: 'edit-dep' | 'edit-arr' | 'new-dep' | 'new-arr', current: string) => void;
   setFlight: React.Dispatch<React.SetStateAction<FlightEditDraft | null>>;
   setPassengerIds: (ids: string[]) => void;
-  modalDepLocationRef: React.RefObject<TextInput>;
-  modalArrLocationRef: React.RefObject<TextInput>;
-  modalLayoverLocationRef: React.RefObject<TextInput>;
+  modalDepLocationRef: React.RefObject<React.ElementRef<typeof TextInput>>;
+  modalArrLocationRef: React.RefObject<React.ElementRef<typeof TextInput>>;
+  modalLayoverLocationRef: React.RefObject<React.ElementRef<typeof TextInput>>;
   onClose: () => void;
   onSave: () => void;
 };

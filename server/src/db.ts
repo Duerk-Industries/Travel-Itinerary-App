@@ -9,7 +9,7 @@ import { logError } from './logger';
 let pool: Pool | null = null;
 
 
-function getPool(): Pool {
+export const getPool = (): Pool => {
   if (!pool) {
     const cs = process.env.DATABASE_URL;
 
@@ -27,7 +27,7 @@ function getPool(): Pool {
     pool = new Pool({ connectionString: cs });
   }
   return pool;
-}
+};
 
 export const closePool = async (): Promise<void> => {
   if (pool) {
@@ -1638,15 +1638,7 @@ export const addGroupMember = async (
     );
     if (!groupRows.length) throw new Error('Group not found or not owner');
 
-    if (member.guestName && member.guestName.trim()) {
-      await client.query(
-        `INSERT INTO group_members (id, group_id, guest_name, added_by) VALUES ($1, $2, $3, $4)`,
-        [randomUUID(), groupId, member.guestName.trim(), ownerId]
-      );
-      await client.query('COMMIT');
-      return {};
-    }
-
+    const guestName = member.guestName?.trim() ?? '';
     if (member.email && member.email.trim()) {
       const normalizedEmail = member.email.trim().toLowerCase();
       const user = await findUserByEmail(normalizedEmail);
@@ -1676,11 +1668,11 @@ export const addGroupMember = async (
           `INSERT INTO group_members (id, group_id, invite_email, guest_name, added_by)
            VALUES ($1, $2, $3, $4, $5)
            ON CONFLICT DO NOTHING`,
-          [randomUUID(), groupId, normalizedEmail, member.guestName ?? null, ownerId]
+          [randomUUID(), groupId, normalizedEmail, guestName || null, ownerId]
         );
       } else {
         await client.query(`UPDATE group_members SET removed_at = NULL, guest_name = COALESCE($1, guest_name) WHERE id = $2`, [
-          member.guestName ?? null,
+          guestName || null,
           existingPending.rows[0].id,
         ]);
       }
@@ -1694,6 +1686,15 @@ export const addGroupMember = async (
       );
       await client.query('COMMIT');
       return { inviteId, email: normalizedEmail };
+    }
+
+    if (guestName) {
+      await client.query(
+        `INSERT INTO group_members (id, group_id, guest_name, added_by) VALUES ($1, $2, $3, $4)`,
+        [randomUUID(), groupId, guestName, ownerId]
+      );
+      await client.query('COMMIT');
+      return {};
     }
 
     throw new Error('Provide an email or guest name');
@@ -2071,14 +2072,6 @@ export const createGroupWithMembers = async (
 
     for (const member of members) {
       const guestName = member.guestName?.trim();
-      if (guestName) {
-        await client.query(
-          `INSERT INTO group_members (id, group_id, guest_name, added_by) VALUES ($1, $2, $3, $4)`,
-          [randomUUID(), groupId, guestName, ownerId]
-        );
-        continue;
-      }
-
       if (member.email && member.email.trim().length) {
         const normalizedEmail = member.email.trim().toLowerCase();
         const user = await findUserByEmail(normalizedEmail);
@@ -2106,6 +2099,15 @@ export const createGroupWithMembers = async (
           );
           invites.push({ id: inviteId, email: normalizedEmail });
         }
+        continue;
+      }
+
+      if (guestName) {
+        await client.query(
+          `INSERT INTO group_members (id, group_id, guest_name, added_by) VALUES ($1, $2, $3, $4)`,
+          [randomUUID(), groupId, guestName, ownerId]
+        );
+        continue;
       }
     }
 
@@ -2150,14 +2152,7 @@ export const createTripWithGroupAndMembers = async (payload: {
 
     const invites: { id: string; email: string }[] = [];
     for (const member of payload.members) {
-      if (member.guestName && member.guestName.trim().length) {
-        await client.query(
-          `INSERT INTO group_members (id, group_id, guest_name, added_by) VALUES ($1, $2, $3, $4)`,
-          [randomUUID(), groupId, member.guestName.trim(), payload.ownerId]
-        );
-        continue;
-      }
-
+      const guestName = member.guestName?.trim();
       if (member.email && member.email.trim().length) {
         const email = member.email.trim().toLowerCase();
         const userRes = await client.query<User>('SELECT id, email FROM users WHERE email = $1', [email]);
@@ -2178,8 +2173,22 @@ export const createTripWithGroupAndMembers = async (payload: {
              ON CONFLICT DO NOTHING`,
             [inviteId, groupId, payload.ownerId, null, email]
           );
+          await client.query(
+            `INSERT INTO group_members (id, group_id, invite_email, guest_name, added_by)
+             VALUES ($1, $2, $3, $4, $5)
+             ON CONFLICT DO NOTHING`,
+            [randomUUID(), groupId, email, guestName ?? null, payload.ownerId]
+          );
           invites.push({ id: inviteId, email });
         }
+        continue;
+      }
+
+      if (guestName && guestName.length) {
+        await client.query(
+          `INSERT INTO group_members (id, group_id, guest_name, added_by) VALUES ($1, $2, $3, $4)`,
+          [randomUUID(), groupId, guestName, payload.ownerId]
+        );
       }
     }
 
