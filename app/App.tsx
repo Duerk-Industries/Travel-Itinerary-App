@@ -278,6 +278,7 @@ const App: React.FC = () => {
     passwordConfirm: '',
   });
   const [accountProfile, setAccountProfile] = useState({ firstName: '', lastName: '', email: '' });
+  const [mapApp, setMapApp] = useState<MapApp>(() => loadStoredMapPreference('google'));
   const [familyRelationships, setFamilyRelationships] = useState<any[]>([]);
   const [fellowTravelers, setFellowTravelers] = useState<FellowTraveler[]>([]);
   const [showRelationshipDropdown, setShowRelationshipDropdown] = useState(false);
