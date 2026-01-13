@@ -13,6 +13,7 @@ A starter shared trip planner stack with a TypeScript/Node.js API backed by Post
    ```
 2. Configure the API:
    - Copy `server/.env.example` to `server/.env` and update `DATABASE_URL` for your PostgreSQL instance and `AUTH_SECRET` for JWT signing.
+   - Choose a database provider with `DB_PROVIDER=postgres|memory|dynamodb|firebase` (defaults to `postgres`; `memory` reuses pg-mem for tests; DynamoDB/Firebase paths are scaffolded and will throw until fully implemented). `USE_IN_MEMORY_DB=1` still works for backwards compatibility in tests.
    - Ensure PostgreSQL is running and accessible.
 3. Run the API (from repo root):
    ```bash

@@ -37,6 +37,17 @@ router.post('/register', async (req, res) => {
       res.status(409).json({ error: 'User already exists' });
       return;
     }
+    const message = (err as Error)?.message ?? '';
+    const unavailable =
+      (err as any)?.code === 'UNAVAILABLE' ||
+      (err as any)?.code === 14 ||
+      /UNAVAILABLE/i.test(message) ||
+      /ECONNREFUSED/i.test(message);
+    if (unavailable) {
+      logError('Registration datastore unavailable', err);
+      res.status(503).json({ error: 'Registration temporarily unavailable. Please try again.' });
+      return;
+    }
     logError('Failed to create user', err);
     res.status(500).json({ error: 'Failed to create user' });
   }
@@ -61,6 +72,17 @@ router.post('/login', async (req, res) => {
     const token = createToken({ userId: user.id, email: user.email, provider: 'email' });
     res.json({ message: 'Login successful', token, user });
   } catch (err) {
+    const message = (err as Error)?.message ?? '';
+    const unavailable =
+      (err as any)?.code === 'UNAVAILABLE' ||
+      (err as any)?.code === 14 ||
+      /UNAVAILABLE/i.test(message) ||
+      /ECONNREFUSED/i.test(message);
+    if (unavailable) {
+      logError('Login datastore unavailable', err);
+      res.status(503).json({ error: 'Login temporarily unavailable. Please try again.' });
+      return;
+    }
     logError('Failed to login', err);
     res.status(500).json({ error: 'Failed to login' });
   }

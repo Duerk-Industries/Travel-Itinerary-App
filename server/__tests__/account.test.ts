@@ -67,6 +67,70 @@ describe('Password validation', () => {
       .send({ email, password: 'newpass1' })
       .expect(200);
   });
+
+  it('returns 503 when datastore is unavailable during login', async () => {
+    const db = require('../src/db');
+    const err = new Error('UNAVAILABLE: datastore down');
+    (err as any).code = 'UNAVAILABLE';
+    const spy = jest.spyOn(db, 'verifyWebUserCredentials').mockRejectedValue(err);
+
+    await request(app)
+      .post('/api/web-auth/login')
+      .send({ email: 'anyone@example.com', password: 'irrelevant' })
+      .expect(503)
+      .expect((res) => {
+        expect(res.body.error).toMatch(/temporarily unavailable/i);
+      });
+
+    spy.mockRestore();
+  });
+
+  it('returns 503 when datastore is unavailable during registration', async () => {
+    const db = require('../src/db');
+    const err = new Error('ECONNREFUSED');
+    (err as any).code = 'UNAVAILABLE';
+    const spy = jest.spyOn(db, 'createWebUser').mockRejectedValue(err);
+
+    await request(app)
+      .post('/api/web-auth/register')
+      .send({
+        firstName: 'Unavailable',
+        lastName: 'User',
+        email: 'unavailable@example.com',
+        password: 'testtest',
+        passwordConfirm: 'testtest',
+      })
+      .expect(503)
+      .expect((res) => {
+        expect(res.body.error).toMatch(/temporarily unavailable/i);
+      });
+
+    spy.mockRestore();
+  });
+
+  it('returns demographics with null age/gender for a new user', async () => {
+    const email = 'demographics-test@example.com';
+    await pool.query('DELETE FROM users WHERE email = $1', [email]);
+
+    const reg = await request(app)
+      .post('/api/web-auth/register')
+      .send({
+        firstName: 'Demo',
+        lastName: 'Graphics',
+        email,
+        password: 'testtest',
+        passwordConfirm: 'testtest',
+      })
+      .expect(201);
+
+    const token = reg.body.token as string;
+    const resp = await request(app)
+      .get('/api/traits/profile/demographics')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(resp.body).toEqual({ age: null, gender: null });
+  });
 });
 
 describe('Family relationships', () => {

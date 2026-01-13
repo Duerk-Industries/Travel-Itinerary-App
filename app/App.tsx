@@ -890,7 +890,8 @@ const App: React.FC = () => {
     if (!userToken) return;
     const res = await fetch(`${backendUrl}/api/traits/profile/demographics`, { headers });
     if (!res.ok) return;
-    const data = await res.json().catch(() => ({}));
+    const raw = await res.json().catch(() => ({}));
+    const data = raw ?? {};
     if (data.age != null) setTraitAge(String(data.age));
     if (data.gender) {
       if (data.gender === 'female' || data.gender === 'male' || data.gender === 'nonbinary' || data.gender === 'prefer-not') {

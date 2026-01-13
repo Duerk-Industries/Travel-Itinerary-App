@@ -2,6 +2,7 @@
     "chatgpt.runCodexInWindowsSubsystemForLinux": true,
     "cSpell.words": [
         "datetimepicker",
+        "Firestore",
         "geoloc",
         "ossp",
         "tesseract",

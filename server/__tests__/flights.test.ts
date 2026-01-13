@@ -159,6 +159,39 @@ describe('Flights API passenger validation', () => {
       .expect(200);
     expect(String(updateRes.body.arrivalDate ?? updateRes.body.arrival_date)).toContain(newArrivalDate);
   });
+
+  it('creates a flight without using a SQL pool when firebase provider is active', async () => {
+    const db = require('../src/db');
+    const providerSpy = jest.spyOn(db, 'getCurrentDbProvider').mockReturnValue('firebase');
+    const ensureSpy = jest.spyOn(db, 'ensureUserInTrip').mockResolvedValue({ groupId: tripId });
+    const membersSpy = jest.spyOn(db, 'listGroupMembers').mockResolvedValue([
+      { id: 'm-owner', status: 'active', firstName: user.firstName, lastName: user.lastName, email: user.email },
+      { id: 'm-member', status: 'active', firstName: member.firstName, lastName: member.lastName, email: member.email },
+    ]);
+    const insertSpy = jest.spyOn(db, 'insertFlight').mockImplementation(async (payload: any) => ({ ...payload, id: 'fake-flight' }));
+
+    await request(app)
+      .post('/api/flights')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        passengerIds: ['m-member'],
+        departureDate: '2025-03-01',
+        departureTime: '10:00',
+        arrivalTime: '12:00',
+        carrier: 'AA',
+        flightNumber: '200',
+        bookingReference: 'BOOK200',
+        tripId,
+        cost: 200,
+        paidBy: ['m-owner'],
+      })
+      .expect(201);
+
+    providerSpy.mockRestore();
+    ensureSpy.mockRestore();
+    membersSpy.mockRestore();
+    insertSpy.mockRestore();
+  });
 });
 
 describe('Pending passengers and payer rules', () => {
