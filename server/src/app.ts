@@ -71,6 +71,8 @@ if (!hasWebApp) {
 app.use(express.static(publicDir));
 
 app.use('/api/auth', authRoutes);
+// Alias web-auth routes under /api/auth to keep legacy tests and clients working.
+app.use('/api/auth', webAuthRoutes);
 app.use('/api/web-auth', webAuthRoutes);
 app.use('/api/flights', flightRoutes);
 app.use('/api/groups', groupsRouter);

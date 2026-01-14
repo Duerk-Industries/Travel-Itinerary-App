@@ -35,6 +35,8 @@ export type GroupMemberOption = {
   email?: string;
   firstName?: string;
   lastName?: string;
+  status?: 'active' | 'pending' | 'removed';
+  removedAt?: string | null;
 };
 
 // Build a blank tour draft with today's date and zero cost.

@@ -17,7 +17,7 @@ const config: ExpoConfig = {
       NSAppTransportSecurity: {
         NSAllowsArbitraryLoads: true,
         NSExceptionDomains: {
-          '192.168.50.200': {
+          '192.168.50.17': {
             NSIncludesSubdomains: true,
             NSExceptionAllowsInsecureHTTPLoads: true,
           },
@@ -30,7 +30,7 @@ const config: ExpoConfig = {
     package: 'com.duerkindustries.travelitineraryplanner'
   },
   extra: {
-    backendUrl: process.env.BACKEND_URL || 'http://192.168.50.200:4000',
+    backendUrl: process.env.BACKEND_URL || 'http://192.168.50.17:4000',
     refreshIntervalMs: Number(process.env.REFRESH_INTERVAL_MS) || 60000,
     eas: {
         projectId: "06966c0b-d878-4346-850c-090c762f1916"

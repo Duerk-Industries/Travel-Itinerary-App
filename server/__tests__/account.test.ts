@@ -1,7 +1,7 @@
 import request from 'supertest';
 import { Pool } from 'pg';
 import { app } from '../src/app';
-import { initDb, closePool } from '../src/db';
+import { initDb, closePool, createWebUser } from '../src/db';
 
 describe('Password validation', () => {
   let pool: Pool;
@@ -66,6 +66,70 @@ describe('Password validation', () => {
       .post('/api/web-auth/login')
       .send({ email, password: 'newpass1' })
       .expect(200);
+  });
+
+  it('returns 503 when datastore is unavailable during login', async () => {
+    const db = require('../src/db');
+    const err = new Error('UNAVAILABLE: datastore down');
+    (err as any).code = 'UNAVAILABLE';
+    const spy = jest.spyOn(db, 'verifyWebUserCredentials').mockRejectedValue(err);
+
+    await request(app)
+      .post('/api/web-auth/login')
+      .send({ email: 'anyone@example.com', password: 'irrelevant' })
+      .expect(503)
+      .expect((res) => {
+        expect(res.body.error).toMatch(/temporarily unavailable/i);
+      });
+
+    spy.mockRestore();
+  });
+
+  it('returns 503 when datastore is unavailable during registration', async () => {
+    const db = require('../src/db');
+    const err = new Error('ECONNREFUSED');
+    (err as any).code = 'UNAVAILABLE';
+    const spy = jest.spyOn(db, 'createWebUser').mockRejectedValue(err);
+
+    await request(app)
+      .post('/api/web-auth/register')
+      .send({
+        firstName: 'Unavailable',
+        lastName: 'User',
+        email: 'unavailable@example.com',
+        password: 'testtest',
+        passwordConfirm: 'testtest',
+      })
+      .expect(503)
+      .expect((res) => {
+        expect(res.body.error).toMatch(/temporarily unavailable/i);
+      });
+
+    spy.mockRestore();
+  });
+
+  it('returns demographics with null age/gender for a new user', async () => {
+    const email = 'demographics-test@example.com';
+    await pool.query('DELETE FROM users WHERE email = $1', [email]);
+
+    const reg = await request(app)
+      .post('/api/web-auth/register')
+      .send({
+        firstName: 'Demo',
+        lastName: 'Graphics',
+        email,
+        password: 'testtest',
+        passwordConfirm: 'testtest',
+      })
+      .expect(201);
+
+    const token = reg.body.token as string;
+    const resp = await request(app)
+      .get('/api/traits/profile/demographics')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(resp.body).toEqual({ age: null, gender: null });
   });
 });
 
@@ -231,5 +295,73 @@ describe('Account lifecycle API with shared trip', () => {
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
     expect(membersAfter.body.some((m: any) => (m.email ?? m.userEmail) === joiner.email)).toBe(false);
+  });
+});
+
+describe('Pending group invites', () => {
+  const owner = { email: 'invite-owner@example.com', firstName: 'Owner', lastName: 'Pending', password: 'testtest' };
+  const invitee = { email: 'invitee-login@example.com', firstName: 'Invitee', lastName: 'Login', password: 'testtest' };
+  let pool: Pool;
+  let ownerToken: string;
+  let tripId: string;
+
+  beforeAll(async () => {
+    process.env.NODE_ENV = 'test';
+    await initDb();
+    pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    await pool.query('DELETE FROM users WHERE email IN ($1, $2)', [owner.email, invitee.email]);
+  });
+
+  afterAll(async () => {
+    if (pool) {
+      await pool.query('DELETE FROM users WHERE email IN ($1, $2)', [owner.email, invitee.email]);
+      await pool.end();
+    }
+    await closePool();
+  });
+
+  it('claims a pending invite for an existing email on login', async () => {
+    const regOwner = await request(app)
+      .post('/api/web-auth/register')
+      .send({ firstName: owner.firstName, lastName: owner.lastName, email: owner.email, password: owner.password, passwordConfirm: owner.password })
+      .expect(201);
+    ownerToken = regOwner.body.token as string;
+
+    const tripRes = await request(app)
+      .post('/api/trips/wizard')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ name: 'Claim Invite Trip', description: 'Test pending invite claim', destination: 'Paris', participants: [] })
+      .expect(201);
+    tripId = tripRes.body.trip?.id as string;
+    expect(tripId).toBeTruthy();
+
+    await request(app)
+      .post(`/api/account/trips/${tripId}/members`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ email: invitee.email })
+      .expect(201);
+
+    const pendingMembers = await request(app)
+      .get(`/api/account/trips/${tripId}/members`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+    const pending = pendingMembers.body.find((m: any) => m.email === invitee.email && m.status === 'pending');
+    expect(pending).toBeTruthy();
+
+    await createWebUser(invitee.firstName, invitee.lastName, invitee.email, invitee.password);
+
+    const login = await request(app)
+      .post('/api/web-auth/login')
+      .send({ email: invitee.email, password: invitee.password })
+      .expect(200);
+    expect(login.body.token).toBeTruthy();
+
+    const membersAfter = await request(app)
+      .get(`/api/account/trips/${tripId}/members`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+    const claimed = membersAfter.body.find((m: any) => m.email === invitee.email && m.status === 'active');
+    expect(claimed).toBeTruthy();
+    expect(claimed.firstName).toBe(invitee.firstName);
   });
 });

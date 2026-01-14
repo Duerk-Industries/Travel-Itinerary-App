@@ -17,8 +17,8 @@ import { formatDateLong } from './utils/formatDateLong';
 import { normalizeDateString } from './utils/normalizeDateString';
 import { FlightsTab, type Flight, fetchFlightsForTrip } from './tabs/flights';
 import { Tour, TourTab, fetchToursForTrip } from './tabs/tours';
-import { computePayerTotals } from './tabs/costReport';
-import { Trait, TraitsTab } from './tabs/traits';
+import { balanceCategoryTotals, computePayerTotals } from './tabs/costReport';
+import { Trait } from './tabs/traits';
 import { FollowTab, fetchFollowedTripsApi, loadFollowCodes, loadFollowPayloads, saveFollowCodes, saveFollowPayloads, type FollowedTrip } from './tabs/follow';
 import ItinerariesTab from './tabs/itineraries';
 import OverviewTab from './tabs/overview';
@@ -38,6 +38,7 @@ import {
   toLodgingDraft,
 } from './tabs/lodging';
 import { InvitePayload } from './utils/inviteCodes';
+import { type MapApp, buildMapUrl, loadStoredMapPreference, persistMapPreference } from './utils/mapLinks';
 
 type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
 let NativeDateTimePicker: NativeDateTimePickerType | null = null;
@@ -96,6 +97,8 @@ interface GroupMemberOption {
   email?: string;
   firstName?: string;
   lastName?: string;
+  status?: 'active' | 'pending' | 'removed';
+  removedAt?: string | null;
 }
 
 type Page =
@@ -211,6 +214,7 @@ const App: React.FC = () => {
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const refreshInFlightRef = useRef(false);
   const [flights, setFlights] = useState<Flight[]>([]);
+  const [externalFlightEditId, setExternalFlightEditId] = useState<string | null>(null);
   const [invites, setInvites] = useState<GroupInvite[]>([]);
   const [followInviteCode, setFollowInviteCode] = useState('');
   const [followLoading, setFollowLoading] = useState(false);
@@ -274,21 +278,29 @@ const App: React.FC = () => {
     passwordConfirm: '',
   });
   const [accountProfile, setAccountProfile] = useState({ firstName: '', lastName: '', email: '' });
+  const [mapApp, setMapApp] = useState<MapApp>(() => loadStoredMapPreference('google'));
   const [familyRelationships, setFamilyRelationships] = useState<any[]>([]);
   const [fellowTravelers, setFellowTravelers] = useState<FellowTraveler[]>([]);
   const [showRelationshipDropdown, setShowRelationshipDropdown] = useState(false);
   const formatMemberName = (member: GroupMemberOption): string => {
     if (member.guestName) return member.guestName;
-    const first = member.firstName?.trim();
-    const last = member.lastName?.trim();
+    const norm = (val?: string | null) => {
+      const t = val?.trim();
+      if (!t || t.toLowerCase() === 'unknown') return '';
+      return t;
+    };
+    const first = norm(member.firstName);
+    const last = norm(member.lastName);
+    const email = member.email?.trim();
+    const status = member.status;
     if (first || last) return `${first ?? ''} ${last ?? ''}`.trim();
-    if (member.email) {
-      const local = member.email.split('@')[0] ?? '';
+    if (email) {
+      const local = email.split('@')[0] ?? '';
       const parts = local.split(/[._-]+/).filter(Boolean);
-      if (parts.length >= 2) return `${parts[0]} ${parts.slice(1).join(' ')}`.trim();
-      return member.email;
+      const base = parts.length >= 2 ? `${parts[0]} ${parts.slice(1).join(' ')}`.trim() : email;
+      return status === 'pending' ? `${base} (pending)` : base;
     }
-    return 'Member';
+    return status === 'pending' ? 'Pending member' : 'Member';
   };
 
   const flightsTotal = useMemo(
@@ -305,14 +317,27 @@ const App: React.FC = () => {
 
   const overallCost = useMemo(() => flightsTotal + lodgingTotal + toursTotal, [flightsTotal, lodgingTotal, toursTotal]);
 
+  const updateMapPreference = useCallback(
+    (pref: MapApp) => {
+      setMapApp(pref);
+      persistMapPreference(pref);
+      setAccountProfile((prev) => ({ ...prev, mapPreference: pref }));
+    },
+    [setAccountProfile]
+  );
+
   const openMaps = (address: string) => {
-    if (!address) return;
-    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+    const url = buildMapUrl(address, mapApp);
+    if (!url) return;
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       window.open(url, '_blank');
     } else {
       Linking.openURL(url);
     }
+  };
+
+  const openFlightInFlightsTab = (flightId: string) => {
+    setExternalFlightEditId(flightId);
   };
 
   const applyLodgingDate = (field: 'checkIn' | 'checkOut', value: string, context: 'draft' | 'edit') => {
@@ -406,7 +431,12 @@ const App: React.FC = () => {
     return member ? formatMemberName(member) : 'Unknown';
   };
 
-  const userMembers = useMemo(() => groupMembers.filter((m) => !m.guestName), [groupMembers]);
+  const userMembers = useMemo(
+    () => groupMembers.filter((m) => !m.guestName && m.status !== 'pending' && m.status !== 'removed'),
+    [groupMembers]
+  );
+
+  const memberIds = useMemo(() => userMembers.map((m) => m.id), [userMembers]);
 
   // Per-user tour totals via shared helper. Note: if a tour has an explicit empty payer list,
   // we leave it unsplit (no cost assigned) so non-payers stay at $0.
@@ -450,6 +480,11 @@ const App: React.FC = () => {
     [flights, userMembers]
   );
 
+  const flightShares = useMemo(
+    () => balanceCategoryTotals(flightsTotal, flightsPayerTotals, memberIds),
+    [flightsTotal, flightsPayerTotals, memberIds]
+  );
+
   // Per-user lodging totals via shared helper. Explicitly empty paidBy means no split, so removed users go to $0.
   const lodgingPayerTotals = useMemo(
     () =>
@@ -463,27 +498,23 @@ const App: React.FC = () => {
     [lodgings, userMembers]
   );
 
-  const lodgingTotalsBalanced = useMemo(() => {
+  const lodgingTotalsBalanced = useMemo(
+    () => balanceCategoryTotals(lodgingTotal, lodgingPayerTotals, memberIds),
+    [lodgingPayerTotals, lodgingTotal, memberIds]
+  );
+
+  const tourShares = useMemo(
+    () => balanceCategoryTotals(toursTotal, payerTotals, memberIds),
+    [toursTotal, payerTotals, memberIds]
+  );
+
+  const overallShares = useMemo(() => {
     const totals: Record<string, number> = {};
-    userMembers.forEach((m) => {
-      totals[m.id] = lodgingPayerTotals[m.id] ?? 0;
+    memberIds.forEach((id) => {
+      totals[id] = (flightShares[id] ?? 0) + (lodgingTotalsBalanced[id] ?? 0) + (tourShares[id] ?? 0);
     });
-    const assigned = Object.values(totals).reduce((sum, v) => sum + v, 0);
-    const remainder = lodgingTotal - assigned;
-    if (userMembers.length && Math.abs(remainder) > 1e-6) {
-      const evenShare = remainder / userMembers.length;
-      userMembers.forEach((m) => {
-        totals[m.id] = (totals[m.id] ?? 0) + evenShare;
-      });
-      const afterEven = Object.values(totals).reduce((sum, v) => sum + v, 0);
-      const adjust = lodgingTotal - afterEven;
-      if (Math.abs(adjust) > 1e-6) {
-        const first = userMembers[0]?.id;
-        if (first) totals[first] = (totals[first] ?? 0) + adjust;
-      }
-    }
     return totals;
-  }, [lodgingPayerTotals, lodgingTotal, userMembers]);
+  }, [flightShares, lodgingTotalsBalanced, memberIds, tourShares]);
 
   const lodgingBreakdownSum = useMemo(
     () => Object.values(lodgingTotalsBalanced).reduce((sum, v) => sum + v, 0),
@@ -586,7 +617,7 @@ const App: React.FC = () => {
     setSelectedTraitNames(new Set());
     setTraitAge('');
     setTraitGender('prefer-not');
-    setAccountProfile({ firstName: '', lastName: '', email: '' });
+    setAccountProfile({ firstName: '', lastName: '', email: '', mapPreference: mapApp });
     setFamilyRelationships([]);
     setFellowTravelers([]);
     setActivePage('menu');
@@ -603,10 +634,11 @@ const App: React.FC = () => {
         token: token ?? userToken,
         logout,
         setAccountProfile,
+        setMapPreference: updateMapPreference,
         setUserName,
         setUserEmail,
       }),
-    [backendUrl, logout, setAccountProfile, setUserEmail, setUserName, userToken]
+    [backendUrl, logout, setAccountProfile, setUserEmail, setUserName, updateMapPreference, userToken]
   );
 
   const loadFamilyRelationships = useCallback(
@@ -792,9 +824,13 @@ const App: React.FC = () => {
     });
     if (!res.ok) return;
     const data = await res.json();
-    setGroups(data);
-    if (!newTripGroupId && data.length) {
-      setNewTripGroupId(data[0].id);
+    const normalized = (Array.isArray(data) ? data : []).map((group: GroupView) => ({
+      ...group,
+      invites: Array.isArray(group.invites) ? group.invites : [],
+    }));
+    setGroups(normalized);
+    if (!newTripGroupId && normalized.length) {
+      setNewTripGroupId(normalized[0].id);
     }
   };
 
@@ -836,8 +872,10 @@ const App: React.FC = () => {
         email: m.email ?? undefined,
         firstName: m.firstName ?? m.first_name ?? undefined,
         lastName: m.lastName ?? m.last_name ?? undefined,
+        status: m.status ?? undefined,
+        removedAt: m.removedAt ?? undefined,
       }));
-      setGroupMembers(normalized);
+      setGroupMembers(normalized.filter((m) => m.status !== 'removed'));
     } catch {
       setGroupMembers([]);
     }
@@ -856,7 +894,8 @@ const App: React.FC = () => {
     if (!userToken) return;
     const res = await fetch(`${backendUrl}/api/traits/profile/demographics`, { headers });
     if (!res.ok) return;
-    const data = await res.json().catch(() => ({}));
+    const raw = await res.json().catch(() => ({}));
+    const data = raw ?? {};
     if (data.age != null) setTraitAge(String(data.age));
     if (data.gender) {
       if (data.gender === 'female' || data.gender === 'male' || data.gender === 'nonbinary' || data.gender === 'prefer-not') {
@@ -952,7 +991,7 @@ const App: React.FC = () => {
       setUserEmail(session.email ?? null);
       if (session.tripId) setActiveTripId(session.tripId);
       const sessionPage = session.page;
-      if (sessionPage === 'overview' || sessionPage === 'flights' || sessionPage === 'lodging' || sessionPage === 'trips' || sessionPage === 'create-trip' || sessionPage === 'trip-details' || sessionPage === 'traits' || sessionPage === 'itinerary' || sessionPage === 'tours' || sessionPage === 'cost' || sessionPage === 'account' || sessionPage === 'follow') {
+      if (sessionPage === 'overview' || sessionPage === 'flights' || sessionPage === 'lodging' || sessionPage === 'trips' || sessionPage === 'create-trip' || sessionPage === 'trip-details' || sessionPage === 'itinerary' || sessionPage === 'tours' || sessionPage === 'cost' || sessionPage === 'account' || sessionPage === 'follow') {
         setActivePage(sessionPage as Page);
       } else {
         setActivePage('menu');
@@ -1026,6 +1065,7 @@ const App: React.FC = () => {
   }, [userToken, activeTripId, trips]);
 
   const findActiveTrip = () => trips.find((t) => t.id === activeTripId);
+
 
   const addMemberToGroup = async (groupId: string, type: 'user' | 'relationship') => {
     if (!userToken) return;
@@ -1198,13 +1238,6 @@ const App: React.FC = () => {
             ) : null}
             <View style={styles.topRight}>
               <Text style={styles.bodyText}>{userName ?? 'Traveler'}</Text>
-              <TouchableOpacity
-                style={[styles.button, styles.smallButton, isRefreshing && styles.disabledButton]}
-                onPress={() => refreshAllData()}
-                disabled={isRefreshing}
-              >
-                <Text style={styles.buttonText}>{isRefreshing ? 'Refreshing...' : 'Refresh'}</Text>
-              </TouchableOpacity>
               <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={logout}>
                 <Text style={styles.buttonText}>Logout</Text>
               </TouchableOpacity>
@@ -1244,17 +1277,14 @@ const App: React.FC = () => {
               <TouchableOpacity style={[styles.button, activePage === 'account' && styles.toggleActive]} onPress={() => setActivePage('account')}>
                 <Text style={styles.buttonText}>Account</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.button, activePage === 'traits' && styles.toggleActive]} onPress={() => setActivePage('traits')}>
-                <Text style={styles.buttonText}>Traits</Text>
-              </TouchableOpacity>
               <TouchableOpacity style={[styles.button, activePage === 'follow' && styles.toggleActive]} onPress={() => setActivePage('follow')}>
                 <Text style={styles.buttonText}>Follow Trip</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.button, activePage === 'itinerary' && styles.toggleActive]} onPress={() => setActivePage('itinerary')}>
-                <Text style={styles.buttonText}>Create Itinerary</Text>
-              </TouchableOpacity>
+                <TouchableOpacity style={[styles.button, activePage === 'itinerary' && styles.toggleActive]} onPress={() => setActivePage('itinerary')}>
+                  <Text style={styles.buttonText}>Create Itinerary</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
 
           {activePage === 'itinerary' ? (
             <ItinerariesTab
@@ -1268,28 +1298,6 @@ const App: React.FC = () => {
               styles={styles}
             />
           ) : null}
-
-      {activePage === 'traits' ? (
-        <TraitsTab
-          backendUrl={backendUrl}
-          userToken={userToken}
-          traits={traits}
-          setTraits={setTraits}
-          selectedTraitNames={selectedTraitNames}
-          setSelectedTraitNames={setSelectedTraitNames}
-          traitAge={traitAge}
-          setTraitAge={setTraitAge}
-          traitGender={traitGender}
-          setTraitGender={setTraitGender}
-          newTraitName={newTraitName}
-          setNewTraitName={setNewTraitName}
-          headers={headers}
-          jsonHeaders={jsonHeaders}
-          fetchTraits={fetchTraits}
-          fetchTraitProfile={fetchTraitProfile}
-          styles={styles}
-        />
-      ) : null}
 
           {activePage === 'tours' ? (
             <TourTab
@@ -1340,16 +1348,12 @@ const App: React.FC = () => {
                         <Text style={styles.cellText}>{row.label}</Text>
                       </View>
                       {userMembers.map((m) => {
-                        let share = 0;
-                        if (row.label === 'Tours') {
-                          share = payerTotals[m.id] || 0;
-                        } else if (row.label === 'Flights') {
-                          const pay = flightsPayerTotals[m.id];
-                          share = typeof pay === 'number' && pay > 0 ? pay : row.total / (userMembers.length || 1);
-                        } else if (row.label === 'Lodging') {
-                          const pay = lodgingTotalsBalanced[m.id];
-                          share = typeof pay === 'number' ? pay : row.total / (userMembers.length || 1);
-                        }
+                        const share =
+                          row.label === 'Tours'
+                            ? tourShares[m.id] ?? 0
+                            : row.label === 'Flights'
+                              ? flightShares[m.id] ?? 0
+                              : lodgingTotalsBalanced[m.id] ?? 0;
                         return (
                           <View key={`${row.label}-${m.id}`} style={[styles.cell, { minWidth: 120, flex: 1 }]}>
                             <Text style={styles.cellText}>${share.toFixed(2)}</Text>
@@ -1366,17 +1370,7 @@ const App: React.FC = () => {
                       <Text style={styles.headerText}>Overall</Text>
                     </View>
                     {userMembers.map((m) => {
-                      const divisor = userMembers.length || 1;
-                      const flightsShare = (() => {
-                        const pay = flightsPayerTotals[m.id];
-                        return typeof pay === 'number' && pay > 0 ? pay : flightsTotal / divisor;
-                      })();
-                      const lodgingShare = (() => {
-                        const pay = lodgingTotalsBalanced[m.id];
-                        return typeof pay === 'number' ? pay : lodgingTotal / divisor;
-                      })();
-                      const tourShare = payerTotals[m.id] || 0;
-                      const total = flightsShare + lodgingShare + tourShare;
+                      const total = overallShares[m.id] ?? 0;
                       return (
                         <View key={`overall-${m.id}`} style={[styles.cell, { minWidth: 120, flex: 1 }]}>
                           <Text style={styles.headerText}>${total.toFixed(2)}</Text>
@@ -1408,11 +1402,25 @@ const App: React.FC = () => {
               setUserToken={setUserToken}
               setUserName={setUserName}
               setUserEmail={setUserEmail}
+              mapApp={mapApp}
+              onChangeMapApp={updateMapPreference}
               saveSession={saveSession}
               headers={headers}
               jsonHeaders={jsonHeaders}
               logout={logout}
               styles={styles}
+              traits={traits}
+              setTraits={setTraits}
+              selectedTraitNames={selectedTraitNames}
+              setSelectedTraitNames={setSelectedTraitNames}
+              traitAge={traitAge}
+              setTraitAge={setTraitAge}
+              traitGender={traitGender}
+              setTraitGender={setTraitGender}
+              newTraitName={newTraitName}
+              setNewTraitName={setNewTraitName}
+              fetchTraits={fetchTraits}
+              fetchTraitProfile={fetchTraitProfile}
             />
           ) : null}
 
@@ -2072,7 +2080,7 @@ const App: React.FC = () => {
           </View>
         </View>
       ) : null}
-      {activePage === 'flights' ? (
+      {activePage === 'flights' || externalFlightEditId ? (
         <FlightsTab
           backendUrl={backendUrl}
           userToken={userToken}
@@ -2090,6 +2098,9 @@ const App: React.FC = () => {
           styles={styles}
           airportOptions={flightAirportOptions}
           onSearchAirports={fetchFlightAirports}
+          externalEditFlightId={externalFlightEditId}
+          onExternalEditHandled={() => setExternalFlightEditId(null)}
+          showList={activePage === 'flights'}
         />
       ) : null}
       {activePage === 'trips' ? (
@@ -2104,7 +2115,7 @@ const App: React.FC = () => {
                 </TouchableOpacity>
               </View>
               {(() => {
-                const inviteEmails = groups.flatMap((g) => g.invites.map((inv) => inv.inviteeEmail));
+                const inviteEmails = groups.flatMap((g) => (g.invites ?? []).map((inv) => inv.inviteeEmail));
                 if (!inviteEmails.length) return null;
                 return (
                   <View style={[styles.row, { flexWrap: 'wrap', gap: 8 }]}>
@@ -2240,12 +2251,16 @@ const App: React.FC = () => {
               carRentals={carRentals}
               defaultPayerId={defaultPayerId}
               styles={styles}
+              mapApp={mapApp}
+              onOpenAddress={openMaps}
               onRefreshTrips={fetchTrips}
               onRefreshGroups={fetchGroups}
+              onRefreshGroupMembers={fetchGroupMembersForActiveTrip}
               onRefreshFlights={fetchFlights}
               onRefreshLodgings={fetchLodgings}
               onRefreshTours={fetchTours}
               onAddCarRental={addCarRentalFromOverview}
+              openFlightInFlightsTab={openFlightInFlightsTab}
             />
           ) : null}
 
@@ -2347,12 +2362,12 @@ const App: React.FC = () => {
               onChangeText={(text) => setAuthForm((p) => ({ ...p, passwordConfirm: text }))}
             />
           ) : null}
-          <TouchableOpacity
-            style={styles.button}
-            onPress={authMode === 'login' ? loginWithPassword : register}
-          >
-            <Text style={styles.buttonText}>{authMode === 'login' ? 'Login' : 'Create account'}</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={authMode === 'login' ? loginWithPassword : register}
+            >
+              <Text style={styles.buttonText}>{authMode === 'login' ? 'Login' : 'Create account'}</Text>
+            </TouchableOpacity>
         </View>
       )}
     </SafeAreaView>
@@ -2962,6 +2977,28 @@ const styles = StyleSheet.create({
   },
   traitChipTextSelected: {
     color: '#fff',
+  },
+  attendeeChipContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  badge: {
+    marginLeft: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+    backgroundColor: '#e0e0e0',
+  },
+  badgePending: {
+    backgroundColor: '#f6c851',
+  },
+  badgeRemoved: {
+    backgroundColor: '#c7c7c7',
+  },
+  badgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#2b2b2b',
   },
   modalOverlay: {
     position: 'absolute',

@@ -17,6 +17,7 @@ export interface Flight {
   passengerName: string;
   passengerIds?: string[];
   departureDate: string;
+  arrivalDate?: string | null;
   tripId: string;
   departureLocation?: string;
   departureAirportCode?: string;

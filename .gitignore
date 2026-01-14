@@ -7,10 +7,14 @@ dist
 .DS_Store
 .idea
 *.iml
+.gradle
 server/.env
 server/logs
 server/public/_expo
 server/node_modules
+server/Mailgun Example.js
+server/.env.example
+server/__tests__/test-credentials.json
 app/.expo
 app/android/.gradle
 app/android/.idea
@@ -19,6 +23,9 @@ app/android/.gradle
 app/node_modules
 /android
 logs
-.gradle
 patches
 build
+.github/workflows/cloudrun.yml
+*.log
+firestore-debug.log
+firebase-debug.log

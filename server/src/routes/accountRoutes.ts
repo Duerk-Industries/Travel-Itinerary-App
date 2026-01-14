@@ -317,8 +317,18 @@ router.delete('/trips/:tripId/members/:memberId', async (req, res) => {
     return;
   }
   try {
-    await removeGroupMember(userId, membership.groupId, req.params.memberId);
-    res.status(204).send();
+    try {
+      await removeGroupMember(userId, membership.groupId, req.params.memberId);
+      res.status(204).send();
+      return;
+    } catch (err) {
+      if ((err as Error).message === 'Member not found') {
+        await removeGroupInvite(userId, req.params.memberId);
+        res.status(204).send();
+        return;
+      }
+      throw err;
+    }
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });
   }
@@ -398,9 +408,16 @@ groupsRouter.post('/', async (req, res) => {
 
 groupsRouter.post('/:id/members', async (req, res) => {
   const user = (req as any).user as { userId: string; email: string };
-  const { email, guestName } = req.body as { email?: string; guestName?: string };
+  const { email, guestName, firstName, lastName } = req.body as { email?: string; guestName?: string; firstName?: string; lastName?: string };
+  const given = typeof firstName === 'string' ? firstName.trim() : '';
+  const family = typeof lastName === 'string' ? lastName.trim() : '';
+  if ((firstName !== undefined || lastName !== undefined) && (!given || !family)) {
+    res.status(400).json({ error: 'firstName and lastName cannot be blank' });
+    return;
+  }
+  const normalizedGuestName = guestName?.trim() || (given && family ? `${given} ${family}` : undefined);
   try {
-    const result = await addGroupMember(user.userId, req.params.id, { email, guestName });
+    const result = await addGroupMember(user.userId, req.params.id, { email, guestName: normalizedGuestName });
     if (result.email && result.inviteId && isEmailConfigured()) {
       const subject = `${user.email} invited you to a group`;
       const body = `${user.email} invited you to join a group. Log in to accept.`;
@@ -418,6 +435,11 @@ groupsRouter.delete('/:groupId/members/:memberId', async (req, res) => {
     await removeGroupMember(user.userId, req.params.groupId, req.params.memberId);
     res.status(204).send();
   } catch (err) {
+    if ((err as Error).message === 'Member not found') {
+      await removeGroupInvite(user.userId, req.params.memberId);
+      res.status(204).send();
+      return;
+    }
     res.status(400).json({ error: (err as Error).message });
   }
 });

@@ -3,8 +3,6 @@ import { app, envLoadedFrom } from './app';
 import { initDb, refreshAirportsDaily } from './db';
 import { logError } from './logger';
 
-console.log('DATABASE_URL loaded:', process.env.DATABASE_URL, 'from', envLoadedFrom);
-
 const defaultPort = Number(process.env.PORT) || 4000;
 
 process.on('unhandledRejection', (reason) => {

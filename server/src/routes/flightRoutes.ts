@@ -1,7 +1,17 @@
 import { Router } from 'express';
 import bodyParser from 'body-parser';
 import { authenticate } from '../auth';
-import { deleteFlight, ensureUserInTrip, getFlightForUser, insertFlight, listFlights, searchFlightLocations, shareFlight, updateFlight, poolClient } from '../db';
+import {
+  deleteFlight,
+  ensureUserInTrip,
+  getFlightForUser,
+  insertFlight,
+  listFlights,
+  searchFlightLocations,
+  shareFlight,
+  updateFlight,
+  listGroupMembers,
+} from '../db';
 import { isEmailConfigured, sendShareEmail } from '../mailer';
 
 // Flights API: CRUD for flights scoped to the authenticated user / their group trips.
@@ -40,6 +50,7 @@ router.post('/', async (req, res) => {
     layoverLocation,
     layoverLocationCode,
     layoverDuration,
+    arrivalDate,
     arrivalTime,
     cost,
     carrier,
@@ -53,41 +64,19 @@ router.post('/', async (req, res) => {
     return;
   }
   const allZeroPassengerIds = passengerIds.every((id: any) => String(id).startsWith('0000'));
-  if (process.env.USE_IN_MEMORY_DB === '1' && !allZeroPassengerIds) {
-    const flight = await insertFlight({
-      userId,
-      tripId,
-      passengerName: 'Passenger',
-      passengerIds: passengerIds.map((id: any) => String(id)),
-      departureDate,
-      departureLocation,
-      departureAirportCode,
-      departureTime,
-      arrivalLocation,
-      arrivalAirportCode,
-      layoverLocation,
-      layoverLocationCode,
-      layoverDuration,
-      arrivalTime,
-      cost: Number(cost) ?? 0,
-      carrier,
-      flightNumber,
-      bookingReference,
-      paidBy: Array.isArray(paidBy) ? (paidBy.length ? paidBy : []) : [],
-    });
-    res.status(201).json(flight);
-    return;
-  }
   const tripGroup = (await ensureUserInTrip(tripId, userId)) || (process.env.USE_IN_MEMORY_DB === '1' ? { groupId: tripId } : null);
   if (!tripGroup) {
     res.status(403).json({ error: 'You must be in the group for this trip' });
     return;
   }
-  const pool = poolClient();
-  const groupMemberIds = await pool.query<{ id: string }>(`SELECT id FROM group_members WHERE group_id = $1`, [tripGroup.groupId]);
-  const memberIdSet = new Set(groupMemberIds.rows.map((r) => String(r.id)));
+  const members = await listGroupMembers(tripGroup.groupId, userId);
+  const activeMembers = members.filter((m) => m.status !== 'pending');
+  const pendingMembers = members.filter((m) => m.status === 'pending');
+  const memberIdSet = new Set(activeMembers.map((m) => String(m.id)));
+  const inviteIdSet = new Set(pendingMembers.map((m) => String(m.id)));
+  const validPassengerIds = new Set<string>([...memberIdSet, ...inviteIdSet]);
   const normalizedPassengerIds = passengerIds.map((id: any) => String(id));
-  const allValid = normalizedPassengerIds.every((id: string) => memberIdSet.has(id));
+  const allValid = normalizedPassengerIds.every((id: string) => validPassengerIds.has(id));
   const allZero = normalizedPassengerIds.every((id: string) => id.startsWith('0000'));
   if (!allValid) {
     if (allZero) {
@@ -99,26 +88,22 @@ router.post('/', async (req, res) => {
       normalizedPassengerIds.splice(0, normalizedPassengerIds.length, Array.from(memberIdSet)[0]);
     }
   }
-  const { rows: memberRows } = await pool.query(
-    `SELECT gm.id, gm.guest_name, wu.first_name, wu.last_name, u.email
-     FROM group_members gm
-     LEFT JOIN users u ON gm.user_id = u.id
-     LEFT JOIN web_users wu ON gm.user_id = wu.id
-     WHERE gm.group_id = $1 AND gm.id = ANY($2::uuid[])`,
-    [tripGroup.groupId, normalizedPassengerIds]
-  );
-  if (memberRows.length !== normalizedPassengerIds.length) {
-    if (process.env.USE_IN_MEMORY_DB !== '1') {
-      res.status(400).json({ error: 'Passengers must be members of the trip group' });
-      return;
-    }
+  const passengers = normalizedPassengerIds
+    .map((id) => members.find((m) => String(m.id) === id))
+    .filter(Boolean) as any[];
+  if (passengers.length !== normalizedPassengerIds.length && process.env.USE_IN_MEMORY_DB !== '1') {
+    res.status(400).json({ error: 'Passengers must be members of the trip group' });
+    return;
   }
-  const passengerNameSource: Array<{ guest_name?: string | null; first_name?: string | null; last_name?: string | null; email?: string | null }> =
-    memberRows.length ? memberRows : (normalizedPassengerIds as any[]).map(() => ({}));
-  const passengerName =
-    passengerNameSource
-      .map((m) => m.guest_name || `${m.first_name ?? ''} ${m.last_name ?? ''}`.trim() || m.email || 'Passenger')
-      .join(', ') || 'Passenger';
+  const passengerName = passengers
+    .map((m: any) => m.guestName || `${m.firstName ?? ''} ${m.lastName ?? ''}`.trim() || m.email || 'Passenger')
+    .join(', ') || 'Passenger';
+  const normalizedPaidBy = Array.isArray(paidBy) ? paidBy.map((id: any) => String(id)).filter(Boolean) : [];
+  const payerIdSet = new Set(activeMembers.map((m) => String(m.id)));
+  if (normalizedPaidBy.some((id) => !payerIdSet.has(id))) {
+    res.status(400).json({ error: 'Payers must be active trip members' });
+    return;
+  }
   const flight = await insertFlight({
     userId,
     tripId,
@@ -133,12 +118,13 @@ router.post('/', async (req, res) => {
     layoverLocation,
     layoverLocationCode,
     layoverDuration,
+    arrivalDate: arrivalDate || departureDate,
     arrivalTime,
     cost: Number(cost) ?? 0,
     carrier,
     flightNumber,
     bookingReference,
-    paidBy: Array.isArray(paidBy) ? (paidBy.length ? paidBy : []) : [],
+    paidBy: normalizedPaidBy,
   });
   res.status(201).json(flight);
 });
@@ -156,6 +142,7 @@ router.patch('/:id', async (req, res) => {
     layoverLocation,
     layoverLocationCode,
     layoverDuration,
+    arrivalDate,
     arrivalTime,
     cost,
     carrier,
@@ -165,55 +152,67 @@ router.patch('/:id', async (req, res) => {
   } = req.body;
   const passengerIds = Array.isArray(req.body.passengerIds) ? req.body.passengerIds : null;
   const normalizedPaidBy = Array.isArray(paidBy) ? (paidBy.length ? paidBy : undefined) : undefined;
-  const useInMemory = process.env.USE_IN_MEMORY_DB === '1';
   try {
-    if (passengerIds && passengerIds.length === 0) {
-      throw new Error('At least one passenger is required');
+    const useInMemory = process.env.USE_IN_MEMORY_DB === '1';
+    const flight = await getFlightForUser(req.params.id, userId);
+    if (!flight) {
+      res.status(404).json({ error: 'Flight not found' });
+      return;
     }
-    let passengerName = typeof incomingPassengerName === 'string' ? incomingPassengerName : undefined;
-    const normalizedPassengerIds = passengerIds ? passengerIds.map((id: any) => String(id)) : undefined;
-    if (passengerIds) {
-      const pool = poolClient();
-      if (!useInMemory) {
-        const groupMemberIds = await pool
-          .query<{ id: string }>(
-            `SELECT gm.id
-             FROM flights f
-             JOIN trips t ON f.trip_id = t.id
-             JOIN group_members gm ON gm.group_id = t.group_id
-             WHERE f.id = $1`,
-            [req.params.id]
-          )
-          .catch(() => ({ rows: [] as any[] }));
-        const memberIdSet = new Set(groupMemberIds.rows.map((r) => String(r.id)));
-        const allValid = normalizedPassengerIds.every((id: string) => memberIdSet.has(id));
-        if (!allValid) {
+    const tripGroup = (await ensureUserInTrip(flight.tripId, userId)) || (useInMemory ? { groupId: flight.tripId } : null);
+    if (!tripGroup) {
+      res.status(403).json({ error: 'Not authorized for this trip' });
+      return;
+    }
+
+    let passengerName: string | undefined = typeof incomingPassengerName === 'string' ? incomingPassengerName : undefined;
+    let normalizedPassengerIds = passengerIds ? passengerIds.map((id: any) => String(id)) : undefined;
+    if (passengerIds && passengerIds.length === 0) {
+      // Treat empty array as "no change" to passengers.
+      normalizedPassengerIds = undefined;
+      if (!passengerName) {
+        passengerName = flight.passengerName;
+      }
+    }
+
+    if (normalizedPassengerIds) {
+      const members = await listGroupMembers(tripGroup.groupId, userId).catch(() => []);
+      if (members.length) {
+        const activeMembers = members.filter((m: any) => m.status !== 'pending');
+        const pendingMembers = members.filter((m: any) => m.status === 'pending');
+        const memberIdSet = new Set(activeMembers.map((m: any) => String(m.id)));
+        const inviteIdSet = new Set(pendingMembers.map((m: any) => String(m.id)));
+        const matchesExisting =
+          flight.passengerIds &&
+          normalizedPassengerIds.length === (flight.passengerIds as any[]).length &&
+          normalizedPassengerIds.every((id: string) => (flight.passengerIds as any[]).includes(id));
+        const allValid = normalizedPassengerIds.every((id: string) => memberIdSet.has(id) || inviteIdSet.has(id));
+        if (!allValid && !matchesExisting) {
           throw new Error('Passengers must be members of the trip group');
         }
-      }
-      const { rows: memberRows } = await pool
-        .query(
-          `SELECT gm.id, gm.guest_name, wu.first_name, wu.last_name, u.email
-           FROM flights f
-           JOIN trips t ON f.trip_id = t.id
-           JOIN group_members gm ON gm.group_id = t.group_id AND gm.id = ANY($1::uuid[])
-           LEFT JOIN users u ON gm.user_id = u.id
-           LEFT JOIN web_users wu ON gm.user_id = wu.id
-           WHERE f.id = $2`,
-          [normalizedPassengerIds, req.params.id]
-        )
-        .catch(() => ({ rows: [] as any[] }));
-      if (memberRows.length === normalizedPassengerIds.length || (useInMemory && memberRows.length > 0)) {
-        const computedName = memberRows
-          .map((m) => m.guest_name || `${m.first_name ?? ''} ${m.last_name ?? ''}`.trim() || m.email || 'Passenger')
+        const passengers = normalizedPassengerIds
+          .map((id: string) => members.find((m: any) => String(m.id) === id))
+          .filter(Boolean) as any[];
+        const computedName = passengers
+          .map((m: any) => m.guestName || `${m.firstName ?? ''} ${m.lastName ?? ''}`.trim() || m.email || 'Passenger')
           .join(', ');
         if (computedName.trim()) {
           passengerName = computedName;
         }
-      } else if (!useInMemory) {
-        throw new Error('Passengers must be members of the trip group');
-      } else if (!passengerName) {
-        passengerName = 'Passenger';
+      }
+    } else if (!normalizedPassengerIds || normalizedPassengerIds.length === 0) {
+      normalizedPassengerIds = Array.isArray(flight.passengerIds) ? flight.passengerIds.map((id: any) => String(id)) : undefined;
+    }
+    if (!passengerName) {
+      passengerName = flight.passengerName || 'Passenger';
+    }
+
+    if (normalizedPaidBy) {
+      const members = await listGroupMembers(tripGroup.groupId, userId);
+      const payerIdSet = new Set(members.filter((m: any) => m.status !== 'pending').map((m: any) => String(m.id)));
+      const payersValid = normalizedPaidBy.every((id: string) => payerIdSet.has(id));
+      if (!payersValid) {
+        throw new Error('Payers must be active trip members');
       }
     }
 
@@ -229,6 +228,7 @@ router.patch('/:id', async (req, res) => {
       layoverLocation,
       layoverLocationCode,
       layoverDuration,
+      arrivalDate: arrivalDate || departureDate,
       arrivalTime,
       cost: typeof cost === 'undefined' ? undefined : Number(cost),
       carrier,
@@ -255,6 +255,7 @@ router.put('/:id', async (req, res) => {
     layoverLocation,
     layoverLocationCode,
     layoverDuration,
+    arrivalDate,
     arrivalTime,
     cost,
     carrier,
@@ -275,6 +276,7 @@ router.put('/:id', async (req, res) => {
       layoverLocation,
       layoverLocationCode,
       layoverDuration,
+      arrivalDate: arrivalDate || departureDate,
       arrivalTime,
       cost: typeof cost === 'undefined' ? undefined : Number(cost),
       carrier,
