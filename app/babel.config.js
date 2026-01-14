@@ -2,12 +2,13 @@ module.exports = function(api) {
   api.cache(true);
   return {
     presets: [
+      ['babel-preset-expo', { unstable_transformImportMeta: true }],
+    ],
+    plugins: [
       [
-        'babel-preset-expo',
-        {
-          unstable_transformImportMeta: true,
-        },
+        'module:react-native-dotenv',
+        { moduleName: '@env', safe: false, allowUndefined: false },
       ],
     ],
   };
-};
+}

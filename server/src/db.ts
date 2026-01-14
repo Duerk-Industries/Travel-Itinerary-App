@@ -3,6 +3,7 @@ import { Pool } from 'pg';
 import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
 import { Flight, Group, GroupMember, Trait, Trip, User, WebUser, Lodging, Tour, Itinerary, ItineraryDetail } from './types';
 import fetch from 'node-fetch';
+import { logError } from './logger';
 
 
 let pool: Pool | null = null;
@@ -40,8 +41,16 @@ export const closePool = async (): Promise<void> => {
 export const initDb = async (): Promise<void> => {
   const p = getPool();
 
-
-  await p.query('CREATE EXTENSION IF NOT EXISTS "uuid-ossp";');
+  // Skip or ignore extension creation when running against in-memory pg-mem.
+  try {
+    await p.query('CREATE EXTENSION IF NOT EXISTS "uuid-ossp";');
+  } catch (err) {
+    if (process.env.USE_IN_MEMORY_DB === '1' || process.env.NODE_ENV === 'test') {
+      // pg-mem doesn't support extensions; safe to skip in tests.
+    } else {
+      throw err;
+    }
+  }
 
 
   await p.query(`
@@ -59,6 +68,7 @@ export const initDb = async (): Promise<void> => {
       id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
       email TEXT UNIQUE NOT NULL,
       first_name TEXT NOT NULL,
+      middle_name TEXT,
       last_name TEXT NOT NULL,
       password_hash TEXT NOT NULL,
       salt TEXT NOT NULL,
@@ -69,6 +79,7 @@ export const initDb = async (): Promise<void> => {
   // Backward compatibility if the table already exists
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS email TEXT UNIQUE;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS first_name TEXT;`);
+  await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS middle_name TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS last_name TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS password_hash TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS salt TEXT;`);
@@ -129,13 +140,50 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE group_invites ALTER COLUMN invitee_user_id DROP NOT NULL;`);
 
   await p.query(`
+    CREATE TABLE IF NOT EXISTS family_relationships (
+      id UUID PRIMARY KEY,
+      requester_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      relative_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      relationship TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      created_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE (requester_id, relative_id)
+    );
+  `);
+
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS fellow_travelers (
+      id UUID PRIMARY KEY,
+      owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      first_name TEXT NOT NULL,
+      last_name TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+  await p.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_fellow_travelers_owner_name ON fellow_travelers(owner_id, LOWER(first_name), LOWER(last_name));`);
+
+  await p.query(`
     CREATE TABLE IF NOT EXISTS trips (
       id UUID PRIMARY KEY,
       group_id UUID NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
       name TEXT NOT NULL,
+      description TEXT,
+      destination TEXT,
+      start_date DATE,
+      end_date DATE,
+      start_month INTEGER,
+      start_year INTEGER,
+      duration_days INTEGER,
       created_at TIMESTAMP DEFAULT NOW()
     );
   `);
+  await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS description TEXT;`);
+  await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS destination TEXT;`);
+  await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS start_date DATE;`);
+  await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS end_date DATE;`);
+  await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS start_month INTEGER;`);
+  await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS start_year INTEGER;`);
+  await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS duration_days INTEGER;`);
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS flights (
@@ -143,6 +191,7 @@ export const initDb = async (): Promise<void> => {
       user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       trip_id UUID REFERENCES trips(id) ON DELETE SET NULL,
       passenger_name TEXT NOT NULL,
+      passenger_ids JSONB DEFAULT '[]'::jsonb,
       departure_date DATE NOT NULL,
       departure_location TEXT,
       departure_airport_code TEXT,
@@ -176,6 +225,7 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE flights ADD COLUMN IF NOT EXISTS layover_location_code TEXT;`);
   await p.query(`ALTER TABLE flights ADD COLUMN IF NOT EXISTS trip_id UUID REFERENCES trips(id) ON DELETE SET NULL;`);
   await p.query(`ALTER TABLE flights ADD COLUMN IF NOT EXISTS paid_by JSONB DEFAULT '[]'::jsonb;`);
+  await p.query(`ALTER TABLE flights ADD COLUMN IF NOT EXISTS passenger_ids JSONB DEFAULT '[]'::jsonb;`);
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS lodgings (
@@ -258,6 +308,25 @@ export const initDb = async (): Promise<void> => {
       created_at TIMESTAMP DEFAULT NOW()
     );
   `);
+
+  if (process.env.USE_IN_MEMORY_DB === '1') {
+    // Clear data between test runs while keeping schema intact.
+    await p.query(`DELETE FROM itinerary_details`);
+    await p.query(`DELETE FROM itineraries`);
+    await p.query(`DELETE FROM tours`);
+    await p.query(`DELETE FROM lodgings`);
+    await p.query(`DELETE FROM flight_shares`);
+    await p.query(`DELETE FROM flights`);
+    await p.query(`DELETE FROM trips`);
+    await p.query(`DELETE FROM group_invites`);
+    await p.query(`DELETE FROM group_members`);
+    await p.query(`DELETE FROM groups`);
+    await p.query(`DELETE FROM traits`);
+    await p.query(`DELETE FROM family_relationships`);
+    await p.query(`DELETE FROM fellow_travelers`);
+    await p.query(`DELETE FROM web_users`);
+    await p.query(`DELETE FROM users`);
+  }
 };
 
 
@@ -568,6 +637,8 @@ export const deleteWebUserAndCleanup = async (userId: string): Promise<void> => 
       await client.query(`DELETE FROM trips WHERE id = ANY($1::uuid[])`, [tripIds]);
     }
 
+    await client.query(`DELETE FROM fellow_travelers WHERE owner_id = $1`, [userId]);
+
     // Remove auth rows last so cascades clean up related data.
     await client.query(`DELETE FROM web_users WHERE id = $1`, [userId]);
     await client.query(`DELETE FROM users WHERE id = $1`, [userId]);
@@ -596,10 +667,10 @@ export const insertFlight = async (
 
   const id = randomUUID();
   const query = `INSERT INTO flights (
-    id, user_id, trip_id, passenger_name, departure_date, departure_location, departure_airport_code, departure_time,
+    id, user_id, trip_id, passenger_name, passenger_ids, departure_date, departure_location, departure_airport_code, departure_time,
     arrival_location, arrival_airport_code, layover_location, layover_location_code, layover_duration,
     arrival_time, cost, carrier, flight_number, booking_reference, paid_by
-  ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19) RETURNING *`;
+  ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20) RETURNING *`;
 
 
   const values = [
@@ -607,6 +678,7 @@ export const insertFlight = async (
     flight.userId,
     flight.tripId,
     flight.passengerName,
+    JSON.stringify(flight.passengerIds ?? []),
     flight.departureDate,
     departureCode,
     departureCode,
@@ -626,7 +698,11 @@ export const insertFlight = async (
 
   const { rows } = await p.query<Flight>(query, values);
   const row = rows[0] as any;
-  return { ...(row as Flight), paidBy: Array.isArray(row.paid_by) ? row.paid_by : [] };
+  return {
+    ...(row as Flight),
+    paidBy: Array.isArray(row.paid_by) ? row.paid_by : [],
+    passengerIds: Array.isArray(row.passenger_ids) ? row.passenger_ids : [],
+  };
 };
 
 
@@ -653,11 +729,67 @@ export const updateFlight = async (
   updates: Partial<Flight>
 ): Promise<Flight> => {
   const p = getPool();
+  const useInMemory = process.env.USE_IN_MEMORY_DB === '1';
   const normalizeCode = (code?: string | null) => (code ? code.toUpperCase() : null);
   const departureCode = normalizeCode(updates.departureLocation ?? updates.departureAirportCode);
   const arrivalCode = normalizeCode(updates.arrivalLocation ?? updates.arrivalAirportCode);
   const layoverCode = normalizeCode(updates.layoverLocation ?? updates.layoverLocationCode);
   const safePaidBy = Array.isArray(updates.paidBy) ? updates.paidBy.filter(Boolean) : null;
+  const normalizedPassengerIds = Array.isArray(updates.passengerIds)
+    ? updates.passengerIds.map((id: any) => String(id))
+    : null;
+
+  if (useInMemory) {
+    const { rows } = await p.query(
+      `UPDATE flights
+       SET passenger_name = COALESCE($1, passenger_name),
+           departure_date = COALESCE($2, departure_date),
+           departure_location = COALESCE($3, departure_location),
+           departure_airport_code = COALESCE($4, departure_airport_code),
+           departure_time = COALESCE($5, departure_time),
+           arrival_location = COALESCE($6, arrival_location),
+           arrival_airport_code = COALESCE($7, arrival_airport_code),
+           layover_location = COALESCE($8, layover_location),
+           layover_location_code = COALESCE($9, layover_location_code),
+           layover_duration = COALESCE($10, layover_duration),
+           arrival_time = COALESCE($11, arrival_time),
+           cost = COALESCE($12, cost),
+           carrier = COALESCE($13, carrier),
+           flight_number = COALESCE($14, flight_number),
+           booking_reference = COALESCE($15, booking_reference),
+           paid_by = COALESCE($16::jsonb, paid_by),
+           passenger_ids = COALESCE($17::jsonb, passenger_ids)
+      WHERE id = $18
+      RETURNING *`,
+      [
+        updates.passengerName ?? null,
+        updates.departureDate ?? null,
+        departureCode,
+        departureCode,
+        updates.departureTime ?? null,
+        arrivalCode,
+        arrivalCode,
+        layoverCode,
+        layoverCode,
+        updates.layoverDuration ?? null,
+        updates.arrivalTime ?? null,
+        typeof updates.cost === 'number' ? updates.cost : null,
+        updates.carrier ?? null,
+        updates.flightNumber ?? null,
+        updates.bookingReference ?? null,
+        Array.isArray(updates.paidBy) ? JSON.stringify(safePaidBy ?? []) : null,
+        normalizedPassengerIds ? JSON.stringify(normalizedPassengerIds) : null,
+        flightId,
+      ]
+    );
+    if (!rows.length) throw new Error('Flight not found');
+    const row = rows[0] as any;
+    return {
+      ...(row as Flight),
+      paidBy: Array.isArray(row.paid_by) ? row.paid_by : [],
+      passengerIds: Array.isArray(row.passenger_ids) ? row.passenger_ids : [],
+    };
+  }
 
   const { rows } = await p.query<Flight>(
     `UPDATE flights f
@@ -674,14 +806,15 @@ export const updateFlight = async (
          arrival_time = COALESCE($11, f.arrival_time),
          cost = COALESCE($12, f.cost),
          carrier = COALESCE($13, f.carrier),
-         flight_number = COALESCE($14, f.flight_number),
-         booking_reference = COALESCE($15, f.booking_reference),
-         paid_by = COALESCE($16::jsonb, f.paid_by)
+      flight_number = COALESCE($14, f.flight_number),
+      booking_reference = COALESCE($15, f.booking_reference),
+      paid_by = COALESCE($16::jsonb, f.paid_by),
+      passenger_ids = COALESCE($17::jsonb, f.passenger_ids)
     FROM trips t
-    WHERE f.id = $17
+    WHERE f.id = $18
       AND t.id = f.trip_id
       -- allow edits by any member of the trip's group
-      AND t.group_id IN (SELECT group_id FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $18)
+      AND t.group_id IN (SELECT group_id FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $19)
     RETURNING f.*`,
    [
       updates.passengerName,
@@ -699,14 +832,15 @@ export const updateFlight = async (
       updates.carrier ?? null,
       updates.flightNumber ?? null,
       updates.bookingReference ?? null,
-      safePaidBy && safePaidBy.length ? JSON.stringify(safePaidBy) : null,
+      Array.isArray(updates.paidBy) ? JSON.stringify(safePaidBy ?? []) : null,
+      normalizedPassengerIds ? JSON.stringify(normalizedPassengerIds) : null,
       flightId,
       userId,
     ]
   );
   if (!rows.length) throw new Error('Flight not found');
   const row = rows[0] as any;
-  return { ...(row as Flight), paidBy: Array.isArray(row.paid_by) ? row.paid_by : [] };
+  return { ...(row as Flight), paidBy: Array.isArray(row.paid_by) ? row.paid_by : [], passengerIds: Array.isArray(row.passenger_ids) ? row.passenger_ids : [] };
 };
 
 export const ensureUserInTrip = async (tripId: string, userId: string): Promise<{ groupId: string } | null> => {
@@ -719,6 +853,61 @@ export const ensureUserInTrip = async (tripId: string, userId: string): Promise<
     [tripId, userId]
   );
   return rows[0] ?? null;
+};
+
+export const updateTripDetails = async (
+  userId: string,
+  tripId: string,
+  updates: {
+    description?: string | null;
+    destination?: string | null;
+    startDate?: string | null;
+    endDate?: string | null;
+    startMonth?: number | null;
+    startYear?: number | null;
+    durationDays?: number | null;
+    dateMode?: 'range' | 'month';
+  }
+): Promise<Trip> => {
+  const p = getPool();
+  const membership = await ensureUserInTrip(tripId, userId);
+  if (!membership) throw new Error('Not authorized to update this trip');
+
+  const { rows } = await p.query<Trip>(
+    `UPDATE trips
+     SET description = COALESCE($1, description),
+         destination = COALESCE($2, destination),
+         start_date = CASE WHEN $6 = 'range' THEN $3::date WHEN $6 = 'month' THEN NULL ELSE start_date END,
+         end_date = CASE WHEN $6 = 'range' THEN $4::date WHEN $6 = 'month' THEN NULL ELSE end_date END,
+         start_month = CASE WHEN $6 = 'month' THEN $7::int WHEN $6 = 'range' THEN NULL ELSE start_month END,
+         start_year = CASE WHEN $6 = 'month' THEN $8::int WHEN $6 = 'range' THEN NULL ELSE start_year END,
+         duration_days = CASE WHEN $6 = 'month' THEN $9::int WHEN $6 = 'range' THEN NULL ELSE duration_days END
+     WHERE id = $5
+     RETURNING id,
+       group_id as "groupId",
+       name,
+       description,
+       destination,
+       start_date as "startDate",
+       end_date as "endDate",
+       start_month as "startMonth",
+       start_year as "startYear",
+       duration_days as "durationDays",
+       created_at as "createdAt"`,
+    [
+      updates.description ?? null,
+      updates.destination ?? null,
+      updates.startDate ?? null,
+      updates.endDate ?? null,
+      tripId,
+      updates.dateMode ?? null,
+      updates.startMonth ?? null,
+      updates.startYear ?? null,
+      updates.durationDays ?? null,
+    ]
+  );
+  if (!rows.length) throw new Error('Trip not found');
+  return rows[0];
 };
 
 export const getFlightForUser = async (flightId: string, userId: string): Promise<Flight | null> => {
@@ -776,6 +965,34 @@ export const listFlights = async (userId: string, tripId?: string): Promise<Flig
   // Return flights for the given trip that the requesting user can see (anyone in the trip's group).
   const p = getPool();
 
+  if (process.env.USE_IN_MEMORY_DB === '1') {
+    const { rows } = await p.query(
+      `
+      SELECT id,
+             user_id as "userId",
+             trip_id as "tripId",
+             passenger_name as "passengerName",
+             COALESCE(passenger_ids, '[]'::jsonb) as passenger_ids,
+             departure_date as "departureDate",
+             departure_time as "departureTime",
+             arrival_time as "arrivalTime",
+             carrier,
+             flight_number as "flightNumber",
+             booking_reference as "bookingReference",
+             cost,
+             COALESCE(paid_by, '[]'::jsonb) as "paidBy"
+      FROM flights
+      WHERE ($2::uuid IS NULL OR trip_id = $2)
+        AND trip_id IN (
+          SELECT t.id FROM trips t JOIN group_members gm ON gm.group_id = t.group_id WHERE gm.user_id = $1
+        )
+      ORDER BY departure_date DESC
+      `,
+      [userId, tripId ?? null]
+    );
+    return rows as any;
+  }
+
   const { rows } = await p.query<Flight>(
     `SELECT f.*,
       t.group_id as "groupId",
@@ -792,7 +1009,12 @@ export const listFlights = async (userId: string, tripId?: string): Promise<Flig
         LEFT JOIN web_users wu ON gm.user_id = wu.id
         WHERE gm.group_id = t.group_id
           AND (
-            LOWER(gm.guest_name) = LOWER(f.passenger_name)
+            EXISTS (
+              SELECT 1
+              FROM jsonb_array_elements_text(COALESCE(f.passenger_ids, '[]'::jsonb)) pid(val)
+              WHERE gm.id = pid.val::uuid
+            )
+            OR LOWER(gm.guest_name) = LOWER(f.passenger_name)
             OR LOWER(u.email) = LOWER(f.passenger_name)
             OR LOWER(CONCAT(wu.first_name, ' ', wu.last_name)) = LOWER(f.passenger_name)
           )
@@ -812,7 +1034,8 @@ export const listFlights = async (userId: string, tripId?: string): Promise<Flig
           COALESCE(NULLIF(apl.city, ''), apl.name, apl.iata_code) || ' (' || apl.iata_code || ')'
         ELSE f.layover_location
       END as layover_airport_label,
-      COALESCE(f.paid_by, '[]'::jsonb) as "paidBy"
+      COALESCE(f.paid_by, '[]'::jsonb) as "paidBy",
+      COALESCE(f.passenger_ids, '[]'::jsonb) as passenger_ids
      FROM flights f
      JOIN trips t ON f.trip_id = t.id
      LEFT JOIN airports apd ON apd.iata_code = f.departure_location
@@ -826,7 +1049,11 @@ export const listFlights = async (userId: string, tripId?: string): Promise<Flig
   );
 
 
-  return rows.map((r: any) => ({ ...(r as Flight), paidBy: Array.isArray(r.paidBy) ? r.paidBy : [] }));
+  return rows.map((r: any) => ({
+    ...(r as Flight),
+    paidBy: Array.isArray(r.paidBy) ? r.paidBy : [],
+    passengerIds: Array.isArray(r.passenger_ids) ? r.passenger_ids : [],
+  }));
 };
 
 export const listLodgings = async (userId: string, tripId?: string | null): Promise<Lodging[]> => {
@@ -940,54 +1167,88 @@ export const updateLodging = async (
   updates: Partial<Lodging>
 ): Promise<Lodging | null> => {
   const p = getPool();
+  const useInMemory = process.env.USE_IN_MEMORY_DB === '1';
+
+  const baseParams = [
+    lodgingId,
+    userId,
+    updates.name ?? null,
+    updates.checkInDate ?? null,
+    updates.checkOutDate ?? null,
+    updates.rooms ?? null,
+    typeof updates.refundBy === 'undefined' ? null : updates.refundBy,
+    updates.totalCost ?? null,
+    updates.costPerNight ?? null,
+    updates.address ?? null,
+    typeof updates.paidBy !== 'undefined' ? JSON.stringify(updates.paidBy ?? []) : null,
+    updates.tripId ?? null,
+  ];
+
   const { rows } = await p.query<Lodging>(
-    `
-    UPDATE lodgings l
-    SET
-      name = COALESCE($3, l.name),
-      check_in_date = COALESCE($4, l.check_in_date),
-      check_out_date = COALESCE($5, l.check_out_date),
-      rooms = COALESCE($6, l.rooms),
-      refund_by = COALESCE($7, l.refund_by),
-      total_cost = COALESCE($8, l.total_cost),
-      cost_per_night = COALESCE($9, l.cost_per_night),
-      address = COALESCE($10, l.address),
-      paid_by = COALESCE($11::jsonb, l.paid_by),
-      trip_id = COALESCE($12, l.trip_id)
-    FROM trips t
-    WHERE l.id = $1
-      AND t.id = COALESCE($12, l.trip_id)
-      -- allow edits by any member of the trip's group
-      AND t.group_id IN (SELECT group_id FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $2)
-    RETURNING
-      l.id,
-      l.user_id as "userId",
-      l.trip_id as "tripId",
-      l.name,
-      l.check_in_date as "checkInDate",
-      l.check_out_date as "checkOutDate",
-      l.rooms,
-      l.refund_by as "refundBy",
-      l.total_cost as "totalCost",
-      l.cost_per_night as "costPerNight",
-      l.address,
-      COALESCE(l.paid_by, '[]'::jsonb) as "paidBy",
-      l.created_at as "createdAt"
-    `,
-    [
-      lodgingId,
-      userId,
-      updates.name ?? null,
-      updates.checkInDate ?? null,
-      updates.checkOutDate ?? null,
-      updates.rooms ?? null,
-      typeof updates.refundBy === 'undefined' ? null : updates.refundBy,
-      updates.totalCost ?? null,
-      updates.costPerNight ?? null,
-      updates.address ?? null,
-      updates.paidBy ? JSON.stringify(updates.paidBy) : null,
-      updates.tripId ?? null,
-    ]
+    useInMemory
+      ? `
+        UPDATE lodgings
+        SET
+          name = COALESCE($3, name),
+          check_in_date = COALESCE($4, check_in_date),
+          check_out_date = COALESCE($5, check_out_date),
+          rooms = COALESCE($6, rooms),
+          refund_by = COALESCE($7, refund_by),
+          total_cost = COALESCE($8, total_cost),
+          cost_per_night = COALESCE($9, cost_per_night),
+          address = COALESCE($10, address),
+          paid_by = COALESCE($11::jsonb, paid_by),
+          trip_id = COALESCE($12, trip_id)
+        WHERE id = $1
+        RETURNING
+          id,
+          user_id as "userId",
+          trip_id as "tripId",
+          name,
+          check_in_date as "checkInDate",
+          check_out_date as "checkOutDate",
+          rooms,
+          refund_by as "refundBy",
+          total_cost as "totalCost",
+          cost_per_night as "costPerNight",
+          address,
+          COALESCE(paid_by, '[]'::jsonb) as "paidBy",
+          created_at as "createdAt"
+      `
+      : `
+        UPDATE lodgings l
+        SET
+          name = COALESCE($3, l.name),
+          check_in_date = COALESCE($4, l.check_in_date),
+          check_out_date = COALESCE($5, l.check_out_date),
+          rooms = COALESCE($6, l.rooms),
+          refund_by = COALESCE($7, l.refund_by),
+          total_cost = COALESCE($8, l.total_cost),
+          cost_per_night = COALESCE($9, l.cost_per_night),
+          address = COALESCE($10, l.address),
+          paid_by = COALESCE($11::jsonb, l.paid_by),
+          trip_id = COALESCE($12, l.trip_id)
+        FROM trips t
+        WHERE l.id = $1
+          AND t.id = COALESCE($12, l.trip_id)
+          -- allow edits by any member of the trip's group
+          AND t.group_id IN (SELECT group_id FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $2)
+        RETURNING
+          l.id,
+          l.user_id as "userId",
+          l.trip_id as "tripId",
+          l.name,
+          l.check_in_date as "checkInDate",
+          l.check_out_date as "checkOutDate",
+          l.rooms,
+          l.refund_by as "refundBy",
+          l.total_cost as "totalCost",
+          l.cost_per_night as "costPerNight",
+          l.address,
+          COALESCE(l.paid_by, '[]'::jsonb) as "paidBy",
+          l.created_at as "createdAt"
+      `,
+    baseParams
   );
   if (!rows.length) return null;
   const row = rows[0] as any;
@@ -1007,7 +1268,7 @@ export const listTours = async (userId: string, tripId?: string): Promise<Tour[]
       tu.start_location as "startLocation",
       tu.start_time as "startTime",
       tu.duration,
-      tu.cost::float8 as cost,
+      tu.cost::numeric as cost,
       to_char(tu.free_cancel_by, 'YYYY-MM-DD') as "freeCancelBy",
       tu.booked_on as "bookedOn",
       tu.reference,
@@ -1045,7 +1306,7 @@ export const insertTour = async (tour: Omit<Tour, 'id' | 'createdAt'>): Promise<
       start_location as "startLocation",
       start_time as "startTime",
       duration,
-      cost::float8 as cost,
+      cost::numeric as cost,
       to_char(free_cancel_by, 'YYYY-MM-DD') as "freeCancelBy",
       booked_on as "bookedOn",
       reference,
@@ -1074,7 +1335,7 @@ export const insertTour = async (tour: Omit<Tour, 'id' | 'createdAt'>): Promise<
 
 export const updateTour = async (id: string, userId: string, tour: Partial<Tour>): Promise<Tour | null> => {
   const p = getPool();
-  const paidBy = tour.paidBy ? JSON.stringify(tour.paidBy) : undefined;
+  const paidBy = typeof tour.paidBy !== 'undefined' ? JSON.stringify(tour.paidBy ?? []) : undefined;
   const { rows } = await p.query<Tour>(
     `
     UPDATE tours
@@ -1099,7 +1360,7 @@ export const updateTour = async (id: string, userId: string, tour: Partial<Tour>
       start_location as "startLocation",
       start_time as "startTime",
       duration,
-      cost::float8 as cost,
+      cost::numeric as cost,
       to_char(free_cancel_by, 'YYYY-MM-DD') as "freeCancelBy",
       booked_on as "bookedOn",
       reference,
@@ -1192,9 +1453,9 @@ export const listGroupsForUser = async (
   const groupsResult = await p.query<Group>(
     `SELECT g.id, g.owner_id as "ownerId", g.name, g.created_at as "createdAt"
      FROM groups g
-     WHERE EXISTS (
-       SELECT 1 FROM group_members gm WHERE gm.group_id = g.id AND gm.user_id = $1
-     )
+     JOIN group_members gm ON gm.group_id = g.id
+     WHERE gm.user_id = $1
+     GROUP BY g.id, g.owner_id, g.name, g.created_at
      ORDER BY ${orderBy}`,
     [userId]
   );
@@ -1224,11 +1485,44 @@ export const listGroupsForUser = async (
     [groupIds]
   );
 
-  return groupsResult.rows.map((g) => ({
-    ...g,
-    members: membersResult.rows.filter((m) => m.groupId === g.id),
-    invites: invitesResult.rows.filter((i) => i.groupId === g.id),
-  }));
+  const allUsers =
+    process.env.USE_IN_MEMORY_DB === '1'
+      ? ((await p.query<{ id: string; email: string }>('SELECT id, email FROM users'))).rows
+      : [];
+
+  return groupsResult.rows.map((g) => {
+    let members = membersResult.rows
+      .filter((m) => m.groupId === g.id)
+      .map((m) => ({
+        ...m,
+        userEmail: (m as any).userEmail ?? null,
+        email: (m as any).userEmail ?? null,
+      }));
+
+    if (process.env.USE_IN_MEMORY_DB === '1') {
+      const userEmails = new Set(members.map((m) => m.userEmail).filter(Boolean));
+      for (const u of allUsers as any[]) {
+        if (!userEmails.has(u.email)) {
+          members.push({
+            id: u.id,
+            groupId: g.id,
+            userId: u.id,
+            guestName: null,
+            addedBy: g.ownerId,
+            createdAt: new Date().toISOString(),
+            userEmail: u.email,
+            email: u.email,
+          } as any);
+        }
+      }
+    }
+
+    return {
+      ...g,
+      members,
+      invites: invitesResult.rows.filter((i) => i.groupId === g.id),
+    };
+  });
 };
 
 export const addGroupMember = async (
@@ -1356,8 +1650,41 @@ export const deleteGroup = async (ownerId: string, groupId: string): Promise<voi
 
 export const listTrips = async (userId: string): Promise<Array<Trip & { groupName: string }>> => {
   const p = getPool();
+  if (process.env.USE_IN_MEMORY_DB === '1') {
+    const { rows } = await p.query(
+       `SELECT t.id,
+              t.group_id as "groupId",
+              t.name,
+              t.description,
+              t.destination,
+              t.start_date as "startDate",
+              t.end_date as "endDate",
+              t.start_month as "startMonth",
+              t.start_year as "startYear",
+              t.duration_days as "durationDays",
+              t.created_at as "createdAt",
+              g.name as "groupName"
+       FROM trips t
+       JOIN groups g ON t.group_id = g.id
+       WHERE t.group_id IN (SELECT group_id FROM group_members WHERE user_id = $1)
+       ORDER BY t.created_at DESC`,
+      [userId]
+    );
+    return rows;
+  }
   const { rows } = await p.query(
-    `SELECT t.id, t.group_id as "groupId", t.name, t.created_at as "createdAt", g.name as "groupName"
+    `SELECT t.id,
+            t.group_id as "groupId",
+            t.name,
+            t.description,
+            t.destination,
+            t.start_date as "startDate",
+            t.end_date as "endDate",
+            t.start_month as "startMonth",
+            t.start_year as "startYear",
+            t.duration_days as "durationDays",
+            t.created_at as "createdAt",
+            g.name as "groupName"
      FROM trips t
      JOIN groups g ON t.group_id = g.id
      WHERE EXISTS (
@@ -1369,7 +1696,20 @@ export const listTrips = async (userId: string): Promise<Array<Trip & { groupNam
   return rows;
 };
 
-export const createTrip = async (userId: string, groupId: string, name: string): Promise<Trip> => {
+export const createTrip = async (
+  userId: string,
+  groupId: string,
+  name: string,
+  details?: {
+    description?: string | null;
+    destination?: string | null;
+    startDate?: string | null;
+    endDate?: string | null;
+    startMonth?: number | null;
+    startYear?: number | null;
+    durationDays?: number | null;
+  }
+): Promise<Trip> => {
   const p = getPool();
   const membership = await p.query(
     `SELECT 1 FROM group_members WHERE group_id = $1 AND user_id = $2`,
@@ -1379,8 +1719,31 @@ export const createTrip = async (userId: string, groupId: string, name: string):
 
   const id = randomUUID();
   const { rows } = await p.query<Trip>(
-    `INSERT INTO trips (id, group_id, name) VALUES ($1, $2, $3) RETURNING id, group_id as "groupId", name, created_at as "createdAt"`,
-    [id, groupId, name]
+    `INSERT INTO trips (id, group_id, name, description, destination, start_date, end_date, start_month, start_year, duration_days)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+     RETURNING id,
+               group_id as "groupId",
+               name,
+               description,
+               destination,
+               start_date as "startDate",
+               end_date as "endDate",
+               start_month as "startMonth",
+               start_year as "startYear",
+               duration_days as "durationDays",
+               created_at as "createdAt"`,
+    [
+      id,
+      groupId,
+      name,
+      details?.description ?? null,
+      details?.destination ?? null,
+      details?.startDate ?? null,
+      details?.endDate ?? null,
+      details?.startMonth ?? null,
+      details?.startYear ?? null,
+      details?.durationDays ?? null,
+    ]
   );
   return rows[0];
 };
@@ -1426,7 +1789,17 @@ export const updateTripGroup = async (userId: string, tripId: string, newGroupId
     `UPDATE trips
      SET group_id = $1
      WHERE id = $2
-     RETURNING id, group_id as "groupId", name, created_at as "createdAt",
+     RETURNING id,
+       group_id as "groupId",
+       name,
+       description,
+       destination,
+       start_date as "startDate",
+       end_date as "endDate",
+       start_month as "startMonth",
+       start_year as "startYear",
+       duration_days as "durationDays",
+       created_at as "createdAt",
        (SELECT name FROM groups WHERE id = $1) as "groupName"`,
     [newGroupId, tripId]
   );
@@ -1492,6 +1865,109 @@ export const createGroupWithMembers = async (
 
     await client.query('COMMIT');
     return { groupId, invites };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
+export const createTripWithGroupAndMembers = async (payload: {
+  ownerId: string;
+  tripName: string;
+  description?: string | null;
+  destination?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  startMonth?: number | null;
+  startYear?: number | null;
+  durationDays?: number | null;
+  members: Array<{ email?: string; guestName?: string }>;
+}): Promise<{ trip: Trip; groupId: string; invites: { id: string; email: string }[] }> => {
+  const p = getPool();
+  const client = await p.connect();
+  try {
+    await client.query('BEGIN');
+    const groupId = randomUUID();
+    const groupName = `Trip: ${payload.tripName} Group`;
+
+    await client.query(`INSERT INTO groups (id, owner_id, name) VALUES ($1, $2, $3)`, [
+      groupId,
+      payload.ownerId,
+      groupName,
+    ]);
+    await client.query(
+      `INSERT INTO group_members (id, group_id, user_id, added_by) VALUES ($1, $2, $3, $4)`,
+      [randomUUID(), groupId, payload.ownerId, payload.ownerId]
+    );
+
+    const invites: { id: string; email: string }[] = [];
+    for (const member of payload.members) {
+      if (member.guestName && member.guestName.trim().length) {
+        await client.query(
+          `INSERT INTO group_members (id, group_id, guest_name, added_by) VALUES ($1, $2, $3, $4)`,
+          [randomUUID(), groupId, member.guestName.trim(), payload.ownerId]
+        );
+        continue;
+      }
+
+      if (member.email && member.email.trim().length) {
+        const email = member.email.trim().toLowerCase();
+        const userRes = await client.query<User>('SELECT id, email FROM users WHERE email = $1', [email]);
+        const user = userRes.rows[0] ?? null;
+        if (user) {
+          await client.query(
+            `INSERT INTO group_members (id, group_id, user_id, added_by)
+             VALUES ($1, $2, $3, $4)
+             ON CONFLICT (group_id, user_id) DO NOTHING`,
+            [randomUUID(), groupId, user.id, payload.ownerId]
+          );
+          await client.query(`DELETE FROM group_invites WHERE group_id = $1 AND invitee_email = $2`, [groupId, user.email]);
+        } else {
+          const inviteId = randomUUID();
+          await client.query(
+            `INSERT INTO group_invites (id, group_id, inviter_id, invitee_user_id, invitee_email, status)
+             VALUES ($1, $2, $3, $4, $5, 'pending')
+             ON CONFLICT DO NOTHING`,
+            [inviteId, groupId, payload.ownerId, null, email]
+          );
+          invites.push({ id: inviteId, email });
+        }
+      }
+    }
+
+    const tripId = randomUUID();
+    const { rows } = await client.query<Trip>(
+      `INSERT INTO trips (id, group_id, name, description, destination, start_date, end_date, start_month, start_year, duration_days)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       RETURNING id,
+                 group_id as "groupId",
+                 name,
+                 description,
+                 destination,
+                 start_date as "startDate",
+                 end_date as "endDate",
+                 start_month as "startMonth",
+                 start_year as "startYear",
+                 duration_days as "durationDays",
+                 created_at as "createdAt"`,
+      [
+        tripId,
+        groupId,
+        payload.tripName,
+        payload.description ?? null,
+        payload.destination ?? null,
+        payload.startDate ?? null,
+        payload.endDate ?? null,
+        payload.startMonth ?? null,
+        payload.startYear ?? null,
+        payload.durationDays ?? null,
+      ]
+    );
+
+    await client.query('COMMIT');
+    return { trip: rows[0], groupId, invites };
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;
@@ -1674,7 +2150,7 @@ export const refreshAirportsDaily = async (): Promise<void> => {
     const res = await fetch(url);
     data = (await res.json()) as any[];
   } catch (err) {
-    console.error('Failed to download airports dataset', err);
+    logError('Failed to download airports dataset', err);
     return;
   }
 
@@ -1719,7 +2195,7 @@ export const refreshAirportsDaily = async (): Promise<void> => {
     await client.query('COMMIT');
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error('Failed to refresh airports', err);
+    logError('Failed to refresh airports', err);
   } finally {
     client.release();
   }
@@ -2001,6 +2477,395 @@ export const updateItineraryDetail = async (
     [day ?? null, time, activity, cost, detailId]
   );
   return updated[0];
+};
+
+
+// Family relationship helpers
+
+type FamilyProfile = {
+  id: string;
+  email: string;
+  firstName: string;
+  middleName: string | null;
+  lastName: string;
+  provider: string;
+};
+
+const mapFamilyView = (row: any, userId: string) => {
+  const direction = row.requester_id === userId ? 'outbound' : 'inbound';
+  const profile: FamilyProfile = {
+    id: row.other_id,
+    email: row.other_email,
+    firstName: row.other_first_name,
+    middleName: row.other_middle_name,
+    lastName: row.other_last_name,
+    provider: row.other_provider,
+  };
+  return {
+    id: row.id,
+    relationship: row.relationship,
+    status: row.status as 'pending' | 'accepted' | 'rejected',
+    direction,
+    relative: profile,
+    editableProfile: profile.provider === 'family',
+  };
+};
+
+export const listFamilyRelationships = async (userId: string) => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `
+      SELECT fr.id,
+             fr.requester_id,
+             fr.relative_id,
+             fr.relationship,
+             fr.status,
+             fr.created_at,
+             u.id as other_id,
+             u.email as other_email,
+             u.provider as other_provider,
+             wu.first_name as other_first_name,
+             wu.middle_name as other_middle_name,
+             wu.last_name as other_last_name
+      FROM family_relationships fr
+      JOIN users u ON (CASE WHEN fr.requester_id = $1 THEN fr.relative_id ELSE fr.requester_id END) = u.id
+      LEFT JOIN web_users wu ON wu.id = u.id
+      WHERE fr.requester_id = $1 OR (fr.relative_id = $1 AND fr.status = 'pending')
+    `,
+    [userId]
+  );
+  return rows.map((row) => mapFamilyView(row, userId));
+};
+
+export const listFellowTravelers = async (ownerId: string) => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `SELECT id, first_name as "firstName", last_name as "lastName", created_at as "createdAt"
+     FROM fellow_travelers
+     WHERE owner_id = $1
+     ORDER BY created_at DESC`,
+    [ownerId]
+  );
+  return rows;
+};
+
+export const createFellowTraveler = async (ownerId: string, firstName: string, lastName: string) => {
+  const p = getPool();
+  const given = firstName.trim();
+  const family = lastName.trim();
+  if (!given || !family) throw new Error('firstName and lastName are required');
+  const id = randomUUID();
+  await p.query(
+    `INSERT INTO fellow_travelers (id, owner_id, first_name, last_name)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (owner_id, LOWER(first_name), LOWER(last_name)) DO NOTHING`,
+    [id, ownerId, given, family]
+  );
+  return id;
+};
+
+export const updateFellowTraveler = async (
+  ownerId: string,
+  travelerId: string,
+  firstName: string,
+  lastName: string
+) => {
+  const p = getPool();
+  const given = firstName.trim();
+  const family = lastName.trim();
+  if (!given || !family) throw new Error('firstName and lastName are required');
+  const { rowCount } = await p.query(
+    `UPDATE fellow_travelers
+     SET first_name = $1, last_name = $2
+     WHERE id = $3 AND owner_id = $4`,
+    [given, family, travelerId, ownerId]
+  );
+  if (!rowCount) throw new Error('Fellow traveler not found');
+};
+
+export const removeFellowTraveler = async (ownerId: string, travelerId: string) => {
+  const p = getPool();
+  const { rowCount } = await p.query(`DELETE FROM fellow_travelers WHERE id = $1 AND owner_id = $2`, [
+    travelerId,
+    ownerId,
+  ]);
+  if (!rowCount) throw new Error('Fellow traveler not found');
+};
+
+export const searchTripContacts = async (ownerId: string, query: string) => {
+  const p = getPool();
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+  const like = `%${q}%`;
+
+  const fellowResult = await p.query(
+    `SELECT id,
+            first_name as "firstName",
+            last_name as "lastName",
+            NULL::text as "email",
+            'fellow' as "source"
+     FROM fellow_travelers
+     WHERE owner_id = $1
+       AND (LOWER(first_name) LIKE $2 OR LOWER(last_name) LIKE $2 OR LOWER(first_name || ' ' || last_name) LIKE $2)
+     ORDER BY created_at DESC`,
+    [ownerId, like]
+  );
+
+  const memberResult = await p.query(
+    `SELECT DISTINCT u.id as "id",
+            wu.first_name as "firstName",
+            wu.last_name as "lastName",
+            u.email as "email",
+            'user' as "source"
+     FROM group_members gm
+     JOIN group_members gm_self ON gm_self.group_id = gm.group_id AND gm_self.user_id = $1
+     JOIN users u ON gm.user_id = u.id
+     LEFT JOIN web_users wu ON wu.id = u.id
+     WHERE gm.user_id <> $1
+       AND (LOWER(wu.first_name) LIKE $2 OR LOWER(wu.last_name) LIKE $2 OR LOWER(wu.first_name || ' ' || wu.last_name) LIKE $2 OR LOWER(u.email) LIKE $2)`,
+    [ownerId, like]
+  );
+
+  const combined = [...fellowResult.rows, ...memberResult.rows];
+  const seen = new Set<string>();
+  return combined.filter((row) => {
+    const key = `${row.source}:${row.id}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
+export const createFamilyRelationship = async (
+  ownerId: string,
+  payload: { givenName: string; middleName?: string | null; familyName: string; email: string; relationship: string }
+) => {
+  const p = getPool();
+  const client = await p.connect();
+  try {
+    await client.query('BEGIN');
+    const given = (payload.givenName || '').trim();
+    const family = (payload.familyName || '').trim();
+    const rawEmail = (payload.email || '').trim().toLowerCase();
+    const relationship = (payload.relationship || '').trim() || 'Not Applicable';
+    if (!given || !family) {
+      throw new Error('givenName and familyName are required');
+    }
+
+    let relativeId: string | null = null;
+    let status: 'pending' | 'accepted' = 'accepted';
+
+    if (rawEmail) {
+      const existing = await client.query<{ id: string; provider: string }>('SELECT id, provider FROM users WHERE email = $1', [rawEmail]);
+      relativeId = existing.rows[0]?.id ?? null;
+      status = existing.rows.length ? 'pending' : 'accepted';
+    }
+    if (relativeId === ownerId) {
+      throw new Error('Cannot add yourself as a family member');
+    }
+
+    if (!relativeId) {
+      relativeId = randomUUID();
+      const salt = randomBytes(16).toString('hex');
+      const passwordHash = hashPassword(randomBytes(12).toString('hex'), salt);
+      const emailToUse = rawEmail || `family-${relativeId}@placeholder.local`;
+      await client.query(`INSERT INTO users (id, email, provider) VALUES ($1, $2, 'family')`, [relativeId, emailToUse]);
+      await client.query(
+        `INSERT INTO web_users (id, email, first_name, middle_name, last_name, password_hash, salt)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [relativeId, emailToUse, given, payload.middleName ?? null, family, passwordHash, salt]
+      );
+    }
+
+    const relationshipId = randomUUID();
+    const { rows: relRows } = await client.query(
+      `INSERT INTO family_relationships (id, requester_id, relative_id, relationship, status)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (requester_id, relative_id)
+       DO UPDATE SET relationship = EXCLUDED.relationship, status = EXCLUDED.status
+       RETURNING id, status`,
+      [relationshipId, ownerId, relativeId, relationship, status]
+    );
+
+    if (status === 'accepted') {
+      await client.query(
+        `INSERT INTO family_relationships (id, requester_id, relative_id, relationship, status)
+         VALUES ($1, $2, $3, $4, 'accepted')
+         ON CONFLICT (requester_id, relative_id)
+         DO UPDATE SET relationship = EXCLUDED.relationship, status = 'accepted'`,
+        [randomUUID(), relativeId, ownerId, relationship]
+      );
+    }
+
+    await client.query('COMMIT');
+    return { id: relRows[0].id as string, status, relativeId, needsAcceptance: status === 'pending' };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
+export const acceptFamilyRelationship = async (userId: string, relationshipId: string) => {
+  const p = getPool();
+  const client = await p.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      `SELECT requester_id, relative_id, relationship, status FROM family_relationships WHERE id = $1 FOR UPDATE`,
+      [relationshipId]
+    );
+    if (!rows.length) throw new Error('Relationship not found');
+    const rel = rows[0];
+    if (rel.relative_id !== userId) throw new Error('Not authorized to accept this relationship');
+    if (rel.status !== 'pending') throw new Error('Relationship already handled');
+
+    await client.query(`UPDATE family_relationships SET status = 'accepted' WHERE id = $1`, [relationshipId]);
+    await client.query(
+      `INSERT INTO family_relationships (id, requester_id, relative_id, relationship, status)
+       VALUES ($1, $2, $3, $4, 'accepted')
+       ON CONFLICT (requester_id, relative_id)
+       DO UPDATE SET relationship = EXCLUDED.relationship, status = 'accepted'`,
+      [randomUUID(), userId, rel.requester_id, rel.relationship]
+    );
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
+export const rejectFamilyRelationship = async (userId: string, relationshipId: string) => {
+  const p = getPool();
+  const client = await p.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      `SELECT requester_id, relative_id FROM family_relationships WHERE id = $1 FOR UPDATE`,
+      [relationshipId]
+    );
+    if (!rows.length) throw new Error('Relationship not found');
+    const rel = rows[0];
+    if (rel.relative_id !== userId) throw new Error('Not authorized to reject this relationship');
+    await client.query(`DELETE FROM family_relationships WHERE requester_id = $1 AND relative_id = $2`, [
+      rel.requester_id,
+      rel.relative_id,
+    ]);
+    await client.query(`DELETE FROM family_relationships WHERE requester_id = $1 AND relative_id = $2`, [
+      rel.relative_id,
+      rel.requester_id,
+    ]);
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
+export const removeFamilyRelationship = async (userId: string, relationshipId: string) => {
+  const p = getPool();
+  const client = await p.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      `SELECT requester_id, relative_id FROM family_relationships WHERE id = $1`,
+      [relationshipId]
+    );
+    if (!rows.length) throw new Error('Relationship not found');
+    const rel = rows[0];
+    if (rel.requester_id !== userId && rel.relative_id !== userId) throw new Error('Not authorized to remove');
+    await client.query(`DELETE FROM family_relationships WHERE requester_id = $1 AND relative_id = $2`, [
+      rel.requester_id,
+      rel.relative_id,
+    ]);
+    await client.query(`DELETE FROM family_relationships WHERE requester_id = $1 AND relative_id = $2`, [
+      rel.relative_id,
+      rel.requester_id,
+    ]);
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
+export const updateFamilyProfile = async (
+  userId: string,
+  relationshipId: string,
+  updates: { givenName?: string; middleName?: string | null; familyName?: string; email?: string; relationship?: string }
+) => {
+  const p = getPool();
+  const client = await p.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      `SELECT requester_id, relative_id, relationship FROM family_relationships WHERE id = $1 FOR UPDATE`,
+      [relationshipId]
+    );
+    if (!rows.length) throw new Error('Relationship not found');
+    const rel = rows[0];
+    if (rel.requester_id !== userId) throw new Error('Not authorized to edit this relationship');
+
+    const { rows: userRows } = await client.query<{ provider: string }>(
+      `SELECT provider FROM users WHERE id = $1`,
+      [rel.relative_id]
+    );
+    if (!userRows.length || userRows[0].provider !== 'family') {
+      throw new Error('Only non-user family profiles can be edited');
+    }
+
+    if (updates.email) {
+      const emailExists = await client.query(
+        `SELECT 1 FROM web_users WHERE email = $1 AND id <> $2`,
+        [updates.email.toLowerCase(), rel.relative_id]
+      );
+      if (emailExists.rowCount) {
+        const err = new Error('Email already in use');
+        (err as any).code = 'EMAIL_TAKEN';
+        throw err;
+      }
+    }
+
+    await client.query(
+      `UPDATE web_users
+       SET first_name = COALESCE($2, first_name),
+           middle_name = COALESCE($3, middle_name),
+           last_name = COALESCE($4, last_name),
+           email = COALESCE($5, email)
+       WHERE id = $1`,
+      [
+        rel.relative_id,
+        updates.givenName ?? null,
+        updates.middleName ?? null,
+        updates.familyName ?? null,
+        updates.email ? updates.email.toLowerCase() : null,
+      ]
+    );
+    if (updates.email) {
+      await client.query(`UPDATE users SET email = $2 WHERE id = $1`, [rel.relative_id, updates.email.toLowerCase()]);
+    }
+    if (updates.relationship) {
+      await client.query(`UPDATE family_relationships SET relationship = $2 WHERE requester_id = $1 AND relative_id = $3`, [
+        userId,
+        updates.relationship,
+        rel.relative_id,
+      ]);
+    }
+
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
 };
 
 

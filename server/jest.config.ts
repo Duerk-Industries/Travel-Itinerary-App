@@ -8,6 +8,7 @@ const config: Config = {
   roots: ['<rootDir>/src', '<rootDir>/__tests__'],
   moduleFileExtensions: ['ts', 'js', 'json'],
   maxWorkers: 1,
+  setupFiles: ['<rootDir>/__tests__/pg-mem-setup.ts'],
 };
 
 export default config;

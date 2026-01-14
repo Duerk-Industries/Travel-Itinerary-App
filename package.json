@@ -7,9 +7,15 @@
     "app"
   ],
   "scripts": {
-    "lint": "echo \"Add linters per workspace\""
+    "lint": "echo \"Add linters per workspace\"",
+    "postinstall": "patch-package"
   },
   "devDependencies": {
-    "canvas": "^3.2.0"
+    "canvas": "^3.2.0",
+    "patch-package": "^8.0.1"
+  },
+  "dependencies": {
+    "outdated": "^0.1.1",
+    "update": "^0.4.2"
   }
 }

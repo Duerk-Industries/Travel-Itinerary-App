@@ -4,5 +4,13 @@
         "datetimepicker",
         "tesseract",
         "travelitineraryplanner"
-    ]
+    ],
+    "diffEditor.codeLens": true,
+    "geminicodeassist.codeGenerationPaneViewEnabled": true,
+    "geminicodeassist.updateChannel": "Insiders",
+    "java.jdt.ls.java.home": "C:\\Program Files\\Amazon Corretto\\jdk25.0.1_8",
+    "terminal.integrated.env.windows": {
+        "JAVA_HOME": "C:\\Program Files\\Amazon Corretto\\jdk25.0.1_8"
+    },
+    "java.configuration.updateBuildConfiguration": "automatic"
 }

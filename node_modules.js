@@ -1,0 +1,10 @@
+node_modules
+npm-debug.log*
+dist
+.env
+server/.env
+app/.expo
+.expo
+app/android/.gradle
+app/android/.idea
+app/android/local.properties

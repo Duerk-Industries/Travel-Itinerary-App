@@ -2,6 +2,7 @@ import { Router } from 'express';
 import bodyParser from 'body-parser';
 import { claimInvitesForUser, createWebUser, ensureDefaultGroupForUser, verifyWebUserCredentials } from '../db';
 import { createToken } from '../auth';
+import { logError } from '../logger';
 
 // Web auth routes for email/password login/registration.
 const router = Router();
@@ -36,7 +37,7 @@ router.post('/register', async (req, res) => {
       res.status(409).json({ error: 'User already exists' });
       return;
     }
-    console.error('Failed to create user', err);
+    logError('Failed to create user', err);
     res.status(500).json({ error: 'Failed to create user' });
   }
 });
@@ -60,7 +61,7 @@ router.post('/login', async (req, res) => {
     const token = createToken({ userId: user.id, email: user.email, provider: 'email' });
     res.json({ message: 'Login successful', token, user });
   } catch (err) {
-    console.error('Failed to login', err);
+    logError('Failed to login', err);
     res.status(500).json({ error: 'Failed to login' });
   }
 });
