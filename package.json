@@ -7,6 +7,8 @@
     "app"
   ],
   "scripts": {
+    "start": "npm run start -w server",
+    "build": "npm run build -w server",
     "lint": "echo \"Add linters per workspace\"",
     "postinstall": "node -e \"try{require('patch-package');require('child_process').execSync('patch-package',{stdio:'inherit'});}catch(e){console.log('patch-package not installed, skipping');}\""
   },
