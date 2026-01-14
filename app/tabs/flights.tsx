@@ -548,7 +548,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   const extractTextFromPdf = async (file: File): Promise<string> => {
     const arrayBuffer = await file.arrayBuffer();
     // Use the legacy ES build to avoid Metro/Hermes bundle issues on native targets.
-    const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+    const pdfjs = await import('pdfjs-dist/legacy/build/pdf.js');
     (pdfjs as any).GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${(pdfjs as any).version}/pdf.worker.min.js`;
     const loadingTask = (pdfjs as any).getDocument({ data: arrayBuffer });
     const pdf = await loadingTask.promise;
