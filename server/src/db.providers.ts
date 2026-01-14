@@ -1,7 +1,5 @@
-import { DataType, newDb } from 'pg-mem';
 import * as postgresAdapter from './db.postgres';
 import * as firebaseAdapter from './db.firebase';
-import { createMemoryAdapter } from './db.memory';
 
 export type DbProvider = 'postgres' | 'memory' | 'dynamodb' | 'firebase';
 export type DatabaseAdapter = typeof postgresAdapter;
@@ -15,7 +13,20 @@ const formatDate = (value: any) => {
   return date.toISOString().slice(0, 10);
 };
 
-const buildMemoryAdapter = (): DatabaseAdapter => createMemoryAdapter() as unknown as DatabaseAdapter;
+const buildMemoryAdapter = (): DatabaseAdapter => {
+  // Lazy-load to avoid requiring pg-mem in production builds.
+  try {
+    const { createMemoryAdapter } = require('./db.memory') as typeof import('./db.memory');
+    return createMemoryAdapter() as unknown as DatabaseAdapter;
+  } catch (err: any) {
+    if (err && err.code === 'MODULE_NOT_FOUND' && String(err.message).includes('pg-mem')) {
+      throw new Error(
+        'In-memory DB selected but pg-mem is missing. Install it in production or switch DB_PROVIDER/USE_IN_MEMORY_DB.'
+      );
+    }
+    throw err;
+  }
+};
 
 const buildNotImplementedAdapter = (provider: DbProvider): DatabaseAdapter => {
   const thrower = () => {

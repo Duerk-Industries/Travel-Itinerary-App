@@ -18,15 +18,18 @@ const getDb = (): Firestore => {
     if (process.env.FIRESTORE_EMULATOR_HOST) {
       app = initializeApp({ projectId });
     } else {
-      if (!projectId || !clientEmail || !privateKey) {
-        throw new Error(
-          'GCLOUD_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY are required for Firebase DB provider'
-        );
+      if (!projectId) {
+        throw new Error('GCLOUD_PROJECT_ID (or FIREBASE_PROJECT_ID) is required for Firebase DB provider');
       }
-      app = initializeApp({
-        credential: cert({ projectId, clientEmail, privateKey }),
-        projectId,
-      });
+      if (clientEmail && privateKey) {
+        app = initializeApp({
+          credential: cert({ projectId, clientEmail, privateKey }),
+          projectId,
+        });
+      } else {
+        // Default to ADC on Cloud Run / local gcloud auth
+        app = initializeApp({ projectId });
+      }
     }
   }
   return adminGetFirestore(app!);
