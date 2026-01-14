@@ -824,9 +824,13 @@ const App: React.FC = () => {
     });
     if (!res.ok) return;
     const data = await res.json();
-    setGroups(data);
-    if (!newTripGroupId && data.length) {
-      setNewTripGroupId(data[0].id);
+    const normalized = (Array.isArray(data) ? data : []).map((group: GroupView) => ({
+      ...group,
+      invites: Array.isArray(group.invites) ? group.invites : [],
+    }));
+    setGroups(normalized);
+    if (!newTripGroupId && normalized.length) {
+      setNewTripGroupId(normalized[0].id);
     }
   };
 
@@ -1398,11 +1402,25 @@ const App: React.FC = () => {
               setUserToken={setUserToken}
               setUserName={setUserName}
               setUserEmail={setUserEmail}
+              mapApp={mapApp}
+              onChangeMapApp={updateMapPreference}
               saveSession={saveSession}
               headers={headers}
               jsonHeaders={jsonHeaders}
               logout={logout}
               styles={styles}
+              traits={traits}
+              setTraits={setTraits}
+              selectedTraitNames={selectedTraitNames}
+              setSelectedTraitNames={setSelectedTraitNames}
+              traitAge={traitAge}
+              setTraitAge={setTraitAge}
+              traitGender={traitGender}
+              setTraitGender={setTraitGender}
+              newTraitName={newTraitName}
+              setNewTraitName={setNewTraitName}
+              fetchTraits={fetchTraits}
+              fetchTraitProfile={fetchTraitProfile}
             />
           ) : null}
 
@@ -2097,7 +2115,7 @@ const App: React.FC = () => {
                 </TouchableOpacity>
               </View>
               {(() => {
-                const inviteEmails = groups.flatMap((g) => g.invites.map((inv) => inv.inviteeEmail));
+                const inviteEmails = groups.flatMap((g) => (g.invites ?? []).map((inv) => inv.inviteeEmail));
                 if (!inviteEmails.length) return null;
                 return (
                   <View style={[styles.row, { flexWrap: 'wrap', gap: 8 }]}>
