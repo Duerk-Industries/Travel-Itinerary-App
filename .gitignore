@@ -8,7 +8,6 @@ dist
 .idea
 *.iml
 .gradle
-.gradle/8.14.3/fileHashes/fileHashes.lock
 server/.env
 server/logs
 server/public/_expo
