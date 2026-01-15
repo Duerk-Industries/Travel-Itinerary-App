@@ -29,7 +29,6 @@ app/node_modules
 logs
 patches
 build
-.github/workflows/cloudrun.yml
 *.log
 firestore-debug.log
 firebase-debug.log
