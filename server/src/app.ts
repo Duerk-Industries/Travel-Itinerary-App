@@ -1,3 +1,4 @@
+console.log('Backend starting... Travel Itinerary App v1.0.0');
 import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
@@ -96,5 +97,10 @@ if (hasWebApp) {
     res.sendFile(webIndexPath);
   });
 }
+
+app.use((req, res, _next) => {
+  console.log(`Final handler: 404 for ${req.method} ${req.originalUrl}`);
+  res.status(404).send('Not Found from final handler');
+});
 
 export default app;

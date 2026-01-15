@@ -74,6 +74,7 @@ set CLASSPATH=
 
 
 @rem Execute Gradle
+if defined JAVA_HOME set GRADLE_OPTS=%GRADLE_OPTS% "-Dorg.gradle.java.home=%JAVA_HOME%"
 "%JAVA_EXE%" %DEFAULT_JVM_OPTS% %JAVA_OPTS% %GRADLE_OPTS% "-Dorg.gradle.appname=%APP_BASE_NAME%" -classpath "%CLASSPATH%" -jar "%APP_HOME%\gradle\wrapper\gradle-wrapper.jar" %*
 
 :end
