@@ -48,7 +48,8 @@ const getDb = (): Firestore => {
       }
     }
   }
-  return adminGetFirestore(app!);
+  const databaseId = getEnvValue('FIRESTORE_DATABASE_ID');
+  return databaseId ? adminGetFirestore(app!, databaseId) : adminGetFirestore(app!);
 };
 
 export const initDb = async (): Promise<void> => {
