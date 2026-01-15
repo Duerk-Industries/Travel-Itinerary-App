@@ -47,19 +47,29 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const logDir = path.resolve(__dirname, '..', 'logs');
-if (!fs.existsSync(logDir)) {
-  fs.mkdirSync(logDir, { recursive: true });
+let accessLogStream: fs.WriteStream | null = null;
+try {
+  const logDir = path.resolve(__dirname, '..', 'logs');
+  if (!fs.existsSync(logDir)) {
+    fs.mkdirSync(logDir, { recursive: true });
+  }
+  const accessLogPath = path.join(logDir, 'api-access.log');
+  accessLogStream = fs.createWriteStream(accessLogPath, { flags: 'a' });
+} catch (err) {
+  console.error('[api] Failed to initialize access log file:', err);
+  accessLogStream = null;
 }
-const accessLogPath = path.join(logDir, 'api-access.log');
-const accessLogStream = fs.createWriteStream(accessLogPath, { flags: 'a' });
 
 app.use((req, res, next) => {
   const start = Date.now();
   res.on('finish', () => {
     const ms = Date.now() - start;
     const line = `[api] ${new Date().toISOString()} ${req.method} ${req.originalUrl} ${res.statusCode} ${ms}ms\n`;
-    accessLogStream.write(line);
+    if (accessLogStream) {
+      accessLogStream.write(line);
+    } else {
+      console.info(line.trim());
+    }
   });
   next();
 });
