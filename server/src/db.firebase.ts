@@ -13,10 +13,21 @@ const hashPassword = (password: string, salt: string) => scryptSync(password, sa
 
 const getDb = (): Firestore => {
   if (!app) {
+    const firebaseConfigRaw = process.env.FIREBASE_CONFIG;
+    let firebaseConfigProjectId: string | undefined;
+    if (firebaseConfigRaw) {
+      try {
+        const parsed = JSON.parse(firebaseConfigRaw) as { projectId?: string };
+        firebaseConfigProjectId = parsed.projectId;
+      } catch {
+        // Ignore malformed FIREBASE_CONFIG; fall back to explicit envs.
+      }
+    }
     const projectId =
       process.env.GCLOUD_PROJECT_ID ||
       process.env.FIREBASE_PROJECT_ID ||
-      process.env.GOOGLE_CLOUD_PROJECT;
+      process.env.GOOGLE_CLOUD_PROJECT ||
+      firebaseConfigProjectId;
     const clientEmail = getEnvValue('FIREBASE_CLIENT_EMAIL');
     const rawPrivateKey = getEnvValue('FIREBASE_PRIVATE_KEY');
     const privateKey = rawPrivateKey ? rawPrivateKey.replace(/\\n/g, '\n') : undefined;
