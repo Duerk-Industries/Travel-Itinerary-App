@@ -21,5 +21,4 @@ jobs:
           gcloud run deploy travel-itinerary-app \
             --source . \
             --region us-east5 \
-            --allow-unauthenticated \
-            --set-env-vars=DB_PROVIDER=firebase,USE_IN_MEMORY_DB=0,GCLOUD_PROJECT_ID=[GCLOUD_PROJECT_ID],FIRESTORE_DATABASE_ID=trave-itinerary-app-database
+            --allow-unauthenticated

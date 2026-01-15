@@ -95,6 +95,10 @@ Opinionated, repo-specific steps for running this app locally with the Firestore
    ./scripts/deploy-cloud-run.sh server/.env
    ```
    Defaults: service `travel-itinerary-app`, region `us-east5`, source `server/`. Set `SERVICE_NAME`, `REGION`, or `SOURCE_DIR` to override. For secrets, pass `SECRETS=NAME=SECRET:version,...` (e.g., `SECRETS=FIREBASE_PRIVATE_KEY=FIREBASE_PRIVATE_KEY:latest`) or create a `server/.secrets` file with `KEY=VALUE` pairs to auto-create/update Secret Manager entries and map them. Use `--dry-run` to print the deploy command without executing.
+   To preconfigure env vars/secrets without deploying code (useful for GitHub/App Hosting deploys that inherit service config):
+   ```bash
+   ./scripts/configure-cloud-run-env.sh server/.env
+   ```
 7) Firebase Hosting rewrite to Cloud Run (`firebase.json`):  
    ```json
    {
