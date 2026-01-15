@@ -1,7 +1,7 @@
 {
   "expo": {
     "extra": {
-      "backendUrl": "https://duerkhome.asuscomm.com",
+      "backendUrl": "https://duerk.org",
       "eas": {
         "projectId": "06966c0b-d878-4346-850c-090c762f1916"
       }
@@ -9,10 +9,10 @@
     "owner": "duerk-industries",
     "slug": "travel-itinerary-planner",
     "android": {
-      "package": "com.duerkindustries.travelitineraryplanner"
+      "package": "org.duerk.travelitineraryapp"
     },
     "ios": {
-      "bundleIdentifier": "com.duerkindustries.travelitineraryplanner",
+      "bundleIdentifier": "org.duerk.travelitineraryapp",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }

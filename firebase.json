@@ -1,6 +1,6 @@
 {
   "firestore": {
-    "database": "(default)",
+    "database": "travel-itinerary-app-database",
     "location": "us-east5",
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"

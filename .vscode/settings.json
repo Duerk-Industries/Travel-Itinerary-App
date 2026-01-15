@@ -1,10 +1,17 @@
 {
     "chatgpt.runCodexInWindowsSubsystemForLinux": true,
     "cSpell.words": [
+        "artifactregistry",
+        "cloudbuild",
         "datetimepicker",
+        "dnschecker",
         "Firestore",
         "geoloc",
         "ossp",
+        "Prereqs",
+        "Runbook",
+        "secretmanager",
+        "Squarespace",
         "tesseract",
         "themself",
         "travelitineraryplanner"

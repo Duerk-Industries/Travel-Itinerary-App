@@ -3,11 +3,15 @@
 Opinionated, repo-specific steps for running this app locally with the Firestore emulator and in Google Cloud (Firestore + Cloud Run + Firebase Hosting), plus CI builds for web and Expo (iOS/Android) on `main`. Region: **us-east5**. Cloud Run service name: **travel-itinerary-app**. Auth: **Application Default Credentials (ADC)** on Cloud Run preferred.
 
 ## 1) Architecture (this repo)
-- **API**: Node/Express in `server/`, deployed to **Cloud Run**.
-- **Database**: **Firestore** (hosted). Local dev uses the Firestore emulator.
-- **Web**: React/Expo web served by **Firebase Hosting**; `/api/**` is proxied to Cloud Run.
-- **Native**: Expo (EAS) builds for iOS and Android; app config lives in `app.json`.
-- **Custom domain**: `duerk.org` (Firebase Hosting manages SSL; DNS points to Hosting).
+- **Backend API (`travel-itinerary-app`)**: The backend is a Node.js/Express application located in the `server/` directory. It is deployed as a Google Cloud Run service named **travel-itinerary-app**. This is the service that handles all API requests (e.g., creating trips, adding flights).
+
+- **Database (Firestore)**: The application uses Google Firestore as its database. Firestore is a flexible, scalable NoSQL document database for mobile, web, and server development from Firebase and Google Cloud. It keeps your data in sync across client apps through realtime listeners and offers offline support.
+
+- **Frontend (Web App)**: The frontend is a React web application (built with Expo for web) located in the `app/` directory. It is not "named" in the same way as the backend service. Instead, it is built into a set of static files (HTML, CSS, JavaScript).
+
+- **Hosting (Firebase Hosting & App Hosting)**: The static files of the frontend (Web App) are served by **Firebase Hosting**. Your custom domain, **duerk.org**, is pointed at Firebase Hosting. Firebase Hosting is responsible for serving the web app content and forwarding API requests. The term "Firebase App Hosting" refers to the integrated experience that connects your frontend (on Firebase Hosting) to your backend (on Cloud Run), and your logs indicate you are using this streamlined service. When a user visits `https://duerk.org`, they are hitting Firebase Hosting, which serves the web app. When the web app makes an API call to `/api/...`, Hosting rewrites that request and sends it to your `travel-itinerary-app` backend on Cloud Run.
+
+- **Native App (Expo)**: The project also includes a native mobile app for iOS and Android, managed by Expo Application Services (EAS). The configuration for this is in `app.json`.
 
 ## 2) Prereqs (once)
 - Google Cloud project with billing (e.g., [GCLOUD_PROJECT_ID]) and Firebase enabled.
@@ -21,6 +25,7 @@ Opinionated, repo-specific steps for running this app locally with the Firestore
   DB_PROVIDER=firebase
   USE_IN_MEMORY_DB=0
   GCLOUD_PROJECT_ID=[GCLOUD_PROJECT_ID]  # your project ID
+  FIRESTORE_DATABASE_ID=travel-itinerary-app-database
   GCLOUD_PROJECT=[GCLOUD_PROJECT_NUMBER]  # optional, for some SDK features
   # ADC preferred on Cloud Run; only set keys if you must override ADC (not recommended):
   # FIREBASE_CLIENT_EMAIL=...
@@ -50,7 +55,13 @@ Opinionated, repo-specific steps for running this app locally with the Firestore
    ```
    gcloud services enable run.googleapis.com secretmanager.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com firestore.googleapis.com
    ```  
-3) Create Firestore (Production mode) in **us-east5** (or your preferred region).  
+3) Create Firestore Database:
+   - In the Google Cloud Console, use the top search bar to find and select **"Firestore"**.
+   - Click the **"Create Database"** button.
+   - Choose **"Native Mode"** when prompted.
+   - For location, select a region. This project uses **us-east5**.
+   - You will be asked about security rules. You can start with the default production rules and apply the rules from `firestore.rules` later by deploying them with the Firebase CLI (`firebase deploy --only firestore`).
+   - Click **"Create"**.  
 4) IAM for Cloud Run service account (default `[GCLOUD_PROJECT_NUMBER]-compute@developer.gserviceaccount.com` or your custom one):  
    ```
    gcloud projects add-iam-policy-binding [GCLOUD_PROJECT_ID] \
@@ -71,7 +82,7 @@ Opinionated, repo-specific steps for running this app locally with the Firestore
      --source . \
      --region us-east5 \
      --allow-unauthenticated \
-     --set-env-vars=DB_PROVIDER=firebase,USE_IN_MEMORY_DB=0,GCLOUD_PROJECT_ID=[GCLOUD_PROJECT_ID]
+     --set-env-vars=DB_PROVIDER=firebase,USE_IN_MEMORY_DB=0,GCLOUD_PROJECT_ID=[GCLOUD_PROJECT_ID],FIRESTORE_DATABASE_ID=travel-itinerary-app-database
    ```
    If you use secrets for keys, add `--set-secrets=FIREBASE_CLIENT_EMAIL=FIREBASE_CLIENT_EMAIL:latest,FIREBASE_PRIVATE_KEY=FIREBASE_PRIVATE_KEY:latest`.
 7) Firebase Hosting rewrite to Cloud Run (`firebase.json`):  
@@ -87,16 +98,54 @@ Opinionated, repo-specific steps for running this app locally with the Firestore
    }
    ```
    Deploy Hosting: `firebase deploy --only hosting`.
-8) Domain `duerk.org`: Firebase Console → Hosting → Add custom domain → follow TXT + A/AAAA (or CNAME) instructions at your registrar. SSL auto-provisioned. Result: `https://duerk.org` with `/api/**` proxied to Cloud Run.
 
-## 6a) HTTPS certificate for duerk.org
-- Firebase Hosting provisions and renews the TLS certificate automatically after domain verification.
-- Steps (recap):
-  1. Firebase Console → Hosting → Add custom domain → enter `duerk.org`.
-  2. Add the TXT record for verification at your domain registrar.
-  3. Add A/AAAA (or CNAME for `www`) records per the wizard.
-  4. Wait for DNS to propagate; Hosting will issue and attach the cert. No manual certificate handling required.
-  5. Test: `https://duerk.org` and `https://duerk.org/api/health` (or similar) should load over HTTPS without warnings.
+## Linking the Squarespace Domain (duerk.org)
+
+To connect your `duerk.org` domain from Squarespace to Firebase Hosting, you need to get DNS records from Firebase and add them to your Squarespace DNS settings. This process proves you own the domain and then points it to Firebase's servers.
+
+### Step 1: Start the Domain Linking in Firebase
+
+1.  Navigate to the **Firebase Console** for your project.
+2.  In the left-hand menu, go to **Build > Hosting**.
+3.  Click on **"Add custom domain"**.
+4.  Enter `duerk.org` as the domain name and click **"Continue"**.
+5.  Firebase will present you with a **TXT record**. This is for verifying that you own the domain. Copy the value of this record (it usually starts with `google-site-verification=...`).
+6.  Keep this browser tab open.
+
+### Step 2: Add DNS Records in Squarespace
+
+1.  In a new browser tab, log in to your **Squarespace account**.
+2.  From the main menu, go to **Settings**, then click **Domains**.
+3.  Click on your domain, `duerk.org`.
+4.  Click on **DNS Settings**. You will see a list of existing DNS records.
+
+#### Add the Verification TXT Record
+
+1.  In the "Custom Records" section, click **"Add Record"**.
+2.  In the form fields, enter:
+    *   **Host**: `@` (This represents the root domain, `duerk.org`)
+    *   **Type**: `TXT`
+    *   **Data**: Paste the TXT record value you copied from Firebase.
+3.  Click **"Save"**.
+
+#### Add the Firebase Hosting A Records
+
+Firebase points your domain to its global CDN using IP addresses (A records). You must remove any existing A records on Squarespace to avoid conflicts.
+
+1.  In the Squarespace DNS Settings panel, look for any records with the **Type** `A`. There may be one or more pointing to Squarespace's default servers. Delete these records.
+2.  Go back to your Firebase Console tab. After you've verified the TXT record, Firebase will show you one or two IP addresses. These are the **A records** you need to add.
+3.  In Squarespace, add the first A record:
+    *   **Host**: `@`
+    *   **Type**: `A`
+    *   **Data**: Enter the first IP address provided by Firebase.
+    *   Click **"Save"**.
+4.  If Firebase provided a second IP address, repeat the process to add the second A record.
+
+### Step 3: Finalize and Wait for Propagation
+
+1.  After adding the records in Squarespace, go back to the Firebase Console and click **"Finish"** (or "Verify").
+2.  **Wait.** DNS changes can take anywhere from a few minutes to 48 hours to fully propagate across the internet. You can use an online tool like [dnschecker.org](https://dnschecker.org/) to see if the A records are pointing to the Google IP addresses.
+3.  Once propagation is complete and Firebase has verified your domain, it will automatically provision an SSL certificate. Your site `https://duerk.org` will then be live and secure. The API proxy to `/api/**` will also be active.
 
 ## 6b) SMTP/email setup on Google Cloud (send/receive)
 Recommended: use a managed email provider; simplest with Google Workspace + SMTP relay.
@@ -156,7 +205,7 @@ Receiving email (inbound):
               --source . \
               --region us-east5 \
               --allow-unauthenticated \
-              --set-env-vars=DB_PROVIDER=firebase,USE_IN_MEMORY_DB=0,GCLOUD_PROJECT_ID=[GCLOUD_PROJECT_ID]
+              --set-env-vars=DB_PROVIDER=firebase,USE_IN_MEMORY_DB=0,GCLOUD_PROJECT_ID=[GCLOUD_PROJECT_ID],FIRESTORE_DATABASE_ID=travel-itinerary-app-database
   ```
   Add `--set-secrets=...` if using key secrets.
 
