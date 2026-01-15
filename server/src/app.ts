@@ -15,19 +15,29 @@ import lodgingRoutes from './routes/lodgingRoutes';
 import tourRoutes from './routes/tourRoutes';
 import accountRoutes, { groupsRouter } from './routes/accountRoutes';
 
-// Load env vars from server/.env if present, otherwise fall back to repo root .env or existing process env
-const envPaths = [path.resolve(__dirname, '../.env'), path.resolve(__dirname, '../../.env')];
-let envLoadedFrom: string | null = null;
+// Load env vars from server/.env, server/.local_env, and server/.secrets (plus repo root fallbacks).
+// Later files override earlier ones to make local overrides and secrets take precedence.
+const envPaths = [
+  path.resolve(__dirname, '../.env'),
+  path.resolve(__dirname, '../../.env'),
+  path.resolve(__dirname, '../.local_env'),
+  path.resolve(__dirname, '../../.local_env'),
+  path.resolve(__dirname, '../.secrets'),
+  path.resolve(__dirname, '../../.secrets'),
+];
+const loadedEnvPaths: string[] = [];
 for (const envPath of envPaths) {
   if (fs.existsSync(envPath)) {
-    dotenv.config({ path: envPath });
-    envLoadedFrom = envPath;
-    break;
+    dotenv.config({ path: envPath, override: true });
+    loadedEnvPaths.push(envPath);
   }
 }
-if (!envLoadedFrom) {
+let envLoadedFrom: string | null = null;
+if (loadedEnvPaths.length === 0) {
   dotenv.config(); // default search (process cwd)
   envLoadedFrom = 'process.env/default';
+} else {
+  envLoadedFrom = loadedEnvPaths.join(', ');
 }
 
 export { envLoadedFrom };

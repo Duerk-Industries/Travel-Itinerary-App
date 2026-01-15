@@ -2,6 +2,8 @@ node_modules
 npm-debug.log*
 dist
 .env
+.local_env
+.secrets
 .expo
 .vscode
 .DS_Store
@@ -9,6 +11,8 @@ dist
 *.iml
 .gradle
 server/.env
+server/.local_env
+server/.secrets
 server/logs
 server/public/_expo
 server/node_modules

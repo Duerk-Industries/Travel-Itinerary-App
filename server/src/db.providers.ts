@@ -41,8 +41,11 @@ const buildNotImplementedAdapter = (provider: DbProvider): DatabaseAdapter => {
   return fallback as DatabaseAdapter;
 };
 
+const isLikelyCloudRun = (): boolean =>
+  Boolean(process.env.K_SERVICE || process.env.CLOUD_RUN_JOB || process.env.GOOGLE_CLOUD_PROJECT);
+
 const normalizeProvider = (raw: string | undefined): DbProvider => {
-  if (!raw || raw.trim().length === 0) return 'postgres';
+  if (!raw || raw.trim().length === 0) return isLikelyCloudRun() ? 'firebase' : 'postgres';
   const lower = raw.toLowerCase();
   if (lower === 'postgres' || lower === 'postgresql') return 'postgres';
   if (lower === 'memory' || lower === 'inmemory' || lower === 'in-memory') return 'memory';

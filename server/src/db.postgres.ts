@@ -4,6 +4,7 @@ import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
 import { Flight, Group, GroupMember, Trait, Trip, User, WebUser, Lodging, Tour, Itinerary, ItineraryDetail } from './types';
 import fetch from 'node-fetch';
 import { logError } from './logger';
+import { getEnvValue } from './env';
 
 
 type PoolCtor = typeof Pool;
@@ -22,7 +23,7 @@ export const setPoolFactory = (factory: PoolCtor): void => {
 
 function getPool(): Pool {
   if (!pool) {
-    const cs = process.env.DATABASE_URL;
+    const cs = getEnvValue('DATABASE_URL');
 
 
     // Fail fast with a clear error instead of the SCRAM message

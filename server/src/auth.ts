@@ -2,8 +2,9 @@ import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
 import { findOrCreateUser } from './db';
 import { User } from './types';
+import { getEnvValue } from './env';
 
-const secret = process.env.AUTH_SECRET || 'development-secret';
+const secret = getEnvValue('AUTH_SECRET', { defaultValue: 'development-secret' })!;
 
 interface TokenPayload {
   userId: string;
