@@ -19,12 +19,15 @@ Opinionated, repo-specific steps for running this app locally with the Firestore
 - Access to Expo account `duerk-industries` and Apple/Play credentials for store uploads.
 
 ## 3) Environment config
+- **Cloud Run environment variables (no `.env` in GitHub)**  
+  Cloud Run does not read your repo `.env` files. Set env vars on the Cloud Run service (Console or `gcloud run deploy --set-env-vars=...`). The backend now defaults to the Firebase provider when running on Cloud Run, but you should still set env vars explicitly in production for clarity.
+
 - **Server `.env` (hosted Firestore, ADC on Cloud Run)**  
   ```env
   PORT=4000
   DB_PROVIDER=firebase
   USE_IN_MEMORY_DB=0
-  GCLOUD_PROJECT_ID=[GCLOUD_PROJECT_ID]  # your project ID
+  GCLOUD_PROJECT_ID=[GCLOUD_PROJECT_ID]  # your project ID (or use GOOGLE_CLOUD_PROJECT on Cloud Run)
   FIRESTORE_DATABASE_ID=travel-itinerary-app-database
   GCLOUD_PROJECT=[GCLOUD_PROJECT_NUMBER]  # optional, for some SDK features
   # ADC preferred on Cloud Run; only set keys if you must override ADC (not recommended):
@@ -40,6 +43,7 @@ Opinionated, repo-specific steps for running this app locally with the Firestore
   FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
   GCLOUD_PROJECT=[GCLOUD_PROJECT_NUMBER]  # optional, for some SDK features
   ```
+  Local-only overrides can go in `server/.local_env` (e.g., emulator hosts). It is loaded after `.env` and ignored by git. See `server/.local_env.example` for a template.
 
 - **Expo backend URL**: point to `https://duerk.org` for production. Use `EXPO_PUBLIC_BACKEND_URL` or a dev build to target local API/emulator during development.
 
@@ -84,7 +88,13 @@ Opinionated, repo-specific steps for running this app locally with the Firestore
      --allow-unauthenticated \
      --set-env-vars=DB_PROVIDER=firebase,USE_IN_MEMORY_DB=0,GCLOUD_PROJECT_ID=[GCLOUD_PROJECT_ID],FIRESTORE_DATABASE_ID=travel-itinerary-app-database
    ```
+   Note: Cloud Run sets `GOOGLE_CLOUD_PROJECT` automatically; the server will use it if `GCLOUD_PROJECT_ID` is not provided.
    If you use secrets for keys, add `--set-secrets=FIREBASE_CLIENT_EMAIL=FIREBASE_CLIENT_EMAIL:latest,FIREBASE_PRIVATE_KEY=FIREBASE_PRIVATE_KEY:latest`.
+   Optional helper script (reads `.env` and sets env vars automatically):
+   ```bash
+   ./scripts/deploy-cloud-run.sh server/.env
+   ```
+   Defaults: service `travel-itinerary-app`, region `us-east5`, source `server/`. Set `SERVICE_NAME`, `REGION`, or `SOURCE_DIR` to override. For secrets, pass `SECRETS=NAME=SECRET:version,...` (e.g., `SECRETS=FIREBASE_PRIVATE_KEY=FIREBASE_PRIVATE_KEY:latest`) or create a `server/.secrets` file with `KEY=VALUE` pairs to auto-create/update Secret Manager entries and map them. Use `--dry-run` to print the deploy command without executing.
 7) Firebase Hosting rewrite to Cloud Run (`firebase.json`):  
    ```json
    {

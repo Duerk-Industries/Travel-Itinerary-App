@@ -4,6 +4,7 @@ import { getFirestore as adminGetFirestore, FieldPath, Firestore } from 'firebas
 import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
 import { Flight, Lodging, Tour, Trait, Trip, User, WebUser, Itinerary, ItineraryDetail, Group } from './types';
 import { logError } from './logger';
+import { getEnvValue } from './env';
 
 let app: App | null = null;
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
@@ -12,9 +13,13 @@ const hashPassword = (password: string, salt: string) => scryptSync(password, sa
 
 const getDb = (): Firestore => {
   if (!app) {
-    const projectId = process.env.GCLOUD_PROJECT_ID || process.env.FIREBASE_PROJECT_ID;
-    const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-    const privateKey = (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n');
+    const projectId =
+      process.env.GCLOUD_PROJECT_ID ||
+      process.env.FIREBASE_PROJECT_ID ||
+      process.env.GOOGLE_CLOUD_PROJECT;
+    const clientEmail = getEnvValue('FIREBASE_CLIENT_EMAIL');
+    const rawPrivateKey = getEnvValue('FIREBASE_PRIVATE_KEY');
+    const privateKey = rawPrivateKey ? rawPrivateKey.replace(/\\n/g, '\n') : undefined;
     if (process.env.FIRESTORE_EMULATOR_HOST) {
       app = initializeApp({ projectId });
     } else {
