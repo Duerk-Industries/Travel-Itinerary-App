@@ -25,5 +25,8 @@ const formatError = (err: unknown): string => {
 export const logError = (message: string, err?: unknown): void => {
   const timestamp = new Date().toISOString();
   const suffix = err !== undefined ? ` ${formatError(err)}` : '';
-  errorLogStream.write(`[error] ${timestamp} ${message}${suffix}\n`);
+  const line = `[error] ${timestamp} ${message}${suffix}`;
+  errorLogStream.write(`${line}\n`);
+  // Emit to stderr so Cloud Run logs capture startup/runtime failures.
+  console.error(line);
 };
