@@ -186,6 +186,8 @@ Receiving email (inbound):
 - If you need to process inbound mail, use the provider’s webhooks (e.g., SendGrid inbound parse, Mailgun routes) and point them to a Cloud Run endpoint.
 
 ## 6) CI/CD on `main`
+- **Build script note (Firebase/App Hosting)**: the root `build`/`start` scripts use `npm --prefix server run ...` instead of `npm run -w server ...` to avoid workspace recursion in environments that don't support the `-w` flag.
+
 - **API (Cloud Run)** via GitHub Actions (example):  
   ```yaml
   jobs:
