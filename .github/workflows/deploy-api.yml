@@ -21,4 +21,5 @@ jobs:
           gcloud run deploy travel-itinerary-app \
             --source . \
             --region us-east5 \
-            --allow-unauthenticated
+            --allow-unauthenticated \
+            --runtime nodejs20
