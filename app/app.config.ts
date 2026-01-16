@@ -17,7 +17,7 @@ const config: ExpoConfig = {
       NSAppTransportSecurity: {
         NSAllowsArbitraryLoads: true,
         NSExceptionDomains: {
-          '192.168.50.17': {
+          'localhost': {
             NSIncludesSubdomains: true,
             NSExceptionAllowsInsecureHTTPLoads: true,
           },
@@ -33,7 +33,7 @@ const config: ExpoConfig = {
     backendUrl:
       process.env.BACKEND_URL ||
       process.env.EXPO_PUBLIC_BACKEND_URL ||
-      (process.env.NODE_ENV === 'development' ? 'http://192.168.50.17:4000' : 'https://duerk.org'),
+      (process.env.NODE_ENV === 'development' ? 'http://localhost:4000' : 'https://duerk.org'),
     refreshIntervalMs: Number(process.env.REFRESH_INTERVAL_MS) || 60000,
     eas: {
         projectId: "06966c0b-d878-4346-850c-090c762f1916"
