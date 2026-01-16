@@ -7,9 +7,15 @@
     "app"
   ],
   "scripts": {
+    "start": "node server/scripts/start-with-debug.js",
+    "build": "npm --prefix server run build",
     "lint": "echo \"Add linters per workspace\"",
-    "postinstall": "patch-package"
+    "postinstall": "node -e \"try{require('patch-package');require('child_process').execSync('patch-package',{stdio:'inherit'});}catch(e){console.log('patch-package not installed, skipping');}\""
   },
+  "engines": {
+    "node": "20.x"
+  },
+  "packageManager": "npm@10.8.2",
   "devDependencies": {
     "canvas": "^3.2.0",
     "patch-package": "^8.0.1"
@@ -17,6 +23,6 @@
   "dependencies": {
     "firebase-admin": "^13.6.0",
     "outdated": "^0.1.1",
-    "update": "^0.4.2"
+    "update": "^0.7.4"
   }
 }

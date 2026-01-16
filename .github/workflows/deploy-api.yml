@@ -1,0 +1,25 @@
+name: Deploy API to Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy-api:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }} # SA with run.admin + iam.serviceAccountUser (+ secret accessor if needed)
+      - uses: google-github-actions/setup-gcloud@v2
+      - run: gcloud config set project [GCLOUD_PROJECT_ID]
+      - run: |
+          cd server
+          gcloud run deploy travel-itinerary-app \
+            --source . \
+            --region us-east5 \
+            --allow-unauthenticated \
+            --runtime nodejs20

@@ -4,6 +4,7 @@ import { getFirestore as adminGetFirestore, FieldPath, Firestore } from 'firebas
 import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
 import { Flight, Lodging, Tour, Trait, Trip, User, WebUser, Itinerary, ItineraryDetail, Group } from './types';
 import { logError } from './logger';
+import { getEnvValue } from './env';
 
 let app: App | null = null;
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
@@ -12,24 +13,43 @@ const hashPassword = (password: string, salt: string) => scryptSync(password, sa
 
 const getDb = (): Firestore => {
   if (!app) {
-    const projectId = process.env.GCLOUD_PROJECT_ID || process.env.FIREBASE_PROJECT_ID;
-    const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-    const privateKey = (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n');
+    const firebaseConfigRaw = process.env.FIREBASE_CONFIG;
+    let firebaseConfigProjectId: string | undefined;
+    if (firebaseConfigRaw) {
+      try {
+        const parsed = JSON.parse(firebaseConfigRaw) as { projectId?: string };
+        firebaseConfigProjectId = parsed.projectId;
+      } catch {
+        // Ignore malformed FIREBASE_CONFIG; fall back to explicit envs.
+      }
+    }
+    const projectId =
+      process.env.GCLOUD_PROJECT_ID ||
+      process.env.FIREBASE_PROJECT_ID ||
+      process.env.GOOGLE_CLOUD_PROJECT ||
+      firebaseConfigProjectId;
+    const clientEmail = getEnvValue('FIREBASE_CLIENT_EMAIL');
+    const rawPrivateKey = getEnvValue('FIREBASE_PRIVATE_KEY');
+    const privateKey = rawPrivateKey ? rawPrivateKey.replace(/\\n/g, '\n') : undefined;
     if (process.env.FIRESTORE_EMULATOR_HOST) {
       app = initializeApp({ projectId });
     } else {
-      if (!projectId || !clientEmail || !privateKey) {
-        throw new Error(
-          'GCLOUD_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY are required for Firebase DB provider'
-        );
+      if (!projectId) {
+        throw new Error('GCLOUD_PROJECT_ID (or FIREBASE_PROJECT_ID) is required for Firebase DB provider');
       }
-      app = initializeApp({
-        credential: cert({ projectId, clientEmail, privateKey }),
-        projectId,
-      });
+      if (clientEmail && privateKey) {
+        app = initializeApp({
+          credential: cert({ projectId, clientEmail, privateKey }),
+          projectId,
+        });
+      } else {
+        // Default to ADC on Cloud Run / local gcloud auth
+        app = initializeApp({ projectId });
+      }
     }
   }
-  return adminGetFirestore(app!);
+  const databaseId = getEnvValue('FIRESTORE_DATABASE_ID');
+  return databaseId ? adminGetFirestore(app!, databaseId) : adminGetFirestore(app!);
 };
 
 export const initDb = async (): Promise<void> => {
