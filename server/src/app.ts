@@ -43,7 +43,11 @@ if (loadedEnvPaths.length === 0) {
 export { envLoadedFrom };
 
 export const app = express();
-app.use(cors());
+app.use(cors({
+  origin: 'https://duerk.org',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
