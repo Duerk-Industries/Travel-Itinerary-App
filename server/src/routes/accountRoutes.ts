@@ -39,7 +39,7 @@ router.get('/', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const profile = await getWebUserProfile(userId);
   if (!profile) {
-    res.status(404).json({ error: 'User not found' });
+    res.status(401).json({ error: 'User not found' });
     return;
   }
   res.json(profile);

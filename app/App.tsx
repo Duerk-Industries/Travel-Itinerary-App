@@ -737,7 +737,6 @@ const App: React.FC = () => {
         lastName: data.user.lastName ?? '',
         email,
       });
-      saveSession(data.token, name, 'create-trip', email, activeTripId);
       fetchFlights(data.token);
       fetchLodgings(data.token);
       fetchTours(data.token);
@@ -745,7 +744,14 @@ const App: React.FC = () => {
       loadAccountProfile(data.token);
       loadFamilyRelationships(data.token);
       loadFellowTravelers(data.token);
-      setActivePage('create-trip');
+      const trips = await fetchTrips(data.token);
+      const nextTripId = trips[0]?.id ?? null;
+      const nextPage: Page = trips.length ? 'overview' : 'create-trip';
+      if (nextTripId) {
+        setActiveTripId(nextTripId);
+      }
+      setActivePage(nextPage);
+      saveSession(data.token, name, nextPage, email, nextTripId);
     } catch (err) {
       alert((err as Error).message || 'Registration failed');
     }
@@ -822,6 +828,10 @@ const App: React.FC = () => {
     const res = await fetch(`${backendUrl}/api/groups?sort=${sort ?? groupSort}`, {
       headers: { Authorization: `Bearer ${userToken}` },
     });
+    if (res.status === 401 || res.status === 403) {
+      logout();
+      return;
+    }
     if (!res.ok) return;
     const data = await res.json();
     const normalized = (Array.isArray(data) ? data : []).map((group: GroupView) => ({
@@ -834,15 +844,29 @@ const App: React.FC = () => {
     }
   };
 
-  const fetchTrips = async () => {
-    const res = await fetch(`${backendUrl}/api/trips`, { headers: { Authorization: `Bearer ${userToken}` } });
-    if (!res.ok) return;
-    const data = await res.json();
-    setTrips(data);
-    if (!activeTripId && data.length) {
-      setActiveTripId(data[0].id);
-    } else if (activeTripId && !data.find((t: Trip) => t.id === activeTripId)) {
-      setActiveTripId(data[0]?.id ?? null);
+  const fetchTrips = async (tokenOverride?: string): Promise<Trip[]> => {
+    const authToken = tokenOverride ?? userToken;
+    if (!authToken) {
+      setTrips([]);
+      return [];
+    }
+    try {
+      const res = await fetch(`${backendUrl}/api/trips`, { headers: { Authorization: `Bearer ${authToken}` } });
+      if (res.status === 401 || res.status === 403) {
+        logout();
+        return [];
+      }
+      if (!res.ok) return [];
+      const data = await res.json();
+      setTrips(data);
+      if (!activeTripId && data.length) {
+        setActiveTripId(data[0].id);
+      } else if (activeTripId && !data.find((t: Trip) => t.id === activeTripId)) {
+        setActiveTripId(data[0]?.id ?? null);
+      }
+      return data;
+    } catch {
+      return [];
     }
   };
 
@@ -979,6 +1003,14 @@ const App: React.FC = () => {
   useEffect(() => {
     if (userToken) {
       refreshAllData();
+    }
+  }, [userToken]);
+
+  useEffect(() => {
+    if (userToken) {
+      fetchTrips();
+      fetchGroups();
+      fetchInvites();
     }
   }, [userToken]);
 
@@ -1151,6 +1183,10 @@ const App: React.FC = () => {
       headers: { 'Content-Type': 'application/json', ...headers },
       body: JSON.stringify({ name: newTripName.trim(), groupId: newTripGroupId }),
     });
+    if (res.status === 401 || res.status === 403) {
+      logout();
+      return;
+    }
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       alert(data.error || 'Unable to create trip');
@@ -2224,6 +2260,8 @@ const App: React.FC = () => {
               userToken={userToken}
               headers={headers}
               traits={traits}
+              airportOptions={flightAirportOptions}
+              onSearchAirports={fetchFlightAirports}
               styles={styles}
               onCancel={() => setActivePage('trips')}
               onTripCreated={(tripId) => {
@@ -2234,6 +2272,10 @@ const App: React.FC = () => {
                 fetchInvites();
                 setActivePage('trip-details');
               }}
+              onWizardCarRentals={(rentals) => setCarRentals(rentals)}
+              onUnauthorized={logout}
+              currentUserName={userName}
+              currentUserEmail={userEmail}
             />
           ) : null}
 

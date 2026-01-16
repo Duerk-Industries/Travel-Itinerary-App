@@ -50,7 +50,7 @@ export const fetchAccountProfile = async ({
     const res = await fetch(`${backendUrl}/api/account`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (res.status === 401 || res.status === 403) {
+    if (res.status === 401 || res.status === 403 || res.status === 404) {
       logout();
       return false;
     }

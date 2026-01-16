@@ -365,3 +365,91 @@ describe('Pending group invites', () => {
     expect(claimed.firstName).toBe(invitee.firstName);
   });
 });
+
+describe('Account onboarding trip flow', () => {
+  const suffix = Date.now();
+  const owner = { email: `onboard-owner+${suffix}@example.com`, firstName: 'Onboard', lastName: 'Owner', password: 'testtest' };
+  const invited = { email: `onboard-invitee+${suffix}@example.com`, firstName: 'Onboard', lastName: 'Invitee', password: 'testtest' };
+  const solo = { email: `onboard-solo+${suffix}@example.com`, firstName: 'Onboard', lastName: 'Solo', password: 'testtest' };
+  let pool: Pool;
+  let ownerToken: string;
+  let tripId: string;
+
+  beforeAll(async () => {
+    process.env.NODE_ENV = 'test';
+    await initDb();
+    pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    await pool.query('DELETE FROM users WHERE email IN ($1, $2, $3)', [owner.email, invited.email, solo.email]);
+  });
+
+  afterAll(async () => {
+    if (pool) {
+      await pool.query('DELETE FROM users WHERE email IN ($1, $2, $3)', [owner.email, invited.email, solo.email]);
+      await pool.end();
+    }
+    await closePool();
+  });
+
+  it('returns trips for a newly registered user who was invited to a trip', async () => {
+    const regOwner = await request(app)
+      .post('/api/web-auth/register')
+      .send({ firstName: owner.firstName, lastName: owner.lastName, email: owner.email, password: owner.password, passwordConfirm: owner.password })
+      .expect(201);
+    ownerToken = regOwner.body.token as string;
+
+    const tripRes = await request(app)
+      .post('/api/trips/wizard')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ name: 'Onboard Trip', description: 'Onboard invite flow', destination: 'Rome', participants: [] })
+      .expect(201);
+    tripId = tripRes.body.trip?.id as string;
+    expect(tripId).toBeTruthy();
+
+    await request(app)
+      .post(`/api/account/trips/${tripId}/members`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ email: invited.email })
+      .expect(201);
+
+    const regInvited = await request(app)
+      .post('/api/web-auth/register')
+      .send({
+        firstName: invited.firstName,
+        lastName: invited.lastName,
+        email: invited.email,
+        password: invited.password,
+        passwordConfirm: invited.password,
+      })
+      .expect(201);
+    const invitedToken = regInvited.body.token as string;
+
+    const trips = await request(app)
+      .get('/api/trips')
+      .set('Authorization', `Bearer ${invitedToken}`)
+      .expect(200);
+    expect(Array.isArray(trips.body)).toBe(true);
+    expect(trips.body.length).toBeGreaterThanOrEqual(1);
+    expect(trips.body.some((t: any) => t.id === tripId)).toBe(true);
+  });
+
+  it('returns no trips for a newly registered user without invites', async () => {
+    const regSolo = await request(app)
+      .post('/api/web-auth/register')
+      .send({
+        firstName: solo.firstName,
+        lastName: solo.lastName,
+        email: solo.email,
+        password: solo.password,
+        passwordConfirm: solo.password,
+      })
+      .expect(201);
+    const soloToken = regSolo.body.token as string;
+
+    const trips = await request(app)
+      .get('/api/trips')
+      .set('Authorization', `Bearer ${soloToken}`)
+      .expect(200);
+    expect(Array.isArray(trips.body)).toBe(true);
+    expect(trips.body).toHaveLength(0);
+  });
+});
