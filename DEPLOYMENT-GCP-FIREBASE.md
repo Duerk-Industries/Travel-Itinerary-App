@@ -37,6 +37,15 @@ This setup ensures both the web and native apps use the same backend API, hosted
 
 These steps only need to be performed once per Google Cloud project.
 
+### Fast Path: Run Everything Once
+If you already have your values in `server/.secrets`, you can run the full setup in one command:
+
+```bash
+./scripts/setup-all.sh
+```
+
+Use `--skip-login` if you are already authenticated with gcloud.
+
 ### Step 1: Configure gcloud CLI
 This script will guide you through logging into Google Cloud and setting your default project.
 
@@ -59,14 +68,42 @@ This step is done manually in the Google Cloud Console.
 3.  Select a location (this project uses **us-east5**).
 4.  Click **"Create"**. You can apply the security rules from `firestore.rules` later.
 
-### Step 4: Set IAM Permissions for Cloud Run
-This script grants the default Cloud Run service account the necessary permissions to access Firestore and Secret Manager.
+### Step 4: Configure IAM Permissions
 
-```bash
-# Usage: ./scripts/setup-iam-permissions.sh <PROJECT_ID> <PROJECT_NUMBER>
-# You can find the Project Number on the Google Cloud Console Dashboard.
-./scripts/setup-iam-permissions.sh your-project-id-here 123456789012
-```
+This step uses a dedicated script to grant all necessary permissions for a secure, automated deployment pipeline. It follows the principle of least privilege by defining three distinct service accounts:
+
+*   **Deployer Service Account**: Used by the CI/CD system (GitHub Actions) to authenticate with Google Cloud and trigger builds.
+*   **Cloud Build Service Account**: The default service account used by Google Cloud Build to execute the build and deployment process.
+*   **Runtime Service Account**: The identity that the Cloud Run service runs as, granting it access to other Google Cloud resources like Firestore.
+
+1.  **Define Service Accounts in `server/.secrets`**:
+
+    Create or open the `server/.secrets` file and add the following required variables. This file is git-ignored and should not be committed.
+
+    ```bash
+    # The ID of your Google Cloud project.
+    GCLOUD_PROJECT_ID="your-project-id-here"
+
+    # The unique number of your Google Cloud project.
+    # Find this on the GCP Console Dashboard.
+    GCLOUD_PROJECT_NUMBER="123456789012"
+
+    # The email of the service account used for deployment (e.g., from GitHub Actions).
+    # This account will be granted permissions to trigger builds and manage secrets.
+    DEPLOYER_SERVICE_ACCOUNT_EMAIL="your-deployer-sa@your-project-id.iam.gserviceaccount.com"
+
+    # (Optional) The email of the service account the Cloud Run service will run as.
+    # If commented out, it defaults to the Compute Engine default service account.
+    # RUNTIME_SERVICE_ACCOUNT_EMAIL="123456789012-compute@developer.gserviceaccount.com"
+    ```
+
+2.  **Run the IAM Configuration Script**:
+
+    Execute the script from the root directory. It will read the variables from `server/.secrets` and apply the correct IAM role bindings to all three service accounts. The script is idempotent, so it's safe to run multiple times.
+
+    ```bash
+    ./scripts/setup-iam-permissions.sh
+    ```
 
 ---
 
@@ -92,13 +129,13 @@ Before deploying to Firebase Hosting, you must create a production build of the 
 # From the root directory:
 npx expo export --platform web --output-dir ./dist
 ```
-This command compiles the web app and places the static files into the `public/` directory, which is what Firebase Hosting serves.
+This command compiles the web app and places the static files into the `dist/` directory, which is what Firebase Hosting serves.
 
 ### Step 2: Configure the Backend Environment
-Your backend's configuration (database connections, API keys) is managed through environment variables and secrets.
+Your backend's configuration is managed through environment variables and secrets.
 
 *   **`server/.env`**: Contains non-sensitive configuration. A `GCLOUD_PROJECT_ID` entry is required.
-*   **`server/.secrets`**: Contains sensitive values like API keys or passwords. This file should be in your `.gitignore`. Create it from `server/.secrets.example`.
+*   **`server/.secrets`**: Contains sensitive values like API keys or passwords. This file is git-ignored. Deployment/IAM settings also live here.
 
 Run the following script to upload these variables and secrets to your Cloud Run service. It will create secrets in Google Secret Manager if they don't exist and then securely map them to your service.
 
@@ -111,13 +148,13 @@ Run the following script to upload these variables and secrets to your Cloud Run
 With the environment configured, you can now deploy the code.
 
 **Deploy the Backend API:**
-This script deploys the code from the `server/` directory to Cloud Run.
+This script deploys the code from the `server/` directory to Cloud Run using `gcloud run deploy --source`, which automatically triggers a build on Cloud Build.
 ```bash
 ./scripts/deploy-api.sh
 ```
 
 **Deploy the Frontend Web App:**
-This script uploads the contents of the `public/` directory to Firebase Hosting.
+This script uploads the contents of the `dist/` directory to Firebase Hosting.
 ```bash
 ./scripts/deploy-hosting.sh
 ```
@@ -125,97 +162,62 @@ This script uploads the contents of the `public/` directory to Firebase Hosting.
 ---
 
 
-## 5. Automated Deployments with GitHub Actions (CI/CD)
+## 5. Automated Deployment Strategy
 
-You can automate the entire deployment workflow to run every time you push a change to the `main` branch.
+This project uses **GitHub Actions** as the primary mechanism for automated deployments. Pushing to the `main` branch will trigger the workflows defined in the `.github/workflows` directory.
 
-1.  **Secrets**: Add the following secrets to your GitHub repository's settings (`Settings > Secrets and variables > Actions`):
-    *   `GCP_SERVICE_ACCOUNT_KEY`: A JSON key for a Google Cloud service account with permissions to deploy to Cloud Run and Hosting (`roles/run.admin`, `roles/iam.serviceAccountUser`, `roles/firebase.admin`).
-    *   `GCLOUD_PROJECT_ID`: Your Google Cloud project ID.
-    *   `EXPO_TOKEN`: Your Expo access token for EAS builds.
+### Native Cloud Build Triggers
+The `trigger.yaml` file in the root directory is a sample configuration for a native Google Cloud Build trigger. This file is provided for reference but is not active.
 
-2.  **Workflows**: Add the following workflow files to your `.github/workflows/` directory.
+**Important**: To avoid running redundant builds, ensure that only one automated deployment method is active. This project is configured to use the GitHub Actions workflows. If you have a native Cloud Build trigger configured in your GCP project that also deploys on pushes to `main`, you should disable it.
 
-**Backend API Deployment (`deploy-api.yml`):**
-```yaml
-name: Deploy API to Cloud Run
+---
 
-on:
-  push:
-    branches:
-      - main
+## 6. Automated Deployments with GitHub Actions (CI/CD)
 
-jobs:
-  deploy:
-    name: Deploy API
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+**Workflows**
+*   Backend API: `.github/workflows/deploy-api.yml`
+*   Firebase Hosting (prod): `.github/workflows/firebase-hosting-merge.yml`
+*   Firebase Hosting (PR preview): `.github/workflows/firebase-hosting-pull-request.yml`
 
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+**GitHub Secrets**
 
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
+Navigate to your repository's `Settings > Secrets and variables > Actions` to configure the following:
 
-      - name: Deploy API
-        run: |-
-          gcloud run deploy travel-itinerary-app \
-            --source ./server \
-            --region us-east5 \
-            --project ${{ secrets.GCLOUD_PROJECT_ID }}
-```
+*   **`GCP_SERVICE_ACCOUNT_KEY`**: The JSON key for the **Deployer Service Account** defined as `DEPLOYER_SERVICE_ACCOUNT_EMAIL` in your `server/.secrets` file. The `./scripts/setup-iam-permissions.sh` script grants it the necessary roles to trigger builds and deploy Cloud Run:
+    *   `Cloud Run Admin`
+    *   `Cloud Build Editor`
+    *   `Service Account User` (on the runtime service account)
 
-**Frontend Web App Deployment (`deploy-hosting.yml`):**
-```yaml
-name: Deploy Web App to Firebase Hosting
+*   **`GCLOUD_PROJECT_ID`**: The ID of your Google Cloud project (e.g., `travel-itinerary-app-483623`).
 
-on:
-  push:
-    branches:
-      - main
+*   **`FIREBASE_SERVICE_ACCOUNT_TRAVEL_ITINERARY_APP_483623`**: A JSON service account key with permissions to deploy to Firebase Hosting. You can generate this by running `firebase login:ci` and following the prompts.
 
-jobs:
-  build_and_deploy:
-    name: Build and Deploy
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-
-      - name: Install Dependencies
-        run: npm install
-
-      - name: Build Web App
-        run: npx expo export --platform web --output-dir ./dist
-
-      - name: Deploy to Firebase Hosting
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
-          projectId: ${{ secrets.GCLOUD_PROJECT_ID }}
-          channelId: live
-```
+*   **`EXPO_TOKEN`**: Your Expo Access Token, used for publishing updates and running builds with EAS via the `eas-build.yml` workflow.
 
 ---
 
 
-## 6. Connecting a Custom Domain
+## 7. CI/CD and Cloud Build Checklist
+
+Use this list to validate configuration before you rely on automated deployments:
+
+*   `server/.secrets` contains `GCLOUD_PROJECT_ID`, `GCLOUD_PROJECT_NUMBER`, and `DEPLOYER_SERVICE_ACCOUNT_EMAIL`.
+*   `./scripts/setup-iam-permissions.sh` runs successfully (safe to re-run) and grants the deployer `roles/run.admin` plus `roles/iam.serviceAccountUser` on the runtime service account.
+*   The Cloud Build service account has `roles/artifactregistry.writer` if you deploy with `gcloud run deploy --source`.
+*   GitHub Secrets include `GCP_SERVICE_ACCOUNT_KEY`, `GCLOUD_PROJECT_ID`, `FIREBASE_SERVICE_ACCOUNT_TRAVEL_ITINERARY_APP_483623`, and `EXPO_TOKEN`.
+*   The Hosting workflows build the Expo web output into `dist/`, which matches `firebase.json` hosting `public`.
+
+---
+
+
+## 8. Connecting a Custom Domain
 
 To connect your domain (e.g., `duerk.org`) to Firebase Hosting:
 
 1.  **In the Firebase Console**, go to **Hosting** and click **"Add custom domain"**.
 2.  Enter your domain name. Firebase will provide you with a **TXT record** for verification and two **A records** (IP addresses).
-3.  **At your domain registrar** (GoDaddy, Namecheap, etc.), go to your domain's DNS settings.
+3.  **At your domain registrar**, go to your domain's DNS settings.
     *   Add the **TXT record** to prove ownership.
     *   **Delete any existing A records** for your root domain.
     *   Add the two **A records** provided by Firebase.
@@ -224,7 +226,7 @@ To connect your domain (e.g., `duerk.org`) to Firebase Hosting:
 ---
 
 
-## 7. Testing the Deployment
+## 9. Testing the Deployment
 
 After a deployment, perform these checks to ensure everything is working.
 
@@ -240,13 +242,7 @@ After a deployment, perform these checks to ensure everything is working.
 ---
 
 
-## 8. Other Topics
-
-### Deprecated Scripts
-The scripts `deploy-cloud-run.sh` and `configure-cloud-run-env.sh` are now deprecated. Please use the new, more focused scripts:
-*   `configure-run-env.sh`
-*   `deploy-api.sh`
-*   `deploy-hosting.sh`
+## 10. Other Topics
 
 ### SMTP/Email Setup
 (Content from previous version remains here)
