@@ -7,7 +7,7 @@ build:
     - 'deploy'
     - 'travel-itinerary-app'
     - '--source'
-    - '.'
+    - './server'
     - '--region'
     - 'us-east5'
 createTime: '2026-01-13T17:05:48.751510082Z'

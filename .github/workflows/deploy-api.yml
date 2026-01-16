@@ -15,11 +15,12 @@ jobs:
         with:
           credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }} # SA with run.admin + iam.serviceAccountUser (+ secret accessor if needed)
       - uses: google-github-actions/setup-gcloud@v2
-      - run: gcloud config set project [GCLOUD_PROJECT_ID]
+      - run: gcloud config set project "${{ secrets.GCLOUD_PROJECT_ID }}"
       - run: |
           cd server
           gcloud run deploy travel-itinerary-app \
             --source . \
             --region us-east5 \
             --allow-unauthenticated \
-            --runtime nodejs20
+            --runtime nodejs20 \
+            --project "${{ secrets.GCLOUD_PROJECT_ID }}"

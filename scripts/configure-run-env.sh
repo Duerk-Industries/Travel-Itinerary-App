@@ -6,6 +6,7 @@ SECRETS_FILE="${SECRETS_FILE:-}"
 SERVICE_NAME="${SERVICE_NAME:-travel-itinerary-app}"
 REGION="${REGION:-us-east5}"
 IGNORE_KEYS="${IGNORE_KEYS:-PORT,FIRESTORE_EMULATOR_HOST}"
+IGNORE_SECRET_KEYS="${IGNORE_SECRET_KEYS:-GCLOUD_PROJECT_ID,GCLOUD_PROJECT_NUMBER,DEPLOYER_SERVICE_ACCOUNT_EMAIL,RUNTIME_SERVICE_ACCOUNT_EMAIL,CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL}"
 SECRETS="${SECRETS:-}"
 
 usage() {
@@ -118,6 +119,12 @@ should_ignore_key() {
   [[ "$list" == *",$key,"* ]]
 }
 
+should_ignore_secret_key() {
+  local key="$1"
+  local list=",${IGNORE_SECRET_KEYS},"
+  [[ "$list" == *",$key,"* ]]
+}
+
 env_pairs=()
 project_id=""
 
@@ -185,6 +192,9 @@ if [[ -n "${SECRETS_FILE}" && -f "${SECRETS_FILE}" ]]; then
       value="${value:1:${#value}-2}"
     fi
     [[ -z "$key" ]] && continue
+    if should_ignore_secret_key "$key"; then
+      continue
+    fi
     if ! gcloud secrets describe "$key" ${project_id:+"--project" "$project_id"} >/dev/null 2>&1; then
       gcloud secrets create "$key" --replication-policy=automatic ${project_id:+"--project" "$project_id"}
     fi
