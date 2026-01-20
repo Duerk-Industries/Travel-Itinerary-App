@@ -3,8 +3,9 @@ import { initializeApp, cert, deleteApp, getApps, App } from 'firebase-admin/app
 import { getFirestore as adminGetFirestore, FieldPath, Firestore } from 'firebase-admin/firestore';
 import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
 import { Flight, Lodging, Tour, Trait, Trip, User, WebUser, Itinerary, ItineraryDetail, Group } from './types';
-import { logError } from './logger';
-import { getEnvValue } from './env';
+import { logError, logInfo } from './logger';
+import { getEnvValue, isLocalEnv } from './env';
+import fetch from 'node-fetch';
 
 let app: App | null = null;
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
@@ -13,14 +14,17 @@ const hashPassword = (password: string, salt: string) => scryptSync(password, sa
 
 const getDb = (): Firestore => {
   if (!app) {
+    logInfo('Firebase app not initialized, initializing...');
     const firebaseConfigRaw = process.env.FIREBASE_CONFIG;
     let firebaseConfigProjectId: string | undefined;
     if (firebaseConfigRaw) {
       try {
         const parsed = JSON.parse(firebaseConfigRaw) as { projectId?: string };
         firebaseConfigProjectId = parsed.projectId;
-      } catch {
+        logInfo('Parsed FIREBASE_CONFIG for projectId.');
+      } catch (e) {
         // Ignore malformed FIREBASE_CONFIG; fall back to explicit envs.
+        logError('Malformed FIREBASE_CONFIG, ignoring', e);
       }
     }
     const projectId =
@@ -28,32 +32,70 @@ const getDb = (): Firestore => {
       process.env.FIREBASE_PROJECT_ID ||
       process.env.GOOGLE_CLOUD_PROJECT ||
       firebaseConfigProjectId;
+    logInfo(`Using projectId: ${projectId}`);
     const clientEmail = getEnvValue('FIREBASE_CLIENT_EMAIL');
     const rawPrivateKey = getEnvValue('FIREBASE_PRIVATE_KEY');
     const privateKey = rawPrivateKey ? rawPrivateKey.replace(/\\n/g, '\n') : undefined;
-    if (process.env.FIRESTORE_EMULATOR_HOST) {
+    const useEmulator = isLocalEnv() && getEnvValue('USE_FIRESTORE_EMULATOR') === 'true';
+    if (useEmulator) {
+      const emulatorHost = getEnvValue('FIRESTORE_EMULATOR_HOST', { defaultValue: '127.0.0.1:8080' });
+      logInfo(`Using Firestore emulator at ${emulatorHost}`);
+      process.env.FIRESTORE_EMULATOR_HOST = emulatorHost;
       app = initializeApp({ projectId });
     } else {
       if (!projectId) {
+        logError('GCLOUD_PROJECT_ID (or FIREBASE_PROJECT_ID) is required for Firebase DB provider');
         throw new Error('GCLOUD_PROJECT_ID (or FIREBASE_PROJECT_ID) is required for Firebase DB provider');
       }
       if (clientEmail && privateKey) {
+        logInfo('Initializing Firebase with service account credentials.');
         app = initializeApp({
           credential: cert({ projectId, clientEmail, privateKey }),
           projectId,
         });
       } else {
+        logInfo('Initializing Firebase with default Application Default Credentials (ADC).');
         // Default to ADC on Cloud Run / local gcloud auth
         app = initializeApp({ projectId });
       }
     }
+    logInfo('Firebase app initialized.');
   }
   const databaseId = getEnvValue('FIRESTORE_DATABASE_ID');
+  if (databaseId) {
+    logInfo(`Using databaseId: ${databaseId}`);
+  }
   return databaseId ? adminGetFirestore(app!, databaseId) : adminGetFirestore(app!);
 };
 
 export const initDb = async (): Promise<void> => {
-  getDb();
+  logInfo('Initializing DB connection...');
+  const db = getDb();
+  try {
+    logInfo('Attempting to list collections to test database connection...');
+    await db.listCollections();
+    logInfo('Database connection test successful.');
+  } catch (error) {
+    logError('Database connection test failed.', error);
+    if (process.env.K_SERVICE) {
+      // On Cloud Run, provide more diagnostics.
+      logInfo('This service is running on Cloud Run. Checking for common issues...');
+      try {
+        const saResponse = await fetch('http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/email', {
+            headers: { 'Metadata-Flavor': 'Google' }
+        });
+        if(saResponse.ok) {
+            const serviceAccount = await saResponse.text();
+            logInfo(`Cloud Run service is using service account: ${serviceAccount}. Ensure this service account has the 'Cloud Datastore User' role on project ${getEnvValue('GCLOUD_PROJECT_ID')}.`);
+        } else {
+            logError('Could not retrieve service account from metadata server.', await saResponse.text());
+        }
+      } catch (metaError) {
+          logError('Failed to query metadata server for service account diagnostics.', metaError);
+      }
+    }
+    throw error;
+  }
 };
 
 export const closePool = async (): Promise<void> => {

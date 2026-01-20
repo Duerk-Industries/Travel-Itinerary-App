@@ -111,9 +111,24 @@ This step uses a dedicated script to grant all necessary permissions for a secur
 ## 3. Local Development
 
 1.  `npm install` in the root, `server/`, and `app/` directories.
-2.  Start emulators: `firebase emulators:start`.
-3.  Run the API: `cd server && npm run dev`.
-4.  Run the Expo app: `cd app && npm start`.
+2.  **Configure Local Environment**: The server uses a `server/.local_env` file for local-only settings. Create this file by copying `server/.local_env.example`.
+    ```bash
+    cp server/.local_env.example server/.local_env
+    ```
+    By default, `server/.local_env` is configured to use the Firebase emulator (`USE_FIRESTORE_EMULATOR=true`).
+
+3.  **Start Emulators**: In one terminal, start the Firebase emulators.
+    ```bash
+    firebase emulators:start
+    ```
+4.  **Run the API**: In another terminal, run the API server.
+    ```bash
+    cd server && npm run dev
+    ```
+5.  **Run the Expo App**: In a third terminal, run the frontend application.
+    ```bash
+    cd app && npm start
+    ```
 
 ---
 

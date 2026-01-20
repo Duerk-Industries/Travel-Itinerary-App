@@ -5,8 +5,8 @@ ENV_FILE=""
 SECRETS_FILE="${SECRETS_FILE:-}"
 SERVICE_NAME="${SERVICE_NAME:-travel-itinerary-app}"
 REGION="${REGION:-us-east5}"
-IGNORE_KEYS="${IGNORE_KEYS:-PORT,FIRESTORE_EMULATOR_HOST}"
-IGNORE_SECRET_KEYS="${IGNORE_SECRET_KEYS:-GCLOUD_PROJECT_ID,GCLOUD_PROJECT_NUMBER,DEPLOYER_SERVICE_ACCOUNT_EMAIL,RUNTIME_SERVICE_ACCOUNT_EMAIL,CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL}"
+IGNORE_KEYS="${IGNORE_KEYS:-PORT,FIRESTORE_EMULATOR_HOST,GCLOUD_PROJECT_ID,GCLOUD_PROJECT_NUMBER,DEPLOYER_SERVICE_ACCOUNT_EMAIL,RUNTIME_SERVICE_ACCOUNT_EMAIL,CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL,FIRESTORE_DATABASE_ID}"
+IGNORE_SECRET_KEYS="${IGNORE_SECRET_KEYS:-GCLOUD_PROJECT,GOOGLE_CLOUD_PROJECT,GCLOUD_PROJECT_ID,GCLOUD_PROJECT_NUMBER,DEPLOYER_SERVICE_ACCOUNT_EMAIL,RUNTIME_SERVICE_ACCOUNT_EMAIL,CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL}"
 SECRETS="${SECRETS:-}"
 
 usage() {
@@ -129,7 +129,8 @@ env_pairs=()
 project_id=""
 
 while IFS= read -r line || [[ -n "$line" ]]; do
-  line="${line%%$''}"
+  line="${line%%$'
+'}"
   if is_comment_or_empty "$line"; then
     continue
   fi
@@ -176,7 +177,8 @@ fi
 
 if [[ -n "${SECRETS_FILE}" && -f "${SECRETS_FILE}" ]]; then
   while IFS= read -r line || [[ -n "$line" ]]; do
-    line="${line%%$''}"
+    line="${line%%$'
+'}"
     if is_comment_or_empty "$line"; then
       continue
     fi
@@ -219,7 +221,7 @@ if [[ -n "$project_id" ]]; then
   cmd+=(--project "$project_id")
 fi
 if [[ -n "$secrets_arg" ]]; then
-  cmd+=(--update-secrets "$secrets_arg")
+  cmd+=(--set-secrets "$secrets_arg")
 else
   # If there are no secrets to update, we might need to clear existing ones
   # To avoid accidental removal, this script will not clear secrets.
