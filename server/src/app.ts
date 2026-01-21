@@ -30,15 +30,16 @@ const localEnvPaths = [
   path.resolve(__dirname, '../../.local_env'),
 ];
 const loadedEnvPaths: string[] = [];
+const shouldOverride = !process.env.JEST_WORKER_ID;
 for (const envPath of envPaths) {
   if (fs.existsSync(envPath)) {
-    dotenv.config({ path: envPath, override: true });
+    dotenv.config({ path: envPath, override: shouldOverride });
     loadedEnvPaths.push(envPath);
   }
 }
 for (const envPath of localEnvPaths) {
   if (hasRunLocalFlag(envPath)) {
-    dotenv.config({ path: envPath, override: true });
+    dotenv.config({ path: envPath, override: shouldOverride });
     loadedEnvPaths.push(envPath);
   }
 }
