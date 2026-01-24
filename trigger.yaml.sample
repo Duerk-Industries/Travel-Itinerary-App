@@ -1,0 +1,39 @@
+
+build:
+  steps:
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args:
+    - 'run'
+    - 'deploy'
+    - 'travel-itinerary-app'
+    - '--source'
+    - './server'
+    - '--region'
+    - 'us-east5'
+createTime: '2026-01-13T17:05:48.751510082Z'
+description: Build and deploy to Cloud Run service travel-itinerary-app on push to
+  "^main$"
+github:
+  name: Travel-Itinerary-App
+  owner: Duerk-Industries
+  push:
+    branch: ^main$
+id: 5627b20b-ea09-4a7e-8513-af88a08cebe7
+includeBuildLogs: INCLUDE_BUILD_LOGS_WITH_STATUS
+logging: CLOUD_LOGGING_ONLY
+name: rmgpgab-travel-itinerary-app-us-east5-Duerk-Industries-Travevgq
+resourceName: projects/travel-itinerary-app-483623/locations/global/triggers/5627b20b-ea09-4a7e-8513-af88a08cebe7
+serviceAccount: projects/travel-itinerary-app-483623/serviceAccounts/62364014972-compute@developer.gserviceaccount.com
+substitutions:
+  REPO_NAME: travel-itinerary-app
+  _AR_HOSTNAME: us-east5-docker.pkg.dev
+  _AR_PROJECT_ID: travel-itinerary-app-483623
+  _AR_REPOSITORY: cloud-run-source-deploy
+  _DEPLOY_REGION: us-east5
+  _PLATFORM: managed
+  _SERVICE_NAME: travel-itinerary-app
+  _TRIGGER_ID: 5627b20b-ea09-4a7e-8513-af88a08cebe7
+tags:
+- gcp-cloud-build-deploy-cloud-run
+- gcp-cloud-build-deploy-cloud-run-managed
+- travel-itinerary-app

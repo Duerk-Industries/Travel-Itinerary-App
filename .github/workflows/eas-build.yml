@@ -1,0 +1,23 @@
+name: Build and Deploy Expo App
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  expo-eas-build:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - run: |
+          cd app
+          eas build --platform ios --profile production --non-interactive
+          eas build --platform android --profile production --non-interactive
+          # Replace Hosting content with Expo web export on main
+          npx expo export:web --output-dir ../public

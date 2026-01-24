@@ -1,18 +1,25 @@
 {
   "firestore": {
-    "database": "(default)",
+    "database": "travel-itinerary-app-database",
     "location": "us-east5",
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
   "hosting": {
-    "public": "public",
+    "public": "dist",
     "ignore": [
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
     ],
     "rewrites": [
+      {
+        "source": "/api/**",
+        "run": {
+          "serviceId": "travel-itinerary-app",
+          "region": "us-east5"
+        }
+      },
       {
         "source": "**",
         "destination": "/index.html"

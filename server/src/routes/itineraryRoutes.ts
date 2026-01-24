@@ -4,6 +4,7 @@ import { authenticate } from '../auth';
 import fetch from 'node-fetch';
 import { listTraitsForGroupTrip } from '../db';
 import { logError } from '../logger';
+import { getEnvValue } from '../env';
 
 type ChatCompletionResponse = {
   choices?: Array<{
@@ -19,7 +20,7 @@ router.use(bodyParser.json());
 router.use(authenticate);
 
 router.post('/', async (req, res) => {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = getEnvValue('OPENAI_API_KEY');
   if (!apiKey) {
     res.status(500).json({ error: 'OpenAI API key not configured on server' });
     return;

@@ -1,0 +1,6 @@
+# Local-only overrides for development (not committed).
+# Set to true to use the Firestore emulator for local development.
+USE_FIRESTORE_EMULATOR=true
+
+# If using the emulator and it's not at the default host/port, uncomment and set this:
+# FIRESTORE_EMULATOR_HOST=127.0.0.1:8080

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { TraitsTab, type Trait } from './traits';
 import { type MapApp, isMapApp, mapAppOptions } from '../utils/mapLinks';
 
 type Setter<T> = React.Dispatch<React.SetStateAction<T>>;
@@ -130,6 +131,18 @@ interface AccountTabProps {
   jsonHeaders: Headers;
   logout: () => void;
   styles: Styles;
+  traits: Trait[];
+  setTraits: React.Dispatch<React.SetStateAction<Trait[]>>;
+  selectedTraitNames: Set<string>;
+  setSelectedTraitNames: React.Dispatch<React.SetStateAction<Set<string>>>;
+  traitAge: string;
+  setTraitAge: React.Dispatch<React.SetStateAction<string>>;
+  traitGender: 'female' | 'male' | 'nonbinary' | 'prefer-not';
+  setTraitGender: React.Dispatch<React.SetStateAction<'female' | 'male' | 'nonbinary' | 'prefer-not'>>;
+  newTraitName: string;
+  setNewTraitName: React.Dispatch<React.SetStateAction<string>>;
+  fetchTraits: () => Promise<void>;
+  fetchTraitProfile: () => Promise<void>;
 }
 
 const relationshipOptions = [
@@ -168,6 +181,18 @@ const AccountTab: React.FC<AccountTabProps> = ({
   jsonHeaders,
   logout,
   styles,
+  traits,
+  setTraits,
+  selectedTraitNames,
+  setSelectedTraitNames,
+  traitAge,
+  setTraitAge,
+  traitGender,
+  setTraitGender,
+  newTraitName,
+  setNewTraitName,
+  fetchTraits,
+  fetchTraitProfile,
 }) => {
   const [accountMessage, setAccountMessage] = useState<string | null>(null);
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', newPasswordConfirm: '' });
@@ -745,6 +770,27 @@ const AccountTab: React.FC<AccountTabProps> = ({
       ) : (
         <Text style={styles.helperText}>No fellow travelers yet.</Text>
       )}
+
+      <View style={styles.divider} />
+      <TraitsTab
+        backendUrl={backendUrl}
+        userToken={userToken}
+        traits={traits}
+        setTraits={setTraits}
+        selectedTraitNames={selectedTraitNames}
+        setSelectedTraitNames={setSelectedTraitNames}
+        traitAge={traitAge}
+        setTraitAge={setTraitAge}
+        traitGender={traitGender}
+        setTraitGender={setTraitGender}
+        newTraitName={newTraitName}
+        setNewTraitName={setNewTraitName}
+        headers={headers}
+        jsonHeaders={jsonHeaders}
+        fetchTraits={fetchTraits}
+        fetchTraitProfile={fetchTraitProfile}
+        styles={styles}
+      />
 
       <View style={styles.divider} />
       <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={() => setShowDeleteConfirm(true)}>
