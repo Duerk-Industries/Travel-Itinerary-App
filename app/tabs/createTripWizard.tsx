@@ -499,6 +499,20 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     }));
   };
 
+  const fetchWithTimeout = async (url: string, options: RequestInit, timeoutMs: number) => {
+    if (typeof AbortController === 'undefined') {
+      const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Request timed out')), timeoutMs));
+      return Promise.race([fetch(url, options), timeout]) as Promise<Response>;
+    }
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      return await fetch(url, { ...options, signal: controller.signal });
+    } finally {
+      clearTimeout(timeout);
+    }
+  };
+
   const openWizardMaps = (address: string) => {
     const encoded = encodeURIComponent(address);
     const url = `https://www.google.com/maps/search/?api=1&query=${encoded}`;
@@ -978,65 +992,96 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           (dates.mode === 'range' ? rangeDays : null) ??
           (Number(itineraryDays) > 0 ? Number(itineraryDays) : Number(dates.durationDays) || 1);
         const destination = details.destination.trim() || details.name.trim() || 'Trip';
-        const createRes = await fetch(`${backendUrl}/api/itineraries`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...headers },
-          body: JSON.stringify({
-            tripId,
-            destination,
-            days,
-            budget: budgetRange.max,
-          }),
-        });
-        const created = await createRes.json().catch(() => ({}));
-        const itineraryId = created.id ?? null;
-        if (createRes.ok && itineraryId) {
-          if (itineraryItems.length) {
-            for (const item of itineraryItems) {
-              const day = getItemDayIndex(item);
-              await fetch(`${backendUrl}/api/itineraries/${itineraryId}/details`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', ...headers },
-                body: JSON.stringify({
-                  day,
-                  time: item.time || undefined,
-                  activity: item.activity,
-                  cost: null,
-                }),
-              });
-            }
-          }
-          if (generateItinerary) {
-            const aiRes = await fetch(`${backendUrl}/api/itinerary`, {
+        try {
+          const createRes = await fetchWithTimeout(
+            `${backendUrl}/api/itineraries`,
+            {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', ...headers },
               body: JSON.stringify({
-                country: destination,
-                days,
-                budgetMin: budgetRange.min,
-                budgetMax: budgetRange.max,
-                departureAirport: itineraryDepartureAirport.trim() || undefined,
-                tripStyle: itineraryTripStyle.trim() || undefined,
                 tripId,
-                traits: traits.map((t) => ({ name: t.name, level: t.level, notes: t.notes })),
+                destination,
+                days,
+                budget: budgetRange.max,
               }),
-            });
-            const aiData = await aiRes.json().catch(() => ({}));
-            if (aiRes.ok && aiData.plan) {
-              const parsed = parsePlanToDetails(aiData.plan);
-              for (const detail of parsed) {
-                await fetch(`${backendUrl}/api/itineraries/${itineraryId}/details`, {
+            },
+            15000
+          );
+          const created = await createRes.json().catch(() => ({}));
+          const itineraryId = created.id ?? null;
+          if (!createRes.ok || !itineraryId) {
+            setWizardError(created?.error || 'Trip created, but the itinerary could not be created.');
+          } else {
+            if (itineraryItems.length) {
+              await Promise.all(
+                itineraryItems.map((item) => {
+                  const day = getItemDayIndex(item);
+                  return fetchWithTimeout(
+                    `${backendUrl}/api/itineraries/${itineraryId}/details`,
+                    {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', ...headers },
+                      body: JSON.stringify({
+                        day,
+                        time: item.time || undefined,
+                        activity: item.activity,
+                        cost: null,
+                      }),
+                    },
+                    10000
+                  ).catch(() => null);
+                })
+              );
+            }
+            if (generateItinerary) {
+              const aiRes = await fetchWithTimeout(
+                `${backendUrl}/api/itinerary`,
+                {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json', ...headers },
                   body: JSON.stringify({
-                    day: detail.day,
-                    activity: detail.activity,
-                    cost: detail.cost ?? null,
+                    country: destination,
+                    days,
+                    budgetMin: budgetRange.min,
+                    budgetMax: budgetRange.max,
+                    departureAirport: itineraryDepartureAirport.trim() || undefined,
+                    tripStyle: itineraryTripStyle.trim() || undefined,
+                    tripId,
+                    traits: traits.map((t) => ({ name: t.name, level: t.level, notes: t.notes })),
                   }),
-                });
+                },
+                20000
+              );
+              const aiData = await aiRes.json().catch(() => ({}));
+              if (!aiRes.ok || !aiData.plan) {
+                setWizardError(aiData?.error || 'Trip created, but the AI itinerary could not be generated.');
+              } else {
+                const parsed = parsePlanToDetails(String(aiData.plan));
+                await Promise.all(
+                  parsed.map((detail) =>
+                    fetchWithTimeout(
+                      `${backendUrl}/api/itineraries/${itineraryId}/details`,
+                      {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', ...headers },
+                        body: JSON.stringify({
+                          day: detail.day,
+                          activity: detail.activity,
+                          cost: detail.cost ?? null,
+                        }),
+                      },
+                      10000
+                    ).catch(() => null)
+                  )
+                );
+                if (!parsed.length) {
+                  setWizardError('Trip created, but the AI itinerary returned no activities.');
+                }
               }
             }
           }
+        } catch (err) {
+          setWizardError((err as Error).message || 'Trip created, but itinerary setup failed.');
         }
       }
 
