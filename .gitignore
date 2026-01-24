@@ -1,5 +1,4 @@
 node_modules
-npm-debug.log*
 dist
 .env
 .local_env
@@ -9,7 +8,6 @@ dist
 .DS_Store
 .idea
 *.iml
-.gradle
 server/.env
 server/.local_env
 server/.secrets
@@ -25,10 +23,11 @@ app/android/.idea
 app/android/local.properties
 app/android/.gradle
 app/node_modules
+app/logs
 /android
 logs
 patches
 build
-*.log
-firestore-debug.log
-firebase-debug.log
+*.log*
+logs
+*example*

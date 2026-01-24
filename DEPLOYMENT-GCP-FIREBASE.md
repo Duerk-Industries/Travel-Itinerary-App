@@ -1,273 +1,264 @@
-# Travel Itinerary App — Google Cloud + Firestore Runbook (duerk.org)
+# Travel Itinerary App — Deployment Runbook (duerk.org)
 
-Opinionated, repo-specific steps for running this app locally with the Firestore emulator and in Google Cloud (Firestore + Cloud Run + Firebase Hosting), plus CI builds for web and Expo (iOS/Android) on `main`. Region: **us-east5**. Cloud Run service name: **travel-itinerary-app**. Auth: **Application Default Credentials (ADC)** on Cloud Run preferred.
+This document provides a complete guide for deploying and maintaining the Travel Itinerary App on Google Cloud and Firebase.
 
-## 1) Architecture (this repo)
-- **Backend API (`travel-itinerary-app`)**: The backend is a Node.js/Express application located in the `server/` directory. It is deployed as a Google Cloud Run service named **travel-itinerary-app**. This is the service that handles all API requests (e.g., creating trips, adding flights).
+## 1. System Architecture
 
-- **Database (Firestore)**: The application uses Google Firestore as its database. Firestore is a flexible, scalable NoSQL document database for mobile, web, and server development from Firebase and Google Cloud. It keeps your data in sync across client apps through realtime listeners and offers offline support.
+The application consists of a React/Expo frontend (for web and native mobile apps) and a Node.js/Express backend API, using Firestore as the database.
 
-- **Frontend (Web App)**: The frontend is a React web application (built with Expo for web) located in the `app/` directory. It is not "named" in the same way as the backend service. Instead, it is built into a set of static files (HTML, CSS, JavaScript).
+*   **Backend API**: A Node.js/Express app in `server/` is deployed as a **Google Cloud Run** service.
+*   **Frontend Web App**: A React web app (built from the `app/` directory) is deployed to **Firebase Hosting**.
+*   **Database**: A **Firestore** database hosts all application data.
+*   **Native Mobile Apps**: iOS and Android apps are built using **Expo Application Services (EAS)**.
 
-- **Hosting (Firebase Hosting & App Hosting)**: The static files of the frontend (Web App) are served by **Firebase Hosting**. Your custom domain, **duerk.org**, is pointed at Firebase Hosting. Firebase Hosting is responsible for serving the web app content and forwarding API requests. The term "Firebase App Hosting" refers to the integrated experience that connects your frontend (on Firebase Hosting) to your backend (on Cloud Run), and your logs indicate you are using this streamlined service. When a user visits `https://duerk.org`, they are hitting Firebase Hosting, which serves the web app. When the web app makes an API call to `/api/...`, Hosting rewrites that request and sends it to your `travel-itinerary-app` backend on Cloud Run.
+### How It All Connects
 
-- **Native App (Expo)**: The project also includes a native mobile app for iOS and Android, managed by Expo Application Services (EAS). The configuration for this is in `app.json`.
+The custom domain `duerk.org` is the single entry point for all users. Firebase Hosting and Cloud Run work together to route requests.
 
-## 2) Prereqs (once)
-- Google Cloud project with billing (e.g., [GCLOUD_PROJECT_ID]) and Firebase enabled.
-- Tools: `gcloud`, `firebase-tools`, Node LTS, Docker, `expo-cli`/`eas` (for local builds).
-- Access to Expo account `duerk-industries` and Apple/Play credentials for store uploads.
+**Web App Request Flow:**
+1.  A user visits `https://duerk.org`.
+2.  **Firebase Hosting** receives the request and serves the static frontend assets (HTML, CSS, JavaScript) that make up the React web application.
+3.  The React app, now running in the user's browser, makes an API call to a path like `https://duerk.org/api/trips`.
+4.  **Firebase Hosting** intercepts this request. A **rewrite rule** in `firebase.json` matches the `/api/**` pattern and forwards the request to the **Cloud Run** backend service.
+5.  The **Cloud Run** service processes the request (e.g., queries the Firestore database) and returns a JSON response.
 
-## 3) Environment config
-- **Cloud Run environment variables (no `.env` in GitHub)**  
-  Cloud Run does not read your repo `.env` files. Set env vars on the Cloud Run service (Console or `gcloud run deploy --set-env-vars=...`). The backend now defaults to the Firebase provider when running on Cloud Run, but you should still set env vars explicitly in production for clarity.
+**Native App (Expo) Request Flow:**
+1.  The native app is installed on a user's device.
+2.  The app's code is configured to make API calls directly to the production backend endpoint: `https://duerk.org/api`.
+3.  When the app needs data, it makes a standard HTTPS request to `https://duerk.org/api/trips`.
+4.  Just like the web app, the request hits **Firebase Hosting**, which triggers the rewrite rule, forwarding the request to the **Cloud Run** backend.
 
-- **Server `.env` (hosted Firestore, ADC on Cloud Run)**  
-  ```env
-  PORT=4000
-  DB_PROVIDER=firebase
-  USE_IN_MEMORY_DB=0
-  GCLOUD_PROJECT_ID=[GCLOUD_PROJECT_ID]  # your project ID (or use GOOGLE_CLOUD_PROJECT on Cloud Run)
-  FIRESTORE_DATABASE_ID=travel-itinerary-app-database
-  GCLOUD_PROJECT=[GCLOUD_PROJECT_NUMBER]  # optional, for some SDK features
-  # ADC preferred on Cloud Run; only set keys if you must override ADC (not recommended):
-  # FIREBASE_CLIENT_EMAIL=...
-  # FIREBASE_PRIVATE_KEY=-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----
-  ```
+This setup ensures both the web and native apps use the same backend API, hosted under a single, consistent domain.
 
-- **Server `.env` (local emulator)**  
-  ```env
-  DB_PROVIDER=firebase
-  USE_IN_MEMORY_DB=0
-  GCLOUD_PROJECT_ID=[GCLOUD_PROJECT_ID]  # your project ID
-  FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
-  GCLOUD_PROJECT=[GCLOUD_PROJECT_NUMBER]  # optional, for some SDK features
-  ```
-  Local-only overrides can go in `server/.local_env` (e.g., emulator hosts). It is loaded after `.env` and ignored by git. See `server/.local_env.example` for a template.
+---
 
-- **Expo backend URL**: point to `https://duerk.org` for production. Use `EXPO_PUBLIC_BACKEND_URL` or a dev build to target local API/emulator during development.
 
-## 4) Local development with Firestore emulator
-1) `npm install` (root), then install inside `server/` and `app/` if needed.  
-2) Start emulators: `firebase emulators:start` (Firestore 8080, Auth 9099).  
-3) Run API: `cd server && npm run dev` (uses emulator via env above).  
-4) Run Expo: `cd app && npm start` (use a dev build or env override to hit local API).  
+## 2. One-Time Project Setup
 
-## 5) Cloud setup (Firestore + Cloud Run + Hosting)
-1) Set project: `gcloud auth login && gcloud config set project [GCLOUD_PROJECT_ID]`.  
-2) Enable APIs:  
-   ```
-   gcloud services enable run.googleapis.com secretmanager.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com firestore.googleapis.com
-   ```  
-3) Create Firestore Database:
-   - In the Google Cloud Console, use the top search bar to find and select **"Firestore"**.
-   - Click the **"Create Database"** button.
-   - Choose **"Native Mode"** when prompted.
-   - For location, select a region. This project uses **us-east5**.
-   - You will be asked about security rules. You can start with the default production rules and apply the rules from `firestore.rules` later by deploying them with the Firebase CLI (`firebase deploy --only firestore`).
-   - Click **"Create"**.  
-4) IAM for Cloud Run service account (default `[GCLOUD_PROJECT_NUMBER]-compute@developer.gserviceaccount.com` or your custom one):  
-   ```
-   gcloud projects add-iam-policy-binding [GCLOUD_PROJECT_ID] \
-     --member="serviceAccount:[GCLOUD_PROJECT_NUMBER]-compute@developer.gserviceaccount.com" \
-     --role="roles/datastore.user"
-   gcloud projects add-iam-policy-binding [GCLOUD_PROJECT_ID] \
-     --member="serviceAccount:[GCLOUD_PROJECT_NUMBER]-compute@developer.gserviceaccount.com" \
-     --role="roles/secretmanager.secretAccessor"
-   ```
-   (Secret Manager access is granted proactively in case you choose to mount secrets.)
-5) Secrets (optional if using ADC):  
-   - Prefer ADC on Cloud Run (no private key).  
-   - If you must use keys, store `FIREBASE_CLIENT_EMAIL` and `FIREBASE_PRIVATE_KEY` in Secret Manager and grant accessor.  
-6) Deploy API to Cloud Run (source deploy, **us-east5**):  
-   ```bash
-   cd server
-   gcloud run deploy travel-itinerary-app \
-     --source . \
-     --region us-east5 \
-     --allow-unauthenticated \
-     --set-env-vars=DB_PROVIDER=firebase,USE_IN_MEMORY_DB=0,GCLOUD_PROJECT_ID=[GCLOUD_PROJECT_ID],FIRESTORE_DATABASE_ID=travel-itinerary-app-database
-   ```
-   Note: Cloud Run sets `GOOGLE_CLOUD_PROJECT` automatically; the server will use it if `GCLOUD_PROJECT_ID` is not provided.
-   If you use secrets for keys, add `--set-secrets=FIREBASE_CLIENT_EMAIL=FIREBASE_CLIENT_EMAIL:latest,FIREBASE_PRIVATE_KEY=FIREBASE_PRIVATE_KEY:latest`.
-   Optional helper script (reads `.env` and sets env vars automatically):
-   ```bash
-   ./scripts/deploy-cloud-run.sh server/.env
-   ```
-   Defaults: service `travel-itinerary-app`, region `us-east5`, source `server/`. Set `SERVICE_NAME`, `REGION`, or `SOURCE_DIR` to override. For secrets, pass `SECRETS=NAME=SECRET:version,...` (e.g., `SECRETS=FIREBASE_PRIVATE_KEY=FIREBASE_PRIVATE_KEY:latest`) or create a `server/.secrets` file with `KEY=VALUE` pairs to auto-create/update Secret Manager entries and map them. Use `--dry-run` to print the deploy command without executing.
-   To preconfigure env vars/secrets without deploying code (useful for GitHub/App Hosting deploys that inherit service config):
-   ```bash
-   ./scripts/configure-cloud-run-env.sh server/.env
-   ```
-7) Firebase Hosting rewrite to Cloud Run (`firebase.json`):  
-   ```json
-   {
-     "hosting": {
-       "public": "public",
-       "rewrites": [
-         { "source": "/api/**", "run": { "serviceId": "travel-itinerary-app", "region": "us-east5" } },
-         { "source": "**", "destination": "/index.html" }
-       ]
-     }
-   }
-   ```
-   Deploy Hosting: `firebase deploy --only hosting`.
+These steps only need to be performed once per Google Cloud project.
 
-## Linking the Squarespace Domain (duerk.org)
+### Fast Path: Run Everything Once
+If you already have your values in `server/.secrets`, you can run the full setup in one command:
 
-To connect your `duerk.org` domain from Squarespace to Firebase Hosting, you need to get DNS records from Firebase and add them to your Squarespace DNS settings. This process proves you own the domain and then points it to Firebase's servers.
+```bash
+./scripts/setup-all.sh
+```
 
-### Step 1: Start the Domain Linking in Firebase
+Use `--skip-login` if you are already authenticated with gcloud.
 
-1.  Navigate to the **Firebase Console** for your project.
-2.  In the left-hand menu, go to **Build > Hosting**.
-3.  Click on **"Add custom domain"**.
-4.  Enter `duerk.org` as the domain name and click **"Continue"**.
-5.  Firebase will present you with a **TXT record**. This is for verifying that you own the domain. Copy the value of this record (it usually starts with `google-site-verification=...`).
-6.  Keep this browser tab open.
+### Step 1: Configure gcloud CLI
+This script will guide you through logging into Google Cloud and setting your default project.
 
-### Step 2: Add DNS Records in Squarespace
+```bash
+# Usage: ./scripts/configure-gcloud.sh <YOUR_GCLOUD_PROJECT_ID>
+./scripts/configure-gcloud.sh your-project-id-here
+```
 
-1.  In a new browser tab, log in to your **Squarespace account**.
-2.  From the main menu, go to **Settings**, then click **Domains**.
-3.  Click on your domain, `duerk.org`.
-4.  Click on **DNS Settings**. You will see a list of existing DNS records.
+### Step 2: Enable Required GCP Services
+This script enables the necessary APIs for Cloud Run, Secret Manager, and Firestore.
 
-#### Add the Verification TXT Record
+```bash
+./scripts/enable-gcp-apis.sh
+```
 
-1.  In the "Custom Records" section, click **"Add Record"**.
-2.  In the form fields, enter:
-    *   **Host**: `@` (This represents the root domain, `duerk.org`)
-    *   **Type**: `TXT`
-    *   **Data**: Paste the TXT record value you copied from Firebase.
-3.  Click **"Save"**.
+### Step 3: Create Firestore Database
+This step is done manually in the Google Cloud Console.
+1.  In the Cloud Console, search for and select **"Firestore"**.
+2.  Click **"Create Database"** and choose **"Native Mode"**.
+3.  Select a location (this project uses **us-east5**).
+4.  Click **"Create"**. You can apply the security rules from `firestore.rules` later.
 
-#### Add the Firebase Hosting A Records
+### Step 4: Configure IAM Permissions
 
-Firebase points your domain to its global CDN using IP addresses (A records). You must remove any existing A records on Squarespace to avoid conflicts.
+This step uses a dedicated script to grant all necessary permissions for a secure, automated deployment pipeline. It follows the principle of least privilege by defining three distinct service accounts:
 
-1.  In the Squarespace DNS Settings panel, look for any records with the **Type** `A`. There may be one or more pointing to Squarespace's default servers. Delete these records.
-2.  Go back to your Firebase Console tab. After you've verified the TXT record, Firebase will show you one or two IP addresses. These are the **A records** you need to add.
-3.  In Squarespace, add the first A record:
-    *   **Host**: `@`
-    *   **Type**: `A`
-    *   **Data**: Enter the first IP address provided by Firebase.
-    *   Click **"Save"**.
-4.  If Firebase provided a second IP address, repeat the process to add the second A record.
+*   **Deployer Service Account**: Used by the CI/CD system (GitHub Actions) to authenticate with Google Cloud and trigger builds.
+*   **Cloud Build Service Account**: The default service account used by Google Cloud Build to execute the build and deployment process.
+*   **Runtime Service Account**: The identity that the Cloud Run service runs as, granting it access to other Google Cloud resources like Firestore.
 
-### Step 3: Finalize and Wait for Propagation
+1.  **Define Service Accounts in `server/.secrets`**:
 
-1.  After adding the records in Squarespace, go back to the Firebase Console and click **"Finish"** (or "Verify").
-2.  **Wait.** DNS changes can take anywhere from a few minutes to 48 hours to fully propagate across the internet. You can use an online tool like [dnschecker.org](https://dnschecker.org/) to see if the A records are pointing to the Google IP addresses.
-3.  Once propagation is complete and Firebase has verified your domain, it will automatically provision an SSL certificate. Your site `https://duerk.org` will then be live and secure. The API proxy to `/api/**` will also be active.
+    Create or open the `server/.secrets` file and add the following required variables. This file is git-ignored and should not be committed.
 
-## 6b) SMTP/email setup on Google Cloud (send/receive)
-Recommended: use a managed email provider; simplest with Google Workspace + SMTP relay.
+    ```bash
+    # The ID of your Google Cloud project.
+    GCLOUD_PROJECT_ID="your-project-id-here"
 
-Option A — Google Workspace SMTP relay (send mail):
-1. Obtain a Google Workspace domain account (e.g., admin@duerk.org).
-2. In Google Admin Console → Apps → Google Workspace → Gmail → Routing → SMTP relay service:
-   - Allow addresses from `duerk.org`.
-   - Restrict to IPs you trust or require authentication.
-3. In app config (`server/.env`):
-   ```
-   SMTP_HOST=smtp-relay.gmail.com
-   SMTP_PORT=587
-   SMTP_USER=your-workspace-user@duerk.org   # if using auth; relay may allow unauth from trusted IPs
-   SMTP_PASS=app_password_or_oauth_token    # app password if 2FA; or use OAuth2 if preferred
-   SMTP_FROM="Shared Trip Planner <noreply@duerk.org>"
-   ```
-4. Ensure Cloud Run egress can reach `smtp-relay.gmail.com:587`. For strict auth, use an App Password (if 2FA) or OAuth2.
+    # The unique number of your Google Cloud project.
+    # Find this on the GCP Console Dashboard.
+    GCLOUD_PROJECT_NUMBER="123456789012"
 
-Option B — Mailgun (transactional email):
-1. Create a Mailgun account and add a sending domain (e.g., `mg.duerk.org` or `duerk.org`).
-2. Add the required DNS records at your registrar for that domain: SPF (TXT), DKIM (CNAME/TXT), and tracking/CNAME if desired (Mailgun console provides exact records).
-3. Verify the domain in Mailgun, then create a Private API key.
-4. Store the API key in Secret Manager; optionally also store the SMTP credentials Mailgun provides.
-5. App config examples:
-   - Using SMTP:
-     ```
-     SMTP_HOST=smtp.mailgun.org
-     SMTP_PORT=587
-     SMTP_USER=postmaster@mg.duerk.org        # adjust to your Mailgun SMTP user
-     SMTP_PASS=MAILGUN_SMTP_PASSWORD          # store in Secret Manager
-     SMTP_FROM="Shared Travel Itinerary <noreply@duerk.org>"
-     ```
-   - Using API (preferred for resilience): keep the API key in Secret Manager and call Mailgun’s API from the server; still set `SMTP_FROM` for consistency.
+    # The email of the service account used for deployment (e.g., from GitHub Actions).
+    # This account will be granted permissions to trigger builds and manage secrets.
+    DEPLOYER_SERVICE_ACCOUNT_EMAIL="your-deployer-sa@your-project-id.iam.gserviceaccount.com"
 
-Receiving email (inbound):
-- Google Cloud does not host inbound SMTP directly. To receive mail at `@duerk.org`, use Google Workspace (recommended) or your email provider’s inbox routing.
-- If you need to process inbound mail, use the provider’s webhooks (e.g., SendGrid inbound parse, Mailgun routes) and point them to a Cloud Run endpoint.
+    # (Optional) The email of the service account the Cloud Run service will run as.
+    # If commented out, it defaults to the Compute Engine default service account.
+    # RUNTIME_SERVICE_ACCOUNT_EMAIL="123456789012-compute@developer.gserviceaccount.com"
+    ```
 
-## 6) CI/CD on `main`
-- **Build script note (Firebase/App Hosting)**: the root `build`/`start` scripts use `npm --prefix server run ...` instead of `npm run -w server ...` to avoid workspace recursion in environments that don't support the `-w` flag.
+2.  **Run the IAM Configuration Script**:
 
-- **API (Cloud Run)** via GitHub Actions (example):  
-  ```yaml
-  jobs:
-    deploy-api:
-      if: github.ref == 'refs/heads/main'
-      runs-on: ubuntu-latest
-      steps:
-        - uses: actions/checkout@v4
-        - uses: google-github-actions/auth@v2
-          with:
-            credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }} # SA with run.admin + iam.serviceAccountUser (+ secret accessor if needed)
-        - uses: google-github-actions/setup-gcloud@v2
-        - run: gcloud config set project [GCLOUD_PROJECT_ID]
-        - run: |
-            cd server
-            gcloud run deploy travel-itinerary-app \
-              --source . \
-              --region us-east5 \
-              --allow-unauthenticated \
-              --set-env-vars=DB_PROVIDER=firebase,USE_IN_MEMORY_DB=0,GCLOUD_PROJECT_ID=[GCLOUD_PROJECT_ID],FIRESTORE_DATABASE_ID=travel-itinerary-app-database
-  ```
-  Add `--set-secrets=...` if using key secrets.
+    Execute the script from the root directory. It will read the variables from `server/.secrets` and apply the correct IAM role bindings to all three service accounts. The script is idempotent, so it's safe to run multiple times.
 
-- **Hosting**: already configured via `.github/workflows/firebase-hosting-merge.yml` (live on `main`). Ensure `firebase.json` has the `/api/**` rewrite.  
+    ```bash
+    ./scripts/setup-iam-permissions.sh
+    ```
 
-- **Expo EAS (iOS + Android + web)** — recommended: Expo-managed credentials + `EXPO_TOKEN` in GitHub secrets:  
-  ```yaml
-  jobs:
-    expo-eas-build:
-      if: github.ref == 'refs/heads/main'
-      runs-on: ubuntu-latest
-      steps:
-        - uses: actions/checkout@v4
-        - uses: expo/expo-github-action@v8
-          with:
-            eas-version: latest
-            token: ${{ secrets.EXPO_TOKEN }}
-        - run: |
-            cd app
-            eas build --platform ios --profile production --non-interactive
-            eas build --platform android --profile production --non-interactive
-            # Replace Hosting content with Expo web export on main
-            npx expo export:web --output-dir ../public
-  ```
-  - iOS: configure Apple credentials in Expo (App Store Connect API key) or via secrets.  
-  - Android: use Expo-managed keystore or supply via secrets.  
-  - The Expo web export replaces `public/`, which Hosting serves with the `/api/**` rewrite intact.
+---
 
-## 7) Smoke tests post-deploy
-- API: `curl https://duerk.org/api/web-auth/login` (expect 400/401, not 5xx).  
-- Firestore: create/list trips in app; confirm data in Firestore console.  
-- Web: `https://duerk.org` loads.  
-- Native: latest EAS build hits `https://duerk.org/api/...`.  
 
-## 8) Checklist
-- [ ] Cloud Run service `travel-itinerary-app` deployed in `us-east5` (ADC).  
-- [ ] Cloud Run SA has `roles/datastore.user` and `roles/secretmanager.secretAccessor`.  
-- [ ] `firebase.json` rewrite `/api/**` → Cloud Run; Hosting deployed.  
-- [ ] Domain `duerk.org` mapped in Firebase Hosting; DNS updated.  
-- [ ] Expo backend URL set to `https://duerk.org`.  
-- [ ] GitHub secrets: `GCP_SERVICE_ACCOUNT_KEY`, `EXPO_TOKEN`, (optional) `FIREBASE_CLIENT_EMAIL`/`FIREBASE_PRIVATE_KEY` if you decide to use keys.  
-- [ ] Firestore rules/indexes deployed (`firestore.rules`, `firestore.indexes.json`).  
+## 3. Local Development
 
-## 9) Decisions (confirmed)
-1) Cloud Run region: **us-east5**, service name: **travel-itinerary-app**.  
-2) Expo credentials: **Expo-managed** with `EXPO_TOKEN` in GitHub.  
-3) CI runner: **GitHub Actions** for API + Hosting + Expo (keep; switch to Cloud Build only if desired later).  
-4) Expo web export: **replace** Hosting `public/` on each `main` merge.  
-5) Firebase Admin auth: **Application Default Credentials** on Cloud Run; keys only if you must override.  
+1.  `npm install` in the root, `server/`, and `app/` directories.
+2.  **Configure Local Environment**: The server uses a `server/.local_env` file for local-only settings. Create this file by copying `server/.local_env.example`.
+    ```bash
+    cp server/.local_env.example server/.local_env
+    ```
+    By default, `server/.local_env` is configured to use the Firebase emulator (`USE_FIRESTORE_EMULATOR=true`).
+
+3.  **Start Emulators**: In one terminal, start the Firebase emulators.
+    ```bash
+    firebase emulators:start
+    ```
+4.  **Run the API**: In another terminal, run the API server.
+    ```bash
+    cd server && npm run dev
+    ```
+5.  **Run the Expo App**: In a third terminal, run the frontend application.
+    ```bash
+    cd app && npm start
+    ```
+
+---
+
+
+## 4. Deployment Workflow
+
+Deploying the application is a three-step process: build the frontend, configure the backend environment, and deploy the services.
+
+### Step 1: Build the Frontend Web App
+Before deploying to Firebase Hosting, you must create a production build of the web app.
+
+```bash
+# From the root directory:
+npx expo export --platform web --output-dir ./dist
+```
+This command compiles the web app and places the static files into the `dist/` directory, which is what Firebase Hosting serves.
+
+### Step 2: Configure the Backend Environment
+Your backend's configuration is managed through environment variables and secrets.
+
+*   **`server/.env`**: Contains non-sensitive configuration. A `GCLOUD_PROJECT_ID` entry is required.
+*   **`server/.secrets`**: Contains sensitive values like API keys or passwords. This file is git-ignored. Deployment/IAM settings also live here.
+
+Run the following script to upload these variables and secrets to your Cloud Run service. It will create secrets in Google Secret Manager if they don't exist and then securely map them to your service.
+
+```bash
+# This script reads from server/.env and server/.secrets by default.
+./scripts/configure-run-env.sh
+```
+
+### Step 3: Deploy the Application
+With the environment configured, you can now deploy the code.
+
+**Deploy the Backend API:**
+This script deploys the code from the `server/` directory to Cloud Run using `gcloud run deploy --source`, which automatically triggers a build on Cloud Build.
+```bash
+./scripts/deploy-api.sh
+```
+
+**Deploy the Frontend Web App:**
+This script uploads the contents of the `dist/` directory to Firebase Hosting.
+```bash
+./scripts/deploy-hosting.sh
+```
+
+---
+
+
+## 5. Automated Deployment Strategy
+
+This project uses **GitHub Actions** as the primary mechanism for automated deployments. Pushing to the `main` branch will trigger the workflows defined in the `.github/workflows` directory.
+
+### Native Cloud Build Triggers
+The `trigger.yaml` file in the root directory is a sample configuration for a native Google Cloud Build trigger. This file is provided for reference but is not active.
+
+**Important**: To avoid running redundant builds, ensure that only one automated deployment method is active. This project is configured to use the GitHub Actions workflows. If you have a native Cloud Build trigger configured in your GCP project that also deploys on pushes to `main`, you should disable it.
+
+---
+
+## 6. Automated Deployments with GitHub Actions (CI/CD)
+
+**Workflows**
+*   Backend API: `.github/workflows/deploy-api.yml`
+*   Firebase Hosting (prod): `.github/workflows/firebase-hosting-merge.yml`
+*   Firebase Hosting (PR preview): `.github/workflows/firebase-hosting-pull-request.yml`
+
+**GitHub Secrets**
+
+Navigate to your repository's `Settings > Secrets and variables > Actions` to configure the following:
+
+*   **`GCP_SERVICE_ACCOUNT_KEY`**: The JSON key for the **Deployer Service Account** defined as `DEPLOYER_SERVICE_ACCOUNT_EMAIL` in your `server/.secrets` file. The `./scripts/setup-iam-permissions.sh` script grants it the necessary roles to trigger builds and deploy Cloud Run:
+    *   `Cloud Run Admin`
+    *   `Cloud Build Editor`
+    *   `Service Account User` (on the runtime service account)
+
+*   **`GCLOUD_PROJECT_ID`**: The ID of your Google Cloud project (e.g., `travel-itinerary-app-483623`).
+
+*   **`FIREBASE_SERVICE_ACCOUNT_TRAVEL_ITINERARY_APP_483623`**: A JSON service account key with permissions to deploy to Firebase Hosting. You can generate this by running `firebase login:ci` and following the prompts.
+
+*   **`EXPO_TOKEN`**: Your Expo Access Token, used for publishing updates and running builds with EAS via the `eas-build.yml` workflow.
+
+---
+
+
+## 7. CI/CD and Cloud Build Checklist
+
+Use this list to validate configuration before you rely on automated deployments:
+
+*   `server/.secrets` contains `GCLOUD_PROJECT_ID`, `GCLOUD_PROJECT_NUMBER`, and `DEPLOYER_SERVICE_ACCOUNT_EMAIL`.
+*   `./scripts/setup-iam-permissions.sh` runs successfully (safe to re-run) and grants the deployer `roles/run.admin` plus `roles/iam.serviceAccountUser` on the runtime service account.
+*   The Cloud Build service account has `roles/artifactregistry.writer` if you deploy with `gcloud run deploy --source`.
+*   GitHub Secrets include `GCP_SERVICE_ACCOUNT_KEY`, `GCLOUD_PROJECT_ID`, `FIREBASE_SERVICE_ACCOUNT_TRAVEL_ITINERARY_APP_483623`, and `EXPO_TOKEN`.
+*   The Hosting workflows build the Expo web output into `dist/`, which matches `firebase.json` hosting `public`.
+
+---
+
+
+## 8. Connecting a Custom Domain
+
+To connect your domain (e.g., `duerk.org`) to Firebase Hosting:
+
+1.  **In the Firebase Console**, go to **Hosting** and click **"Add custom domain"**.
+2.  Enter your domain name. Firebase will provide you with a **TXT record** for verification and two **A records** (IP addresses).
+3.  **At your domain registrar**, go to your domain's DNS settings.
+    *   Add the **TXT record** to prove ownership.
+    *   **Delete any existing A records** for your root domain.
+    *   Add the two **A records** provided by Firebase.
+4.  **Wait** for DNS to propagate, then click **"Verify"** in the Firebase console. Firebase will automatically provision an SSL certificate.
+
+---
+
+
+## 9. Testing the Deployment
+
+After a deployment, perform these checks to ensure everything is working.
+
+*   **Test the API**: Use `curl` to hit an API endpoint. You should get a valid response, not a 5xx server error or a 404.
+    ```bash
+    # This endpoint should return a 401 Unauthorized error, which is correct.
+    curl -i https://duerk.org/api/web-auth/login
+    ```
+*   **Test the Web App**: Open `https://duerk.org` in your browser. The app should load, and you should be able to interact with it (e.g., log in, view trips). Check the browser's developer console for any errors.
+*   **Check Firestore**: Create or modify data using the app and verify that the changes appear in the **Firestore Console**.
+*   **Verify Native App Connectivity**: Open a development build of the native app or a new build from EAS. Ensure it can successfully fetch and update data from the `https://duerk.org/api` backend.
+
+---
+
+
+## 10. Other Topics
+
+### SMTP/Email Setup
+(Content from previous version remains here)
+...

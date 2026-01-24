@@ -24,5 +24,16 @@
         "JAVA_HOME": "C:\\Program Files\\Amazon Corretto\\jdk25.0.1_8"
     },
     "java.configuration.updateBuildConfiguration": "automatic",
+    "terminal.integrated.defaultProfile.windows": "WSL Bash",
+    "terminal.integrated.profiles.windows": {
+        "WSL Bash": {
+            "path": "C:\\Windows\\System32\\wsl.exe",
+            "args": [
+                "-e",
+                "bash",
+                "-l"
+            ]
+        }
+    },
     "geminicodeassist.project": "travel-itinerary-app-483623"
 }

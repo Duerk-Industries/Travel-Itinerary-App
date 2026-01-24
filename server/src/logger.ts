@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 
 let errorLogStream: fs.WriteStream | null = null;
+let infoLogStream: fs.WriteStream | null = null;
 try {
   const logDir = path.resolve(__dirname, '..', 'logs');
   if (!fs.existsSync(logDir)) {
@@ -9,10 +10,13 @@ try {
   }
   const errorLogPath = path.join(logDir, 'api-error.log');
   errorLogStream = fs.createWriteStream(errorLogPath, { flags: 'a' });
+  const infoLogPath = path.join(logDir, 'api-info.log');
+  infoLogStream = fs.createWriteStream(infoLogPath, { flags: 'a' });
 } catch (err) {
   // Fall back to stderr only when the filesystem is read-only (Cloud Run).
   console.error('[logger] Failed to initialize file logging:', err);
   errorLogStream = null;
+  infoLogStream = null;
 }
 
 const formatError = (err: unknown): string => {
@@ -26,6 +30,15 @@ const formatError = (err: unknown): string => {
   } catch {
     return 'Unknown error';
   }
+};
+
+export const logInfo = (message: string): void => {
+  const timestamp = new Date().toISOString();
+  const line = `[info] ${timestamp} ${message}`;
+  if (infoLogStream) {
+    infoLogStream.write(`${line}\n`);
+  }
+  console.log(line);
 };
 
 export const logError = (message: string, err?: unknown): void => {

@@ -14,20 +14,30 @@ import traitRoutes from './routes/traitRoutes';
 import lodgingRoutes from './routes/lodgingRoutes';
 import tourRoutes from './routes/tourRoutes';
 import accountRoutes, { groupsRouter } from './routes/accountRoutes';
+import { hasRunLocalFlag } from './env';
 
-// Load env vars from server/.env, server/.local_env, and server/.secrets (plus repo root fallbacks).
+// Load env vars from server/.env and server/.secrets (plus repo root fallbacks).
+// .local_env files load only when RUN_LOCAL=1 is set inside that file.
 // Later files override earlier ones to make local overrides and secrets take precedence.
 const envPaths = [
   path.resolve(__dirname, '../.env'),
   path.resolve(__dirname, '../../.env'),
-  path.resolve(__dirname, '../.local_env'),
-  path.resolve(__dirname, '../../.local_env'),
   path.resolve(__dirname, '../.secrets'),
   path.resolve(__dirname, '../../.secrets'),
+];
+const localEnvPaths = [
+  path.resolve(__dirname, '../.local_env'),
+  path.resolve(__dirname, '../../.local_env'),
 ];
 const loadedEnvPaths: string[] = [];
 for (const envPath of envPaths) {
   if (fs.existsSync(envPath)) {
+    dotenv.config({ path: envPath, override: true });
+    loadedEnvPaths.push(envPath);
+  }
+}
+for (const envPath of localEnvPaths) {
+  if (hasRunLocalFlag(envPath)) {
     dotenv.config({ path: envPath, override: true });
     loadedEnvPaths.push(envPath);
   }
@@ -43,7 +53,11 @@ if (loadedEnvPaths.length === 0) {
 export { envLoadedFrom };
 
 export const app = express();
-app.use(cors());
+app.use(cors({
+  origin: 'https://duerk.org',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

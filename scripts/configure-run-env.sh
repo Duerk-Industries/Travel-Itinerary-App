@@ -3,26 +3,20 @@ set -euo pipefail
 
 ENV_FILE=""
 SECRETS_FILE="${SECRETS_FILE:-}"
-DRY_RUN="${DRY_RUN:-0}"
 SERVICE_NAME="${SERVICE_NAME:-travel-itinerary-app}"
 REGION="${REGION:-us-east5}"
-SOURCE_DIR="${SOURCE_DIR:-server}"
-ALLOW_UNAUTH="${ALLOW_UNAUTH:-1}"
-IGNORE_KEYS="${IGNORE_KEYS:-PORT,FIRESTORE_EMULATOR_HOST}"
+IGNORE_KEYS="${IGNORE_KEYS:-PORT,FIRESTORE_EMULATOR_HOST,GCLOUD_PROJECT_ID,GCLOUD_PROJECT_NUMBER,DEPLOYER_SERVICE_ACCOUNT_EMAIL,RUNTIME_SERVICE_ACCOUNT_EMAIL,CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL,FIRESTORE_DATABASE_ID}"
+IGNORE_SECRET_KEYS="${IGNORE_SECRET_KEYS:-GCLOUD_PROJECT,GOOGLE_CLOUD_PROJECT,GCLOUD_PROJECT_ID,GCLOUD_PROJECT_NUMBER,DEPLOYER_SERVICE_ACCOUNT_EMAIL,RUNTIME_SERVICE_ACCOUNT_EMAIL,CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL}"
 SECRETS="${SECRETS:-}"
 
 usage() {
-  echo "Usage: $0 [--dry-run] [path/to/.env]" >&2
-  echo "Local-only overrides: use server/.local_env (ignored by git and not deployable)." >&2
+  echo "Usage: $0 [path/to/.env]" >&2
+  echo "Configures Cloud Run env vars and Secret Manager mappings without deploying code." >&2
   exit 1
 }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --dry-run)
-      DRY_RUN=1
-      shift
-      ;;
     -h|--help)
       usage
       ;;
@@ -54,7 +48,7 @@ if [[ ! -f "$ENV_FILE" ]]; then
 fi
 
 if [[ "$(basename "$ENV_FILE")" == ".local_env" ]]; then
-  echo "Refusing to deploy using .local_env (local-only values should not be uploaded)." >&2
+  echo "Refusing to configure using .local_env (local-only values should not be uploaded)." >&2
   exit 1
 fi
 
@@ -68,8 +62,8 @@ fi
 
 trim() {
   local input="$1"
-  input="${input#"${input%%[![:space:]]*}"}"
-  input="${input%"${input##*[![:space:]]}"}"
+  input="${input#${input%%[![:space:]]*}}"
+  input="${input%${input##*[![:space:]]}}"
   printf '%s' "$input"
 }
 
@@ -93,7 +87,7 @@ strip_inline_comment() {
       escaped=0
       continue
     fi
-    if [[ "$ch" == "\\" ]]; then
+    if [[ "$ch" == \\ ]]; then
       out+="$ch"
       escaped=1
       continue
@@ -103,14 +97,14 @@ strip_inline_comment() {
       out+="$ch"
       continue
     fi
-    if [[ "$ch" == "\"" && $in_single -eq 0 ]]; then
+    if [[ "$ch" == '"' && $in_single -eq 0 ]]; then
       ((in_double = 1 - in_double))
       out+="$ch"
       continue
     fi
-    if [[ "$ch" == "#" && $in_single -eq 0 && $in_double -eq 0 ]]; then
+    if [[ "$ch" == \# && $in_single -eq 0 && $in_double -eq 0 ]]; then
       prev="${line:$((i-1)):1}"
-      if [[ $i -eq 0 || "$prev" == " " || "$prev" == $'\t' ]]; then
+      if [[ $i -eq 0 || "$prev" == " " || "$prev" == $'	' ]]; then
         break
       fi
     fi
@@ -125,11 +119,18 @@ should_ignore_key() {
   [[ "$list" == *",$key,"* ]]
 }
 
+should_ignore_secret_key() {
+  local key="$1"
+  local list=",${IGNORE_SECRET_KEYS},"
+  [[ "$list" == *",$key,"* ]]
+}
+
 env_pairs=()
 project_id=""
 
 while IFS= read -r line || [[ -n "$line" ]]; do
-  line="${line%%$'\r'}"
+  line="${line%%$'
+'}"
   if is_comment_or_empty "$line"; then
     continue
   fi
@@ -139,9 +140,9 @@ while IFS= read -r line || [[ -n "$line" ]]; do
   line="$(strip_inline_comment "$line")"
   line="$(trim "$line")"
   [[ "$line" != *"="* ]] && continue
-  key="$(trim "${line%%=*}")"
+  key="$(trim "${line%%=*} ")"
   value="$(trim "${line#*=}")"
-  if [[ "$value" =~ ^\".*\"$ || "$value" =~ ^\'.*\'$ ]]; then
+  if [[ "$value" =~ ^".*"$ || "$value" =~ ^'.*'$ ]]; then
     value="${value:1:${#value}-2}"
   fi
   if should_ignore_key "$key"; then
@@ -166,7 +167,7 @@ if [[ -n "$SECRETS" ]]; then
   IFS=',' read -r -a secret_entries <<< "$SECRETS"
   for entry in "${secret_entries[@]}"; do
     [[ -z "$entry" || "$entry" != *"="* ]] && continue
-    key="${entry%%=*}"
+    key="${entry%%=*} "
     value="${entry#*=}"
     if [[ -n "$key" && -n "$value" ]]; then
       secret_map["$key"]="$value"
@@ -176,7 +177,8 @@ fi
 
 if [[ -n "${SECRETS_FILE}" && -f "${SECRETS_FILE}" ]]; then
   while IFS= read -r line || [[ -n "$line" ]]; do
-    line="${line%%$'\r'}"
+    line="${line%%$'
+'}"
     if is_comment_or_empty "$line"; then
       continue
     fi
@@ -186,18 +188,19 @@ if [[ -n "${SECRETS_FILE}" && -f "${SECRETS_FILE}" ]]; then
     line="$(strip_inline_comment "$line")"
     line="$(trim "$line")"
     [[ "$line" != *"="* ]] && continue
-    key="$(trim "${line%%=*}")"
+    key="$(trim "${line%%=*} ")"
     value="$(trim "${line#*=}")"
-    if [[ "$value" =~ ^\".*\"$ || "$value" =~ ^\'.*\'$ ]]; then
+    if [[ "$value" =~ ^".*"$ || "$value" =~ ^'.*'$ ]]; then
       value="${value:1:${#value}-2}"
     fi
     [[ -z "$key" ]] && continue
-    if [[ "$DRY_RUN" != "1" ]]; then
-      if ! gcloud secrets describe "$key" ${project_id:+--project "$project_id"} >/dev/null 2>&1; then
-        gcloud secrets create "$key" --replication-policy=automatic ${project_id:+--project "$project_id"}
-      fi
-      printf '%s' "$value" | gcloud secrets versions add "$key" --data-file=- ${project_id:+--project "$project_id"}
+    if should_ignore_secret_key "$key"; then
+      continue
     fi
+    if ! gcloud secrets describe "$key" ${project_id:+"--project" "$project_id"} >/dev/null 2>&1; then
+      gcloud secrets create "$key" --replication-policy=automatic ${project_id:+"--project" "$project_id"}
+    fi
+    printf '%s' "$value" | gcloud secrets versions add "$key" --data-file=-
     if [[ -z "${secret_map[$key]:-}" ]]; then
       secret_map["$key"]="$key:latest"
     fi
@@ -213,34 +216,28 @@ if [[ "${#secret_map[@]}" -gt 0 ]]; then
   secrets_arg="$(IFS=,; echo "${secret_pairs[*]}")"
 fi
 
-cmd=(gcloud run deploy "$SERVICE_NAME" --source "$SOURCE_DIR" --region "$REGION" --set-env-vars "$env_arg")
-if [[ "$ALLOW_UNAUTH" == "1" ]]; then
-  cmd+=(--allow-unauthenticated)
-fi
+cmd=(gcloud run services update "$SERVICE_NAME" --region "$REGION" --update-env-vars "$env_arg")
 if [[ -n "$project_id" ]]; then
   cmd+=(--project "$project_id")
 fi
 if [[ -n "$secrets_arg" ]]; then
   cmd+=(--set-secrets "$secrets_arg")
+else
+  # If there are no secrets to update, we might need to clear existing ones
+  # To avoid accidental removal, this script will not clear secrets.
+  # Use `gcloud run services update ... --clear-secrets` manually if needed.
+  :
 fi
 
-echo "Deploying Cloud Run service..."
+echo "Configuring Cloud Run service environment..."
 echo "  Service: $SERVICE_NAME"
 echo "  Region: $REGION"
-echo "  Source: $SOURCE_DIR"
 echo "  Env file: $ENV_FILE"
-echo "  Ignored keys: $IGNORE_KEYS"
 if [[ -n "$SECRETS_FILE" ]]; then
   echo "  Secrets file: $SECRETS_FILE"
 fi
 if [[ -n "$secrets_arg" ]]; then
   echo "  Secrets mapped: ${#secret_map[@]}"
-fi
-if [[ "$DRY_RUN" == "1" ]]; then
-  echo "Dry run command:"
-  printf '%q ' "${cmd[@]}"
-  echo
-  exit 0
 fi
 
 "${cmd[@]}"
