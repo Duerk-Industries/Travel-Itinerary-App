@@ -14,7 +14,7 @@ import traitRoutes from './routes/traitRoutes';
 import lodgingRoutes from './routes/lodgingRoutes';
 import tourRoutes from './routes/tourRoutes';
 import accountRoutes, { groupsRouter } from './routes/accountRoutes';
-import { hasRunLocalFlag } from './env';
+import { getEnvValue, hasRunLocalFlag, isLocalEnv } from './env';
 
 // Load env vars from server/.env and server/.secrets (plus repo root fallbacks).
 // .local_env files load only when RUN_LOCAL=1 is set inside that file.
@@ -30,15 +30,16 @@ const localEnvPaths = [
   path.resolve(__dirname, '../../.local_env'),
 ];
 const loadedEnvPaths: string[] = [];
+const shouldOverride = !process.env.JEST_WORKER_ID;
 for (const envPath of envPaths) {
   if (fs.existsSync(envPath)) {
-    dotenv.config({ path: envPath, override: true });
+    dotenv.config({ path: envPath, override: shouldOverride });
     loadedEnvPaths.push(envPath);
   }
 }
 for (const envPath of localEnvPaths) {
   if (hasRunLocalFlag(envPath)) {
-    dotenv.config({ path: envPath, override: true });
+    dotenv.config({ path: envPath, override: shouldOverride });
     loadedEnvPaths.push(envPath);
   }
 }
@@ -53,8 +54,31 @@ if (loadedEnvPaths.length === 0) {
 export { envLoadedFrom };
 
 export const app = express();
+
+const isRunningLocally = isLocalEnv();
+const webUrl = getEnvValue('WEB_URL', { defaultValue: 'https://duerk.org' });
+const allowedOrigins = isRunningLocally
+  ? [/^http:\/\/localhost(:\d+)?$/, /^http:\/\/127\.0\.0\.1(:\d+)?$/]
+  : [webUrl];
+
 app.use(cors({
-  origin: 'https://duerk.org',
+  origin: (origin, callback) => {
+    if (!origin) {
+      // Allow requests with no origin, like mobile apps or curl requests.
+      return callback(null, true);
+    }
+    for (const allowedOrigin of allowedOrigins) {
+      if (typeof allowedOrigin === 'string') {
+        if (allowedOrigin === origin) {
+          return callback(null, true);
+        }
+      } else if (allowedOrigin && allowedOrigin.test(origin)) {
+        return callback(null, true);
+      }
+    }
+    const msg = `The CORS policy for this site does not allow access from the specified Origin: ${origin}`;
+    return callback(new Error(msg));
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));

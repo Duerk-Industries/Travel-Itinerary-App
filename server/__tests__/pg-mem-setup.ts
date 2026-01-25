@@ -19,6 +19,15 @@ db.public.registerFunction({ name: 'to_char', args: [DataType.timestamp, DataTyp
 // Allow longer async flows in integration tests.
 jest.setTimeout(30000);
 
+// Silence expected console output so Jest only reports pass/fail lines.
+const silenceConsole = () => {
+  jest.spyOn(console, 'log').mockImplementation(() => {});
+  jest.spyOn(console, 'info').mockImplementation(() => {});
+  jest.spyOn(console, 'warn').mockImplementation(() => {});
+  jest.spyOn(console, 'error').mockImplementation(() => {});
+};
+silenceConsole();
+
 // Provide a dummy connection string so code that validates DATABASE_URL passes.
 if (!process.env.DATABASE_URL) {
   process.env.DATABASE_URL = 'pg-mem://localhost/test';

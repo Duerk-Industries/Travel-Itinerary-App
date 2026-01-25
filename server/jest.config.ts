@@ -9,10 +9,8 @@ const config: Config = {
   moduleFileExtensions: ['ts', 'tsx', 'js', 'json'],
   maxWorkers: 1,
   setupFiles: ['<rootDir>/__tests__/pg-mem-setup.ts'],
-  globals: {
-    'ts-jest': {
-      tsconfig: './tsconfig.jest.json',
-    },
+  transform: {
+    '^.+\\.(ts|tsx)$': ['ts-jest', { tsconfig: './tsconfig.jest.json' }],
   },
 };
 
