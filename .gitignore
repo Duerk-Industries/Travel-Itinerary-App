@@ -28,3 +28,5 @@ build
 *.log*
 logs
 *example*
+.gradle
+server/.gradle
