@@ -62,7 +62,22 @@ router.post('/', async (req, res) => {
   try {
     groupTraits = await listTraitsForGroupTrip(userId, tripId);
   } catch (err: any) {
-    res.status(400).json({ error: err?.message || 'Unable to fetch group traits' });
+    const message = err?.message || '';
+    if (/not authorized/i.test(message)) {
+      res.status(403).json({
+        error: 'Not authorized to generate an itinerary for this trip. Ensure you are signed in and belong to the trip group.',
+        detail: message,
+      });
+      return;
+    }
+    if (/trip not found/i.test(message)) {
+      res.status(404).json({
+        error: 'Trip not found for itinerary generation. Select an active trip and try again.',
+        detail: message,
+      });
+      return;
+    }
+    res.status(400).json({ error: message || 'Unable to fetch group traits' });
     return;
   }
 

@@ -63,7 +63,6 @@ const getDb = (): Firestore => {
   }
   const databaseId = getEnvValue('FIRESTORE_DATABASE_ID');
   if (databaseId) {
-    logInfo(`Using databaseId: ${databaseId}`);
   }
   return databaseId ? adminGetFirestore(app!, databaseId) : adminGetFirestore(app!);
 };
@@ -802,9 +801,9 @@ export const searchUsersByEmail = async (query: string): Promise<User[]> => {
   return snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
 };
 
-export const listTraitsForGroupTrip = async (tripId: string, userId: string) => {
+export const listTraitsForGroupTrip = async (userId: string, tripId: string) => {
   const membership = await ensureUserInTrip(tripId, userId);
-  if (!membership) throw new Error('Not authorized');
+  if (!membership) throw new Error('Not authorized for this trip');
   return listTraits(userId);
 };
 
