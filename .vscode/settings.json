@@ -19,9 +19,9 @@
     "diffEditor.codeLens": true,
     "geminicodeassist.codeGenerationPaneViewEnabled": true,
     "geminicodeassist.updateChannel": "Insiders",
-    "java.jdt.ls.java.home": "C:\\Program Files\\Amazon Corretto\\jdk25.0.1_8",
+    "java.jdt.ls.java.home": "C:\\Program Files\\Amazon Corretto\\jdk21.0.10_7",
     "terminal.integrated.env.windows": {
-        "JAVA_HOME": "C:\\Program Files\\Amazon Corretto\\jdk25.0.1_8"
+        "JAVA_HOME": "C:\\Program Files\\Amazon Corretto\\jdk21.0.10_7"
     },
     "java.configuration.updateBuildConfiguration": "automatic",
     "terminal.integrated.defaultProfile.windows": "WSL Bash",

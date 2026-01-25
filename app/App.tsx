@@ -122,35 +122,17 @@ const resolveBackendUrl = (): string => {
   const envConfigured =
     (typeof process !== 'undefined' && (process.env.EXPO_PUBLIC_BACKEND_URL ?? process.env.REACT_NATIVE_APP_BACKEND_URL)) || '';
   const appConfigured = Constants.expoConfig?.extra?.backendUrl;
-  const raw = [envConfigured, appConfigured, 'http://localhost:4000'].find(
+  if (process.env.NODE_ENV === 'development') {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const { hostname, protocol } = window.location;
+      return `${protocol}//${hostname}:4000`;
+    }
+    return 'http://localhost:4000';
+  }
+  const raw = [envConfigured, appConfigured, 'https://duerk.org'].find(
     (val) => typeof val === 'string' && val.trim().length > 0
   ) as string;
-  const normalizedRaw = raw.startsWith('http://') || raw.startsWith('https://') ? raw.trim() : `http://${raw.trim()}`;
-
-  if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    const { origin, hostname, port, protocol } = window.location;
-    const isExpoDevServer = port === '19006' || port === '19000';
-    const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
-    const scheme = protocol === 'https:' ? 'https' : 'http';
-
-    if (envConfigured || appConfigured) {
-      return normalizedRaw;
-    }
-
-    // On Expo web dev server, target the same host on port 4000 so LAN devices can reach the API.
-    if (isExpoDevServer) {
-      return `${scheme}://${hostname}:4000`;
-    }
-
-    // When hosted behind a proxy/server (non-Expo dev), use same-origin to avoid mixed-content/CORS.
-    if (origin.startsWith('http')) {
-      return origin;
-    }
-    if (isLocalHost) {
-      return `${scheme}://${hostname}:4000`;
-    }
-  }
-
+  const normalizedRaw = raw.startsWith('http://') || raw.startsWith('https://') ? raw.trim() : `https://${raw.trim()}`;
   return normalizedRaw;
 };
 

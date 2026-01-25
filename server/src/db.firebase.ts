@@ -38,7 +38,7 @@ const getDb = (): Firestore => {
     const privateKey = rawPrivateKey ? rawPrivateKey.replace(/\\n/g, '\n') : undefined;
     const useEmulator = isLocalEnv() && getEnvValue('USE_FIRESTORE_EMULATOR') === 'true';
     if (useEmulator) {
-      const emulatorHost = getEnvValue('FIRESTORE_EMULATOR_HOST', { defaultValue: '127.0.0.1:8080' });
+      const emulatorHost = getEnvValue('FIRESTORE_EMULATOR_HOST', { defaultValue: 'localhost:8080' });
       logInfo(`Using Firestore emulator at ${emulatorHost}`);
       process.env.FIRESTORE_EMULATOR_HOST = emulatorHost;
       app = initializeApp({ projectId });
