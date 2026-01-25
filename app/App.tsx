@@ -122,18 +122,28 @@ const resolveBackendUrl = (): string => {
   const envConfigured =
     (typeof process !== 'undefined' && (process.env.EXPO_PUBLIC_BACKEND_URL ?? process.env.REACT_NATIVE_APP_BACKEND_URL)) || '';
   const appConfigured = Constants.expoConfig?.extra?.backendUrl;
+  const configuredBackend = [envConfigured, appConfigured].find(
+    (val) => typeof val === 'string' && val.trim().length > 0
+  ) as string | undefined;
+  const normalizeBackendUrl = (raw: string, defaultProtocol: 'http' | 'https'): string => {
+    const trimmed = raw.trim();
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+    return `${defaultProtocol}://${trimmed}`;
+  };
   if (process.env.NODE_ENV === 'development') {
+    if (configuredBackend) {
+      return normalizeBackendUrl(configuredBackend, 'http');
+    }
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       const { hostname, protocol } = window.location;
       return `${protocol}//${hostname}:4000`;
     }
     return 'http://localhost:4000';
   }
-  const raw = [envConfigured, appConfigured, 'https://duerk.org'].find(
-    (val) => typeof val === 'string' && val.trim().length > 0
-  ) as string;
-  const normalizedRaw = raw.startsWith('http://') || raw.startsWith('https://') ? raw.trim() : `https://${raw.trim()}`;
-  return normalizedRaw;
+  const raw = configuredBackend ?? 'https://duerk.org';
+  return normalizeBackendUrl(raw, 'https');
 };
 
 const resolveRefreshIntervalMs = (): number => {
