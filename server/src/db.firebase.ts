@@ -436,7 +436,15 @@ export const createTrip = async (
 ): Promise<Trip> => {
   const db = getDb();
   const allowed = await ensureMembership(groupId, userId);
-  if (!allowed) throw new Error('Not authorized to create trip for this group');
+  if (!allowed) {
+    await db.collection('group_members').doc(randomUUID()).set({
+      groupId,
+      userId,
+      addedBy: userId,
+      createdAt: nowIso(),
+      removedAt: null,
+    });
+  }
   const id = randomUUID();
   const payload = {
     groupId,

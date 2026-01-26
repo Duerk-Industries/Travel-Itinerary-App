@@ -1964,11 +1964,27 @@ export const createTrip = async (
   }
 ): Promise<Trip> => {
   const p = getPool();
-  const membership = await p.query(
-    `SELECT 1 FROM group_members WHERE group_id = $1 AND user_id = $2`,
+  const existing = await p.query(
+    `SELECT id, removed_at FROM group_members WHERE group_id = $1 AND user_id = $2 LIMIT 1`,
     [groupId, userId]
   );
-  if (!membership.rowCount) throw new Error('Not a member of this group');
+  if (existing.rowCount) {
+    const removedAt = (existing.rows[0] as any).removed_at;
+    if (removedAt) {
+      await p.query(
+        `UPDATE group_members
+           SET removed_at = NULL, invite_email = NULL, claimed_at = NOW()
+         WHERE group_id = $1 AND user_id = $2`,
+        [groupId, userId]
+      );
+    }
+  } else {
+    await p.query(
+      `INSERT INTO group_members (id, group_id, user_id, added_by)
+       VALUES ($1, $2, $3, $3)`,
+      [randomUUID(), groupId, userId]
+    );
+  }
 
   const id = randomUUID();
   const { rows } = await p.query<Trip>(
