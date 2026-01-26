@@ -1524,16 +1524,27 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             </Text>
             <View style={styles.row}>
               <TouchableOpacity
-                style={[styles.button, itineraryMode === 'ai' && styles.toggleActive]}
+                style={[
+                  styles.mapOptionButton ?? styles.button,
+                  itineraryMode === 'ai' && (styles.mapOptionActive ?? styles.toggleActive),
+                  { marginRight: 8 },
+                ]}
                 onPress={() => selectItineraryMode('ai')}
               >
-                <Text style={styles.buttonText}>Yes</Text>
+                <Text style={[styles.mapOptionText ?? styles.buttonText, itineraryMode === 'ai' && (styles.mapOptionActiveText ?? styles.buttonText)]}>
+                  Yes
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.button, itineraryMode === 'manual' && styles.toggleActive]}
+                style={[
+                  styles.mapOptionButton ?? styles.button,
+                  itineraryMode === 'manual' && (styles.mapOptionActive ?? styles.toggleActive),
+                ]}
                 onPress={() => selectItineraryMode('manual')}
               >
-                <Text style={styles.buttonText}>No</Text>
+                <Text style={[styles.mapOptionText ?? styles.buttonText, itineraryMode === 'manual' && (styles.mapOptionActiveText ?? styles.buttonText)]}>
+                  No
+                </Text>
               </TouchableOpacity>
             </View>
             {itineraryMode === 'ai' ? (
