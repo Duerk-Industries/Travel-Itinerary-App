@@ -447,16 +447,23 @@ const AccountTab: React.FC<AccountTabProps> = ({
         {mapAppOptions.map((opt) => (
           <TouchableOpacity
             key={opt.key}
-            style={[styles.button, styles.smallButton, mapApp === opt.key && styles.toggleActive, { marginRight: 8, marginTop: 4 }]}
+            style={[
+              styles.mapOptionButton,
+              mapApp === opt.key && styles.mapOptionActive,
+              { marginRight: 8, marginTop: 4 },
+            ]}
             onPress={() => {
               onChangeMapApp(opt.key);
               setAccountProfile((p) => ({ ...p, mapPreference: opt.key }));
             }}
           >
-            <Text style={styles.buttonText}>{opt.label}</Text>
+            <Text style={[styles.mapOptionText, mapApp === opt.key && styles.mapOptionActiveText]}>{opt.label}</Text>
           </TouchableOpacity>
         ))}
       </View>
+      <Text style={styles.helperText}>
+        Selected: {mapAppOptions.find((opt) => opt.key === mapApp)?.label ?? 'Google Maps'}
+      </Text>
       <TouchableOpacity style={styles.button} onPress={updateAccountProfile}>
         <Text style={styles.buttonText}>Save Profile</Text>
       </TouchableOpacity>

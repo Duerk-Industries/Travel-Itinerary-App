@@ -2680,6 +2680,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderRadius: 6,
   },
+  mapOptionButton: {
+    backgroundColor: '#fff',
+    borderColor: '#0d6efd',
+    borderWidth: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+  },
+  mapOptionActive: {
+    backgroundColor: '#0d6efd',
+    borderColor: '#0d6efd',
+  },
+  mapOptionText: {
+    color: '#0d6efd',
+    fontWeight: '600',
+  },
+  mapOptionActiveText: {
+    color: '#fff',
+  },
   dangerButton: {
     backgroundColor: '#dc2626',
   },
