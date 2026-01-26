@@ -11,7 +11,7 @@
  * then UI sections render conditionally based on the active page.
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Constants from 'expo-constants';
 import { formatDateLong } from './utils/formatDateLong';
 import { normalizeDateString } from './utils/normalizeDateString';
@@ -275,7 +275,6 @@ const App: React.FC = () => {
   const [familyRelationships, setFamilyRelationships] = useState<any[]>([]);
   const [fellowTravelers, setFellowTravelers] = useState<FellowTraveler[]>([]);
   const [showRelationshipDropdown, setShowRelationshipDropdown] = useState(false);
-  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const formatMemberName = (member: GroupMemberOption): string => {
     if (member.guestName) return member.guestName;
     const norm = (val?: string | null) => {
@@ -2439,16 +2438,7 @@ const App: React.FC = () => {
       )}
       {userToken && isTripWizardOpen ? (
         <View style={styles.wizardOverlay}>
-          <View
-            style={[
-              styles.wizardModal,
-              {
-                width: Math.min(windowWidth - 12, 1700),
-                height: Math.min(windowHeight - 24, windowHeight * 0.95),
-                transform: [{ translateY: 40 }],
-              },
-            ]}
-          >
+          <View style={styles.wizardModal}>
             <CreateTripWizard
               backendUrl={backendUrl}
               userToken={userToken}
@@ -3133,14 +3123,16 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: 'rgba(15,23,42,0.55)',
-    padding: 4,
+    padding: 16,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 30000,
   },
   wizardModal: {
-    maxWidth: 1700,
-    marginTop: 40,
+    width: '100%',
+    maxWidth: 1200,
+    maxHeight: '90%',
+    alignSelf: 'center',
   },
   modalOverlay: {
     position: 'absolute',
