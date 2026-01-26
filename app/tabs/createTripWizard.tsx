@@ -26,6 +26,7 @@ import {
   KnownInfoInput,
   buildTripDescription,
   computeTripDays,
+  canProceedFromItineraryStep,
   normalizeEmail,
   validateParticipants,
   validateTripDates,
@@ -561,6 +562,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     if (stepIndex === 0) return !validateTripDetails(details);
     if (stepIndex === 1) return !validateTripDates(dates);
     if (stepIndex === 2) return !validateParticipants(participants);
+    if (stepIndex === 3) return canProceedFromItineraryStep(itineraryMode);
     return true;
   };
 
@@ -569,6 +571,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     if (stepIndex === 0) error = validateTripDetails(details);
     if (stepIndex === 1) error = validateTripDates(dates);
     if (stepIndex === 2) error = validateParticipants(participants);
+    if (stepIndex === 3 && !canProceedFromItineraryStep(itineraryMode)) error = 'Choose Yes or No to continue.';
     if (error) {
       setWizardError(error);
       return;

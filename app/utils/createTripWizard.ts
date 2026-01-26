@@ -32,6 +32,8 @@ export type KnownInfoInput = {
   cars: string;
 };
 
+export type ItineraryMode = 'ai' | 'manual' | null;
+
 export const normalizeEmail = (value?: string | null): string => (value ?? '').trim().toLowerCase();
 
 export const validateTripDetails = (details: TripDetails): string | null => {
@@ -103,3 +105,5 @@ export const buildTripDescription = (details: TripDetails, knownInfo?: KnownInfo
   const block = [header, ...sections].join('\n');
   return base ? `${base}\n\n${block}` : block;
 };
+
+export const canProceedFromItineraryStep = (mode: ItineraryMode): boolean => Boolean(mode);
