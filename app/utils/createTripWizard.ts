@@ -34,6 +34,69 @@ export type KnownInfoInput = {
 
 export const normalizeEmail = (value?: string | null): string => (value ?? '').trim().toLowerCase();
 
+export const isoDateString = (date: Date): string => date.toISOString().slice(0, 10);
+
+export const addDaysToIso = (value: string, days: number): string | null => {
+  const base = new Date(value);
+  if (Number.isNaN(base.getTime())) return null;
+  const next = new Date(base.getTime() + days * 24 * 60 * 60 * 1000);
+  return isoDateString(next);
+};
+
+export const ensureRangeEndDate = (startDate: string, endDate?: string | null): string => {
+  if (!startDate) return endDate ?? '';
+  const start = new Date(startDate);
+  if (Number.isNaN(start.getTime())) return endDate ?? '';
+  if (!endDate) return addDaysToIso(startDate, 1) ?? '';
+  const end = new Date(endDate);
+  if (Number.isNaN(end.getTime()) || end < start) {
+    return addDaysToIso(startDate, 1) ?? endDate;
+  }
+  return endDate;
+};
+
+export const getDefaultTripRangeDates = (params: {
+  startDate?: string | null;
+  endDate?: string | null;
+  today?: Date;
+}): { startDate: string; endDate: string } => {
+  const todayIso = isoDateString(params.today ?? new Date());
+  const startDate = params.startDate || todayIso;
+  const endDate = ensureRangeEndDate(startDate, params.endDate ?? undefined);
+  return { startDate, endDate };
+};
+
+export const getDefaultParticipant = (
+  currentUserName?: string | null,
+  currentUserEmail?: string | null
+): ParticipantInput | null => {
+  const safeEmail = normalizeEmail(currentUserEmail);
+  const safeName = (currentUserName ?? '').trim();
+  if (!safeEmail && !safeName) return null;
+  const parts = safeName.split(/\s+/).filter(Boolean);
+  const firstName = parts[0] ?? (safeEmail ? safeEmail.split('@')[0] || 'Traveler' : 'Traveler');
+  const lastName = parts.slice(1).join(' ') || 'Traveler';
+  return { firstName, lastName, email: safeEmail || '' };
+};
+
+export const ensureParticipantIncluded = (
+  participants: ParticipantInput[],
+  currentUserName?: string | null,
+  currentUserEmail?: string | null
+): ParticipantInput[] => {
+  const entry = getDefaultParticipant(currentUserName, currentUserEmail);
+  if (!entry) return participants;
+  const existing = participants.some((p) => {
+    const normalizedEmail = normalizeEmail(p.email);
+    if (entry.email && normalizedEmail === entry.email) return true;
+    return (
+      p.firstName.trim().toLowerCase() === entry.firstName.toLowerCase() &&
+      p.lastName.trim().toLowerCase() === entry.lastName.toLowerCase()
+    );
+  });
+  return existing ? participants : [entry, ...participants];
+};
+
 export const validateTripDetails = (details: TripDetails): string | null => {
   if (!details.name.trim()) return 'Trip name is required.';
   return null;

@@ -24,6 +24,9 @@ import {
   ParticipantInput,
   ItineraryItemInput,
   KnownInfoInput,
+  ensureParticipantIncluded,
+  ensureRangeEndDate,
+  getDefaultTripRangeDates,
   buildTripDescription,
   computeTripDays,
   normalizeEmail,
@@ -247,15 +250,6 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     [wizardLodgingTotalsBalanced]
   );
 
-  const getCurrentUserParticipant = (): ParticipantInput | null => {
-    const safeEmail = normalizeEmail(currentUserEmail);
-    const safeName = (currentUserName ?? '').trim();
-    if (!safeEmail && !safeName) return null;
-    const parts = safeName.split(/\s+/).filter(Boolean);
-    const firstName = parts[0] ?? (safeEmail ? safeEmail.split('@')[0] || 'Traveler' : 'Traveler');
-    const lastName = parts.slice(1).join(' ') || 'Traveler';
-    return { firstName, lastName, email: safeEmail || '' };
-  };
   const wizardToursTotal = useMemo(
     () => wizardTours.reduce((sum, t) => sum + (Number(t.cost) || 0), 0),
     [wizardTours]
@@ -389,19 +383,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
 
   useEffect(() => {
     if (hasSeededCurrentUser) return;
-    const entry = getCurrentUserParticipant();
-    if (!entry) return;
-    setParticipants((prev) => {
-      const existing = prev.some((p) => {
-        const normalizedEmail = normalizeEmail(p.email);
-        if (entry.email && normalizedEmail === entry.email) return true;
-        return (
-          p.firstName.trim().toLowerCase() === entry.firstName.toLowerCase() &&
-          p.lastName.trim().toLowerCase() === entry.lastName.toLowerCase()
-        );
-      });
-      return existing ? prev : [entry, ...prev];
-    });
+    setParticipants((prev) => ensureParticipantIncluded(prev, currentUserName, currentUserEmail));
     setHasSeededCurrentUser(true);
   }, [currentUserEmail, currentUserName, hasSeededCurrentUser]);
 
@@ -459,24 +441,6 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     setWizardError('');
   };
 
-  const isoDateString = (date: Date): string => date.toISOString().slice(0, 10);
-  const addDaysToIso = (value: string, days: number): string | null => {
-    const base = new Date(value);
-    if (Number.isNaN(base.getTime())) return null;
-    const next = new Date(base.getTime() + days * 24 * 60 * 60 * 1000);
-    return isoDateString(next);
-  };
-  const ensureRangeEndDate = (startDate: string, endDate?: string): string => {
-    if (!startDate) return endDate ?? '';
-    const start = new Date(startDate);
-    if (Number.isNaN(start.getTime())) return endDate ?? '';
-    if (!endDate) return addDaysToIso(startDate, 1) ?? '';
-    const end = new Date(endDate);
-    if (Number.isNaN(end.getTime()) || end < start) {
-      return addDaysToIso(startDate, 1) ?? endDate;
-    }
-    return endDate;
-  };
   const setStartDateWithRangeGuard = (value: string) => {
     const normalized = normalizeDateString(value);
     setDates((prev) => {
@@ -489,10 +453,9 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   };
   const primeRangeDates = () => {
     if (dates.mode !== 'range') return;
-    const start = dates.startDate || isoDateString(new Date());
-    const end = ensureRangeEndDate(start, dates.endDate);
-    if (start !== dates.startDate || end !== dates.endDate) {
-      setDates((prev) => ({ ...prev, startDate: start, endDate: end }));
+    const defaults = getDefaultTripRangeDates({ startDate: dates.startDate, endDate: dates.endDate });
+    if (defaults.startDate !== dates.startDate || defaults.endDate !== dates.endDate) {
+      setDates((prev) => ({ ...prev, startDate: defaults.startDate, endDate: defaults.endDate }));
     }
   };
 
@@ -501,11 +464,14 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
       primeRangeDates();
     }
     if (Platform.OS !== 'web' && NativeDateTimePicker) {
+      const rangeDefaults = field === 'start' || field === 'end'
+        ? getDefaultTripRangeDates({ startDate: dates.startDate, endDate: dates.endDate })
+        : null;
       const base =
         field === 'start'
-          ? dates.startDate || isoDateString(new Date())
+          ? rangeDefaults?.startDate
           : field === 'end'
-            ? ensureRangeEndDate(dates.startDate || isoDateString(new Date()), dates.endDate)
+            ? rangeDefaults?.endDate
             : itineraryDraft.date;
       const date = base ? new Date(base) : new Date();
       setDateValue(date);
