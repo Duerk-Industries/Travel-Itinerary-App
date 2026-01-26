@@ -453,3 +453,84 @@ describe('Account onboarding trip flow', () => {
     expect(trips.body).toHaveLength(0);
   });
 });
+
+describe('Web Authentication', () => {
+  let pool: Pool;
+  const testUser = {
+    firstName: 'WebAuth',
+    lastName: 'Tester',
+    email: 'webauth@example.com',
+    password: 'password123',
+  };
+
+  beforeAll(async () => {
+    process.env.NODE_ENV = 'test';
+    await initDb();
+    pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    await pool.query('DELETE FROM users WHERE email = $1', [testUser.email]);
+  });
+
+  afterAll(async () => {
+    if (pool) {
+      await pool.query('DELETE FROM users WHERE email = $1', [testUser.email]);
+      await pool.end();
+    }
+    await closePool();
+  });
+
+  it('successfully registers a new user', async () => {
+    const res = await request(app)
+      .post('/api/web-auth/register')
+      .send({
+        ...testUser,
+        passwordConfirm: testUser.password,
+      })
+      .expect(201);
+
+    expect(res.body.token).toBeDefined();
+    expect(res.body.user.email).toBe(testUser.email);
+  });
+
+  it('rejects registration for an existing user', async () => {
+    await request(app)
+      .post('/api/web-auth/register')
+      .send({
+        ...testUser,
+        passwordConfirm: testUser.password,
+      })
+      .expect(409);
+  });
+
+  it('successfully logs in an existing user', async () => {
+    const res = await request(app)
+      .post('/api/web-auth/login')
+      .send({
+        email: testUser.email,
+        password: testUser.password,
+      })
+      .expect(200);
+
+    expect(res.body.token).toBeDefined();
+    expect(res.body.user.email).toBe(testUser.email);
+  });
+
+  it('rejects login with an incorrect password', async () => {
+    await request(app)
+      .post('/api/web-auth/login')
+      .send({
+        email: testUser.email,
+        password: 'wrongpassword',
+      })
+      .expect(401);
+  });
+
+  it('rejects login for a non-existent user', async () => {
+    await request(app)
+      .post('/api/web-auth/login')
+      .send({
+        email: 'nobody@example.com',
+        password: 'password123',
+      })
+      .expect(401);
+  });
+});

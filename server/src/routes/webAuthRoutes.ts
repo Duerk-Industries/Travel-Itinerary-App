@@ -12,6 +12,11 @@ const isInvalid = (value?: unknown, min = 2): boolean => {
   return typeof value !== 'string' || value.trim().length < min;
 };
 
+router.get('/register', (req, res) => {
+  // This route is sometimes hit by browsers on startup; it's not a real action.
+  res.status(200).send('GET /register is not an action.');
+});
+
 router.post('/register', async (req, res) => {
   const { firstName, lastName, email, password, passwordConfirm } = req.body ?? {};
   const confirmValue = typeof passwordConfirm === 'string' ? passwordConfirm : password;
