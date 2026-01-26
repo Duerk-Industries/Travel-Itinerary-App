@@ -11,7 +11,7 @@
  * then UI sections render conditionally based on the active page.
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import Constants from 'expo-constants';
 import { formatDateLong } from './utils/formatDateLong';
 import { normalizeDateString } from './utils/normalizeDateString';
@@ -39,6 +39,7 @@ import {
 } from './tabs/lodging';
 import { InvitePayload } from './utils/inviteCodes';
 import { type MapApp, buildMapUrl, loadStoredMapPreference, persistMapPreference } from './utils/mapLinks';
+import { shouldAllowPageChange, shouldDisableTab } from './utils/wizardGuard';
 
 type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
 let NativeDateTimePicker: NativeDateTimePickerType | null = null;
@@ -274,6 +275,7 @@ const App: React.FC = () => {
   const [familyRelationships, setFamilyRelationships] = useState<any[]>([]);
   const [fellowTravelers, setFellowTravelers] = useState<FellowTraveler[]>([]);
   const [showRelationshipDropdown, setShowRelationshipDropdown] = useState(false);
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const formatMemberName = (member: GroupMemberOption): string => {
     if (member.guestName) return member.guestName;
     const norm = (val?: string | null) => {
@@ -317,6 +319,12 @@ const App: React.FC = () => {
     },
     [setAccountProfile]
   );
+
+  const isTripWizardOpen = activePage === 'create-trip';
+  const requestPageChange = (page: Page) => {
+    if (!shouldAllowPageChange(activePage, page)) return;
+    setActivePage(page);
+  };
 
   const openMaps = (address: string) => {
     const url = buildMapUrl(address, mapApp);
@@ -1240,7 +1248,14 @@ const App: React.FC = () => {
             {trips.length ? (
               <TouchableOpacity
                 activeOpacity={0.8}
-                style={[styles.input, styles.inlineInput, styles.dropdown, styles.activeTrip]}
+                disabled={isTripWizardOpen}
+                style={[
+                  styles.input,
+                  styles.inlineInput,
+                  styles.dropdown,
+                  styles.activeTrip,
+                  isTripWizardOpen && styles.buttonDisabled,
+                ]}
                 onPress={() => setShowActiveTripDropdown((s) => !s)}
               >
                 <Text style={styles.cellText}>
@@ -1278,37 +1293,80 @@ const App: React.FC = () => {
             <View style={styles.card}>
               <Text style={styles.sectionTitle}>Choose a section</Text>
             <View style={styles.navRow}>
-              <TouchableOpacity style={[styles.button, activePage === 'overview' && styles.toggleActive]} onPress={() => setActivePage('overview')}>
+              <TouchableOpacity
+                disabled={shouldDisableTab(activePage, 'overview')}
+                style={[styles.button, activePage === 'overview' && styles.toggleActive, shouldDisableTab(activePage, 'overview') && styles.buttonDisabled]}
+                onPress={() => requestPageChange('overview')}
+              >
                 <Text style={styles.buttonText}>Overview</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.button, activePage === 'flights' && styles.toggleActive]} onPress={() => setActivePage('flights')}>
+              <TouchableOpacity
+                disabled={shouldDisableTab(activePage, 'flights')}
+                style={[styles.button, activePage === 'flights' && styles.toggleActive, shouldDisableTab(activePage, 'flights') && styles.buttonDisabled]}
+                onPress={() => requestPageChange('flights')}
+              >
                 <Text style={styles.buttonText}>Flights</Text>
               </TouchableOpacity>
-                <TouchableOpacity style={[styles.button, activePage === 'lodging' && styles.toggleActive]} onPress={() => setActivePage('lodging')}>
+                <TouchableOpacity
+                  disabled={shouldDisableTab(activePage, 'lodging')}
+                  style={[styles.button, activePage === 'lodging' && styles.toggleActive, shouldDisableTab(activePage, 'lodging') && styles.buttonDisabled]}
+                  onPress={() => requestPageChange('lodging')}
+                >
                   <Text style={styles.buttonText}>Lodging</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.button, activePage === 'car' && styles.toggleActive]} onPress={() => setActivePage('car')}>
+                <TouchableOpacity
+                  disabled={shouldDisableTab(activePage, 'car')}
+                  style={[styles.button, activePage === 'car' && styles.toggleActive, shouldDisableTab(activePage, 'car') && styles.buttonDisabled]}
+                  onPress={() => requestPageChange('car')}
+                >
                   <Text style={styles.buttonText}>Car Rentals</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.button, activePage === 'tours' && styles.toggleActive]} onPress={() => setActivePage('tours')}>
+                <TouchableOpacity
+                  disabled={shouldDisableTab(activePage, 'tours')}
+                  style={[styles.button, activePage === 'tours' && styles.toggleActive, shouldDisableTab(activePage, 'tours') && styles.buttonDisabled]}
+                  onPress={() => requestPageChange('tours')}
+                >
                   <Text style={styles.buttonText}>Tours</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.button, activePage === 'cost' && styles.toggleActive]} onPress={() => setActivePage('cost')}>
+                <TouchableOpacity
+                  disabled={shouldDisableTab(activePage, 'cost')}
+                  style={[styles.button, activePage === 'cost' && styles.toggleActive, shouldDisableTab(activePage, 'cost') && styles.buttonDisabled]}
+                  onPress={() => requestPageChange('cost')}
+                >
                   <Text style={styles.buttonText}>Cost Report</Text>
                 </TouchableOpacity>
-              <TouchableOpacity style={[styles.button, activePage === 'trips' && styles.toggleActive]} onPress={() => setActivePage('trips')}>
+              <TouchableOpacity
+                disabled={shouldDisableTab(activePage, 'trips')}
+                style={[styles.button, activePage === 'trips' && styles.toggleActive, shouldDisableTab(activePage, 'trips') && styles.buttonDisabled]}
+                onPress={() => requestPageChange('trips')}
+              >
                 <Text style={styles.buttonText}>Trips</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.button, activePage === 'create-trip' && styles.toggleActive]} onPress={() => setActivePage('create-trip')}>
+              <TouchableOpacity
+                style={[styles.button, activePage === 'create-trip' && styles.toggleActive]}
+                onPress={() => requestPageChange('create-trip')}
+              >
                 <Text style={styles.buttonText}>Create Trip</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.button, activePage === 'account' && styles.toggleActive]} onPress={() => setActivePage('account')}>
+              <TouchableOpacity
+                disabled={shouldDisableTab(activePage, 'account')}
+                style={[styles.button, activePage === 'account' && styles.toggleActive, shouldDisableTab(activePage, 'account') && styles.buttonDisabled]}
+                onPress={() => requestPageChange('account')}
+              >
                 <Text style={styles.buttonText}>Account</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.button, activePage === 'follow' && styles.toggleActive]} onPress={() => setActivePage('follow')}>
+              <TouchableOpacity
+                disabled={shouldDisableTab(activePage, 'follow')}
+                style={[styles.button, activePage === 'follow' && styles.toggleActive, shouldDisableTab(activePage, 'follow') && styles.buttonDisabled]}
+                onPress={() => requestPageChange('follow')}
+              >
                 <Text style={styles.buttonText}>Follow Trip</Text>
               </TouchableOpacity>
-                <TouchableOpacity style={[styles.button, activePage === 'itinerary' && styles.toggleActive]} onPress={() => setActivePage('itinerary')}>
+                <TouchableOpacity
+                  disabled={shouldDisableTab(activePage, 'itinerary')}
+                  style={[styles.button, activePage === 'itinerary' && styles.toggleActive, shouldDisableTab(activePage, 'itinerary') && styles.buttonDisabled]}
+                  onPress={() => requestPageChange('itinerary')}
+                >
                   <Text style={styles.buttonText}>Create Itinerary</Text>
                 </TouchableOpacity>
               </View>
@@ -2137,7 +2195,7 @@ const App: React.FC = () => {
                 <Text style={styles.sectionTitle}>Trips</Text>
                 <TouchableOpacity
                   style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
-                  onPress={() => setActivePage('create-trip')}
+                  onPress={() => requestPageChange('create-trip')}
                 >
                   <Text style={styles.buttonText}>Open Wizard</Text>
                 </TouchableOpacity>
@@ -2244,31 +2302,6 @@ const App: React.FC = () => {
                 ))}
               </View>
             </View>
-          ) : null}
-
-          {activePage === 'create-trip' ? (
-            <CreateTripWizard
-              backendUrl={backendUrl}
-              userToken={userToken}
-              headers={headers}
-              traits={traits}
-              airportOptions={flightAirportOptions}
-              onSearchAirports={fetchFlightAirports}
-              styles={styles}
-              onCancel={() => setActivePage('trips')}
-              onTripCreated={(tripId) => {
-                setActiveTripId(tripId);
-                setSelectedTripId(tripId);
-                fetchTrips();
-                fetchGroups();
-                fetchInvites();
-                setActivePage('trip-details');
-              }}
-              onWizardCarRentals={(rentals) => setCarRentals(rentals)}
-              onUnauthorized={logout}
-              currentUserName={userName}
-              currentUserEmail={userEmail}
-            />
           ) : null}
 
           {activePage === 'overview' ? (
@@ -2404,6 +2437,43 @@ const App: React.FC = () => {
             </TouchableOpacity>
         </View>
       )}
+      {userToken && isTripWizardOpen ? (
+        <View style={styles.wizardOverlay}>
+          <View
+            style={[
+              styles.wizardModal,
+              {
+                width: Math.min(windowWidth - 12, 1700),
+                height: Math.min(windowHeight - 24, windowHeight * 0.95),
+                transform: [{ translateY: 40 }],
+              },
+            ]}
+          >
+            <CreateTripWizard
+              backendUrl={backendUrl}
+              userToken={userToken}
+              headers={headers}
+              traits={traits}
+              airportOptions={flightAirportOptions}
+              onSearchAirports={fetchFlightAirports}
+              styles={styles}
+              onCancel={() => setActivePage('trips')}
+              onTripCreated={(tripId) => {
+                setActiveTripId(tripId);
+                setSelectedTripId(tripId);
+                fetchTrips();
+                fetchGroups();
+                fetchInvites();
+                setActivePage('trip-details');
+              }}
+              onWizardCarRentals={(rentals) => setCarRentals(rentals)}
+              onUnauthorized={logout}
+              currentUserName={userName}
+              currentUserEmail={userEmail}
+            />
+          </View>
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 };
@@ -3052,6 +3122,25 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#2b2b2b',
+  },
+  buttonDisabled: {
+    opacity: 0.45,
+  },
+  wizardOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(15,23,42,0.55)',
+    padding: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 30000,
+  },
+  wizardModal: {
+    maxWidth: 1700,
+    marginTop: 40,
   },
   modalOverlay: {
     position: 'absolute',
