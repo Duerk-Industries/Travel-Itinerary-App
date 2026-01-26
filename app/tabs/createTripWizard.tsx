@@ -109,6 +109,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   const [participantDraft, setParticipantDraft] = useState<ParticipantInput>({ firstName: '', lastName: '', email: '' });
   const [participantSearch, setParticipantSearch] = useState('');
   const [participantSuggestions, setParticipantSuggestions] = useState<Suggestion[]>([]);
+  const [hasSeededCurrentUser, setHasSeededCurrentUser] = useState(false);
   const [wizardFlights, setWizardFlights] = useState<Flight[]>([]);
   const [wizardLodgings, setWizardLodgings] = useState<Lodging[]>([]);
   const [wizardTours, setWizardTours] = useState<Tour[]>([]);
@@ -189,18 +190,6 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   );
   const wizardGroupMembers = useMemo<GroupMemberOption[]>(() => {
     const members: GroupMemberOption[] = [];
-    const safeEmail = (currentUserEmail ?? '').trim().toLowerCase();
-    const safeName = (currentUserName ?? '').trim();
-    if (safeEmail || safeName) {
-      const parts = safeName.split(/\s+/).filter(Boolean);
-      members.push({
-        id: 'wizard-self',
-        email: safeEmail || undefined,
-        firstName: parts[0] ?? (safeEmail ? safeEmail.split('@')[0] : 'Traveler'),
-        lastName: parts.slice(1).join(' ') || undefined,
-        status: 'active',
-      });
-    }
     participants.forEach((p, idx) => {
       const firstName = p.firstName.trim();
       const lastName = p.lastName.trim();
@@ -216,7 +205,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
       });
     });
     return members;
-  }, [currentUserEmail, currentUserName, participants]);
+  }, [participants]);
   const wizardDefaultPayerId = wizardGroupMembers[0]?.id ?? null;
   const formatWizardMemberName = (member: GroupMemberOption): string => {
     if (member.guestName) return member.guestName;
@@ -257,6 +246,16 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     () => Object.values(wizardLodgingTotalsBalanced).reduce((sum, v) => sum + v, 0),
     [wizardLodgingTotalsBalanced]
   );
+
+  const getCurrentUserParticipant = (): ParticipantInput | null => {
+    const safeEmail = normalizeEmail(currentUserEmail);
+    const safeName = (currentUserName ?? '').trim();
+    if (!safeEmail && !safeName) return null;
+    const parts = safeName.split(/\s+/).filter(Boolean);
+    const firstName = parts[0] ?? (safeEmail ? safeEmail.split('@')[0] || 'Traveler' : 'Traveler');
+    const lastName = parts.slice(1).join(' ') || 'Traveler';
+    return { firstName, lastName, email: safeEmail || '' };
+  };
   const wizardToursTotal = useMemo(
     () => wizardTours.reduce((sum, t) => sum + (Number(t.cost) || 0), 0),
     [wizardTours]
@@ -387,6 +386,24 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     }, 300);
     return () => clearTimeout(handle);
   }, [backendUrl, headers, participantSearch, userToken]);
+
+  useEffect(() => {
+    if (hasSeededCurrentUser) return;
+    const entry = getCurrentUserParticipant();
+    if (!entry) return;
+    setParticipants((prev) => {
+      const existing = prev.some((p) => {
+        const normalizedEmail = normalizeEmail(p.email);
+        if (entry.email && normalizedEmail === entry.email) return true;
+        return (
+          p.firstName.trim().toLowerCase() === entry.firstName.toLowerCase() &&
+          p.lastName.trim().toLowerCase() === entry.lastName.toLowerCase()
+        );
+      });
+      return existing ? prev : [entry, ...prev];
+    });
+    setHasSeededCurrentUser(true);
+  }, [currentUserEmail, currentUserName, hasSeededCurrentUser]);
 
   const budgetRange = useMemo(() => {
     if (budgetLevel === 'cheap') return { min: 500, max: 1500 };
@@ -981,6 +998,10 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
       setWizardError(detailError || dateError || participantError || '');
       return;
     }
+    const currentUserEmailNormalized = normalizeEmail(currentUserEmail);
+    const participantPayload = currentUserEmailNormalized
+      ? participants.filter((p) => normalizeEmail(p.email) !== currentUserEmailNormalized)
+      : participants;
     setIsSubmitting(true);
     setWizardError('');
     const description = buildTripDescription(details, hasKnownInfo ? knownInfo : undefined);
@@ -997,7 +1018,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           startMonth: dates.mode === 'month' ? Number(dates.startMonth) || undefined : undefined,
           startYear: dates.mode === 'month' ? Number(dates.startYear) || undefined : undefined,
           durationDays: dates.mode === 'month' ? Number(dates.durationDays) || undefined : undefined,
-          participants,
+          participants: participantPayload,
         }),
       });
     if (res.status === 401 || res.status === 403) {
@@ -1384,9 +1405,9 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
       case 2:
         return (
           <>
-            <Text style={styles.sectionTitle}>Additional Participants</Text>
+            <Text style={styles.sectionTitle}>Participants</Text>
             <Text style={styles.helperText}>
-              Optional step. You're already included—add fellow travelers with first/last names and optional emails.
+              Optional step. We'll add you by default—add fellow travelers or remove yourself if needed.
             </Text>
             <TextInput
               style={styles.input}
@@ -1457,7 +1478,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                 ))}
               </View>
             ) : (
-              <Text style={styles.helperText}>No additional participants yet.</Text>
+              <Text style={styles.helperText}>No participants added yet.</Text>
             )}
           </>
         );
@@ -2206,7 +2227,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                 </Text>
               ))
             ) : (
-              <Text style={styles.helperText}>No additional participants added.</Text>
+              <Text style={styles.helperText}>No participants added.</Text>
             )}
             <Text style={styles.headerText}>Itinerary</Text>
             {itineraryEnabled ? (
