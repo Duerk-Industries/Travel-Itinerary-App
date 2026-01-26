@@ -1294,79 +1294,79 @@ const App: React.FC = () => {
             <View style={styles.navRow}>
               <TouchableOpacity
                 disabled={shouldDisableTab(activePage, 'overview')}
-                style={[styles.button, activePage === 'overview' && styles.toggleActive, shouldDisableTab(activePage, 'overview') && styles.buttonDisabled]}
+                style={[styles.navButton, activePage === 'overview' && styles.navButtonActive, shouldDisableTab(activePage, 'overview') && styles.buttonDisabled]}
                 onPress={() => requestPageChange('overview')}
               >
-                <Text style={styles.buttonText}>Overview</Text>
+                <Text style={[styles.navButtonText, activePage === 'overview' && styles.navButtonActiveText]}>Overview</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 disabled={shouldDisableTab(activePage, 'flights')}
-                style={[styles.button, activePage === 'flights' && styles.toggleActive, shouldDisableTab(activePage, 'flights') && styles.buttonDisabled]}
+                style={[styles.navButton, activePage === 'flights' && styles.navButtonActive, shouldDisableTab(activePage, 'flights') && styles.buttonDisabled]}
                 onPress={() => requestPageChange('flights')}
               >
-                <Text style={styles.buttonText}>Flights</Text>
+                <Text style={[styles.navButtonText, activePage === 'flights' && styles.navButtonActiveText]}>Flights</Text>
               </TouchableOpacity>
                 <TouchableOpacity
                   disabled={shouldDisableTab(activePage, 'lodging')}
-                  style={[styles.button, activePage === 'lodging' && styles.toggleActive, shouldDisableTab(activePage, 'lodging') && styles.buttonDisabled]}
+                  style={[styles.navButton, activePage === 'lodging' && styles.navButtonActive, shouldDisableTab(activePage, 'lodging') && styles.buttonDisabled]}
                   onPress={() => requestPageChange('lodging')}
                 >
-                  <Text style={styles.buttonText}>Lodging</Text>
+                  <Text style={[styles.navButtonText, activePage === 'lodging' && styles.navButtonActiveText]}>Lodging</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   disabled={shouldDisableTab(activePage, 'car')}
-                  style={[styles.button, activePage === 'car' && styles.toggleActive, shouldDisableTab(activePage, 'car') && styles.buttonDisabled]}
+                  style={[styles.navButton, activePage === 'car' && styles.navButtonActive, shouldDisableTab(activePage, 'car') && styles.buttonDisabled]}
                   onPress={() => requestPageChange('car')}
                 >
-                  <Text style={styles.buttonText}>Car Rentals</Text>
+                  <Text style={[styles.navButtonText, activePage === 'car' && styles.navButtonActiveText]}>Car Rentals</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   disabled={shouldDisableTab(activePage, 'tours')}
-                  style={[styles.button, activePage === 'tours' && styles.toggleActive, shouldDisableTab(activePage, 'tours') && styles.buttonDisabled]}
+                  style={[styles.navButton, activePage === 'tours' && styles.navButtonActive, shouldDisableTab(activePage, 'tours') && styles.buttonDisabled]}
                   onPress={() => requestPageChange('tours')}
                 >
-                  <Text style={styles.buttonText}>Tours</Text>
+                  <Text style={[styles.navButtonText, activePage === 'tours' && styles.navButtonActiveText]}>Tours</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   disabled={shouldDisableTab(activePage, 'cost')}
-                  style={[styles.button, activePage === 'cost' && styles.toggleActive, shouldDisableTab(activePage, 'cost') && styles.buttonDisabled]}
+                  style={[styles.navButton, activePage === 'cost' && styles.navButtonActive, shouldDisableTab(activePage, 'cost') && styles.buttonDisabled]}
                   onPress={() => requestPageChange('cost')}
                 >
-                  <Text style={styles.buttonText}>Cost Report</Text>
+                  <Text style={[styles.navButtonText, activePage === 'cost' && styles.navButtonActiveText]}>Cost Report</Text>
                 </TouchableOpacity>
               <TouchableOpacity
                 disabled={shouldDisableTab(activePage, 'trips')}
-                style={[styles.button, activePage === 'trips' && styles.toggleActive, shouldDisableTab(activePage, 'trips') && styles.buttonDisabled]}
+                style={[styles.navButton, activePage === 'trips' && styles.navButtonActive, shouldDisableTab(activePage, 'trips') && styles.buttonDisabled]}
                 onPress={() => requestPageChange('trips')}
               >
-                <Text style={styles.buttonText}>Trips</Text>
+                <Text style={[styles.navButtonText, activePage === 'trips' && styles.navButtonActiveText]}>Trips</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.button, activePage === 'create-trip' && styles.toggleActive]}
+                style={[styles.navButton, activePage === 'create-trip' && styles.navButtonActive]}
                 onPress={() => requestPageChange('create-trip')}
               >
-                <Text style={styles.buttonText}>Create Trip</Text>
+                <Text style={[styles.navButtonText, activePage === 'create-trip' && styles.navButtonActiveText]}>Create Trip</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 disabled={shouldDisableTab(activePage, 'account')}
-                style={[styles.button, activePage === 'account' && styles.toggleActive, shouldDisableTab(activePage, 'account') && styles.buttonDisabled]}
+                style={[styles.navButton, activePage === 'account' && styles.navButtonActive, shouldDisableTab(activePage, 'account') && styles.buttonDisabled]}
                 onPress={() => requestPageChange('account')}
               >
-                <Text style={styles.buttonText}>Account</Text>
+                <Text style={[styles.navButtonText, activePage === 'account' && styles.navButtonActiveText]}>Account</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 disabled={shouldDisableTab(activePage, 'follow')}
-                style={[styles.button, activePage === 'follow' && styles.toggleActive, shouldDisableTab(activePage, 'follow') && styles.buttonDisabled]}
+                style={[styles.navButton, activePage === 'follow' && styles.navButtonActive, shouldDisableTab(activePage, 'follow') && styles.buttonDisabled]}
                 onPress={() => requestPageChange('follow')}
               >
-                <Text style={styles.buttonText}>Follow Trip</Text>
+                <Text style={[styles.navButtonText, activePage === 'follow' && styles.navButtonActiveText]}>Follow Trip</Text>
               </TouchableOpacity>
                 <TouchableOpacity
                   disabled={shouldDisableTab(activePage, 'itinerary')}
-                  style={[styles.button, activePage === 'itinerary' && styles.toggleActive, shouldDisableTab(activePage, 'itinerary') && styles.buttonDisabled]}
+                  style={[styles.navButton, activePage === 'itinerary' && styles.navButtonActive, shouldDisableTab(activePage, 'itinerary') && styles.buttonDisabled]}
                   onPress={() => requestPageChange('itinerary')}
                 >
-                  <Text style={styles.buttonText}>Create Itinerary</Text>
+                  <Text style={[styles.navButtonText, activePage === 'itinerary' && styles.navButtonActiveText]}>Create Itinerary</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -2614,6 +2614,23 @@ const styles = StyleSheet.create({
   toggleActive: {
     backgroundColor: '#0d6efd',
     borderColor: '#0d6efd',
+  },
+  navButton: {
+    backgroundColor: '#e5e7eb',
+    padding: 10,
+    borderRadius: 6,
+    alignItems: 'center',
+    marginVertical: 6,
+  },
+  navButtonActive: {
+    backgroundColor: '#0d6efd',
+  },
+  navButtonText: {
+    color: '#0f172a',
+    fontWeight: '600',
+  },
+  navButtonActiveText: {
+    color: '#fff',
   },
   toggleText: {
     color: '#0f172a',
