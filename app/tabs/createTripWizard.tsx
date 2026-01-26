@@ -1654,58 +1654,6 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                   ))}
                 </View>
                 <Text style={styles.helperText}>Selected budget: {budgetLevel}</Text>
-                <Text style={styles.headerText}>Optional manual additions</Text>
-                <View style={styles.dateInputWrap}>
-                  {Platform.OS === 'web' ? (
-                    <input
-                      ref={itineraryDateRef as any}
-                      type="date"
-                      value={itineraryDraft.date}
-                      onChange={(e) =>
-                        setItineraryDraft((prev) => ({ ...prev, date: normalizeDateString(e.target.value) }))
-                      }
-                      style={styles.input as any}
-                    />
-                  ) : (
-                    <TouchableOpacity style={[styles.input, styles.dateTouchable]} onPress={() => openDatePicker('itinerary')}>
-                      <Text style={styles.cellText}>{itineraryDraft.date || 'YYYY-MM-DD'}</Text>
-                    </TouchableOpacity>
-                  )}
-                  <TouchableOpacity style={styles.dateIcon} onPress={() => openDatePicker('itinerary')}>
-                    <Text style={styles.selectCaret}>v</Text>
-                  </TouchableOpacity>
-                </View>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Time (optional)"
-                  value={itineraryDraft.time}
-                  onChangeText={(text) => setItineraryDraft((prev) => ({ ...prev, time: text }))}
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Activity description"
-                  value={itineraryDraft.activity}
-                  onChangeText={(text) => setItineraryDraft((prev) => ({ ...prev, activity: text }))}
-                />
-                <TouchableOpacity style={styles.button} onPress={addItineraryItem}>
-                  <Text style={styles.buttonText}>Add Itinerary Item</Text>
-                </TouchableOpacity>
-                {itineraryItems.length ? (
-                  <View style={{ marginTop: 12 }}>
-                    {itineraryItems.map((item, idx) => (
-                      <View key={`${item.activity}-${idx}`} style={styles.memberPill}>
-                        <Text style={styles.cellText}>
-                          {item.date || 'Day'} {item.time ? `@ ${item.time}` : ''} - {item.activity}
-                        </Text>
-                        <TouchableOpacity onPress={() => setItineraryItems((prev) => prev.filter((_, i) => i !== idx))}>
-                          <Text style={styles.removeText}>Remove</Text>
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                  </View>
-                ) : (
-                  <Text style={styles.helperText}>No itinerary items yet.</Text>
-                )}
               </ScrollView>
             ) : null}
             {itineraryMode === 'manual' ? (
