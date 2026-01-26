@@ -13,7 +13,7 @@
     "postinstall": "node -e \"try{require('patch-package');require('child_process').execSync('patch-package',{stdio:'inherit'});}catch(e){console.log('patch-package not installed, skipping');}\""
   },
   "engines": {
-    "node": "20.x"
+    "node": "^20.0.0 || ^22.0.0 || ^24.0.0"
   },
   "packageManager": "npm@10.8.2",
   "devDependencies": {
