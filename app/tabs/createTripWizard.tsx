@@ -1537,7 +1537,12 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               </TouchableOpacity>
             </View>
             {itineraryMode === 'ai' ? (
-              <>
+              <ScrollView
+                style={{ maxHeight: 520 }}
+                contentContainerStyle={{ paddingBottom: 12 }}
+                showsVerticalScrollIndicator
+                nestedScrollEnabled
+              >
                 <Text style={styles.helperText}>We'll generate a starter plan you can edit later.</Text>
                 <TextInput
                   style={[
@@ -1690,10 +1695,15 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                 ) : (
                   <Text style={styles.helperText}>No itinerary items yet.</Text>
                 )}
-              </>
+              </ScrollView>
             ) : null}
             {itineraryMode === 'manual' ? (
-              <>
+              <ScrollView
+                style={{ maxHeight: 520 }}
+                contentContainerStyle={{ paddingBottom: 12 }}
+                showsVerticalScrollIndicator
+                nestedScrollEnabled
+              >
                 <Text style={styles.helperText}>All days are free to start. Add manual items to any day.</Text>
                 {!computedDays && dates.mode === 'range' ? (
                   <TextInput
@@ -1765,7 +1775,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                 ) : (
                   <Text style={styles.helperText}>Select a day to add manual items.</Text>
                 )}
-              </>
+              </ScrollView>
             ) : null}
             {!itineraryMode ? (
               <Text style={styles.helperText}>You can always build an itinerary later.</Text>
