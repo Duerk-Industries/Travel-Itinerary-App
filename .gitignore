@@ -30,3 +30,4 @@ logs
 *example*
 .gradle
 server/.gradle
+firestore-debug.log
