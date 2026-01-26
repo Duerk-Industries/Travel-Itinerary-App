@@ -174,7 +174,7 @@ if [[ "$DB_PROVIDER" == "firebase" ]]; then
     EMULATOR_HOST="$(read_env_value "$ENV_FILE" "FIRESTORE_EMULATOR_HOST")"
   fi
   if [[ -z "$EMULATOR_HOST" ]]; then
-    EMULATOR_HOST="127.0.0.1:8080"
+    EMULATOR_HOST="localhost:8080"
   fi
 
   if ! is_emulator_running "$EMULATOR_HOST"; then

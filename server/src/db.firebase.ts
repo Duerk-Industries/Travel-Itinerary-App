@@ -36,9 +36,9 @@ const getDb = (): Firestore => {
     const clientEmail = getEnvValue('FIREBASE_CLIENT_EMAIL');
     const rawPrivateKey = getEnvValue('FIREBASE_PRIVATE_KEY');
     const privateKey = rawPrivateKey ? rawPrivateKey.replace(/\\n/g, '\n') : undefined;
-    const useEmulator = isLocalEnv() && getEnvValue('USE_FIRESTORE_EMULATOR') === 'true';
+    const useEmulator = !!process.env.FIRESTORE_EMULATOR_HOST;
     if (useEmulator) {
-      const emulatorHost = getEnvValue('FIRESTORE_EMULATOR_HOST', { defaultValue: '127.0.0.1:8080' });
+      const emulatorHost = getEnvValue('FIRESTORE_EMULATOR_HOST', { defaultValue: 'localhost:8080' });
       logInfo(`Using Firestore emulator at ${emulatorHost}`);
       process.env.FIRESTORE_EMULATOR_HOST = emulatorHost;
       app = initializeApp({ projectId });
@@ -63,7 +63,6 @@ const getDb = (): Firestore => {
   }
   const databaseId = getEnvValue('FIRESTORE_DATABASE_ID');
   if (databaseId) {
-    logInfo(`Using databaseId: ${databaseId}`);
   }
   return databaseId ? adminGetFirestore(app!, databaseId) : adminGetFirestore(app!);
 };
@@ -802,9 +801,9 @@ export const searchUsersByEmail = async (query: string): Promise<User[]> => {
   return snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
 };
 
-export const listTraitsForGroupTrip = async (tripId: string, userId: string) => {
+export const listTraitsForGroupTrip = async (userId: string, tripId: string) => {
   const membership = await ensureUserInTrip(tripId, userId);
-  if (!membership) throw new Error('Not authorized');
+  if (!membership) throw new Error('Not authorized for this trip');
   return listTraits(userId);
 };
 
@@ -835,13 +834,50 @@ export const listItineraries = async (userId: string): Promise<Array<Itinerary &
 
 export const createItineraryRecord = async (
   userId: string,
-  itinerary: Omit<Itinerary, 'id' | 'createdAt' | 'updatedAt'>
-): Promise<Itinerary> => {
+  tripId: string,
+  destination: string,
+  days: number,
+  budget?: number | null
+): Promise<Itinerary & { tripName: string }> => {
   const db = getDb();
+  const membership = await ensureUserInTrip(tripId, userId);
+  if (!membership) throw new Error('You must belong to the trip group to save an itinerary');
+
+  const normalizedDestination = destination.trim().toLowerCase();
+  const roundedDays = Math.max(1, Math.round(days));
+  const budgetValue = budget ?? null;
+
+  const dupeQuery = await db
+    .collection('itineraries')
+    .where('tripId', '==', tripId)
+    .where('destination', '==', normalizedDestination)
+    .where('days', '==', roundedDays)
+    .where('budget', '==', budgetValue)
+    .limit(1)
+    .get();
+
+  if (!dupeQuery.empty) {
+    const err = new Error('Itinerary already exists for this trip');
+    (err as any).code = 'ITINERARY_EXISTS';
+    throw err;
+  }
+
   const id = randomUUID();
-  const payload = { ...itinerary, id, userId, createdAt: nowIso(), updatedAt: nowIso() };
+  const trip = await db.collection('trips').doc(tripId).get();
+  const tripName = trip.exists ? (trip.data() as Trip).name : '';
+
+  const payload: Itinerary = {
+    id,
+    tripId,
+    destination: destination.trim(),
+    days: roundedDays,
+    budget: budgetValue,
+    createdAt: nowIso(),
+    userId,
+  };
   await db.collection('itineraries').doc(id).set(payload);
-  return payload;
+
+  return { ...payload, tripName };
 };
 
 export const deleteItineraryRecord = async (userId: string, itineraryId: string): Promise<void> => {
@@ -874,10 +910,28 @@ export const listItineraryDetails = async (userId: string, itineraryId: string):
   return details.docs.map((d) => d.data() as ItineraryDetail);
 };
 
-export const addItineraryDetail = async (detail: Omit<ItineraryDetail, 'id'>): Promise<ItineraryDetail> => {
+export const addItineraryDetail = async (
+  userId: string,
+  itineraryId: string,
+  detail: { day: number; time?: string | null; activity: string; cost?: number | null }
+): Promise<ItineraryDetail> => {
   const db = getDb();
+  const itinerary = await db.collection('itineraries').doc(itineraryId).get();
+  if (!itinerary.exists) throw new Error('Itinerary not found');
+
+  const tripId = (itinerary.data() as Itinerary).tripId;
+  const membership = await ensureUserInTrip(tripId, userId);
+  if (!membership) throw new Error('Not authorized to edit this itinerary');
+
   const id = randomUUID();
-  const payload = { ...detail, id };
+  const payload: ItineraryDetail = {
+    id,
+    itineraryId,
+    day: Math.max(1, Math.round(detail.day)),
+    time: detail.time ?? null,
+    activity: detail.activity.trim(),
+    cost: detail.cost ?? null,
+  };
   await db.collection('itinerary_details').doc(id).set(payload);
   return payload;
 };

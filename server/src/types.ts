@@ -125,6 +125,7 @@ export interface Tour {
 
 export interface Itinerary {
   id: string;
+  userId: string;
   tripId: string;
   destination: string;
   days: number;

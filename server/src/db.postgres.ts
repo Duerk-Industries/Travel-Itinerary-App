@@ -379,8 +379,22 @@ export const findOrCreateUser = async (
   return { id, email, provider };
 };
 
+type Queryable = Pick<Pool, 'query'>;
+
+const ensureOwnerUserRow = async (db: Queryable, ownerId: string): Promise<void> => {
+  const existing = await db.query(`SELECT id FROM users WHERE id = $1`, [ownerId]);
+  if (existing.rowCount) return;
+  const webUser = await db.query<{ email: string }>(`SELECT email FROM web_users WHERE id = $1`, [ownerId]);
+  const email = webUser.rows[0]?.email;
+  if (!email) {
+    throw new Error('User not found. Please log in again.');
+  }
+  await db.query(`INSERT INTO users (id, email, provider) VALUES ($1, $2, $3)`, [ownerId, email, 'email']);
+};
+
 export const ensureDefaultGroupForUser = async (userId: string, email: string): Promise<void> => {
   const p = getPool();
+  await ensureOwnerUserRow(p, userId);
   const { rows: webUserRows } = await p.query<{ first_name: string }>(
     `SELECT first_name FROM web_users WHERE id = $1 LIMIT 1`,
     [userId]
@@ -1901,10 +1915,9 @@ export const listTrips = async (userId: string): Promise<Array<Trip & { groupNam
               g.name as "groupName"
        FROM trips t
        JOIN groups g ON t.group_id = g.id
+       LEFT JOIN trip_removals tr ON tr.trip_id = t.id AND tr.user_id = $1
        WHERE t.group_id IN (SELECT group_id FROM group_members WHERE user_id = $1 AND removed_at IS NULL)
-         AND NOT EXISTS (
-           SELECT 1 FROM trip_removals tr WHERE tr.trip_id = t.id AND tr.user_id = $1
-         )
+         AND tr.trip_id IS NULL
        ORDER BY t.created_at DESC`,
       [userId]
     );
@@ -1925,12 +1938,11 @@ export const listTrips = async (userId: string): Promise<Array<Trip & { groupNam
             g.name as "groupName"
      FROM trips t
      JOIN groups g ON t.group_id = g.id
+     LEFT JOIN trip_removals tr ON tr.trip_id = t.id AND tr.user_id = $1
      WHERE EXISTS (
        SELECT 1 FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $1 AND gm.removed_at IS NULL
      )
-       AND NOT EXISTS (
-         SELECT 1 FROM trip_removals tr WHERE tr.trip_id = t.id AND tr.user_id = $1
-       )
+       AND tr.trip_id IS NULL
      ORDER BY t.created_at DESC`,
     [userId]
   );
@@ -2116,6 +2128,7 @@ export const createGroupWithMembers = async (
   const client = await p.connect();
   try {
     await client.query('BEGIN');
+    await ensureOwnerUserRow(client, ownerId);
     const groupId = randomUUID();
 
     await client.query(
@@ -2197,6 +2210,7 @@ export const createTripWithGroupAndMembers = async (payload: {
   const client = await p.connect();
   try {
     await client.query('BEGIN');
+    await ensureOwnerUserRow(client, payload.ownerId);
     const groupId = randomUUID();
     const groupName = `Trip: ${payload.tripName} Group`;
 

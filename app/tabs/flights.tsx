@@ -313,6 +313,7 @@ type FlightsTabProps = {
   externalEditFlightId?: string | null;
   onExternalEditHandled?: () => void;
   showList?: boolean;
+  mode?: 'live' | 'wizard';
 };
 
 type Airport = {
@@ -372,7 +373,9 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   externalEditFlightId,
   onExternalEditHandled,
   showList = true,
+  mode = 'live',
 }) => {
+  const isWizard = mode === 'wizard';
   const containerRef = useRef<React.ElementRef<typeof View> | null>(null);
   const memberNames = useMemo(() => {
     const map = new Map<string, string>();
@@ -422,6 +425,36 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       return `${parts[0]} ${parts[parts.length - 1]}`;
     }
     return trimmed.toLowerCase();
+  };
+
+  const buildLocalFlight = (draft: FlightEditDraft, id?: string): Flight => {
+    const localId = id ?? `wizard-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+    const departureDate = normalizeDateString(draft.departureDate) || new Date().toISOString().slice(0, 10);
+    const arrivalDate = normalizeDateString(draft.arrivalDate) || departureDate;
+    return {
+      id: localId,
+      passenger_name: draft.passengerName || 'Traveler',
+      passenger_ids: draft.passengerIds ?? [],
+      trip_id: activeTripId ?? 'wizard',
+      departure_date: departureDate,
+      departure_location: draft.departureLocation || '',
+      departure_airport_code: draft.departureAirportCode || '',
+      departure_time: draft.departureTime || '00:00',
+      arrival_date: arrivalDate,
+      arrival_location: draft.arrivalLocation || '',
+      arrival_airport_code: draft.arrivalAirportCode || '',
+      layover_location: draft.layoverLocation || '',
+      layover_location_code: draft.layoverLocationCode || '',
+      layover_duration: draft.layoverDuration || '',
+      arrival_time: draft.arrivalTime || '00:00',
+      cost: Number(draft.cost) || 0,
+      carrier: draft.carrier || 'UNKNOWN',
+      flight_number: draft.flightNumber || 'UNKNOWN',
+      booking_reference: draft.bookingReference || 'UNKNOWN',
+      paidBy: Array.isArray(draft.paidBy) ? draft.paidBy : [],
+      paid_by: Array.isArray(draft.paidBy) ? draft.paidBy : [],
+      passengerInGroup: true,
+    };
   };
 
   const flightsTotal = useMemo(() => flights.reduce((sum, f) => sum + (Number(f.cost) || 0), 0), [flights]);
@@ -547,6 +580,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   };
 
   const fetchFlights = async (token?: string) => {
+    if (isWizard) return;
     if (!userToken || !activeTripId) {
       setFlights([]);
       return;
@@ -560,7 +594,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       alert('File upload is available on web right now.');
       return;
     }
-    if (!activeTripId) {
+    if (!activeTripId && !isWizard) {
       alert('Select an active trip before uploading a flight.');
       return;
     }
@@ -586,6 +620,41 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
 
   const saveParsedFlights = async (flightsOverride?: FlightEditDraft[]) => {
     const flightsToSave = flightsOverride ?? parsedFlights;
+    if (isWizard) {
+      if (!flightsToSave.length) {
+        alert('No parsed flights to add.');
+        return;
+      }
+      const localFlights = flightsToSave.map((flight) => {
+        const passengerIds =
+          flight.passengerIds && flight.passengerIds.length
+            ? flight.passengerIds
+            : groupMembers.length
+              ? [groupMembers[0].id]
+              : [];
+        const enriched: FlightEditDraft = {
+          ...flight,
+          passengerIds,
+          passengerName: flight.passengerName?.trim() || 'Traveler',
+          departureLocation: flight.departureLocation?.trim() || flight.departureAirportCode || '',
+          departureAirportCode: flight.departureAirportCode?.trim() || flight.departureLocation || '',
+          arrivalLocation: flight.arrivalLocation?.trim() || flight.arrivalAirportCode || '',
+          arrivalAirportCode: flight.arrivalAirportCode?.trim() || flight.arrivalLocation || '',
+          departureDate: flight.departureDate?.trim() || new Date().toISOString().slice(0, 10),
+          departureTime: flight.departureTime?.trim() || '00:00',
+          arrivalTime: flight.arrivalTime?.trim() || '00:00',
+          carrier: flight.carrier?.trim() || 'UNKNOWN',
+          flightNumber: flight.flightNumber?.trim() || 'UNKNOWN',
+          bookingReference: flight.bookingReference?.trim() || 'UNKNOWN',
+          paidBy: flight.paidBy?.length ? flight.paidBy : defaultPayerId ? [defaultPayerId] : [],
+        };
+        return buildLocalFlight(enriched);
+      });
+      setFlights((prev) => [...prev, ...localFlights]);
+      setParsedFlights(flightsToSave);
+      setPdfParseMessage(`Added ${localFlights.length} flight(s).`);
+      return;
+    }
     if (!userToken || !activeTripId || !flightsToSave.length) {
       alert('No parsed flights to add.');
       return;
@@ -669,13 +738,18 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   ) => {
     setLocationTarget(target);
     setLocationSearch(text);
-    if (!userToken) {
+    if (!userToken && !isWizard) {
       setLocationSuggestions([]);
       return;
     }
     const q = text.trim();
     if (!q) {
       setLocationSuggestions([]);
+      return;
+    }
+    if (isWizard && !userToken) {
+      const suggestions = buildAirportSuggestions(q).map((a) => formatAirportLabel(a));
+      setLocationSuggestions(suggestions);
       return;
     }
     try {
@@ -834,7 +908,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   }, [externalEditFlightId, flights]);
 
   const saveFlightDetails = async () => {
-    if (!userToken || !editingFlightId || !editingFlight) return;
+    if (!editingFlightId || !editingFlight) return;
     if (!isValidTime(editingFlight.departureTime) || !isValidTime(editingFlight.arrivalTime)) {
       alert('Enter valid departure and arrival times (HH:MM).');
       return;
@@ -843,10 +917,23 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       alert('Select at least one passenger');
       return;
     }
-    if (editingFlightId === 'new' && !activeTripId) {
+    if (editingFlightId === 'new' && !activeTripId && !isWizard) {
       alert('Select an active trip before adding a flight.');
       return;
     }
+    if (isWizard) {
+      const localFlight = buildLocalFlight(
+        { ...editingFlight, passengerName: buildPassengerName(editingFlight.passengerIds) || editingFlight.passengerName },
+        editingFlightId === 'new' ? undefined : editingFlightId
+      );
+      setFlights((prev) => {
+        if (editingFlightId === 'new') return [...prev, localFlight];
+        return prev.map((flight) => (flight.id === editingFlightId ? { ...flight, ...localFlight } : flight));
+      });
+      closeFlightDetails();
+      return;
+    }
+    if (!userToken) return;
     const payload = buildFlightPayload(
       { ...editingFlight, passengerName: buildPassengerName(editingFlight.passengerIds) || editingFlight.passengerName },
       editingFlightId === 'new' ? activeTripId ?? undefined : undefined,
@@ -914,12 +1001,17 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   };
 
   const removeFlight = async (id: string) => {
+    if (isWizard) {
+      setFlights((prev) => prev.filter((flight) => flight.id !== id));
+      return;
+    }
     if (!userToken) return;
     await fetch(`${backendUrl}/api/flights/${id}`, { method: 'DELETE', headers });
     fetchFlights();
   };
 
   const shareFlight = async (id: string) => {
+    if (isWizard) return;
     if (!userToken) return;
     if (!email.trim()) {
       alert('Enter an email to share this flight.');
@@ -950,7 +1042,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   };
 
   const handleAddPress = () => {
-    if (!activeTripId) {
+    if (!activeTripId && !isWizard) {
       alert('Select an active trip before adding a flight.');
       return;
     }

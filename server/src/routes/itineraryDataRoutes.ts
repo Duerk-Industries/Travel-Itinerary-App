@@ -33,8 +33,12 @@ router.post('/', async (req, res) => {
   try {
     const created = await createItineraryRecord(userId, tripId, destination, Number(days), budget != null ? Number(budget) : null);
     res.status(201).json(created);
-  } catch (err) {
-    res.status(400).json({ error: (err as Error).message });
+  } catch (err: any) {
+    if (err.code === 'ITINERARY_EXISTS') {
+      res.status(409).json({ error: err.message });
+    } else {
+      res.status(400).json({ error: (err as Error).message });
+    }
   }
 });
 
@@ -64,8 +68,12 @@ router.put('/:id', async (req, res) => {
       budget != null ? Number(budget) : null
     );
     res.json(updated);
-  } catch (err) {
-    res.status(400).json({ error: (err as Error).message });
+  } catch (err: any) {
+    if (err.code === 'ITINERARY_EXISTS') {
+      res.status(409).json({ error: err.message });
+    } else {
+      res.status(400).json({ error: (err as Error).message });
+    }
   }
 });
 

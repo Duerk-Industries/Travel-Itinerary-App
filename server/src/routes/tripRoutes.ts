@@ -57,7 +57,12 @@ router.post('/', async (req, res) => {
     });
     res.status(201).json(trip);
   } catch (err) {
-    res.status(400).json({ error: (err as Error).message });
+    const message = (err as Error).message;
+    if (/log in again/i.test(message) || /user not found/i.test(message)) {
+      res.status(401).json({ error: message });
+      return;
+    }
+    res.status(400).json({ error: message });
   }
 });
 

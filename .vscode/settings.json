@@ -8,6 +8,7 @@
         "buildscript",
         "cloudbuild",
         "datetimepicker",
+        "dists",
         "dnschecker",
         "Firestore",
         "geoloc",
@@ -16,6 +17,7 @@
         "ossp",
         "Preact",
         "Prereqs",
+        "rels",
         "Runbook",
         "secretmanager",
         "Squarespace",
@@ -39,7 +41,8 @@
             "args": [
                 "-e",
                 "bash",
-                "-l"
+                "-l",
+                "-i"
             ]
         }
     },
