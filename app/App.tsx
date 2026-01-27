@@ -127,6 +127,7 @@ const resolveBackendUrl = (): string => {
   const configuredBackend = [envConfigured, appConfigured].find(
     (val) => typeof val === 'string' && val.trim().length > 0
   ) as string | undefined;
+  const isLocalHost = (value: string) => /^(localhost|127\.0\.0\.1)$/i.test(value);
   const normalizeBackendUrl = (raw: string, defaultProtocol: 'http' | 'https'): string => {
     const trimmed = raw.trim();
     if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
@@ -135,12 +136,17 @@ const resolveBackendUrl = (): string => {
     return `${defaultProtocol}://${trimmed}`;
   };
   if (process.env.NODE_ENV === 'development') {
-    if (configuredBackend) {
-      return normalizeBackendUrl(configuredBackend, 'http');
-    }
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       const { hostname, protocol } = window.location;
-      return `${protocol}//${hostname}:4000`;
+      if (isLocalHost(hostname)) {
+        if (configuredBackend && isLocalHost(new URL(normalizeBackendUrl(configuredBackend, 'http')).hostname)) {
+          return normalizeBackendUrl(configuredBackend, 'http');
+        }
+        return `${protocol}//${hostname}:4000`;
+      }
+    }
+    if (configuredBackend) {
+      return normalizeBackendUrl(configuredBackend, 'http');
     }
     return 'http://localhost:4000';
   }
