@@ -119,6 +119,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     durationDays: '',
     mode: 'range',
   });
+  const [dateModeSelected, setDateModeSelected] = useState<'range' | 'month' | null>(null);
   const [participants, setParticipants] = useState<ParticipantInput[]>([]);
   const [participantDraft, setParticipantDraft] = useState<ParticipantInput>({ firstName: '', lastName: '', email: '' });
   const [participantSearch, setParticipantSearch] = useState('');
@@ -561,7 +562,15 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
 
   const canMoveNext = () => {
     if (stepIndex === 0) return !validateTripDetails(details);
-    if (stepIndex === 1) return !validateTripDates(dates);
+    if (stepIndex === 1) {
+      if (!dateModeSelected) return false;
+      if (dateModeSelected === 'range') {
+        if (!dates.startDate || !dates.endDate) return false;
+      } else {
+        if (!dates.startMonth || !dates.startYear || !dates.durationDays) return false;
+      }
+      return !validateTripDates(dates);
+    }
     if (stepIndex === 2) return !validateParticipants(participants);
     if (stepIndex === 3) return canProceedFromItineraryStep(itineraryMode);
     return true;
@@ -570,7 +579,19 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   const goNext = () => {
     let error: string | null = null;
     if (stepIndex === 0) error = validateTripDetails(details);
-    if (stepIndex === 1) error = validateTripDates(dates);
+    if (stepIndex === 1 && !dateModeSelected) {
+      error = 'Select a date option to continue.';
+    }
+    if (stepIndex === 1 && !error) {
+      if (dateModeSelected === 'range') {
+        if (!dates.startDate || !dates.endDate) {
+          error = 'Select both a start and end date.';
+        }
+      } else if (!dates.startMonth || !dates.startYear || !dates.durationDays) {
+        error = 'Select a month, year, and number of days.';
+      }
+    }
+    if (stepIndex === 1 && !error) error = validateTripDates(dates);
     if (stepIndex === 2) error = validateParticipants(participants);
     if (stepIndex === 3 && !canProceedFromItineraryStep(itineraryMode)) error = 'Choose Yes or No to continue.';
     if (error) {
@@ -1226,19 +1247,60 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             <Text style={styles.helperText}>Choose exact dates or a month and duration (optional).</Text>
             <View style={styles.row}>
               <TouchableOpacity
-                style={[styles.button, dates.mode === 'range' && styles.toggleActive, styles.smallButton]}
-                onPress={() => setDates((prev) => ({ ...prev, mode: 'range' }))}
+                style={[
+                  {
+                    backgroundColor: dateModeSelected === 'range' ? '#0d6efd' : '#fff',
+                    borderColor: '#0d6efd',
+                    borderWidth: 1,
+                    paddingVertical: 8,
+                    paddingHorizontal: 12,
+                    borderRadius: 6,
+                    alignItems: 'center',
+                  },
+                  { marginRight: 8 },
+                ]}
+                onPress={() => {
+                  setDateModeSelected('range');
+                  setDates((prev) => ({ ...prev, mode: 'range' }));
+                }}
               >
-                <Text style={styles.buttonText}>I know which dates I'm going</Text>
+                <Text
+                  style={[
+                    { color: dateModeSelected === 'range' ? '#fff' : '#0d6efd', fontWeight: '600' },
+                  ]}
+                >
+                  I know which dates I'm going
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.button, dates.mode === 'month' && styles.toggleActive, styles.smallButton]}
-                onPress={() => setDates((prev) => ({ ...prev, mode: 'month' }))}
+                style={[
+                  {
+                    backgroundColor: dateModeSelected === 'month' ? '#0d6efd' : '#fff',
+                    borderColor: '#0d6efd',
+                    borderWidth: 1,
+                    paddingVertical: 8,
+                    paddingHorizontal: 12,
+                    borderRadius: 6,
+                    alignItems: 'center',
+                  },
+                ]}
+                onPress={() => {
+                  setDateModeSelected('month');
+                  setDates((prev) => ({ ...prev, mode: 'month' }));
+                }}
               >
-                <Text style={styles.buttonText}>Flexible Timeline</Text>
+                <Text
+                  style={[
+                    { color: dateModeSelected === 'month' ? '#fff' : '#0d6efd', fontWeight: '600' },
+                  ]}
+                >
+                  Flexible Timeline
+                </Text>
               </TouchableOpacity>
             </View>
-            {dates.mode === 'range' ? (
+            {!dateModeSelected ? (
+              <Text style={styles.helperText}>Select a date option to continue.</Text>
+            ) : dates.mode === 'range' ? (
               <>
                 <View style={styles.row}>
                   <View style={[styles.dateInputWrap, { flex: 1 }]}>
