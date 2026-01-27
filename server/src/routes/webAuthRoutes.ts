@@ -2,7 +2,7 @@ import { Router } from 'express';
 import bodyParser from 'body-parser';
 import { claimInvitesForUser, createWebUser, ensureDefaultGroupForUser, verifyWebUserCredentials } from '../db';
 import { createToken } from '../auth';
-import { logError } from '../logger';
+import { logError, logInfo } from '../logger';
 
 // Web auth routes for email/password login/registration.
 const router = Router();
@@ -61,7 +61,11 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
   const { email, password } = req.body ?? {};
 
+  // TEMPORARY: auth logging (remove later)
+  logInfo(`[web-auth] login attempt for ${String(email ?? '').trim().toLowerCase() || 'unknown'}`);
   if (isInvalid(email, 5) || isInvalid(password, 6)) {
+    // TEMPORARY: auth logging (remove later)
+    logInfo('[web-auth] login rejected: invalid payload');
     res.status(400).json({ error: 'email and password (min 6 chars) are required' });
     return;
   }
@@ -69,12 +73,16 @@ router.post('/login', async (req, res) => {
   try {
     const user = await verifyWebUserCredentials(email.trim().toLowerCase(), password.trim());
     if (!user) {
+      // TEMPORARY: auth logging (remove later)
+      logInfo('[web-auth] login failed: invalid credentials');
       res.status(401).json({ error: 'Invalid email or password' });
       return;
     }
     await ensureDefaultGroupForUser(user.id, user.email);
     await claimInvitesForUser(user.email, user.id);
     const token = createToken({ userId: user.id, email: user.email, provider: 'email' });
+    // TEMPORARY: auth logging (remove later)
+    logInfo(`[web-auth] login success for ${user.email}`);
     res.json({ message: 'Login successful', token, user });
   } catch (err) {
     const message = (err as Error)?.message ?? '';
@@ -88,6 +96,8 @@ router.post('/login', async (req, res) => {
       res.status(503).json({ error: 'Login temporarily unavailable. Please try again.' });
       return;
     }
+    // TEMPORARY: auth logging (remove later)
+    logError('Login failed with unexpected error', err);
     logError('Failed to login', err);
     res.status(500).json({ error: 'Failed to login' });
   }

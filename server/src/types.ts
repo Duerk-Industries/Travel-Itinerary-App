@@ -1,7 +1,11 @@
 export interface User {
   id: string;
   email: string;
-  provider: 'google' | 'apple' | 'email';
+  provider: 'google' | 'apple' | 'email' | 'family';
+  google_id?: string;
+  picture?: string;
+  firstName?: string;
+  lastName?: string;
 }
 
 export interface WebUser {

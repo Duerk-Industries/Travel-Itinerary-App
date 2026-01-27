@@ -1,70 +1,100 @@
 import { describe, expect, test, jest, beforeEach } from '@jest/globals';
-import nodemailer from 'nodemailer';
 import { getEnvValue } from '../src/env';
-import { isEmailConfigured, sendShareEmail } from '../src/mailer';
 
-jest.mock('nodemailer');
 jest.mock('../src/env');
+const mockSendMail = jest.fn();
+jest.mock('nodemailer', () => ({
+    createTransport: jest.fn(() => ({
+        sendMail: mockSendMail,
+    })),
+}));
 
-const mockedNodemailer = nodemailer as jest.Mocked<typeof nodemailer>;
-const mockedGetEnvValue = getEnvValue as jest.Mock<typeof getEnvValue>;
+const nodemailer = require('nodemailer');
 
 describe('Mailer', () => {
   beforeEach(() => {
-    jest.resetAllMocks();
+    jest.clearAllMocks();
+    nodemailer.createTransport.mockClear();
+    mockSendMail.mockClear();
   });
+
+  const getMockedEnv = () => {
+    const envModule = jest.requireMock('../src/env') as typeof import('../src/env');
+    return envModule.getEnvValue as jest.MockedFunction<typeof getEnvValue>;
+  };
 
   describe('isEmailConfigured', () => {
     test('returns false if SMTP settings are not provided', () => {
+      const mockedGetEnvValue = getMockedEnv();
       mockedGetEnvValue.mockReturnValue(undefined);
-      const mailer = require('../src/mailer');
-      expect(mailer.isEmailConfigured()).toBe(false);
+      let mailer: typeof import('../src/mailer');
+      jest.isolateModules(() => {
+        mailer = require('../src/mailer');
+      });
+      const { isEmailConfigured } = mailer!;
+      expect(isEmailConfigured()).toBe(false);
     });
 
     test('returns true if SMTP settings are provided', () => {
-      mockedGetEnvValue.mockImplementation((key) => {
-        if (key === 'SMTP_HOST') return 'smtp.example.com';
-        if (key === 'SMTP_PORT') return '587';
-        if (key === 'SMTP_FROM') return 'from@example.com';
-        return undefined;
-      });
-      const mailer = require('../src/mailer');
-      expect(mailer.isEmailConfigured()).toBe(true);
+        const mockedGetEnvValue = getMockedEnv();
+        mockedGetEnvValue.mockImplementation((key, _options) => {
+            switch (key) {
+                case 'SMTP_HOST': return 'smtp.example.com';
+                case 'SMTP_PORT': return '587';
+                case 'SMTP_FROM': return 'from@example.com';
+                default: return undefined;
+            }
+        });
+        let mailer: typeof import('../src/mailer');
+        jest.isolateModules(() => {
+          mailer = require('../src/mailer');
+        });
+        const { isEmailConfigured } = mailer!;
+        expect(isEmailConfigured()).toBe(true);
     });
   });
 
   describe('sendShareEmail', () => {
     test('throws an error if email is not configured', async () => {
+        const mockedGetEnvValue = getMockedEnv();
         mockedGetEnvValue.mockReturnValue(undefined);
-        const { sendShareEmail } = require('../src/mailer');
+        let mailer: typeof import('../src/mailer');
+        jest.isolateModules(() => {
+          mailer = require('../src/mailer');
+        });
+        const { sendShareEmail } = mailer!;
         await expect(sendShareEmail('to@example.com', 'subject', 'body')).rejects.toThrow(
             'Email is not configured; set SMTP_HOST, SMTP_PORT, and SMTP_FROM'
         );
     });
 
     test('calls sendMail with the correct arguments', async () => {
-      const sendMailMock = jest.fn();
-      mockedNodemailer.createTransport.mockReturnValue({ sendMail: sendMailMock } as any);
+        const mockedGetEnvValue = getMockedEnv();
+        mockedGetEnvValue.mockImplementation((key, _options) => {
+            switch (key) {
+                case 'SMTP_HOST': return 'smtp.example.com';
+                case 'SMTP_PORT': return '587';
+                case 'SMTP_FROM': return 'from@example.com';
+                case 'SMTP_USER': return 'user';
+                case 'SMTP_PASS': return 'pass';
+                default: return undefined;
+            }
+        });
 
-      mockedGetEnvValue.mockImplementation((key) => {
-        if (key === 'SMTP_HOST') return 'smtp.example.com';
-        if (key === 'SMTP_PORT') return '587';
-        if (key === 'SMTP_FROM') return 'from@example.com';
-        if (key === 'SMTP_USER') return 'user';
-        if (key === 'SMTP_PASS') return 'pass';
-        return undefined;
-      });
+        let mailer: typeof import('../src/mailer');
+        jest.isolateModules(() => {
+          mailer = require('../src/mailer');
+        });
+        const { sendShareEmail } = mailer!;
+        await sendShareEmail('to@example.com', 'Test Subject', 'Test Body');
 
-      const { sendShareEmail } = require('../src/mailer');
-
-      await sendShareEmail('to@example.com', 'Test Subject', 'Test Body');
-
-      expect(sendMailMock).toHaveBeenCalledWith({
-        from: 'from@example.com',
-        to: 'to@example.com',
-        subject: 'Test Subject',
-        text: 'Test Body',
-      });
+        expect(nodemailer.createTransport).toHaveBeenCalled();
+        expect(mockSendMail).toHaveBeenCalledWith({
+            from: 'from@example.com',
+            to: 'to@example.com',
+            subject: 'Test Subject',
+            text: 'Test Body',
+        });
     });
   });
 });

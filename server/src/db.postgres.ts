@@ -70,9 +70,17 @@ export const initDb = async (): Promise<void> => {
       id UUID PRIMARY KEY,
       email TEXT UNIQUE NOT NULL,
       provider TEXT NOT NULL,
+      google_id TEXT,
+      picture TEXT,
+      first_name TEXT,
+      last_name TEXT,
       created_at TIMESTAMP DEFAULT NOW()
     );
   `);
+  await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id TEXT;`);
+  await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS picture TEXT;`);
+  await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name TEXT;`);
+  await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name TEXT;`);
 
 
   await p.query(`
@@ -3209,3 +3217,41 @@ export const updateFamilyProfile = async (
 
 // Backwards-compatible export; call poolClient() when you need the Pool instance.
 export const poolClient = (): Pool => getPool();
+
+export const findOrCreateGoogleUser = async (profile: any): Promise<User> => {
+    const p = getPool();
+    const { id, displayName, emails, photos, name } = profile;
+
+    const email = emails?.[0]?.value;
+    if (!email) {
+        throw new Error('Google profile did not return an email');
+    }
+
+    const existing = await p.query<User>(`SELECT * FROM users WHERE google_id = $1`, [id]);
+    if (existing.rows.length) {
+        const user = existing.rows[0];
+        await p.query(
+            `UPDATE users SET email = $1, picture = $2, first_name = $3, last_name = $4 WHERE id = $5`,
+            [email, photos?.[0]?.value, name?.givenName, name?.familyName, user.id]
+        );
+        return user;
+    }
+
+    const existingByEmail = await p.query<User>(`SELECT * FROM users WHERE email = $1`, [email]);
+    if (existingByEmail.rows.length) {
+        const user = existingByEmail.rows[0];
+        await p.query(
+            `UPDATE users SET google_id = $1, picture = $2, first_name = $3, last_name = $4 WHERE id = $5`,
+            [id, photos?.[0]?.value, name?.givenName, name?.familyName, user.id]
+        );
+        return user;
+    }
+
+    const newUserId = randomUUID();
+    await p.query(
+        `INSERT INTO users (id, email, provider, google_id, picture, first_name, last_name) VALUES ($1, $2, 'google', $3, $4, $5, $6)`,
+        [newUserId, email, id, photos?.[0]?.value, name?.givenName, name?.familyName]
+    );
+
+    return { id: newUserId, email, provider: 'google' };
+};

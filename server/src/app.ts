@@ -16,18 +16,18 @@ import tourRoutes from './routes/tourRoutes';
 import accountRoutes, { groupsRouter } from './routes/accountRoutes';
 import { getEnvValue, hasRunLocalFlag, isLocalEnv } from './env';
 
-// Load env vars from server/.env and server/.secrets (plus repo root fallbacks).
+// Load env vars from server/.env and optionally server/.secrets (plus repo root fallbacks).
 // .local_env files load only when RUN_LOCAL=1 is set inside that file.
 // Later files override earlier ones to make local overrides and secrets take precedence.
-const envPaths = [
-  path.resolve(__dirname, '../.env'),
-  path.resolve(__dirname, '../../.env'),
-  path.resolve(__dirname, '../.secrets'),
-  path.resolve(__dirname, '../../.secrets'),
-];
 const localEnvPaths = [
   path.resolve(__dirname, '../.local_env'),
   path.resolve(__dirname, '../../.local_env'),
+];
+const isLocalFlag = localEnvPaths.some((envPath) => hasRunLocalFlag(envPath));
+const envPaths = [
+  path.resolve(__dirname, '../.env'),
+  path.resolve(__dirname, '../../.env'),
+  ...(isLocalFlag ? [path.resolve(__dirname, '../.secrets'), path.resolve(__dirname, '../../.secrets')] : []),
 ];
 const loadedEnvPaths: string[] = [];
 const shouldOverride = !process.env.JEST_WORKER_ID;
@@ -54,6 +54,7 @@ if (loadedEnvPaths.length === 0) {
 export { envLoadedFrom };
 
 export const app = express();
+app.set('trust proxy', 1);
 
 const isRunningLocally = isLocalEnv();
 const webUrl = getEnvValue('WEB_URL', { defaultValue: 'https://duerk.org' });
@@ -128,6 +129,36 @@ if (!hasWebApp) {
 }
 
 app.use(express.static(publicDir));
+
+import passport from 'passport';
+import { initPassport, createToken } from './auth';
+import { logInfo, logError } from './logger';
+
+initPassport();
+app.use(passport.initialize());
+
+app.get('/api/auth/google', (req, _res, next) => {
+  // TEMPORARY: Google OAuth logging (remove later)
+  logInfo(`[auth/google] start redirect_uri=${String(req.query?.redirect_uri ?? '')}`);
+  next();
+}, passport.authenticate('google', { scope: ['profile', 'email'] }));
+
+app.get(
+  '/api/auth/google/callback',
+  (req, _res, next) => {
+    // TEMPORARY: Google OAuth logging (remove later)
+    logInfo('[auth/google] callback received');
+    next();
+  },
+  passport.authenticate('google', { failureRedirect: '/login', session: false }),
+  (req, res) => {
+    const user = req.user as any;
+    // TEMPORARY: Google OAuth logging (remove later)
+    logInfo(`[auth/google] callback success for ${user?.email ?? 'unknown'}`);
+    const token = createToken({ userId: user.id, email: user.email, provider: user.provider });
+    res.redirect(`/login?token=${token}`);
+  }
+);
 
 app.use('/api/auth', authRoutes);
 // Alias web-auth routes under /api/auth to keep legacy tests and clients working.

@@ -9,6 +9,7 @@ module.exports = {
   },
   moduleNameMapper: {
     '^react-native$': '<rootDir>/tests/__mocks__/react-native.ts',
+    '^\\./flightParsing$': '<rootDir>/tabs/flightParsing.web.ts',
   },
   globals: {
     'ts-jest': {

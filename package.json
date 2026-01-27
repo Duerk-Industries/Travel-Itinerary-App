@@ -23,6 +23,7 @@
     "firebase": "^12.8.0",
     "firebase-admin": "^13.6.0",
     "outdated": "^0.1.1",
+    "passport-google-oauth20": "^2.0.0",
     "update": "^0.7.4"
   }
 }

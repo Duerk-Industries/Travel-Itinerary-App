@@ -39,6 +39,8 @@ import {
 } from './tabs/lodging';
 import { InvitePayload } from './utils/inviteCodes';
 import { type MapApp, buildMapUrl, loadStoredMapPreference, persistMapPreference } from './utils/mapLinks';
+import * as WebBrowser from 'expo-web-browser';
+import { Buffer } from 'buffer';
 
 type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
 let NativeDateTimePicker: NativeDateTimePickerType | null = null;
@@ -653,42 +655,168 @@ const App: React.FC = () => {
     [backendUrl, setFellowTravelers, userToken]
   );
 
+  const buildLoginRedirectUrl = () => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      return `${window.location.origin}/login`;
+    }
+    if (typeof Linking?.createURL === 'function') {
+      return Linking.createURL('/login');
+    }
+    const base = typeof window !== 'undefined' ? window.location.origin : backendUrl;
+    return `${base}/login`;
+  };
+
+  const loginWithGoogle = async () => {
+    const redirectUrl = buildLoginRedirectUrl();
+    const authUrl = `${backendUrl}/api/auth/google?redirect_uri=${encodeURIComponent(redirectUrl)}`;
+    // TODO(remove-debug): trace Google login flow
+    console.info('[AUTH][google] redirectUrl:', redirectUrl);
+    // TODO(remove-debug): trace Google login flow
+    console.info('[AUTH][google] authUrl:', authUrl);
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      // TODO(remove-debug): trace Google login flow
+      console.info('[AUTH][google] navigating via window.location');
+      window.location.assign(authUrl);
+      return;
+    }
+    // TODO(remove-debug): trace Google login flow
+    console.info('[AUTH][google] opening browser');
+    await WebBrowser.openBrowserAsync(authUrl);
+  };
+
+  const handleAuthSuccess = (token: string) => {
+    // TODO(remove-debug): trace auth success
+    console.info('[AUTH] success: token received', { tokenPresent: Boolean(token) });
+    let decoded: { firstName?: string; lastName?: string; email?: string; provider?: string } | null = null;
+    try {
+      const payload = token.split('.')[1];
+      if (payload) {
+        const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+        const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+        decoded = JSON.parse(Buffer.from(padded, 'base64').toString());
+      }
+      // TODO(remove-debug): trace auth success
+      console.info('[AUTH] decoded token claims', { email: decoded?.email, provider: decoded?.provider });
+    } catch (err) {
+      // TODO(remove-debug): trace auth decoding failure
+      console.warn('[AUTH] token decode failed, continuing with fallback user data', err);
+    }
+    const name =
+      `${decoded?.firstName ?? ''} ${decoded?.lastName ?? ''}`.trim() || decoded?.email || 'Traveler';
+    setUserToken(token);
+    setUserName(name);
+    if (decoded?.email) {
+      setUserEmail(decoded.email);
+    }
+    setAccountProfile({
+      firstName: decoded?.firstName ?? '',
+      lastName: decoded?.lastName ?? '',
+      email: decoded?.email ?? '',
+    });
+    saveSession(token, name, 'overview', decoded?.email, activeTripId);
+    fetchFlights(token);
+    fetchLodgings(token);
+    fetchTours(token);
+    fetchInvites(token);
+    loadAccountProfile(token);
+    loadFamilyRelationships(token);
+    loadFellowTravelers(token);
+    setActivePage('overview');
+  }
+
+  useEffect(() => {
+    const extractTokenFromUrl = (rawUrl: string) => {
+      const url = new URL(rawUrl);
+      const token = url.searchParams.get('token');
+      if (token) {
+        return { token, url, source: 'query' as const };
+      }
+      const hash = url.hash.startsWith('#') ? url.hash.slice(1) : url.hash;
+      if (hash) {
+        const hashParams = new URLSearchParams(hash);
+        const hashToken = hashParams.get('token');
+        if (hashToken) {
+          return { token: hashToken, url, source: 'hash' as const };
+        }
+      }
+      return { token: null, url, source: null as const };
+    };
+
+    const handleDeepLink = (event: { url: string }) => {
+      const { token } = extractTokenFromUrl(event.url);
+      if (token) {
+        handleAuthSuccess(token);
+      }
+    };
+
+    const subscription = Linking.addEventListener('url', handleDeepLink);
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      // DEBUG: auth logging (remove later)
+      console.info('[AUTH] web initial url', window.location.href);
+      const { token, url, source } = extractTokenFromUrl(window.location.href);
+      if (token) {
+        // DEBUG: auth logging (remove later)
+        console.info('[AUTH] web initial token detected', { source });
+        handleAuthSuccess(token);
+        url.searchParams.delete('token');
+        if (url.hash) {
+          const hashParams = new URLSearchParams(url.hash.slice(1));
+          hashParams.delete('token');
+          const newHash = hashParams.toString();
+          url.hash = newHash ? `#${newHash}` : '';
+        }
+        window.history.replaceState({}, '', url.toString());
+      } else {
+        // DEBUG: auth logging (remove later)
+        console.info('[AUTH] web initial token missing');
+      }
+    }
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
   const loginWithPassword = async () => {
     try {
+      // TODO(remove-debug): trace password login
+      console.info('[AUTH][password] attempt', { email: authForm.email.trim() });
       const res = await fetch(`${backendUrl}/api/web-auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: authForm.email.trim(), password: authForm.password }),
       });
+      // TODO(remove-debug): trace password login
+      console.info('[AUTH][password] response', { status: res.status });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
+        // TODO(remove-debug): trace password login failure
+        console.warn('[AUTH][password] failed', { status: res.status, error: data?.error });
         alert(data.error || 'Login failed');
         return;
       }
       if (!data?.user || typeof data.token !== 'string') {
+        // TODO(remove-debug): trace unexpected login response
+        const contentType = res.headers.get('content-type') || '';
+        let rawBody = '';
+        try {
+          rawBody = await res.clone().text();
+        } catch {
+          rawBody = '';
+        }
+        // TODO(remove-debug): trace unexpected login response
+        console.warn('[AUTH][password] invalid payload', {
+          hasUser: Boolean(data?.user),
+          tokenType: typeof data?.token,
+          contentType,
+          rawBodyPreview: rawBody.slice(0, 300),
+        });
         alert(data.error || 'Login failed');
         return;
       }
-      const name = `${data.user.firstName ?? ''} ${data.user.lastName ?? ''}`.trim() || 'Traveler';
-      const email = authForm.email.trim();
-      setUserToken(data.token);
-      setUserName(name);
-      setUserEmail(email);
-      setAccountProfile({
-        firstName: data.user.firstName ?? '',
-        lastName: data.user.lastName ?? '',
-        email,
-      });
-      saveSession(data.token, name, 'overview', email, activeTripId);
-      fetchFlights(data.token);
-      fetchLodgings(data.token);
-      fetchTours(data.token);
-      fetchInvites(data.token);
-      loadAccountProfile(data.token);
-      loadFamilyRelationships(data.token);
-      loadFellowTravelers(data.token);
-      setActivePage('overview');
+      handleAuthSuccess(data.token);
     } catch (err) {
+      // TODO(remove-debug): trace password login exception
+      console.warn('[AUTH][password] exception', err);
       alert((err as Error).message || 'Login failed');
     }
   };
@@ -719,31 +847,7 @@ const App: React.FC = () => {
         alert(data.error || 'Registration failed');
         return;
       }
-      const name = `${data.user.firstName ?? ''} ${data.user.lastName ?? ''}`.trim() || 'Traveler';
-      const email = authForm.email.trim();
-      setUserToken(data.token);
-      setUserName(name);
-      setUserEmail(email);
-      setAccountProfile({
-        firstName: data.user.firstName ?? '',
-        lastName: data.user.lastName ?? '',
-        email,
-      });
-      fetchFlights(data.token);
-      fetchLodgings(data.token);
-      fetchTours(data.token);
-      fetchInvites(data.token);
-      loadAccountProfile(data.token);
-      loadFamilyRelationships(data.token);
-      loadFellowTravelers(data.token);
-      const trips = await fetchTrips(data.token);
-      const nextTripId = trips[0]?.id ?? null;
-      const nextPage: Page = trips.length ? 'overview' : 'create-trip';
-      if (nextTripId) {
-        setActiveTripId(nextTripId);
-      }
-      setActivePage(nextPage);
-      saveSession(data.token, name, nextPage, email, nextTripId);
+      handleAuthSuccess(data.token);
     } catch (err) {
       alert((err as Error).message || 'Registration failed');
     }
@@ -2396,17 +2500,19 @@ const App: React.FC = () => {
               onChangeText={(text) => setAuthForm((p) => ({ ...p, passwordConfirm: text }))}
             />
           ) : null}
-            <TouchableOpacity
-              style={styles.button}
-              onPress={authMode === 'login' ? loginWithPassword : register}
-            >
-              <Text style={styles.buttonText}>{authMode === 'login' ? 'Login' : 'Create account'}</Text>
-            </TouchableOpacity>
-        </View>
-      )}
-    </SafeAreaView>
-  );
-};
+                      <TouchableOpacity
+                        style={styles.button}
+                        onPress={authMode === 'login' ? loginWithPassword : register}
+                      >
+                        <Text style={styles.buttonText}>{authMode === 'login' ? 'Login' : 'Create account'}</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[styles.button, { marginTop: 12, backgroundColor: '#4285F4' }]} onPress={loginWithGoogle}>
+                        <Text style={styles.buttonText}>Sign in with Google</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </SafeAreaView>
+              );};
 
 const styles = StyleSheet.create({
   container: {

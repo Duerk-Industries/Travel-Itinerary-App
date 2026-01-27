@@ -16,6 +16,7 @@
         "Metaspace",
         "ossp",
         "Preact",
+        "predeploy",
         "Prereqs",
         "rels",
         "Runbook",
@@ -34,8 +35,11 @@
         "JAVA_HOME": "C:\\Program Files\\Amazon Corretto\\jdk21.0.10_7"
     },
     "java.configuration.updateBuildConfiguration": "automatic",
-    "terminal.integrated.defaultProfile.windows": "WSL Bash",
+    "terminal.integrated.defaultProfile.windows": "PowerShell",
     "terminal.integrated.profiles.windows": {
+        "PowerShell": {
+            "source": "PowerShell"
+        },
         "WSL Bash": {
             "path": "C:\\Windows\\System32\\wsl.exe",
             "args": [

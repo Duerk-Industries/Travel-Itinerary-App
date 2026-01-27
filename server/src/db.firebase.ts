@@ -36,7 +36,11 @@ const getDb = (): Firestore => {
     const clientEmail = getEnvValue('FIREBASE_CLIENT_EMAIL');
     const rawPrivateKey = getEnvValue('FIREBASE_PRIVATE_KEY');
     const privateKey = rawPrivateKey ? rawPrivateKey.replace(/\\n/g, '\n') : undefined;
-    const useEmulator = !!process.env.FIRESTORE_EMULATOR_HOST;
+    if (process.env.K_SERVICE && process.env.FIRESTORE_EMULATOR_HOST) {
+      // Never use emulator on Cloud Run even if the env var is present.
+      delete process.env.FIRESTORE_EMULATOR_HOST;
+    }
+    const useEmulator = isLocalEnv() && !!process.env.FIRESTORE_EMULATOR_HOST;
     if (useEmulator) {
       const emulatorHost = getEnvValue('FIRESTORE_EMULATOR_HOST', { defaultValue: 'localhost:8080' });
       logInfo(`Using Firestore emulator at ${emulatorHost}`);
