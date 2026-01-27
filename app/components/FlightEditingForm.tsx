@@ -123,6 +123,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
               <View style={{ position: 'relative' }}>
                 <TextInput
                   style={styles.input}
+                  testID="flight-modal-departure-location"
                   value={getLocationInputValue(flight.departureLocation, 'modal-dep', airportTarget)}
                   placeholder="Location"
                   ref={modalDepLocationRef}
@@ -184,6 +185,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
               <View style={{ position: 'relative' }}>
                 <TextInput
                   style={styles.input}
+                  testID="flight-modal-arrival-location"
                   value={getLocationInputValue(flight.arrivalLocation, 'modal-arr', airportTarget)}
                   placeholder="Location"
                   ref={modalArrLocationRef}
@@ -284,6 +286,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
               <Text style={styles.modalLabelSmall}>Carrier</Text>
               <TextInput
                 style={styles.input}
+                testID="flight-modal-carrier"
                 value={flight.carrier}
                 onChangeText={(text: string) => setFlight((prev) => (prev ? { ...prev, carrier: text } : prev))}
               />
@@ -292,6 +295,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
               <Text style={styles.modalLabelSmall}>Flight #</Text>
               <TextInput
                 style={styles.input}
+                testID="flight-modal-flight-number"
                 value={flight.flightNumber}
                 onChangeText={(text: string) => setFlight((prev) => (prev ? { ...prev, flightNumber: text } : prev))}
               />
@@ -300,6 +304,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
               <Text style={styles.modalLabelSmall}>Booking Ref</Text>
               <TextInput
                 style={styles.input}
+                testID="flight-modal-booking-reference"
                 value={flight.bookingReference}
                 onChangeText={(text: string) => setFlight((prev) => (prev ? { ...prev, bookingReference: text.toUpperCase() } : prev))}
               />
@@ -308,6 +313,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
           <Text style={styles.modalLabel}>Cost</Text>
           <TextInput
             style={styles.input}
+            testID="flight-modal-cost"
             value={flight.cost}
             keyboardType="numeric"
             onChangeText={(text: string) => setFlight((prev) => (prev ? { ...prev, cost: text } : prev))}
@@ -350,7 +356,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
           <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={onClose}>
             <Text style={styles.buttonText}>Cancel</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.button} onPress={onSave}>
+          <TouchableOpacity style={styles.button} onPress={onSave} testID="flight-modal-save">
             <Text style={styles.buttonText}>Save</Text>
           </TouchableOpacity>
         </View>

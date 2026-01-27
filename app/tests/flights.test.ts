@@ -8,37 +8,52 @@ describe('Flights helpers', () => {
     expect(result.error).toBe('Select an active trip before adding a flight.');
   });
 
-  test('requires times, carrier, flight number, and booking reference', () => {
+  test('requires times and at least one passenger', () => {
     const draft = {
       ...createInitialFlightCreateDraft(),
       departureDate: '2025-04-10',
       departureTime: '',
       arrivalTime: '',
-      carrier: '',
-      flightNumber: '',
-      bookingReference: '',
+      passengerIds: [],
     };
     const result = buildFlightPayloadForCreate(draft, 'trip-1', null);
     expect(result.error).toBe('Departure and arrival times are required.');
   });
 
-  test('builds payload with defaults and trip id', () => {
+  test('builds payload with optional carrier/flight/booking and passengers', () => {
     const draft = {
       ...createInitialFlightCreateDraft(),
       passengerName: '',
+      passengerIds: ['p1', 'p2'],
       departureDate: '2025-04-10',
       departureTime: '08:00',
       arrivalTime: '11:00',
       departureAirportCode: 'JFK',
       arrivalAirportCode: 'LAX',
-      carrier: 'Delta',
-      flightNumber: 'DL100',
-      bookingReference: 'ABC123',
+      carrier: '',
+      flightNumber: '',
+      bookingReference: '',
       cost: '200',
     };
     const result = buildFlightPayloadForCreate(draft, 'trip-1', 'payer-1');
     expect(result.payload?.tripId).toBe('trip-1');
     expect(result.payload?.passengerName).toBe('Traveler');
+    expect(result.payload?.passengerIds).toEqual(['p1', 'p2']);
+    expect(result.payload?.carrier).toBe('');
+    expect(result.payload?.flightNumber).toBe('');
+    expect(result.payload?.bookingReference).toBe('');
     expect(result.payload?.paidBy).toEqual(['payer-1']);
+  });
+
+  test('fails when no passengers selected', () => {
+    const draft = {
+      ...createInitialFlightCreateDraft(),
+      departureDate: '2025-04-10',
+      departureTime: '08:00',
+      arrivalTime: '11:00',
+      passengerIds: [],
+    };
+    const result = buildFlightPayloadForCreate(draft, 'trip-1', null);
+    expect(result.error).toBe('Select at least one passenger');
   });
 });

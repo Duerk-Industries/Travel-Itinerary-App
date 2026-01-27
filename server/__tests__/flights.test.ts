@@ -129,6 +129,28 @@ describe('Flights API passenger validation', () => {
       .expect(200);
   });
 
+  it('creates a flight with optional carrier, flight number, and booking reference', async () => {
+    const createRes = await request(app)
+      .post('/api/flights')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        passengerIds: [memberId],
+        departureDate: '2025-01-03',
+        departureTime: '08:30',
+        arrivalTime: '10:30',
+        carrier: '',
+        flightNumber: '',
+        bookingReference: '',
+        tripId,
+        cost: 150,
+      })
+      .expect(201);
+
+    expect(createRes.body.carrier ?? '').toBe('');
+    expect(createRes.body.flightNumber ?? createRes.body.flight_number ?? '').toBe('');
+    expect(createRes.body.bookingReference ?? createRes.body.booking_reference ?? '').toBe('');
+  });
+
   it('defaults arrival date to departure date and allows updating it', async () => {
     const depDate = '2025-01-05';
     const createRes = await request(app)

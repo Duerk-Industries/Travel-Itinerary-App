@@ -59,10 +59,13 @@ router.post('/', async (req, res) => {
     tripId,
     paidBy,
   } = req.body;
-  if (!Array.isArray(passengerIds) || passengerIds.length === 0 || !departureDate || !departureTime || !arrivalTime || !carrier || !flightNumber || !bookingReference || !tripId) {
+  if (!Array.isArray(passengerIds) || passengerIds.length === 0 || !departureDate || !departureTime || !arrivalTime || !tripId) {
     res.status(400).json({ error: 'Missing required fields (need at least one passenger)' });
     return;
   }
+  const normalizedCarrier = typeof carrier === 'string' ? carrier : '';
+  const normalizedFlightNumber = typeof flightNumber === 'string' ? flightNumber : '';
+  const normalizedBookingReference = typeof bookingReference === 'string' ? bookingReference : '';
   const allZeroPassengerIds = passengerIds.every((id: any) => String(id).startsWith('0000'));
   const tripGroup = (await ensureUserInTrip(tripId, userId)) || (process.env.USE_IN_MEMORY_DB === '1' ? { groupId: tripId } : null);
   if (!tripGroup) {
@@ -121,9 +124,9 @@ router.post('/', async (req, res) => {
     arrivalDate: arrivalDate || departureDate,
     arrivalTime,
     cost: Number(cost) ?? 0,
-    carrier,
-    flightNumber,
-    bookingReference,
+    carrier: normalizedCarrier,
+    flightNumber: normalizedFlightNumber,
+    bookingReference: normalizedBookingReference,
     paidBy: normalizedPaidBy,
   });
   res.status(201).json(flight);

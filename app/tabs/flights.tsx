@@ -93,8 +93,11 @@ export type FlightEditDraft = {
 
 export type FlightCreateDraft = {
   passengerName: string;
+  passengerIds: string[];
+  departureLocation?: string;
   departureDate: string;
   arrivalDate: string;
+  arrivalLocation?: string;
   departureAirportCode: string;
   departureTime: string;
   arrivalAirportCode: string;
@@ -118,6 +121,7 @@ const isValidTime = (value: string): boolean => {
 
 export const createInitialFlightCreateDraft = (): FlightCreateDraft => ({
   passengerName: '',
+  passengerIds: [],
   departureDate: new Date().toISOString().slice(0, 10),
   arrivalDate: new Date().toISOString().slice(0, 10),
   departureAirportCode: '',
@@ -168,13 +172,13 @@ export const createInitialFlightState = (): FlightDraft => ({
   arrivalDate: new Date().toISOString().slice(0, 10),
   departureLocation: '',
   departureAirportCode: '',
-  departureTime: '',
+  departureTime: '08:00',
   arrivalLocation: '',
   arrivalAirportCode: '',
   layoverLocation: '',
   layoverLocationCode: '',
   layoverDuration: '',
-  arrivalTime: '',
+  arrivalTime: '10:00',
   cost: '',
   carrier: '',
   flightNumber: '',
@@ -249,45 +253,66 @@ export const buildFlightPayload = (flight: FlightEditDraft, tripId?: string | nu
     arrivalDate,
     arrivalTime: trim(flight.arrivalTime) || '00:00',
     cost: Number(flight.cost) || 0,
-    carrier: trim(flight.carrier) || 'UNKNOWN',
-    flightNumber: trim(flight.flightNumber) || 'UNKNOWN',
-    bookingReference: trim(flight.bookingReference) || 'UNKNOWN',
+    carrier: trim(flight.carrier),
+    flightNumber: trim(flight.flightNumber),
+    bookingReference: trim(flight.bookingReference),
     paidBy: flight.paidBy?.length ? flight.paidBy : defaultPayerId ? [defaultPayerId] : [],
     ...(tripId ? { tripId } : {}),
   };
 };
 
 export const buildFlightPayloadForCreate = (
-  draft: FlightCreateDraft,
+  draft: FlightCreateDraft | FlightEditDraft,
   tripId?: string | null,
   defaultPayerId?: string | null
 ): { payload?: any; error?: string } => {
   if (!tripId) return { error: 'Select an active trip before adding a flight.' };
+  const draftDepartureDate = (draft as any).departureDate ?? '';
+  const draftArrivalDate = (draft as any).arrivalDate ?? '';
+  const draftDepartureTime = (draft as any).departureTime ?? '';
+  const draftArrivalTime = (draft as any).arrivalTime ?? '';
+  const draftDepartureLocation = (draft as any).departureLocation ?? '';
+  const draftArrivalLocation = (draft as any).arrivalLocation ?? '';
+  const draftDepartureCode = (draft as any).departureAirportCode ?? '';
+  const draftArrivalCode = (draft as any).arrivalAirportCode ?? '';
+  const draftCarrier = (draft as any).carrier ?? '';
+  const draftFlightNumber = (draft as any).flightNumber ?? '';
+  const draftBookingReference = (draft as any).bookingReference ?? '';
+  const draftCost = (draft as any).cost ?? '';
+  const draftPassengerName = (draft as any).passengerName ?? '';
+  const draftPassengerIds = (draft as any).passengerIds ?? [];
   if (!draft.departureDate.trim()) return { error: 'Departure date is required.' };
   if (!draft.departureTime.trim() || !draft.arrivalTime.trim()) return { error: 'Departure and arrival times are required.' };
   if (!isValidTime(draft.departureTime) || !isValidTime(draft.arrivalTime)) return { error: 'Enter valid departure and arrival times (HH:MM).' };
-  if (!draft.carrier.trim() || !draft.flightNumber.trim()) return { error: 'Carrier and flight number are required.' };
-  if (!draft.bookingReference.trim()) return { error: 'Booking reference is required.' };
+  if (!Array.isArray(draft.passengerIds) || draft.passengerIds.filter(Boolean).length === 0) {
+    return { error: 'Select at least one passenger' };
+  }
+  const normalizedDepartureLocation = String(draftDepartureLocation).trim();
+  const normalizedArrivalLocation = String(draftArrivalLocation).trim();
+  const normalizedDepartureCode = String(draftDepartureCode).trim();
+  const normalizedArrivalCode = String(draftArrivalCode).trim();
+  const departureLocation = normalizedDepartureLocation || normalizedDepartureCode;
+  const arrivalLocation = normalizedArrivalLocation || normalizedArrivalCode;
   const payload = buildFlightPayload(
     {
-      passengerName: draft.passengerName.trim() || 'Traveler',
-      passengerIds: [],
-      departureDate: draft.departureDate.trim(),
-      arrivalDate: draft.arrivalDate.trim() || draft.departureDate.trim(),
-      departureLocation: '',
-      departureAirportCode: draft.departureAirportCode.trim(),
-      departureTime: draft.departureTime.trim(),
-      arrivalLocation: '',
-      arrivalAirportCode: draft.arrivalAirportCode.trim(),
-      layoverLocation: draft.layoverLocation.trim(),
-      layoverLocationCode: draft.layoverLocationCode.trim(),
-      layoverDuration: draft.layoverDuration.trim(),
-      arrivalTime: draft.arrivalTime.trim(),
-      cost: draft.cost.trim(),
-      carrier: draft.carrier.trim(),
-      flightNumber: draft.flightNumber.trim(),
-      bookingReference: draft.bookingReference.trim(),
-      paidBy: [],
+      passengerName: String(draftPassengerName).trim() || 'Traveler',
+      passengerIds: Array.isArray(draftPassengerIds) ? draftPassengerIds.filter(Boolean) : [],
+      departureDate: String(draftDepartureDate).trim(),
+      arrivalDate: String(draftArrivalDate).trim() || String(draftDepartureDate).trim(),
+      departureLocation,
+      departureAirportCode: normalizedDepartureCode || departureLocation,
+      departureTime: String(draftDepartureTime).trim(),
+      arrivalLocation,
+      arrivalAirportCode: normalizedArrivalCode || arrivalLocation,
+      layoverLocation: String((draft as any).layoverLocation ?? '').trim(),
+      layoverLocationCode: String((draft as any).layoverLocationCode ?? '').trim(),
+      layoverDuration: String((draft as any).layoverDuration ?? '').trim(),
+      arrivalTime: String(draftArrivalTime).trim(),
+      cost: String(draftCost).trim(),
+      carrier: String(draftCarrier).trim(),
+      flightNumber: String(draftFlightNumber).trim(),
+      bookingReference: String(draftBookingReference).trim(),
+      paidBy: Array.isArray((draft as any).paidBy) ? (draft as any).paidBy : [],
     },
     tripId,
     defaultPayerId
@@ -980,21 +1005,28 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       return;
     }
     if (!userToken) return;
-    const payload = buildFlightPayload(
-      { ...editingFlight, passengerName: buildPassengerName(editingFlight.passengerIds) || editingFlight.passengerName },
-      editingFlightId === 'new' ? activeTripId ?? undefined : undefined,
-      defaultPayerId
-    );
     let res: Response;
     if (editingFlightId === 'new') {
+      const { payload, error } = buildFlightPayloadForCreate(
+        { ...editingFlight, passengerName: buildPassengerName(editingFlight.passengerIds) || editingFlight.passengerName },
+        activeTripId ?? null,
+        defaultPayerId
+      );
+      if (error || !payload) {
+        alert(error || 'Unable to add flight');
+        return;
+      }
       res = await fetch(`${backendUrl}/api/flights`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...headers },
-        body: JSON.stringify({
-          ...payload,
-        }),
+        body: JSON.stringify(payload),
       });
     } else {
+      const payload = buildFlightPayload(
+        { ...editingFlight, passengerName: buildPassengerName(editingFlight.passengerIds) || editingFlight.passengerName },
+        undefined,
+        defaultPayerId
+      );
       res = await fetch(`${backendUrl}/api/flights/${editingFlightId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', ...headers },

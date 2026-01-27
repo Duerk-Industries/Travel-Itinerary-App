@@ -1,4 +1,4 @@
-export const Platform = { OS: 'web' };
+export const Platform = { OS: 'ios' };
 export const ScrollView = 'ScrollView';
 export const Text = 'Text';
 export const TextInput = 'TextInput';
