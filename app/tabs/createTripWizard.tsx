@@ -155,6 +155,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   const [knownInfo, setKnownInfo] = useState<KnownInfoInput>({ flights: '', lodging: '', tours: '', cars: '' });
   const [wizardError, setWizardError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [createdTripId, setCreatedTripId] = useState<string | null>(null);
   const [dateField, setDateField] = useState<'start' | 'end' | 'itinerary' | null>(null);
   const [dateValue, setDateValue] = useState<Date>(new Date());
@@ -2377,11 +2378,19 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   return (
     <View style={{ position: 'relative' }}>
       <ScrollView style={styles.card} contentContainerStyle={{ gap: 12 }}>
-        <View>
-          <Text style={styles.sectionTitle}>Create Trip Wizard</Text>
-          <Text style={styles.helperText}>
-            Step {stepIndex + 1} of {totalSteps}: {steps[stepIndex]}
-          </Text>
+        <View style={[styles.row, { alignItems: 'center', justifyContent: 'space-between' }]}>
+          <View>
+            <Text style={styles.sectionTitle}>Create Trip Wizard</Text>
+            <Text style={styles.helperText}>
+              Step {stepIndex + 1} of {totalSteps}: {steps[stepIndex]}
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.button, styles.dangerButton, { paddingHorizontal: 12, paddingVertical: 6 }]}
+            onPress={() => setShowExitConfirm(true)}
+          >
+            <Text style={styles.buttonText}>X</Text>
+          </TouchableOpacity>
         </View>
         {wizardError ? <Text style={styles.errorText}>{wizardError}</Text> : null}
         {renderStepContent()}
@@ -2623,6 +2632,28 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                 onPress={() => editingWizardLodging && saveWizardLodging(editingWizardLodging, editingWizardLodgingId)}
               >
                 <Text style={styles.buttonText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      ) : null}
+      {showExitConfirm ? (
+        <View style={styles.modalOverlay}>
+          <View style={styles.confirmModal}>
+            <Text style={styles.sectionTitle}>Exit trip wizard?</Text>
+            <Text style={styles.helperText}>Your progress will not be saved.</Text>
+            <View style={styles.row}>
+              <TouchableOpacity
+                style={[styles.button, styles.dangerButton, { flex: 1 }]}
+                onPress={() => {
+                  setShowExitConfirm(false);
+                  onCancel();
+                }}
+              >
+                <Text style={styles.buttonText}>Exit</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.button, { flex: 1 }]} onPress={() => setShowExitConfirm(false)}>
+                <Text style={styles.buttonText}>Stay</Text>
               </TouchableOpacity>
             </View>
           </View>
