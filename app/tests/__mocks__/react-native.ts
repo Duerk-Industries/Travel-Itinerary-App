@@ -4,6 +4,12 @@ export const Text = 'Text';
 export const TextInput = 'TextInput';
 export const TouchableOpacity = 'TouchableOpacity';
 export const View = 'View';
+export const Image = 'Image';
+export const AsyncStorage = {
+  getItem: jest.fn(async () => null),
+  setItem: jest.fn(async () => undefined),
+  removeItem: jest.fn(async () => undefined),
+};
 export const StyleSheet = { create: <T extends Record<string, any>>(styles: T) => styles };
 
 export default {
@@ -13,5 +19,7 @@ export default {
   TextInput,
   TouchableOpacity,
   View,
+  Image,
+  AsyncStorage,
   StyleSheet,
 };

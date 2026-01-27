@@ -2,13 +2,14 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  testMatch: ['**/tests/**/*.test.ts'],
+  testMatch: ['**/tests/**/*.test.ts', '**/tests/**/*.test.tsx'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'json'],
   transform: {
     '^.+\\.(ts|tsx)$': 'ts-jest',
   },
   moduleNameMapper: {
     '^react-native$': '<rootDir>/tests/__mocks__/react-native.ts',
+    '^@react-native-async-storage/async-storage$': '<rootDir>/tests/__mocks__/asyncStorage.ts',
   },
   globals: {
     'ts-jest': {

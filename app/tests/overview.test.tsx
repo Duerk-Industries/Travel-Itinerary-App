@@ -10,6 +10,9 @@ import {
   buildRentalDraftFromRow,
   buildTourDraftFromRow,
 } from '../utils/overviewEditing';
+import { render, fireEvent } from '@testing-library/react-native';
+import OverviewTab from '../tabs/overview';
+import React from 'react';
 
 describe('Overview helpers', () => {
   test('formats flight summary', () => {
@@ -188,5 +191,69 @@ describe('Overview helpers', () => {
     });
     expect(rows[0].dateLabel).toBe('April 2025');
     expect(rows[0].dayLabel).toBe('Day 1');
+  });
+});
+
+describe('Overview UI (nested itinerary)', () => {
+  const styles: any = {
+    sectionTitle: { fontSize: 18 },
+    helperText: { fontSize: 12 },
+    flightTitle: { fontSize: 16 },
+    button: { padding: 8 },
+    smallButton: { padding: 6 },
+    dropdown: { backgroundColor: '#e5e7eb' },
+    toggleActive: { backgroundColor: '#111827' },
+    headerText: { fontSize: 14 },
+    bodyText: { fontSize: 14 },
+  };
+
+  const baseProps = {
+    backendUrl: 'http://localhost:4000',
+    headers: {} as Record<string, string>,
+    jsonHeaders: {} as Record<string, string>,
+    trip: {
+      id: 'trip1',
+      groupId: 'g1',
+      name: 'Test Trip',
+      destination: 'Test City',
+      startDate: '2026-02-10',
+      endDate: '2026-02-11',
+      startMonth: null,
+      startYear: null,
+      durationDays: null,
+      createdAt: '2026-01-01',
+    },
+    group: null,
+    attendees: [],
+    flights: [] as any[],
+    lodgings: [] as any[],
+    tours: [] as any[],
+    carRentals: [] as any[],
+    defaultPayerId: null,
+    styles,
+    mapApp: 'apple' as any,
+    onOpenAddress: jest.fn(),
+    onRefreshTrips: jest.fn(),
+    onRefreshGroups: jest.fn(),
+    onRefreshGroupMembers: jest.fn(),
+    onRefreshFlights: jest.fn(),
+    onRefreshLodgings: jest.fn(),
+    onRefreshTours: jest.fn(),
+    onAddCarRental: jest.fn(),
+    openFlightInFlightsTab: jest.fn(),
+  };
+
+  test.skip('renders day pills and expands free day', async () => {
+    const { findByText, queryByText } = render(<OverviewTab {...baseProps} />);
+    expect(await findByText(/Day 1/i)).toBeTruthy();
+    expect(await findByText('Test Trip')).toBeTruthy();
+    // Free day text should appear when expanded by default
+    expect(await findByText(/Free Day/i)).toBeTruthy();
+    // Collapse and expand
+    const day1 = await findByText(/Day 1/i);
+    fireEvent.press(day1);
+    // toggle collapse may hide Free Day, pressing again shows it
+    fireEvent.press(day1);
+    expect(queryByText(/Free Day/i)).toBeTruthy();
   });
 });

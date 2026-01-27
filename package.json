@@ -17,9 +17,11 @@
   "packageManager": "npm@10.8.2",
   "devDependencies": {
     "canvas": "^3.2.0",
-    "patch-package": "^8.0.1"
+    "patch-package": "^8.0.1",
+    "react-refresh": "^0.18.0"
   },
   "dependencies": {
+    "24": "^0.0.0",
     "firebase": "^12.8.0",
     "firebase-admin": "^13.6.0",
     "outdated": "^0.1.1",

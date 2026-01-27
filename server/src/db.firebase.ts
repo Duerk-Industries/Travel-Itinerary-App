@@ -12,7 +12,7 @@ const normalizeEmail = (email: string) => email.trim().toLowerCase();
 const nowIso = () => new Date().toISOString();
 const hashPassword = (password: string, salt: string) => scryptSync(password, salt, 64).toString('hex');
 
-const getDb = (): Firestore => {
+export const getDb = (): Firestore => {
   if (!app) {
     logInfo('Firebase app not initialized, initializing...');
     const firebaseConfigRaw = process.env.FIREBASE_CONFIG;
