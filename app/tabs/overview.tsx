@@ -337,6 +337,10 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
 
   const saveItineraryDetail = async () => {
     if (!itineraryId) return;
+    if (!detailDraft.activity.trim()) {
+      alert('Activity is required.');
+      return;
+    }
     const payload = {
       day: detailDraft.day,
       time: detailDraft.time || null,
@@ -1467,92 +1471,156 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
                 sortedItineraryDetails.map((d) => (
                   <View key={d.id} style={styles.tableRow}>
                     <View style={[styles.cell, dayColStyle]}>
-                      <Text style={styles.cellText}>{d.day}</Text>
+                      {editingDetailId === d.id ? (
+                        <TextInput
+                          style={styles.input}
+                          placeholder="Day"
+                          keyboardType="numeric"
+                          value={detailDraft.day}
+                          onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, day: text }))}
+                        />
+                      ) : (
+                        <Text style={styles.cellText}>{d.day}</Text>
+                      )}
                     </View>
                     <View style={[styles.cell, { flex: 1 }]}>
-                      <Text style={styles.cellText}>{d.time || '-'}</Text>
+                      {editingDetailId === d.id ? (
+                        <TextInput
+                          style={styles.input}
+                          placeholder="Time"
+                          value={detailDraft.time}
+                          onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, time: text }))}
+                        />
+                      ) : (
+                        <Text style={styles.cellText}>{d.time || '-'}</Text>
+                      )}
                     </View>
                     <View style={[styles.cell, { flex: 2 }]}>
-                      <Text style={styles.cellText}>{d.activity}</Text>
+                      {editingDetailId === d.id ? (
+                        <TextInput
+                          style={styles.input}
+                          placeholder="Activity"
+                          value={detailDraft.activity}
+                          onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, activity: text }))}
+                        />
+                      ) : (
+                        <Text style={styles.cellText}>{d.activity}</Text>
+                      )}
                     </View>
                     <View style={[styles.cell, { flex: 1 }]}>
-                      <Text style={styles.cellText}>{d.cost != null ? `$${d.cost}` : '-'}</Text>
+                      {editingDetailId === d.id ? (
+                        <TextInput
+                          style={styles.input}
+                          placeholder="Cost"
+                          keyboardType="numeric"
+                          value={detailDraft.cost}
+                          onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, cost: text }))}
+                        />
+                      ) : (
+                        <Text style={styles.cellText}>{d.cost != null ? `$${d.cost}` : '-'}</Text>
+                      )}
                     </View>
                     <View style={[styles.cell, styles.actionCell, { flex: 1 }]}>
-                      <TouchableOpacity
-                        style={[styles.button, styles.smallButton]}
-                        onPress={() => {
-                          setEditingDetailId(d.id);
-                          setDetailDraft({
-                            day: String(d.day ?? '1'),
-                            time: d.time ?? '',
-                            activity: d.activity ?? '',
-                            cost: d.cost != null ? String(d.cost) : '',
-                          });
-                        }}
-                      >
-                        <Text style={styles.buttonText}>Edit</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.button, styles.smallButton, styles.dangerButton]}
-                        onPress={async () => {
-                          await fetch(`${backendUrl}/api/itineraries/details/${d.id}`, {
-                            method: 'DELETE',
-                            headers,
-                          });
-                          if (editingDetailId === d.id) setEditingDetailId(null);
-                          refreshItineraryDetails();
-                        }}
-                      >
-                        <Text style={styles.buttonText}>Delete</Text>
-                      </TouchableOpacity>
+                      {editingDetailId === d.id ? (
+                        <>
+                          <TouchableOpacity
+                            style={[styles.button, styles.smallButton]}
+                            onPress={async () => {
+                              await saveItineraryDetail();
+                            }}
+                          >
+                            <Text style={styles.buttonText}>Save</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[styles.button, styles.smallButton, styles.dangerButton]}
+                            onPress={() => {
+                              setEditingDetailId(null);
+                              setDetailDraft({ day: '1', time: '', activity: '', cost: '' });
+                            }}
+                          >
+                            <Text style={styles.buttonText}>Cancel</Text>
+                          </TouchableOpacity>
+                        </>
+                      ) : (
+                        <>
+                          <TouchableOpacity
+                            style={[styles.button, styles.smallButton]}
+                            onPress={() => {
+                              setEditingDetailId(d.id);
+                              setDetailDraft({
+                                day: String(d.day ?? '1'),
+                                time: d.time ?? '',
+                                activity: d.activity ?? '',
+                                cost: d.cost != null ? String(d.cost) : '',
+                              });
+                            }}
+                          >
+                            <Text style={styles.buttonText}>Edit</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[styles.button, styles.smallButton, styles.dangerButton]}
+                            onPress={async () => {
+                              await fetch(`${backendUrl}/api/itineraries/details/${d.id}`, {
+                                method: 'DELETE',
+                                headers,
+                              });
+                              if (editingDetailId === d.id) setEditingDetailId(null);
+                              refreshItineraryDetails();
+                            }}
+                          >
+                            <Text style={styles.buttonText}>Delete</Text>
+                          </TouchableOpacity>
+                        </>
+                      )}
                     </View>
                   </View>
                 ))
               ) : (
                 <Text style={styles.helperText}>No itinerary items yet.</Text>
               )}
-              <View style={[styles.tableRow, styles.inputRow]}>
-                <View style={[styles.cell, dayColStyle]}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Day"
-                    keyboardType="numeric"
-                    value={detailDraft.day}
-                    onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, day: text }))}
-                  />
+              {!editingDetailId ? (
+                <View style={[styles.tableRow, styles.inputRow]}>
+                  <View style={[styles.cell, dayColStyle]}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Day"
+                      keyboardType="numeric"
+                      value={detailDraft.day}
+                      onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, day: text }))}
+                    />
+                  </View>
+                  <View style={[styles.cell, { flex: 1 }]}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Time"
+                      value={detailDraft.time}
+                      onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, time: text }))}
+                    />
+                  </View>
+                  <View style={[styles.cell, { flex: 2 }]}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Activity"
+                      value={detailDraft.activity}
+                      onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, activity: text }))}
+                    />
+                  </View>
+                  <View style={[styles.cell, { flex: 1 }]}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Cost"
+                      keyboardType="numeric"
+                      value={detailDraft.cost}
+                      onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, cost: text }))}
+                    />
+                  </View>
+                  <View style={[styles.cell, styles.actionCell, { flex: 1 }]}>
+                    <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={saveItineraryDetail}>
+                      <Text style={styles.buttonText}>Add</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
-                <View style={[styles.cell, { flex: 1 }]}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Time"
-                    value={detailDraft.time}
-                    onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, time: text }))}
-                  />
-                </View>
-                <View style={[styles.cell, { flex: 2 }]}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Activity"
-                    value={detailDraft.activity}
-                    onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, activity: text }))}
-                  />
-                </View>
-                <View style={[styles.cell, { flex: 1 }]}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Cost"
-                    keyboardType="numeric"
-                    value={detailDraft.cost}
-                    onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, cost: text }))}
-                  />
-                </View>
-                <View style={[styles.cell, styles.actionCell, { flex: 1 }]}>
-                  <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={saveItineraryDetail}>
-                    <Text style={styles.buttonText}>{editingDetailId ? 'Update' : 'Add'}</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
+              ) : null}
             </>
           )}
         </View>
