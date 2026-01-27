@@ -46,7 +46,7 @@ import {
   type CarRental,
   type CarRentalDraft,
 } from '../tabs/carRentals';
-import { buildRentalDraftFromRow, buildTourDraftFromRow } from '../utils/overviewEditing';
+import { buildRentalDraftFromRow, buildTourDraftFromRow, getOverviewSaveFlags } from '../utils/overviewEditing';
 import { FlightEditingForm } from '../components/FlightEditingForm';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -193,6 +193,9 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
 }) => {
   const [itineraryDetails, setItineraryDetails] = useState<ItineraryDetail[]>([]);
   const [itineraryLoading, setItineraryLoading] = useState(false);
+  const [itineraryId, setItineraryId] = useState<string | null>(null);
+  const [editingDetailId, setEditingDetailId] = useState<string | null>(null);
+  const [detailDraft, setDetailDraft] = useState({ day: '1', time: '', activity: '', cost: '' });
   const [descriptionDraft, setDescriptionDraft] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [dateDraft, setDateDraft] = useState({
@@ -278,6 +281,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
     const loadItinerary = async () => {
       if (!trip?.id) {
         setItineraryDetails([]);
+        setItineraryId(null);
         return;
       }
       setItineraryLoading(true);
@@ -285,15 +289,18 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
         const res = await fetch(`${backendUrl}/api/itineraries`, { headers });
         if (!res.ok) {
           setItineraryDetails([]);
+          setItineraryId(null);
           return;
         }
         const data = await res.json();
         const records = (Array.isArray(data) ? data : []).filter((i) => i.tripId === trip.id);
         if (!records.length) {
           setItineraryDetails([]);
+          setItineraryId(null);
           return;
         }
         const latest = records.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+        setItineraryId(latest.id ?? null);
         const detailsRes = await fetch(`${backendUrl}/api/itineraries/${latest.id}/details`, { headers });
         if (!detailsRes.ok) {
           setItineraryDetails([]);
@@ -303,12 +310,69 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
         setItineraryDetails(Array.isArray(details) ? details : []);
       } catch {
         setItineraryDetails([]);
+        setItineraryId(null);
       } finally {
         setItineraryLoading(false);
       }
     };
     loadItinerary();
   }, [backendUrl, headers, trip?.id]);
+
+  const sortedItineraryDetails = useMemo(
+    () =>
+      [...itineraryDetails].sort((a, b) => {
+        const dayA = Number(a.day) || 0;
+        const dayB = Number(b.day) || 0;
+        if (dayA !== dayB) return dayA - dayB;
+        const timeA = (a.time ?? '').toString();
+        const timeB = (b.time ?? '').toString();
+        if (timeA && timeB) return timeA.localeCompare(timeB);
+        if (timeA) return -1;
+        if (timeB) return 1;
+        return 0;
+      }),
+    [itineraryDetails]
+  );
+
+  const refreshItineraryDetails = async () => {
+    if (!itineraryId) return;
+    const detailsRes = await fetch(`${backendUrl}/api/itineraries/${itineraryId}/details`, { headers });
+    if (!detailsRes.ok) return;
+    const details = await detailsRes.json();
+    setItineraryDetails(Array.isArray(details) ? details : []);
+  };
+
+  const saveItineraryDetail = async () => {
+    if (!itineraryId) return;
+    if (!detailDraft.activity.trim()) {
+      alert('Activity is required.');
+      return;
+    }
+    const payload = {
+      day: detailDraft.day,
+      time: detailDraft.time || null,
+      activity: detailDraft.activity,
+      cost: detailDraft.cost ? Number(detailDraft.cost) : null,
+    };
+    if (editingDetailId) {
+      const res = await fetch(`${backendUrl}/api/itineraries/details/${editingDetailId}`, {
+        method: 'PUT',
+        headers: jsonHeaders,
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) return;
+    } else {
+      const res = await fetch(`${backendUrl}/api/itineraries/${itineraryId}/details`, {
+        method: 'POST',
+        headers: jsonHeaders,
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) return;
+    }
+    setEditingDetailId(null);
+    setDetailDraft({ day: '1', time: '', activity: '', cost: '' });
+    refreshItineraryDetails();
+  };
 
   const earliestEventDate = useMemo(
     () =>
@@ -623,6 +687,13 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
 
   const saveOverviewEdits = async () => {
     if (!trip?.id) return;
+    setEditingDetailId(null);
+    const { shouldSkipTripSave } = getOverviewSaveFlags(trip, descriptionDraft, dateDraft, pendingRemovalIds);
+    if (shouldSkipTripSave) {
+      setIsEditing(false);
+      await refreshItineraryDetails();
+      return;
+    }
     const validationError = validateTripDates({
       mode: dateDraft.mode,
       startDate: dateDraft.startDate,
@@ -678,6 +749,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       onRefreshGroups();
     }
     setIsEditing(false);
+    await refreshItineraryDetails();
     onRefreshTrips();
   };
 
@@ -1505,62 +1577,212 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       ) : null}
 
       <View style={styles.divider} />
-      <Text style={styles.headerText}>Itinerary</Text>
-      {itineraryLoading ? <Text style={styles.helperText}>Loading itinerary...</Text> : null}
-      {!itineraryLoading && !rows.length ? <Text style={styles.helperText}>No itinerary items yet.</Text> : null}
-      {rows.length ? (
-        <View>
-          <View style={[styles.tableRow, styles.tableHeader]}>
-            <View style={[styles.cell, dayColStyle]}>
-              <Text style={styles.headerText}>Day</Text>
-            </View>
-            <View style={[styles.cell, dateColStyle]}>
-              <Text style={styles.headerText}>Date</Text>
-            </View>
-            <View style={[styles.cell, { flex: 1 }]}>
-              <Text style={styles.headerText}>Description</Text>
-            </View>
-          </View>
-          {(() => {
-            let dayCounter = 0;
-            return rows.map((row, idx) => {
-              const prev = rows[idx - 1];
-              const showDay = !prev || prev.dayLabel !== row.dayLabel || prev.dateLabel !== row.dateLabel;
-              if (showDay) dayCounter += 1;
-              const renderedDate = formatFriendlyDate(row.dateLabel, row.time) ?? row.dateLabel;
-              const renderDescription = (content: React.ReactNode, onPress?: () => void) =>
-                onPress ? (
-                  <TouchableOpacity onPress={onPress}>
-                    <Text style={styles.linkText}>{content}</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <Text style={styles.cellText}>{content}</Text>
-                );
-              let onPress: (() => void) | undefined;
-              if (row.type === 'flight') onPress = () => openFlightEditor(row.meta as Flight);
-              if (row.type === 'lodging') onPress = () => openLodgingEditor(row.meta as Lodging);
-              if (row.type === 'tour') onPress = () => openTourEditor(row.meta as Tour);
-              if (row.type === 'rental') onPress = () => openRentalEditor(row.meta as CarRental);
-              return (
-                <View
-                  key={`${row.type}-${row.label}-${idx}`}
-                  style={styles.tableRow}
-                  onLayout={(e: LayoutChangeEvent) => {
-                    if (row.type === 'flight' && (row.meta as Flight)?.id) {
-                      setFlightRowOffsets((prev) => ({
-                        ...prev,
-                        [(row.meta as Flight).id]: e.nativeEvent.layout.y,
-                      }));
-                    }
-                  }}
-                >
-                  <View style={[styles.cell, dayColStyle]}>{showDay ? <Text style={styles.cellText}>{dayCounter}</Text> : null}</View>
-                  <View style={[styles.cell, dateColStyle]}>{showDay ? <Text style={styles.cellText}>{renderedDate}</Text> : null}</View>
-                  <View style={[styles.cell, { flex: 1 }]}>{renderDescription(row.label, onPress)}</View>
+      {!isEditing ? (
+        <>
+          <Text style={styles.headerText}>Itinerary</Text>
+          {itineraryLoading ? <Text style={styles.helperText}>Loading itinerary...</Text> : null}
+          {!itineraryLoading && !sortedItineraryDetails.length ? (
+            <Text style={styles.helperText}>No itinerary items yet.</Text>
+          ) : null}
+          {sortedItineraryDetails.length ? (
+            <View>
+              <View style={[styles.tableRow, styles.tableHeader]}>
+                <View style={[styles.cell, dayColStyle]}>
+                  <Text style={styles.headerText}>Day</Text>
                 </View>
-              );
-            });
-          })()}
+                <View style={[styles.cell, { flex: 1 }]}>
+                  <Text style={styles.headerText}>Time</Text>
+                </View>
+                <View style={[styles.cell, { flex: 2 }]}>
+                  <Text style={styles.headerText}>Activity</Text>
+                </View>
+                <View style={[styles.cell, { flex: 1 }]}>
+                  <Text style={styles.headerText}>Cost</Text>
+                </View>
+              </View>
+              {sortedItineraryDetails.map((d) => (
+                <View key={d.id} style={styles.tableRow}>
+                  <View style={[styles.cell, dayColStyle]}>
+                    <Text style={styles.cellText}>{d.day}</Text>
+                  </View>
+                  <View style={[styles.cell, { flex: 1 }]}>
+                    <Text style={styles.cellText}>{d.time || '-'}</Text>
+                  </View>
+                  <View style={[styles.cell, { flex: 2 }]}>
+                    <Text style={styles.cellText}>{d.activity}</Text>
+                  </View>
+                  <View style={[styles.cell, { flex: 1 }]}>
+                    <Text style={styles.cellText}>{d.cost != null ? `$${d.cost}` : '-'}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          ) : null}
+        </>
+      ) : null}
+      {isEditing ? (
+        <View style={[styles.card, { marginTop: 12 }]}>
+          <Text style={styles.sectionTitle}>Edit Itinerary Items</Text>
+          {!itineraryId ? (
+            <Text style={styles.helperText}>No itinerary found for this trip yet.</Text>
+          ) : (
+            <>
+              {sortedItineraryDetails.length ? (
+                sortedItineraryDetails.map((d) => (
+                  <View key={d.id} style={styles.tableRow}>
+                    <View style={[styles.cell, dayColStyle]}>
+                      {editingDetailId === d.id ? (
+                        <TextInput
+                          style={styles.input}
+                          placeholder="Day"
+                          keyboardType="numeric"
+                          value={detailDraft.day}
+                          onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, day: text }))}
+                        />
+                      ) : (
+                        <Text style={styles.cellText}>{d.day}</Text>
+                      )}
+                    </View>
+                    <View style={[styles.cell, { flex: 1 }]}>
+                      {editingDetailId === d.id ? (
+                        <TextInput
+                          style={styles.input}
+                          placeholder="Time"
+                          value={detailDraft.time}
+                          onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, time: text }))}
+                        />
+                      ) : (
+                        <Text style={styles.cellText}>{d.time || '-'}</Text>
+                      )}
+                    </View>
+                    <View style={[styles.cell, { flex: 2 }]}>
+                      {editingDetailId === d.id ? (
+                        <TextInput
+                          style={styles.input}
+                          placeholder="Activity"
+                          value={detailDraft.activity}
+                          onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, activity: text }))}
+                        />
+                      ) : (
+                        <Text style={styles.cellText}>{d.activity}</Text>
+                      )}
+                    </View>
+                    <View style={[styles.cell, { flex: 1 }]}>
+                      {editingDetailId === d.id ? (
+                        <TextInput
+                          style={styles.input}
+                          placeholder="Cost"
+                          keyboardType="numeric"
+                          value={detailDraft.cost}
+                          onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, cost: text }))}
+                        />
+                      ) : (
+                        <Text style={styles.cellText}>{d.cost != null ? `$${d.cost}` : '-'}</Text>
+                      )}
+                    </View>
+                    <View style={[styles.cell, styles.actionCell, { flex: 1 }]}>
+                      {editingDetailId === d.id ? (
+                        <>
+                          <TouchableOpacity
+                            style={[styles.button, styles.smallButton]}
+                            onPress={async () => {
+                              await saveItineraryDetail();
+                            }}
+                          >
+                            <Text style={styles.buttonText}>Save</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[styles.button, styles.smallButton, styles.dangerButton]}
+                            onPress={() => {
+                              setEditingDetailId(null);
+                              setDetailDraft({ day: '1', time: '', activity: '', cost: '' });
+                            }}
+                          >
+                            <Text style={styles.buttonText}>Cancel</Text>
+                          </TouchableOpacity>
+                        </>
+                      ) : (
+                        <>
+                          <TouchableOpacity
+                            style={[styles.button, styles.smallButton]}
+                            onPress={() => {
+                              setEditingDetailId(d.id);
+                              setDetailDraft({
+                                day: String(d.day ?? '1'),
+                                time: d.time ?? '',
+                                activity: d.activity ?? '',
+                                cost: d.cost != null ? String(d.cost) : '',
+                              });
+                            }}
+                          >
+                            <Text style={styles.buttonText}>Edit</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[styles.button, styles.smallButton, styles.dangerButton]}
+                            onPress={async () => {
+                              await fetch(`${backendUrl}/api/itineraries/details/${d.id}`, {
+                                method: 'DELETE',
+                                headers,
+                              });
+                              if (editingDetailId === d.id) setEditingDetailId(null);
+                              refreshItineraryDetails();
+                            }}
+                          >
+                            <Text style={styles.buttonText}>Delete</Text>
+                          </TouchableOpacity>
+                        </>
+                      )}
+                    </View>
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.helperText}>No itinerary items yet.</Text>
+              )}
+              {!editingDetailId ? (
+                <View style={[styles.tableRow, styles.inputRow]}>
+                  <View style={[styles.cell, dayColStyle]}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Day"
+                      keyboardType="numeric"
+                      value={detailDraft.day}
+                      onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, day: text }))}
+                    />
+                  </View>
+                  <View style={[styles.cell, { flex: 1 }]}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Time"
+                      value={detailDraft.time}
+                      onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, time: text }))}
+                    />
+                  </View>
+                  <View style={[styles.cell, { flex: 2 }]}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Activity"
+                      value={detailDraft.activity}
+                      onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, activity: text }))}
+                    />
+                  </View>
+                  <View style={[styles.cell, { flex: 1 }]}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Cost"
+                      keyboardType="numeric"
+                      value={detailDraft.cost}
+                      onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, cost: text }))}
+                    />
+                  </View>
+                  <View style={[styles.cell, styles.actionCell, { flex: 1 }]}>
+                    <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={saveItineraryDetail}>
+                      <Text style={styles.buttonText}>Add</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : null}
+            </>
+          )}
         </View>
       ) : null}
 

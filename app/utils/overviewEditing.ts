@@ -2,6 +2,48 @@ import { type CarRental, type CarRentalDraft } from '../tabs/carRentals';
 import { type Flight, type FlightCreateDraft } from '../tabs/flights';
 import { type Tour, type TourDraft } from '../tabs/tours';
 
+type TripSnapshot = {
+  description?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  startMonth?: number | null;
+  startYear?: number | null;
+  durationDays?: number | null;
+};
+
+type DateDraft = {
+  mode: 'range' | 'month';
+  startDate: string;
+  endDate: string;
+  startMonth: string;
+  startYear: string;
+  durationDays: string;
+};
+
+export const getOverviewSaveFlags = (
+  trip: TripSnapshot | null,
+  descriptionDraft: string,
+  dateDraft: DateDraft,
+  pendingRemovalIds: string[]
+) => {
+  const originalDescription = trip?.description ?? '';
+  const hasDescriptionEdit = descriptionDraft !== originalDescription;
+  const hasDateEdit =
+    (dateDraft.mode === 'range' &&
+      (dateDraft.startDate !== (trip?.startDate ?? '') || dateDraft.endDate !== (trip?.endDate ?? ''))) ||
+    (dateDraft.mode === 'month' &&
+      (dateDraft.startMonth !== (trip?.startMonth ? String(trip?.startMonth) : '') ||
+        dateDraft.startYear !== (trip?.startYear ? String(trip?.startYear) : '') ||
+        dateDraft.durationDays !== (trip?.durationDays ? String(trip?.durationDays) : '')));
+  const hasTripEdits = hasDescriptionEdit || hasDateEdit;
+  const hasGroupEdits = pendingRemovalIds.length > 0;
+  return {
+    hasTripEdits,
+    hasGroupEdits,
+    shouldSkipTripSave: !hasTripEdits && !hasGroupEdits,
+  };
+};
+
 export const buildFlightDraftFromRow = (flight: Flight): FlightCreateDraft & { passengerIds: string[]; paidBy?: string[] } => ({
   passengerName: flight.passenger_name,
   arrivalDate: (flight as any).arrival_date || (flight as any).arrivalDate || flight.departure_date,
