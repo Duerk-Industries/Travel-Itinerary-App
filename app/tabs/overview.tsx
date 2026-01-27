@@ -48,7 +48,7 @@ import {
   type CarRental,
   type CarRentalDraft,
 } from '../tabs/carRentals';
-import { buildRentalDraftFromRow, buildTourDraftFromRow } from '../utils/overviewEditing';
+import { buildRentalDraftFromRow, buildTourDraftFromRow, getOverviewSaveFlags } from '../utils/overviewEditing';
 import { FlightEditingForm } from '../components/FlightEditingForm';
 
 type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
@@ -564,17 +564,8 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
   const saveOverviewEdits = async () => {
     if (!trip?.id) return;
     setEditingDetailId(null);
-    const originalDescription = trip.description ?? '';
-    const hasDescriptionEdit = descriptionDraft !== originalDescription;
-    const hasDateEdit =
-      (dateDraft.mode === 'range' &&
-        (dateDraft.startDate !== (trip.startDate ?? '') || dateDraft.endDate !== (trip.endDate ?? ''))) ||
-      (dateDraft.mode === 'month' &&
-        (dateDraft.startMonth !== (trip.startMonth ? String(trip.startMonth) : '') ||
-          dateDraft.startYear !== (trip.startYear ? String(trip.startYear) : '') ||
-          dateDraft.durationDays !== (trip.durationDays ? String(trip.durationDays) : '')));
-    const hasGroupEdits = pendingRemovalIds.length > 0;
-    if (!hasDescriptionEdit && !hasDateEdit && !hasGroupEdits) {
+    const { shouldSkipTripSave } = getOverviewSaveFlags(trip, descriptionDraft, dateDraft, pendingRemovalIds);
+    if (shouldSkipTripSave) {
       setIsEditing(false);
       await refreshItineraryDetails();
       return;
