@@ -1559,6 +1559,9 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                 nestedScrollEnabled
               >
                 <Text style={styles.helperText}>We'll generate a starter plan you can edit later.</Text>
+                <Text style={styles.helperText}>
+                  The AI itinerary will be generated after you complete all steps of the trip wizard.
+                </Text>
                 <TextInput
                   style={[
                     styles.input,
