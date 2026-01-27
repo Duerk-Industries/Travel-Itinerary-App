@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Linking, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import type { Trait } from './traits';
-import { FlightsTab, type Flight, type GroupMemberOption, buildFlightPayload, type FlightEditDraft } from './flights';
+import { FlightsTab, type Flight, type GroupMemberOption, type Trip, buildFlightPayload, type FlightEditDraft } from './flights';
 import {
   type Lodging,
   type LodgingDraft,
@@ -148,6 +148,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   const [itineraryDepartureAirport, setItineraryDepartureAirport] = useState('');
   const [itineraryAirportSuggestions, setItineraryAirportSuggestions] = useState<string[]>([]);
   const [showItineraryAirportSuggestions, setShowItineraryAirportSuggestions] = useState(false);
+  const itineraryAirportRef = useRef<TextInput | null>(null);
+  const [itineraryAirportAnchor, setItineraryAirportAnchor] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const [budgetLevel, setBudgetLevel] = useState<'cheap' | 'middle' | 'expensive'>('middle');
   const [generateItinerary, setGenerateItinerary] = useState(false);
   const [itineraryMode, setItineraryMode] = useState<'ai' | 'manual' | null>(null);
@@ -174,6 +176,24 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   const wizardCarDropoffDateRef = useRef<HTMLInputElement | null>(null);
 
   const totalSteps = steps.length;
+  const wizardTripDefaults = useMemo<Trip>(
+    () => ({
+      id: 'wizard',
+      groupId: 'wizard',
+      groupName: 'Wizard',
+      name: details.name || 'Trip',
+      description: details.description || null,
+      destination: details.destination || null,
+      departureLocation: itineraryDepartureAirport.trim() || null,
+      startDate: dates.mode === 'range' ? dates.startDate || null : null,
+      endDate: dates.mode === 'range' ? dates.endDate || null : null,
+      startMonth: dates.mode === 'month' ? Number(dates.startMonth) || null : null,
+      startYear: dates.mode === 'month' ? Number(dates.startYear) || null : null,
+      durationDays: dates.mode === 'month' ? Number(dates.durationDays) || null : null,
+      createdAt: new Date().toISOString(),
+    }),
+    [dates, details, itineraryDepartureAirport]
+  );
   const computedDays = useMemo(() => computeTripDays(dates.startDate, dates.endDate), [dates.startDate, dates.endDate]);
   const monthLabel = useMemo(
     () => formatMonthYear(Number(dates.startMonth), Number(dates.startYear)),
@@ -312,16 +332,42 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     }
   }, [computedDays, dates.mode, itineraryDaysTouched]);
 
-  useEffect(() => {
-    const query = itineraryDepartureAirport.trim();
-    if (!query) {
-      setItineraryAirportSuggestions([]);
-      setShowItineraryAirportSuggestions(false);
-      return;
+  const buildItineraryAirportSuggestions = (query: string): string[] => {
+    const trimmed = query.trim();
+    if (!trimmed) return [];
+    return airportOptions.filter((opt) => opt.toLowerCase().includes(trimmed.toLowerCase())).slice(0, 10);
+  };
+
+  const showItineraryAirportDropdown = (query: string) => {
+    setItineraryAirportSuggestions(buildItineraryAirportSuggestions(query));
+    setShowItineraryAirportSuggestions(true);
+    const node = itineraryAirportRef.current as any;
+    if (node?.measureInWindow) {
+      node.measureInWindow((x: number, y: number, width: number, height: number) => {
+        setItineraryAirportAnchor({ x, y, width, height });
+      });
+    } else if (typeof node?.getBoundingClientRect === 'function') {
+      const rect = node.getBoundingClientRect();
+      setItineraryAirportAnchor({
+        x: rect.left + (typeof window !== 'undefined' ? window.scrollX : 0),
+        y: rect.top + (typeof window !== 'undefined' ? window.scrollY : 0),
+        width: rect.width,
+        height: rect.height,
+      });
     }
-    const filtered = airportOptions.filter((opt) => opt.toLowerCase().includes(query.toLowerCase()));
-    setItineraryAirportSuggestions(filtered.slice(0, 10));
-  }, [airportOptions, itineraryDepartureAirport]);
+    if (query.trim()) {
+      try {
+        void onSearchAirports(query);
+      } catch {
+        // ignore background errors
+      }
+    }
+  };
+
+  const hideItineraryAirportDropdown = () => {
+    setShowItineraryAirportSuggestions(false);
+    setItineraryAirportAnchor(null);
+  };
 
   useEffect(() => {
     const nights = calculateNights(wizardLodgingDraft.checkInDate, wizardLodgingDraft.checkOutDate);
@@ -1664,41 +1710,25 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     </TouchableOpacity>
                   ))}
                 </View>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Departure airport (optional)"
-                  value={itineraryDepartureAirport}
-                  onChangeText={(text) => {
-                    setItineraryDepartureAirport(text);
-                    setShowItineraryAirportSuggestions(true);
-                    const query = text.trim();
-                    if (query) {
-                      try {
-                        void onSearchAirports(query);
-                      } catch {
-                        // ignore background errors
-                      }
-                    }
-                  }}
-                  onFocus={() => setShowItineraryAirportSuggestions(true)}
-                  onBlur={() => setTimeout(() => setShowItineraryAirportSuggestions(false), 150)}
-                />
-                {showItineraryAirportSuggestions && itineraryAirportSuggestions.length ? (
-                  <View style={styles.dropdownList}>
-                    {itineraryAirportSuggestions.map((opt) => (
-                      <TouchableOpacity
-                        key={opt}
-                        style={styles.dropdownOption}
-                        onPress={() => {
-                          setItineraryDepartureAirport(opt);
-                          setShowItineraryAirportSuggestions(false);
-                        }}
-                      >
-                        <Text style={styles.cellText}>{opt}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                ) : null}
+                <View style={{ position: 'relative' }}>
+                  <TextInput
+                    ref={itineraryAirportRef}
+                    style={styles.input}
+                    placeholder="Departure airport (optional)"
+                    value={itineraryDepartureAirport}
+                    onFocus={() => showItineraryAirportDropdown(itineraryDepartureAirport)}
+                    onChangeText={(text) => {
+                      setItineraryDepartureAirport(text);
+                      showItineraryAirportDropdown(text);
+                    }}
+                  />
+                  <TouchableOpacity
+                    style={{ position: 'absolute', right: 8, top: 10, padding: 6 }}
+                    onPress={() => showItineraryAirportDropdown(itineraryDepartureAirport)}
+                  >
+                    <Text style={styles.selectCaret}>ƒ-¬</Text>
+                  </TouchableOpacity>
+                </View>
                 <View style={[styles.row, { flexWrap: 'wrap' }]}>
                   {(['cheap', 'middle', 'expensive'] as const).map((level) => (
                     <TouchableOpacity
@@ -1827,7 +1857,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               payerName={wizardPayerName}
               headers={headers}
               jsonHeaders={wizardJsonHeaders}
-              findActiveTrip={() => undefined}
+              findActiveTrip={() => wizardTripDefaults}
               fetchGroupMembersForActiveTrip={async () => undefined}
               styles={styles}
               airportOptions={airportOptions}
@@ -2481,6 +2511,45 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           )}
         </View>
       </ScrollView>
+      {showItineraryAirportSuggestions && itineraryAirportAnchor ? (
+        <View style={[styles.passengerOverlay, { backgroundColor: 'transparent', zIndex: 52000, elevation: 80 }]}>
+          <TouchableOpacity
+            style={[styles.passengerOverlayBackdrop, { backgroundColor: 'transparent' }]}
+            onPress={hideItineraryAirportDropdown}
+          />
+          <View
+            style={[
+              styles.passengerOverlayList,
+              {
+                zIndex: 53000,
+                elevation: 84,
+                left: itineraryAirportAnchor.x,
+                top: itineraryAirportAnchor.y + itineraryAirportAnchor.height,
+                width: itineraryAirportAnchor.width || 280,
+              },
+            ]}
+          >
+            {itineraryAirportSuggestions.length ? (
+              itineraryAirportSuggestions.map((opt) => (
+                <TouchableOpacity
+                  key={opt}
+                  style={styles.dropdownOption}
+                  onPress={() => {
+                    const codeMatch = opt.match(/\(([A-Za-z]{3})\)/);
+                    const value = codeMatch ? codeMatch[1].toUpperCase() : opt;
+                    setItineraryDepartureAirport(value);
+                    hideItineraryAirportDropdown();
+                  }}
+                >
+                  <Text style={styles.cellText}>{opt}</Text>
+                </TouchableOpacity>
+              ))
+            ) : (
+              <Text style={styles.helperText}>Type to search airports</Text>
+            )}
+          </View>
+        </View>
+      ) : null}
       {Platform.OS !== 'web' && dateField && NativeDateTimePicker ? (
         <NativeDateTimePicker
           value={dateValue}

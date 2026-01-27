@@ -19,12 +19,9 @@ import {
 import { normalizeDateString } from '../utils/normalizeDateString';
 import {
   buildFlightPayload,
-  buildFlightPayloadForCreate,
-  createInitialFlightCreateDraft,
+  createFlightDraftForTrip,
   createInitialFlightState,
-  createFlightForTrip,
   type Flight,
-  type FlightCreateDraft,
   type FlightEditDraft,
   type GroupMemberOption,
 } from '../tabs/flights';
@@ -203,11 +200,9 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
   const [showAddTraveler, setShowAddTraveler] = useState(false);
   const [travelerDraft, setTravelerDraft] = useState({ firstName: '', lastName: '', email: '' });
   const [pendingRemovalIds, setPendingRemovalIds] = useState<string[]>([]);
-  const [showAddFlight, setShowAddFlight] = useState(false);
   const [showAddLodging, setShowAddLodging] = useState(false);
   const [showAddTour, setShowAddTour] = useState(false);
   const [showAddRental, setShowAddRental] = useState(false);
-  const [flightDraft, setFlightDraft] = useState<FlightCreateDraft>(createInitialFlightCreateDraft());
   const [lodgingDraft, setLodgingDraft] = useState<LodgingDraft>(createInitialLodgingState());
   const [tourDraft, setTourDraft] = useState<TourDraft>(createInitialTourState());
   const [rentalDraft, setRentalDraft] = useState<CarRentalDraft>(createInitialCarRentalDraft());
@@ -592,43 +587,47 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
     onRefreshGroups();
   };
 
-  const saveFlight = async () => {
-    if (editingFlightId) {
-      if (!trip?.id) {
-        alert('Select an active trip before editing a flight.');
-        return;
-      }
-      const { payload, error } = buildFlightPayloadForCreate(flightDraft, trip.id, defaultPayerId);
-      if (error || !payload) {
-        alert(error || 'Unable to update flight');
-        return;
-      }
-      const res = await fetch(`${backendUrl}/api/flights/${editingFlightId}`, {
-        method: 'PATCH',
+  const saveFlightDetails = async () => {
+    if (!editingFlightId || !editingFlightDraft) return;
+    if (!trip?.id) {
+      alert('Select an active trip before editing a flight.');
+      return;
+    }
+    if (!editingFlightDraft.passengerIds.length) {
+      alert('Select at least one passenger');
+      return;
+    }
+    const payload = buildFlightPayload(
+      { ...editingFlightDraft, passengerName: buildPassengerName(editingFlightDraft.passengerIds) || editingFlightDraft.passengerName },
+      trip.id,
+      defaultPayerId
+    );
+    if (editingFlightId === 'new') {
+      const res = await fetch(`${backendUrl}/api/flights`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json', ...headers },
         body: JSON.stringify(payload),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        alert(data.error || 'Unable to update flight');
+        alert(data.error || 'Unable to save flight');
         return;
       }
-      closeFlightModal();
+      closeFlightEditor();
       onRefreshFlights();
       return;
     }
-    const result = await createFlightForTrip({
-      backendUrl,
-      headers,
-      draft: flightDraft,
-      tripId: trip?.id ?? null,
-      defaultPayerId,
+    const res = await fetch(`${backendUrl}/api/flights/${editingFlightId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...headers },
+      body: JSON.stringify(payload),
     });
-    if (!result.ok) {
-      alert(result.error || 'Unable to save flight');
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      alert(data.error || 'Unable to update flight');
       return;
     }
-    closeFlightModal();
+    closeFlightEditor();
     onRefreshFlights();
   };
 
@@ -672,36 +671,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
     setEditingFlightDraft((prev) => (prev ? { ...prev, passengerIds: unique, passengerName: buildPassengerName(unique) } : prev));
   };
 
-  const saveFlightEdit = async () => {
-    if (!editingFlightId || !editingFlightDraft) return;
-    if (!trip?.id) {
-      alert('Select an active trip before editing a flight.');
-      return;
-    }
-    if (!editingFlightDraft.passengerIds.length) {
-      alert('Select at least one passenger');
-      return;
-    }
-    const payload = buildFlightPayload(
-      { ...editingFlightDraft, passengerName: buildPassengerName(editingFlightDraft.passengerIds) || editingFlightDraft.passengerName },
-      trip.id,
-      defaultPayerId
-    );
-    const res = await fetch(`${backendUrl}/api/flights/${editingFlightId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', ...headers },
-      body: JSON.stringify(payload),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      alert(data.error || 'Unable to update flight');
-      return;
-    }
-    setShowFlightEditor(false);
-    setEditingFlightDraft(null);
-    setEditingFlightId(null);
-    onRefreshFlights();
-  };
+  const saveFlightEdit = saveFlightDetails;
 
   const saveLodging = async () => {
     if (!trip?.id) {
@@ -798,12 +768,6 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
     closeRentalModal();
   };
 
-  const closeFlightModal = () => {
-    setShowAddFlight(false);
-    setEditingFlightId(null);
-    setFlightDraft(createInitialFlightCreateDraft());
-  };
-
   const closeFlightEditor = () => {
     setShowFlightEditor(false);
     setEditingFlightId(null);
@@ -832,7 +796,6 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
 
   useEffect(() => {
     if (!isEditing) {
-      closeFlightModal();
       closeFlightEditor();
       closeLodgingModal();
       closeTourModal();
@@ -847,7 +810,6 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       return;
     }
     setSelectedFlight(null);
-    setShowAddFlight(false);
     setEditingFlightId(flight.id);
     setEditingFlightDraft(toFlightEditDraft(flight));
     const anchor = flightRowOffsets[flight.id];
@@ -858,6 +820,20 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       setFlightEditorAnchor(scrollY + 80);
       scrollRef.current?.scrollTo({ y: Math.max(scrollY - 40, 0), animated: true });
     }
+    setShowFlightEditor(true);
+  };
+
+  const openFlightAdd = () => {
+    if (!isEditing) return;
+    setSelectedFlight(null);
+    setEditingFlightId('new');
+    const draft = createFlightDraftForTrip(trip ?? undefined, defaultPayerId);
+    if (groupMembers.length) {
+      draft.passengerIds = groupMembers.map((m) => m.id);
+      draft.passengerName = buildPassengerName(draft.passengerIds) || draft.passengerName;
+    }
+    setEditingFlightDraft(draft);
+    setFlightEditorAnchor(scrollY + 80);
     setShowFlightEditor(true);
   };
 
@@ -1306,10 +1282,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
           <View style={[styles.row, { flexWrap: 'wrap' }]}>
             <TouchableOpacity
               style={[styles.button, styles.smallButton]}
-              onPress={() => {
-                closeFlightModal();
-                setShowAddFlight(true);
-              }}
+              onPress={openFlightAdd}
             >
               <Text style={styles.buttonText}>Add Flight</Text>
             </TouchableOpacity>
@@ -1445,141 +1418,6 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
         onClose={closeFlightEditor}
         onSave={saveFlightEdit}
       />
-      {showAddFlight ? (
-        <View style={styles.modalOverlay}>
-          <View style={styles.confirmModal}>
-            <Text style={styles.sectionTitle}>{editingFlightId ? 'Edit Flight' : 'Add Flight'}</Text>
-            <ScrollView style={{ maxHeight: 420 }}>
-              <Text style={styles.modalLabel}>Passenger</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Passenger name"
-                value={flightDraft.passengerName}
-                onChangeText={(text) => setFlightDraft((prev) => ({ ...prev, passengerName: text }))}
-              />
-              <Text style={styles.modalLabel}>Departure date</Text>
-              {Platform.OS === 'web' ? (
-                <input
-                  type="date"
-                  value={flightDraft.departureDate}
-                  onChange={(e) =>
-                    setFlightDraft((prev) => ({ ...prev, departureDate: normalizeDateString(e.target.value) }))
-                  }
-                  style={styles.input as any}
-                />
-              ) : (
-                <TouchableOpacity style={styles.input} onPress={() => openModalDatePicker('flightDeparture', flightDraft.departureDate)}>
-                  <Text style={styles.cellText}>{flightDraft.departureDate || 'YYYY-MM-DD'}</Text>
-                </TouchableOpacity>
-              )}
-              <Text style={styles.modalLabel}>Departure airport code</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="JFK"
-                value={flightDraft.departureAirportCode}
-                onChangeText={(text) => setFlightDraft((prev) => ({ ...prev, departureAirportCode: text }))}
-              />
-              <Text style={styles.modalLabel}>Departure time</Text>
-              {Platform.OS === 'web' ? (
-                <input
-                  type="time"
-                  value={flightDraft.departureTime}
-                  onChange={(e) => setFlightDraft((prev) => ({ ...prev, departureTime: e.target.value }))}
-                  style={styles.input as any}
-                />
-              ) : (
-                <TextInput
-                  style={styles.input}
-                  placeholder="HH:MM"
-                  value={flightDraft.departureTime}
-                  onChangeText={(text) => setFlightDraft((prev) => ({ ...prev, departureTime: text }))}
-                />
-              )}
-              <Text style={styles.modalLabel}>Arrival airport code</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="LAX"
-                value={flightDraft.arrivalAirportCode}
-                onChangeText={(text) => setFlightDraft((prev) => ({ ...prev, arrivalAirportCode: text }))}
-              />
-              <Text style={styles.modalLabel}>Arrival time</Text>
-              {Platform.OS === 'web' ? (
-                <input
-                  type="time"
-                  value={flightDraft.arrivalTime}
-                  onChange={(e) => setFlightDraft((prev) => ({ ...prev, arrivalTime: e.target.value }))}
-                  style={styles.input as any}
-                />
-              ) : (
-                <TextInput
-                  style={styles.input}
-                  placeholder="HH:MM"
-                  value={flightDraft.arrivalTime}
-                  onChangeText={(text) => setFlightDraft((prev) => ({ ...prev, arrivalTime: text }))}
-                />
-              )}
-              <Text style={styles.modalLabel}>Carrier</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Delta"
-                value={flightDraft.carrier}
-                onChangeText={(text) => setFlightDraft((prev) => ({ ...prev, carrier: text }))}
-              />
-              <Text style={styles.modalLabel}>Flight number</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="DL123"
-                value={flightDraft.flightNumber}
-                onChangeText={(text) => setFlightDraft((prev) => ({ ...prev, flightNumber: text }))}
-              />
-              <Text style={styles.modalLabel}>Booking reference</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="ABC123"
-                value={flightDraft.bookingReference}
-                onChangeText={(text) => setFlightDraft((prev) => ({ ...prev, bookingReference: text }))}
-              />
-              <Text style={styles.modalLabel}>Layover location</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Chicago"
-                value={flightDraft.layoverLocation}
-                onChangeText={(text) => setFlightDraft((prev) => ({ ...prev, layoverLocation: text }))}
-              />
-              <Text style={styles.modalLabel}>Layover airport code</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="ORD"
-                value={flightDraft.layoverLocationCode}
-                onChangeText={(text) => setFlightDraft((prev) => ({ ...prev, layoverLocationCode: text }))}
-              />
-              <Text style={styles.modalLabel}>Layover duration</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="1h 20m"
-                value={flightDraft.layoverDuration}
-                onChangeText={(text) => setFlightDraft((prev) => ({ ...prev, layoverDuration: text }))}
-              />
-              <Text style={styles.modalLabel}>Cost</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="0.00"
-                keyboardType="numeric"
-                value={flightDraft.cost}
-                onChangeText={(text) => setFlightDraft((prev) => ({ ...prev, cost: text }))}
-              />
-            </ScrollView>
-            <View style={styles.row}>
-              <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={closeFlightModal}>
-                <Text style={styles.buttonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.button} onPress={saveFlight}>
-                <Text style={styles.buttonText}>Save</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      ) : null}
       {showAddLodging ? (
         <View style={styles.modalOverlay}>
           <View style={styles.confirmModal}>

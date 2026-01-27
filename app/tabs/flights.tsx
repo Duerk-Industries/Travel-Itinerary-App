@@ -150,6 +150,9 @@ export type Trip = {
   name: string;
   description?: string | null;
   destination?: string | null;
+  departureCity?: string | null;
+  departureLocation?: string | null;
+  departureAirport?: string | null;
   startDate?: string | null;
   endDate?: string | null;
   startMonth?: number | null;
@@ -178,6 +181,49 @@ export const createInitialFlightState = (): FlightDraft => ({
   bookingReference: '',
   paidBy: [],
 });
+
+const getDefaultFlightDates = (trip?: Trip): { departureDate: string; arrivalDate: string } | null => {
+  if (!trip) return null;
+  const normalizedStart = normalizeDateString(trip.startDate ?? '');
+  if (normalizedStart) {
+    return { departureDate: normalizedStart, arrivalDate: normalizedStart };
+  }
+  if (trip.startYear && trip.startMonth) {
+    const month = String(trip.startMonth).padStart(2, '0');
+    const date = `${trip.startYear}-${month}-01`;
+    return { departureDate: date, arrivalDate: date };
+  }
+  return null;
+};
+
+const getDefaultFlightDepartureLocation = (trip?: Trip): string | null => {
+  if (!trip) return null;
+  const raw =
+    (trip as Trip)?.departureCity ??
+    (trip as Trip)?.departureLocation ??
+    (trip as Trip)?.departureAirport ??
+    '';
+  if (typeof raw !== 'string') return null;
+  const trimmed = raw.trim();
+  return trimmed.length ? trimmed : null;
+};
+
+export const createFlightDraftForTrip = (trip?: Trip, defaultPayerId?: string | null): FlightEditDraft => {
+  const draft = createInitialFlightState() as FlightEditDraft;
+  const dateDefaults = getDefaultFlightDates(trip);
+  if (dateDefaults) {
+    draft.departureDate = dateDefaults.departureDate;
+    draft.arrivalDate = dateDefaults.arrivalDate;
+  }
+  const locationDefault = getDefaultFlightDepartureLocation(trip);
+  if (locationDefault) {
+    draft.departureLocation = locationDefault;
+  }
+  if (defaultPayerId) {
+    draft.paidBy = [defaultPayerId];
+  }
+  return draft;
+};
 
 export const buildFlightPayload = (flight: FlightEditDraft, tripId?: string | null, defaultPayerId?: string | null) => {
   const trim = (v: string | null | undefined) => (v ?? '').trim();
@@ -1047,9 +1093,11 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       return;
     }
     setEditingFlightId('new');
-    const init = createInitialFlightState();
-    if (defaultPayerId && !init.paidBy.includes(defaultPayerId)) {
-      init.paidBy.push(defaultPayerId);
+    const init = createFlightDraftForTrip(findActiveTrip(), defaultPayerId);
+    if (groupMembers.length) {
+      const allIds = groupMembers.map((m) => m.id);
+      init.passengerIds = allIds;
+      init.passengerName = buildPassengerName(allIds) || init.passengerName;
     }
     setEditingFlight(init);
     setAirportTarget(null);
