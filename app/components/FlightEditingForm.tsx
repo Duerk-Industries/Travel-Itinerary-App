@@ -137,7 +137,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
                   style={{ position: 'absolute', right: 8, top: 10, padding: 6 }}
                   onPress={() => showAirportDropdown('modal-dep', modalDepLocationRef.current, flight.departureLocation)}
                 >
-                  <Text style={styles.selectCaret}>ƒ-¬</Text>
+                  <Text style={styles.selectCaret}></Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -199,7 +199,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
                   style={{ position: 'absolute', right: 8, top: 10, padding: 6 }}
                   onPress={() => showAirportDropdown('modal-arr', modalArrLocationRef.current, flight.arrivalLocation)}
                 >
-                  <Text style={styles.selectCaret}>ƒ-¬</Text>
+                  <Text style={styles.selectCaret}></Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -243,7 +243,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
                   style={{ position: 'absolute', right: 8, top: 10, padding: 6 }}
                   onPress={() => showAirportDropdown('modal-layover', modalLayoverLocationRef.current, flight.layoverLocation)}
                 >
-                  <Text style={styles.selectCaret}>ƒ-¬</Text>
+                  <Text style={styles.selectCaret}></Text>
                 </TouchableOpacity>
               </View>
             </View>

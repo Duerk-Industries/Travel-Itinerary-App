@@ -1727,7 +1727,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     style={{ position: 'absolute', right: 8, top: 10, padding: 6 }}
                     onPress={() => showItineraryAirportDropdown(itineraryDepartureAirport)}
                   >
-                    <Text style={styles.selectCaret}>ƒ-¬</Text>
+                    <Text style={styles.selectCaret}></Text>
                   </TouchableOpacity>
                 </View>
                 <View style={[styles.row, { flexWrap: 'wrap' }]}>
@@ -2281,7 +2281,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                         onPress={() => setWizardCarPrepaidOpen((s) => !s)}
                       >
                         <Text style={styles.cellText}>{wizardCarDraft.prepaid || 'Select Yes/No'}</Text>
-                        <Text style={styles.selectCaret}>ƒ-_</Text>
+                        <Text style={styles.selectCaret}></Text>
                       </TouchableOpacity>
                       {wizardCarPrepaidOpen ? (
                         <View style={[styles.dropdownList, { position: 'relative', top: 0 }]}>
