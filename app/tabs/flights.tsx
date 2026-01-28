@@ -267,56 +267,16 @@ export const buildFlightPayloadForCreate = (
   defaultPayerId?: string | null
 ): { payload?: any; error?: string } => {
   if (!tripId) return { error: 'Select an active trip before adding a flight.' };
-  const draftDepartureDate = (draft as any).departureDate ?? '';
-  const draftArrivalDate = (draft as any).arrivalDate ?? '';
-  const draftDepartureTime = (draft as any).departureTime ?? '';
-  const draftArrivalTime = (draft as any).arrivalTime ?? '';
-  const draftDepartureLocation = (draft as any).departureLocation ?? '';
-  const draftArrivalLocation = (draft as any).arrivalLocation ?? '';
-  const draftDepartureCode = (draft as any).departureAirportCode ?? '';
-  const draftArrivalCode = (draft as any).arrivalAirportCode ?? '';
-  const draftCarrier = (draft as any).carrier ?? '';
-  const draftFlightNumber = (draft as any).flightNumber ?? '';
-  const draftBookingReference = (draft as any).bookingReference ?? '';
-  const draftCost = (draft as any).cost ?? '';
-  const draftPassengerName = (draft as any).passengerName ?? '';
-  const draftPassengerIds = (draft as any).passengerIds ?? [];
-  if (!draft.departureDate.trim()) return { error: 'Departure date is required.' };
-  if (!draft.departureTime.trim() || !draft.arrivalTime.trim()) return { error: 'Departure and arrival times are required.' };
-  if (!isValidTime(draft.departureTime) || !isValidTime(draft.arrivalTime)) return { error: 'Enter valid departure and arrival times (HH:MM).' };
+  const departureDate = (draft as FlightEditDraft).departureDate?.trim();
+  const departureTime = (draft as FlightEditDraft).departureTime?.trim();
+  const arrivalTime = (draft as FlightEditDraft).arrivalTime?.trim();
+  if (!departureDate) return { error: 'Departure date is required.' };
+  if (!departureTime || !arrivalTime) return { error: 'Departure and arrival times are required.' };
+  if (!isValidTime(departureTime) || !isValidTime(arrivalTime)) return { error: 'Enter valid departure and arrival times (HH:MM).' };
   if (!Array.isArray(draft.passengerIds) || draft.passengerIds.filter(Boolean).length === 0) {
     return { error: 'Select at least one passenger' };
   }
-  const normalizedDepartureLocation = String(draftDepartureLocation).trim();
-  const normalizedArrivalLocation = String(draftArrivalLocation).trim();
-  const normalizedDepartureCode = String(draftDepartureCode).trim();
-  const normalizedArrivalCode = String(draftArrivalCode).trim();
-  const departureLocation = normalizedDepartureLocation || normalizedDepartureCode;
-  const arrivalLocation = normalizedArrivalLocation || normalizedArrivalCode;
-  const payload = buildFlightPayload(
-    {
-      passengerName: String(draftPassengerName).trim() || 'Traveler',
-      passengerIds: Array.isArray(draftPassengerIds) ? draftPassengerIds.filter(Boolean) : [],
-      departureDate: String(draftDepartureDate).trim(),
-      arrivalDate: String(draftArrivalDate).trim() || String(draftDepartureDate).trim(),
-      departureLocation,
-      departureAirportCode: normalizedDepartureCode || departureLocation,
-      departureTime: String(draftDepartureTime).trim(),
-      arrivalLocation,
-      arrivalAirportCode: normalizedArrivalCode || arrivalLocation,
-      layoverLocation: String((draft as any).layoverLocation ?? '').trim(),
-      layoverLocationCode: String((draft as any).layoverLocationCode ?? '').trim(),
-      layoverDuration: String((draft as any).layoverDuration ?? '').trim(),
-      arrivalTime: String(draftArrivalTime).trim(),
-      cost: String(draftCost).trim(),
-      carrier: String(draftCarrier).trim(),
-      flightNumber: String(draftFlightNumber).trim(),
-      bookingReference: String(draftBookingReference).trim(),
-      paidBy: Array.isArray((draft as any).paidBy) ? (draft as any).paidBy : [],
-    },
-    tripId,
-    defaultPayerId
-  );
+  const payload = buildFlightPayload(draft as FlightEditDraft, tripId, defaultPayerId);
   return { payload };
 };
 
@@ -340,6 +300,41 @@ export const createFlightForTrip = async (params: {
   return { ok: true };
 };
 
+export const normalizeFlightFromApi = (f: any): Flight => ({
+  ...f,
+  passenger_name: f.passenger_name ?? f.passengerName ?? '',
+  passenger_ids: Array.isArray(f.passenger_ids)
+    ? f.passenger_ids
+    : Array.isArray(f.passengerIds)
+      ? f.passengerIds
+      : [],
+  departure_date: f.departure_date ?? f.departureDate ?? '',
+  arrival_date: f.arrival_date ?? f.arrivalDate ?? null,
+  departure_location: f.departure_location ?? f.departureLocation ?? '',
+  arrival_location: f.arrival_location ?? f.arrivalLocation ?? '',
+  layover_location: f.layover_location ?? f.layoverLocation ?? '',
+  layover_location_code: f.layover_location_code ?? f.layoverLocationCode ?? '',
+  departure_airport_code: f.departure_airport_code ?? f.departureAirportCode ?? '',
+  arrival_airport_code: f.arrival_airport_code ?? f.arrivalAirportCode ?? '',
+  layover_airport_code: f.layover_airport_code ?? f.layoverAirportCode ?? '',
+  departure_time: f.departure_time ?? f.departureTime ?? '',
+  arrival_time: f.arrival_time ?? f.arrivalTime ?? '',
+  carrier: f.carrier ?? '',
+  flight_number: f.flight_number ?? f.flightNumber ?? '',
+  booking_reference: f.booking_reference ?? f.bookingReference ?? '',
+  paidBy: Array.isArray(f.paidBy)
+    ? f.paidBy
+    : Array.isArray(f.paid_by)
+      ? f.paid_by
+      : [],
+  paid_by: Array.isArray(f.paid_by)
+    ? f.paid_by
+    : Array.isArray(f.paidBy)
+      ? f.paidBy
+      : [],
+  arrivalDate: f.arrival_date ?? f.arrivalDate ?? null,
+});
+
 export const fetchFlightsForTrip = async ({
   backendUrl,
   activeTripId,
@@ -355,13 +350,7 @@ export const fetchFlightsForTrip = async ({
   });
   if (!res.ok) return [];
   const data = await res.json();
-  return (data as any[]).map((f) => ({
-    ...f,
-    passenger_ids: Array.isArray((f as any).passenger_ids) ? (f as any).passenger_ids : [],
-    paidBy: Array.isArray(f.paidBy) ? f.paidBy : Array.isArray(f.paid_by) ? f.paid_by : [],
-    arrival_date: (f as any).arrival_date || (f as any).arrivalDate || null,
-    arrivalDate: (f as any).arrival_date || (f as any).arrivalDate || null,
-  }));
+  return (data as any[]).map((f) => normalizeFlightFromApi(f));
 };
 
 type FlightsTabProps = {
@@ -448,11 +437,20 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
 }) => {
   const isWizard = mode === 'wizard';
   const containerRef = useRef<React.ElementRef<typeof View> | null>(null);
+  const formatPassengerLabel = (member: GroupMemberOption): string => {
+    const first = member.firstName?.trim() ?? '';
+    const last = member.lastName?.trim() ?? '';
+    const full = `${first} ${last}`.trim();
+    if (full) return full;
+    if (member.guestName?.trim()) return member.guestName.trim();
+    if (member.email?.trim()) return member.email.trim();
+    return member.id;
+  };
   const memberNames = useMemo(() => {
     const map = new Map<string, string>();
-    groupMembers.forEach((m) => map.set(m.id, formatMemberName(m)));
+    groupMembers.forEach((m) => map.set(m.id, formatPassengerLabel(m)));
     return map;
-  }, [groupMembers, formatMemberName]);
+  }, [groupMembers]);
 
   const buildPassengerName = (ids: string[]) => {
     const names = ids.map((id) => memberNames.get(id)).filter(Boolean) as string[];
@@ -1016,6 +1014,8 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
         alert(error || 'Unable to add flight');
         return;
       }
+      // TEMP DEBUG: log payload for flight create
+      console.log('[DEBUG][flights] create payload', payload);
       res = await fetch(`${backendUrl}/api/flights`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...headers },
@@ -1027,6 +1027,8 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
         undefined,
         defaultPayerId
       );
+      // TEMP DEBUG: log payload for flight update
+      console.log('[DEBUG][flights] update payload', payload);
       res = await fetch(`${backendUrl}/api/flights/${editingFlightId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', ...headers },
@@ -1285,15 +1287,17 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                       ]}
                     >
                       {!item.passengerInGroup ? <Text style={styles.warningText}>Passenger not in trip group</Text> : null}
-                      <TouchableOpacity style={styles.smallButton} onPress={() => openFlightDetails(item)}>
-                        <Text style={styles.buttonText}>Details</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={[styles.smallButton, styles.dangerButton]} onPress={() => removeFlight(item.id)}>
-                        <Text style={styles.buttonText}>Delete</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={styles.smallButton} onPress={() => shareFlight(item.id)}>
-                        <Text style={styles.buttonText}>Share</Text>
-                      </TouchableOpacity>
+                      <View style={styles.actionButtonsRow}>
+                        <TouchableOpacity style={styles.smallButton} onPress={() => openFlightDetails(item)}>
+                          <Text style={styles.buttonText}>Details</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.smallButton, styles.dangerButton]} onPress={() => removeFlight(item.id)}>
+                          <Text style={styles.buttonText}>Delete</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.smallButton} onPress={() => shareFlight(item.id)}>
+                          <Text style={styles.buttonText}>Share</Text>
+                        </TouchableOpacity>
+                      </View>
                     </View>
                   );
                 }
@@ -1696,7 +1700,4 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
 };
 
 export const mergeFlightsFromApi = (list: Flight[]): Flight[] =>
-  list.map((f) => ({
-    ...f,
-    paidBy: Array.isArray(f.paidBy) ? f.paidBy : Array.isArray((f as any).paid_by) ? (f as any).paid_by : [],
-  }));
+  list.map((f) => normalizeFlightFromApi(f));

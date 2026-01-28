@@ -1,5 +1,5 @@
 import { describe, expect, test } from '@jest/globals';
-import { buildFlightPayloadForCreate, createInitialFlightCreateDraft } from '../tabs/flights';
+import { buildFlightPayloadForCreate, createInitialFlightCreateDraft, normalizeFlightFromApi } from '../tabs/flights';
 
 describe('Flights helpers', () => {
   test('requires an active trip id', () => {
@@ -55,5 +55,30 @@ describe('Flights helpers', () => {
     };
     const result = buildFlightPayloadForCreate(draft, 'trip-1', null);
     expect(result.error).toBe('Select at least one passenger');
+  });
+
+  test('normalizes firestore flights to table fields', () => {
+    const apiFlight = {
+      id: 'f1',
+      passengerName: 'Member',
+      passengerIds: ['m1'],
+      departureDate: '2026-05-15',
+      arrivalDate: '2026-05-15',
+      departureLocation: 'ATL',
+      arrivalLocation: 'ORD',
+      departureTime: '08:00',
+      arrivalTime: '10:00',
+      carrier: '',
+      flightNumber: '',
+      bookingReference: '',
+      paidBy: ['m1'],
+    };
+    const normalized = normalizeFlightFromApi(apiFlight);
+    expect(normalized.passenger_ids).toEqual(['m1']);
+    expect(normalized.departure_location).toBe('ATL');
+    expect(normalized.arrival_location).toBe('ORD');
+    expect(normalized.flight_number).toBe('');
+    expect(normalized.booking_reference).toBe('');
+    expect(normalized.paid_by).toEqual(['m1']);
   });
 });

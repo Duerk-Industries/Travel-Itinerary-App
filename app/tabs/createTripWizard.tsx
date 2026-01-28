@@ -247,11 +247,12 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   }, [participants]);
   const wizardDefaultPayerId = wizardGroupMembers[0]?.id ?? null;
   const formatWizardMemberName = (member: GroupMemberOption): string => {
-    if (member.guestName) return member.guestName;
     const first = (member.firstName ?? '').trim();
     const last = (member.lastName ?? '').trim();
     const name = `${first} ${last}`.trim();
-    return name || member.email || 'Traveler';
+    if (name) return name;
+    if (member.guestName) return member.guestName;
+    return member.email || 'Traveler';
   };
   const wizardPayerName = (id: string): string => {
     const match = wizardGroupMembers.find((m) => m.id === id);

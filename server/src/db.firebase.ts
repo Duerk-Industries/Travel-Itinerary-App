@@ -265,14 +265,48 @@ export const listGroupMembers = async (
   if (!allowed) throw new Error('Not authorized to view members');
   const membersSnap = await db.collection('group_members').where('groupId', '==', groupId).where('removedAt', '==', null).get();
   const invitesSnap = await db.collection('group_invites').where('groupId', '==', groupId).where('status', '==', 'pending').get();
-  const members = membersSnap.docs.map((d) => {
-    const data = d.data() as any;
+  const memberDocs = membersSnap.docs.map((d) => ({ id: d.id, data: d.data() as any }));
+  const userIds = Array.from(
+    new Set(memberDocs.map((m) => m.data.userId).filter((id) => typeof id === 'string' && id.trim().length))
+  );
+  const userProfiles = new Map<string, any>();
+  if (userIds.length) {
+    const refs = userIds.map((id) => db.collection('web_users').doc(id));
+    const snaps = await db.getAll(...refs);
+    snaps.forEach((doc) => {
+      if (doc.exists) {
+        userProfiles.set(doc.id, doc.data() as any);
+      }
+    });
+  }
+  const inviteEmails = Array.from(
+    new Set(
+      memberDocs
+        .map((m) => m.data.inviteEmail)
+        .filter((email) => typeof email === 'string' && email.trim().length)
+        .map((email) => normalizeEmail(email))
+    )
+  );
+  const emailProfiles = new Map<string, any>();
+  if (inviteEmails.length) {
+    const profileRefs = inviteEmails.map((email) => db.collection('web_users').where('email', '==', email).limit(1));
+    const profileSnaps = await Promise.all(profileRefs.map((q) => q.get()));
+    profileSnaps.forEach((snap) => {
+      snap.docs.forEach((doc) => emailProfiles.set(doc.data().email, doc.data()));
+    });
+  }
+  const members = memberDocs.map((doc) => {
+    const data = doc.data;
+    const profile = data.userId ? userProfiles.get(data.userId) : null;
+    const normalizedInvite = data.inviteEmail ? normalizeEmail(data.inviteEmail) : '';
+    const inviteProfile = normalizedInvite ? emailProfiles.get(normalizedInvite) : null;
+    const email = data.inviteEmail ?? profile?.email ?? inviteProfile?.email ?? data.email;
     return {
-      id: d.id,
-      guestName: data.guestName,
-      email: data.inviteEmail,
-      firstName: data.firstName,
-      lastName: data.lastName,
+      id: doc.id,
+      guestName: data.guestName ?? null,
+      email,
+      firstName: data.firstName ?? profile?.firstName ?? inviteProfile?.firstName ?? null,
+      lastName: data.lastName ?? profile?.lastName ?? inviteProfile?.lastName ?? null,
       status: data.inviteEmail ? 'pending' : 'active',
       removedAt: data.removedAt ?? null,
     };
@@ -632,7 +666,13 @@ export const ensureUserInTrip = async (tripId: string, userId: string): Promise<
 export const insertFlight = async (flight: Omit<Flight, 'id'>): Promise<Flight> => {
   const db = getDb();
   const id = randomUUID();
-  await db.collection('flights').doc(id).set({ ...flight, id, createdAt: nowIso() });
+  const payload = { ...flight, id, createdAt: nowIso() };
+  // TEMP DEBUG: log firestore payload
+  console.log('[DEBUG][flights] firestore insert payload', payload);
+  await db.collection('flights').doc(id).set(payload);
+  const saved = await db.collection('flights').doc(id).get();
+  // TEMP DEBUG: log saved firestore doc
+  console.log('[DEBUG][flights] firestore insert saved', saved.data());
   return { ...flight, id };
 };
 
@@ -669,7 +709,21 @@ export const listFlights = async (userId: string, tripId?: string): Promise<Flig
   let query: FirebaseFirestore.Query = db.collection('flights').where('userId', '==', userId);
   if (tripId) query = query.where('tripId', '==', tripId);
   const snapshot = await query.get();
-  return snapshot.docs.map((d) => d.data() as Flight);
+  let validPassengerIds: Set<string> | null = null;
+  if (tripId) {
+    const tripDoc = await db.collection('trips').doc(tripId).get();
+    const groupId = tripDoc.exists ? (tripDoc.data() as any)?.groupId : null;
+    if (groupId) {
+      const members = await listGroupMembers(groupId, userId).catch(() => []);
+      validPassengerIds = new Set(members.map((m) => String(m.id)));
+    }
+  }
+  return snapshot.docs.map((d) => {
+    const data = d.data() as Flight;
+    const ids: string[] = Array.isArray((data as any).passengerIds) ? (data as any).passengerIds : [];
+    const passengerInGroup = validPassengerIds ? ids.every((id: string) => validPassengerIds!.has(String(id))) : true;
+    return { ...data, passengerInGroup };
+  });
 };
 
 export const shareFlight = async (flightId: string, sharedEmail: string): Promise<void> => {

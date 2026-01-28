@@ -282,7 +282,6 @@ const App: React.FC = () => {
   const [fellowTravelers, setFellowTravelers] = useState<FellowTraveler[]>([]);
   const [showRelationshipDropdown, setShowRelationshipDropdown] = useState(false);
   const formatMemberName = (member: GroupMemberOption): string => {
-    if (member.guestName) return member.guestName;
     const norm = (val?: string | null) => {
       const t = val?.trim();
       if (!t || t.toLowerCase() === 'unknown') return '';
@@ -293,6 +292,7 @@ const App: React.FC = () => {
     const email = member.email?.trim();
     const status = member.status;
     if (first || last) return `${first ?? ''} ${last ?? ''}`.trim();
+    if (member.guestName) return member.guestName;
     if (email) {
       const local = email.split('@')[0] ?? '';
       const parts = local.split(/[._-]+/).filter(Boolean);
@@ -2684,9 +2684,15 @@ const styles = StyleSheet.create({
     color: '#0f172a',
   },
   actionCell: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: 6,
+  },
+  actionButtonsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 8,
+    width: '100%',
   },
   inputRow: {
     backgroundColor: '#f8fafc',

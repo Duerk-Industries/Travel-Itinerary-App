@@ -59,6 +59,27 @@ router.post('/', async (req, res) => {
     tripId,
     paidBy,
   } = req.body;
+  // TEMP DEBUG: log incoming flight create request
+  console.log('[DEBUG][flights] create request', {
+    passengerIds,
+    departureDate,
+    departureLocation,
+    departureAirportCode,
+    departureTime,
+    arrivalLocation,
+    arrivalAirportCode,
+    arrivalDate,
+    arrivalTime,
+    layoverLocation,
+    layoverLocationCode,
+    layoverDuration,
+    cost,
+    carrier,
+    flightNumber,
+    bookingReference,
+    tripId,
+    paidBy,
+  });
   if (!Array.isArray(passengerIds) || passengerIds.length === 0 || !departureDate || !departureTime || !arrivalTime || !tripId) {
     res.status(400).json({ error: 'Missing required fields (need at least one passenger)' });
     return;
@@ -129,6 +150,8 @@ router.post('/', async (req, res) => {
     bookingReference: normalizedBookingReference,
     paidBy: normalizedPaidBy,
   });
+  // TEMP DEBUG: log flight stored payload
+  console.log('[DEBUG][flights] create stored', flight);
   res.status(201).json(flight);
 });
 
