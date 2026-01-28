@@ -905,6 +905,25 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     setAirportQuery('');
   };
 
+  const applyTopAirportSuggestion = (
+    target: 'dep' | 'arr' | 'modal-dep' | 'modal-arr' | 'modal-layover',
+    value: string
+  ) => {
+    const trimmed = value.trim();
+    if (target === 'modal-layover' && !trimmed) {
+      setEditingFlight((prev) =>
+        prev
+          ? { ...prev, layoverLocation: '', layoverLocationCode: '', layoverDuration: '' }
+          : prev
+      );
+      hideAirportDropdown();
+      return;
+    }
+    const suggestions = airportSuggestions.length ? airportSuggestions : buildAirportSuggestions(trimmed);
+    if (!suggestions.length) return;
+    selectAirport(target, suggestions[0]);
+  };
+
   const selectAirport = (target: 'dep' | 'arr' | 'modal-dep' | 'modal-arr' | 'modal-layover', airport: Airport) => {
     const code = airport.iata_code ?? '';
     if ((target === 'dep' || target === 'modal-dep') && editingFlight) {
@@ -1687,6 +1706,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
         showAirportDropdown={showAirportDropdown}
         parseLayoverDuration={parseLayoverDuration}
         openTimePicker={openTimePicker}
+        onAirportEnter={applyTopAirportSuggestion}
         setFlight={setEditingFlight}
         setPassengerIds={setEditingFlightPassengers}
         modalDepLocationRef={modalDepLocationRef}

@@ -21,6 +21,7 @@ export type FlightEditingFormProps = {
   showAirportDropdown: (target: Exclude<AirportTarget, null>, node: any, query: string) => void;
   parseLayoverDuration: (value: string | null | undefined) => { hours: string; minutes: string };
   openTimePicker: (target: 'edit-dep' | 'edit-arr' | 'new-dep' | 'new-arr', current: string) => void;
+  onAirportEnter: (target: Exclude<AirportTarget, null>, value: string) => void;
   setFlight: React.Dispatch<React.SetStateAction<FlightEditDraft | null>>;
   setPassengerIds: (ids: string[]) => void;
   modalDepLocationRef: React.RefObject<React.ElementRef<typeof TextInput>>;
@@ -46,6 +47,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
   showAirportDropdown,
   parseLayoverDuration,
   openTimePicker,
+  onAirportEnter,
   setFlight,
   setPassengerIds,
   modalDepLocationRef,
@@ -132,6 +134,11 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
                     setFlight((prev) => (prev ? { ...prev, departureLocation: text } : prev));
                     showAirportDropdown('modal-dep', modalDepLocationRef.current, text);
                   }}
+                  onKeyPress={(e: any) => {
+                    if (e?.nativeEvent?.key === 'Enter') {
+                      onAirportEnter('modal-dep', flight.departureLocation);
+                    }
+                  }}
                 />
                 <TouchableOpacity
                   style={{ position: 'absolute', right: 8, top: 10, padding: 6 }}
@@ -194,6 +201,11 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
                     setFlight((prev) => (prev ? { ...prev, arrivalLocation: text } : prev));
                     showAirportDropdown('modal-arr', modalArrLocationRef.current, text);
                   }}
+                  onKeyPress={(e: any) => {
+                    if (e?.nativeEvent?.key === 'Enter') {
+                      onAirportEnter('modal-arr', flight.arrivalLocation);
+                    }
+                  }}
                 />
                 <TouchableOpacity
                   style={{ position: 'absolute', right: 8, top: 10, padding: 6 }}
@@ -237,6 +249,11 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
                   onChangeText={(text: string) => {
                     setFlight((prev) => (prev ? { ...prev, layoverLocation: text } : prev));
                     showAirportDropdown('modal-layover', modalLayoverLocationRef.current, text);
+                  }}
+                  onKeyPress={(e: any) => {
+                    if (e?.nativeEvent?.key === 'Enter') {
+                      onAirportEnter('modal-layover', flight.layoverLocation);
+                    }
                   }}
                 />
                 <TouchableOpacity
