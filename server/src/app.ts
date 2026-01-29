@@ -137,6 +137,10 @@ import { logInfo, logError } from './logger';
 initPassport();
 app.use(passport.initialize());
 
+if (!isLocalEnv() && getEnvValue('AUTH_SECRET') === 'development-secret') {
+    logError('[WARNING] AUTH_SECRET is not set or is using the default value in a non-local environment. This is a security risk and will cause authentication to fail.');
+}
+
 app.get('/api/auth/google', (req, _res, next) => {
   // TEMPORARY: Google OAuth logging (remove later)
   logInfo(`[auth/google] start redirect_uri=${String(req.query?.redirect_uri ?? '')}`);

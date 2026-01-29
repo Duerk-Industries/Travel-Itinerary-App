@@ -539,9 +539,21 @@ export const getWebUserProfile = async (
     `SELECT id, email, first_name, last_name FROM web_users WHERE id = $1 LIMIT 1`,
     [userId]
   );
-  if (!rows.length) return null;
-  const row = rows[0];
-  return { id: row.id, email: row.email, firstName: row.first_name, lastName: row.last_name };
+  if (rows.length) {
+    const row = rows[0];
+    return { id: row.id, email: row.email, firstName: row.first_name, lastName: row.last_name };
+  }
+
+  const { rows: userRows } = await p.query<{ id: string; email: string; first_name: string; last_name: string }>(
+    `SELECT id, email, first_name, last_name FROM users WHERE id = $1 LIMIT 1`,
+    [userId]
+  );
+  if (userRows.length) {
+    const row = userRows[0];
+    return { id: row.id, email: row.email, firstName: row.first_name, lastName: row.last_name };
+  }
+
+  return null;
 };
 
 export const updateWebUserProfile = async (

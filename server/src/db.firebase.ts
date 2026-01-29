@@ -202,9 +202,18 @@ export const verifyWebUserCredentials = async (
 export const getWebUserProfile = async (userId: string): Promise<WebUser | null> => {
   const db = getDb();
   const doc = await db.collection('web_users').doc(userId).get();
-  if (!doc.exists) return null;
-  const data = doc.data() as any;
-  return { id: userId, email: data.email, firstName: data.firstName, lastName: data.lastName };
+  if (doc.exists) {
+    const data = doc.data() as any;
+    return { id: userId, email: data.email, firstName: data.firstName, lastName: data.lastName };
+  }
+
+  const userDoc = await db.collection('users').doc(userId).get();
+  if (userDoc.exists) {
+    const data = userDoc.data() as any;
+    return { id: userId, email: data.email, firstName: data.firstName, lastName: data.lastName };
+  }
+
+  return null;
 };
 
 export const updateWebUserProfile = async (
@@ -1067,4 +1076,58 @@ export const updateFamilyProfile = async (
     await getDb().collection('users').doc(data.relativeId).set({ email: normalized }, { merge: true });
     await getDb().collection('web_users').doc(data.relativeId).set({ email: normalized }, { merge: true });
   }
+};
+
+export const findOrCreateGoogleUser = async (profile: any): Promise<User> => {
+    const db = getDb();
+    const { id, displayName, emails, photos, name } = profile;
+
+    const email = emails?.[0]?.value;
+    if (!email) {
+        throw new Error('Google profile did not return an email');
+    }
+    const normalizedEmail = normalizeEmail(email);
+
+    const existing = await db.collection('users').where('googleId', '==', id).limit(1).get();
+    if (!existing.empty) {
+        const doc = existing.docs[0];
+        const updateData = {
+            email: normalizedEmail,
+            picture: photos?.[0]?.value,
+            firstName: name?.givenName,
+            lastName: name?.familyName,
+        };
+        await doc.ref.update(updateData);
+        const updatedDoc = await doc.ref.get();
+        const data = updatedDoc.data() as User;
+        return { id: doc.id, email: data.email, provider: data.provider };
+    }
+
+    const existingByEmail = await db.collection('users').where('email', '==', normalizedEmail).limit(1).get();
+    if (!existingByEmail.empty) {
+        const doc = existingByEmail.docs[0];
+        const updateData = {
+            googleId: id,
+            picture: photos?.[0]?.value,
+            firstName: name?.givenName,
+            lastName: name?.familyName,
+        };
+        await doc.ref.update(updateData);
+        const updatedDoc = await doc.ref.get();
+        const data = updatedDoc.data() as User;
+        return { id: doc.id, email: data.email, provider: data.provider };
+    }
+
+    const newUserId = randomUUID();
+    await db.collection('users').doc(newUserId).set({
+        email: normalizedEmail,
+        provider: 'google',
+        googleId: id,
+        picture: photos?.[0]?.value,
+        firstName: name?.givenName,
+        lastName: name?.familyName,
+        createdAt: nowIso(),
+    });
+
+    return { id: newUserId, email: normalizedEmail, provider: 'google' };
 };
