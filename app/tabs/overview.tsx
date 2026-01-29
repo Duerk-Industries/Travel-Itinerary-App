@@ -167,6 +167,60 @@ type ModalDateField =
   | 'rentalPickup'
   | 'rentalDropoff';
 
+export const dedupeAttendees = (
+  attendees: OverviewTabProps['attendees']
+): OverviewTabProps['attendees'] => {
+  const byKey = new Map<string, OverviewTabProps['attendees'][number]>();
+  const makeKey = (member: OverviewTabProps['attendees'][number]) => {
+    const rawEmail = (member.email ?? member.userEmail ?? '').trim().toLowerCase();
+    return rawEmail || member.id;
+  };
+  const merge = (base: OverviewTabProps['attendees'][number], incoming: OverviewTabProps['attendees'][number]) => {
+    const preferIncoming =
+      (base.status === 'pending' && incoming.status !== 'pending') ||
+      (base.status === 'removed' && incoming.status !== 'removed');
+    const keep = preferIncoming ? incoming : base;
+    const mergeFrom = preferIncoming ? base : incoming;
+    return {
+      ...keep,
+      firstName: keep.firstName ?? mergeFrom.firstName,
+      lastName: keep.lastName ?? mergeFrom.lastName,
+      email: keep.email ?? mergeFrom.email ?? keep.userEmail ?? mergeFrom.userEmail,
+      userEmail: keep.userEmail ?? mergeFrom.userEmail,
+      guestName: keep.guestName ?? mergeFrom.guestName,
+      status: keep.status ?? mergeFrom.status,
+      removedAt: keep.removedAt ?? mergeFrom.removedAt,
+    };
+  };
+  for (const member of attendees ?? []) {
+    const key = makeKey(member);
+    const existing = byKey.get(key);
+    if (existing) {
+      byKey.set(key, merge(existing, member));
+    } else {
+      byKey.set(key, member);
+    }
+  }
+  const deduped = Array.from(byKey.values());
+  if ((attendees?.length ?? 0) !== deduped.length) {
+    // TEMP DEBUG: remove after confirming attendee de-duplication.
+    console.info('[DEBUG][overview] deduped attendees', {
+      before: attendees?.length ?? 0,
+      after: deduped.length,
+    });
+  }
+  return deduped;
+};
+
+export const formatAttendeeLabel = (member: OverviewTabProps['attendees'][number]) => {
+  const first = member.firstName?.trim() ?? '';
+  const last = member.lastName?.trim() ?? '';
+  const combined = `${first} ${last}`.trim();
+  const email = member.email?.trim() || member.userEmail?.trim() || '';
+  const base = combined || member.guestName?.trim() || email || 'Traveler';
+  return email && base.toLowerCase() !== email.toLowerCase() ? `${base} (${email})` : base;
+};
+
 const OverviewTab: React.FC<OverviewTabProps> = ({
   backendUrl,
   headers,
@@ -733,9 +787,9 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       alert(data.error || 'Unable to update trip');
       return;
     }
-    if (pendingRemovalIds.length && group?.id) {
+    if (pendingRemovalIds.length && trip?.id) {
       for (const memberId of pendingRemovalIds) {
-        const removeRes = await fetch(`${backendUrl}/api/groups/${group.id}/members/${memberId}`, {
+        const removeRes = await fetch(`${backendUrl}/api/trips/${trip.id}/members/${memberId}`, {
           method: 'DELETE',
           headers,
         });
@@ -747,10 +801,22 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       }
       setPendingRemovalIds([]);
       onRefreshGroups();
+      onRefreshFlights();
+      onRefreshLodgings();
+      onRefreshTours();
     }
     setIsEditing(false);
     await refreshItineraryDetails();
     onRefreshTrips();
+  };
+
+  const cancelOverviewEdits = () => {
+    resetDrafts();
+    setPendingRemovalIds([]);
+    setShowAddTraveler(false);
+    setTravelerDraft({ firstName: '', lastName: '', email: '' });
+    setEditingDetailId(null);
+    setIsEditing(false);
   };
 
   const removeTraveler = (memberId: string) => {
@@ -767,7 +833,10 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       alert('Enter first and last name');
       return;
     }
-    const payload = email ? { email, firstName: first, lastName: last } : { guestName: `${first} ${last}`.trim() };
+    const guestName = `${first} ${last}`.trim();
+    const payload = email ? { email, firstName: first, lastName: last, guestName } : { guestName };
+    // TEMP DEBUG: remove after confirming single attendee entry.
+    console.info('[DEBUG][overview] add traveler payload', payload);
     const res = await fetch(`${backendUrl}/api/groups/${group.id}/members`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...headers },
@@ -778,6 +847,8 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       alert(data.error || 'Unable to add member');
       return;
     }
+    // TEMP DEBUG: remove after confirming single attendee entry.
+    console.info('[DEBUG][overview] add traveler response', data);
     onRefreshGroupMembers();
     setTravelerDraft({ firstName: '', lastName: '', email: '' });
     setShowAddTraveler(false);
@@ -1096,6 +1167,19 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
     </View>
   );
 
+  const startLabel = formatFriendlyDate(displayStartDate);
+  const endLabel = formatFriendlyDate(displayEndDate);
+  const dateRange = startLabel || endLabel ? `${startLabel ?? 'Start'} - ${endLabel ?? 'End'}` : null;
+  const dayColStyle = { minWidth: 90, width: 90 };
+  const dateColStyle = { minWidth: 200, width: 200 };
+  const normalizedAttendees = useMemo(() => dedupeAttendees(attendees), [attendees]);
+  const attendeeLabel = (member: OverviewTabProps['attendees'][number]) => formatAttendeeLabel(member);
+  const attendeeTestId = (member: OverviewTabProps['attendees'][number]) => {
+    const email = member.email?.trim() || member.userEmail?.trim() || '';
+    const safeEmail = email ? email.replace(/[^a-z0-9]+/gi, '-').toLowerCase() : 'no-email';
+    return `attendee-chip-${safeEmail}`;
+  };
+
   if (!trip) {
     return (
       <View style={styles.card}>
@@ -1104,18 +1188,6 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       </View>
     );
   }
-
-  const startLabel = formatFriendlyDate(displayStartDate);
-  const endLabel = formatFriendlyDate(displayEndDate);
-  const dateRange = startLabel || endLabel ? `${startLabel ?? 'Start'} - ${endLabel ?? 'End'}` : null;
-  const dayColStyle = { minWidth: 90, width: 90 };
-  const dateColStyle = { minWidth: 200, width: 200 };
-  const attendeeLabel = (member: OverviewTabProps['attendees'][number]) => {
-    const first = member.firstName?.trim() ?? '';
-    const last = member.lastName?.trim() ?? '';
-    const combined = `${first} ${last}`.trim();
-    return combined || member.guestName?.trim() || 'Traveler';
-  };
 
   if (!isEditing) {
     const pillBg = (date: string) => (expandedDay === date ? styles.toggleActive : styles.dropdown);
@@ -1209,9 +1281,20 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       >
       <View style={styles.row}>
         <Text style={styles.sectionTitle}>Overview</Text>
-        <TouchableOpacity style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]} onPress={() => setIsEditing(true)}>
-          <Text style={styles.buttonText}>Edit</Text>
-        </TouchableOpacity>
+        {isEditing ? (
+          <View style={[styles.row, { marginLeft: 'auto', gap: 8 }]}>
+            <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={saveOverviewEdits}>
+              <Text style={styles.buttonText}>Save</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={cancelOverviewEdits}>
+              <Text style={styles.buttonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]} onPress={() => setIsEditing(true)}>
+            <Text style={styles.buttonText}>Edit</Text>
+          </TouchableOpacity>
+        )}
       </View>
       <Text style={styles.flightTitle}>{trip.name}</Text>
       {trip.destination ? <Text style={styles.helperText}>Destination: {trip.destination}</Text> : null}
@@ -1460,7 +1543,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
         ) : null}
       </View>
       <View style={[styles.row, { flexWrap: 'wrap', gap: 8 }]}>
-        {(attendees ?? []).map((m) => {
+        {normalizedAttendees.map((m) => {
           const label = attendeeLabel(m);
           const pendingRemoval = pendingRemovalIds.includes(m.id);
           const badge =
@@ -1485,11 +1568,16 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
             </View>
           );
           return isEditing ? (
-            <TouchableOpacity key={m.id} style={[styles.button, styles.smallButton]} onPress={() => removeTraveler(m.id)}>
+            <TouchableOpacity
+              key={m.id}
+              style={[styles.button, styles.smallButton]}
+              onPress={() => removeTraveler(m.id)}
+              testID={attendeeTestId(m)}
+            >
               {content}
             </TouchableOpacity>
           ) : (
-            <View key={m.id} style={[styles.button, styles.smallButton]}>
+            <View key={m.id} style={[styles.button, styles.smallButton]} testID={attendeeTestId(m)}>
               {content}
             </View>
           );

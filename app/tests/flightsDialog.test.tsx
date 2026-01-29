@@ -52,6 +52,7 @@ describe('Flights dialog', () => {
         airportTarget={null}
         getLocationInputValue={(raw) => raw}
         showAirportDropdown={jest.fn()}
+        onAirportEnter={jest.fn()}
         parseLayoverDuration={() => ({ hours: '', minutes: '' })}
         openTimePicker={jest.fn()}
         setFlight={setFlight}

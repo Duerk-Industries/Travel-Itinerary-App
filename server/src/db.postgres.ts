@@ -3,7 +3,7 @@ import { Pool } from 'pg';
 import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
 import { Flight, Group, GroupMember, Trait, Trip, User, WebUser, Lodging, Tour, Itinerary, ItineraryDetail } from './types';
 import fetch from 'node-fetch';
-import { logError } from './logger';
+import { logError, logInfo } from './logger';
 import { getEnvValue } from './env';
 
 
@@ -1789,6 +1789,8 @@ export const removeGroupMember = async (
   const p = getPool();
   const client = await p.connect();
   try {
+    // TEMP DEBUG: remove after attendee removal flow is stable.
+    logInfo(`[DEBUG][members] db remove start provider=postgres group=${groupId} member=${memberId} requester=${requesterId}`);
     await client.query('BEGIN');
     const { rows: groupRows } = await client.query(
       `SELECT owner_id as "ownerId" FROM groups WHERE id = $1`,
@@ -1809,7 +1811,18 @@ export const removeGroupMember = async (
     if (!memberRows.length) throw new Error('Member not found');
     if (memberRows[0].userId === groupRows[0].ownerId) throw new Error('Owner cannot be removed');
 
-    await client.query(`UPDATE group_members SET removed_at = NOW() WHERE id = $1 AND group_id = $2`, [memberId, groupId]);
+    const removeResult = await client.query(
+      `UPDATE group_members SET removed_at = NOW() WHERE id = $1 AND group_id = $2`,
+      [memberId, groupId]
+    );
+    logInfo(
+      `[DEBUG][members] db remove group_members updated rows=${removeResult.rowCount ?? 0} group=${groupId} member=${memberId}`
+    );
+
+    const { rows: requesterRows } = await client.query(
+      `SELECT id FROM group_members WHERE group_id = $1 AND user_id = $2 AND removed_at IS NULL`,
+      [groupId, requesterId]
+    );
 
     const { rows: remainingMemberRows } = await client.query(
       `SELECT id FROM group_members WHERE group_id = $1 AND removed_at IS NULL`,
@@ -1818,19 +1831,103 @@ export const removeGroupMember = async (
     const remainingIds = remainingMemberRows.map((r) => r.id);
     const { rows: tripRows } = await client.query(`SELECT id FROM trips WHERE group_id = $1`, [groupId]);
     const tripIds = tripRows.map((r) => r.id);
+    const fallbackPayerId = requesterRows[0]?.id ?? remainingIds[0] ?? null;
 
-    if (tripIds.length && process.env.USE_IN_MEMORY_DB !== '1') {
-      const updatePaidByForTable = async (table: 'flights' | 'lodgings' | 'tours') => {
+    if (tripIds.length) {
+      const useInMemory = process.env.USE_IN_MEMORY_DB === '1';
+      if (useInMemory) {
+        const jsonbRemoveMemberExpr = (column: string) => `
+          COALESCE(
+            (
+              replace(
+                replace(
+                  replace(
+                    replace(
+                      replace(
+                        replace(COALESCE(${column}::text, '[]'), ',"' || $2 || '"', ''),
+                        ', \"' || $2 || '\"',
+                        ''
+                      ),
+                      '"' || $2 || '", ',
+                      ''
+                    ),
+                    '"' || $2 || '",',
+                    ''
+                  ),
+                  '"' || $2 || '"',
+                  ''
+                ),
+                '"' || $2 || '" ',
+                ''
+              )
+            ),
+            '[]'
+          )::jsonb
+        `;
+
+        const updatePaidByForTable = async (table: 'flights' | 'lodgings' | 'tours', tripId: string) => {
+          await client.query(
+            `
+            UPDATE ${table}
+            SET paid_by = ${jsonbRemoveMemberExpr('paid_by')}
+            WHERE trip_id = $1
+            `,
+            [tripId, memberId]
+          );
+          if (fallbackPayerId) {
+            await client.query(
+              `
+              UPDATE ${table}
+              SET paid_by = $2::jsonb
+              WHERE trip_id = $1
+                AND COALESCE(paid_by::text, '[]') IN ('[]', '[ ]', '[  ]', 'null')
+              `,
+              [tripId, JSON.stringify([fallbackPayerId])]
+            );
+          }
+        };
+
+        for (const tripId of tripIds) {
+          await client.query(
+            `
+            UPDATE flights
+            SET passenger_ids = ${jsonbRemoveMemberExpr('passenger_ids')}
+            WHERE trip_id = $1
+            `,
+            [tripId, memberId]
+          );
+
+          const deleteResult = await client.query(
+            `
+            DELETE FROM flights
+            WHERE trip_id = $1
+              AND (
+                COALESCE(passenger_ids::text, '[]') IN ('[]', '[ ]', '[  ]', 'null')
+                OR (
+                  passenger_ids::text LIKE '%' || $2 || '%'
+                  AND passenger_ids::text NOT LIKE '%,%'
+                )
+              )
+            `,
+            [tripId, memberId]
+          );
+          logInfo(
+            `[DEBUG][members] db remove flights cleaned trip=${tripId} deleted=${deleteResult.rowCount ?? 0}`
+          );
+
+          await updatePaidByForTable('flights', tripId);
+          await updatePaidByForTable('lodgings', tripId);
+          await updatePaidByForTable('tours', tripId);
+        }
+      } else {
         await client.query(
           `
-          UPDATE ${table}
-          SET paid_by = COALESCE(
+          UPDATE flights
+          SET passenger_ids = COALESCE(
             (
-              SELECT jsonb_agg(elem.value) FROM (
-                SELECT value
-                FROM jsonb_array_elements_text(COALESCE(paid_by, '[]'::jsonb)) value
-                WHERE value <> $2::text
-              ) elem
+              SELECT jsonb_agg(elem.value)
+              FROM jsonb_array_elements_text(COALESCE(passenger_ids, '[]'::jsonb)) elem
+              WHERE elem.value <> $2::text
             ),
             '[]'::jsonb
           )
@@ -1838,26 +1935,60 @@ export const removeGroupMember = async (
           `,
           [tripIds, memberId]
         );
-        if (remainingIds.length) {
+
+        const deleteResult = await client.query(
+          `
+          DELETE FROM flights
+          WHERE trip_id = ANY($1::uuid[])
+            AND jsonb_array_length(COALESCE(passenger_ids, '[]'::jsonb)) = 0
+          `,
+          [tripIds]
+        );
+        logInfo(
+          `[DEBUG][members] db remove flights deleted=${deleteResult.rowCount ?? 0} group=${groupId}`
+        );
+
+        const updatePaidByForTable = async (table: 'flights' | 'lodgings' | 'tours') => {
           await client.query(
             `
             UPDATE ${table}
-            SET paid_by = $2::jsonb
+            SET paid_by = COALESCE(
+              (
+                SELECT jsonb_agg(elem.value) FROM (
+                  SELECT value
+                  FROM jsonb_array_elements_text(COALESCE(paid_by, '[]'::jsonb)) value
+                  WHERE value <> $2::text
+                ) elem
+              ),
+              '[]'::jsonb
+            )
             WHERE trip_id = ANY($1::uuid[])
-              AND jsonb_array_length(COALESCE(paid_by, '[]'::jsonb)) = 0
             `,
-            [tripIds, JSON.stringify(remainingIds)]
+            [tripIds, memberId]
           );
-        }
-      };
-      await updatePaidByForTable('flights');
-      await updatePaidByForTable('lodgings');
-      await updatePaidByForTable('tours');
+          if (fallbackPayerId) {
+            await client.query(
+              `
+              UPDATE ${table}
+              SET paid_by = $2::jsonb
+              WHERE trip_id = ANY($1::uuid[])
+                AND jsonb_array_length(COALESCE(paid_by, '[]'::jsonb)) = 0
+              `,
+              [tripIds, JSON.stringify([fallbackPayerId])]
+            );
+          }
+        };
+        await updatePaidByForTable('flights');
+        await updatePaidByForTable('lodgings');
+        await updatePaidByForTable('tours');
+      }
     }
 
     await client.query('COMMIT');
+    logInfo(`[DEBUG][members] db remove committed group=${groupId} member=${memberId}`);
   } catch (err) {
     await client.query('ROLLBACK');
+    logError(`[DEBUG][members] db remove failed group=${groupId} member=${memberId}`, err);
     throw err;
   } finally {
     client.release();
@@ -3121,34 +3252,18 @@ export const rejectFamilyRelationship = async (userId: string, relationshipId: s
   }
 };
 
-export const removeFamilyRelationship = async (userId: string, relationshipId: string) => {
+export const removeFamilyRelationship = async (userId: string, relationshipId: string): Promise<void> => {
   const p = getPool();
-  const client = await p.connect();
-  try {
-    await client.query('BEGIN');
-    const { rows } = await client.query(
-      `SELECT requester_id, relative_id FROM family_relationships WHERE id = $1`,
-      [relationshipId]
-    );
-    if (!rows.length) throw new Error('Relationship not found');
-    const rel = rows[0];
-    if (rel.requester_id !== userId && rel.relative_id !== userId) throw new Error('Not authorized to remove');
-    await client.query(`DELETE FROM family_relationships WHERE requester_id = $1 AND relative_id = $2`, [
-      rel.requester_id,
-      rel.relative_id,
-    ]);
-    await client.query(`DELETE FROM family_relationships WHERE requester_id = $1 AND relative_id = $2`, [
-      rel.relative_id,
-      rel.requester_id,
-    ]);
-    await client.query('COMMIT');
-  } catch (err) {
-    await client.query('ROLLBACK');
-    throw err;
-  } finally {
-    client.release();
-  }
+  await p.query('DELETE FROM family_relationships WHERE id = $1 AND (requester_id = $2 OR relative_id = $2)', [relationshipId, userId]);
 };
+
+export const removeTravelerFromTrip = async (userId: string, tripId: string, travelerId: string): Promise<void> => {
+  // TODO: implement for postgres
+  throw new Error('removeTravelerFromTrip not implemented for postgres');
+};
+
+
+
 
 export const updateFamilyProfile = async (
   userId: string,

@@ -29,6 +29,9 @@ describe('db provider selection', () => {
       {
         DB_PROVIDER: undefined,
         USE_IN_MEMORY_DB: undefined,
+        K_SERVICE: undefined,
+        CLOUD_RUN_JOB: undefined,
+        GOOGLE_CLOUD_PROJECT: undefined,
       },
       async () => {
         const db = await loadDb();
@@ -89,6 +92,9 @@ describe('db lifecycle', () => {
       {
         DB_PROVIDER: undefined,
         USE_IN_MEMORY_DB: undefined,
+        K_SERVICE: undefined,
+        CLOUD_RUN_JOB: undefined,
+        GOOGLE_CLOUD_PROJECT: undefined,
         DATABASE_URL: process.env.DATABASE_URL ?? 'pg-mem://localhost/test',
       },
       async () => {
