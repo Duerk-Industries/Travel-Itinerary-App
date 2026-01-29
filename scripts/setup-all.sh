@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ENV_FILE=""
+ENV_FILES=()
 SKIP_LOGIN=0
 
 usage() {
@@ -32,12 +33,22 @@ done
 
 if [[ -z "$ENV_FILE" ]]; then
   if [[ -f "server/.secrets" ]]; then
-    ENV_FILE="server/.secrets"
-  elif [[ -f "server/.env" ]]; then
-    ENV_FILE="server/.env"
-  elif [[ -f ".env" ]]; then
-    ENV_FILE=".env"
+    ENV_FILES+=("server/.secrets")
   fi
+  if [[ -f "server/.env" ]]; then
+    ENV_FILES+=("server/.env")
+  fi
+  if [[ -f "server/.local_env" ]]; then
+    ENV_FILES+=("server/.local_env")
+  fi
+  if [[ -f ".env" ]]; then
+    ENV_FILES+=(".env")
+  fi
+  if [[ ${#ENV_FILES[@]} -gt 0 ]]; then
+    ENV_FILE="${ENV_FILES[0]}"
+  fi
+else
+  ENV_FILES+=("$ENV_FILE")
 fi
 
 if [[ -n "$ENV_FILE" && ! -f "$ENV_FILE" ]]; then
@@ -100,27 +111,29 @@ strip_inline_comment() {
 
 PROJECT_ID="${GCLOUD_PROJECT_ID:-}"
 
-if [[ -n "$ENV_FILE" ]]; then
-  while IFS= read -r line || [[ -n "$line" ]]; do
-    line="${line%%$'\r'}"
-    if is_comment_or_empty "$line"; then
-      continue
-    fi
-    if [[ "$line" == export\ * ]]; then
-      line="${line#export }"
-    fi
-    line="$(strip_inline_comment "$line")"
-    line="$(trim "$line")"
-    [[ "$line" != *"="* ]] && continue
-    key="$(trim "${line%%=*}")"
-    value="$(trim "${line#*=}")"
-    if [[ "$value" =~ ^\".*\"$ || "$value" =~ ^\'.*\'$ ]]; then
-      value="${value:1:${#value}-2}"
-    fi
-    if [[ "$key" == "GCLOUD_PROJECT_ID" && -z "$PROJECT_ID" ]]; then
-      PROJECT_ID="$value"
-    fi
-  done < "$ENV_FILE"
+if [[ ${#ENV_FILES[@]} -gt 0 ]]; then
+  for env_path in "${ENV_FILES[@]}"; do
+    while IFS= read -r line || [[ -n "$line" ]]; do
+      line="${line%%$'\r'}"
+      if is_comment_or_empty "$line"; then
+        continue
+      fi
+      if [[ "$line" == export\ * ]]; then
+        line="${line#export }"
+      fi
+      line="$(strip_inline_comment "$line")"
+      line="$(trim "$line")"
+      [[ "$line" != *"="* ]] && continue
+      key="$(trim "${line%%=*}")"
+      value="$(trim "${line#*=}")"
+      if [[ "$value" =~ ^\".*\"$ || "$value" =~ ^\'.*\'$ ]]; then
+        value="${value:1:${#value}-2}"
+      fi
+      if [[ "$key" == "GCLOUD_PROJECT_ID" && -z "$PROJECT_ID" ]]; then
+        PROJECT_ID="$value"
+      fi
+    done < "$env_path"
+  done
 fi
 
 if [[ -z "$PROJECT_ID" ]]; then
