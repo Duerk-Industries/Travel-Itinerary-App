@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import bodyParser from 'body-parser';
 import { authenticate, createToken } from '../auth';
+import { logError, logInfo } from '../logger';
 import {
   deleteWebUserAndCleanup,
   acceptFamilyRelationship,
@@ -242,7 +243,7 @@ router.delete('/', async (req, res) => {
 
         // Remove memberships and invites for the user.
         const membershipsToUpdate = await p.query(`SELECT id, group_id, user_id, added_by FROM group_members WHERE added_by = $1`, [userId]);
-        for (const m of membershipsToUpdate.rows as Array<{ id: string; group_id: string; user_id: string | null; added_by: string | null }>) {
+        for (const m of membershipsToUpdate.rows as Array<{ id: string; group_id: string; user_id: string | null; added_by: string | null }> ) {
           const ownerRes = await p.query(`SELECT owner_id FROM groups WHERE id = $1`, [m.group_id]);
           const ownerIdForGroup = ownerRes.rows[0]?.owner_id ?? null;
           const newAddedBy = ownerIdForGroup ?? m.user_id ?? m.added_by ?? userId;
@@ -318,18 +319,35 @@ router.delete('/trips/:tripId/members/:memberId', async (req, res) => {
   }
   try {
     try {
+      // TEMP DEBUG: remove after attendee removal flow is stable.
+      logInfo(
+        `[DEBUG][members] remove from trip start user=${userId} trip=${req.params.tripId} group=${membership.groupId} member=${req.params.memberId}`
+      );
       await removeGroupMember(userId, membership.groupId, req.params.memberId);
+      logInfo(
+        `[DEBUG][members] remove from trip success user=${userId} trip=${req.params.tripId} group=${membership.groupId} member=${req.params.memberId}`
+      );
       res.status(204).send();
       return;
     } catch (err) {
       if ((err as Error).message === 'Member not found') {
+        logInfo(
+          `[DEBUG][members] remove from trip fallback to invite user=${userId} trip=${req.params.tripId} group=${membership.groupId} member=${req.params.memberId}`
+        );
         await removeGroupInvite(userId, req.params.memberId);
+        logInfo(
+          `[DEBUG][members] remove from trip invite removed user=${userId} trip=${req.params.tripId} group=${membership.groupId} member=${req.params.memberId}`
+        );
         res.status(204).send();
         return;
       }
       throw err;
     }
   } catch (err) {
+    logError(
+      `[DEBUG][members] remove from trip failed user=${userId} trip=${req.params.tripId} group=${membership.groupId} member=${req.params.memberId}`,
+      err
+    );
     res.status(400).json({ error: (err as Error).message });
   }
 });
@@ -393,7 +411,7 @@ groupsRouter.post('/', async (req, res) => {
             `Hi,`,
             ``,
             `${user.email} invited you to join the group "${name}".`,
-            `Log in to Shared Trip Planner to accept this invitation.`,
+            `Log in to Shared Trip Planner to accept this invitation.`, 
           ].join('\n');
           return sendShareEmail(email, subject, body).catch(() => undefined);
         })
@@ -432,14 +450,31 @@ groupsRouter.post('/:id/members', async (req, res) => {
 groupsRouter.delete('/:groupId/members/:memberId', async (req, res) => {
   const user = (req as any).user as { userId: string };
   try {
+    // TEMP DEBUG: remove after attendee removal flow is stable.
+    logInfo(
+      `[DEBUG][members] remove from group start user=${user.userId} group=${req.params.groupId} member=${req.params.memberId}`
+    );
     await removeGroupMember(user.userId, req.params.groupId, req.params.memberId);
+    logInfo(
+      `[DEBUG][members] remove from group success user=${user.userId} group=${req.params.groupId} member=${req.params.memberId}`
+    );
     res.status(204).send();
   } catch (err) {
     if ((err as Error).message === 'Member not found') {
+      logInfo(
+        `[DEBUG][members] remove from group fallback to invite user=${user.userId} group=${req.params.groupId} member=${req.params.memberId}`
+      );
       await removeGroupInvite(user.userId, req.params.memberId);
+      logInfo(
+        `[DEBUG][members] remove from group invite removed user=${user.userId} group=${req.params.groupId} member=${req.params.memberId}`
+      );
       res.status(204).send();
       return;
     }
+    logError(
+      `[DEBUG][members] remove from group failed user=${user.userId} group=${req.params.groupId} member=${req.params.memberId}`,
+      err
+    );
     res.status(400).json({ error: (err as Error).message });
   }
 });

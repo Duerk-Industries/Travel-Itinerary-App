@@ -2,7 +2,7 @@
 import { initializeApp, cert, deleteApp, getApps, App } from 'firebase-admin/app';
 import { getFirestore as adminGetFirestore, FieldPath, Firestore } from 'firebase-admin/firestore';
 import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
-import { Flight, Lodging, Tour, Trait, Trip, User, WebUser, Itinerary, ItineraryDetail, Group } from './types';
+import { Flight, Lodging, Tour, Trait, Trip, User, WebUser, Itinerary, ItineraryDetail, Group, GroupMember } from './types';
 import { logError, logInfo } from './logger';
 import { getEnvValue, isLocalEnv } from './env';
 import fetch from 'node-fetch';
@@ -12,7 +12,7 @@ const normalizeEmail = (email: string) => email.trim().toLowerCase();
 const nowIso = () => new Date().toISOString();
 const hashPassword = (password: string, salt: string) => scryptSync(password, salt, 64).toString('hex');
 
-const getDb = (): Firestore => {
+export const getDb = (): Firestore => {
   if (!app) {
     logInfo('Firebase app not initialized, initializing...');
     const firebaseConfigRaw = process.env.FIREBASE_CONFIG;
@@ -272,33 +272,123 @@ const ensureMembership = async (groupId: string, userId: string): Promise<boolea
 export const listGroupMembers = async (
   groupId: string,
   userId: string
-): Promise<Array<{ id: string; guestName?: string; email?: string; firstName?: string; lastName?: string; status?: string; removedAt?: string | null }>> => {
+): Promise<Array<{ id: string; userId?: string; guestName?: string; email?: string; firstName?: string; lastName?: string; status?: string; removedAt?: string | null }>> => {
   const db = getDb();
   const allowed = await ensureMembership(groupId, userId);
   if (!allowed) throw new Error('Not authorized to view members');
   const membersSnap = await db.collection('group_members').where('groupId', '==', groupId).where('removedAt', '==', null).get();
   const invitesSnap = await db.collection('group_invites').where('groupId', '==', groupId).where('status', '==', 'pending').get();
-  const members = membersSnap.docs.map((d) => {
-    const data = d.data() as any;
-    return {
-      id: d.id,
-      guestName: data.guestName,
-      email: data.inviteEmail,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      status: data.inviteEmail ? 'pending' : 'active',
+  const memberDocs = membersSnap.docs.map((d) => ({ id: d.id, data: d.data() as any }));
+  const userIds = Array.from(
+    new Set(memberDocs.map((m) => m.data.userId).filter((id) => typeof id === 'string' && id.trim().length))
+  );
+  const userProfiles = new Map<string, any>();
+  if (userIds.length) {
+    const refs = userIds.map((id) => db.collection('web_users').doc(id));
+    const snaps = await db.getAll(...refs);
+    snaps.forEach((doc) => {
+      if (doc.exists) {
+        userProfiles.set(doc.id, doc.data() as any);
+      }
+    });
+  }
+  const inviteEmails = Array.from(
+    new Set(
+      memberDocs
+        .map((m) => m.data.inviteEmail)
+        .filter((email) => typeof email === 'string' && email.trim().length)
+        .map((email) => normalizeEmail(email))
+    )
+  );
+  const emailToUserId = new Map<string, string>();
+  if (inviteEmails.length) {
+    await Promise.all(
+      inviteEmails.map(async (email) => {
+        const userSnap = await db.collection('users').where('email', '==', email).limit(1).get();
+        if (!userSnap.empty) {
+          emailToUserId.set(email, userSnap.docs[0].id);
+        }
+      })
+    );
+  }
+  const inviteUserIds = Array.from(new Set(Array.from(emailToUserId.values())));
+  const allProfileIds = Array.from(new Set([...userIds, ...inviteUserIds]));
+  const emailProfiles = new Map<string, any>();
+  if (inviteEmails.length) {
+    const profileRefs = inviteEmails.map((email) => db.collection('web_users').where('email', '==', email).limit(1));
+    const profileSnaps = await Promise.all(profileRefs.map((q) => q.get()));
+    profileSnaps.forEach((snap) => {
+      snap.docs.forEach((doc) => emailProfiles.set(doc.data().email, doc.data()));
+    });
+  }
+  if (allProfileIds.length) {
+    const profileRefs = allProfileIds.map((id) => db.collection('web_users').doc(id));
+    const profileSnaps = await db.getAll(...profileRefs);
+    profileSnaps.forEach((doc) => {
+      if (doc.exists) {
+        userProfiles.set(doc.id, doc.data() as any);
+      }
+    });
+  }
+  const members = memberDocs.map((doc) => {
+    const data = doc.data;
+    const inviteEmail = data.inviteEmail ? normalizeEmail(data.inviteEmail) : '';
+    const resolvedUserId = data.userId || (inviteEmail ? emailToUserId.get(inviteEmail) : null);
+    const profile = resolvedUserId ? userProfiles.get(resolvedUserId) : null;
+    const normalizedInvite = data.inviteEmail ? normalizeEmail(data.inviteEmail) : '';
+    const inviteProfile = normalizedInvite ? emailProfiles.get(normalizedInvite) : null;
+    const email = data.inviteEmail ?? profile?.email ?? inviteProfile?.email ?? data.email;
+    const result = {
+      id: doc.id,
+      userId: resolvedUserId,
+      guestName: data.guestName ?? null,
+      email,
+      firstName: data.firstName ?? profile?.firstName ?? inviteProfile?.firstName ?? null,
+      lastName: data.lastName ?? profile?.lastName ?? inviteProfile?.lastName ?? null,
+      status: resolvedUserId ? 'active' : data.inviteEmail ? 'pending' : 'active',
       removedAt: data.removedAt ?? null,
     };
+    // TEMP DEBUG: member name resolution
+    console.log('[DEBUG][members] resolve', {
+      memberId: doc.id,
+      inviteEmail: data.inviteEmail ?? null,
+      resolvedUserId,
+      profileName: profile ? `${profile.firstName ?? ''} ${profile.lastName ?? ''}`.trim() : null,
+      inviteProfileName: inviteProfile ? `${inviteProfile.firstName ?? ''} ${inviteProfile.lastName ?? ''}`.trim() : null,
+      resultFirst: result.firstName,
+      resultLast: result.lastName,
+      resultEmail: result.email,
+      resultStatus: result.status,
+    });
+    return result;
   });
-  const invites = invitesSnap.docs.map((d) => {
-    const data = d.data() as any;
-    return {
-      id: d.id,
-      guestName: data.inviteeEmail,
-      email: data.inviteeEmail,
-      status: data.status,
-    };
-  });
+  const memberEmails = new Set(
+    members
+      .map((m) => (m.email ?? '').trim().toLowerCase())
+      .filter((email) => email.length)
+  );
+  const invites = invitesSnap.docs
+    .map((d) => {
+      const data = d.data() as any;
+      return {
+        id: d.id,
+        guestName: data.inviteeEmail,
+        email: data.inviteeEmail,
+        status: data.status,
+      };
+    })
+    .filter((invite) => {
+      const email = (invite.email ?? '').trim().toLowerCase();
+      return !email || !memberEmails.has(email);
+    });
+  if (members.length + invites.length !== members.length + invitesSnap.docs.length) {
+    // TEMP DEBUG: remove after confirming invite de-duplication.
+    console.info('[DEBUG][members] deduped invites', {
+      memberCount: members.length,
+      inviteCount: invitesSnap.docs.length,
+      remainingInvites: invites.length,
+    });
+  }
   return [...members, ...invites];
 };
 
@@ -382,11 +472,65 @@ export const addGroupMember = async (
 
 export const removeGroupMember = async (requesterId: string, groupId: string, memberId: string): Promise<void> => {
   const db = getDb();
+  logInfo(`[DEBUG][members] db remove start provider=firebase group=${groupId} member=${memberId} requester=${requesterId}`);
   const group = await db.collection('groups').doc(groupId).get();
   if (!group.exists) throw new Error('Group not found');
   const authorized = await ensureMembership(groupId, requesterId);
   if (!authorized) throw new Error('Not authorized to remove members');
+  const memberDoc = await db.collection('group_members').doc(memberId).get();
+  if (!memberDoc.exists) throw new Error('Member not found');
   await db.collection('group_members').doc(memberId).set({ removedAt: nowIso() }, { merge: true });
+  logInfo(`[DEBUG][members] db remove group_members updated group=${groupId} member=${memberId}`);
+  const requesterSnap = await db
+    .collection('group_members')
+    .where('groupId', '==', groupId)
+    .where('userId', '==', requesterId)
+    .where('removedAt', '==', null)
+    .limit(1)
+    .get();
+  const requesterMemberId = requesterSnap.empty ? null : requesterSnap.docs[0].id;
+  const tripsSnap = await db.collection('trips').where('groupId', '==', groupId).get();
+  const tripIds = tripsSnap.docs.map((d) => d.id);
+  if (!tripIds.length) return;
+  const fallbackPayerId = requesterMemberId;
+  for (const tripId of tripIds) {
+    const flightsSnap = await db.collection('flights').where('tripId', '==', tripId).get();
+    for (const doc of flightsSnap.docs) {
+      const data = doc.data() as any;
+      const passengerIds = Array.isArray(data.passengerIds) ? data.passengerIds.filter((id: string) => id !== memberId) : [];
+      if (!passengerIds.length) {
+        await doc.ref.delete();
+        logInfo(`[DEBUG][members] db remove flights deleted trip=${tripId} flight=${doc.id}`);
+        continue;
+      }
+      let paidBy = Array.isArray(data.paidBy) ? data.paidBy.filter((id: string) => id !== memberId) : [];
+      if (!paidBy.length && fallbackPayerId) {
+        paidBy = [fallbackPayerId];
+      }
+      await doc.ref.update({ passengerIds, paidBy });
+    }
+
+    const lodgingsSnap = await db.collection('lodgings').where('tripId', '==', tripId).get();
+    for (const doc of lodgingsSnap.docs) {
+      const data = doc.data() as any;
+      let paidBy = Array.isArray(data.paidBy) ? data.paidBy.filter((id: string) => id !== memberId) : [];
+      if (!paidBy.length && fallbackPayerId) {
+        paidBy = [fallbackPayerId];
+      }
+      await doc.ref.update({ paidBy });
+    }
+
+    const toursSnap = await db.collection('tours').where('tripId', '==', tripId).get();
+    for (const doc of toursSnap.docs) {
+      const data = doc.data() as any;
+      let paidBy = Array.isArray(data.paidBy) ? data.paidBy.filter((id: string) => id !== memberId) : [];
+      if (!paidBy.length && fallbackPayerId) {
+        paidBy = [fallbackPayerId];
+      }
+      await doc.ref.update({ paidBy });
+    }
+  }
+  logInfo(`[DEBUG][members] db remove committed provider=firebase group=${groupId} member=${memberId}`);
 };
 
 export const removeGroupInvite = async (ownerId: string, inviteId: string): Promise<void> => {
@@ -449,7 +593,15 @@ export const createTrip = async (
 ): Promise<Trip> => {
   const db = getDb();
   const allowed = await ensureMembership(groupId, userId);
-  if (!allowed) throw new Error('Not authorized to create trip for this group');
+  if (!allowed) {
+    await db.collection('group_members').doc(randomUUID()).set({
+      groupId,
+      userId,
+      addedBy: userId,
+      createdAt: nowIso(),
+      removedAt: null,
+    });
+  }
   const id = randomUUID();
   const payload = {
     groupId,
@@ -531,7 +683,10 @@ export const createGroupWithMembers = async (
   const db = getDb();
   const groupId = randomUUID();
   await db.collection('groups').doc(groupId).set({ ownerId, name: groupName, createdAt: nowIso() });
-  await db.collection('group_members').doc(randomUUID()).set({ groupId, userId: ownerId, addedBy: ownerId, createdAt: nowIso() });
+  await db
+    .collection('group_members')
+    .doc(randomUUID())
+    .set({ groupId, userId: ownerId, addedBy: ownerId, createdAt: nowIso(), removedAt: null });
   const invites: { id: string; email: string }[] = [];
   for (const email of memberEmails) {
     const normalized = normalizeEmail(email);
@@ -637,7 +792,13 @@ export const ensureUserInTrip = async (tripId: string, userId: string): Promise<
 export const insertFlight = async (flight: Omit<Flight, 'id'>): Promise<Flight> => {
   const db = getDb();
   const id = randomUUID();
-  await db.collection('flights').doc(id).set({ ...flight, id, createdAt: nowIso() });
+  const payload = { ...flight, id, createdAt: nowIso() };
+  // TEMP DEBUG: log firestore payload
+  console.log('[DEBUG][flights] firestore insert payload', payload);
+  await db.collection('flights').doc(id).set(payload);
+  const saved = await db.collection('flights').doc(id).get();
+  // TEMP DEBUG: log saved firestore doc
+  console.log('[DEBUG][flights] firestore insert saved', saved.data());
   return { ...flight, id };
 };
 
@@ -674,7 +835,21 @@ export const listFlights = async (userId: string, tripId?: string): Promise<Flig
   let query: FirebaseFirestore.Query = db.collection('flights').where('userId', '==', userId);
   if (tripId) query = query.where('tripId', '==', tripId);
   const snapshot = await query.get();
-  return snapshot.docs.map((d) => d.data() as Flight);
+  let validPassengerIds: Set<string> | null = null;
+  if (tripId) {
+    const tripDoc = await db.collection('trips').doc(tripId).get();
+    const groupId = tripDoc.exists ? (tripDoc.data() as any)?.groupId : null;
+    if (groupId) {
+      const members = await listGroupMembers(groupId, userId).catch(() => []);
+      validPassengerIds = new Set(members.map((m) => String(m.id)));
+    }
+  }
+  return snapshot.docs.map((d) => {
+    const data = d.data() as Flight;
+    const ids: string[] = Array.isArray((data as any).passengerIds) ? (data as any).passengerIds : [];
+    const passengerInGroup = validPassengerIds ? ids.every((id: string) => validPassengerIds!.has(String(id))) : true;
+    return { ...data, passengerInGroup };
+  });
 };
 
 export const shareFlight = async (flightId: string, sharedEmail: string): Promise<void> => {
@@ -1058,6 +1233,110 @@ export const removeFamilyRelationship = async (userId: string, relationshipId: s
   if (data.relativeId !== userId && data.requesterId !== userId) throw new Error('Not authorized');
   await getDb().collection('family_relationships').doc(relationshipId).delete();
 };
+
+export const removeTravelerFromTrip = async (userId: string, tripId: string, travelerId: string): Promise<void> => {
+  const db = getDb();
+  const tripRef = db.collection('trips').doc(tripId);
+  const tripDoc = await tripRef.get();
+  if (!tripDoc.exists) {
+    throw new Error('Trip not found');
+  }
+  
+  // 1. Authorize user
+  const membership = await ensureUserInTrip(tripId, userId);
+  if (!membership) {
+    throw new Error('Not authorized for this trip');
+  }
+
+  // Get the user ID of the traveler being removed.
+  const memberToRemoveDoc = await db.collection('group_members').doc(travelerId).get();
+  if (!memberToRemoveDoc.exists) {
+    // It might be an invite, not a full member.
+    const inviteDoc = await db.collection('group_invites').doc(travelerId).get();
+    if (inviteDoc.exists) {
+      await inviteDoc.ref.delete();
+    }
+    return; // Nothing more to do.
+  }
+  const memberToRemove = memberToRemoveDoc.data() as GroupMember;
+  const userIdToRemove = memberToRemove.userId;
+
+  const batch = db.batch();
+
+  if (userIdToRemove) {
+    // 2. Process Flights
+    const flightsSnap = await db.collection('flights').where('tripId', '==', tripId).get();
+    for (const flightDoc of flightsSnap.docs) {
+      const flight = flightDoc.data() as Flight & { passengerIds?: string[]; paidBy?: string[] };
+      let wasModified = false;
+      const updates: Partial<Flight> = {};
+
+      if (flight.passengerIds?.includes(userIdToRemove)) {
+        if (flight.passengerIds.length === 1) {
+          batch.delete(flightDoc.ref);
+          continue; 
+        }
+        updates.passengerIds = flight.passengerIds.filter((id) => id !== userIdToRemove);
+        wasModified = true;
+      }
+
+      const currentPaidBy = (updates.paidBy || flight.paidBy) ?? [];
+      if (currentPaidBy.includes(userIdToRemove)) {
+        if (currentPaidBy.length === 1) {
+          updates.paidBy = [userId]; 
+        } else {
+          updates.paidBy = currentPaidBy.filter((id) => id !== userIdToRemove);
+        }
+        wasModified = true;
+      }
+      
+      if (wasModified) {
+        batch.update(flightDoc.ref, updates);
+      }
+    }
+
+    // 3. Process Lodgings
+    const lodgingsSnap = await db.collection('lodgings').where('tripId', '==', tripId).get();
+    for (const lodgingDoc of lodgingsSnap.docs) {
+      const lodging = lodgingDoc.data() as Lodging & { paidBy?: string[] };
+      if (lodging.paidBy?.includes(userIdToRemove)) {
+        if (lodging.paidBy.length === 1) {
+          batch.delete(lodgingDoc.ref);
+        } else {
+          const updates: Partial<Lodging> = {
+            paidBy: lodging.paidBy.filter((id) => id !== userIdToRemove),
+          };
+          batch.update(lodgingDoc.ref, updates);
+        }
+      }
+    }
+
+    // 4. Process Tours
+    const toursSnap = await db.collection('tours').where('tripId', '==', tripId).get();
+    for (const tourDoc of toursSnap.docs) {
+      const tour = tourDoc.data() as Tour & { paidBy?: string[] };
+      if (tour.paidBy?.includes(userIdToRemove)) {
+        if (tour.paidBy.length === 1) {
+          batch.delete(tourDoc.ref);
+        } else {
+          const updates: Partial<Tour> = {
+            paidBy: tour.paidBy.filter((id) => id !== userIdToRemove),
+          };
+          batch.update(tourDoc.ref, updates);
+        }
+      }
+    }
+  }
+
+  // 5. Remove from group
+  batch.update(memberToRemoveDoc.ref, { removedAt: nowIso() });
+
+  await batch.commit();
+};
+
+
+
+
 
 export const updateFamilyProfile = async (
   userId: string,

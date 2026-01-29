@@ -54,6 +54,10 @@ A starter shared trip planner stack with a TypeScript/Node.js API backed by Post
 - `DELETE /api/trips/:id` → delete a trip (must belong to the group).
 - `PATCH /api/trips/:id/group { groupId }` → move a trip to another group the user belongs to.
 
+## Testing
+- App unit/UI tests: `cd app && npm test`
+- Day overview/day details interactions are covered in `app/tests/overview.test.tsx`.
+
 ## Notes
 - This project is a base implementation; plug in real OAuth client IDs/secrets and production storage for secure deployments.
 - The Expo client uses React Native Web so the same code runs on web, Android, and iOS.

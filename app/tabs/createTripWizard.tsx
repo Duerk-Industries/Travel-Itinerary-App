@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Linking, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import type { Trait } from './traits';
-import { FlightsTab, type Flight, type GroupMemberOption, buildFlightPayload, type FlightEditDraft } from './flights';
+import { FlightsTab, type Flight, type GroupMemberOption, type Trip, buildFlightPayload, type FlightEditDraft } from './flights';
 import {
   type Lodging,
   type LodgingDraft,
@@ -29,6 +29,7 @@ import {
   getDefaultTripRangeDates,
   buildTripDescription,
   computeTripDays,
+  canProceedFromItineraryStep,
   normalizeEmail,
   validateParticipants,
   validateTripDates,
@@ -71,6 +72,19 @@ const steps = [
   'Review & Confirm',
 ];
 
+const itineraryStyleOptions = [
+  'Relaxation',
+  'Adventure',
+  'Family',
+  'Romantic',
+  'Food & Wine',
+  'Culture & Museums',
+  'Beach',
+  'City Break',
+  'Nature & Hiking',
+  'Wellness & Spa',
+];
+
 type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
 let NativeDateTimePicker: NativeDateTimePickerType | null = null;
 if (Platform.OS !== 'web') {
@@ -108,6 +122,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     durationDays: '',
     mode: 'range',
   });
+  const [dateModeSelected, setDateModeSelected] = useState<'range' | 'month' | null>(null);
   const [participants, setParticipants] = useState<ParticipantInput[]>([]);
   const [participantDraft, setParticipantDraft] = useState<ParticipantInput>({ firstName: '', lastName: '', email: '' });
   const [participantSearch, setParticipantSearch] = useState('');
@@ -131,8 +146,13 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   const [itineraryItems, setItineraryItems] = useState<ItineraryItemInput[]>([]);
   const [itineraryDraft, setItineraryDraft] = useState<ItineraryItemInput>({ date: '', time: '', activity: '' });
   const [itineraryDays, setItineraryDays] = useState('');
+  const [itineraryDaysTouched, setItineraryDaysTouched] = useState(false);
   const [itineraryTripStyle, setItineraryTripStyle] = useState('');
   const [itineraryDepartureAirport, setItineraryDepartureAirport] = useState('');
+  const [itineraryAirportSuggestions, setItineraryAirportSuggestions] = useState<string[]>([]);
+  const [showItineraryAirportSuggestions, setShowItineraryAirportSuggestions] = useState(false);
+  const itineraryAirportRef = useRef<TextInput | null>(null);
+  const [itineraryAirportAnchor, setItineraryAirportAnchor] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const [budgetLevel, setBudgetLevel] = useState<'cheap' | 'middle' | 'expensive'>('middle');
   const [generateItinerary, setGenerateItinerary] = useState(false);
   const [itineraryMode, setItineraryMode] = useState<'ai' | 'manual' | null>(null);
@@ -141,6 +161,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   const [knownInfo, setKnownInfo] = useState<KnownInfoInput>({ flights: '', lodging: '', tours: '', cars: '' });
   const [wizardError, setWizardError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [createdTripId, setCreatedTripId] = useState<string | null>(null);
   const [dateField, setDateField] = useState<'start' | 'end' | 'itinerary' | null>(null);
   const [dateValue, setDateValue] = useState<Date>(new Date());
@@ -158,6 +179,24 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   const wizardCarDropoffDateRef = useRef<HTMLInputElement | null>(null);
 
   const totalSteps = steps.length;
+  const wizardTripDefaults = useMemo<Trip>(
+    () => ({
+      id: 'wizard',
+      groupId: 'wizard',
+      groupName: 'Wizard',
+      name: details.name || 'Trip',
+      description: details.description || null,
+      destination: details.destination || null,
+      departureLocation: itineraryDepartureAirport.trim() || null,
+      startDate: dates.mode === 'range' ? dates.startDate || null : null,
+      endDate: dates.mode === 'range' ? dates.endDate || null : null,
+      startMonth: dates.mode === 'month' ? Number(dates.startMonth) || null : null,
+      startYear: dates.mode === 'month' ? Number(dates.startYear) || null : null,
+      durationDays: dates.mode === 'month' ? Number(dates.durationDays) || null : null,
+      createdAt: new Date().toISOString(),
+    }),
+    [dates, details, itineraryDepartureAirport]
+  );
   const computedDays = useMemo(() => computeTripDays(dates.startDate, dates.endDate), [dates.startDate, dates.endDate]);
   const monthLabel = useMemo(
     () => formatMonthYear(Number(dates.startMonth), Number(dates.startYear)),
@@ -211,11 +250,12 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   }, [participants]);
   const wizardDefaultPayerId = wizardGroupMembers[0]?.id ?? null;
   const formatWizardMemberName = (member: GroupMemberOption): string => {
-    if (member.guestName) return member.guestName;
     const first = (member.firstName ?? '').trim();
     const last = (member.lastName ?? '').trim();
     const name = `${first} ${last}`.trim();
-    return name || member.email || 'Traveler';
+    if (name) return name;
+    if (member.guestName) return member.guestName;
+    return member.email || 'Traveler';
   };
   const wizardPayerName = (id: string): string => {
     const match = wizardGroupMembers.find((m) => m.id === id);
@@ -280,6 +320,49 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
       setWizardLodgingDraft((prev) => ({ ...prev, paidBy: [wizardDefaultPayerId] }));
     }
   }, [wizardDefaultPayerId]);
+
+  useEffect(() => {
+    if (dates.mode === 'range' && computedDays && !itineraryDaysTouched) {
+      setItineraryDays(String(computedDays));
+    }
+  }, [computedDays, dates.mode, itineraryDaysTouched]);
+
+  const buildItineraryAirportSuggestions = (query: string): string[] => {
+    const trimmed = query.trim();
+    if (!trimmed) return [];
+    return airportOptions.filter((opt) => opt.toLowerCase().includes(trimmed.toLowerCase())).slice(0, 10);
+  };
+
+  const showItineraryAirportDropdown = (query: string) => {
+    setItineraryAirportSuggestions(buildItineraryAirportSuggestions(query));
+    setShowItineraryAirportSuggestions(true);
+    const node = itineraryAirportRef.current as any;
+    if (node?.measureInWindow) {
+      node.measureInWindow((x: number, y: number, width: number, height: number) => {
+        setItineraryAirportAnchor({ x, y, width, height });
+      });
+    } else if (typeof node?.getBoundingClientRect === 'function') {
+      const rect = node.getBoundingClientRect();
+      setItineraryAirportAnchor({
+        x: rect.left + (typeof window !== 'undefined' ? window.scrollX : 0),
+        y: rect.top + (typeof window !== 'undefined' ? window.scrollY : 0),
+        width: rect.width,
+        height: rect.height,
+      });
+    }
+    if (query.trim()) {
+      try {
+        void onSearchAirports(query);
+      } catch {
+        // ignore background errors
+      }
+    }
+  };
+
+  const hideItineraryAirportDropdown = () => {
+    setShowItineraryAirportSuggestions(false);
+    setItineraryAirportAnchor(null);
+  };
 
   useEffect(() => {
     const nights = calculateNights(wizardLodgingDraft.checkInDate, wizardLodgingDraft.checkOutDate);
@@ -492,16 +575,38 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
 
   const canMoveNext = () => {
     if (stepIndex === 0) return !validateTripDetails(details);
-    if (stepIndex === 1) return !validateTripDates(dates);
+    if (stepIndex === 1) {
+      if (!dateModeSelected) return false;
+      if (dateModeSelected === 'range') {
+        if (!dates.startDate || !dates.endDate) return false;
+      } else {
+        if (!dates.startMonth || !dates.startYear || !dates.durationDays) return false;
+      }
+      return !validateTripDates(dates);
+    }
     if (stepIndex === 2) return !validateParticipants(participants);
+    if (stepIndex === 3) return canProceedFromItineraryStep(itineraryMode);
     return true;
   };
 
   const goNext = () => {
     let error: string | null = null;
     if (stepIndex === 0) error = validateTripDetails(details);
-    if (stepIndex === 1) error = validateTripDates(dates);
+    if (stepIndex === 1 && !dateModeSelected) {
+      error = 'Select a date option to continue.';
+    }
+    if (stepIndex === 1 && !error) {
+      if (dateModeSelected === 'range') {
+        if (!dates.startDate || !dates.endDate) {
+          error = 'Select both a start and end date.';
+        }
+      } else if (!dates.startMonth || !dates.startYear || !dates.durationDays) {
+        error = 'Select a month, year, and number of days.';
+      }
+    }
+    if (stepIndex === 1 && !error) error = validateTripDates(dates);
     if (stepIndex === 2) error = validateParticipants(participants);
+    if (stepIndex === 3 && !canProceedFromItineraryStep(itineraryMode)) error = 'Choose Yes or No to continue.';
     if (error) {
       setWizardError(error);
       return;
@@ -701,7 +806,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
         lastName: m.lastName ?? m.last_name ?? undefined,
         status: m.status ?? undefined,
       }));
-      const activeMembers = members.filter((m: any) => m.status !== 'pending');
+      const activeMembers = members.filter((m: any) => m.status !== 'removed');
       const memberByEmail = new Map(
         members
           .map((m: any) => [String(m.email ?? '').toLowerCase(), m.id] as const)
@@ -804,7 +909,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
         lastName: m.lastName ?? m.last_name ?? undefined,
         status: m.status ?? undefined,
       }));
-      const activeMembers = members.filter((m: any) => m.status !== 'pending');
+      const activeMembers = members.filter((m: any) => m.status !== 'removed');
       const memberByEmail = new Map(
         members
           .map((m: any) => [String(m.email ?? '').toLowerCase(), m.id] as const)
@@ -887,7 +992,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
         lastName: m.lastName ?? m.last_name ?? undefined,
         status: m.status ?? undefined,
       }));
-      const activeMembers = members.filter((m: any) => m.status !== 'pending');
+      const activeMembers = members.filter((m: any) => m.status !== 'removed');
       const memberByEmail = new Map(
         members
           .map((m: any) => [String(m.email ?? '').toLowerCase(), m.id] as const)
@@ -1155,19 +1260,60 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             <Text style={styles.helperText}>Choose exact dates or a month and duration (optional).</Text>
             <View style={styles.row}>
               <TouchableOpacity
-                style={[styles.button, dates.mode === 'range' && styles.toggleActive, styles.smallButton]}
-                onPress={() => setDates((prev) => ({ ...prev, mode: 'range' }))}
+                style={[
+                  {
+                    backgroundColor: dateModeSelected === 'range' ? '#0d6efd' : '#fff',
+                    borderColor: '#0d6efd',
+                    borderWidth: 1,
+                    paddingVertical: 8,
+                    paddingHorizontal: 12,
+                    borderRadius: 6,
+                    alignItems: 'center',
+                  },
+                  { marginRight: 8 },
+                ]}
+                onPress={() => {
+                  setDateModeSelected('range');
+                  setDates((prev) => ({ ...prev, mode: 'range' }));
+                }}
               >
-                <Text style={styles.buttonText}>I know which dates I'm going</Text>
+                <Text
+                  style={[
+                    { color: dateModeSelected === 'range' ? '#fff' : '#0d6efd', fontWeight: '600' },
+                  ]}
+                >
+                  I know which dates I'm going
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.button, dates.mode === 'month' && styles.toggleActive, styles.smallButton]}
-                onPress={() => setDates((prev) => ({ ...prev, mode: 'month' }))}
+                style={[
+                  {
+                    backgroundColor: dateModeSelected === 'month' ? '#0d6efd' : '#fff',
+                    borderColor: '#0d6efd',
+                    borderWidth: 1,
+                    paddingVertical: 8,
+                    paddingHorizontal: 12,
+                    borderRadius: 6,
+                    alignItems: 'center',
+                  },
+                ]}
+                onPress={() => {
+                  setDateModeSelected('month');
+                  setDates((prev) => ({ ...prev, mode: 'month' }));
+                }}
               >
-                <Text style={styles.buttonText}>Flexible Timeline</Text>
+                <Text
+                  style={[
+                    { color: dateModeSelected === 'month' ? '#fff' : '#0d6efd', fontWeight: '600' },
+                  ]}
+                >
+                  Flexible Timeline
+                </Text>
               </TouchableOpacity>
             </View>
-            {dates.mode === 'range' ? (
+            {!dateModeSelected ? (
+              <Text style={styles.helperText}>Select a date option to continue.</Text>
+            ) : dates.mode === 'range' ? (
               <>
                 <View style={styles.row}>
                   <View style={[styles.dateInputWrap, { flex: 1 }]}>
@@ -1457,27 +1603,55 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             </Text>
             <View style={styles.row}>
               <TouchableOpacity
-                style={[styles.button, itineraryMode === 'ai' && styles.toggleActive]}
+                style={[
+                  styles.mapOptionButton ?? styles.button,
+                  itineraryMode === 'ai' && (styles.mapOptionActive ?? styles.toggleActive),
+                  { marginRight: 8 },
+                ]}
                 onPress={() => selectItineraryMode('ai')}
               >
-                <Text style={styles.buttonText}>Yes</Text>
+                <Text style={[styles.mapOptionText ?? styles.buttonText, itineraryMode === 'ai' && (styles.mapOptionActiveText ?? styles.buttonText)]}>
+                  Yes
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.button, itineraryMode === 'manual' && styles.toggleActive]}
+                style={[
+                  styles.mapOptionButton ?? styles.button,
+                  itineraryMode === 'manual' && (styles.mapOptionActive ?? styles.toggleActive),
+                ]}
                 onPress={() => selectItineraryMode('manual')}
               >
-                <Text style={styles.buttonText}>No</Text>
+                <Text style={[styles.mapOptionText ?? styles.buttonText, itineraryMode === 'manual' && (styles.mapOptionActiveText ?? styles.buttonText)]}>
+                  No
+                </Text>
               </TouchableOpacity>
             </View>
             {itineraryMode === 'ai' ? (
-              <>
+              <ScrollView
+                style={{ maxHeight: 520 }}
+                contentContainerStyle={{ paddingBottom: 12 }}
+                showsVerticalScrollIndicator
+                nestedScrollEnabled
+              >
                 <Text style={styles.helperText}>We'll generate a starter plan you can edit later.</Text>
+                <Text style={styles.helperText}>
+                  The AI itinerary will be generated after you complete all steps of the trip wizard.
+                </Text>
                 <TextInput
-                  style={styles.input}
+                  style={[
+                    styles.input,
+                    dates.mode === 'range' && computedDays
+                      ? { backgroundColor: '#e5e7eb', color: '#6b7280' }
+                      : null,
+                  ]}
                   placeholder="Trip days (optional if dates are set)"
                   keyboardType="numeric"
                   value={itineraryDays}
-                  onChangeText={setItineraryDays}
+                  onChangeText={(text) => {
+                    setItineraryDaysTouched(true);
+                    setItineraryDays(text);
+                  }}
+                  editable={!(dates.mode === 'range' && computedDays)}
                 />
                 <TextInput
                   style={styles.input}
@@ -1485,79 +1659,76 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                   value={itineraryTripStyle}
                   onChangeText={setItineraryTripStyle}
                 />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Departure airport (optional)"
-                  value={itineraryDepartureAirport}
-                  onChangeText={setItineraryDepartureAirport}
-                />
-                <View style={styles.row}>
-                  {(['cheap', 'middle', 'expensive'] as const).map((level) => (
+                <Text style={styles.helperText}>Suggested styles</Text>
+                <View style={[styles.row, { flexWrap: 'wrap' }]}>
+                  {itineraryStyleOptions.map((style) => (
                     <TouchableOpacity
-                      key={level}
-                      style={[styles.button, budgetLevel === level && styles.toggleActive, styles.smallButton]}
-                      onPress={() => setBudgetLevel(level)}
+                      key={style}
+                      style={[
+                        styles.mapOptionButton ?? styles.button,
+                        itineraryTripStyle === style && (styles.mapOptionActive ?? styles.toggleActive),
+                        { marginRight: 8, marginTop: 4 },
+                      ]}
+                      onPress={() => setItineraryTripStyle(style)}
                     >
-                      <Text style={styles.buttonText}>{level}</Text>
+                      <Text style={[styles.mapOptionText ?? styles.buttonText, itineraryTripStyle === style && (styles.mapOptionActiveText ?? styles.buttonText)]}>
+                        {style}
+                      </Text>
                     </TouchableOpacity>
                   ))}
                 </View>
-                <Text style={styles.headerText}>Optional manual additions</Text>
-                <View style={styles.dateInputWrap}>
-                  {Platform.OS === 'web' ? (
-                    <input
-                      ref={itineraryDateRef as any}
-                      type="date"
-                      value={itineraryDraft.date}
-                      onChange={(e) =>
-                        setItineraryDraft((prev) => ({ ...prev, date: normalizeDateString(e.target.value) }))
-                      }
-                      style={styles.input as any}
-                    />
-                  ) : (
-                    <TouchableOpacity style={[styles.input, styles.dateTouchable]} onPress={() => openDatePicker('itinerary')}>
-                      <Text style={styles.cellText}>{itineraryDraft.date || 'YYYY-MM-DD'}</Text>
-                    </TouchableOpacity>
-                  )}
-                  <TouchableOpacity style={styles.dateIcon} onPress={() => openDatePicker('itinerary')}>
-                    <Text style={styles.selectCaret}>v</Text>
+                <View style={{ position: 'relative' }}>
+                  <TextInput
+                    ref={itineraryAirportRef}
+                    style={styles.input}
+                    placeholder="Departure airport (optional)"
+                    value={itineraryDepartureAirport}
+                    onFocus={() => showItineraryAirportDropdown(itineraryDepartureAirport)}
+                    onChangeText={(text) => {
+                      setItineraryDepartureAirport(text);
+                      showItineraryAirportDropdown(text);
+                    }}
+                  />
+                  <TouchableOpacity
+                    style={{ position: 'absolute', right: 8, top: 10, padding: 6 }}
+                    onPress={() => showItineraryAirportDropdown(itineraryDepartureAirport)}
+                  >
+                    <Text style={styles.selectCaret}></Text>
                   </TouchableOpacity>
                 </View>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Time (optional)"
-                  value={itineraryDraft.time}
-                  onChangeText={(text) => setItineraryDraft((prev) => ({ ...prev, time: text }))}
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Activity description"
-                  value={itineraryDraft.activity}
-                  onChangeText={(text) => setItineraryDraft((prev) => ({ ...prev, activity: text }))}
-                />
-                <TouchableOpacity style={styles.button} onPress={addItineraryItem}>
-                  <Text style={styles.buttonText}>Add Itinerary Item</Text>
-                </TouchableOpacity>
-                {itineraryItems.length ? (
-                  <View style={{ marginTop: 12 }}>
-                    {itineraryItems.map((item, idx) => (
-                      <View key={`${item.activity}-${idx}`} style={styles.memberPill}>
-                        <Text style={styles.cellText}>
-                          {item.date || 'Day'} {item.time ? `@ ${item.time}` : ''} - {item.activity}
-                        </Text>
-                        <TouchableOpacity onPress={() => setItineraryItems((prev) => prev.filter((_, i) => i !== idx))}>
-                          <Text style={styles.removeText}>Remove</Text>
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                  </View>
-                ) : (
-                  <Text style={styles.helperText}>No itinerary items yet.</Text>
-                )}
-              </>
+                <View style={[styles.row, { flexWrap: 'wrap' }]}>
+                  {(['cheap', 'middle', 'expensive'] as const).map((level) => (
+                    <TouchableOpacity
+                      key={level}
+                      style={[
+                        {
+                          backgroundColor: budgetLevel === level ? '#0d6efd' : '#fff',
+                          borderColor: '#0d6efd',
+                          borderWidth: 1,
+                          paddingVertical: 8,
+                          paddingHorizontal: 12,
+                          borderRadius: 6,
+                        },
+                        { marginRight: 8, marginTop: 4 },
+                      ]}
+                      onPress={() => setBudgetLevel(level)}
+                    >
+                      <Text style={{ color: budgetLevel === level ? '#fff' : '#0d6efd', fontWeight: '600' }}>
+                        {level}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                <Text style={styles.helperText}>Selected budget: {budgetLevel}</Text>
+              </ScrollView>
             ) : null}
             {itineraryMode === 'manual' ? (
-              <>
+              <ScrollView
+                style={{ maxHeight: 520 }}
+                contentContainerStyle={{ paddingBottom: 12 }}
+                showsVerticalScrollIndicator
+                nestedScrollEnabled
+              >
                 <Text style={styles.helperText}>All days are free to start. Add manual items to any day.</Text>
                 {!computedDays && dates.mode === 'range' ? (
                   <TextInput
@@ -1629,7 +1800,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                 ) : (
                   <Text style={styles.helperText}>Select a day to add manual items.</Text>
                 )}
-              </>
+              </ScrollView>
             ) : null}
             {!itineraryMode ? (
               <Text style={styles.helperText}>You can always build an itinerary later.</Text>
@@ -1653,7 +1824,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               payerName={wizardPayerName}
               headers={headers}
               jsonHeaders={wizardJsonHeaders}
-              findActiveTrip={() => undefined}
+              findActiveTrip={() => wizardTripDefaults}
               fetchGroupMembersForActiveTrip={async () => undefined}
               styles={styles}
               airportOptions={airportOptions}
@@ -2076,7 +2247,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                         onPress={() => setWizardCarPrepaidOpen((s) => !s)}
                       >
                         <Text style={styles.cellText}>{wizardCarDraft.prepaid || 'Select Yes/No'}</Text>
-                        <Text style={styles.selectCaret}>ƒ-_</Text>
+                        <Text style={styles.selectCaret}></Text>
                       </TouchableOpacity>
                       {wizardCarPrepaidOpen ? (
                         <View style={[styles.dropdownList, { position: 'relative', top: 0 }]}>
@@ -2269,11 +2440,19 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   return (
     <View style={{ position: 'relative' }}>
       <ScrollView style={styles.card} contentContainerStyle={{ gap: 12 }}>
-        <View>
-          <Text style={styles.sectionTitle}>Create Trip Wizard</Text>
-          <Text style={styles.helperText}>
-            Step {stepIndex + 1} of {totalSteps}: {steps[stepIndex]}
-          </Text>
+        <View style={[styles.row, { alignItems: 'center', justifyContent: 'space-between' }]}>
+          <View>
+            <Text style={styles.sectionTitle}>Create Trip Wizard</Text>
+            <Text style={styles.helperText}>
+              Step {stepIndex + 1} of {totalSteps}: {steps[stepIndex]}
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.button, styles.dangerButton, { paddingHorizontal: 12, paddingVertical: 6 }]}
+            onPress={() => setShowExitConfirm(true)}
+          >
+            <Text style={styles.buttonText}>X</Text>
+          </TouchableOpacity>
         </View>
         {wizardError ? <Text style={styles.errorText}>{wizardError}</Text> : null}
         {renderStepContent()}
@@ -2299,6 +2478,45 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           )}
         </View>
       </ScrollView>
+      {showItineraryAirportSuggestions && itineraryAirportAnchor ? (
+        <View style={[styles.passengerOverlay, { backgroundColor: 'transparent', zIndex: 52000, elevation: 80 }]}>
+          <TouchableOpacity
+            style={[styles.passengerOverlayBackdrop, { backgroundColor: 'transparent' }]}
+            onPress={hideItineraryAirportDropdown}
+          />
+          <View
+            style={[
+              styles.passengerOverlayList,
+              {
+                zIndex: 53000,
+                elevation: 84,
+                left: itineraryAirportAnchor.x,
+                top: itineraryAirportAnchor.y + itineraryAirportAnchor.height,
+                width: itineraryAirportAnchor.width || 280,
+              },
+            ]}
+          >
+            {itineraryAirportSuggestions.length ? (
+              itineraryAirportSuggestions.map((opt) => (
+                <TouchableOpacity
+                  key={opt}
+                  style={styles.dropdownOption}
+                  onPress={() => {
+                    const codeMatch = opt.match(/\(([A-Za-z]{3})\)/);
+                    const value = codeMatch ? codeMatch[1].toUpperCase() : opt;
+                    setItineraryDepartureAirport(value);
+                    hideItineraryAirportDropdown();
+                  }}
+                >
+                  <Text style={styles.cellText}>{opt}</Text>
+                </TouchableOpacity>
+              ))
+            ) : (
+              <Text style={styles.helperText}>Type to search airports</Text>
+            )}
+          </View>
+        </View>
+      ) : null}
       {Platform.OS !== 'web' && dateField && NativeDateTimePicker ? (
         <NativeDateTimePicker
           value={dateValue}
@@ -2515,6 +2733,28 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                 onPress={() => editingWizardLodging && saveWizardLodging(editingWizardLodging, editingWizardLodgingId)}
               >
                 <Text style={styles.buttonText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      ) : null}
+      {showExitConfirm ? (
+        <View style={styles.modalOverlay}>
+          <View style={styles.confirmModal}>
+            <Text style={styles.sectionTitle}>Exit trip wizard?</Text>
+            <Text style={styles.helperText}>Your progress will not be saved.</Text>
+            <View style={styles.row}>
+              <TouchableOpacity
+                style={[styles.button, styles.dangerButton, { flex: 1 }]}
+                onPress={() => {
+                  setShowExitConfirm(false);
+                  onCancel();
+                }}
+              >
+                <Text style={styles.buttonText}>Exit</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.button, { flex: 1 }]} onPress={() => setShowExitConfirm(false)}>
+                <Text style={styles.buttonText}>Stay</Text>
               </TouchableOpacity>
             </View>
           </View>

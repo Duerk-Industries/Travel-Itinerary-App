@@ -5,6 +5,30 @@ import fetch from 'node-fetch';
 import { listTraitsForGroupTrip } from '../db';
 import { logError } from '../logger';
 import { getEnvValue } from '../env';
+import { getDb } from '../db.firebase';
+
+type ImageCacheEntry = { url: string; fetchedAt: number };
+const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
+const PLACEHOLDER_IMAGE =
+  'https://images.unsplash.com/photo-1502920917128-1aa500764b0e?auto=format&fit=crop&w=1200&q=80';
+
+const fetchUnsplashImage = async (query: string): Promise<string | null> => {
+  // Prefer correctly-spelled var, but fall back to historical typo for backward compatibility.
+  const key = getEnvValue('UNSPLASH_ACCESS_KEY') ?? getEnvValue('UNSPLASE_ACCESS_KEY');
+  if (!key) return null;
+  try {
+    const res = await fetch(
+      `https://api.unsplash.com/photos/random?orientation=landscape&content_filter=high&query=${encodeURIComponent(query)}`,
+      { headers: { Authorization: `Client-ID ${key}` } }
+    );
+    if (!res.ok) return null;
+    const data = (await res.json()) as any;
+    return data?.urls?.regular || data?.urls?.full || null;
+  } catch (err) {
+    logError('[itinerary] Unsplash fetch failed', err);
+    return null;
+  }
+};
 
 type ChatCompletionResponse = {
   choices?: Array<{
@@ -18,6 +42,36 @@ type ChatCompletionResponse = {
 const router = Router();
 router.use(bodyParser.json());
 router.use(authenticate);
+
+router.get('/images', async (req, res) => {
+  const location = String(req.query.location || '').trim().toLowerCase();
+  if (!location) {
+    res.status(400).json({ error: 'location is required' });
+    return;
+  }
+  const dayKey = String(req.query.day || 'any').trim().toLowerCase();
+  const cacheId = `${location}|${dayKey}`;
+  try {
+    const db = getDb();
+    const docRef = db.collection('imageCache').doc(cacheId);
+    const doc = await docRef.get();
+    const now = Date.now();
+    if (doc.exists) {
+      const data = doc.data() as ImageCacheEntry;
+      if (data?.url && data?.fetchedAt && now - data.fetchedAt < ONE_YEAR_MS) {
+        res.json({ url: data.url, cached: true });
+        return;
+      }
+    }
+
+    const fetchedUrl = (await fetchUnsplashImage(location)) || PLACEHOLDER_IMAGE;
+    await docRef.set({ url: fetchedUrl, fetchedAt: now }, { merge: true });
+    res.json({ url: fetchedUrl, cached: false });
+  } catch (err) {
+    logError('[itinerary] image cache error', err);
+    res.json({ url: PLACEHOLDER_IMAGE, cached: false, error: 'fallback' });
+  }
+});
 
 router.post('/', async (req, res) => {
   const apiKey = getEnvValue('OPENAI_API_KEY');

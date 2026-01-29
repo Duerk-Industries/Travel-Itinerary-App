@@ -16,10 +16,12 @@
     "test:invite": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" ./scripts/test-invite-follow.ts",
     "test:itinerary": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" ./scripts/test-itinerary-generate.ts",
     "test:trait": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" ./scripts/test-trait-create-delete.ts",
-    "test:tours": "jest"
+    "test:tours": "jest",
+    "test": "jest --runInBand"
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",
+    "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native-community/datetimepicker": "8.4.4",
     "body-parser": "2.2.1",
     "buffer": "^6.0.3",
@@ -41,6 +43,7 @@
     "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
+    "@testing-library/react-native": "^12.9.0",
     "@types/express": "^5.0.6",
     "@types/jest": "^29.5.12",
     "@types/node": "^25.0.3",
@@ -51,6 +54,7 @@
     "jest": "^29.7.0",
     "react-native-dotenv": "^3.4.11",
     "react-native-svg-transformer": "^1.5.2",
+    "react-test-renderer": "^19.1.0",
     "ts-jest": "^29.2.5",
     "ts-node": "^10.9.2",
     "typescript": "^5.4.5"

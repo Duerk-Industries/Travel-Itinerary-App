@@ -14,6 +14,8 @@ import traitRoutes from './routes/traitRoutes';
 import lodgingRoutes from './routes/lodgingRoutes';
 import tourRoutes from './routes/tourRoutes';
 import accountRoutes, { groupsRouter } from './routes/accountRoutes';
+
+import { loadEnv } from './env_loader';
 import { getEnvValue, hasRunLocalFlag, isLocalEnv } from './env';
 
 // Load env vars from server/.env and optionally server/.secrets (plus repo root fallbacks).

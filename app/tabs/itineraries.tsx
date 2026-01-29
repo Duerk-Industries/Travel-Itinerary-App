@@ -439,11 +439,22 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
 
   const dedupeDetails = (list: ItineraryDetailRecord[]) => {
     const seen = new Set<string>();
-    return list.filter((d) => {
+    const filtered = list.filter((d) => {
       const key = `${d.day}|${(d.activity || '').toLowerCase().trim()}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
+    });
+    return filtered.sort((a, b) => {
+      const dayA = Number(a.day) || 0;
+      const dayB = Number(b.day) || 0;
+      if (dayA !== dayB) return dayA - dayB;
+      const timeA = (a.time ?? '').toString();
+      const timeB = (b.time ?? '').toString();
+      if (timeA && timeB) return timeA.localeCompare(timeB);
+      if (timeA) return -1;
+      if (timeB) return 1;
+      return 0;
     });
   };
 

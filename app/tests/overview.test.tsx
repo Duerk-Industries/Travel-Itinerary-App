@@ -10,6 +10,9 @@ import {
   buildRentalDraftFromRow,
   buildTourDraftFromRow,
 } from '../utils/overviewEditing';
+import { render, fireEvent } from '@testing-library/react-native';
+import OverviewTab from '../tabs/overview';
+import React from 'react';
 
 describe('Overview helpers', () => {
   test('formats flight summary', () => {
@@ -188,5 +191,157 @@ describe('Overview helpers', () => {
     });
     expect(rows[0].dateLabel).toBe('April 2025');
     expect(rows[0].dayLabel).toBe('Day 1');
+  });
+});
+
+describe('Overview UI (nested itinerary)', () => {
+  const styles: any = {
+    sectionTitle: { fontSize: 18 },
+    helperText: { fontSize: 12 },
+    flightTitle: { fontSize: 16 },
+    button: { padding: 8 },
+    smallButton: { padding: 6 },
+    dropdown: { backgroundColor: '#e5e7eb' },
+    toggleActive: { backgroundColor: '#111827' },
+    headerText: { fontSize: 14 },
+    bodyText: { fontSize: 14 },
+  };
+
+  const baseProps = {
+    backendUrl: 'http://localhost:4000',
+    headers: {} as Record<string, string>,
+    jsonHeaders: {} as Record<string, string>,
+    trip: {
+      id: 'trip1',
+      groupId: 'g1',
+      name: 'Test Trip',
+      destination: 'Test City',
+      startDate: '2026-01-29',
+      endDate: '2026-01-30',
+      startMonth: null,
+      startYear: null,
+      durationDays: null,
+      createdAt: '2026-01-01',
+    },
+    group: null,
+    attendees: [],
+    flights: [] as any[],
+    lodgings: [] as any[],
+    tours: [] as any[],
+    carRentals: [] as any[],
+    defaultPayerId: null,
+    styles,
+    mapApp: 'apple' as any,
+    onOpenAddress: jest.fn(),
+    onRefreshTrips: jest.fn(),
+    onRefreshGroups: jest.fn(),
+    onRefreshGroupMembers: jest.fn(),
+    onRefreshFlights: jest.fn(),
+    onRefreshLodgings: jest.fn(),
+    onRefreshTours: jest.fn(),
+    onAddCarRental: jest.fn(),
+    openFlightInFlightsTab: jest.fn(),
+  };
+
+  test('renders day pills with overview and short dates', async () => {
+    const { findByTestId, findByText } = render(<OverviewTab {...baseProps} />);
+    expect(await findByTestId('overview-day-pill-overview')).toBeTruthy();
+    expect(await findByText('Thu. 29')).toBeTruthy();
+  });
+
+  test('navigates to day details and back', async () => {
+    const { findByTestId } = render(<OverviewTab {...baseProps} />);
+    const dayCard = await findByTestId('overview-day-card-1');
+    fireEvent.press(dayCard);
+    const back = await findByTestId('day-details-back');
+    fireEvent.press(back);
+    expect(await findByTestId('overview-day-card-1')).toBeTruthy();
+  });
+
+  test('opens flight details modal from day details', async () => {
+    const flight = {
+      id: 'flight-1',
+      passenger_name: 'Traveler',
+      passenger_ids: ['member-1'],
+      trip_id: 'trip1',
+      departure_date: '2026-01-29',
+      departure_location: 'BOS',
+      departure_airport_code: 'BOS',
+      departure_time: '20:00',
+      arrival_date: '2026-01-30',
+      arrival_location: 'CAI',
+      arrival_airport_code: 'CAI',
+      arrival_time: '19:55',
+      cost: 0,
+      carrier: 'Delta',
+      flight_number: 'DL100',
+      booking_reference: 'ABC123',
+    };
+    const attendees = [
+      { id: 'member-1', firstName: 'Vicky', lastName: 'Duerk', email: 'vduerk@gmail.com' },
+    ];
+    const { findByTestId, findByText } = render(
+      <OverviewTab {...baseProps} attendees={attendees} flights={[flight] as any} />
+    );
+    fireEvent.press(await findByTestId('overview-day-card-1'));
+    fireEvent.press(await findByTestId('day-details-flight-details'));
+    expect(await findByText('Flight Details')).toBeTruthy();
+  });
+
+  test('shows next day button in day details', async () => {
+    const { findByTestId } = render(<OverviewTab {...baseProps} />);
+    fireEvent.press(await findByTestId('overview-day-card-1'));
+    expect(await findByTestId('day-details-next')).toBeTruthy();
+  });
+
+  test('shows traveler names when flights differ', async () => {
+    const flights = [
+      {
+        id: 'flight-1',
+        passenger_name: 'Traveler',
+        passenger_ids: ['member-1'],
+        trip_id: 'trip1',
+        departure_date: '2026-01-29',
+        departure_location: 'BOS',
+        departure_airport_code: 'BOS',
+        departure_time: '20:00',
+        arrival_date: '2026-01-29',
+        arrival_location: 'CAI',
+        arrival_airport_code: 'CAI',
+        arrival_time: '19:55',
+        cost: 0,
+        carrier: 'Delta',
+        flight_number: 'DL100',
+        booking_reference: 'ABC123',
+      },
+      {
+        id: 'flight-2',
+        passenger_name: 'Traveler',
+        passenger_ids: ['member-2'],
+        trip_id: 'trip1',
+        departure_date: '2026-01-29',
+        departure_location: 'BOS',
+        departure_airport_code: 'BOS',
+        departure_time: '21:00',
+        arrival_date: '2026-01-29',
+        arrival_location: 'CAI',
+        arrival_airport_code: 'CAI',
+        arrival_time: '20:55',
+        cost: 0,
+        carrier: 'Delta',
+        flight_number: 'DL200',
+        booking_reference: 'DEF456',
+      },
+    ];
+    const attendees = [
+      { id: 'member-1', firstName: 'Vicky', lastName: 'Duerk', email: 'vduerk@gmail.com' },
+      { id: 'member-2', firstName: 'Bryan', lastName: 'Duerk', email: 'bryan@example.com' },
+    ];
+    const { findByTestId, findByText } = render(
+      <OverviewTab {...baseProps} attendees={attendees} flights={flights as any} />
+    );
+    fireEvent.press(await findByTestId('overview-day-card-1'));
+    expect(await findByText(/Travelers: Vicky Duerk/i)).toBeTruthy();
+    expect(await findByText(/Travelers: Bryan Duerk/i)).toBeTruthy();
   });
 });

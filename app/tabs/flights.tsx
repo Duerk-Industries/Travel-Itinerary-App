@@ -93,8 +93,11 @@ export type FlightEditDraft = {
 
 export type FlightCreateDraft = {
   passengerName: string;
+  passengerIds: string[];
+  departureLocation?: string;
   departureDate: string;
   arrivalDate: string;
+  arrivalLocation?: string;
   departureAirportCode: string;
   departureTime: string;
   arrivalAirportCode: string;
@@ -118,6 +121,7 @@ const isValidTime = (value: string): boolean => {
 
 export const createInitialFlightCreateDraft = (): FlightCreateDraft => ({
   passengerName: '',
+  passengerIds: [],
   departureDate: new Date().toISOString().slice(0, 10),
   arrivalDate: new Date().toISOString().slice(0, 10),
   departureAirportCode: '',
@@ -150,6 +154,9 @@ export type Trip = {
   name: string;
   description?: string | null;
   destination?: string | null;
+  departureCity?: string | null;
+  departureLocation?: string | null;
+  departureAirport?: string | null;
   startDate?: string | null;
   endDate?: string | null;
   startMonth?: number | null;
@@ -165,19 +172,62 @@ export const createInitialFlightState = (): FlightDraft => ({
   arrivalDate: new Date().toISOString().slice(0, 10),
   departureLocation: '',
   departureAirportCode: '',
-  departureTime: '',
+  departureTime: '08:00',
   arrivalLocation: '',
   arrivalAirportCode: '',
   layoverLocation: '',
   layoverLocationCode: '',
   layoverDuration: '',
-  arrivalTime: '',
+  arrivalTime: '10:00',
   cost: '',
   carrier: '',
   flightNumber: '',
   bookingReference: '',
   paidBy: [],
 });
+
+const getDefaultFlightDates = (trip?: Trip): { departureDate: string; arrivalDate: string } | null => {
+  if (!trip) return null;
+  const normalizedStart = normalizeDateString(trip.startDate ?? '');
+  if (normalizedStart) {
+    return { departureDate: normalizedStart, arrivalDate: normalizedStart };
+  }
+  if (trip.startYear && trip.startMonth) {
+    const month = String(trip.startMonth).padStart(2, '0');
+    const date = `${trip.startYear}-${month}-01`;
+    return { departureDate: date, arrivalDate: date };
+  }
+  return null;
+};
+
+const getDefaultFlightDepartureLocation = (trip?: Trip): string | null => {
+  if (!trip) return null;
+  const raw =
+    (trip as Trip)?.departureCity ??
+    (trip as Trip)?.departureLocation ??
+    (trip as Trip)?.departureAirport ??
+    '';
+  if (typeof raw !== 'string') return null;
+  const trimmed = raw.trim();
+  return trimmed.length ? trimmed : null;
+};
+
+export const createFlightDraftForTrip = (trip?: Trip, defaultPayerId?: string | null): FlightEditDraft => {
+  const draft = createInitialFlightState() as FlightEditDraft;
+  const dateDefaults = getDefaultFlightDates(trip);
+  if (dateDefaults) {
+    draft.departureDate = dateDefaults.departureDate;
+    draft.arrivalDate = dateDefaults.arrivalDate;
+  }
+  const locationDefault = getDefaultFlightDepartureLocation(trip);
+  if (locationDefault) {
+    draft.departureLocation = locationDefault;
+  }
+  if (defaultPayerId) {
+    draft.paidBy = [defaultPayerId];
+  }
+  return draft;
+};
 
 export const buildFlightPayload = (flight: FlightEditDraft, tripId?: string | null, defaultPayerId?: string | null) => {
   const trim = (v: string | null | undefined) => (v ?? '').trim();
@@ -203,49 +253,30 @@ export const buildFlightPayload = (flight: FlightEditDraft, tripId?: string | nu
     arrivalDate,
     arrivalTime: trim(flight.arrivalTime) || '00:00',
     cost: Number(flight.cost) || 0,
-    carrier: trim(flight.carrier) || 'UNKNOWN',
-    flightNumber: trim(flight.flightNumber) || 'UNKNOWN',
-    bookingReference: trim(flight.bookingReference) || 'UNKNOWN',
+    carrier: trim(flight.carrier),
+    flightNumber: trim(flight.flightNumber),
+    bookingReference: trim(flight.bookingReference),
     paidBy: flight.paidBy?.length ? flight.paidBy : defaultPayerId ? [defaultPayerId] : [],
     ...(tripId ? { tripId } : {}),
   };
 };
 
 export const buildFlightPayloadForCreate = (
-  draft: FlightCreateDraft,
+  draft: FlightCreateDraft | FlightEditDraft,
   tripId?: string | null,
   defaultPayerId?: string | null
 ): { payload?: any; error?: string } => {
   if (!tripId) return { error: 'Select an active trip before adding a flight.' };
-  if (!draft.departureDate.trim()) return { error: 'Departure date is required.' };
-  if (!draft.departureTime.trim() || !draft.arrivalTime.trim()) return { error: 'Departure and arrival times are required.' };
-  if (!isValidTime(draft.departureTime) || !isValidTime(draft.arrivalTime)) return { error: 'Enter valid departure and arrival times (HH:MM).' };
-  if (!draft.carrier.trim() || !draft.flightNumber.trim()) return { error: 'Carrier and flight number are required.' };
-  if (!draft.bookingReference.trim()) return { error: 'Booking reference is required.' };
-  const payload = buildFlightPayload(
-    {
-      passengerName: draft.passengerName.trim() || 'Traveler',
-      passengerIds: [],
-      departureDate: draft.departureDate.trim(),
-      arrivalDate: draft.arrivalDate.trim() || draft.departureDate.trim(),
-      departureLocation: '',
-      departureAirportCode: draft.departureAirportCode.trim(),
-      departureTime: draft.departureTime.trim(),
-      arrivalLocation: '',
-      arrivalAirportCode: draft.arrivalAirportCode.trim(),
-      layoverLocation: draft.layoverLocation.trim(),
-      layoverLocationCode: draft.layoverLocationCode.trim(),
-      layoverDuration: draft.layoverDuration.trim(),
-      arrivalTime: draft.arrivalTime.trim(),
-      cost: draft.cost.trim(),
-      carrier: draft.carrier.trim(),
-      flightNumber: draft.flightNumber.trim(),
-      bookingReference: draft.bookingReference.trim(),
-      paidBy: [],
-    },
-    tripId,
-    defaultPayerId
-  );
+  const departureDate = (draft as FlightEditDraft).departureDate?.trim();
+  const departureTime = (draft as FlightEditDraft).departureTime?.trim();
+  const arrivalTime = (draft as FlightEditDraft).arrivalTime?.trim();
+  if (!departureDate) return { error: 'Departure date is required.' };
+  if (!departureTime || !arrivalTime) return { error: 'Departure and arrival times are required.' };
+  if (!isValidTime(departureTime) || !isValidTime(arrivalTime)) return { error: 'Enter valid departure and arrival times (HH:MM).' };
+  if (!Array.isArray(draft.passengerIds) || draft.passengerIds.filter(Boolean).length === 0) {
+    return { error: 'Select at least one passenger' };
+  }
+  const payload = buildFlightPayload(draft as FlightEditDraft, tripId, defaultPayerId);
   return { payload };
 };
 
@@ -269,6 +300,41 @@ export const createFlightForTrip = async (params: {
   return { ok: true };
 };
 
+export const normalizeFlightFromApi = (f: any): Flight => ({
+  ...f,
+  passenger_name: f.passenger_name ?? f.passengerName ?? '',
+  passenger_ids: Array.isArray(f.passenger_ids)
+    ? f.passenger_ids
+    : Array.isArray(f.passengerIds)
+      ? f.passengerIds
+      : [],
+  departure_date: f.departure_date ?? f.departureDate ?? '',
+  arrival_date: f.arrival_date ?? f.arrivalDate ?? null,
+  departure_location: f.departure_location ?? f.departureLocation ?? '',
+  arrival_location: f.arrival_location ?? f.arrivalLocation ?? '',
+  layover_location: f.layover_location ?? f.layoverLocation ?? '',
+  layover_location_code: f.layover_location_code ?? f.layoverLocationCode ?? '',
+  departure_airport_code: f.departure_airport_code ?? f.departureAirportCode ?? '',
+  arrival_airport_code: f.arrival_airport_code ?? f.arrivalAirportCode ?? '',
+  layover_airport_code: f.layover_airport_code ?? f.layoverAirportCode ?? '',
+  departure_time: f.departure_time ?? f.departureTime ?? '',
+  arrival_time: f.arrival_time ?? f.arrivalTime ?? '',
+  carrier: f.carrier ?? '',
+  flight_number: f.flight_number ?? f.flightNumber ?? '',
+  booking_reference: f.booking_reference ?? f.bookingReference ?? '',
+  paidBy: Array.isArray(f.paidBy)
+    ? f.paidBy
+    : Array.isArray(f.paid_by)
+      ? f.paid_by
+      : [],
+  paid_by: Array.isArray(f.paid_by)
+    ? f.paid_by
+    : Array.isArray(f.paidBy)
+      ? f.paidBy
+      : [],
+  arrivalDate: f.arrival_date ?? f.arrivalDate ?? null,
+});
+
 export const fetchFlightsForTrip = async ({
   backendUrl,
   activeTripId,
@@ -284,13 +350,7 @@ export const fetchFlightsForTrip = async ({
   });
   if (!res.ok) return [];
   const data = await res.json();
-  return (data as any[]).map((f) => ({
-    ...f,
-    passenger_ids: Array.isArray((f as any).passenger_ids) ? (f as any).passenger_ids : [],
-    paidBy: Array.isArray(f.paidBy) ? f.paidBy : Array.isArray(f.paid_by) ? f.paid_by : [],
-    arrival_date: (f as any).arrival_date || (f as any).arrivalDate || null,
-    arrivalDate: (f as any).arrival_date || (f as any).arrivalDate || null,
-  }));
+  return (data as any[]).map((f) => normalizeFlightFromApi(f));
 };
 
 type FlightsTabProps = {
@@ -377,11 +437,20 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
 }) => {
   const isWizard = mode === 'wizard';
   const containerRef = useRef<React.ElementRef<typeof View> | null>(null);
+  const formatPassengerLabel = (member: GroupMemberOption): string => {
+    const first = member.firstName?.trim() ?? '';
+    const last = member.lastName?.trim() ?? '';
+    const full = `${first} ${last}`.trim();
+    if (full) return full;
+    if (member.guestName?.trim()) return member.guestName.trim();
+    if (member.email?.trim()) return member.email.trim();
+    return member.id;
+  };
   const memberNames = useMemo(() => {
     const map = new Map<string, string>();
-    groupMembers.forEach((m) => map.set(m.id, formatMemberName(m)));
+    groupMembers.forEach((m) => map.set(m.id, formatPassengerLabel(m)));
     return map;
-  }, [groupMembers, formatMemberName]);
+  }, [groupMembers]);
 
   const buildPassengerName = (ids: string[]) => {
     const names = ids.map((id) => memberNames.get(id)).filter(Boolean) as string[];
@@ -398,11 +467,13 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   const [airportAnchor, setAirportAnchor] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const [airportTarget, setAirportTarget] = useState<'dep' | 'arr' | 'modal-dep' | 'modal-arr' | 'modal-layover' | null>(null);
   const [airportQuery, setAirportQuery] = useState('');
+  const airportSelectInProgressRef = useRef(false);
   const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
   const [locationTarget, setLocationTarget] = useState<'dep' | 'arr' | 'modal-dep' | 'modal-arr' | 'modal-layover' | null>(null);
   const [showLocationOverlay, setShowLocationOverlay] = useState(false);
   const [locationFieldTarget, setLocationFieldTarget] = useState<'dep' | 'arr' | null>(null);
   const [locationSearch, setLocationSearch] = useState('');
+  const locationSelectInProgressRef = useRef(false);
   const [email, setEmail] = useState('');
   const [isParsingPdf, setIsParsingPdf] = useState(false);
   const [pdfParseMessage, setPdfParseMessage] = useState<string | null>(null);
@@ -460,7 +531,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   const flightsTotal = useMemo(() => flights.reduce((sum, f) => sum + (Number(f.cost) || 0), 0), [flights]);
 
   const userMembers = useMemo(
-    () => groupMembers.filter((m) => !m.guestName && m.status !== 'pending' && m.status !== 'removed'),
+    () => groupMembers.filter((m) => !m.guestName && m.status !== 'removed'),
     [groupMembers]
   );
 
@@ -836,6 +907,59 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     setAirportQuery('');
   };
 
+  const applyTopAirportSuggestion = (
+    target: 'dep' | 'arr' | 'modal-dep' | 'modal-arr' | 'modal-layover',
+    value: string
+  ) => {
+    if (airportSelectInProgressRef.current) {
+      airportSelectInProgressRef.current = false;
+      return;
+    }
+    const trimmed = value.trim();
+    if (!trimmed) {
+      if ((target === 'dep' || target === 'modal-dep') && editingFlight) {
+        setEditingFlight((prev) => (prev ? { ...prev, departureLocation: '', departureAirportCode: '' } : prev));
+      } else if ((target === 'arr' || target === 'modal-arr') && editingFlight) {
+        setEditingFlight((prev) => (prev ? { ...prev, arrivalLocation: '', arrivalAirportCode: '' } : prev));
+      } else if (target === 'modal-layover' && editingFlight) {
+        setEditingFlight((prev) => (prev ? { ...prev, layoverLocation: '', layoverLocationCode: '' } : prev));
+      }
+      hideAirportDropdown();
+      return;
+    }
+    const suggestions = airportSuggestions.length ? airportSuggestions : buildAirportSuggestions(trimmed);
+    if (!suggestions.length) {
+      hideAirportDropdown();
+      return;
+    }
+    selectAirport(target, suggestions[0]);
+  };
+
+  const commitLocationOverlay = () => {
+    if (locationSelectInProgressRef.current) {
+      locationSelectInProgressRef.current = false;
+      return;
+    }
+    const trimmed = locationSearch.trim();
+    if (!trimmed) {
+      closeLocationOverlay();
+      return;
+    }
+    const top = locationSuggestions[0];
+    if (!top) {
+      closeLocationOverlay();
+      return;
+    }
+    const codeMatch = top.match(/\(([A-Za-z]{3})\)/i);
+    const code = codeMatch ? codeMatch[1].toUpperCase() : top;
+    if (locationFieldTarget === 'dep') {
+      setNewFlight((prev) => ({ ...prev, departureLocation: code, departureAirportCode: code }));
+    } else if (locationFieldTarget === 'arr') {
+      setNewFlight((prev) => ({ ...prev, arrivalLocation: code, arrivalAirportCode: code }));
+    }
+    closeLocationOverlay();
+  };
+
   const selectAirport = (target: 'dep' | 'arr' | 'modal-dep' | 'modal-arr' | 'modal-layover', airport: Airport) => {
     const code = airport.iata_code ?? '';
     if ((target === 'dep' || target === 'modal-dep') && editingFlight) {
@@ -934,21 +1058,32 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       return;
     }
     if (!userToken) return;
-    const payload = buildFlightPayload(
-      { ...editingFlight, passengerName: buildPassengerName(editingFlight.passengerIds) || editingFlight.passengerName },
-      editingFlightId === 'new' ? activeTripId ?? undefined : undefined,
-      defaultPayerId
-    );
     let res: Response;
     if (editingFlightId === 'new') {
+      const { payload, error } = buildFlightPayloadForCreate(
+        { ...editingFlight, passengerName: buildPassengerName(editingFlight.passengerIds) || editingFlight.passengerName },
+        activeTripId ?? null,
+        defaultPayerId
+      );
+      if (error || !payload) {
+        alert(error || 'Unable to add flight');
+        return;
+      }
+      // TEMP DEBUG: log payload for flight create
+      console.log('[DEBUG][flights] create payload', payload);
       res = await fetch(`${backendUrl}/api/flights`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...headers },
-        body: JSON.stringify({
-          ...payload,
-        }),
+        body: JSON.stringify(payload),
       });
     } else {
+      const payload = buildFlightPayload(
+        { ...editingFlight, passengerName: buildPassengerName(editingFlight.passengerIds) || editingFlight.passengerName },
+        undefined,
+        defaultPayerId
+      );
+      // TEMP DEBUG: log payload for flight update
+      console.log('[DEBUG][flights] update payload', payload);
       res = await fetch(`${backendUrl}/api/flights/${editingFlightId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', ...headers },
@@ -1047,9 +1182,11 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       return;
     }
     setEditingFlightId('new');
-    const init = createInitialFlightState();
-    if (defaultPayerId && !init.paidBy.includes(defaultPayerId)) {
-      init.paidBy.push(defaultPayerId);
+    const init = createFlightDraftForTrip(findActiveTrip(), defaultPayerId);
+    if (groupMembers.length) {
+      const allIds = groupMembers.map((m) => m.id);
+      init.passengerIds = allIds;
+      init.passengerName = buildPassengerName(allIds) || init.passengerName;
     }
     setEditingFlight(init);
     setAirportTarget(null);
@@ -1205,15 +1342,17 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                       ]}
                     >
                       {!item.passengerInGroup ? <Text style={styles.warningText}>Passenger not in trip group</Text> : null}
-                      <TouchableOpacity style={styles.smallButton} onPress={() => openFlightDetails(item)}>
-                        <Text style={styles.buttonText}>Details</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={[styles.smallButton, styles.dangerButton]} onPress={() => removeFlight(item.id)}>
-                        <Text style={styles.buttonText}>Delete</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={styles.smallButton} onPress={() => shareFlight(item.id)}>
-                        <Text style={styles.buttonText}>Share</Text>
-                      </TouchableOpacity>
+                      <View style={styles.actionButtonsRow}>
+                        <TouchableOpacity style={styles.smallButton} onPress={() => openFlightDetails(item)}>
+                          <Text style={styles.buttonText}>Details</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.smallButton, styles.dangerButton]} onPress={() => removeFlight(item.id)}>
+                          <Text style={styles.buttonText}>Delete</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.smallButton} onPress={() => shareFlight(item.id)}>
+                          <Text style={styles.buttonText}>Share</Text>
+                        </TouchableOpacity>
+                      </View>
                     </View>
                   );
                 }
@@ -1469,6 +1608,12 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                 setLocationSearch(text);
                 if (locationFieldTarget) fetchLocationSuggestions(locationFieldTarget, text);
               }}
+              onBlur={() => commitLocationOverlay()}
+              onKeyPress={(e: any) => {
+                if (e?.nativeEvent?.key === 'Enter' || e?.nativeEvent?.key === 'Tab') {
+                  commitLocationOverlay();
+                }
+              }}
               autoFocus
             />
             <ScrollView style={styles.dropdownScroll}>
@@ -1476,6 +1621,9 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                 <TouchableOpacity
                   key={`overlay-${loc}`}
                   style={styles.dropdownOption}
+                  onPressIn={() => {
+                    locationSelectInProgressRef.current = true;
+                  }}
                   onPress={() => {
                     const codeMatch = loc.match(/\(([A-Za-z]{3})\)/i);
                     const code = codeMatch ? codeMatch[1].toUpperCase() : loc;
@@ -1554,7 +1702,13 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
               <TouchableOpacity
                 key={`${airport.iata_code}-${airport.name}`}
                 style={styles.dropdownOption}
-                onPress={() => selectAirport(airportTarget, airport)}
+                onPressIn={() => {
+                  airportSelectInProgressRef.current = true;
+                }}
+                onPress={() => {
+                  selectAirport(airportTarget, airport);
+                  airportSelectInProgressRef.current = false;
+                }}
               >
                 <Text style={styles.cellText}>{formatAirportLabel(airport)}</Text>
               </TouchableOpacity>
@@ -1603,6 +1757,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
         showAirportDropdown={showAirportDropdown}
         parseLayoverDuration={parseLayoverDuration}
         openTimePicker={openTimePicker}
+        onAirportEnter={applyTopAirportSuggestion}
         setFlight={setEditingFlight}
         setPassengerIds={setEditingFlightPassengers}
         modalDepLocationRef={modalDepLocationRef}
@@ -1616,7 +1771,4 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
 };
 
 export const mergeFlightsFromApi = (list: Flight[]): Flight[] =>
-  list.map((f) => ({
-    ...f,
-    paidBy: Array.isArray(f.paidBy) ? f.paidBy : Array.isArray((f as any).paid_by) ? (f as any).paid_by : [],
-  }));
+  list.map((f) => normalizeFlightFromApi(f));
