@@ -62,11 +62,10 @@ if [[ "$RUN_LOCAL_VALUE" != "1" ]]; then
   exit 1
 fi
 
-ENV_FILE=""
-if [[ -f "${SERVER_DIR}/.env" ]]; then
-  ENV_FILE="${SERVER_DIR}/.env"
-elif [[ -f "${ROOT_DIR}/.env" ]]; then
-  ENV_FILE="${ROOT_DIR}/.env"
+ENV_FILE="${SERVER_DIR}/.env"
+if [[ ! -f "$ENV_FILE" ]]; then
+  echo "Missing ${SERVER_DIR}/.env file."
+  exit 1
 fi
 
 DB_PROVIDER="$(read_env_value "$ENV_FILE" "DB_PROVIDER")"

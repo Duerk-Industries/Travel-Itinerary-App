@@ -8,9 +8,10 @@
 # access necessary Google Cloud resources.
 #
 # Usage:
-#   ./scripts/configure-gcp-iam.sh [path/to/secrets/file]
+#   ./scripts/configure-gcp-iam.sh [path/to/.env]
 #
-# The script reads the following variables from the specified file (or ./server/.secrets):
+# The script reads the following variables from the specified file (or ./server/.env),
+# falling back to ./server/.secrets for any missing values.
 #   - GCLOUD_PROJECT_ID (required)
 #   - GCLOUD_PROJECT_NUMBER (required)
 #   - DEPLOYER_SERVICE_ACCOUNT_EMAIL (required)
@@ -18,7 +19,7 @@
 #
 set -euo pipefail
 
-SECRETS_FILE="${1:-./server/.secrets}"
+SECRETS_FILE="${1:-./server/.env}"
 
 # --- Helper Functions ---
 
@@ -36,14 +37,47 @@ fail() {
 # --- Variable Loading ---
 
 if [[ ! -f "$SECRETS_FILE" ]]; then
-  fail "Secrets file not found at '$SECRETS_FILE'. Please create it or provide a path."
+  fail "Env file not found at '$SECRETS_FILE'. Please create it or provide a path."
 fi
 
-# Source the file to load variables.
+read_env_value() {
+  local file="$1"
+  local key="$2"
+  if [[ ! -f "$file" ]]; then
+    return 0
+  fi
+  awk -F= -v k="$key" '
+    $0 ~ "^[[:space:]]*"k"[[:space:]]*=" {
+      val=$0
+      sub(/^[^=]*=/,"",val)
+      sub(/[[:space:]]*(#.*)?$/,"",val)
+      gsub(/^[[:space:]]+|[[:space:]]+$/,"",val)
+      gsub(/^["'"'"']|["'"'"']$/,"",val)
+      print val
+    }
+  ' "$file" | tail -n 1
+}
+
+# Source the env file to load variables.
 set -a
 # shellcheck source=/dev/null
 source <(grep -vE '^\s*#' "$SECRETS_FILE" | grep -v '^\s*$')
 set +a
+
+if [[ -f "./server/.secrets" ]]; then
+  if [[ -z "${GCLOUD_PROJECT_ID:-}" ]]; then
+    GCLOUD_PROJECT_ID="$(read_env_value "./server/.secrets" "GCLOUD_PROJECT_ID")"
+  fi
+  if [[ -z "${GCLOUD_PROJECT_NUMBER:-}" ]]; then
+    GCLOUD_PROJECT_NUMBER="$(read_env_value "./server/.secrets" "GCLOUD_PROJECT_NUMBER")"
+  fi
+  if [[ -z "${DEPLOYER_SERVICE_ACCOUNT_EMAIL:-}" ]]; then
+    DEPLOYER_SERVICE_ACCOUNT_EMAIL="$(read_env_value "./server/.secrets" "DEPLOYER_SERVICE_ACCOUNT_EMAIL")"
+  fi
+  if [[ -z "${RUNTIME_SERVICE_ACCOUNT_EMAIL:-}" ]]; then
+    RUNTIME_SERVICE_ACCOUNT_EMAIL="$(read_env_value "./server/.secrets" "RUNTIME_SERVICE_ACCOUNT_EMAIL")"
+  fi
+fi
 
 # --- Variable Validation and Defaults ---
 
@@ -134,4 +168,3 @@ done
 
 log "-----------------------------------------------------"
 log "IAM configuration complete."
-
