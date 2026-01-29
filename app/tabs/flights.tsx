@@ -529,7 +529,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   const flightsTotal = useMemo(() => flights.reduce((sum, f) => sum + (Number(f.cost) || 0), 0), [flights]);
 
   const userMembers = useMemo(
-    () => groupMembers.filter((m) => !m.guestName && m.status !== 'pending' && m.status !== 'removed'),
+    () => groupMembers.filter((m) => !m.guestName && m.status !== 'removed'),
     [groupMembers]
   );
 

@@ -467,7 +467,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
   const buildPassengerName = (ids: string[]) => ids.map((id) => memberNames.get(id)).filter(Boolean).join(', ');
 
   const userMembers = useMemo(
-    () => groupMembers.filter((m) => !m.guestName && m.status !== 'pending' && m.status !== 'removed'),
+    () => groupMembers.filter((m) => !m.guestName && m.status !== 'removed'),
     [groupMembers]
   );
 
@@ -788,8 +788,13 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       return;
     }
     if (pendingRemovalIds.length && trip?.id) {
+      const removalGroupId = group?.id ?? trip.groupId;
+      if (!removalGroupId) {
+        alert('Unable to remove member: missing group id');
+        return;
+      }
       for (const memberId of pendingRemovalIds) {
-        const removeRes = await fetch(`${backendUrl}/api/trips/${trip.id}/members/${memberId}`, {
+        const removeRes = await fetch(`${backendUrl}/api/groups/${removalGroupId}/members/${memberId}`, {
           method: 'DELETE',
           headers,
         });
@@ -801,6 +806,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       }
       setPendingRemovalIds([]);
       onRefreshGroups();
+      onRefreshGroupMembers();
       onRefreshFlights();
       onRefreshLodgings();
       onRefreshTours();

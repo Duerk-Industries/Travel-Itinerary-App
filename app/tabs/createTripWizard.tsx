@@ -840,7 +840,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
         lastName: m.lastName ?? m.last_name ?? undefined,
         status: m.status ?? undefined,
       }));
-      const activeMembers = members.filter((m: any) => m.status !== 'pending');
+      const activeMembers = members.filter((m: any) => m.status !== 'removed');
       const memberByEmail = new Map(
         members
           .map((m: any) => [String(m.email ?? '').toLowerCase(), m.id] as const)
@@ -943,7 +943,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
         lastName: m.lastName ?? m.last_name ?? undefined,
         status: m.status ?? undefined,
       }));
-      const activeMembers = members.filter((m: any) => m.status !== 'pending');
+      const activeMembers = members.filter((m: any) => m.status !== 'removed');
       const memberByEmail = new Map(
         members
           .map((m: any) => [String(m.email ?? '').toLowerCase(), m.id] as const)
@@ -1026,7 +1026,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
         lastName: m.lastName ?? m.last_name ?? undefined,
         status: m.status ?? undefined,
       }));
-      const activeMembers = members.filter((m: any) => m.status !== 'pending');
+      const activeMembers = members.filter((m: any) => m.status !== 'removed');
       const memberByEmail = new Map(
         members
           .map((m: any) => [String(m.email ?? '').toLowerCase(), m.id] as const)

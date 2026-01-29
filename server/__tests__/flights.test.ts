@@ -292,7 +292,7 @@ describe('Pending passengers and payer rules', () => {
     expect(String(res.body.passengerName ?? res.body.passenger_name ?? '')).toBeTruthy();
   });
 
-  it('rejects pending passengers as payers', async () => {
+  it('allows pending passengers as payers', async () => {
     await request(app)
       .post('/api/flights')
       .set('Authorization', `Bearer ${token}`)
@@ -308,7 +308,7 @@ describe('Pending passengers and payer rules', () => {
         cost: 75,
         paidBy: [pendingId],
       })
-      .expect(400);
+      .expect(201);
 
     // Owner can still be a payer
     await request(app)

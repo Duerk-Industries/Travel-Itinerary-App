@@ -437,7 +437,7 @@ const App: React.FC = () => {
   };
 
   const userMembers = useMemo(
-    () => groupMembers.filter((m) => !m.guestName && m.status !== 'pending' && m.status !== 'removed'),
+    () => groupMembers.filter((m) => !m.guestName && m.status !== 'removed'),
     [groupMembers]
   );
 

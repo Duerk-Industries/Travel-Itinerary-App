@@ -9,7 +9,9 @@
   "scripts": {
     "start": "node server/scripts/start-with-debug.js",
     "build": "npm --prefix server run build",
-    "lint": "echo \"Add linters per workspace\""
+    "lint": "echo \"Add linters per workspace\"",
+    "list-users": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/list_users.ts",
+    "list-trips": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/list_trips_and_users.ts"
   },
   "engines": {
     "node": ">=20.x"
@@ -18,7 +20,8 @@
   "devDependencies": {
     "canvas": "^3.2.0",
     "patch-package": "^8.0.1",
-    "react-refresh": "^0.18.0"
+    "react-refresh": "^0.18.0",
+    "ts-node": "^10.9.2"
   },
   "dependencies": {
     "24": "^0.0.0",

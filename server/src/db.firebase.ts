@@ -464,6 +464,8 @@ export const removeGroupMember = async (requesterId: string, groupId: string, me
   if (!group.exists) throw new Error('Group not found');
   const authorized = await ensureMembership(groupId, requesterId);
   if (!authorized) throw new Error('Not authorized to remove members');
+  const memberDoc = await db.collection('group_members').doc(memberId).get();
+  if (!memberDoc.exists) throw new Error('Member not found');
   await db.collection('group_members').doc(memberId).set({ removedAt: nowIso() }, { merge: true });
   logInfo(`[DEBUG][members] db remove group_members updated group=${groupId} member=${memberId}`);
   const requesterSnap = await db

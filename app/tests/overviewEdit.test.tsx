@@ -218,7 +218,7 @@ describe('Overview edit controls', () => {
     expect(body.guestName).toBe('Vicky Duerk');
   });
 
-  test('removes traveler via trip members endpoint on save', async () => {
+  test('removes traveler via group members endpoint on save', async () => {
     const attendees = [
       {
         id: 'member-1',
@@ -232,7 +232,7 @@ describe('Overview edit controls', () => {
       if (String(url).includes('/api/trips/') && options?.method === 'PATCH') {
         return { ok: true, json: async () => ({}) } as any;
       }
-      if (String(url).includes('/api/trips/') && options?.method === 'DELETE') {
+      if (String(url).includes('/api/groups/') && options?.method === 'DELETE') {
         return { ok: true, json: async () => ({}) } as any;
       }
       return { ok: true, json: async () => ({}) } as any;
@@ -256,7 +256,7 @@ describe('Overview edit controls', () => {
     });
 
     const deleteCall = fetchMock.mock.calls.find((call: any[]) =>
-      String(call[0]).includes(`/api/trips/${baseTrip.id}/members/member-1`)
+      String(call[0]).includes(`/api/groups/${baseTrip.groupId}/members/member-1`)
     );
     expect(deleteCall).toBeTruthy();
   });

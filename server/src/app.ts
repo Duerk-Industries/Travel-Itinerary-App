@@ -14,43 +14,10 @@ import traitRoutes from './routes/traitRoutes';
 import lodgingRoutes from './routes/lodgingRoutes';
 import tourRoutes from './routes/tourRoutes';
 import accountRoutes, { groupsRouter } from './routes/accountRoutes';
-import { getEnvValue, hasRunLocalFlag, isLocalEnv } from './env';
+import { loadEnv } from './env_loader';
+import { getEnvValue, isLocalEnv } from './env';
 
-// Load env vars from server/.env and server/.secrets (plus repo root fallbacks).
-// .local_env files load only when RUN_LOCAL=1 is set inside that file.
-// Later files override earlier ones to make local overrides and secrets take precedence.
-const envPaths = [
-  path.resolve(__dirname, '../.env'),
-  path.resolve(__dirname, '../../.env'),
-  path.resolve(__dirname, '../.secrets'),
-  path.resolve(__dirname, '../../.secrets'),
-];
-const localEnvPaths = [
-  path.resolve(__dirname, '../.local_env'),
-  path.resolve(__dirname, '../../.local_env'),
-];
-const loadedEnvPaths: string[] = [];
-const shouldOverride = !process.env.JEST_WORKER_ID;
-for (const envPath of envPaths) {
-  if (fs.existsSync(envPath)) {
-    dotenv.config({ path: envPath, override: shouldOverride });
-    loadedEnvPaths.push(envPath);
-  }
-}
-for (const envPath of localEnvPaths) {
-  if (hasRunLocalFlag(envPath)) {
-    dotenv.config({ path: envPath, override: shouldOverride });
-    loadedEnvPaths.push(envPath);
-  }
-}
-let envLoadedFrom: string | null = null;
-if (loadedEnvPaths.length === 0) {
-  dotenv.config(); // default search (process cwd)
-  envLoadedFrom = 'process.env/default';
-} else {
-  envLoadedFrom = loadedEnvPaths.join(', ');
-}
-
+const envLoadedFrom = loadEnv();
 export { envLoadedFrom };
 
 export const app = express();
