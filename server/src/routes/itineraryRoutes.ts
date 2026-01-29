@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import bodyParser from 'body-parser';
 import { authenticate } from '../auth';
-import fetch from 'node-fetch';
+import axios from 'axios';
 import { listTraitsForGroupTrip } from '../db';
 import { logError } from '../logger';
 import { getEnvValue } from '../env';
@@ -12,22 +12,41 @@ const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
 const PLACEHOLDER_IMAGE =
   'https://images.unsplash.com/photo-1502920917128-1aa500764b0e?auto=format&fit=crop&w=1200&q=80';
 
-const fetchUnsplashImage = async (query: string): Promise<string | null> => {
+const fetchUnsplashImage = async (query: string, retries = 2): Promise<string | null> => {
   // Prefer correctly-spelled var, but fall back to historical typo for backward compatibility.
   const key = getEnvValue('UNSPLASH_ACCESS_KEY') ?? getEnvValue('UNSPLASE_ACCESS_KEY');
   if (!key) return null;
-  try {
-    const res = await fetch(
-      `https://api.unsplash.com/photos/random?orientation=landscape&content_filter=high&query=${encodeURIComponent(query)}`,
-      { headers: { Authorization: `Client-ID ${key}` } }
-    );
-    if (!res.ok) return null;
-    const data = (await res.json()) as any;
+
+  const doFetch = async (fetchQuery: string) => {
+    const url = `https://api.unsplash.com/photos/random?orientation=landscape&content_filter=high&query=${encodeURIComponent(
+      fetchQuery
+    )}`;
+    const res = await axios.get(url, { headers: { Authorization: `Client-ID ${key}` } });
+    const data = res.data as any;
     return data?.urls?.regular || data?.urls?.full || null;
-  } catch (err) {
-    logError('[itinerary] Unsplash fetch failed', err);
-    return null;
+  };
+
+  for (let i = 0; i < retries; i++) {
+    try {
+      const imageUrl = await doFetch(query);
+      if (imageUrl) return imageUrl;
+    } catch (err) {
+      logError(`[itinerary] Unsplash fetch for query "${query}" failed (attempt ${i + 1})`, err);
+      if (i < retries - 1) {
+        await new Promise((res) => setTimeout(res, 500 * (i + 1))); // Exponential backoff
+      }
+    }
   }
+
+  // Fallback to a generic query
+  try {
+    const fallbackUrl = await doFetch('travel');
+    if (fallbackUrl) return fallbackUrl;
+  } catch (err) {
+    logError('[itinerary] Unsplash fallback fetch failed', err);
+  }
+
+  return null;
 };
 
 type ChatCompletionResponse = {
@@ -174,13 +193,9 @@ router.post('/', async (req, res) => {
   ].join('\n');
 
   try {
-    const aiRes = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+    const aiRes = await axios.post(
+      'https://api.openai.com/v1/chat/completions',
+      {
         model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: 'You write concise, actionable travel itineraries.' },
@@ -188,17 +203,16 @@ router.post('/', async (req, res) => {
         ],
         temperature: 0.7,
         max_tokens: 500,
-      }),
-    });
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
 
-    if (!aiRes.ok) {
-      const text = await aiRes.text();
-      logError(`[itinerary] OpenAI API error ${aiRes.status}`, text);
-      res.status(500).json({ error: 'Failed to generate itinerary', detail: text });
-      return;
-    }
-
-    const data = (await aiRes.json()) as ChatCompletionResponse;
+    const data = aiRes.data as ChatCompletionResponse;
     const content = data?.choices?.[0]?.message?.content;
     if (!content) {
       res.status(500).json({ error: 'No itinerary returned' });
@@ -206,9 +220,10 @@ router.post('/', async (req, res) => {
     }
 
     res.json({ plan: content });
-  } catch (err) {
-    logError('[itinerary] Unexpected error', err);
-    res.status(500).json({ error: 'Failed to generate itinerary', detail: (err as Error).message });
+  } catch (err: any) {
+    const detail = err.response?.data || err.message || String(err);
+    logError(`[itinerary] OpenAI API error`, detail);
+    res.status(500).json({ error: 'Failed to generate itinerary', detail });
   }
 });
 
