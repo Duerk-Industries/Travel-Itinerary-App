@@ -210,13 +210,6 @@ export const dedupeAttendees = (
     }
   }
   const deduped = Array.from(byKey.values());
-  if ((attendees?.length ?? 0) !== deduped.length) {
-    // TEMP DEBUG: remove after confirming attendee de-duplication.
-    console.info('[DEBUG][overview] deduped attendees', {
-      before: attendees?.length ?? 0,
-      after: deduped.length,
-    });
-  }
   return deduped;
 };
 
@@ -860,8 +853,6 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
     }
     const guestName = `${first} ${last}`.trim();
     const payload = email ? { email, firstName: first, lastName: last, guestName } : { guestName };
-    // TEMP DEBUG: remove after confirming single attendee entry.
-    console.info('[DEBUG][overview] add traveler payload', payload);
     const res = await fetch(`${backendUrl}/api/groups/${group.id}/members`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...headers },
@@ -872,8 +863,6 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       alert(data.error || 'Unable to add member');
       return;
     }
-    // TEMP DEBUG: remove after confirming single attendee entry.
-    console.info('[DEBUG][overview] add traveler response', data);
     onRefreshGroupMembers();
     setTravelerDraft({ firstName: '', lastName: '', email: '' });
     setShowAddTraveler(false);

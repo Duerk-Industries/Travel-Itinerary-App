@@ -172,10 +172,6 @@ const refreshIntervalMs = resolveRefreshIntervalMs();
 const sessionKey = 'stp.session';
 const sessionDurationMs = 12 * 60 * 60 * 1000;
 
-if (Platform.OS === 'web') {
-  // Surface the selected backend in the browser console to simplify network debugging.
-  console.info('[STP] Backend URL:', backendUrl);
-}
 
 const loadSession = (): { token: string; name: string; email?: string; page?: string; tripId?: string | null } | null => {
   if (Platform.OS !== 'web' || typeof window === 'undefined') return null;
@@ -687,24 +683,14 @@ const App: React.FC = () => {
   const loginWithGoogle = async () => {
     const redirectUrl = buildLoginRedirectUrl();
     const authUrl = `${backendUrl}/api/auth/google?redirect_uri=${encodeURIComponent(redirectUrl)}`;
-    // TODO(remove-debug): trace Google login flow
-    console.info('[AUTH][google] redirectUrl:', redirectUrl);
-    // TODO(remove-debug): trace Google login flow
-    console.info('[AUTH][google] authUrl:', authUrl);
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      // TODO(remove-debug): trace Google login flow
-      console.info('[AUTH][google] navigating via window.location');
       window.location.assign(authUrl);
       return;
     }
-    // TODO(remove-debug): trace Google login flow
-    console.info('[AUTH][google] opening browser');
     await WebBrowser.openBrowserAsync(authUrl);
   };
 
   const handleAuthSuccess = (token: string) => {
-    // TODO(remove-debug): trace auth success
-    console.info('[AUTH] success: token received', { tokenPresent: Boolean(token) });
     let decoded: { firstName?: string; lastName?: string; email?: string; provider?: string } | null = null;
     try {
       const payload = token.split('.')[1];
@@ -713,11 +699,8 @@ const App: React.FC = () => {
         const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
         decoded = JSON.parse(Buffer.from(padded, 'base64').toString());
       }
-      // TODO(remove-debug): trace auth success
-      console.info('[AUTH] decoded token claims', { email: decoded?.email, provider: decoded?.provider });
-    } catch (err) {
-      // TODO(remove-debug): trace auth decoding failure
-      console.warn('[AUTH] token decode failed, continuing with fallback user data', err);
+    } catch {
+      decoded = null;
     }
     const name =
       `${decoded?.firstName ?? ''} ${decoded?.lastName ?? ''}`.trim() || decoded?.email || 'Traveler';
@@ -769,12 +752,8 @@ const App: React.FC = () => {
 
     const subscription = Linking.addEventListener('url', handleDeepLink);
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      // DEBUG: auth logging (remove later)
-      console.info('[AUTH] web initial url', window.location.href);
-      const { token, url, source } = extractTokenFromUrl(window.location.href);
+      const { token, url } = extractTokenFromUrl(window.location.href);
       if (token) {
-        // DEBUG: auth logging (remove later)
-        console.info('[AUTH] web initial token detected', { source });
         handleAuthSuccess(token);
         url.searchParams.delete('token');
         if (url.hash) {
@@ -784,9 +763,6 @@ const App: React.FC = () => {
           url.hash = newHash ? `#${newHash}` : '';
         }
         window.history.replaceState({}, '', url.toString());
-      } else {
-        // DEBUG: auth logging (remove later)
-        console.info('[AUTH] web initial token missing');
       }
     }
     return () => {
@@ -796,45 +772,22 @@ const App: React.FC = () => {
 
   const loginWithPassword = async () => {
     try {
-      // TODO(remove-debug): trace password login
-      console.info('[AUTH][password] attempt', { email: authForm.email.trim() });
       const res = await fetch(`${backendUrl}/api/web-auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: authForm.email.trim(), password: authForm.password }),
       });
-      // TODO(remove-debug): trace password login
-      console.info('[AUTH][password] response', { status: res.status });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        // TODO(remove-debug): trace password login failure
-        console.warn('[AUTH][password] failed', { status: res.status, error: data?.error });
         alert(data.error || 'Login failed');
         return;
       }
       if (!data?.user || typeof data.token !== 'string') {
-        // TODO(remove-debug): trace unexpected login response
-        const contentType = res.headers.get('content-type') || '';
-        let rawBody = '';
-        try {
-          rawBody = await res.clone().text();
-        } catch {
-          rawBody = '';
-        }
-        // TODO(remove-debug): trace unexpected login response
-        console.warn('[AUTH][password] invalid payload', {
-          hasUser: Boolean(data?.user),
-          tokenType: typeof data?.token,
-          contentType,
-          rawBodyPreview: rawBody.slice(0, 300),
-        });
         alert(data.error || 'Login failed');
         return;
       }
       handleAuthSuccess(data.token);
     } catch (err) {
-      // TODO(remove-debug): trace password login exception
-      console.warn('[AUTH][password] exception', err);
       alert((err as Error).message || 'Login failed');
     }
   };

@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import bodyParser from 'body-parser';
 import { authenticate, createToken } from '../auth';
-import { logError, logInfo } from '../logger';
 import {
   deleteWebUserAndCleanup,
   acceptFamilyRelationship,
@@ -319,35 +318,18 @@ router.delete('/trips/:tripId/members/:memberId', async (req, res) => {
   }
   try {
     try {
-      // TEMP DEBUG: remove after attendee removal flow is stable.
-      logInfo(
-        `[DEBUG][members] remove from trip start user=${userId} trip=${req.params.tripId} group=${membership.groupId} member=${req.params.memberId}`
-      );
       await removeGroupMember(userId, membership.groupId, req.params.memberId);
-      logInfo(
-        `[DEBUG][members] remove from trip success user=${userId} trip=${req.params.tripId} group=${membership.groupId} member=${req.params.memberId}`
-      );
       res.status(204).send();
       return;
     } catch (err) {
       if ((err as Error).message === 'Member not found') {
-        logInfo(
-          `[DEBUG][members] remove from trip fallback to invite user=${userId} trip=${req.params.tripId} group=${membership.groupId} member=${req.params.memberId}`
-        );
         await removeGroupInvite(userId, req.params.memberId);
-        logInfo(
-          `[DEBUG][members] remove from trip invite removed user=${userId} trip=${req.params.tripId} group=${membership.groupId} member=${req.params.memberId}`
-        );
         res.status(204).send();
         return;
       }
       throw err;
     }
   } catch (err) {
-    logError(
-      `[DEBUG][members] remove from trip failed user=${userId} trip=${req.params.tripId} group=${membership.groupId} member=${req.params.memberId}`,
-      err
-    );
     res.status(400).json({ error: (err as Error).message });
   }
 });
@@ -450,31 +432,14 @@ groupsRouter.post('/:id/members', async (req, res) => {
 groupsRouter.delete('/:groupId/members/:memberId', async (req, res) => {
   const user = (req as any).user as { userId: string };
   try {
-    // TEMP DEBUG: remove after attendee removal flow is stable.
-    logInfo(
-      `[DEBUG][members] remove from group start user=${user.userId} group=${req.params.groupId} member=${req.params.memberId}`
-    );
     await removeGroupMember(user.userId, req.params.groupId, req.params.memberId);
-    logInfo(
-      `[DEBUG][members] remove from group success user=${user.userId} group=${req.params.groupId} member=${req.params.memberId}`
-    );
     res.status(204).send();
   } catch (err) {
     if ((err as Error).message === 'Member not found') {
-      logInfo(
-        `[DEBUG][members] remove from group fallback to invite user=${user.userId} group=${req.params.groupId} member=${req.params.memberId}`
-      );
       await removeGroupInvite(user.userId, req.params.memberId);
-      logInfo(
-        `[DEBUG][members] remove from group invite removed user=${user.userId} group=${req.params.groupId} member=${req.params.memberId}`
-      );
       res.status(204).send();
       return;
     }
-    logError(
-      `[DEBUG][members] remove from group failed user=${user.userId} group=${req.params.groupId} member=${req.params.memberId}`,
-      err
-    );
     res.status(400).json({ error: (err as Error).message });
   }
 });

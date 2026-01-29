@@ -348,18 +348,6 @@ export const listGroupMembers = async (
       status: resolvedUserId ? 'active' : data.inviteEmail ? 'pending' : 'active',
       removedAt: data.removedAt ?? null,
     };
-    // TEMP DEBUG: member name resolution
-    console.log('[DEBUG][members] resolve', {
-      memberId: doc.id,
-      inviteEmail: data.inviteEmail ?? null,
-      resolvedUserId,
-      profileName: profile ? `${profile.firstName ?? ''} ${profile.lastName ?? ''}`.trim() : null,
-      inviteProfileName: inviteProfile ? `${inviteProfile.firstName ?? ''} ${inviteProfile.lastName ?? ''}`.trim() : null,
-      resultFirst: result.firstName,
-      resultLast: result.lastName,
-      resultEmail: result.email,
-      resultStatus: result.status,
-    });
     return result;
   });
   const memberEmails = new Set(
@@ -381,14 +369,6 @@ export const listGroupMembers = async (
       const email = (invite.email ?? '').trim().toLowerCase();
       return !email || !memberEmails.has(email);
     });
-  if (members.length + invites.length !== members.length + invitesSnap.docs.length) {
-    // TEMP DEBUG: remove after confirming invite de-duplication.
-    console.info('[DEBUG][members] deduped invites', {
-      memberCount: members.length,
-      inviteCount: invitesSnap.docs.length,
-      remainingInvites: invites.length,
-    });
-  }
   return [...members, ...invites];
 };
 
@@ -472,7 +452,6 @@ export const addGroupMember = async (
 
 export const removeGroupMember = async (requesterId: string, groupId: string, memberId: string): Promise<void> => {
   const db = getDb();
-  logInfo(`[DEBUG][members] db remove start provider=firebase group=${groupId} member=${memberId} requester=${requesterId}`);
   const group = await db.collection('groups').doc(groupId).get();
   if (!group.exists) throw new Error('Group not found');
   const authorized = await ensureMembership(groupId, requesterId);
@@ -480,7 +459,6 @@ export const removeGroupMember = async (requesterId: string, groupId: string, me
   const memberDoc = await db.collection('group_members').doc(memberId).get();
   if (!memberDoc.exists) throw new Error('Member not found');
   await db.collection('group_members').doc(memberId).set({ removedAt: nowIso() }, { merge: true });
-  logInfo(`[DEBUG][members] db remove group_members updated group=${groupId} member=${memberId}`);
   const requesterSnap = await db
     .collection('group_members')
     .where('groupId', '==', groupId)
@@ -500,7 +478,6 @@ export const removeGroupMember = async (requesterId: string, groupId: string, me
       const passengerIds = Array.isArray(data.passengerIds) ? data.passengerIds.filter((id: string) => id !== memberId) : [];
       if (!passengerIds.length) {
         await doc.ref.delete();
-        logInfo(`[DEBUG][members] db remove flights deleted trip=${tripId} flight=${doc.id}`);
         continue;
       }
       let paidBy = Array.isArray(data.paidBy) ? data.paidBy.filter((id: string) => id !== memberId) : [];
@@ -530,7 +507,6 @@ export const removeGroupMember = async (requesterId: string, groupId: string, me
       await doc.ref.update({ paidBy });
     }
   }
-  logInfo(`[DEBUG][members] db remove committed provider=firebase group=${groupId} member=${memberId}`);
 };
 
 export const removeGroupInvite = async (ownerId: string, inviteId: string): Promise<void> => {
@@ -793,12 +769,8 @@ export const insertFlight = async (flight: Omit<Flight, 'id'>): Promise<Flight> 
   const db = getDb();
   const id = randomUUID();
   const payload = { ...flight, id, createdAt: nowIso() };
-  // TEMP DEBUG: log firestore payload
-  console.log('[DEBUG][flights] firestore insert payload', payload);
   await db.collection('flights').doc(id).set(payload);
   const saved = await db.collection('flights').doc(id).get();
-  // TEMP DEBUG: log saved firestore doc
-  console.log('[DEBUG][flights] firestore insert saved', saved.data());
   return { ...flight, id };
 };
 

@@ -134,7 +134,7 @@ app.use(express.static(publicDir));
 
 import passport from 'passport';
 import { initPassport, createToken } from './auth';
-import { logInfo, logError } from './logger';
+import { logError } from './logger';
 
 initPassport();
 app.use(passport.initialize());
@@ -144,23 +144,17 @@ if (!isLocalEnv() && getEnvValue('AUTH_SECRET') === 'development-secret') {
 }
 
 app.get('/api/auth/google', (req, _res, next) => {
-  // TEMPORARY: Google OAuth logging (remove later)
-  logInfo(`[auth/google] start redirect_uri=${String(req.query?.redirect_uri ?? '')}`);
   next();
 }, passport.authenticate('google', { scope: ['profile', 'email'] }));
 
 app.get(
   '/api/auth/google/callback',
   (req, _res, next) => {
-    // TEMPORARY: Google OAuth logging (remove later)
-    logInfo('[auth/google] callback received');
     next();
   },
   passport.authenticate('google', { failureRedirect: '/login', session: false }),
   (req, res) => {
     const user = req.user as any;
-    // TEMPORARY: Google OAuth logging (remove later)
-    logInfo(`[auth/google] callback success for ${user?.email ?? 'unknown'}`);
     const token = createToken({ userId: user.id, email: user.email, provider: user.provider });
     res.redirect(`/login?token=${token}`);
   }

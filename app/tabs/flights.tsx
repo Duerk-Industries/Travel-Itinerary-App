@@ -1069,8 +1069,6 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
         alert(error || 'Unable to add flight');
         return;
       }
-      // TEMP DEBUG: log payload for flight create
-      console.log('[DEBUG][flights] create payload', payload);
       res = await fetch(`${backendUrl}/api/flights`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...headers },
@@ -1082,8 +1080,6 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
         undefined,
         defaultPayerId
       );
-      // TEMP DEBUG: log payload for flight update
-      console.log('[DEBUG][flights] update payload', payload);
       res = await fetch(`${backendUrl}/api/flights/${editingFlightId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', ...headers },

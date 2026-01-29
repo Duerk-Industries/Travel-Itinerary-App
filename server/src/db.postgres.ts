@@ -3,7 +3,7 @@ import { Pool } from 'pg';
 import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
 import { Flight, Group, GroupMember, Trait, Trip, User, WebUser, Lodging, Tour, Itinerary, ItineraryDetail } from './types';
 import fetch from 'node-fetch';
-import { logError, logInfo } from './logger';
+import { logError } from './logger';
 import { getEnvValue } from './env';
 
 
@@ -1809,8 +1809,6 @@ export const removeGroupMember = async (
   const p = getPool();
   const client = await p.connect();
   try {
-    // TEMP DEBUG: remove after attendee removal flow is stable.
-    logInfo(`[DEBUG][members] db remove start provider=postgres group=${groupId} member=${memberId} requester=${requesterId}`);
     await client.query('BEGIN');
     const { rows: groupRows } = await client.query(
       `SELECT owner_id as "ownerId" FROM groups WHERE id = $1`,
@@ -1834,9 +1832,6 @@ export const removeGroupMember = async (
     const removeResult = await client.query(
       `UPDATE group_members SET removed_at = NOW() WHERE id = $1 AND group_id = $2`,
       [memberId, groupId]
-    );
-    logInfo(
-      `[DEBUG][members] db remove group_members updated rows=${removeResult.rowCount ?? 0} group=${groupId} member=${memberId}`
     );
 
     const { rows: requesterRows } = await client.query(
@@ -1931,9 +1926,6 @@ export const removeGroupMember = async (
             `,
             [tripId, memberId]
           );
-          logInfo(
-            `[DEBUG][members] db remove flights cleaned trip=${tripId} deleted=${deleteResult.rowCount ?? 0}`
-          );
 
           await updatePaidByForTable('flights', tripId);
           await updatePaidByForTable('lodgings', tripId);
@@ -1963,9 +1955,6 @@ export const removeGroupMember = async (
             AND jsonb_array_length(COALESCE(passenger_ids, '[]'::jsonb)) = 0
           `,
           [tripIds]
-        );
-        logInfo(
-          `[DEBUG][members] db remove flights deleted=${deleteResult.rowCount ?? 0} group=${groupId}`
         );
 
         const updatePaidByForTable = async (table: 'flights' | 'lodgings' | 'tours') => {
@@ -2005,10 +1994,8 @@ export const removeGroupMember = async (
     }
 
     await client.query('COMMIT');
-    logInfo(`[DEBUG][members] db remove committed group=${groupId} member=${memberId}`);
   } catch (err) {
     await client.query('ROLLBACK');
-    logError(`[DEBUG][members] db remove failed group=${groupId} member=${memberId}`, err);
     throw err;
   } finally {
     client.release();
