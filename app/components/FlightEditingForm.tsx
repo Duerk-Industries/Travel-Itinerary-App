@@ -135,9 +135,12 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
                     showAirportDropdown('modal-dep', modalDepLocationRef.current, text);
                   }}
                   onKeyPress={(e: any) => {
-                    if (e?.nativeEvent?.key === 'Enter') {
+                    if (e?.nativeEvent?.key === 'Enter' || e?.nativeEvent?.key === 'Tab') {
                       onAirportEnter('modal-dep', flight.departureLocation);
                     }
+                  }}
+                  onBlur={() => {
+                    onAirportEnter('modal-dep', flight.departureLocation);
                   }}
                 />
                 <TouchableOpacity
@@ -202,9 +205,12 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
                     showAirportDropdown('modal-arr', modalArrLocationRef.current, text);
                   }}
                   onKeyPress={(e: any) => {
-                    if (e?.nativeEvent?.key === 'Enter') {
+                    if (e?.nativeEvent?.key === 'Enter' || e?.nativeEvent?.key === 'Tab') {
                       onAirportEnter('modal-arr', flight.arrivalLocation);
                     }
+                  }}
+                  onBlur={() => {
+                    onAirportEnter('modal-arr', flight.arrivalLocation);
                   }}
                 />
                 <TouchableOpacity
@@ -251,9 +257,12 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
                     showAirportDropdown('modal-layover', modalLayoverLocationRef.current, text);
                   }}
                   onKeyPress={(e: any) => {
-                    if (e?.nativeEvent?.key === 'Enter') {
+                    if (e?.nativeEvent?.key === 'Enter' || e?.nativeEvent?.key === 'Tab') {
                       onAirportEnter('modal-layover', flight.layoverLocation);
                     }
+                  }}
+                  onBlur={() => {
+                    onAirportEnter('modal-layover', flight.layoverLocation);
                   }}
                 />
                 <TouchableOpacity
