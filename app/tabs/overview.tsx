@@ -154,6 +154,14 @@ type DayCard = {
   label: string;
   items: string[];
   location?: string | null;
+  title?: string;
+  summary?: string;
+};
+
+type DetailSection = {
+  title?: string;
+  subtitle?: string;
+  items: DetailItem[];
 };
 
 type ModalDateField =
@@ -263,6 +271,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
   const [selectedFlight, setSelectedFlight] = useState<Flight | null>(null);
   const [selectedLodging, setSelectedLodging] = useState<Lodging | null>(null);
   const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
+  const [detailModal, setDetailModal] = useState<{ title: string; sections: DetailSection[] } | null>(null);
   const [showAddTraveler, setShowAddTraveler] = useState(false);
   const [travelerDraft, setTravelerDraft] = useState({ firstName: '', lastName: '', email: '' });
   const [pendingRemovalIds, setPendingRemovalIds] = useState<string[]>([]);
@@ -295,7 +304,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
   const [modalDateField, setModalDateField] = useState<ModalDateField | null>(null);
   const [modalDateValue, setModalDateValue] = useState<Date>(new Date());
   const [dayCards, setDayCards] = useState<DayCard[]>([]);
-  const [expandedDay, setExpandedDay] = useState<string | null>(null);
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [dayImages, setDayImages] = useState<Record<string, string>>({});
 
   const formatFriendlyDate = (dateStr?: string | null, timeStr?: string | null): string | null =>
@@ -329,6 +338,16 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
     if (!trip) return;
     resetDrafts();
   }, [trip]);
+
+  useEffect(() => {
+    setSelectedDay(null);
+  }, [trip?.id]);
+
+  useEffect(() => {
+    if (!selectedDay) {
+      setDetailModal(null);
+    }
+  }, [selectedDay]);
 
 
   useEffect(() => {
@@ -581,7 +600,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
         return { date, label, items, location: trip?.destination ?? null };
       });
       setDayCards(cards);
-      setExpandedDay(cards[0]?.date ?? null);
+      setSelectedDay((prev) => (prev && cards.some((card) => card.date === prev) ? prev : null));
     };
     buildDayCards();
   }, [allDates, flights, lodgings, tours, carRentals, trip?.destination]);
@@ -604,7 +623,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
           const parsed = JSON.parse(raw) as DayCard[];
           if (Array.isArray(parsed) && parsed.length) {
             setDayCards(parsed);
-            setExpandedDay(parsed[0].date);
+            setSelectedDay((prev) => (prev && parsed.some((card) => card.date === prev) ? prev : null));
           }
         }
       } catch {
@@ -1146,6 +1165,19 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
     }
   };
 
+  const formatRentalDetails = (rental: CarRental): DetailItem[] => [
+    { label: 'Pickup Location', value: rental.pickupLocation || 'N/A' },
+    { label: 'Pickup Date', value: formatFriendlyDate(rental.pickupDate) || rental.pickupDate || 'N/A' },
+    { label: 'Dropoff Location', value: rental.dropoffLocation || 'N/A' },
+    { label: 'Dropoff Date', value: formatFriendlyDate(rental.dropoffDate) || rental.dropoffDate || 'N/A' },
+    { label: 'Vendor', value: rental.vendor || 'N/A' },
+    { label: 'Model', value: rental.model || 'N/A' },
+    { label: 'Reference', value: rental.reference || 'N/A' },
+    { label: 'Prepaid', value: rental.prepaid || 'N/A' },
+    { label: 'Cost', value: rental.cost ? `$${rental.cost}` : 'N/A' },
+    { label: 'Notes', value: rental.notes || 'N/A' },
+  ];
+
   const renderDetailModal = (title: string, items: DetailItem[], onClose: () => void) => (
     <View style={styles.modalOverlay}>
       <View style={styles.confirmModal}>
@@ -1173,6 +1205,41 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
     </View>
   );
 
+  const renderDetailSectionsModal = (modal: { title: string; sections: DetailSection[] }) => (
+    <View style={styles.modalOverlay}>
+      <View style={[styles.confirmModal, styles.detailModal]}>
+        <ScrollView style={styles.detailModalScroll}>
+          <Text style={styles.sectionTitle}>{modal.title}</Text>
+          {modal.sections.map((section, idx) => (
+            <View key={`${section.title ?? 'section'}-${idx}`} style={styles.detailSection}>
+              {section.title ? <Text style={styles.headerText}>{section.title}</Text> : null}
+              {section.subtitle ? <Text style={styles.helperText}>{section.subtitle}</Text> : null}
+              {section.items.map((item) => {
+                const handler = item.onPress ?? (item.linkUrl ? () => openDetailLink(item.linkUrl) : undefined);
+                const content = handler ? (
+                  <TouchableOpacity onPress={handler}>
+                    <Text style={styles.linkText ?? styles.buttonText}>{item.value}</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <Text style={[styles.bodyText, { marginLeft: 6 }]}>{item.value}</Text>
+                );
+                return (
+                  <View key={`${section.title ?? 'section'}-${item.label}`} style={[styles.row, { alignItems: 'center' }]}>
+                    <Text style={styles.headerText}>{item.label}:</Text>
+                    <View style={{ marginLeft: 6, flex: 1 }}>{content}</View>
+                  </View>
+                );
+              })}
+            </View>
+          ))}
+        </ScrollView>
+        <TouchableOpacity style={styles.button} onPress={() => setDetailModal(null)}>
+          <Text style={styles.buttonText}>Close</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
   const startLabel = formatFriendlyDate(displayStartDate);
   const endLabel = formatFriendlyDate(displayEndDate);
   const dateRange = startLabel || endLabel ? `${startLabel ?? 'Start'} - ${endLabel ?? 'End'}` : null;
@@ -1186,6 +1253,135 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
     return `attendee-chip-${safeEmail}`;
   };
 
+  const formatShortDayLabel = (dateStr: string): string => {
+    const parts = dateStr.split('-').map((v) => Number(v));
+    const date = parts.length === 3 ? new Date(parts[0], parts[1] - 1, parts[2]) : new Date(dateStr);
+    if (Number.isNaN(date.valueOf())) return dateStr;
+    const weekday = date.toLocaleDateString('en-US', { weekday: 'short' });
+    const weekdayLabel = weekday.endsWith('.') ? weekday : `${weekday}.`;
+    return `${weekdayLabel} ${date.getDate()}`;
+  };
+
+  const allMemberIds = useMemo(() => groupMembers.map((m) => m.id), [groupMembers]);
+
+  const dayDataByDate = useMemo(() => {
+    const map = new Map<
+      string,
+      {
+        index: number;
+        date: string;
+        flights: Flight[];
+        lodgings: Lodging[];
+        tours: Tour[];
+        rentals: CarRental[];
+        details: ItineraryDetail[];
+      }
+    >();
+    dayCards.forEach((card, idx) => {
+      const dayNumber = idx + 1;
+      const flightsForDay = flights.filter((f) => f.departure_date === card.date || f.arrival_date === card.date);
+      const lodgingsForDay = lodgings.filter((l) => {
+        const ci = l.checkInDate;
+        const co = l.checkOutDate;
+        if (!ci || !co) return false;
+        const d = new Date(card.date).getTime();
+        return d >= new Date(ci).getTime() && d <= new Date(co).getTime();
+      });
+      const toursForDay = tours.filter((t) => t.date === card.date);
+      const rentalsForDay = carRentals.filter((r) => r.pickupDate === card.date || r.dropoffDate === card.date);
+      const detailsForDay = sortedItineraryDetails.filter((d) => Number(d.day) === dayNumber);
+      map.set(card.date, {
+        index: dayNumber,
+        date: card.date,
+        flights: flightsForDay,
+        lodgings: lodgingsForDay,
+        tours: toursForDay,
+        rentals: rentalsForDay,
+        details: detailsForDay,
+      });
+    });
+    return map;
+  }, [dayCards, flights, lodgings, tours, carRentals, sortedItineraryDetails]);
+
+  const formatTravelerNames = (ids: string[]) =>
+    ids
+      .map((id) => memberNames.get(id))
+      .filter(Boolean)
+      .join(', ');
+
+  const buildDayStartLocation = (info?: { flights: Flight[]; lodgings: Lodging[]; tours: Tour[]; rentals: CarRental[] }) => {
+    if (!info) return trip?.destination || 'Trip Day';
+    const flight = info.flights[0];
+    if (flight) return flight.departure_location || flight.departure_airport_code || trip?.destination || 'Trip Day';
+    const lodging = info.lodgings[0];
+    if (lodging) return lodging.name || trip?.destination || 'Trip Day';
+    const tour = info.tours[0];
+    if (tour) return tour.startLocation || tour.name || trip?.destination || 'Trip Day';
+    const rental = info.rentals[0];
+    if (rental) return rental.pickupLocation || rental.vendor || trip?.destination || 'Trip Day';
+    return trip?.destination || 'Trip Day';
+  };
+
+  const buildDaySummary = (info?: { flights: Flight[]; lodgings: Lodging[]; tours: Tour[]; rentals: CarRental[]; details: ItineraryDetail[] }) => {
+    if (!info) return 'Free day';
+    if (info.details.length) return info.details[0].activity;
+    if (info.tours.length) return info.tours[0].name || 'Tour day';
+    if (info.flights.length) return 'Travel day';
+    if (info.lodgings.length) return `Stay at ${info.lodgings[0].name || 'lodging'}`;
+    if (info.rentals.length) return 'Drive day';
+    return 'Free day';
+  };
+
+  const buildDayNarrative = (info?: { details: ItineraryDetail[]; flights: Flight[]; tours: Tour[]; lodgings: Lodging[]; rentals: CarRental[] }) => {
+    if (!info) return ['No itinerary details yet.'];
+    if (info.details.length) {
+      return info.details.map((d) => (d.time ? `${d.time} · ${d.activity}` : d.activity));
+    }
+    if (info.flights.length) {
+      return info.flights.map((f) => {
+        const dep = f.departure_location || f.departure_airport_code || 'Departure';
+        const arr = f.arrival_location || f.arrival_airport_code || 'Arrival';
+        return `Flight from ${dep} to ${arr}.`;
+      });
+    }
+    if (info.tours.length) {
+      return info.tours.map((t) => `${t.name}${t.startTime ? ` at ${t.startTime}` : ''}`);
+    }
+    if (info.lodgings.length) {
+      return info.lodgings.map((l) => `Check-in at ${l.name}.`);
+    }
+    if (info.rentals.length) {
+      return info.rentals.map((r) => `Pick up rental car from ${r.pickupLocation || r.vendor}.`);
+    }
+    return ['No itinerary details yet.'];
+  };
+
+  const renderDayBar = (activeDate: string | null) => (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 8 }}>
+      <TouchableOpacity
+        testID="overview-day-pill-overview"
+        style={[styles.dayPill, !activeDate && styles.dayPillActive]}
+        onPress={() => setSelectedDay(null)}
+      >
+        <Text style={[styles.dayPillText, !activeDate && styles.dayPillActiveText]}>Overview</Text>
+      </TouchableOpacity>
+      {dayCards.map((card, idx) => {
+        const isActive = activeDate === card.date;
+        return (
+          <TouchableOpacity
+            key={card.date}
+            testID={`overview-day-pill-${idx + 1}`}
+            style={[styles.dayPill, isActive && styles.dayPillActive]}
+            onPress={() => setSelectedDay(card.date)}
+          >
+            <Text style={[styles.dayPillNumber, isActive && styles.dayPillActiveText]}>{idx + 1}</Text>
+            <Text style={[styles.dayPillDate, isActive && styles.dayPillActiveText]}>{formatShortDayLabel(card.date)}</Text>
+          </TouchableOpacity>
+        );
+      })}
+    </ScrollView>
+  );
+
   if (!trip) {
     return (
       <View style={styles.card}>
@@ -1196,14 +1392,246 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
   }
 
   if (!isEditing) {
-    const pillBg = (date: string) => (expandedDay === date ? styles.toggleActive : styles.dropdown);
-    const dayPillBase = { padding: 10, borderRadius: 12, marginRight: 8, minWidth: 90, alignItems: 'center' as const };
-    const dayCardBase = { borderRadius: 16, backgroundColor: '#f5f5f5', padding: 12, marginBottom: 8 };
-    const dayCardOpen = { backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#e5e7eb' };
-    const dayBadgeStyle = { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, backgroundColor: '#111827', color: '#fff', marginBottom: 6 };
-    const dayTitleStyle = { fontSize: 18, fontWeight: '600', marginBottom: 2 };
-    const heroWrap = { borderRadius: 16, overflow: 'hidden', marginTop: 8 };
-    const heroImageStyle = { width: '100%', height: 180, resizeMode: 'cover' as const };
+    const activeDayInfo = selectedDay ? dayDataByDate.get(selectedDay) : null;
+    const activeDayCard = selectedDay ? dayCards.find((card) => card.date === selectedDay) : null;
+    const activeDayIndex = activeDayInfo?.index ?? (activeDayCard ? dayCards.findIndex((card) => card.date === activeDayCard.date) + 1 : null);
+    const nextDayCard = activeDayIndex && activeDayIndex < dayCards.length ? dayCards[activeDayIndex] : null;
+
+    const renderHeroCard = (card: DayCard, title: string, showAction: boolean, onPress?: () => void, testID?: string) => {
+      const img = dayImages[card.date];
+      return (
+        <TouchableOpacity
+          testID={testID}
+          style={styles.dayHeroCard}
+          onPress={onPress}
+          disabled={!onPress}
+        >
+          {img ? <Image style={styles.dayHeroImage} source={{ uri: img }} /> : <View style={styles.dayHeroImageFallback} />}
+          <View style={styles.dayHeroOverlay} />
+          <View style={styles.dayHeroBadge}>
+            <Text style={styles.dayHeroBadgeText}>{card.label.toUpperCase()}</Text>
+          </View>
+          <View style={styles.dayHeroTextWrap}>
+            <Text style={styles.dayHeroTitle}>{title}</Text>
+            {showAction ? <Text style={styles.dayHeroAction}>View details</Text> : null}
+          </View>
+        </TouchableOpacity>
+      );
+    };
+
+    if (selectedDay && activeDayCard && activeDayInfo) {
+      const startLocation = buildDayStartLocation(activeDayInfo);
+      const summary = buildDaySummary(activeDayInfo);
+      const heroTitle = [startLocation, summary].filter(Boolean).join(' - ');
+      const narrativeLines = buildDayNarrative(activeDayInfo);
+      const flightsForDay = activeDayInfo.flights;
+      const toursForDay = activeDayInfo.tours;
+      const lodgingsForDay = activeDayInfo.lodgings;
+      const rentalsForDay = activeDayInfo.rentals;
+
+      const flightParticipantKeys = flightsForDay.map((f) => {
+        const ids = Array.isArray(f.passenger_ids) && f.passenger_ids.length ? f.passenger_ids : [];
+        return ids.slice().sort().join('|');
+      });
+      const showFlightNames = new Set(flightParticipantKeys).size > 1;
+
+      const tourParticipantKeys = toursForDay.map((t) => {
+        const ids = Array.isArray(t.paidBy) && t.paidBy.length ? t.paidBy : allMemberIds;
+        return ids.slice().sort().join('|');
+      });
+      const showTourNames = new Set(tourParticipantKeys).size > 1;
+
+      const lodgingParticipantKeys = lodgingsForDay.map((l) => {
+        const ids = Array.isArray(l.paidBy) && l.paidBy.length ? l.paidBy : allMemberIds;
+        return ids.slice().sort().join('|');
+      });
+      const showLodgingNames = new Set(lodgingParticipantKeys).size > 1;
+
+      return (
+        <View style={[styles.card, { position: 'relative' }]}>
+          <TouchableOpacity
+            testID="day-details-back"
+            style={styles.dayDetailsBackButton}
+            onPress={() => setSelectedDay(null)}
+          >
+            <Text style={styles.dayDetailsBackText}>← Back</Text>
+          </TouchableOpacity>
+          <ScrollView
+            ref={scrollRef}
+            style={{ flex: 1 }}
+            contentContainerStyle={{ gap: 16, paddingTop: 56 }}
+            onScroll={(e: any) => setScrollY(e.nativeEvent.contentOffset.y)}
+            scrollEventThrottle={16}
+          >
+            <Text style={styles.sectionTitle}>My itinerary</Text>
+            <Text style={styles.flightTitle}>{trip.name}</Text>
+            {trip.destination ? <Text style={styles.helperText}>{trip.destination}</Text> : null}
+            {renderDayBar(selectedDay)}
+            {renderHeroCard(activeDayCard, heroTitle, false, undefined, 'day-details-hero')}
+            <View style={styles.dayNarrativeBox}>
+              {narrativeLines.map((line, idx) => (
+                <Text key={`${activeDayCard.date}-narrative-${idx}`} style={styles.bodyText}>
+                  {line}
+                </Text>
+              ))}
+            </View>
+
+            {flightsForDay.length ? (
+              <View style={styles.dayInfoCard}>
+                <Text style={styles.sectionTitle}>Your flight</Text>
+                {flightsForDay.map((flight) => {
+                  const dep = flight.departure_location || flight.departure_airport_code || 'DEP';
+                  const arr = flight.arrival_location || flight.arrival_airport_code || 'ARR';
+                  const passengers =
+                    Array.isArray(flight.passenger_ids) && flight.passenger_ids.length
+                      ? formatTravelerNames(flight.passenger_ids)
+                      : flight.passenger_name || '';
+                  return (
+                    <View key={flight.id} style={styles.dayInfoRow}>
+                      <Text style={styles.dayInfoRoute}>{`${dep} → ${arr}`}</Text>
+                      <Text style={styles.helperText}>{`${flight.departure_time || '--:--'} / ${flight.arrival_time || '--:--'}`}</Text>
+                      {showFlightNames && passengers ? (
+                        <Text style={styles.helperText}>Travelers: {passengers}</Text>
+                      ) : null}
+                    </View>
+                  );
+                })}
+                <TouchableOpacity
+                  testID="day-details-flight-details"
+                  style={styles.dayInfoButton}
+                  onPress={() => {
+                    const sections: DetailSection[] = flightsForDay.map((flight, idx) => {
+                      const dep = flight.departure_location || flight.departure_airport_code || 'DEP';
+                      const arr = flight.arrival_location || flight.arrival_airport_code || 'ARR';
+                      const passengers =
+                        Array.isArray(flight.passenger_ids) && flight.passenger_ids.length
+                          ? formatTravelerNames(flight.passenger_ids)
+                          : flight.passenger_name || '';
+                      return {
+                        title: flightsForDay.length > 1 ? `Flight ${idx + 1} · ${dep} → ${arr}` : undefined,
+                        subtitle: showFlightNames && passengers ? `Travelers: ${passengers}` : undefined,
+                        items: formatFlightDetails(flight),
+                      };
+                    });
+                    setDetailModal({ title: 'Flight Details', sections });
+                  }}
+                >
+                  <Text style={styles.dayInfoButtonText}>See flight details →</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
+
+            {rentalsForDay.length ? (
+              <View style={styles.dayInfoCard}>
+                <Text style={styles.sectionTitle}>Rental car</Text>
+                {rentalsForDay.map((rental) => (
+                  <View key={rental.id} style={styles.dayInfoRow}>
+                    <Text style={styles.dayInfoRoute}>{`${rental.vendor || 'Rental car'} · ${rental.model || 'Vehicle'}`}</Text>
+                    <Text style={styles.helperText}>
+                      {`${rental.pickupLocation || 'Pickup'} → ${rental.dropoffLocation || 'Dropoff'}`}
+                    </Text>
+                  </View>
+                ))}
+                <TouchableOpacity
+                  testID="day-details-rental-details"
+                  style={styles.dayInfoButton}
+                  onPress={() => {
+                    const sections: DetailSection[] = rentalsForDay.map((rental, idx) => ({
+                      title: rentalsForDay.length > 1 ? `Rental ${idx + 1}` : undefined,
+                      items: formatRentalDetails(rental),
+                    }));
+                    setDetailModal({ title: 'Rental Car Details', sections });
+                  }}
+                >
+                  <Text style={styles.dayInfoButtonText}>See rental car details →</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
+
+            {toursForDay.length ? (
+              <View style={styles.dayInfoCard}>
+                <Text style={styles.sectionTitle}>Tours</Text>
+                {toursForDay.map((tour) => {
+                  const participants = Array.isArray(tour.paidBy) && tour.paidBy.length ? formatTravelerNames(tour.paidBy) : formatTravelerNames(allMemberIds);
+                  return (
+                    <View key={tour.id} style={styles.dayInfoRow}>
+                      <Text style={styles.dayInfoRoute}>{tour.name}</Text>
+                      <Text style={styles.helperText}>{`${tour.startTime || 'Time TBD'} · ${tour.startLocation || 'Location TBD'}`}</Text>
+                      {showTourNames && participants ? <Text style={styles.helperText}>Travelers: {participants}</Text> : null}
+                    </View>
+                  );
+                })}
+                <TouchableOpacity
+                  testID="day-details-tour-details"
+                  style={styles.dayInfoButton}
+                  onPress={() => {
+                    const sections: DetailSection[] = toursForDay.map((tour, idx) => {
+                      const participants = Array.isArray(tour.paidBy) && tour.paidBy.length ? formatTravelerNames(tour.paidBy) : formatTravelerNames(allMemberIds);
+                      return {
+                        title: toursForDay.length > 1 ? `Tour ${idx + 1}` : undefined,
+                        subtitle: showTourNames && participants ? `Travelers: ${participants}` : undefined,
+                        items: formatTourDetails(tour),
+                      };
+                    });
+                    setDetailModal({ title: 'Tour Details', sections });
+                  }}
+                >
+                  <Text style={styles.dayInfoButtonText}>See tour details →</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
+
+            {lodgingsForDay.length ? (
+              <View style={styles.dayInfoCard}>
+                <Text style={styles.sectionTitle}>Accommodation</Text>
+                {lodgingsForDay.map((lodging) => {
+                  const participants = Array.isArray(lodging.paidBy) && lodging.paidBy.length ? formatTravelerNames(lodging.paidBy) : formatTravelerNames(allMemberIds);
+                  return (
+                    <TouchableOpacity
+                      key={lodging.id}
+                      testID={`day-details-lodging-${lodging.id}`}
+                      style={styles.dayInfoRow}
+                      onPress={() => {
+                        setDetailModal({
+                          title: 'Lodging Details',
+                          sections: [
+                            {
+                              subtitle: showLodgingNames && participants ? `Travelers: ${participants}` : undefined,
+                              items: formatLodgingDetails(lodging, mapApp).map((item) =>
+                                item.label === 'Address' && lodging.address
+                                  ? { ...item, onPress: () => onOpenAddress(lodging.address) }
+                                  : item
+                              ),
+                            },
+                          ],
+                        });
+                      }}
+                    >
+                      <Text style={styles.dayInfoRoute}>{lodging.name}</Text>
+                      <Text style={styles.helperText}>{`${lodging.checkInDate} → ${lodging.checkOutDate}`}</Text>
+                      {showLodgingNames && participants ? <Text style={styles.helperText}>Travelers: {participants}</Text> : null}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            ) : null}
+
+            {nextDayCard ? (
+              <TouchableOpacity
+                testID="day-details-next"
+                style={styles.dayNextButton}
+                onPress={() => setSelectedDay(nextDayCard.date)}
+              >
+                <Text style={styles.helperText}>Next day</Text>
+                <Text style={styles.headerText}>{`${nextDayCard.label} · ${formatShortDayLabel(nextDayCard.date)}`}</Text>
+              </TouchableOpacity>
+            ) : null}
+          </ScrollView>
+          {detailModal ? renderDetailSectionsModal(detailModal) : null}
+        </View>
+      );
+    }
+
     return (
       <ScrollView
         ref={scrollRef}
@@ -1228,47 +1656,17 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
         ) : null}
         {tripLength ? <Text style={styles.helperText}>Trip length: {tripLength} day(s)</Text> : null}
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 8 }}>
-          {dayCards.map((card, idx) => (
-            <TouchableOpacity
-              key={card.date}
-              style={[dayPillBase, pillBg(card.date)]}
-              onPress={() => {
-                setExpandedDay(card.date);
-              }}
-            >
-              <Text style={styles.headerText}>{idx + 1}</Text>
-              <Text style={styles.helperText}>{card.date}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        {renderDayBar(null)}
 
         <View style={{ gap: 12 }}>
           {dayCards.map((card, idx) => {
-            const isOpen = expandedDay === card.date;
-            const img = dayImages[card.date];
+            const info = dayDataByDate.get(card.date);
+            const startLocation = buildDayStartLocation(info);
+            const summary = buildDaySummary(info);
+            const heroTitle = [startLocation, summary].filter(Boolean).join(' - ');
             return (
-              <View key={card.date} style={[dayCardBase, isOpen && dayCardOpen]}>
-                <TouchableOpacity
-                  style={{ paddingVertical: 6 }}
-                  onPress={() => setExpandedDay(isOpen ? null : card.date)}
-                >
-                  <Text style={[styles.helperText, dayBadgeStyle]}>{card.label}</Text>
-                  <Text style={dayTitleStyle}>{card.location || trip.destination || 'Trip Day'}</Text>
-                  <Text style={styles.helperText}>{card.date}</Text>
-                </TouchableOpacity>
-                {isOpen ? (
-                  <View>
-                    {img ? <View style={heroWrap}><Image style={heroImageStyle} source={{ uri: img }} /></View> : null}
-                    <View style={{ paddingVertical: 8, gap: 8 }}>
-                      {card.items.map((line, i) => (
-                        <Text key={`${card.date}-${i}`} style={styles.bodyText}>
-                          {line}
-                        </Text>
-                      ))}
-                    </View>
-                  </View>
-                ) : null}
+              <View key={card.date}>
+                {renderHeroCard(card, heroTitle, true, () => setSelectedDay(card.date), `overview-day-card-${idx + 1}`)}
               </View>
             );
           })}
@@ -1895,6 +2293,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
           )
         : null}
       {selectedTour ? renderDetailModal('Tour Details', formatTourDetails(selectedTour), () => setSelectedTour(null)) : null}
+      {detailModal ? renderDetailSectionsModal(detailModal) : null}
       <FlightEditingForm
         visible={showFlightEditor && Boolean(editingFlightDraft && editingFlightId)}
         flightId={editingFlightId}
