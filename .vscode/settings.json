@@ -13,6 +13,8 @@
         "dropoff",
         "Firestore",
         "geoloc",
+        "gsub",
+        "hostport",
         "jvmargs",
         "Metaspace",
         "ossp",

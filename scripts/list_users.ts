@@ -3,8 +3,8 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { getEnvValue } from '../server/src/env';
 import { loadEnv } from '../server/src/env_loader';
 
-// Load environment variables from .env files
-loadEnv();
+// Load environment variables from server/.env only
+loadEnv({ serverOnly: true });
 
 const listUsers = async () => {
   const projectId = getEnvValue('GCLOUD_PROJECT_ID');
