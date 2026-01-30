@@ -2,7 +2,6 @@
 import { Pool } from 'pg';
 import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
 import { Flight, Group, GroupMember, Trait, Trip, User, WebUser, Lodging, Tour, Itinerary, ItineraryDetail } from './types';
-import fetch from 'node-fetch';
 import { logError } from './logger';
 import { getEnvValue } from './env';
 

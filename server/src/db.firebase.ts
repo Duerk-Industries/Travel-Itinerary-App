@@ -5,7 +5,6 @@ import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
 import { Flight, Lodging, Tour, Trait, Trip, User, WebUser, Itinerary, ItineraryDetail, Group, GroupMember } from './types';
 import { logError, logInfo } from './logger';
 import { getEnvValue, isLocalEnv } from './env';
-import fetch from 'node-fetch';
 
 let app: App | null = null;
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
