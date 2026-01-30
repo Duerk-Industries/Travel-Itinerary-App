@@ -39,7 +39,6 @@ export interface Flight {
   booking_reference: string;
   paid_by?: string[];
   paidBy?: string[];
-  sharedWith?: string[];
   passengerInGroup?: boolean;
   departure_airport_label?: string;
   arrival_airport_label?: string;
@@ -474,7 +473,6 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   const [locationFieldTarget, setLocationFieldTarget] = useState<'dep' | 'arr' | null>(null);
   const [locationSearch, setLocationSearch] = useState('');
   const locationSelectInProgressRef = useRef(false);
-  const [email, setEmail] = useState('');
   const [isParsingPdf, setIsParsingPdf] = useState(false);
   const [pdfParseMessage, setPdfParseMessage] = useState<string | null>(null);
   const [parsedFlights, setParsedFlights] = useState<FlightEditDraft[]>([]);
@@ -1141,21 +1139,6 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     fetchFlights();
   };
 
-  const shareFlight = async (id: string) => {
-    if (isWizard) return;
-    if (!userToken) return;
-    if (!email.trim()) {
-      alert('Enter an email to share this flight.');
-      return;
-    }
-    await fetch(`${backendUrl}/api/flights/${id}/share`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...headers },
-      body: JSON.stringify({ email }),
-    });
-    fetchFlights();
-  };
-
   const openLocationOverlay = (target: 'dep' | 'arr', initialValue: string) => {
     setLocationFieldTarget(target);
     setLocationTarget(target);
@@ -1344,9 +1327,6 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                         </TouchableOpacity>
                         <TouchableOpacity style={[styles.smallButton, styles.dangerButton]} onPress={() => removeFlight(item.id)}>
                           <Text style={styles.buttonText}>Delete</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.smallButton} onPress={() => shareFlight(item.id)}>
-                          <Text style={styles.buttonText}>Share</Text>
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -1584,11 +1564,6 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
           <Text style={styles.buttonText}>{isAddingRow ? 'OK' : 'Add'}</Text>
         </TouchableOpacity>
       </View>
-      <View style={styles.shareRow}>
-        <TextInput placeholder="Share with email" value={email} onChangeText={setEmail} style={[styles.input, styles.shareInput]} autoCapitalize="none" />
-        <Text style={styles.helperText}>Enter an email, then press Share on a row.</Text>
-      </View>
-
         </>
       ) : null}
 
