@@ -92,6 +92,7 @@ type Lodging = {
   totalCost: string;
   costPerNight: string;
   address: string;
+  imageUrl?: string;
 };
 
 type Tour = {
@@ -1596,9 +1597,16 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
                         });
                       }}
                     >
-                      <Text style={styles.dayInfoRoute}>{lodging.name}</Text>
-                      <Text style={styles.helperText}>{`${lodging.checkInDate} → ${lodging.checkOutDate}`}</Text>
-                      {showLodgingNames && participants ? <Text style={styles.helperText}>Travelers: {participants}</Text> : null}
+                      {lodging.imageUrl ? (
+                        <Image style={styles.lodgingImage} source={{ uri: lodging.imageUrl }} />
+                      ) : (
+                        <View style={styles.lodgingImageFallback} />
+                      )}
+                      <View style={styles.dayInfoText}>
+                        <Text style={styles.dayInfoRoute}>{lodging.name}</Text>
+                        <Text style={styles.helperText}>{`${lodging.checkInDate} → ${lodging.checkOutDate}`}</Text>
+                        {showLodgingNames && participants ? <Text style={styles.helperText}>Travelers: {participants}</Text> : null}
+                      </View>
                     </TouchableOpacity>
                   );
                 })}

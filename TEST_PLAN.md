@@ -57,6 +57,14 @@ This document outlines the existing test suites in the Travel Itinerary App, ide
         *   Validation of lodging payload (name, dates).
         *   Calculation of cost per night and application of default payer.
 
+*   **`persistenceFlows.test.ts`**:
+    *   **Purpose**: Tests that flight and lodging saves trigger the expected API calls across wizard, tabs, and overview editing flows.
+    *   **Verifies**:
+        *   Create trip wizard resolves member IDs and posts flight/lodging payloads.
+        *   Flight tab uses `POST /api/flights` with trip/payer data.
+        *   Lodging tab uses `POST /api/lodgings` with trip/payer data.
+        *   Overview lodging edits use `PUT /api/lodgings/:id`.
+
 *   **`overview.test.ts`**:
     *   **Purpose**: Tests utility functions for building the trip overview.
     *   **Verifies**:
@@ -148,6 +156,19 @@ This document outlines the existing test suites in the Travel Itinerary App, ide
         *   `isEmailConfigured` returns the correct status based on environment variables.
         *   `sendShareEmail` throws an error if email is not configured.
         *   `sendShareEmail` calls the `sendMail` function with the correct arguments.
+
+*   **`lodging.test.ts`**:
+    *   **Purpose**: Tests the lodging API.
+    *   **Verifies**:
+        *   Creates a new lodging with an image URL.
+
+*   **`googlePlaces.test.ts`**:
+    *   **Purpose**: Tests the Google Places API integration.
+    *   **Verifies**:
+        *   Returns a photo URL when a place with a photo is found.
+        *   Returns null when no place is found.
+        *   Returns null when the place has no photo.
+        *   Returns null when the API call fails.
 
 *   **`overview-flights.test.ts`**:
     *   **Purpose**: Tests flight editing from the overview.

@@ -281,6 +281,7 @@ export const initDb = async (): Promise<void> => {
       cost_per_night NUMERIC NOT NULL DEFAULT 0,
       address TEXT,
       paid_by JSONB DEFAULT '[]'::jsonb,
+      image_url TEXT,
       created_at TIMESTAMP DEFAULT NOW()
     );
   `);
@@ -290,6 +291,7 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS cost_per_night NUMERIC NOT NULL DEFAULT 0;`);
   await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS address TEXT;`);
   await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS paid_by JSONB DEFAULT '[]'::jsonb;`);
+  await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS image_url TEXT;`);
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS tours (
@@ -1230,7 +1232,8 @@ export const listLodgings = async (userId: string, tripId?: string | null): Prom
              l.total_cost as "totalCost",
              l.cost_per_night as "costPerNight",
              l.address,
-             COALESCE(l.paid_by, '[]'::jsonb) as "paidBy",
+             COALESCE(l.paid_by, '[]'::jsonb) as "paid_by",
+             l.image_url as "imageUrl",
              l.created_at as "createdAt"
       FROM lodgings l
       JOIN trips t ON l.trip_id = t.id
@@ -1241,10 +1244,10 @@ export const listLodgings = async (userId: string, tripId?: string | null): Prom
     `,
     [userId, tripId ?? null]
   );
-  return rows.map((r: any) => ({
-    ...(r as Lodging),
-    paidBy: Array.isArray(r.paidBy) ? r.paidBy : [],
-  }));
+  return rows.map((r: any) => {
+    const paidBy = Array.isArray(r.paid_by) ? r.paid_by : [];
+    return { ...(r as Lodging), paid_by: paidBy, paidBy } as Lodging & { paidBy: string[] };
+  });
 };
 
 export const insertLodging = async (lodging: {
@@ -1258,16 +1261,17 @@ export const insertLodging = async (lodging: {
   totalCost: number;
   costPerNight: number;
   address?: string;
-  paidBy?: string[];
+  paid_by?: string[];
+  imageUrl?: string | null;
 }): Promise<Lodging> => {
   const p = getPool();
   const id = randomUUID();
   const { rows } = await p.query(
     `
       INSERT INTO lodgings (
-        id, user_id, trip_id, name, check_in_date, check_out_date, rooms, refund_by, total_cost, cost_per_night, address, paid_by
+        id, user_id, trip_id, name, check_in_date, check_out_date, rooms, refund_by, total_cost, cost_per_night, address, paid_by, image_url
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
       RETURNING id,
                 user_id as "userId",
                 trip_id as "tripId",
@@ -1279,7 +1283,8 @@ export const insertLodging = async (lodging: {
                 total_cost as "totalCost",
                 cost_per_night as "costPerNight",
                 address,
-                COALESCE(paid_by, '[]'::jsonb) as "paidBy",
+                COALESCE(paid_by, '[]'::jsonb) as "paid_by",
+                image_url as "imageUrl",
                 created_at as "createdAt"
     `,
     [
@@ -1294,11 +1299,13 @@ export const insertLodging = async (lodging: {
       lodging.totalCost,
       lodging.costPerNight,
       lodging.address ?? '',
-      JSON.stringify(lodging.paidBy ?? []),
+      JSON.stringify(lodging.paid_by ?? []),
+      lodging.imageUrl ?? null,
     ]
   );
   const row = rows[0] as any;
-  return { ...(row as Lodging), paidBy: Array.isArray(row.paidBy) ? row.paidBy : [] };
+  const paidBy = Array.isArray(row.paid_by) ? row.paid_by : [];
+  return { ...(row as Lodging), paid_by: paidBy, paidBy } as Lodging & { paidBy: string[] };
 };
 
 // Delete a lodging row when the caller belongs to the trip's group.
@@ -1332,15 +1339,16 @@ export const updateLodging = async (
     lodgingId,
     userId,
     updates.name ?? null,
-    updates.checkInDate ?? null,
-    updates.checkOutDate ?? null,
+    updates.check_in_date ?? null,
+    updates.check_out_date ?? null,
     updates.rooms ?? null,
-    typeof updates.refundBy === 'undefined' ? null : updates.refundBy,
-    updates.totalCost ?? null,
-    updates.costPerNight ?? null,
+    typeof updates.refund_by === 'undefined' ? null : updates.refund_by,
+    updates.total_cost ?? null,
+    updates.cost_per_night ?? null,
     updates.address ?? null,
-    typeof updates.paidBy !== 'undefined' ? JSON.stringify(updates.paidBy ?? []) : null,
-    updates.tripId ?? null,
+    updates.imageUrl ?? null,
+    typeof updates.paid_by !== 'undefined' ? JSON.stringify(updates.paid_by ?? []) : null,
+    updates.trip_id ?? null,
   ];
 
   const { rows } = await p.query<Lodging>(
@@ -1356,8 +1364,9 @@ export const updateLodging = async (
           total_cost = COALESCE($8, total_cost),
           cost_per_night = COALESCE($9, cost_per_night),
           address = COALESCE($10, address),
-          paid_by = COALESCE($11::jsonb, paid_by),
-          trip_id = COALESCE($12, trip_id)
+          image_url = COALESCE($11, image_url),
+          paid_by = COALESCE($12::jsonb, paid_by),
+          trip_id = COALESCE($13, trip_id)
         WHERE id = $1
         RETURNING
           id,
@@ -1371,7 +1380,8 @@ export const updateLodging = async (
           total_cost as "totalCost",
           cost_per_night as "costPerNight",
           address,
-          COALESCE(paid_by, '[]'::jsonb) as "paidBy",
+          COALESCE(paid_by, '[]'::jsonb) as "paid_by",
+          image_url as "imageUrl",
           created_at as "createdAt"
       `
       : `
@@ -1385,11 +1395,12 @@ export const updateLodging = async (
           total_cost = COALESCE($8, l.total_cost),
           cost_per_night = COALESCE($9, l.cost_per_night),
           address = COALESCE($10, l.address),
-          paid_by = COALESCE($11::jsonb, l.paid_by),
-          trip_id = COALESCE($12, l.trip_id)
+          image_url = COALESCE($11, l.image_url),
+          paid_by = COALESCE($12::jsonb, l.paid_by),
+          trip_id = COALESCE($13, l.trip_id)
         FROM trips t
         WHERE l.id = $1
-          AND t.id = COALESCE($12, l.trip_id)
+          AND t.id = COALESCE($13, l.trip_id)
           -- allow edits by any member of the trip's group
           AND t.group_id IN (SELECT group_id FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $2)
         RETURNING
@@ -1404,14 +1415,16 @@ export const updateLodging = async (
           l.total_cost as "totalCost",
           l.cost_per_night as "costPerNight",
           l.address,
-          COALESCE(l.paid_by, '[]'::jsonb) as "paidBy",
+          COALESCE(l.paid_by, '[]'::jsonb) as "paid_by",
+          l.image_url as "imageUrl",
           l.created_at as "createdAt"
       `,
     baseParams
   );
   if (!rows.length) return null;
   const row = rows[0] as any;
-  return { ...(row as Lodging), paidBy: Array.isArray(row.paidBy) ? row.paidBy : [] };
+  const paidBy = Array.isArray(row.paid_by) ? row.paid_by : [];
+  return { ...(row as Lodging), paid_by: paidBy, paidBy } as Lodging & { paidBy: string[] };
 };
 export const listTours = async (userId: string, tripId?: string): Promise<Tour[]> => {
   // Return tours for the given trip that the requesting user can see (anyone in the trip's group).
@@ -3383,4 +3396,9 @@ export const findOrCreateGoogleUser = async (profile: any): Promise<User> => {
     );
 
     return { id: newUserId, email, provider: 'google' };
+};
+
+export const deleteAllUsers = async (userIds: string[]): Promise<void> => {
+  const p = getPool();
+  await p.query(`DELETE FROM users WHERE id = ANY($1::uuid[])`, [userIds]);
 };

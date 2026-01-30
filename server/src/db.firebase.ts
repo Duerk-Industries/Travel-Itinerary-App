@@ -1,6 +1,6 @@
 // Firebase adapter (Firestore-backed)
 import { initializeApp, cert, deleteApp, getApps, App } from 'firebase-admin/app';
-import { getFirestore as adminGetFirestore, FieldPath, Firestore } from 'firebase-admin/firestore';
+import { getFirestore, Firestore, FieldPath } from 'firebase-admin/firestore';
 import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
 import { Flight, Lodging, Tour, Trait, Trip, User, WebUser, Itinerary, ItineraryDetail, Group, GroupMember } from './types';
 import { logError, logInfo } from './logger';
@@ -67,7 +67,7 @@ export const getDb = (): Firestore => {
   const databaseId = getEnvValue('FIRESTORE_DATABASE_ID');
   if (databaseId) {
   }
-  return databaseId ? adminGetFirestore(app!, databaseId) : adminGetFirestore(app!);
+  return databaseId ? getFirestore(app!, databaseId) : getFirestore(app!);
 };
 
 export const initDb = async (): Promise<void> => {
@@ -75,7 +75,7 @@ export const initDb = async (): Promise<void> => {
   const db = getDb();
   try {
     logInfo('Attempting to list collections to test database connection...');
-    await db.listCollections();
+    await db.collection('users').limit(1).get();
     logInfo('Database connection test successful.');
   } catch (error) {
     logError('Database connection test failed.', error);
@@ -373,7 +373,11 @@ export const listGroupMembers = async (
 
 export const listGroupsForUser = async (userId: string): Promise<Group[]> => {
   const db = getDb();
-  const memberships = await db.collection('group_members').where('userId', '==', userId).where('removedAt', '==', null).get();
+  const memberships = await db
+    .collection('group_members')
+    .where('userId', '==', userId)
+    .where('removedAt', '==', null)
+    .get();
   const groupIds = memberships.docs.map((d) => d.data().groupId as string);
   if (!groupIds.length) return [];
   const groupsSnap = await db.collection('groups').where(FieldPath.documentId(), 'in', groupIds).get();
@@ -486,14 +490,14 @@ export const removeGroupMember = async (requesterId: string, groupId: string, me
       await doc.ref.update({ passengerIds, paidBy });
     }
 
-    const lodgingsSnap = await db.collection('lodgings').where('tripId', '==', tripId).get();
+    const lodgingsSnap = await db.collection('lodgings').where('trip_id', '==', tripId).get();
     for (const doc of lodgingsSnap.docs) {
       const data = doc.data() as any;
-      let paidBy = Array.isArray(data.paidBy) ? data.paidBy.filter((id: string) => id !== memberId) : [];
+      let paidBy = Array.isArray(data.paid_by) ? data.paid_by.filter((id: string) => id !== memberId) : [];
       if (!paidBy.length && fallbackPayerId) {
         paidBy = [fallbackPayerId];
       }
-      await doc.ref.update({ paidBy });
+      await doc.ref.update({ paid_by: paidBy });
     }
 
     const toursSnap = await db.collection('tours').where('tripId', '==', tripId).get();
@@ -535,7 +539,11 @@ export const deleteGroup = async (ownerId: string, groupId: string): Promise<voi
 
 export const listTrips = async (userId: string): Promise<Array<Trip & { groupName: string }>> => {
   const db = getDb();
-  const memberships = await db.collection('group_members').where('userId', '==', userId).where('removedAt', '==', null).get();
+  const memberships = await db
+    .collection('group_members')
+    .where('userId', '==', userId)
+    .where('removedAt', '==', null)
+    .get();
   const groupIds = memberships.docs.map((d) => d.data().groupId as string);
   if (!groupIds.length) return [];
   const trips = await db.collection('trips').where('groupId', 'in', groupIds).get();
@@ -803,13 +811,16 @@ export const getFlightForUser = async (flightId: string, userId: string): Promis
 
 export const listFlights = async (userId: string, tripId?: string): Promise<Flight[]> => {
   const db = getDb();
-  let query: FirebaseFirestore.Query = db.collection('flights').where('userId', '==', userId);
-  if (tripId) query = query.where('tripId', '==', tripId);
+  let query: FirebaseFirestore.Query = db.collection('flights');
+  if (tripId) {
+    query = query.where('tripId', '==', tripId);
+  }
   const snapshot = await query.get();
   let validPassengerIds: Set<string> | null = null;
   if (tripId) {
     const tripDoc = await db.collection('trips').doc(tripId).get();
-    const groupId = tripDoc.exists ? (tripDoc.data() as any)?.groupId : null;
+    const tripData = tripDoc.exists ? (tripDoc.data() as any) : null;
+    const groupId = tripData?.groupId ?? tripData?.group_id ?? null;
     if (groupId) {
       const members = await listGroupMembers(groupId, userId).catch(() => []);
       validPassengerIds = new Set(members.map((m) => String(m.id)));
@@ -817,7 +828,11 @@ export const listFlights = async (userId: string, tripId?: string): Promise<Flig
   }
   return snapshot.docs.map((d) => {
     const data = d.data() as Flight;
-    const ids: string[] = Array.isArray((data as any).passengerIds) ? (data as any).passengerIds : [];
+    const ids: string[] = Array.isArray((data as any).passengerIds)
+      ? (data as any).passengerIds
+      : Array.isArray((data as any).passenger_ids)
+        ? (data as any).passenger_ids
+        : [];
     const passengerInGroup = validPassengerIds ? ids.every((id: string) => validPassengerIds!.has(String(id))) : true;
     return { ...data, passengerInGroup };
   });
@@ -847,16 +862,44 @@ export const searchFlightLocations = async (_userId: string, query: string): Pro
 // Lodgings
 export const listLodgings = async (userId: string, tripId?: string | null): Promise<Lodging[]> => {
   const db = getDb();
-  let query: FirebaseFirestore.Query = db.collection('lodgings').where('userId', '==', userId);
-  if (tripId) query = query.where('tripId', '==', tripId);
+  let query: FirebaseFirestore.Query = db.collection('lodgings').where('user_id', '==', userId);
+  if (tripId) query = query.where('trip_id', '==', tripId);
   const snapshot = await query.get();
   return snapshot.docs.map((d) => d.data() as Lodging);
 };
 
-export const insertLodging = async (lodging: { userId: string } & Omit<Lodging, 'id'>): Promise<Lodging> => {
+export const insertLodging = async (lodging: {
+  userId: string;
+  tripId: string;
+  name: string;
+  checkInDate: string;
+  checkOutDate: string;
+  rooms: number;
+  refundBy?: string | null;
+  totalCost: number;
+  costPerNight: number;
+  address?: string;
+  paid_by?: string[];
+  imageUrl?: string;
+  image_url?: string;
+}): Promise<Lodging> => {
   const db = getDb();
   const id = randomUUID();
-  const payload = { ...lodging, id };
+  const payload: Lodging = {
+    id,
+    user_id: lodging.userId,
+    trip_id: lodging.tripId,
+    name: lodging.name,
+    check_in_date: lodging.checkInDate,
+    check_out_date: lodging.checkOutDate,
+    rooms: lodging.rooms,
+    refund_by: lodging.refundBy ?? '',
+    total_cost: lodging.totalCost,
+    cost_per_night: lodging.costPerNight,
+    address: lodging.address ?? '',
+    paid_by: lodging.paid_by ?? [],
+    imageUrl: lodging.imageUrl ?? lodging.image_url ?? '',
+  };
   await db.collection('lodgings').doc(id).set(payload);
   return payload;
 };
@@ -874,7 +917,11 @@ export const updateLodging = async (lodgingId: string, userId: string, updates: 
   const doc = await db.collection('lodgings').doc(lodgingId).get();
   if (!doc.exists) return null;
   if ((doc.data() as any).userId !== userId) throw new Error('Not authorized');
-  await db.collection('lodgings').doc(lodgingId).update(updates);
+  const updatePayload: Partial<Lodging> = { ...updates };
+  if (updates.imageUrl) {
+    updatePayload.imageUrl = updates.imageUrl;
+  }
+  await db.collection('lodgings').doc(lodgingId).update(updatePayload);
   const updated = await db.collection('lodgings').doc(lodgingId).get();
   return updated.data() as Lodging;
 };
@@ -1238,7 +1285,7 @@ export const removeTravelerFromTrip = async (userId: string, tripId: string, tra
     // 2. Process Flights
     const flightsSnap = await db.collection('flights').where('tripId', '==', tripId).get();
     for (const flightDoc of flightsSnap.docs) {
-      const flight = flightDoc.data() as Flight & { passengerIds?: string[]; paidBy?: string[] };
+      const flight = flightDoc.data() as Flight & { passengerIds?: string[]; paidBy?: string[]; paid_by?: string[] };
       let wasModified = false;
       const updates: Partial<Flight> = {};
 
@@ -1251,12 +1298,12 @@ export const removeTravelerFromTrip = async (userId: string, tripId: string, tra
         wasModified = true;
       }
 
-      const currentPaidBy = (updates.paidBy || flight.paidBy) ?? [];
+      const currentPaidBy = (updates.paidBy || flight.paidBy || flight.paid_by) ?? [];
       if (currentPaidBy.includes(userIdToRemove)) {
         if (currentPaidBy.length === 1) {
-          updates.paidBy = [userId]; 
+          updates.paidBy = [userId];
         } else {
-          updates.paidBy = currentPaidBy.filter((id) => id !== userIdToRemove);
+          updates.paidBy = currentPaidBy.filter((id: string) => id !== userIdToRemove);
         }
         wasModified = true;
       }
@@ -1267,15 +1314,16 @@ export const removeTravelerFromTrip = async (userId: string, tripId: string, tra
     }
 
     // 3. Process Lodgings
-    const lodgingsSnap = await db.collection('lodgings').where('tripId', '==', tripId).get();
+    const lodgingsSnap = await db.collection('lodgings').where('trip_id', '==', tripId).get();
     for (const lodgingDoc of lodgingsSnap.docs) {
-      const lodging = lodgingDoc.data() as Lodging & { paidBy?: string[] };
-      if (lodging.paidBy?.includes(userIdToRemove)) {
-        if (lodging.paidBy.length === 1) {
+      const lodging = lodgingDoc.data() as Lodging & { paidBy?: string[]; paid_by?: string[] };
+      const lodgingPaidBy = lodging.paid_by ?? lodging.paidBy ?? [];
+      if (lodgingPaidBy.includes(userIdToRemove)) {
+        if (lodgingPaidBy.length === 1) {
           batch.delete(lodgingDoc.ref);
         } else {
           const updates: Partial<Lodging> = {
-            paidBy: lodging.paidBy.filter((id) => id !== userIdToRemove),
+            paid_by: lodgingPaidBy.filter((id: string) => id !== userIdToRemove),
           };
           batch.update(lodgingDoc.ref, updates);
         }

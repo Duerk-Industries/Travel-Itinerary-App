@@ -3033,8 +3033,26 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   dayInfoRow: {
-    gap: 4,
+    flexDirection: 'row',
+    gap: 12,
     paddingVertical: 6,
+  },
+  dayInfoText: {
+    flex: 1,
+  },
+  lodgingImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    backgroundColor: '#e5e7eb',
+  },
+  lodgingImageFallback: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    backgroundColor: '#e5e7eb',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   dayInfoRoute: {
     fontSize: 16,

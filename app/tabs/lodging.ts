@@ -2,7 +2,8 @@ import { formatDateLong } from '../utils/formatDateLong';
 
 export type Lodging = {
   id: string;
-  tripId?: string;
+  userId: string;
+  tripId: string;
   name: string;
   checkInDate: string;
   checkOutDate: string;
@@ -11,7 +12,8 @@ export type Lodging = {
   totalCost: string;
   costPerNight: string;
   address: string;
-  paidBy?: string[];
+  paidBy: string[];
+  imageUrl?: string;
 };
 
 export type LodgingDraft = {
@@ -24,19 +26,21 @@ export type LodgingDraft = {
   costPerNight: string;
   address: string;
   paidBy: string[];
+  imageUrl?: string;
 };
 
 // Build a blank lodging draft with today's dates and default room count.
 export const createInitialLodgingState = (): LodgingDraft => ({
   name: '',
-  checkInDate: new Date().toISOString().slice(0, 10),
-  checkOutDate: new Date().toISOString().slice(0, 10),
+  checkInDate: normalizeDate(new Date().toISOString()),
+  checkOutDate: normalizeDate(new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()),
   rooms: '1',
   refundBy: '',
   totalCost: '',
   costPerNight: '',
   address: '',
   paidBy: [],
+  imageUrl: '',
 });
 
 // Calculate whole-night stay length; returns 0 if invalid or checkout <= checkin.
@@ -49,12 +53,19 @@ export const calculateNights = (checkIn: string, checkOut: string): number => {
 
 // Normalize a lodging row from the API.
 export const normalizeLodgingFromApi = (l: any): Lodging => ({
-  ...l,
-  rooms: String(l.rooms ?? ''),
-  totalCost: String(l.totalCost ?? ''),
-  costPerNight: String(l.costPerNight ?? ''),
-  refundBy: l.refundBy ?? '',
-  paidBy: Array.isArray(l.paidBy) ? l.paidBy : [],
+  id: l.id,
+  userId: l.user_id,
+  tripId: l.trip_id,
+  name: l.name,
+  checkInDate: normalizeDate(l.check_in_date),
+  checkOutDate: normalizeDate(l.check_out_date),
+  rooms: String(l.rooms ?? '1'),
+  refundBy: normalizeDate(l.refund_by),
+  totalCost: String(l.total_cost ?? ''),
+  costPerNight: String(l.cost_per_night ?? ''),
+  address: l.address ?? '',
+  paidBy: Array.isArray(l.paid_by) ? l.paid_by : [],
+  imageUrl: l.imageUrl,
 });
 
 // Build a payload for creating/updating lodging; validates dates and cost.
@@ -172,8 +183,8 @@ export const formatLodgingDates = (lodging: Lodging) => ({
   checkOutLabel: formatDateLong(normalizeDate(lodging.checkOutDate)),
 });
 
-const normalizeDate = (date: string) => {
+function normalizeDate(date: string): string {
   if (!date) return '';
   if (/^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
   return new Date(date).toISOString().slice(0, 10);
-};
+}

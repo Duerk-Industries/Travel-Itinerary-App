@@ -96,18 +96,18 @@ export interface Trait {
 
 export interface Lodging {
   id: string;
-  userId: string;
-  tripId: string;
+  user_id: string;
+  trip_id: string;
   name: string;
-  checkInDate: string;
-  checkOutDate: string;
+  check_in_date: string;
+  check_out_date: string;
   rooms: number;
-  refundBy?: string | null;
-  totalCost: number;
-  costPerNight: number;
+  refund_by: string;
+  total_cost: number;
+  cost_per_night: number;
   address: string;
-  paidBy: string[];
-  createdAt: string;
+  paid_by: string[];
+  imageUrl?: string;
 }
 
 export interface Tour {

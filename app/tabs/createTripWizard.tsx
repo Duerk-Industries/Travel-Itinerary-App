@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Linking, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import type { Trait } from './traits';
-import { FlightsTab, type Flight, type GroupMemberOption, type Trip, buildFlightPayload, type FlightEditDraft } from './flights';
+import { FlightsTab, type Flight, type GroupMemberOption, type Trip } from './flights';
 import {
   type Lodging,
   type LodgingDraft,
@@ -18,6 +18,7 @@ import { type CarRental, type CarRentalDraft, buildCarRentalFromDraft, createIni
 import { parsePlanToDetails } from '../utils/itineraryParser';
 import { computeDurationFromRange, formatMonthYear } from '../utils/tripDates';
 import { normalizeDateString } from '../utils/normalizeDateString';
+import { saveWizardFlights, saveWizardLodgings } from '../utils/wizardSaves';
 import {
   TripDetails,
   TripDates,
@@ -787,189 +788,41 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     }
   };
 
-  const saveWizardFlights = async (tripId: string, groupId: string) => {
-    if (!userToken || wizardFlights.length === 0) return;
-    try {
-      const res = await fetch(`${backendUrl}/api/groups/${groupId}/members`, {
-        headers: { Authorization: `Bearer ${userToken}` },
-      });
-      if (!res.ok) {
-        setWizardError('Trip created, but flights could not be saved.');
-        return;
-      }
-      const data = await res.json().catch(() => []);
-      const members = (Array.isArray(data) ? data : []).map((m: any) => ({
-        id: m.id,
-        email: m.email ?? m.userEmail ?? undefined,
-        guestName: m.guestName ?? m.guest_name ?? undefined,
-        firstName: m.firstName ?? m.first_name ?? undefined,
-        lastName: m.lastName ?? m.last_name ?? undefined,
-        status: m.status ?? undefined,
-      }));
-      const activeMembers = members.filter((m: any) => m.status !== 'removed');
-      const memberByEmail = new Map(
-        members
-          .map((m: any) => [String(m.email ?? '').toLowerCase(), m.id] as const)
-          .filter(([email]) => email)
-      );
-      const memberByGuest = new Map(
-        members
-          .map((m: any) => [String(m.guestName ?? '').toLowerCase(), m.id] as const)
-          .filter(([name]) => name)
-      );
-      const wizardMembersById = new Map(wizardGroupMembers.map((m) => [m.id, m] as const));
-      const fallbackPassengerId = activeMembers[0]?.id ?? members[0]?.id ?? null;
-      const fallbackPayerId = activeMembers[0]?.id ?? null;
-      const failures: string[] = [];
-
-      for (const flight of wizardFlights) {
-        const rawPassengerIds = Array.isArray(flight.passenger_ids) ? flight.passenger_ids : [];
-        const resolvedPassengerIds = rawPassengerIds
-          .map((id) => wizardMembersById.get(String(id)))
-          .map((member) => {
-            if (!member) return null;
-            if (member.email) return memberByEmail.get(member.email.toLowerCase()) ?? null;
-            if (member.guestName) return memberByGuest.get(member.guestName.toLowerCase()) ?? null;
-            return null;
-          })
-          .filter(Boolean) as string[];
-
-        const passengerIds = resolvedPassengerIds.length ? resolvedPassengerIds : fallbackPassengerId ? [fallbackPassengerId] : [];
-        if (!passengerIds.length) {
-          failures.push('Missing passengers for a flight.');
-          continue;
-        }
-
-        const rawPaidBy = Array.isArray(flight.paidBy) ? flight.paidBy : Array.isArray((flight as any).paid_by) ? (flight as any).paid_by : [];
-        const resolvedPaidBy = rawPaidBy
-          .map((id: any) => wizardMembersById.get(String(id)))
-          .map((member) => {
-            if (!member || !member.email) return null;
-            return memberByEmail.get(member.email.toLowerCase()) ?? null;
-          })
-          .filter(Boolean) as string[];
-        const paidBy = resolvedPaidBy.length ? resolvedPaidBy : fallbackPayerId ? [fallbackPayerId] : [];
-
-        const draft: FlightEditDraft = {
-          passengerName: flight.passenger_name || 'Traveler',
-          passengerIds,
-          departureDate: normalizeDateString(flight.departure_date || '') || new Date().toISOString().slice(0, 10),
-          arrivalDate: normalizeDateString(flight.arrival_date || '') || normalizeDateString(flight.departure_date || '') || new Date().toISOString().slice(0, 10),
-          departureLocation: flight.departure_location ?? '',
-          departureAirportCode: flight.departure_airport_code ?? '',
-          departureTime: flight.departure_time || '00:00',
-          arrivalLocation: flight.arrival_location ?? '',
-          arrivalAirportCode: flight.arrival_airport_code ?? '',
-          layoverLocation: flight.layover_location ?? '',
-          layoverLocationCode: flight.layover_location_code ?? '',
-          layoverDuration: flight.layover_duration ?? '',
-          arrivalTime: flight.arrival_time || '00:00',
-          cost: String(flight.cost ?? 0),
-          carrier: flight.carrier || 'UNKNOWN',
-          flightNumber: flight.flight_number || 'UNKNOWN',
-          bookingReference: flight.booking_reference || 'UNKNOWN',
-          paidBy,
-        };
-        const payload = buildFlightPayload(draft, tripId, fallbackPayerId ?? undefined);
-        const saveRes = await fetch(`${backendUrl}/api/flights`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...headers },
-          body: JSON.stringify(payload),
-        });
-        if (!saveRes.ok) {
-          const errData = await saveRes.json().catch(() => ({}));
-          failures.push(errData.error || 'Failed to save flight');
-        }
-      }
-
-      if (failures.length) {
-        setWizardError(`Trip created, but ${failures.length} flight(s) failed to save.`);
-      }
-    } catch {
-      setWizardError('Trip created, but flights could not be saved.');
+  const saveWizardFlightsForTrip = async (tripId: string, groupId: string) => {
+    const result = await saveWizardFlights({
+      backendUrl,
+      headers,
+      userToken,
+      groupId,
+      tripId,
+      wizardFlights,
+      wizardGroupMembers,
+    });
+    if (result.fatal) {
+      setWizardError(result.fatal);
+      return;
+    }
+    if (result.failures.length) {
+      setWizardError(`Trip created, but ${result.failures.length} flight(s) failed to save.`);
     }
   };
 
-  const saveWizardLodgings = async (tripId: string, groupId: string) => {
-    if (!userToken || wizardLodgings.length === 0) return;
-    try {
-      const res = await fetch(`${backendUrl}/api/groups/${groupId}/members`, {
-        headers: { Authorization: `Bearer ${userToken}` },
-      });
-      if (!res.ok) {
-        setWizardError('Trip created, but lodging could not be saved.');
-        return;
-      }
-      const data = await res.json().catch(() => []);
-      const members = (Array.isArray(data) ? data : []).map((m: any) => ({
-        id: m.id,
-        email: m.email ?? m.userEmail ?? undefined,
-        guestName: m.guestName ?? m.guest_name ?? undefined,
-        firstName: m.firstName ?? m.first_name ?? undefined,
-        lastName: m.lastName ?? m.last_name ?? undefined,
-        status: m.status ?? undefined,
-      }));
-      const activeMembers = members.filter((m: any) => m.status !== 'removed');
-      const memberByEmail = new Map(
-        members
-          .map((m: any) => [String(m.email ?? '').toLowerCase(), m.id] as const)
-          .filter(([email]) => email)
-      );
-      const memberByGuest = new Map(
-        members
-          .map((m: any) => [String(m.guestName ?? '').toLowerCase(), m.id] as const)
-          .filter(([name]) => name)
-      );
-      const wizardMembersById = new Map(wizardGroupMembers.map((m) => [m.id, m] as const));
-      const fallbackPayerId = activeMembers[0]?.id ?? members[0]?.id ?? null;
-      const failures: string[] = [];
-
-      for (const lodging of wizardLodgings) {
-        const rawPaidBy = Array.isArray(lodging.paidBy) ? lodging.paidBy : [];
-        const resolvedPaidBy = rawPaidBy
-          .map((id) => wizardMembersById.get(String(id)))
-          .map((member) => {
-            if (!member) return null;
-            if (member.email) return memberByEmail.get(member.email.toLowerCase()) ?? null;
-            if (member.guestName) return memberByGuest.get(member.guestName.toLowerCase()) ?? null;
-            return null;
-          })
-          .filter(Boolean) as string[];
-        const paidBy = resolvedPaidBy.length ? resolvedPaidBy : fallbackPayerId ? [fallbackPayerId] : [];
-
-        const draft: LodgingDraft = {
-          name: lodging.name,
-          checkInDate: normalizeDateString(lodging.checkInDate),
-          checkOutDate: normalizeDateString(lodging.checkOutDate),
-          rooms: lodging.rooms || '1',
-          refundBy: lodging.refundBy ? normalizeDateString(lodging.refundBy) : '',
-          totalCost: lodging.totalCost || '',
-          costPerNight: lodging.costPerNight || '',
-          address: lodging.address || '',
-          paidBy,
-        };
-        const { payload, error } = buildLodgingPayload(draft, tripId, fallbackPayerId ?? undefined);
-        if (error || !payload) {
-          failures.push(error || 'Failed to save lodging');
-          continue;
-        }
-        payload.paidBy = paidBy;
-        const saveRes = await fetch(`${backendUrl}/api/lodgings`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...headers },
-          body: JSON.stringify(payload),
-        });
-        if (!saveRes.ok) {
-          const errData = await saveRes.json().catch(() => ({}));
-          failures.push(errData.error || 'Failed to save lodging');
-        }
-      }
-
-      if (failures.length) {
-        setWizardError(`Trip created, but ${failures.length} lodging entr${failures.length === 1 ? 'y' : 'ies'} failed to save.`);
-      }
-    } catch {
-      setWizardError('Trip created, but lodging could not be saved.');
+  const saveWizardLodgingsForTrip = async (tripId: string, groupId: string) => {
+    const result = await saveWizardLodgings({
+      backendUrl,
+      headers,
+      userToken,
+      groupId,
+      tripId,
+      wizardLodgings,
+      wizardGroupMembers,
+    });
+    if (result.fatal) {
+      setWizardError(result.fatal);
+      return;
+    }
+    if (result.failures.length) {
+      setWizardError(`Trip created, but ${result.failures.length} lodging entr${result.failures.length === 1 ? 'y' : 'ies'} failed to save.`);
     }
   };
 
@@ -1110,8 +963,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
       }
       const groupId = data.groupId as string | undefined;
       if (groupId) {
-        await saveWizardFlights(tripId, groupId);
-        await saveWizardLodgings(tripId, groupId);
+        await saveWizardFlightsForTrip(tripId, groupId);
+        await saveWizardLodgingsForTrip(tripId, groupId);
         await saveWizardTours(tripId, groupId);
       }
       if (wizardCarRentals.length) {
