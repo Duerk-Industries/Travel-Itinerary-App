@@ -42,6 +42,7 @@ import { type MapApp, buildMapUrl, loadStoredMapPreference, persistMapPreference
 import { shouldAllowPageChange, shouldDisableTab } from './utils/wizardGuard';
 import * as WebBrowser from 'expo-web-browser';
 import { Buffer } from 'buffer';
+import { loadSession, saveSession, clearSession } from './utils/session';
 
 type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
 let NativeDateTimePicker: NativeDateTimePickerType | null = null;
@@ -172,41 +173,6 @@ const refreshIntervalMs = resolveRefreshIntervalMs();
 const sessionKey = 'stp.session';
 const sessionDurationMs = 12 * 60 * 60 * 1000;
 
-
-const loadSession = (): { token: string; name: string; email?: string; page?: string; tripId?: string | null } | null => {
-  if (Platform.OS !== 'web' || typeof window === 'undefined') return null;
-  try {
-    const raw = window.localStorage.getItem(sessionKey);
-    if (!raw) return null;
-    const data = JSON.parse(raw) as { token: string; name: string; email?: string; expiresAt: number; page?: string; tripId?: string | null };
-    if (!data?.token || !data?.name || !data?.expiresAt) return null;
-    if (Date.now() > data.expiresAt) {
-      window.localStorage.removeItem(sessionKey);
-      return null;
-    }
-    return { token: data.token, name: data.name, email: data.email, page: data.page, tripId: data.tripId ?? null };
-  } catch {
-    return null;
-  }
-};
-
-const saveSession = (token: string, name: string, page?: string, email?: string | null, tripId?: string | null) => {
-  if (Platform.OS !== 'web' || typeof window === 'undefined') return;
-  const payload = {
-    token,
-    name,
-    email: email ?? undefined,
-    page,
-    tripId: tripId ?? undefined,
-    expiresAt: Date.now() + sessionDurationMs,
-  };
-  window.localStorage.setItem(sessionKey, JSON.stringify(payload));
-};
-
-const clearSession = () => {
-  if (Platform.OS !== 'web' || typeof window === 'undefined') return;
-  window.localStorage.removeItem(sessionKey);
-};
 
 const App: React.FC = () => {
   const [userToken, setUserToken] = useState<string | null>(null);
@@ -714,7 +680,11 @@ const App: React.FC = () => {
       lastName: decoded?.lastName ?? '',
       email: decoded?.email ?? '',
     });
-    saveSession(token, name, 'overview', decoded?.email, activeTripId);
+    const previousSession = loadSession();
+    const restoredTripId = previousSession?.tripId ?? activeTripId ?? null;
+    setActiveTripId(restoredTripId);
+    setActivePage('overview');
+    saveSession(token, name, 'overview', decoded?.email, restoredTripId);
     fetchFlights(token);
     fetchLodgings(token);
     fetchTours(token);
@@ -1088,12 +1058,29 @@ const App: React.FC = () => {
       setUserToken(session.token);
       setUserName(session.name);
       setUserEmail(session.email ?? null);
-      if (session.tripId) setActiveTripId(session.tripId);
-      const sessionPage = session.page;
-      if (sessionPage === 'overview' || sessionPage === 'flights' || sessionPage === 'lodging' || sessionPage === 'trips' || sessionPage === 'create-trip' || sessionPage === 'trip-details' || sessionPage === 'itinerary' || sessionPage === 'tours' || sessionPage === 'cost' || sessionPage === 'account' || sessionPage === 'follow') {
-        setActivePage(sessionPage as Page);
+      const tripId = session.tripId ?? null;
+      if (tripId) {
+        setActiveTripId(tripId);
+        setActivePage('overview');
       } else {
-        setActivePage('menu');
+        const sessionPage = session.page;
+        if (
+          sessionPage === 'overview' ||
+          sessionPage === 'flights' ||
+          sessionPage === 'lodging' ||
+          sessionPage === 'trips' ||
+          sessionPage === 'create-trip' ||
+          sessionPage === 'trip-details' ||
+          sessionPage === 'itinerary' ||
+          sessionPage === 'tours' ||
+          sessionPage === 'cost' ||
+          sessionPage === 'account' ||
+          sessionPage === 'follow'
+        ) {
+          setActivePage(sessionPage as Page);
+        } else {
+          setActivePage('menu');
+        }
       }
     }
   }, [userToken]);
