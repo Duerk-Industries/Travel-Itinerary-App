@@ -16,11 +16,7 @@ echo "  Region: $REGION"
 echo "  Source: $SOURCE_DIR"
 
 if [[ -z "$ENV_FILE" ]]; then
-  if [[ -f "server/.env" ]]; then
-    ENV_FILE="server/.env"
-  elif [[ -f ".env" ]]; then
-    ENV_FILE=".env"
-  fi
+  ENV_FILE="server/.env"
 fi
 
 trim() {

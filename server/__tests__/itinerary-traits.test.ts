@@ -2,10 +2,10 @@ import request from 'supertest';
 import { Pool } from 'pg';
 import { app } from '../src/app';
 import { initDb, closePool } from '../src/db';
-import fetch from 'node-fetch';
+import axios from 'axios';
 
-jest.mock('node-fetch');
-const mockedFetch = fetch as unknown as jest.Mock;
+jest.mock('axios');
+const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 describe('Itinerary generation and trait lifecycle', () => {
   let pool: Pool;
@@ -29,7 +29,7 @@ describe('Itinerary generation and trait lifecycle', () => {
   });
 
   beforeEach(() => {
-    mockedFetch.mockReset();
+    mockedAxios.post.mockReset();
   });
 
   it('creates and deletes a custom trait via API', async () => {
@@ -79,12 +79,11 @@ describe('Itinerary generation and trait lifecycle', () => {
 
   it('generates an itinerary successfully', async () => {
     // Mock OpenAI response
-    mockedFetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({
+    mockedAxios.post.mockResolvedValue({
+      data: {
         choices: [{ message: { content: 'Day 1: Activity $100\nDay 2: Fun $150' } }],
-      }),
-    } as any);
+      },
+    });
 
     // Create group
     const groupRes = await request(app)

@@ -10,6 +10,8 @@ export const closePool = async (): Promise<void> => adapter().closePool();
 export const initDb = async (): Promise<void> => adapter().initDb();
 export const findOrCreateUser = async (...args: Parameters<ReturnType<typeof adapter>['findOrCreateUser']>) =>
   adapter().findOrCreateUser(...args);
+export const findOrCreateGoogleUser = async (...args: Parameters<ReturnType<typeof adapter>['findOrCreateGoogleUser']>) =>
+    adapter().findOrCreateGoogleUser(...args);
 export const ensureDefaultGroupForUser = async (...args: Parameters<ReturnType<typeof adapter>['ensureDefaultGroupForUser']>) =>
   adapter().ensureDefaultGroupForUser(...args);
 export const findUserByEmail = async (email: string): Promise<User | null> => adapter().findUserByEmail(email);

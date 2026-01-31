@@ -1,10 +1,38 @@
 import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
-import { findOrCreateUser } from './db';
+import { findOrCreateUser, findOrCreateGoogleUser } from './db';
 import { User } from './types';
 import { getEnvValue } from './env';
+import passport from 'passport';
+import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 
 const secret = getEnvValue('AUTH_SECRET', { defaultValue: 'development-secret' })!;
+
+export const initPassport = () => {
+    const googleClientId = getEnvValue('GOOGLE_CLIENT_ID');
+    const googleClientSecret = getEnvValue('GOOGLE_CLIENT_SECRET');
+    const googleCallbackUrl = getEnvValue('GOOGLE_CALLBACK_URL');
+    if (googleClientId && googleClientSecret) {
+        passport.use(new GoogleStrategy({
+            clientID: googleClientId,
+            clientSecret: googleClientSecret,
+            callbackURL: googleCallbackUrl || '/api/auth/google/callback',
+            scope: ['profile', 'email'],
+        },
+        async (_accessToken, _refreshToken, profile, done) => {
+            const user = await findOrCreateGoogleUser(profile);
+            return done(null, user);
+        }));
+    }
+
+    passport.serializeUser((user, done) => {
+        done(null, user);
+    });
+
+    passport.deserializeUser((user: User, done) => {
+        done(null, user);
+    });
+};
 
 interface TokenPayload {
   userId: string;

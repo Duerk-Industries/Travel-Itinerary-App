@@ -22,6 +22,24 @@ export const createMemoryAdapter = () => {
       returns: DataType.text,
       implementation: formatDate,
     });
+    db.public.registerFunction({
+      name: 'nullif',
+      args: [DataType.text, DataType.text],
+      returns: DataType.text,
+      implementation: (value: string | null, compare: string | null) => {
+        if (value == null) return null;
+        return value === compare ? null : value;
+      },
+    });
+    db.public.registerFunction({
+      name: 'replace',
+      args: [DataType.text, DataType.text, DataType.text],
+      returns: DataType.text,
+      implementation: (value: string | null, find: string | null, replaceWith: string | null) => {
+        if (value == null || find == null || replaceWith == null) return value;
+        return value.split(find).join(replaceWith);
+      },
+    });
     poolFactory = pgMem.Pool;
   }
 

@@ -32,14 +32,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$ENV_FILE" ]]; then
-  if [[ -f "server/.env" ]]; then
-    ENV_FILE="server/.env"
-  elif [[ -f ".env" ]]; then
-    ENV_FILE=".env"
-  else
-    echo "No .env file found. Provide one as the first argument." >&2
-    exit 1
-  fi
+  ENV_FILE="server/.env"
 fi
 
 if [[ ! -f "$ENV_FILE" ]]; then
@@ -52,12 +45,8 @@ if [[ "$(basename "$ENV_FILE")" == ".local_env" ]]; then
   exit 1
 fi
 
-if [[ -z "$SECRETS_FILE" ]]; then
-  if [[ -f "server/.secrets" ]]; then
-    SECRETS_FILE="server/.secrets"
-  elif [[ -f ".secrets" ]]; then
-    SECRETS_FILE=".secrets"
-  fi
+if [[ -z "$SECRETS_FILE" && -f "server/.secrets" ]]; then
+  SECRETS_FILE="server/.secrets"
 fi
 
 trim() {
@@ -154,6 +143,31 @@ while IFS= read -r line || [[ -n "$line" ]]; do
   value="${value//,/\\,}"
   env_pairs+=("${key}=${value}")
 done < "$ENV_FILE"
+
+if [[ -z "$project_id" && -n "$SECRETS_FILE" && -f "$SECRETS_FILE" ]]; then
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    line="${line%%$'
+'}"
+    if is_comment_or_empty "$line"; then
+      continue
+    fi
+    if [[ "$line" == export\ * ]]; then
+      line="${line#export }"
+    fi
+    line="$(strip_inline_comment "$line")"
+    line="$(trim "$line")"
+    [[ "$line" != *"="* ]] && continue
+    key="$(trim "${line%%=*} ")"
+    value="$(trim "${line#*=}")"
+    if [[ "$value" =~ ^".*"$ || "$value" =~ ^'.*'$ ]]; then
+      value="${value:1:${#value}-2}"
+    fi
+    if [[ "$key" == "GCLOUD_PROJECT_ID" || "$key" == "GOOGLE_CLOUD_PROJECT" ]]; then
+      project_id="$value"
+      break
+    fi
+  done < "$SECRETS_FILE"
+fi
 
 if [[ "${#env_pairs[@]}" -eq 0 ]]; then
   echo "No env vars parsed from $ENV_FILE." >&2

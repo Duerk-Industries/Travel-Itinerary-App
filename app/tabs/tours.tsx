@@ -88,6 +88,24 @@ export const createTourForTrip = async (params: {
   return { ok: true };
 };
 
+export const removeTourApi = async (
+  backendUrl: string,
+  jsonHeaders: Record<string, string>,
+  id: string
+): Promise<{ ok: boolean; error?: string }> => {
+  const res = await fetch(`${backendUrl}/api/tours/${id}`, { method: 'DELETE', headers: jsonHeaders });
+  if (!res.ok) {
+    let data: any = {};
+    try {
+      data = await res.json();
+    } catch {
+      // ignore
+    }
+    return { ok: false, error: data.error || 'Unable to delete tour' };
+  }
+  return { ok: true };
+};
+
 export const fetchToursForTrip = async ({
   backendUrl,
   activeTripId,
@@ -130,6 +148,7 @@ type TourTabProps = {
   styles: ReturnType<typeof StyleSheet.create>;
   nativeDateTimePicker: NativeDateTimePickerType | null;
   fetchTours: (token?: string) => Promise<void>;
+  mode?: 'live' | 'wizard';
 };
 
 export const TourTab: React.FC<TourTabProps> = ({
@@ -148,6 +167,7 @@ export const TourTab: React.FC<TourTabProps> = ({
   styles,
   nativeDateTimePicker,
   fetchTours,
+  mode = 'live',
 }) => {
   const [editingTour, setEditingTour] = useState<TourDraft | null>(null);
   const [editingTourId, setEditingTourId] = useState<string | null>(null);
@@ -156,7 +176,7 @@ export const TourTab: React.FC<TourTabProps> = ({
   const DateTimePickerComponent = nativeDateTimePicker;
 
   const openTourEditor = (tour?: Tour) => {
-    if (!activeTripId) {
+    if (mode !== 'wizard' && !activeTripId) {
       alert('Select an active trip before adding a tour.');
       return;
     }
@@ -212,6 +232,20 @@ export const TourTab: React.FC<TourTabProps> = ({
     if ((!payload.paidBy || payload.paidBy.length === 0) && defaultPayerId) {
       payload = { ...payload, paidBy: [defaultPayerId] };
     }
+    if (mode === 'wizard') {
+      setTours((prev) => {
+        const next: Tour = {
+          id: editingTourId ?? `wizard-tour-${Date.now()}-${Math.round(Math.random() * 10000)}`,
+          ...payload,
+        };
+        if (editingTourId) {
+          return prev.map((t) => (t.id === editingTourId ? next : t));
+        }
+        return [...prev, next];
+      });
+      closeTourEditor();
+      return;
+    }
     if (!activeTripId) {
       alert('Select an active trip before saving a tour.');
       return;
@@ -243,9 +277,13 @@ export const TourTab: React.FC<TourTabProps> = ({
   };
 
   const removeTour = (id: string) => {
-    fetch(`${backendUrl}/api/tours/${id}`, { method: 'DELETE', headers: jsonHeaders })
-      .then((res) => {
-        if (!res.ok) throw new Error('Unable to delete tour');
+    if (mode === 'wizard') {
+      setTours((prev) => prev.filter((t) => t.id !== id));
+      return;
+    }
+    removeTourApi(backendUrl, jsonHeaders, id)
+      .then((result) => {
+        if (!result.ok) throw new Error(result.error || 'Unable to delete tour');
         fetchTours();
       })
       .catch((err) => alert(err.message));

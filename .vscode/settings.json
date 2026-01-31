@@ -1,39 +1,58 @@
 {
     "chatgpt.runCodexInWindowsSubsystemForLinux": true,
     "cSpell.words": [
+        "AAPT",
+        "allprojects",
+        "armeabi",
         "artifactregistry",
+        "buildscript",
         "cloudbuild",
         "datetimepicker",
+        "dists",
         "dnschecker",
+        "dropoff",
         "Firestore",
         "geoloc",
+        "gsub",
+        "hostport",
+        "jvmargs",
+        "Metaspace",
         "ossp",
+        "Preact",
+        "predeploy",
         "Prereqs",
+        "rels",
         "Runbook",
         "secretmanager",
         "Squarespace",
         "tesseract",
         "themself",
-        "travelitineraryplanner"
+        "travelitineraryplanner",
+        "webp"
     ],
     "diffEditor.codeLens": true,
     "geminicodeassist.codeGenerationPaneViewEnabled": true,
     "geminicodeassist.updateChannel": "Insiders",
-    "java.jdt.ls.java.home": "C:\\Program Files\\Amazon Corretto\\jdk25.0.1_8",
+    "java.jdt.ls.java.home": "C:\\Program Files\\Amazon Corretto\\jdk21.0.10_7",
     "terminal.integrated.env.windows": {
-        "JAVA_HOME": "C:\\Program Files\\Amazon Corretto\\jdk25.0.1_8"
+        "JAVA_HOME": "C:\\Program Files\\Amazon Corretto\\jdk21.0.10_7"
     },
     "java.configuration.updateBuildConfiguration": "automatic",
-    "terminal.integrated.defaultProfile.windows": "WSL Bash",
+    "terminal.integrated.defaultProfile.windows": "PowerShell",
     "terminal.integrated.profiles.windows": {
+        "PowerShell": {
+            "source": "PowerShell"
+        },
         "WSL Bash": {
             "path": "C:\\Windows\\System32\\wsl.exe",
             "args": [
                 "-e",
                 "bash",
-                "-l"
+                "-l",
+                "-i"
             ]
         }
     },
-    "geminicodeassist.project": "travel-itinerary-app-483623"
+    "geminicodeassist.project": "travel-itinerary-app-483623",
+    "java.jdt.ls.vmargs": "-XX:+UseParallelGC -XX:GCTimeRatio=4 -XX:AdaptiveSizePolicyWeight=90 -Dsun.zip.disableMemoryMapping=true -Xmx4G -Xms100m -Xlog:disable"
 }

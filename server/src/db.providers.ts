@@ -1,5 +1,6 @@
 import * as postgresAdapter from './db.postgres';
 import * as firebaseAdapter from './db.firebase';
+import { logInfo } from './logger';
 
 export type DbProvider = 'postgres' | 'memory' | 'dynamodb' | 'firebase';
 export type DatabaseAdapter = typeof postgresAdapter;
@@ -56,7 +57,11 @@ const normalizeProvider = (raw: string | undefined): DbProvider => {
 
 const detectProvider = (): DbProvider => {
   if (process.env.USE_IN_MEMORY_DB === '1') return 'memory';
-  return normalizeProvider(process.env.DB_PROVIDER);
+  if (process.env.DB_PROVIDER && process.env.DB_PROVIDER.trim().length > 0) {
+    return normalizeProvider(process.env.DB_PROVIDER);
+  }
+  if (process.env.FIRESTORE_EMULATOR_HOST) return 'firebase';
+  return normalizeProvider(undefined);
 };
 
 const makeAdapter = (provider: DbProvider): DatabaseAdapter => {
@@ -80,6 +85,9 @@ export const getDbAdapter = (): DatabaseAdapter => {
     const provider = detectProvider();
     cachedAdapter = makeAdapter(provider);
     cachedProvider = provider;
+    logInfo(
+      `[db] Using ${provider} adapter${process.env.FIRESTORE_EMULATOR_HOST ? ' (FIRESTORE_EMULATOR_HOST detected)' : ''}`
+    );
   }
   return cachedAdapter;
 };

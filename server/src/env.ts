@@ -7,11 +7,6 @@ type EnvOptions = {
 };
 
 export const getEnvValue = (key: string, options: EnvOptions = {}): string | undefined => {
-  const direct = process.env[key];
-  if (direct && direct.length > 0) {
-    return direct;
-  }
-
   const fileKey = `${key}_FILE`;
   const filePath = process.env[fileKey];
   if (filePath && filePath.length > 0 && fs.existsSync(filePath)) {
@@ -20,6 +15,11 @@ export const getEnvValue = (key: string, options: EnvOptions = {}): string | und
     if (trimmed.length > 0) {
       return trimmed;
     }
+  }
+
+  const direct = process.env[key];
+  if (direct && direct.length > 0) {
+    return direct;
   }
 
   if (options.defaultValue !== undefined) {
@@ -42,6 +42,9 @@ export const hasRunLocalFlag = (filePath: string): boolean => {
 };
 
 export const isLocalEnv = (): boolean => {
+  if (process.env.K_SERVICE) {
+    return false;
+  }
   // Check for a marker file that only exists in the local dev environment.
   return hasRunLocalFlag(path.resolve(__dirname, '../.local_env'));
 };

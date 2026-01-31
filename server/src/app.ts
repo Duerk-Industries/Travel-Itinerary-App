@@ -14,31 +14,34 @@ import traitRoutes from './routes/traitRoutes';
 import lodgingRoutes from './routes/lodgingRoutes';
 import tourRoutes from './routes/tourRoutes';
 import accountRoutes, { groupsRouter } from './routes/accountRoutes';
-import { hasRunLocalFlag } from './env';
 
-// Load env vars from server/.env and server/.secrets (plus repo root fallbacks).
+import { loadEnv } from './env_loader';
+import { getEnvValue, hasRunLocalFlag, isLocalEnv } from './env';
+
+// Load env vars from server/.env and optionally server/.secrets (plus repo root fallbacks).
 // .local_env files load only when RUN_LOCAL=1 is set inside that file.
 // Later files override earlier ones to make local overrides and secrets take precedence.
-const envPaths = [
-  path.resolve(__dirname, '../.env'),
-  path.resolve(__dirname, '../../.env'),
-  path.resolve(__dirname, '../.secrets'),
-  path.resolve(__dirname, '../../.secrets'),
-];
 const localEnvPaths = [
   path.resolve(__dirname, '../.local_env'),
   path.resolve(__dirname, '../../.local_env'),
 ];
+const isLocalFlag = localEnvPaths.some((envPath) => hasRunLocalFlag(envPath));
+const envPaths = [
+  path.resolve(__dirname, '../.env'),
+  path.resolve(__dirname, '../../.env'),
+  ...(isLocalFlag ? [path.resolve(__dirname, '../.secrets'), path.resolve(__dirname, '../../.secrets')] : []),
+];
 const loadedEnvPaths: string[] = [];
+const shouldOverride = !process.env.JEST_WORKER_ID;
 for (const envPath of envPaths) {
   if (fs.existsSync(envPath)) {
-    dotenv.config({ path: envPath, override: true });
+    dotenv.config({ path: envPath, override: shouldOverride });
     loadedEnvPaths.push(envPath);
   }
 }
 for (const envPath of localEnvPaths) {
   if (hasRunLocalFlag(envPath)) {
-    dotenv.config({ path: envPath, override: true });
+    dotenv.config({ path: envPath, override: shouldOverride });
     loadedEnvPaths.push(envPath);
   }
 }
@@ -53,8 +56,32 @@ if (loadedEnvPaths.length === 0) {
 export { envLoadedFrom };
 
 export const app = express();
+app.set('trust proxy', 1);
+
+const isRunningLocally = isLocalEnv();
+const webUrl = getEnvValue('WEB_URL', { defaultValue: 'https://duerk.org' });
+const allowedOrigins = isRunningLocally
+  ? [/^http:\/\/localhost(:\d+)?$/, /^http:\/\/127\.0\.0\.1(:\d+)?$/]
+  : [webUrl];
+
 app.use(cors({
-  origin: 'https://duerk.org',
+  origin: (origin, callback) => {
+    if (!origin) {
+      // Allow requests with no origin, like mobile apps or curl requests.
+      return callback(null, true);
+    }
+    for (const allowedOrigin of allowedOrigins) {
+      if (typeof allowedOrigin === 'string') {
+        if (allowedOrigin === origin) {
+          return callback(null, true);
+        }
+      } else if (allowedOrigin && allowedOrigin.test(origin)) {
+        return callback(null, true);
+      }
+    }
+    const msg = `The CORS policy for this site does not allow access from the specified Origin: ${origin}`;
+    return callback(new Error(msg));
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
@@ -104,6 +131,34 @@ if (!hasWebApp) {
 }
 
 app.use(express.static(publicDir));
+
+import passport from 'passport';
+import { initPassport, createToken } from './auth';
+import { logError } from './logger';
+
+initPassport();
+app.use(passport.initialize());
+
+if (!isLocalEnv() && getEnvValue('AUTH_SECRET') === 'development-secret') {
+    logError('[WARNING] AUTH_SECRET is not set or is using the default value in a non-local environment. This is a security risk and will cause authentication to fail.');
+}
+
+app.get('/api/auth/google', (req, _res, next) => {
+  next();
+}, passport.authenticate('google', { scope: ['profile', 'email'] }));
+
+app.get(
+  '/api/auth/google/callback',
+  (req, _res, next) => {
+    next();
+  },
+  passport.authenticate('google', { failureRedirect: '/login', session: false }),
+  (req, res) => {
+    const user = req.user as any;
+    const token = createToken({ userId: user.id, email: user.email, provider: user.provider });
+    res.redirect(`/login?token=${token}`);
+  }
+);
 
 app.use('/api/auth', authRoutes);
 // Alias web-auth routes under /api/auth to keep legacy tests and clients working.

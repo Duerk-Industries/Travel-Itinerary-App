@@ -39,6 +39,10 @@ import {
 } from './tabs/lodging';
 import { InvitePayload } from './utils/inviteCodes';
 import { type MapApp, buildMapUrl, loadStoredMapPreference, persistMapPreference } from './utils/mapLinks';
+import { shouldAllowPageChange, shouldDisableTab } from './utils/wizardGuard';
+import * as WebBrowser from 'expo-web-browser';
+import { Buffer } from 'buffer';
+import { loadSession, saveSession, clearSession } from './utils/session';
 
 type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
 let NativeDateTimePicker: NativeDateTimePickerType | null = null;
@@ -122,36 +126,39 @@ const resolveBackendUrl = (): string => {
   const envConfigured =
     (typeof process !== 'undefined' && (process.env.EXPO_PUBLIC_BACKEND_URL ?? process.env.REACT_NATIVE_APP_BACKEND_URL)) || '';
   const appConfigured = Constants.expoConfig?.extra?.backendUrl;
-  const raw = [envConfigured, appConfigured, 'http://localhost:4000'].find(
+  const configuredBackend = [envConfigured, appConfigured].find(
     (val) => typeof val === 'string' && val.trim().length > 0
-  ) as string;
-  const normalizedRaw = raw.startsWith('http://') || raw.startsWith('https://') ? raw.trim() : `http://${raw.trim()}`;
-
-  if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    const { origin, hostname, port, protocol } = window.location;
-    const isExpoDevServer = port === '19006' || port === '19000';
-    const isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
-    const scheme = protocol === 'https:' ? 'https' : 'http';
-
-    if (envConfigured || appConfigured) {
-      return normalizedRaw;
+  ) as string | undefined;
+  const isLocalHost = (value: string) => /^(localhost|127\.0\.0\.1)$/i.test(value);
+  const normalizeBackendUrl = (raw: string, defaultProtocol: 'http' | 'https'): string => {
+    const trimmed = raw.trim();
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
     }
-
-    // On Expo web dev server, target the same host on port 4000 so LAN devices can reach the API.
-    if (isExpoDevServer) {
-      return `${scheme}://${hostname}:4000`;
+    return `${defaultProtocol}://${trimmed}`;
+  };
+  if (process.env.NODE_ENV === 'development') {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const { hostname, protocol } = window.location;
+      if (isLocalHost(hostname)) {
+        if (configuredBackend && isLocalHost(new URL(normalizeBackendUrl(configuredBackend, 'http')).hostname)) {
+          return normalizeBackendUrl(configuredBackend, 'http');
+        }
+        return `${protocol}//${hostname}:4000`;
+      }
     }
-
-    // When hosted behind a proxy/server (non-Expo dev), use same-origin to avoid mixed-content/CORS.
-    if (origin.startsWith('http')) {
-      return origin;
-    }
-    if (isLocalHost) {
-      return `${scheme}://${hostname}:4000`;
+    if (configuredBackend) {
+      return normalizeBackendUrl(configuredBackend, 'http');
     }
   }
-
-  return normalizedRaw;
+  if (process.env.NODE_ENV === 'development') {
+    if (configuredBackend) {
+      return normalizeBackendUrl(configuredBackend, 'http');
+    }
+    return 'http://localhost:4000';
+  }
+  const raw = configuredBackend ?? 'https://duerk.org';
+  return normalizeBackendUrl(raw, 'https');
 };
 
 const resolveRefreshIntervalMs = (): number => {
@@ -166,45 +173,6 @@ const refreshIntervalMs = resolveRefreshIntervalMs();
 const sessionKey = 'stp.session';
 const sessionDurationMs = 12 * 60 * 60 * 1000;
 
-if (Platform.OS === 'web') {
-  // Surface the selected backend in the browser console to simplify network debugging.
-  console.info('[STP] Backend URL:', backendUrl);
-}
-
-const loadSession = (): { token: string; name: string; email?: string; page?: string; tripId?: string | null } | null => {
-  if (Platform.OS !== 'web' || typeof window === 'undefined') return null;
-  try {
-    const raw = window.localStorage.getItem(sessionKey);
-    if (!raw) return null;
-    const data = JSON.parse(raw) as { token: string; name: string; email?: string; expiresAt: number; page?: string; tripId?: string | null };
-    if (!data?.token || !data?.name || !data?.expiresAt) return null;
-    if (Date.now() > data.expiresAt) {
-      window.localStorage.removeItem(sessionKey);
-      return null;
-    }
-    return { token: data.token, name: data.name, email: data.email, page: data.page, tripId: data.tripId ?? null };
-  } catch {
-    return null;
-  }
-};
-
-const saveSession = (token: string, name: string, page?: string, email?: string | null, tripId?: string | null) => {
-  if (Platform.OS !== 'web' || typeof window === 'undefined') return;
-  const payload = {
-    token,
-    name,
-    email: email ?? undefined,
-    page,
-    tripId: tripId ?? undefined,
-    expiresAt: Date.now() + sessionDurationMs,
-  };
-  window.localStorage.setItem(sessionKey, JSON.stringify(payload));
-};
-
-const clearSession = () => {
-  if (Platform.OS !== 'web' || typeof window === 'undefined') return;
-  window.localStorage.removeItem(sessionKey);
-};
 
 const App: React.FC = () => {
   const [userToken, setUserToken] = useState<string | null>(null);
@@ -283,7 +251,6 @@ const App: React.FC = () => {
   const [fellowTravelers, setFellowTravelers] = useState<FellowTraveler[]>([]);
   const [showRelationshipDropdown, setShowRelationshipDropdown] = useState(false);
   const formatMemberName = (member: GroupMemberOption): string => {
-    if (member.guestName) return member.guestName;
     const norm = (val?: string | null) => {
       const t = val?.trim();
       if (!t || t.toLowerCase() === 'unknown') return '';
@@ -294,6 +261,7 @@ const App: React.FC = () => {
     const email = member.email?.trim();
     const status = member.status;
     if (first || last) return `${first ?? ''} ${last ?? ''}`.trim();
+    if (member.guestName) return member.guestName;
     if (email) {
       const local = email.split('@')[0] ?? '';
       const parts = local.split(/[._-]+/).filter(Boolean);
@@ -325,6 +293,12 @@ const App: React.FC = () => {
     },
     [setAccountProfile]
   );
+
+  const isTripWizardOpen = activePage === 'create-trip';
+  const requestPageChange = (page: Page) => {
+    if (!shouldAllowPageChange(activePage, page)) return;
+    setActivePage(page);
+  };
 
   const openMaps = (address: string) => {
     const url = buildMapUrl(address, mapApp);
@@ -432,7 +406,7 @@ const App: React.FC = () => {
   };
 
   const userMembers = useMemo(
-    () => groupMembers.filter((m) => !m.guestName && m.status !== 'pending' && m.status !== 'removed'),
+    () => groupMembers.filter((m) => !m.guestName && m.status !== 'removed'),
     [groupMembers]
   );
 
@@ -661,6 +635,111 @@ const App: React.FC = () => {
     [backendUrl, setFellowTravelers, userToken]
   );
 
+  const buildLoginRedirectUrl = () => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      return `${window.location.origin}/login`;
+    }
+    if (typeof Linking?.createURL === 'function') {
+      return Linking.createURL('/login');
+    }
+    const base = typeof window !== 'undefined' ? window.location.origin : backendUrl;
+    return `${base}/login`;
+  };
+
+  const loginWithGoogle = async () => {
+    const redirectUrl = buildLoginRedirectUrl();
+    const authUrl = `${backendUrl}/api/auth/google?redirect_uri=${encodeURIComponent(redirectUrl)}`;
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.location.assign(authUrl);
+      return;
+    }
+    await WebBrowser.openBrowserAsync(authUrl);
+  };
+
+  const handleAuthSuccess = (token: string) => {
+    let decoded: { firstName?: string; lastName?: string; email?: string; provider?: string } | null = null;
+    try {
+      const payload = token.split('.')[1];
+      if (payload) {
+        const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+        const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+        decoded = JSON.parse(Buffer.from(padded, 'base64').toString());
+      }
+    } catch {
+      decoded = null;
+    }
+    const name =
+      `${decoded?.firstName ?? ''} ${decoded?.lastName ?? ''}`.trim() || decoded?.email || 'Traveler';
+    setUserToken(token);
+    setUserName(name);
+    if (decoded?.email) {
+      setUserEmail(decoded.email);
+    }
+    setAccountProfile({
+      firstName: decoded?.firstName ?? '',
+      lastName: decoded?.lastName ?? '',
+      email: decoded?.email ?? '',
+    });
+    const previousSession = loadSession();
+    const restoredTripId = previousSession?.tripId ?? activeTripId ?? null;
+    setActiveTripId(restoredTripId);
+    setActivePage('overview');
+    saveSession(token, name, 'overview', decoded?.email, restoredTripId);
+    fetchFlights(token);
+    fetchLodgings(token);
+    fetchTours(token);
+    fetchInvites(token);
+    loadAccountProfile(token);
+    loadFamilyRelationships(token);
+    loadFellowTravelers(token);
+    setActivePage('overview');
+  }
+
+  useEffect(() => {
+    const extractTokenFromUrl = (rawUrl: string) => {
+      const url = new URL(rawUrl);
+      const token = url.searchParams.get('token');
+      if (token) {
+        return { token, url, source: 'query' as const };
+      }
+      const hash = url.hash.startsWith('#') ? url.hash.slice(1) : url.hash;
+      if (hash) {
+        const hashParams = new URLSearchParams(hash);
+        const hashToken = hashParams.get('token');
+        if (hashToken) {
+          return { token: hashToken, url, source: 'hash' as const };
+        }
+      }
+      return { token: null, url, source: null as const };
+    };
+
+    const handleDeepLink = (event: { url: string }) => {
+      const { token } = extractTokenFromUrl(event.url);
+      if (token) {
+        handleAuthSuccess(token);
+      }
+    };
+
+    const subscription = Linking.addEventListener('url', handleDeepLink);
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const { token, url } = extractTokenFromUrl(window.location.href);
+      if (token) {
+        handleAuthSuccess(token);
+        url.searchParams.delete('token');
+        if (url.hash) {
+          const hashParams = new URLSearchParams(url.hash.slice(1));
+          hashParams.delete('token');
+          const newHash = hashParams.toString();
+          url.hash = newHash ? `#${newHash}` : '';
+        }
+        window.history.replaceState({}, '', url.toString());
+      }
+    }
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
   const loginWithPassword = async () => {
     try {
       const res = await fetch(`${backendUrl}/api/web-auth/login`, {
@@ -677,25 +756,7 @@ const App: React.FC = () => {
         alert(data.error || 'Login failed');
         return;
       }
-      const name = `${data.user.firstName ?? ''} ${data.user.lastName ?? ''}`.trim() || 'Traveler';
-      const email = authForm.email.trim();
-      setUserToken(data.token);
-      setUserName(name);
-      setUserEmail(email);
-      setAccountProfile({
-        firstName: data.user.firstName ?? '',
-        lastName: data.user.lastName ?? '',
-        email,
-      });
-      saveSession(data.token, name, 'overview', email, activeTripId);
-      fetchFlights(data.token);
-      fetchLodgings(data.token);
-      fetchTours(data.token);
-      fetchInvites(data.token);
-      loadAccountProfile(data.token);
-      loadFamilyRelationships(data.token);
-      loadFellowTravelers(data.token);
-      setActivePage('overview');
+      handleAuthSuccess(data.token);
     } catch (err) {
       alert((err as Error).message || 'Login failed');
     }
@@ -727,25 +788,7 @@ const App: React.FC = () => {
         alert(data.error || 'Registration failed');
         return;
       }
-      const name = `${data.user.firstName ?? ''} ${data.user.lastName ?? ''}`.trim() || 'Traveler';
-      const email = authForm.email.trim();
-      setUserToken(data.token);
-      setUserName(name);
-      setUserEmail(email);
-      setAccountProfile({
-        firstName: data.user.firstName ?? '',
-        lastName: data.user.lastName ?? '',
-        email,
-      });
-      saveSession(data.token, name, 'create-trip', email, activeTripId);
-      fetchFlights(data.token);
-      fetchLodgings(data.token);
-      fetchTours(data.token);
-      fetchInvites(data.token);
-      loadAccountProfile(data.token);
-      loadFamilyRelationships(data.token);
-      loadFellowTravelers(data.token);
-      setActivePage('create-trip');
+      handleAuthSuccess(data.token);
     } catch (err) {
       alert((err as Error).message || 'Registration failed');
     }
@@ -822,6 +865,10 @@ const App: React.FC = () => {
     const res = await fetch(`${backendUrl}/api/groups?sort=${sort ?? groupSort}`, {
       headers: { Authorization: `Bearer ${userToken}` },
     });
+    if (res.status === 401 || res.status === 403) {
+      logout();
+      return;
+    }
     if (!res.ok) return;
     const data = await res.json();
     const normalized = (Array.isArray(data) ? data : []).map((group: GroupView) => ({
@@ -834,15 +881,29 @@ const App: React.FC = () => {
     }
   };
 
-  const fetchTrips = async () => {
-    const res = await fetch(`${backendUrl}/api/trips`, { headers: { Authorization: `Bearer ${userToken}` } });
-    if (!res.ok) return;
-    const data = await res.json();
-    setTrips(data);
-    if (!activeTripId && data.length) {
-      setActiveTripId(data[0].id);
-    } else if (activeTripId && !data.find((t: Trip) => t.id === activeTripId)) {
-      setActiveTripId(data[0]?.id ?? null);
+  const fetchTrips = async (tokenOverride?: string): Promise<Trip[]> => {
+    const authToken = tokenOverride ?? userToken;
+    if (!authToken) {
+      setTrips([]);
+      return [];
+    }
+    try {
+      const res = await fetch(`${backendUrl}/api/trips`, { headers: { Authorization: `Bearer ${authToken}` } });
+      if (res.status === 401 || res.status === 403) {
+        logout();
+        return [];
+      }
+      if (!res.ok) return [];
+      const data = await res.json();
+      setTrips(data);
+      if (!activeTripId && data.length) {
+        setActiveTripId(data[0].id);
+      } else if (activeTripId && !data.find((t: Trip) => t.id === activeTripId)) {
+        setActiveTripId(data[0]?.id ?? null);
+      }
+      return data;
+    } catch {
+      return [];
     }
   };
 
@@ -983,18 +1044,43 @@ const App: React.FC = () => {
   }, [userToken]);
 
   useEffect(() => {
+    if (userToken) {
+      fetchTrips();
+      fetchGroups();
+      fetchInvites();
+    }
+  }, [userToken]);
+
+  useEffect(() => {
     if (userToken) return;
     const session = loadSession();
     if (session) {
       setUserToken(session.token);
       setUserName(session.name);
       setUserEmail(session.email ?? null);
-      if (session.tripId) setActiveTripId(session.tripId);
-      const sessionPage = session.page;
-      if (sessionPage === 'overview' || sessionPage === 'flights' || sessionPage === 'lodging' || sessionPage === 'trips' || sessionPage === 'create-trip' || sessionPage === 'trip-details' || sessionPage === 'itinerary' || sessionPage === 'tours' || sessionPage === 'cost' || sessionPage === 'account' || sessionPage === 'follow') {
-        setActivePage(sessionPage as Page);
+      const tripId = session.tripId ?? null;
+      if (tripId) {
+        setActiveTripId(tripId);
+        setActivePage('overview');
       } else {
-        setActivePage('menu');
+        const sessionPage = session.page;
+        if (
+          sessionPage === 'overview' ||
+          sessionPage === 'flights' ||
+          sessionPage === 'lodging' ||
+          sessionPage === 'trips' ||
+          sessionPage === 'create-trip' ||
+          sessionPage === 'trip-details' ||
+          sessionPage === 'itinerary' ||
+          sessionPage === 'tours' ||
+          sessionPage === 'cost' ||
+          sessionPage === 'account' ||
+          sessionPage === 'follow'
+        ) {
+          setActivePage(sessionPage as Page);
+        } else {
+          setActivePage('menu');
+        }
       }
     }
   }, [userToken]);
@@ -1151,6 +1237,10 @@ const App: React.FC = () => {
       headers: { 'Content-Type': 'application/json', ...headers },
       body: JSON.stringify({ name: newTripName.trim(), groupId: newTripGroupId }),
     });
+    if (res.status === 401 || res.status === 403) {
+      logout();
+      return;
+    }
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       alert(data.error || 'Unable to create trip');
@@ -1212,7 +1302,14 @@ const App: React.FC = () => {
             {trips.length ? (
               <TouchableOpacity
                 activeOpacity={0.8}
-                style={[styles.input, styles.inlineInput, styles.dropdown, styles.activeTrip]}
+                disabled={isTripWizardOpen}
+                style={[
+                  styles.input,
+                  styles.inlineInput,
+                  styles.dropdown,
+                  styles.activeTrip,
+                  isTripWizardOpen && styles.buttonDisabled,
+                ]}
                 onPress={() => setShowActiveTripDropdown((s) => !s)}
               >
                 <Text style={styles.cellText}>
@@ -1250,38 +1347,81 @@ const App: React.FC = () => {
             <View style={styles.card}>
               <Text style={styles.sectionTitle}>Choose a section</Text>
             <View style={styles.navRow}>
-              <TouchableOpacity style={[styles.button, activePage === 'overview' && styles.toggleActive]} onPress={() => setActivePage('overview')}>
-                <Text style={styles.buttonText}>Overview</Text>
+              <TouchableOpacity
+                disabled={shouldDisableTab(activePage, 'overview')}
+                style={[styles.navButton, activePage === 'overview' && styles.navButtonActive, shouldDisableTab(activePage, 'overview') && styles.buttonDisabled]}
+                onPress={() => requestPageChange('overview')}
+              >
+                <Text style={[styles.navButtonText, activePage === 'overview' && styles.navButtonActiveText]}>Overview</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.button, activePage === 'flights' && styles.toggleActive]} onPress={() => setActivePage('flights')}>
-                <Text style={styles.buttonText}>Flights</Text>
+              <TouchableOpacity
+                disabled={shouldDisableTab(activePage, 'flights')}
+                style={[styles.navButton, activePage === 'flights' && styles.navButtonActive, shouldDisableTab(activePage, 'flights') && styles.buttonDisabled]}
+                onPress={() => requestPageChange('flights')}
+              >
+                <Text style={[styles.navButtonText, activePage === 'flights' && styles.navButtonActiveText]}>Flights</Text>
               </TouchableOpacity>
-                <TouchableOpacity style={[styles.button, activePage === 'lodging' && styles.toggleActive]} onPress={() => setActivePage('lodging')}>
-                  <Text style={styles.buttonText}>Lodging</Text>
+                <TouchableOpacity
+                  disabled={shouldDisableTab(activePage, 'lodging')}
+                  style={[styles.navButton, activePage === 'lodging' && styles.navButtonActive, shouldDisableTab(activePage, 'lodging') && styles.buttonDisabled]}
+                  onPress={() => requestPageChange('lodging')}
+                >
+                  <Text style={[styles.navButtonText, activePage === 'lodging' && styles.navButtonActiveText]}>Lodging</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.button, activePage === 'car' && styles.toggleActive]} onPress={() => setActivePage('car')}>
-                  <Text style={styles.buttonText}>Car Rentals</Text>
+                <TouchableOpacity
+                  disabled={shouldDisableTab(activePage, 'car')}
+                  style={[styles.navButton, activePage === 'car' && styles.navButtonActive, shouldDisableTab(activePage, 'car') && styles.buttonDisabled]}
+                  onPress={() => requestPageChange('car')}
+                >
+                  <Text style={[styles.navButtonText, activePage === 'car' && styles.navButtonActiveText]}>Car Rentals</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.button, activePage === 'tours' && styles.toggleActive]} onPress={() => setActivePage('tours')}>
-                  <Text style={styles.buttonText}>Tours</Text>
+                <TouchableOpacity
+                  disabled={shouldDisableTab(activePage, 'tours')}
+                  style={[styles.navButton, activePage === 'tours' && styles.navButtonActive, shouldDisableTab(activePage, 'tours') && styles.buttonDisabled]}
+                  onPress={() => requestPageChange('tours')}
+                >
+                  <Text style={[styles.navButtonText, activePage === 'tours' && styles.navButtonActiveText]}>Tours</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.button, activePage === 'cost' && styles.toggleActive]} onPress={() => setActivePage('cost')}>
-                  <Text style={styles.buttonText}>Cost Report</Text>
+                <TouchableOpacity
+                  disabled={shouldDisableTab(activePage, 'cost')}
+                  style={[styles.navButton, activePage === 'cost' && styles.navButtonActive, shouldDisableTab(activePage, 'cost') && styles.buttonDisabled]}
+                  onPress={() => requestPageChange('cost')}
+                >
+                  <Text style={[styles.navButtonText, activePage === 'cost' && styles.navButtonActiveText]}>Cost Report</Text>
                 </TouchableOpacity>
-              <TouchableOpacity style={[styles.button, activePage === 'trips' && styles.toggleActive]} onPress={() => setActivePage('trips')}>
-                <Text style={styles.buttonText}>Trips</Text>
+              <TouchableOpacity
+                disabled={shouldDisableTab(activePage, 'trips')}
+                style={[styles.navButton, activePage === 'trips' && styles.navButtonActive, shouldDisableTab(activePage, 'trips') && styles.buttonDisabled]}
+                onPress={() => requestPageChange('trips')}
+              >
+                <Text style={[styles.navButtonText, activePage === 'trips' && styles.navButtonActiveText]}>Trips</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.button, activePage === 'create-trip' && styles.toggleActive]} onPress={() => setActivePage('create-trip')}>
-                <Text style={styles.buttonText}>Create Trip</Text>
+              <TouchableOpacity
+                style={[styles.navButton, activePage === 'create-trip' && styles.navButtonActive]}
+                onPress={() => requestPageChange('create-trip')}
+              >
+                <Text style={[styles.navButtonText, activePage === 'create-trip' && styles.navButtonActiveText]}>Create Trip</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.button, activePage === 'account' && styles.toggleActive]} onPress={() => setActivePage('account')}>
-                <Text style={styles.buttonText}>Account</Text>
+              <TouchableOpacity
+                disabled={shouldDisableTab(activePage, 'account')}
+                style={[styles.navButton, activePage === 'account' && styles.navButtonActive, shouldDisableTab(activePage, 'account') && styles.buttonDisabled]}
+                onPress={() => requestPageChange('account')}
+              >
+                <Text style={[styles.navButtonText, activePage === 'account' && styles.navButtonActiveText]}>Account</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.button, activePage === 'follow' && styles.toggleActive]} onPress={() => setActivePage('follow')}>
-                <Text style={styles.buttonText}>Follow Trip</Text>
+              <TouchableOpacity
+                disabled={shouldDisableTab(activePage, 'follow')}
+                style={[styles.navButton, activePage === 'follow' && styles.navButtonActive, shouldDisableTab(activePage, 'follow') && styles.buttonDisabled]}
+                onPress={() => requestPageChange('follow')}
+              >
+                <Text style={[styles.navButtonText, activePage === 'follow' && styles.navButtonActiveText]}>Follow Trip</Text>
               </TouchableOpacity>
-                <TouchableOpacity style={[styles.button, activePage === 'itinerary' && styles.toggleActive]} onPress={() => setActivePage('itinerary')}>
-                  <Text style={styles.buttonText}>Create Itinerary</Text>
+                <TouchableOpacity
+                  disabled={shouldDisableTab(activePage, 'itinerary')}
+                  style={[styles.navButton, activePage === 'itinerary' && styles.navButtonActive, shouldDisableTab(activePage, 'itinerary') && styles.buttonDisabled]}
+                  onPress={() => requestPageChange('itinerary')}
+                >
+                  <Text style={[styles.navButtonText, activePage === 'itinerary' && styles.navButtonActiveText]}>Create Itinerary</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -2109,7 +2249,7 @@ const App: React.FC = () => {
                 <Text style={styles.sectionTitle}>Trips</Text>
                 <TouchableOpacity
                   style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
-                  onPress={() => setActivePage('create-trip')}
+                  onPress={() => requestPageChange('create-trip')}
                 >
                   <Text style={styles.buttonText}>Open Wizard</Text>
                 </TouchableOpacity>
@@ -2216,25 +2356,6 @@ const App: React.FC = () => {
                 ))}
               </View>
             </View>
-          ) : null}
-
-          {activePage === 'create-trip' ? (
-            <CreateTripWizard
-              backendUrl={backendUrl}
-              userToken={userToken}
-              headers={headers}
-              traits={traits}
-              styles={styles}
-              onCancel={() => setActivePage('trips')}
-              onTripCreated={(tripId) => {
-                setActiveTripId(tripId);
-                setSelectedTripId(tripId);
-                fetchTrips();
-                fetchGroups();
-                fetchInvites();
-                setActivePage('trip-details');
-              }}
-            />
           ) : null}
 
           {activePage === 'overview' ? (
@@ -2362,17 +2483,47 @@ const App: React.FC = () => {
               onChangeText={(text) => setAuthForm((p) => ({ ...p, passwordConfirm: text }))}
             />
           ) : null}
-            <TouchableOpacity
-              style={styles.button}
-              onPress={authMode === 'login' ? loginWithPassword : register}
-            >
-              <Text style={styles.buttonText}>{authMode === 'login' ? 'Login' : 'Create account'}</Text>
-            </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.button}
+                        onPress={authMode === 'login' ? loginWithPassword : register}
+                      >
+                        <Text style={styles.buttonText}>{authMode === 'login' ? 'Login' : 'Create account'}</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[styles.button, { marginTop: 12, backgroundColor: '#4285F4' }]} onPress={loginWithGoogle}>
+                        <Text style={styles.buttonText}>Sign in with Google</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+      {userToken && isTripWizardOpen ? (
+        <View style={styles.wizardOverlay}>
+          <View style={styles.wizardModal}>
+            <CreateTripWizard
+              backendUrl={backendUrl}
+              userToken={userToken}
+              headers={headers}
+              traits={traits}
+              airportOptions={flightAirportOptions}
+              onSearchAirports={fetchFlightAirports}
+              styles={styles}
+              onCancel={() => setActivePage('trips')}
+              onTripCreated={(tripId) => {
+                setActiveTripId(tripId);
+                setSelectedTripId(tripId);
+                fetchTrips();
+                fetchGroups();
+                fetchInvites();
+                setActivePage('trip-details');
+              }}
+              onWizardCarRentals={(rentals) => setCarRentals(rentals)}
+              onUnauthorized={logout}
+              currentUserName={userName}
+              currentUserEmail={userEmail}
+            />
+          </View>
         </View>
-      )}
-    </SafeAreaView>
-  );
-};
+      ) : null}
+                </SafeAreaView>
+              );};
 
 const styles = StyleSheet.create({
   container: {
@@ -2521,6 +2672,23 @@ const styles = StyleSheet.create({
     backgroundColor: '#0d6efd',
     borderColor: '#0d6efd',
   },
+  navButton: {
+    backgroundColor: '#e5e7eb',
+    padding: 10,
+    borderRadius: 6,
+    alignItems: 'center',
+    marginVertical: 6,
+  },
+  navButtonActive: {
+    backgroundColor: '#0d6efd',
+  },
+  navButtonText: {
+    color: '#0f172a',
+    fontWeight: '600',
+  },
+  navButtonActiveText: {
+    color: '#fff',
+  },
   toggleText: {
     color: '#0f172a',
     fontWeight: '600',
@@ -2567,9 +2735,15 @@ const styles = StyleSheet.create({
     color: '#0f172a',
   },
   actionCell: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: 6,
+  },
+  actionButtonsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 8,
+    width: '100%',
   },
   inputRow: {
     backgroundColor: '#f8fafc',
@@ -2646,6 +2820,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderRadius: 6,
   },
+  mapOptionButton: {
+    backgroundColor: '#fff',
+    borderColor: '#0d6efd',
+    borderWidth: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+  },
+  mapOptionActive: {
+    backgroundColor: '#0d6efd',
+    borderColor: '#0d6efd',
+  },
+  mapOptionText: {
+    color: '#0d6efd',
+    fontWeight: '600',
+  },
+  mapOptionActiveText: {
+    color: '#fff',
+  },
   dangerButton: {
     backgroundColor: '#dc2626',
   },
@@ -2707,6 +2900,164 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
     marginTop: 8,
+  },
+  dayPill: {
+    backgroundColor: '#e5e7eb',
+    padding: 10,
+    borderRadius: 16,
+    marginRight: 8,
+    minWidth: 90,
+    alignItems: 'center',
+  },
+  dayPillActive: {
+    backgroundColor: '#111827',
+  },
+  dayPillText: {
+    color: '#111827',
+    fontWeight: '600',
+  },
+  dayPillActiveText: {
+    color: '#fff',
+  },
+  dayPillNumber: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  dayPillDate: {
+    fontSize: 12,
+    color: '#4b5563',
+  },
+  dayHeroCard: {
+    position: 'relative',
+    borderRadius: 20,
+    overflow: 'hidden',
+    height: 200,
+    backgroundColor: '#e5e7eb',
+  },
+  dayHeroImage: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  dayHeroImageFallback: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#d1d5db',
+  },
+  dayHeroOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  dayHeroBadge: {
+    position: 'absolute',
+    top: 12,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  dayHeroBadgeText: {
+    backgroundColor: '#fff',
+    color: '#111827',
+    paddingHorizontal: 14,
+    paddingVertical: 4,
+    borderRadius: 999,
+    fontWeight: '700',
+    fontSize: 12,
+    overflow: 'hidden',
+  },
+  dayHeroTextWrap: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+  },
+  dayHeroTitle: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  dayHeroAction: {
+    color: '#fff',
+    fontSize: 12,
+    marginTop: 6,
+    textAlign: 'center',
+  },
+  dayDetailsBackButton: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    zIndex: 10,
+    backgroundColor: '#111827',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
+  dayDetailsBackText: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  dayNarrativeBox: {
+    gap: 8,
+  },
+  dayInfoCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    gap: 8,
+  },
+  dayInfoRow: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingVertical: 6,
+  },
+  dayInfoText: {
+    flex: 1,
+  },
+  lodgingImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    backgroundColor: '#e5e7eb',
+  },
+  lodgingImageFallback: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    backgroundColor: '#e5e7eb',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dayInfoRoute: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0f172a',
+  },
+  dayInfoButton: {
+    alignSelf: 'center',
+    paddingVertical: 6,
+  },
+  dayInfoButtonText: {
+    color: '#111827',
+    fontWeight: '600',
+  },
+  dayNextButton: {
+    backgroundColor: '#e5e7eb',
+    borderRadius: 16,
+    padding: 12,
   },
   memberPill: {
     flexDirection: 'row',
@@ -2854,6 +3205,19 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
   },
+  detailModal: {
+    maxHeight: 520,
+    maxWidth: 520,
+    width: '100%',
+  },
+  detailModalScroll: {
+    maxHeight: 420,
+    marginBottom: 8,
+  },
+  detailSection: {
+    marginTop: 8,
+    gap: 4,
+  },
   modalLabel: {
     fontSize: 12,
     color: '#6b7280',
@@ -2999,6 +3363,27 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#2b2b2b',
+  },
+  buttonDisabled: {
+    opacity: 0.45,
+  },
+  wizardOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(15,23,42,0.55)',
+    padding: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 30000,
+  },
+  wizardModal: {
+    width: '100%',
+    maxWidth: 1200,
+    maxHeight: '90%',
+    alignSelf: 'center',
   },
   modalOverlay: {
     position: 'absolute',

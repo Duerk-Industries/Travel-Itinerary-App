@@ -1,7 +1,11 @@
 export interface User {
   id: string;
   email: string;
-  provider: 'google' | 'apple' | 'email';
+  provider: 'google' | 'apple' | 'email' | 'family';
+  google_id?: string;
+  picture?: string;
+  firstName?: string;
+  lastName?: string;
 }
 
 export interface WebUser {
@@ -92,18 +96,18 @@ export interface Trait {
 
 export interface Lodging {
   id: string;
-  userId: string;
-  tripId: string;
+  user_id: string;
+  trip_id: string;
   name: string;
-  checkInDate: string;
-  checkOutDate: string;
+  check_in_date: string;
+  check_out_date: string;
   rooms: number;
-  refundBy?: string | null;
-  totalCost: number;
-  costPerNight: number;
+  refund_by: string;
+  total_cost: number;
+  cost_per_night: number;
   address: string;
-  paidBy: string[];
-  createdAt: string;
+  paid_by: string[];
+  imageUrl?: string;
 }
 
 export interface Tour {
@@ -125,6 +129,7 @@ export interface Tour {
 
 export interface Itinerary {
   id: string;
+  userId: string;
   tripId: string;
   destination: string;
   days: number;

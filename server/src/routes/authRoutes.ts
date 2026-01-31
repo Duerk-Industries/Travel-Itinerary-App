@@ -2,7 +2,6 @@ import { Router } from 'express';
 import bodyParser from 'body-parser';
 import { handleLogin, createToken } from '../auth';
 import { claimInvitesForUser, createWebUser, ensureDefaultGroupForUser } from '../db';
-import { logError } from '../logger';
 
 // Auth routes for device-based auth tokens (non-web).
 const router = Router();
@@ -37,7 +36,6 @@ router.post('/register', async (req, res) => {
       res.status(409).json({ error: 'User already exists' });
       return;
     }
-    logError('Failed to create user', err);
     res.status(500).json({ error: 'Failed to create user' });
   }
 });

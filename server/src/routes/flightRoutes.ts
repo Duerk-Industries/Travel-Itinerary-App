@@ -59,10 +59,13 @@ router.post('/', async (req, res) => {
     tripId,
     paidBy,
   } = req.body;
-  if (!Array.isArray(passengerIds) || passengerIds.length === 0 || !departureDate || !departureTime || !arrivalTime || !carrier || !flightNumber || !bookingReference || !tripId) {
+  if (!Array.isArray(passengerIds) || passengerIds.length === 0 || !departureDate || !departureTime || !arrivalTime || !tripId) {
     res.status(400).json({ error: 'Missing required fields (need at least one passenger)' });
     return;
   }
+  const normalizedCarrier = typeof carrier === 'string' ? carrier : '';
+  const normalizedFlightNumber = typeof flightNumber === 'string' ? flightNumber : '';
+  const normalizedBookingReference = typeof bookingReference === 'string' ? bookingReference : '';
   const allZeroPassengerIds = passengerIds.every((id: any) => String(id).startsWith('0000'));
   const tripGroup = (await ensureUserInTrip(tripId, userId)) || (process.env.USE_IN_MEMORY_DB === '1' ? { groupId: tripId } : null);
   if (!tripGroup) {
@@ -70,11 +73,8 @@ router.post('/', async (req, res) => {
     return;
   }
   const members = await listGroupMembers(tripGroup.groupId, userId);
-  const activeMembers = members.filter((m) => m.status !== 'pending');
-  const pendingMembers = members.filter((m) => m.status === 'pending');
-  const memberIdSet = new Set(activeMembers.map((m) => String(m.id)));
-  const inviteIdSet = new Set(pendingMembers.map((m) => String(m.id)));
-  const validPassengerIds = new Set<string>([...memberIdSet, ...inviteIdSet]);
+  const memberIdSet = new Set(members.map((m) => String(m.id)));
+  const validPassengerIds = new Set<string>(memberIdSet);
   const normalizedPassengerIds = passengerIds.map((id: any) => String(id));
   const allValid = normalizedPassengerIds.every((id: string) => validPassengerIds.has(id));
   const allZero = normalizedPassengerIds.every((id: string) => id.startsWith('0000'));
@@ -99,9 +99,8 @@ router.post('/', async (req, res) => {
     .map((m: any) => m.guestName || `${m.firstName ?? ''} ${m.lastName ?? ''}`.trim() || m.email || 'Passenger')
     .join(', ') || 'Passenger';
   const normalizedPaidBy = Array.isArray(paidBy) ? paidBy.map((id: any) => String(id)).filter(Boolean) : [];
-  const payerIdSet = new Set(activeMembers.map((m) => String(m.id)));
-  if (normalizedPaidBy.some((id) => !payerIdSet.has(id))) {
-    res.status(400).json({ error: 'Payers must be active trip members' });
+  if (normalizedPaidBy.some((id) => !memberIdSet.has(id))) {
+    res.status(400).json({ error: 'Payers must be trip members' });
     return;
   }
   const flight = await insertFlight({
@@ -121,9 +120,9 @@ router.post('/', async (req, res) => {
     arrivalDate: arrivalDate || departureDate,
     arrivalTime,
     cost: Number(cost) ?? 0,
-    carrier,
-    flightNumber,
-    bookingReference,
+    carrier: normalizedCarrier,
+    flightNumber: normalizedFlightNumber,
+    bookingReference: normalizedBookingReference,
     paidBy: normalizedPaidBy,
   });
   res.status(201).json(flight);
@@ -178,15 +177,12 @@ router.patch('/:id', async (req, res) => {
     if (normalizedPassengerIds) {
       const members = await listGroupMembers(tripGroup.groupId, userId).catch(() => []);
       if (members.length) {
-        const activeMembers = members.filter((m: any) => m.status !== 'pending');
-        const pendingMembers = members.filter((m: any) => m.status === 'pending');
-        const memberIdSet = new Set(activeMembers.map((m: any) => String(m.id)));
-        const inviteIdSet = new Set(pendingMembers.map((m: any) => String(m.id)));
+        const memberIdSet = new Set(members.map((m: any) => String(m.id)));
         const matchesExisting =
           flight.passengerIds &&
           normalizedPassengerIds.length === (flight.passengerIds as any[]).length &&
           normalizedPassengerIds.every((id: string) => (flight.passengerIds as any[]).includes(id));
-        const allValid = normalizedPassengerIds.every((id: string) => memberIdSet.has(id) || inviteIdSet.has(id));
+        const allValid = normalizedPassengerIds.every((id: string) => memberIdSet.has(id));
         if (!allValid && !matchesExisting) {
           throw new Error('Passengers must be members of the trip group');
         }
@@ -209,10 +205,10 @@ router.patch('/:id', async (req, res) => {
 
     if (normalizedPaidBy) {
       const members = await listGroupMembers(tripGroup.groupId, userId);
-      const payerIdSet = new Set(members.filter((m: any) => m.status !== 'pending').map((m: any) => String(m.id)));
+      const payerIdSet = new Set(members.map((m: any) => String(m.id)));
       const payersValid = normalizedPaidBy.every((id: string) => payerIdSet.has(id));
       if (!payersValid) {
-        throw new Error('Payers must be active trip members');
+        throw new Error('Payers must be trip members');
       }
     }
 

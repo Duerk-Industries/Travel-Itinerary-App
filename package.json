@@ -10,19 +10,25 @@
     "start": "node server/scripts/start-with-debug.js",
     "build": "npm --prefix server run build",
     "lint": "echo \"Add linters per workspace\"",
-    "postinstall": "node -e \"try{require('patch-package');require('child_process').execSync('patch-package',{stdio:'inherit'});}catch(e){console.log('patch-package not installed, skipping');}\""
+    "list-users": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/list_users.ts",
+    "list-trips": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/list_trips_and_users.ts"
   },
   "engines": {
-    "node": "20.x"
+    "node": ">=20.x"
   },
   "packageManager": "npm@10.8.2",
   "devDependencies": {
     "canvas": "^3.2.0",
-    "patch-package": "^8.0.1"
+    "patch-package": "^8.0.1",
+    "react-refresh": "^0.18.0",
+    "ts-node": "^10.9.2"
   },
   "dependencies": {
+    "24": "^0.0.0",
+    "firebase": "^12.8.0",
     "firebase-admin": "^13.6.0",
     "outdated": "^0.1.1",
+    "passport-google-oauth20": "^2.0.0",
     "update": "^0.7.4"
   }
 }

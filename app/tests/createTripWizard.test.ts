@@ -2,6 +2,10 @@ import { describe, expect, test } from '@jest/globals';
 import {
   buildTripDescription,
   computeTripDays,
+  ensureParticipantIncluded,
+  ensureRangeEndDate,
+  getDefaultParticipant,
+  getDefaultTripRangeDates,
   normalizeEmail,
   validateParticipants,
   validateTripDates,
@@ -98,5 +102,27 @@ describe('Create Trip Wizard helpers', () => {
 
   test('normalizes emails', () => {
     expect(normalizeEmail('  TEST@Example.com ')).toBe('test@example.com');
+  });
+
+  test('defaults trip range dates to today and next day', () => {
+    const today = new Date('2025-03-10T12:00:00Z');
+    const defaults = getDefaultTripRangeDates({ startDate: '', endDate: '', today });
+    expect(defaults.startDate).toBe('2025-03-10');
+    expect(defaults.endDate).toBe('2025-03-11');
+  });
+
+  test('ensures end date is after start date', () => {
+    expect(ensureRangeEndDate('2025-03-10', '2025-03-09')).toBe('2025-03-11');
+    expect(ensureRangeEndDate('2025-03-10', '')).toBe('2025-03-11');
+    expect(ensureRangeEndDate('2025-03-10', '2025-03-12')).toBe('2025-03-12');
+  });
+
+  test('adds current user as default participant once', () => {
+    const user = getDefaultParticipant('Ava Smith', 'ava@example.com');
+    expect(user).toEqual({ firstName: 'Ava', lastName: 'Smith', email: 'ava@example.com' });
+    const seeded = ensureParticipantIncluded([], 'Ava Smith', 'ava@example.com');
+    expect(seeded).toHaveLength(1);
+    const secondPass = ensureParticipantIncluded(seeded, 'Ava Smith', 'ava@example.com');
+    expect(secondPass).toHaveLength(1);
   });
 });

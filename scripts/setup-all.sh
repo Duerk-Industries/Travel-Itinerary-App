@@ -5,7 +5,7 @@ ENV_FILE=""
 SKIP_LOGIN=0
 
 usage() {
-  echo "Usage: $0 [--skip-login] [path/to/.secrets|.env]" >&2
+  echo "Usage: $0 [--skip-login] [path/to/.env]" >&2
   echo "Runs configure-gcloud, enable-gcp-apis, configure-gcp-iam, and configure-run-env." >&2
   exit 1
 }
@@ -31,13 +31,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$ENV_FILE" ]]; then
-  if [[ -f "server/.secrets" ]]; then
-    ENV_FILE="server/.secrets"
-  elif [[ -f "server/.env" ]]; then
-    ENV_FILE="server/.env"
-  elif [[ -f ".env" ]]; then
-    ENV_FILE=".env"
-  fi
+  ENV_FILE="server/.env"
 fi
 
 if [[ -n "$ENV_FILE" && ! -f "$ENV_FILE" ]]; then
@@ -100,7 +94,28 @@ strip_inline_comment() {
 
 PROJECT_ID="${GCLOUD_PROJECT_ID:-}"
 
-if [[ -n "$ENV_FILE" ]]; then
+while IFS= read -r line || [[ -n "$line" ]]; do
+  line="${line%%$'\r'}"
+  if is_comment_or_empty "$line"; then
+    continue
+  fi
+  if [[ "$line" == export\ * ]]; then
+    line="${line#export }"
+  fi
+  line="$(strip_inline_comment "$line")"
+  line="$(trim "$line")"
+  [[ "$line" != *"="* ]] && continue
+  key="$(trim "${line%%=*}")"
+  value="$(trim "${line#*=}")"
+  if [[ "$value" =~ ^\".*\"$ || "$value" =~ ^\'.*\'$ ]]; then
+    value="${value:1:${#value}-2}"
+  fi
+  if [[ "$key" == "GCLOUD_PROJECT_ID" && -z "$PROJECT_ID" ]]; then
+    PROJECT_ID="$value"
+  fi
+done < "$ENV_FILE"
+
+if [[ -z "$PROJECT_ID" && -f "server/.secrets" ]]; then
   while IFS= read -r line || [[ -n "$line" ]]; do
     line="${line%%$'\r'}"
     if is_comment_or_empty "$line"; then
@@ -120,11 +135,11 @@ if [[ -n "$ENV_FILE" ]]; then
     if [[ "$key" == "GCLOUD_PROJECT_ID" && -z "$PROJECT_ID" ]]; then
       PROJECT_ID="$value"
     fi
-  done < "$ENV_FILE"
+  done < "server/.secrets"
 fi
 
 if [[ -z "$PROJECT_ID" ]]; then
-  echo "GCLOUD_PROJECT_ID is required (set env or add to .secrets/.env)." >&2
+  echo "GCLOUD_PROJECT_ID is required (set env or add to server/.env or server/.secrets)." >&2
   exit 1
 fi
 

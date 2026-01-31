@@ -39,7 +39,7 @@ router.get('/', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const profile = await getWebUserProfile(userId);
   if (!profile) {
-    res.status(404).json({ error: 'User not found' });
+    res.status(401).json({ error: 'User not found' });
     return;
   }
   res.json(profile);
@@ -242,7 +242,7 @@ router.delete('/', async (req, res) => {
 
         // Remove memberships and invites for the user.
         const membershipsToUpdate = await p.query(`SELECT id, group_id, user_id, added_by FROM group_members WHERE added_by = $1`, [userId]);
-        for (const m of membershipsToUpdate.rows as Array<{ id: string; group_id: string; user_id: string | null; added_by: string | null }>) {
+        for (const m of membershipsToUpdate.rows as Array<{ id: string; group_id: string; user_id: string | null; added_by: string | null }> ) {
           const ownerRes = await p.query(`SELECT owner_id FROM groups WHERE id = $1`, [m.group_id]);
           const ownerIdForGroup = ownerRes.rows[0]?.owner_id ?? null;
           const newAddedBy = ownerIdForGroup ?? m.user_id ?? m.added_by ?? userId;
@@ -393,7 +393,7 @@ groupsRouter.post('/', async (req, res) => {
             `Hi,`,
             ``,
             `${user.email} invited you to join the group "${name}".`,
-            `Log in to Shared Trip Planner to accept this invitation.`,
+            `Log in to Shared Trip Planner to accept this invitation.`, 
           ].join('\n');
           return sendShareEmail(email, subject, body).catch(() => undefined);
         })
