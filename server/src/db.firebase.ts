@@ -862,10 +862,44 @@ export const searchFlightLocations = async (_userId: string, query: string): Pro
 // Lodgings
 export const listLodgings = async (userId: string, tripId?: string | null): Promise<Lodging[]> => {
   const db = getDb();
-  let query: FirebaseFirestore.Query = db.collection('lodgings').where('user_id', '==', userId);
-  if (tripId) query = query.where('trip_id', '==', tripId);
-  const snapshot = await query.get();
-  return snapshot.docs.map((d) => d.data() as Lodging);
+  const chunk = <T>(items: T[], size = 10): T[][] => {
+    const chunks: T[][] = [];
+    for (let i = 0; i < items.length; i += size) {
+      chunks.push(items.slice(i, i + size));
+    }
+    return chunks;
+  };
+
+  if (tripId) {
+    const membership = await ensureUserInTrip(tripId, userId);
+    if (!membership) return [];
+    const snapshot = await db.collection('lodgings').where('trip_id', '==', tripId).get();
+    return snapshot.docs.map((d) => d.data() as Lodging);
+  }
+
+  const memberSnap = await db
+    .collection('group_members')
+    .where('userId', '==', userId)
+    .where('removedAt', '==', null)
+    .get();
+  const groupIds = memberSnap.docs.map((doc) => (doc.data() as any).groupId).filter(Boolean);
+  if (!groupIds.length) return [];
+
+  const tripIds: string[] = [];
+  for (const groupChunk of chunk(groupIds)) {
+    const tripsSnap = await db.collection('trips').where('groupId', 'in', groupChunk).get();
+    tripsSnap.docs.forEach((doc) => {
+      tripIds.push(doc.id);
+    });
+  }
+  if (!tripIds.length) return [];
+
+  const lodgings: Lodging[] = [];
+  for (const tripChunk of chunk(tripIds)) {
+    const lodgingsSnap = await db.collection('lodgings').where('trip_id', 'in', tripChunk).get();
+    lodgingsSnap.docs.forEach((doc) => lodgings.push(doc.data() as Lodging));
+  }
+  return lodgings;
 };
 
 export const insertLodging = async (lodging: {
@@ -908,7 +942,11 @@ export const deleteLodging = async (lodgingId: string, userId: string): Promise<
   const db = getDb();
   const doc = await db.collection('lodgings').doc(lodgingId).get();
   if (!doc.exists) return;
-  if ((doc.data() as any).userId !== userId) throw new Error('Not authorized');
+  const data = doc.data() as any;
+  const tripId = data.trip_id ?? data.tripId;
+  if (!tripId) return;
+  const membership = await ensureUserInTrip(tripId, userId);
+  if (!membership) return;
   await db.collection('lodgings').doc(lodgingId).delete();
 };
 
@@ -916,7 +954,11 @@ export const updateLodging = async (lodgingId: string, userId: string, updates: 
   const db = getDb();
   const doc = await db.collection('lodgings').doc(lodgingId).get();
   if (!doc.exists) return null;
-  if ((doc.data() as any).userId !== userId) throw new Error('Not authorized');
+  const data = doc.data() as any;
+  const tripId = (updates as any).trip_id ?? data.trip_id ?? data.tripId;
+  if (!tripId) return null;
+  const membership = await ensureUserInTrip(tripId, userId);
+  if (!membership) return null;
   const updatePayload: Partial<Lodging> = { ...updates };
   if (updates.imageUrl) {
     updatePayload.imageUrl = updates.imageUrl;
