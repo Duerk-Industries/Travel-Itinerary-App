@@ -65,6 +65,13 @@ This document outlines the existing test suites in the Travel Itinerary App, ide
         *   Lodging tab uses `POST /api/lodgings` with trip/payer data.
         *   Overview lodging edits use `PUT /api/lodgings/:id`.
 
+*   **`session.test.ts`**:
+    *   **Purpose**: Tests session persistence utilities used to restore the last active trip on login.
+    *   **Verifies**:
+        *   Save/load round trip for stored session data.
+        *   Clearing session removes stored data.
+        *   Expired sessions are ignored.
+
 *   **`overview.test.ts`**:
     *   **Purpose**: Tests utility functions for building the trip overview.
     *   **Verifies**:
@@ -207,3 +214,8 @@ This document outlines the existing test suites in the Travel Itinerary App, ide
         *   `formatMonthYear` formats a month and year into a string.
         *   `adjustStartDateForEarliest` adjusts the start date based on an earliest possible date.
         *   `getEarliestTripEventDate` finds the earliest date from a list of dates.
+*   **`crud-delete.test.ts`**:
+    *   **Purpose**: Tests delete endpoints for flights, lodgings, tours, and trips.
+    *   **Verifies**:
+        *   Delete flight/lodging/tour removes them from trip lists.
+        *   Delete trip removes it from the trip list.

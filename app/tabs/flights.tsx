@@ -299,6 +299,24 @@ export const createFlightForTrip = async (params: {
   return { ok: true };
 };
 
+export const removeFlightApi = async (
+  backendUrl: string,
+  headers: Record<string, string>,
+  id: string
+): Promise<{ ok: boolean; error?: string }> => {
+  const res = await fetch(`${backendUrl}/api/flights/${id}`, { method: 'DELETE', headers });
+  if (!res.ok) {
+    let data: any = {};
+    try {
+      data = await res.json();
+    } catch {
+      // ignore
+    }
+    return { ok: false, error: data.error || 'Unable to delete flight' };
+  }
+  return { ok: true };
+};
+
 export const normalizeFlightFromApi = (f: any): Flight => ({
   ...f,
   passenger_name: f.passenger_name ?? f.passengerName ?? '',
@@ -1135,7 +1153,11 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       return;
     }
     if (!userToken) return;
-    await fetch(`${backendUrl}/api/flights/${id}`, { method: 'DELETE', headers });
+    const result = await removeFlightApi(backendUrl, headers, id);
+    if (!result.ok) {
+      alert(result.error || 'Unable to delete flight');
+      return;
+    }
     fetchFlights();
   };
 

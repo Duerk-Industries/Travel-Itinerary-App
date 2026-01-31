@@ -803,6 +803,29 @@ export const insertFlight = async (
 
 export const deleteFlight = async (flightId: string, userId: string): Promise<void> => {
   const p = getPool();
+  const useInMemory = process.env.USE_IN_MEMORY_DB === '1';
+  if (useInMemory) {
+    const { rows } = await p.query(
+      `
+        SELECT f.id
+        FROM flights f
+        JOIN trips t ON t.id = f.trip_id
+        JOIN group_members gm ON gm.group_id = t.group_id
+        WHERE f.id = $1
+          AND gm.user_id = $2
+      `,
+      [flightId, userId]
+    );
+    if (!rows.length) return;
+    await p.query(
+      `
+        DELETE FROM flights
+        WHERE id = $1
+      `,
+      [flightId]
+    );
+    return;
+  }
   await p.query(
     `
       DELETE FROM flights f
@@ -1311,6 +1334,23 @@ export const insertLodging = async (lodging: {
 // Delete a lodging row when the caller belongs to the trip's group.
 export const deleteLodging = async (lodgingId: string, userId: string): Promise<void> => {
   const p = getPool();
+  const useInMemory = process.env.USE_IN_MEMORY_DB === '1';
+  if (useInMemory) {
+    const { rows } = await p.query(
+      `
+        SELECT l.id
+        FROM lodgings l
+        JOIN trips t ON t.id = l.trip_id
+        JOIN group_members gm ON gm.group_id = t.group_id
+        WHERE l.id = $1
+          AND gm.user_id = $2
+      `,
+      [lodgingId, userId]
+    );
+    if (!rows.length) return;
+    await p.query(`DELETE FROM lodgings WHERE id = $1`, [lodgingId]);
+    return;
+  }
   await p.query(
     `
       DELETE FROM lodgings l

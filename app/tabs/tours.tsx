@@ -88,6 +88,24 @@ export const createTourForTrip = async (params: {
   return { ok: true };
 };
 
+export const removeTourApi = async (
+  backendUrl: string,
+  jsonHeaders: Record<string, string>,
+  id: string
+): Promise<{ ok: boolean; error?: string }> => {
+  const res = await fetch(`${backendUrl}/api/tours/${id}`, { method: 'DELETE', headers: jsonHeaders });
+  if (!res.ok) {
+    let data: any = {};
+    try {
+      data = await res.json();
+    } catch {
+      // ignore
+    }
+    return { ok: false, error: data.error || 'Unable to delete tour' };
+  }
+  return { ok: true };
+};
+
 export const fetchToursForTrip = async ({
   backendUrl,
   activeTripId,
@@ -263,9 +281,9 @@ export const TourTab: React.FC<TourTabProps> = ({
       setTours((prev) => prev.filter((t) => t.id !== id));
       return;
     }
-    fetch(`${backendUrl}/api/tours/${id}`, { method: 'DELETE', headers: jsonHeaders })
-      .then((res) => {
-        if (!res.ok) throw new Error('Unable to delete tour');
+    removeTourApi(backendUrl, jsonHeaders, id)
+      .then((result) => {
+        if (!result.ok) throw new Error(result.error || 'Unable to delete tour');
         fetchTours();
       })
       .catch((err) => alert(err.message));
