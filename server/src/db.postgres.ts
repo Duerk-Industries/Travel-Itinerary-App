@@ -154,6 +154,8 @@ export const initDb = async (): Promise<void> => {
       claimed_at TIMESTAMP,
       removed_at TIMESTAMP,
       guest_name TEXT,
+      first_name TEXT,
+      last_name TEXT,
       added_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       created_at TIMESTAMP DEFAULT NOW(),
       UNIQUE (group_id, user_id)
@@ -164,6 +166,8 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE group_members ADD COLUMN IF NOT EXISTS claimed_at TIMESTAMP;`);
   await p.query(`ALTER TABLE group_members ADD COLUMN IF NOT EXISTS removed_at TIMESTAMP;`);
   await p.query(`ALTER TABLE group_members ADD COLUMN IF NOT EXISTS guest_name TEXT;`);
+  await p.query(`ALTER TABLE group_members ADD COLUMN IF NOT EXISTS first_name TEXT;`);
+  await p.query(`ALTER TABLE group_members ADD COLUMN IF NOT EXISTS last_name TEXT;`);
   await p.query(`ALTER TABLE group_members ADD COLUMN IF NOT EXISTS added_by UUID;`);
   await p.query(`ALTER TABLE group_members ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();`);
 
@@ -1710,8 +1714,8 @@ export const listGroupMembers = async (
     `SELECT gm.id,
             gm.guest_name as "guestName",
             COALESCE(u.email, gm.invite_email) as "email",
-            COALESCE(wu.first_name, wu_pending.first_name) as "firstName",
-            COALESCE(wu.last_name, wu_pending.last_name) as "lastName",
+            COALESCE(gm.first_name, wu.first_name, wu_pending.first_name) as "firstName",
+            COALESCE(gm.last_name, wu.last_name, wu_pending.last_name) as "lastName",
             gm.removed_at as "removedAt",
             CASE
               WHEN gm.removed_at IS NOT NULL THEN 'removed'
@@ -1840,7 +1844,7 @@ export const listGroupsForUser = async (
 export const addGroupMember = async (
   ownerId: string,
   groupId: string,
-  member: { email?: string; guestName?: string }
+  member: { email?: string; guestName?: string; firstName?: string; lastName?: string }
 ): Promise<{ inviteId?: string; email?: string }> => {
   const p = getPool();
   const client = await p.connect();
@@ -1856,6 +1860,8 @@ export const addGroupMember = async (
     if (emailValue) {
       const normalizedEmail = emailValue.toLowerCase();
       const user = await findUserByEmail(normalizedEmail);
+      const firstName = member.firstName?.trim() || null;
+      const lastName = member.lastName?.trim() || null;
       if (user) {
         await client.query(
           `INSERT INTO group_members (id, group_id, user_id, added_by)
@@ -1879,16 +1885,21 @@ export const addGroupMember = async (
       );
       if (!existingPending.rowCount) {
         await client.query(
-          `INSERT INTO group_members (id, group_id, invite_email, guest_name, added_by)
-           VALUES ($1, $2, $3, $4, $5)
+          `INSERT INTO group_members (id, group_id, invite_email, guest_name, first_name, last_name, added_by)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
            ON CONFLICT DO NOTHING`,
-          [randomUUID(), groupId, normalizedEmail, member.guestName ?? null, ownerId]
+          [randomUUID(), groupId, normalizedEmail, member.guestName ?? null, firstName, lastName, ownerId]
         );
       } else {
-        await client.query(`UPDATE group_members SET removed_at = NULL, guest_name = COALESCE($1, guest_name) WHERE id = $2`, [
-          member.guestName ?? null,
-          existingPending.rows[0].id,
-        ]);
+        await client.query(
+          `UPDATE group_members
+           SET removed_at = NULL,
+               guest_name = COALESCE($1, guest_name),
+               first_name = COALESCE($2, first_name),
+               last_name = COALESCE($3, last_name)
+           WHERE id = $4`,
+          [member.guestName ?? null, firstName, lastName, existingPending.rows[0].id]
+        );
       }
 
       const inviteId = randomUUID();
@@ -1903,9 +1914,12 @@ export const addGroupMember = async (
     }
 
     if (member.guestName && member.guestName.trim()) {
+      const firstName = member.firstName?.trim() || null;
+      const lastName = member.lastName?.trim() || null;
       await client.query(
-        `INSERT INTO group_members (id, group_id, guest_name, added_by) VALUES ($1, $2, $3, $4)`,
-        [randomUUID(), groupId, member.guestName.trim(), ownerId]
+        `INSERT INTO group_members (id, group_id, guest_name, first_name, last_name, added_by)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [randomUUID(), groupId, member.guestName.trim(), firstName, lastName, ownerId]
       );
       await client.query('COMMIT');
       return {};

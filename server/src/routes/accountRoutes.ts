@@ -300,9 +300,14 @@ router.post('/trips/:tripId/members', async (req, res) => {
     res.status(403).json({ error: 'Not authorized to add members to this trip' });
     return;
   }
-  const { email, guestName } = req.body as { email?: string; guestName?: string };
+  const { email, guestName, firstName, lastName } = req.body as {
+    email?: string;
+    guestName?: string;
+    firstName?: string;
+    lastName?: string;
+  };
   try {
-    const result = await addGroupMember(userId, membership.groupId, { email, guestName });
+    const result = await addGroupMember(userId, membership.groupId, { email, guestName, firstName, lastName });
     res.status(201).json(result);
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });
@@ -417,7 +422,12 @@ groupsRouter.post('/:id/members', async (req, res) => {
   }
   const normalizedGuestName = guestName?.trim() || (given && family ? `${given} ${family}` : undefined);
   try {
-    const result = await addGroupMember(user.userId, req.params.id, { email, guestName: normalizedGuestName });
+    const result = await addGroupMember(user.userId, req.params.id, {
+      email,
+      guestName: normalizedGuestName,
+      firstName: given || undefined,
+      lastName: family || undefined,
+    });
     if (result.email && result.inviteId && isEmailConfigured()) {
       const subject = `${user.email} invited you to a group`;
       const body = `${user.email} invited you to join a group. Log in to accept.`;

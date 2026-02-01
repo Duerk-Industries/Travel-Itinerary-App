@@ -894,7 +894,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       return;
     }
     const guestName = `${first} ${last}`.trim();
-    const payload = email ? { email, firstName: first, lastName: last, guestName } : { guestName };
+    const payload = email ? { email, firstName: first, lastName: last, guestName } : { guestName, firstName: first, lastName: last };
     const res = await fetch(`${backendUrl}/api/groups/${group.id}/members`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...headers },

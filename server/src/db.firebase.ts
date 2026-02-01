@@ -403,7 +403,7 @@ export const listGroupsForUser = async (userId: string): Promise<Group[]> => {
 export const addGroupMember = async (
   ownerId: string,
   groupId: string,
-  member: { email?: string; guestName?: string }
+  member: { email?: string; guestName?: string; firstName?: string; lastName?: string }
 ): Promise<{ inviteId?: string; email?: string }> => {
   const db = getDb();
   const groupDoc = await db.collection('groups').doc(groupId).get();
@@ -437,6 +437,8 @@ export const addGroupMember = async (
       groupId,
       inviteEmail: email,
       guestName: member.guestName ?? null,
+      firstName: member.firstName?.trim() || null,
+      lastName: member.lastName?.trim() || null,
       addedBy: ownerId,
       createdAt: nowIso(),
       removedAt: null,
@@ -456,6 +458,8 @@ export const addGroupMember = async (
     await db.collection('group_members').doc(randomUUID()).set({
       groupId,
       guestName: member.guestName.trim(),
+      firstName: member.firstName?.trim() || null,
+      lastName: member.lastName?.trim() || null,
       addedBy: ownerId,
       createdAt: nowIso(),
       removedAt: null,
