@@ -34,6 +34,8 @@ import { shouldAllowPageChange, shouldDisableTab } from './utils/wizardGuard';
 import * as WebBrowser from 'expo-web-browser';
 import { Buffer } from 'buffer';
 import { loadSession, saveSession, clearSession } from './utils/session';
+import LodgingDetailsDialog from './components/LodgingDetailsDialog';
+import ConfirmDialog from './components/ConfirmDialog';
 
 import LodgingTab from './tabs/LodgingTab';
 
@@ -202,6 +204,9 @@ const App: React.FC = () => {
   const [groupMembers, setGroupMembers] = useState<GroupMemberOption[]>([]);
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
   const [lodgings, setLodgings] = useState<Lodging[]>([]);
+  const [selectedLodging, setSelectedLodging] = useState<Lodging | null>(null);
+  const [showLodgingDetails, setShowLodgingDetails] = useState(false);
+  const [lodgingToDelete, setLodgingToDelete] = useState<Lodging | null>(null);
 
   const [tours, setTours] = useState<Tour[]>([]);
   const [carRentals, setCarRentals] = useState<CarRental[]>([]);
@@ -1175,6 +1180,25 @@ const App: React.FC = () => {
     fetchTrips();
   };
 
+  const openLodgingDetails = (lodging: Lodging) => {
+    setSelectedLodging(lodging);
+    setShowLodgingDetails(true);
+  };
+
+  const deleteLodging = async (lodgingId: string) => {
+    if (!activeTripId) return;
+    const res = await fetch(`${backendUrl}/api/lodgings/${lodgingId}`, {
+        method: 'DELETE',
+        headers,
+    });
+    if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || 'Unable to delete lodging');
+        return;
+    }
+    fetchLodgings();
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.topBar}>
@@ -1875,6 +1899,7 @@ const App: React.FC = () => {
               onRefreshTours={fetchTours}
               onAddCarRental={addCarRentalFromOverview}
               openFlightInFlightsTab={openFlightInFlightsTab}
+              openLodgingDetails={openLodgingDetails}
             />
           ) : null}
 
@@ -1998,506 +2023,372 @@ const App: React.FC = () => {
               airportOptions={flightAirportOptions}
               onSearchAirports={fetchFlightAirports}
               styles={styles}
-              onCancel={() => setActivePage('trips')}
-              onTripCreated={(tripId) => {
-                setActiveTripId(tripId);
-                setSelectedTripId(tripId);
-                fetchTrips();
-                fetchGroups();
-                fetchInvites();
-                setActivePage('trip-details');
-              }}
-              onWizardCarRentals={(rentals) => setCarRentals(rentals)}
-              onUnauthorized={logout}
-              currentUserName={userName}
-              currentUserEmail={userEmail}
             />
           </View>
         </View>
       ) : null}
-                </SafeAreaView>
-              );};
+      {lodgingToDelete ? (
+        <ConfirmDialog
+          title="Delete Lodging"
+          prompt={`Are you sure you want to delete ${lodgingToDelete.name}? This cannot be undone.`}
+          onConfirm={() => {
+            deleteLodging(lodgingToDelete.id);
+            setLodgingToDelete(null);
+          }}
+          onCancel={() => setLodgingToDelete(null)}
+          styles={styles}
+        />
+      ) : null}
+      {showLodgingDetails && selectedLodging ? (
+        <LodgingDetailsDialog
+          visible={showLodgingDetails}
+          lodging={selectedLodging}
+          attendees={groupMembers}
+          backendUrl={backendUrl}
+          requestHeaders={headers}
+          styles={styles}
+          payerName={payerName}
+          travelerName={payerName}
+          onClose={() => setShowLodgingDetails(false)}
+          onEdit={() => {
+            if (!selectedLodging) return;
+            setShowLodgingDetails(false);
+            // openLodgingEditor(selectedLodging);
+          }}
+          onDelete={() => {
+            if (selectedLodging) {
+              setLodgingToDelete(selectedLodging);
+            }
+          }}
+          onOpenMap={openMaps}
+        />
+      ) : null}
+    </SafeAreaView>
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
-    backgroundColor: '#f7f7f7',
-  },
-  contentScroll: {
-    flex: 1,
-  },
-  contentScrollContent: {
-    paddingBottom: 120,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    backgroundColor: '#f1f5f9',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    width: '100%',
   },
   topBar: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderColor: '#d1d5db',
+  },
+  topRightWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-    position: 'relative',
-    zIndex: 1500,
+    gap: 16,
   },
   topRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  topRightWrapper: {
-    flexDirection: 'row',
+  contentScroll: {
+    flex: 1,
+    width: '100%',
+  },
+  contentScrollContent: {
     alignItems: 'center',
-    gap: 12,
-  },
-  auth: {
-    gap: 8,
-  },
-  input: {
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 6,
-    marginVertical: 6,
-    backgroundColor: '#fff',
+    padding: 16,
+    gap: 16,
   },
   card: {
-    padding: 12,
+    width: '100%',
+    maxWidth: 1200,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  auth: {
+    width: '100%',
+    maxWidth: 420,
+    marginTop: 40,
+    padding: 16,
     backgroundColor: '#fff',
     borderRadius: 8,
-    marginBottom: 12,
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
   },
-  successCard: {
-    padding: 12,
-    backgroundColor: '#e0f2fe',
-    borderRadius: 8,
-    marginBottom: 12,
-    borderColor: '#bfdbfe',
+  toggleRow: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  toggleButton: {
+    flex: 1,
+    padding: 10,
+    borderBottomWidth: 2,
+    borderColor: '#d1d5db',
+  },
+  toggleActive: {
+    borderColor: '#0d6efd',
+  },
+  toggleText: {
+    textAlign: 'center',
+    fontWeight: '600',
+    color: '#6b7280',
+  },
+  input: {
     borderWidth: 1,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#e5e7eb',
-    marginVertical: 12,
-  },
-  accountSection: {
-    gap: 6,
+    borderColor: '#d1d5db',
+    borderRadius: 6,
+    padding: 10,
+    marginBottom: 12,
+    width: '100%',
   },
   button: {
     backgroundColor: '#0d6efd',
     padding: 10,
     borderRadius: 6,
     alignItems: 'center',
-    marginVertical: 6,
-  },
-  budgetRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  budgetIndicator: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: '#0d6efd',
-    backgroundColor: 'transparent',
-  },
-  budgetIndicatorActive: {
-    backgroundColor: '#fff',
-    borderColor: '#fff',
   },
   buttonText: {
     color: '#fff',
-    fontWeight: '600',
+    fontWeight: 'bold',
   },
-  sectionTitle: {
-    fontWeight: '700',
-    fontSize: 18,
-    marginBottom: 8,
+  smallButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
-  row: {
+  dangerButton: {
+    backgroundColor: '#dc3545',
+  },
+  navRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
     marginTop: 8,
   },
-  groupRow: {
-    flexDirection: 'row',
-    gap: 12,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  traitRow: {
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  groupColumn: {
-    gap: 6,
-  },
-  shareRow: {
-    marginTop: 12,
-    gap: 6,
-  },
-  familyRow: {
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderColor: '#e5e7eb',
-    gap: 4,
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    marginBottom: 8,
-  },
-  toggleButton: {
-    flex: 1,
-    padding: 10,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ccc',
-  },
-  toggleActive: {
-    backgroundColor: '#0d6efd',
-    borderColor: '#0d6efd',
-  },
   navButton: {
-    backgroundColor: '#e5e7eb',
-    padding: 10,
-    borderRadius: 6,
-    alignItems: 'center',
-    marginVertical: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#e9ecef',
   },
   navButtonActive: {
     backgroundColor: '#0d6efd',
   },
   navButtonText: {
-    color: '#0f172a',
+    color: '#000',
     fontWeight: '600',
   },
   navButtonActiveText: {
     color: '#fff',
   },
-  toggleText: {
-    color: '#0f172a',
-    fontWeight: '600',
+  section: {
+    width: '100%',
+    maxWidth: 1200,
+    padding: 16,
+    backgroundColor: '#fff',
+    borderRadius: 8,
   },
-  bodyText: {
-    fontSize: 14,
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  helperText: {
+    color: '#6b7280',
+    marginBottom: 8,
+    fontSize: 13,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  groupRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderColor: '#e5e7eb',
+    gap: 8,
+  },
+  groupRowLast: {
+    borderBottomWidth: 0,
   },
   table: {
+    width: '100%',
     borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 8,
-    overflow: 'visible',
-    minWidth: 900,
+    borderColor: '#dee2e6',
+    borderRadius: 6,
   },
   tableRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    overflow: 'visible',
+    borderBottomWidth: 1,
+    borderColor: '#dee2e6',
+  },
+  lastRow: {
+    borderBottomWidth: 0,
   },
   tableHeader: {
-    backgroundColor: '#f1f5f9',
-  },
-  tableHeaderCell: {
-    padding: 10,
-    borderRightWidth: 1,
-    borderColor: '#e5e7eb',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tableCell: {
-    padding: 12,
-    borderRightWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: '#e5e7eb',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  lodgingTable: {
-    minWidth: 0,
-    width: '100%',
-  },
-  lodgingTabNameCol: {
-    flex: 1,
-    minWidth: 220,
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-  },
-  lodgingTabDateCol: {
-    flex: 0,
-    minWidth: 110,
-    maxWidth: 140,
-    justifyContent: 'center',
-  },
-  lodgingTabActionsCol: {
-    flex: 0,
-    minWidth: 200,
-    justifyContent: 'center',
-  },
-  tableNameButton: {
-    width: '100%',
-  },
-  tableActionButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: 100,
-  },
-  tableActionButtonPrimary: {
-    backgroundColor: '#0d6efd',
-  },
-  tableActionButtonDanger: {
-    backgroundColor: '#dc2626',
-  },
-  lodgingTableRow: {
-    alignItems: 'center',
-  },
-  tableHeaderRow: {
-    backgroundColor: '#f1f5f9',
+    backgroundColor: '#f8f9fa',
   },
   cell: {
-    padding: 10,
-    minWidth: 120,
+    padding: 8,
     borderRightWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: '#e5e7eb',
-    justifyContent: 'center',
+    borderColor: '#dee2e6',
   },
   lastCell: {
     borderRightWidth: 0,
   },
-  cellText: {
-    color: '#111827',
-  },
   headerText: {
-    fontWeight: '700',
-    color: '#0f172a',
+    fontWeight: 'bold',
   },
-  flightTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#0f172a',
+  cellText: {
+    flexWrap: 'wrap',
   },
   actionCell: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    gap: 6,
-  },
-  actionButtonsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 8,
-    width: '100%',
-  },
-  inputRow: {
-    backgroundColor: '#f8fafc',
-  },
-  cellInput: {
-    padding: 8,
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 6,
-    backgroundColor: '#fff',
-  },
-  tableFooter: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 12,
-  },
-  formGrid: {
-    marginTop: 12,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  totalRow: {
-    marginTop: 8,
-  },
-  summaryRow: {
-    marginTop: 8,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
   },
-  summaryOverall: {
-    borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
-    paddingTop: 8,
-    marginTop: 12,
-  },
-  summaryBreakdown: {
-    marginTop: 6,
-    gap: 2,
-  },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  payerBox: {
-    display: 'flex',
-    gap: 6,
-  },
-  payerChips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  payerChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    backgroundColor: '#e5e7eb',
-    borderRadius: 12,
-  },
-  payerOptions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  smallButton: {
-    backgroundColor: '#0d6efd',
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 6,
-  },
-  mapOptionButton: {
-    backgroundColor: '#fff',
-    borderColor: '#0d6efd',
-    borderWidth: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 6,
-  },
-  mapOptionActive: {
-    backgroundColor: '#0d6efd',
-    borderColor: '#0d6efd',
-  },
-  mapOptionText: {
-    color: '#0d6efd',
-    fontWeight: '600',
-  },
-  mapOptionActiveText: {
-    color: '#fff',
-  },
-  dangerButton: {
-    backgroundColor: '#dc2626',
-  },
-  helperText: {
-    color: '#6b7280',
-    fontSize: 12,
-  },
-  errorText: {
-    color: '#dc2626',
-    fontSize: 13,
-    marginTop: 4,
-  },
-  parsedList: {
-    marginTop: 4,
-    gap: 2,
-  },
-  pdfRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginTop: 8,
-  },
-  hiddenInput: {
-    display: 'none',
-  },
-  disabledButton: {
-    backgroundColor: '#94a3b8',
-  },
-  shareInput: {
-    flex: 1,
-  },
-  followTripItem: {
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  inviteRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 6,
-  },
-  codeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
+  bodyText: {
+    fontSize: 14,
   },
   flightsSection: {
-    position: 'relative',
-    zIndex: 2500,
-  },
-  traitsSection: {
-    position: 'relative',
-  },
-  itinerarySection: {
-    position: 'relative',
-  },
-  navRow: {
-    flexDirection: 'row',
     gap: 12,
+  },
+  flightsList: {
+    gap: 8,
+  },
+  flightCard: {
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 8,
+    padding: 12,
+    gap: 4,
+  },
+  flightTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  attendeeList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
     marginTop: 8,
+  },
+  attendeeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e9ecef',
+    borderRadius: 16,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    gap: 6,
+  },
+  attendeeChipRemoving: {
+    backgroundColor: '#f8d7da',
+  },
+  attendeeChipPending: {
+    backgroundColor: '#fff3cd',
+  },
+  attendeeText: {
+    fontWeight: '600',
+  },
+  attendeeRemoveButton: {
+    marginLeft: 4,
+  },
+  attendeeRemoveText: {
+    color: '#dc3545',
+    fontWeight: 'bold',
+  },
+  addTravelerForm: {
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 8,
+    gap: 8,
+  },
+  flightEditorWrap: {
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 8,
+    padding: 12,
+    marginVertical: 4,
+  },
+  flightRow: {
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 8,
+    padding: 12,
+    gap: 4,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#e2e8f0',
+    marginVertical: 12,
   },
   dayPill: {
     backgroundColor: '#e5e7eb',
-    padding: 10,
-    borderRadius: 16,
-    marginRight: 8,
-    minWidth: 90,
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
+    marginRight: 8,
   },
   dayPillActive: {
     backgroundColor: '#111827',
   },
   dayPillText: {
-    color: '#111827',
     fontWeight: '600',
   },
   dayPillActiveText: {
     color: '#fff',
   },
   dayPillNumber: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#111827',
+    fontSize: 13,
   },
   dayPillDate: {
-    fontSize: 12,
     color: '#4b5563',
+    fontSize: 13,
   },
   dayHeroCard: {
-    position: 'relative',
-    borderRadius: 20,
+    borderRadius: 16,
     overflow: 'hidden',
-    height: 200,
-    backgroundColor: '#e5e7eb',
+    position: 'relative',
+    height: 180,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   dayHeroImage: {
     position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     width: '100%',
     height: '100%',
   },
   dayHeroImageFallback: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-    backgroundColor: '#d1d5db',
+    flex: 1,
+    backgroundColor: '#e5e7eb',
   },
   dayHeroOverlay: {
     position: 'absolute',

@@ -35,6 +35,7 @@ const baseProps = {
   onRefreshTours: jest.fn(),
   onAddCarRental: jest.fn(),
   openFlightInFlightsTab: jest.fn(),
+  openLodgingDetails: jest.fn(),
 };
 
 const findByText = (root: any, label: string) =>
@@ -185,7 +186,7 @@ describe('Overview edit controls', () => {
     });
 
     act(() => {
-      const addTravelerNode = findByText(root, 'Add Traveler');
+      const addTravelerNode = findByText(root, '+ Add');
       if (!addTravelerNode?.parent?.props.onPress) {
         throw new Error('Add Traveler button not found.');
       }
@@ -202,7 +203,7 @@ describe('Overview edit controls', () => {
     });
 
     await act(async () => {
-      pressByText(root, 'Add');
+      pressByText(root, 'Save Traveler');
     });
 
     const addCall = fetchMock.mock.calls.find((call: any[]) => String(call[0]).includes('/api/groups/'));
@@ -249,7 +250,9 @@ describe('Overview edit controls', () => {
       pressByText(root, 'Edit');
     });
     act(() => {
-      pressByTextContains(root, 'vduerk@gmail.com');
+      const travelerChip = root.findByProps({ testID: 'attendee-chip-vduerk-gmail-com' });
+      const removeButton = travelerChip.findByType('TouchableOpacity');
+      removeButton.props.onPress();
     });
     await act(async () => {
       pressByText(root, 'Save');

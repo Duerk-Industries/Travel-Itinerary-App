@@ -13,7 +13,15 @@ type DetailRow = {
 type LodgingDetailsDialogProps = {
   visible: boolean;
   lodging: Lodging | null;
-  attendees: Array<{ id: string; guestName?: string; firstName?: string; lastName?: string }>;
+  attendees: Array<{
+    id: string;
+    guestName?: string;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    userEmail?: string;
+    status?: string;
+  }>;
   backendUrl: string;
   requestHeaders: Record<string, string>;
   styles: Record<string, any>;
@@ -83,6 +91,21 @@ const LodgingDetailsDialog: React.FC<LodgingDetailsDialogProps> = ({
       : Array.isArray(lodging.paidBy)
         ? lodging.paidBy
         : [];
+
+  useEffect(() => {
+    if (!visible || !lodging) return;
+    travelerIds.forEach((id) => {
+      const attendee = attendees.find((a) => a.id === id);
+      const firstName = attendee?.firstName ?? '';
+      const lastName = attendee?.lastName ?? '';
+      const displayName = `${firstName} ${lastName}`.trim();
+      const email = attendee?.email ?? attendee?.userEmail ?? '';
+      const pending = attendee?.status === 'pending';
+      console.debug(
+        `[overview][debug] traveler read (lodging details) id=${id} name="${displayName}" email=${email || 'n/a'} pending=${pending}`
+      );
+    });
+  }, [attendees, lodging, travelerIds, visible]);
   const resolveTravelerName = travelerName ?? payerName;
   const travelersLabel = travelerIds.length
     ? travelerIds

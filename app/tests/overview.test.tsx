@@ -239,13 +239,13 @@ describe('Overview UI (nested itinerary)', () => {
     onRefreshFlights: jest.fn(),
     onRefreshLodgings: jest.fn(),
     onRefreshTours: jest.fn(),
-    onAddCarRental: jest.fn(),
-    openFlightInFlightsTab: jest.fn(),
-  };
-
-  let fetchMock: jest.SpyInstance;
-  const originalFetch = global.fetch;
-  const renderOverview = async (element: React.ReactElement) => {
+      onAddCarRental: jest.fn(),
+      openFlightInFlightsTab: jest.fn(),
+      openLodgingDetails: jest.fn(),
+    };
+    
+    let fetchMock: jest.SpyInstance;
+    const originalFetch = global.fetch;  const renderOverview = async (element: React.ReactElement) => {
     const utils = render(element);
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
     return utils;
