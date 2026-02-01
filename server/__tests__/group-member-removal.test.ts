@@ -155,7 +155,7 @@ describe('Group member removal cleans related items', () => {
       .get(`/api/lodgings?tripId=${tripId}`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
-    expect(lodgingsRes.body[0].paidBy || lodgingsRes.body[0].paid_by).toEqual([ownerMemberId]);
+    expect(lodgingsRes.body).toHaveLength(0);
 
     const toursRes = await request(app)
       .get(`/api/tours?tripId=${tripId}`)

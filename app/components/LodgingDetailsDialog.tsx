@@ -9,6 +9,7 @@ type LodgingDetailsDialogProps = {
   lodging: Lodging | null;
   styles: Record<string, any>;
   payerName: (id: string) => string;
+  travelerName?: (id: string) => string;
   onClose: () => void;
   onEdit: (lodging: Lodging) => void;
   onDelete: (lodging: Lodging) => void;
@@ -21,6 +22,7 @@ const LodgingDetailsDialog: React.FC<LodgingDetailsDialogProps> = ({
   lodging,
   styles,
   payerName,
+  travelerName,
   onClose,
   onEdit,
   onDelete,
@@ -33,8 +35,14 @@ const LodgingDetailsDialog: React.FC<LodgingDetailsDialogProps> = ({
 
   const mapImageUrl = lodging.address ? buildStaticMapUrl(lodging.address) : '';
   const dateRange = `${lodging.checkInDate ? formatDateLong(lodging.checkInDate) : 'TBD'}${lodging.checkOutDate ? ` – ${formatDateLong(lodging.checkOutDate)}` : ''}`;
-  const travelerIds = Array.isArray(lodging.travelerIds) && lodging.travelerIds.length ? lodging.travelerIds : Array.isArray(lodging.paidBy) ? lodging.paidBy : [];
-  const travelersLabel = travelerIds.length ? travelerIds.map(payerName).join(', ') : 'Not set';
+  const travelerIds =
+    Array.isArray(lodging.travelerIds) && lodging.travelerIds.length
+      ? lodging.travelerIds
+      : Array.isArray(lodging.paidBy)
+        ? lodging.paidBy
+        : [];
+  const resolveTravelerName = travelerName ?? payerName;
+  const travelersLabel = travelerIds.length ? travelerIds.map(resolveTravelerName).join(', ') : 'Not set';
   const totalCostLabel = lodging.totalCost ? `$${lodging.totalCost}` : 'Not set';
 
   return (
@@ -202,6 +210,29 @@ const detailStyles = StyleSheet.create({
     paddingBottom: 12,
     backgroundColor: '#fff',
   },
+  detailList: {
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    gap: 8,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  detailLabel: {
+    width: 110,
+    color: '#0f172a',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  detailValue: {
+    flex: 1,
+    textAlign: 'left',
+    color: '#111827',
+    fontSize: 13,
+  },
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -240,5 +271,10 @@ const detailStyles = StyleSheet.create({
   },
   mapLink: {
     fontWeight: '600',
+  },
+  actionGroup: {
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap',
   },
 });

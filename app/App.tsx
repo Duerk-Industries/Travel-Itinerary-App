@@ -15,6 +15,7 @@ import { Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInpu
 import Constants from 'expo-constants';
 import { formatDateLong } from './utils/formatDateLong';
 import { normalizeDateString } from './utils/normalizeDateString';
+import { sanitizeCostInput } from './utils/sanitizeCost';
 import { FlightsTab, type Flight, fetchFlightsForTrip } from './tabs/flights';
 import { Tour, TourTab, fetchToursForTrip } from './tabs/tours';
 import { balanceCategoryTotals, computePayerTotals } from './tabs/costReport';
@@ -1046,7 +1047,11 @@ const App: React.FC = () => {
 
     let payload: any = {};
     if (type === 'user') {
-      payload = { email };
+      const normalized = email.trim();
+      const local = normalized.split('@')[0] ?? '';
+      const parts = local.split(/[._-]+/).filter(Boolean);
+      const derivedGuestName = parts.length >= 2 ? `${parts[0]} ${parts.slice(1).join(' ')}`.trim() : '';
+      payload = { email: normalized, ...(derivedGuestName ? { guestName: derivedGuestName } : {}) };
     } else {
       const rel = familyRelationships.find((r) => r.id === relationshipId);
       if (!rel) {
@@ -1634,7 +1639,7 @@ const App: React.FC = () => {
                     placeholder="Cost"
                     keyboardType="numeric"
                     value={carDraft.cost}
-                    onChangeText={(text) => setCarDraft((p) => ({ ...p, cost: text }))}
+                    onChangeText={(text) => setCarDraft((p) => ({ ...p, cost: sanitizeCostInput(text) }))}
                   />
                 </View>
                 <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>

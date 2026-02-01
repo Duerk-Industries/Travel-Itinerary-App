@@ -1995,15 +1995,13 @@ export const removeGroupMember = async (
             `,
             [tripId, memberId]
           );
-          const fallbackIds = fallbackPayerId ? JSON.stringify([fallbackPayerId]) : '[]';
           await client.query(
             `
-            UPDATE lodgings
-            SET traveler_ids = $2::jsonb
+            DELETE FROM lodgings
             WHERE trip_id = $1
               AND COALESCE(traveler_ids::text, '[]') IN ('[]', '[ ]', '[  ]', 'null')
             `,
-            [tripId, fallbackIds]
+            [tripId]
           );
         };
 
@@ -2114,15 +2112,13 @@ export const removeGroupMember = async (
           `,
           [tripIds, memberId]
         );
-        const fallbackIds = fallbackPayerId ? JSON.stringify([fallbackPayerId]) : '[]';
         await client.query(
           `
-          UPDATE lodgings
-          SET traveler_ids = $2::jsonb
+          DELETE FROM lodgings
           WHERE trip_id = ANY($1::uuid[])
             AND jsonb_array_length(COALESCE(traveler_ids, '[]'::jsonb)) = 0
           `,
-          [tripIds, fallbackIds]
+          [tripIds]
         );
       }
     }

@@ -2,7 +2,7 @@
 // @ts-nocheck
 import React, { useMemo, useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { type Lodging, type LodgingDraft, createLodgingDraftForTrip, saveLodgingApi, removeLodgingApi } from './lodging';
+import { type Lodging, type LodgingDraft, buildLodgingPayload, createLodgingDraftForTrip, saveLodgingApi, removeLodgingApi } from './lodging';
 import LodgingDialog from '../components/LodgingDialog';
 import LodgingDetailsDialog from '../components/LodgingDetailsDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -28,8 +28,10 @@ export const formatShortDate = (dateString?: string | null): string => {
   const parsed = new Date(target);
   if (Number.isNaN(parsed.getTime())) return dateString;
   const weekday = parsed.toLocaleDateString('en-US', { weekday: 'short' });
-  const monthDay = parsed.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  return `${weekday}. ${monthDay}`;
+  const month = parsed.toLocaleDateString('en-US', { month: 'short' });
+  const weekdayLabel = weekday.endsWith('.') ? weekday : `${weekday}.`;
+  const monthLabel = month.endsWith('.') ? month : `${month}.`;
+  return `${weekdayLabel} ${monthLabel} ${parsed.getDate()}`;
 };
 
 const LodgingTab: React.FC<LodgingTabProps> = ({
@@ -102,10 +104,11 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
   const handleSave = async () => {
     if (!lodgingDraft || !activeTripId) return;
 
-    const payload = {
-        ...lodgingDraft,
-        tripId: activeTripId,
-    };
+    const { payload, error } = buildLodgingPayload(lodgingDraft, activeTripId, defaultPayerId);
+    if (error || !payload) {
+      alert(error || 'Failed to save lodging.');
+      return;
+    }
 
     const result = await saveLodgingApi(backendUrl, jsonHeaders, payload, editingLodging?.id);
     if (result.ok) {
@@ -132,11 +135,21 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
     return [...lodgings].sort((a, b) => new Date(a.checkInDate).getTime() - new Date(b.checkInDate).getTime());
   }, [lodgings]);
 
+  const travelerNames = useMemo(() => {
+    const map = new Map<string, string>();
+    groupMembers.forEach((member) => {
+      map.set(member.id, formatMemberName(member));
+    });
+    return map;
+  }, [groupMembers, formatMemberName]);
+
+  const travelerName = (id: string) => travelerNames.get(id) ?? payerName(id);
+
   return (
     <View style={styles.card}>
       <View style={styles.row}>
         <Text style={styles.sectionTitle}>Lodging</Text>
-        <TouchableOpacity style={[styles.button, styles.roundButton, { marginLeft: 'auto' }]} onPress={openAddDialog}>
+        <TouchableOpacity style={[styles.button, styles.roundButton]} onPress={openAddDialog}>
           <Text style={styles.buttonText}>+</Text>
         </TouchableOpacity>
       </View>
@@ -201,6 +214,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
           lodging={selectedLodging}
           styles={styles}
           payerName={payerName}
+          travelerName={travelerName}
           onClose={closeDetails}
           onEdit={openEditDialog}
           onDelete={() => setLodgingToDelete(selectedLodging)}

@@ -131,7 +131,7 @@ describe('Lodging Dialogs', () => {
   });
 
   test('LodgingDetailsDialog renders correctly', () => {
-    const { getByText } = render(
+    const { getByText, getAllByText } = render(
       <LodgingDetailsDialog
         visible
         lodging={mockLodging}
@@ -145,7 +145,7 @@ describe('Lodging Dialogs', () => {
     );
 
     expect(getByText('Test Hotel')).toBeTruthy();
-    expect(getByText('123 Main St')).toBeTruthy();
+    expect(getAllByText('123 Main St').length).toBeGreaterThan(0);
     expect(getByText('$200')).toBeTruthy();
   });
 

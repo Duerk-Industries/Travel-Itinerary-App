@@ -56,9 +56,15 @@ router.put('/:id', async (req, res) => {
     
     let imageUrl: string | null = null;
     if (name || address) {
-      const currentLodging = (await listLodgings(userId, tripId)).find(l => l.id === req.params.id);
+      const currentLodging = (await listLodgings(userId, tripId)).find((l) => l.id === req.params.id);
       if (currentLodging) {
-        imageUrl = await findPlacePhoto(address ? `${name || currentLodging.name}, ${address}` : name);
+        const nextName = name ?? currentLodging.name;
+        const nextAddress = address ?? currentLodging.address;
+        const nameChanged = typeof name === 'string' && name.trim() && name !== currentLodging.name;
+        const addressChanged = typeof address === 'string' && address.trim() && address !== currentLodging.address;
+        if ((nameChanged || addressChanged) || !currentLodging.imageUrl) {
+          imageUrl = await findPlacePhoto(nextAddress ? `${nextName}, ${nextAddress}` : nextName);
+        }
       }
     }
 
@@ -101,9 +107,15 @@ router.patch('/:id', async (req, res) => {
 
     let imageUrl: string | null = null;
     if (name || address) {
-      const currentLodging = (await listLodgings(userId, tripId)).find(l => l.id === req.params.id);
+      const currentLodging = (await listLodgings(userId, tripId)).find((l) => l.id === req.params.id);
       if (currentLodging) {
-        imageUrl = await findPlacePhoto(address ? `${name || currentLodging.name}, ${address}` : name);
+        const nextName = name ?? currentLodging.name;
+        const nextAddress = address ?? currentLodging.address;
+        const nameChanged = typeof name === 'string' && name.trim() && name !== currentLodging.name;
+        const addressChanged = typeof address === 'string' && address.trim() && address !== currentLodging.address;
+        if ((nameChanged || addressChanged) || !currentLodging.imageUrl) {
+          imageUrl = await findPlacePhoto(nextAddress ? `${nextName}, ${nextAddress}` : nextName);
+        }
       }
     }
 

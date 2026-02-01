@@ -1369,17 +1369,33 @@ export const removeTravelerFromTrip = async (userId: string, tripId: string, tra
     // 3. Process Lodgings
     const lodgingsSnap = await db.collection('lodgings').where('trip_id', '==', tripId).get();
     for (const lodgingDoc of lodgingsSnap.docs) {
-      const lodging = lodgingDoc.data() as Lodging & { paidBy?: string[]; paid_by?: string[] };
+      const lodging = lodgingDoc.data() as Lodging & { paidBy?: string[]; paid_by?: string[]; traveler_ids?: string[]; travelerIds?: string[] };
       const lodgingPaidBy = lodging.paid_by ?? lodging.paidBy ?? [];
+      const lodgingTravelers = lodging.traveler_ids ?? lodging.travelerIds ?? [];
+      const updates: Partial<Lodging> = {};
+      let shouldDelete = false;
+
+      if (lodgingTravelers.includes(userIdToRemove)) {
+        const nextTravelers = lodgingTravelers.filter((id: string) => id !== userIdToRemove);
+        if (nextTravelers.length === 0) {
+          shouldDelete = true;
+        } else {
+          updates.traveler_ids = nextTravelers;
+        }
+      }
+
       if (lodgingPaidBy.includes(userIdToRemove)) {
         if (lodgingPaidBy.length === 1) {
-          batch.delete(lodgingDoc.ref);
+          updates.paid_by = [userId];
         } else {
-          const updates: Partial<Lodging> = {
-            paid_by: lodgingPaidBy.filter((id: string) => id !== userIdToRemove),
-          };
-          batch.update(lodgingDoc.ref, updates);
+          updates.paid_by = lodgingPaidBy.filter((id: string) => id !== userIdToRemove);
         }
+      }
+
+      if (shouldDelete) {
+        batch.delete(lodgingDoc.ref);
+      } else if (Object.keys(updates).length) {
+        batch.update(lodgingDoc.ref, updates);
       }
     }
 

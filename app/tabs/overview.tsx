@@ -7,7 +7,6 @@ import {
   buildOverviewRows,
   type DetailItem,
   formatFlightDetails,
-  formatLodgingDetails,
   formatTourDetails,
   type OverviewRow,
 } from '../utils/overviewBuilder';
@@ -482,6 +481,14 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
     const map = new Map<string, string>();
     groupMembers.forEach((m) => map.set(m.id, formatMemberName(m)));
     return map;
+  }, [groupMembers, formatMemberName]);
+
+  const travelerNames = useMemo(() => {
+    const map = new Map<string, string>();
+    groupMembers.forEach((member) => {
+      map.set(member.id, formatMemberName(member));
+    });
+    return map;
   }, [groupMembers]);
 
   const buildPassengerName = (ids: string[]) => ids.map((id) => memberNames.get(id)).filter(Boolean).join(', ');
@@ -492,6 +499,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
   );
 
   const payerName = (id: string) => memberNames.get(id) ?? 'Unknown';
+  const travelerName = (id: string) => travelerNames.get(id) ?? payerName(id);
 
   const overviewTravelerIds = useMemo(
     () => groupMembers.map((m) => m.id).filter(Boolean),
@@ -1644,19 +1652,8 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
                       testID={`day-details-lodging-${lodging.id}`}
                       style={styles.dayInfoRow}
                       onPress={() => {
-                        setDetailModal({
-                          title: 'Lodging Details',
-                          sections: [
-                            {
-                              subtitle: showLodgingNames && participants ? `Travelers: ${participants}` : undefined,
-                              items: formatLodgingDetails(lodging, mapApp).map((item) =>
-                                item.label === 'Address' && lodging.address
-                                  ? { ...item, onPress: () => onOpenAddress(lodging.address) }
-                                  : item
-                              ),
-                            },
-                          ],
-                        });
+                        setSelectedLodging(lodging);
+                        setShowLodgingDetails(true);
                       }}
                     >
                       {lodging.imageUrl ? (
@@ -2320,17 +2317,6 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       {selectedFlight
         ? renderDetailModal('Flight Details', formatFlightDetails(selectedFlight), () => setSelectedFlight(null))
         : null}
-      {selectedLodging
-        ? renderDetailModal(
-            'Lodging Details',
-            formatLodgingDetails(selectedLodging, mapApp).map((item) =>
-              item.label === 'Address' && selectedLodging.address
-                ? { ...item, onPress: () => onOpenAddress(selectedLodging.address) }
-                : item
-            ),
-            () => setSelectedLodging(null)
-          )
-        : null}
       {selectedTour ? renderDetailModal('Tour Details', formatTourDetails(selectedTour), () => setSelectedTour(null)) : null}
       {detailModal ? renderDetailSectionsModal(detailModal) : null}
       <FlightEditingForm
@@ -2720,6 +2706,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
           lodging={selectedLodging}
           styles={styles}
           payerName={payerName}
+          travelerName={travelerName}
           onClose={() => setShowLodgingDetails(false)}
           onEdit={() => {
             setShowLodgingDetails(false);
