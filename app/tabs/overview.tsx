@@ -1163,10 +1163,15 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
     setShowFlightEditor(true);
   };
 
+  const openLodgingDetails = (lodging: Lodging) => {
+    setDetailModal(null);
+    setSelectedLodging(lodging);
+    setShowLodgingDetails(true);
+  };
+
   const openLodgingEditor = (lodging: Lodging) => {
     if (!isEditing) {
-      setSelectedLodging(lodging);
-      setShowLodgingDetails(true);
+      openLodgingDetails(lodging);
       return;
     }
     setEditingLodgingId(lodging.id);
@@ -1652,8 +1657,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
                       testID={`day-details-lodging-${lodging.id}`}
                       style={styles.dayInfoRow}
                       onPress={() => {
-                        setSelectedLodging(lodging);
-                        setShowLodgingDetails(true);
+                        openLodgingDetails(lodging);
                       }}
                     >
                       {lodging.imageUrl ? (

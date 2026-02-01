@@ -109,6 +109,8 @@ export interface Lodging {
   paid_by: string[];
   traveler_ids?: string[];
   imageUrl?: string;
+  place_id?: string;
+  placeId?: string;
 }
 
 export interface Tour {
@@ -145,6 +147,13 @@ export interface ItineraryDetail {
   time?: string | null;
   activity: string;
   cost?: number | null;
+}
+
+export interface PlaceDetailsCache {
+  placeId: string;
+  name: string;
+  details: Record<string, any>;
+  fetchedAt: string;
 }
 
 export interface GroupInvite {

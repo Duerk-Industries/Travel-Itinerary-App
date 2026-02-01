@@ -10,6 +10,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
 type LodgingTabProps = {
   backendUrl: string;
   jsonHeaders: Record<string, string>,
+  requestHeaders: Record<string, string>,
   trip: { id: string, startDate?: string | null } | null;
   lodgings: Lodging[];
   groupMembers: any[];
@@ -37,6 +38,7 @@ export const formatShortDate = (dateString?: string | null): string => {
 const LodgingTab: React.FC<LodgingTabProps> = ({
   backendUrl,
   jsonHeaders,
+  requestHeaders,
   trip,
   lodgings,
   groupMembers,
@@ -212,6 +214,8 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
           testID="lodging-details-dialog"
           visible={showDetails}
           lodging={selectedLodging}
+          backendUrl={backendUrl}
+          requestHeaders={requestHeaders}
           styles={styles}
           payerName={payerName}
           travelerName={travelerName}

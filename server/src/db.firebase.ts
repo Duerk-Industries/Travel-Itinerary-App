@@ -2,7 +2,20 @@
 import { initializeApp, cert, deleteApp, getApps, App } from 'firebase-admin/app';
 import { getFirestore, Firestore, FieldPath } from 'firebase-admin/firestore';
 import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
-import { Flight, Lodging, Tour, Trait, Trip, User, WebUser, Itinerary, ItineraryDetail, Group, GroupMember } from './types';
+import {
+  Flight,
+  Lodging,
+  Tour,
+  Trait,
+  Trip,
+  User,
+  WebUser,
+  Itinerary,
+  ItineraryDetail,
+  Group,
+  GroupMember,
+  PlaceDetailsCache,
+} from './types';
 import { logError, logInfo } from './logger';
 import { getEnvValue, isLocalEnv } from './env';
 
@@ -922,6 +935,8 @@ export const insertLodging = async (lodging: {
   totalCost: number;
   costPerNight: number;
   address?: string;
+  place_id?: string;
+  placeId?: string;
   paid_by?: string[];
   traveler_ids?: string[];
   imageUrl?: string;
@@ -941,6 +956,7 @@ export const insertLodging = async (lodging: {
     total_cost: lodging.totalCost,
     cost_per_night: lodging.costPerNight,
     address: lodging.address ?? '',
+    place_id: lodging.place_id ?? lodging.placeId ?? '',
     paid_by: lodging.paid_by ?? [],
     traveler_ids: lodging.traveler_ids ?? lodging.paid_by ?? [],
     imageUrl: lodging.imageUrl ?? lodging.image_url ?? '',
@@ -1219,6 +1235,39 @@ export const updateItineraryDetail = async (
   await db.collection('itinerary_details').doc(detailId).update(updates);
   const updated = await db.collection('itinerary_details').doc(detailId).get();
   return updated.data() as ItineraryDetail;
+};
+
+export const getPlaceDetailsCache = async (placeId: string): Promise<PlaceDetailsCache | null> => {
+  const db = getDb();
+  const doc = await db.collection('place_details_cache').doc(placeId).get();
+  if (!doc.exists) return null;
+  const data = doc.data() as any;
+  return {
+    placeId: data.placeId ?? placeId,
+    name: data.name ?? '',
+    details: data.details ?? {},
+    fetchedAt: data.fetchedAt ?? data.updatedAt ?? nowIso(),
+  };
+};
+
+export const upsertPlaceDetailsCache = async (entry: {
+  placeId: string;
+  name: string;
+  details: Record<string, any>;
+  fetchedAt?: string | Date;
+}): Promise<void> => {
+  const db = getDb();
+  const fetchedAt = entry.fetchedAt ? new Date(entry.fetchedAt).toISOString() : nowIso();
+  await db.collection('place_details_cache').doc(entry.placeId).set(
+    {
+      placeId: entry.placeId,
+      name: entry.name,
+      details: entry.details ?? {},
+      fetchedAt,
+      updatedAt: nowIso(),
+    },
+    { merge: true }
+  );
 };
 
 // Family & fellow travelers

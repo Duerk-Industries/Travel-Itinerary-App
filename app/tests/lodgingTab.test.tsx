@@ -57,6 +57,7 @@ describe('LodgingTab', () => {
             <LodgingTab
                 backendUrl=""
                 jsonHeaders={{}}
+                requestHeaders={{}}
                 trip={trip}
                 lodgings={mockLodgings}
                 groupMembers={groupMembers}
@@ -85,6 +86,7 @@ describe('LodgingTab', () => {
             <LodgingTab
                 backendUrl=""
                 jsonHeaders={{}}
+                requestHeaders={{}}
                 trip={trip}
                 lodgings={mockLodgings}
                 groupMembers={groupMembers}
@@ -107,6 +109,7 @@ describe('LodgingTab', () => {
             <LodgingTab
                 backendUrl=""
                 jsonHeaders={{}}
+                requestHeaders={{}}
                 trip={trip}
                 lodgings={mockLodgings}
                 groupMembers={groupMembers}
@@ -131,6 +134,7 @@ describe('LodgingTab', () => {
             <LodgingTab
                 backendUrl=""
                 jsonHeaders={{}}
+                requestHeaders={{}}
                 trip={trip}
                 lodgings={mockLodgings}
                 groupMembers={groupMembers}
@@ -157,6 +161,7 @@ describe('LodgingTab', () => {
             <LodgingTab
                 backendUrl=""
                 jsonHeaders={{}}
+                requestHeaders={{}}
                 trip={trip}
                 lodgings={mockLodgings}
                 groupMembers={groupMembers}

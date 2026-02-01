@@ -13,6 +13,7 @@ export type Lodging = {
   totalCost: string;
   costPerNight: string;
   address: string;
+  placeId?: string;
   paidBy: string[];
   travelerIds: string[];
   imageUrl?: string;
@@ -27,6 +28,7 @@ export type LodgingDraft = {
   totalCost: string;
   costPerNight: string;
   address: string;
+  placeId?: string;
   paidBy: string[];
   travelerIds: string[];
   imageUrl?: string;
@@ -42,6 +44,7 @@ export const createInitialLodgingState = (overrides: Partial<LodgingDraft> = {})
   totalCost: '',
   costPerNight: '',
   address: '',
+  placeId: '',
   paidBy: [],
   travelerIds: [],
   imageUrl: '',
@@ -69,6 +72,7 @@ export const normalizeLodgingFromApi = (l: any): Lodging => ({
   totalCost: String(l.total_cost ?? ''),
   costPerNight: String(l.cost_per_night ?? ''),
   address: l.address ?? '',
+  placeId: l.place_id ?? l.placeId ?? '',
   paidBy: Array.isArray(l.paid_by) ? l.paid_by : [],
   travelerIds: Array.isArray(l.traveler_ids)
     ? l.traveler_ids
@@ -107,6 +111,7 @@ export const buildLodgingPayload = (
       tripId: activeTripId,
       rooms,
       costPerNight,
+      placeId: draft.placeId ?? '',
       paidBy,
       travelerIds,
     },
@@ -224,6 +229,7 @@ export const toLodgingDraft = (
     totalCost: lodging.totalCost || '',
     costPerNight: lodging.costPerNight || '',
     address: lodging.address || '',
+    placeId: lodging.placeId || '',
     paidBy: Array.isArray(lodging.paidBy) && lodging.paidBy.length ? lodging.paidBy : opts?.defaultPayerId ? [opts.defaultPayerId] : [],
     travelerIds: Array.isArray(lodging.travelerIds) && lodging.travelerIds.length
       ? lodging.travelerIds
@@ -233,6 +239,24 @@ export const toLodgingDraft = (
           ? [opts.defaultPayerId]
           : [],
   };
+};
+
+export type PlaceDetailsPayload = {
+  placeId: string;
+  name: string;
+  details: Record<string, any>;
+  cached: boolean;
+};
+
+export const fetchPlaceDetailsApi = async (
+  backendUrl: string,
+  headers: Record<string, string>,
+  placeId: string
+): Promise<PlaceDetailsPayload | null> => {
+  if (!placeId) return null;
+  const res = await fetch(`${backendUrl}/api/places/${encodeURIComponent(placeId)}`, { headers });
+  if (!res.ok) return null;
+  return res.json();
 };
 
 // Helper to keep the detailed card consistent with normalized dates if needed elsewhere.

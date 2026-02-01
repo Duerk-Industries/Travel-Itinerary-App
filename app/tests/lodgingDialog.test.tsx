@@ -135,6 +135,8 @@ describe('Lodging Dialogs', () => {
       <LodgingDetailsDialog
         visible
         lodging={mockLodging}
+        backendUrl="http://example.com"
+        requestHeaders={{}}
         styles={styles}
         payerName={payerName}
         onClose={() => {}}
@@ -155,6 +157,8 @@ describe('Lodging Dialogs', () => {
       <LodgingDetailsDialog
         visible
         lodging={mockLodging}
+        backendUrl="http://example.com"
+        requestHeaders={{}}
         styles={styles}
         payerName={payerName}
         onClose={() => {}}
@@ -174,6 +178,8 @@ describe('Lodging Dialogs', () => {
       <LodgingDetailsDialog
         visible
         lodging={mockLodging}
+        backendUrl="http://example.com"
+        requestHeaders={{}}
         styles={styles}
         payerName={payerName}
         onClose={() => {}}
@@ -193,6 +199,8 @@ describe('Lodging Dialogs', () => {
       <LodgingDetailsDialog
         visible
         lodging={mockLodging}
+        backendUrl="http://example.com"
+        requestHeaders={{}}
         styles={styles}
         payerName={payerName}
         onClose={() => {}}
@@ -211,6 +219,8 @@ describe('Lodging Dialogs', () => {
       <LodgingDetailsDialog
         visible
         lodging={mockLodging}
+        backendUrl="http://example.com"
+        requestHeaders={{}}
         styles={styles}
         payerName={payerName}
         onClose={onClose}

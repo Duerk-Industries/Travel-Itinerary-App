@@ -363,12 +363,17 @@ export const fetchFlightsForTrip = async ({
   token?: string | null;
 }): Promise<Flight[]> => {
   if (!activeTripId || !token) return [];
-  const res = await fetch(`${backendUrl}/api/flights?tripId=${activeTripId}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) return [];
-  const data = await res.json();
-  return (data as any[]).map((f) => normalizeFlightFromApi(f));
+  try {
+    const res = await fetch(`${backendUrl}/api/flights?tripId=${activeTripId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data as any[]).map((f) => normalizeFlightFromApi(f));
+  } catch (err) {
+    console.error('Failed to fetch flights', err);
+    return [];
+  }
 };
 
 type FlightsTabProps = {
@@ -1263,7 +1268,10 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       ];
 
   return (
-    <View style={containerStyle} ref={containerRef as any} pointerEvents={showList ? 'auto' : 'box-none'}>
+    <View
+      style={[containerStyle, { pointerEvents: showList ? 'auto' : 'box-none' }]}
+      ref={containerRef as any}
+    >
       {showList ? (
         <>
       <Text style={styles.sectionTitle}>Flights</Text>

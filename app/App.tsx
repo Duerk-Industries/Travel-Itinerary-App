@@ -1450,6 +1450,7 @@ const App: React.FC = () => {
         <LodgingTab
           backendUrl={backendUrl}
           jsonHeaders={jsonHeaders}
+          requestHeaders={headers}
           trip={findActiveTrip() ?? null}
           lodgings={lodgings}
           groupMembers={groupMembers}

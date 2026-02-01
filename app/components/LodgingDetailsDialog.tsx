@@ -1,12 +1,20 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, ScrollView, Text, View, TouchableOpacity, useWindowDimensions, Image } from 'react-native';
-import type { Lodging } from '../tabs/lodging';
+import { type Lodging, fetchPlaceDetailsApi, type PlaceDetailsPayload } from '../tabs/lodging';
 import { formatDateLong } from '../utils/formatDateLong';
 import { buildStaticMapUrl } from '../utils/googleMaps';
+
+type DetailRow = {
+  label: string;
+  value: any;
+  action?: () => void;
+};
 
 type LodgingDetailsDialogProps = {
   visible: boolean;
   lodging: Lodging | null;
+  backendUrl: string;
+  requestHeaders: Record<string, string>;
   styles: Record<string, any>;
   payerName: (id: string) => string;
   travelerName?: (id: string) => string;
@@ -20,6 +28,8 @@ type LodgingDetailsDialogProps = {
 const LodgingDetailsDialog: React.FC<LodgingDetailsDialogProps> = ({
   visible,
   lodging,
+  backendUrl,
+  requestHeaders,
   styles,
   payerName,
   travelerName,
@@ -31,6 +41,34 @@ const LodgingDetailsDialog: React.FC<LodgingDetailsDialogProps> = ({
 }) => {
   const { width } = useWindowDimensions();
   const isCompact = width < 520;
+
+  const [placeDetails, setPlaceDetails] = useState<PlaceDetailsPayload | null>(null);
+  const [placeDetailsStatus, setPlaceDetailsStatus] = useState<'idle' | 'loading' | 'done'>('idle');
+
+  useEffect(() => {
+    let isMounted = true;
+    if (!visible || !lodging?.placeId) {
+      setPlaceDetails(null);
+      setPlaceDetailsStatus('idle');
+      return () => undefined;
+    }
+    setPlaceDetailsStatus('loading');
+    fetchPlaceDetailsApi(backendUrl, requestHeaders, lodging.placeId)
+      .then((data) => {
+        if (!isMounted) return;
+        setPlaceDetails(data);
+        setPlaceDetailsStatus('done');
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setPlaceDetails(null);
+        setPlaceDetailsStatus('done');
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [backendUrl, lodging?.placeId, requestHeaders, visible]);
+
   if (!visible || !lodging) return null;
 
   const mapImageUrl = lodging.address ? buildStaticMapUrl(lodging.address) : '';
@@ -44,6 +82,23 @@ const LodgingDetailsDialog: React.FC<LodgingDetailsDialogProps> = ({
   const resolveTravelerName = travelerName ?? payerName;
   const travelersLabel = travelerIds.length ? travelerIds.map(resolveTravelerName).join(', ') : 'Not set';
   const totalCostLabel = lodging.totalCost ? `$${lodging.totalCost}` : 'Not set';
+  const placeDetailsRows = useMemo<DetailRow[]>(() => {
+    if (!placeDetails?.details) return [];
+    const details = placeDetails.details as any;
+    const phone = details.internationalPhoneNumber || details.nationalPhoneNumber;
+    const website = details.websiteUri;
+    const rating = typeof details.rating === 'number' ? `${details.rating} (${details.userRatingCount ?? 0})` : null;
+    const hours = Array.isArray(details.regularOpeningHours?.weekdayDescriptions)
+      ? details.regularOpeningHours.weekdayDescriptions.join(' • ')
+      : null;
+
+    const rows: DetailRow[] = [];
+    if (phone) rows.push({ label: 'Phone', value: phone });
+    if (website) rows.push({ label: 'Website', value: website });
+    if (rating) rows.push({ label: 'Rating', value: rating });
+    if (hours) rows.push({ label: 'Hours', value: hours });
+    return rows;
+  }, [placeDetails]);
 
   return (
     <View style={styles.modalOverlay} testID={testID}>
@@ -72,7 +127,8 @@ const LodgingDetailsDialog: React.FC<LodgingDetailsDialogProps> = ({
           </View>
         </View>
         <View style={detailStyles.detailList}>
-          {[
+          {(
+            [
             { label: 'Check-in', value: lodging.checkInDate ? formatDateLong(lodging.checkInDate) : 'TBD' },
             { label: 'Check-out', value: lodging.checkOutDate ? formatDateLong(lodging.checkOutDate) : 'TBD' },
             { label: 'Rooms', value: lodging.rooms || '1' },
@@ -86,7 +142,26 @@ const LodgingDetailsDialog: React.FC<LodgingDetailsDialogProps> = ({
             { label: 'Travelers', value: travelersLabel },
             { label: 'Total cost', value: totalCostLabel },
             { label: 'Cost per night', value: lodging.costPerNight ? `$${lodging.costPerNight}` : '$0' },
-          ].map((row) => (
+          ] as DetailRow[]
+          ).map((row) => (
+            <View key={row.label} style={detailStyles.detailRow}>
+              <Text style={detailStyles.detailLabel}>{row.label}</Text>
+              {row.action ? (
+                <Text style={[detailStyles.detailValue, styles.linkText]} onPress={row.action}>
+                  {row.value}
+                </Text>
+              ) : (
+                <Text style={detailStyles.detailValue}>{row.value}</Text>
+              )}
+            </View>
+          ))}
+          {placeDetailsStatus === 'loading' ? (
+            <View style={detailStyles.detailRow}>
+              <Text style={detailStyles.detailLabel}>Place details</Text>
+              <Text style={detailStyles.detailValue}>Loading...</Text>
+            </View>
+          ) : null}
+          {placeDetailsRows.map((row) => (
             <View key={row.label} style={detailStyles.detailRow}>
               <Text style={detailStyles.detailLabel}>{row.label}</Text>
               {row.action ? (

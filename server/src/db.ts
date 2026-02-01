@@ -1,6 +1,17 @@
 import { getCurrentDbProvider as getProvider, getDbAdapter, resetDbAdapter, type DbProvider } from './db.providers';
 import type { Pool } from 'pg';
-import type { Flight, Lodging, Tour, Trait, Trip, Itinerary, ItineraryDetail, User, WebUser } from './types';
+import type {
+  Flight,
+  Lodging,
+  Tour,
+  Trait,
+  Trip,
+  Itinerary,
+  ItineraryDetail,
+  User,
+  WebUser,
+  PlaceDetailsCache,
+} from './types';
 
 const adapter = () => getDbAdapter();
 
@@ -126,6 +137,12 @@ export const deleteItineraryDetail = async (...args: Parameters<ReturnType<typeo
   adapter().deleteItineraryDetail(...args);
 export const updateItineraryDetail = async (...args: Parameters<ReturnType<typeof adapter>['updateItineraryDetail']>) =>
   adapter().updateItineraryDetail(...args);
+export const getPlaceDetailsCache = async (
+  placeId: string
+): Promise<PlaceDetailsCache | null> => adapter().getPlaceDetailsCache(placeId);
+export const upsertPlaceDetailsCache = async (
+  entry: Parameters<ReturnType<typeof adapter>['upsertPlaceDetailsCache']>[0]
+): Promise<void> => adapter().upsertPlaceDetailsCache(entry);
 export const listFamilyRelationships = async (...args: Parameters<ReturnType<typeof adapter>['listFamilyRelationships']>) =>
   adapter().listFamilyRelationships(...args);
 export const listFellowTravelers = async (...args: Parameters<ReturnType<typeof adapter>['listFellowTravelers']>) =>

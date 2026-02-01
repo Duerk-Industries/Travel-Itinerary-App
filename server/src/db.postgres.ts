@@ -1,7 +1,20 @@
 // server/src/db.ts
 import { Pool } from 'pg';
 import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
-import { Flight, Group, GroupMember, Trait, Trip, User, WebUser, Lodging, Tour, Itinerary, ItineraryDetail } from './types';
+import {
+  Flight,
+  Group,
+  GroupMember,
+  Trait,
+  Trip,
+  User,
+  WebUser,
+  Lodging,
+  Tour,
+  Itinerary,
+  ItineraryDetail,
+  PlaceDetailsCache,
+} from './types';
 import { logError } from './logger';
 import { getEnvValue } from './env';
 
@@ -280,6 +293,7 @@ export const initDb = async (): Promise<void> => {
       total_cost NUMERIC NOT NULL DEFAULT 0,
       cost_per_night NUMERIC NOT NULL DEFAULT 0,
       address TEXT,
+      place_id TEXT,
       paid_by JSONB DEFAULT '[]'::jsonb,
       traveler_ids JSONB DEFAULT '[]'::jsonb,
       image_url TEXT,
@@ -291,6 +305,7 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS total_cost NUMERIC NOT NULL DEFAULT 0;`);
   await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS cost_per_night NUMERIC NOT NULL DEFAULT 0;`);
   await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS address TEXT;`);
+  await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS place_id TEXT;`);
   await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS paid_by JSONB DEFAULT '[]'::jsonb;`);
   await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS traveler_ids JSONB DEFAULT '[]'::jsonb;`);
   await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS image_url TEXT;`);
@@ -331,6 +346,16 @@ export const initDb = async (): Promise<void> => {
   await p.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_airports_iata_code ON airports(iata_code);`);
 
   await p.query(`
+    CREATE TABLE IF NOT EXISTS place_details_cache (
+      place_id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      details JSONB NOT NULL DEFAULT '{}'::jsonb,
+      fetched_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+
+  await p.query(`
     CREATE TABLE IF NOT EXISTS itineraries (
       id UUID PRIMARY KEY,
       trip_id UUID NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
@@ -362,6 +387,7 @@ export const initDb = async (): Promise<void> => {
     await p.query(`DELETE FROM flight_shares`);
     await p.query(`DELETE FROM flights`);
     await p.query(`DELETE FROM trips`);
+    await p.query(`DELETE FROM place_details_cache`);
     await p.query(`DELETE FROM group_invites`);
     await p.query(`DELETE FROM group_members`);
     await p.query(`DELETE FROM groups`);
@@ -1257,6 +1283,7 @@ export const listLodgings = async (userId: string, tripId?: string | null): Prom
              l.total_cost as "totalCost",
              l.cost_per_night as "costPerNight",
              l.address,
+             l.place_id as "placeId",
              COALESCE(l.paid_by, '[]'::jsonb) as "paid_by",
              COALESCE(l.traveler_ids, '[]'::jsonb) as "traveler_ids",
              l.image_url as "imageUrl",
@@ -1294,6 +1321,7 @@ export const insertLodging = async (lodging: {
   totalCost: number;
   costPerNight: number;
   address?: string;
+  place_id?: string;
   paid_by?: string[];
   traveler_ids?: string[];
   imageUrl?: string | null;
@@ -1303,9 +1331,9 @@ export const insertLodging = async (lodging: {
   const { rows } = await p.query(
     `
       INSERT INTO lodgings (
-        id, user_id, trip_id, name, check_in_date, check_out_date, rooms, refund_by, total_cost, cost_per_night, address, paid_by, traveler_ids, image_url
+        id, user_id, trip_id, name, check_in_date, check_out_date, rooms, refund_by, total_cost, cost_per_night, address, place_id, paid_by, traveler_ids, image_url
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
       RETURNING id,
                 user_id as "userId",
                 trip_id as "tripId",
@@ -1317,6 +1345,7 @@ export const insertLodging = async (lodging: {
                 total_cost as "totalCost",
                 cost_per_night as "costPerNight",
                 address,
+                place_id as "placeId",
                 COALESCE(paid_by, '[]'::jsonb) as "paid_by",
                 COALESCE(traveler_ids, '[]'::jsonb) as "traveler_ids",
                 image_url as "imageUrl",
@@ -1334,6 +1363,7 @@ export const insertLodging = async (lodging: {
       lodging.totalCost,
       lodging.costPerNight,
       lodging.address ?? '',
+      lodging.place_id ?? null,
       JSON.stringify(lodging.paid_by ?? []),
       JSON.stringify(lodging.traveler_ids ?? []),
       lodging.imageUrl ?? null,
@@ -1406,6 +1436,7 @@ export const updateLodging = async (
     updates.total_cost ?? null,
     updates.cost_per_night ?? null,
     updates.address ?? null,
+    updates.place_id ?? null,
     updates.imageUrl ?? null,
     typeof updates.paid_by !== 'undefined' ? JSON.stringify(updates.paid_by ?? []) : null,
     typeof updates.traveler_ids !== 'undefined' ? JSON.stringify(updates.traveler_ids ?? []) : null,
@@ -1425,10 +1456,11 @@ export const updateLodging = async (
           total_cost = COALESCE($8, total_cost),
           cost_per_night = COALESCE($9, cost_per_night),
           address = COALESCE($10, address),
-          image_url = COALESCE($11, image_url),
-          paid_by = COALESCE($12::jsonb, paid_by),
-          traveler_ids = COALESCE($13::jsonb, traveler_ids),
-          trip_id = COALESCE($14, trip_id)
+          place_id = COALESCE($11, place_id),
+          image_url = COALESCE($12, image_url),
+          paid_by = COALESCE($13::jsonb, paid_by),
+          traveler_ids = COALESCE($14::jsonb, traveler_ids),
+          trip_id = COALESCE($15, trip_id)
         WHERE id = $1
         RETURNING
           id,
@@ -1442,6 +1474,7 @@ export const updateLodging = async (
           total_cost as "totalCost",
           cost_per_night as "costPerNight",
           address,
+          place_id as "placeId",
           COALESCE(paid_by, '[]'::jsonb) as "paid_by",
           COALESCE(traveler_ids, '[]'::jsonb) as "traveler_ids",
           image_url as "imageUrl",
@@ -1458,13 +1491,14 @@ export const updateLodging = async (
           total_cost = COALESCE($8, l.total_cost),
           cost_per_night = COALESCE($9, l.cost_per_night),
           address = COALESCE($10, l.address),
-          image_url = COALESCE($11, l.image_url),
-          paid_by = COALESCE($12::jsonb, l.paid_by),
-          traveler_ids = COALESCE($13::jsonb, l.traveler_ids),
-          trip_id = COALESCE($14, l.trip_id)
+          place_id = COALESCE($11, l.place_id),
+          image_url = COALESCE($12, l.image_url),
+          paid_by = COALESCE($13::jsonb, l.paid_by),
+          traveler_ids = COALESCE($14::jsonb, l.traveler_ids),
+          trip_id = COALESCE($15, l.trip_id)
         FROM trips t
         WHERE l.id = $1
-          AND t.id = COALESCE($14, l.trip_id)
+          AND t.id = COALESCE($15, l.trip_id)
           -- allow edits by any member of the trip's group
           AND t.group_id IN (SELECT group_id FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $2)
         RETURNING
@@ -1479,6 +1513,7 @@ export const updateLodging = async (
           l.total_cost as "totalCost",
           l.cost_per_night as "costPerNight",
           l.address,
+          l.place_id as "placeId",
           COALESCE(l.paid_by, '[]'::jsonb) as "paid_by",
           COALESCE(l.traveler_ids, '[]'::jsonb) as "traveler_ids",
           l.image_url as "imageUrl",
@@ -3472,6 +3507,38 @@ export const updateFamilyProfile = async (
   } finally {
     client.release();
   }
+};
+
+
+export const getPlaceDetailsCache = async (placeId: string): Promise<PlaceDetailsCache | null> => {
+  const p = getPool();
+  const { rows } = await p.query<PlaceDetailsCache>(
+    `SELECT place_id as "placeId", name, details, fetched_at as "fetchedAt"
+     FROM place_details_cache
+     WHERE place_id = $1
+     LIMIT 1`,
+    [placeId]
+  );
+  return rows[0] ?? null;
+};
+
+export const upsertPlaceDetailsCache = async (entry: {
+  placeId: string;
+  name: string;
+  details: Record<string, any>;
+  fetchedAt?: string | Date;
+}): Promise<void> => {
+  const p = getPool();
+  const fetchedAt = entry.fetchedAt ? new Date(entry.fetchedAt) : new Date();
+  await p.query(
+    `INSERT INTO place_details_cache (place_id, name, details, fetched_at)
+     VALUES ($1, $2, $3::jsonb, $4)
+     ON CONFLICT (place_id) DO UPDATE
+     SET name = EXCLUDED.name,
+         details = EXCLUDED.details,
+         fetched_at = EXCLUDED.fetched_at`,
+    [entry.placeId, entry.name, JSON.stringify(entry.details ?? {}), fetchedAt]
+  );
 };
 
 
