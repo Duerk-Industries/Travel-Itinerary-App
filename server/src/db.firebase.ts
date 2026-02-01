@@ -497,7 +497,16 @@ export const removeGroupMember = async (requesterId: string, groupId: string, me
       if (!paidBy.length && fallbackPayerId) {
         paidBy = [fallbackPayerId];
       }
-      await doc.ref.update({ paid_by: paidBy });
+      const travelerIds = Array.isArray(data.traveler_ids)
+        ? data.traveler_ids.filter((id: string) => id !== memberId)
+        : Array.isArray(data.travelerIds)
+          ? data.travelerIds.filter((id: string) => id !== memberId)
+          : [];
+      if (!travelerIds.length) {
+        await doc.ref.delete();
+        continue;
+      }
+      await doc.ref.update({ paid_by: paidBy, traveler_ids: travelerIds });
     }
 
     const toursSnap = await db.collection('tours').where('tripId', '==', tripId).get();
@@ -914,6 +923,7 @@ export const insertLodging = async (lodging: {
   costPerNight: number;
   address?: string;
   paid_by?: string[];
+  traveler_ids?: string[];
   imageUrl?: string;
   image_url?: string;
 }): Promise<Lodging> => {
@@ -932,6 +942,7 @@ export const insertLodging = async (lodging: {
     cost_per_night: lodging.costPerNight,
     address: lodging.address ?? '',
     paid_by: lodging.paid_by ?? [],
+    traveler_ids: lodging.traveler_ids ?? lodging.paid_by ?? [],
     imageUrl: lodging.imageUrl ?? lodging.image_url ?? '',
   };
   await db.collection('lodgings').doc(id).set(payload);

@@ -18,7 +18,7 @@ router.get('/', async (req, res) => {
 
 router.post('/', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const { name, checkInDate, checkOutDate, rooms, refundBy, totalCost, costPerNight, address, tripId, paidBy } = req.body;
+  const { name, checkInDate, checkOutDate, rooms, refundBy, totalCost, costPerNight, address, tripId, paidBy, travelerIds } = req.body;
   if (!name || !checkInDate || !checkOutDate || !tripId) {
     res.status(400).json({ error: 'Missing required fields' });
     return;
@@ -41,6 +41,7 @@ router.post('/', async (req, res) => {
     costPerNight: Number(costPerNight) || 0,
     address,
     paid_by: Array.isArray(paidBy) ? paidBy : [],
+    traveler_ids: Array.isArray(travelerIds) ? travelerIds : Array.isArray(paidBy) ? paidBy : [],
     imageUrl,
   });
   res.status(201).json(lodging);
@@ -49,8 +50,9 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const userId = (req as any).user.userId as string;
-    const { name, checkInDate, checkOutDate, rooms, refundBy, totalCost, costPerNight, address, tripId, paidBy } = req.body;
+    const { name, checkInDate, checkOutDate, rooms, refundBy, totalCost, costPerNight, address, tripId, paidBy, travelerIds } = req.body;
     const normalizedPaidBy = Array.isArray(paidBy) ? (paidBy.length ? paidBy : undefined) : undefined;
+    const normalizedTravelerIds = Array.isArray(travelerIds) ? (travelerIds.length ? travelerIds : []) : undefined;
     
     let imageUrl: string | null = null;
     if (name || address) {
@@ -70,6 +72,7 @@ router.put('/:id', async (req, res) => {
       cost_per_night: typeof costPerNight === 'undefined' ? undefined : Number(costPerNight) || 0,
       address,
       paid_by: normalizedPaidBy,
+      traveler_ids: typeof normalizedTravelerIds === 'undefined' ? undefined : normalizedTravelerIds,
       trip_id: tripId,
       imageUrl: imageUrl ?? undefined,
     });
@@ -92,8 +95,9 @@ router.put('/:id', async (req, res) => {
 router.patch('/:id', async (req, res) => {
   try {
     const userId = (req as any).user.userId as string;
-    const { name, checkInDate, checkOutDate, rooms, refundBy, totalCost, costPerNight, address, tripId, paidBy } = req.body;
+    const { name, checkInDate, checkOutDate, rooms, refundBy, totalCost, costPerNight, address, tripId, paidBy, travelerIds } = req.body;
     const normalizedPaidBy = Array.isArray(paidBy) ? (paidBy.length ? paidBy : undefined) : undefined;
+    const normalizedTravelerIds = Array.isArray(travelerIds) ? (travelerIds.length ? travelerIds : []) : undefined;
 
     let imageUrl: string | null = null;
     if (name || address) {
@@ -113,6 +117,7 @@ router.patch('/:id', async (req, res) => {
       cost_per_night: typeof costPerNight === 'undefined' ? undefined : Number(costPerNight) || 0,
       address,
       paid_by: normalizedPaidBy,
+      traveler_ids: typeof normalizedTravelerIds === 'undefined' ? undefined : normalizedTravelerIds,
       trip_id: tripId,
       imageUrl: imageUrl ?? undefined,
     });

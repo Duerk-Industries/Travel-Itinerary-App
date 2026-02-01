@@ -281,6 +281,7 @@ export const initDb = async (): Promise<void> => {
       cost_per_night NUMERIC NOT NULL DEFAULT 0,
       address TEXT,
       paid_by JSONB DEFAULT '[]'::jsonb,
+      traveler_ids JSONB DEFAULT '[]'::jsonb,
       image_url TEXT,
       created_at TIMESTAMP DEFAULT NOW()
     );
@@ -291,6 +292,7 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS cost_per_night NUMERIC NOT NULL DEFAULT 0;`);
   await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS address TEXT;`);
   await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS paid_by JSONB DEFAULT '[]'::jsonb;`);
+  await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS traveler_ids JSONB DEFAULT '[]'::jsonb;`);
   await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS image_url TEXT;`);
 
   await p.query(`
@@ -1256,6 +1258,7 @@ export const listLodgings = async (userId: string, tripId?: string | null): Prom
              l.cost_per_night as "costPerNight",
              l.address,
              COALESCE(l.paid_by, '[]'::jsonb) as "paid_by",
+             COALESCE(l.traveler_ids, '[]'::jsonb) as "traveler_ids",
              l.image_url as "imageUrl",
              l.created_at as "createdAt"
       FROM lodgings l
@@ -1269,7 +1272,14 @@ export const listLodgings = async (userId: string, tripId?: string | null): Prom
   );
   return rows.map((r: any) => {
     const paidBy = Array.isArray(r.paid_by) ? r.paid_by : [];
-    return { ...(r as Lodging), paid_by: paidBy, paidBy } as Lodging & { paidBy: string[] };
+    const travelerIds = Array.isArray(r.traveler_ids) ? r.traveler_ids : [];
+    return {
+      ...(r as Lodging),
+      paid_by: paidBy,
+      paidBy,
+      traveler_ids: travelerIds,
+      travelerIds,
+    } as Lodging & { paidBy: string[]; travelerIds: string[] };
   });
 };
 
@@ -1285,6 +1295,7 @@ export const insertLodging = async (lodging: {
   costPerNight: number;
   address?: string;
   paid_by?: string[];
+  traveler_ids?: string[];
   imageUrl?: string | null;
 }): Promise<Lodging> => {
   const p = getPool();
@@ -1292,9 +1303,9 @@ export const insertLodging = async (lodging: {
   const { rows } = await p.query(
     `
       INSERT INTO lodgings (
-        id, user_id, trip_id, name, check_in_date, check_out_date, rooms, refund_by, total_cost, cost_per_night, address, paid_by, image_url
+        id, user_id, trip_id, name, check_in_date, check_out_date, rooms, refund_by, total_cost, cost_per_night, address, paid_by, traveler_ids, image_url
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
       RETURNING id,
                 user_id as "userId",
                 trip_id as "tripId",
@@ -1307,6 +1318,7 @@ export const insertLodging = async (lodging: {
                 cost_per_night as "costPerNight",
                 address,
                 COALESCE(paid_by, '[]'::jsonb) as "paid_by",
+                COALESCE(traveler_ids, '[]'::jsonb) as "traveler_ids",
                 image_url as "imageUrl",
                 created_at as "createdAt"
     `,
@@ -1323,12 +1335,20 @@ export const insertLodging = async (lodging: {
       lodging.costPerNight,
       lodging.address ?? '',
       JSON.stringify(lodging.paid_by ?? []),
+      JSON.stringify(lodging.traveler_ids ?? []),
       lodging.imageUrl ?? null,
     ]
   );
   const row = rows[0] as any;
   const paidBy = Array.isArray(row.paid_by) ? row.paid_by : [];
-  return { ...(row as Lodging), paid_by: paidBy, paidBy } as Lodging & { paidBy: string[] };
+  const travelerIds = Array.isArray(row.traveler_ids) ? row.traveler_ids : [];
+  return {
+    ...(row as Lodging),
+    paid_by: paidBy,
+    paidBy,
+    traveler_ids: travelerIds,
+    travelerIds,
+  } as Lodging & { paidBy: string[]; travelerIds: string[] };
 };
 
 // Delete a lodging row when the caller belongs to the trip's group.
@@ -1388,6 +1408,7 @@ export const updateLodging = async (
     updates.address ?? null,
     updates.imageUrl ?? null,
     typeof updates.paid_by !== 'undefined' ? JSON.stringify(updates.paid_by ?? []) : null,
+    typeof updates.traveler_ids !== 'undefined' ? JSON.stringify(updates.traveler_ids ?? []) : null,
     updates.trip_id ?? null,
   ];
 
@@ -1406,7 +1427,8 @@ export const updateLodging = async (
           address = COALESCE($10, address),
           image_url = COALESCE($11, image_url),
           paid_by = COALESCE($12::jsonb, paid_by),
-          trip_id = COALESCE($13, trip_id)
+          traveler_ids = COALESCE($13::jsonb, traveler_ids),
+          trip_id = COALESCE($14, trip_id)
         WHERE id = $1
         RETURNING
           id,
@@ -1421,6 +1443,7 @@ export const updateLodging = async (
           cost_per_night as "costPerNight",
           address,
           COALESCE(paid_by, '[]'::jsonb) as "paid_by",
+          COALESCE(traveler_ids, '[]'::jsonb) as "traveler_ids",
           image_url as "imageUrl",
           created_at as "createdAt"
       `
@@ -1437,10 +1460,11 @@ export const updateLodging = async (
           address = COALESCE($10, l.address),
           image_url = COALESCE($11, l.image_url),
           paid_by = COALESCE($12::jsonb, l.paid_by),
-          trip_id = COALESCE($13, l.trip_id)
+          traveler_ids = COALESCE($13::jsonb, l.traveler_ids),
+          trip_id = COALESCE($14, l.trip_id)
         FROM trips t
         WHERE l.id = $1
-          AND t.id = COALESCE($13, l.trip_id)
+          AND t.id = COALESCE($14, l.trip_id)
           -- allow edits by any member of the trip's group
           AND t.group_id IN (SELECT group_id FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $2)
         RETURNING
@@ -1456,6 +1480,7 @@ export const updateLodging = async (
           l.cost_per_night as "costPerNight",
           l.address,
           COALESCE(l.paid_by, '[]'::jsonb) as "paid_by",
+          COALESCE(l.traveler_ids, '[]'::jsonb) as "traveler_ids",
           l.image_url as "imageUrl",
           l.created_at as "createdAt"
       `,
@@ -1464,7 +1489,14 @@ export const updateLodging = async (
   if (!rows.length) return null;
   const row = rows[0] as any;
   const paidBy = Array.isArray(row.paid_by) ? row.paid_by : [];
-  return { ...(row as Lodging), paid_by: paidBy, paidBy } as Lodging & { paidBy: string[] };
+  const travelerIds = Array.isArray(row.traveler_ids) ? row.traveler_ids : [];
+  return {
+    ...(row as Lodging),
+    paid_by: paidBy,
+    paidBy,
+    traveler_ids: travelerIds,
+    travelerIds,
+  } as Lodging & { paidBy: string[]; travelerIds: string[] };
 };
 export const listTours = async (userId: string, tripId?: string): Promise<Tour[]> => {
   // Return tours for the given trip that the requesting user can see (anyone in the trip's group).
@@ -1954,6 +1986,27 @@ export const removeGroupMember = async (
           }
         };
 
+        const updateTravelerIdsForLodgings = async (tripId: string) => {
+          await client.query(
+            `
+            UPDATE lodgings
+            SET traveler_ids = ${jsonbRemoveMemberExpr('traveler_ids')}
+            WHERE trip_id = $1
+            `,
+            [tripId, memberId]
+          );
+          const fallbackIds = fallbackPayerId ? JSON.stringify([fallbackPayerId]) : '[]';
+          await client.query(
+            `
+            UPDATE lodgings
+            SET traveler_ids = $2::jsonb
+            WHERE trip_id = $1
+              AND COALESCE(traveler_ids::text, '[]') IN ('[]', '[ ]', '[  ]', 'null')
+            `,
+            [tripId, fallbackIds]
+          );
+        };
+
         for (const tripId of tripIds) {
           await client.query(
             `
@@ -1982,6 +2035,7 @@ export const removeGroupMember = async (
           await updatePaidByForTable('flights', tripId);
           await updatePaidByForTable('lodgings', tripId);
           await updatePaidByForTable('tours', tripId);
+          await updateTravelerIdsForLodgings(tripId);
         }
       } else {
         await client.query(
@@ -2042,6 +2096,34 @@ export const removeGroupMember = async (
         await updatePaidByForTable('flights');
         await updatePaidByForTable('lodgings');
         await updatePaidByForTable('tours');
+        await client.query(
+          `
+          UPDATE lodgings
+          SET traveler_ids = COALESCE(
+            (
+              SELECT jsonb_agg(elem.value)
+              FROM (
+                SELECT value
+                FROM jsonb_array_elements_text(COALESCE(traveler_ids, '[]'::jsonb)) value
+                WHERE value <> $2::text
+              ) elem
+            ),
+            '[]'::jsonb
+          )
+          WHERE trip_id = ANY($1::uuid[])
+          `,
+          [tripIds, memberId]
+        );
+        const fallbackIds = fallbackPayerId ? JSON.stringify([fallbackPayerId]) : '[]';
+        await client.query(
+          `
+          UPDATE lodgings
+          SET traveler_ids = $2::jsonb
+          WHERE trip_id = ANY($1::uuid[])
+            AND jsonb_array_length(COALESCE(traveler_ids, '[]'::jsonb)) = 0
+          `,
+          [tripIds, fallbackIds]
+        );
       }
     }
 

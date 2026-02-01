@@ -26,23 +26,15 @@ import CreateTripWizard from './tabs/createTripWizard';
 import TripDetailsTab from './tabs/tripDetails';
 import AccountTab, { fetchAccountProfile, fetchFamilyRelationships, fetchFellowTravelers, type FellowTraveler } from './tabs/account';
 import { CarRental, CarRentalDraft, buildCarRentalFromDraft, createInitialCarRentalDraft } from './tabs/carRentals';
-import {
-  Lodging,
-  LodgingDraft,
-  buildLodgingPayload,
-  calculateNights,
-  createInitialLodgingState,
-  fetchLodgingsApi,
-  removeLodgingApi,
-  saveLodgingApi,
-  toLodgingDraft,
-} from './tabs/lodging';
+import { Lodging, fetchLodgingsApi } from './tabs/lodging';
 import { InvitePayload } from './utils/inviteCodes';
 import { type MapApp, buildMapUrl, loadStoredMapPreference, persistMapPreference } from './utils/mapLinks';
 import { shouldAllowPageChange, shouldDisableTab } from './utils/wizardGuard';
 import * as WebBrowser from 'expo-web-browser';
 import { Buffer } from 'buffer';
 import { loadSession, saveSession, clearSession } from './utils/session';
+
+import LodgingTab from './tabs/LodgingTab';
 
 type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
 let NativeDateTimePicker: NativeDateTimePickerType | null = null;
@@ -173,7 +165,6 @@ const refreshIntervalMs = resolveRefreshIntervalMs();
 const sessionKey = 'stp.session';
 const sessionDurationMs = 12 * 60 * 60 * 1000;
 
-
 const App: React.FC = () => {
   const [userToken, setUserToken] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
@@ -210,16 +201,6 @@ const App: React.FC = () => {
   const [groupMembers, setGroupMembers] = useState<GroupMemberOption[]>([]);
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
   const [lodgings, setLodgings] = useState<Lodging[]>([]);
-  const [lodgingDraft, setLodgingDraft] = useState<LodgingDraft>(createInitialLodgingState());
-  const [editingLodgingId, setEditingLodgingId] = useState<string | null>(null);
-  const [editingLodging, setEditingLodging] = useState<LodgingDraft | null>(null);
-  const [lodgingDateField, setLodgingDateField] = useState<'checkIn' | 'checkOut' | 'refund' | null>(null);
-  const [lodgingDateContext, setLodgingDateContext] = useState<'draft' | 'edit'>('draft');
-  const [lodgingDateValue, setLodgingDateValue] = useState<Date>(new Date());
-  const lodgingCheckInRef = useRef<HTMLInputElement | null>(null);
-  const lodgingCheckOutRef = useRef<HTMLInputElement | null>(null);
-  const editLodgingCheckInRef = useRef<HTMLInputElement | null>(null);
-  const editLodgingCheckOutRef = useRef<HTMLInputElement | null>(null);
 
   const [tours, setTours] = useState<Tour[]>([]);
   const [carRentals, setCarRentals] = useState<CarRental[]>([]);
@@ -314,14 +295,6 @@ const App: React.FC = () => {
     setExternalFlightEditId(flightId);
   };
 
-  const applyLodgingDate = (field: 'checkIn' | 'checkOut', value: string, context: 'draft' | 'edit') => {
-    if (context === 'edit') {
-      setEditingLodging((prev) => (prev ? { ...prev, [field === 'checkIn' ? 'checkInDate' : 'checkOutDate']: value } : prev));
-    } else {
-      setLodgingDraft((prev) => ({ ...prev, [field === 'checkIn' ? 'checkInDate' : 'checkOutDate']: value }));
-    }
-  };
-
   const applyCarDate = (field: 'pickup' | 'dropoff', value: string) => {
     setCarDraft((prev) => ({ ...prev, [field === 'pickup' ? 'pickupDate' : 'dropoffDate']: value }));
   };
@@ -362,33 +335,6 @@ const App: React.FC = () => {
     }
     const ref = field === 'pickup' ? carPickupDateRef.current : carDropoffDateRef.current;
     if ((ref as any)?.showPicker) {
-      (ref as any).showPicker();
-      return;
-    }
-    if (typeof ref?.click === 'function') {
-      ref.click();
-      return;
-    }
-    ref?.focus();
-  };
-
-  const openLodgingDatePicker = (field: 'checkIn' | 'checkOut', context: 'draft' | 'edit', current?: string) => {
-    setLodgingDateContext(context);
-    if (Platform.OS !== 'web' && NativeDateTimePicker) {
-      const base = current && current.trim() ? new Date(current) : new Date();
-      setLodgingDateValue(base);
-      setLodgingDateField(field);
-      return;
-    }
-    const ref =
-      context === 'edit'
-        ? field === 'checkIn'
-          ? editLodgingCheckInRef.current
-          : editLodgingCheckOutRef.current
-        : field === 'checkIn'
-          ? lodgingCheckInRef.current
-          : lodgingCheckOutRef.current;
-    if (ref?.showPicker) {
       (ref as any).showPicker();
       return;
     }
@@ -494,75 +440,6 @@ const App: React.FC = () => {
     () => Object.values(lodgingTotalsBalanced).reduce((sum, v) => sum + v, 0),
     [lodgingTotalsBalanced]
   );
-
-  useEffect(() => {
-    if (defaultPayerId && (!lodgingDraft.paidBy || lodgingDraft.paidBy.length === 0)) {
-      setLodgingDraft((p) => ({ ...p, paidBy: [defaultPayerId] }));
-    }
-  }, [defaultPayerId]);
-
-  useEffect(() => {
-    const nights = calculateNights(lodgingDraft.checkInDate, lodgingDraft.checkOutDate);
-    const totalNum = Number(lodgingDraft.totalCost) || 0;
-    const computed = nights > 0 && totalNum ? (totalNum / nights).toFixed(2) : '';
-    setLodgingDraft((prev) => ({ ...prev, costPerNight: computed }));
-  }, [lodgingDraft.checkInDate, lodgingDraft.checkOutDate, lodgingDraft.totalCost]);
-
-  useEffect(() => {
-    if (!editingLodging) return;
-    const nights = calculateNights(editingLodging.checkInDate, editingLodging.checkOutDate);
-    const totalNum = Number(editingLodging.totalCost) || 0;
-    const computed = nights > 0 && totalNum ? (totalNum / nights).toFixed(2) : '';
-    if (computed !== editingLodging.costPerNight) {
-      setEditingLodging((prev) => (prev ? { ...prev, costPerNight: computed } : prev));
-    }
-  }, [editingLodging?.checkInDate, editingLodging?.checkOutDate, editingLodging?.totalCost]);
-
-  // Create or update a lodging; computes cost-per-night and applies default payer.
-  const saveLodging = async (draft: LodgingDraft, lodgingId?: string | null) => {
-    if (!activeTripId) {
-      alert('Please enter a lodging name and select an active trip.');
-      return;
-    }
-    const { payload, error } = buildLodgingPayload(draft, activeTripId, defaultPayerId);
-    if (error || !payload) {
-      alert(error);
-      return;
-    }
-    const result = await saveLodgingApi(backendUrl, jsonHeaders, payload, lodgingId);
-    if (!result.ok) {
-      alert(result.error || 'Unable to save lodging');
-      return;
-    }
-    if (lodgingId) {
-      setEditingLodgingId(null);
-      setEditingLodging(null);
-    } else {
-      setLodgingDraft(createInitialLodgingState());
-    }
-    fetchLodgings();
-  };
-
-  const removeLodging = async (id: string) => {
-    const result = await removeLodgingApi(backendUrl, jsonHeaders, id);
-    if (!result.ok) {
-      alert(result.error || 'Unable to delete lodging');
-      return;
-    }
-    fetchLodgings();
-  };
-
-  // Populate the lodging edit modal with the selected row.
-  const openLodgingEditor = (lodging: Lodging) => {
-    setEditingLodgingId(lodging.id);
-    setEditingLodging(toLodgingDraft(lodging, { normalize: normalizeDateString, defaultPayerId }));
-  };
-
-  // Close the lodging edit modal.
-  const closeLodgingEditor = () => {
-    setEditingLodgingId(null);
-    setEditingLodging(null);
-  };
 
   const headers = useMemo<Record<string, string>>(
     () => (userToken ? { Authorization: `Bearer ${userToken}` } : ({} as Record<string, string>)),
@@ -1565,252 +1442,19 @@ const App: React.FC = () => {
           ) : null}
 
       {activePage === 'lodging' ? (
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Lodging</Text>
-          <Text style={styles.helperText}>Track stays for your active trip.</Text>
-          <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
-            <View style={styles.table}>
-              <View style={[styles.tableRow, styles.tableHeader]}>
-                <View style={[styles.cell, styles.lodgingNameCol]}>
-                  <Text style={styles.headerText}>Name</Text>
-                </View>
-                <View style={[styles.cell, styles.lodgingDateCol]}>
-                  <Text style={styles.headerText}>Check-in</Text>
-                </View>
-                <View style={[styles.cell, styles.lodgingDateCol]}>
-                  <Text style={styles.headerText}>Check-out</Text>
-                </View>
-                <View style={[styles.cell, styles.lodgingRoomsCol]}>
-                  <Text style={styles.headerText}>Rooms</Text>
-                </View>
-                <View style={[styles.cell, styles.lodgingRefundCol]}>
-                  <Text style={styles.headerText}>Refundable By</Text>
-                </View>
-                <View style={[styles.cell, styles.lodgingCostCol]}>
-                  <Text style={styles.headerText}>Total Cost</Text>
-                </View>
-                <View style={[styles.cell, styles.lodgingCostCol]}>
-                  <Text style={styles.headerText}>Per Night</Text>
-                </View>
-                <View style={[styles.cell, styles.lodgingPayerCol]}>
-                  <Text style={styles.headerText}>Paid By</Text>
-                </View>
-                <View style={[styles.cell, styles.lodgingAddressCol]}>
-                  <Text style={styles.headerText}>Address</Text>
-                </View>
-                <View style={[styles.cell, styles.actionCell, styles.lodgingActionCol, styles.lastCell]}>
-                  <Text style={styles.headerText}>Actions</Text>
-                </View>
-              </View>
-
-              {lodgings.map((l) => (
-                <View key={l.id} style={styles.tableRow}>
-                  <View style={[styles.cell, styles.lodgingNameCol]}>
-                    <Text style={[styles.cellText, styles.cellTextWrap]}>{l.name}</Text>
-                  </View>
-                  <View style={[styles.cell, styles.lodgingDateCol]}>
-                    <Text style={[styles.cellText, styles.cellTextWrap]}>{formatDateLong(normalizeDateString(l.checkInDate))}</Text>
-                  </View>
-                  <View style={[styles.cell, styles.lodgingDateCol]}>
-                    <Text style={[styles.cellText, styles.cellTextWrap]}>{formatDateLong(normalizeDateString(l.checkOutDate))}</Text>
-                  </View>
-                  <View style={[styles.cell, styles.lodgingRoomsCol]}>
-                    <Text style={[styles.cellText, styles.cellTextWrap]}>{l.rooms || '-'}</Text>
-                  </View>
-                  <View style={[styles.cell, styles.lodgingRefundCol]}>
-                    <Text style={[styles.cellText, styles.cellTextWrap]}>
-                      {l.refundBy ? formatDateLong(normalizeDateString(l.refundBy)) : 'Non-refundable'}
-                    </Text>
-                  </View>
-                  <View style={[styles.cell, styles.lodgingCostCol]}>
-                    <Text style={[styles.cellText, styles.cellTextWrap]}>{l.totalCost ? `$${l.totalCost}` : '-'}</Text>
-                  </View>
-                  <View style={[styles.cell, styles.lodgingCostCol]}>
-                    <Text style={[styles.cellText, styles.cellTextWrap]}>{l.costPerNight ? `$${l.costPerNight}` : '-'}</Text>
-                  </View>
-                  <View style={[styles.cell, styles.lodgingPayerCol]}>
-                    <Text style={[styles.cellText, styles.cellTextWrap]}>{l.paidBy?.length ? l.paidBy.map(payerName).join(', ') : '-'}</Text>
-                  </View>
-                  <View style={[styles.cell, styles.lodgingAddressCol]}>
-                    <Text style={[styles.cellText, styles.cellTextWrap]}>{l.address || '-'}</Text>
-                  </View>
-                  <View style={[styles.cell, styles.actionCell, styles.lodgingActionCol, styles.lastCell]}>
-                    {l.address ? (
-                      <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => openMaps(l.address)}>
-                        <Text style={styles.buttonText}>Map</Text>
-                      </TouchableOpacity>
-                    ) : null}
-                    <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => openLodgingEditor(l)}>
-                      <Text style={styles.buttonText}>Edit</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => removeLodging(l.id)}>
-                      <Text style={styles.buttonText}>Delete</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ))}
-
-              <View style={[styles.tableRow, styles.inputRow, styles.lastRow]}>
-                <View style={[styles.cell, styles.lodgingNameCol]}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Hotel / Airbnb"
-                    value={lodgingDraft.name}
-                    onChangeText={(text) => setLodgingDraft((prev) => ({ ...prev, name: text }))}
-                  />
-                </View>
-                <View style={[styles.cell, styles.lodgingDateCol]}>
-                  <View style={styles.dateInputWrap}>
-                    {Platform.OS === 'web' ? (
-                      <input
-                        ref={lodgingCheckInRef as any}
-                        type="date"
-                        value={lodgingDraft.checkInDate}
-                        onChange={(e) =>
-                          setLodgingDraft((prev) => ({ ...prev, checkInDate: normalizeDateString(e.target.value) }))
-                        }
-                        style={styles.input as any}
-                      />
-                    ) : (
-                      <TouchableOpacity
-                        style={[styles.input, styles.dateTouchable]}
-                        onPress={() => openLodgingDatePicker('checkIn', 'draft', lodgingDraft.checkInDate)}
-                      >
-                        <Text style={styles.cellText}>{lodgingDraft.checkInDate || 'YYYY-MM-DD'}</Text>
-                      </TouchableOpacity>
-                    )}
-                    <TouchableOpacity
-                      style={styles.dateIcon}
-                      onPress={() => openLodgingDatePicker('checkIn', 'draft', lodgingDraft.checkInDate)}
-                    >
-                      <Text style={styles.selectCaret}>📅</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-                <View style={[styles.cell, styles.lodgingDateCol]}>
-                  <View style={styles.dateInputWrap}>
-                    {Platform.OS === 'web' ? (
-                      <input
-                        ref={lodgingCheckOutRef as any}
-                        type="date"
-                        value={lodgingDraft.checkOutDate}
-                        onChange={(e) =>
-                          setLodgingDraft((prev) => ({ ...prev, checkOutDate: normalizeDateString(e.target.value) }))
-                        }
-                        style={styles.input as any}
-                      />
-                    ) : (
-                      <TouchableOpacity
-                        style={[styles.input, styles.dateTouchable]}
-                        onPress={() => openLodgingDatePicker('checkOut', 'draft', lodgingDraft.checkOutDate)}
-                      >
-                        <Text style={styles.cellText}>{lodgingDraft.checkOutDate || 'YYYY-MM-DD'}</Text>
-                      </TouchableOpacity>
-                    )}
-                    <TouchableOpacity
-                      style={styles.dateIcon}
-                      onPress={() => openLodgingDatePicker('checkOut', 'draft', lodgingDraft.checkOutDate)}
-                    >
-                      <Text style={styles.selectCaret}>📅</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-                <View style={[styles.cell, styles.lodgingRoomsCol]}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Rooms"
-                    keyboardType="numeric"
-                    value={lodgingDraft.rooms}
-                    onChangeText={(text) => setLodgingDraft((prev) => ({ ...prev, rooms: text }))}
-                  />
-                </View>
-                <View style={[styles.cell, styles.lodgingRefundCol]}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Refund by (YYYY-MM-DD)"
-                    value={lodgingDraft.refundBy}
-                    onChangeText={(text) => setLodgingDraft((prev) => ({ ...prev, refundBy: normalizeDateString(text) }))}
-                  />
-                </View>
-                <View style={[styles.cell, styles.lodgingCostCol]}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Total $"
-                    keyboardType="numeric"
-                    value={lodgingDraft.totalCost}
-                    onChangeText={(text) => setLodgingDraft((prev) => ({ ...prev, totalCost: text }))}
-                  />
-                </View>
-                <View style={[styles.cell, styles.lodgingCostCol]}>
-                  <Text style={styles.cellText}>{lodgingDraft.costPerNight ? `$${lodgingDraft.costPerNight}` : '-'}</Text>
-                </View>
-                <View style={[styles.cell, styles.lodgingPayerCol]}>
-                  <View style={styles.payerChips}>
-                    {lodgingDraft.paidBy.map((id) => (
-                      <View key={id} style={styles.payerChip}>
-                        <Text style={styles.cellText}>{payerName(id)}</Text>
-                        <TouchableOpacity onPress={() => setLodgingDraft((prev) => ({ ...prev, paidBy: prev.paidBy.filter((x) => x !== id) }))}>
-                          <Text style={styles.removeText}>x</Text>
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                  </View>
-                  <View style={styles.payerOptions}>
-                    {userMembers
-                      .filter((m) => !lodgingDraft.paidBy.includes(m.id))
-                      .map((m) => (
-                        <TouchableOpacity
-                          key={m.id}
-                          style={styles.smallButton}
-                          onPress={() => setLodgingDraft((prev) => ({ ...prev, paidBy: [...prev.paidBy, m.id] }))}
-                        >
-                          <Text style={styles.buttonText}>Add {formatMemberName(m)}</Text>
-                        </TouchableOpacity>
-                      ))}
-                  </View>
-                </View>
-                <View style={[styles.cell, styles.lodgingAddressCol]}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Address"
-                    value={lodgingDraft.address}
-                    onChangeText={(text) => setLodgingDraft((prev) => ({ ...prev, address: text }))}
-                  />
-                </View>
-                <View style={[styles.cell, styles.actionCell, styles.lodgingActionCol, styles.lastCell]}>
-                  <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => saveLodging(lodgingDraft)}>
-                    <Text style={styles.buttonText}>Add</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-          </ScrollView>
-          <View style={{ marginTop: 12 }}>
-            <Text style={styles.flightTitle}>Total lodging cost: ${lodgingTotal.toFixed(2)}</Text>
-            <Text style={styles.helperText}>Breakdown (aligned with total even when no payers are set):</Text>
-            {userMembers.map((m) => (
-              <Text key={m.id} style={styles.helperText}>
-                {formatMemberName(m)}: ${Number(lodgingTotalsBalanced[m.id] ?? 0).toFixed(2)}
-              </Text>
-            ))}
-            <Text style={[styles.helperText, { marginTop: 4 }]}>Subtotal across payers: ${lodgingBreakdownSum.toFixed(2)}</Text>
-          </View>
-          {Platform.OS !== 'web' && lodgingDateField && NativeDateTimePicker ? (
-            <NativeDateTimePicker
-              value={lodgingDateValue}
-              mode="date"
-              onChange={(_, date) => {
-                if (!date) {
-                  setLodgingDateField(null);
-                  return;
-                }
-                const iso = date.toISOString().slice(0, 10);
-                applyLodgingDate(lodgingDateField, iso, lodgingDateContext);
-                setLodgingDateField(null);
-              }}
-            />
-          ) : null}
-        </View>
+        <LodgingTab
+          backendUrl={backendUrl}
+          jsonHeaders={jsonHeaders}
+          trip={findActiveTrip() ?? null}
+          lodgings={lodgings}
+          groupMembers={groupMembers}
+          defaultPayerId={defaultPayerId}
+          styles={styles}
+          onRefreshLodgings={fetchLodgings}
+          onOpenMap={openMaps}
+          formatMemberName={formatMemberName}
+          payerName={payerName}
+        />
       ) : null}
 
       {activePage === 'car' ? (
@@ -2062,164 +1706,7 @@ const App: React.FC = () => {
         />
       ) : null}
 
-      {editingLodging && editingLodgingId ? (
-        <View style={styles.passengerOverlay}>
-          <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={closeLodgingEditor} />
-          <View style={styles.modalCard}>
-            <Text style={styles.sectionTitle}>Edit Lodging</Text>
-            <ScrollView style={{ maxHeight: 420 }}>
-              <Text style={styles.modalLabel}>Name</Text>
-              <TextInput
-                style={styles.input}
-                value={editingLodging.name}
-                onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, name: text } : prev))}
-              />
-              <Text style={styles.modalLabel}>Check-in</Text>
-              <View style={styles.dateInputWrap}>
-                {Platform.OS === 'web' ? (
-                  <input
-                    ref={editLodgingCheckInRef as any}
-                    type="date"
-                    value={editingLodging.checkInDate}
-                    onChange={(e) =>
-                      setEditingLodging((prev) => (prev ? { ...prev, checkInDate: normalizeDateString(e.target.value) } : prev))
-                    }
-                    style={styles.input as any}
-                  />
-                ) : (
-                  <TouchableOpacity
-                    style={[styles.input, styles.dateTouchable]}
-                    onPress={() => openLodgingDatePicker('checkIn', 'edit', editingLodging.checkInDate)}
-                  >
-                    <Text style={styles.cellText}>{editingLodging.checkInDate || 'YYYY-MM-DD'}</Text>
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity
-                  style={styles.dateIcon}
-                  onPress={() => openLodgingDatePicker('checkIn', 'edit', editingLodging.checkInDate)}
-                >
-                  <Text style={styles.selectCaret}>📅</Text>
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.modalLabel}>Check-out</Text>
-              <View style={styles.dateInputWrap}>
-                {Platform.OS === 'web' ? (
-                  <input
-                    ref={editLodgingCheckOutRef as any}
-                    type="date"
-                    value={editingLodging.checkOutDate}
-                    onChange={(e) =>
-                      setEditingLodging((prev) => (prev ? { ...prev, checkOutDate: normalizeDateString(e.target.value) } : prev))
-                    }
-                    style={styles.input as any}
-                  />
-                ) : (
-                  <TouchableOpacity
-                    style={[styles.input, styles.dateTouchable]}
-                    onPress={() => openLodgingDatePicker('checkOut', 'edit', editingLodging.checkOutDate)}
-                  >
-                    <Text style={styles.cellText}>{editingLodging.checkOutDate || 'YYYY-MM-DD'}</Text>
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity
-                  style={styles.dateIcon}
-                  onPress={() => openLodgingDatePicker('checkOut', 'edit', editingLodging.checkOutDate)}
-                >
-                  <Text style={styles.selectCaret}>📅</Text>
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.modalLabel}>Rooms</Text>
-              <TextInput
-                style={styles.input}
-                keyboardType="numeric"
-                value={editingLodging.rooms}
-                onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, rooms: text } : prev))}
-              />
-              <Text style={styles.modalLabel}>Refund by</Text>
-              {Platform.OS === 'web' ? (
-                <input
-                  type="date"
-                  value={editingLodging.refundBy}
-                  onChange={(e) => setEditingLodging((prev) => (prev ? { ...prev, refundBy: e.target.value } : prev))}
-                  style={styles.input as any}
-                />
-              ) : (
-                <TextInput
-                  style={styles.input}
-                  value={editingLodging.refundBy}
-                  placeholder="YYYY-MM-DD"
-                  onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, refundBy: normalizeDateString(text) } : prev))}
-                />
-              )}
-              <Text style={styles.modalLabel}>Total cost</Text>
-              <TextInput
-                style={styles.input}
-                value={editingLodging.totalCost}
-                keyboardType="numeric"
-                onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, totalCost: text } : prev))}
-              />
-              <Text style={styles.modalLabel}>Cost per night</Text>
-              <Text style={styles.helperText}>{editingLodging.costPerNight ? `$${editingLodging.costPerNight}` : '-'}</Text>
-
-              <Text style={styles.modalLabel}>Paid by</Text>
-              <View style={[styles.input, styles.payerBox]}>
-                <View style={styles.payerChips}>
-                  {editingLodging.paidBy.map((id) => (
-                    <View key={id} style={styles.payerChip}>
-                      <Text style={styles.cellText}>{payerName(id)}</Text>
-                      <TouchableOpacity
-                        onPress={() =>
-                          setEditingLodging((p) =>
-                            p
-                              ? {
-                                  ...p,
-                                  paidBy: p.paidBy.filter((x) => x !== id),
-                                }
-                              : p
-                          )
-                        }
-                      >
-                        <Text style={styles.removeText}>x</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                </View>
-                <View style={styles.payerOptions}>
-                  {userMembers
-                    .filter((m) => !editingLodging.paidBy.includes(m.id))
-                    .map((m) => (
-                      <TouchableOpacity
-                        key={m.id}
-                        style={styles.smallButton}
-                        onPress={() => setEditingLodging((p) => (p ? { ...p, paidBy: [...p.paidBy, m.id] } : p))}
-                      >
-                        <Text style={styles.buttonText}>Add {formatMemberName(m)}</Text>
-                      </TouchableOpacity>
-                    ))}
-                </View>
-              </View>
-
-              <Text style={styles.modalLabel}>Address</Text>
-              <TextInput
-                style={styles.input}
-                value={editingLodging.address}
-                onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, address: text } : prev))}
-              />
-            </ScrollView>
-            <View style={styles.row}>
-              <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={closeLodgingEditor}>
-                <Text style={styles.buttonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.button}
-                onPress={() => editingLodging && saveLodging(editingLodging, editingLodgingId)}
-              >
-                <Text style={styles.buttonText}>Save</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      ) : null}
+      
       {activePage === 'flights' || externalFlightEditId ? (
         <FlightsTab
           backendUrl={backendUrl}
@@ -2705,10 +2192,69 @@ const styles = StyleSheet.create({
   },
   tableRow: {
     flexDirection: 'row',
-    alignItems: 'stretch',
+    alignItems: 'center',
     overflow: 'visible',
   },
   tableHeader: {
+    backgroundColor: '#f1f5f9',
+  },
+  tableHeaderCell: {
+    padding: 10,
+    borderRightWidth: 1,
+    borderColor: '#e5e7eb',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tableCell: {
+    padding: 12,
+    borderRightWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: '#e5e7eb',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  lodgingTable: {
+    minWidth: 0,
+    width: '100%',
+  },
+  lodgingTabNameCol: {
+    flex: 1,
+    minWidth: 220,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+  },
+  lodgingTabDateCol: {
+    flex: 0,
+    minWidth: 110,
+    maxWidth: 140,
+    justifyContent: 'center',
+  },
+  lodgingTabActionsCol: {
+    flex: 0,
+    minWidth: 200,
+    justifyContent: 'center',
+  },
+  tableNameButton: {
+    width: '100%',
+  },
+  tableActionButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 100,
+  },
+  tableActionButtonPrimary: {
+    backgroundColor: '#0d6efd',
+  },
+  tableActionButtonDanger: {
+    backgroundColor: '#dc2626',
+  },
+  lodgingTableRow: {
+    alignItems: 'center',
+  },
+  tableHeaderRow: {
     backgroundColor: '#f1f5f9',
   },
   cell: {
@@ -2735,8 +2281,9 @@ const styles = StyleSheet.create({
     color: '#0f172a',
   },
   actionCell: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
     gap: 6,
   },
   actionButtonsRow: {

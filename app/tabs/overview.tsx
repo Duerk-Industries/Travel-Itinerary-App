@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Linking, Platform, ScrollView, Text, TextInput, TouchableOpacity, View, Image, type LayoutChangeEvent } from 'react-native';
 import { computeTripDays, validateTripDates } from '../utils/createTripWizard';
 import { renderRichTextBlocks } from '../utils/richText';
@@ -18,6 +18,7 @@ import {
   getEarliestTripEventDate,
 } from '../utils/tripDates';
 import { normalizeDateString } from '../utils/normalizeDateString';
+import { sanitizeCostInput } from '../utils/sanitizeCost';
 import {
   buildFlightPayload,
   createFlightDraftForTrip,
@@ -29,6 +30,7 @@ import {
 import {
   buildLodgingPayload,
   createInitialLodgingState,
+  createLodgingDraftForTrip,
   createLodgingForTrip,
   saveLodgingApi,
   toLodgingDraft,
@@ -48,6 +50,9 @@ import {
 } from '../tabs/carRentals';
 import { buildRentalDraftFromRow, buildTourDraftFromRow, getOverviewSaveFlags } from '../utils/overviewEditing';
 import { FlightEditingForm } from '../components/FlightEditingForm';
+import ConfirmDialog from '../components/ConfirmDialog';
+import LodgingDialog from '../components/LodgingDialog';
+import LodgingDetailsDialog from '../components/LodgingDetailsDialog';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
@@ -264,6 +269,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
   });
   const [selectedFlight, setSelectedFlight] = useState<Flight | null>(null);
   const [selectedLodging, setSelectedLodging] = useState<Lodging | null>(null);
+  const [showLodgingDetails, setShowLodgingDetails] = useState(false);
   const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
   const [detailModal, setDetailModal] = useState<{ title: string; sections: DetailSection[] } | null>(null);
   const [showAddTraveler, setShowAddTraveler] = useState(false);
@@ -272,6 +278,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
   const [showAddLodging, setShowAddLodging] = useState(false);
   const [showAddTour, setShowAddTour] = useState(false);
   const [showAddRental, setShowAddRental] = useState(false);
+  const [lodgingToDelete, setLodgingToDelete] = useState<Lodging | null>(null);
   const [lodgingDraft, setLodgingDraft] = useState<LodgingDraft>(createInitialLodgingState());
   const [tourDraft, setTourDraft] = useState<TourDraft>(createInitialTourState());
   const [rentalDraft, setRentalDraft] = useState<CarRentalDraft>(createInitialCarRentalDraft());
@@ -485,6 +492,22 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
   );
 
   const payerName = (id: string) => memberNames.get(id) ?? 'Unknown';
+
+  const overviewTravelerIds = useMemo(
+    () => groupMembers.map((m) => m.id).filter(Boolean),
+    [groupMembers]
+  );
+
+  const buildOverviewLodgingDraft = useCallback(
+    () =>
+      createLodgingDraftForTrip({
+        tripStartDate: trip?.startDate,
+        existingLodgings: lodgings,
+        defaultPayerId,
+        defaultTravelerIds: overviewTravelerIds,
+      }),
+    [trip?.startDate, lodgings, defaultPayerId, overviewTravelerIds]
+  );
 
   const parseLayoverDuration = (value: string | null | undefined): { hours: string; minutes: string } => {
     const safe = value ?? '';
@@ -1042,6 +1065,21 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
     closeRentalModal();
   };
 
+  const deleteLodging = async (lodgingId: string) => {
+    if (!trip?.id) return;
+    const res = await fetch(`${backendUrl}/api/lodgings/${lodgingId}`, {
+        method: 'DELETE',
+        headers,
+    });
+    if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || 'Unable to delete lodging');
+        return;
+    }
+    onRefreshLodgings();
+    setShowLodgingDetails(false);
+  };
+
   const closeFlightEditor = () => {
     setShowFlightEditor(false);
     setEditingFlightId(null);
@@ -1053,7 +1091,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
   const closeLodgingModal = () => {
     setShowAddLodging(false);
     setEditingLodgingId(null);
-    setLodgingDraft(createInitialLodgingState());
+    setLodgingDraft(buildOverviewLodgingDraft());
   };
 
   const closeTourModal = () => {
@@ -1120,10 +1158,18 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
   const openLodgingEditor = (lodging: Lodging) => {
     if (!isEditing) {
       setSelectedLodging(lodging);
+      setShowLodgingDetails(true);
       return;
     }
     setEditingLodgingId(lodging.id);
     setLodgingDraft(toLodgingDraft(lodging, { normalize: normalizeDateString, defaultPayerId }));
+    setShowAddLodging(true);
+  };
+
+  const openAddLodging = () => {
+    if (!isEditing) return;
+    setEditingLodgingId(null);
+    setLodgingDraft(buildOverviewLodgingDraft());
     setShowAddLodging(true);
   };
 
@@ -1273,9 +1319,25 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       const lodgingsForDay = lodgings.filter((l) => {
         const ci = l.checkInDate;
         const co = l.checkOutDate;
-        if (!ci || !co) return false;
-        const d = new Date(card.date).getTime();
-        return d >= new Date(ci).getTime() && d <= new Date(co).getTime();
+        if (!ci) return false;
+        const dayMs = normalizeDateString(card.date);
+        const checkInMs = normalizeDateString(ci);
+        if (!dayMs || !checkInMs) return false;
+        const dayTime = new Date(dayMs).getTime();
+        const checkInTime = new Date(checkInMs).getTime();
+        if (Number.isNaN(dayTime) || Number.isNaN(checkInTime)) return false;
+        if (!co) {
+          return dayTime >= checkInTime;
+        }
+        const checkOutMs = normalizeDateString(co);
+        if (!checkOutMs) {
+          return dayTime >= checkInTime;
+        }
+        const checkOutTime = new Date(checkOutMs).getTime();
+        if (Number.isNaN(checkOutTime)) {
+          return dayTime >= checkInTime;
+        }
+        return dayTime >= checkInTime && dayTime < checkOutTime;
       });
       const toursForDay = tours.filter((t) => t.date === card.date);
       const rentalsForDay = carRentals.filter((r) => r.pickupDate === card.date || r.dropoffDate === card.date);
@@ -2025,43 +2087,19 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       ) : null}
 
       {isEditing ? (
-        <View style={{ marginTop: 12 }}>
-          <Text style={styles.headerText}>Add Trip Items</Text>
-          <View style={[styles.row, { flexWrap: 'wrap' }]}>
-            <TouchableOpacity
-              style={[styles.button, styles.smallButton]}
-              onPress={openFlightAdd}
-            >
-              <Text style={styles.buttonText}>Add Flight</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.button, styles.smallButton]}
-              onPress={() => {
-                closeLodgingModal();
-                setShowAddLodging(true);
-              }}
-            >
-              <Text style={styles.buttonText}>Add Lodging</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.button, styles.smallButton]}
-              onPress={() => {
-                closeRentalModal();
-                setShowAddRental(true);
-              }}
-            >
-              <Text style={styles.buttonText}>Add Rental Car</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.button, styles.smallButton]}
-              onPress={() => {
-                closeTourModal();
-                setShowAddTour(true);
-              }}
-            >
-              <Text style={styles.buttonText}>Add Tour</Text>
-            </TouchableOpacity>
-          </View>
+        <View style={styles.row}>
+          <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={openFlightAdd}>
+            <Text style={styles.buttonText}>Add Flight</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={openAddLodging}>
+            <Text style={styles.buttonText}>Add Lodging</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => setShowAddTour(true)}>
+            <Text style={styles.buttonText}>Add Tour</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => setShowAddRental(true)}>
+            <Text style={styles.buttonText}>Add Rental Car</Text>
+          </TouchableOpacity>
         </View>
       ) : null}
 
@@ -2163,7 +2201,9 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
                           placeholder="Cost"
                           keyboardType="numeric"
                           value={detailDraft.cost}
-                          onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, cost: text }))}
+                          onChangeText={(text) =>
+                            setDetailDraft((prev) => ({ ...prev, cost: sanitizeCostInput(text) }))
+                          }
                         />
                       ) : (
                         <Text style={styles.cellText}>{d.cost != null ? `$${d.cost}` : '-'}</Text>
@@ -2260,7 +2300,9 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
                       placeholder="Cost"
                       keyboardType="numeric"
                       value={detailDraft.cost}
-                      onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, cost: text }))}
+                      onChangeText={(text) =>
+                        setDetailDraft((prev) => ({ ...prev, cost: sanitizeCostInput(text) }))
+                      }
                     />
                   </View>
                   <View style={[styles.cell, styles.actionCell, { flex: 1 }]}>
@@ -2477,7 +2519,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
                 placeholder="0.00"
                 keyboardType="numeric"
                 value={tourDraft.cost}
-                onChangeText={(text) => setTourDraft((prev) => ({ ...prev, cost: text }))}
+                onChangeText={(text) => setTourDraft((prev) => ({ ...prev, cost: sanitizeCostInput(text) }))}
               />
               <View style={styles.modalRow}>
                 <Text style={styles.modalLabel}>Free cancel by</Text>
@@ -2621,7 +2663,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
                 placeholder="0.00"
                 keyboardType="numeric"
                 value={rentalDraft.cost}
-                onChangeText={(text) => setRentalDraft((prev) => ({ ...prev, cost: text }))}
+                onChangeText={(text) => setRentalDraft((prev) => ({ ...prev, cost: sanitizeCostInput(text) }))}
               />
               <Text style={styles.modalLabel}>Notes</Text>
               <TextInput
@@ -2642,6 +2684,54 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
             </View>
           </View>
         </View>
+      ) : null}
+      {showAddLodging ? (
+        <LodgingDialog
+          visible={showAddLodging}
+          title={editingLodgingId ? 'Edit Lodging' : 'Add Lodging'}
+          draft={lodgingDraft}
+          setDraft={setLodgingDraft}
+          groupMembers={groupMembers}
+          formatMemberName={formatMemberName}
+          payerName={payerName}
+          defaultPayerId={defaultPayerId}
+          styles={styles}
+          onSave={saveLodging}
+          onCancel={closeLodgingModal}
+          onOpenDatePicker={(field) => openModalDatePicker(`lodging${field.charAt(0).toUpperCase() + field.slice(1)}` as ModalDateField)}
+        />
+      ) : null}
+      {lodgingToDelete ? (
+        <ConfirmDialog
+          visible
+          title="Delete Lodging"
+          message={`Delete ${lodgingToDelete.name}? This cannot be undone.`}
+          onConfirm={async () => {
+            await deleteLodging(lodgingToDelete.id);
+            setLodgingToDelete(null);
+          }}
+          onCancel={() => setLodgingToDelete(null)}
+          styles={styles}
+        />
+      ) : null}
+      {showLodgingDetails && selectedLodging ? (
+        <LodgingDetailsDialog
+          visible={showLodgingDetails}
+          lodging={selectedLodging}
+          styles={styles}
+          payerName={payerName}
+          onClose={() => setShowLodgingDetails(false)}
+          onEdit={() => {
+            setShowLodgingDetails(false);
+            openLodgingEditor(selectedLodging);
+          }}
+          onDelete={() => {
+            if (selectedLodging) {
+              setLodgingToDelete(selectedLodging);
+            }
+          }}
+          onOpenMap={onOpenAddress}
+        />
       ) : null}
       {Platform.OS !== 'web' && timePickerTarget && NativeDateTimePicker ? (
         <NativeDateTimePicker

@@ -1,4 +1,5 @@
 import { formatDateLong } from '../utils/formatDateLong';
+import { sanitizeCostInput } from '../utils/sanitizeCost';
 
 export type Lodging = {
   id: string;
@@ -13,6 +14,7 @@ export type Lodging = {
   costPerNight: string;
   address: string;
   paidBy: string[];
+  travelerIds: string[];
   imageUrl?: string;
 };
 
@@ -26,11 +28,12 @@ export type LodgingDraft = {
   costPerNight: string;
   address: string;
   paidBy: string[];
+  travelerIds: string[];
   imageUrl?: string;
 };
 
 // Build a blank lodging draft with today's dates and default room count.
-export const createInitialLodgingState = (): LodgingDraft => ({
+export const createInitialLodgingState = (overrides: Partial<LodgingDraft> = {}): LodgingDraft => ({
   name: '',
   checkInDate: normalizeDate(new Date().toISOString()),
   checkOutDate: normalizeDate(new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()),
@@ -40,7 +43,9 @@ export const createInitialLodgingState = (): LodgingDraft => ({
   costPerNight: '',
   address: '',
   paidBy: [],
+  travelerIds: [],
   imageUrl: '',
+  ...overrides,
 });
 
 // Calculate whole-night stay length; returns 0 if invalid or checkout <= checkin.
@@ -65,6 +70,15 @@ export const normalizeLodgingFromApi = (l: any): Lodging => ({
   costPerNight: String(l.cost_per_night ?? ''),
   address: l.address ?? '',
   paidBy: Array.isArray(l.paid_by) ? l.paid_by : [],
+  travelerIds: Array.isArray(l.traveler_ids)
+    ? l.traveler_ids
+    : Array.isArray(l.travelerIds)
+      ? l.travelerIds
+      : Array.isArray(l.paid_by)
+        ? l.paid_by
+        : Array.isArray(l.paidBy)
+          ? l.paidBy
+          : [],
   imageUrl: l.imageUrl,
 });
 
@@ -79,20 +93,57 @@ export const buildLodgingPayload = (
   const nights = calculateNights(draft.checkInDate, draft.checkOutDate);
   if (nights <= 0) return { error: 'Check-out must be after check-in.' };
 
-  const totalNum = Number(draft.totalCost) || 0;
+  const cleanTotal = sanitizeCostInput(draft.totalCost);
+  const totalNum = Number(cleanTotal) || 0;
   const rooms = Number(draft.rooms) || 1;
   const costPerNight = totalNum && rooms > 0 ? (totalNum / (nights * rooms)).toFixed(2) : '0';
   const paidBy = draft.paidBy.length ? draft.paidBy : defaultPayerId ? [defaultPayerId] : [];
+  const travelerIds = draft.travelerIds.length ? draft.travelerIds : paidBy;
 
   return {
     payload: {
       ...draft,
+      totalCost: cleanTotal,
       tripId: activeTripId,
       rooms,
       costPerNight,
       paidBy,
+      travelerIds,
     },
   };
+};
+
+export const getDefaultLodgingDates = (
+  tripStartDate?: string | null,
+  existingLodgings: Array<{ checkOutDate?: string | null }> = []
+): { checkInDate: string; checkOutDate: string } => {
+  const normalizedTripStart = normalizeDate(tripStartDate ?? '');
+  const validCheckoutDates = existingLodgings
+    .map((l) => normalizeDate(l.checkOutDate ?? ''))
+    .filter(Boolean)
+    .sort();
+  const latestCheckout = validCheckoutDates.length ? validCheckoutDates[validCheckoutDates.length - 1] : '';
+  const checkInDate = latestCheckout || normalizedTripStart || normalizeDate(new Date().toISOString());
+  const checkOutDate = addDays(checkInDate, 1);
+  return { checkInDate, checkOutDate };
+};
+
+export const createLodgingDraftForTrip = (params: {
+  tripStartDate?: string | null;
+  existingLodgings?: Array<{ checkOutDate?: string | null }>;
+  defaultPayerId?: string | null;
+  defaultTravelerIds?: string[];
+}): LodgingDraft => {
+  const { tripStartDate, existingLodgings = [], defaultPayerId, defaultTravelerIds = [] } = params;
+  const { checkInDate, checkOutDate } = getDefaultLodgingDates(tripStartDate, existingLodgings);
+  const paidBy = defaultPayerId ? [defaultPayerId] : [];
+  const travelerIds = defaultTravelerIds.length ? defaultTravelerIds : paidBy;
+  return createInitialLodgingState({
+    checkInDate,
+    checkOutDate,
+    paidBy,
+    travelerIds,
+  });
 };
 
 export const fetchLodgingsApi = async (backendUrl: string, activeTripId: string, token: string): Promise<Lodging[]> => {
@@ -174,6 +225,13 @@ export const toLodgingDraft = (
     costPerNight: lodging.costPerNight || '',
     address: lodging.address || '',
     paidBy: Array.isArray(lodging.paidBy) && lodging.paidBy.length ? lodging.paidBy : opts?.defaultPayerId ? [opts.defaultPayerId] : [],
+    travelerIds: Array.isArray(lodging.travelerIds) && lodging.travelerIds.length
+      ? lodging.travelerIds
+      : Array.isArray(lodging.paidBy) && lodging.paidBy.length
+        ? lodging.paidBy
+        : opts?.defaultPayerId
+          ? [opts.defaultPayerId]
+          : [],
   };
 };
 
@@ -187,4 +245,11 @@ function normalizeDate(date: string): string {
   if (!date) return '';
   if (/^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
   return new Date(date).toISOString().slice(0, 10);
+}
+
+function addDays(isoDate: string, days: number): string {
+  const base = new Date(isoDate);
+  if (Number.isNaN(base.getTime())) return normalizeDate(new Date().toISOString());
+  base.setDate(base.getDate() + days);
+  return base.toISOString().slice(0, 10);
 }

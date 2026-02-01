@@ -1,6 +1,7 @@
 import React from 'react';
 import { Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { formatDateLong } from '../utils/formatDateLong';
+import { sanitizeCostInput } from '../utils/sanitizeCost';
 import type { FlightEditDraft, GroupMemberOption } from '../tabs/flights';
 
 type AirportTarget = 'dep' | 'arr' | 'modal-dep' | 'modal-arr' | 'modal-layover' | null;
@@ -342,7 +343,9 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
             testID="flight-modal-cost"
             value={flight.cost}
             keyboardType="numeric"
-            onChangeText={(text: string) => setFlight((prev) => (prev ? { ...prev, cost: text } : prev))}
+            onChangeText={(text: string) =>
+              setFlight((prev) => (prev ? { ...prev, cost: sanitizeCostInput(text) } : prev))
+            }
           />
           <Text style={styles.modalLabel}>Paid by</Text>
           <View style={[styles.input, styles.payerBox]}>

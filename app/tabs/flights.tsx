@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { formatDateLong } from '../utils/formatDateLong';
+import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { normalizeDateString } from '../utils/normalizeDateString';
 import { parseFlightText, type ParsedFlight } from '../utils/parsers/flightParser';
 import { extractTextFromImage, extractTextFromPdf } from './flightParsing';
@@ -251,7 +252,7 @@ export const buildFlightPayload = (flight: FlightEditDraft, tripId?: string | nu
     layoverDuration: trim(flight.layoverDuration),
     arrivalDate,
     arrivalTime: trim(flight.arrivalTime) || '00:00',
-    cost: Number(flight.cost) || 0,
+    cost: Number(sanitizeCostInput(flight.cost)) || 0,
     carrier: trim(flight.carrier),
     flightNumber: trim(flight.flightNumber),
     bookingReference: trim(flight.bookingReference),
@@ -1459,7 +1460,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                   arrival_date: (text) => setNewFlight((prev) => ({ ...prev, arrivalDate: text })),
                   arrival_time: (text) => setNewFlight((prev) => ({ ...prev, arrivalTime: text })),
                   layover_duration: (text) => setNewFlight((prev) => ({ ...prev, layoverDuration: text })),
-                  cost: (text) => setNewFlight((prev) => ({ ...prev, cost: text })),
+                  cost: (text) => setNewFlight((prev) => ({ ...prev, cost: sanitizeCostInput(text) })),
                   carrier: (text) => setNewFlight((prev) => ({ ...prev, carrier: text })),
                   flight_number: (text) => setNewFlight((prev) => ({ ...prev, flightNumber: text })),
                   booking_reference: (text) => setNewFlight((prev) => ({ ...prev, bookingReference: text.toUpperCase() })),

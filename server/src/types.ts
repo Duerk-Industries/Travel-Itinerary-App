@@ -107,6 +107,7 @@ export interface Lodging {
   cost_per_night: number;
   address: string;
   paid_by: string[];
+  traveler_ids?: string[];
   imageUrl?: string;
 }
 

@@ -1,0 +1,243 @@
+
+// @ts-nocheck
+import React, { useMemo, useState } from 'react';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { type Lodging, type LodgingDraft, createLodgingDraftForTrip, saveLodgingApi, removeLodgingApi } from './lodging';
+import LodgingDialog from '../components/LodgingDialog';
+import LodgingDetailsDialog from '../components/LodgingDetailsDialog';
+import ConfirmDialog from '../components/ConfirmDialog';
+
+type LodgingTabProps = {
+  backendUrl: string;
+  jsonHeaders: Record<string, string>,
+  trip: { id: string, startDate?: string | null } | null;
+  lodgings: Lodging[];
+  groupMembers: any[];
+  defaultPayerId: string | null;
+  styles: Record<string, any>;
+  onRefreshLodgings: () => void;
+  onOpenMap: (address: string) => void;
+  formatMemberName: (member: any) => string;
+  payerName: (id: string) => string;
+};
+
+export const formatShortDate = (dateString?: string | null): string => {
+  if (!dateString) return '-';
+  const hasDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(dateString);
+  const target = hasDateOnly ? `${dateString}T00:00:00` : dateString;
+  const parsed = new Date(target);
+  if (Number.isNaN(parsed.getTime())) return dateString;
+  const weekday = parsed.toLocaleDateString('en-US', { weekday: 'short' });
+  const monthDay = parsed.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return `${weekday}. ${monthDay}`;
+};
+
+const LodgingTab: React.FC<LodgingTabProps> = ({
+  backendUrl,
+  jsonHeaders,
+  trip,
+  lodgings,
+  groupMembers,
+  defaultPayerId,
+  styles,
+  onRefreshLodgings,
+  onOpenMap,
+  formatMemberName,
+  payerName,
+}) => {
+  const [selectedLodging, setSelectedLodging] = useState<Lodging | null>(null);
+  const [showDetails, setShowDetails] = useState(false);
+  const [showEditor, setShowEditor] = useState(false);
+  const [editingLodging, setEditingLodging] = useState<Lodging | null>(null);
+  const [lodgingDraft, setLodgingDraft] = useState<LodgingDraft | null>(null);
+  const [lodgingToDelete, setLodgingToDelete] = useState<Lodging | null>(null);
+
+  const activeTripId = trip?.id;
+
+  const openAddDialog = () => {
+    if (!activeTripId) {
+      alert('Please select a trip first.');
+      return;
+    }
+    const draft = createLodgingDraftForTrip({
+      tripStartDate: trip?.startDate,
+      existingLodgings: lodgings,
+      defaultPayerId: defaultPayerId,
+      defaultTravelerIds: groupMembers.map((m) => m.id).filter(Boolean),
+    });
+    setLodgingDraft(draft);
+    setEditingLodging(null);
+    setShowEditor(true);
+  };
+
+  const openEditDialog = (lodging: Lodging) => {
+    const draft = {
+      ...lodging,
+      totalCost: lodging.totalCost?.toString() || '',
+      costPerNight: lodging.costPerNight?.toString() || '',
+      rooms: lodging.rooms?.toString() || '1',
+    };
+    setLodgingDraft(draft);
+    setEditingLodging(lodging);
+    setShowDetails(false);
+    setShowEditor(true);
+  };
+
+  const openDetailsDialog = (lodging: Lodging) => {
+    setSelectedLodging(lodging);
+    setShowDetails(true);
+  };
+
+  const closeEditor = () => {
+    setShowEditor(false);
+    setEditingLodging(null);
+    setLodgingDraft(null);
+  };
+
+  const closeDetails = () => {
+    setShowDetails(false);
+    setSelectedLodging(null);
+  };
+
+  const handleSave = async () => {
+    if (!lodgingDraft || !activeTripId) return;
+
+    const payload = {
+        ...lodgingDraft,
+        tripId: activeTripId,
+    };
+
+    const result = await saveLodgingApi(backendUrl, jsonHeaders, payload, editingLodging?.id);
+    if (result.ok) {
+      onRefreshLodgings();
+      closeEditor();
+    } else {
+      alert(result.error || 'Failed to save lodging.');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!lodgingToDelete) return;
+    const result = await removeLodgingApi(backendUrl, jsonHeaders, lodgingToDelete.id);
+    if (result.ok) {
+      onRefreshLodgings();
+      setLodgingToDelete(null);
+      closeDetails();
+    } else {
+      alert(result.error || 'Failed to delete lodging.');
+    }
+  };
+  
+  const sortedLodgings = useMemo(() => {
+    return [...lodgings].sort((a, b) => new Date(a.checkInDate).getTime() - new Date(b.checkInDate).getTime());
+  }, [lodgings]);
+
+  return (
+    <View style={styles.card}>
+      <View style={styles.row}>
+        <Text style={styles.sectionTitle}>Lodging</Text>
+        <TouchableOpacity style={[styles.button, styles.roundButton, { marginLeft: 'auto' }]} onPress={openAddDialog}>
+          <Text style={styles.buttonText}>+</Text>
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+        <View style={[styles.table, styles.lodgingTable]}>
+          <View style={[styles.tableRow, styles.tableHeaderRow]}>
+            <View style={[styles.tableHeaderCell, styles.lodgingTabNameCol]}>
+              <Text style={styles.headerText}>Name</Text>
+            </View>
+            <View style={[styles.tableHeaderCell, styles.lodgingTabDateCol]}>
+              <Text style={styles.headerText}>Check-In</Text>
+            </View>
+            <View style={[styles.tableHeaderCell, styles.lodgingTabDateCol]}>
+              <Text style={styles.headerText}>Check-Out</Text>
+            </View>
+            <View style={[styles.tableHeaderCell, styles.lodgingTabActionsCol, styles.lastCell]}>
+              <Text style={styles.headerText}>Actions</Text>
+            </View>
+          </View>
+          {sortedLodgings.map((lodging) => (
+            <View key={lodging.id} style={[styles.tableRow, styles.lodgingTableRow]} testID={`lodging-row-${lodging.id}`}>
+              <View style={[styles.tableCell, styles.lodgingTabNameCol]}>
+                <TouchableOpacity
+                  style={styles.tableNameButton}
+                  onPress={() => openDetailsDialog(lodging)}
+                >
+                  <Text style={[styles.cellText, styles.cellTextWrap]}>{lodging.name}</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={[styles.tableCell, styles.lodgingTabDateCol]}>
+                <Text style={styles.cellText}>{formatShortDate(lodging.checkInDate)}</Text>
+              </View>
+              <View style={[styles.tableCell, styles.lodgingTabDateCol]}>
+                <Text style={styles.cellText}>{formatShortDate(lodging.checkOutDate)}</Text>
+              </View>
+              <View style={[styles.tableCell, styles.lodgingTabActionsCol, styles.lastCell]}>
+                <View style={styles.actionCell}>
+                  <TouchableOpacity
+                    style={[styles.tableActionButton, styles.tableActionButtonPrimary]}
+                    onPress={() => openEditDialog(lodging)}
+                  >
+                    <Text style={styles.buttonText}>Edit</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.tableActionButton, styles.tableActionButtonDanger]}
+                    onPress={() => setLodgingToDelete(lodging)}
+                  >
+                    <Text style={styles.buttonText}>Delete</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          ))}
+        </View>
+      </ScrollView>
+
+      {showDetails && selectedLodging && (
+        <LodgingDetailsDialog
+          testID="lodging-details-dialog"
+          visible={showDetails}
+          lodging={selectedLodging}
+          styles={styles}
+          payerName={payerName}
+          onClose={closeDetails}
+          onEdit={openEditDialog}
+          onDelete={() => setLodgingToDelete(selectedLodging)}
+          onOpenMap={onOpenMap}
+        />
+      )}
+
+      {showEditor && lodgingDraft && (
+        <LodgingDialog
+          testID="lodging-editor-dialog"
+          visible={showEditor}
+          title={editingLodging ? 'Edit Accommodation' : 'Add Accommodation'}
+          draft={lodgingDraft}
+          setDraft={setLodgingDraft}
+          groupMembers={groupMembers}
+          formatMemberName={formatMemberName}
+          payerName={payerName}
+          defaultPayerId={defaultPayerId}
+          styles={styles}
+          onSave={handleSave}
+          onCancel={closeEditor}
+        />
+      )}
+
+      {lodgingToDelete && (
+          <ConfirmDialog
+            testID="delete-lodging-dialog"
+            visible
+            title="Delete Lodging"
+            message={`Are you sure you want to delete ${lodgingToDelete.name}?`}
+            onCancel={() => setLodgingToDelete(null)}
+            onConfirm={handleDelete}
+            styles={styles}
+        />
+      )}
+    </View>
+  );
+};
+
+export default LodgingTab;

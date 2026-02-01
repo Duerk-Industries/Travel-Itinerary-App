@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { formatDateLong } from '../utils/formatDateLong';
+import { sanitizeCostInput } from '../utils/sanitizeCost';
 
 export type Tour = {
   id: string;
@@ -55,7 +56,7 @@ export const createInitialTourState = (): TourDraft => ({
 
 export const buildTourPayload = (draft: TourDraft, defaultPayerId?: string | null): { payload?: TourDraft; error?: string } => {
   if (!draft.name.trim()) return { error: 'Please enter a tour name.' };
-  const cleanCost = (draft.cost || '').replace(/[^0-9.]/g, '');
+  const cleanCost = sanitizeCostInput(draft.cost || '');
   let payload: TourDraft = { ...draft, cost: cleanCost };
   if ((!payload.paidBy || payload.paidBy.length === 0) && defaultPayerId) {
     payload = { ...payload, paidBy: [defaultPayerId] };
@@ -460,7 +461,7 @@ export const TourTab: React.FC<TourTabProps> = ({
                 placeholder="Cost"
                 keyboardType="numeric"
                 value={editingTour.cost}
-                onChangeText={(text: string) => setEditingTour((p) => (p ? { ...p, cost: text.replace(/[^0-9.]/g, '') } : p))}
+                onChangeText={(text: string) => setEditingTour((p) => (p ? { ...p, cost: sanitizeCostInput(text) } : p))}
               />
               <View style={styles.modalRow}>
                 <Text style={styles.modalLabel}>Free cancellation by</Text>

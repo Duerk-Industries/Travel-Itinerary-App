@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Linking, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import type { Trait } from './traits';
 import { FlightsTab, type Flight, type GroupMemberOption, type Trip } from './flights';
@@ -8,6 +8,7 @@ import {
   buildLodgingPayload,
   calculateNights,
   createInitialLodgingState,
+  createLodgingDraftForTrip,
   toLodgingDraft,
 } from './lodging';
 import { balanceCategoryTotals, computePayerTotals } from './costReport';
@@ -18,6 +19,7 @@ import { type CarRental, type CarRentalDraft, buildCarRentalFromDraft, createIni
 import { parsePlanToDetails } from '../utils/itineraryParser';
 import { computeDurationFromRange, formatMonthYear } from '../utils/tripDates';
 import { normalizeDateString } from '../utils/normalizeDateString';
+import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { saveWizardFlights, saveWizardLodgings } from '../utils/wizardSaves';
 import {
   TripDetails,
@@ -36,6 +38,7 @@ import {
   validateTripDates,
   validateTripDetails,
 } from '../utils/createTripWizard';
+import LodgingDialog from '../components/LodgingDialog';
 
 type Suggestion = {
   id: string;
@@ -289,6 +292,16 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   const wizardLodgingBreakdownSum = useMemo(
     () => Object.values(wizardLodgingTotalsBalanced).reduce((sum, v) => sum + v, 0),
     [wizardLodgingTotalsBalanced]
+  );
+  const buildWizardLodgingDraft = useCallback(
+    () =>
+      createLodgingDraftForTrip({
+        tripStartDate: wizardTripDefaults.startDate,
+        existingLodgings: wizardLodgings,
+        defaultPayerId: wizardDefaultPayerId,
+        defaultTravelerIds: wizardMemberIds,
+      }),
+    [wizardMemberIds, wizardLodgings, wizardDefaultPayerId, wizardTripDefaults.startDate]
   );
 
   const wizardToursTotal = useMemo(
@@ -693,11 +706,16 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     setWizardLodgingDateContext(context);
   };
 
-  const openWizardLodgingEditor = (lodging: Lodging) => {
-    setEditingWizardLodgingId(lodging.id);
-    setEditingWizardLodging(
-      toLodgingDraft(lodging, { normalize: normalizeDateString, defaultPayerId: wizardDefaultPayerId })
-    );
+  const openWizardLodgingEditor = (lodging: Lodging | null) => {
+    if (lodging) {
+      setEditingWizardLodgingId(lodging.id);
+      setEditingWizardLodging(
+        toLodgingDraft(lodging, { normalize: normalizeDateString, defaultPayerId: wizardDefaultPayerId })
+      );
+    } else {
+      setEditingWizardLodgingId(null);
+      setEditingWizardLodging(buildWizardLodgingDraft());
+    }
   };
 
   const closeWizardLodgingEditor = () => {
@@ -784,7 +802,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     if (lodgingId) {
       closeWizardLodgingEditor();
     } else {
-      setWizardLodgingDraft(createInitialLodgingState());
+      setWizardLodgingDraft(buildWizardLodgingDraft());
     }
   };
 
@@ -1692,6 +1710,9 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           <>
             <Text style={styles.sectionTitle}>Accommodation Details</Text>
             <Text style={styles.helperText}>Optional. Add lodging details using the full lodging interface.</Text>
+            <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => openWizardLodgingEditor(null)}>
+              <Text style={styles.buttonText}>Add Lodging</Text>
+            </TouchableOpacity>
             <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
               <View style={styles.table}>
                 <View style={[styles.tableRow, styles.tableHeader]}>
@@ -1776,142 +1797,24 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     </View>
                   </View>
                 ))}
-
-                <View style={[styles.tableRow, styles.inputRow, styles.lastRow]}>
-                  <View style={[styles.cell, styles.lodgingNameCol]}>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Hotel / Airbnb"
-                      value={wizardLodgingDraft.name}
-                      onChangeText={(text) => setWizardLodgingDraft((prev) => ({ ...prev, name: text }))}
-                    />
-                  </View>
-                  <View style={[styles.cell, styles.lodgingDateCol]}>
-                    <View style={styles.dateInputWrap}>
-                      {Platform.OS === 'web' ? (
-                        <input
-                          ref={wizardLodgingCheckInRef as any}
-                          type="date"
-                          value={wizardLodgingDraft.checkInDate}
-                          onChange={(e) =>
-                            setWizardLodgingDraft((prev) => ({ ...prev, checkInDate: normalizeDateString(e.target.value) }))
-                          }
-                          style={styles.input as any}
-                        />
-                      ) : (
-                        <TouchableOpacity
-                          style={[styles.input, styles.dateTouchable]}
-                          onPress={() => openWizardLodgingDatePicker('checkIn', 'draft', wizardLodgingDraft.checkInDate)}
-                        >
-                          <Text style={styles.cellText}>{wizardLodgingDraft.checkInDate || 'YYYY-MM-DD'}</Text>
-                        </TouchableOpacity>
-                      )}
-                      <TouchableOpacity
-                        style={styles.dateIcon}
-                        onPress={() => openWizardLodgingDatePicker('checkIn', 'draft', wizardLodgingDraft.checkInDate)}
-                      >
-                        <Text style={styles.selectCaret}>dY".</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                  <View style={[styles.cell, styles.lodgingDateCol]}>
-                    <View style={styles.dateInputWrap}>
-                      {Platform.OS === 'web' ? (
-                        <input
-                          ref={wizardLodgingCheckOutRef as any}
-                          type="date"
-                          value={wizardLodgingDraft.checkOutDate}
-                          onChange={(e) =>
-                            setWizardLodgingDraft((prev) => ({ ...prev, checkOutDate: normalizeDateString(e.target.value) }))
-                          }
-                          style={styles.input as any}
-                        />
-                      ) : (
-                        <TouchableOpacity
-                          style={[styles.input, styles.dateTouchable]}
-                          onPress={() => openWizardLodgingDatePicker('checkOut', 'draft', wizardLodgingDraft.checkOutDate)}
-                        >
-                          <Text style={styles.cellText}>{wizardLodgingDraft.checkOutDate || 'YYYY-MM-DD'}</Text>
-                        </TouchableOpacity>
-                      )}
-                      <TouchableOpacity
-                        style={styles.dateIcon}
-                        onPress={() => openWizardLodgingDatePicker('checkOut', 'draft', wizardLodgingDraft.checkOutDate)}
-                      >
-                        <Text style={styles.selectCaret}>dY".</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                  <View style={[styles.cell, styles.lodgingRoomsCol]}>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Rooms"
-                      keyboardType="numeric"
-                      value={wizardLodgingDraft.rooms}
-                      onChangeText={(text) => setWizardLodgingDraft((prev) => ({ ...prev, rooms: text }))}
-                    />
-                  </View>
-                  <View style={[styles.cell, styles.lodgingRefundCol]}>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Refund by (YYYY-MM-DD)"
-                      value={wizardLodgingDraft.refundBy}
-                      onChangeText={(text) => setWizardLodgingDraft((prev) => ({ ...prev, refundBy: normalizeDateString(text) }))}
-                    />
-                  </View>
-                  <View style={[styles.cell, styles.lodgingCostCol]}>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Total $"
-                      keyboardType="numeric"
-                      value={wizardLodgingDraft.totalCost}
-                      onChangeText={(text) => setWizardLodgingDraft((prev) => ({ ...prev, totalCost: text }))}
-                    />
-                  </View>
-                  <View style={[styles.cell, styles.lodgingCostCol]}>
-                    <Text style={styles.cellText}>{wizardLodgingDraft.costPerNight ? `$${wizardLodgingDraft.costPerNight}` : '-'}</Text>
-                  </View>
-                  <View style={[styles.cell, styles.lodgingPayerCol]}>
-                    <View style={styles.payerChips}>
-                      {wizardLodgingDraft.paidBy.map((id) => (
-                        <View key={id} style={styles.payerChip}>
-                          <Text style={styles.cellText}>{wizardPayerName(id)}</Text>
-                          <TouchableOpacity onPress={() => setWizardLodgingDraft((prev) => ({ ...prev, paidBy: prev.paidBy.filter((x) => x !== id) }))}>
-                            <Text style={styles.removeText}>x</Text>
-                          </TouchableOpacity>
-                        </View>
-                      ))}
-                    </View>
-                    <View style={styles.payerOptions}>
-                      {wizardGroupMembers
-                        .filter((m) => !wizardLodgingDraft.paidBy.includes(m.id))
-                        .map((m) => (
-                          <TouchableOpacity
-                            key={m.id}
-                            style={styles.smallButton}
-                            onPress={() => setWizardLodgingDraft((prev) => ({ ...prev, paidBy: [...prev.paidBy, m.id] }))}
-                          >
-                            <Text style={styles.buttonText}>Add {formatWizardMemberName(m)}</Text>
-                          </TouchableOpacity>
-                        ))}
-                    </View>
-                  </View>
-                  <View style={[styles.cell, styles.lodgingAddressCol]}>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Address"
-                      value={wizardLodgingDraft.address}
-                      onChangeText={(text) => setWizardLodgingDraft((prev) => ({ ...prev, address: text }))}
-                    />
-                  </View>
-                  <View style={[styles.cell, styles.actionCell, styles.lodgingActionCol, styles.lastCell]}>
-                    <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => saveWizardLodging(wizardLodgingDraft)}>
-                      <Text style={styles.buttonText}>Add</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
               </View>
             </ScrollView>
+            {editingWizardLodging ? (
+              <LodgingDialog
+                visible={!!editingWizardLodging}
+                title={editingWizardLodgingId ? 'Edit Lodging' : 'Add Lodging'}
+                draft={editingWizardLodging}
+                setDraft={setEditingWizardLodging}
+                groupMembers={wizardGroupMembers}
+                formatMemberName={formatWizardMemberName}
+                payerName={wizardPayerName}
+                defaultPayerId={wizardDefaultPayerId}
+                styles={styles}
+                onSave={() => saveWizardLodging(editingWizardLodging, editingWizardLodgingId)}
+                onCancel={closeWizardLodgingEditor}
+                onOpenDatePicker={(field) => openWizardLodgingDatePicker(field, 'edit')}
+              />
+            ) : null}
             <View style={{ marginTop: 12 }}>
               <Text style={styles.flightTitle}>Total lodging cost: ${wizardLodgingTotal.toFixed(2)}</Text>
               <Text style={styles.helperText}>Breakdown (aligned with total even when no payers are set):</Text>
@@ -2126,7 +2029,9 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                       placeholder="Cost"
                       keyboardType="numeric"
                       value={wizardCarDraft.cost}
-                      onChangeText={(text) => setWizardCarDraft((p) => ({ ...p, cost: text }))}
+                      onChangeText={(text) =>
+                        setWizardCarDraft((p) => ({ ...p, cost: sanitizeCostInput(text) }))
+                      }
                     />
                   </View>
                   <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>

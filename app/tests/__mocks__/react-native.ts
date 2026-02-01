@@ -24,6 +24,10 @@ export const StyleSheet = {
   create: <T extends Record<string, any>>(styles: T) => styles,
   flatten: (style: any) => style,
 };
+export const useWindowDimensions = () => ({
+  width: 800,
+  height: 600,
+});
 
 export default {
   Platform,
@@ -45,4 +49,5 @@ export default {
   ActivityIndicator,
   AsyncStorage,
   StyleSheet,
+  useWindowDimensions,
 };
