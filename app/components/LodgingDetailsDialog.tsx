@@ -13,6 +13,7 @@ type DetailRow = {
 type LodgingDetailsDialogProps = {
   visible: boolean;
   lodging: Lodging | null;
+  attendees: Array<{ id: string; guestName?: string; firstName?: string; lastName?: string }>;
   backendUrl: string;
   requestHeaders: Record<string, string>;
   styles: Record<string, any>;
@@ -28,6 +29,7 @@ type LodgingDetailsDialogProps = {
 const LodgingDetailsDialog: React.FC<LodgingDetailsDialogProps> = ({
   visible,
   lodging,
+  attendees = [],
   backendUrl,
   requestHeaders,
   styles,
@@ -72,6 +74,8 @@ const LodgingDetailsDialog: React.FC<LodgingDetailsDialogProps> = ({
   if (!visible || !lodging) return null;
 
   const mapImageUrl = lodging.address ? buildStaticMapUrl(lodging.address) : '';
+  const photoUrl = placeDetails?.details?.photos?.[0]?.photoUri;
+  const imageUrl = lodging.imageUrl || photoUrl;
   const dateRange = `${lodging.checkInDate ? formatDateLong(lodging.checkInDate) : 'TBD'}${lodging.checkOutDate ? ` – ${formatDateLong(lodging.checkOutDate)}` : ''}`;
   const travelerIds =
     Array.isArray(lodging.travelerIds) && lodging.travelerIds.length
@@ -80,7 +84,19 @@ const LodgingDetailsDialog: React.FC<LodgingDetailsDialogProps> = ({
         ? lodging.paidBy
         : [];
   const resolveTravelerName = travelerName ?? payerName;
-  const travelersLabel = travelerIds.length ? travelerIds.map(resolveTravelerName).join(', ') : 'Not set';
+  const travelersLabel = travelerIds.length
+    ? travelerIds
+        .map((id) => {
+          const name = resolveTravelerName(id);
+          const attendee = attendees.find((a) => a.id === id);
+          const guestName = attendee?.guestName;
+          const firstName = attendee?.firstName;
+          const lastName = attendee?.lastName;
+          if (firstName || lastName) return `${firstName ?? ''} ${lastName ?? ''}`.trim();
+          return name || guestName || id;
+        })
+        .join(', ')
+    : 'Not set';
   const totalCostLabel = lodging.totalCost ? `$${lodging.totalCost}` : 'Not set';
   const placeDetailsRows = useMemo<DetailRow[]>(() => {
     if (!placeDetails?.details) return [];
@@ -103,91 +119,93 @@ const LodgingDetailsDialog: React.FC<LodgingDetailsDialogProps> = ({
   return (
     <View style={styles.modalOverlay} testID={testID}>
       <View style={[styles.modalCard, detailStyles.detailCard, isCompact && { width: '100%', maxHeight: '95%' }]}>
-        <View style={detailStyles.imageWrap}>
-          {lodging.imageUrl ? (
-            <Image source={{ uri: lodging.imageUrl }} style={detailStyles.image} resizeMode="cover" />
-          ) : (
-            <View style={detailStyles.imageFallback}>
-              <Text style={styles.helperText}>No photo available</Text>
+        <ScrollView>
+          <View style={detailStyles.imageWrap}>
+            {imageUrl ? (
+              <Image source={{ uri: imageUrl }} style={detailStyles.image} resizeMode="cover" />
+            ) : (
+              <View style={detailStyles.imageFallback}>
+                <Text style={styles.helperText}>No photo available</Text>
+              </View>
+            )}
+            <TouchableOpacity style={detailStyles.closeButton} onPress={onClose}>
+              <Text style={detailStyles.closeText}>✕</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={detailStyles.headerRow}>
+            <View style={detailStyles.headerMeta}>
+              <Text style={detailStyles.title}>{lodging.name}</Text>
+              <Text style={[styles.helperText, { marginTop: 2 }]} numberOfLines={2}>
+                {lodging.address || 'Address not available'}
+              </Text>
             </View>
-          )}
-          <TouchableOpacity style={detailStyles.closeButton} onPress={onClose}>
-            <Text style={detailStyles.closeText}>✕</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={detailStyles.headerRow}>
-          <View style={detailStyles.headerMeta}>
-            <Text style={detailStyles.title}>{lodging.name}</Text>
-            <Text style={[styles.helperText, { marginTop: 2 }]} numberOfLines={2}>
-              {lodging.address || 'Address not available'}
-            </Text>
+            <View style={detailStyles.statusBadge}>
+              <Text style={detailStyles.statusText}>Confirmed</Text>
+            </View>
           </View>
-          <View style={detailStyles.statusBadge}>
-            <Text style={detailStyles.statusText}>Confirmed</Text>
+          <View style={detailStyles.detailList}>
+            {(
+              [
+                { label: 'Check-in', value: lodging.checkInDate ? formatDateLong(lodging.checkInDate) : 'TBD' },
+                { label: 'Check-out', value: lodging.checkOutDate ? formatDateLong(lodging.checkOutDate) : 'TBD' },
+                { label: 'Rooms', value: lodging.rooms || '1' },
+                { label: 'Refund By', value: lodging.refundBy ? formatDateLong(lodging.refundBy) : 'N/A' },
+                {
+                  label: 'Address',
+                  value: lodging.address || 'Not provided',
+                  action: lodging.address ? () => onOpenMap(lodging.address) : undefined,
+                },
+                { label: 'Paid by', value: lodging.paidBy?.length ? lodging.paidBy.map(payerName).join(', ') : 'Not set' },
+                { label: 'Travelers', value: travelersLabel },
+                { label: 'Total cost', value: totalCostLabel },
+                { label: 'Cost per night', value: lodging.costPerNight ? `$${lodging.costPerNight}` : '$0' },
+              ] as DetailRow[]
+            ).map((row) => (
+              <View key={row.label} style={detailStyles.detailRow}>
+                <Text style={detailStyles.detailLabel}>{row.label}</Text>
+                {row.action ? (
+                  <Text style={[detailStyles.detailValue, styles.linkText]} onPress={row.action}>
+                    {row.value}
+                  </Text>
+                ) : (
+                  <Text style={detailStyles.detailValue}>{row.value}</Text>
+                )}
+              </View>
+            ))}
+            {placeDetailsStatus === 'loading' ? (
+              <View style={detailStyles.detailRow}>
+                <Text style={detailStyles.detailLabel}>Place details</Text>
+                <Text style={detailStyles.detailValue}>Loading...</Text>
+              </View>
+            ) : null}
+            {placeDetailsRows.map((row) => (
+              <View key={row.label} style={detailStyles.detailRow}>
+                <Text style={detailStyles.detailLabel}>{row.label}</Text>
+                {row.action ? (
+                  <Text style={[detailStyles.detailValue, styles.linkText]} onPress={row.action}>
+                    {row.value}
+                  </Text>
+                ) : (
+                  <Text style={detailStyles.detailValue}>{row.value}</Text>
+                )}
+              </View>
+            ))}
           </View>
-        </View>
-        <View style={detailStyles.detailList}>
-          {(
-            [
-            { label: 'Check-in', value: lodging.checkInDate ? formatDateLong(lodging.checkInDate) : 'TBD' },
-            { label: 'Check-out', value: lodging.checkOutDate ? formatDateLong(lodging.checkOutDate) : 'TBD' },
-            { label: 'Rooms', value: lodging.rooms || '1' },
-            { label: 'Refund By', value: lodging.refundBy ? formatDateLong(lodging.refundBy) : 'N/A' },
-            {
-              label: 'Address',
-              value: lodging.address || 'Not provided',
-              action: lodging.address ? () => onOpenMap(lodging.address) : undefined,
-            },
-            { label: 'Paid by', value: lodging.paidBy?.length ? lodging.paidBy.map(payerName).join(', ') : 'Not set' },
-            { label: 'Travelers', value: travelersLabel },
-            { label: 'Total cost', value: totalCostLabel },
-            { label: 'Cost per night', value: lodging.costPerNight ? `$${lodging.costPerNight}` : '$0' },
-          ] as DetailRow[]
-          ).map((row) => (
-            <View key={row.label} style={detailStyles.detailRow}>
-              <Text style={detailStyles.detailLabel}>{row.label}</Text>
-              {row.action ? (
-                <Text style={[detailStyles.detailValue, styles.linkText]} onPress={row.action}>
-                  {row.value}
+          {mapImageUrl ? (
+            <View style={detailStyles.mapCard}>
+              <Image style={detailStyles.mapImage} source={{ uri: mapImageUrl }} resizeMode="cover" />
+              <View style={detailStyles.mapMeta}>
+                <Text style={detailStyles.summaryLabel}>Location preview</Text>
+                <Text style={detailStyles.summaryValue} numberOfLines={2}>
+                  {lodging.address}
                 </Text>
-              ) : (
-                <Text style={detailStyles.detailValue}>{row.value}</Text>
-              )}
-            </View>
-          ))}
-          {placeDetailsStatus === 'loading' ? (
-            <View style={detailStyles.detailRow}>
-              <Text style={detailStyles.detailLabel}>Place details</Text>
-              <Text style={detailStyles.detailValue}>Loading...</Text>
+                <TouchableOpacity onPress={() => onOpenMap(lodging.address)}>
+                  <Text style={[styles.linkText, detailStyles.mapLink]}>Open in Maps</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           ) : null}
-          {placeDetailsRows.map((row) => (
-            <View key={row.label} style={detailStyles.detailRow}>
-              <Text style={detailStyles.detailLabel}>{row.label}</Text>
-              {row.action ? (
-                <Text style={[detailStyles.detailValue, styles.linkText]} onPress={row.action}>
-                  {row.value}
-                </Text>
-              ) : (
-                <Text style={detailStyles.detailValue}>{row.value}</Text>
-              )}
-            </View>
-          ))}
-        </View>
-        {mapImageUrl ? (
-          <View style={detailStyles.mapCard}>
-            <Image style={detailStyles.mapImage} source={{ uri: mapImageUrl }} resizeMode="cover" />
-            <View style={detailStyles.mapMeta}>
-              <Text style={detailStyles.summaryLabel}>Location preview</Text>
-              <Text style={detailStyles.summaryValue} numberOfLines={2}>
-                {lodging.address}
-              </Text>
-              <TouchableOpacity onPress={() => onOpenMap(lodging.address)}>
-                <Text style={[styles.linkText, detailStyles.mapLink]}>Open in Maps</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ) : null}
+        </ScrollView>
         <View style={[styles.row, styles.detailActionsRow]}>
           <View style={detailStyles.actionGroup}>
             <TouchableOpacity style={styles.button} onPress={onClose}>

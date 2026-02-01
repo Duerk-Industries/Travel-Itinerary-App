@@ -8,7 +8,8 @@ export const getMapsApiKey = (): string => {
 export const buildStaticMapUrl = (address: string, apiKey?: string): string => {
   if (!address) return '';
   const key = apiKey ?? getMapsApiKey();
+  if (!key) return '';
   const encoded = encodeURIComponent(address);
   const base = `https://maps.googleapis.com/maps/api/staticmap?center=${encoded}&zoom=14&size=600x320&scale=2&maptype=roadmap&markers=color:red|${encoded}`;
-  return key ? `${base}&key=${key}` : base;
+  return `${base}&key=${key}`;
 };

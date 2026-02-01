@@ -1471,7 +1471,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
           onPress={onPress}
           disabled={!onPress}
         >
-          {img ? <Image style={styles.dayHeroImage} source={{ uri: img }} /> : <View style={styles.dayHeroImageFallback} />}
+          {img ? <Image style={styles.dayHeroImage} source={{ uri: img }} resizeMode="cover" /> : <View style={styles.dayHeroImageFallback} />}
           <View style={styles.dayHeroOverlay} />
           <View style={styles.dayHeroBadge}>
             <Text style={styles.dayHeroBadgeText}>{card.label.toUpperCase()}</Text>
@@ -1661,7 +1661,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
                       }}
                     >
                       {lodging.imageUrl ? (
-                        <Image style={styles.lodgingImage} source={{ uri: lodging.imageUrl }} />
+                        <Image style={styles.lodgingImage} source={{ uri: lodging.imageUrl }} resizeMode="cover" />
                       ) : (
                         <View style={styles.lodgingImageFallback} />
                       )}
@@ -2708,6 +2708,9 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
         <LodgingDetailsDialog
           visible={showLodgingDetails}
           lodging={selectedLodging}
+          attendees={attendees}
+          backendUrl={backendUrl}
+          requestHeaders={headers}
           styles={styles}
           payerName={payerName}
           travelerName={travelerName}
