@@ -2765,6 +2765,13 @@ const styles = StyleSheet.create({
     marginTop: 8,
     gap: 4,
   },
+  detailActionsRow: {
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    gap: 8,
+  },
   modalLabel: {
     fontSize: 12,
     color: '#6b7280',
