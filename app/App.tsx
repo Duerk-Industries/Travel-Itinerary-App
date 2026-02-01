@@ -2238,6 +2238,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: '#dee2e6',
   },
+  tableHeaderRow: {
+    backgroundColor: '#f8f9fa',
+  },
   lastRow: {
     borderBottomWidth: 0,
   },
@@ -2245,6 +2248,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8f9fa',
   },
   cell: {
+    padding: 8,
+    borderRightWidth: 1,
+    borderColor: '#dee2e6',
+  },
+  tableHeaderCell: {
+    padding: 8,
+    borderRightWidth: 1,
+    borderColor: '#dee2e6',
+  },
+  tableCell: {
     padding: 8,
     borderRightWidth: 1,
     borderColor: '#dee2e6',
@@ -2261,6 +2274,31 @@ const styles = StyleSheet.create({
   actionCell: {
     flexDirection: 'row',
     gap: 8,
+    alignItems: 'center',
+  },
+  tableActionButton: {
+    minWidth: 72,
+    height: 32,
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+  },
+  tableActionButtonPrimary: {
+    backgroundColor: '#2563eb',
+  },
+  tableActionButtonDanger: {
+    backgroundColor: '#dc2626',
+  },
+  tableNameButton: {
+    alignSelf: 'flex-start',
+  },
+  roundButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    paddingHorizontal: 0,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   bodyText: {
@@ -2528,6 +2566,9 @@ const styles = StyleSheet.create({
   lodgingPayerCol: { minWidth: 140, maxWidth: 320, flex: 1 },
   lodgingAddressCol: { minWidth: 140, maxWidth: 320, flex: 1 },
   lodgingActionCol: { minWidth: 140, maxWidth: 320, flex: 1 },
+  lodgingTabNameCol: { flex: 1, minWidth: 160 },
+  lodgingTabDateCol: { flexGrow: 0, flexShrink: 0, minWidth: 110 },
+  lodgingTabActionsCol: { flexGrow: 0, flexShrink: 0, minWidth: 168 },
   cellTextWrap: {
     flexWrap: 'wrap',
     whiteSpace: 'normal',
