@@ -222,6 +222,7 @@ const App: React.FC = () => {
   const [selectedTraitNames, setSelectedTraitNames] = useState<Set<string>>(new Set());
   const [activePage, setActivePage] = useState<Page>('home');
   const [pageHistory, setPageHistory] = useState<Page[]>([]);
+  const [pageForwardHistory, setPageForwardHistory] = useState<Page[]>([]);
   const [flightAirportOptions, setFlightAirportOptions] = useState<string[]>([]);
   const [traitAge, setTraitAge] = useState('');
   const [traitGender, setTraitGender] = useState<'female' | 'male' | 'nonbinary' | 'prefer-not'>('prefer-not');
@@ -287,6 +288,7 @@ const App: React.FC = () => {
   const requestPageChange = (page: Page, opts?: { skipHistory?: boolean }) => {
     if (!shouldAllowPageChange(activePage, page)) return;
     if (page === activePage) return;
+    setPageForwardHistory([]);
     if (!opts?.skipHistory) {
       setPageHistory((prev) => {
         const next = [...prev, activePage];
@@ -486,6 +488,7 @@ const App: React.FC = () => {
     setAccountProfile({ firstName: '', lastName: '', email: '', mapPreference: mapApp });
     setFamilyRelationships([]);
     setFellowTravelers([]);
+    setPageForwardHistory([]);
     setActivePage('home');
     setPageHistory([]);
     setLastRefreshAt(null);
@@ -577,8 +580,9 @@ const App: React.FC = () => {
     const restoredTripId = previousSession?.tripId ?? activeTripId ?? null;
     setActiveTripId(restoredTripId);
     setActivePage('home');
+    setPageForwardHistory([]);
     setPageHistory([]);
-    saveSession(token, name, 'home', decoded?.email, restoredTripId, []);
+    saveSession(token, name, 'home', decoded?.email, restoredTripId, [], []);
     fetchFlights(token);
     fetchLodgings(token);
     fetchTours(token);
@@ -956,6 +960,10 @@ const App: React.FC = () => {
         ? session.pageHistory.filter((p) => typeof p === 'string') as Page[]
         : [];
       setPageHistory(sessionHistory);
+      const sessionForwardHistory = (Array.isArray(session.pageForwardHistory)
+        ? session.pageForwardHistory.filter((p) => typeof p === 'string')
+        : []) as Page[];
+      setPageForwardHistory(sessionForwardHistory);
       const tripId = session.tripId ?? null;
       if (tripId) {
         setActiveTripId(tripId);
@@ -1002,11 +1010,6 @@ const App: React.FC = () => {
   useEffect(() => {
     saveFollowPayloads(followCodePayloads);
   }, [followCodePayloads]);
-
-  useEffect(() => {
-    if (!userToken) return;
-    saveSession(userToken, userName ?? 'Traveler', activePage, userEmail, activeTripId, pageHistory);
-  }, [userToken, userName, userEmail, activePage, activeTripId, pageHistory]);
 
   useEffect(() => {
     if (!userToken) return;
@@ -1215,7 +1218,31 @@ const App: React.FC = () => {
     fetchLodgings();
   };
 
-  const backTarget: Page | null = activePage === 'trip-details' ? 'trips' : null;
+  const goBack = () => {
+    if (pageHistory.length === 0) return;
+    const previousPage = pageHistory[pageHistory.length - 1];
+    if (shouldAllowPageChange(activePage, previousPage)) {
+      setPageForwardHistory((prev) => [activePage, ...prev].slice(0, 25));
+      setPageHistory((prev) => prev.slice(0, -1));
+      setActivePage(previousPage);
+    }
+  };
+
+  const goForward = () => {
+    if (pageForwardHistory.length === 0) return;
+    const nextPage = pageForwardHistory[0];
+    if (shouldAllowPageChange(activePage, nextPage)) {
+      setPageHistory((prev) => [...prev, activePage].slice(-25));
+      setPageForwardHistory((prev) => prev.slice(1));
+      setActivePage(nextPage);
+    }
+  };
+
+  useEffect(() => {
+    if (!userToken) return;
+    saveSession(userToken, userName ?? 'Traveler', activePage, userEmail, activeTripId, pageHistory, pageForwardHistory);
+  }, [userToken, userName, userEmail, activePage, activeTripId, pageHistory, pageForwardHistory]);
+
   const disabledPages = useMemo(() => {
     const pages: Page[] = [
       'overview',
@@ -1246,13 +1273,24 @@ const App: React.FC = () => {
               <Text style={styles.homeButtonText}>⌂</Text>
             </TouchableOpacity>
           ) : null}
-          {userToken && backTarget ? (
+          {userToken ? (
             <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => requestPageChange(backTarget)}
+              style={[styles.backButton, pageHistory.length === 0 && styles.buttonDisabled]}
+              onPress={goBack}
+              disabled={pageHistory.length === 0}
               accessibilityLabel="Back"
             >
               <Text style={styles.backButtonText}>{'<'}</Text>
+            </TouchableOpacity>
+          ) : null}
+          {userToken ? (
+            <TouchableOpacity
+              style={[styles.backButton, pageForwardHistory.length === 0 && styles.buttonDisabled]}
+              onPress={goForward}
+              disabled={pageForwardHistory.length === 0}
+              accessibilityLabel="Forward"
+            >
+              <Text style={styles.backButtonText}>{'>'}</Text>
             </TouchableOpacity>
           ) : null}
           <Text style={styles.title}>Shared Trip Planner</Text>
@@ -2092,12 +2130,12 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: '#000',
     justifyContent: 'center',
     alignItems: 'center',
   },
   backButtonText: {
-    color: '#111827',
+    color: '#fff',
     fontSize: 16,
     fontWeight: '700',
   },
@@ -3028,7 +3066,7 @@ const styles = StyleSheet.create({
     color: '#2b2b2b',
   },
   buttonDisabled: {
-    opacity: 0.45,
+    opacity: 0.6,
   },
   wizardOverlay: {
     position: 'absolute',

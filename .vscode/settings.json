@@ -17,6 +17,7 @@
         "hostport",
         "jvmargs",
         "Metaspace",
+        "nonbinary",
         "ossp",
         "Preact",
         "predeploy",
