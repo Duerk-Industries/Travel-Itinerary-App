@@ -22,6 +22,7 @@ import { balanceCategoryTotals, computePayerTotals } from './tabs/costReport';
 import { Trait } from './tabs/traits';
 import { FollowTab, fetchFollowedTripsApi, loadFollowCodes, loadFollowPayloads, saveFollowCodes, saveFollowPayloads, type FollowedTrip } from './tabs/follow';
 import ItinerariesTab from './tabs/itineraries';
+import HomeTab from './tabs/HomeTab';
 import OverviewTab from './tabs/overview';
 import CreateTripWizard from './tabs/createTripWizard';
 import TripDetailsTab from './tabs/tripDetails';
@@ -101,7 +102,7 @@ interface GroupMemberOption {
 }
 
 type Page =
-  | 'menu'
+  | 'home'
   | 'overview'
   | 'flights'
   | 'lodging'
@@ -219,7 +220,8 @@ const App: React.FC = () => {
   const [traits, setTraits] = useState<Trait[]>([]);
   const [newTraitName, setNewTraitName] = useState('');
   const [selectedTraitNames, setSelectedTraitNames] = useState<Set<string>>(new Set());
-  const [activePage, setActivePage] = useState<Page>('menu');
+  const [activePage, setActivePage] = useState<Page>('home');
+  const [pageHistory, setPageHistory] = useState<Page[]>([]);
   const [flightAirportOptions, setFlightAirportOptions] = useState<string[]>([]);
   const [traitAge, setTraitAge] = useState('');
   const [traitGender, setTraitGender] = useState<'female' | 'male' | 'nonbinary' | 'prefer-not'>('prefer-not');
@@ -282,8 +284,15 @@ const App: React.FC = () => {
   );
 
   const isTripWizardOpen = activePage === 'create-trip';
-  const requestPageChange = (page: Page) => {
+  const requestPageChange = (page: Page, opts?: { skipHistory?: boolean }) => {
     if (!shouldAllowPageChange(activePage, page)) return;
+    if (page === activePage) return;
+    if (!opts?.skipHistory) {
+      setPageHistory((prev) => {
+        const next = [...prev, activePage];
+        return next.slice(-25);
+      });
+    }
     setActivePage(page);
   };
 
@@ -477,7 +486,8 @@ const App: React.FC = () => {
     setAccountProfile({ firstName: '', lastName: '', email: '', mapPreference: mapApp });
     setFamilyRelationships([]);
     setFellowTravelers([]);
-    setActivePage('menu');
+    setActivePage('home');
+    setPageHistory([]);
     setLastRefreshAt(null);
     setIsRefreshing(false);
     refreshInFlightRef.current = false;
@@ -566,8 +576,9 @@ const App: React.FC = () => {
     const previousSession = loadSession();
     const restoredTripId = previousSession?.tripId ?? activeTripId ?? null;
     setActiveTripId(restoredTripId);
-    setActivePage('overview');
-    saveSession(token, name, 'overview', decoded?.email, restoredTripId);
+    setActivePage('home');
+    setPageHistory([]);
+    saveSession(token, name, 'home', decoded?.email, restoredTripId, []);
     fetchFlights(token);
     fetchLodgings(token);
     fetchTours(token);
@@ -575,7 +586,7 @@ const App: React.FC = () => {
     loadAccountProfile(token);
     loadFamilyRelationships(token);
     loadFellowTravelers(token);
-    setActivePage('overview');
+    setActivePage('home');
   }
 
   useEffect(() => {
@@ -941,6 +952,10 @@ const App: React.FC = () => {
       setUserToken(session.token);
       setUserName(session.name);
       setUserEmail(session.email ?? null);
+      const sessionHistory = Array.isArray(session.pageHistory)
+        ? session.pageHistory.filter((p) => typeof p === 'string') as Page[]
+        : [];
+      setPageHistory(sessionHistory);
       const tripId = session.tripId ?? null;
       if (tripId) {
         setActiveTripId(tripId);
@@ -948,6 +963,7 @@ const App: React.FC = () => {
       } else {
         const sessionPage = session.page;
         if (
+          sessionPage === 'home' ||
           sessionPage === 'overview' ||
           sessionPage === 'flights' ||
           sessionPage === 'lodging' ||
@@ -960,9 +976,9 @@ const App: React.FC = () => {
           sessionPage === 'account' ||
           sessionPage === 'follow'
         ) {
-          setActivePage(sessionPage as Page);
+          setActivePage(sessionPage === 'menu' ? 'home' : (sessionPage as Page));
         } else {
-          setActivePage('menu');
+          setActivePage('home');
         }
       }
     }
@@ -989,8 +1005,8 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (!userToken) return;
-    saveSession(userToken, userName ?? 'Traveler', activePage, userEmail, activeTripId);
-  }, [userToken, userName, userEmail, activePage, activeTripId]);
+    saveSession(userToken, userName ?? 'Traveler', activePage, userEmail, activeTripId, pageHistory);
+  }, [userToken, userName, userEmail, activePage, activeTripId, pageHistory]);
 
   useEffect(() => {
     if (!userToken) return;
@@ -1199,10 +1215,48 @@ const App: React.FC = () => {
     fetchLodgings();
   };
 
+  const backTarget: Page | null = activePage === 'trip-details' ? 'trips' : null;
+  const disabledPages = useMemo(() => {
+    const pages: Page[] = [
+      'overview',
+      'flights',
+      'lodging',
+      'car',
+      'tours',
+      'cost',
+      'trips',
+      'create-trip',
+      'account',
+      'follow',
+      'itinerary',
+    ];
+    return new Set(pages.filter((page) => shouldDisableTab(activePage, page)));
+  }, [activePage]);
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.topBar}>
-        <Text style={styles.title}>Shared Trip Planner</Text>
+        <View style={styles.topBarLeft}>
+          {userToken && activePage !== 'home' ? (
+            <TouchableOpacity
+              style={styles.homeButton}
+              onPress={() => requestPageChange('home')}
+              accessibilityLabel="Home"
+            >
+              <Text style={styles.homeButtonText}>⌂</Text>
+            </TouchableOpacity>
+          ) : null}
+          {userToken && backTarget ? (
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => requestPageChange(backTarget)}
+              accessibilityLabel="Back"
+            >
+              <Text style={styles.backButtonText}>{'<'}</Text>
+            </TouchableOpacity>
+          ) : null}
+          <Text style={styles.title}>Shared Trip Planner</Text>
+        </View>
         {userToken ? (
           <View style={styles.topRightWrapper}>
             {trips.length ? (
@@ -1250,87 +1304,18 @@ const App: React.FC = () => {
       </View>
       {userToken ? (
         <ScrollView style={styles.contentScroll} contentContainerStyle={styles.contentScrollContent}>
-            <View style={styles.card}>
-              <Text style={styles.sectionTitle}>Choose a section</Text>
-            <View style={styles.navRow}>
-              <TouchableOpacity
-                disabled={shouldDisableTab(activePage, 'overview')}
-                style={[styles.navButton, activePage === 'overview' && styles.navButtonActive, shouldDisableTab(activePage, 'overview') && styles.buttonDisabled]}
-                onPress={() => requestPageChange('overview')}
-              >
-                <Text style={[styles.navButtonText, activePage === 'overview' && styles.navButtonActiveText]}>Overview</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                disabled={shouldDisableTab(activePage, 'flights')}
-                style={[styles.navButton, activePage === 'flights' && styles.navButtonActive, shouldDisableTab(activePage, 'flights') && styles.buttonDisabled]}
-                onPress={() => requestPageChange('flights')}
-              >
-                <Text style={[styles.navButtonText, activePage === 'flights' && styles.navButtonActiveText]}>Flights</Text>
-              </TouchableOpacity>
-                <TouchableOpacity
-                  disabled={shouldDisableTab(activePage, 'lodging')}
-                  style={[styles.navButton, activePage === 'lodging' && styles.navButtonActive, shouldDisableTab(activePage, 'lodging') && styles.buttonDisabled]}
-                  onPress={() => requestPageChange('lodging')}
-                >
-                  <Text style={[styles.navButtonText, activePage === 'lodging' && styles.navButtonActiveText]}>Lodging</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  disabled={shouldDisableTab(activePage, 'car')}
-                  style={[styles.navButton, activePage === 'car' && styles.navButtonActive, shouldDisableTab(activePage, 'car') && styles.buttonDisabled]}
-                  onPress={() => requestPageChange('car')}
-                >
-                  <Text style={[styles.navButtonText, activePage === 'car' && styles.navButtonActiveText]}>Car Rentals</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  disabled={shouldDisableTab(activePage, 'tours')}
-                  style={[styles.navButton, activePage === 'tours' && styles.navButtonActive, shouldDisableTab(activePage, 'tours') && styles.buttonDisabled]}
-                  onPress={() => requestPageChange('tours')}
-                >
-                  <Text style={[styles.navButtonText, activePage === 'tours' && styles.navButtonActiveText]}>Tours</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  disabled={shouldDisableTab(activePage, 'cost')}
-                  style={[styles.navButton, activePage === 'cost' && styles.navButtonActive, shouldDisableTab(activePage, 'cost') && styles.buttonDisabled]}
-                  onPress={() => requestPageChange('cost')}
-                >
-                  <Text style={[styles.navButtonText, activePage === 'cost' && styles.navButtonActiveText]}>Cost Report</Text>
-                </TouchableOpacity>
-              <TouchableOpacity
-                disabled={shouldDisableTab(activePage, 'trips')}
-                style={[styles.navButton, activePage === 'trips' && styles.navButtonActive, shouldDisableTab(activePage, 'trips') && styles.buttonDisabled]}
-                onPress={() => requestPageChange('trips')}
-              >
-                <Text style={[styles.navButtonText, activePage === 'trips' && styles.navButtonActiveText]}>Trips</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.navButton, activePage === 'create-trip' && styles.navButtonActive]}
-                onPress={() => requestPageChange('create-trip')}
-              >
-                <Text style={[styles.navButtonText, activePage === 'create-trip' && styles.navButtonActiveText]}>Create Trip</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                disabled={shouldDisableTab(activePage, 'account')}
-                style={[styles.navButton, activePage === 'account' && styles.navButtonActive, shouldDisableTab(activePage, 'account') && styles.buttonDisabled]}
-                onPress={() => requestPageChange('account')}
-              >
-                <Text style={[styles.navButtonText, activePage === 'account' && styles.navButtonActiveText]}>Account</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                disabled={shouldDisableTab(activePage, 'follow')}
-                style={[styles.navButton, activePage === 'follow' && styles.navButtonActive, shouldDisableTab(activePage, 'follow') && styles.buttonDisabled]}
-                onPress={() => requestPageChange('follow')}
-              >
-                <Text style={[styles.navButtonText, activePage === 'follow' && styles.navButtonActiveText]}>Follow Trip</Text>
-              </TouchableOpacity>
-                <TouchableOpacity
-                  disabled={shouldDisableTab(activePage, 'itinerary')}
-                  style={[styles.navButton, activePage === 'itinerary' && styles.navButtonActive, shouldDisableTab(activePage, 'itinerary') && styles.buttonDisabled]}
-                  onPress={() => requestPageChange('itinerary')}
-                >
-                  <Text style={[styles.navButtonText, activePage === 'itinerary' && styles.navButtonActiveText]}>Create Itinerary</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+          {activePage === 'home' ? (
+            <HomeTab
+              backendUrl={backendUrl}
+              headers={headers}
+              activeTripId={activeTripId}
+              trips={trips}
+              styles={styles}
+              onSelectTrip={setActiveTripId}
+              onNavigate={(page) => requestPageChange(page as Page)}
+              disabledPages={disabledPages}
+            />
+          ) : null}
 
           {activePage === 'itinerary' ? (
             <ItinerariesTab
@@ -1861,7 +1846,7 @@ const App: React.FC = () => {
                       style={[styles.button, styles.smallButton]}
                       onPress={() => {
                         setSelectedTripId(trip.id);
-                        setActivePage('trip-details');
+                        requestPageChange('trip-details');
                       }}
                     >
                       <Text style={styles.buttonText}>View</Text>
@@ -1908,11 +1893,10 @@ const App: React.FC = () => {
               trip={trips.find((t) => t.id === selectedTripId) ?? null}
               group={groups.find((g) => g.id === trips.find((t) => t.id === selectedTripId)?.groupId) ?? null}
               styles={styles}
-              onBack={() => setActivePage('trips')}
               onSetActive={(tripId) => setActiveTripId(tripId)}
               onOpenItinerary={(tripId) => {
                 setActiveTripId(tripId);
-                setActivePage('itinerary');
+                requestPageChange('itinerary');
               }}
             />
           ) : null}
@@ -2086,6 +2070,37 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: '#d1d5db',
   },
+  topBarLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  homeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#000',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  homeButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  backButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#e5e7eb',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  backButtonText: {
+    color: '#111827',
+    fontSize: 16,
+    fontWeight: '700',
+  },
   topRightWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2113,6 +2128,163 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: '#e2e8f0',
+  },
+  homeScrollContent: {
+    gap: 16,
+  },
+  homeTitle: {
+    fontSize: 28,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  homeHeroCard: {
+    position: 'relative',
+    borderRadius: 20,
+    overflow: 'hidden',
+    height: 180,
+    backgroundColor: '#e5e7eb',
+  },
+  homeHeroImage: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+  },
+  homeHeroFallback: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#d1d5db',
+  },
+  homeHeroOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  homeHeroTextWrap: {
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    bottom: 20,
+  },
+  homeHeroSubtitle: {
+    color: '#e5e7eb',
+    fontSize: 16,
+  },
+  homeHeroTitle: {
+    color: '#fff',
+    fontSize: 32,
+    fontWeight: '700',
+  },
+  homeNavList: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    overflow: 'hidden',
+  },
+  homeNavButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderColor: '#e5e7eb',
+    backgroundColor: '#fff',
+  },
+  homeNavButtonDisabled: {
+    opacity: 0.5,
+  },
+  homeNavIcon: {
+    width: 24,
+    textAlign: 'center',
+    fontSize: 18,
+  },
+  homeNavLabel: {
+    flex: 1,
+    fontSize: 16,
+    color: '#111827',
+  },
+  homeNavArrow: {
+    color: '#111827',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  homeModalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#f8fafc',
+    zIndex: 30000,
+    padding: 16,
+  },
+  homeModalCard: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    padding: 16,
+  },
+  homeModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  homeModalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  homeModalClose: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#e5e7eb',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  homeModalCloseText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  homeModalList: {
+    flex: 1,
+  },
+  homeModalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  homeModalRowActive: {
+    backgroundColor: '#f1f5f9',
+  },
+  homeModalRowText: {
+    flex: 1,
+  },
+  homeModalRowTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  homeModalRowMeta: {
+    color: '#6b7280',
+    fontSize: 13,
+  },
+  homeModalActiveBadge: {
+    color: '#047857',
+    fontSize: 12,
+    fontWeight: '700',
   },
   title: {
     fontSize: 24,

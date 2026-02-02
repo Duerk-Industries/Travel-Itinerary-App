@@ -1,6 +1,17 @@
 // @ts-nocheck
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Linking, Platform, ScrollView, Text, TextInput, TouchableOpacity, View, Image, type LayoutChangeEvent } from 'react-native';
+import {
+  Linking,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  Image,
+  type LayoutChangeEvent,
+} from 'react-native';
 import { computeTripDays, validateTripDates } from '../utils/createTripWizard';
 import { renderRichTextBlocks } from '../utils/richText';
 import {
@@ -253,6 +264,16 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
   openFlightInFlightsTab: _openFlightInFlightsTab,
   openLodgingDetails,
 }) => {
+  const stripResizeMode = useCallback((style: any) => {
+    const flattened = StyleSheet.flatten(style);
+    if (!flattened || typeof flattened !== 'object' || !('resizeMode' in flattened)) {
+      return style;
+    }
+    const { resizeMode: _resizeMode, ...rest } = flattened as Record<string, unknown>;
+    return rest;
+  }, []);
+  const dayHeroImageStyle = useMemo(() => stripResizeMode(styles.dayHeroImage), [stripResizeMode, styles.dayHeroImage]);
+  const lodgingImageStyle = useMemo(() => stripResizeMode(styles.lodgingImage), [stripResizeMode, styles.lodgingImage]);
   const [itineraryDetails, setItineraryDetails] = useState<ItineraryDetail[]>([]);
   const [itineraryLoading, setItineraryLoading] = useState(false);
   const [itineraryId, setItineraryId] = useState<string | null>(null);
@@ -1465,7 +1486,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
         return (
           <TouchableOpacity testID={testID} style={styles.dayHeroCard} onPress={onPress} disabled={!onPress}>
             {img ? (
-              <Image style={styles.dayHeroImage} source={{ uri: img }} resizeMode="cover" />
+              <Image style={dayHeroImageStyle} source={{ uri: img }} resizeMode="cover" />
             ) : (
               <View style={styles.dayHeroImageFallback} />
             )}
@@ -1668,7 +1689,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
                         }}
                       >
                         {lodging.imageUrl ? (
-                          <Image style={styles.lodgingImage} source={{ uri: lodging.imageUrl }} resizeMode="cover" />
+                          <Image style={lodgingImageStyle} source={{ uri: lodging.imageUrl }} resizeMode="cover" />
                         ) : (
                           <View style={styles.lodgingImageFallback} />
                         )}

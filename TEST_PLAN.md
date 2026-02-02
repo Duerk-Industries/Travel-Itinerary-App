@@ -41,6 +41,13 @@ This document outlines the existing test suites in the Travel Itinerary App, ide
         *   Departure/arrival times, carrier, flight number, and booking reference are required.
         *   The payload is built correctly with defaults and trip ID.
 
+*   **`homeTab.test.tsx`**:
+    *   **Purpose**: Tests the Home tab UI behavior.
+    *   **Verifies**:
+        *   Hero card renders active trip title and opens the trip picker modal.
+        *   Trip picker ordering (active first, then no start date, then start date order).
+        *   Home navigation buttons trigger page changes.
+
 *   **`itineraryParser.test.ts`**:
     *   **Purpose**: Tests the parsing of itinerary plans into structured data.
     *   **Verifies**:

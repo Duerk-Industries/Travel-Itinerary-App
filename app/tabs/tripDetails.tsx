@@ -29,20 +29,16 @@ type TripDetailsTabProps = {
   trip: Trip | null;
   group: GroupView | null;
   styles: Record<string, any>;
-  onBack: () => void;
   onSetActive: (tripId: string) => void;
   onOpenItinerary: (tripId: string) => void;
 };
 
-const TripDetailsTab: React.FC<TripDetailsTabProps> = ({ trip, group, styles, onBack, onSetActive, onOpenItinerary }) => {
+const TripDetailsTab: React.FC<TripDetailsTabProps> = ({ trip, group, styles, onSetActive, onOpenItinerary }) => {
   if (!trip) {
     return (
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Trip Details</Text>
         <Text style={styles.helperText}>This trip is no longer available.</Text>
-        <TouchableOpacity style={styles.button} onPress={onBack}>
-          <Text style={styles.buttonText}>Back to Trips</Text>
-        </TouchableOpacity>
       </View>
     );
   }
@@ -58,9 +54,6 @@ const TripDetailsTab: React.FC<TripDetailsTabProps> = ({ trip, group, styles, on
     <ScrollView style={styles.card} contentContainerStyle={{ gap: 12 }}>
       <View style={styles.row}>
         <Text style={styles.sectionTitle}>Trip Details</Text>
-        <TouchableOpacity style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]} onPress={onBack}>
-          <Text style={styles.buttonText}>Back</Text>
-        </TouchableOpacity>
       </View>
       <Text style={styles.flightTitle}>{trip.name}</Text>
       <Text style={styles.helperText}>Created: {formatDateLong(trip.createdAt)}</Text>

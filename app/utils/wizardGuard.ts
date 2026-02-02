@@ -1,5 +1,5 @@
 export type PageKey =
-  | 'menu'
+  | 'home'
   | 'overview'
   | 'flights'
   | 'lodging'

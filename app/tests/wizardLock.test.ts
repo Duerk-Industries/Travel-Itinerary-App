@@ -2,7 +2,7 @@ import { describe, expect, test } from '@jest/globals';
 import { shouldAllowPageChange, shouldDisableTab, type PageKey } from '../utils/wizardGuard';
 
 const pages: PageKey[] = [
-  'menu',
+  'home',
   'overview',
   'flights',
   'lodging',
