@@ -2199,7 +2199,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
           {rows
             .filter((r) => r.type === 'flight')
             .map((row, idx) => {
-              const flight = row.item as Flight;
+              const flight = row.meta as Flight;
               const isEditingFlight = isEditing && editingFlightId === flight.id;
               if (isEditingFlight) {
                 return (
@@ -2263,7 +2263,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
           {rows
             .filter((r) => r.type === 'lodging')
             .map((row) => {
-              const lodging = row.item as Lodging;
+              const lodging = row.meta as Lodging;
               const isEditingThis = isEditing && editingLodgingId === lodging.id;
               if (isEditingThis) {
                 return (
@@ -2271,14 +2271,20 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
                     <LodgingDialog
                       visible
                       styles={styles}
+                      title={editingLodgingId ? 'Edit Accommodation' : 'Add Accommodation'}
                       draft={lodgingDraft}
                       setDraft={setLodgingDraft}
                       groupMembers={groupMembers}
+                      formatMemberName={formatMemberName}
                       defaultPayerId={defaultPayerId}
                       payerName={payerName}
                       onSave={saveLodging}
-                      onClose={closeLodgingModal}
-                      openModalDate={(field, current) => openModalDatePicker(field as ModalDateField, current)}
+                      onCancel={closeLodgingModal}
+                      onOpenDatePicker={(field) =>
+                        openModalDatePicker(
+                          field === 'checkIn' ? 'lodgingCheckIn' : field === 'checkOut' ? 'lodgingCheckOut' : 'lodgingRefundBy'
+                        )
+                      }
                     />
                   </View>
                 );
@@ -2308,7 +2314,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
           {rows
             .filter((r) => r.type === 'tour')
             .map((row) => {
-              const tour = row.item as Tour;
+              const tour = row.meta as Tour;
               return (
                 <TouchableOpacity key={tour.id} style={styles.flightRow} onPress={() => openTourEditor(tour)}>
                   <Text style={styles.flightTitle}>{tour.name}</Text>
@@ -2334,7 +2340,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
           {rows
             .filter((r) => r.type === 'rental')
             .map((row) => {
-              const rental = row.item as CarRental;
+              const rental = row.meta as CarRental;
               return (
                 <TouchableOpacity key={rental.id} style={styles.flightRow} onPress={() => openRentalEditor(rental)}>
                   <Text style={styles.flightTitle}>{rental.vendor}</Text>

@@ -23,6 +23,8 @@ let app: App | null = null;
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
 const nowIso = () => new Date().toISOString();
 const hashPassword = (password: string, salt: string) => scryptSync(password, salt, 64).toString('hex');
+const stripUndefined = <T extends Record<string, any>>(updates: T): Partial<T> =>
+  Object.fromEntries(Object.entries(updates).filter(([, value]) => typeof value !== 'undefined')) as Partial<T>;
 
 export const getDb = (): Firestore => {
   if (!app) {
@@ -831,7 +833,8 @@ export const updateFlight = async (flightId: string, userId: string, updates: Pa
   if (!doc.exists) return null;
   const data = doc.data() as any;
   if (data.userId !== userId) throw new Error('Not authorized to update');
-  await db.collection('flights').doc(flightId).update(updates);
+  const updatePayload = stripUndefined(updates);
+  await db.collection('flights').doc(flightId).update(updatePayload);
   const updated = await db.collection('flights').doc(flightId).get();
   return updated.data() as Flight;
 };
@@ -999,10 +1002,7 @@ export const updateLodging = async (lodgingId: string, userId: string, updates: 
   if (!tripId) return null;
   const membership = await ensureUserInTrip(tripId, userId);
   if (!membership) return null;
-  const updatePayload: Partial<Lodging> = { ...updates };
-  if (updates.imageUrl) {
-    updatePayload.imageUrl = updates.imageUrl;
-  }
+  const updatePayload = stripUndefined(updates);
   await db.collection('lodgings').doc(lodgingId).update(updatePayload);
   const updated = await db.collection('lodgings').doc(lodgingId).get();
   return updated.data() as Lodging;
@@ -1030,7 +1030,8 @@ export const updateTour = async (id: string, userId: string, tour: Partial<Tour>
   const doc = await db.collection('tours').doc(id).get();
   if (!doc.exists) return null;
   if ((doc.data() as any).userId !== userId) throw new Error('Not authorized');
-  await db.collection('tours').doc(id).update(tour);
+  const updatePayload = stripUndefined(tour);
+  await db.collection('tours').doc(id).update(updatePayload);
   const updated = await db.collection('tours').doc(id).get();
   return updated.data() as Tour;
 };

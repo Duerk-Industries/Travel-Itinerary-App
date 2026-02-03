@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent, within } from '@testing-library/react-native';
+import { render, fireEvent, within, waitFor } from '@testing-library/react-native';
 import LodgingTab, { formatShortDate } from '../tabs/LodgingTab';
 import type { Lodging } from '../tabs/lodging';
 
@@ -179,5 +179,51 @@ describe('LodgingTab', () => {
         fireEvent.press(within(detailsDialog).getByText('Delete'));
         const deleteDialog = getByTestId('delete-lodging-dialog');
         expect(within(deleteDialog).getByText('Are you sure you want to delete Hotel 1?')).toBeTruthy();
+    });
+
+    it('updates paid by and saves the lodging', async () => {
+        const originalFetch = global.fetch;
+        const fetchMock = jest.fn().mockResolvedValue({ ok: true, json: async () => ({}) } as any);
+        (global as any).fetch = fetchMock;
+
+        try {
+            const onRefreshLodgings = jest.fn();
+
+            const { getByTestId, getAllByText, getByText } = render(
+                <LodgingTab
+                    backendUrl="http://example.com"
+                    jsonHeaders={{ 'Content-Type': 'application/json' }}
+                    requestHeaders={{}}
+                    trip={trip}
+                    lodgings={mockLodgings}
+                    groupMembers={groupMembers}
+                    defaultPayerId="m1"
+                    styles={styles}
+                    onRefreshLodgings={onRefreshLodgings}
+                    onOpenMap={() => { }}
+                    formatMemberName={formatMemberName}
+                    payerName={payerName}
+                />
+            );
+
+            fireEvent.press(within(getByTestId('lodging-row-l1')).getByText('Edit'));
+            const editDialog = getByTestId('lodging-editor-dialog');
+            expect(within(editDialog).getByText('Edit Accommodation')).toBeTruthy();
+
+            const addButtons = getAllByText('Add Jane Doe');
+            fireEvent.press(addButtons[addButtons.length - 1]);
+
+            fireEvent.press(getByText('Save'));
+
+            await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+            const [url, options] = fetchMock.mock.calls[0];
+            expect(String(url)).toContain('/api/lodgings/l1');
+            expect(options.method).toBe('PUT');
+            const payload = JSON.parse(options.body);
+            expect(payload.paidBy).toEqual(['m1', 'm2']);
+            expect(onRefreshLodgings).toHaveBeenCalled();
+        } finally {
+            (global as any).fetch = originalFetch;
+        }
     });
 });
