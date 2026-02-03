@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { formatDateLong } from '../utils/formatDateLong';
 import { renderRichTextBlocks } from '../utils/richText';
@@ -15,6 +15,7 @@ type Trip = {
   startMonth?: number | null;
   startYear?: number | null;
   durationDays?: number | null;
+  currency?: string | null;
   createdAt: string;
 };
 
@@ -31,9 +32,10 @@ type TripDetailsTabProps = {
   styles: Record<string, any>;
   onSetActive: (tripId: string) => void;
   onOpenItinerary: (tripId: string) => void;
+  onUpdateCurrency: (tripId: string, currency: string) => void;
 };
 
-const TripDetailsTab: React.FC<TripDetailsTabProps> = ({ trip, group, styles, onSetActive, onOpenItinerary }) => {
+const TripDetailsTab: React.FC<TripDetailsTabProps> = ({ trip, group, styles, onSetActive, onOpenItinerary, onUpdateCurrency }) => {
   if (!trip) {
     return (
       <View style={styles.card}>
@@ -42,6 +44,13 @@ const TripDetailsTab: React.FC<TripDetailsTabProps> = ({ trip, group, styles, on
       </View>
     );
   }
+
+  const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
+  const currencyOptions = useMemo(
+    () => ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY', 'INR', 'MXN'],
+    []
+  );
+  const currentCurrency = trip.currency ?? 'USD';
 
   const dateRange = trip.startDate || trip.endDate
     ? `${trip.startDate ? formatDateLong(trip.startDate) : 'Start'} - ${trip.endDate ? formatDateLong(trip.endDate) : 'End'}`
@@ -77,6 +86,33 @@ const TripDetailsTab: React.FC<TripDetailsTabProps> = ({ trip, group, styles, on
       ) : (
         <Text style={styles.helperText}>No description yet.</Text>
       )}
+
+      <View style={styles.divider} />
+      <Text style={styles.headerText}>Currency</Text>
+      <View style={[styles.input, styles.dropdown, { marginTop: 6 }]}>
+        <TouchableOpacity style={styles.selectButtonRow} onPress={() => setShowCurrencyDropdown((prev) => !prev)}>
+          <Text style={styles.cellText}>{currentCurrency}</Text>
+          <Text style={styles.selectCaret}>▾</Text>
+        </TouchableOpacity>
+        {showCurrencyDropdown ? (
+          <View style={styles.dropdownList}>
+            {currencyOptions.map((currency) => (
+              <TouchableOpacity
+                key={currency}
+                style={styles.dropdownOption}
+                onPress={() => {
+                  setShowCurrencyDropdown(false);
+                  if (currency !== currentCurrency) {
+                    onUpdateCurrency(trip.id, currency);
+                  }
+                }}
+              >
+                <Text style={styles.cellText}>{currency}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : null}
+      </View>
 
       <View style={styles.divider} />
       <Text style={styles.headerText}>Participants</Text>

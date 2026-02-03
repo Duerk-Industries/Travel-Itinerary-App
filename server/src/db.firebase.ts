@@ -588,6 +588,7 @@ export const listTrips = async (userId: string): Promise<Array<Trip & { groupNam
       startMonth: data.startMonth ?? null,
       startYear: data.startYear ?? null,
       durationDays: data.durationDays ?? null,
+      currency: data.currency ?? 'USD',
       createdAt: data.createdAt,
       groupName: groupNames[data.groupId] ?? '',
     } as any;
@@ -622,6 +623,7 @@ export const createTrip = async (
     startMonth: details.startMonth ?? null,
     startYear: details.startYear ?? null,
     durationDays: details.durationDays ?? null,
+    currency: details.currency ?? 'USD',
     createdAt: nowIso(),
   };
   await db.collection('trips').doc(id).set(payload);
@@ -650,6 +652,7 @@ export const updateTripDetails = async (
       startMonth: updates.startMonth ?? data.startMonth ?? null,
       startYear: updates.startYear ?? data.startYear ?? null,
       durationDays: updates.durationDays ?? data.durationDays ?? null,
+      currency: updates.currency ?? data.currency ?? 'USD',
       name: updates.name ?? data.name,
     });
   const updated = await db.collection('trips').doc(tripId).get();
@@ -663,7 +666,11 @@ export const deleteTrip = async (userId: string, tripId: string): Promise<void> 
   const data = trip.data() as any;
   const allowed = await ensureMembership(data.groupId, userId);
   if (!allowed) throw new Error('Not authorized');
-  await db.collection('trips').doc(tripId).delete();
+  const expenses = await db.collection('expenses').where('tripId', '==', tripId).get();
+  const batch = db.batch();
+  expenses.forEach((doc) => batch.delete(doc.ref));
+  batch.delete(trip.ref);
+  await batch.commit();
 };
 
 export const updateTripGroup = async (
@@ -731,6 +738,7 @@ export const createTripWithGroupAndMembers = async (payload: {
   startMonth?: number | null;
   startYear?: number | null;
   durationDays?: number | null;
+  currency?: string | null;
   members: Array<{ email?: string; guestName?: string }>;
 }): Promise<{ trip: Trip; groupId: string; invites: { id: string; email: string }[] }> => {
   const group = await createGroupWithMembers(
@@ -746,6 +754,7 @@ export const createTripWithGroupAndMembers = async (payload: {
     startMonth: payload.startMonth ?? null,
     startYear: payload.startYear ?? null,
     durationDays: payload.durationDays ?? null,
+    currency: payload.currency ?? 'USD',
   });
   for (const m of payload.members) {
     if (!m.email && m.guestName) {
@@ -1032,6 +1041,127 @@ export const deleteTour = async (tourId: string, userId: string): Promise<void> 
   if (!doc.exists) return;
   if ((doc.data() as any).userId !== userId) throw new Error('Not authorized');
   await db.collection('tours').doc(tourId).delete();
+};
+
+// Expenses
+export const listExpenses = async (userId: string, tripId?: string | null): Promise<any[]> => {
+  if (!tripId) return [];
+  const membership = await ensureUserInTrip(tripId, userId);
+  if (!membership) return [];
+  const db = getDb();
+  const snapshot = await db.collection('expenses').where('tripId', '==', tripId).get();
+  return snapshot.docs.map((d) => d.data() as any);
+};
+
+export const insertExpense = async (expense: {
+  userId: string;
+  tripId: string;
+  groupId: string;
+  expenseDate: string;
+  category: string;
+  amount: number;
+  currency?: string | null;
+  payerIds?: string[];
+  forIds?: string[];
+  sourceType?: string | null;
+  sourceId?: string | null;
+  notes?: string | null;
+}): Promise<any> => {
+  const db = getDb();
+  const tripDoc = await db.collection('trips').doc(expense.tripId).get();
+  const tripCurrency = (tripDoc.data() as any)?.currency ?? 'USD';
+  const id = randomUUID();
+  const payload = {
+    id,
+    tripId: expense.tripId,
+    groupId: expense.groupId,
+    userId: expense.userId,
+    expenseDate: expense.expenseDate,
+    category: expense.category,
+    amount: expense.amount ?? 0,
+    currency: expense.currency ?? tripCurrency ?? 'USD',
+    payerIds: Array.isArray(expense.payerIds) ? expense.payerIds : [],
+    forIds: Array.isArray(expense.forIds) ? expense.forIds : [],
+    sourceType: expense.sourceType ?? null,
+    sourceId: expense.sourceId ?? null,
+    notes: expense.notes ?? null,
+    createdAt: nowIso(),
+  };
+  await db.collection('expenses').doc(id).set(payload);
+  return payload;
+};
+
+export const upsertExpenseForSource = async (expense: {
+  userId: string;
+  tripId: string;
+  groupId: string;
+  expenseDate: string;
+  category: string;
+  amount: number;
+  currency?: string | null;
+  payerIds?: string[];
+  forIds?: string[];
+  sourceType: string;
+  sourceId: string;
+  notes?: string | null;
+}): Promise<any> => {
+  const db = getDb();
+  const tripDoc = await db.collection('trips').doc(expense.tripId).get();
+  const tripCurrency = (tripDoc.data() as any)?.currency ?? 'USD';
+  const existing = await db
+    .collection('expenses')
+    .where('sourceType', '==', expense.sourceType)
+    .where('sourceId', '==', expense.sourceId)
+    .limit(1)
+    .get();
+  const payload = {
+    tripId: expense.tripId,
+    groupId: expense.groupId,
+    userId: expense.userId,
+    expenseDate: expense.expenseDate,
+    category: expense.category,
+    amount: expense.amount ?? 0,
+    currency: expense.currency ?? tripCurrency ?? 'USD',
+    payerIds: Array.isArray(expense.payerIds) ? expense.payerIds : [],
+    forIds: Array.isArray(expense.forIds) ? expense.forIds : [],
+    sourceType: expense.sourceType,
+    sourceId: expense.sourceId,
+    notes: expense.notes ?? null,
+    createdAt: nowIso(),
+  };
+  if (existing.docs.length) {
+    const doc = existing.docs[0];
+    await doc.ref.update(payload);
+    return { id: doc.id, ...payload };
+  }
+  const id = randomUUID();
+  await db.collection('expenses').doc(id).set({ id, ...payload });
+  return { id, ...payload };
+};
+
+export const deleteExpense = async (expenseId: string, userId: string): Promise<void> => {
+  const db = getDb();
+  const doc = await db.collection('expenses').doc(expenseId).get();
+  if (!doc.exists) return;
+  const data = doc.data() as any;
+  const membership = await ensureUserInTrip(data.tripId, userId);
+  if (!membership) throw new Error('Not authorized');
+  await db.collection('expenses').doc(expenseId).delete();
+};
+
+export const deleteExpenseForSource = async (sourceType: string, sourceId: string, userId: string): Promise<void> => {
+  const db = getDb();
+  const snapshot = await db
+    .collection('expenses')
+    .where('sourceType', '==', sourceType)
+    .where('sourceId', '==', sourceId)
+    .get();
+  for (const doc of snapshot.docs) {
+    const data = doc.data() as any;
+    const membership = await ensureUserInTrip(data.tripId, userId);
+    if (!membership) continue;
+    await doc.ref.delete();
+  }
 };
 
 // Traits

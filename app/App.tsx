@@ -23,6 +23,7 @@ import { Trait } from './tabs/traits';
 import { FollowTab, fetchFollowedTripsApi, loadFollowCodes, loadFollowPayloads, saveFollowCodes, saveFollowPayloads, type FollowedTrip } from './tabs/follow';
 import ItinerariesTab from './tabs/itineraries';
 import HomeTab from './tabs/HomeTab';
+import DailyExpensesTab from './tabs/dailyExpenses';
 import OverviewTab from './tabs/overview';
 import CreateTripWizard from './tabs/createTripWizard';
 import TripDetailsTab from './tabs/tripDetails';
@@ -88,6 +89,24 @@ interface Trip {
   startMonth?: number | null;
   startYear?: number | null;
   durationDays?: number | null;
+  currency?: string | null;
+  createdAt: string;
+}
+
+interface Expense {
+  id: string;
+  tripId: string;
+  groupId: string;
+  userId: string;
+  expenseDate: string;
+  category: string;
+  amount: number;
+  currency: string;
+  payerIds: string[];
+  forIds: string[];
+  sourceType?: string | null;
+  sourceId?: string | null;
+  notes?: string | null;
   createdAt: string;
 }
 
@@ -108,6 +127,7 @@ type Page =
   | 'lodging'
   | 'car'
   | 'tours'
+  | 'expenses'
   | 'trips'
   | 'create-trip'
   | 'trip-details'
@@ -210,6 +230,7 @@ const App: React.FC = () => {
   const [lodgingToDelete, setLodgingToDelete] = useState<Lodging | null>(null);
 
   const [tours, setTours] = useState<Tour[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [carRentals, setCarRentals] = useState<CarRental[]>([]);
   const [carDraft, setCarDraft] = useState<CarRentalDraft>(createInitialCarRentalDraft());
   const [carDateField, setCarDateField] = useState<'pickup' | 'dropoff' | null>(null);
@@ -273,7 +294,33 @@ const App: React.FC = () => {
 
   const toursTotal = useMemo(() => tours.reduce((sum, t) => sum + (Number(t.cost) || 0), 0), [tours]);
 
-  const overallCost = useMemo(() => flightsTotal + lodgingTotal + toursTotal, [flightsTotal, lodgingTotal, toursTotal]);
+  const expenseCategories = useMemo(
+    () => ['Breakfast', 'Lunch', 'Dinner', 'Other Food', 'Rides', 'Souvenirs', 'Other'],
+    []
+  );
+  const expenseItems = useMemo(
+    () => expenses.filter((e) => expenseCategories.includes(e.category)),
+    [expenses, expenseCategories]
+  );
+  const expenseTotalsByCategory = useMemo(() => {
+    const totals: Record<string, number> = {};
+    expenseCategories.forEach((cat) => {
+      totals[cat] = 0;
+    });
+    expenseItems.forEach((expense) => {
+      totals[expense.category] = (totals[expense.category] ?? 0) + (Number(expense.amount) || 0);
+    });
+    return totals;
+  }, [expenseItems, expenseCategories]);
+  const expensesTotal = useMemo(
+    () => expenseCategories.reduce((sum, cat) => sum + (expenseTotalsByCategory[cat] ?? 0), 0),
+    [expenseCategories, expenseTotalsByCategory]
+  );
+
+  const overallCost = useMemo(
+    () => flightsTotal + lodgingTotal + toursTotal + expensesTotal,
+    [flightsTotal, lodgingTotal, toursTotal, expensesTotal]
+  );
 
   const updateMapPreference = useCallback(
     (pref: MapApp) => {
@@ -445,13 +492,78 @@ const App: React.FC = () => {
     [toursTotal, payerTotals, memberIds]
   );
 
+  const expensePayerTotalsByCategory = useMemo(() => {
+    const totals: Record<string, Record<string, number>> = {};
+    expenseCategories.forEach((category) => {
+      const items = expenseItems.filter((expense) => expense.category === category);
+      totals[category] = computePayerTotals(
+        items,
+        (expense) => Number(expense.amount) || 0,
+        (expense) => (Array.isArray(expense.payerIds) ? expense.payerIds : []),
+        userMembers.map((m) => m.id),
+        { fallbackOnEmpty: false }
+      );
+    });
+    return totals;
+  }, [expenseCategories, expenseItems, userMembers]);
+
+  const expenseSharesByCategory = useMemo(() => {
+    const balanced: Record<string, Record<string, number>> = {};
+    expenseCategories.forEach((category) => {
+      balanced[category] = balanceCategoryTotals(expenseTotalsByCategory[category] ?? 0, expensePayerTotalsByCategory[category] ?? {}, memberIds);
+    });
+    return balanced;
+  }, [expenseCategories, expenseTotalsByCategory, expensePayerTotalsByCategory, memberIds]);
+
+  const expenseOverallShares = useMemo(() => {
+    const totals: Record<string, number> = {};
+    memberIds.forEach((id) => {
+      totals[id] = 0;
+    });
+    expenseCategories.forEach((category) => {
+      memberIds.forEach((id) => {
+        totals[id] = (totals[id] ?? 0) + (expenseSharesByCategory[category]?.[id] ?? 0);
+      });
+    });
+    return totals;
+  }, [expenseCategories, expenseSharesByCategory, memberIds]);
+
+  const costReportRows = useMemo(() => {
+    const rows: Array<{ label: string; total: number; shares: Record<string, number> }> = [
+      { label: 'Flights', total: flightsTotal, shares: flightShares },
+      { label: 'Lodging', total: lodgingTotal, shares: lodgingTotalsBalanced },
+      { label: 'Tours', total: toursTotal, shares: tourShares },
+    ];
+    expenseCategories.forEach((category) => {
+      const total = expenseTotalsByCategory[category] ?? 0;
+      if (total > 0) {
+        rows.push({ label: category, total, shares: expenseSharesByCategory[category] ?? {} });
+      }
+    });
+    return rows;
+  }, [
+    expenseCategories,
+    expenseSharesByCategory,
+    expenseTotalsByCategory,
+    flightShares,
+    flightsTotal,
+    lodgingTotalsBalanced,
+    lodgingTotal,
+    tourShares,
+    toursTotal,
+  ]);
+
   const overallShares = useMemo(() => {
     const totals: Record<string, number> = {};
     memberIds.forEach((id) => {
-      totals[id] = (flightShares[id] ?? 0) + (lodgingTotalsBalanced[id] ?? 0) + (tourShares[id] ?? 0);
+      totals[id] =
+        (flightShares[id] ?? 0) +
+        (lodgingTotalsBalanced[id] ?? 0) +
+        (tourShares[id] ?? 0) +
+        (expenseOverallShares[id] ?? 0);
     });
     return totals;
-  }, [flightShares, lodgingTotalsBalanced, memberIds, tourShares]);
+  }, [expenseOverallShares, flightShares, lodgingTotalsBalanced, memberIds, tourShares]);
 
   const lodgingBreakdownSum = useMemo(
     () => Object.values(lodgingTotalsBalanced).reduce((sum, v) => sum + v, 0),
@@ -472,6 +584,7 @@ const App: React.FC = () => {
     setUserEmail(null);
     setFlights([]);
     setTours([]);
+    setExpenses([]);
     setInvites([]);
     setFollowedTrips([]);
     setFollowInviteCode('');
@@ -730,6 +843,27 @@ const App: React.FC = () => {
     setTours(data);
   };
 
+  const fetchExpenses = async (token?: string) => {
+    const authToken = token ?? userToken;
+    if (!activeTripId || !authToken) {
+      setExpenses([]);
+      return;
+    }
+    try {
+      const res = await fetch(`${backendUrl}/api/expenses?tripId=${activeTripId}`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      if (!res.ok) {
+        setExpenses([]);
+        return;
+      }
+      const data = await res.json();
+      setExpenses(Array.isArray(data) ? data : []);
+    } catch {
+      setExpenses([]);
+    }
+  };
+
   // Fetch itineraries for the current user; ItinerariesTab also fetches within its own lifecycle,
   // but this keeps the call from blowing up when invoked from shared effects.
   const fetchItineraries = async (token?: string) => {
@@ -910,6 +1044,7 @@ const App: React.FC = () => {
       fetchFlights(authToken);
       fetchLodgings(authToken);
       fetchTours(authToken);
+      fetchExpenses(authToken);
       fetchInvites(authToken);
       fetchGroups();
       fetchTrips();
@@ -980,6 +1115,7 @@ const App: React.FC = () => {
           sessionPage === 'trip-details' ||
           sessionPage === 'itinerary' ||
           sessionPage === 'tours' ||
+          sessionPage === 'expenses' ||
           sessionPage === 'cost' ||
           sessionPage === 'account' ||
           sessionPage === 'follow'
@@ -1036,6 +1172,7 @@ const App: React.FC = () => {
       fetchFlights();
       fetchLodgings();
       fetchTours();
+      fetchExpenses();
     }
   }, [activeTripId]);
 
@@ -1187,6 +1324,21 @@ const App: React.FC = () => {
     fetchTrips();
   };
 
+  const updateTripCurrency = async (tripId: string, currency: string) => {
+    if (!userToken) return;
+    const res = await fetch(`${backendUrl}/api/trips/${tripId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...headers },
+      body: JSON.stringify({ currency }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'Unable to update currency');
+      return;
+    }
+    fetchTrips();
+  };
+
   const deleteGroupApi = async (groupId: string) => {
     if (!userToken) return;
     const res = await fetch(`${backendUrl}/api/groups/${groupId}`, { method: 'DELETE', headers });
@@ -1250,6 +1402,7 @@ const App: React.FC = () => {
       'lodging',
       'car',
       'tours',
+      'expenses',
       'cost',
       'trips',
       'create-trip',
@@ -1388,6 +1541,20 @@ const App: React.FC = () => {
             />
           ) : null}
 
+          {activePage === 'expenses' ? (
+            <DailyExpensesTab
+              backendUrl={backendUrl}
+              headers={headers}
+              jsonHeaders={jsonHeaders}
+              trip={findActiveTrip() ?? null}
+              groupMembers={groupMembers}
+              expenses={expenses}
+              setExpenses={setExpenses}
+              defaultPayerId={defaultPayerId}
+              styles={styles}
+            />
+          ) : null}
+
           {activePage === 'cost' ? (
             <View style={[styles.card, styles.flightsSection]}>
               <Text style={styles.sectionTitle}>Cost Report</Text>
@@ -1407,22 +1574,13 @@ const App: React.FC = () => {
                       <Text style={styles.headerText}>Total</Text>
                     </View>
                   </View>
-                  {[
-                    { label: 'Flights', total: flightsTotal },
-                    { label: 'Lodging', total: lodgingTotal },
-                    { label: 'Tours', total: toursTotal },
-                  ].map((row, idx, arr) => (
+                  {costReportRows.map((row, idx, arr) => (
                     <View key={row.label} style={[styles.tableRow, idx === arr.length - 1 && styles.lastRow]}>
                       <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
                         <Text style={styles.cellText}>{row.label}</Text>
                       </View>
                       {userMembers.map((m) => {
-                        const share =
-                          row.label === 'Tours'
-                            ? tourShares[m.id] ?? 0
-                            : row.label === 'Flights'
-                              ? flightShares[m.id] ?? 0
-                              : lodgingTotalsBalanced[m.id] ?? 0;
+                        const share = row.shares[m.id] ?? 0;
                         return (
                           <View key={`${row.label}-${m.id}`} style={[styles.cell, { minWidth: 120, flex: 1 }]}>
                             <Text style={styles.cellText}>${share.toFixed(2)}</Text>
@@ -1926,18 +2084,19 @@ const App: React.FC = () => {
             />
           ) : null}
 
-          {activePage === 'trip-details' ? (
-            <TripDetailsTab
-              trip={trips.find((t) => t.id === selectedTripId) ?? null}
-              group={groups.find((g) => g.id === trips.find((t) => t.id === selectedTripId)?.groupId) ?? null}
-              styles={styles}
-              onSetActive={(tripId) => setActiveTripId(tripId)}
-              onOpenItinerary={(tripId) => {
-                setActiveTripId(tripId);
-                requestPageChange('itinerary');
-              }}
-            />
-          ) : null}
+      {activePage === 'trip-details' ? (
+        <TripDetailsTab
+          trip={trips.find((t) => t.id === selectedTripId) ?? null}
+          group={groups.find((g) => g.id === trips.find((t) => t.id === selectedTripId)?.groupId) ?? null}
+          styles={styles}
+          onSetActive={(tripId) => setActiveTripId(tripId)}
+          onOpenItinerary={(tripId) => {
+            setActiveTripId(tripId);
+            requestPageChange('itinerary');
+          }}
+          onUpdateCurrency={updateTripCurrency}
+        />
+      ) : null}
 
           {activePage === 'follow' ? (
             <FollowTab

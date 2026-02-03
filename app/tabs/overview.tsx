@@ -88,6 +88,7 @@ type Trip = {
   startMonth?: number | null;
   startYear?: number | null;
   durationDays?: number | null;
+  currency?: string | null;
   createdAt: string;
 };
 

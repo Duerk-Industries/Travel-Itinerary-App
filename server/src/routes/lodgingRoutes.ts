@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import bodyParser from 'body-parser';
 import { authenticate } from '../auth';
-import { deleteLodging, ensureUserInTrip, insertLodging, listLodgings, updateLodging } from '../db';
+import { deleteExpenseForSource, deleteLodging, ensureUserInTrip, insertLodging, listLodgings, updateLodging, upsertExpenseForSource } from '../db';
 import { findPlacePhoto } from '../googlePlaces';
 
 // Lodgings API: CRUD for lodgings scoped to the authenticated user / their group trips.
@@ -58,6 +58,19 @@ router.post('/', async (req, res) => {
     traveler_ids: Array.isArray(travelerIds) ? travelerIds : Array.isArray(paidBy) ? paidBy : [],
     imageUrl,
   });
+  await upsertExpenseForSource({
+    userId,
+    tripId,
+    groupId: tripGroup.groupId,
+    expenseDate: checkInDate,
+    category: 'Lodging',
+    amount: Number(totalCost) || 0,
+    currency: undefined,
+    payerIds: Array.isArray(paidBy) ? paidBy : [],
+    forIds: Array.isArray(travelerIds) ? travelerIds : Array.isArray(paidBy) ? paidBy : [],
+    sourceType: 'lodging',
+    sourceId: lodging.id,
+  });
   res.status(201).json(lodging);
 });
 
@@ -113,6 +126,25 @@ router.put('/:id', async (req, res) => {
     if (!updated) {
       res.status(404).json({ error: 'Lodging not found' });
       return;
+    }
+    const updatedTripId = (updated as any)?.tripId ?? (updated as any)?.trip_id;
+    const updatedCheckIn = (updated as any)?.checkInDate ?? (updated as any)?.check_in_date;
+    const updatedTotal = (updated as any)?.totalCost ?? (updated as any)?.total_cost;
+    const membership = updatedTripId ? await ensureUserInTrip(updatedTripId as string, userId) : null;
+    if (updated && membership) {
+      await upsertExpenseForSource({
+        userId,
+        tripId: updatedTripId as string,
+        groupId: membership.groupId,
+        expenseDate: updatedCheckIn as string,
+        category: 'Lodging',
+        amount: Number(updatedTotal) || 0,
+        currency: undefined,
+        payerIds: Array.isArray((updated as any).paidBy) ? (updated as any).paidBy : [],
+        forIds: Array.isArray((updated as any).travelerIds) ? (updated as any).travelerIds : [],
+        sourceType: 'lodging',
+        sourceId: updated.id,
+      });
     }
     res.json(updated);
   } catch (err) {
@@ -179,6 +211,25 @@ router.patch('/:id', async (req, res) => {
       res.status(404).json({ error: 'Lodging not found' });
       return;
     }
+    const updatedTripId = (updated as any)?.tripId ?? (updated as any)?.trip_id;
+    const updatedCheckIn = (updated as any)?.checkInDate ?? (updated as any)?.check_in_date;
+    const updatedTotal = (updated as any)?.totalCost ?? (updated as any)?.total_cost;
+    const membership = updatedTripId ? await ensureUserInTrip(updatedTripId as string, userId) : null;
+    if (updated && membership) {
+      await upsertExpenseForSource({
+        userId,
+        tripId: updatedTripId as string,
+        groupId: membership.groupId,
+        expenseDate: updatedCheckIn as string,
+        category: 'Lodging',
+        amount: Number(updatedTotal) || 0,
+        currency: undefined,
+        payerIds: Array.isArray((updated as any).paidBy) ? (updated as any).paidBy : [],
+        forIds: Array.isArray((updated as any).travelerIds) ? (updated as any).travelerIds : [],
+        sourceType: 'lodging',
+        sourceId: updated.id,
+      });
+    }
     res.json(updated);
   } catch (err) {
     const message = (err as Error)?.message ?? 'Unable to update lodging';
@@ -194,6 +245,7 @@ router.delete('/:id', async (req, res) => {
   try {
     const userId = (req as any).user.userId as string;
     await deleteLodging(req.params.id, userId);
+    await deleteExpenseForSource('lodging', req.params.id, userId);
     res.status(204).send();
   } catch (err) {
     const message = (err as Error)?.message ?? 'Unable to delete lodging';

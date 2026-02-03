@@ -82,6 +82,7 @@ export interface Trip {
   startMonth?: number | null;
   startYear?: number | null;
   durationDays?: number | null;
+  currency?: string | null;
   createdAt: string;
 }
 
@@ -154,6 +155,23 @@ export interface PlaceDetailsCache {
   name: string;
   details: Record<string, any>;
   fetchedAt: string;
+}
+
+export interface Expense {
+  id: string;
+  tripId: string;
+  groupId: string;
+  userId: string;
+  expenseDate: string;
+  category: string;
+  amount: number;
+  currency: string;
+  payerIds: string[];
+  forIds: string[];
+  sourceType?: string | null;
+  sourceId?: string | null;
+  notes?: string | null;
+  createdAt: string;
 }
 
 export interface GroupInvite {

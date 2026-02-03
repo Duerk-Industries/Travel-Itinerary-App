@@ -11,6 +11,7 @@ import type {
   User,
   WebUser,
   PlaceDetailsCache,
+  Expense,
 } from './types';
 
 const adapter = () => getDbAdapter();
@@ -118,6 +119,17 @@ export const listTraitsForGroupTrip = async (...args: Parameters<ReturnType<type
   adapter().listTraitsForGroupTrip(...args);
 export const getUserDemographics = async (...args: Parameters<ReturnType<typeof adapter>['getUserDemographics']>) =>
   adapter().getUserDemographics(...args);
+
+export const listExpenses = async (...args: Parameters<ReturnType<typeof adapter>['listExpenses']>): Promise<Expense[]> =>
+  adapter().listExpenses(...args);
+export const insertExpense = async (...args: Parameters<ReturnType<typeof adapter>['insertExpense']>) =>
+  adapter().insertExpense(...args);
+export const upsertExpenseForSource = async (...args: Parameters<ReturnType<typeof adapter>['upsertExpenseForSource']>) =>
+  adapter().upsertExpenseForSource(...args);
+export const deleteExpense = async (...args: Parameters<ReturnType<typeof adapter>['deleteExpense']>) =>
+  adapter().deleteExpense(...args);
+export const deleteExpenseForSource = async (...args: Parameters<ReturnType<typeof adapter>['deleteExpenseForSource']>) =>
+  adapter().deleteExpenseForSource(...args);
 export const saveUserDemographics = async (...args: Parameters<ReturnType<typeof adapter>['saveUserDemographics']>) =>
   adapter().saveUserDemographics(...args);
 export const listItineraries = async (

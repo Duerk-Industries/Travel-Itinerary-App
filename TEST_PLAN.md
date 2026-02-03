@@ -41,6 +41,17 @@ This document outlines the existing test suites in the Travel Itinerary App, ide
         *   Departure/arrival times, carrier, flight number, and booking reference are required.
         *   The payload is built correctly with defaults and trip ID.
 
+*   **`dailyExpenses.test.tsx`**:
+    *   **Purpose**: Tests the Daily Expenses tab UI behavior.
+    *   **Verifies**:
+        *   Trip currency is shown in the add-expense form.
+        *   Non-zero daily totals open the detail modal when pressed.
+
+*   **`tripDetailsCurrency.test.tsx`**:
+    *   **Purpose**: Tests trip currency editing in the Trip Details page.
+    *   **Verifies**:
+        *   Selecting a new currency calls the update handler with the trip ID and currency.
+
 *   **`homeTab.test.tsx`**:
     *   **Purpose**: Tests the Home tab UI behavior.
     *   **Verifies**:
@@ -129,6 +140,13 @@ This document outlines the existing test suites in the Travel Itinerary App, ide
         *   Cost splitting for lodging (shared, single payer, payer removal).
         *   Cost splitting for tours (shared, single payer, payer removal).
         *   Cost splitting for flights (shared, single payer, payer removal).
+
+*   **`expenses.test.ts`**:
+    *   **Purpose**: Tests the expenses API.
+    *   **Verifies**:
+        *   Creates a new expense for a trip.
+        *   Lists expenses by trip.
+        *   Deletes an expense by ID.
 
 *   **`db-provider.test.ts`**:
     *   **Purpose**: Tests the database provider selection logic.

@@ -231,6 +231,7 @@ router.delete('/', async (req, res) => {
               await p.query(`DELETE FROM flights WHERE trip_id = ANY($1::uuid[])`, [tripIds]);
               await p.query(`DELETE FROM lodgings WHERE trip_id = ANY($1::uuid[])`, [tripIds]);
               await p.query(`DELETE FROM tours WHERE trip_id = ANY($1::uuid[])`, [tripIds]);
+              await p.query(`DELETE FROM expenses WHERE trip_id = ANY($1::uuid[])`, [tripIds]);
               await p.query(`DELETE FROM itineraries WHERE trip_id = ANY($1::uuid[])`, [tripIds]);
               await p.query(`DELETE FROM trips WHERE id = ANY($1::uuid[])`, [tripIds]);
             }
@@ -256,6 +257,7 @@ router.delete('/', async (req, res) => {
         await p.query(`DELETE FROM flights WHERE user_id = $1`, [userId]);
         await p.query(`DELETE FROM lodgings WHERE user_id = $1`, [userId]);
         await p.query(`DELETE FROM tours WHERE user_id = $1`, [userId]);
+        await p.query(`DELETE FROM expenses WHERE user_id = $1`, [userId]);
         await p.query(`DELETE FROM traits WHERE user_id = $1`, [userId]);
         await p.query(`DELETE FROM family_relationships WHERE requester_id = $1 OR relative_id = $1`, [userId]);
 

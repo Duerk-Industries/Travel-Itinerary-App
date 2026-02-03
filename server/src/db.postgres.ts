@@ -220,6 +220,7 @@ export const initDb = async (): Promise<void> => {
       start_month INTEGER,
       start_year INTEGER,
       duration_days INTEGER,
+      currency TEXT DEFAULT 'USD',
       created_at TIMESTAMP DEFAULT NOW()
     );
   `);
@@ -230,6 +231,8 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS start_month INTEGER;`);
   await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS start_year INTEGER;`);
   await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS duration_days INTEGER;`);
+  await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS currency TEXT DEFAULT 'USD';`);
+  await p.query(`UPDATE trips SET currency = 'USD' WHERE currency IS NULL;`);
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS trip_removals (
@@ -382,6 +385,27 @@ export const initDb = async (): Promise<void> => {
     );
   `);
 
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS expenses (
+      id UUID PRIMARY KEY,
+      trip_id UUID NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+      group_id UUID NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      expense_date DATE NOT NULL,
+      category TEXT NOT NULL,
+      amount NUMERIC NOT NULL DEFAULT 0,
+      currency TEXT NOT NULL DEFAULT 'USD',
+      payer_ids JSONB DEFAULT '[]'::jsonb,
+      for_ids JSONB DEFAULT '[]'::jsonb,
+      source_type TEXT,
+      source_id TEXT,
+      notes TEXT,
+      created_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE (source_type, source_id)
+    );
+  `);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_expenses_trip_date ON expenses(trip_id, expense_date);`);
+
   if (process.env.USE_IN_MEMORY_DB === '1') {
     // Clear data between test runs while keeping schema intact.
     await p.query(`DELETE FROM itinerary_details`);
@@ -390,6 +414,7 @@ export const initDb = async (): Promise<void> => {
     await p.query(`DELETE FROM lodgings`);
     await p.query(`DELETE FROM flight_shares`);
     await p.query(`DELETE FROM flights`);
+    await p.query(`DELETE FROM expenses`);
     await p.query(`DELETE FROM trips`);
     await p.query(`DELETE FROM place_details_cache`);
     await p.query(`DELETE FROM group_invites`);
@@ -1033,6 +1058,7 @@ export const updateTripDetails = async (
     startYear?: number | null;
     durationDays?: number | null;
     dateMode?: 'range' | 'month';
+    currency?: string | null;
   }
 ): Promise<Trip> => {
   const p = getPool();
@@ -1047,7 +1073,8 @@ export const updateTripDetails = async (
          end_date = CASE WHEN $6 = 'range' THEN $4::date WHEN $6 = 'month' THEN NULL ELSE end_date END,
          start_month = CASE WHEN $6 = 'month' THEN $7::int WHEN $6 = 'range' THEN NULL ELSE start_month END,
          start_year = CASE WHEN $6 = 'month' THEN $8::int WHEN $6 = 'range' THEN NULL ELSE start_year END,
-         duration_days = CASE WHEN $6 = 'month' THEN $9::int WHEN $6 = 'range' THEN NULL ELSE duration_days END
+         duration_days = CASE WHEN $6 = 'month' THEN $9::int WHEN $6 = 'range' THEN NULL ELSE duration_days END,
+         currency = COALESCE($10, currency)
      WHERE id = $5
      RETURNING id,
        group_id as "groupId",
@@ -1059,6 +1086,7 @@ export const updateTripDetails = async (
        start_month as "startMonth",
        start_year as "startYear",
        duration_days as "durationDays",
+       currency,
        created_at as "createdAt"`,
     [
       updates.description ?? null,
@@ -1070,6 +1098,7 @@ export const updateTripDetails = async (
       updates.startMonth ?? null,
       updates.startYear ?? null,
       updates.durationDays ?? null,
+      updates.currency ?? null,
     ]
   );
   if (!rows.length) throw new Error('Trip not found');
@@ -1675,6 +1704,227 @@ export const deleteTour = async (tourId: string, userId: string): Promise<void> 
   await p.query(`DELETE FROM tours WHERE id = $1 AND user_id = $2`, [tourId, userId]);
 };
 
+const resolveTripCurrency = async (tripId: string): Promise<string> => {
+  const p = getPool();
+  const { rows } = await p.query<{ currency: string | null }>(`SELECT currency FROM trips WHERE id = $1`, [tripId]);
+  return rows[0]?.currency ?? 'USD';
+};
+
+export const listExpenses = async (userId: string, tripId?: string | null): Promise<any[]> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `
+      SELECT e.id,
+             e.trip_id as "tripId",
+             e.group_id as "groupId",
+             e.user_id as "userId",
+             to_char(e.expense_date, 'YYYY-MM-DD') as "expenseDate",
+             e.category,
+             e.amount::numeric as amount,
+             e.currency,
+             COALESCE(e.payer_ids, '[]'::jsonb) as "payerIds",
+             COALESCE(e.for_ids, '[]'::jsonb) as "forIds",
+             e.source_type as "sourceType",
+             e.source_id as "sourceId",
+             e.notes,
+             e.created_at as "createdAt"
+      FROM expenses e
+      JOIN trips t ON e.trip_id = t.id
+      WHERE ($2::uuid IS NULL OR e.trip_id = $2)
+        AND t.group_id IN (SELECT group_id FROM group_members WHERE user_id = $1)
+      ORDER BY e.expense_date ASC, e.created_at DESC
+    `,
+    [userId, tripId ?? null]
+  );
+  return rows.map((row: any) => ({
+    ...row,
+    payerIds: Array.isArray(row.payerIds) ? row.payerIds : [],
+    forIds: Array.isArray(row.forIds) ? row.forIds : [],
+  }));
+};
+
+export const insertExpense = async (expense: {
+  userId: string;
+  tripId: string;
+  groupId: string;
+  expenseDate: string;
+  category: string;
+  amount: number;
+  currency?: string | null;
+  payerIds?: string[];
+  forIds?: string[];
+  sourceType?: string | null;
+  sourceId?: string | null;
+  notes?: string | null;
+}): Promise<any> => {
+  const p = getPool();
+  const id = randomUUID();
+  const currency = expense.currency ?? (await resolveTripCurrency(expense.tripId));
+  const { rows } = await p.query(
+    `
+      INSERT INTO expenses (
+        id, trip_id, group_id, user_id, expense_date, category, amount, currency, payer_ids, for_ids, source_type, source_id, notes
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10::jsonb, $11, $12, $13
+      )
+      RETURNING
+        id,
+        trip_id as "tripId",
+        group_id as "groupId",
+        user_id as "userId",
+        to_char(expense_date, 'YYYY-MM-DD') as "expenseDate",
+        category,
+        amount::numeric as amount,
+        currency,
+        COALESCE(payer_ids, '[]'::jsonb) as "payerIds",
+        COALESCE(for_ids, '[]'::jsonb) as "forIds",
+        source_type as "sourceType",
+        source_id as "sourceId",
+        notes,
+        created_at as "createdAt"
+    `,
+    [
+      id,
+      expense.tripId,
+      expense.groupId,
+      expense.userId,
+      expense.expenseDate,
+      expense.category,
+      expense.amount ?? 0,
+      currency,
+      JSON.stringify(expense.payerIds ?? []),
+      JSON.stringify(expense.forIds ?? []),
+      expense.sourceType ?? null,
+      expense.sourceId ?? null,
+      expense.notes ?? null,
+    ]
+  );
+  const row = rows[0] as any;
+  return {
+    ...row,
+    payerIds: Array.isArray(row.payerIds) ? row.payerIds : [],
+    forIds: Array.isArray(row.forIds) ? row.forIds : [],
+  };
+};
+
+export const upsertExpenseForSource = async (expense: {
+  userId: string;
+  tripId: string;
+  groupId: string;
+  expenseDate: string;
+  category: string;
+  amount: number;
+  currency?: string | null;
+  payerIds?: string[];
+  forIds?: string[];
+  sourceType: string;
+  sourceId: string;
+  notes?: string | null;
+}): Promise<any> => {
+  const p = getPool();
+  const currency = expense.currency ?? (await resolveTripCurrency(expense.tripId));
+  const { rows } = await p.query(
+    `
+      INSERT INTO expenses (
+        id, trip_id, group_id, user_id, expense_date, category, amount, currency, payer_ids, for_ids, source_type, source_id, notes
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10::jsonb, $11, $12, $13
+      )
+      ON CONFLICT (source_type, source_id)
+      DO UPDATE SET
+        trip_id = EXCLUDED.trip_id,
+        group_id = EXCLUDED.group_id,
+        user_id = EXCLUDED.user_id,
+        expense_date = EXCLUDED.expense_date,
+        category = EXCLUDED.category,
+        amount = EXCLUDED.amount,
+        currency = EXCLUDED.currency,
+        payer_ids = EXCLUDED.payer_ids,
+        for_ids = EXCLUDED.for_ids,
+        notes = EXCLUDED.notes
+      RETURNING
+        id,
+        trip_id as "tripId",
+        group_id as "groupId",
+        user_id as "userId",
+        to_char(expense_date, 'YYYY-MM-DD') as "expenseDate",
+        category,
+        amount::numeric as amount,
+        currency,
+        COALESCE(payer_ids, '[]'::jsonb) as "payerIds",
+        COALESCE(for_ids, '[]'::jsonb) as "forIds",
+        source_type as "sourceType",
+        source_id as "sourceId",
+        notes,
+        created_at as "createdAt"
+    `,
+    [
+      randomUUID(),
+      expense.tripId,
+      expense.groupId,
+      expense.userId,
+      expense.expenseDate,
+      expense.category,
+      expense.amount ?? 0,
+      currency,
+      JSON.stringify(expense.payerIds ?? []),
+      JSON.stringify(expense.forIds ?? []),
+      expense.sourceType,
+      expense.sourceId,
+      expense.notes ?? null,
+    ]
+  );
+  const row = rows[0] as any;
+  return {
+    ...row,
+    payerIds: Array.isArray(row.payerIds) ? row.payerIds : [],
+    forIds: Array.isArray(row.forIds) ? row.forIds : [],
+  };
+};
+
+export const deleteExpense = async (expenseId: string, userId: string): Promise<void> => {
+  const p = getPool();
+  const useInMemory = process.env.USE_IN_MEMORY_DB === '1';
+  if (useInMemory) {
+    await p.query(`DELETE FROM expenses WHERE id = $1`, [expenseId]);
+    return;
+  }
+  await p.query(
+    `
+      DELETE FROM expenses e
+      USING trips t
+      WHERE e.id = $1
+        AND t.id = e.trip_id
+        AND EXISTS (
+          SELECT 1 FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $2
+        )
+    `,
+    [expenseId, userId]
+  );
+};
+
+export const deleteExpenseForSource = async (sourceType: string, sourceId: string, userId: string): Promise<void> => {
+  const p = getPool();
+  const useInMemory = process.env.USE_IN_MEMORY_DB === '1';
+  if (useInMemory) {
+    await p.query(`DELETE FROM expenses WHERE source_type = $1 AND source_id = $2`, [sourceType, sourceId]);
+    return;
+  }
+  await p.query(
+    `
+      DELETE FROM expenses e
+      USING trips t
+      WHERE e.source_type = $1
+        AND e.source_id = $2
+        AND t.id = e.trip_id
+        AND EXISTS (
+          SELECT 1 FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $3
+        )
+    `,
+    [sourceType, sourceId, userId]
+  );
+};
+
 
 export const shareFlight = async (
   flightId: string,
@@ -2228,6 +2478,7 @@ export const listTrips = async (userId: string): Promise<Array<Trip & { groupNam
               t.start_month as "startMonth",
               t.start_year as "startYear",
               t.duration_days as "durationDays",
+              t.currency as "currency",
               t.created_at as "createdAt",
               g.name as "groupName"
        FROM trips t
@@ -2251,6 +2502,7 @@ export const listTrips = async (userId: string): Promise<Array<Trip & { groupNam
             t.start_month as "startMonth",
             t.start_year as "startYear",
             t.duration_days as "durationDays",
+            t.currency as "currency",
             t.created_at as "createdAt",
             g.name as "groupName"
      FROM trips t
@@ -2278,6 +2530,7 @@ export const createTrip = async (
     startMonth?: number | null;
     startYear?: number | null;
     durationDays?: number | null;
+    currency?: string | null;
   }
 ): Promise<Trip> => {
   const p = getPool();
@@ -2305,8 +2558,8 @@ export const createTrip = async (
 
   const id = randomUUID();
   const { rows } = await p.query<Trip>(
-    `INSERT INTO trips (id, group_id, name, description, destination, start_date, end_date, start_month, start_year, duration_days)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    `INSERT INTO trips (id, group_id, name, description, destination, start_date, end_date, start_month, start_year, duration_days, currency)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
      RETURNING id,
                group_id as "groupId",
                name,
@@ -2317,6 +2570,7 @@ export const createTrip = async (
                start_month as "startMonth",
                start_year as "startYear",
                duration_days as "durationDays",
+               currency,
                created_at as "createdAt"`,
     [
       id,
@@ -2329,6 +2583,7 @@ export const createTrip = async (
       details?.startMonth ?? null,
       details?.startYear ?? null,
       details?.durationDays ?? null,
+      details?.currency ?? 'USD',
     ]
   );
   return rows[0];
@@ -2537,6 +2792,7 @@ export const createTripWithGroupAndMembers = async (payload: {
   startMonth?: number | null;
   startYear?: number | null;
   durationDays?: number | null;
+  currency?: string | null;
   members: Array<{ email?: string; guestName?: string }>;
 }): Promise<{ trip: Trip; groupId: string; invites: { id: string; email: string }[] }> => {
   const p = getPool();
@@ -2595,8 +2851,8 @@ export const createTripWithGroupAndMembers = async (payload: {
 
     const tripId = randomUUID();
     const { rows } = await client.query<Trip>(
-      `INSERT INTO trips (id, group_id, name, description, destination, start_date, end_date, start_month, start_year, duration_days)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      `INSERT INTO trips (id, group_id, name, description, destination, start_date, end_date, start_month, start_year, duration_days, currency)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING id,
                  group_id as "groupId",
                  name,
@@ -2607,6 +2863,7 @@ export const createTripWithGroupAndMembers = async (payload: {
                  start_month as "startMonth",
                  start_year as "startYear",
                  duration_days as "durationDays",
+                 currency,
                  created_at as "createdAt"`,
       [
         tripId,
@@ -2619,6 +2876,7 @@ export const createTripWithGroupAndMembers = async (payload: {
         payload.startMonth ?? null,
         payload.startYear ?? null,
         payload.durationDays ?? null,
+        payload.currency ?? 'USD',
       ]
     );
 

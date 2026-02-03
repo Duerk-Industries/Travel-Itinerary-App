@@ -10,6 +10,7 @@ type Trip = {
   startDate?: string | null;
   endDate?: string | null;
   durationDays?: number | null;
+  currency?: string | null;
   createdAt?: string;
 };
 
@@ -102,8 +103,9 @@ const HomeTab: React.FC<HomeTabProps> = ({
     { key: 'itinerary', label: 'Create Itinerary', icon: '🧾' },
     { key: 'flights', label: 'Flights', icon: '✈️' },
     { key: 'lodging', label: 'Lodging', icon: '🏨' },
-    { key: 'tours', label: 'Tours', icon: '🎟️' },
-    { key: 'car', label: 'Car Rentals', icon: '🚗' },
+        { key: 'tours', label: 'Tours', icon: '🎟️' },
+        { key: 'expenses', label: 'Daily Expenses', icon: '🧾' },
+        { key: 'car', label: 'Car Rentals', icon: '🚗' },
     { key: 'cost', label: 'Cost Report', icon: '💵' },
     { key: 'trips', label: 'Trips', icon: '🧳' },
     { key: 'create-trip', label: 'Create Trip', icon: '➕' },
