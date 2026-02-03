@@ -1061,6 +1061,9 @@ export const insertExpense = async (expense: {
   category: string;
   amount: number;
   currency?: string | null;
+  amountInTripCurrency?: number | null;
+  exchangeRateToTripCurrency?: number | null;
+  exchangeRateDate?: string | null;
   payerIds?: string[];
   forIds?: string[];
   sourceType?: string | null;
@@ -1070,6 +1073,13 @@ export const insertExpense = async (expense: {
   const db = getDb();
   const tripDoc = await db.collection('trips').doc(expense.tripId).get();
   const tripCurrency = (tripDoc.data() as any)?.currency ?? 'USD';
+  const currency = expense.currency ?? tripCurrency ?? 'USD';
+  const amountInTripCurrency =
+    expense.amountInTripCurrency ??
+    (currency === tripCurrency ? expense.amount ?? 0 : null);
+  const exchangeRateToTripCurrency =
+    expense.exchangeRateToTripCurrency ??
+    (currency === tripCurrency ? 1 : null);
   const id = randomUUID();
   const payload = {
     id,
@@ -1079,7 +1089,10 @@ export const insertExpense = async (expense: {
     expenseDate: expense.expenseDate,
     category: expense.category,
     amount: expense.amount ?? 0,
-    currency: expense.currency ?? tripCurrency ?? 'USD',
+    currency,
+    amountInTripCurrency,
+    exchangeRateToTripCurrency,
+    exchangeRateDate: expense.exchangeRateDate ?? null,
     payerIds: Array.isArray(expense.payerIds) ? expense.payerIds : [],
     forIds: Array.isArray(expense.forIds) ? expense.forIds : [],
     sourceType: expense.sourceType ?? null,
@@ -1099,6 +1112,9 @@ export const upsertExpenseForSource = async (expense: {
   category: string;
   amount: number;
   currency?: string | null;
+  amountInTripCurrency?: number | null;
+  exchangeRateToTripCurrency?: number | null;
+  exchangeRateDate?: string | null;
   payerIds?: string[];
   forIds?: string[];
   sourceType: string;
@@ -1108,6 +1124,13 @@ export const upsertExpenseForSource = async (expense: {
   const db = getDb();
   const tripDoc = await db.collection('trips').doc(expense.tripId).get();
   const tripCurrency = (tripDoc.data() as any)?.currency ?? 'USD';
+  const currency = expense.currency ?? tripCurrency ?? 'USD';
+  const amountInTripCurrency =
+    expense.amountInTripCurrency ??
+    (currency === tripCurrency ? expense.amount ?? 0 : null);
+  const exchangeRateToTripCurrency =
+    expense.exchangeRateToTripCurrency ??
+    (currency === tripCurrency ? 1 : null);
   const existing = await db
     .collection('expenses')
     .where('sourceType', '==', expense.sourceType)
@@ -1121,7 +1144,10 @@ export const upsertExpenseForSource = async (expense: {
     expenseDate: expense.expenseDate,
     category: expense.category,
     amount: expense.amount ?? 0,
-    currency: expense.currency ?? tripCurrency ?? 'USD',
+    currency,
+    amountInTripCurrency,
+    exchangeRateToTripCurrency,
+    exchangeRateDate: expense.exchangeRateDate ?? null,
     payerIds: Array.isArray(expense.payerIds) ? expense.payerIds : [],
     forIds: Array.isArray(expense.forIds) ? expense.forIds : [],
     sourceType: expense.sourceType,

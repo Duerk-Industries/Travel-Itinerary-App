@@ -88,4 +88,5 @@ export const buildRentalDraftFromRow = (rental: CarRental): CarRentalDraft => ({
   model: rental.model,
   notes: rental.notes,
   paidBy: rental.paidBy ?? [],
+  travelerIds: rental.travelerIds ?? [],
 });

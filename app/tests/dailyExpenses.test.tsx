@@ -91,6 +91,7 @@ describe('DailyExpensesTab', () => {
       />
     );
 
+    fireEvent.press(getByText('+ Add Expense'));
     expect(getByText('EUR')).toBeTruthy();
     expect(queryByTestId('expense-detail-modal')).toBeNull();
     fireEvent.press(getAllByText('$12.00')[0]);

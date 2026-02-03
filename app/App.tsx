@@ -24,6 +24,7 @@ import { FollowTab, fetchFollowedTripsApi, loadFollowCodes, loadFollowPayloads, 
 import ItinerariesTab from './tabs/itineraries';
 import HomeTab from './tabs/HomeTab';
 import DailyExpensesTab from './tabs/dailyExpenses';
+import LedgerTab from './tabs/ledger';
 import OverviewTab from './tabs/overview';
 import CreateTripWizard from './tabs/createTripWizard';
 import TripDetailsTab from './tabs/tripDetails';
@@ -102,6 +103,9 @@ interface Expense {
   category: string;
   amount: number;
   currency: string;
+  amountInTripCurrency?: number | null;
+  exchangeRateToTripCurrency?: number | null;
+  exchangeRateDate?: string | null;
   payerIds: string[];
   forIds: string[];
   sourceType?: string | null;
@@ -128,6 +132,7 @@ type Page =
   | 'car'
   | 'tours'
   | 'expenses'
+  | 'ledger'
   | 'trips'
   | 'create-trip'
   | 'trip-details'
@@ -302,24 +307,32 @@ const App: React.FC = () => {
     () => expenses.filter((e) => expenseCategories.includes(e.category)),
     [expenses, expenseCategories]
   );
+  const getExpenseAmount = useCallback(
+    (expense: Expense) => Number(expense.amountInTripCurrency ?? expense.amount) || 0,
+    []
+  );
   const expenseTotalsByCategory = useMemo(() => {
     const totals: Record<string, number> = {};
     expenseCategories.forEach((cat) => {
       totals[cat] = 0;
     });
     expenseItems.forEach((expense) => {
-      totals[expense.category] = (totals[expense.category] ?? 0) + (Number(expense.amount) || 0);
+      totals[expense.category] = (totals[expense.category] ?? 0) + getExpenseAmount(expense);
     });
     return totals;
-  }, [expenseItems, expenseCategories]);
+  }, [expenseItems, expenseCategories, getExpenseAmount]);
   const expensesTotal = useMemo(
     () => expenseCategories.reduce((sum, cat) => sum + (expenseTotalsByCategory[cat] ?? 0), 0),
     [expenseCategories, expenseTotalsByCategory]
   );
+  const carRentalsTotal = useMemo(
+    () => carRentals.reduce((sum, rental) => sum + (Number(rental.cost) || 0), 0),
+    [carRentals]
+  );
 
   const overallCost = useMemo(
-    () => flightsTotal + lodgingTotal + toursTotal + expensesTotal,
-    [flightsTotal, lodgingTotal, toursTotal, expensesTotal]
+    () => flightsTotal + lodgingTotal + toursTotal + expensesTotal + carRentalsTotal,
+    [flightsTotal, lodgingTotal, toursTotal, expensesTotal, carRentalsTotal]
   );
 
   const updateMapPreference = useCallback(
@@ -368,7 +381,7 @@ const App: React.FC = () => {
       alert('Select an active trip before adding a car rental.');
       return;
     }
-    const result = buildCarRentalFromDraft(carDraft, defaultPayerId);
+    const result = buildCarRentalFromDraft(carDraft, defaultPayerId, memberIds);
     if (result.error || !result.rental) {
       alert(result.error || 'Unable to add car rental.');
       return;
@@ -492,20 +505,37 @@ const App: React.FC = () => {
     [toursTotal, payerTotals, memberIds]
   );
 
+  const carRentalPayerTotals = useMemo(
+    () =>
+      computePayerTotals(
+        carRentals,
+        (rental) => Number(rental.cost) || 0,
+        (rental) => (Array.isArray(rental.paidBy) ? rental.paidBy : []),
+        userMembers.map((m) => m.id),
+        { fallbackOnEmpty: false }
+      ),
+    [carRentals, userMembers]
+  );
+
+  const carRentalShares = useMemo(
+    () => balanceCategoryTotals(carRentalsTotal, carRentalPayerTotals, memberIds),
+    [carRentalsTotal, carRentalPayerTotals, memberIds]
+  );
+
   const expensePayerTotalsByCategory = useMemo(() => {
     const totals: Record<string, Record<string, number>> = {};
     expenseCategories.forEach((category) => {
       const items = expenseItems.filter((expense) => expense.category === category);
       totals[category] = computePayerTotals(
         items,
-        (expense) => Number(expense.amount) || 0,
+        (expense) => getExpenseAmount(expense),
         (expense) => (Array.isArray(expense.payerIds) ? expense.payerIds : []),
         userMembers.map((m) => m.id),
         { fallbackOnEmpty: false }
       );
     });
     return totals;
-  }, [expenseCategories, expenseItems, userMembers]);
+  }, [expenseCategories, expenseItems, getExpenseAmount, userMembers]);
 
   const expenseSharesByCategory = useMemo(() => {
     const balanced: Record<string, Record<string, number>> = {};
@@ -533,6 +563,7 @@ const App: React.FC = () => {
       { label: 'Flights', total: flightsTotal, shares: flightShares },
       { label: 'Lodging', total: lodgingTotal, shares: lodgingTotalsBalanced },
       { label: 'Tours', total: toursTotal, shares: tourShares },
+      { label: 'Car Rentals', total: carRentalsTotal, shares: carRentalShares },
     ];
     expenseCategories.forEach((category) => {
       const total = expenseTotalsByCategory[category] ?? 0;
@@ -547,6 +578,8 @@ const App: React.FC = () => {
     expenseTotalsByCategory,
     flightShares,
     flightsTotal,
+    carRentalsTotal,
+    carRentalShares,
     lodgingTotalsBalanced,
     lodgingTotal,
     tourShares,
@@ -560,10 +593,11 @@ const App: React.FC = () => {
         (flightShares[id] ?? 0) +
         (lodgingTotalsBalanced[id] ?? 0) +
         (tourShares[id] ?? 0) +
-        (expenseOverallShares[id] ?? 0);
+        (expenseOverallShares[id] ?? 0) +
+        (carRentalShares[id] ?? 0);
     });
     return totals;
-  }, [expenseOverallShares, flightShares, lodgingTotalsBalanced, memberIds, tourShares]);
+  }, [carRentalShares, expenseOverallShares, flightShares, lodgingTotalsBalanced, memberIds, tourShares]);
 
   const lodgingBreakdownSum = useMemo(
     () => Object.values(lodgingTotalsBalanced).reduce((sum, v) => sum + v, 0),
@@ -1116,6 +1150,7 @@ const App: React.FC = () => {
           sessionPage === 'itinerary' ||
           sessionPage === 'tours' ||
           sessionPage === 'expenses' ||
+          sessionPage === 'ledger' ||
           sessionPage === 'cost' ||
           sessionPage === 'account' ||
           sessionPage === 'follow'
@@ -1403,6 +1438,7 @@ const App: React.FC = () => {
       'car',
       'tours',
       'expenses',
+      'ledger',
       'cost',
       'trips',
       'create-trip',
@@ -1555,9 +1591,27 @@ const App: React.FC = () => {
             />
           ) : null}
 
+          {activePage === 'ledger' ? (
+            <LedgerTab
+              trip={findActiveTrip() ?? null}
+              groupMembers={groupMembers}
+              expenses={expenses}
+              carRentals={carRentals}
+              styles={styles}
+            />
+          ) : null}
+
           {activePage === 'cost' ? (
             <View style={[styles.card, styles.flightsSection]}>
-              <Text style={styles.sectionTitle}>Cost Report</Text>
+              <View style={styles.row}>
+                <Text style={styles.sectionTitle}>Cost Report</Text>
+                <TouchableOpacity
+                  style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
+                  onPress={() => requestPageChange('ledger')}
+                >
+                  <Text style={styles.buttonText}>📒 Ledger</Text>
+                </TouchableOpacity>
+              </View>
               <Text style={styles.helperText}>Combined totals by category and user.</Text>
               <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
                 <View style={styles.table}>
@@ -1676,7 +1730,7 @@ const App: React.FC = () => {
           <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
             <View style={styles.table}>
               <View style={[styles.tableRow, styles.tableHeader]}>
-                {['Pick Up Location', 'Pick Up Date', 'Drop Off Location', 'Drop Off Date', 'Reference', 'Vendor', 'Prepaid?', 'Cost', 'Car Model', 'Notes', 'Paid By', 'Actions'].map((label, idx, arr) => (
+                {['Pick Up Location', 'Pick Up Date', 'Drop Off Location', 'Drop Off Date', 'Reference', 'Vendor', 'Prepaid?', 'Cost', 'Car Model', 'Notes', 'For', 'Paid By', 'Actions'].map((label, idx, arr) => (
                   <View
                     key={label}
                     style={[styles.cell, { minWidth: 140, flex: 1 }, idx === arr.length - 1 && styles.lastCell]}
@@ -1716,6 +1770,11 @@ const App: React.FC = () => {
                   </View>
                   <View style={[styles.cell, { minWidth: 220, flex: 1 }]}>
                     <Text style={[styles.cellText, styles.cellTextWrap]}>{car.notes || '-'}</Text>
+                  </View>
+                  <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
+                    <Text style={styles.cellText}>
+                      {(car.travelerIds ?? []).length ? (car.travelerIds ?? []).map(payerName).join(', ') : '-'}
+                    </Text>
                   </View>
                   <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
                     <Text style={styles.cellText}>{car.paidBy.length ? car.paidBy.map(payerName).join(', ') : '-'}</Text>
@@ -1864,6 +1923,43 @@ const App: React.FC = () => {
                     onChangeText={(text) => setCarDraft((p) => ({ ...p, notes: text }))}
                     multiline
                   />
+                </View>
+                <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
+                  <View style={styles.payerChips}>
+                    {carDraft.travelerIds.map((id) => (
+                      <View key={`car-traveler-${id}`} style={styles.payerChip}>
+                        <Text style={styles.cellText}>{payerName(id)}</Text>
+                        <TouchableOpacity
+                          onPress={() =>
+                            setCarDraft((prev) => ({
+                              ...prev,
+                              travelerIds: prev.travelerIds.filter((x) => x !== id),
+                            }))
+                          }
+                        >
+                          <Text style={styles.removeText}>x</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                  <View style={styles.payerOptions}>
+                    {userMembers
+                      .filter((m) => !carDraft.travelerIds.includes(m.id))
+                      .map((m) => (
+                        <TouchableOpacity
+                          key={`car-traveler-add-${m.id}`}
+                          style={styles.smallButton}
+                          onPress={() =>
+                            setCarDraft((prev) => ({
+                              ...prev,
+                              travelerIds: [...prev.travelerIds, m.id],
+                            }))
+                          }
+                        >
+                          <Text style={styles.buttonText}>Add {formatMemberName(m)}</Text>
+                        </TouchableOpacity>
+                      ))}
+                  </View>
                 </View>
                 <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
                   <View style={styles.payerChips}>

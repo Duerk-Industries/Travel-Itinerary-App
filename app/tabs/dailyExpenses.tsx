@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import ConfirmDialog from '../components/ConfirmDialog';
+import { fetchExchangeRate, getLocalDateString } from '../utils/exchangeRates';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 
 type Trip = {
@@ -30,6 +31,9 @@ type Expense = {
   category: string;
   amount: number;
   currency: string;
+  amountInTripCurrency?: number | null;
+  exchangeRateToTripCurrency?: number | null;
+  exchangeRateDate?: string | null;
   payerIds: string[];
   forIds: string[];
   createdAt: string;
@@ -195,12 +199,38 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
       alert('Select a date.');
       return;
     }
+    const tripCurrency = (trip.currency ?? 'USD').toUpperCase();
+    const inputCurrency = (draftCurrency || tripCurrency).toUpperCase();
+    const amountValue = Number(draftAmount) || 0;
+    const rateDate = getLocalDateString();
+    let amountInTripCurrency: number | null = null;
+    let exchangeRateToTripCurrency: number | null = null;
+    let exchangeRateDate: string | null = null;
+    if (inputCurrency === tripCurrency) {
+      amountInTripCurrency = amountValue;
+      exchangeRateToTripCurrency = 1;
+      exchangeRateDate = rateDate;
+    } else if (amountValue) {
+      try {
+        const rateInfo = await fetchExchangeRate(inputCurrency, tripCurrency, rateDate);
+        if (rateInfo) {
+          amountInTripCurrency = amountValue * rateInfo.rate;
+          exchangeRateToTripCurrency = rateInfo.rate;
+          exchangeRateDate = rateInfo.date;
+        }
+      } catch {
+        // ignore FX lookup failures; ledger can still compute on demand.
+      }
+    }
     const payload = {
       tripId: trip.id,
       expenseDate: draftDate,
       category: draftCategory,
-      amount: Number(draftAmount) || 0,
-      currency: draftCurrency || 'USD',
+      amount: amountValue,
+      currency: inputCurrency,
+      amountInTripCurrency: amountInTripCurrency ?? undefined,
+      exchangeRateToTripCurrency: exchangeRateToTripCurrency ?? undefined,
+      exchangeRateDate: exchangeRateDate ?? undefined,
       payerIds: draftPayerIds,
       forIds: draftForIds,
     };

@@ -6,6 +6,7 @@ export type PageKey =
   | 'car'
   | 'tours'
   | 'expenses'
+  | 'ledger'
   | 'cost'
   | 'trips'
   | 'create-trip'

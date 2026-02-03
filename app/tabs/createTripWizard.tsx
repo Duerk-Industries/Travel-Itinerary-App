@@ -752,7 +752,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   };
 
   const addWizardCarRental = () => {
-    const result = buildCarRentalFromDraft(wizardCarDraft, wizardDefaultPayerId);
+    const result = buildCarRentalFromDraft(wizardCarDraft, wizardDefaultPayerId, wizardMemberIds);
     if (result.error || !result.rental) {
       setWizardError(result.error || 'Unable to add car rental.');
       return;
@@ -1860,7 +1860,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
               <View style={styles.table}>
                 <View style={[styles.tableRow, styles.tableHeader]}>
-                  {['Pick Up Location', 'Pick Up Date', 'Drop Off Location', 'Drop Off Date', 'Reference', 'Vendor', 'Prepaid?', 'Cost', 'Car Model', 'Notes', 'Paid By', 'Actions'].map((label, idx, arr) => (
+                  {['Pick Up Location', 'Pick Up Date', 'Drop Off Location', 'Drop Off Date', 'Reference', 'Vendor', 'Prepaid?', 'Cost', 'Car Model', 'Notes', 'For', 'Paid By', 'Actions'].map((label, idx, arr) => (
                     <View
                       key={label}
                       style={[styles.cell, { minWidth: 140, flex: 1 }, idx === arr.length - 1 && styles.lastCell]}
@@ -1900,6 +1900,11 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     </View>
                     <View style={[styles.cell, { minWidth: 220, flex: 1 }]}>
                       <Text style={[styles.cellText, styles.cellTextWrap]}>{car.notes || '-'}</Text>
+                    </View>
+                    <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
+                      <Text style={styles.cellText}>
+                        {(car.travelerIds ?? []).length ? (car.travelerIds ?? []).map(wizardPayerName).join(', ') : '-'}
+                      </Text>
                     </View>
                     <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
                       <Text style={styles.cellText}>{car.paidBy.length ? car.paidBy.map(wizardPayerName).join(', ') : '-'}</Text>
@@ -2050,6 +2055,31 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                       onChangeText={(text) => setWizardCarDraft((p) => ({ ...p, notes: text }))}
                       multiline
                     />
+                  </View>
+                  <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
+                    <View style={styles.payerChips}>
+                      {wizardCarDraft.travelerIds.map((id) => (
+                        <View key={`wizard-car-traveler-${id}`} style={styles.payerChip}>
+                          <Text style={styles.cellText}>{wizardPayerName(id)}</Text>
+                          <TouchableOpacity onPress={() => setWizardCarDraft((prev) => ({ ...prev, travelerIds: prev.travelerIds.filter((x) => x !== id) }))}>
+                            <Text style={styles.removeText}>x</Text>
+                          </TouchableOpacity>
+                        </View>
+                      ))}
+                    </View>
+                    <View style={styles.payerOptions}>
+                      {wizardGroupMembers
+                        .filter((m) => !wizardCarDraft.travelerIds.includes(m.id))
+                        .map((m) => (
+                          <TouchableOpacity
+                            key={`wizard-car-traveler-add-${m.id}`}
+                            style={styles.smallButton}
+                            onPress={() => setWizardCarDraft((prev) => ({ ...prev, travelerIds: [...prev.travelerIds, m.id] }))}
+                          >
+                            <Text style={styles.buttonText}>Add {formatWizardMemberName(m)}</Text>
+                          </TouchableOpacity>
+                        ))}
+                    </View>
                   </View>
                   <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
                     <View style={styles.payerChips}>

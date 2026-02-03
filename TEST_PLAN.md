@@ -47,6 +47,18 @@ This document outlines the existing test suites in the Travel Itinerary App, ide
         *   Trip currency is shown in the add-expense form.
         *   Non-zero daily totals open the detail modal when pressed.
 
+*   **`ledger.test.tsx`**:
+    *   **Purpose**: Tests the Ledger tab calculations and FX conversion handling.
+    *   **Verifies**:
+        *   Paid vs. used totals render with converted amounts.
+        *   FX rates are applied to non-trip-currency expenses.
+        *   Overall row shows matching Paid/Used totals.
+
+*   **`ledgerCostReportMatch.test.ts`**:
+    *   **Purpose**: Ensures Cost Report overall shares align with Ledger paid totals.
+    *   **Verifies**:
+        *   Overall Cost Report per-user totals match Ledger paid totals for the same data.
+
 *   **`tripDetailsCurrency.test.tsx`**:
     *   **Purpose**: Tests trip currency editing in the Trip Details page.
     *   **Verifies**:
@@ -147,6 +159,13 @@ This document outlines the existing test suites in the Travel Itinerary App, ide
         *   Creates a new expense for a trip.
         *   Lists expenses by trip.
         *   Deletes an expense by ID.
+        *   Stores optional FX conversion fields when provided.
+
+*   **`ledger-integration.test.ts`**:
+    *   **Purpose**: Creates a trip with full cost data (flight, lodging, tour, rental, daily expenses).
+    *   **Verifies**:
+        *   API accepts randomized traveler/payer assignments per item.
+        *   Expense list returns expected items with non-empty payer/used lists.
 
 *   **`db-provider.test.ts`**:
     *   **Purpose**: Tests the database provider selection logic.

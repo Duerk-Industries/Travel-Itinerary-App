@@ -18,6 +18,7 @@ const allowedCategories = new Set([
   'Flights',
   'Lodging',
   'Tours',
+  'Car Rentals',
 ]);
 
 router.get('/', async (req, res) => {
@@ -39,6 +40,9 @@ router.post('/', async (req, res) => {
     category,
     amount,
     currency,
+    amountInTripCurrency,
+    exchangeRateToTripCurrency,
+    exchangeRateDate,
     payerIds,
     forIds,
     notes,
@@ -62,6 +66,11 @@ router.post('/', async (req, res) => {
   const memberIdSet = new Set(members.map((m) => String(m.id)));
   const normalizedPayers = Array.isArray(payerIds) ? payerIds.map((id: any) => String(id)).filter(Boolean) : [];
   const normalizedFor = Array.isArray(forIds) ? forIds.map((id: any) => String(id)).filter(Boolean) : [];
+  const normalizedAmountInTripCurrency =
+    amountInTripCurrency == null ? null : Number(amountInTripCurrency) || 0;
+  const normalizedExchangeRate =
+    exchangeRateToTripCurrency == null ? null : Number(exchangeRateToTripCurrency) || 0;
+  const normalizedRateDate = typeof exchangeRateDate === 'string' ? exchangeRateDate.trim() || null : null;
 
   if (!normalizedPayers.length || !normalizedFor.length) {
     res.status(400).json({ error: 'At least one payer and one traveler are required' });
@@ -84,6 +93,9 @@ router.post('/', async (req, res) => {
     category: normalizedCategory,
     amount: Number(amount) || 0,
     currency: typeof currency === 'string' && currency.trim() ? currency.trim().toUpperCase() : undefined,
+    amountInTripCurrency: normalizedAmountInTripCurrency,
+    exchangeRateToTripCurrency: normalizedExchangeRate,
+    exchangeRateDate: normalizedRateDate,
     payerIds: normalizedPayers,
     forIds: normalizedFor,
     notes: typeof notes === 'string' ? notes.trim() || null : null,

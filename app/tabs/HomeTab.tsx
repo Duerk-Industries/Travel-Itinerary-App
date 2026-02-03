@@ -107,6 +107,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
         { key: 'expenses', label: 'Daily Expenses', icon: '🧾' },
         { key: 'car', label: 'Car Rentals', icon: '🚗' },
     { key: 'cost', label: 'Cost Report', icon: '💵' },
+    { key: 'ledger', label: 'Ledger', icon: '📒' },
     { key: 'trips', label: 'Trips', icon: '🧳' },
     { key: 'create-trip', label: 'Create Trip', icon: '➕' },
     { key: 'account', label: 'Account', icon: '👤' },

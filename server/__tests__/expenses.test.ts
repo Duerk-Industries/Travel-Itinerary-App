@@ -54,10 +54,16 @@ describe('Expenses API', () => {
         category: 'Breakfast',
         amount: 12.5,
         currency: 'USD',
+        amountInTripCurrency: 12.5,
+        exchangeRateToTripCurrency: 1,
+        exchangeRateDate: '2025-02-01',
         payerIds: [memberId],
         forIds: [memberId],
       })
       .expect(201);
+    expect(created.body.amountInTripCurrency).toBe(12.5);
+    expect(created.body.exchangeRateToTripCurrency).toBe(1);
+    expect(created.body.exchangeRateDate).toBe('2025-02-01');
 
     const list = await request(app)
       .get(`/api/expenses?tripId=${tripId}`)

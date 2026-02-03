@@ -166,6 +166,9 @@ export interface Expense {
   category: string;
   amount: number;
   currency: string;
+  amountInTripCurrency?: number | null;
+  exchangeRateToTripCurrency?: number | null;
+  exchangeRateDate?: string | null;
   payerIds: string[];
   forIds: string[];
   sourceType?: string | null;
