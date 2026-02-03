@@ -2513,6 +2513,33 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#6b7280',
   },
+  toggleGroup: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  expenseToggleButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 18,
+    borderWidth: 1,
+    backgroundColor: '#fff',
+  },
+  expenseToggleSelected: {
+    backgroundColor: '#0d6efd',
+    borderColor: '#0d6efd',
+  },
+  expenseToggleUnselected: {
+    backgroundColor: '#fff',
+    borderColor: '#cbd5e1',
+  },
+  expenseToggleText: {
+    fontWeight: '600',
+    color: '#0f172a',
+  },
+  expenseToggleTextSelected: {
+    color: '#fff',
+  },
   input: {
     borderWidth: 1,
     borderColor: '#d1d5db',
@@ -3058,10 +3085,43 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
   },
+  expenseModalCard: {
+    maxWidth: 760,
+    maxHeight: 640,
+  },
+  expenseModalScroll: {
+    maxHeight: 520,
+    marginBottom: 8,
+  },
   detailModal: {
     maxHeight: 520,
     maxWidth: 520,
     width: '100%',
+  },
+  expenseFieldRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  expenseFieldDate: {
+    minWidth: 160,
+    flexGrow: 1,
+    flexBasis: 160,
+  },
+  expenseFieldCategory: {
+    minWidth: 150,
+    flexGrow: 1,
+    flexBasis: 150,
+  },
+  expenseFieldCurrency: {
+    minWidth: 110,
+    flexGrow: 0,
+    flexBasis: 110,
+  },
+  expenseFieldAmount: {
+    minWidth: 120,
+    flexGrow: 0,
+    flexBasis: 120,
   },
   detailModalScroll: {
     maxHeight: 420,

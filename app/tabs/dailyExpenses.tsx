@@ -115,6 +115,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
   const [datePickerVisible, setDatePickerVisible] = useState(false);
+  const [addExpenseVisible, setAddExpenseVisible] = useState(false);
   const [detailTarget, setDetailTarget] = useState<{ date: string; category: CategoryOption } | null>(null);
   const [pendingDeleteExpense, setPendingDeleteExpense] = useState<Expense | null>(null);
 
@@ -170,6 +171,13 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   const toggleSelection = (ids: string[], id: string): string[] =>
     ids.includes(id) ? ids.filter((item) => item !== id) : [...ids, id];
 
+  const closeAddExpenseModal = () => {
+    setAddExpenseVisible(false);
+    setShowCategoryDropdown(false);
+    setShowCurrencyDropdown(false);
+    setDatePickerVisible(false);
+  };
+
   const saveExpense = async () => {
     if (!trip?.id) {
       alert('Select an active trip before adding expenses.');
@@ -209,6 +217,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
       }
       setExpenses((prev) => [data as Expense, ...prev.filter((e) => e.id !== data.id)]);
       setDraftAmount('');
+      closeAddExpenseModal();
     } catch (err) {
       alert((err as Error).message || 'Unable to save expense');
     }
@@ -251,146 +260,185 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   }
 
   const webInputStyle = useMemo(() => StyleSheet.flatten(styles.input) ?? {}, [styles]);
+  const formattedDraftDate = draftDate ? formatDateLabel(draftDate) : '';
 
   return (
     <View style={styles.card}>
       <View style={styles.row}>
         <Text style={styles.sectionTitle}>Daily Expenses</Text>
-        <TouchableOpacity style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]} onPress={saveExpense}>
+        <TouchableOpacity
+          style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
+          onPress={() => setAddExpenseVisible(true)}
+        >
           <Text style={styles.buttonText}>+ Add Expense</Text>
         </TouchableOpacity>
       </View>
-      <View style={{ gap: 8 }}>
-        <Text style={styles.headerText}>Add Expense</Text>
-        <View style={styles.row}>
-          <View style={[styles.dateInputWrap, { flex: 1 }]}>
-            {Platform.OS === 'web' ? (
-              <input
-                type="date"
-                value={draftDate}
-                onChange={(event) => setDraftDate(event.target.value)}
-                style={webInputStyle as any}
-              />
-            ) : (
-              <TouchableOpacity style={[styles.input, styles.dateTouchable]} onPress={() => setDatePickerVisible(true)}>
-                <Text style={draftDate ? styles.cellText : styles.placeholderText}>
-                  {draftDate || 'Select date'}
-                </Text>
-              </TouchableOpacity>
-            )}
-            {Platform.OS !== 'web' ? (
-              <TouchableOpacity style={styles.dateIcon} onPress={() => setDatePickerVisible(true)}>
-                <Text style={styles.selectCaret}>📅</Text>
-              </TouchableOpacity>
-            ) : null}
-          </View>
-          <View style={[styles.input, styles.dropdown, { flex: 1 }]}>
-            <TouchableOpacity style={styles.selectButtonRow} onPress={() => setShowCategoryDropdown((prev) => !prev)}>
-              <Text style={styles.cellText}>{draftCategory}</Text>
-              <Text style={styles.selectCaret}>▾</Text>
-            </TouchableOpacity>
-            {showCategoryDropdown ? (
-              <View style={styles.dropdownList}>
-                {categoryOptions.map((category) => (
-                  <TouchableOpacity
-                    key={category}
-                    style={styles.dropdownOption}
-                    onPress={() => {
-                      setDraftCategory(category);
-                      setShowCategoryDropdown(false);
-                    }}
-                  >
-                    <Text style={styles.cellText}>{category}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            ) : null}
-          </View>
-          <View style={[styles.input, styles.dropdown, { flex: 1 }]}>
-            <TouchableOpacity style={styles.selectButtonRow} onPress={() => setShowCurrencyDropdown((prev) => !prev)}>
-              <Text style={styles.cellText}>{draftCurrency}</Text>
-              <Text style={styles.selectCaret}>▾</Text>
-            </TouchableOpacity>
-            {showCurrencyDropdown ? (
-              <View style={styles.dropdownList}>
-                {['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY', 'INR', 'MXN'].map((currency) => (
-                  <TouchableOpacity
-                    key={currency}
-                    style={styles.dropdownOption}
-                    onPress={() => {
-                      setDraftCurrency(currency);
-                      setShowCurrencyDropdown(false);
-                    }}
-                  >
-                    <Text style={styles.cellText}>{currency}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            ) : null}
-          </View>
-          <TextInput
-            style={[styles.input, { flex: 1 }]}
-            placeholder="Amount"
-            keyboardType="numeric"
-            value={draftAmount}
-            onChangeText={(value: string) => setDraftAmount(sanitizeCostInput(value))}
-          />
-        </View>
-
-        <Text style={styles.headerText}>For</Text>
-        <View style={[styles.input, styles.payerBox]}>
-          <View style={styles.payerChips}>
-            {draftForIds.map((id) => (
-              <View key={`for-${id}`} style={styles.payerChip}>
-                <Text style={styles.cellText}>{memberNameMap.get(id) ?? 'Traveler'}</Text>
-                <TouchableOpacity onPress={() => setDraftForIds((prev) => prev.filter((item) => item !== id))}>
-                  <Text style={styles.removeText}>x</Text>
-                </TouchableOpacity>
-              </View>
-            ))}
-          </View>
-          <View style={styles.payerOptions}>
-            {activeMembers
-              .filter((m) => !draftForIds.includes(m.id))
-              .map((m) => (
+      {addExpenseVisible ? (
+        <Modal transparent visible animationType="fade">
+          <View style={styles.modalOverlay} testID="expense-add-modal">
+            <View style={[styles.modalCard, styles.expenseModalCard]}>
+              <View style={styles.row}>
+                <Text style={styles.sectionTitle}>Add Expense</Text>
                 <TouchableOpacity
-                  key={`for-add-${m.id}`}
-                  style={styles.smallButton}
-                  onPress={() => setDraftForIds((prev) => [...prev, m.id])}
+                  style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
+                  onPress={closeAddExpenseModal}
                 >
-                  <Text style={styles.buttonText}>Add {memberNameMap.get(m.id) ?? 'Traveler'}</Text>
-                </TouchableOpacity>
-              ))}
-          </View>
-        </View>
-
-        <Text style={styles.headerText}>Payers</Text>
-        <View style={[styles.input, styles.payerBox]}>
-          <View style={styles.payerChips}>
-            {draftPayerIds.map((id) => (
-              <View key={`payer-${id}`} style={styles.payerChip}>
-                <Text style={styles.cellText}>{memberNameMap.get(id) ?? 'Traveler'}</Text>
-                <TouchableOpacity onPress={() => setDraftPayerIds((prev) => prev.filter((item) => item !== id))}>
-                  <Text style={styles.removeText}>x</Text>
+                  <Text style={styles.buttonText}>Close</Text>
                 </TouchableOpacity>
               </View>
-            ))}
+              <ScrollView style={styles.expenseModalScroll} contentContainerStyle={{ gap: 8 }}>
+                <View style={styles.expenseFieldRow}>
+                  <View style={[styles.dateInputWrap, styles.expenseFieldDate]}>
+                    {Platform.OS === 'web' ? (
+                      <View style={styles.dateInputWrap}>
+                        <View style={[styles.input, styles.dateTouchable]}>
+                          <Text style={draftDate ? styles.cellText : styles.placeholderText}>
+                            {draftDate ? formattedDraftDate : 'Select date'}
+                          </Text>
+                        </View>
+                        <input
+                          type="date"
+                          value={draftDate}
+                          onChange={(event) => setDraftDate(event.target.value)}
+                          style={{
+                            ...(webInputStyle as any),
+                            position: 'absolute',
+                            top: 0,
+                            right: 0,
+                            bottom: 0,
+                            left: 0,
+                            opacity: 0,
+                            cursor: 'pointer',
+                          }}
+                        />
+                      </View>
+                    ) : (
+                      <TouchableOpacity
+                        style={[styles.input, styles.dateTouchable]}
+                        onPress={() => setDatePickerVisible(true)}
+                      >
+                        <Text style={draftDate ? styles.cellText : styles.placeholderText}>
+                          {draftDate ? formattedDraftDate : 'Select date'}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                    {Platform.OS !== 'web' ? (
+                      <TouchableOpacity style={styles.dateIcon} onPress={() => setDatePickerVisible(true)}>
+                        <Text style={styles.selectCaret}>📅</Text>
+                      </TouchableOpacity>
+                    ) : null}
+                  </View>
+                  <View style={[styles.input, styles.dropdown, styles.expenseFieldCategory]}>
+                    <TouchableOpacity
+                      style={styles.selectButtonRow}
+                      onPress={() => setShowCategoryDropdown((prev) => !prev)}
+                    >
+                      <Text style={styles.cellText}>{draftCategory}</Text>
+                      <Text style={styles.selectCaret}>▾</Text>
+                    </TouchableOpacity>
+                    {showCategoryDropdown ? (
+                      <View style={styles.dropdownList}>
+                        {categoryOptions.map((category) => (
+                          <TouchableOpacity
+                            key={category}
+                            style={styles.dropdownOption}
+                            onPress={() => {
+                              setDraftCategory(category);
+                              setShowCategoryDropdown(false);
+                            }}
+                          >
+                            <Text style={styles.cellText}>{category}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    ) : null}
+                  </View>
+                  <View style={[styles.input, styles.dropdown, styles.expenseFieldCurrency]}>
+                    <TouchableOpacity
+                      style={styles.selectButtonRow}
+                      onPress={() => setShowCurrencyDropdown((prev) => !prev)}
+                    >
+                      <Text style={styles.cellText}>{draftCurrency}</Text>
+                      <Text style={styles.selectCaret}>▾</Text>
+                    </TouchableOpacity>
+                    {showCurrencyDropdown ? (
+                      <View style={styles.dropdownList}>
+                        {['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY', 'INR', 'MXN'].map((currency) => (
+                          <TouchableOpacity
+                            key={currency}
+                            style={styles.dropdownOption}
+                            onPress={() => {
+                              setDraftCurrency(currency);
+                              setShowCurrencyDropdown(false);
+                            }}
+                          >
+                            <Text style={styles.cellText}>{currency}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    ) : null}
+                  </View>
+                  <TextInput
+                    style={[styles.input, styles.expenseFieldAmount]}
+                    placeholder="Amount"
+                    keyboardType="numeric"
+                    value={draftAmount}
+                    onChangeText={(value: string) => setDraftAmount(sanitizeCostInput(value))}
+                  />
+                </View>
+
+                <Text style={styles.headerText}>For</Text>
+                <View style={styles.toggleGroup}>
+                  {activeMembers.map((member) => {
+                    const selected = draftForIds.includes(member.id);
+                    return (
+                      <TouchableOpacity
+                        key={`for-toggle-${member.id}`}
+                        style={[
+                          styles.expenseToggleButton,
+                          selected ? styles.expenseToggleSelected : styles.expenseToggleUnselected,
+                        ]}
+                        onPress={() => setDraftForIds((prev) => toggleSelection(prev, member.id))}
+                      >
+                        <Text style={[styles.expenseToggleText, selected && styles.expenseToggleTextSelected]}>
+                          {memberNameMap.get(member.id) ?? 'Traveler'}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                <Text style={styles.headerText}>Payers</Text>
+                <View style={styles.toggleGroup}>
+                  {activeMembers.map((member) => {
+                    const selected = draftPayerIds.includes(member.id);
+                    return (
+                      <TouchableOpacity
+                        key={`payer-toggle-${member.id}`}
+                        style={[
+                          styles.expenseToggleButton,
+                          selected ? styles.expenseToggleSelected : styles.expenseToggleUnselected,
+                        ]}
+                        onPress={() => setDraftPayerIds((prev) => toggleSelection(prev, member.id))}
+                      >
+                        <Text style={[styles.expenseToggleText, selected && styles.expenseToggleTextSelected]}>
+                          {memberNameMap.get(member.id) ?? 'Traveler'}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                <View style={styles.row}>
+                  <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={saveExpense}>
+                    <Text style={styles.buttonText}>Save Expense</Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            </View>
           </View>
-          <View style={styles.payerOptions}>
-            {activeMembers
-              .filter((m) => !draftPayerIds.includes(m.id))
-              .map((m) => (
-                <TouchableOpacity
-                  key={`payer-add-${m.id}`}
-                  style={styles.smallButton}
-                  onPress={() => setDraftPayerIds((prev) => [...prev, m.id])}
-                >
-                  <Text style={styles.buttonText}>Add {memberNameMap.get(m.id) ?? 'Traveler'}</Text>
-                </TouchableOpacity>
-              ))}
-          </View>
-        </View>
-      </View>
+        </Modal>
+      ) : null}
 
       <View style={styles.divider} />
       <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
