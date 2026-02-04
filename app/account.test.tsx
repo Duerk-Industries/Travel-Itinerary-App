@@ -1,6 +1,12 @@
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { render } from '@testing-library/react-native';
+import { View } from 'react-native';
 import AccountTab from '../tabs/account';
+
+jest.mock('../tabs/AccountProfileManagement', () => (props: any) => <View testID="account-profile-management" {...props} />);
+jest.mock('../tabs/FamilyRelationships', () => (props: any) => <View testID="family-relationships" {...props} />);
+jest.mock('../tabs/AccountTraits', () => (props: any) => <View testID="account-traits" {...props} />);
+jest.mock('../tabs/ExpenseCovering', () => (props: any) => <View testID="expense-covering" {...props} />);
 
 const styles = {
   card: {},
@@ -94,9 +100,11 @@ describe('AccountTab', () => {
     jest.clearAllMocks();
   });
 
-  it('renders the Account section', () => {
-    const { getByText } = render(<AccountTab {...defaultProps} />);
-    expect(getByText('Account')).toBeTruthy();
-    expect(getByText('Save Profile')).toBeTruthy();
+  it('renders its child components', () => {
+    const { getByTestId } = render(<AccountTab {...defaultProps} />);
+    expect(getByTestId('account-profile-management')).toBeTruthy();
+    expect(getByTestId('family-relationships')).toBeTruthy();
+    expect(getByTestId('account-traits')).toBeTruthy();
+    expect(getByTestId('expense-covering')).toBeTruthy();
   });
 });
