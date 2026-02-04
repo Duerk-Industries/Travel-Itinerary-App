@@ -968,8 +968,11 @@ export const updateFlight = async (
     );
     if (!rows.length) throw new Error('Flight not found');
     const row = rows[0] as any;
+    const tripId = row.tripId ?? row.trip_id ?? updates.tripId ?? null;
     return {
       ...(row as Flight),
+      tripId,
+      departureDate: (row as any).departureDate ?? row.departure_date ?? updates.departureDate ?? null,
       paidBy: Array.isArray(row.paid_by) ? row.paid_by : [],
       passengerIds: Array.isArray(row.passenger_ids) ? row.passenger_ids : [],
       passengerName: (row as any).passengerName ?? row.passenger_name,
@@ -1028,8 +1031,11 @@ export const updateFlight = async (
   );
   if (!rows.length) throw new Error('Flight not found');
   const row = rows[0] as any;
+  const tripId = row.tripId ?? row.trip_id ?? updates.tripId ?? null;
   return {
     ...(row as Flight),
+    tripId,
+    departureDate: (row as any).departureDate ?? row.departure_date ?? updates.departureDate ?? null,
     paidBy: Array.isArray(row.paid_by) ? row.paid_by : [],
     passengerIds: Array.isArray(row.passenger_ids) ? row.passenger_ids : [],
     passengerName: (row as any).passengerName ?? row.passenger_name,
@@ -1745,10 +1751,32 @@ export const listExpenses = async (userId: string, tripId?: string | null): Prom
     `,
     [userId, tripId ?? null]
   );
+  const normalizeJsonArray = (value: any): string[] => {
+    if (Array.isArray(value)) return value;
+    if (typeof value === 'string') {
+      try {
+        const parsed = JSON.parse(value);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (err) {
+        return [];
+      }
+    }
+    if (value && typeof value === 'object') {
+      const keys = Object.keys(value);
+      const numericKeys = keys.filter((key) => String(Number(key)) === key);
+      if (numericKeys.length === keys.length) {
+        return numericKeys
+          .sort((a, b) => Number(a) - Number(b))
+          .map((key) => value[key])
+          .filter(Boolean);
+      }
+    }
+    return [];
+  };
   return rows.map((row: any) => ({
     ...row,
-    payerIds: Array.isArray(row.payerIds) ? row.payerIds : [],
-    forIds: Array.isArray(row.forIds) ? row.forIds : [],
+    payerIds: normalizeJsonArray(row.payerIds),
+    forIds: normalizeJsonArray(row.forIds),
   }));
 };
 
@@ -3838,6 +3866,15 @@ export const getPlaceDetailsCache = async (placeId: string): Promise<PlaceDetail
     [placeId]
   );
   return rows[0] ?? null;
+};
+
+export const getTripGroupId = async (tripId: string): Promise<string | null> => {
+  const p = getPool();
+  const { rows } = await p.query<{ groupId: string }>(
+    `SELECT group_id as "groupId" FROM trips WHERE id = $1 LIMIT 1`,
+    [tripId]
+  );
+  return rows[0]?.groupId ?? null;
 };
 
 export const upsertPlaceDetailsCache = async (entry: {

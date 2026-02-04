@@ -58,6 +58,32 @@ const LodgingForm: React.FC<LodgingFormProps> = ({
     }));
   };
 
+  const resolveTravelerLabel = (member: MemberOption) => {
+    const first = member.firstName?.trim() ?? '';
+    const last = member.lastName?.trim() ?? '';
+    if (first || last) return `${first} ${last}`.trim();
+    const guest = member.guestName?.trim() ?? '';
+    if (guest) return guest;
+    const email = (member.email ?? '').trim();
+    if (email) return email;
+    return 'Traveler';
+  };
+
+  const toggleBaseStyle = styles.toggleOption ?? {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#111',
+    backgroundColor: '#fff',
+  };
+  const toggleSelectedStyle = styles.toggleOptionSelected ?? {
+    backgroundColor: '#e5e7eb',
+    borderColor: '#111',
+  };
+  const toggleTextStyle = styles.toggleOptionText ?? { color: '#111', fontWeight: '600' };
+  const toggleTextSelectedStyle = styles.toggleOptionTextSelected ?? { color: '#111' };
+
   const renderDateInput = (
     field: 'checkIn' | 'checkOut' | 'refundBy',
     value: string,
@@ -152,62 +178,47 @@ const LodgingForm: React.FC<LodgingFormProps> = ({
       </View>
 
       <Text style={styles.modalLabel}>Travelers</Text>
-      <View style={[styles.input, styles.payerBox]}>
-        <View style={styles.payerChips}>
-          {draft.travelerIds.map((id) => (
-            <View key={`traveler-${id}`} style={styles.payerChip}>
-              <Text style={styles.cellText}>{payerName(id)}</Text>
-              <TouchableOpacity onPress={() => updateTravelerIds(draft.travelerIds.filter((x) => x !== id))}>
-                <Text style={styles.removeText}>x</Text>
-              </TouchableOpacity>
-            </View>
-          ))}
-        </View>
-        <View style={styles.payerOptions}>
-          {activeMembers
-            .filter((m) => !draft.travelerIds.includes(m.id))
-            .map((m) => (
-              <TouchableOpacity
-                key={`traveler-add-${m.id}`}
-                style={styles.smallButton}
-                onPress={() => updateTravelerIds([...draft.travelerIds, m.id])}
-              >
-                <Text style={styles.buttonText}>Add {formatMemberName(m)}</Text>
-              </TouchableOpacity>
-            ))}
-        </View>
+      <View style={styles.payerChips}>
+        {activeMembers.map((m) => {
+          const selected = draft.travelerIds.includes(m.id);
+          const name = resolveTravelerLabel(m);
+          return (
+            <TouchableOpacity
+              key={`traveler-toggle-${m.id}`}
+              style={[toggleBaseStyle, selected && toggleSelectedStyle]}
+              onPress={() => {
+                const next = selected
+                  ? draft.travelerIds.filter((id) => id !== m.id)
+                  : [...draft.travelerIds, m.id];
+                updateTravelerIds(next);
+              }}
+            >
+              <Text style={[toggleTextStyle, selected && toggleTextSelectedStyle]}>{name}</Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       <Text style={styles.modalLabel}>Paid by</Text>
-      <View style={[styles.input, styles.payerBox]}>
-        <View style={styles.payerChips}>
-          {draft.paidBy.map((id) => (
-            <View key={`payer-${id}`} style={styles.payerChip}>
-              <Text style={styles.cellText}>{payerName(id)}</Text>
-              <TouchableOpacity
-                onPress={() => {
-                  const nextPaidBy = draft.paidBy.filter((x) => x !== id);
-                  setDraft((prev) => ({ ...prev, paidBy: ensurePaidBy(nextPaidBy) }));
-                }}
-              >
-                <Text style={styles.removeText}>x</Text>
-              </TouchableOpacity>
-            </View>
-          ))}
-        </View>
-        <View style={styles.payerOptions}>
-          {activeMembers
-            .filter((m) => !draft.paidBy.includes(m.id))
-            .map((m) => (
-              <TouchableOpacity
-                key={`payer-add-${m.id}`}
-                style={styles.smallButton}
-                onPress={() => setDraft((prev) => ({ ...prev, paidBy: ensurePaidBy([...prev.paidBy, m.id]) }))}
-              >
-                <Text style={styles.buttonText}>Add {formatMemberName(m)}</Text>
-              </TouchableOpacity>
-            ))}
-        </View>
+      <View style={styles.payerChips}>
+        {activeMembers.map((m) => {
+          const selected = draft.paidBy.includes(m.id);
+          const name = resolveTravelerLabel(m);
+          return (
+            <TouchableOpacity
+              key={`payer-toggle-${m.id}`}
+              style={[toggleBaseStyle, selected && toggleSelectedStyle]}
+              onPress={() => {
+                const nextPaidBy = selected
+                  ? draft.paidBy.filter((id) => id !== m.id)
+                  : [...draft.paidBy, m.id];
+                setDraft((prev) => ({ ...prev, paidBy: ensurePaidBy(nextPaidBy) }));
+              }}
+            >
+              <Text style={[toggleTextStyle, selected && toggleTextSelectedStyle]}>{name}</Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       <Text style={styles.modalLabel}>Address</Text>

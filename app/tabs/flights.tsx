@@ -3,8 +3,6 @@ import { Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'r
 import { formatDateLong } from '../utils/formatDateLong';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { normalizeDateString } from '../utils/normalizeDateString';
-import { parseFlightText, type ParsedFlight } from '../utils/parsers/flightParser';
-import { extractTextFromImage, extractTextFromPdf } from './flightParsing';
 import { FlightEditingForm } from '../components/FlightEditingForm';
 
 type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
@@ -396,6 +394,7 @@ type FlightsTabProps = {
   onSearchAirports: (q: string) => Promise<void> | void;
   externalEditFlightId?: string | null;
   onExternalEditHandled?: () => void;
+  onDataChanged?: () => void;
   showList?: boolean;
   mode?: 'live' | 'wizard';
 };
@@ -456,6 +455,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   onSearchAirports,
   externalEditFlightId,
   onExternalEditHandled,
+  onDataChanged,
   showList = true,
   mode = 'live',
 }) => {
@@ -498,16 +498,11 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   const [locationFieldTarget, setLocationFieldTarget] = useState<'dep' | 'arr' | null>(null);
   const [locationSearch, setLocationSearch] = useState('');
   const locationSelectInProgressRef = useRef(false);
-  const [isParsingPdf, setIsParsingPdf] = useState(false);
-  const [pdfParseMessage, setPdfParseMessage] = useState<string | null>(null);
-  const [parsedFlights, setParsedFlights] = useState<FlightEditDraft[]>([]);
-  const [isSavingParsedFlights, setIsSavingParsedFlights] = useState(false);
   const [isAddingRow] = useState(false);
   const passengerDropdownRef = useRef<React.ElementRef<typeof TouchableOpacity> | null>(null);
   const modalDepLocationRef = useRef<React.ElementRef<typeof TextInput> | null>(null);
   const modalArrLocationRef = useRef<React.ElementRef<typeof TextInput> | null>(null);
   const modalLayoverLocationRef = useRef<React.ElementRef<typeof TextInput> | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [containerOffset, setContainerOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [timePickerTarget, setTimePickerTarget] = useState<'edit-dep' | 'edit-arr' | 'new-dep' | 'new-arr' | null>(null);
   const [timePickerValue, setTimePickerValue] = useState<Date>(new Date());
@@ -660,19 +655,6 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   };
 
 
-  const mergeParsedFlight = (current: FlightEditDraft, parsed: Partial<FlightEditDraft>): FlightEditDraft => {
-    const next = { ...current } as FlightEditDraft;
-    (Object.entries(parsed) as Array<[keyof FlightEditDraft, FlightEditDraft[keyof FlightEditDraft]]>).forEach(
-      ([key, value]) => {
-        if (typeof value !== 'string') return;
-        const existing = current[key];
-        if (typeof existing === 'string' && existing.trim().length > 0) return;
-        (next as unknown as Record<string, string>)[key as string] = value;
-      }
-    );
-    return next;
-  };
-
   const fetchFlights = async (token?: string) => {
     if (isWizard) return;
     if (!userToken || !activeTripId) {
@@ -681,148 +663,6 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     }
     const list = await fetchFlightsForTrip({ backendUrl, activeTripId, token: token ?? userToken });
     setFlights(list);
-  };
-
-  const handleFlightFile = async (file: File) => {
-    if (Platform.OS !== 'web') {
-      alert('File upload is available on web right now.');
-      return;
-    }
-    if (!activeTripId && !isWizard) {
-      alert('Select an active trip before uploading a flight.');
-      return;
-    }
-    setIsParsingPdf(true);
-    setPdfParseMessage(null);
-    try {
-      const type = file.type || '';
-      const isPdf = type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf');
-      const text = isPdf ? await extractTextFromPdf(file) : await extractTextFromImage(file);
-      const { primary, bulk } = parseFlightText(text);
-      const flightsToSave = (bulk.length ? bulk : [primary]).map((flight) =>
-        mergeParsedFlight(createInitialFlightState(), flight as Partial<FlightEditDraft>)
-      );
-      setParsedFlights(flightsToSave);
-      await saveParsedFlights(flightsToSave);
-    } catch (err) {
-      console.error('File parse failed', err);
-      alert('Could not read that file. Please upload a legible flight confirmation PDF or image.');
-    } finally {
-      setIsParsingPdf(false);
-    }
-  };
-
-  const saveParsedFlights = async (flightsOverride?: FlightEditDraft[]) => {
-    const flightsToSave = flightsOverride ?? parsedFlights;
-    if (isWizard) {
-      if (!flightsToSave.length) {
-        alert('No parsed flights to add.');
-        return;
-      }
-      const localFlights = flightsToSave.map((flight) => {
-        const passengerIds =
-          flight.passengerIds && flight.passengerIds.length
-            ? flight.passengerIds
-            : groupMembers.length
-              ? [groupMembers[0].id]
-              : [];
-        const enriched: FlightEditDraft = {
-          ...flight,
-          passengerIds,
-          passengerName: flight.passengerName?.trim() || 'Traveler',
-          departureLocation: flight.departureLocation?.trim() || flight.departureAirportCode || '',
-          departureAirportCode: flight.departureAirportCode?.trim() || flight.departureLocation || '',
-          arrivalLocation: flight.arrivalLocation?.trim() || flight.arrivalAirportCode || '',
-          arrivalAirportCode: flight.arrivalAirportCode?.trim() || flight.arrivalLocation || '',
-          departureDate: flight.departureDate?.trim() || new Date().toISOString().slice(0, 10),
-          departureTime: flight.departureTime?.trim() || '00:00',
-          arrivalTime: flight.arrivalTime?.trim() || '00:00',
-          carrier: flight.carrier?.trim() || 'UNKNOWN',
-          flightNumber: flight.flightNumber?.trim() || 'UNKNOWN',
-          bookingReference: flight.bookingReference?.trim() || 'UNKNOWN',
-          paidBy: flight.paidBy?.length ? flight.paidBy : defaultPayerId ? [defaultPayerId] : [],
-        };
-        return buildLocalFlight(enriched);
-      });
-      setFlights((prev) => [...prev, ...localFlights]);
-      setParsedFlights(flightsToSave);
-      setPdfParseMessage(`Added ${localFlights.length} flight(s).`);
-      return;
-    }
-    if (!userToken || !activeTripId || !flightsToSave.length) {
-      alert('No parsed flights to add.');
-      return;
-    }
-    setIsSavingParsedFlights(true);
-    try {
-      let saved = 0;
-      const failures: string[] = [];
-      for (const flight of flightsToSave) {
-        const enriched: FlightEditDraft = {
-          ...flight,
-          passengerIds:
-            flight.passengerIds && flight.passengerIds.length
-              ? flight.passengerIds
-              : groupMembers.length
-                ? [groupMembers[0].id]
-                : [],
-          passengerName: flight.passengerName?.trim() || 'Traveler',
-          departureLocation: flight.departureLocation?.trim() || flight.departureAirportCode || '',
-          departureAirportCode: flight.departureAirportCode?.trim() || flight.departureLocation || '',
-          arrivalLocation: flight.arrivalLocation?.trim() || flight.arrivalAirportCode || '',
-          arrivalAirportCode: flight.arrivalAirportCode?.trim() || flight.arrivalLocation || '',
-          departureDate: flight.departureDate?.trim() || new Date().toISOString().slice(0, 10),
-          departureTime: flight.departureTime?.trim() || '00:00',
-          arrivalTime: flight.arrivalTime?.trim() || '00:00',
-          carrier: flight.carrier?.trim() || 'UNKNOWN',
-          flightNumber: flight.flightNumber?.trim() || 'UNKNOWN',
-          bookingReference: flight.bookingReference?.trim() || 'UNKNOWN',
-        };
-        if ((!enriched.paidBy || enriched.paidBy.length === 0) && defaultPayerId) {
-          enriched.paidBy = [defaultPayerId];
-        }
-        if (!enriched.departureLocation || !enriched.arrivalLocation) {
-          failures.push('Missing departure or arrival location.');
-          continue;
-        }
-        if (!enriched.passengerIds.length) {
-          failures.push('No passengers selected for a parsed flight.');
-          continue;
-        }
-        enriched.passengerName = buildPassengerName(enriched.passengerIds) || enriched.passengerName;
-        const res = await fetch(`${backendUrl}/api/flights`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...headers },
-          body: JSON.stringify({
-            ...enriched,
-            cost: Number(flight.cost) || 0,
-            tripId: activeTripId,
-            departureDate: enriched.departureDate,
-            paidBy: enriched.paidBy,
-          }),
-        });
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          failures.push(data.error || 'Failed to save flight');
-          continue;
-        }
-        saved += 1;
-      }
-      setParsedFlights(flightsToSave);
-      if (saved) {
-        const baseMsg = saved === 1 ? 'Added 1 flight to this trip.' : `Added ${saved} flights to this trip.`;
-        const failMsg = failures.length ? ` ${failures.length} failed. First error: ${failures[0]}` : '';
-        setPdfParseMessage(baseMsg + failMsg);
-      } else {
-        const failMsg = failures.length ? `Reason: ${failures[0]}` : '';
-        setPdfParseMessage(`No flights added. Please review the upload. ${failMsg}`);
-      }
-      fetchFlights();
-    } catch {
-      alert('Unable to add parsed flights. Please review and add manually.');
-    } finally {
-      setIsSavingParsedFlights(false);
-    }
   };
 
 
@@ -1115,7 +955,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       return;
     }
     closeFlightDetails();
-    fetchFlights();
+    onDataChanged ? onDataChanged() : fetchFlights();
   };
 
 
@@ -1165,7 +1005,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       alert(result.error || 'Unable to delete flight');
       return;
     }
-    fetchFlights();
+    onDataChanged ? onDataChanged() : fetchFlights();
   };
 
   const openLocationOverlay = (target: 'dep' | 'arr', initialValue: string) => {
@@ -1275,52 +1115,12 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     >
       {showList ? (
         <>
-      <Text style={styles.sectionTitle}>Flights</Text>
-      {Platform.OS === 'web' ? (
-        <View style={styles.pdfRow}>
-          <input
-            ref={fileInputRef as any}
-            type="file"
-            accept="application/pdf,image/*"
-            style={styles.hiddenInput as any}
-            onChange={(e: any) => {
-              const file = e.target.files?.[0];
-              if (file) {
-                handleFlightFile(file);
-              }
-              e.target.value = '';
-            }}
-          />
-          <TouchableOpacity style={[styles.button, isParsingPdf && styles.disabledButton]} disabled={isParsingPdf} onPress={() => fileInputRef.current?.click()}>
-            <Text style={styles.buttonText}>{isParsingPdf ? 'Reading...' : 'Upload Flight PDF'}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.button, styles.smallButton, isSavingParsedFlights && styles.disabledButton]}
-            disabled={isSavingParsedFlights || parsedFlights.length === 0}
-            onPress={() => saveParsedFlights()}
-          >
-            <Text style={styles.buttonText}>
-              {isSavingParsedFlights
-                ? 'Adding flights...'
-                : parsedFlights.length
-                  ? `Add parsed flights (${parsedFlights.length})`
-                  : 'Add parsed flights'}
-            </Text>
-          </TouchableOpacity>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.helperText}>{pdfParseMessage ?? 'Upload a confirmation email PDF or image to auto-add flights.'}</Text>
-            {parsedFlights.length ? (
-              <View style={styles.parsedList}>
-                {parsedFlights.map((f, idx) => (
-                  <Text key={`${f.passengerName}-${idx}`} style={styles.helperText}>
-                    {`${f.passengerName || 'Traveler'} | ${f.departureDate || 'Date?'} | ${f.departureLocation} -> ${f.arrivalLocation} | ${f.departureTime || '?'} / Arr ${f.arrivalTime || '?'} | Cost ${f.cost || '0'} | Ref ${f.bookingReference || '-'}`}
-                  </Text>
-                ))}
-              </View>
-            ) : null}
-          </View>
-        </View>
-      ) : null}
+      <View style={styles.row}>
+        <Text style={styles.sectionTitle}>Flights</Text>
+        <TouchableOpacity style={[styles.button, styles.roundButton]} onPress={handleAddPress}>
+          <Text style={styles.buttonText}>+</Text>
+        </TouchableOpacity>
+      </View>
       <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
         <View style={styles.table}>
           <View style={[styles.tableRow, styles.tableHeader]}>
@@ -1353,11 +1153,11 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                       ]}
                     >
                       {!item.passengerInGroup ? <Text style={styles.warningText}>Passenger not in trip group</Text> : null}
-                      <View style={styles.actionButtonsRow}>
-                        <TouchableOpacity style={styles.smallButton} onPress={() => openFlightDetails(item)}>
-                          <Text style={styles.buttonText}>Details</Text>
+                      <View style={styles.actionCell}>
+                        <TouchableOpacity style={[styles.tableActionButton, styles.tableActionButtonPrimary]} onPress={() => openFlightDetails(item)}>
+                          <Text style={styles.buttonText}>Edit</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={[styles.smallButton, styles.dangerButton]} onPress={() => removeFlight(item.id)}>
+                        <TouchableOpacity style={[styles.tableActionButton, styles.tableActionButtonDanger]} onPress={() => removeFlight(item.id)}>
                           <Text style={styles.buttonText}>Delete</Text>
                         </TouchableOpacity>
                       </View>
@@ -1590,11 +1390,6 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       </ScrollView>
       <View style={styles.totalRow}>
         <Text style={styles.flightTitle}>Total flight cost: ${flightsTotal.toFixed(2)}</Text>
-      </View>
-      <View style={styles.tableFooter}>
-        <TouchableOpacity style={styles.button} onPress={handleAddPress}>
-          <Text style={styles.buttonText}>{isAddingRow ? 'OK' : 'Add'}</Text>
-        </TouchableOpacity>
       </View>
         </>
       ) : null}

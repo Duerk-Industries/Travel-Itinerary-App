@@ -349,7 +349,7 @@ describe('Overview edit controls', () => {
 
     const lodgingDialog = root.findByType(LodgingDialog);
     act(() => {
-      pressByTextContainsWithin(lodgingDialog, 'Add Jane Doe');
+      pressByTextContainsWithin(lodgingDialog, 'Jane Doe');
     });
 
     await act(async () => {

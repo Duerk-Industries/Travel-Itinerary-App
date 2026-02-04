@@ -2271,7 +2271,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
                     <LodgingDialog
                       visible
                       styles={styles}
-                      title={editingLodgingId ? 'Edit Accommodation' : 'Add Accommodation'}
+                      title={editingLodgingId ? 'Lodging Details' : 'Add Lodging'}
                       draft={lodgingDraft}
                       setDraft={setLodgingDraft}
                       groupMembers={groupMembers}

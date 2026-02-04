@@ -101,6 +101,28 @@ describe('Lodging Dialogs', () => {
     expect(getByDisplayValue('Test Hotel')).toBeTruthy();
   });
 
+  test('renders title and toggle buttons for travelers and payers', () => {
+    const { getByText, getAllByText } = render(
+      <LodgingDialog
+        visible
+        title="Lodging Details"
+        draft={createInitialLodgingState({ paidBy: ['m1'], travelerIds: ['m2'] })}
+        setDraft={() => {}}
+        groupMembers={groupMembers}
+        formatMemberName={formatMemberName}
+        payerName={payerName}
+        styles={styles}
+        onSave={() => {}}
+        onCancel={() => {}}
+      />
+    );
+
+    expect(getByText('Lodging Details')).toBeTruthy();
+    expect(getAllByText('John Doe').length).toBeGreaterThan(0);
+    expect(getAllByText('Jane Doe').length).toBeGreaterThan(0);
+    expect(getAllByText('Jane Doe').length).toBeGreaterThan(0);
+  });
+
   test('LodgingDialog calls onSave with the correct data', () => {
     const onSave = jest.fn();
     const draft = createInitialLodgingState();

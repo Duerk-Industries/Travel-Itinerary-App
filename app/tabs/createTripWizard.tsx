@@ -1802,7 +1802,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             {editingWizardLodging ? (
               <LodgingDialog
                 visible={!!editingWizardLodging}
-                title={editingWizardLodgingId ? 'Edit Lodging' : 'Add Lodging'}
+                title={editingWizardLodgingId ? 'Lodging Details' : 'Add Lodging'}
                 draft={editingWizardLodging}
                 setDraft={setEditingWizardLodging}
                 groupMembers={wizardGroupMembers}

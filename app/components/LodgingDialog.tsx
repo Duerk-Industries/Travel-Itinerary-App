@@ -36,7 +36,7 @@ const LodgingDialog: React.FC<LodgingDialogProps> = (props) => {
   if (!props.visible) return null;
 
   return (
-    <View style={props.styles.modalOverlay} testID={props.testID}>
+    <View style={[props.styles.modalOverlay, { justifyContent: 'flex-start' }]} testID={props.testID}>
       <View style={[props.styles.modalCard, isCompact && { width: '100%', maxHeight: '90%' }]}>
         <Text style={props.styles.sectionTitle}>{props.title}</Text>
         <ScrollView style={{ maxHeight: isCompact ? 520 : 440 }}>

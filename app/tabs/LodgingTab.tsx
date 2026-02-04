@@ -230,7 +230,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
         <LodgingDialog
           testID="lodging-editor-dialog"
           visible={showEditor}
-          title={editingLodging ? 'Edit Accommodation' : 'Add Accommodation'}
+          title={editingLodging ? 'Lodging Details' : 'Add Lodging'}
           draft={lodgingDraft}
           setDraft={setLodgingDraft}
           groupMembers={groupMembers}

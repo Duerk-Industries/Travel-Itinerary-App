@@ -101,7 +101,7 @@ describe('LodgingTab', () => {
 
         fireEvent.press(getByText('+'));
         const dialog = getByTestId('lodging-editor-dialog');
-        expect(within(dialog).getByText('Add Accommodation')).toBeTruthy();
+        expect(within(dialog).getByText('Add Lodging')).toBeTruthy();
     });
 
     it('opens the details dialog when a lodging is clicked', () => {
@@ -153,7 +153,7 @@ describe('LodgingTab', () => {
 
         expect(queryByTestId('lodging-details-dialog')).toBeNull();
         const editDialog = getByTestId('lodging-editor-dialog');
-        expect(within(editDialog).getByText('Edit Accommodation')).toBeTruthy();
+        expect(within(editDialog).getByText('Lodging Details')).toBeTruthy();
     });
 
     it('shows delete confirmation when delete is clicked', () => {
@@ -208,9 +208,9 @@ describe('LodgingTab', () => {
 
             fireEvent.press(within(getByTestId('lodging-row-l1')).getByText('Edit'));
             const editDialog = getByTestId('lodging-editor-dialog');
-            expect(within(editDialog).getByText('Edit Accommodation')).toBeTruthy();
+            expect(within(editDialog).getByText('Lodging Details')).toBeTruthy();
 
-            const addButtons = getAllByText('Add Jane Doe');
+            const addButtons = getAllByText('Jane Doe');
             fireEvent.press(addButtons[addButtons.length - 1]);
 
             fireEvent.press(getByText('Save'));

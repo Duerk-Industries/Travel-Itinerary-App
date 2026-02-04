@@ -5,6 +5,7 @@ import {
   deleteFlight,
   deleteExpenseForSource,
   ensureUserInTrip,
+  getTripGroupId,
   getCurrentDbProvider,
   getFlightForUser,
   insertFlight,
@@ -250,6 +251,31 @@ router.patch('/:id', async (req, res) => {
       bookingReference,
       paidBy: normalizedPaidBy,
     });
+    if (updated && !(getCurrentDbProvider() === 'firebase' && process.env.USE_IN_MEMORY_DB === '1')) {
+      const membership = await ensureUserInTrip(updated.tripId, userId);
+      const groupId = membership?.groupId ?? (await getTripGroupId(updated.tripId));
+      if (groupId) {
+        const payerIds = Array.isArray(normalizedPaidBy)
+          ? normalizedPaidBy
+          : Array.isArray((updated as any).paidBy)
+            ? (updated as any).paidBy
+            : [];
+        const forIds = Array.isArray((updated as any).passengerIds) ? (updated as any).passengerIds : [];
+        await upsertExpenseForSource({
+          userId,
+          tripId: updated.tripId,
+          groupId,
+          expenseDate: updated.departureDate,
+          category: 'Flights',
+          amount: Number(updated.cost) ?? 0,
+          currency: undefined,
+          payerIds,
+          forIds,
+          sourceType: 'flight',
+          sourceId: updated.id,
+        });
+      }
+    }
     res.json(updated);
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });

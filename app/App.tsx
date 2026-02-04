@@ -2033,6 +2033,10 @@ const App: React.FC = () => {
           airportOptions={flightAirportOptions}
           onSearchAirports={fetchFlightAirports}
           externalEditFlightId={externalFlightEditId}
+          onDataChanged={() => {
+            fetchFlights();
+            fetchExpenses();
+          }}
           onExternalEditHandled={() => setExternalFlightEditId(null)}
           showList={activePage === 'flights'}
         />

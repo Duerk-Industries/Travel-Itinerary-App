@@ -808,6 +808,14 @@ export const ensureUserInTrip = async (tripId: string, userId: string): Promise<
   return { groupId: data.groupId };
 };
 
+export const getTripGroupId = async (tripId: string): Promise<string | null> => {
+  const db = getDb();
+  const trip = await db.collection('trips').doc(tripId).get();
+  if (!trip.exists) return null;
+  const data = trip.data() as any;
+  return data?.groupId ?? data?.group_id ?? null;
+};
+
 // Flights
 export const insertFlight = async (flight: Omit<Flight, 'id'>): Promise<Flight> => {
   const db = getDb();
