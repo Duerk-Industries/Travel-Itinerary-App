@@ -21,6 +21,15 @@ This document outlines the existing test suites in the Travel Itinerary App, ide
         *   The remainder is distributed correctly among members.
         *   The overall sum across categories is correct.
 
+*   **`coveredBy.test.ts`**:
+    *   **Purpose**: Tests the "covered-by" roll-up logic for cost reporting.
+    *   **Verifies**:
+        *   A covered traveler's totals are correctly added to the covering traveler.
+        *   The covered traveler's original total is removed.
+        *   The logic handles multiple travelers being covered by the same person.
+        *   The logic works correctly when a covered person has no initial costs.
+        *   The logic returns original totals when no "covered-by" relationships exist.
+
 *   **`createTripWizard.test.ts`**:
     *   **Purpose**: Tests helper functions for the "create trip" wizard.
     *   **Verifies**:
@@ -49,9 +58,9 @@ This document outlines the existing test suites in the Travel Itinerary App, ide
 
 *   **`ledger.test.tsx`**:
     *   **Purpose**: Tests the Ledger tab calculations and FX conversion handling.
-    *   **Verifies**:
-        *   Paid vs. used totals render with converted amounts.
-        *   FX rates are applied to non-trip-currency expenses.
+    *   **Verifies** (now a presentational component):
+        *   Renders pre-calculated "Paid" and "Used" totals correctly.
+        *   Correctly formats currency values.
         *   Overall row shows matching Paid/Used totals.
 
 *   **`ledgerCostReportMatch.test.ts`**:
@@ -239,6 +248,60 @@ This document outlines the existing test suites in the Travel Itinerary App, ide
         *   Requires a trip name.
         *   Requires participant names.
         *   Rejects duplicate participant emails.
+
+*   **`groups.test.ts`** (New or existing server test):
+    *   **Purpose**: To test group-related API endpoints.
+    *   **Verifies**:
+        *   `PUT /api/groups/:groupId/covered-by` rejects a payload with a circular dependency with a 400 status.
+        *   `PUT /api/groups/:groupId/covered-by` accepts and saves a valid payload.
+
+## Proposed New Tests
+
+*   **`costReportCsv.test.tsx`**:
+    *   **Purpose**: To verify the CSV export functionality for both "Paid" and "Incurred" expenses from the Cost Report page.
+    *   **Verifies**:
+        *   The generated CSV string has the correct headers: `Date`, `Category`, and one column for each active traveler.
+        *   The CSV rows correctly represent individual expense line items.
+        *   The "Covered-By" logic is correctly applied, rolling up costs and excluding covered travelers from the columns.
+        *   The correct data (`payerIds` vs `forIds`) is used for "Paid" vs. "Incurred" reports.
+
+*   **`account.test.tsx`**:
+    *   **Purpose**: To verify the rendering and user interactions of the `AccountTab` component, especially the "Expense Covering" feature.
+    *   **Purpose**: To verify the rendering and user interactions of the `AccountTab` component.
+    *   **Verifies**:
+        *   The main account profile section renders correctly.
+        *   The component correctly renders the child `ExpenseCovering` component.
+
+*   **`ExpenseCovering.test.tsx`**:
+    *   **Purpose**: To verify the rendering and user interactions of the `ExpenseCovering` component.
+    *   **Verifies**:
+        *   The component renders correctly with all travelers and their covering status.
+        *   The dropdown for selecting a covering traveler can be opened and used.
+        *   Clicking the "Save Covering Rules" button triggers the save handler.
+
+*   **`FamilyRelationships.test.tsx`**:
+    *   **Purpose**: To verify the rendering of the `FamilyRelationships` component.
+    *   **Verifies**:
+        *   The "Family & Relationships" section title and form elements render correctly.
+        *   The "Fellow Travelers" section title and form elements render correctly.
+
+*   **`AccountTraits.test.tsx`**:
+    *   **Purpose**: To verify the rendering of the `AccountTraits` component.
+    *   **Verifies**:
+        *   The component renders a card.
+        *   The component renders the child `TraitsTab` and passes props to it.
+
+*   **`FamilyRelationships.test.tsx`**:
+    *   **Purpose**: To verify the rendering of the `FamilyRelationships` component.
+    *   **Verifies**:
+        *   The "Family & Relationships" section title and form elements render correctly.
+        *   The "Fellow Travelers" section title and form elements render correctly.
+
+*   **`AccountTraits.test.tsx`**:
+    *   **Purpose**: To verify the rendering of the `AccountTraits` component.
+    *   **Verifies**:
+        *   The component renders a card.
+        *   The component renders the child `TraitsTab` and passes props to it.
 
 ### Utility Tests (`app/utils`)
 

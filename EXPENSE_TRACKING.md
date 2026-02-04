@@ -18,6 +18,14 @@ All sources are consolidated into the **expenses** table to power the Cost Repor
 
 The Ledger uses these split rules and sums across **all expense categories**, plus car rentals.
 
+## Covered-By Accounting
+- In the Account page, a traveler can be designated as "covered by" another traveler.
+- This creates a one-to-one mapping where one traveler's costs are rolled up to another.
+- A traveler covering someone else cannot be covered by a third person (no chains).
+- When this relationship is active:
+  - If a covered traveler pays for an expense (`payerIds`), their share is moved to the covering traveler.
+  - If a cost is incurred for a covered traveler (`forIds`), that cost is also moved to the covering traveler.
+  - The covered traveler will not appear in the Cost Report or Ledger, simplifying the view to only show the ultimate payers and beneficiaries.
 ## Currency Conversion
 - Each expense stores:
   - `amount` and `currency` (original values)

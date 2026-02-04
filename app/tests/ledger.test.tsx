@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, waitFor, within } from '@testing-library/react-native';
 import LedgerTab from '../tabs/ledger';
+import { computePayerTotals } from '../utils/costs';
 
 const styles = {
   card: {},
@@ -16,6 +17,8 @@ const styles = {
   lastRow: {},
   headerText: {},
   cellText: {},
+  row: {},
+  button: {},
 };
 
 describe('LedgerTab', () => {
@@ -62,49 +65,52 @@ describe('LedgerTab', () => {
   const downloadCsv = jest.fn();
   const findActiveTrip = () => trip;
 
-  beforeEach(() => {
-    global.fetch = jest.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ rates: { USD: 2 }, date: '2026-02-03' }),
-    }) as any;
-  });
+  const allExpenses = [
+    ...expenses.map((e) => ({
+      ...e,
+      amountInTripCurrency: e.currency === 'EUR' ? e.amount * 2 : e.amount,
+    })),
+    ...carRentals.map((c) => ({
+      ...c,
+      amount: Number(c.cost),
+      currency: 'USD',
+      amountInTripCurrency: Number(c.cost),
+      forIds: c.travelerIds,
+      payerIds: c.paidBy,
+    })),
+  ];
 
-  afterEach(() => {
-    global.fetch = originalFetch;
-    jest.clearAllMocks();
-  });
+  const paidTotals = computePayerTotals(
+    allExpenses,
+    (e) => e.amountInTripCurrency ?? e.amount,
+    (e) => e.payerIds,
+    groupMembers.map((m) => m.id)
+  );
+
+  const usedTotals = computePayerTotals(
+    allExpenses,
+    (e) => e.amountInTripCurrency ?? e.amount,
+    (e) => e.forIds,
+    groupMembers.map((m) => m.id)
+  );
 
   it('computes paid and used totals with FX conversion', async () => {
-    const { getAllByText } = render(
-      <LedgerTab
-        trip={trip}
-        groupMembers={groupMembers}
-        expenses={expenses}
-        carRentals={carRentals}
-        styles={styles}
-        downloadCsv={downloadCsv}
-        findActiveTrip={findActiveTrip}
-      />
+    const { getByTestId } = render(
+      <LedgerTab trip={trip} groupMembers={groupMembers} paidTotals={paidTotals} usedTotals={usedTotals} styles={styles} downloadCsv={downloadCsv} findActiveTrip={findActiveTrip} onNavigate={() => {}} />
     );
 
-    await waitFor(() => {
-      expect(getAllByText('$200.00').length).toBeGreaterThan(0);
-    });
+    // Alex (m1) Paid: 100 (e1) + 50 (c1) = 150, Used: 100 (e2/2) + 50 (c1) = 150
+    // Blair (m2) Paid: 100 * 2 (e2) = 200, Used: 100 (e1) + 100 (e2/2) = 200
+    const alexRow = await waitFor(() => getByTestId('ledger-row-m1'));
+    expect(within(alexRow).getAllByText('$150.00')).toHaveLength(2);
 
-    expect(getAllByText('$150.00').length).toBeGreaterThan(0);
+    const blairRow = await waitFor(() => getByTestId('ledger-row-m2'));
+    expect(within(blairRow).getAllByText('$200.00')).toHaveLength(2);
   });
 
   it('shows matching paid/used totals in the overall row', async () => {
     const { getByTestId } = render(
-      <LedgerTab
-        trip={trip}
-        groupMembers={groupMembers}
-        expenses={expenses}
-        carRentals={carRentals}
-        styles={styles}
-        downloadCsv={downloadCsv}
-        findActiveTrip={findActiveTrip}
-      />
+      <LedgerTab trip={trip} groupMembers={groupMembers} paidTotals={paidTotals} usedTotals={usedTotals} styles={styles} downloadCsv={downloadCsv} findActiveTrip={findActiveTrip} onNavigate={() => {}} />
     );
 
     const row = await waitFor(() => getByTestId('ledger-overall-row'));

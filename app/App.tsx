@@ -27,6 +27,8 @@ import DailyExpensesTab from './tabs/dailyExpenses';
 import LedgerTab from './tabs/ledger';
 import OverviewTab from './tabs/overview';
 import CreateTripWizard from './tabs/createTripWizard';
+import { buildAllExpenses, calculateAllTotals, UnifiedExpense, computePayerTotals } from './utils/costs';
+import { rollUpTotals, detectCycle } from './utils/coveredBy';
 import TripDetailsTab from './tabs/tripDetails';
 import AccountTab, { fetchAccountProfile, fetchFamilyRelationships, fetchFellowTravelers, type FellowTraveler } from './tabs/account';
 import { CarRental, CarRentalDraft, buildCarRentalFromDraft, createInitialCarRentalDraft } from './tabs/carRentals';
@@ -264,6 +266,7 @@ const App: React.FC = () => {
   const [accountProfile, setAccountProfile] = useState({ firstName: '', lastName: '', email: '' });
   const [mapApp, setMapApp] = useState<MapApp>(() => loadStoredMapPreference('google'));
   const [familyRelationships, setFamilyRelationships] = useState<any[]>([]);
+  const [coveredBy, setCoveredBy] = useState<Record<string, string>>({});
   const [fellowTravelers, setFellowTravelers] = useState<FellowTraveler[]>([]);
   const [showRelationshipDropdown, setShowRelationshipDropdown] = useState(false);
   const formatMemberName = (member: GroupMemberOption): string => {
@@ -428,6 +431,43 @@ const App: React.FC = () => {
     return member ? formatMemberName(member) : 'Unknown';
   };
 
+  const saveCoveredBy = async () => {
+    const trip = findActiveTrip();
+    if (!trip?.groupId) {
+      alert('An active trip with a group is required.');
+      return;
+    }
+
+    if (detectCycle(coveredBy)) {
+      alert('Invalid covering rules. A circular dependency was detected (e.g., A covers B, and B covers A).');
+      return;
+    }
+
+    try {
+      const res = await fetch(`${backendUrl}/api/groups/${trip.groupId}/covered-by`, {
+        method: 'PUT',
+        headers: jsonHeaders,
+        body: JSON.stringify(coveredBy),
+      });
+      if (!res.ok) throw new Error('Failed to save covering rules.');
+      alert('Covering rules saved.');
+    } catch (err) {
+      alert((err as Error).message);
+    }
+  };
+
+  const coveredTravelerIds = useMemo(() => new Set(Object.keys(coveredBy)), [coveredBy]);
+
+  const reportableMembers = useMemo(
+    () => groupMembers.filter(m => !coveredTravelerIds.has(m.id)),
+    [groupMembers, coveredTravelerIds]
+  );
+
+  const reportableMemberIds = useMemo(
+    () => reportableMembers.map(m => m.id),
+    [reportableMembers]
+  );
+
   const userMembers = useMemo(
     () => groupMembers.filter((m) => !m.guestName && m.status !== 'removed'),
     [groupMembers]
@@ -435,18 +475,16 @@ const App: React.FC = () => {
 
   const memberIds = useMemo(() => userMembers.map((m) => m.id), [userMembers]);
 
-  // Per-user tour totals via shared helper. Note: if a tour has an explicit empty payer list,
-  // we leave it unsplit (no cost assigned) so non-payers stay at $0.
-  const payerTotals = useMemo(
-    () =>
-      computePayerTotals(
-        tours,
-        (t) => Number(t.cost) || 0,
-        (t) => (Array.isArray(t.paidBy) ? t.paidBy : []),
-        userMembers.map((m) => m.id),
-        { fallbackOnEmpty: false }
-      ),
-    [tours, userMembers]
+  const allMemberIds = useMemo(() => groupMembers.map(m => m.id), [groupMembers]);
+
+  const allExpenses = useMemo(
+    () => buildAllExpenses(flights, lodgings, tours, carRentals, expenses, findActiveTrip()?.currency ?? 'USD', allMemberIds),
+    [flights, lodgings, tours, carRentals, expenses, findActiveTrip, allMemberIds]
+  );
+
+  const { ledgerPaidTotals, ledgerUsedTotals, finalBalances } = useMemo(
+    () => calculateAllTotals(allExpenses, allMemberIds, reportableMemberIds, coveredBy),
+    [allExpenses, allMemberIds, reportableMemberIds, coveredBy]
   );
 
   const currentUserMemberId = useMemo(() => {
@@ -454,155 +492,30 @@ const App: React.FC = () => {
     const match = userMembers.find((m) => m.email && m.email.toLowerCase() === userEmail.toLowerCase());
     return match?.id ?? null;
   }, [userMembers, userEmail]);
-
+  
   const defaultPayerId = useMemo(() => {
     if (currentUserMemberId) return currentUserMemberId;
     if (userMembers.length) return userMembers[0].id;
     return null;
   }, [currentUserMemberId, userMembers]);
 
-  // Per-user flight totals via shared helper. Explicitly empty paidBy means no split, so removed users go to $0.
-  const flightsPayerTotals = useMemo(
-    () =>
-      computePayerTotals(
-        flights,
-        (f) => Number((f as any).cost) || 0,
-        (f) => {
-          const paidBy = (f as any).paidBy ?? (f as any).paid_by;
-          return Array.isArray(paidBy) ? paidBy : [];
-        },
-        userMembers.map((m) => m.id),
-        { fallbackOnEmpty: false }
-      ),
-    [flights, userMembers]
-  );
-
-  const flightShares = useMemo(
-    () => balanceCategoryTotals(flightsTotal, flightsPayerTotals, memberIds),
-    [flightsTotal, flightsPayerTotals, memberIds]
-  );
-
-  // Per-user lodging totals via shared helper. Explicitly empty paidBy means no split, so removed users go to $0.
-  const lodgingPayerTotals = useMemo(
-    () =>
-      computePayerTotals(
-        lodgings,
-        (l) => Number(l.totalCost) || 0,
-        (l) => (Array.isArray(l.paidBy) ? l.paidBy : []),
-        userMembers.map((m) => m.id),
-        { fallbackOnEmpty: false }
-      ),
-    [lodgings, userMembers]
-  );
-
-  const lodgingTotalsBalanced = useMemo(
-    () => balanceCategoryTotals(lodgingTotal, lodgingPayerTotals, memberIds),
-    [lodgingPayerTotals, lodgingTotal, memberIds]
-  );
-
-  const tourShares = useMemo(
-    () => balanceCategoryTotals(toursTotal, payerTotals, memberIds),
-    [toursTotal, payerTotals, memberIds]
-  );
-
-  const carRentalPayerTotals = useMemo(
-    () =>
-      computePayerTotals(
-        carRentals,
-        (rental) => Number(rental.cost) || 0,
-        (rental) => (Array.isArray(rental.paidBy) ? rental.paidBy : []),
-        userMembers.map((m) => m.id),
-        { fallbackOnEmpty: true }
-      ),
-    [carRentals, userMembers]
-  );
-
-  const carRentalShares = useMemo(
-    () => balanceCategoryTotals(carRentalsTotal, carRentalPayerTotals, memberIds),
-    [carRentalsTotal, carRentalPayerTotals, memberIds]
-  );
-
-  const expensePayerTotalsByCategory = useMemo(() => {
-    const totals: Record<string, Record<string, number>> = {};
-    expenseCategories.forEach((category) => {
-      const items = expenseItems.filter((expense) => expense.category === category);
-      totals[category] = computePayerTotals(
-        items,
-        (expense) => getExpenseAmount(expense),
-        (expense) => (Array.isArray(expense.payerIds) ? expense.payerIds : []),
-        userMembers.map((m) => m.id),
-        { fallbackOnEmpty: false }
-      );
-    });
-    return totals;
-  }, [expenseCategories, expenseItems, getExpenseAmount, userMembers]);
-
-  const expenseSharesByCategory = useMemo(() => {
-    const balanced: Record<string, Record<string, number>> = {};
-    expenseCategories.forEach((category) => {
-      balanced[category] = balanceCategoryTotals(expenseTotalsByCategory[category] ?? 0, expensePayerTotalsByCategory[category] ?? {}, memberIds);
-    });
-    return balanced;
-  }, [expenseCategories, expenseTotalsByCategory, expensePayerTotalsByCategory, memberIds]);
-
-  const expenseOverallShares = useMemo(() => {
-    const totals: Record<string, number> = {};
-    memberIds.forEach((id) => {
-      totals[id] = 0;
-    });
-    expenseCategories.forEach((category) => {
-      memberIds.forEach((id) => {
-        totals[id] = (totals[id] ?? 0) + (expenseSharesByCategory[category]?.[id] ?? 0);
-      });
-    });
-    return totals;
-  }, [expenseCategories, expenseSharesByCategory, memberIds]);
+  const overallCost = useMemo(() => allExpenses.reduce((sum, e) => sum + e.amount, 0), [allExpenses]);
 
   const costReportRows = useMemo(() => {
-    const rows: Array<{ label: string; total: number; shares: Record<string, number> }> = [
-      { label: 'Flights', total: flightsTotal, shares: flightShares },
-      { label: 'Lodging', total: lodgingTotal, shares: lodgingTotalsBalanced },
-      { label: 'Tours', total: toursTotal, shares: tourShares },
-      { label: 'Car Rentals', total: carRentalsTotal, shares: carRentalShares },
-    ];
-    expenseCategories.forEach((category) => {
-      const total = expenseTotalsByCategory[category] ?? 0;
-      if (total > 0) {
-        rows.push({ label: category, total, shares: expenseSharesByCategory[category] ?? {} });
-      }
+    const categories = [...new Set(allExpenses.map(e => e.category))].sort();
+    return categories.map(category => {
+      const categoryExpenses = allExpenses.filter(e => e.category === category);
+      const total = categoryExpenses.reduce((sum, e) => sum + e.amount, 0);
+      const rawPaid = computePayerTotals(categoryExpenses, e => e.amount, e => e.payerIds, allMemberIds, { fallbackOnEmpty: true });
+      const shares = rollUpTotals(rawPaid, coveredBy);
+      return { label: category, total, shares };
     });
-    return rows;
-  }, [
-    expenseCategories,
-    expenseSharesByCategory,
-    expenseTotalsByCategory,
-    flightShares,
-    flightsTotal,
-    carRentalsTotal,
-    carRentalShares,
-    lodgingTotalsBalanced,
-    lodgingTotal,
-    tourShares,
-    toursTotal,
-  ]);
-
-  const overallShares = useMemo(() => {
-    const totals: Record<string, number> = {};
-    memberIds.forEach((id) => {
-      totals[id] =
-        (flightShares[id] ?? 0) +
-        (lodgingTotalsBalanced[id] ?? 0) +
-        (tourShares[id] ?? 0) +
-        (expenseOverallShares[id] ?? 0) +
-        (carRentalShares[id] ?? 0);
-    });
-    return totals;
-  }, [carRentalShares, expenseOverallShares, flightShares, lodgingTotalsBalanced, memberIds, tourShares]);
+  }, [allExpenses, allMemberIds, coveredBy]);
 
   const convertCostReportToCsv = (
     reportRows: Array<{ label: string; total: number; shares: Record<string, number> }>,
     members: GroupMemberOption[],
-    finalShares: Record<string, number>,
+    finalBalances: Record<string, number>,
     finalCost: number,
     getMemberName: (member: GroupMemberOption) => string
   ): string => {
@@ -621,12 +534,50 @@ const App: React.FC = () => {
 
     const overallRow = [
         'Overall',
-        ...members.map(m => finalShares[m.id]?.toFixed(2) ?? '0.00'),
+        ...members.map(m => finalBalances[m.id]?.toFixed(2) ?? '0.00'),
         finalCost.toFixed(2)
     ].map(escapeCsvCell);
 
     const allRows = [header, ...rows, overallRow];
     return allRows.map(row => row.join(',')).join('\n');
+  };
+
+  const allExpensesForCsv = useMemo(() => {
+    return allExpenses;
+  }, [allExpenses]);
+
+  const convertExpensesToCsv = (expenseType: 'paid' | 'incurred'): string => {
+    const escapeCsvCell = (cell: any) => {
+      const cellStr = String(cell ?? '');
+      if (/[",\n]/.test(cellStr)) {
+        return `"${cellStr.replace(/"/g, '""')}"`;
+      }
+      return cellStr;
+    };
+
+    const members = reportableMembers;
+    const memberIds = reportableMemberIds;
+
+    const header = ['Date', 'Category', ...members.map(formatMemberName)];
+    const rows = allExpensesForCsv.map(expense => {
+        const row: (string | number)[] = [expense.date, expense.category];
+        const ids = expenseType === 'paid' ? expense.payerIds : expense.forIds;
+        const rolledUpIds = (ids || []).map(id => coveredBy[id] || id);
+
+        const totals = computePayerTotals(
+            [{ amount: expense.amount, ids: rolledUpIds }],
+            item => item.amount,
+            item => item.ids,
+            memberIds,
+            { fallbackOnEmpty: true }
+        );
+
+        memberIds.forEach(id => {
+            row.push(totals[id]?.toFixed(2) || '0.00');
+        });
+        return row.map(escapeCsvCell).join(',');
+    });
+    return [header.map(escapeCsvCell).join(','), ...rows].join('\n');
   };
 
   const downloadCsv = (csvContent: string, fileName: string) => {
@@ -1268,6 +1219,29 @@ const App: React.FC = () => {
     }
   }, [userToken, activeTripId, trips]);
 
+  useEffect(() => {
+    if (!userToken || !activeTripId) {
+      setCoveredBy({});
+      return;
+    }
+    const fetchCoveredBy = async () => {
+      const trip = findActiveTrip();
+      if (!trip?.groupId) {
+        setCoveredBy({});
+        return;
+      }
+      try {
+        const res = await fetch(`${backendUrl}/api/groups/${trip.groupId}/covered-by`, { headers });
+        if (!res.ok) throw new Error('Failed to fetch covering rules.');
+        const data = await res.json();
+        setCoveredBy(data || {});
+      } catch (err) {
+        setCoveredBy({});
+      }
+    };
+    fetchCoveredBy();
+  }, [userToken, activeTripId, headers]);
+
   const findActiveTrip = () => trips.find((t) => t.id === activeTripId);
 
 
@@ -1639,10 +1613,11 @@ const App: React.FC = () => {
           {activePage === 'ledger' ? (
             <LedgerTab
               trip={findActiveTrip() ?? null}
-              groupMembers={groupMembers}
-              expenses={expenses}
-              carRentals={carRentals}
+              groupMembers={reportableMembers} // Only show reportable members
+              paidTotals={ledgerPaidTotals}
+              usedTotals={ledgerUsedTotals}
               styles={styles}
+              onNavigate={requestPageChange}
               downloadCsv={downloadCsv}
               findActiveTrip={findActiveTrip}
             />
@@ -1652,17 +1627,28 @@ const App: React.FC = () => {
             <View style={[styles.card, styles.flightsSection]}>
               <View style={styles.row}>
                 <Text style={styles.sectionTitle}>Cost Report</Text>
-                <TouchableOpacity
-                  style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
-                  onPress={() => {
-                    const activeTrip = findActiveTrip();
-                    const csv = convertCostReportToCsv(costReportRows, userMembers, overallShares, overallCost, formatMemberName);
-                    const fileName = `cost-report-${activeTrip?.name?.replace(/\s/g, '_') ?? 'export'}.csv`;
-                    downloadCsv(csv, fileName);
-                  }}
-                >
-                  <Text style={styles.buttonText}>Export CSV</Text>
-                </TouchableOpacity>
+                <View style={[styles.row, { marginLeft: 'auto' }]}>
+                  <TouchableOpacity
+                    style={[styles.button, styles.smallButton]}
+                    onPress={() => {
+                      const csv = convertExpensesToCsv('paid');
+                      const fileName = `paid-expenses-${findActiveTrip()?.name?.replace(/\s/g, '_') ?? 'export'}.csv`;
+                      downloadCsv(csv, fileName);
+                    }}
+                  >
+                    <Text style={styles.buttonText}>Export Paid CSV</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.button, styles.smallButton]}
+                    onPress={() => {
+                      const csv = convertExpensesToCsv('incurred');
+                      const fileName = `incurred-expenses-${findActiveTrip()?.name?.replace(/\s/g, '_') ?? 'export'}.csv`;
+                      downloadCsv(csv, fileName);
+                    }}
+                  >
+                    <Text style={styles.buttonText}>Export Incurred CSV</Text>
+                  </TouchableOpacity>
+                </View>
                 <TouchableOpacity
                   style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
                   onPress={() => requestPageChange('ledger')}
@@ -1677,7 +1663,7 @@ const App: React.FC = () => {
                     <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
                       <Text style={styles.headerText}>Category</Text>
                     </View>
-                    {userMembers.map((m) => (
+                    {reportableMembers.map((m) => (
                       <View key={m.id} style={[styles.cell, { minWidth: 120, flex: 1 }]}>
                         <Text style={styles.headerText}>{formatMemberName(m)}</Text>
                       </View>
@@ -1691,7 +1677,7 @@ const App: React.FC = () => {
                       <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
                         <Text style={styles.cellText}>{row.label}</Text>
                       </View>
-                      {userMembers.map((m) => {
+                      {reportableMembers.map((m) => {
                         const share = row.shares[m.id] ?? 0;
                         return (
                           <View key={`${row.label}-${m.id}`} style={[styles.cell, { minWidth: 120, flex: 1 }]}>
@@ -1708,8 +1694,9 @@ const App: React.FC = () => {
                     <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
                       <Text style={styles.headerText}>Overall</Text>
                     </View>
-                    {userMembers.map((m) => {
+                    {reportableMembers.map((m) => {
                       const total = overallShares[m.id] ?? 0;
+                      const total = finalBalances[m.id] ?? 0;
                       return (
                         <View key={`overall-${m.id}`} style={[styles.cell, { minWidth: 120, flex: 1 }]}>
                           <Text style={styles.headerText}>${total.toFixed(2)}</Text>
@@ -1760,6 +1747,13 @@ const App: React.FC = () => {
               setNewTraitName={setNewTraitName}
               fetchTraits={fetchTraits}
               fetchTraitProfile={fetchTraitProfile}
+              groupMembers={groupMembers}
+              reportableMembers={reportableMembers}
+              coveredBy={coveredBy}
+              setCoveredBy={setCoveredBy}
+              formatMemberName={formatMemberName}
+              payerName={payerName}
+              saveCoveredBy={saveCoveredBy}
             />
           ) : null}
 
