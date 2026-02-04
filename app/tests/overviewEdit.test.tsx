@@ -1,6 +1,6 @@
 import React from 'react';
 import renderer, { act } from 'react-test-renderer';
-import OverviewTab, { dedupeAttendees, formatAttendeeLabel } from '../tabs/overview';
+import { OverviewTab, dedupeAttendees, formatAttendeeLabel } from '../tabs/overview';
 import LodgingDialog from '../components/LodgingDialog';
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
@@ -31,9 +31,9 @@ const baseProps = {
   onRefreshTrips: jest.fn(),
   onRefreshGroups: jest.fn(),
   onRefreshGroupMembers: jest.fn(),
-  onRefreshFlights: jest.fn(),
-  onRefreshLodgings: jest.fn(),
-  onRefreshTours: jest.fn(),
+  onFlightDataChanged: jest.fn(),
+  onLodgingDataChanged: jest.fn(),
+  onTourDataChanged: jest.fn(),
   onAddCarRental: jest.fn(),
   openFlightInFlightsTab: jest.fn(),
   openLodgingDetails: jest.fn(),
@@ -333,7 +333,6 @@ describe('Overview edit controls', () => {
           attendees={attendees}
           lodgings={lodgings as any}
           defaultPayerId="member-1"
-          onRefreshLodgings={jest.fn()}
         />
       );
     });

@@ -11,7 +11,7 @@ import {
   buildTourDraftFromRow,
 } from '../utils/overviewEditing';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
-import OverviewTab from '../tabs/overview';
+import { OverviewTab } from '../tabs/overview';
 import React from 'react';
 
 describe('Overview helpers', () => {
@@ -236,13 +236,13 @@ describe('Overview UI (nested itinerary)', () => {
     onRefreshTrips: jest.fn(),
     onRefreshGroups: jest.fn(),
     onRefreshGroupMembers: jest.fn(),
-    onRefreshFlights: jest.fn(),
-    onRefreshLodgings: jest.fn(),
-    onRefreshTours: jest.fn(),
-      onAddCarRental: jest.fn(),
-      openFlightInFlightsTab: jest.fn(),
-      openLodgingDetails: jest.fn(),
-    };
+    onFlightDataChanged: jest.fn(),
+    onLodgingDataChanged: jest.fn(),
+    onTourDataChanged: jest.fn(),
+    onAddCarRental: jest.fn(),
+    openFlightInFlightsTab: jest.fn(),
+    openLodgingDetails: jest.fn(),
+  };
     
     let fetchMock: jest.SpyInstance;
     const originalFetch = global.fetch;  const renderOverview = async (element: React.ReactElement) => {

@@ -59,6 +59,8 @@ describe('LedgerTab', () => {
   ];
 
   const originalFetch = global.fetch;
+  const downloadCsv = jest.fn();
+  const findActiveTrip = () => trip;
 
   beforeEach(() => {
     global.fetch = jest.fn().mockResolvedValue({
@@ -80,6 +82,8 @@ describe('LedgerTab', () => {
         expenses={expenses}
         carRentals={carRentals}
         styles={styles}
+        downloadCsv={downloadCsv}
+        findActiveTrip={findActiveTrip}
       />
     );
 
@@ -98,6 +102,8 @@ describe('LedgerTab', () => {
         expenses={expenses}
         carRentals={carRentals}
         styles={styles}
+        downloadCsv={downloadCsv}
+        findActiveTrip={findActiveTrip}
       />
     );
 

@@ -159,9 +159,9 @@ type OverviewTabProps = {
   onRefreshTrips: () => void;
   onRefreshGroups: () => void;
   onRefreshGroupMembers: () => void;
-  onRefreshFlights: () => void;
-  onRefreshLodgings: () => void;
-  onRefreshTours: () => void;
+  onFlightDataChanged: () => void;
+  onLodgingDataChanged: () => void;
+  onTourDataChanged: () => void;
   onAddCarRental: (rental: CarRental) => void;
   openFlightInFlightsTab: (flightId: string) => void;
   openLodgingDetails: (lodging: Lodging) => void;
@@ -240,7 +240,7 @@ export const formatAttendeeLabel = (member: OverviewTabProps['attendees'][number
   return email && base.toLowerCase() !== email.toLowerCase() ? `${base} (${email})` : base;
 };
 
-const OverviewTab: React.FC<OverviewTabProps> = ({
+export const OverviewTab: React.FC<OverviewTabProps> = ({
   backendUrl,
   headers,
   jsonHeaders,
@@ -258,9 +258,9 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
   onRefreshTrips,
   onRefreshGroups,
   onRefreshGroupMembers,
-  onRefreshFlights,
-  onRefreshLodgings,
-  onRefreshTours,
+  onFlightDataChanged,
+  onLodgingDataChanged,
+  onTourDataChanged,
   onAddCarRental,
   openFlightInFlightsTab: _openFlightInFlightsTab,
   openLodgingDetails,
@@ -883,9 +883,9 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       setPendingRemovalIds([]);
       onRefreshGroups();
       onRefreshGroupMembers();
-      onRefreshFlights();
-      onRefreshLodgings();
-      onRefreshTours();
+      onFlightDataChanged();
+      onLodgingDataChanged();
+      onTourDataChanged();
     }
     setIsEditing(false);
     await refreshItineraryDetails();
@@ -961,6 +961,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       }
       closeFlightEditor();
       onRefreshFlights();
+      onFlightDataChanged();
       return;
     }
     const res = await fetch(`${backendUrl}/api/flights/${editingFlightId}`, {
@@ -974,7 +975,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       return;
     }
     closeFlightEditor();
-    onRefreshFlights();
+    onFlightDataChanged();
   };
 
   const toFlightEditDraft = (flight: Flight): FlightEditDraft => {
@@ -1036,7 +1037,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
         return;
       }
       closeLodgingModal();
-      onRefreshLodgings();
+      onLodgingDataChanged();
       return;
     }
     const result = await createLodgingForTrip({
@@ -1051,7 +1052,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       return;
     }
     closeLodgingModal();
-    onRefreshLodgings();
+    onLodgingDataChanged();
   };
 
   const saveTour = async () => {
@@ -1072,7 +1073,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
         return;
       }
       closeTourModal();
-      onRefreshTours();
+      onTourDataChanged();
       return;
     }
     const result = await createTourForTrip({
@@ -1087,7 +1088,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       return;
     }
     closeTourModal();
-    onRefreshTours();
+    onTourDataChanged();
   };
 
   const saveRental = () => {
@@ -1195,6 +1196,20 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
     setEditingLodgingId(null);
     setLodgingDraft(buildOverviewLodgingDraft());
     setShowAddLodging(true);
+  };
+
+  const openAddTour = () => {
+    if (!isEditing) return;
+    setEditingTourId(null);
+    setTourDraft(createInitialTourState());
+    setShowAddTour(true);
+  };
+
+  const openAddRental = () => {
+    if (!isEditing) return;
+    setEditingRentalId(null);
+    setRentalDraft(createInitialCarRentalDraft());
+    setShowAddRental(true);
   };
 
   const openTourEditor = (tour: Tour) => {
@@ -2305,7 +2320,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
         <View style={styles.row}>
           <Text style={styles.headerText}>Tours & Activities</Text>
           {isEditing && (
-            <TouchableOpacity style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]} onPress={() => {}}>
+            <TouchableOpacity style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]} onPress={openAddTour}>
               <Text style={styles.buttonText}>+ Add Tour</Text>
             </TouchableOpacity>
           )}
@@ -2331,7 +2346,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
         <View style={styles.row}>
           <Text style={styles.headerText}>Rental Cars</Text>
           {isEditing && (
-            <TouchableOpacity style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]} onPress={() => {}}>
+            <TouchableOpacity style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]} onPress={openAddRental}>
               <Text style={styles.buttonText}>+ Add Rental</Text>
             </TouchableOpacity>
           )}

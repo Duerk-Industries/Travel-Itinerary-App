@@ -512,7 +512,7 @@ const App: React.FC = () => {
         (rental) => Number(rental.cost) || 0,
         (rental) => (Array.isArray(rental.paidBy) ? rental.paidBy : []),
         userMembers.map((m) => m.id),
-        { fallbackOnEmpty: false }
+        { fallbackOnEmpty: true }
       ),
     [carRentals, userMembers]
   );
@@ -598,6 +598,50 @@ const App: React.FC = () => {
     });
     return totals;
   }, [carRentalShares, expenseOverallShares, flightShares, lodgingTotalsBalanced, memberIds, tourShares]);
+
+  const convertCostReportToCsv = (
+    reportRows: Array<{ label: string; total: number; shares: Record<string, number> }>,
+    members: GroupMemberOption[],
+    finalShares: Record<string, number>,
+    finalCost: number,
+    getMemberName: (member: GroupMemberOption) => string
+  ): string => {
+    const escapeCsvCell = (cell: string) => {
+      if (/[",\n]/.test(cell)) {
+        return `"${cell.replace(/"/g, '""')}"`;
+      }
+      return cell;
+    };
+
+    const header = ['Category', ...members.map(getMemberName), 'Total'].map(escapeCsvCell);
+    const rows = reportRows.map(row => {
+        const shares = members.map(m => row.shares[m.id]?.toFixed(2) ?? '0.00');
+        return [row.label, ...shares, row.total.toFixed(2)].map(escapeCsvCell);
+    });
+
+    const overallRow = [
+        'Overall',
+        ...members.map(m => finalShares[m.id]?.toFixed(2) ?? '0.00'),
+        finalCost.toFixed(2)
+    ].map(escapeCsvCell);
+
+    const allRows = [header, ...rows, overallRow];
+    return allRows.map(row => row.join(',')).join('\n');
+  };
+
+  const downloadCsv = (csvContent: string, fileName: string) => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') {
+      alert('CSV export is only available on web.');
+      return;
+    }
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
 
   const lodgingBreakdownSum = useMemo(
     () => Object.values(lodgingTotalsBalanced).reduce((sum, v) => sum + v, 0),
@@ -1372,6 +1416,7 @@ const App: React.FC = () => {
       return;
     }
     fetchTrips();
+    fetchExpenses();
   };
 
   const deleteGroupApi = async (groupId: string) => {
@@ -1598,6 +1643,8 @@ const App: React.FC = () => {
               expenses={expenses}
               carRentals={carRentals}
               styles={styles}
+              downloadCsv={downloadCsv}
+              findActiveTrip={findActiveTrip}
             />
           ) : null}
 
@@ -1605,6 +1652,17 @@ const App: React.FC = () => {
             <View style={[styles.card, styles.flightsSection]}>
               <View style={styles.row}>
                 <Text style={styles.sectionTitle}>Cost Report</Text>
+                <TouchableOpacity
+                  style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
+                  onPress={() => {
+                    const activeTrip = findActiveTrip();
+                    const csv = convertCostReportToCsv(costReportRows, userMembers, overallShares, overallCost, formatMemberName);
+                    const fileName = `cost-report-${activeTrip?.name?.replace(/\s/g, '_') ?? 'export'}.csv`;
+                    downloadCsv(csv, fileName);
+                  }}
+                >
+                  <Text style={styles.buttonText}>Export CSV</Text>
+                </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
                   onPress={() => requestPageChange('ledger')}
@@ -2175,9 +2233,18 @@ const App: React.FC = () => {
               onRefreshTrips={fetchTrips}
               onRefreshGroups={fetchGroups}
               onRefreshGroupMembers={fetchGroupMembersForActiveTrip}
-              onRefreshFlights={fetchFlights}
-              onRefreshLodgings={fetchLodgings}
-              onRefreshTours={fetchTours}
+              onFlightDataChanged={() => {
+                fetchFlights();
+                fetchExpenses();
+              }}
+              onLodgingDataChanged={() => {
+                fetchLodgings();
+                fetchExpenses();
+              }}
+              onTourDataChanged={() => {
+                fetchTours();
+                fetchExpenses();
+              }}
               onAddCarRental={addCarRentalFromOverview}
               openFlightInFlightsTab={openFlightInFlightsTab}
               openLodgingDetails={openLodgingDetails}

@@ -1,6 +1,10 @@
 const originalError = console.error.bind(console);
 const originalDebug = console.debug ? console.debug.bind(console) : undefined;
 
+if (!(global as any).fetch) {
+  (global as any).fetch = jest.fn();
+}
+
 console.error = (...args: unknown[]) => {
   const first = args[0];
   if (

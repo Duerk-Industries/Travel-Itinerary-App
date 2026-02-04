@@ -16,7 +16,7 @@ type LodgingTabProps = {
   groupMembers: any[];
   defaultPayerId: string | null;
   styles: Record<string, any>;
-  onRefreshLodgings: () => void;
+  onRefreshLodgings?: () => void;
   onOpenMap: (address: string) => void;
   formatMemberName: (member: any) => string;
   payerName: (id: string) => string;
@@ -114,7 +114,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
 
     const result = await saveLodgingApi(backendUrl, jsonHeaders, payload, editingLodging?.id);
     if (result.ok) {
-      onRefreshLodgings();
+      onRefreshLodgings?.();
       closeEditor();
     } else {
       alert(result.error || 'Failed to save lodging.');
@@ -125,7 +125,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
     if (!lodgingToDelete) return;
     const result = await removeLodgingApi(backendUrl, jsonHeaders, lodgingToDelete.id);
     if (result.ok) {
-      onRefreshLodgings();
+      onRefreshLodgings?.();
       setLodgingToDelete(null);
       closeDetails();
     } else {

@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, View, TouchableOpacity } from 'react-native';
 import { computePayerTotals } from './costReport';
 import { fetchExchangeRate, getLocalDateString } from '../utils/exchangeRates';
 
 type Trip = {
   id: string;
   currency?: string | null;
+  name?: string | null;
 };
 
 type GroupMemberOption = {
@@ -43,11 +44,21 @@ type LedgerTabProps = {
   expenses: Expense[];
   carRentals: CarRental[];
   styles: Record<string, any>;
+  downloadCsv: (content: string, fileName: string) => void;
+  findActiveTrip: () => Trip | undefined;
 };
 
 type RateEntry = { rate: number; date: string };
 
-const LedgerTab: React.FC<LedgerTabProps> = ({ trip, groupMembers, expenses, carRentals, styles }) => {
+const LedgerTab: React.FC<LedgerTabProps> = ({
+  trip,
+  groupMembers,
+  expenses,
+  carRentals,
+  styles,
+  downloadCsv,
+  findActiveTrip,
+}) => {
   const [fxRates, setFxRates] = useState<Record<string, RateEntry>>({});
   const [fxMissing, setFxMissing] = useState<Set<string>>(new Set());
   const tripCurrency = (trip?.currency ?? 'USD').toUpperCase();
@@ -191,6 +202,40 @@ const LedgerTab: React.FC<LedgerTabProps> = ({ trip, groupMembers, expenses, car
   const formatMoney = (value: number): string =>
     new Intl.NumberFormat('en-US', { style: 'currency', currency: tripCurrency }).format(value);
 
+  const convertLedgerToCsv = (): string => {
+    const escapeCsvCell = (cell: string) => {
+      if (/[",\n]/.test(cell)) {
+        return `"${cell.replace(/"/g, '""')}"`;
+      }
+      return cell;
+    };
+
+    const header = ['Person', 'Paid', 'Used'].map(escapeCsvCell);
+
+    const rows = memberIds.map(memberId => {
+      const person = memberNameMap.get(memberId) ?? 'Traveler';
+      const paid = paidTotals[memberId] ?? 0;
+      const used = usedTotals[memberId] ?? 0;
+      return [person, paid.toFixed(2), used.toFixed(2)].map(escapeCsvCell);
+    });
+
+    const overallRow = [
+      'Overall',
+      overallPaid.toFixed(2),
+      overallUsed.toFixed(2)
+    ].map(escapeCsvCell);
+
+    const allRows = [header, ...rows, overallRow];
+    return allRows.map(row => row.join(',')).join('\n');
+  };
+
+  const handleExportCsv = () => {
+    const activeTrip = findActiveTrip?.();
+    const csv = convertLedgerToCsv();
+    const fileName = `ledger-${activeTrip?.name?.replace(/\s/g, '_') ?? 'export'}.csv`;
+    downloadCsv?.(csv, fileName);
+  };
+
   if (!trip) {
     return (
       <View style={styles.card}>
@@ -202,7 +247,15 @@ const LedgerTab: React.FC<LedgerTabProps> = ({ trip, groupMembers, expenses, car
 
   return (
     <View style={styles.card}>
-      <Text style={styles.sectionTitle}>Ledger</Text>
+      <View style={styles.row}>
+        <Text style={styles.sectionTitle}>Ledger</Text>
+        <TouchableOpacity
+          style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
+          onPress={handleExportCsv}
+        >
+          <Text style={styles.buttonText}>Export CSV</Text>
+        </TouchableOpacity>
+      </View>
       <Text style={styles.helperText}>Paid vs. used costs across all trip expenses.</Text>
       {fxMissing.size ? (
         <Text style={styles.helperText}>

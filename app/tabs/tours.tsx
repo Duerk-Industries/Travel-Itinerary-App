@@ -149,6 +149,7 @@ type TourTabProps = {
   styles: ReturnType<typeof StyleSheet.create>;
   nativeDateTimePicker: NativeDateTimePickerType | null;
   fetchTours: (token?: string) => Promise<void>;
+  onDataChanged?: () => void;
   mode?: 'live' | 'wizard';
 };
 
@@ -168,6 +169,7 @@ export const TourTab: React.FC<TourTabProps> = ({
   styles,
   nativeDateTimePicker,
   fetchTours,
+  onDataChanged,
   mode = 'live',
 }) => {
   const [editingTour, setEditingTour] = useState<TourDraft | null>(null);
@@ -268,7 +270,7 @@ export const TourTab: React.FC<TourTabProps> = ({
           const data = await res.json().catch(() => ({}));
           throw new Error(data.error || `Unable to save tour (status ${res.status})`);
         }
-        await fetchTours();
+        onDataChanged ? onDataChanged() : await fetchTours();
         closeTourEditor();
       } catch (err: any) {
         console.error('saveTour failed', err);
@@ -285,7 +287,7 @@ export const TourTab: React.FC<TourTabProps> = ({
     removeTourApi(backendUrl, jsonHeaders, id)
       .then((result) => {
         if (!result.ok) throw new Error(result.error || 'Unable to delete tour');
-        fetchTours();
+        onDataChanged ? onDataChanged() : fetchTours();
       })
       .catch((err) => alert(err.message));
   };
