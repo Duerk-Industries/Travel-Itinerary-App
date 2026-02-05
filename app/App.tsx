@@ -17,9 +17,8 @@ import { formatDateLong } from './utils/formatDateLong';
 import { normalizeDateString } from './utils/normalizeDateString';
 import { sanitizeCostInput } from './utils/sanitizeCost';
 import { FlightsTab, type Flight, fetchFlightsForTrip } from './tabs/flights';
-import { Tour, TourTab, fetchToursForTrip } from './tabs/tours';
-import { balanceCategoryTotals, computePayerTotals } from './tabs/costReport';
-import { Trait } from './tabs/traits';
+import { type Tour, TourTab, fetchToursForTrip } from './tabs/tours';
+import { type Trait } from './tabs/traits';
 import { FollowTab, fetchFollowedTripsApi, loadFollowCodes, loadFollowPayloads, saveFollowCodes, saveFollowPayloads, type FollowedTrip } from './tabs/follow';
 import ItinerariesTab from './tabs/itineraries';
 import HomeTab from './tabs/HomeTab';
@@ -27,7 +26,7 @@ import DailyExpensesTab from './tabs/dailyExpenses';
 import LedgerTab from './tabs/ledger';
 import OverviewTab from './tabs/overview';
 import CreateTripWizard from './tabs/createTripWizard';
-import { buildAllExpenses, calculateAllTotals, UnifiedExpense, computePayerTotals } from './utils/costs';
+import { buildAllExpenses, calculateAllTotals, type UnifiedExpense, computePayerTotals } from './utils/costs';
 import { rollUpTotals, detectCycle } from './utils/coveredBy';
 import TripDetailsTab from './tabs/tripDetails';
 import AccountTab, { fetchAccountProfile, fetchFamilyRelationships, fetchFellowTravelers, type FellowTraveler } from './tabs/account';
@@ -333,11 +332,6 @@ const App: React.FC = () => {
     [carRentals]
   );
 
-  const overallCost = useMemo(
-    () => flightsTotal + lodgingTotal + toursTotal + expensesTotal + carRentalsTotal,
-    [flightsTotal, lodgingTotal, toursTotal, expensesTotal, carRentalsTotal]
-  );
-
   const updateMapPreference = useCallback(
     (pref: MapApp) => {
       setMapApp(pref);
@@ -345,6 +339,11 @@ const App: React.FC = () => {
       setAccountProfile((prev) => ({ ...prev, mapPreference: pref }));
     },
     [setAccountProfile]
+  );
+
+  const findActiveTrip = useCallback(
+    () => trips.find((t) => t.id === activeTripId),
+    [trips, activeTripId]
   );
 
   const isTripWizardOpen = activePage === 'create-trip';
@@ -479,7 +478,7 @@ const App: React.FC = () => {
 
   const allExpenses = useMemo(
     () => buildAllExpenses(flights, lodgings, tours, carRentals, expenses, findActiveTrip()?.currency ?? 'USD', allMemberIds),
-    [flights, lodgings, tours, carRentals, expenses, findActiveTrip, allMemberIds]
+    [flights, lodgings, tours, carRentals, expenses, allMemberIds, findActiveTrip]
   );
 
   const { ledgerPaidTotals, ledgerUsedTotals, finalBalances } = useMemo(
@@ -593,11 +592,6 @@ const App: React.FC = () => {
     link.click();
     URL.revokeObjectURL(link.href);
   };
-
-  const lodgingBreakdownSum = useMemo(
-    () => Object.values(lodgingTotalsBalanced).reduce((sum, v) => sum + v, 0),
-    [lodgingTotalsBalanced]
-  );
 
   const headers = useMemo<Record<string, string>>(
     () => (userToken ? { Authorization: `Bearer ${userToken}` } : ({} as Record<string, string>)),
@@ -1242,9 +1236,6 @@ const App: React.FC = () => {
     fetchCoveredBy();
   }, [userToken, activeTripId, headers]);
 
-  const findActiveTrip = () => trips.find((t) => t.id === activeTripId);
-
-
   const addMemberToGroup = async (groupId: string, type: 'user' | 'relationship') => {
     if (!userToken) return;
     const email = groupAddEmail[groupId] ?? '';
@@ -1695,7 +1686,6 @@ const App: React.FC = () => {
                       <Text style={styles.headerText}>Overall</Text>
                     </View>
                     {reportableMembers.map((m) => {
-                      const total = overallShares[m.id] ?? 0;
                       const total = finalBalances[m.id] ?? 0;
                       return (
                         <View key={`overall-${m.id}`} style={[styles.cell, { minWidth: 120, flex: 1 }]}>

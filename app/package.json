@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "test": "jest -c jest.config.js",
-    "export:web": "expo export --platform web"
+    "export:web": "expo export --platform web",
+    "web": "expo start --web"
   },
   "dependencies": {
     "@expo/metro-runtime": "~3.1.3",
