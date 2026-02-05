@@ -1094,6 +1094,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
       }
 
       setCreatedTripId(tripId);
+      onTripCreated(tripId);
     } catch (err) {
       setWizardError((err as Error).message);
     } finally {

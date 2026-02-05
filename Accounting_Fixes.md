@@ -52,3 +52,20 @@ Totals now match across:
 3. Cost Report (by category + Overall row)
 
 Paid totals in the Ledger now match the Overall row for each traveler in the Cost Report, and category totals match the item totals shown in their respective pages.
+
+## Expense Covering (Per Trip)
+Expense covering now lives on the **Ledger** page and is **scoped to the active Trip** (not the group).
+
+### Behavior Without Covering
+- All travelers appear in the Ledger and Cost Report.
+- Paid and Used totals reflect the traveler’s own expenses.
+
+### Behavior With Covering
+- A covered traveler does **not** appear in the Ledger or Cost Report.
+- Any **paid** or **incurred** amounts for the covered traveler roll up to the covering traveler.
+- A traveler may only be covered by one other traveler.
+- If a traveler covers anyone, they cannot be covered by someone else (no chains).
+
+### Implementation Notes
+- Covering rules are saved to the **Trip** via `PUT /api/trips/:tripId/covered-by`.
+- The Ledger and Cost Report use roll-ups so covered travelers are removed and their totals aggregate into the covering traveler.

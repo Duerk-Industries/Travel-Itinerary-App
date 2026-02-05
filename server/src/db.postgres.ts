@@ -221,6 +221,7 @@ export const initDb = async (): Promise<void> => {
       start_year INTEGER,
       duration_days INTEGER,
       currency TEXT DEFAULT 'USD',
+      covered_by JSONB DEFAULT '{}'::jsonb,
       created_at TIMESTAMP DEFAULT NOW()
     );
   `);
@@ -232,7 +233,9 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS start_year INTEGER;`);
   await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS duration_days INTEGER;`);
   await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS currency TEXT DEFAULT 'USD';`);
+  await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS covered_by JSONB DEFAULT '{}'::jsonb;`);
   await p.query(`UPDATE trips SET currency = 'USD' WHERE currency IS NULL;`);
+  await p.query(`UPDATE trips SET covered_by = '{}'::jsonb WHERE covered_by IS NULL;`);
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS trip_removals (
@@ -1099,6 +1102,7 @@ export const updateTripDetails = async (
        start_year as "startYear",
        duration_days as "durationDays",
        currency,
+       covered_by as "coveredBy",
        created_at as "createdAt"`,
     [
       updates.description ?? null,
@@ -1115,6 +1119,34 @@ export const updateTripDetails = async (
   );
   if (!rows.length) throw new Error('Trip not found');
   return rows[0];
+};
+
+export const getTripCovering = async (userId: string, tripId: string): Promise<Record<string, string>> => {
+  const p = getPool();
+  const membership = await ensureUserInTrip(tripId, userId);
+  if (!membership) throw new Error('Not authorized to view this trip');
+  const { rows } = await p.query<{ coveredBy: Record<string, string> | null }>(
+    `SELECT covered_by as "coveredBy" FROM trips WHERE id = $1`,
+    [tripId]
+  );
+  if (!rows.length) throw new Error('Trip not found');
+  return rows[0].coveredBy ?? {};
+};
+
+export const updateTripCovering = async (
+  userId: string,
+  tripId: string,
+  coveredBy: Record<string, string>
+): Promise<Record<string, string>> => {
+  const p = getPool();
+  const membership = await ensureUserInTrip(tripId, userId);
+  if (!membership) throw new Error('Not authorized to update this trip');
+  const { rows } = await p.query<{ coveredBy: Record<string, string> | null }>(
+    `UPDATE trips SET covered_by = $1 WHERE id = $2 RETURNING covered_by as "coveredBy"`,
+    [coveredBy ?? {}, tripId]
+  );
+  if (!rows.length) throw new Error('Trip not found');
+  return rows[0].coveredBy ?? {};
 };
 
 export const getFlightForUser = async (flightId: string, userId: string): Promise<Flight | null> => {
@@ -2553,6 +2585,7 @@ export const listTrips = async (userId: string): Promise<Array<Trip & { groupNam
               t.start_year as "startYear",
               t.duration_days as "durationDays",
               t.currency as "currency",
+              t.covered_by as "coveredBy",
               t.created_at as "createdAt",
               g.name as "groupName"
        FROM trips t
@@ -2577,6 +2610,7 @@ export const listTrips = async (userId: string): Promise<Array<Trip & { groupNam
             t.start_year as "startYear",
             t.duration_days as "durationDays",
             t.currency as "currency",
+            t.covered_by as "coveredBy",
             t.created_at as "createdAt",
             g.name as "groupName"
      FROM trips t
@@ -2632,8 +2666,8 @@ export const createTrip = async (
 
   const id = randomUUID();
   const { rows } = await p.query<Trip>(
-    `INSERT INTO trips (id, group_id, name, description, destination, start_date, end_date, start_month, start_year, duration_days, currency)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+    `INSERT INTO trips (id, group_id, name, description, destination, start_date, end_date, start_month, start_year, duration_days, currency, covered_by)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
      RETURNING id,
                group_id as "groupId",
                name,
@@ -2645,6 +2679,7 @@ export const createTrip = async (
                start_year as "startYear",
                duration_days as "durationDays",
                currency,
+               covered_by as "coveredBy",
                created_at as "createdAt"`,
     [
       id,
@@ -2658,6 +2693,7 @@ export const createTrip = async (
       details?.startYear ?? null,
       details?.durationDays ?? null,
       details?.currency ?? 'USD',
+      {},
     ]
   );
   return rows[0];
@@ -2773,6 +2809,8 @@ export const updateTripGroup = async (userId: string, tripId: string, newGroupId
        start_month as "startMonth",
        start_year as "startYear",
        duration_days as "durationDays",
+       currency,
+       covered_by as "coveredBy",
        created_at as "createdAt",
        (SELECT name FROM groups WHERE id = $1) as "groupName"`,
     [newGroupId, tripId]

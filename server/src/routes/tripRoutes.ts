@@ -1,7 +1,19 @@
 import { Router } from 'express';
 import bodyParser from 'body-parser';
 import { authenticate } from '../auth';
-import { createFellowTraveler, createTrip, createTripWithGroupAndMembers, deleteTrip, listTrips, searchTripContacts, updateTripDetails, updateTripGroup } from '../db';
+import {
+  createFellowTraveler,
+  createTrip,
+  createTripWithGroupAndMembers,
+  deleteTrip,
+  getTripCovering,
+  listTrips,
+  searchTripContacts,
+  updateTripCovering,
+  updateTripDetails,
+  updateTripGroup,
+} from '../db';
+import { detectCoveringConflict, detectCycle } from '../utils/coveredBy';
 
 // Trips API: create/list/delete trips for the authenticated user.
 const router = Router();
@@ -36,6 +48,37 @@ router.get('/participants/search', async (req, res) => {
   }
   const results = await searchTripContacts(userId, q);
   res.json(results);
+});
+
+router.get('/:id/covered-by', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  try {
+    const coveredBy = await getTripCovering(userId, req.params.id);
+    res.json(coveredBy || {});
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.put('/:id/covered-by', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const coveredBy = (req.body ?? {}) as Record<string, string>;
+  if (detectCycle(coveredBy)) {
+    res.status(400).json({ error: 'Invalid covering rules: circular dependency detected.' });
+    return;
+  }
+  if (detectCoveringConflict(coveredBy)) {
+    res
+      .status(400)
+      .json({ error: 'Invalid covering rules: a traveler who covers someone cannot be covered by another traveler.' });
+    return;
+  }
+  try {
+    const updated = await updateTripCovering(userId, req.params.id, coveredBy);
+    res.json(updated || {});
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
 });
 
 router.post('/', async (req, res) => {

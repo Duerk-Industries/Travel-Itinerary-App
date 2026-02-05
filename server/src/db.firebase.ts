@@ -613,6 +613,7 @@ export const listTrips = async (userId: string): Promise<Array<Trip & { groupNam
       startYear: data.startYear ?? null,
       durationDays: data.durationDays ?? null,
       currency: data.currency ?? 'USD',
+      coveredBy: data.coveredBy ?? {},
       createdAt: data.createdAt,
       groupName: groupNames[data.groupId] ?? '',
     } as any;
@@ -648,6 +649,7 @@ export const createTrip = async (
     startYear: details.startYear ?? null,
     durationDays: details.durationDays ?? null,
     currency: details.currency ?? 'USD',
+    coveredBy: details.coveredBy ?? {},
     createdAt: nowIso(),
   };
   await db.collection('trips').doc(id).set(payload);
@@ -681,6 +683,30 @@ export const updateTripDetails = async (
     });
   const updated = await db.collection('trips').doc(tripId).get();
   return { id: tripId, ...(updated.data() as any) };
+};
+
+export const getTripCovering = async (userId: string, tripId: string): Promise<Record<string, string>> => {
+  const db = getDb();
+  const membership = await ensureUserInTrip(tripId, userId);
+  if (!membership) throw new Error('Not authorized to view this trip');
+  const tripDoc = await db.collection('trips').doc(tripId).get();
+  if (!tripDoc.exists) throw new Error('Trip not found');
+  const data = tripDoc.data() as any;
+  return data?.coveredBy ?? {};
+};
+
+export const updateTripCovering = async (
+  userId: string,
+  tripId: string,
+  coveredBy: Record<string, string>
+): Promise<Record<string, string>> => {
+  const db = getDb();
+  const membership = await ensureUserInTrip(tripId, userId);
+  if (!membership) throw new Error('Not authorized to update this trip');
+  const tripDoc = await db.collection('trips').doc(tripId).get();
+  if (!tripDoc.exists) throw new Error('Trip not found');
+  await db.collection('trips').doc(tripId).update({ coveredBy: coveredBy ?? {} });
+  return coveredBy ?? {};
 };
 
 export const deleteTrip = async (userId: string, tripId: string): Promise<void> => {

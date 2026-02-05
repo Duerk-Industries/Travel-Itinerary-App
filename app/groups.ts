@@ -4,7 +4,7 @@ import express from 'express';
 // You would replace them with your actual authentication middleware and database provider.
 import { requireAuth } from './middleware/auth';
 import { db } from './database';
-import { detectCycle } from './utils/coveredBy';
+import { validateCoveringRules } from './utils/coveredBy';
 
 const router = express.Router();
 
@@ -36,8 +36,9 @@ router.put('/:groupId/covered-by', requireAuth, async (req, res) => {
   const { groupId } = req.params;
   const coveredByData = req.body;
   // Server-side validation to prevent cycles.
-  if (detectCycle(coveredByData)) {
-    return res.status(400).json({ error: 'Invalid covering rules: circular dependency detected.' });
+  const validation = validateCoveringRules(coveredByData);
+  if (!validation.ok) {
+    return res.status(400).json({ error: validation.error });
   }
 
   await db.updateGroup(groupId, { coveredBy: coveredByData });

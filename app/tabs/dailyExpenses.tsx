@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { fetchExchangeRate, getLocalDateString } from '../utils/exchangeRates';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
@@ -289,7 +289,6 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
     );
   }
 
-  const webInputStyle = useMemo(() => StyleSheet.flatten(styles.input) ?? {}, [styles]);
   const formattedDraftDate = draftDate ? formatDateLabel(draftDate) : '';
 
   return (
@@ -316,47 +315,36 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                   <Text style={styles.buttonText}>Close</Text>
                 </TouchableOpacity>
               </View>
-              <ScrollView style={styles.expenseModalScroll} contentContainerStyle={{ gap: 8 }}>
+              <ScrollView style={styles.expenseModalScroll} contentContainerStyle={{ gap: 8, overflow: 'visible', paddingBottom: 8 }}>
                 <View style={styles.expenseFieldRow}>
-                  <View style={[styles.dateInputWrap, styles.expenseFieldDate]}>
+                  <View style={styles.expenseFieldDate}>
                     {Platform.OS === 'web' ? (
+                      <input
+                        type="date"
+                        value={draftDate}
+                        onChange={(event) => setDraftDate(event.target.value)}
+                        style={{
+                          ...(styles.input as any),
+                          width: '100%',
+                          maxWidth: '100%',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                    ) : (
                       <View style={styles.dateInputWrap}>
-                        <View style={[styles.input, styles.dateTouchable]}>
+                        <TouchableOpacity
+                          style={[styles.input, styles.dateTouchable]}
+                          onPress={() => setDatePickerVisible(true)}
+                        >
                           <Text style={draftDate ? styles.cellText : styles.placeholderText}>
                             {draftDate ? formattedDraftDate : 'Select date'}
                           </Text>
-                        </View>
-                        <input
-                          type="date"
-                          value={draftDate}
-                          onChange={(event) => setDraftDate(event.target.value)}
-                          style={{
-                            ...(webInputStyle as any),
-                            position: 'absolute',
-                            top: 0,
-                            right: 0,
-                            bottom: 0,
-                            left: 0,
-                            opacity: 0,
-                            cursor: 'pointer',
-                          }}
-                        />
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.dateIcon} onPress={() => setDatePickerVisible(true)}>
+                          <Text style={styles.selectCaret}>📅</Text>
+                        </TouchableOpacity>
                       </View>
-                    ) : (
-                      <TouchableOpacity
-                        style={[styles.input, styles.dateTouchable]}
-                        onPress={() => setDatePickerVisible(true)}
-                      >
-                        <Text style={draftDate ? styles.cellText : styles.placeholderText}>
-                          {draftDate ? formattedDraftDate : 'Select date'}
-                        </Text>
-                      </TouchableOpacity>
                     )}
-                    {Platform.OS !== 'web' ? (
-                      <TouchableOpacity style={styles.dateIcon} onPress={() => setDatePickerVisible(true)}>
-                        <Text style={styles.selectCaret}>📅</Text>
-                      </TouchableOpacity>
-                    ) : null}
                   </View>
                   <View style={[styles.input, styles.dropdown, styles.expenseFieldCategory]}>
                     <TouchableOpacity

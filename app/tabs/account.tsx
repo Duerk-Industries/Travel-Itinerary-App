@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { type MapApp, isMapApp } from '../utils/mapLinks';
-import ExpenseCovering from './ExpenseCovering';
 import FamilyRelationships from './FamilyRelationships';
 import AccountTraits from './AccountTraits';
 import AccountProfileManagement from './AccountProfileManagement';
@@ -20,16 +19,6 @@ export interface FellowTraveler {
   firstName: string;
   lastName: string;
   createdAt: string;
-}
-
-interface GroupMemberOption {
-  id: string;
-  guestName?: string;
-  email?: string;
-  firstName?: string;
-  lastName?: string;
-  status?: 'active' | 'pending' | 'removed';
-  removedAt?: string | null;
 }
 
 type FamilyForm = { givenName: string; middleName: string; familyName: string; email: string; relationship: string };
@@ -156,13 +145,6 @@ interface AccountTabProps {
   setNewTraitName: React.Dispatch<React.SetStateAction<string>>;
   fetchTraits: () => Promise<void>;
   fetchTraitProfile: () => Promise<void>;
-  groupMembers: GroupMemberOption[];
-  reportableMembers: GroupMemberOption[];
-  coveredBy: Record<string, string>;
-  setCoveredBy: Setter<Record<string, string>>;
-  formatMemberName: (member: GroupMemberOption) => string;
-  payerName: (id: string) => string;
-  saveCoveredBy: () => Promise<void>;
 }
 
 const relationshipOptions = [
@@ -213,13 +195,6 @@ const AccountTab: React.FC<AccountTabProps> = ({
   setNewTraitName,
   fetchTraits,
   fetchTraitProfile,
-  groupMembers,
-  reportableMembers,
-  coveredBy,
-  setCoveredBy,
-  formatMemberName,
-  payerName,
-  saveCoveredBy,
 }) => {
   return (
     <View>
@@ -270,16 +245,6 @@ const AccountTab: React.FC<AccountTabProps> = ({
         setNewTraitName={setNewTraitName}
         fetchTraits={fetchTraits}
         fetchTraitProfile={fetchTraitProfile}
-        styles={styles}
-      />
-      <ExpenseCovering
-        groupMembers={groupMembers}
-        reportableMembers={reportableMembers}
-        coveredBy={coveredBy}
-        setCoveredBy={setCoveredBy}
-        formatMemberName={formatMemberName}
-        payerName={payerName}
-        saveCoveredBy={saveCoveredBy}
         styles={styles}
       />
     </View>

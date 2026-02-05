@@ -83,6 +83,7 @@ export interface Trip {
   startYear?: number | null;
   durationDays?: number | null;
   currency?: string | null;
+  coveredBy?: Record<string, string>;
   createdAt: string;
 }
 

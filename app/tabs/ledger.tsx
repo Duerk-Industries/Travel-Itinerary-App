@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { ScrollView, Text, View, TouchableOpacity } from 'react-native';
+import ExpenseCovering from './ExpenseCovering';
 
 type Trip = {
   id: string;
@@ -19,29 +20,41 @@ type GroupMemberOption = {
 type LedgerTabProps = {
   trip: Trip | null;
   groupMembers: GroupMemberOption[];
+  reportableMembers: GroupMemberOption[];
   paidTotals: Record<string, number>;
   usedTotals: Record<string, number>;
   styles: Record<string, any>;
   downloadCsv: (content: string, fileName: string) => void;
   findActiveTrip: () => Trip | undefined;
   onNavigate: (page: 'cost') => void;
+  coveredBy: Record<string, string>;
+  setCoveredBy: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  formatMemberName: (member: GroupMemberOption) => string;
+  payerName: (id: string) => string;
+  saveCoveredBy: () => Promise<void>;
 };
 
 const LedgerTab: React.FC<LedgerTabProps> = ({
   trip,
   groupMembers,
+  reportableMembers,
   paidTotals,
   usedTotals,
   styles,
   downloadCsv,
   findActiveTrip,
   onNavigate,
+  coveredBy,
+  setCoveredBy,
+  formatMemberName,
+  payerName,
+  saveCoveredBy,
 }) => {
   const tripCurrency = (trip?.currency ?? 'USD').toUpperCase();
 
   const activeMembers = useMemo(
-    () => groupMembers.filter((m) => m.status !== 'removed'),
-    [groupMembers]
+    () => reportableMembers.filter((m) => m.status !== 'removed'),
+    [reportableMembers]
   );
 
   const memberNameMap = useMemo(() => {
@@ -107,70 +120,82 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
   }
 
   return (
-    <View style={styles.card}>
-      <View style={styles.row}>
-        <Text style={styles.sectionTitle}>Ledger</Text>
-        <TouchableOpacity style={[styles.button, styles.smallButton, { marginLeft: 8 }]} onPress={() => onNavigate('cost')}>
-          <Text style={styles.buttonText}>Cost Report</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
-          onPress={handleExportCsv}
-        >
-          <Text style={styles.buttonText}>Export CSV</Text>
-        </TouchableOpacity>
-      </View>
-      <Text style={styles.helperText}>Paid vs. used costs across all trip expenses.</Text>
-      <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
-        <View style={styles.table} testID="ledger-table">
-          <View style={[styles.tableRow, styles.tableHeader]}>
-            {['Person', 'Paid', 'Used', 'Total'].map((header, idx, arr) => (
-              <View key={header} style={[styles.cell, { minWidth: idx === 0 ? 160 : 140, flex: 1 }, idx === arr.length - 1 && styles.lastCell]}>
-                <Text style={styles.headerText}>{header}</Text>
+    <View style={{ gap: 12 }}>
+      <View style={styles.card}>
+        <View style={styles.row}>
+          <Text style={styles.sectionTitle}>Ledger</Text>
+          <TouchableOpacity style={[styles.button, styles.smallButton, { marginLeft: 8 }]} onPress={() => onNavigate('cost')}>
+            <Text style={styles.buttonText}>Cost Report</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
+            onPress={handleExportCsv}
+          >
+            <Text style={styles.buttonText}>Export CSV</Text>
+          </TouchableOpacity>
+        </View>
+        <Text style={styles.helperText}>Paid vs. used costs across all trip expenses.</Text>
+        <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
+          <View style={styles.table} testID="ledger-table">
+            <View style={[styles.tableRow, styles.tableHeader]}>
+              {['Person', 'Paid', 'Used', 'Total'].map((header, idx, arr) => (
+                <View key={header} style={[styles.cell, { minWidth: idx === 0 ? 160 : 140, flex: 1 }, idx === arr.length - 1 && styles.lastCell]}>
+                  <Text style={styles.headerText}>{header}</Text>
+                </View>
+              ))}
+            </View>
+            {memberIds.map((memberId, idx) => (
+              <View key={memberId} style={[styles.tableRow, idx === memberIds.length - 1 && styles.lastRow]} testID={`ledger-row-${memberId}`}>
+                <View style={[styles.cell, { minWidth: 160, flex: 1 }]}>
+                  <Text style={styles.cellText}>{memberNameMap.get(memberId) ?? 'Traveler'}</Text>
+                </View>
+                <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                  <Text style={styles.cellText}>{formatMoney(paidTotals[memberId] ?? 0)}</Text>
+                </View>
+                <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                  <Text style={styles.cellText}>{formatMoney(usedTotals[memberId] ?? 0)}</Text>
+                </View>
+                <View style={[styles.cell, styles.lastCell, { minWidth: 140, flex: 1 }]}>
+                  <Text style={styles.cellText}>-</Text>
+                </View>
               </View>
             ))}
+            {memberIds.length ? (
+              <View style={[styles.tableRow, styles.tableHeader]} testID="ledger-overall-row">
+                <View style={[styles.cell, { minWidth: 160, flex: 1 }]}>
+                  <Text style={styles.headerText}>Overall</Text>
+                </View>
+                <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                  <Text style={styles.headerText}>{formatMoney(overallPaid)}</Text>
+                </View>
+                <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                  <Text style={styles.headerText}>{formatMoney(overallUsed)}</Text>
+                </View>
+                <View style={[styles.cell, styles.lastCell, { minWidth: 140, flex: 1 }]}>
+                  <Text style={styles.headerText}>{formatMoney(overallTotal)}</Text>
+                </View>
+              </View>
+            ) : null}
+            {!memberIds.length ? (
+              <View style={[styles.tableRow, styles.lastRow]}>
+                <View style={[styles.cell, styles.lastCell, { minWidth: 160, flex: 1 }]}>
+                  <Text style={styles.helperText}>No travelers available.</Text>
+                </View>
+              </View>
+            ) : null}
           </View>
-          {memberIds.map((memberId, idx) => (
-            <View key={memberId} style={[styles.tableRow, idx === memberIds.length - 1 && styles.lastRow]} testID={`ledger-row-${memberId}`}>
-              <View style={[styles.cell, { minWidth: 160, flex: 1 }]}>
-                <Text style={styles.cellText}>{memberNameMap.get(memberId) ?? 'Traveler'}</Text>
-              </View>
-              <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                <Text style={styles.cellText}>{formatMoney(paidTotals[memberId] ?? 0)}</Text>
-              </View>
-              <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                <Text style={styles.cellText}>{formatMoney(usedTotals[memberId] ?? 0)}</Text>
-              </View>
-              <View style={[styles.cell, styles.lastCell, { minWidth: 140, flex: 1 }]}>
-                <Text style={styles.cellText}>-</Text>
-              </View>
-            </View>
-          ))}
-          {memberIds.length ? (
-            <View style={[styles.tableRow, styles.tableHeader]} testID="ledger-overall-row">
-              <View style={[styles.cell, { minWidth: 160, flex: 1 }]}>
-                <Text style={styles.headerText}>Overall</Text>
-              </View>
-              <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                <Text style={styles.headerText}>{formatMoney(overallPaid)}</Text>
-              </View>
-              <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                <Text style={styles.headerText}>{formatMoney(overallUsed)}</Text>
-              </View>
-              <View style={[styles.cell, styles.lastCell, { minWidth: 140, flex: 1 }]}>
-                <Text style={styles.headerText}>{formatMoney(overallTotal)}</Text>
-              </View>
-            </View>
-          ) : null}
-          {!memberIds.length ? (
-            <View style={[styles.tableRow, styles.lastRow]}>
-              <View style={[styles.cell, styles.lastCell, { minWidth: 160, flex: 1 }]}>
-                <Text style={styles.helperText}>No travelers available.</Text>
-              </View>
-            </View>
-          ) : null}
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </View>
+      <ExpenseCovering
+        groupMembers={groupMembers}
+        reportableMembers={reportableMembers}
+        coveredBy={coveredBy}
+        setCoveredBy={setCoveredBy}
+        formatMemberName={formatMemberName}
+        payerName={payerName}
+        saveCoveredBy={saveCoveredBy}
+        styles={styles}
+      />
     </View>
   );
 };

@@ -47,3 +47,28 @@ export const detectCycle = (coveredBy: Record<string, string>): boolean => {
 
   return false;
 };
+
+export const detectCoveringConflict = (coveredBy: Record<string, string>): boolean => {
+  const covered = new Set(Object.keys(coveredBy));
+  const covering = new Set(Object.values(coveredBy).filter(Boolean));
+  for (const memberId of covered) {
+    if (covering.has(memberId)) return true;
+  }
+  return false;
+};
+
+export const validateCoveringRules = (coveredBy: Record<string, string>): { ok: true } | { ok: false; error: string } => {
+  if (detectCycle(coveredBy)) {
+    return {
+      ok: false,
+      error: 'Invalid covering rules. A circular dependency was detected (e.g., A covers B, and B covers A).',
+    };
+  }
+  if (detectCoveringConflict(coveredBy)) {
+    return {
+      ok: false,
+      error: 'Invalid covering rules. A traveler who covers someone cannot be covered by another traveler.',
+    };
+  }
+  return { ok: true };
+};

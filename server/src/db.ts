@@ -51,6 +51,10 @@ export const getTripGroupId = async (...args: Parameters<ReturnType<typeof adapt
   adapter().getTripGroupId(...args);
 export const updateTripDetails = async (...args: Parameters<ReturnType<typeof adapter>['updateTripDetails']>) =>
   adapter().updateTripDetails(...args);
+export const getTripCovering = async (...args: Parameters<ReturnType<typeof adapter>['getTripCovering']>) =>
+  adapter().getTripCovering(...args);
+export const updateTripCovering = async (...args: Parameters<ReturnType<typeof adapter>['updateTripCovering']>) =>
+  adapter().updateTripCovering(...args);
 export const getFlightForUser = async (...args: Parameters<ReturnType<typeof adapter>['getFlightForUser']>) =>
   adapter().getFlightForUser(...args);
 export const listFlights = async (...args: Parameters<ReturnType<typeof adapter>['listFlights']>): Promise<Flight[]> =>

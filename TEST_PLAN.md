@@ -134,4 +134,11 @@ test('should allow a user to update their profile', async ({ page }) => {
 });
 ```
 
+## 3. Ledger/Cost Report Covering Tests
+
+New unit tests validate expense covering behavior on the Ledger and Cost Report:
+- `app/tests/ledger.covered.test.tsx`: Covered travelers are hidden and totals roll up to the covering traveler.
+- `app/tests/costReportUi.covered.test.tsx`: Covered travelers are excluded from the report table and totals roll up correctly.
+- `app/tests/ledgerCostReportMatch.covered.test.ts`: Cost Report totals match Ledger totals after roll-ups.
+
 By following these patterns, you can build a robust and maintainable Playwright test suite that can easily scale with your application.

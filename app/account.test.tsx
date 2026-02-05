@@ -6,7 +6,6 @@ import AccountTab from '../tabs/account';
 jest.mock('../tabs/AccountProfileManagement', () => (props: any) => <View testID="account-profile-management" {...props} />);
 jest.mock('../tabs/FamilyRelationships', () => (props: any) => <View testID="family-relationships" {...props} />);
 jest.mock('../tabs/AccountTraits', () => (props: any) => <View testID="account-traits" {...props} />);
-jest.mock('../tabs/ExpenseCovering', () => (props: any) => <View testID="expense-covering" {...props} />);
 
 const styles = {
   card: {},
@@ -35,24 +34,6 @@ const styles = {
 };
 
 describe('AccountTab', () => {
-  const mockSetCoveredBy = jest.fn();
-  const mockSaveCoveredBy = jest.fn();
-  const mockFormatMemberName = (m: any) => `${m.firstName} ${m.lastName}`.trim() || m.guestName || m.email;
-  const mockPayerName = (id: string) => {
-    const member = [
-      { id: 'm1', firstName: 'Alex' },
-      { id: 'm2', firstName: 'Blair' },
-      { id: 'm3', guestName: 'Casey' },
-    ].find(m => m.id === id);
-    return member ? (member.firstName || member.guestName || 'Unknown') : 'Unknown';
-  };
-
-  const groupMembers = [
-    { id: 'm1', firstName: 'Alex', lastName: 'Rider', status: 'active' as const },
-    { id: 'm2', firstName: 'Blair', lastName: 'Lee', status: 'active' as const },
-    { id: 'm3', guestName: 'Casey', status: 'active' as const },
-  ];
-
   const defaultProps = {
     backendUrl: '',
     userToken: 'test-token',
@@ -87,13 +68,6 @@ describe('AccountTab', () => {
     setNewTraitName: jest.fn(),
     fetchTraits: jest.fn(),
     fetchTraitProfile: jest.fn(),
-    groupMembers: groupMembers,
-    reportableMembers: groupMembers,
-    coveredBy: {},
-    setCoveredBy: mockSetCoveredBy,
-    formatMemberName: mockFormatMemberName,
-    payerName: mockPayerName,
-    saveCoveredBy: mockSaveCoveredBy,
   };
 
   beforeEach(() => {
@@ -105,6 +79,5 @@ describe('AccountTab', () => {
     expect(getByTestId('account-profile-management')).toBeTruthy();
     expect(getByTestId('family-relationships')).toBeTruthy();
     expect(getByTestId('account-traits')).toBeTruthy();
-    expect(getByTestId('expense-covering')).toBeTruthy();
   });
 });

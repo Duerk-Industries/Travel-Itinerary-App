@@ -27,7 +27,7 @@ import LedgerTab from './tabs/ledger';
 import OverviewTab from './tabs/overview';
 import CreateTripWizard from './tabs/createTripWizard';
 import { buildAllExpenses, calculateAllTotals, type UnifiedExpense, computePayerTotals } from './utils/costs';
-import { rollUpTotals, detectCycle } from './utils/coveredBy';
+import { rollUpTotals, validateCoveringRules } from './utils/coveredBy';
 import TripDetailsTab from './tabs/tripDetails';
 import AccountTab, { fetchAccountProfile, fetchFamilyRelationships, fetchFellowTravelers, type FellowTraveler } from './tabs/account';
 import { CarRental, CarRentalDraft, buildCarRentalFromDraft, createInitialCarRentalDraft } from './tabs/carRentals';
@@ -443,18 +443,19 @@ const App: React.FC = () => {
 
   const saveCoveredBy = async () => {
     const trip = findActiveTrip();
-    if (!trip?.groupId) {
-      alert('An active trip with a group is required.');
+    if (!trip?.id) {
+      alert('An active trip is required.');
       return;
     }
 
-    if (detectCycle(coveredBy)) {
-      alert('Invalid covering rules. A circular dependency was detected (e.g., A covers B, and B covers A).');
+    const validation = validateCoveringRules(coveredBy);
+    if (!validation.ok) {
+      alert(validation.error);
       return;
     }
 
     try {
-      const res = await fetch(`${backendUrl}/api/groups/${trip.groupId}/covered-by`, {
+      const res = await fetch(`${backendUrl}/api/trips/${trip.id}/covered-by`, {
         method: 'PUT',
         headers: jsonHeaders,
         body: JSON.stringify(coveredBy),
@@ -1223,13 +1224,8 @@ const App: React.FC = () => {
       return;
     }
     const fetchCoveredBy = async () => {
-      const trip = findActiveTrip();
-      if (!trip?.groupId) {
-        setCoveredBy({});
-        return;
-      }
       try {
-        const res = await fetch(`${backendUrl}/api/groups/${trip.groupId}/covered-by`, { headers });
+        const res = await fetch(`${backendUrl}/api/trips/${activeTripId}/covered-by`, { headers });
         if (!res.ok) throw new Error('Failed to fetch covering rules.');
         const data = await res.json();
         setCoveredBy(data || {});
@@ -1621,13 +1617,19 @@ const App: React.FC = () => {
           {activePage === 'ledger' ? (
             <LedgerTab
               trip={findActiveTrip() ?? null}
-              groupMembers={reportableMembers} // Only show reportable members
+              groupMembers={groupMembers}
+              reportableMembers={reportableMembers}
               paidTotals={ledgerPaidTotals}
               usedTotals={ledgerUsedTotals}
               styles={styles}
               onNavigate={requestPageChange}
               downloadCsv={downloadCsv}
               findActiveTrip={findActiveTrip}
+              coveredBy={coveredBy}
+              setCoveredBy={setCoveredBy}
+              formatMemberName={formatMemberName}
+              payerName={payerName}
+              saveCoveredBy={saveCoveredBy}
             />
           ) : null}
 
@@ -1754,13 +1756,6 @@ const App: React.FC = () => {
               setNewTraitName={setNewTraitName}
               fetchTraits={fetchTraits}
               fetchTraitProfile={fetchTraitProfile}
-              groupMembers={groupMembers}
-              reportableMembers={reportableMembers}
-              coveredBy={coveredBy}
-              setCoveredBy={setCoveredBy}
-              formatMemberName={formatMemberName}
-              payerName={payerName}
-              saveCoveredBy={saveCoveredBy}
             />
           ) : null}
 
@@ -2691,28 +2686,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
+    position: 'relative',
+    zIndex: 1,
   },
   expenseToggleButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 18,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
     borderWidth: 1,
+    borderColor: '#111',
     backgroundColor: '#fff',
   },
   expenseToggleSelected: {
-    backgroundColor: '#0d6efd',
-    borderColor: '#0d6efd',
+    backgroundColor: '#e5e7eb',
+    borderColor: '#111',
   },
   expenseToggleUnselected: {
     backgroundColor: '#fff',
-    borderColor: '#cbd5e1',
+    borderColor: '#111',
   },
   expenseToggleText: {
     fontWeight: '600',
-    color: '#0f172a',
+    color: '#111',
   },
   expenseToggleTextSelected: {
-    color: '#fff',
+    color: '#111',
   },
   input: {
     borderWidth: 1,
@@ -3161,6 +3159,7 @@ const styles = StyleSheet.create({
   },
   dropdown: {
     position: 'relative',
+    zIndex: 20,
   },
   selectButton: {
     justifyContent: 'center',
@@ -3190,8 +3189,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#d1d5db',
     borderRadius: 6,
-    zIndex: 11000,
-    elevation: 18,
+    zIndex: 20000,
+    elevation: 24,
   },
   dropdownOption: {
     padding: 10,
@@ -3269,10 +3268,12 @@ const styles = StyleSheet.create({
   expenseModalCard: {
     maxWidth: 760,
     maxHeight: 640,
+    overflow: 'visible',
   },
   expenseModalScroll: {
     maxHeight: 520,
     marginBottom: 8,
+    overflow: 'visible',
   },
   detailModal: {
     maxHeight: 520,
@@ -3283,21 +3284,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
+    position: 'relative',
+    zIndex: 10,
   },
   expenseFieldDate: {
     minWidth: 160,
     flexGrow: 1,
     flexBasis: 160,
+    zIndex: 1,
   },
   expenseFieldCategory: {
     minWidth: 150,
     flexGrow: 1,
     flexBasis: 150,
+    zIndex: 3,
   },
   expenseFieldCurrency: {
     minWidth: 110,
     flexGrow: 0,
     flexBasis: 110,
+    zIndex: 2,
   },
   expenseFieldAmount: {
     minWidth: 120,

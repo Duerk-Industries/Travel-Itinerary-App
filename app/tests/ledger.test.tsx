@@ -67,6 +67,7 @@ describe('LedgerTab', () => {
 
   const originalFetch = global.fetch;
   const downloadCsv = jest.fn();
+  const coveredBy = {};
   const findActiveTrip = () => trip;
 
   const allExpenses = [
@@ -100,7 +101,22 @@ describe('LedgerTab', () => {
 
   it('computes paid and used totals with FX conversion', async () => {
     const { getByTestId } = render(
-      <LedgerTab trip={trip} groupMembers={groupMembers} paidTotals={paidTotals} usedTotals={usedTotals} styles={styles} downloadCsv={downloadCsv} findActiveTrip={findActiveTrip} onNavigate={() => {}} />
+      <LedgerTab
+        trip={trip}
+        groupMembers={groupMembers}
+        reportableMembers={groupMembers}
+        paidTotals={paidTotals}
+        usedTotals={usedTotals}
+        styles={styles}
+        downloadCsv={downloadCsv}
+        findActiveTrip={findActiveTrip}
+        onNavigate={() => {}}
+        coveredBy={coveredBy}
+        setCoveredBy={jest.fn()}
+        formatMemberName={(member) => `${member.firstName ?? ''} ${member.lastName ?? ''}`.trim()}
+        payerName={(id) => id}
+        saveCoveredBy={async () => {}}
+      />
     );
 
     // Alex (m1) Paid: 100 (e1) + 50 (c1) = 150, Used: 100 (e2/2) + 50 (c1) = 150
@@ -114,7 +130,22 @@ describe('LedgerTab', () => {
 
   it('shows matching paid/used totals in the overall row', async () => {
     const { getByTestId } = render(
-      <LedgerTab trip={trip} groupMembers={groupMembers} paidTotals={paidTotals} usedTotals={usedTotals} styles={styles} downloadCsv={downloadCsv} findActiveTrip={findActiveTrip} onNavigate={() => {}} />
+      <LedgerTab
+        trip={trip}
+        groupMembers={groupMembers}
+        reportableMembers={groupMembers}
+        paidTotals={paidTotals}
+        usedTotals={usedTotals}
+        styles={styles}
+        downloadCsv={downloadCsv}
+        findActiveTrip={findActiveTrip}
+        onNavigate={() => {}}
+        coveredBy={coveredBy}
+        setCoveredBy={jest.fn()}
+        formatMemberName={(member) => `${member.firstName ?? ''} ${member.lastName ?? ''}`.trim()}
+        payerName={(id) => id}
+        saveCoveredBy={async () => {}}
+      />
     );
 
     const row = await waitFor(() => getByTestId('ledger-overall-row'));

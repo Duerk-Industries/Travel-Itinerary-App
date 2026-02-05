@@ -32,7 +32,7 @@ describe('PUT /api/groups/:groupId/covered-by', () => {
       .send(cyclicPayload);
 
     expect(res.statusCode).toEqual(400);
-    expect(res.body.error).toContain('circular dependency detected');
+    expect(res.body.error).toContain('circular dependency');
     expect(mockUpdateGroup).not.toHaveBeenCalled();
   });
 
