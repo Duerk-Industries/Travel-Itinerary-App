@@ -224,7 +224,7 @@ describe('Lodging Dialogs', () => {
 
   test('LodgingDetailsDialog calls onOpenMap when map is pressed', () => {
     const onOpenMap = jest.fn();
-    const { getByText } = render(
+    const { getAllByText } = render(
       <LodgingDetailsDialog
         visible
         lodging={mockLodging}
@@ -239,7 +239,8 @@ describe('Lodging Dialogs', () => {
         onOpenMap={onOpenMap}
       />
     );
-    fireEvent.press(getByText('Map'));
+    const addressLinks = getAllByText('123 Main St');
+    fireEvent.press(addressLinks[addressLinks.length - 1]);
     expect(onOpenMap).toHaveBeenCalledWith('123 Main St');
   });
 

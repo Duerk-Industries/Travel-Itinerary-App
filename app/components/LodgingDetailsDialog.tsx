@@ -236,11 +236,6 @@ const LodgingDetailsDialog: React.FC<LodgingDetailsDialogProps> = ({
             </TouchableOpacity>
           </View>
           <View style={detailStyles.actionGroup}>
-            {lodging.address ? (
-              <TouchableOpacity style={styles.button} onPress={() => onOpenMap(lodging.address)}>
-                <Text style={styles.buttonText}>Map</Text>
-              </TouchableOpacity>
-            ) : null}
             <TouchableOpacity style={styles.button} onPress={() => onEdit(lodging)}>
               <Text style={styles.buttonText}>Edit</Text>
             </TouchableOpacity>

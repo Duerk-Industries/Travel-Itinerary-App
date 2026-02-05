@@ -289,6 +289,13 @@ const App: React.FC = () => {
     return status === 'pending' ? 'Pending member' : 'Member';
   };
 
+  const userMembers = useMemo(
+    () => groupMembers.filter((m) => !m.guestName && m.status !== 'removed'),
+    [groupMembers]
+  );
+
+  const memberIds = useMemo(() => userMembers.map((m) => m.id), [userMembers]);
+
   const flightsTotal = useMemo(
     () => flights.reduce((sum, f) => sum + (Number(f.cost) || 0), 0),
     [flights]
@@ -300,6 +307,10 @@ const App: React.FC = () => {
   );
 
   const toursTotal = useMemo(() => tours.reduce((sum, t) => sum + (Number(t.cost) || 0), 0), [tours]);
+  const tourPayerTotals = useMemo(
+    () => computePayerTotals(tours, (t) => Number(t.cost) || 0, (t) => t.paidBy, memberIds, { fallbackOnEmpty: true }),
+    [tours, memberIds]
+  );
 
   const expenseCategories = useMemo(
     () => ['Breakfast', 'Lunch', 'Dinner', 'Other Food', 'Rides', 'Souvenirs', 'Other'],
@@ -467,13 +478,6 @@ const App: React.FC = () => {
     [reportableMembers]
   );
 
-  const userMembers = useMemo(
-    () => groupMembers.filter((m) => !m.guestName && m.status !== 'removed'),
-    [groupMembers]
-  );
-
-  const memberIds = useMemo(() => userMembers.map((m) => m.id), [userMembers]);
-
   const allMemberIds = useMemo(() => groupMembers.map(m => m.id), [groupMembers]);
 
   const allExpenses = useMemo(
@@ -514,7 +518,7 @@ const App: React.FC = () => {
   const convertCostReportToCsv = (
     reportRows: Array<{ label: string; total: number; shares: Record<string, number> }>,
     members: GroupMemberOption[],
-    finalBalances: Record<string, number>,
+    paidTotals: Record<string, number>,
     finalCost: number,
     getMemberName: (member: GroupMemberOption) => string
   ): string => {
@@ -532,9 +536,9 @@ const App: React.FC = () => {
     });
 
     const overallRow = [
-        'Overall',
-        ...members.map(m => finalBalances[m.id]?.toFixed(2) ?? '0.00'),
-        finalCost.toFixed(2)
+      'Overall',
+      ...members.map((m) => paidTotals[m.id]?.toFixed(2) ?? '0.00'),
+      finalCost.toFixed(2),
     ].map(escapeCsvCell);
 
     const allRows = [header, ...rows, overallRow];
@@ -1590,9 +1594,9 @@ const App: React.FC = () => {
               defaultPayerId={defaultPayerId}
               payerName={payerName}
               formatMemberName={formatMemberName}
-              userMembers={userMembers}
+              groupMembers={groupMembers}
               jsonHeaders={jsonHeaders}
-              payerTotals={payerTotals}
+              payerTotals={tourPayerTotals}
               toursTotal={toursTotal}
               styles={styles}
               nativeDateTimePicker={NativeDateTimePicker}
@@ -1699,7 +1703,7 @@ const App: React.FC = () => {
                       <Text style={styles.headerText}>Overall</Text>
                     </View>
                     {reportableMembers.map((m) => {
-                      const total = finalBalances[m.id] ?? 0;
+                      const total = ledgerPaidTotals[m.id] ?? 0;
                       return (
                         <View key={`overall-${m.id}`} style={[styles.cell, { minWidth: 120, flex: 1 }]}>
                           <Text style={styles.headerText}>${total.toFixed(2)}</Text>
@@ -2779,6 +2783,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
     gap: 8,
+    flexWrap: 'wrap',
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
     flexWrap: 'wrap',
   },
   groupRow: {

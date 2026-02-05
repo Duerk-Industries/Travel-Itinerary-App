@@ -145,7 +145,7 @@ type TourTabProps = {
   defaultPayerId: string | null;
   payerName: (id: string) => string;
   formatMemberName: (member: GroupMemberOption) => string;
-  userMembers: GroupMemberOption[];
+  groupMembers: GroupMemberOption[];
   jsonHeaders: Record<string, string>;
   payerTotals: Record<string, number>;
   toursTotal: number;
@@ -165,7 +165,7 @@ export const TourTab: React.FC<TourTabProps> = ({
   defaultPayerId,
   payerName,
   formatMemberName,
-  userMembers,
+  groupMembers,
   jsonHeaders,
   payerTotals,
   toursTotal,
@@ -181,8 +181,8 @@ export const TourTab: React.FC<TourTabProps> = ({
   const [tourDateValue, setTourDateValue] = useState<Date>(new Date());
   const DateTimePickerComponent = nativeDateTimePicker;
   const activeMembers = useMemo(
-    () => userMembers.filter((m) => m.status !== 'removed' && !m.removedAt),
-    [userMembers]
+    () => groupMembers.filter((m) => m.status !== 'removed' && !m.removedAt),
+    [groupMembers]
   );
 
   const resolveTravelerLabel = (member: GroupMemberOption) => {
@@ -417,10 +417,10 @@ export const TourTab: React.FC<TourTabProps> = ({
                 <Text style={styles.cellText}>{t.paidBy.length ? t.paidBy.map(payerName).join(', ') : '-'}</Text>
               </View>
               <View style={[styles.cell, styles.actionCell, styles.lastCell, { minWidth: 160, flex: 1 }]}>
-                <TouchableOpacity style={[styles.smallButton]} onPress={() => openTourEditor(t)}>
+                <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => openTourEditor(t)}>
                   <Text style={styles.buttonText}>Edit</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.smallButton, styles.dangerButton]} onPress={() => removeTour(t.id)}>
+                <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => removeTour(t.id)}>
                   <Text style={styles.buttonText}>Delete</Text>
                 </TouchableOpacity>
               </View>

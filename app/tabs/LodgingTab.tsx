@@ -191,7 +191,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
                 <Text style={styles.cellText}>{formatShortDate(lodging.checkOutDate)}</Text>
               </View>
               <View style={[styles.tableCell, styles.lodgingTabActionsCol, styles.lastCell]}>
-                <View style={styles.actionCell}>
+                <View style={[styles.actionCell, { flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'flex-start' }]}>
                   <TouchableOpacity
                     style={[styles.tableActionButton, styles.tableActionButtonPrimary]}
                     onPress={() => openEditDialog(lodging)}

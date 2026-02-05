@@ -24,6 +24,7 @@ type LodgingDialogProps = {
   defaultPayerId?: string | null;
   styles: Record<string, any>;
   onSave: () => void;
+  onSaveAndAddAnother?: () => void;
   onCancel: () => void;
   onOpenDatePicker?: (field: 'checkIn' | 'checkOut' | 'refundBy') => void;
   testID?: string;
@@ -47,6 +48,11 @@ const LodgingDialog: React.FC<LodgingDialogProps> = (props) => {
             <TouchableOpacity style={[props.styles.button, props.styles.dangerButton]} onPress={props.onCancel}>
               <Text style={props.styles.buttonText}>Cancel</Text>
             </TouchableOpacity>
+            {props.onSaveAndAddAnother ? (
+              <TouchableOpacity style={props.styles.button} onPress={props.onSaveAndAddAnother}>
+                <Text style={props.styles.buttonText}>Save &amp; Add Another</Text>
+              </TouchableOpacity>
+            ) : null}
             <TouchableOpacity style={props.styles.button} onPress={props.onSave}>
               <Text style={props.styles.buttonText}>Save</Text>
             </TouchableOpacity>

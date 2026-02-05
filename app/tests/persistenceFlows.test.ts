@@ -231,6 +231,7 @@ describe('Persistence flows for flights and lodging', () => {
       bookedOn: '',
       reference: '',
       paidBy: [],
+      travelerIds: [],
     };
 
     const result = await createTourForTrip({

@@ -21,6 +21,7 @@ import { computeDurationFromRange, formatMonthYear } from '../utils/tripDates';
 import { normalizeDateString } from '../utils/normalizeDateString';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { saveWizardFlights, saveWizardLodgings } from '../utils/wizardSaves';
+import { buildMapUrl, loadStoredMapPreference } from '../utils/mapLinks';
 import {
   TripDetails,
   TripDates,
@@ -658,8 +659,9 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   };
 
   const openWizardMaps = (address: string) => {
-    const encoded = encodeURIComponent(address);
-    const url = `https://www.google.com/maps/search/?api=1&query=${encoded}`;
+    const pref = loadStoredMapPreference('google');
+    const url = buildMapUrl(address, pref);
+    if (!url) return;
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       window.open(url, '_blank');
     } else {
@@ -768,7 +770,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     setWizardCarRentals((prev) => prev.filter((c) => c.id !== id));
   };
 
-  const saveWizardLodging = (draft: LodgingDraft, lodgingId?: string | null) => {
+  const saveWizardLodging = (draft: LodgingDraft, lodgingId?: string | null, opts?: { addAnother?: boolean }) => {
     const name = draft.name.trim();
     if (!name) {
       setWizardError('Please enter a lodging name.');
@@ -801,11 +803,12 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
       return [...prev, next];
     });
     setWizardError('');
-    if (lodgingId) {
-      closeWizardLodgingEditor();
-    } else {
-      setWizardLodgingDraft(buildWizardLodgingDraft());
+    if (opts?.addAnother && !lodgingId) {
+      setEditingWizardLodgingId(null);
+      setEditingWizardLodging(buildWizardLodgingDraft());
+      return;
     }
+    closeWizardLodgingEditor();
   };
 
   const saveWizardFlightsForTrip = async (tripId: string, groupId: string) => {
@@ -1794,14 +1797,23 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                       <Text style={[styles.cellText, styles.cellTextWrap]}>{l.paidBy?.length ? l.paidBy.map(wizardPayerName).join(', ') : '-'}</Text>
                     </View>
                     <View style={[styles.cell, styles.lodgingAddressCol]}>
-                      <Text style={[styles.cellText, styles.cellTextWrap]}>{l.address || '-'}</Text>
-                    </View>
-                    <View style={[styles.cell, styles.actionCell, styles.lodgingActionCol, styles.lastCell]}>
                       {l.address ? (
-                        <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => openWizardMaps(l.address)}>
-                          <Text style={styles.buttonText}>Map</Text>
+                        <TouchableOpacity onPress={() => openWizardMaps(l.address)}>
+                          <Text style={[styles.cellText, styles.linkText, styles.cellTextWrap]}>{l.address}</Text>
                         </TouchableOpacity>
-                      ) : null}
+                      ) : (
+                        <Text style={[styles.cellText, styles.cellTextWrap]}>-</Text>
+                      )}
+                    </View>
+                    <View
+                      style={[
+                        styles.cell,
+                        styles.actionCell,
+                        styles.lodgingActionCol,
+                        styles.lastCell,
+                        { flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'flex-start' },
+                      ]}
+                    >
                       <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => openWizardLodgingEditor(l)}>
                         <Text style={styles.buttonText}>Edit</Text>
                       </TouchableOpacity>
@@ -1828,6 +1840,11 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                 defaultPayerId={wizardDefaultPayerId}
                 styles={styles}
                 onSave={() => saveWizardLodging(editingWizardLodging, editingWizardLodgingId)}
+                onSaveAndAddAnother={
+                  !editingWizardLodgingId
+                    ? () => saveWizardLodging(editingWizardLodging, null, { addAnother: true })
+                    : undefined
+                }
                 onCancel={closeWizardLodgingEditor}
                 onOpenDatePicker={(field) => openWizardLodgingDatePicker(field, 'edit')}
               />
@@ -1858,7 +1875,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               defaultPayerId={wizardDefaultPayerId}
               payerName={wizardPayerName}
               formatMemberName={formatWizardMemberName}
-              userMembers={wizardGroupMembers}
+              groupMembers={wizardGroupMembers}
               jsonHeaders={wizardJsonHeaders}
               payerTotals={wizardToursPayerTotals}
               toursTotal={wizardToursTotal}

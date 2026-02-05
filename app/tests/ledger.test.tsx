@@ -121,4 +121,15 @@ describe('LedgerTab', () => {
     const { getAllByText } = within(row);
     expect(getAllByText('$350.00').length).toBeGreaterThan(0);
   });
+
+  it('handles undefined memberIds in computePayerTotals', () => {
+    const totals = computePayerTotals(
+      [{ amount: 42, ids: ['m1'] }],
+      (item) => item.amount,
+      (item) => item.ids,
+      undefined,
+      { fallbackOnEmpty: true }
+    );
+    expect(totals).toEqual({});
+  });
 });

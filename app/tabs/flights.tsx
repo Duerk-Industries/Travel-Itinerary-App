@@ -493,6 +493,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   const [airports, setAirports] = useState<Airport[]>([]);
   const [airportSuggestions, setAirportSuggestions] = useState<Airport[]>([]);
   const [airportAnchor, setAirportAnchor] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [airportAnchorInWindow, setAirportAnchorInWindow] = useState(false);
   const [airportTarget, setAirportTarget] = useState<'dep' | 'arr' | 'modal-dep' | 'modal-arr' | 'modal-layover' | null>(null);
   const [airportQuery, setAirportQuery] = useState('');
   const airportSelectInProgressRef = useRef(false);
@@ -739,7 +740,11 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     setAirportTarget(target);
     setAirportQuery(query);
     setAirportSuggestions(buildAirportSuggestions(query));
-    measureContainerOffset();
+    const inWindow = target.startsWith('modal-');
+    setAirportAnchorInWindow(inWindow);
+    if (!inWindow) {
+      measureContainerOffset();
+    }
     if (query.trim()) {
       try {
         void onSearchAirports(query);
@@ -750,7 +755,11 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     let nextAnchor = { x: 16, y: 120, width: 260, height: 40 };
     if (node?.measureInWindow) {
       node.measureInWindow((x: number, y: number, width: number, height: number) => {
-        setAirportAnchor({ x: x - containerOffset.x, y: y - containerOffset.y, width, height });
+        if (inWindow) {
+          setAirportAnchor({ x, y, width, height });
+        } else {
+          setAirportAnchor({ x: x - containerOffset.x, y: y - containerOffset.y, width, height });
+        }
       });
     } else if (typeof node?.getBoundingClientRect === 'function') {
       const rect = node.getBoundingClientRect();
@@ -758,8 +767,8 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       const containerLeft = (containerRect?.left ?? 0) + (typeof window !== 'undefined' ? window.scrollX : 0);
       const containerTop = (containerRect?.top ?? 0) + (typeof window !== 'undefined' ? window.scrollY : 0);
       nextAnchor = {
-        x: rect.left + (typeof window !== 'undefined' ? window.scrollX : 0) - containerLeft,
-        y: rect.top + (typeof window !== 'undefined' ? window.scrollY : 0) - containerTop,
+        x: rect.left + (typeof window !== 'undefined' ? window.scrollX : 0) - (inWindow ? 0 : containerLeft),
+        y: rect.top + (typeof window !== 'undefined' ? window.scrollY : 0) - (inWindow ? 0 : containerTop),
         width: rect.width,
         height: rect.height,
       };
@@ -770,6 +779,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   const hideAirportDropdown = () => {
     setAirportTarget(null);
     setAirportAnchor(null);
+    setAirportAnchorInWindow(false);
     setAirportSuggestions([]);
     setAirportQuery('');
   };
@@ -1480,7 +1490,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
           </View>
         </View>
       ) : null}
-      {airportTarget && airportAnchor ? (
+      {airportTarget && airportAnchor && !airportTarget.startsWith('modal-') ? (
         <View
           style={[
             styles.passengerOverlay,
@@ -1551,12 +1561,17 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
         flight={editingFlight}
         overlayStyle={modalOverlayStyle}
         cardStyle={modalCardStyle}
+        airportAnchor={airportAnchorInWindow ? airportAnchor : null}
+        airportTarget={airportAnchorInWindow ? airportTarget : null}
+        airportSuggestions={airportAnchorInWindow ? airportSuggestions : []}
+        formatAirportLabel={formatAirportLabel}
+        onHideAirportDropdown={hideAirportDropdown}
+        onSelectAirport={selectAirport}
         groupMembers={groupMembers}
         userMembers={userMembers}
         styles={styles}
         formatMemberName={formatMemberName}
         payerName={payerName}
-        airportTarget={airportTarget}
         getLocationInputValue={getLocationInputValue}
         showAirportDropdown={showAirportDropdown}
         parseLayoverDuration={parseLayoverDuration}
