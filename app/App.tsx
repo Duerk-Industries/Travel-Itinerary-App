@@ -1343,7 +1343,9 @@ const App: React.FC = () => {
     fetchTrips();
     fetchGroups();
     fetchInvites();
-    requestPageChange('overview', { skipHistory: true });
+    setPageForwardHistory([]);
+    setPageHistory((prev) => prev.slice(-25));
+    setActivePage('overview');
   };
 
   const deleteTrip = async (tripId: string) => {

@@ -118,6 +118,14 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   currentUserEmail,
 }) => {
   const { width: viewportWidth } = useWindowDimensions();
+  const handleTripCreated = useCallback(
+    (tripId: string) => {
+      if (typeof onTripCreated === 'function') {
+        onTripCreated(tripId);
+      }
+    },
+    [onTripCreated]
+  );
   const isNarrowLayout = viewportWidth < 720;
   const [stepIndex, setStepIndex] = useState(0);
   const [details, setDetails] = useState<TripDetails>({ name: '', description: '', destination: '' });
@@ -184,6 +192,12 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   const wizardEditLodgingCheckOutRef = useRef<HTMLInputElement | null>(null);
   const wizardCarPickupDateRef = useRef<HTMLInputElement | null>(null);
   const wizardCarDropoffDateRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (createdTripId) {
+      handleTripCreated(createdTripId);
+    }
+  }, [createdTripId, handleTripCreated]);
 
   const totalSteps = steps.length;
   const wizardTripDefaults = useMemo<Trip>(
@@ -1094,7 +1108,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
       }
 
       setCreatedTripId(tripId);
-      onTripCreated(tripId);
+      handleTripCreated(tripId);
     } catch (err) {
       setWizardError((err as Error).message);
     } finally {
@@ -2248,14 +2262,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   if (createdTripId) {
     return (
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Trip created!</Text>
-        <Text style={styles.helperText}>Your trip is ready. You can view it now.</Text>
-        <TouchableOpacity style={styles.button} onPress={() => onTripCreated(createdTripId)}>
-          <Text style={styles.buttonText}>View Trip</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={onCancel}>
-          <Text style={styles.buttonText}>Back to Trips</Text>
-        </TouchableOpacity>
+        <Text style={styles.sectionTitle}>Creating trip...</Text>
+        <Text style={styles.helperText}>Finalizing setup and opening your overview.</Text>
       </View>
     );
   }
