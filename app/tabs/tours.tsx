@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { formatDateLong } from '../utils/formatDateLong';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 
@@ -15,6 +15,7 @@ export type Tour = {
   bookedOn: string;
   reference: string;
   paidBy: string[];
+  travelerIds?: string[];
 };
 
 export type TourDraft = {
@@ -28,6 +29,7 @@ export type TourDraft = {
   bookedOn: string;
   reference: string;
   paidBy: string[];
+  travelerIds: string[];
 };
 
 export type GroupMemberOption = {
@@ -52,6 +54,7 @@ export const createInitialTourState = (): TourDraft => ({
   bookedOn: '',
   reference: '',
   paidBy: [],
+  travelerIds: [],
 });
 
 export const buildTourPayload = (draft: TourDraft, defaultPayerId?: string | null): { payload?: TourDraft; error?: string } => {
@@ -177,13 +180,46 @@ export const TourTab: React.FC<TourTabProps> = ({
   const [tourDateField, setTourDateField] = useState<'date' | 'bookedOn' | 'freeCancel' | 'startTime' | null>(null);
   const [tourDateValue, setTourDateValue] = useState<Date>(new Date());
   const DateTimePickerComponent = nativeDateTimePicker;
+  const activeMembers = useMemo(
+    () => userMembers.filter((m) => m.status !== 'removed' && !m.removedAt),
+    [userMembers]
+  );
+
+  const resolveTravelerLabel = (member: GroupMemberOption) => {
+    const first = member.firstName?.trim() ?? '';
+    const last = member.lastName?.trim() ?? '';
+    if (first || last) return `${first} ${last}`.trim();
+    const guest = member.guestName?.trim() ?? '';
+    if (guest) return guest;
+    const email = (member.email ?? '').trim();
+    if (email) return email;
+    return 'Traveler';
+  };
+
+  const toggleBaseStyle = styles.toggleOption ?? {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#111',
+    backgroundColor: '#fff',
+  };
+  const toggleSelectedStyle = styles.toggleOptionSelected ?? {
+    backgroundColor: '#e5e7eb',
+    borderColor: '#111',
+  };
+  const toggleTextStyle = styles.toggleOptionText ?? { color: '#111', fontWeight: '600' };
+  const toggleTextSelectedStyle = styles.toggleOptionTextSelected ?? { color: '#111' };
 
   const openTourEditor = (tour?: Tour) => {
     if (mode !== 'wizard' && !activeTripId) {
       alert('Select an active trip before adding a tour.');
       return;
     }
-    const base = tour ? { ...tour } : createInitialTourState();
+    const base = tour ? { ...tour, travelerIds: tour.travelerIds ?? (tour as any).travelerIds ?? [] } : createInitialTourState();
+    if (!base.travelerIds?.length) {
+      base.travelerIds = activeMembers.map((m) => m.id);
+    }
     if (!tour && defaultPayerId && !base.paidBy.includes(defaultPayerId)) {
       base.paidBy = [...base.paidBy, defaultPayerId];
     }
@@ -298,8 +334,8 @@ export const TourTab: React.FC<TourTabProps> = ({
     <View style={styles.card}>
       <View style={styles.sectionHeaderRow}>
         <Text style={styles.sectionTitle}>Tours</Text>
-        <TouchableOpacity style={styles.button} onPress={() => openTourEditor()}>
-          <Text style={styles.buttonText}>+ Add Tour</Text>
+        <TouchableOpacity style={[styles.button, styles.roundButton]} onPress={() => openTourEditor()}>
+          <Text style={styles.buttonText}>+</Text>
         </TouchableOpacity>
       </View>
       {Platform.OS !== 'web' && tourDateField && editingTour && DateTimePickerComponent ? (
@@ -405,15 +441,16 @@ export const TourTab: React.FC<TourTabProps> = ({
         ) : null}
       </View>
       {editingTour ? (
-        <View style={styles.passengerOverlay}>
-          <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={closeTourEditor} />
-          <View style={styles.modalCard}>
+        <Modal transparent visible={Boolean(editingTour)} animationType="fade" onRequestClose={closeTourEditor}>
+          <View style={styles.modalOverlay}>
+            <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={closeTourEditor} />
+            <View style={[styles.modalCard, { marginTop: 0 }]}>
             <Text style={styles.sectionTitle}>{editingTourId ? 'Edit Tour' : 'Add Tour'}</Text>
             <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ paddingRight: 12 }}>
               <Text style={styles.modalLabel}>Date</Text>
               {Platform.OS === 'web' ? (
                 <input
-                  style={{ ...StyleSheet.flatten(styles.input), width: '100%' }}
+                  style={{ ...StyleSheet.flatten(styles.input), width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
                   type="date"
                   value={editingTour.date}
                   onChange={(e) => setEditingTour((p) => (p ? { ...p, date: e.target.value } : p))}
@@ -440,7 +477,7 @@ export const TourTab: React.FC<TourTabProps> = ({
               <Text style={styles.modalLabel}>Start time</Text>
               {Platform.OS === 'web' ? (
                 <input
-                  style={{ ...StyleSheet.flatten(styles.input), width: '100%' }}
+                  style={{ ...StyleSheet.flatten(styles.input), width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
                   type="time"
                   value={editingTour.startTime}
                   onChange={(e) => setEditingTour((p) => (p ? { ...p, startTime: e.target.value } : p))}
@@ -473,7 +510,7 @@ export const TourTab: React.FC<TourTabProps> = ({
               </View>
               {Platform.OS === 'web' ? (
                 <input
-                  style={{ ...StyleSheet.flatten(styles.input), width: '100%' }}
+                  style={{ ...StyleSheet.flatten(styles.input), width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
                   type="date"
                   value={editingTour.freeCancelBy}
                   onChange={(e) => setEditingTour((p) => (p ? { ...p, freeCancelBy: e.target.value } : p))}
@@ -484,45 +521,61 @@ export const TourTab: React.FC<TourTabProps> = ({
                 </TouchableOpacity>
               )}
               <Text style={styles.modalLabel}>Platform Booked On</Text>
-              <View style={{ flexDirection: 'row', gap: 8 }}>
+              <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
                 <TextInput
-                  style={[styles.input, { flex: 1 }]}
+                  style={[styles.input, { flex: 1, minWidth: 220 }]}
                   placeholder="Viator, Get Your Guide, Klook, etc."
                   value={editingTour.bookedOn}
                   onChangeText={(text: string) => setEditingTour((p) => (p ? { ...p, bookedOn: text } : p))}
                 />
                 <TextInput
-                  style={[styles.input, { flex: 1 }]}
+                  style={[styles.input, { flex: 1, minWidth: 220 }]}
                   placeholder="Reference"
                   value={editingTour.reference}
                   onChangeText={(text: string) => setEditingTour((p) => (p ? { ...p, reference: text } : p))}
                 />
               </View>
+              <Text style={styles.modalLabel}>Participants</Text>
+              <View style={styles.payerChips}>
+                {activeMembers.map((m) => {
+                  const selected = editingTour.travelerIds.includes(m.id);
+                  const name = resolveTravelerLabel(m);
+                  return (
+                    <TouchableOpacity
+                      key={`tour-participant-${m.id}`}
+                      style={[toggleBaseStyle, selected && toggleSelectedStyle]}
+                      onPress={() => {
+                        const next = selected
+                          ? editingTour.travelerIds.filter((id) => id !== m.id)
+                          : [...editingTour.travelerIds, m.id];
+                        setEditingTour((p) => (p ? { ...p, travelerIds: next } : p));
+                      }}
+                    >
+                      <Text style={[toggleTextStyle, selected && toggleTextSelectedStyle]}>{name}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
               <Text style={styles.modalLabel}>Paid by</Text>
-              <View style={[styles.input, styles.payerBox]}>
-                <View style={styles.payerChips}>
-                  {editingTour.paidBy.map((id) => (
-                    <View key={id} style={styles.payerChip}>
-                      <Text style={styles.cellText}>{payerName(id)}</Text>
-                      <TouchableOpacity onPress={() => setEditingTour((p) => (p ? { ...p, paidBy: p.paidBy.filter((x) => x !== id) } : p))}>
-                        <Text style={styles.removeText}>x</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                </View>
-                <View style={styles.payerOptions}>
-                  {userMembers
-                    .filter((m) => !editingTour.paidBy.includes(m.id))
-                    .map((m) => (
-                      <TouchableOpacity
-                        key={m.id}
-                        style={styles.smallButton}
-                        onPress={() => setEditingTour((p) => (p ? { ...p, paidBy: [...p.paidBy, m.id] } : p))}
-                      >
-                        <Text style={styles.buttonText}>Add {formatMemberName(m)}</Text>
-                      </TouchableOpacity>
-                    ))}
-                </View>
+              <View style={styles.payerChips}>
+                {activeMembers.map((m) => {
+                  const selected = editingTour.paidBy.includes(m.id);
+                  const name = resolveTravelerLabel(m);
+                  return (
+                    <TouchableOpacity
+                      key={`tour-payer-${m.id}`}
+                      style={[toggleBaseStyle, selected && toggleSelectedStyle]}
+                      onPress={() => {
+                        const next = selected
+                          ? editingTour.paidBy.filter((id) => id !== m.id)
+                          : [...editingTour.paidBy, m.id];
+                        setEditingTour((p) => (p ? { ...p, paidBy: next } : p));
+                      }}
+                    >
+                      <Text style={[toggleTextStyle, selected && toggleTextSelectedStyle]}>{name}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </ScrollView>
             <View style={[styles.tableFooter, { justifyContent: 'space-between' }]}>
@@ -533,8 +586,9 @@ export const TourTab: React.FC<TourTabProps> = ({
                 <Text style={styles.buttonText}>Save</Text>
               </TouchableOpacity>
             </View>
+            </View>
           </View>
-        </View>
+        </Modal>
       ) : null}
     </View>
   );

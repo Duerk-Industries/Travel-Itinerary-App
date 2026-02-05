@@ -1,5 +1,5 @@
 import React from 'react';
-import { Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { formatDateLong } from '../utils/formatDateLong';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import type { FlightEditDraft, GroupMemberOption } from '../tabs/flights';
@@ -85,20 +85,29 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
   const toggleTextStyle = styles.toggleOptionText ?? { color: '#111', fontWeight: '600' };
   const toggleTextSelectedStyle = styles.toggleOptionTextSelected ?? { color: '#111' };
   const rowStyle = [styles.modalRow, { flexWrap: 'wrap', gap: 8, alignItems: 'flex-start' }];
-  const fieldStyle = [styles.modalField, { minWidth: 180, flex: 1 }];
-  const dateFieldStyle = [styles.modalField, { flexGrow: 0, flexShrink: 0, flexBasis: 170, minWidth: 170, maxWidth: 200 }];
-  const timeFieldStyle = [styles.modalField, { flexGrow: 0, flexShrink: 0, flexBasis: 100, minWidth: 100 }];
-  const locationFieldStyle = [styles.modalField, { minWidth: 220, flexGrow: 1, flexBasis: 0 }];
+  const fieldStyle = [styles.modalField, { minWidth: 200, flex: 1 }];
+  const dateFieldStyle = [styles.modalField, { flexGrow: 0, flexShrink: 0, flexBasis: 190, minWidth: 190, maxWidth: 240 }];
+  const timeFieldStyle = [styles.modalField, { flexGrow: 0, flexShrink: 0, flexBasis: 180, minWidth: 180, maxWidth: 220 }];
+  const locationFieldStyle = [styles.modalField, { minWidth: 240, flexGrow: 1, flexBasis: 0 }];
+
+  const baseOverlayStyle = {
+    backgroundColor: 'rgba(15,23,42,0.35)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  };
+  const baseCardStyle = { marginTop: 0 };
 
   return (
-    <View style={[styles.passengerOverlay, overlayStyle]}>
-      <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={onClose} />
-      <View style={[styles.modalCard, cardStyle]}>
+    <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
+      <View style={[styles.passengerOverlay, baseOverlayStyle, overlayStyle]}>
+        <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={onClose} />
+        <View style={[styles.modalCard, baseCardStyle, cardStyle]}>
         <Text style={styles.sectionTitle}>Flight Details</Text>
         <Text style={styles.helperText}>
           Current Departure: {formatDateLong(flight.departureDate)} at {flight.departureTime || '?'}
         </Text>
-        <ScrollView style={{ maxHeight: 420 }}>
+        <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ paddingRight: 12 }}>
           <Text style={styles.modalLabel}>Passengers</Text>
           <View style={styles.payerChips}>
             {groupMembers.map((m) => {
@@ -134,7 +143,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
                       return { ...prev, departureDate: dep, arrivalDate: nextArrival };
                     })
                   }
-                  style={styles.input as any}
+                  style={{ ...(styles.input as any), width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
                 />
               ) : (
                 <TextInput
@@ -152,6 +161,26 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
                 />
               )}
             </View>
+            <View style={timeFieldStyle}>
+              <Text style={styles.modalLabelSmall}>Time</Text>
+              {Platform.OS === 'web' ? (
+                <input
+                  type="time"
+                  value={flight.departureTime}
+                  onChange={(e) => setFlight((prev) => (prev ? { ...prev, departureTime: e.target.value } : prev))}
+                  style={{ ...(styles.input as any), width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
+                />
+              ) : (
+                <TouchableOpacity
+                  style={[styles.input, { justifyContent: 'center' }]}
+                  onPress={() => openTimePicker('edit-dep', flight.departureTime)}
+                >
+                  <Text style={styles.cellText}>{flight.departureTime || 'HH:MM'}</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+          <View style={rowStyle}>
             <View style={locationFieldStyle}>
               <Text style={styles.modalLabelSmall}>Location</Text>
               <TextInput
@@ -175,24 +204,6 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
                 }}
               />
             </View>
-            <View style={timeFieldStyle}>
-              <Text style={styles.modalLabelSmall}>Time</Text>
-              {Platform.OS === 'web' ? (
-                <input
-                  type="time"
-                  value={flight.departureTime}
-                  onChange={(e) => setFlight((prev) => (prev ? { ...prev, departureTime: e.target.value } : prev))}
-                  style={styles.input as any}
-                />
-              ) : (
-                <TouchableOpacity
-                  style={[styles.input, { justifyContent: 'center' }]}
-                  onPress={() => openTimePicker('edit-dep', flight.departureTime)}
-                >
-                  <Text style={styles.cellText}>{flight.departureTime || 'HH:MM'}</Text>
-                </TouchableOpacity>
-              )}
-            </View>
           </View>
           <Text style={styles.modalLabel}>Arrival</Text>
           <View style={rowStyle}>
@@ -203,7 +214,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
                   type="date"
                   value={flight.arrivalDate}
                   onChange={(e) => setFlight((prev) => (prev ? { ...prev, arrivalDate: e.target.value } : prev))}
-                  style={styles.input as any}
+                  style={{ ...(styles.input as any), width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
                 />
               ) : (
                 <TextInput
@@ -214,6 +225,26 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
                 />
               )}
             </View>
+            <View style={timeFieldStyle}>
+              <Text style={styles.modalLabelSmall}>Time</Text>
+              {Platform.OS === 'web' ? (
+                <input
+                  type="time"
+                  value={flight.arrivalTime}
+                  onChange={(e) => setFlight((prev) => (prev ? { ...prev, arrivalTime: e.target.value } : prev))}
+                  style={{ ...(styles.input as any), width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
+                />
+              ) : (
+                <TouchableOpacity
+                  style={[styles.input, { justifyContent: 'center' }]}
+                  onPress={() => openTimePicker('edit-arr', flight.arrivalTime)}
+                >
+                  <Text style={styles.cellText}>{flight.arrivalTime || 'HH:MM'}</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+          <View style={rowStyle}>
             <View style={locationFieldStyle}>
               <Text style={styles.modalLabelSmall}>Location</Text>
               <TextInput
@@ -236,24 +267,6 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
                   onAirportEnter('modal-arr', flight.arrivalLocation);
                 }}
               />
-            </View>
-            <View style={timeFieldStyle}>
-              <Text style={styles.modalLabelSmall}>Time</Text>
-              {Platform.OS === 'web' ? (
-                <input
-                  type="time"
-                  value={flight.arrivalTime}
-                  onChange={(e) => setFlight((prev) => (prev ? { ...prev, arrivalTime: e.target.value } : prev))}
-                  style={styles.input as any}
-                />
-              ) : (
-                <TouchableOpacity
-                  style={[styles.input, { justifyContent: 'center' }]}
-                  onPress={() => openTimePicker('edit-arr', flight.arrivalTime)}
-                >
-                  <Text style={styles.cellText}>{flight.arrivalTime || 'HH:MM'}</Text>
-                </TouchableOpacity>
-              )}
             </View>
           </View>
 
@@ -290,7 +303,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
                   return (
                     <>
                       <TextInput
-                        style={[styles.input, { flex: 1 }]}
+                        style={[styles.input, { flex: 1, minWidth: 90, maxWidth: 140 }]}
                         keyboardType="numeric"
                         placeholder="Hours"
                         value={hours}
@@ -300,7 +313,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
                         }}
                       />
                       <TextInput
-                        style={[styles.input, { flex: 1 }]}
+                        style={[styles.input, { flex: 1, minWidth: 90, maxWidth: 140 }]}
                         keyboardType="numeric"
                         placeholder="Minutes"
                         value={minutes}
@@ -386,7 +399,8 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
             <Text style={styles.buttonText}>Save</Text>
           </TouchableOpacity>
         </View>
+        </View>
       </View>
-    </View>
+    </Modal>
   );
 };

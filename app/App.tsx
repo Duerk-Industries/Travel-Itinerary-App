@@ -3322,10 +3322,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     alignItems: 'flex-start',
+    flexWrap: 'wrap',
   },
   modalField: {
     flex: 1,
     position: 'relative',
+    minWidth: 200,
+    maxWidth: '100%',
+    flexBasis: 0,
   },
   inlineDropdownList: {
     position: 'absolute',

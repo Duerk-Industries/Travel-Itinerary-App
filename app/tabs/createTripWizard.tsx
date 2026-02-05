@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Linking, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Linking, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import type { Trait } from './traits';
 import { FlightsTab, type Flight, type GroupMemberOption, type Trip } from './flights';
 import {
@@ -116,6 +116,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   currentUserName,
   currentUserEmail,
 }) => {
+  const { width: viewportWidth } = useWindowDimensions();
+  const isNarrowLayout = viewportWidth < 720;
   const [stepIndex, setStepIndex] = useState(0);
   const [details, setDetails] = useState<TripDetails>({ name: '', description: '', destination: '' });
   const [dates, setDates] = useState<TripDates>({
@@ -1186,8 +1188,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               <Text style={styles.helperText}>Select a date option to continue.</Text>
             ) : dates.mode === 'range' ? (
               <>
-                <View style={styles.row}>
-                  <View style={[styles.dateInputWrap, { flex: 1 }]}>
+                <View style={[styles.row, { flexWrap: isNarrowLayout ? 'wrap' : 'nowrap' }]}>
+                  <View style={[styles.dateInputWrap, { flex: 1, minWidth: isNarrowLayout ? '100%' : 0, maxWidth: '100%' }]}>
                     {Platform.OS === 'web' ? (
                       <input
                         ref={startDateRef as any}
@@ -1195,7 +1197,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                         value={dates.startDate}
                         onChange={(e) => setStartDateWithRangeGuard(e.target.value)}
                         onFocus={primeRangeDates}
-                        style={styles.input as any}
+                        style={{ ...(styles.input as any), width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
                       />
                     ) : (
                       <TouchableOpacity style={[styles.input, styles.dateTouchable]} onPress={() => openDatePicker('start')}>
@@ -1208,7 +1210,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                       </TouchableOpacity>
                     ) : null}
                   </View>
-                  <View style={[styles.dateInputWrap, { flex: 1 }]}>
+                  <View style={[styles.dateInputWrap, { flex: 1, minWidth: isNarrowLayout ? '100%' : 0, maxWidth: '100%' }]}>
                     {Platform.OS === 'web' ? (
                       <input
                         ref={endDateRef as any}
@@ -1216,7 +1218,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                         value={dates.endDate}
                         onChange={(e) => setDates((prev) => ({ ...prev, endDate: normalizeDateString(e.target.value) }))}
                         onFocus={primeRangeDates}
-                        style={styles.input as any}
+                        style={{ ...(styles.input as any), width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
                       />
                     ) : (
                       <TouchableOpacity style={[styles.input, styles.dateTouchable]} onPress={() => openDatePicker('end')}>
@@ -1704,6 +1706,14 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               styles={styles}
               airportOptions={airportOptions}
               onSearchAirports={onSearchAirports}
+              modalOverlayStyle={{
+                ...(Platform.OS === 'web'
+                  ? { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }
+                  : { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }),
+                zIndex: 45000,
+                elevation: 80,
+              }}
+              modalCardStyle={{ zIndex: 46000, elevation: 84 }}
               showList
               mode="wizard"
             />
@@ -1714,9 +1724,12 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           <>
             <Text style={styles.sectionTitle}>Accommodation Details</Text>
             <Text style={styles.helperText}>Optional. Add lodging details using the full lodging interface.</Text>
-            <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => openWizardLodgingEditor(null)}>
-              <Text style={styles.buttonText}>Add Lodging</Text>
-            </TouchableOpacity>
+            <View style={styles.row}>
+              <Text style={styles.sectionTitle}>Lodgings</Text>
+              <TouchableOpacity style={[styles.button, styles.roundButton]} onPress={() => openWizardLodgingEditor(null)}>
+                <Text style={styles.buttonText}>+</Text>
+              </TouchableOpacity>
+            </View>
             <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
               <View style={styles.table}>
                 <View style={[styles.tableRow, styles.tableHeader]}>

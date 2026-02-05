@@ -397,6 +397,8 @@ type FlightsTabProps = {
   onDataChanged?: () => void;
   showList?: boolean;
   mode?: 'live' | 'wizard';
+  modalOverlayStyle?: Record<string, any>;
+  modalCardStyle?: Record<string, any>;
 };
 
 type Airport = {
@@ -458,6 +460,8 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   onDataChanged,
   showList = true,
   mode = 'live',
+  modalOverlayStyle,
+  modalCardStyle,
 }) => {
   const isWizard = mode === 'wizard';
   const containerRef = useRef<React.ElementRef<typeof View> | null>(null);
@@ -1545,6 +1549,8 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
         visible={Boolean(editingFlight && editingFlightId)}
         flightId={editingFlightId}
         flight={editingFlight}
+        overlayStyle={modalOverlayStyle}
+        cardStyle={modalCardStyle}
         groupMembers={groupMembers}
         userMembers={userMembers}
         styles={styles}

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import type { LodgingDraft } from '../tabs/lodging';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 
@@ -95,7 +95,7 @@ const LodgingForm: React.FC<LodgingFormProps> = ({
           type="date"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          style={styles.input as any}
+          style={{ ...StyleSheet.flatten(styles.input), width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
         />
       );
     }
@@ -112,7 +112,7 @@ const LodgingForm: React.FC<LodgingFormProps> = ({
   return (
     <>
       <View style={[styles.modalRow, isCompact && { flexDirection: 'column' }]}>
-        <View style={styles.modalField}>
+        <View style={[styles.modalField, isCompact && { minWidth: '100%' }]}>
           <Text style={styles.modalLabel}>Name</Text>
           <TextInput
             style={styles.input}
@@ -121,7 +121,7 @@ const LodgingForm: React.FC<LodgingFormProps> = ({
             onChangeText={(text: string) => setDraft((prev) => ({ ...prev, name: text }))}
           />
         </View>
-        <View style={styles.modalField}>
+        <View style={[styles.modalField, isCompact && { minWidth: '100%' }]}>
           <Text style={styles.modalLabel}>Rooms</Text>
           <TextInput
             style={styles.input}
@@ -134,13 +134,13 @@ const LodgingForm: React.FC<LodgingFormProps> = ({
       </View>
 
       <View style={[styles.modalRow, isCompact && { flexDirection: 'column' }]}>
-        <View style={styles.modalField}>
+        <View style={[styles.modalField, isCompact && { minWidth: '100%' }]}>
           <Text style={styles.modalLabel}>Check-in date</Text>
           {renderDateInput('checkIn', draft.checkInDate, (value) =>
             setDraft((prev) => ({ ...prev, checkInDate: value }))
           )}
         </View>
-        <View style={styles.modalField}>
+        <View style={[styles.modalField, isCompact && { minWidth: '100%' }]}>
           <Text style={styles.modalLabel}>Check-out date</Text>
           {renderDateInput('checkOut', draft.checkOutDate, (value) =>
             setDraft((prev) => ({ ...prev, checkOutDate: value }))
@@ -149,7 +149,7 @@ const LodgingForm: React.FC<LodgingFormProps> = ({
       </View>
 
       <View style={[styles.modalRow, isCompact && { flexDirection: 'column' }]}>
-        <View style={styles.modalField}>
+        <View style={[styles.modalField, isCompact && { minWidth: '100%' }]}>
           <View style={styles.modalRow}>
             <Text style={styles.modalLabel}>Refund by</Text>
             <TouchableOpacity onPress={() => setDraft((prev) => ({ ...prev, refundBy: '' }))}>
@@ -160,7 +160,7 @@ const LodgingForm: React.FC<LodgingFormProps> = ({
             setDraft((prev) => ({ ...prev, refundBy: value }))
           )}
         </View>
-        <View style={styles.modalField}>
+        <View style={[styles.modalField, isCompact && { minWidth: '100%' }]}>
           <Text style={styles.modalLabel}>Total cost</Text>
           <TextInput
             style={styles.input}
