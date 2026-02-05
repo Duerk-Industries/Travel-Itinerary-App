@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { type Lodging, type LodgingDraft, buildLodgingPayload, createLodgingDraftForTrip, saveLodgingApi, removeLodgingApi } from './lodging';
+import { formatUserDisplayName } from './overview';
 import LodgingDialog from '../components/LodgingDialog';
 import LodgingDetailsDialog from '../components/LodgingDetailsDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -18,7 +19,7 @@ type LodgingTabProps = {
   styles: Record<string, any>;
   onRefreshLodgings?: () => void;
   onOpenMap: (address: string) => void;
-  formatMemberName: (member: any) => string;
+  formatMemberName: (member: any) => string; // This will be ignored, but kept for compatibility
   payerName: (id: string) => string;
 };
 
@@ -46,8 +47,8 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
   styles,
   onRefreshLodgings,
   onOpenMap,
-  formatMemberName,
-  payerName,
+  formatMemberName: _formatMemberName, // unused
+  payerName: _payerName, // unused
 }) => {
   const [selectedLodging, setSelectedLodging] = useState<Lodging | null>(null);
   const [showDetails, setShowDetails] = useState(false);
@@ -139,13 +140,14 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
 
   const travelerNames = useMemo(() => {
     const map = new Map<string, string>();
-    groupMembers.forEach((member) => {
-      map.set(member.id, formatMemberName(member));
+    groupMembers.forEach(member => {
+      map.set(member.id, formatUserDisplayName(member));
     });
     return map;
-  }, [groupMembers, formatMemberName]);
+  }, [groupMembers]);
 
-  const travelerName = (id: string) => travelerNames.get(id) ?? payerName(id);
+  const payerName = (id: string) => travelerNames.get(id) ?? 'Unknown';
+  const travelerName = (id: string) => travelerNames.get(id) ?? 'Unknown';
 
   return (
     <View style={styles.card}>
@@ -234,7 +236,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
           draft={lodgingDraft}
           setDraft={setLodgingDraft}
           groupMembers={groupMembers}
-          formatMemberName={formatMemberName}
+          formatMemberName={formatUserDisplayName}
           payerName={payerName}
           defaultPayerId={defaultPayerId}
           styles={styles}

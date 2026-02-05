@@ -240,6 +240,27 @@ export const formatAttendeeLabel = (member: OverviewTabProps['attendees'][number
   return email && base.toLowerCase() !== email.toLowerCase() ? `${base} (${email})` : base;
 };
 
+export const formatUserDisplayName = (member: {
+  firstName?: string | null;
+  lastName?: string | null;
+  guestName?: string | null;
+  email?: string | null;
+  userEmail?: string | null;
+}) => {
+  const first = member.firstName?.trim() ?? '';
+  const last = member.lastName?.trim() ?? '';
+  const combined = `${first} ${last}`.trim();
+  if (combined) return combined;
+
+  const guest = member.guestName?.trim();
+  if (guest) return guest;
+
+  const email = member.email?.trim() || member.userEmail?.trim();
+  if (email) return email;
+
+  return 'Traveler';
+};
+
 export const OverviewTab: React.FC<OverviewTabProps> = ({
   backendUrl,
   headers,
@@ -482,17 +503,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     () => adjustStartDateForEarliest({ startDate: trip?.startDate ?? null, endDate: trip?.endDate ?? null, earliestDate: earliestEventDate }),
     [trip?.startDate, trip?.endDate, earliestEventDate]
   );
-
-  const formatMemberName = (member: GroupMemberOption) => {
-    const full = `${member.firstName ?? ''} ${member.lastName ?? ''}`.trim();
-    if (full) return full;
-    if (member.guestName) return member.guestName;
-    if (member.email) return member.email;
-    // @ts-expect-error legacy field
-    if (member.userEmail) return member.userEmail as string;
-    return 'Traveler';
-  };
-
+  
+  const formatMemberName = (member: GroupMemberOption) => formatUserDisplayName(member);
+  
   const groupMembers: GroupMemberOption[] = useMemo(
     () => attendees.map((a) => ({ ...a })),
     [attendees]

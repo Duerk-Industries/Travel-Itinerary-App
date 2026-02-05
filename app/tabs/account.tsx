@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { type MapApp } from '../utils/mapLinks';
+import { type MapApp, isMapApp } from '../utils/mapLinks';
 import ExpenseCovering from './ExpenseCovering';
 import FamilyRelationships from './FamilyRelationships';
 import AccountTraits from './AccountTraits';

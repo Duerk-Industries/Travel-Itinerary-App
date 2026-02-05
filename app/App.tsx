@@ -1338,6 +1338,14 @@ const App: React.FC = () => {
     fetchTrips();
   };
 
+  const onTripCreated = (tripId: string) => {
+    setActiveTripId(tripId);
+    fetchTrips();
+    fetchGroups();
+    fetchInvites();
+    requestPageChange('overview', { skipHistory: true });
+  };
+
   const deleteTrip = async (tripId: string) => {
     if (!userToken) return;
     const res = await fetch(`${backendUrl}/api/trips/${tripId}`, {
@@ -1423,6 +1431,11 @@ const App: React.FC = () => {
       setPageHistory((prev) => prev.slice(0, -1));
       setActivePage(previousPage);
     }
+  };
+
+  const closeTripWizard = () => {
+    setPageForwardHistory([]);
+    setActivePage('home');
   };
 
   const goForward = () => {
@@ -2355,6 +2368,12 @@ const App: React.FC = () => {
               airportOptions={flightAirportOptions}
               onSearchAirports={fetchFlightAirports}
               styles={styles}
+              onCancel={closeTripWizard}
+              onTripCreated={onTripCreated}
+              onUnauthorized={logout}
+              onWizardCarRentals={setCarRentals}
+              currentUserName={userName}
+              currentUserEmail={userEmail}
             />
           </View>
         </View>
