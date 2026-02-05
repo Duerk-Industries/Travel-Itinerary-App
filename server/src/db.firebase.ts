@@ -175,16 +175,38 @@ export const createWebUser = async (
 ): Promise<WebUser> => {
   const db = getDb();
   const normalizedEmail = normalizeEmail(email);
-  const existing = await db.collection('users').where('email', '==', normalizedEmail).limit(1).get();
-  if (!existing.empty) {
-    const err: any = new Error('User already exists');
-    err.code = 'USER_EXISTS';
-    throw err;
+  const existingUser = await findUserByEmail(normalizedEmail);
+  if (existingUser) {
+    const webUserDoc = await db.collection('web_users').doc(existingUser.id).get();
+    if (webUserDoc.exists) {
+      const err: any = new Error('User already exists');
+      err.code = 'USER_EXISTS';
+      throw err;
+    }
+    // User from another provider, upgrade to email/password
+    const salt = randomBytes(16).toString('hex');
+    const passwordHash = hashPassword(password, salt);
+    await db.collection('web_users').doc(existingUser.id).set({
+      email: normalizedEmail,
+      firstName,
+      lastName,
+      passwordHash,
+      salt,
+      createdAt: nowIso(),
+    });
+    await db.collection('users').doc(existingUser.id).update({ firstName, lastName });
+    return { id: existingUser.id, email: normalizedEmail, firstName, lastName };
   }
   const id = randomUUID();
   const salt = randomBytes(16).toString('hex');
   const passwordHash = hashPassword(password, salt);
-  await db.collection('users').doc(id).set({ email: normalizedEmail, provider: 'email', createdAt: nowIso() });
+  await db.collection('users').doc(id).set({
+    email: normalizedEmail,
+    provider: 'email',
+    createdAt: nowIso(),
+    firstName,
+    lastName,
+  });
   await db.collection('web_users').doc(id).set({
     email: normalizedEmail,
     firstName,

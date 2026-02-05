@@ -35,4 +35,5 @@ firebase-export-*
 playwright-report/index.html
 test-results/.last-run.json
 firestore-debug.log
-firestore-debug.log
+.firebase
+.firebase-data
