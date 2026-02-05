@@ -1,10 +1,12 @@
 export type PageKey =
-  | 'menu'
+  | 'home'
   | 'overview'
   | 'flights'
   | 'lodging'
   | 'car'
   | 'tours'
+  | 'expenses'
+  | 'ledger'
   | 'cost'
   | 'trips'
   | 'create-trip'

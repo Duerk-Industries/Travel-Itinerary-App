@@ -1,3 +1,7 @@
+/**
+ * @jest-environment node
+ */
+
 import { describe, expect, test } from '@jest/globals';
 import {
   buildOverviewRows,
@@ -10,8 +14,8 @@ import {
   buildRentalDraftFromRow,
   buildTourDraftFromRow,
 } from '../utils/overviewEditing';
-import { render, fireEvent } from '@testing-library/react-native';
-import OverviewTab from '../tabs/overview';
+import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { OverviewTab } from '../tabs/overview';
 import React from 'react';
 
 describe('Overview helpers', () => {
@@ -236,21 +240,47 @@ describe('Overview UI (nested itinerary)', () => {
     onRefreshTrips: jest.fn(),
     onRefreshGroups: jest.fn(),
     onRefreshGroupMembers: jest.fn(),
-    onRefreshFlights: jest.fn(),
-    onRefreshLodgings: jest.fn(),
-    onRefreshTours: jest.fn(),
+    onFlightDataChanged: jest.fn(),
+    onLodgingDataChanged: jest.fn(),
+    onTourDataChanged: jest.fn(),
     onAddCarRental: jest.fn(),
     openFlightInFlightsTab: jest.fn(),
+    openLodgingDetails: jest.fn(),
+  };
+    
+    let fetchMock: jest.SpyInstance;
+    const originalFetch = global.fetch;  const renderOverview = async (element: React.ReactElement) => {
+    const utils = render(element);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    return utils;
   };
 
+  beforeEach(() => {
+    if (!global.fetch) {
+      (global as any).fetch = jest.fn();
+    }
+    fetchMock = jest.spyOn(global, 'fetch' as any).mockResolvedValue({
+      ok: true,
+      json: async () => [],
+    } as any);
+  });
+
+  afterEach(() => {
+    fetchMock.mockRestore();
+    if (!originalFetch) {
+      delete (global as any).fetch;
+    }
+  });
+
   test('renders day pills with overview and short dates', async () => {
-    const { findByTestId, findByText } = render(<OverviewTab {...baseProps} />);
+    const { findByTestId, findByText } = await renderOverview(<OverviewTab {...baseProps} />);
     expect(await findByTestId('overview-day-pill-overview')).toBeTruthy();
     expect(await findByText('Thu. 29')).toBeTruthy();
+    await findByTestId('overview-day-card-1');
   });
 
   test('navigates to day details and back', async () => {
-    const { findByTestId } = render(<OverviewTab {...baseProps} />);
+    const { findByTestId } = await renderOverview(<OverviewTab {...baseProps} />);
     const dayCard = await findByTestId('overview-day-card-1');
     fireEvent.press(dayCard);
     const back = await findByTestId('day-details-back');
@@ -280,7 +310,7 @@ describe('Overview UI (nested itinerary)', () => {
     const attendees = [
       { id: 'member-1', firstName: 'Vicky', lastName: 'Duerk', email: 'vduerk@gmail.com' },
     ];
-    const { findByTestId, findByText } = render(
+    const { findByTestId, findByText } = await renderOverview(
       <OverviewTab {...baseProps} attendees={attendees} flights={[flight] as any} />
     );
     fireEvent.press(await findByTestId('overview-day-card-1'));
@@ -289,7 +319,7 @@ describe('Overview UI (nested itinerary)', () => {
   });
 
   test('shows next day button in day details', async () => {
-    const { findByTestId } = render(<OverviewTab {...baseProps} />);
+    const { findByTestId } = await renderOverview(<OverviewTab {...baseProps} />);
     fireEvent.press(await findByTestId('overview-day-card-1'));
     expect(await findByTestId('day-details-next')).toBeTruthy();
   });
@@ -337,7 +367,7 @@ describe('Overview UI (nested itinerary)', () => {
       { id: 'member-1', firstName: 'Vicky', lastName: 'Duerk', email: 'vduerk@gmail.com' },
       { id: 'member-2', firstName: 'Bryan', lastName: 'Duerk', email: 'bryan@example.com' },
     ];
-    const { findByTestId, findByText } = render(
+    const { findByTestId, findByText } = await renderOverview(
       <OverviewTab {...baseProps} attendees={attendees} flights={flights as any} />
     );
     fireEvent.press(await findByTestId('overview-day-card-1'));

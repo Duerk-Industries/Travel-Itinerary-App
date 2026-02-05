@@ -75,6 +75,7 @@ describe('Tours', () => {
         bookedOn: '',
         reference: 'REF',
         paidBy: [],
+        travelerIds: [],
       },
       'payer-1'
     );

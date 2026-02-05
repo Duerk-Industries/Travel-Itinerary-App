@@ -15,34 +15,33 @@ import { Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInpu
 import Constants from 'expo-constants';
 import { formatDateLong } from './utils/formatDateLong';
 import { normalizeDateString } from './utils/normalizeDateString';
+import { sanitizeCostInput } from './utils/sanitizeCost';
 import { FlightsTab, type Flight, fetchFlightsForTrip } from './tabs/flights';
-import { Tour, TourTab, fetchToursForTrip } from './tabs/tours';
-import { balanceCategoryTotals, computePayerTotals } from './tabs/costReport';
-import { Trait } from './tabs/traits';
+import { type Tour, TourTab, fetchToursForTrip } from './tabs/tours';
+import { type Trait } from './tabs/traits';
 import { FollowTab, fetchFollowedTripsApi, loadFollowCodes, loadFollowPayloads, saveFollowCodes, saveFollowPayloads, type FollowedTrip } from './tabs/follow';
 import ItinerariesTab from './tabs/itineraries';
+import HomeTab from './tabs/HomeTab';
+import DailyExpensesTab from './tabs/dailyExpenses';
+import LedgerTab from './tabs/ledger';
 import OverviewTab from './tabs/overview';
 import CreateTripWizard from './tabs/createTripWizard';
+import { buildAllExpenses, calculateAllTotals, type UnifiedExpense, computePayerTotals } from './utils/costs';
+import { rollUpTotals, validateCoveringRules } from './utils/coveredBy';
 import TripDetailsTab from './tabs/tripDetails';
 import AccountTab, { fetchAccountProfile, fetchFamilyRelationships, fetchFellowTravelers, type FellowTraveler } from './tabs/account';
 import { CarRental, CarRentalDraft, buildCarRentalFromDraft, createInitialCarRentalDraft } from './tabs/carRentals';
-import {
-  Lodging,
-  LodgingDraft,
-  buildLodgingPayload,
-  calculateNights,
-  createInitialLodgingState,
-  fetchLodgingsApi,
-  removeLodgingApi,
-  saveLodgingApi,
-  toLodgingDraft,
-} from './tabs/lodging';
+import { Lodging, fetchLodgingsApi } from './tabs/lodging';
 import { InvitePayload } from './utils/inviteCodes';
 import { type MapApp, buildMapUrl, loadStoredMapPreference, persistMapPreference } from './utils/mapLinks';
 import { shouldAllowPageChange, shouldDisableTab } from './utils/wizardGuard';
 import * as WebBrowser from 'expo-web-browser';
 import { Buffer } from 'buffer';
 import { loadSession, saveSession, clearSession } from './utils/session';
+import LodgingDetailsDialog from './components/LodgingDetailsDialog';
+import ConfirmDialog from './components/ConfirmDialog';
+
+import LodgingTab from './tabs/LodgingTab';
 
 type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
 let NativeDateTimePicker: NativeDateTimePickerType | null = null;
@@ -92,6 +91,27 @@ interface Trip {
   startMonth?: number | null;
   startYear?: number | null;
   durationDays?: number | null;
+  currency?: string | null;
+  createdAt: string;
+}
+
+interface Expense {
+  id: string;
+  tripId: string;
+  groupId: string;
+  userId: string;
+  expenseDate: string;
+  category: string;
+  amount: number;
+  currency: string;
+  amountInTripCurrency?: number | null;
+  exchangeRateToTripCurrency?: number | null;
+  exchangeRateDate?: string | null;
+  payerIds: string[];
+  forIds: string[];
+  sourceType?: string | null;
+  sourceId?: string | null;
+  notes?: string | null;
   createdAt: string;
 }
 
@@ -106,12 +126,14 @@ interface GroupMemberOption {
 }
 
 type Page =
-  | 'menu'
+  | 'home'
   | 'overview'
   | 'flights'
   | 'lodging'
   | 'car'
   | 'tours'
+  | 'expenses'
+  | 'ledger'
   | 'trips'
   | 'create-trip'
   | 'trip-details'
@@ -173,7 +195,6 @@ const refreshIntervalMs = resolveRefreshIntervalMs();
 const sessionKey = 'stp.session';
 const sessionDurationMs = 12 * 60 * 60 * 1000;
 
-
 const App: React.FC = () => {
   const [userToken, setUserToken] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
@@ -210,18 +231,12 @@ const App: React.FC = () => {
   const [groupMembers, setGroupMembers] = useState<GroupMemberOption[]>([]);
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
   const [lodgings, setLodgings] = useState<Lodging[]>([]);
-  const [lodgingDraft, setLodgingDraft] = useState<LodgingDraft>(createInitialLodgingState());
-  const [editingLodgingId, setEditingLodgingId] = useState<string | null>(null);
-  const [editingLodging, setEditingLodging] = useState<LodgingDraft | null>(null);
-  const [lodgingDateField, setLodgingDateField] = useState<'checkIn' | 'checkOut' | 'refund' | null>(null);
-  const [lodgingDateContext, setLodgingDateContext] = useState<'draft' | 'edit'>('draft');
-  const [lodgingDateValue, setLodgingDateValue] = useState<Date>(new Date());
-  const lodgingCheckInRef = useRef<HTMLInputElement | null>(null);
-  const lodgingCheckOutRef = useRef<HTMLInputElement | null>(null);
-  const editLodgingCheckInRef = useRef<HTMLInputElement | null>(null);
-  const editLodgingCheckOutRef = useRef<HTMLInputElement | null>(null);
+  const [selectedLodging, setSelectedLodging] = useState<Lodging | null>(null);
+  const [showLodgingDetails, setShowLodgingDetails] = useState(false);
+  const [lodgingToDelete, setLodgingToDelete] = useState<Lodging | null>(null);
 
   const [tours, setTours] = useState<Tour[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [carRentals, setCarRentals] = useState<CarRental[]>([]);
   const [carDraft, setCarDraft] = useState<CarRentalDraft>(createInitialCarRentalDraft());
   const [carDateField, setCarDateField] = useState<'pickup' | 'dropoff' | null>(null);
@@ -232,7 +247,9 @@ const App: React.FC = () => {
   const [traits, setTraits] = useState<Trait[]>([]);
   const [newTraitName, setNewTraitName] = useState('');
   const [selectedTraitNames, setSelectedTraitNames] = useState<Set<string>>(new Set());
-  const [activePage, setActivePage] = useState<Page>('menu');
+  const [activePage, setActivePage] = useState<Page>('home');
+  const [pageHistory, setPageHistory] = useState<Page[]>([]);
+  const [pageForwardHistory, setPageForwardHistory] = useState<Page[]>([]);
   const [flightAirportOptions, setFlightAirportOptions] = useState<string[]>([]);
   const [traitAge, setTraitAge] = useState('');
   const [traitGender, setTraitGender] = useState<'female' | 'male' | 'nonbinary' | 'prefer-not'>('prefer-not');
@@ -248,6 +265,7 @@ const App: React.FC = () => {
   const [accountProfile, setAccountProfile] = useState({ firstName: '', lastName: '', email: '' });
   const [mapApp, setMapApp] = useState<MapApp>(() => loadStoredMapPreference('google'));
   const [familyRelationships, setFamilyRelationships] = useState<any[]>([]);
+  const [coveredBy, setCoveredBy] = useState<Record<string, string>>({});
   const [fellowTravelers, setFellowTravelers] = useState<FellowTraveler[]>([]);
   const [showRelationshipDropdown, setShowRelationshipDropdown] = useState(false);
   const formatMemberName = (member: GroupMemberOption): string => {
@@ -271,6 +289,13 @@ const App: React.FC = () => {
     return status === 'pending' ? 'Pending member' : 'Member';
   };
 
+  const userMembers = useMemo(
+    () => groupMembers.filter((m) => !m.guestName && m.status !== 'removed'),
+    [groupMembers]
+  );
+
+  const memberIds = useMemo(() => userMembers.map((m) => m.id), [userMembers]);
+
   const flightsTotal = useMemo(
     () => flights.reduce((sum, f) => sum + (Number(f.cost) || 0), 0),
     [flights]
@@ -282,8 +307,41 @@ const App: React.FC = () => {
   );
 
   const toursTotal = useMemo(() => tours.reduce((sum, t) => sum + (Number(t.cost) || 0), 0), [tours]);
+  const tourPayerTotals = useMemo(
+    () => computePayerTotals(tours, (t) => Number(t.cost) || 0, (t) => t.paidBy, memberIds, { fallbackOnEmpty: true }),
+    [tours, memberIds]
+  );
 
-  const overallCost = useMemo(() => flightsTotal + lodgingTotal + toursTotal, [flightsTotal, lodgingTotal, toursTotal]);
+  const expenseCategories = useMemo(
+    () => ['Breakfast', 'Lunch', 'Dinner', 'Other Food', 'Rides', 'Souvenirs', 'Other'],
+    []
+  );
+  const expenseItems = useMemo(
+    () => expenses.filter((e) => expenseCategories.includes(e.category)),
+    [expenses, expenseCategories]
+  );
+  const getExpenseAmount = useCallback(
+    (expense: Expense) => Number(expense.amountInTripCurrency ?? expense.amount) || 0,
+    []
+  );
+  const expenseTotalsByCategory = useMemo(() => {
+    const totals: Record<string, number> = {};
+    expenseCategories.forEach((cat) => {
+      totals[cat] = 0;
+    });
+    expenseItems.forEach((expense) => {
+      totals[expense.category] = (totals[expense.category] ?? 0) + getExpenseAmount(expense);
+    });
+    return totals;
+  }, [expenseItems, expenseCategories, getExpenseAmount]);
+  const expensesTotal = useMemo(
+    () => expenseCategories.reduce((sum, cat) => sum + (expenseTotalsByCategory[cat] ?? 0), 0),
+    [expenseCategories, expenseTotalsByCategory]
+  );
+  const carRentalsTotal = useMemo(
+    () => carRentals.reduce((sum, rental) => sum + (Number(rental.cost) || 0), 0),
+    [carRentals]
+  );
 
   const updateMapPreference = useCallback(
     (pref: MapApp) => {
@@ -294,9 +352,22 @@ const App: React.FC = () => {
     [setAccountProfile]
   );
 
+  const findActiveTrip = useCallback(
+    () => trips.find((t) => t.id === activeTripId),
+    [trips, activeTripId]
+  );
+
   const isTripWizardOpen = activePage === 'create-trip';
-  const requestPageChange = (page: Page) => {
+  const requestPageChange = (page: Page, opts?: { skipHistory?: boolean }) => {
     if (!shouldAllowPageChange(activePage, page)) return;
+    if (page === activePage) return;
+    setPageForwardHistory([]);
+    if (!opts?.skipHistory) {
+      setPageHistory((prev) => {
+        const next = [...prev, activePage];
+        return next.slice(-25);
+      });
+    }
     setActivePage(page);
   };
 
@@ -314,14 +385,6 @@ const App: React.FC = () => {
     setExternalFlightEditId(flightId);
   };
 
-  const applyLodgingDate = (field: 'checkIn' | 'checkOut', value: string, context: 'draft' | 'edit') => {
-    if (context === 'edit') {
-      setEditingLodging((prev) => (prev ? { ...prev, [field === 'checkIn' ? 'checkInDate' : 'checkOutDate']: value } : prev));
-    } else {
-      setLodgingDraft((prev) => ({ ...prev, [field === 'checkIn' ? 'checkInDate' : 'checkOutDate']: value }));
-    }
-  };
-
   const applyCarDate = (field: 'pickup' | 'dropoff', value: string) => {
     setCarDraft((prev) => ({ ...prev, [field === 'pickup' ? 'pickupDate' : 'dropoffDate']: value }));
   };
@@ -331,7 +394,7 @@ const App: React.FC = () => {
       alert('Select an active trip before adding a car rental.');
       return;
     }
-    const result = buildCarRentalFromDraft(carDraft, defaultPayerId);
+    const result = buildCarRentalFromDraft(carDraft, defaultPayerId, memberIds);
     if (result.error || !result.rental) {
       alert(result.error || 'Unable to add car rental.');
       return;
@@ -372,58 +435,60 @@ const App: React.FC = () => {
     ref?.focus();
   };
 
-  const openLodgingDatePicker = (field: 'checkIn' | 'checkOut', context: 'draft' | 'edit', current?: string) => {
-    setLodgingDateContext(context);
-    if (Platform.OS !== 'web' && NativeDateTimePicker) {
-      const base = current && current.trim() ? new Date(current) : new Date();
-      setLodgingDateValue(base);
-      setLodgingDateField(field);
-      return;
-    }
-    const ref =
-      context === 'edit'
-        ? field === 'checkIn'
-          ? editLodgingCheckInRef.current
-          : editLodgingCheckOutRef.current
-        : field === 'checkIn'
-          ? lodgingCheckInRef.current
-          : lodgingCheckOutRef.current;
-    if (ref?.showPicker) {
-      (ref as any).showPicker();
-      return;
-    }
-    if (typeof ref?.click === 'function') {
-      ref.click();
-      return;
-    }
-    ref?.focus();
-  };
-
   // Resolve a member id to a human-friendly name for payer chips.
   const payerName = (id: string): string => {
     const member = groupMembers.find((m) => m.id === id);
     return member ? formatMemberName(member) : 'Unknown';
   };
 
-  const userMembers = useMemo(
-    () => groupMembers.filter((m) => !m.guestName && m.status !== 'removed'),
-    [groupMembers]
+  const saveCoveredBy = async () => {
+    const trip = findActiveTrip();
+    if (!trip?.id) {
+      alert('An active trip is required.');
+      return;
+    }
+
+    const validation = validateCoveringRules(coveredBy);
+    if (!validation.ok) {
+      alert(validation.error);
+      return;
+    }
+
+    try {
+      const res = await fetch(`${backendUrl}/api/trips/${trip.id}/covered-by`, {
+        method: 'PUT',
+        headers: jsonHeaders,
+        body: JSON.stringify(coveredBy),
+      });
+      if (!res.ok) throw new Error('Failed to save covering rules.');
+      alert('Covering rules saved.');
+    } catch (err) {
+      alert((err as Error).message);
+    }
+  };
+
+  const coveredTravelerIds = useMemo(() => new Set(Object.keys(coveredBy)), [coveredBy]);
+
+  const reportableMembers = useMemo(
+    () => groupMembers.filter(m => !coveredTravelerIds.has(m.id)),
+    [groupMembers, coveredTravelerIds]
   );
 
-  const memberIds = useMemo(() => userMembers.map((m) => m.id), [userMembers]);
+  const reportableMemberIds = useMemo(
+    () => reportableMembers.map(m => m.id),
+    [reportableMembers]
+  );
 
-  // Per-user tour totals via shared helper. Note: if a tour has an explicit empty payer list,
-  // we leave it unsplit (no cost assigned) so non-payers stay at $0.
-  const payerTotals = useMemo(
-    () =>
-      computePayerTotals(
-        tours,
-        (t) => Number(t.cost) || 0,
-        (t) => (Array.isArray(t.paidBy) ? t.paidBy : []),
-        userMembers.map((m) => m.id),
-        { fallbackOnEmpty: false }
-      ),
-    [tours, userMembers]
+  const allMemberIds = useMemo(() => groupMembers.map(m => m.id), [groupMembers]);
+
+  const allExpenses = useMemo(
+    () => buildAllExpenses(flights, lodgings, tours, carRentals, expenses, findActiveTrip()?.currency ?? 'USD', allMemberIds),
+    [flights, lodgings, tours, carRentals, expenses, allMemberIds, findActiveTrip]
+  );
+
+  const { ledgerPaidTotals, ledgerUsedTotals, finalBalances } = useMemo(
+    () => calculateAllTotals(allExpenses, allMemberIds, reportableMemberIds, coveredBy),
+    [allExpenses, allMemberIds, reportableMemberIds, coveredBy]
   );
 
   const currentUserMemberId = useMemo(() => {
@@ -431,137 +496,106 @@ const App: React.FC = () => {
     const match = userMembers.find((m) => m.email && m.email.toLowerCase() === userEmail.toLowerCase());
     return match?.id ?? null;
   }, [userMembers, userEmail]);
-
+  
   const defaultPayerId = useMemo(() => {
     if (currentUserMemberId) return currentUserMemberId;
     if (userMembers.length) return userMembers[0].id;
     return null;
   }, [currentUserMemberId, userMembers]);
 
-  // Per-user flight totals via shared helper. Explicitly empty paidBy means no split, so removed users go to $0.
-  const flightsPayerTotals = useMemo(
-    () =>
-      computePayerTotals(
-        flights,
-        (f) => Number((f as any).cost) || 0,
-        (f) => {
-          const paidBy = (f as any).paidBy ?? (f as any).paid_by;
-          return Array.isArray(paidBy) ? paidBy : [];
-        },
-        userMembers.map((m) => m.id),
-        { fallbackOnEmpty: false }
-      ),
-    [flights, userMembers]
-  );
+  const overallCost = useMemo(() => allExpenses.reduce((sum, e) => sum + e.amount, 0), [allExpenses]);
 
-  const flightShares = useMemo(
-    () => balanceCategoryTotals(flightsTotal, flightsPayerTotals, memberIds),
-    [flightsTotal, flightsPayerTotals, memberIds]
-  );
-
-  // Per-user lodging totals via shared helper. Explicitly empty paidBy means no split, so removed users go to $0.
-  const lodgingPayerTotals = useMemo(
-    () =>
-      computePayerTotals(
-        lodgings,
-        (l) => Number(l.totalCost) || 0,
-        (l) => (Array.isArray(l.paidBy) ? l.paidBy : []),
-        userMembers.map((m) => m.id),
-        { fallbackOnEmpty: false }
-      ),
-    [lodgings, userMembers]
-  );
-
-  const lodgingTotalsBalanced = useMemo(
-    () => balanceCategoryTotals(lodgingTotal, lodgingPayerTotals, memberIds),
-    [lodgingPayerTotals, lodgingTotal, memberIds]
-  );
-
-  const tourShares = useMemo(
-    () => balanceCategoryTotals(toursTotal, payerTotals, memberIds),
-    [toursTotal, payerTotals, memberIds]
-  );
-
-  const overallShares = useMemo(() => {
-    const totals: Record<string, number> = {};
-    memberIds.forEach((id) => {
-      totals[id] = (flightShares[id] ?? 0) + (lodgingTotalsBalanced[id] ?? 0) + (tourShares[id] ?? 0);
+  const costReportRows = useMemo(() => {
+    const categories = [...new Set(allExpenses.map(e => e.category))].sort();
+    return categories.map(category => {
+      const categoryExpenses = allExpenses.filter(e => e.category === category);
+      const total = categoryExpenses.reduce((sum, e) => sum + e.amount, 0);
+      const rawPaid = computePayerTotals(categoryExpenses, e => e.amount, e => e.payerIds, allMemberIds, { fallbackOnEmpty: true });
+      const shares = rollUpTotals(rawPaid, coveredBy);
+      return { label: category, total, shares };
     });
-    return totals;
-  }, [flightShares, lodgingTotalsBalanced, memberIds, tourShares]);
+  }, [allExpenses, allMemberIds, coveredBy]);
 
-  const lodgingBreakdownSum = useMemo(
-    () => Object.values(lodgingTotalsBalanced).reduce((sum, v) => sum + v, 0),
-    [lodgingTotalsBalanced]
-  );
+  const convertCostReportToCsv = (
+    reportRows: Array<{ label: string; total: number; shares: Record<string, number> }>,
+    members: GroupMemberOption[],
+    paidTotals: Record<string, number>,
+    finalCost: number,
+    getMemberName: (member: GroupMemberOption) => string
+  ): string => {
+    const escapeCsvCell = (cell: string) => {
+      if (/[",\n]/.test(cell)) {
+        return `"${cell.replace(/"/g, '""')}"`;
+      }
+      return cell;
+    };
 
-  useEffect(() => {
-    if (defaultPayerId && (!lodgingDraft.paidBy || lodgingDraft.paidBy.length === 0)) {
-      setLodgingDraft((p) => ({ ...p, paidBy: [defaultPayerId] }));
-    }
-  }, [defaultPayerId]);
+    const header = ['Category', ...members.map(getMemberName), 'Total'].map(escapeCsvCell);
+    const rows = reportRows.map(row => {
+        const shares = members.map(m => row.shares[m.id]?.toFixed(2) ?? '0.00');
+        return [row.label, ...shares, row.total.toFixed(2)].map(escapeCsvCell);
+    });
 
-  useEffect(() => {
-    const nights = calculateNights(lodgingDraft.checkInDate, lodgingDraft.checkOutDate);
-    const totalNum = Number(lodgingDraft.totalCost) || 0;
-    const computed = nights > 0 && totalNum ? (totalNum / nights).toFixed(2) : '';
-    setLodgingDraft((prev) => ({ ...prev, costPerNight: computed }));
-  }, [lodgingDraft.checkInDate, lodgingDraft.checkOutDate, lodgingDraft.totalCost]);
+    const overallRow = [
+      'Overall',
+      ...members.map((m) => paidTotals[m.id]?.toFixed(2) ?? '0.00'),
+      finalCost.toFixed(2),
+    ].map(escapeCsvCell);
 
-  useEffect(() => {
-    if (!editingLodging) return;
-    const nights = calculateNights(editingLodging.checkInDate, editingLodging.checkOutDate);
-    const totalNum = Number(editingLodging.totalCost) || 0;
-    const computed = nights > 0 && totalNum ? (totalNum / nights).toFixed(2) : '';
-    if (computed !== editingLodging.costPerNight) {
-      setEditingLodging((prev) => (prev ? { ...prev, costPerNight: computed } : prev));
-    }
-  }, [editingLodging?.checkInDate, editingLodging?.checkOutDate, editingLodging?.totalCost]);
-
-  // Create or update a lodging; computes cost-per-night and applies default payer.
-  const saveLodging = async (draft: LodgingDraft, lodgingId?: string | null) => {
-    if (!activeTripId) {
-      alert('Please enter a lodging name and select an active trip.');
-      return;
-    }
-    const { payload, error } = buildLodgingPayload(draft, activeTripId, defaultPayerId);
-    if (error || !payload) {
-      alert(error);
-      return;
-    }
-    const result = await saveLodgingApi(backendUrl, jsonHeaders, payload, lodgingId);
-    if (!result.ok) {
-      alert(result.error || 'Unable to save lodging');
-      return;
-    }
-    if (lodgingId) {
-      setEditingLodgingId(null);
-      setEditingLodging(null);
-    } else {
-      setLodgingDraft(createInitialLodgingState());
-    }
-    fetchLodgings();
+    const allRows = [header, ...rows, overallRow];
+    return allRows.map(row => row.join(',')).join('\n');
   };
 
-  const removeLodging = async (id: string) => {
-    const result = await removeLodgingApi(backendUrl, jsonHeaders, id);
-    if (!result.ok) {
-      alert(result.error || 'Unable to delete lodging');
+  const allExpensesForCsv = useMemo(() => {
+    return allExpenses;
+  }, [allExpenses]);
+
+  const convertExpensesToCsv = (expenseType: 'paid' | 'incurred'): string => {
+    const escapeCsvCell = (cell: any) => {
+      const cellStr = String(cell ?? '');
+      if (/[",\n]/.test(cellStr)) {
+        return `"${cellStr.replace(/"/g, '""')}"`;
+      }
+      return cellStr;
+    };
+
+    const members = reportableMembers;
+    const memberIds = reportableMemberIds;
+
+    const header = ['Date', 'Category', ...members.map(formatMemberName)];
+    const rows = allExpensesForCsv.map(expense => {
+        const row: (string | number)[] = [expense.date, expense.category];
+        const ids = expenseType === 'paid' ? expense.payerIds : expense.forIds;
+        const rolledUpIds = (ids || []).map(id => coveredBy[id] || id);
+
+        const totals = computePayerTotals(
+            [{ amount: expense.amount, ids: rolledUpIds }],
+            item => item.amount,
+            item => item.ids,
+            memberIds,
+            { fallbackOnEmpty: true }
+        );
+
+        memberIds.forEach(id => {
+            row.push(totals[id]?.toFixed(2) || '0.00');
+        });
+        return row.map(escapeCsvCell).join(',');
+    });
+    return [header.map(escapeCsvCell).join(','), ...rows].join('\n');
+  };
+
+  const downloadCsv = (csvContent: string, fileName: string) => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') {
+      alert('CSV export is only available on web.');
       return;
     }
-    fetchLodgings();
-  };
 
-  // Populate the lodging edit modal with the selected row.
-  const openLodgingEditor = (lodging: Lodging) => {
-    setEditingLodgingId(lodging.id);
-    setEditingLodging(toLodgingDraft(lodging, { normalize: normalizeDateString, defaultPayerId }));
-  };
-
-  // Close the lodging edit modal.
-  const closeLodgingEditor = () => {
-    setEditingLodgingId(null);
-    setEditingLodging(null);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(link.href);
   };
 
   const headers = useMemo<Record<string, string>>(
@@ -578,6 +612,7 @@ const App: React.FC = () => {
     setUserEmail(null);
     setFlights([]);
     setTours([]);
+    setExpenses([]);
     setInvites([]);
     setFollowedTrips([]);
     setFollowInviteCode('');
@@ -594,7 +629,9 @@ const App: React.FC = () => {
     setAccountProfile({ firstName: '', lastName: '', email: '', mapPreference: mapApp });
     setFamilyRelationships([]);
     setFellowTravelers([]);
-    setActivePage('menu');
+    setPageForwardHistory([]);
+    setActivePage('home');
+    setPageHistory([]);
     setLastRefreshAt(null);
     setIsRefreshing(false);
     refreshInFlightRef.current = false;
@@ -683,8 +720,10 @@ const App: React.FC = () => {
     const previousSession = loadSession();
     const restoredTripId = previousSession?.tripId ?? activeTripId ?? null;
     setActiveTripId(restoredTripId);
-    setActivePage('overview');
-    saveSession(token, name, 'overview', decoded?.email, restoredTripId);
+    setActivePage('home');
+    setPageForwardHistory([]);
+    setPageHistory([]);
+    saveSession(token, name, 'home', decoded?.email, restoredTripId, [], []);
     fetchFlights(token);
     fetchLodgings(token);
     fetchTours(token);
@@ -692,7 +731,7 @@ const App: React.FC = () => {
     loadAccountProfile(token);
     loadFamilyRelationships(token);
     loadFellowTravelers(token);
-    setActivePage('overview');
+    setActivePage('home');
   }
 
   useEffect(() => {
@@ -830,6 +869,27 @@ const App: React.FC = () => {
     }
     const data = await fetchToursForTrip({ backendUrl, activeTripId, token: token ?? userToken });
     setTours(data);
+  };
+
+  const fetchExpenses = async (token?: string) => {
+    const authToken = token ?? userToken;
+    if (!activeTripId || !authToken) {
+      setExpenses([]);
+      return;
+    }
+    try {
+      const res = await fetch(`${backendUrl}/api/expenses?tripId=${activeTripId}`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      if (!res.ok) {
+        setExpenses([]);
+        return;
+      }
+      const data = await res.json();
+      setExpenses(Array.isArray(data) ? data : []);
+    } catch {
+      setExpenses([]);
+    }
   };
 
   // Fetch itineraries for the current user; ItinerariesTab also fetches within its own lifecycle,
@@ -1012,6 +1072,7 @@ const App: React.FC = () => {
       fetchFlights(authToken);
       fetchLodgings(authToken);
       fetchTours(authToken);
+      fetchExpenses(authToken);
       fetchInvites(authToken);
       fetchGroups();
       fetchTrips();
@@ -1058,6 +1119,14 @@ const App: React.FC = () => {
       setUserToken(session.token);
       setUserName(session.name);
       setUserEmail(session.email ?? null);
+      const sessionHistory = Array.isArray(session.pageHistory)
+        ? session.pageHistory.filter((p) => typeof p === 'string') as Page[]
+        : [];
+      setPageHistory(sessionHistory);
+      const sessionForwardHistory = (Array.isArray(session.pageForwardHistory)
+        ? session.pageForwardHistory.filter((p) => typeof p === 'string')
+        : []) as Page[];
+      setPageForwardHistory(sessionForwardHistory);
       const tripId = session.tripId ?? null;
       if (tripId) {
         setActiveTripId(tripId);
@@ -1065,6 +1134,7 @@ const App: React.FC = () => {
       } else {
         const sessionPage = session.page;
         if (
+          sessionPage === 'home' ||
           sessionPage === 'overview' ||
           sessionPage === 'flights' ||
           sessionPage === 'lodging' ||
@@ -1073,13 +1143,15 @@ const App: React.FC = () => {
           sessionPage === 'trip-details' ||
           sessionPage === 'itinerary' ||
           sessionPage === 'tours' ||
+          sessionPage === 'expenses' ||
+          sessionPage === 'ledger' ||
           sessionPage === 'cost' ||
           sessionPage === 'account' ||
           sessionPage === 'follow'
         ) {
-          setActivePage(sessionPage as Page);
+          setActivePage(sessionPage === 'menu' ? 'home' : (sessionPage as Page));
         } else {
-          setActivePage('menu');
+          setActivePage('home');
         }
       }
     }
@@ -1106,11 +1178,6 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (!userToken) return;
-    saveSession(userToken, userName ?? 'Traveler', activePage, userEmail, activeTripId);
-  }, [userToken, userName, userEmail, activePage, activeTripId]);
-
-  useEffect(() => {
-    if (!userToken) return;
     if (!Number.isFinite(refreshIntervalMs) || refreshIntervalMs <= 0) return;
     const now = Date.now();
     const last = lastRefreshAt ?? now;
@@ -1134,6 +1201,7 @@ const App: React.FC = () => {
       fetchFlights();
       fetchLodgings();
       fetchTours();
+      fetchExpenses();
     }
   }, [activeTripId]);
 
@@ -1150,8 +1218,23 @@ const App: React.FC = () => {
     }
   }, [userToken, activeTripId, trips]);
 
-  const findActiveTrip = () => trips.find((t) => t.id === activeTripId);
-
+  useEffect(() => {
+    if (!userToken || !activeTripId) {
+      setCoveredBy({});
+      return;
+    }
+    const fetchCoveredBy = async () => {
+      try {
+        const res = await fetch(`${backendUrl}/api/trips/${activeTripId}/covered-by`, { headers });
+        if (!res.ok) throw new Error('Failed to fetch covering rules.');
+        const data = await res.json();
+        setCoveredBy(data || {});
+      } catch (err) {
+        setCoveredBy({});
+      }
+    };
+    fetchCoveredBy();
+  }, [userToken, activeTripId, headers]);
 
   const addMemberToGroup = async (groupId: string, type: 'user' | 'relationship') => {
     if (!userToken) return;
@@ -1169,7 +1252,11 @@ const App: React.FC = () => {
 
     let payload: any = {};
     if (type === 'user') {
-      payload = { email };
+      const normalized = email.trim();
+      const local = normalized.split('@')[0] ?? '';
+      const parts = local.split(/[._-]+/).filter(Boolean);
+      const derivedGuestName = parts.length >= 2 ? `${parts[0]} ${parts.slice(1).join(' ')}`.trim() : '';
+      payload = { email: normalized, ...(derivedGuestName ? { guestName: derivedGuestName } : {}) };
     } else {
       const rel = familyRelationships.find((r) => r.id === relationshipId);
       if (!rel) {
@@ -1251,6 +1338,16 @@ const App: React.FC = () => {
     fetchTrips();
   };
 
+  const onTripCreated = (tripId: string) => {
+    setActiveTripId(tripId);
+    fetchTrips();
+    fetchGroups();
+    fetchInvites();
+    setPageForwardHistory([]);
+    setPageHistory((prev) => prev.slice(-25));
+    setActivePage('overview');
+  };
+
   const deleteTrip = async (tripId: string) => {
     if (!userToken) return;
     const res = await fetch(`${backendUrl}/api/trips/${tripId}`, {
@@ -1281,6 +1378,22 @@ const App: React.FC = () => {
     fetchTrips();
   };
 
+  const updateTripCurrency = async (tripId: string, currency: string) => {
+    if (!userToken) return;
+    const res = await fetch(`${backendUrl}/api/trips/${tripId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...headers },
+      body: JSON.stringify({ currency }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'Unable to update currency');
+      return;
+    }
+    fetchTrips();
+    fetchExpenses();
+  };
+
   const deleteGroupApi = async (groupId: string) => {
     if (!userToken) return;
     const res = await fetch(`${backendUrl}/api/groups/${groupId}`, { method: 'DELETE', headers });
@@ -1293,10 +1406,109 @@ const App: React.FC = () => {
     fetchTrips();
   };
 
+  const openLodgingDetails = (lodging: Lodging) => {
+    setSelectedLodging(lodging);
+    setShowLodgingDetails(true);
+  };
+
+  const deleteLodging = async (lodgingId: string) => {
+    if (!activeTripId) return;
+    const res = await fetch(`${backendUrl}/api/lodgings/${lodgingId}`, {
+        method: 'DELETE',
+        headers,
+    });
+    if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || 'Unable to delete lodging');
+        return;
+    }
+    fetchLodgings();
+  };
+
+  const goBack = () => {
+    if (pageHistory.length === 0) return;
+    const previousPage = pageHistory[pageHistory.length - 1];
+    if (shouldAllowPageChange(activePage, previousPage)) {
+      setPageForwardHistory((prev) => [activePage, ...prev].slice(0, 25));
+      setPageHistory((prev) => prev.slice(0, -1));
+      setActivePage(previousPage);
+    }
+  };
+
+  const closeTripWizard = () => {
+    setPageForwardHistory([]);
+    setActivePage('home');
+  };
+
+  const goForward = () => {
+    if (pageForwardHistory.length === 0) return;
+    const nextPage = pageForwardHistory[0];
+    if (shouldAllowPageChange(activePage, nextPage)) {
+      setPageHistory((prev) => [...prev, activePage].slice(-25));
+      setPageForwardHistory((prev) => prev.slice(1));
+      setActivePage(nextPage);
+    }
+  };
+
+  useEffect(() => {
+    if (!userToken) return;
+    saveSession(userToken, userName ?? 'Traveler', activePage, userEmail, activeTripId, pageHistory, pageForwardHistory);
+  }, [userToken, userName, userEmail, activePage, activeTripId, pageHistory, pageForwardHistory]);
+
+  const disabledPages = useMemo(() => {
+    const pages: Page[] = [
+      'overview',
+      'flights',
+      'lodging',
+      'car',
+      'tours',
+      'expenses',
+      'ledger',
+      'cost',
+      'trips',
+      'create-trip',
+      'account',
+      'follow',
+      'itinerary',
+    ];
+    return new Set(pages.filter((page) => shouldDisableTab(activePage, page)));
+  }, [activePage]);
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.topBar}>
-        <Text style={styles.title}>Shared Trip Planner</Text>
+        <View style={styles.topBarLeft}>
+          {userToken && activePage !== 'home' ? (
+            <TouchableOpacity
+              style={styles.homeButton}
+              onPress={() => requestPageChange('home')}
+              accessibilityLabel="Home"
+            >
+              <Text style={styles.homeButtonText}>⌂</Text>
+            </TouchableOpacity>
+          ) : null}
+          {userToken ? (
+            <TouchableOpacity
+              style={[styles.backButton, pageHistory.length === 0 && styles.buttonDisabled]}
+              onPress={goBack}
+              disabled={pageHistory.length === 0}
+              accessibilityLabel="Back"
+            >
+              <Text style={styles.backButtonText}>{'<'}</Text>
+            </TouchableOpacity>
+          ) : null}
+          {userToken ? (
+            <TouchableOpacity
+              style={[styles.backButton, pageForwardHistory.length === 0 && styles.buttonDisabled]}
+              onPress={goForward}
+              disabled={pageForwardHistory.length === 0}
+              accessibilityLabel="Forward"
+            >
+              <Text style={styles.backButtonText}>{'>'}</Text>
+            </TouchableOpacity>
+          ) : null}
+          <Text style={styles.title}>Shared Trip Planner</Text>
+        </View>
         {userToken ? (
           <View style={styles.topRightWrapper}>
             {trips.length ? (
@@ -1344,87 +1556,18 @@ const App: React.FC = () => {
       </View>
       {userToken ? (
         <ScrollView style={styles.contentScroll} contentContainerStyle={styles.contentScrollContent}>
-            <View style={styles.card}>
-              <Text style={styles.sectionTitle}>Choose a section</Text>
-            <View style={styles.navRow}>
-              <TouchableOpacity
-                disabled={shouldDisableTab(activePage, 'overview')}
-                style={[styles.navButton, activePage === 'overview' && styles.navButtonActive, shouldDisableTab(activePage, 'overview') && styles.buttonDisabled]}
-                onPress={() => requestPageChange('overview')}
-              >
-                <Text style={[styles.navButtonText, activePage === 'overview' && styles.navButtonActiveText]}>Overview</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                disabled={shouldDisableTab(activePage, 'flights')}
-                style={[styles.navButton, activePage === 'flights' && styles.navButtonActive, shouldDisableTab(activePage, 'flights') && styles.buttonDisabled]}
-                onPress={() => requestPageChange('flights')}
-              >
-                <Text style={[styles.navButtonText, activePage === 'flights' && styles.navButtonActiveText]}>Flights</Text>
-              </TouchableOpacity>
-                <TouchableOpacity
-                  disabled={shouldDisableTab(activePage, 'lodging')}
-                  style={[styles.navButton, activePage === 'lodging' && styles.navButtonActive, shouldDisableTab(activePage, 'lodging') && styles.buttonDisabled]}
-                  onPress={() => requestPageChange('lodging')}
-                >
-                  <Text style={[styles.navButtonText, activePage === 'lodging' && styles.navButtonActiveText]}>Lodging</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  disabled={shouldDisableTab(activePage, 'car')}
-                  style={[styles.navButton, activePage === 'car' && styles.navButtonActive, shouldDisableTab(activePage, 'car') && styles.buttonDisabled]}
-                  onPress={() => requestPageChange('car')}
-                >
-                  <Text style={[styles.navButtonText, activePage === 'car' && styles.navButtonActiveText]}>Car Rentals</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  disabled={shouldDisableTab(activePage, 'tours')}
-                  style={[styles.navButton, activePage === 'tours' && styles.navButtonActive, shouldDisableTab(activePage, 'tours') && styles.buttonDisabled]}
-                  onPress={() => requestPageChange('tours')}
-                >
-                  <Text style={[styles.navButtonText, activePage === 'tours' && styles.navButtonActiveText]}>Tours</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  disabled={shouldDisableTab(activePage, 'cost')}
-                  style={[styles.navButton, activePage === 'cost' && styles.navButtonActive, shouldDisableTab(activePage, 'cost') && styles.buttonDisabled]}
-                  onPress={() => requestPageChange('cost')}
-                >
-                  <Text style={[styles.navButtonText, activePage === 'cost' && styles.navButtonActiveText]}>Cost Report</Text>
-                </TouchableOpacity>
-              <TouchableOpacity
-                disabled={shouldDisableTab(activePage, 'trips')}
-                style={[styles.navButton, activePage === 'trips' && styles.navButtonActive, shouldDisableTab(activePage, 'trips') && styles.buttonDisabled]}
-                onPress={() => requestPageChange('trips')}
-              >
-                <Text style={[styles.navButtonText, activePage === 'trips' && styles.navButtonActiveText]}>Trips</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.navButton, activePage === 'create-trip' && styles.navButtonActive]}
-                onPress={() => requestPageChange('create-trip')}
-              >
-                <Text style={[styles.navButtonText, activePage === 'create-trip' && styles.navButtonActiveText]}>Create Trip</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                disabled={shouldDisableTab(activePage, 'account')}
-                style={[styles.navButton, activePage === 'account' && styles.navButtonActive, shouldDisableTab(activePage, 'account') && styles.buttonDisabled]}
-                onPress={() => requestPageChange('account')}
-              >
-                <Text style={[styles.navButtonText, activePage === 'account' && styles.navButtonActiveText]}>Account</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                disabled={shouldDisableTab(activePage, 'follow')}
-                style={[styles.navButton, activePage === 'follow' && styles.navButtonActive, shouldDisableTab(activePage, 'follow') && styles.buttonDisabled]}
-                onPress={() => requestPageChange('follow')}
-              >
-                <Text style={[styles.navButtonText, activePage === 'follow' && styles.navButtonActiveText]}>Follow Trip</Text>
-              </TouchableOpacity>
-                <TouchableOpacity
-                  disabled={shouldDisableTab(activePage, 'itinerary')}
-                  style={[styles.navButton, activePage === 'itinerary' && styles.navButtonActive, shouldDisableTab(activePage, 'itinerary') && styles.buttonDisabled]}
-                  onPress={() => requestPageChange('itinerary')}
-                >
-                  <Text style={[styles.navButtonText, activePage === 'itinerary' && styles.navButtonActiveText]}>Create Itinerary</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+          {activePage === 'home' ? (
+            <HomeTab
+              backendUrl={backendUrl}
+              headers={headers}
+              activeTripId={activeTripId}
+              trips={trips}
+              styles={styles}
+              onSelectTrip={setActiveTripId}
+              onNavigate={(page) => requestPageChange(page as Page)}
+              disabledPages={disabledPages}
+            />
+          ) : null}
 
           {activePage === 'itinerary' ? (
             <ItinerariesTab
@@ -1449,9 +1592,9 @@ const App: React.FC = () => {
               defaultPayerId={defaultPayerId}
               payerName={payerName}
               formatMemberName={formatMemberName}
-              userMembers={userMembers}
+              groupMembers={groupMembers}
               jsonHeaders={jsonHeaders}
-              payerTotals={payerTotals}
+              payerTotals={tourPayerTotals}
               toursTotal={toursTotal}
               styles={styles}
               nativeDateTimePicker={NativeDateTimePicker}
@@ -1459,9 +1602,72 @@ const App: React.FC = () => {
             />
           ) : null}
 
+          {activePage === 'expenses' ? (
+            <DailyExpensesTab
+              backendUrl={backendUrl}
+              headers={headers}
+              jsonHeaders={jsonHeaders}
+              trip={findActiveTrip() ?? null}
+              groupMembers={groupMembers}
+              expenses={expenses}
+              setExpenses={setExpenses}
+              defaultPayerId={defaultPayerId}
+              styles={styles}
+            />
+          ) : null}
+
+          {activePage === 'ledger' ? (
+            <LedgerTab
+              trip={findActiveTrip() ?? null}
+              groupMembers={groupMembers}
+              reportableMembers={reportableMembers}
+              paidTotals={ledgerPaidTotals}
+              usedTotals={ledgerUsedTotals}
+              styles={styles}
+              onNavigate={requestPageChange}
+              downloadCsv={downloadCsv}
+              findActiveTrip={findActiveTrip}
+              coveredBy={coveredBy}
+              setCoveredBy={setCoveredBy}
+              formatMemberName={formatMemberName}
+              payerName={payerName}
+              saveCoveredBy={saveCoveredBy}
+            />
+          ) : null}
+
           {activePage === 'cost' ? (
             <View style={[styles.card, styles.flightsSection]}>
-              <Text style={styles.sectionTitle}>Cost Report</Text>
+              <View style={styles.row}>
+                <Text style={styles.sectionTitle}>Cost Report</Text>
+                <View style={[styles.row, { marginLeft: 'auto' }]}>
+                  <TouchableOpacity
+                    style={[styles.button, styles.smallButton]}
+                    onPress={() => {
+                      const csv = convertExpensesToCsv('paid');
+                      const fileName = `paid-expenses-${findActiveTrip()?.name?.replace(/\s/g, '_') ?? 'export'}.csv`;
+                      downloadCsv(csv, fileName);
+                    }}
+                  >
+                    <Text style={styles.buttonText}>Export Paid CSV</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.button, styles.smallButton]}
+                    onPress={() => {
+                      const csv = convertExpensesToCsv('incurred');
+                      const fileName = `incurred-expenses-${findActiveTrip()?.name?.replace(/\s/g, '_') ?? 'export'}.csv`;
+                      downloadCsv(csv, fileName);
+                    }}
+                  >
+                    <Text style={styles.buttonText}>Export Incurred CSV</Text>
+                  </TouchableOpacity>
+                </View>
+                <TouchableOpacity
+                  style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
+                  onPress={() => requestPageChange('ledger')}
+                >
+                  <Text style={styles.buttonText}>📒 Ledger</Text>
+                </TouchableOpacity>
+              </View>
               <Text style={styles.helperText}>Combined totals by category and user.</Text>
               <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
                 <View style={styles.table}>
@@ -1469,7 +1675,7 @@ const App: React.FC = () => {
                     <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
                       <Text style={styles.headerText}>Category</Text>
                     </View>
-                    {userMembers.map((m) => (
+                    {reportableMembers.map((m) => (
                       <View key={m.id} style={[styles.cell, { minWidth: 120, flex: 1 }]}>
                         <Text style={styles.headerText}>{formatMemberName(m)}</Text>
                       </View>
@@ -1478,22 +1684,13 @@ const App: React.FC = () => {
                       <Text style={styles.headerText}>Total</Text>
                     </View>
                   </View>
-                  {[
-                    { label: 'Flights', total: flightsTotal },
-                    { label: 'Lodging', total: lodgingTotal },
-                    { label: 'Tours', total: toursTotal },
-                  ].map((row, idx, arr) => (
+                  {costReportRows.map((row, idx, arr) => (
                     <View key={row.label} style={[styles.tableRow, idx === arr.length - 1 && styles.lastRow]}>
                       <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
                         <Text style={styles.cellText}>{row.label}</Text>
                       </View>
-                      {userMembers.map((m) => {
-                        const share =
-                          row.label === 'Tours'
-                            ? tourShares[m.id] ?? 0
-                            : row.label === 'Flights'
-                              ? flightShares[m.id] ?? 0
-                              : lodgingTotalsBalanced[m.id] ?? 0;
+                      {reportableMembers.map((m) => {
+                        const share = row.shares[m.id] ?? 0;
                         return (
                           <View key={`${row.label}-${m.id}`} style={[styles.cell, { minWidth: 120, flex: 1 }]}>
                             <Text style={styles.cellText}>${share.toFixed(2)}</Text>
@@ -1509,8 +1706,8 @@ const App: React.FC = () => {
                     <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
                       <Text style={styles.headerText}>Overall</Text>
                     </View>
-                    {userMembers.map((m) => {
-                      const total = overallShares[m.id] ?? 0;
+                    {reportableMembers.map((m) => {
+                      const total = ledgerPaidTotals[m.id] ?? 0;
                       return (
                         <View key={`overall-${m.id}`} style={[styles.cell, { minWidth: 120, flex: 1 }]}>
                           <Text style={styles.headerText}>${total.toFixed(2)}</Text>
@@ -1565,252 +1762,20 @@ const App: React.FC = () => {
           ) : null}
 
       {activePage === 'lodging' ? (
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Lodging</Text>
-          <Text style={styles.helperText}>Track stays for your active trip.</Text>
-          <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
-            <View style={styles.table}>
-              <View style={[styles.tableRow, styles.tableHeader]}>
-                <View style={[styles.cell, styles.lodgingNameCol]}>
-                  <Text style={styles.headerText}>Name</Text>
-                </View>
-                <View style={[styles.cell, styles.lodgingDateCol]}>
-                  <Text style={styles.headerText}>Check-in</Text>
-                </View>
-                <View style={[styles.cell, styles.lodgingDateCol]}>
-                  <Text style={styles.headerText}>Check-out</Text>
-                </View>
-                <View style={[styles.cell, styles.lodgingRoomsCol]}>
-                  <Text style={styles.headerText}>Rooms</Text>
-                </View>
-                <View style={[styles.cell, styles.lodgingRefundCol]}>
-                  <Text style={styles.headerText}>Refundable By</Text>
-                </View>
-                <View style={[styles.cell, styles.lodgingCostCol]}>
-                  <Text style={styles.headerText}>Total Cost</Text>
-                </View>
-                <View style={[styles.cell, styles.lodgingCostCol]}>
-                  <Text style={styles.headerText}>Per Night</Text>
-                </View>
-                <View style={[styles.cell, styles.lodgingPayerCol]}>
-                  <Text style={styles.headerText}>Paid By</Text>
-                </View>
-                <View style={[styles.cell, styles.lodgingAddressCol]}>
-                  <Text style={styles.headerText}>Address</Text>
-                </View>
-                <View style={[styles.cell, styles.actionCell, styles.lodgingActionCol, styles.lastCell]}>
-                  <Text style={styles.headerText}>Actions</Text>
-                </View>
-              </View>
-
-              {lodgings.map((l) => (
-                <View key={l.id} style={styles.tableRow}>
-                  <View style={[styles.cell, styles.lodgingNameCol]}>
-                    <Text style={[styles.cellText, styles.cellTextWrap]}>{l.name}</Text>
-                  </View>
-                  <View style={[styles.cell, styles.lodgingDateCol]}>
-                    <Text style={[styles.cellText, styles.cellTextWrap]}>{formatDateLong(normalizeDateString(l.checkInDate))}</Text>
-                  </View>
-                  <View style={[styles.cell, styles.lodgingDateCol]}>
-                    <Text style={[styles.cellText, styles.cellTextWrap]}>{formatDateLong(normalizeDateString(l.checkOutDate))}</Text>
-                  </View>
-                  <View style={[styles.cell, styles.lodgingRoomsCol]}>
-                    <Text style={[styles.cellText, styles.cellTextWrap]}>{l.rooms || '-'}</Text>
-                  </View>
-                  <View style={[styles.cell, styles.lodgingRefundCol]}>
-                    <Text style={[styles.cellText, styles.cellTextWrap]}>
-                      {l.refundBy ? formatDateLong(normalizeDateString(l.refundBy)) : 'Non-refundable'}
-                    </Text>
-                  </View>
-                  <View style={[styles.cell, styles.lodgingCostCol]}>
-                    <Text style={[styles.cellText, styles.cellTextWrap]}>{l.totalCost ? `$${l.totalCost}` : '-'}</Text>
-                  </View>
-                  <View style={[styles.cell, styles.lodgingCostCol]}>
-                    <Text style={[styles.cellText, styles.cellTextWrap]}>{l.costPerNight ? `$${l.costPerNight}` : '-'}</Text>
-                  </View>
-                  <View style={[styles.cell, styles.lodgingPayerCol]}>
-                    <Text style={[styles.cellText, styles.cellTextWrap]}>{l.paidBy?.length ? l.paidBy.map(payerName).join(', ') : '-'}</Text>
-                  </View>
-                  <View style={[styles.cell, styles.lodgingAddressCol]}>
-                    <Text style={[styles.cellText, styles.cellTextWrap]}>{l.address || '-'}</Text>
-                  </View>
-                  <View style={[styles.cell, styles.actionCell, styles.lodgingActionCol, styles.lastCell]}>
-                    {l.address ? (
-                      <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => openMaps(l.address)}>
-                        <Text style={styles.buttonText}>Map</Text>
-                      </TouchableOpacity>
-                    ) : null}
-                    <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => openLodgingEditor(l)}>
-                      <Text style={styles.buttonText}>Edit</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => removeLodging(l.id)}>
-                      <Text style={styles.buttonText}>Delete</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ))}
-
-              <View style={[styles.tableRow, styles.inputRow, styles.lastRow]}>
-                <View style={[styles.cell, styles.lodgingNameCol]}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Hotel / Airbnb"
-                    value={lodgingDraft.name}
-                    onChangeText={(text) => setLodgingDraft((prev) => ({ ...prev, name: text }))}
-                  />
-                </View>
-                <View style={[styles.cell, styles.lodgingDateCol]}>
-                  <View style={styles.dateInputWrap}>
-                    {Platform.OS === 'web' ? (
-                      <input
-                        ref={lodgingCheckInRef as any}
-                        type="date"
-                        value={lodgingDraft.checkInDate}
-                        onChange={(e) =>
-                          setLodgingDraft((prev) => ({ ...prev, checkInDate: normalizeDateString(e.target.value) }))
-                        }
-                        style={styles.input as any}
-                      />
-                    ) : (
-                      <TouchableOpacity
-                        style={[styles.input, styles.dateTouchable]}
-                        onPress={() => openLodgingDatePicker('checkIn', 'draft', lodgingDraft.checkInDate)}
-                      >
-                        <Text style={styles.cellText}>{lodgingDraft.checkInDate || 'YYYY-MM-DD'}</Text>
-                      </TouchableOpacity>
-                    )}
-                    <TouchableOpacity
-                      style={styles.dateIcon}
-                      onPress={() => openLodgingDatePicker('checkIn', 'draft', lodgingDraft.checkInDate)}
-                    >
-                      <Text style={styles.selectCaret}>📅</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-                <View style={[styles.cell, styles.lodgingDateCol]}>
-                  <View style={styles.dateInputWrap}>
-                    {Platform.OS === 'web' ? (
-                      <input
-                        ref={lodgingCheckOutRef as any}
-                        type="date"
-                        value={lodgingDraft.checkOutDate}
-                        onChange={(e) =>
-                          setLodgingDraft((prev) => ({ ...prev, checkOutDate: normalizeDateString(e.target.value) }))
-                        }
-                        style={styles.input as any}
-                      />
-                    ) : (
-                      <TouchableOpacity
-                        style={[styles.input, styles.dateTouchable]}
-                        onPress={() => openLodgingDatePicker('checkOut', 'draft', lodgingDraft.checkOutDate)}
-                      >
-                        <Text style={styles.cellText}>{lodgingDraft.checkOutDate || 'YYYY-MM-DD'}</Text>
-                      </TouchableOpacity>
-                    )}
-                    <TouchableOpacity
-                      style={styles.dateIcon}
-                      onPress={() => openLodgingDatePicker('checkOut', 'draft', lodgingDraft.checkOutDate)}
-                    >
-                      <Text style={styles.selectCaret}>📅</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-                <View style={[styles.cell, styles.lodgingRoomsCol]}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Rooms"
-                    keyboardType="numeric"
-                    value={lodgingDraft.rooms}
-                    onChangeText={(text) => setLodgingDraft((prev) => ({ ...prev, rooms: text }))}
-                  />
-                </View>
-                <View style={[styles.cell, styles.lodgingRefundCol]}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Refund by (YYYY-MM-DD)"
-                    value={lodgingDraft.refundBy}
-                    onChangeText={(text) => setLodgingDraft((prev) => ({ ...prev, refundBy: normalizeDateString(text) }))}
-                  />
-                </View>
-                <View style={[styles.cell, styles.lodgingCostCol]}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Total $"
-                    keyboardType="numeric"
-                    value={lodgingDraft.totalCost}
-                    onChangeText={(text) => setLodgingDraft((prev) => ({ ...prev, totalCost: text }))}
-                  />
-                </View>
-                <View style={[styles.cell, styles.lodgingCostCol]}>
-                  <Text style={styles.cellText}>{lodgingDraft.costPerNight ? `$${lodgingDraft.costPerNight}` : '-'}</Text>
-                </View>
-                <View style={[styles.cell, styles.lodgingPayerCol]}>
-                  <View style={styles.payerChips}>
-                    {lodgingDraft.paidBy.map((id) => (
-                      <View key={id} style={styles.payerChip}>
-                        <Text style={styles.cellText}>{payerName(id)}</Text>
-                        <TouchableOpacity onPress={() => setLodgingDraft((prev) => ({ ...prev, paidBy: prev.paidBy.filter((x) => x !== id) }))}>
-                          <Text style={styles.removeText}>x</Text>
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                  </View>
-                  <View style={styles.payerOptions}>
-                    {userMembers
-                      .filter((m) => !lodgingDraft.paidBy.includes(m.id))
-                      .map((m) => (
-                        <TouchableOpacity
-                          key={m.id}
-                          style={styles.smallButton}
-                          onPress={() => setLodgingDraft((prev) => ({ ...prev, paidBy: [...prev.paidBy, m.id] }))}
-                        >
-                          <Text style={styles.buttonText}>Add {formatMemberName(m)}</Text>
-                        </TouchableOpacity>
-                      ))}
-                  </View>
-                </View>
-                <View style={[styles.cell, styles.lodgingAddressCol]}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Address"
-                    value={lodgingDraft.address}
-                    onChangeText={(text) => setLodgingDraft((prev) => ({ ...prev, address: text }))}
-                  />
-                </View>
-                <View style={[styles.cell, styles.actionCell, styles.lodgingActionCol, styles.lastCell]}>
-                  <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => saveLodging(lodgingDraft)}>
-                    <Text style={styles.buttonText}>Add</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-          </ScrollView>
-          <View style={{ marginTop: 12 }}>
-            <Text style={styles.flightTitle}>Total lodging cost: ${lodgingTotal.toFixed(2)}</Text>
-            <Text style={styles.helperText}>Breakdown (aligned with total even when no payers are set):</Text>
-            {userMembers.map((m) => (
-              <Text key={m.id} style={styles.helperText}>
-                {formatMemberName(m)}: ${Number(lodgingTotalsBalanced[m.id] ?? 0).toFixed(2)}
-              </Text>
-            ))}
-            <Text style={[styles.helperText, { marginTop: 4 }]}>Subtotal across payers: ${lodgingBreakdownSum.toFixed(2)}</Text>
-          </View>
-          {Platform.OS !== 'web' && lodgingDateField && NativeDateTimePicker ? (
-            <NativeDateTimePicker
-              value={lodgingDateValue}
-              mode="date"
-              onChange={(_, date) => {
-                if (!date) {
-                  setLodgingDateField(null);
-                  return;
-                }
-                const iso = date.toISOString().slice(0, 10);
-                applyLodgingDate(lodgingDateField, iso, lodgingDateContext);
-                setLodgingDateField(null);
-              }}
-            />
-          ) : null}
-        </View>
+        <LodgingTab
+          backendUrl={backendUrl}
+          jsonHeaders={jsonHeaders}
+          requestHeaders={headers}
+          trip={findActiveTrip() ?? null}
+          lodgings={lodgings}
+          groupMembers={groupMembers}
+          defaultPayerId={defaultPayerId}
+          styles={styles}
+          onRefreshLodgings={fetchLodgings}
+          onOpenMap={openMaps}
+          formatMemberName={formatMemberName}
+          payerName={payerName}
+        />
       ) : null}
 
       {activePage === 'car' ? (
@@ -1821,7 +1786,7 @@ const App: React.FC = () => {
           <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
             <View style={styles.table}>
               <View style={[styles.tableRow, styles.tableHeader]}>
-                {['Pick Up Location', 'Pick Up Date', 'Drop Off Location', 'Drop Off Date', 'Reference', 'Vendor', 'Prepaid?', 'Cost', 'Car Model', 'Notes', 'Paid By', 'Actions'].map((label, idx, arr) => (
+                {['Pick Up Location', 'Pick Up Date', 'Drop Off Location', 'Drop Off Date', 'Reference', 'Vendor', 'Prepaid?', 'Cost', 'Car Model', 'Notes', 'For', 'Paid By', 'Actions'].map((label, idx, arr) => (
                   <View
                     key={label}
                     style={[styles.cell, { minWidth: 140, flex: 1 }, idx === arr.length - 1 && styles.lastCell]}
@@ -1861,6 +1826,11 @@ const App: React.FC = () => {
                   </View>
                   <View style={[styles.cell, { minWidth: 220, flex: 1 }]}>
                     <Text style={[styles.cellText, styles.cellTextWrap]}>{car.notes || '-'}</Text>
+                  </View>
+                  <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
+                    <Text style={styles.cellText}>
+                      {(car.travelerIds ?? []).length ? (car.travelerIds ?? []).map(payerName).join(', ') : '-'}
+                    </Text>
                   </View>
                   <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
                     <Text style={styles.cellText}>{car.paidBy.length ? car.paidBy.map(payerName).join(', ') : '-'}</Text>
@@ -1990,7 +1960,7 @@ const App: React.FC = () => {
                     placeholder="Cost"
                     keyboardType="numeric"
                     value={carDraft.cost}
-                    onChangeText={(text) => setCarDraft((p) => ({ ...p, cost: text }))}
+                    onChangeText={(text) => setCarDraft((p) => ({ ...p, cost: sanitizeCostInput(text) }))}
                   />
                 </View>
                 <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
@@ -2009,6 +1979,43 @@ const App: React.FC = () => {
                     onChangeText={(text) => setCarDraft((p) => ({ ...p, notes: text }))}
                     multiline
                   />
+                </View>
+                <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
+                  <View style={styles.payerChips}>
+                    {carDraft.travelerIds.map((id) => (
+                      <View key={`car-traveler-${id}`} style={styles.payerChip}>
+                        <Text style={styles.cellText}>{payerName(id)}</Text>
+                        <TouchableOpacity
+                          onPress={() =>
+                            setCarDraft((prev) => ({
+                              ...prev,
+                              travelerIds: prev.travelerIds.filter((x) => x !== id),
+                            }))
+                          }
+                        >
+                          <Text style={styles.removeText}>x</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                  <View style={styles.payerOptions}>
+                    {userMembers
+                      .filter((m) => !carDraft.travelerIds.includes(m.id))
+                      .map((m) => (
+                        <TouchableOpacity
+                          key={`car-traveler-add-${m.id}`}
+                          style={styles.smallButton}
+                          onPress={() =>
+                            setCarDraft((prev) => ({
+                              ...prev,
+                              travelerIds: [...prev.travelerIds, m.id],
+                            }))
+                          }
+                        >
+                          <Text style={styles.buttonText}>Add {formatMemberName(m)}</Text>
+                        </TouchableOpacity>
+                      ))}
+                  </View>
                 </View>
                 <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
                   <View style={styles.payerChips}>
@@ -2062,164 +2069,7 @@ const App: React.FC = () => {
         />
       ) : null}
 
-      {editingLodging && editingLodgingId ? (
-        <View style={styles.passengerOverlay}>
-          <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={closeLodgingEditor} />
-          <View style={styles.modalCard}>
-            <Text style={styles.sectionTitle}>Edit Lodging</Text>
-            <ScrollView style={{ maxHeight: 420 }}>
-              <Text style={styles.modalLabel}>Name</Text>
-              <TextInput
-                style={styles.input}
-                value={editingLodging.name}
-                onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, name: text } : prev))}
-              />
-              <Text style={styles.modalLabel}>Check-in</Text>
-              <View style={styles.dateInputWrap}>
-                {Platform.OS === 'web' ? (
-                  <input
-                    ref={editLodgingCheckInRef as any}
-                    type="date"
-                    value={editingLodging.checkInDate}
-                    onChange={(e) =>
-                      setEditingLodging((prev) => (prev ? { ...prev, checkInDate: normalizeDateString(e.target.value) } : prev))
-                    }
-                    style={styles.input as any}
-                  />
-                ) : (
-                  <TouchableOpacity
-                    style={[styles.input, styles.dateTouchable]}
-                    onPress={() => openLodgingDatePicker('checkIn', 'edit', editingLodging.checkInDate)}
-                  >
-                    <Text style={styles.cellText}>{editingLodging.checkInDate || 'YYYY-MM-DD'}</Text>
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity
-                  style={styles.dateIcon}
-                  onPress={() => openLodgingDatePicker('checkIn', 'edit', editingLodging.checkInDate)}
-                >
-                  <Text style={styles.selectCaret}>📅</Text>
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.modalLabel}>Check-out</Text>
-              <View style={styles.dateInputWrap}>
-                {Platform.OS === 'web' ? (
-                  <input
-                    ref={editLodgingCheckOutRef as any}
-                    type="date"
-                    value={editingLodging.checkOutDate}
-                    onChange={(e) =>
-                      setEditingLodging((prev) => (prev ? { ...prev, checkOutDate: normalizeDateString(e.target.value) } : prev))
-                    }
-                    style={styles.input as any}
-                  />
-                ) : (
-                  <TouchableOpacity
-                    style={[styles.input, styles.dateTouchable]}
-                    onPress={() => openLodgingDatePicker('checkOut', 'edit', editingLodging.checkOutDate)}
-                  >
-                    <Text style={styles.cellText}>{editingLodging.checkOutDate || 'YYYY-MM-DD'}</Text>
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity
-                  style={styles.dateIcon}
-                  onPress={() => openLodgingDatePicker('checkOut', 'edit', editingLodging.checkOutDate)}
-                >
-                  <Text style={styles.selectCaret}>📅</Text>
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.modalLabel}>Rooms</Text>
-              <TextInput
-                style={styles.input}
-                keyboardType="numeric"
-                value={editingLodging.rooms}
-                onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, rooms: text } : prev))}
-              />
-              <Text style={styles.modalLabel}>Refund by</Text>
-              {Platform.OS === 'web' ? (
-                <input
-                  type="date"
-                  value={editingLodging.refundBy}
-                  onChange={(e) => setEditingLodging((prev) => (prev ? { ...prev, refundBy: e.target.value } : prev))}
-                  style={styles.input as any}
-                />
-              ) : (
-                <TextInput
-                  style={styles.input}
-                  value={editingLodging.refundBy}
-                  placeholder="YYYY-MM-DD"
-                  onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, refundBy: normalizeDateString(text) } : prev))}
-                />
-              )}
-              <Text style={styles.modalLabel}>Total cost</Text>
-              <TextInput
-                style={styles.input}
-                value={editingLodging.totalCost}
-                keyboardType="numeric"
-                onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, totalCost: text } : prev))}
-              />
-              <Text style={styles.modalLabel}>Cost per night</Text>
-              <Text style={styles.helperText}>{editingLodging.costPerNight ? `$${editingLodging.costPerNight}` : '-'}</Text>
-
-              <Text style={styles.modalLabel}>Paid by</Text>
-              <View style={[styles.input, styles.payerBox]}>
-                <View style={styles.payerChips}>
-                  {editingLodging.paidBy.map((id) => (
-                    <View key={id} style={styles.payerChip}>
-                      <Text style={styles.cellText}>{payerName(id)}</Text>
-                      <TouchableOpacity
-                        onPress={() =>
-                          setEditingLodging((p) =>
-                            p
-                              ? {
-                                  ...p,
-                                  paidBy: p.paidBy.filter((x) => x !== id),
-                                }
-                              : p
-                          )
-                        }
-                      >
-                        <Text style={styles.removeText}>x</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                </View>
-                <View style={styles.payerOptions}>
-                  {userMembers
-                    .filter((m) => !editingLodging.paidBy.includes(m.id))
-                    .map((m) => (
-                      <TouchableOpacity
-                        key={m.id}
-                        style={styles.smallButton}
-                        onPress={() => setEditingLodging((p) => (p ? { ...p, paidBy: [...p.paidBy, m.id] } : p))}
-                      >
-                        <Text style={styles.buttonText}>Add {formatMemberName(m)}</Text>
-                      </TouchableOpacity>
-                    ))}
-                </View>
-              </View>
-
-              <Text style={styles.modalLabel}>Address</Text>
-              <TextInput
-                style={styles.input}
-                value={editingLodging.address}
-                onChangeText={(text) => setEditingLodging((prev) => (prev ? { ...prev, address: text } : prev))}
-              />
-            </ScrollView>
-            <View style={styles.row}>
-              <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={closeLodgingEditor}>
-                <Text style={styles.buttonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.button}
-                onPress={() => editingLodging && saveLodging(editingLodging, editingLodgingId)}
-              >
-                <Text style={styles.buttonText}>Save</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      ) : null}
+      
       {activePage === 'flights' || externalFlightEditId ? (
         <FlightsTab
           backendUrl={backendUrl}
@@ -2239,6 +2089,10 @@ const App: React.FC = () => {
           airportOptions={flightAirportOptions}
           onSearchAirports={fetchFlightAirports}
           externalEditFlightId={externalFlightEditId}
+          onDataChanged={() => {
+            fetchFlights();
+            fetchExpenses();
+          }}
           onExternalEditHandled={() => setExternalFlightEditId(null)}
           showList={activePage === 'flights'}
         />
@@ -2344,7 +2198,7 @@ const App: React.FC = () => {
                       style={[styles.button, styles.smallButton]}
                       onPress={() => {
                         setSelectedTripId(trip.id);
-                        setActivePage('trip-details');
+                        requestPageChange('trip-details');
                       }}
                     >
                       <Text style={styles.buttonText}>View</Text>
@@ -2377,27 +2231,37 @@ const App: React.FC = () => {
               onRefreshTrips={fetchTrips}
               onRefreshGroups={fetchGroups}
               onRefreshGroupMembers={fetchGroupMembersForActiveTrip}
-              onRefreshFlights={fetchFlights}
-              onRefreshLodgings={fetchLodgings}
-              onRefreshTours={fetchTours}
+              onFlightDataChanged={() => {
+                fetchFlights();
+                fetchExpenses();
+              }}
+              onLodgingDataChanged={() => {
+                fetchLodgings();
+                fetchExpenses();
+              }}
+              onTourDataChanged={() => {
+                fetchTours();
+                fetchExpenses();
+              }}
               onAddCarRental={addCarRentalFromOverview}
               openFlightInFlightsTab={openFlightInFlightsTab}
+              openLodgingDetails={openLodgingDetails}
             />
           ) : null}
 
-          {activePage === 'trip-details' ? (
-            <TripDetailsTab
-              trip={trips.find((t) => t.id === selectedTripId) ?? null}
-              group={groups.find((g) => g.id === trips.find((t) => t.id === selectedTripId)?.groupId) ?? null}
-              styles={styles}
-              onBack={() => setActivePage('trips')}
-              onSetActive={(tripId) => setActiveTripId(tripId)}
-              onOpenItinerary={(tripId) => {
-                setActiveTripId(tripId);
-                setActivePage('itinerary');
-              }}
-            />
-          ) : null}
+      {activePage === 'trip-details' ? (
+        <TripDetailsTab
+          trip={trips.find((t) => t.id === selectedTripId) ?? null}
+          group={groups.find((g) => g.id === trips.find((t) => t.id === selectedTripId)?.groupId) ?? null}
+          styles={styles}
+          onSetActive={(tripId) => setActiveTripId(tripId)}
+          onOpenItinerary={(tripId) => {
+            setActiveTripId(tripId);
+            requestPageChange('itinerary');
+          }}
+          onUpdateCurrency={updateTripCurrency}
+        />
+      ) : null}
 
           {activePage === 'follow' ? (
             <FollowTab
@@ -2505,447 +2369,641 @@ const App: React.FC = () => {
               airportOptions={flightAirportOptions}
               onSearchAirports={fetchFlightAirports}
               styles={styles}
-              onCancel={() => setActivePage('trips')}
-              onTripCreated={(tripId) => {
-                setActiveTripId(tripId);
-                setSelectedTripId(tripId);
-                fetchTrips();
-                fetchGroups();
-                fetchInvites();
-                setActivePage('trip-details');
-              }}
-              onWizardCarRentals={(rentals) => setCarRentals(rentals)}
+              onCancel={closeTripWizard}
+              onTripCreated={onTripCreated}
               onUnauthorized={logout}
+              onWizardCarRentals={setCarRentals}
               currentUserName={userName}
               currentUserEmail={userEmail}
             />
           </View>
         </View>
       ) : null}
-                </SafeAreaView>
-              );};
+      {lodgingToDelete ? (
+        <ConfirmDialog
+          title="Delete Lodging"
+          prompt={`Are you sure you want to delete ${lodgingToDelete.name}? This cannot be undone.`}
+          onConfirm={() => {
+            deleteLodging(lodgingToDelete.id);
+            setLodgingToDelete(null);
+          }}
+          onCancel={() => setLodgingToDelete(null)}
+          styles={styles}
+        />
+      ) : null}
+      {showLodgingDetails && selectedLodging ? (
+        <LodgingDetailsDialog
+          visible={showLodgingDetails}
+          lodging={selectedLodging}
+          attendees={groupMembers}
+          backendUrl={backendUrl}
+          requestHeaders={headers}
+          styles={styles}
+          payerName={payerName}
+          travelerName={payerName}
+          onClose={() => setShowLodgingDetails(false)}
+          onEdit={() => {
+            if (!selectedLodging) return;
+            setShowLodgingDetails(false);
+            // openLodgingEditor(selectedLodging);
+          }}
+          onDelete={() => {
+            if (selectedLodging) {
+              setLodgingToDelete(selectedLodging);
+            }
+          }}
+          onOpenMap={openMaps}
+        />
+      ) : null}
+    </SafeAreaView>
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
-    backgroundColor: '#f7f7f7',
-  },
-  contentScroll: {
-    flex: 1,
-  },
-  contentScrollContent: {
-    paddingBottom: 120,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    backgroundColor: '#f1f5f9',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    width: '100%',
   },
   topBar: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderColor: '#d1d5db',
+  },
+  topBarLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-    position: 'relative',
-    zIndex: 1500,
+    gap: 10,
+  },
+  homeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#000',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  homeButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  backButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#000',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  backButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  topRightWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
   },
   topRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  topRightWrapper: {
+  contentScroll: {
+    flex: 1,
+    width: '100%',
+  },
+  contentScrollContent: {
+    alignItems: 'center',
+    padding: 16,
+    gap: 16,
+  },
+  card: {
+    width: '100%',
+    maxWidth: 1200,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  homeScrollContent: {
+    gap: 16,
+  },
+  homeTitle: {
+    fontSize: 28,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  homeHeroCard: {
+    position: 'relative',
+    borderRadius: 20,
+    overflow: 'hidden',
+    height: 180,
+    backgroundColor: '#e5e7eb',
+  },
+  homeHeroImage: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+  },
+  homeHeroFallback: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#d1d5db',
+  },
+  homeHeroOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  homeHeroTextWrap: {
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    bottom: 20,
+  },
+  homeHeroSubtitle: {
+    color: '#e5e7eb',
+    fontSize: 16,
+  },
+  homeHeroTitle: {
+    color: '#fff',
+    fontSize: 32,
+    fontWeight: '700',
+  },
+  homeNavList: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    overflow: 'hidden',
+  },
+  homeNavButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderColor: '#e5e7eb',
+    backgroundColor: '#fff',
+  },
+  homeNavButtonDisabled: {
+    opacity: 0.5,
+  },
+  homeNavIcon: {
+    width: 24,
+    textAlign: 'center',
+    fontSize: 18,
+  },
+  homeNavLabel: {
+    flex: 1,
+    fontSize: 16,
+    color: '#111827',
+  },
+  homeNavArrow: {
+    color: '#111827',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  homeModalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#f8fafc',
+    zIndex: 30000,
+    padding: 16,
+  },
+  homeModalCard: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    padding: 16,
+  },
+  homeModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  homeModalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  homeModalClose: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#e5e7eb',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  homeModalCloseText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  homeModalList: {
+    flex: 1,
+  },
+  homeModalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  homeModalRowActive: {
+    backgroundColor: '#f1f5f9',
+  },
+  homeModalRowText: {
+    flex: 1,
+  },
+  homeModalRowTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  homeModalRowMeta: {
+    color: '#6b7280',
+    fontSize: 13,
+  },
+  homeModalActiveBadge: {
+    color: '#047857',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
   },
   auth: {
+    width: '100%',
+    maxWidth: 420,
+    marginTop: 40,
+    padding: 16,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  toggleButton: {
+    flex: 1,
+    padding: 10,
+    borderBottomWidth: 2,
+    borderColor: '#d1d5db',
+  },
+  toggleActive: {
+    borderColor: '#0d6efd',
+  },
+  toggleText: {
+    textAlign: 'center',
+    fontWeight: '600',
+    color: '#6b7280',
+  },
+  toggleGroup: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
+    position: 'relative',
+    zIndex: 1,
+  },
+  expenseToggleButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#111',
+    backgroundColor: '#fff',
+  },
+  expenseToggleSelected: {
+    backgroundColor: '#e5e7eb',
+    borderColor: '#111',
+  },
+  expenseToggleUnselected: {
+    backgroundColor: '#fff',
+    borderColor: '#111',
+  },
+  expenseToggleText: {
+    fontWeight: '600',
+    color: '#111',
+  },
+  expenseToggleTextSelected: {
+    color: '#111',
   },
   input: {
-    padding: 10,
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: '#d1d5db',
     borderRadius: 6,
-    marginVertical: 6,
-    backgroundColor: '#fff',
-  },
-  card: {
-    padding: 12,
-    backgroundColor: '#fff',
-    borderRadius: 8,
+    padding: 10,
     marginBottom: 12,
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-  },
-  successCard: {
-    padding: 12,
-    backgroundColor: '#e0f2fe',
-    borderRadius: 8,
-    marginBottom: 12,
-    borderColor: '#bfdbfe',
-    borderWidth: 1,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#e5e7eb',
-    marginVertical: 12,
-  },
-  accountSection: {
-    gap: 6,
+    width: '100%',
   },
   button: {
     backgroundColor: '#0d6efd',
     padding: 10,
     borderRadius: 6,
     alignItems: 'center',
-    marginVertical: 6,
-  },
-  budgetRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  budgetIndicator: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: '#0d6efd',
-    backgroundColor: 'transparent',
-  },
-  budgetIndicatorActive: {
-    backgroundColor: '#fff',
-    borderColor: '#fff',
   },
   buttonText: {
     color: '#fff',
-    fontWeight: '600',
+    fontWeight: 'bold',
   },
-  sectionTitle: {
-    fontWeight: '700',
-    fontSize: 18,
-    marginBottom: 8,
+  smallButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
-  row: {
+  dangerButton: {
+    backgroundColor: '#dc3545',
+  },
+  navRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
     marginTop: 8,
   },
-  groupRow: {
-    flexDirection: 'row',
-    gap: 12,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  traitRow: {
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  groupColumn: {
-    gap: 6,
-  },
-  shareRow: {
-    marginTop: 12,
-    gap: 6,
-  },
-  familyRow: {
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderColor: '#e5e7eb',
-    gap: 4,
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    marginBottom: 8,
-  },
-  toggleButton: {
-    flex: 1,
-    padding: 10,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ccc',
-  },
-  toggleActive: {
-    backgroundColor: '#0d6efd',
-    borderColor: '#0d6efd',
-  },
   navButton: {
-    backgroundColor: '#e5e7eb',
-    padding: 10,
-    borderRadius: 6,
-    alignItems: 'center',
-    marginVertical: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#e9ecef',
   },
   navButtonActive: {
     backgroundColor: '#0d6efd',
   },
   navButtonText: {
-    color: '#0f172a',
+    color: '#000',
     fontWeight: '600',
   },
   navButtonActiveText: {
     color: '#fff',
   },
-  toggleText: {
-    color: '#0f172a',
-    fontWeight: '600',
+  section: {
+    width: '100%',
+    maxWidth: 1200,
+    padding: 16,
+    backgroundColor: '#fff',
+    borderRadius: 8,
   },
-  bodyText: {
-    fontSize: 14,
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  helperText: {
+    color: '#6b7280',
+    marginBottom: 8,
+    fontSize: 13,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+    flexWrap: 'wrap',
+  },
+  groupRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderColor: '#e5e7eb',
+    gap: 8,
+  },
+  groupRowLast: {
+    borderBottomWidth: 0,
   },
   table: {
+    width: '100%',
     borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 8,
-    overflow: 'visible',
-    minWidth: 900,
+    borderColor: '#dee2e6',
+    borderRadius: 6,
   },
   tableRow: {
     flexDirection: 'row',
-    alignItems: 'stretch',
-    overflow: 'visible',
+    borderBottomWidth: 1,
+    borderColor: '#dee2e6',
+  },
+  tableHeaderRow: {
+    backgroundColor: '#f8f9fa',
+  },
+  lastRow: {
+    borderBottomWidth: 0,
   },
   tableHeader: {
-    backgroundColor: '#f1f5f9',
+    backgroundColor: '#f8f9fa',
   },
   cell: {
-    padding: 10,
-    minWidth: 120,
+    padding: 8,
     borderRightWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: '#e5e7eb',
-    justifyContent: 'center',
+    borderColor: '#dee2e6',
+  },
+  tableHeaderCell: {
+    padding: 8,
+    borderRightWidth: 1,
+    borderColor: '#dee2e6',
+  },
+  tableCell: {
+    padding: 8,
+    borderRightWidth: 1,
+    borderColor: '#dee2e6',
   },
   lastCell: {
     borderRightWidth: 0,
   },
-  cellText: {
-    color: '#111827',
-  },
   headerText: {
-    fontWeight: '700',
-    color: '#0f172a',
+    fontWeight: 'bold',
+  },
+  cellText: {
+    flexWrap: 'wrap',
+  },
+  actionCell: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+  },
+  tableActionButton: {
+    minWidth: 72,
+    height: 32,
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+  },
+  tableActionButtonPrimary: {
+    backgroundColor: '#2563eb',
+  },
+  tableActionButtonDanger: {
+    backgroundColor: '#dc2626',
+  },
+  tableNameButton: {
+    alignSelf: 'flex-start',
+  },
+  roundButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    paddingHorizontal: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bodyText: {
+    fontSize: 14,
+  },
+  flightsSection: {
+    gap: 12,
+  },
+  flightsList: {
+    gap: 8,
+  },
+  flightCard: {
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 8,
+    padding: 12,
+    gap: 4,
   },
   flightTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#0f172a',
-  },
-  actionCell: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    gap: 6,
-  },
-  actionButtonsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    width: '100%',
-  },
-  inputRow: {
-    backgroundColor: '#f8fafc',
-  },
-  cellInput: {
-    padding: 8,
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 6,
-    backgroundColor: '#fff',
-  },
-  tableFooter: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 12,
-  },
-  formGrid: {
-    marginTop: 12,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  totalRow: {
-    marginTop: 8,
-  },
-  summaryRow: {
-    marginTop: 8,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  summaryOverall: {
-    borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
-    paddingTop: 8,
-    marginTop: 12,
-  },
-  summaryBreakdown: {
-    marginTop: 6,
-    gap: 2,
-  },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  payerBox: {
-    display: 'flex',
-    gap: 6,
-  },
-  payerChips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  payerChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    backgroundColor: '#e5e7eb',
-    borderRadius: 12,
-  },
-  payerOptions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  smallButton: {
-    backgroundColor: '#0d6efd',
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 6,
-  },
-  mapOptionButton: {
-    backgroundColor: '#fff',
-    borderColor: '#0d6efd',
-    borderWidth: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 6,
-  },
-  mapOptionActive: {
-    backgroundColor: '#0d6efd',
-    borderColor: '#0d6efd',
-  },
-  mapOptionText: {
-    color: '#0d6efd',
     fontWeight: '600',
   },
-  mapOptionActiveText: {
-    color: '#fff',
-  },
-  dangerButton: {
-    backgroundColor: '#dc2626',
-  },
-  helperText: {
-    color: '#6b7280',
-    fontSize: 12,
-  },
-  errorText: {
-    color: '#dc2626',
-    fontSize: 13,
-    marginTop: 4,
-  },
-  parsedList: {
-    marginTop: 4,
-    gap: 2,
-  },
-  pdfRow: {
+  attendeeList: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
+    flexWrap: 'wrap',
+    gap: 8,
     marginTop: 8,
   },
-  hiddenInput: {
-    display: 'none',
-  },
-  disabledButton: {
-    backgroundColor: '#94a3b8',
-  },
-  shareInput: {
-    flex: 1,
-  },
-  followTripItem: {
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderColor: '#e5e7eb',
-  },
-  inviteRow: {
+  attendeeChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingVertical: 6,
+    backgroundColor: '#e9ecef',
+    borderRadius: 16,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    gap: 6,
   },
-  codeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
+  attendeeChipRemoving: {
+    backgroundColor: '#f8d7da',
   },
-  flightsSection: {
-    position: 'relative',
-    zIndex: 2500,
+  attendeeChipPending: {
+    backgroundColor: '#fff3cd',
   },
-  traitsSection: {
-    position: 'relative',
+  attendeeText: {
+    fontWeight: '600',
   },
-  itinerarySection: {
-    position: 'relative',
+  attendeeRemoveButton: {
+    marginLeft: 4,
   },
-  navRow: {
-    flexDirection: 'row',
-    gap: 12,
+  attendeeRemoveText: {
+    color: '#dc3545',
+    fontWeight: 'bold',
+  },
+  addTravelerForm: {
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 8,
+    padding: 12,
     marginTop: 8,
+    gap: 8,
+  },
+  flightEditorWrap: {
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 8,
+    padding: 12,
+    marginVertical: 4,
+  },
+  flightRow: {
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 8,
+    padding: 12,
+    gap: 4,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#e2e8f0',
+    marginVertical: 12,
   },
   dayPill: {
     backgroundColor: '#e5e7eb',
-    padding: 10,
-    borderRadius: 16,
-    marginRight: 8,
-    minWidth: 90,
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
+    marginRight: 8,
   },
   dayPillActive: {
     backgroundColor: '#111827',
   },
   dayPillText: {
-    color: '#111827',
     fontWeight: '600',
   },
   dayPillActiveText: {
     color: '#fff',
   },
   dayPillNumber: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#111827',
+    fontSize: 13,
   },
   dayPillDate: {
-    fontSize: 12,
     color: '#4b5563',
+    fontSize: 13,
   },
   dayHeroCard: {
-    position: 'relative',
-    borderRadius: 20,
+    borderRadius: 16,
     overflow: 'hidden',
-    height: 200,
-    backgroundColor: '#e5e7eb',
+    position: 'relative',
+    height: 180,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   dayHeroImage: {
     position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     width: '100%',
     height: '100%',
-    resizeMode: 'cover',
   },
   dayHeroImageFallback: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-    backgroundColor: '#d1d5db',
+    flex: 1,
+    backgroundColor: '#e5e7eb',
   },
   dayHeroOverlay: {
     position: 'absolute',
@@ -3085,6 +3143,9 @@ const styles = StyleSheet.create({
   lodgingPayerCol: { minWidth: 140, maxWidth: 320, flex: 1 },
   lodgingAddressCol: { minWidth: 140, maxWidth: 320, flex: 1 },
   lodgingActionCol: { minWidth: 140, maxWidth: 320, flex: 1 },
+  lodgingTabNameCol: { flex: 1, minWidth: 160 },
+  lodgingTabDateCol: { flexGrow: 0, flexShrink: 0, minWidth: 110 },
+  lodgingTabActionsCol: { flexGrow: 0, flexShrink: 0, minWidth: 168 },
   cellTextWrap: {
     flexWrap: 'wrap',
     whiteSpace: 'normal',
@@ -3100,6 +3161,7 @@ const styles = StyleSheet.create({
   },
   dropdown: {
     position: 'relative',
+    zIndex: 20,
   },
   selectButton: {
     justifyContent: 'center',
@@ -3129,8 +3191,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#d1d5db',
     borderRadius: 6,
-    zIndex: 11000,
-    elevation: 18,
+    zIndex: 20000,
+    elevation: 24,
   },
   dropdownOption: {
     padding: 10,
@@ -3205,10 +3267,50 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
   },
+  expenseModalCard: {
+    maxWidth: 760,
+    maxHeight: 640,
+    overflow: 'visible',
+  },
+  expenseModalScroll: {
+    maxHeight: 520,
+    marginBottom: 8,
+    overflow: 'visible',
+  },
   detailModal: {
     maxHeight: 520,
     maxWidth: 520,
     width: '100%',
+  },
+  expenseFieldRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    position: 'relative',
+    zIndex: 10,
+  },
+  expenseFieldDate: {
+    minWidth: 160,
+    flexGrow: 1,
+    flexBasis: 160,
+    zIndex: 1,
+  },
+  expenseFieldCategory: {
+    minWidth: 150,
+    flexGrow: 1,
+    flexBasis: 150,
+    zIndex: 3,
+  },
+  expenseFieldCurrency: {
+    minWidth: 110,
+    flexGrow: 0,
+    flexBasis: 110,
+    zIndex: 2,
+  },
+  expenseFieldAmount: {
+    minWidth: 120,
+    flexGrow: 0,
+    flexBasis: 120,
   },
   detailModalScroll: {
     maxHeight: 420,
@@ -3217,6 +3319,13 @@ const styles = StyleSheet.create({
   detailSection: {
     marginTop: 8,
     gap: 4,
+  },
+  detailActionsRow: {
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    gap: 8,
   },
   modalLabel: {
     fontSize: 12,
@@ -3232,10 +3341,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     alignItems: 'flex-start',
+    flexWrap: 'wrap',
   },
   modalField: {
     flex: 1,
     position: 'relative',
+    minWidth: 200,
+    maxWidth: '100%',
+    flexBasis: 0,
   },
   inlineDropdownList: {
     position: 'absolute',
@@ -3365,7 +3478,7 @@ const styles = StyleSheet.create({
     color: '#2b2b2b',
   },
   buttonDisabled: {
-    opacity: 0.45,
+    opacity: 0.6,
   },
   wizardOverlay: {
     position: 'absolute',

@@ -14,6 +14,8 @@ import traitRoutes from './routes/traitRoutes';
 import lodgingRoutes from './routes/lodgingRoutes';
 import tourRoutes from './routes/tourRoutes';
 import accountRoutes, { groupsRouter } from './routes/accountRoutes';
+import placeRoutes from './routes/placeRoutes';
+import expenseRoutes from './routes/expenseRoutes';
 
 import { loadEnv } from './env_loader';
 import { getEnvValue, hasRunLocalFlag, isLocalEnv } from './env';
@@ -171,8 +173,10 @@ app.use('/api/itinerary', itineraryRoutes);
 app.use('/api/itineraries', itineraryDataRoutes);
 app.use('/api/traits', traitRoutes);
 app.use('/api/lodgings', lodgingRoutes);
+app.use('/api/places', placeRoutes);
 app.use('/api/tours', tourRoutes);
 app.use('/api/account', accountRoutes);
+app.use('/api/expenses', expenseRoutes);
 
 if (hasWebApp) {
   app.get(['/app', '/app/*', '/'], (_req, res) => {

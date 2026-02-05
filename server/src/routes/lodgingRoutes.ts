@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import bodyParser from 'body-parser';
 import { authenticate } from '../auth';
-import { deleteLodging, ensureUserInTrip, insertLodging, listLodgings, updateLodging } from '../db';
+import { deleteExpenseForSource, deleteLodging, ensureUserInTrip, insertLodging, listLodgings, updateLodging, upsertExpenseForSource } from '../db';
 import { findPlacePhoto } from '../googlePlaces';
 
 // Lodgings API: CRUD for lodgings scoped to the authenticated user / their group trips.
@@ -18,7 +18,20 @@ router.get('/', async (req, res) => {
 
 router.post('/', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const { name, checkInDate, checkOutDate, rooms, refundBy, totalCost, costPerNight, address, tripId, paidBy } = req.body;
+  const {
+    name,
+    checkInDate,
+    checkOutDate,
+    rooms,
+    refundBy,
+    totalCost,
+    costPerNight,
+    address,
+    placeId,
+    tripId,
+    paidBy,
+    travelerIds,
+  } = req.body;
   if (!name || !checkInDate || !checkOutDate || !tripId) {
     res.status(400).json({ error: 'Missing required fields' });
     return;
@@ -40,83 +53,208 @@ router.post('/', async (req, res) => {
     totalCost: Number(totalCost) || 0,
     costPerNight: Number(costPerNight) || 0,
     address,
+    place_id: placeId || null,
     paid_by: Array.isArray(paidBy) ? paidBy : [],
+    traveler_ids: Array.isArray(travelerIds) ? travelerIds : Array.isArray(paidBy) ? paidBy : [],
     imageUrl,
+  });
+  await upsertExpenseForSource({
+    userId,
+    tripId,
+    groupId: tripGroup.groupId,
+    expenseDate: checkInDate,
+    category: 'Lodging',
+    amount: Number(totalCost) || 0,
+    currency: undefined,
+    payerIds: Array.isArray(paidBy) ? paidBy : [],
+    forIds: Array.isArray(travelerIds) ? travelerIds : Array.isArray(paidBy) ? paidBy : [],
+    sourceType: 'lodging',
+    sourceId: lodging.id,
   });
   res.status(201).json(lodging);
 });
 
 router.put('/:id', async (req, res) => {
-  const userId = (req as any).user.userId as string;
-  const { name, checkInDate, checkOutDate, rooms, refundBy, totalCost, costPerNight, address, tripId, paidBy } = req.body;
-  const normalizedPaidBy = Array.isArray(paidBy) ? (paidBy.length ? paidBy : undefined) : undefined;
-  
-  let imageUrl: string | null = null;
-  if (name || address) {
-    const currentLodging = (await listLodgings(userId, tripId)).find(l => l.id === req.params.id);
-    if (currentLodging) {
-      imageUrl = await findPlacePhoto(address ? `${name || currentLodging.name}, ${address}` : name);
+  try {
+    const userId = (req as any).user.userId as string;
+    const {
+      name,
+      checkInDate,
+      checkOutDate,
+      rooms,
+      refundBy,
+      totalCost,
+      costPerNight,
+      address,
+      placeId,
+      tripId,
+      paidBy,
+      travelerIds,
+    } = req.body;
+    const normalizedPaidBy = Array.isArray(paidBy) ? (paidBy.length ? paidBy : undefined) : undefined;
+    const normalizedTravelerIds = Array.isArray(travelerIds) ? (travelerIds.length ? travelerIds : []) : undefined;
+    
+    let imageUrl: string | null = null;
+    if (name || address) {
+      const currentLodging = (await listLodgings(userId, tripId)).find((l) => l.id === req.params.id);
+      if (currentLodging) {
+        const nextName = name ?? currentLodging.name;
+        const nextAddress = address ?? currentLodging.address;
+        const nameChanged = typeof name === 'string' && name.trim() && name !== currentLodging.name;
+        const addressChanged = typeof address === 'string' && address.trim() && address !== currentLodging.address;
+        if ((nameChanged || addressChanged) || !currentLodging.imageUrl) {
+          imageUrl = await findPlacePhoto(nextAddress ? `${nextName}, ${nextAddress}` : nextName);
+        }
+      }
     }
-  }
 
-  const updated = await updateLodging(req.params.id, userId, {
-    name,
-    check_in_date: checkInDate,
-    check_out_date: checkOutDate,
-    rooms: rooms ? Number(rooms) : undefined,
-    refund_by: typeof refundBy === 'undefined' ? undefined : refundBy || null,
-    total_cost: typeof totalCost === 'undefined' ? undefined : Number(totalCost) || 0,
-    cost_per_night: typeof costPerNight === 'undefined' ? undefined : Number(costPerNight) || 0,
-    address,
-    paid_by: normalizedPaidBy,
-    trip_id: tripId,
-    imageUrl: imageUrl ?? undefined,
-  });
-  if (!updated) {
-    res.status(404).json({ error: 'Lodging not found' });
-    return;
+    const updated = await updateLodging(req.params.id, userId, {
+      name,
+      check_in_date: checkInDate,
+      check_out_date: checkOutDate,
+      rooms: rooms ? Number(rooms) : undefined,
+      refund_by: typeof refundBy === 'undefined' ? undefined : refundBy || null,
+      total_cost: typeof totalCost === 'undefined' ? undefined : Number(totalCost) || 0,
+      cost_per_night: typeof costPerNight === 'undefined' ? undefined : Number(costPerNight) || 0,
+      address,
+      place_id: typeof placeId === 'undefined' ? undefined : placeId || null,
+      paid_by: normalizedPaidBy,
+      traveler_ids: typeof normalizedTravelerIds === 'undefined' ? undefined : normalizedTravelerIds,
+      trip_id: tripId,
+      imageUrl: imageUrl ?? undefined,
+    });
+    if (!updated) {
+      res.status(404).json({ error: 'Lodging not found' });
+      return;
+    }
+    const updatedTripId = (updated as any)?.tripId ?? (updated as any)?.trip_id;
+    const updatedCheckIn = (updated as any)?.checkInDate ?? (updated as any)?.check_in_date;
+    const updatedTotal = (updated as any)?.totalCost ?? (updated as any)?.total_cost;
+    const membership = updatedTripId ? await ensureUserInTrip(updatedTripId as string, userId) : null;
+    if (updated && membership) {
+      await upsertExpenseForSource({
+        userId,
+        tripId: updatedTripId as string,
+        groupId: membership.groupId,
+        expenseDate: updatedCheckIn as string,
+        category: 'Lodging',
+        amount: Number(updatedTotal) || 0,
+        currency: undefined,
+        payerIds: Array.isArray((updated as any).paidBy) ? (updated as any).paidBy : [],
+        forIds: Array.isArray((updated as any).travelerIds) ? (updated as any).travelerIds : [],
+        sourceType: 'lodging',
+        sourceId: updated.id,
+      });
+    }
+    res.json(updated);
+  } catch (err) {
+    const message = (err as Error)?.message ?? 'Unable to update lodging';
+    if (message === 'Not authorized') {
+      res.status(403).json({ error: message });
+      return;
+    }
+    res.status(400).json({ error: message });
   }
-  res.json(updated);
 });
 
 // Support partial updates via PATCH for parity with tests/client expectations.
 router.patch('/:id', async (req, res) => {
-  const userId = (req as any).user.userId as string;
-  const { name, checkInDate, checkOutDate, rooms, refundBy, totalCost, costPerNight, address, tripId, paidBy } = req.body;
-  const normalizedPaidBy = Array.isArray(paidBy) ? (paidBy.length ? paidBy : undefined) : undefined;
+  try {
+    const userId = (req as any).user.userId as string;
+    const {
+      name,
+      checkInDate,
+      checkOutDate,
+      rooms,
+      refundBy,
+      totalCost,
+      costPerNight,
+      address,
+      placeId,
+      tripId,
+      paidBy,
+      travelerIds,
+    } = req.body;
+    const normalizedPaidBy = Array.isArray(paidBy) ? (paidBy.length ? paidBy : undefined) : undefined;
+    const normalizedTravelerIds = Array.isArray(travelerIds) ? (travelerIds.length ? travelerIds : []) : undefined;
 
-  let imageUrl: string | null = null;
-  if (name || address) {
-    const currentLodging = (await listLodgings(userId, tripId)).find(l => l.id === req.params.id);
-    if (currentLodging) {
-      imageUrl = await findPlacePhoto(address ? `${name || currentLodging.name}, ${address}` : name);
+    let imageUrl: string | null = null;
+    if (name || address) {
+      const currentLodging = (await listLodgings(userId, tripId)).find((l) => l.id === req.params.id);
+      if (currentLodging) {
+        const nextName = name ?? currentLodging.name;
+        const nextAddress = address ?? currentLodging.address;
+        const nameChanged = typeof name === 'string' && name.trim() && name !== currentLodging.name;
+        const addressChanged = typeof address === 'string' && address.trim() && address !== currentLodging.address;
+        if ((nameChanged || addressChanged) || !currentLodging.imageUrl) {
+          imageUrl = await findPlacePhoto(nextAddress ? `${nextName}, ${nextAddress}` : nextName);
+        }
+      }
     }
-  }
 
-  const updated = await updateLodging(req.params.id, userId, {
-    name,
-    check_in_date: checkInDate,
-    check_out_date: checkOutDate,
-    rooms: rooms ? Number(rooms) : undefined,
-    refund_by: typeof refundBy === 'undefined' ? undefined : refundBy || null,
-    total_cost: typeof totalCost === 'undefined' ? undefined : Number(totalCost) || 0,
-    cost_per_night: typeof costPerNight === 'undefined' ? undefined : Number(costPerNight) || 0,
-    address,
-    paid_by: normalizedPaidBy,
-    trip_id: tripId,
-    imageUrl: imageUrl ?? undefined,
-  });
-  if (!updated) {
-    res.status(404).json({ error: 'Lodging not found' });
-    return;
+    const updated = await updateLodging(req.params.id, userId, {
+      name,
+      check_in_date: checkInDate,
+      check_out_date: checkOutDate,
+      rooms: rooms ? Number(rooms) : undefined,
+      refund_by: typeof refundBy === 'undefined' ? undefined : refundBy || null,
+      total_cost: typeof totalCost === 'undefined' ? undefined : Number(totalCost) || 0,
+      cost_per_night: typeof costPerNight === 'undefined' ? undefined : Number(costPerNight) || 0,
+      address,
+      place_id: typeof placeId === 'undefined' ? undefined : placeId || null,
+      paid_by: normalizedPaidBy,
+      traveler_ids: typeof normalizedTravelerIds === 'undefined' ? undefined : normalizedTravelerIds,
+      trip_id: tripId,
+      imageUrl: imageUrl ?? undefined,
+    });
+    if (!updated) {
+      res.status(404).json({ error: 'Lodging not found' });
+      return;
+    }
+    const updatedTripId = (updated as any)?.tripId ?? (updated as any)?.trip_id;
+    const updatedCheckIn = (updated as any)?.checkInDate ?? (updated as any)?.check_in_date;
+    const updatedTotal = (updated as any)?.totalCost ?? (updated as any)?.total_cost;
+    const membership = updatedTripId ? await ensureUserInTrip(updatedTripId as string, userId) : null;
+    if (updated && membership) {
+      await upsertExpenseForSource({
+        userId,
+        tripId: updatedTripId as string,
+        groupId: membership.groupId,
+        expenseDate: updatedCheckIn as string,
+        category: 'Lodging',
+        amount: Number(updatedTotal) || 0,
+        currency: undefined,
+        payerIds: Array.isArray((updated as any).paidBy) ? (updated as any).paidBy : [],
+        forIds: Array.isArray((updated as any).travelerIds) ? (updated as any).travelerIds : [],
+        sourceType: 'lodging',
+        sourceId: updated.id,
+      });
+    }
+    res.json(updated);
+  } catch (err) {
+    const message = (err as Error)?.message ?? 'Unable to update lodging';
+    if (message === 'Not authorized') {
+      res.status(403).json({ error: message });
+      return;
+    }
+    res.status(400).json({ error: message });
   }
-  res.json(updated);
 });
 
 router.delete('/:id', async (req, res) => {
-  const userId = (req as any).user.userId as string;
-  await deleteLodging(req.params.id, userId);
-  res.status(204).send();
+  try {
+    const userId = (req as any).user.userId as string;
+    await deleteLodging(req.params.id, userId);
+    await deleteExpenseForSource('lodging', req.params.id, userId);
+    res.status(204).send();
+  } catch (err) {
+    const message = (err as Error)?.message ?? 'Unable to delete lodging';
+    if (message === 'Not authorized') {
+      res.status(403).json({ error: message });
+      return;
+    }
+    res.status(400).json({ error: message });
+  }
 });
 
 export default router;

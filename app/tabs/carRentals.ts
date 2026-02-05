@@ -1,3 +1,5 @@
+import { sanitizeCostInput } from '../utils/sanitizeCost';
+
 export type CarRental = {
   id: string;
   pickupLocation: string;
@@ -11,6 +13,7 @@ export type CarRental = {
   model: string;
   notes: string;
   paidBy: string[];
+  travelerIds: string[];
 };
 
 export type CarRentalDraft = {
@@ -25,6 +28,7 @@ export type CarRentalDraft = {
   model: string;
   notes: string;
   paidBy: string[];
+  travelerIds: string[];
 };
 
 export const createInitialCarRentalDraft = (): CarRentalDraft => ({
@@ -39,16 +43,20 @@ export const createInitialCarRentalDraft = (): CarRentalDraft => ({
   model: '',
   notes: '',
   paidBy: [],
+  travelerIds: [],
 });
 
 export const buildCarRentalFromDraft = (
   draft: CarRentalDraft,
-  defaultPayerId?: string | null
+  defaultPayerId?: string | null,
+  defaultTravelerIds: string[] = []
 ): { rental?: CarRental; error?: string } => {
   if (!draft.vendor.trim() && !draft.model.trim() && !draft.pickupLocation.trim()) {
     return { error: 'Enter at least a pickup location, vendor, or car model.' };
   }
+  const cleanCost = sanitizeCostInput(draft.cost || '');
   const paidBy = draft.paidBy.length ? draft.paidBy : defaultPayerId ? [defaultPayerId] : [];
+  const travelerIds = draft.travelerIds.length ? draft.travelerIds : paidBy.length ? paidBy : defaultTravelerIds;
   const rental: CarRental = {
     id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
     pickupLocation: draft.pickupLocation.trim(),
@@ -58,10 +66,11 @@ export const buildCarRentalFromDraft = (
     reference: draft.reference.trim(),
     vendor: draft.vendor.trim(),
     prepaid: draft.prepaid.trim(),
-    cost: draft.cost.trim(),
+    cost: cleanCost,
     model: draft.model.trim(),
     notes: draft.notes.trim(),
     paidBy,
+    travelerIds,
   };
   return { rental };
 };

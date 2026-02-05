@@ -1,6 +1,18 @@
 import { getCurrentDbProvider as getProvider, getDbAdapter, resetDbAdapter, type DbProvider } from './db.providers';
 import type { Pool } from 'pg';
-import type { Flight, Lodging, Tour, Trait, Trip, Itinerary, ItineraryDetail, User, WebUser } from './types';
+import type {
+  Flight,
+  Lodging,
+  Tour,
+  Trait,
+  Trip,
+  Itinerary,
+  ItineraryDetail,
+  User,
+  WebUser,
+  PlaceDetailsCache,
+  Expense,
+} from './types';
 
 const adapter = () => getDbAdapter();
 
@@ -35,8 +47,14 @@ export const updateFlight = async (...args: Parameters<ReturnType<typeof adapter
   adapter().updateFlight(...args);
 export const ensureUserInTrip = async (...args: Parameters<ReturnType<typeof adapter>['ensureUserInTrip']>) =>
   adapter().ensureUserInTrip(...args);
+export const getTripGroupId = async (...args: Parameters<ReturnType<typeof adapter>['getTripGroupId']>) =>
+  adapter().getTripGroupId(...args);
 export const updateTripDetails = async (...args: Parameters<ReturnType<typeof adapter>['updateTripDetails']>) =>
   adapter().updateTripDetails(...args);
+export const getTripCovering = async (...args: Parameters<ReturnType<typeof adapter>['getTripCovering']>) =>
+  adapter().getTripCovering(...args);
+export const updateTripCovering = async (...args: Parameters<ReturnType<typeof adapter>['updateTripCovering']>) =>
+  adapter().updateTripCovering(...args);
 export const getFlightForUser = async (...args: Parameters<ReturnType<typeof adapter>['getFlightForUser']>) =>
   adapter().getFlightForUser(...args);
 export const listFlights = async (...args: Parameters<ReturnType<typeof adapter>['listFlights']>): Promise<Flight[]> =>
@@ -107,6 +125,17 @@ export const listTraitsForGroupTrip = async (...args: Parameters<ReturnType<type
   adapter().listTraitsForGroupTrip(...args);
 export const getUserDemographics = async (...args: Parameters<ReturnType<typeof adapter>['getUserDemographics']>) =>
   adapter().getUserDemographics(...args);
+
+export const listExpenses = async (...args: Parameters<ReturnType<typeof adapter>['listExpenses']>): Promise<Expense[]> =>
+  adapter().listExpenses(...args);
+export const insertExpense = async (...args: Parameters<ReturnType<typeof adapter>['insertExpense']>) =>
+  adapter().insertExpense(...args);
+export const upsertExpenseForSource = async (...args: Parameters<ReturnType<typeof adapter>['upsertExpenseForSource']>) =>
+  adapter().upsertExpenseForSource(...args);
+export const deleteExpense = async (...args: Parameters<ReturnType<typeof adapter>['deleteExpense']>) =>
+  adapter().deleteExpense(...args);
+export const deleteExpenseForSource = async (...args: Parameters<ReturnType<typeof adapter>['deleteExpenseForSource']>) =>
+  adapter().deleteExpenseForSource(...args);
 export const saveUserDemographics = async (...args: Parameters<ReturnType<typeof adapter>['saveUserDemographics']>) =>
   adapter().saveUserDemographics(...args);
 export const listItineraries = async (
@@ -126,6 +155,12 @@ export const deleteItineraryDetail = async (...args: Parameters<ReturnType<typeo
   adapter().deleteItineraryDetail(...args);
 export const updateItineraryDetail = async (...args: Parameters<ReturnType<typeof adapter>['updateItineraryDetail']>) =>
   adapter().updateItineraryDetail(...args);
+export const getPlaceDetailsCache = async (
+  placeId: string
+): Promise<PlaceDetailsCache | null> => adapter().getPlaceDetailsCache(placeId);
+export const upsertPlaceDetailsCache = async (
+  entry: Parameters<ReturnType<typeof adapter>['upsertPlaceDetailsCache']>[0]
+): Promise<void> => adapter().upsertPlaceDetailsCache(entry);
 export const listFamilyRelationships = async (...args: Parameters<ReturnType<typeof adapter>['listFamilyRelationships']>) =>
   adapter().listFamilyRelationships(...args);
 export const listFellowTravelers = async (...args: Parameters<ReturnType<typeof adapter>['listFellowTravelers']>) =>

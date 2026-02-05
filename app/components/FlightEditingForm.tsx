@@ -1,6 +1,7 @@
 import React from 'react';
-import { Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { formatDateLong } from '../utils/formatDateLong';
+import { sanitizeCostInput } from '../utils/sanitizeCost';
 import type { FlightEditDraft, GroupMemberOption } from '../tabs/flights';
 
 type AirportTarget = 'dep' | 'arr' | 'modal-dep' | 'modal-arr' | 'modal-layover' | null;
@@ -11,12 +12,17 @@ export type FlightEditingFormProps = {
   flight: FlightEditDraft | null;
   overlayStyle?: Record<string, any>;
   cardStyle?: Record<string, any>;
+  airportAnchor?: { x: number; y: number; width: number; height: number } | null;
+  airportTarget?: AirportTarget | null;
+  airportSuggestions?: Array<{ iata_code?: string; name: string; city?: string; country?: string }>;
+  formatAirportLabel?: (airport: { iata_code?: string; name: string; city?: string; country?: string }) => string;
+  onHideAirportDropdown?: () => void;
+  onSelectAirport?: (target: Exclude<AirportTarget, null>, airport: any) => void;
   groupMembers: GroupMemberOption[];
   userMembers: GroupMemberOption[];
   styles: Record<string, any>;
   formatMemberName: (member: GroupMemberOption) => string;
   payerName: (id: string) => string;
-  airportTarget: AirportTarget;
   getLocationInputValue: (raw: string, activeTarget: AirportTarget, currentTarget: AirportTarget) => string;
   showAirportDropdown: (target: Exclude<AirportTarget, null>, node: any, query: string) => void;
   parseLayoverDuration: (value: string | null | undefined) => { hours: string; minutes: string };
@@ -37,12 +43,18 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
   flight,
   overlayStyle,
   cardStyle,
+  airportAnchor,
+  airportTarget,
+  airportSuggestions = [],
+  formatAirportLabel,
+  onHideAirportDropdown,
+  onSelectAirport,
   groupMembers,
   userMembers,
   styles,
   formatMemberName,
   payerName,
-  airportTarget,
+  airportTarget: activeAirportTarget,
   getLocationInputValue,
   showAirportDropdown,
   parseLayoverDuration,
@@ -58,37 +70,77 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
 }) => {
   if (!visible || !flight || !flightId) return null;
 
+  const resolveTravelerLabel = (member: GroupMemberOption) => {
+    const first = member.firstName?.trim() ?? '';
+    const last = member.lastName?.trim() ?? '';
+    if (first || last) return `${first} ${last}`.trim();
+    const guest = member.guestName?.trim() ?? '';
+    if (guest) return guest;
+    const email = (member.email ?? (member as any).userEmail ?? '').trim();
+    if (email) return email;
+    return 'Traveler';
+  };
+
+  const toggleBaseStyle = styles.toggleOption ?? {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#111',
+    backgroundColor: '#fff',
+  };
+  const toggleSelectedStyle = styles.toggleOptionSelected ?? {
+    backgroundColor: '#e5e7eb',
+    borderColor: '#111',
+  };
+  const toggleTextStyle = styles.toggleOptionText ?? { color: '#111', fontWeight: '600' };
+  const toggleTextSelectedStyle = styles.toggleOptionTextSelected ?? { color: '#111' };
+  const rowStyle = [styles.modalRow, { flexWrap: 'wrap', gap: 8, alignItems: 'flex-start' }];
+  const fieldStyle = [styles.modalField, { minWidth: 200, flex: 1 }];
+  const dateFieldStyle = [styles.modalField, { flexGrow: 0, flexShrink: 0, flexBasis: 190, minWidth: 190, maxWidth: 240 }];
+  const timeFieldStyle = [styles.modalField, { flexGrow: 0, flexShrink: 0, flexBasis: 180, minWidth: 180, maxWidth: 220 }];
+  const locationFieldStyle = [styles.modalField, { minWidth: 240, flexGrow: 1, flexBasis: 0 }];
+
+  const baseOverlayStyle = {
+    backgroundColor: 'rgba(15,23,42,0.35)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  };
+  const baseCardStyle = { marginTop: 0 };
+
   return (
-    <View style={[styles.passengerOverlay, overlayStyle]}>
-      <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={onClose} />
-      <View style={[styles.modalCard, cardStyle]}>
+    <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
+      <View style={[styles.passengerOverlay, baseOverlayStyle, overlayStyle]}>
+        <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={onClose} />
+        <View style={[styles.modalCard, baseCardStyle, cardStyle]}>
         <Text style={styles.sectionTitle}>Flight Details</Text>
         <Text style={styles.helperText}>
           Current Departure: {formatDateLong(flight.departureDate)} at {flight.departureTime || '?'}
         </Text>
-        <ScrollView style={{ maxHeight: 420 }}>
-          <Text style={styles.modalLabel}>Passengers (tap to toggle)</Text>
+        <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ paddingRight: 12 }}>
+          <Text style={styles.modalLabel}>Passengers</Text>
           <View style={styles.payerChips}>
             {groupMembers.map((m) => {
               const selected = flight.passengerIds.includes(m.id);
-              const name = formatMemberName(m);
+              const name = resolveTravelerLabel(m);
               return (
                 <TouchableOpacity
                   key={m.id}
-                  style={[styles.payerChip, selected && styles.toggleActive]}
+                  style={[toggleBaseStyle, selected && toggleSelectedStyle]}
                   onPress={() => {
                     const next = selected ? flight.passengerIds.filter((id) => id !== m.id) : [...flight.passengerIds, m.id];
                     setPassengerIds(next);
                   }}
                 >
-                  <Text style={styles.cellText}>{name}</Text>
+                  <Text style={[toggleTextStyle, selected && toggleTextSelectedStyle]}>{name}</Text>
                 </TouchableOpacity>
               );
             })}
           </View>
           <Text style={styles.modalLabel}>Departure</Text>
-          <View style={styles.modalRow}>
-            <View style={styles.modalField}>
+          <View style={rowStyle}>
+            <View style={dateFieldStyle}>
               <Text style={styles.modalLabelSmall}>Date</Text>
               {Platform.OS === 'web' ? (
                 <input
@@ -102,7 +154,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
                       return { ...prev, departureDate: dep, arrivalDate: nextArrival };
                     })
                   }
-                  style={styles.input as any}
+                  style={{ ...(styles.input as any), width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
                 />
               ) : (
                 <TextInput
@@ -120,45 +172,14 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
                 />
               )}
             </View>
-            <View style={styles.modalField}>
-              <Text style={styles.modalLabelSmall}>Location</Text>
-              <View style={{ position: 'relative' }}>
-                <TextInput
-                  style={styles.input}
-                  testID="flight-modal-departure-location"
-                  value={getLocationInputValue(flight.departureLocation, 'modal-dep', airportTarget)}
-                  placeholder="Location"
-                  ref={modalDepLocationRef}
-                  onFocus={() => showAirportDropdown('modal-dep', modalDepLocationRef.current, flight.departureLocation)}
-                  onChangeText={(text: string) => {
-                    setFlight((prev) => (prev ? { ...prev, departureLocation: text } : prev));
-                    showAirportDropdown('modal-dep', modalDepLocationRef.current, text);
-                  }}
-                  onKeyPress={(e: any) => {
-                    if (e?.nativeEvent?.key === 'Enter' || e?.nativeEvent?.key === 'Tab') {
-                      onAirportEnter('modal-dep', flight.departureLocation);
-                    }
-                  }}
-                  onBlur={() => {
-                    onAirportEnter('modal-dep', flight.departureLocation);
-                  }}
-                />
-                <TouchableOpacity
-                  style={{ position: 'absolute', right: 8, top: 10, padding: 6 }}
-                  onPress={() => showAirportDropdown('modal-dep', modalDepLocationRef.current, flight.departureLocation)}
-                >
-                  <Text style={styles.selectCaret}></Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-            <View style={styles.modalField}>
+            <View style={timeFieldStyle}>
               <Text style={styles.modalLabelSmall}>Time</Text>
               {Platform.OS === 'web' ? (
                 <input
                   type="time"
                   value={flight.departureTime}
                   onChange={(e) => setFlight((prev) => (prev ? { ...prev, departureTime: e.target.value } : prev))}
-                  style={styles.input as any}
+                  style={{ ...(styles.input as any), width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
                 />
               ) : (
                 <TouchableOpacity
@@ -170,16 +191,41 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
               )}
             </View>
           </View>
+          <View style={rowStyle}>
+            <View style={locationFieldStyle}>
+              <Text style={styles.modalLabelSmall}>Location</Text>
+              <TextInput
+                style={styles.input}
+                testID="flight-modal-departure-location"
+                value={getLocationInputValue(flight.departureLocation, 'modal-dep', activeAirportTarget ?? null)}
+                placeholder="Location"
+                ref={modalDepLocationRef}
+                onFocus={() => showAirportDropdown('modal-dep', modalDepLocationRef.current, flight.departureLocation)}
+                onChangeText={(text: string) => {
+                  setFlight((prev) => (prev ? { ...prev, departureLocation: text } : prev));
+                  showAirportDropdown('modal-dep', modalDepLocationRef.current, text);
+                }}
+                onKeyPress={(e: any) => {
+                  if (e?.nativeEvent?.key === 'Enter' || e?.nativeEvent?.key === 'Tab') {
+                    onAirportEnter('modal-dep', flight.departureLocation);
+                  }
+                }}
+                onBlur={() => {
+                  onAirportEnter('modal-dep', flight.departureLocation);
+                }}
+              />
+            </View>
+          </View>
           <Text style={styles.modalLabel}>Arrival</Text>
-          <View style={styles.modalRow}>
-            <View style={styles.modalField}>
+          <View style={rowStyle}>
+            <View style={dateFieldStyle}>
               <Text style={styles.modalLabelSmall}>Date</Text>
               {Platform.OS === 'web' ? (
                 <input
                   type="date"
                   value={flight.arrivalDate}
                   onChange={(e) => setFlight((prev) => (prev ? { ...prev, arrivalDate: e.target.value } : prev))}
-                  style={styles.input as any}
+                  style={{ ...(styles.input as any), width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
                 />
               ) : (
                 <TextInput
@@ -190,45 +236,14 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
                 />
               )}
             </View>
-            <View style={styles.modalField}>
-              <Text style={styles.modalLabelSmall}>Location</Text>
-              <View style={{ position: 'relative' }}>
-                <TextInput
-                  style={styles.input}
-                  testID="flight-modal-arrival-location"
-                  value={getLocationInputValue(flight.arrivalLocation, 'modal-arr', airportTarget)}
-                  placeholder="Location"
-                  ref={modalArrLocationRef}
-                  onFocus={() => showAirportDropdown('modal-arr', modalArrLocationRef.current, flight.arrivalLocation)}
-                  onChangeText={(text: string) => {
-                    setFlight((prev) => (prev ? { ...prev, arrivalLocation: text } : prev));
-                    showAirportDropdown('modal-arr', modalArrLocationRef.current, text);
-                  }}
-                  onKeyPress={(e: any) => {
-                    if (e?.nativeEvent?.key === 'Enter' || e?.nativeEvent?.key === 'Tab') {
-                      onAirportEnter('modal-arr', flight.arrivalLocation);
-                    }
-                  }}
-                  onBlur={() => {
-                    onAirportEnter('modal-arr', flight.arrivalLocation);
-                  }}
-                />
-                <TouchableOpacity
-                  style={{ position: 'absolute', right: 8, top: 10, padding: 6 }}
-                  onPress={() => showAirportDropdown('modal-arr', modalArrLocationRef.current, flight.arrivalLocation)}
-                >
-                  <Text style={styles.selectCaret}></Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-            <View style={styles.modalField}>
+            <View style={timeFieldStyle}>
               <Text style={styles.modalLabelSmall}>Time</Text>
               {Platform.OS === 'web' ? (
                 <input
                   type="time"
                   value={flight.arrivalTime}
                   onChange={(e) => setFlight((prev) => (prev ? { ...prev, arrivalTime: e.target.value } : prev))}
-                  style={styles.input as any}
+                  style={{ ...(styles.input as any), width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
                 />
               ) : (
                 <TouchableOpacity
@@ -240,40 +255,58 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
               )}
             </View>
           </View>
+          <View style={rowStyle}>
+            <View style={locationFieldStyle}>
+              <Text style={styles.modalLabelSmall}>Location</Text>
+              <TextInput
+                style={styles.input}
+                testID="flight-modal-arrival-location"
+                value={getLocationInputValue(flight.arrivalLocation, 'modal-arr', activeAirportTarget ?? null)}
+                placeholder="Location"
+                ref={modalArrLocationRef}
+                onFocus={() => showAirportDropdown('modal-arr', modalArrLocationRef.current, flight.arrivalLocation)}
+                onChangeText={(text: string) => {
+                  setFlight((prev) => (prev ? { ...prev, arrivalLocation: text } : prev));
+                  showAirportDropdown('modal-arr', modalArrLocationRef.current, text);
+                }}
+                onKeyPress={(e: any) => {
+                  if (e?.nativeEvent?.key === 'Enter' || e?.nativeEvent?.key === 'Tab') {
+                    onAirportEnter('modal-arr', flight.arrivalLocation);
+                  }
+                }}
+                onBlur={() => {
+                  onAirportEnter('modal-arr', flight.arrivalLocation);
+                }}
+              />
+            </View>
+          </View>
 
           <Text style={styles.modalLabel}>Layover</Text>
-          <View style={styles.modalRow}>
-            <View style={styles.modalField}>
+          <View style={rowStyle}>
+            <View style={locationFieldStyle}>
               <Text style={styles.modalLabelSmall}>Location</Text>
-              <View style={{ position: 'relative' }}>
-                <TextInput
-                  style={styles.input}
-                  value={getLocationInputValue(flight.layoverLocation, 'modal-layover', airportTarget)}
-                  placeholder="Layover location"
-                  ref={modalLayoverLocationRef}
-                  onFocus={() => showAirportDropdown('modal-layover', modalLayoverLocationRef.current, flight.layoverLocation)}
-                  onChangeText={(text: string) => {
-                    setFlight((prev) => (prev ? { ...prev, layoverLocation: text } : prev));
-                    showAirportDropdown('modal-layover', modalLayoverLocationRef.current, text);
-                  }}
-                  onKeyPress={(e: any) => {
-                    if (e?.nativeEvent?.key === 'Enter' || e?.nativeEvent?.key === 'Tab') {
-                      onAirportEnter('modal-layover', flight.layoverLocation);
-                    }
-                  }}
-                  onBlur={() => {
+              <TextInput
+                style={styles.input}
+                testID="flight-modal-layover-location"
+                value={getLocationInputValue(flight.layoverLocation, 'modal-layover', activeAirportTarget ?? null)}
+                placeholder="Layover location"
+                ref={modalLayoverLocationRef}
+                onFocus={() => showAirportDropdown('modal-layover', modalLayoverLocationRef.current, flight.layoverLocation)}
+                onChangeText={(text: string) => {
+                  setFlight((prev) => (prev ? { ...prev, layoverLocation: text } : prev));
+                  showAirportDropdown('modal-layover', modalLayoverLocationRef.current, text);
+                }}
+                onKeyPress={(e: any) => {
+                  if (e?.nativeEvent?.key === 'Enter' || e?.nativeEvent?.key === 'Tab') {
                     onAirportEnter('modal-layover', flight.layoverLocation);
-                  }}
-                />
-                <TouchableOpacity
-                  style={{ position: 'absolute', right: 8, top: 10, padding: 6 }}
-                  onPress={() => showAirportDropdown('modal-layover', modalLayoverLocationRef.current, flight.layoverLocation)}
-                >
-                  <Text style={styles.selectCaret}></Text>
-                </TouchableOpacity>
-              </View>
+                  }
+                }}
+                onBlur={() => {
+                  onAirportEnter('modal-layover', flight.layoverLocation);
+                }}
+              />
             </View>
-            <View style={styles.modalField}>
+            <View style={timeFieldStyle}>
               <Text style={styles.modalLabelSmall}>Duration</Text>
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 {(() => {
@@ -281,7 +314,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
                   return (
                     <>
                       <TextInput
-                        style={[styles.input, { flex: 1 }]}
+                        style={[styles.input, { flex: 1, minWidth: 90, maxWidth: 140 }]}
                         keyboardType="numeric"
                         placeholder="Hours"
                         value={hours}
@@ -291,7 +324,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
                         }}
                       />
                       <TextInput
-                        style={[styles.input, { flex: 1 }]}
+                        style={[styles.input, { flex: 1, minWidth: 90, maxWidth: 140 }]}
                         keyboardType="numeric"
                         placeholder="Minutes"
                         value={minutes}
@@ -307,8 +340,8 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
             </View>
           </View>
           <Text style={styles.modalLabel}>Flight</Text>
-          <View style={styles.modalRow}>
-            <View style={styles.modalField}>
+          <View style={rowStyle}>
+            <View style={locationFieldStyle}>
               <Text style={styles.modalLabelSmall}>Carrier</Text>
               <TextInput
                 style={styles.input}
@@ -317,7 +350,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
                 onChangeText={(text: string) => setFlight((prev) => (prev ? { ...prev, carrier: text } : prev))}
               />
             </View>
-            <View style={styles.modalField}>
+            <View style={locationFieldStyle}>
               <Text style={styles.modalLabelSmall}>Flight #</Text>
               <TextInput
                 style={styles.input}
@@ -326,7 +359,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
                 onChangeText={(text: string) => setFlight((prev) => (prev ? { ...prev, flightNumber: text } : prev))}
               />
             </View>
-            <View style={styles.modalField}>
+            <View style={locationFieldStyle}>
               <Text style={styles.modalLabelSmall}>Booking Ref</Text>
               <TextInput
                 style={styles.input}
@@ -342,40 +375,31 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
             testID="flight-modal-cost"
             value={flight.cost}
             keyboardType="numeric"
-            onChangeText={(text: string) => setFlight((prev) => (prev ? { ...prev, cost: text } : prev))}
+            onChangeText={(text: string) =>
+              setFlight((prev) => (prev ? { ...prev, cost: sanitizeCostInput(text) } : prev))
+            }
           />
           <Text style={styles.modalLabel}>Paid by</Text>
-          <View style={[styles.input, styles.payerBox]}>
-            <View style={styles.payerChips}>
-              {flight.paidBy.map((id) => (
-                <View key={id} style={styles.payerChip}>
-                  <Text style={styles.cellText}>{payerName(id)}</Text>
-                  <TouchableOpacity
-                    onPress={() =>
-                      setFlight((p) =>
-                        p
-                          ? {
-                              ...p,
-                              paidBy: p.paidBy.filter((x) => x !== id),
-                            }
-                          : p
-                      )
-                    }
-                  >
-                    <Text style={styles.removeText}>x</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </View>
-            <View style={styles.payerOptions}>
-              {userMembers
-                .filter((m) => !flight.paidBy.includes(m.id))
-                .map((m) => (
-                  <TouchableOpacity key={m.id} style={styles.smallButton} onPress={() => setFlight((p) => (p ? { ...p, paidBy: [...p.paidBy, m.id] } : p))}>
-                    <Text style={styles.buttonText}>Add {formatMemberName(m)}</Text>
-                  </TouchableOpacity>
-                ))}
-            </View>
+          <View style={styles.payerChips}>
+            {groupMembers.map((m) => {
+              const selected = flight.paidBy.includes(m.id);
+              const name = resolveTravelerLabel(m);
+              return (
+                <TouchableOpacity
+                  key={`payer-${m.id}`}
+                  style={[toggleBaseStyle, selected && toggleSelectedStyle]}
+                  onPress={() =>
+                    setFlight((prev) => {
+                      if (!prev) return prev;
+                      const next = selected ? prev.paidBy.filter((id) => id !== m.id) : [...prev.paidBy, m.id];
+                      return { ...prev, paidBy: next };
+                    })
+                  }
+                >
+                  <Text style={[toggleTextStyle, selected && toggleTextSelectedStyle]}>{name}</Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </ScrollView>
         <View style={styles.row}>
@@ -386,7 +410,42 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
             <Text style={styles.buttonText}>Save</Text>
           </TouchableOpacity>
         </View>
+        </View>
       </View>
-    </View>
+      {activeAirportTarget && activeAirportTarget.startsWith('modal-') && airportAnchor ? (
+        <View style={[styles.passengerOverlay, { backgroundColor: 'transparent', zIndex: 56000, elevation: 90 }]}>
+          <TouchableOpacity
+            style={[styles.passengerOverlayBackdrop, { backgroundColor: 'transparent' }]}
+            onPress={onHideAirportDropdown}
+          />
+          <View
+            style={[
+              styles.passengerOverlayList,
+              {
+                zIndex: 57000,
+                elevation: 94,
+                left: airportAnchor.x,
+                top: airportAnchor.y + airportAnchor.height,
+                width: airportAnchor.width || 280,
+              },
+            ]}
+          >
+            {airportSuggestions.map((airport) => (
+              <TouchableOpacity
+                key={`${airport.iata_code ?? 'na'}-${airport.name}`}
+                style={styles.dropdownOption}
+                onPress={() => {
+                  if (onSelectAirport) onSelectAirport(activeAirportTarget, airport);
+                }}
+              >
+                <Text style={styles.cellText}>
+                  {formatAirportLabel ? formatAirportLabel(airport) : airport.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      ) : null}
+    </Modal>
   );
 };

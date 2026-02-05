@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import bodyParser from 'body-parser';
 import { authenticate } from '../auth';
-import { deleteTour, ensureUserInTrip, insertTour, listTours, updateTour } from '../db';
+import { deleteExpenseForSource, deleteTour, ensureUserInTrip, insertTour, listGroupMembers, listTours, updateTour, upsertExpenseForSource } from '../db';
 
 // Tours API: CRUD for tours scoped to the authenticated user / their group trips.
 const router = Router();
@@ -17,7 +17,7 @@ router.get('/', async (req, res) => {
 
 router.post('/', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const { tripId, date, name, startLocation, startTime, duration, cost, freeCancelBy, bookedOn, reference, paidBy } = req.body;
+  const { tripId, date, name, startLocation, startTime, duration, cost, freeCancelBy, bookedOn, reference, paidBy, travelerIds } = req.body;
   if (!tripId || !date || !name) {
     res.status(400).json({ error: 'Missing required fields' });
     return;
@@ -41,13 +41,32 @@ router.post('/', async (req, res) => {
     reference: reference ?? '',
     paidBy: Array.isArray(paidBy) ? paidBy : [],
   });
+  const members = await listGroupMembers(tripGroup.groupId, userId).catch(() => []);
+  const defaultTravelers = members.map((m) => String((m as any).id));
+  const normalizedTravelers = Array.isArray(travelerIds)
+    ? travelerIds.map((id: any) => String(id)).filter(Boolean)
+    : [];
+  const forIds = normalizedTravelers.length ? normalizedTravelers : defaultTravelers;
+  await upsertExpenseForSource({
+    userId,
+    tripId,
+    groupId: tripGroup.groupId,
+    expenseDate: date,
+    category: 'Tours',
+    amount: Number(cost) || 0,
+    currency: undefined,
+    payerIds: Array.isArray(paidBy) ? paidBy : [],
+    forIds,
+    sourceType: 'tour',
+    sourceId: tour.id,
+  });
   res.status(201).json(tour);
 });
 
 router.put('/:id', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const id = req.params.id;
-  const { date, name, startLocation, startTime, duration, cost, freeCancelBy, bookedOn, reference, paidBy } = req.body;
+  const { date, name, startLocation, startTime, duration, cost, freeCancelBy, bookedOn, reference, paidBy, travelerIds } = req.body;
   const normalizedPaidBy = Array.isArray(paidBy) ? (paidBy.length ? paidBy : undefined) : undefined;
   const updated = await updateTour(id, userId, {
     date,
@@ -64,6 +83,28 @@ router.put('/:id', async (req, res) => {
   if (!updated) {
     res.status(404).json({ error: 'Tour not found' });
     return;
+  }
+  const membership = await ensureUserInTrip(updated.tripId, userId);
+  if (membership) {
+    const members = await listGroupMembers(membership.groupId, userId).catch(() => []);
+    const defaultTravelers = members.map((m) => String((m as any).id));
+    const normalizedTravelers = Array.isArray(travelerIds)
+      ? travelerIds.map((id: any) => String(id)).filter(Boolean)
+      : [];
+    const forIds = normalizedTravelers.length ? normalizedTravelers : defaultTravelers;
+    await upsertExpenseForSource({
+      userId,
+      tripId: updated.tripId,
+      groupId: membership.groupId,
+      expenseDate: updated.date,
+      category: 'Tours',
+      amount: Number(updated.cost) || 0,
+      currency: undefined,
+      payerIds: Array.isArray((updated as any).paidBy) ? (updated as any).paidBy : [],
+      forIds,
+      sourceType: 'tour',
+      sourceId: updated.id,
+    });
   }
   res.json(updated);
 });
@@ -72,7 +113,7 @@ router.put('/:id', async (req, res) => {
 router.patch('/:id', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const id = req.params.id;
-  const { date, name, startLocation, startTime, duration, cost, freeCancelBy, bookedOn, reference, paidBy } = req.body;
+  const { date, name, startLocation, startTime, duration, cost, freeCancelBy, bookedOn, reference, paidBy, travelerIds } = req.body;
   const normalizedPaidBy = Array.isArray(paidBy) ? (paidBy.length ? paidBy : undefined) : undefined;
   const updated = await updateTour(id, userId, {
     date,
@@ -90,12 +131,35 @@ router.patch('/:id', async (req, res) => {
     res.status(404).json({ error: 'Tour not found' });
     return;
   }
+  const membership = await ensureUserInTrip(updated.tripId, userId);
+  if (membership) {
+    const members = await listGroupMembers(membership.groupId, userId).catch(() => []);
+    const defaultTravelers = members.map((m) => String((m as any).id));
+    const normalizedTravelers = Array.isArray(travelerIds)
+      ? travelerIds.map((id: any) => String(id)).filter(Boolean)
+      : [];
+    const forIds = normalizedTravelers.length ? normalizedTravelers : defaultTravelers;
+    await upsertExpenseForSource({
+      userId,
+      tripId: updated.tripId,
+      groupId: membership.groupId,
+      expenseDate: updated.date,
+      category: 'Tours',
+      amount: Number(updated.cost) || 0,
+      currency: undefined,
+      payerIds: Array.isArray((updated as any).paidBy) ? (updated as any).paidBy : [],
+      forIds,
+      sourceType: 'tour',
+      sourceId: updated.id,
+    });
+  }
   res.json(updated);
 });
 
 router.delete('/:id', async (req, res) => {
   const userId = (req as any).user.userId as string;
   await deleteTour(req.params.id, userId);
+  await deleteExpenseForSource('tour', req.params.id, userId);
   res.status(204).send();
 });
 

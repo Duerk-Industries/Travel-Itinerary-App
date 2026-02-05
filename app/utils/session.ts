@@ -9,11 +9,19 @@ export type StoredSession = {
   name: string;
   email?: string;
   page?: string;
+  pageHistory?: string[];
   tripId?: string | null;
   expiresAt: number;
 };
 
-export const loadSession = (): { token: string; name: string; email?: string; page?: string; tripId?: string | null } | null => {
+export const loadSession = (): {
+  token: string;
+  name: string;
+  email?: string;
+  page?: string;
+  pageHistory?: string[];
+  tripId?: string | null;
+} | null => {
   if (!canAccessStorage()) return null;
   try {
     const raw = window.localStorage.getItem(sessionKey);
@@ -24,19 +32,34 @@ export const loadSession = (): { token: string; name: string; email?: string; pa
       window.localStorage.removeItem(sessionKey);
       return null;
     }
-    return { token: data.token, name: data.name, email: data.email, page: data.page, tripId: data.tripId ?? null };
+    return {
+      token: data.token,
+      name: data.name,
+      email: data.email,
+      page: data.page,
+      pageHistory: Array.isArray(data.pageHistory) ? data.pageHistory : undefined,
+      tripId: data.tripId ?? null,
+    };
   } catch {
     return null;
   }
 };
 
-export const saveSession = (token: string, name: string, page?: string, email?: string | null, tripId?: string | null): void => {
+export const saveSession = (
+  token: string,
+  name: string,
+  page?: string,
+  email?: string | null,
+  tripId?: string | null,
+  pageHistory?: string[]
+): void => {
   if (!canAccessStorage()) return;
   const payload: StoredSession = {
     token,
     name,
     email: email ?? undefined,
     page,
+    pageHistory,
     tripId: tripId ?? undefined,
     expiresAt: Date.now() + sessionDurationMs,
   };

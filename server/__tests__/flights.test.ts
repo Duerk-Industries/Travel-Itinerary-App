@@ -182,6 +182,57 @@ describe('Flights API passenger validation', () => {
     expect(String(updateRes.body.arrivalDate ?? updateRes.body.arrival_date)).toContain(newArrivalDate);
   });
 
+  it('updates flight expenses when paidBy is patched', async () => {
+    const groups = await request(app).get('/api/groups').set('Authorization', `Bearer ${token}`).expect(200);
+    const groupId = groups.body[0]?.id as string;
+    const membersRes = await request(app)
+      .get(`/api/groups/${groupId}/members`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+    const payerMemberId = membersRes.body[0]?.id as string;
+    expect(payerMemberId).toBeTruthy();
+    const createRes = await request(app)
+      .post('/api/flights')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        passengerIds: [payerMemberId],
+        departureDate: '2025-01-08',
+        departureLocation: 'AAA',
+        departureTime: '07:00',
+        arrivalLocation: 'BBB',
+        arrivalTime: '09:00',
+        carrier: 'AA',
+        flightNumber: '400',
+        bookingReference: 'EXP400',
+        tripId,
+        cost: 250,
+      })
+      .expect(201);
+
+    const flightId = createRes.body.id as string;
+
+    const patchRes = await request(app)
+      .patch(`/api/flights/${flightId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ paidBy: [payerMemberId] });
+    if (patchRes.status !== 200) {
+      throw new Error(`PATCH failed: ${patchRes.status} ${JSON.stringify(patchRes.body)}`);
+    }
+    const patchedPaidBy = patchRes.body.paidBy || patchRes.body.paid_by || [];
+    expect(patchedPaidBy).toEqual([payerMemberId]);
+
+    const expensesRes = await request(app)
+      .get(`/api/expenses?tripId=${tripId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    const flightExpense = (expensesRes.body as any[]).find(
+      (e: any) => e.sourceType === 'flight' && e.sourceId === flightId
+    );
+    expect(flightExpense).toBeTruthy();
+    expect(flightExpense.payerIds).toEqual([payerMemberId]);
+  });
+
   it('creates a flight without using a SQL pool when firebase provider is active', async () => {
     const db = require('../src/db');
     const providerSpy = jest.spyOn(db, 'getCurrentDbProvider').mockReturnValue('firebase');

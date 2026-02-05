@@ -22,10 +22,13 @@ describe('Car rental helpers', () => {
         model: ' SUV ',
         notes: '',
         paidBy: [],
+        travelerIds: [],
       },
-      'payer-1'
+      'payer-1',
+      ['traveler-1', 'traveler-2']
     );
     expect(result.rental?.paidBy).toEqual(['payer-1']);
+    expect(result.rental?.travelerIds).toEqual(['payer-1']);
     expect(result.rental?.pickupLocation).toBe('Airport');
     expect(result.rental?.vendor).toBe('Hertz');
     expect(result.rental?.model).toBe('SUV');

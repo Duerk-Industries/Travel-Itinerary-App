@@ -3,12 +3,16 @@ import bodyParser from 'body-parser';
 import { authenticate } from '../auth';
 import {
   deleteFlight,
+  deleteExpenseForSource,
   ensureUserInTrip,
+  getTripGroupId,
+  getCurrentDbProvider,
   getFlightForUser,
   insertFlight,
   listFlights,
   searchFlightLocations,
   shareFlight,
+  upsertExpenseForSource,
   updateFlight,
   listGroupMembers,
 } from '../db';
@@ -125,6 +129,21 @@ router.post('/', async (req, res) => {
     bookingReference: normalizedBookingReference,
     paidBy: normalizedPaidBy,
   });
+  if (!(getCurrentDbProvider() === 'firebase' && process.env.USE_IN_MEMORY_DB === '1')) {
+    await upsertExpenseForSource({
+      userId,
+      tripId,
+      groupId: tripGroup.groupId,
+      expenseDate: departureDate,
+      category: 'Flights',
+      amount: Number(cost) ?? 0,
+      currency: undefined,
+      payerIds: normalizedPaidBy,
+      forIds: normalizedPassengerIds,
+      sourceType: 'flight',
+      sourceId: flight.id,
+    });
+  }
   res.status(201).json(flight);
 });
 
@@ -232,6 +251,31 @@ router.patch('/:id', async (req, res) => {
       bookingReference,
       paidBy: normalizedPaidBy,
     });
+    if (updated && !(getCurrentDbProvider() === 'firebase' && process.env.USE_IN_MEMORY_DB === '1')) {
+      const membership = await ensureUserInTrip(updated.tripId, userId);
+      const groupId = membership?.groupId ?? (await getTripGroupId(updated.tripId));
+      if (groupId) {
+        const payerIds = Array.isArray(normalizedPaidBy)
+          ? normalizedPaidBy
+          : Array.isArray((updated as any).paidBy)
+            ? (updated as any).paidBy
+            : [];
+        const forIds = Array.isArray((updated as any).passengerIds) ? (updated as any).passengerIds : [];
+        await upsertExpenseForSource({
+          userId,
+          tripId: updated.tripId,
+          groupId,
+          expenseDate: updated.departureDate,
+          category: 'Flights',
+          amount: Number(updated.cost) ?? 0,
+          currency: undefined,
+          payerIds,
+          forIds,
+          sourceType: 'flight',
+          sourceId: updated.id,
+        });
+      }
+    }
     res.json(updated);
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });
@@ -280,6 +324,24 @@ router.put('/:id', async (req, res) => {
       bookingReference,
       paidBy: normalizedPaidBy,
     });
+    if (updated && !(getCurrentDbProvider() === 'firebase' && process.env.USE_IN_MEMORY_DB === '1')) {
+      const membership = await ensureUserInTrip(updated.tripId, userId);
+      if (membership) {
+        await upsertExpenseForSource({
+          userId,
+          tripId: updated.tripId,
+          groupId: membership.groupId,
+          expenseDate: updated.departureDate,
+          category: 'Flights',
+          amount: Number(updated.cost) ?? 0,
+          currency: undefined,
+          payerIds: Array.isArray((updated as any).paidBy) ? (updated as any).paidBy : [],
+          forIds: Array.isArray((updated as any).passengerIds) ? (updated as any).passengerIds : [],
+          sourceType: 'flight',
+          sourceId: updated.id,
+        });
+      }
+    }
     res.json(updated);
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });
@@ -289,6 +351,7 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   const userId = (req as any).user.userId as string;
   await deleteFlight(req.params.id, userId);
+  await deleteExpenseForSource('flight', req.params.id, userId);
   res.status(204).send();
 });
 

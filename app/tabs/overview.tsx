@@ -1,13 +1,23 @@
 // @ts-nocheck
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Linking, Platform, ScrollView, Text, TextInput, TouchableOpacity, View, Image, type LayoutChangeEvent } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Linking,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  Image,
+  type LayoutChangeEvent,
+} from 'react-native';
 import { computeTripDays, validateTripDates } from '../utils/createTripWizard';
 import { renderRichTextBlocks } from '../utils/richText';
 import {
   buildOverviewRows,
   type DetailItem,
   formatFlightDetails,
-  formatLodgingDetails,
   formatTourDetails,
   type OverviewRow,
 } from '../utils/overviewBuilder';
@@ -18,6 +28,7 @@ import {
   getEarliestTripEventDate,
 } from '../utils/tripDates';
 import { normalizeDateString } from '../utils/normalizeDateString';
+import { sanitizeCostInput } from '../utils/sanitizeCost';
 import {
   buildFlightPayload,
   createFlightDraftForTrip,
@@ -29,6 +40,7 @@ import {
 import {
   buildLodgingPayload,
   createInitialLodgingState,
+  createLodgingDraftForTrip,
   createLodgingForTrip,
   saveLodgingApi,
   toLodgingDraft,
@@ -48,6 +60,9 @@ import {
 } from '../tabs/carRentals';
 import { buildRentalDraftFromRow, buildTourDraftFromRow, getOverviewSaveFlags } from '../utils/overviewEditing';
 import { FlightEditingForm } from '../components/FlightEditingForm';
+import ConfirmDialog from '../components/ConfirmDialog';
+import LodgingDialog from '../components/LodgingDialog';
+import LodgingDetailsDialog from '../components/LodgingDetailsDialog';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
@@ -73,6 +88,7 @@ type Trip = {
   startMonth?: number | null;
   startYear?: number | null;
   durationDays?: number | null;
+  currency?: string | null;
   createdAt: string;
 };
 
@@ -143,11 +159,12 @@ type OverviewTabProps = {
   onRefreshTrips: () => void;
   onRefreshGroups: () => void;
   onRefreshGroupMembers: () => void;
-  onRefreshFlights: () => void;
-  onRefreshLodgings: () => void;
-  onRefreshTours: () => void;
+  onFlightDataChanged: () => void;
+  onLodgingDataChanged: () => void;
+  onTourDataChanged: () => void;
   onAddCarRental: (rental: CarRental) => void;
   openFlightInFlightsTab: (flightId: string) => void;
+  openLodgingDetails: (lodging: Lodging) => void;
 };
 
 type DayCard = {
@@ -223,7 +240,28 @@ export const formatAttendeeLabel = (member: OverviewTabProps['attendees'][number
   return email && base.toLowerCase() !== email.toLowerCase() ? `${base} (${email})` : base;
 };
 
-const OverviewTab: React.FC<OverviewTabProps> = ({
+export const formatUserDisplayName = (member: {
+  firstName?: string | null;
+  lastName?: string | null;
+  guestName?: string | null;
+  email?: string | null;
+  userEmail?: string | null;
+}) => {
+  const first = member.firstName?.trim() ?? '';
+  const last = member.lastName?.trim() ?? '';
+  const combined = `${first} ${last}`.trim();
+  if (combined) return combined;
+
+  const guest = member.guestName?.trim();
+  if (guest) return guest;
+
+  const email = member.email?.trim() || member.userEmail?.trim();
+  if (email) return email;
+
+  return 'Traveler';
+};
+
+export const OverviewTab: React.FC<OverviewTabProps> = ({
   backendUrl,
   headers,
   jsonHeaders,
@@ -241,12 +279,23 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
   onRefreshTrips,
   onRefreshGroups,
   onRefreshGroupMembers,
-  onRefreshFlights,
-  onRefreshLodgings,
-  onRefreshTours,
+  onFlightDataChanged,
+  onLodgingDataChanged,
+  onTourDataChanged,
   onAddCarRental,
   openFlightInFlightsTab: _openFlightInFlightsTab,
+  openLodgingDetails,
 }) => {
+  const stripResizeMode = useCallback((style: any) => {
+    const flattened = StyleSheet.flatten(style);
+    if (!flattened || typeof flattened !== 'object' || !('resizeMode' in flattened)) {
+      return style;
+    }
+    const { resizeMode: _resizeMode, ...rest } = flattened as Record<string, unknown>;
+    return rest;
+  }, []);
+  const dayHeroImageStyle = useMemo(() => stripResizeMode(styles.dayHeroImage), [stripResizeMode, styles.dayHeroImage]);
+  const lodgingImageStyle = useMemo(() => stripResizeMode(styles.lodgingImage), [stripResizeMode, styles.lodgingImage]);
   const [itineraryDetails, setItineraryDetails] = useState<ItineraryDetail[]>([]);
   const [itineraryLoading, setItineraryLoading] = useState(false);
   const [itineraryId, setItineraryId] = useState<string | null>(null);
@@ -263,7 +312,6 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
     durationDays: '',
   });
   const [selectedFlight, setSelectedFlight] = useState<Flight | null>(null);
-  const [selectedLodging, setSelectedLodging] = useState<Lodging | null>(null);
   const [selectedTour, setSelectedTour] = useState<Tour | null>(null);
   const [detailModal, setDetailModal] = useState<{ title: string; sections: DetailSection[] } | null>(null);
   const [showAddTraveler, setShowAddTraveler] = useState(false);
@@ -455,17 +503,9 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
     () => adjustStartDateForEarliest({ startDate: trip?.startDate ?? null, endDate: trip?.endDate ?? null, earliestDate: earliestEventDate }),
     [trip?.startDate, trip?.endDate, earliestEventDate]
   );
-
-  const formatMemberName = (member: GroupMemberOption) => {
-    const full = `${member.firstName ?? ''} ${member.lastName ?? ''}`.trim();
-    if (full) return full;
-    if (member.guestName) return member.guestName;
-    if (member.email) return member.email;
-    // @ts-expect-error legacy field
-    if (member.userEmail) return member.userEmail as string;
-    return 'Traveler';
-  };
-
+  
+  const formatMemberName = (member: GroupMemberOption) => formatUserDisplayName(member);
+  
   const groupMembers: GroupMemberOption[] = useMemo(
     () => attendees.map((a) => ({ ...a })),
     [attendees]
@@ -474,6 +514,14 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
   const memberNames = useMemo(() => {
     const map = new Map<string, string>();
     groupMembers.forEach((m) => map.set(m.id, formatMemberName(m)));
+    return map;
+  }, [groupMembers, formatMemberName]);
+
+  const travelerNames = useMemo(() => {
+    const map = new Map<string, string>();
+    groupMembers.forEach((member) => {
+      map.set(member.id, formatMemberName(member));
+    });
     return map;
   }, [groupMembers]);
 
@@ -485,6 +533,23 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
   );
 
   const payerName = (id: string) => memberNames.get(id) ?? 'Unknown';
+  const travelerName = (id: string) => travelerNames.get(id) ?? payerName(id);
+
+  const overviewTravelerIds = useMemo(
+    () => groupMembers.map((m) => m.id).filter(Boolean),
+    [groupMembers]
+  );
+
+  const buildOverviewLodgingDraft = useCallback(
+    () =>
+      createLodgingDraftForTrip({
+        tripStartDate: trip?.startDate,
+        existingLodgings: lodgings,
+        defaultPayerId,
+        defaultTravelerIds: overviewTravelerIds,
+      }),
+    [trip?.startDate, lodgings, defaultPayerId, overviewTravelerIds]
+  );
 
   const parseLayoverDuration = (value: string | null | undefined): { hours: string; minutes: string } => {
     const safe = value ?? '';
@@ -515,6 +580,17 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
     () => formatMonthYear(trip?.startMonth ?? null, trip?.startYear ?? null),
     [trip?.startMonth, trip?.startYear]
   );
+
+  const logTravelerInfo = (member: OverviewTabProps['attendees'][number], context: string) => {
+    const first = member.firstName?.trim() ?? '';
+    const last = member.lastName?.trim() ?? '';
+    const name = `${first} ${last}`.trim();
+    const email = member.email?.trim() || member.userEmail?.trim() || '';
+    const pending = member.status === 'pending';
+    console.debug(
+      `[overview][debug] traveler read (${context}) id=${member.id} name="${name}" email=${email || 'n/a'} pending=${pending}`
+    );
+  };
 
   const tripLength = useMemo(() => {
     if (trip?.startDate || trip?.endDate) {
@@ -820,9 +896,9 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       setPendingRemovalIds([]);
       onRefreshGroups();
       onRefreshGroupMembers();
-      onRefreshFlights();
-      onRefreshLodgings();
-      onRefreshTours();
+      onFlightDataChanged();
+      onLodgingDataChanged();
+      onTourDataChanged();
     }
     setIsEditing(false);
     await refreshItineraryDetails();
@@ -853,7 +929,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       return;
     }
     const guestName = `${first} ${last}`.trim();
-    const payload = email ? { email, firstName: first, lastName: last, guestName } : { guestName };
+    const payload = email ? { email, firstName: first, lastName: last, guestName } : { guestName, firstName: first, lastName: last };
     const res = await fetch(`${backendUrl}/api/groups/${group.id}/members`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...headers },
@@ -898,6 +974,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       }
       closeFlightEditor();
       onRefreshFlights();
+      onFlightDataChanged();
       return;
     }
     const res = await fetch(`${backendUrl}/api/flights/${editingFlightId}`, {
@@ -911,7 +988,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       return;
     }
     closeFlightEditor();
-    onRefreshFlights();
+    onFlightDataChanged();
   };
 
   const toFlightEditDraft = (flight: Flight): FlightEditDraft => {
@@ -973,7 +1050,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
         return;
       }
       closeLodgingModal();
-      onRefreshLodgings();
+      onLodgingDataChanged();
       return;
     }
     const result = await createLodgingForTrip({
@@ -988,7 +1065,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       return;
     }
     closeLodgingModal();
-    onRefreshLodgings();
+    onLodgingDataChanged();
   };
 
   const saveTour = async () => {
@@ -1009,7 +1086,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
         return;
       }
       closeTourModal();
-      onRefreshTours();
+      onTourDataChanged();
       return;
     }
     const result = await createTourForTrip({
@@ -1024,7 +1101,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       return;
     }
     closeTourModal();
-    onRefreshTours();
+    onTourDataChanged();
   };
 
   const saveRental = () => {
@@ -1053,7 +1130,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
   const closeLodgingModal = () => {
     setShowAddLodging(false);
     setEditingLodgingId(null);
-    setLodgingDraft(createInitialLodgingState());
+    setLodgingDraft(buildOverviewLodgingDraft());
   };
 
   const closeTourModal = () => {
@@ -1119,12 +1196,33 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
 
   const openLodgingEditor = (lodging: Lodging) => {
     if (!isEditing) {
-      setSelectedLodging(lodging);
+      openLodgingDetails(lodging);
       return;
     }
     setEditingLodgingId(lodging.id);
     setLodgingDraft(toLodgingDraft(lodging, { normalize: normalizeDateString, defaultPayerId }));
     setShowAddLodging(true);
+  };
+
+  const openAddLodging = () => {
+    if (!isEditing) return;
+    setEditingLodgingId(null);
+    setLodgingDraft(buildOverviewLodgingDraft());
+    setShowAddLodging(true);
+  };
+
+  const openAddTour = () => {
+    if (!isEditing) return;
+    setEditingTourId(null);
+    setTourDraft(createInitialTourState());
+    setShowAddTour(true);
+  };
+
+  const openAddRental = () => {
+    if (!isEditing) return;
+    setEditingRentalId(null);
+    setRentalDraft(createInitialCarRentalDraft());
+    setShowAddRental(true);
   };
 
   const openTourEditor = (tour: Tour) => {
@@ -1254,6 +1352,13 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
 
   const allMemberIds = useMemo(() => groupMembers.map((m) => m.id), [groupMembers]);
 
+  useEffect(() => {
+    if (!isEditing) return;
+    normalizedAttendees.forEach((member) => {
+      logTravelerInfo(member, 'overview edit');
+    });
+  }, [isEditing, normalizedAttendees]);
+
   const dayDataByDate = useMemo(() => {
     const map = new Map<
       string,
@@ -1273,9 +1378,25 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       const lodgingsForDay = lodgings.filter((l) => {
         const ci = l.checkInDate;
         const co = l.checkOutDate;
-        if (!ci || !co) return false;
-        const d = new Date(card.date).getTime();
-        return d >= new Date(ci).getTime() && d <= new Date(co).getTime();
+        if (!ci) return false;
+        const dayMs = normalizeDateString(card.date);
+        const checkInMs = normalizeDateString(ci);
+        if (!dayMs || !checkInMs) return false;
+        const dayTime = new Date(dayMs).getTime();
+        const checkInTime = new Date(checkInMs).getTime();
+        if (Number.isNaN(dayTime) || Number.isNaN(checkInTime)) return false;
+        if (!co) {
+          return dayTime >= checkInTime;
+        }
+        const checkOutMs = normalizeDateString(co);
+        if (!checkOutMs) {
+          return dayTime >= checkInTime;
+        }
+        const checkOutTime = new Date(checkOutMs).getTime();
+        if (Number.isNaN(checkOutTime)) {
+          return dayTime >= checkInTime;
+        }
+        return dayTime >= checkInTime && dayTime < checkOutTime;
       });
       const toursForDay = tours.filter((t) => t.date === card.date);
       const rentalsForDay = carRentals.filter((r) => r.pickupDate === card.date || r.dropoffDate === card.date);
@@ -1372,260 +1493,307 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
     </ScrollView>
   );
 
-  if (!trip) {
-    return (
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Overview</Text>
-        <Text style={styles.helperText}>Select a trip to view its overview.</Text>
-      </View>
-    );
-  }
-
-  if (!isEditing) {
-    const activeDayInfo = selectedDay ? dayDataByDate.get(selectedDay) : null;
-    const activeDayCard = selectedDay ? dayCards.find((card) => card.date === selectedDay) : null;
-    const activeDayIndex = activeDayInfo?.index ?? (activeDayCard ? dayCards.findIndex((card) => card.date === activeDayCard.date) + 1 : null);
-    const nextDayCard = activeDayIndex && activeDayIndex < dayCards.length ? dayCards[activeDayIndex] : null;
-
-    const renderHeroCard = (card: DayCard, title: string, showAction: boolean, onPress?: () => void, testID?: string) => {
-      const img = dayImages[card.date];
+  const renderContent = () => {
+    if (!trip) {
       return (
-        <TouchableOpacity
-          testID={testID}
-          style={styles.dayHeroCard}
-          onPress={onPress}
-          disabled={!onPress}
-        >
-          {img ? <Image style={styles.dayHeroImage} source={{ uri: img }} /> : <View style={styles.dayHeroImageFallback} />}
-          <View style={styles.dayHeroOverlay} />
-          <View style={styles.dayHeroBadge}>
-            <Text style={styles.dayHeroBadgeText}>{card.label.toUpperCase()}</Text>
-          </View>
-          <View style={styles.dayHeroTextWrap}>
-            <Text style={styles.dayHeroTitle}>{title}</Text>
-            {showAction ? <Text style={styles.dayHeroAction}>View details</Text> : null}
-          </View>
-        </TouchableOpacity>
-      );
-    };
-
-    if (selectedDay && activeDayCard && activeDayInfo) {
-      const startLocation = buildDayStartLocation(activeDayInfo);
-      const summary = buildDaySummary(activeDayInfo);
-      const heroTitle = [startLocation, summary].filter(Boolean).join(' - ');
-      const narrativeLines = buildDayNarrative(activeDayInfo);
-      const flightsForDay = activeDayInfo.flights;
-      const toursForDay = activeDayInfo.tours;
-      const lodgingsForDay = activeDayInfo.lodgings;
-      const rentalsForDay = activeDayInfo.rentals;
-
-      const flightParticipantKeys = flightsForDay.map((f) => {
-        const ids = Array.isArray(f.passenger_ids) && f.passenger_ids.length ? f.passenger_ids : [];
-        return ids.slice().sort().join('|');
-      });
-      const showFlightNames = new Set(flightParticipantKeys).size > 1;
-
-      const tourParticipantKeys = toursForDay.map((t) => {
-        const ids = Array.isArray(t.paidBy) && t.paidBy.length ? t.paidBy : allMemberIds;
-        return ids.slice().sort().join('|');
-      });
-      const showTourNames = new Set(tourParticipantKeys).size > 1;
-
-      const lodgingParticipantKeys = lodgingsForDay.map((l) => {
-        const ids = Array.isArray(l.paidBy) && l.paidBy.length ? l.paidBy : allMemberIds;
-        return ids.slice().sort().join('|');
-      });
-      const showLodgingNames = new Set(lodgingParticipantKeys).size > 1;
-
-      return (
-        <View style={[styles.card, { position: 'relative' }]}>
-          <TouchableOpacity
-            testID="day-details-back"
-            style={styles.dayDetailsBackButton}
-            onPress={() => setSelectedDay(null)}
-          >
-            <Text style={styles.dayDetailsBackText}>← Back</Text>
-          </TouchableOpacity>
-          <ScrollView
-            ref={scrollRef}
-            style={{ flex: 1 }}
-            contentContainerStyle={{ gap: 16, paddingTop: 56 }}
-            onScroll={(e: any) => setScrollY(e.nativeEvent.contentOffset.y)}
-            scrollEventThrottle={16}
-          >
-            <Text style={styles.sectionTitle}>My itinerary</Text>
-            <Text style={styles.flightTitle}>{trip.name}</Text>
-            {trip.destination ? <Text style={styles.helperText}>{trip.destination}</Text> : null}
-            {renderDayBar(selectedDay)}
-            {renderHeroCard(activeDayCard, heroTitle, false, undefined, 'day-details-hero')}
-            <View style={styles.dayNarrativeBox}>
-              {narrativeLines.map((line, idx) => (
-                <Text key={`${activeDayCard.date}-narrative-${idx}`} style={styles.bodyText}>
-                  {line}
-                </Text>
-              ))}
-            </View>
-
-            {flightsForDay.length ? (
-              <View style={styles.dayInfoCard}>
-                <Text style={styles.sectionTitle}>Your flight</Text>
-                {flightsForDay.map((flight) => {
-                  const dep = flight.departure_location || flight.departure_airport_code || 'DEP';
-                  const arr = flight.arrival_location || flight.arrival_airport_code || 'ARR';
-                  const passengers =
-                    Array.isArray(flight.passenger_ids) && flight.passenger_ids.length
-                      ? formatTravelerNames(flight.passenger_ids)
-                      : flight.passenger_name || '';
-                  return (
-                    <View key={flight.id} style={styles.dayInfoRow}>
-                      <Text style={styles.dayInfoRoute}>{`${dep} → ${arr}`}</Text>
-                      <Text style={styles.helperText}>{`${flight.departure_time || '--:--'} / ${flight.arrival_time || '--:--'}`}</Text>
-                      {showFlightNames && passengers ? (
-                        <Text style={styles.helperText}>Travelers: {passengers}</Text>
-                      ) : null}
-                    </View>
-                  );
-                })}
-                <TouchableOpacity
-                  testID="day-details-flight-details"
-                  style={styles.dayInfoButton}
-                  onPress={() => {
-                    const sections: DetailSection[] = flightsForDay.map((flight, idx) => {
-                      const dep = flight.departure_location || flight.departure_airport_code || 'DEP';
-                      const arr = flight.arrival_location || flight.arrival_airport_code || 'ARR';
-                      const passengers =
-                        Array.isArray(flight.passenger_ids) && flight.passenger_ids.length
-                          ? formatTravelerNames(flight.passenger_ids)
-                          : flight.passenger_name || '';
-                      return {
-                        title: flightsForDay.length > 1 ? `Flight ${idx + 1} · ${dep} → ${arr}` : undefined,
-                        subtitle: showFlightNames && passengers ? `Travelers: ${passengers}` : undefined,
-                        items: formatFlightDetails(flight),
-                      };
-                    });
-                    setDetailModal({ title: 'Flight Details', sections });
-                  }}
-                >
-                  <Text style={styles.dayInfoButtonText}>See flight details →</Text>
-                </TouchableOpacity>
-              </View>
-            ) : null}
-
-            {rentalsForDay.length ? (
-              <View style={styles.dayInfoCard}>
-                <Text style={styles.sectionTitle}>Rental car</Text>
-                {rentalsForDay.map((rental) => (
-                  <View key={rental.id} style={styles.dayInfoRow}>
-                    <Text style={styles.dayInfoRoute}>{`${rental.vendor || 'Rental car'} · ${rental.model || 'Vehicle'}`}</Text>
-                    <Text style={styles.helperText}>
-                      {`${rental.pickupLocation || 'Pickup'} → ${rental.dropoffLocation || 'Dropoff'}`}
-                    </Text>
-                  </View>
-                ))}
-                <TouchableOpacity
-                  testID="day-details-rental-details"
-                  style={styles.dayInfoButton}
-                  onPress={() => {
-                    const sections: DetailSection[] = rentalsForDay.map((rental, idx) => ({
-                      title: rentalsForDay.length > 1 ? `Rental ${idx + 1}` : undefined,
-                      items: formatRentalDetails(rental),
-                    }));
-                    setDetailModal({ title: 'Rental Car Details', sections });
-                  }}
-                >
-                  <Text style={styles.dayInfoButtonText}>See rental car details →</Text>
-                </TouchableOpacity>
-              </View>
-            ) : null}
-
-            {toursForDay.length ? (
-              <View style={styles.dayInfoCard}>
-                <Text style={styles.sectionTitle}>Tours</Text>
-                {toursForDay.map((tour) => {
-                  const participants = Array.isArray(tour.paidBy) && tour.paidBy.length ? formatTravelerNames(tour.paidBy) : formatTravelerNames(allMemberIds);
-                  return (
-                    <View key={tour.id} style={styles.dayInfoRow}>
-                      <Text style={styles.dayInfoRoute}>{tour.name}</Text>
-                      <Text style={styles.helperText}>{`${tour.startTime || 'Time TBD'} · ${tour.startLocation || 'Location TBD'}`}</Text>
-                      {showTourNames && participants ? <Text style={styles.helperText}>Travelers: {participants}</Text> : null}
-                    </View>
-                  );
-                })}
-                <TouchableOpacity
-                  testID="day-details-tour-details"
-                  style={styles.dayInfoButton}
-                  onPress={() => {
-                    const sections: DetailSection[] = toursForDay.map((tour, idx) => {
-                      const participants = Array.isArray(tour.paidBy) && tour.paidBy.length ? formatTravelerNames(tour.paidBy) : formatTravelerNames(allMemberIds);
-                      return {
-                        title: toursForDay.length > 1 ? `Tour ${idx + 1}` : undefined,
-                        subtitle: showTourNames && participants ? `Travelers: ${participants}` : undefined,
-                        items: formatTourDetails(tour),
-                      };
-                    });
-                    setDetailModal({ title: 'Tour Details', sections });
-                  }}
-                >
-                  <Text style={styles.dayInfoButtonText}>See tour details →</Text>
-                </TouchableOpacity>
-              </View>
-            ) : null}
-
-            {lodgingsForDay.length ? (
-              <View style={styles.dayInfoCard}>
-                <Text style={styles.sectionTitle}>Accommodation</Text>
-                {lodgingsForDay.map((lodging) => {
-                  const participants = Array.isArray(lodging.paidBy) && lodging.paidBy.length ? formatTravelerNames(lodging.paidBy) : formatTravelerNames(allMemberIds);
-                  return (
-                    <TouchableOpacity
-                      key={lodging.id}
-                      testID={`day-details-lodging-${lodging.id}`}
-                      style={styles.dayInfoRow}
-                      onPress={() => {
-                        setDetailModal({
-                          title: 'Lodging Details',
-                          sections: [
-                            {
-                              subtitle: showLodgingNames && participants ? `Travelers: ${participants}` : undefined,
-                              items: formatLodgingDetails(lodging, mapApp).map((item) =>
-                                item.label === 'Address' && lodging.address
-                                  ? { ...item, onPress: () => onOpenAddress(lodging.address) }
-                                  : item
-                              ),
-                            },
-                          ],
-                        });
-                      }}
-                    >
-                      {lodging.imageUrl ? (
-                        <Image style={styles.lodgingImage} source={{ uri: lodging.imageUrl }} />
-                      ) : (
-                        <View style={styles.lodgingImageFallback} />
-                      )}
-                      <View style={styles.dayInfoText}>
-                        <Text style={styles.dayInfoRoute}>{lodging.name}</Text>
-                        <Text style={styles.helperText}>{`${lodging.checkInDate} → ${lodging.checkOutDate}`}</Text>
-                        {showLodgingNames && participants ? <Text style={styles.helperText}>Travelers: {participants}</Text> : null}
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            ) : null}
-
-            {nextDayCard ? (
-              <TouchableOpacity
-                testID="day-details-next"
-                style={styles.dayNextButton}
-                onPress={() => setSelectedDay(nextDayCard.date)}
-              >
-                <Text style={styles.helperText}>Next day</Text>
-                <Text style={styles.headerText}>{`${nextDayCard.label} · ${formatShortDayLabel(nextDayCard.date)}`}</Text>
-              </TouchableOpacity>
-            ) : null}
-          </ScrollView>
-          {detailModal ? renderDetailSectionsModal(detailModal) : null}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Overview</Text>
+          <Text style={styles.helperText}>Select a trip to view its overview.</Text>
         </View>
+      );
+    }
+
+    if (!isEditing) {
+      const activeDayInfo = selectedDay ? dayDataByDate.get(selectedDay) : null;
+      const activeDayCard = selectedDay ? dayCards.find((card) => card.date === selectedDay) : null;
+      const activeDayIndex =
+        activeDayInfo?.index ?? (activeDayCard ? dayCards.findIndex((card) => card.date === activeDayCard.date) + 1 : null);
+      const nextDayCard = activeDayIndex && activeDayIndex < dayCards.length ? dayCards[activeDayIndex] : null;
+
+      const renderHeroCard = (card: DayCard, title: string, showAction: boolean, onPress?: () => void, testID?: string) => {
+        const img = dayImages[card.date];
+        return (
+          <TouchableOpacity testID={testID} style={styles.dayHeroCard} onPress={onPress} disabled={!onPress}>
+            {img ? (
+              <Image style={dayHeroImageStyle} source={{ uri: img }} resizeMode="cover" />
+            ) : (
+              <View style={styles.dayHeroImageFallback} />
+            )}
+            <View style={styles.dayHeroOverlay} />
+            <View style={styles.dayHeroBadge}>
+              <Text style={styles.dayHeroBadgeText}>{card.label.toUpperCase()}</Text>
+            </View>
+            <View style={styles.dayHeroTextWrap}>
+              <Text style={styles.dayHeroTitle}>{title}</Text>
+              {showAction ? <Text style={styles.dayHeroAction}>View details</Text> : null}
+            </View>
+          </TouchableOpacity>
+        );
+      };
+
+      if (selectedDay && activeDayCard && activeDayInfo) {
+        const startLocation = buildDayStartLocation(activeDayInfo);
+        const summary = buildDaySummary(activeDayInfo);
+        const heroTitle = [startLocation, summary].filter(Boolean).join(' - ');
+        const narrativeLines = buildDayNarrative(activeDayInfo);
+        const flightsForDay = activeDayInfo.flights;
+        const toursForDay = activeDayInfo.tours;
+        const lodgingsForDay = activeDayInfo.lodgings;
+        const rentalsForDay = activeDayInfo.rentals;
+
+        const flightParticipantKeys = flightsForDay.map((f) => {
+          const ids = Array.isArray(f.passenger_ids) && f.passenger_ids.length ? f.passenger_ids : [];
+          return ids.slice().sort().join('|');
+        });
+        const showFlightNames = new Set(flightParticipantKeys).size > 1;
+
+        const tourParticipantKeys = toursForDay.map((t) => {
+          const ids = Array.isArray(t.paidBy) && t.paidBy.length ? t.paidBy : allMemberIds;
+          return ids.slice().sort().join('|');
+        });
+        const showTourNames = new Set(tourParticipantKeys).size > 1;
+
+        const lodgingParticipantKeys = lodgingsForDay.map((l) => {
+          const ids = Array.isArray(l.paidBy) && l.paidBy.length ? l.paidBy : allMemberIds;
+          return ids.slice().sort().join('|');
+        });
+        const showLodgingNames = new Set(lodgingParticipantKeys).size > 1;
+
+        return (
+          <View style={[styles.card, { position: 'relative' }]}>
+            <TouchableOpacity testID="day-details-back" style={styles.dayDetailsBackButton} onPress={() => setSelectedDay(null)}>
+              <Text style={styles.dayDetailsBackText}>← Back</Text>
+            </TouchableOpacity>
+            <ScrollView
+              ref={scrollRef}
+              style={{ flex: 1 }}
+              contentContainerStyle={{ gap: 16, paddingTop: 56 }}
+              onScroll={(e: any) => setScrollY(e.nativeEvent.contentOffset.y)}
+              scrollEventThrottle={16}
+            >
+              <Text style={styles.sectionTitle}>My itinerary</Text>
+              <Text style={styles.flightTitle}>{trip.name}</Text>
+              {trip.destination ? <Text style={styles.helperText}>{trip.destination}</Text> : null}
+              {renderDayBar(selectedDay)}
+              {renderHeroCard(activeDayCard, heroTitle, false, undefined, 'day-details-hero')}
+              <View style={styles.dayNarrativeBox}>
+                {narrativeLines.map((line, idx) => (
+                  <Text key={`${activeDayCard.date}-narrative-${idx}`} style={styles.bodyText}>
+                    {line}
+                  </Text>
+                ))}
+              </View>
+
+              {flightsForDay.length ? (
+                <View style={styles.dayInfoCard}>
+                  <Text style={styles.sectionTitle}>Your flight</Text>
+                  {flightsForDay.map((flight) => {
+                    const dep = flight.departure_location || flight.departure_airport_code || 'DEP';
+                    const arr = flight.arrival_location || flight.arrival_airport_code || 'ARR';
+                    const passengers =
+                      Array.isArray(flight.passenger_ids) && flight.passenger_ids.length
+                        ? formatTravelerNames(flight.passenger_ids)
+                        : flight.passenger_name || '';
+                    return (
+                      <View key={flight.id} style={styles.dayInfoRow}>
+                        <Text style={styles.dayInfoRoute}>{`${dep} → ${arr}`}</Text>
+                        <Text style={styles.helperText}>{`${flight.departure_time || '--:--'} / ${
+                          flight.arrival_time || '--:--'
+                        }`}</Text>
+                        {showFlightNames && passengers ? <Text style={styles.helperText}>Travelers: {passengers}</Text> : null}
+                      </View>
+                    );
+                  })}
+                  <TouchableOpacity
+                    testID="day-details-flight-details"
+                    style={styles.dayInfoButton}
+                    onPress={() => {
+                      const sections: DetailSection[] = flightsForDay.map((flight, idx) => {
+                        const dep = flight.departure_location || flight.departure_airport_code || 'DEP';
+                        const arr = flight.arrival_location || flight.arrival_airport_code || 'ARR';
+                        const passengers =
+                          Array.isArray(flight.passenger_ids) && flight.passenger_ids.length
+                            ? formatTravelerNames(flight.passenger_ids)
+                            : flight.passenger_name || '';
+                        return {
+                          title: flightsForDay.length > 1 ? `Flight ${idx + 1} · ${dep} → ${arr}` : undefined,
+                          subtitle: showFlightNames && passengers ? `Travelers: ${passengers}` : undefined,
+                          items: formatFlightDetails(flight),
+                        };
+                      });
+                      setDetailModal({ title: 'Flight Details', sections });
+                    }}
+                  >
+                    <Text style={styles.dayInfoButtonText}>See flight details →</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
+
+              {rentalsForDay.length ? (
+                <View style={styles.dayInfoCard}>
+                  <Text style={styles.sectionTitle}>Rental car</Text>
+                  {rentalsForDay.map((rental) => (
+                    <View key={rental.id} style={styles.dayInfoRow}>
+                      <Text
+                        style={styles.dayInfoRoute}
+                      >{`${rental.vendor || 'Rental car'} · ${rental.model || 'Vehicle'}`}</Text>
+                      <Text style={styles.helperText}>
+                        {`${rental.pickupLocation || 'Pickup'} → ${rental.dropoffLocation || 'Dropoff'}`}
+                      </Text>
+                    </View>
+                  ))}
+                  <TouchableOpacity
+                    testID="day-details-rental-details"
+                    style={styles.dayInfoButton}
+                    onPress={() => {
+                      const sections: DetailSection[] = rentalsForDay.map((rental, idx) => ({
+                        title: rentalsForDay.length > 1 ? `Rental ${idx + 1}` : undefined,
+                        items: formatRentalDetails(rental),
+                      }));
+                      setDetailModal({ title: 'Rental Car Details', sections });
+                    }}
+                  >
+                    <Text style={styles.dayInfoButtonText}>See rental car details →</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
+
+              {toursForDay.length ? (
+                <View style={styles.dayInfoCard}>
+                  <Text style={styles.sectionTitle}>Tours</Text>
+                  {toursForDay.map((tour) => {
+                    const participants =
+                      Array.isArray(tour.paidBy) && tour.paidBy.length
+                        ? formatTravelerNames(tour.paidBy)
+                        : formatTravelerNames(allMemberIds);
+                    return (
+                      <View key={tour.id} style={styles.dayInfoRow}>
+                        <Text style={styles.dayInfoRoute}>{tour.name}</Text>
+                        <Text
+                          style={styles.helperText}
+                        >{`${tour.startTime || 'Time TBD'} · ${tour.startLocation || 'Location TBD'}`}</Text>
+                        {showTourNames && participants ? <Text style={styles.helperText}>Travelers: {participants}</Text> : null}
+                      </View>
+                    );
+                  })}
+                  <TouchableOpacity
+                    testID="day-details-tour-details"
+                    style={styles.dayInfoButton}
+                    onPress={() => {
+                      const sections: DetailSection[] = toursForDay.map((tour, idx) => {
+                        const participants =
+                          Array.isArray(tour.paidBy) && tour.paidBy.length
+                            ? formatTravelerNames(tour.paidBy)
+                            : formatTravelerNames(allMemberIds);
+                        return {
+                          title: toursForDay.length > 1 ? `Tour ${idx + 1}` : undefined,
+                          subtitle: showTourNames && participants ? `Travelers: ${participants}` : undefined,
+                          items: formatTourDetails(tour),
+                        };
+                      });
+                      setDetailModal({ title: 'Tour Details', sections });
+                    }}
+                  >
+                    <Text style={styles.dayInfoButtonText}>See tour details →</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
+
+              {lodgingsForDay.length ? (
+                <View style={styles.dayInfoCard}>
+                  <Text style={styles.sectionTitle}>Accommodation</Text>
+                  {lodgingsForDay.map((lodging) => {
+                    const participants =
+                      Array.isArray(lodging.paidBy) && lodging.paidBy.length
+                        ? formatTravelerNames(lodging.paidBy)
+                        : formatTravelerNames(allMemberIds);
+                    return (
+                      <TouchableOpacity
+                        key={lodging.id}
+                        testID={`day-details-lodging-${lodging.id}`}
+                        style={styles.dayInfoRow}
+                        onPress={() => {
+                          console.debug(`[overview][debug] accommodation pressed id=${lodging.id} name="${lodging.name}"`);
+                          openLodgingDetails(lodging);
+                        }}
+                      >
+                        {lodging.imageUrl ? (
+                          <Image style={lodgingImageStyle} source={{ uri: lodging.imageUrl }} resizeMode="cover" />
+                        ) : (
+                          <View style={styles.lodgingImageFallback} />
+                        )}
+                        <View style={styles.dayInfoText}>
+                          <Text style={styles.dayInfoRoute}>{lodging.name}</Text>
+                          <Text style={styles.helperText}>{`${lodging.checkInDate} → ${lodging.checkOutDate}`}</Text>
+                          {showLodgingNames && participants ? (
+                            <Text style={styles.helperText}>Travelers: {participants}</Text>
+                          ) : null}
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              ) : null}
+
+              {nextDayCard ? (
+                <TouchableOpacity
+                  testID="day-details-next"
+                  style={styles.dayNextButton}
+                  onPress={() => setSelectedDay(nextDayCard.date)}
+                >
+                  <Text style={styles.helperText}>Next day</Text>
+                  <Text style={styles.headerText}>{`${nextDayCard.label} · ${formatShortDayLabel(nextDayCard.date)}`}</Text>
+                </TouchableOpacity>
+              ) : null}
+            </ScrollView>
+            {detailModal ? renderDetailSectionsModal(detailModal) : null}
+          </View>
+        );
+      }
+
+      return (
+        <ScrollView
+          ref={scrollRef}
+          style={styles.card}
+          contentContainerStyle={{ gap: 12 }}
+          onScroll={(e: any) => setScrollY(e.nativeEvent.contentOffset.y)}
+          scrollEventThrottle={16}
+        >
+          <View style={styles.row}>
+            <Text style={styles.sectionTitle}>Overview</Text>
+            <TouchableOpacity
+              style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
+              onPress={() => setIsEditing(true)}
+            >
+              <Text style={styles.buttonText}>Edit</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.flightTitle}>{trip.name}</Text>
+          {trip.destination ? <Text style={styles.helperText}>Destination: {trip.destination}</Text> : null}
+          {dateRange ? <Text style={styles.helperText}>Dates: {dateRange}</Text> : null}
+          {!dateRange && monthLabel && trip.durationDays ? (
+            <Text style={styles.helperText}>
+              Dates: {monthLabel} - {trip.durationDays} day(s)
+            </Text>
+          ) : null}
+          {tripLength ? <Text style={styles.helperText}>Trip length: {tripLength} day(s)</Text> : null}
+
+          {renderDayBar(null)}
+
+          <View style={{ gap: 12 }}>
+            {dayCards.map((card, idx) => {
+              const info = dayDataByDate.get(card.date);
+              const startLocation = buildDayStartLocation(info);
+              const summary = buildDaySummary(info);
+              const heroTitle = [startLocation, summary].filter(Boolean).join(' - ');
+              return (
+                <View key={card.date}>
+                  {renderHeroCard(card, heroTitle, true, () => setSelectedDay(card.date), `overview-day-card-${idx + 1}`)}
+                </View>
+              );
+            })}
+          </View>
+        </ScrollView>
       );
     }
 
@@ -1639,9 +1807,26 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
       >
         <View style={styles.row}>
           <Text style={styles.sectionTitle}>Overview</Text>
-          <TouchableOpacity style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]} onPress={() => setIsEditing(true)}>
-            <Text style={styles.buttonText}>Edit</Text>
-          </TouchableOpacity>
+          {isEditing ? (
+            <View style={[styles.row, { marginLeft: 'auto', gap: 8 }]}>
+              <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={saveOverviewEdits}>
+                <Text style={styles.buttonText}>Save</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, styles.smallButton, styles.dangerButton]}
+                onPress={cancelOverviewEdits}
+              >
+                <Text style={styles.buttonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
+              onPress={() => setIsEditing(true)}
+            >
+              <Text style={styles.buttonText}>Edit</Text>
+            </TouchableOpacity>
+          )}
         </View>
         <Text style={styles.flightTitle}>{trip.name}</Text>
         {trip.destination ? <Text style={styles.helperText}>Destination: {trip.destination}</Text> : null}
@@ -1653,996 +1838,555 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
         ) : null}
         {tripLength ? <Text style={styles.helperText}>Trip length: {tripLength} day(s)</Text> : null}
 
-        {renderDayBar(null)}
+        <View style={[styles.row, { alignItems: 'flex-start' }]}>
+          <Text style={styles.headerText}>Trip Dates</Text>
+        </View>
+        {isEditing ? (
+          <View>
+            <View style={styles.row}>
+              <TouchableOpacity
+                style={[styles.button, dateDraft.mode === 'range' && styles.toggleActive, styles.smallButton]}
+                onPress={() => setDateDraft((prev) => ({ ...prev, mode: 'range' }))}
+              >
+                <Text style={styles.buttonText}>Start + End</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, dateDraft.mode === 'month' && styles.toggleActive, styles.smallButton]}
+                onPress={() => setDateDraft((prev) => ({ ...prev, mode: 'month' }))}
+              >
+                <Text style={styles.buttonText}>Month + Days</Text>
+              </TouchableOpacity>
+            </View>
+            {dateDraft.mode === 'range' ? (
+              <>
+                <View style={[styles.row, { gap: 8 }]}>
+                  {Platform.OS === 'web' ? (
+                    <>
+                      <select
+                        value={parseDateParts(dateDraft.startDate).month}
+                        onChange={(e) => setDatePart('start', 'month', e.target.value)}
+                        style={{
+                          minWidth: 140,
+                          maxWidth: 160,
+                          padding: 8,
+                          borderRadius: 6,
+                          borderColor: '#ccc',
+                          borderWidth: 1,
+                        }}
+                      >
+                        <option value="">Month</option>
+                        {monthOptions.map((m) => (
+                          <option key={`start-${m.value}`} value={m.value}>
+                            {m.label}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        value={parseDateParts(dateDraft.startDate).day}
+                        onChange={(e) => setDatePart('start', 'day', e.target.value)}
+                        style={{
+                          minWidth: 120,
+                          maxWidth: 140,
+                          padding: 8,
+                          borderRadius: 6,
+                          borderColor: '#ccc',
+                          borderWidth: 1,
+                        }}
+                      >
+                        <option value="">Day</option>
+                        {dayOptions.map((d) => (
+                          <option key={`start-day-${d}`} value={d}>
+                            {d}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        value={parseDateParts(dateDraft.startDate).year}
+                        onChange={(e) => setDatePart('start', 'year', e.target.value)}
+                        style={{
+                          minWidth: 140,
+                          maxWidth: 160,
+                          padding: 8,
+                          borderRadius: 6,
+                          borderColor: '#ccc',
+                          borderWidth: 1,
+                        }}
+                      >
+                        <option value="">Year</option>
+                        {yearOptions.map((y) => (
+                          <option key={`start-year-${y}`} value={y}>
+                            {y}
+                          </option>
+                        ))}
+                      </select>
+                    </>
+                  ) : (
+                    <>
+                      <TouchableOpacity
+                        style={[styles.input, styles.dateTouchable, { maxWidth: 200 }]}
+                        onPress={() => openDatePicker('start')}
+                      >
+                        <Text style={styles.cellText}>{dateDraft.startDate || 'YYYY-MM-DD'}</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.dateIcon} onPress={() => openDatePicker('start')}>
+                        <Text style={styles.selectCaret}>v</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
+                </View>
+                <View style={[styles.row, { gap: 8 }]}>
+                  {Platform.OS === 'web' ? (
+                    <>
+                      <select
+                        value={parseDateParts(dateDraft.endDate).month}
+                        onChange={(e) => setDatePart('end', 'month', e.target.value)}
+                        style={{
+                          minWidth: 140,
+                          maxWidth: 160,
+                          padding: 8,
+                          borderRadius: 6,
+                          borderColor: '#ccc',
+                          borderWidth: 1,
+                        }}
+                      >
+                        <option value="">Month</option>
+                        {monthOptions.map((m) => (
+                          <option key={`end-${m.value}`} value={m.value}>
+                            {m.label}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        value={parseDateParts(dateDraft.endDate).day}
+                        onChange={(e) => setDatePart('end', 'day', e.target.value)}
+                        style={{
+                          minWidth: 120,
+                          maxWidth: 140,
+                          padding: 8,
+                          borderRadius: 6,
+                          borderColor: '#ccc',
+                          borderWidth: 1,
+                        }}
+                      >
+                        <option value="">Day</option>
+                        {dayOptions.map((d) => (
+                          <option key={`end-day-${d}`} value={d}>
+                            {d}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        value={parseDateParts(dateDraft.endDate).year}
+                        onChange={(e) => setDatePart('end', 'year', e.target.value)}
+                        style={{
+                          minWidth: 140,
+                          maxWidth: 160,
+                          padding: 8,
+                          borderRadius: 6,
+                          borderColor: '#ccc',
+                          borderWidth: 1,
+                        }}
+                      >
+                        <option value="">Year</option>
+                        {yearOptions.map((y) => (
+                          <option key={`end-year-${y}`} value={y}>
+                            {y}
+                          </option>
+                        ))}
+                      </select>
+                    </>
+                  ) : (
+                    <>
+                      <TouchableOpacity
+                        style={[styles.input, styles.dateTouchable, { maxWidth: 200 }]}
+                        onPress={() => openDatePicker('end')}
+                      >
+                        <Text style={styles.cellText}>{dateDraft.endDate || 'YYYY-MM-DD'}</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.dateIcon} onPress={() => openDatePicker('end')}>
+                        <Text style={styles.selectCaret}>v</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
+                </View>
+              </>
+            ) : (
+              <>
+                {Platform.OS === 'web' ? (
+                  <>
+                    <View style={[styles.row, { gap: 8 }]}>
+                      <select
+                        value={dateDraft.startMonth}
+                        onChange={(e) => setDateDraft((prev) => ({ ...prev, startMonth: e.target.value }))}
+                        style={{
+                          minWidth: 160,
+                          maxWidth: 180,
+                          padding: 8,
+                          borderRadius: 6,
+                          borderColor: '#ccc',
+                          borderWidth: 1,
+                        }}
+                      >
+                        <option value="">Select month</option>
+                        {monthOptions.map((m) => (
+                          <option key={m.value} value={m.value}>
+                            {m.label}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        value={dateDraft.startYear}
+                        onChange={(e) => setDateDraft((prev) => ({ ...prev, startYear: e.target.value }))}
+                        style={{
+                          minWidth: 140,
+                          maxWidth: 160,
+                          padding: 8,
+                          borderRadius: 6,
+                          borderColor: '#ccc',
+                          borderWidth: 1,
+                        }}
+                      >
+                        <option value="">Year</option>
+                        {yearOptions.map((y) => (
+                          <option key={y} value={y}>
+                            {y}
+                          </option>
+                        ))}
+                      </select>
+                    </View>
+                    <select
+                      value={dateDraft.durationDays}
+                      onChange={(e) => setDateDraft((prev) => ({ ...prev, durationDays: e.target.value }))}
+                      style={{
+                        minWidth: 180,
+                        maxWidth: 220,
+                        padding: 8,
+                        borderRadius: 6,
+                        borderColor: '#ccc',
+                        borderWidth: 1,
+                        marginTop: 8,
+                      }}
+                    >
+                      <option value="">Number of days</option>
+                      {durationOptions.map((d) => (
+                        <option key={d} value={d}>
+                          {d}
+                        </option>
+                      ))}
+                    </select>
+                  </>
+                ) : (
+                  <>
+                    <View style={styles.row}>
+                      <TextInput
+                        style={[styles.input, { flex: 1, maxWidth: 160 }]}
+                        placeholder="Month (1-12)"
+                        keyboardType="numeric"
+                        value={dateDraft.startMonth}
+                        onChangeText={(text) => setDateDraft((prev) => ({ ...prev, startMonth: text }))}
+                      />
+                      <TextInput
+                        style={[styles.input, { flex: 1, maxWidth: 160 }]}
+                        placeholder="Year (YYYY)"
+                        keyboardType="numeric"
+                        value={dateDraft.startYear}
+                        onChangeText={(text) => setDateDraft((prev) => ({ ...prev, startYear: text }))}
+                      />
+                    </View>
+                    <TextInput
+                      style={[styles.input, { maxWidth: 200 }]}
+                      placeholder="Number of days"
+                      keyboardType="numeric"
+                      value={dateDraft.durationDays}
+                      onChangeText={(text) => setDateDraft((prev) => ({ ...prev, durationDays: text }))}
+                    />
+                  </>
+                )}
+              </>
+            )}
+          </View>
+        ) : null}
 
-        <View style={{ gap: 12 }}>
-          {dayCards.map((card, idx) => {
-            const info = dayDataByDate.get(card.date);
-            const startLocation = buildDayStartLocation(info);
-            const summary = buildDaySummary(info);
-            const heroTitle = [startLocation, summary].filter(Boolean).join(' - ');
-            return (
-              <View key={card.date}>
-                {renderHeroCard(card, heroTitle, true, () => setSelectedDay(card.date), `overview-day-card-${idx + 1}`)}
-              </View>
-            );
-          })}
+        <View style={[styles.row, { alignItems: 'flex-start' }]}>
+          <Text style={styles.headerText}>Description</Text>
+        </View>
+        {!isEditing ? (
+          trip.description ? (
+            <View>
+              {renderRichTextBlocks(trip.description, {
+                base: styles.bodyText,
+                bold: styles.headerText,
+                italic: styles.helperText,
+                link: styles.linkText ?? styles.buttonText,
+                listItem: styles.helperText,
+              })}
+            </View>
+          ) : (
+            <Text style={styles.helperText}>No description yet.</Text>
+          )
+        ) : (
+          <View>
+            <TextInput
+              style={[styles.input, { minHeight: 120 }]}
+              multiline
+              value={descriptionDraft}
+              onChangeText={setDescriptionDraft}
+            />
+          </View>
+        )}
+
+        <View style={styles.divider} />
+
+        <View style={styles.row}>
+          <Text style={styles.headerText}>Travelers</Text>
+          {isEditing && (
+            <TouchableOpacity
+              style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
+              onPress={() => setShowAddTraveler((prev) => !prev)}
+            >
+              <Text style={styles.buttonText}>+ Add</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        {isEditing && showAddTraveler ? (
+          <View style={styles.addTravelerForm}>
+            <View style={[styles.row, { gap: 8 }]}>
+              <TextInput
+                style={[styles.input, { flex: 1 }]}
+                placeholder="First name"
+                value={travelerDraft.firstName}
+                onChangeText={(text) => setTravelerDraft((prev) => ({ ...prev, firstName: text }))}
+              />
+              <TextInput
+                style={[styles.input, { flex: 1 }]}
+                placeholder="Last name"
+                value={travelerDraft.lastName}
+                onChangeText={(text) => setTravelerDraft((prev) => ({ ...prev, lastName: text }))}
+              />
+            </View>
+            <TextInput
+              style={styles.input}
+              placeholder="Email (optional)"
+              autoCapitalize="none"
+              keyboardType="email-address"
+              value={travelerDraft.email}
+              onChangeText={(text) => setTravelerDraft((prev) => ({ ...prev, email: text }))}
+            />
+            <View style={[styles.row, { justifyContent: 'flex-end', gap: 8 }]}>
+              <TouchableOpacity
+                style={[styles.button, styles.smallButton, styles.dangerButton]}
+                onPress={() => setShowAddTraveler(false)}
+              >
+                <Text style={styles.buttonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={addTraveler}>
+                <Text style={styles.buttonText}>Save Traveler</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : null}
+        <View style={styles.attendeeList}>
+          {attendees.map((member) => (
+            <View
+              key={member.id}
+              testID={attendeeTestId(member)}
+              style={[
+                styles.attendeeChip,
+                pendingRemovalIds.includes(member.id) && styles.attendeeChipRemoving,
+                member.status === 'pending' && styles.attendeeChipPending,
+              ]}
+            >
+              <Text style={styles.attendeeText}>{attendeeLabel(member)}</Text>
+              {isEditing ? (
+                <TouchableOpacity
+                  style={styles.attendeeRemoveButton}
+                  onPress={() => removeTraveler(member.id)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Text style={styles.attendeeRemoveText}>✕</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          ))}
+        </View>
+
+        <View style={styles.divider} />
+
+        <View style={[styles.row, { flexWrap: 'wrap' }]}>
+          <Text style={styles.headerText}>Flights</Text>
+          {isEditing && (
+            <TouchableOpacity
+              style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
+              onPress={() => openFlightAdd()}
+            >
+              <Text style={styles.buttonText}>+ Add Flight</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        <View style={{ gap: 8 }}>
+          {rows
+            .filter((r) => r.type === 'flight')
+            .map((row, idx) => {
+              const flight = row.meta as Flight;
+              const isEditingFlight = isEditing && editingFlightId === flight.id;
+              if (isEditingFlight) {
+                return (
+                  <View
+                    key={flight.id}
+                    style={styles.flightEditorWrap}
+                    onLayout={(e: LayoutChangeEvent) => {
+                      // No-op; this is just here to satisfy TS
+                    }}
+                  >
+                    <FlightEditingForm
+                      draft={editingFlightDraft}
+                      setDraft={setEditingFlightDraft}
+                      styles={styles}
+                      onSave={saveFlightEdit}
+                      onCancel={closeFlightEditor}
+                      groupMembers={groupMembers}
+                      defaultPayerId={defaultPayerId}
+                      payerName={payerName}
+                      onSetPassengers={setEditingFlightPassengers}
+                      openModalDate={(field, current) => openModalDatePicker(field as ModalDateField, current)}
+                    />
+                  </View>
+                );
+              }
+              return (
+                <TouchableOpacity
+                  key={flight.id}
+                  style={styles.flightRow}
+                  onPress={() => openFlightEditor(flight)}
+                  onLayout={(e: LayoutChangeEvent) => {
+                    setFlightRowOffsets((prev) => ({ ...prev, [flight.id]: e.nativeEvent.layout.y }));
+                  }}
+                >
+                  <Text style={styles.flightTitle}>
+                    {flight.departure_airport_code} → {flight.arrival_airport_code}
+                  </Text>
+                  <Text style={styles.helperText}>
+                    {formatFriendlyDate(flight.departure_date, flight.departure_time)}
+                  </Text>
+                  <Text style={styles.helperText}>{buildPassengerName((flight as any).passenger_ids ?? [])}</Text>
+                </TouchableOpacity>
+              );
+            })}
+        </View>
+
+        <View style={styles.divider} />
+
+        <View style={styles.row}>
+          <Text style={styles.headerText}>Lodging</Text>
+          {isEditing && (
+            <TouchableOpacity
+              style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
+              onPress={() => openAddLodging()}
+            >
+              <Text style={styles.buttonText}>+ Add Lodging</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        <View style={{ gap: 8 }}>
+          {rows
+            .filter((r) => r.type === 'lodging')
+            .map((row) => {
+              const lodging = row.meta as Lodging;
+              const isEditingThis = isEditing && editingLodgingId === lodging.id;
+              if (isEditingThis) {
+                return (
+                  <View key={lodging.id}>
+                    <LodgingDialog
+                      visible
+                      styles={styles}
+                      title={editingLodgingId ? 'Lodging Details' : 'Add Lodging'}
+                      draft={lodgingDraft}
+                      setDraft={setLodgingDraft}
+                      groupMembers={groupMembers}
+                      formatMemberName={formatMemberName}
+                      defaultPayerId={defaultPayerId}
+                      payerName={payerName}
+                      onSave={saveLodging}
+                      onCancel={closeLodgingModal}
+                      onOpenDatePicker={(field) =>
+                        openModalDatePicker(
+                          field === 'checkIn' ? 'lodgingCheckIn' : field === 'checkOut' ? 'lodgingCheckOut' : 'lodgingRefundBy'
+                        )
+                      }
+                    />
+                  </View>
+                );
+              }
+              return (
+                <TouchableOpacity key={lodging.id} style={styles.flightRow} onPress={() => openLodgingEditor(lodging)}>
+                  <Text style={styles.flightTitle}>{lodging.name}</Text>
+                  <Text style={styles.helperText}>
+                    {formatFriendlyDate(lodging.checkInDate)} – {formatFriendlyDate(lodging.checkOutDate)}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+        </View>
+
+        <View style={styles.divider} />
+
+        <View style={styles.row}>
+          <Text style={styles.headerText}>Tours & Activities</Text>
+          {isEditing && (
+            <TouchableOpacity style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]} onPress={openAddTour}>
+              <Text style={styles.buttonText}>+ Add Tour</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        <View style={{ gap: 8 }}>
+          {rows
+            .filter((r) => r.type === 'tour')
+            .map((row) => {
+              const tour = row.meta as Tour;
+              return (
+                <TouchableOpacity key={tour.id} style={styles.flightRow} onPress={() => openTourEditor(tour)}>
+                  <Text style={styles.flightTitle}>{tour.name}</Text>
+                  <Text style={styles.helperText}>
+                    {formatFriendlyDate(tour.date, tour.startTime)} @ {tour.startLocation}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+        </View>
+
+        <View style={styles.divider} />
+
+        <View style={styles.row}>
+          <Text style={styles.headerText}>Rental Cars</Text>
+          {isEditing && (
+            <TouchableOpacity style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]} onPress={openAddRental}>
+              <Text style={styles.buttonText}>+ Add Rental</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        <View style={{ gap: 8 }}>
+          {rows
+            .filter((r) => r.type === 'rental')
+            .map((row) => {
+              const rental = row.meta as CarRental;
+              return (
+                <TouchableOpacity key={rental.id} style={styles.flightRow} onPress={() => openRentalEditor(rental)}>
+                  <Text style={styles.flightTitle}>{rental.vendor}</Text>
+                  <Text style={styles.helperText}>
+                    {rental.pickupLocation} {formatFriendlyDate(rental.pickupDate)} – {rental.dropoffLocation}{' '}
+                    {formatFriendlyDate(rental.dropoffDate)}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
         </View>
       </ScrollView>
     );
-  }
+  };
 
   return (
-      <ScrollView
-        ref={scrollRef}
-        style={styles.card}
-        contentContainerStyle={{ gap: 12 }}
-        onScroll={(e: any) => setScrollY(e.nativeEvent.contentOffset.y)}
-        scrollEventThrottle={16}
-      >
-      <View style={styles.row}>
-        <Text style={styles.sectionTitle}>Overview</Text>
-        {isEditing ? (
-          <View style={[styles.row, { marginLeft: 'auto', gap: 8 }]}>
-            <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={saveOverviewEdits}>
-              <Text style={styles.buttonText}>Save</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={cancelOverviewEdits}>
-              <Text style={styles.buttonText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <TouchableOpacity style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]} onPress={() => setIsEditing(true)}>
-            <Text style={styles.buttonText}>Edit</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-      <Text style={styles.flightTitle}>{trip.name}</Text>
-      {trip.destination ? <Text style={styles.helperText}>Destination: {trip.destination}</Text> : null}
-      {dateRange ? <Text style={styles.helperText}>Dates: {dateRange}</Text> : null}
-      {!dateRange && monthLabel && trip.durationDays ? (
-        <Text style={styles.helperText}>
-          Dates: {monthLabel} - {trip.durationDays} day(s)
-        </Text>
-      ) : null}
-      {tripLength ? <Text style={styles.helperText}>Trip length: {tripLength} day(s)</Text> : null}
-
-      <View style={[styles.row, { alignItems: 'flex-start' }]}>
-        <Text style={styles.headerText}>Trip Dates</Text>
-      </View>
-      {isEditing ? (
-        <View>
-          <View style={styles.row}>
-            <TouchableOpacity
-              style={[styles.button, dateDraft.mode === 'range' && styles.toggleActive, styles.smallButton]}
-              onPress={() => setDateDraft((prev) => ({ ...prev, mode: 'range' }))}
-            >
-              <Text style={styles.buttonText}>Start + End</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.button, dateDraft.mode === 'month' && styles.toggleActive, styles.smallButton]}
-              onPress={() => setDateDraft((prev) => ({ ...prev, mode: 'month' }))}
-            >
-              <Text style={styles.buttonText}>Month + Days</Text>
-            </TouchableOpacity>
-          </View>
-          {dateDraft.mode === 'range' ? (
-            <>
-              <View style={[styles.row, { gap: 8 }]}>
-                {Platform.OS === 'web' ? (
-                  <>
-                    <select
-                      value={parseDateParts(dateDraft.startDate).month}
-                      onChange={(e) => setDatePart('start', 'month', e.target.value)}
-                      style={{ minWidth: 140, maxWidth: 160, padding: 8, borderRadius: 6, borderColor: '#ccc', borderWidth: 1 }}
-                    >
-                      <option value="">Month</option>
-                      {monthOptions.map((m) => (
-                        <option key={`start-${m.value}`} value={m.value}>
-                          {m.label}
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      value={parseDateParts(dateDraft.startDate).day}
-                      onChange={(e) => setDatePart('start', 'day', e.target.value)}
-                      style={{ minWidth: 120, maxWidth: 140, padding: 8, borderRadius: 6, borderColor: '#ccc', borderWidth: 1 }}
-                    >
-                      <option value="">Day</option>
-                      {dayOptions.map((d) => (
-                        <option key={`start-day-${d}`} value={d}>
-                          {d}
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      value={parseDateParts(dateDraft.startDate).year}
-                      onChange={(e) => setDatePart('start', 'year', e.target.value)}
-                      style={{ minWidth: 140, maxWidth: 160, padding: 8, borderRadius: 6, borderColor: '#ccc', borderWidth: 1 }}
-                    >
-                      <option value="">Year</option>
-                      {yearOptions.map((y) => (
-                        <option key={`start-year-${y}`} value={y}>
-                          {y}
-                        </option>
-                      ))}
-                    </select>
-                  </>
-                ) : (
-                  <>
-                    <TouchableOpacity style={[styles.input, styles.dateTouchable, { maxWidth: 200 }]} onPress={() => openDatePicker('start')}>
-                      <Text style={styles.cellText}>{dateDraft.startDate || 'YYYY-MM-DD'}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.dateIcon} onPress={() => openDatePicker('start')}>
-                      <Text style={styles.selectCaret}>v</Text>
-                    </TouchableOpacity>
-                  </>
-                )}
-              </View>
-              <View style={[styles.row, { gap: 8 }]}>
-                {Platform.OS === 'web' ? (
-                  <>
-                    <select
-                      value={parseDateParts(dateDraft.endDate).month}
-                      onChange={(e) => setDatePart('end', 'month', e.target.value)}
-                      style={{ minWidth: 140, maxWidth: 160, padding: 8, borderRadius: 6, borderColor: '#ccc', borderWidth: 1 }}
-                    >
-                      <option value="">Month</option>
-                      {monthOptions.map((m) => (
-                        <option key={`end-${m.value}`} value={m.value}>
-                          {m.label}
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      value={parseDateParts(dateDraft.endDate).day}
-                      onChange={(e) => setDatePart('end', 'day', e.target.value)}
-                      style={{ minWidth: 120, maxWidth: 140, padding: 8, borderRadius: 6, borderColor: '#ccc', borderWidth: 1 }}
-                    >
-                      <option value="">Day</option>
-                      {dayOptions.map((d) => (
-                        <option key={`end-day-${d}`} value={d}>
-                          {d}
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      value={parseDateParts(dateDraft.endDate).year}
-                      onChange={(e) => setDatePart('end', 'year', e.target.value)}
-                      style={{ minWidth: 140, maxWidth: 160, padding: 8, borderRadius: 6, borderColor: '#ccc', borderWidth: 1 }}
-                    >
-                      <option value="">Year</option>
-                      {yearOptions.map((y) => (
-                        <option key={`end-year-${y}`} value={y}>
-                          {y}
-                        </option>
-                      ))}
-                    </select>
-                  </>
-                ) : (
-                  <>
-                    <TouchableOpacity style={[styles.input, styles.dateTouchable, { maxWidth: 200 }]} onPress={() => openDatePicker('end')}>
-                      <Text style={styles.cellText}>{dateDraft.endDate || 'YYYY-MM-DD'}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.dateIcon} onPress={() => openDatePicker('end')}>
-                      <Text style={styles.selectCaret}>v</Text>
-                    </TouchableOpacity>
-                  </>
-                )}
-              </View>
-            </>
-          ) : (
-            <>
-              {Platform.OS === 'web' ? (
-                <>
-                  <View style={[styles.row, { gap: 8 }]}>
-                    <select
-                      value={dateDraft.startMonth}
-                      onChange={(e) => setDateDraft((prev) => ({ ...prev, startMonth: e.target.value }))}
-                      style={{ minWidth: 160, maxWidth: 180, padding: 8, borderRadius: 6, borderColor: '#ccc', borderWidth: 1 }}
-                    >
-                      <option value="">Select month</option>
-                      {monthOptions.map((m) => (
-                        <option key={m.value} value={m.value}>
-                          {m.label}
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      value={dateDraft.startYear}
-                      onChange={(e) => setDateDraft((prev) => ({ ...prev, startYear: e.target.value }))}
-                      style={{ minWidth: 140, maxWidth: 160, padding: 8, borderRadius: 6, borderColor: '#ccc', borderWidth: 1 }}
-                    >
-                      <option value="">Year</option>
-                      {yearOptions.map((y) => (
-                        <option key={y} value={y}>
-                          {y}
-                        </option>
-                      ))}
-                    </select>
-                  </View>
-                  <select
-                    value={dateDraft.durationDays}
-                    onChange={(e) => setDateDraft((prev) => ({ ...prev, durationDays: e.target.value }))}
-                    style={{ minWidth: 180, maxWidth: 220, padding: 8, borderRadius: 6, borderColor: '#ccc', borderWidth: 1, marginTop: 8 }}
-                  >
-                    <option value="">Number of days</option>
-                    {durationOptions.map((d) => (
-                      <option key={d} value={d}>
-                        {d}
-                      </option>
-                    ))}
-                  </select>
-                </>
-              ) : (
-                <>
-                  <View style={styles.row}>
-                    <TextInput
-                      style={[styles.input, { flex: 1, maxWidth: 160 }]}
-                      placeholder="Month (1-12)"
-                      keyboardType="numeric"
-                      value={dateDraft.startMonth}
-                      onChangeText={(text) => setDateDraft((prev) => ({ ...prev, startMonth: text }))}
-                    />
-                    <TextInput
-                      style={[styles.input, { flex: 1, maxWidth: 160 }]}
-                      placeholder="Year (YYYY)"
-                      keyboardType="numeric"
-                      value={dateDraft.startYear}
-                      onChangeText={(text) => setDateDraft((prev) => ({ ...prev, startYear: text }))}
-                    />
-                  </View>
-                  <TextInput
-                    style={[styles.input, { maxWidth: 200 }]}
-                    placeholder="Number of days"
-                    keyboardType="numeric"
-                    value={dateDraft.durationDays}
-                    onChangeText={(text) => setDateDraft((prev) => ({ ...prev, durationDays: text }))}
-                  />
-                </>
-              )}
-            </>
-          )}
-        </View>
-      ) : null}
-
-      <View style={[styles.row, { alignItems: 'flex-start' }]}>
-        <Text style={styles.headerText}>Description</Text>
-      </View>
-      {!isEditing ? (
-        trip.description ? (
-          <View>
-            {renderRichTextBlocks(trip.description, {
-              base: styles.bodyText,
-              bold: styles.headerText,
-              italic: styles.helperText,
-              link: styles.linkText ?? styles.buttonText,
-              listItem: styles.helperText,
-            })}
-          </View>
-        ) : (
-          <Text style={styles.helperText}>No description yet.</Text>
-        )
-      ) : (
-        <View>
-          <TextInput
-            style={[styles.input, { minHeight: 120 }]}
-            multiline
-            value={descriptionDraft}
-            onChangeText={setDescriptionDraft}
-          />
-        </View>
-      )}
-
-      <View style={styles.divider} />
-      <View style={styles.row}>
-        <Text style={styles.headerText}>Attendees</Text>
-        {isEditing ? (
-          <TouchableOpacity style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]} onPress={() => setShowAddTraveler((prev) => !prev)}>
-            <Text style={styles.buttonText}>Add Traveler</Text>
-          </TouchableOpacity>
-        ) : null}
-      </View>
-      <View style={[styles.row, { flexWrap: 'wrap', gap: 8 }]}>
-        {normalizedAttendees.map((m) => {
-          const label = attendeeLabel(m);
-          const pendingRemoval = pendingRemovalIds.includes(m.id);
-          const badge =
-            m.status === 'pending' || m.status === 'removed' ? (
-              <View
-                style={[
-                  styles.badge,
-                  m.status === 'pending' ? styles.badgePending : styles.badgeRemoved,
-                ]}
-              >
-                <Text style={styles.badgeText}>{m.status === 'pending' ? 'Pending' : 'Removed'}</Text>
-              </View>
-            ) : null;
-          const content = (
-            <View style={styles.attendeeChipContent}>
-              <Text style={styles.buttonText}>
-                {label}
-                {pendingRemoval ? <Text style={styles.removeText}> (removes on save)</Text> : null}
-                {isEditing ? <Text style={styles.removeText}> x</Text> : null}
-              </Text>
-              {badge}
-            </View>
-          );
-          return isEditing ? (
-            <TouchableOpacity
-              key={m.id}
-              style={[styles.button, styles.smallButton]}
-              onPress={() => removeTraveler(m.id)}
-              testID={attendeeTestId(m)}
-            >
-              {content}
-            </TouchableOpacity>
-          ) : (
-            <View key={m.id} style={[styles.button, styles.smallButton]} testID={attendeeTestId(m)}>
-              {content}
-            </View>
-          );
-        })}
-      </View>
-      {isEditing && showAddTraveler ? (
-        <View style={{ marginTop: 8 }}>
-          <View style={styles.row}>
-            <TextInput
-              style={[styles.input, { flex: 1 }]}
-              placeholder="First name"
-              value={travelerDraft.firstName}
-              onChangeText={(text) => setTravelerDraft((prev) => ({ ...prev, firstName: text }))}
-            />
-            <TextInput
-              style={[styles.input, { flex: 1 }]}
-              placeholder="Last name"
-              value={travelerDraft.lastName}
-              onChangeText={(text) => setTravelerDraft((prev) => ({ ...prev, lastName: text }))}
-            />
-          </View>
-          <TextInput
-            style={styles.input}
-            placeholder="Email (optional)"
-            autoCapitalize="none"
-            value={travelerDraft.email}
-            onChangeText={(text) => setTravelerDraft((prev) => ({ ...prev, email: text }))}
-          />
-          <View style={styles.row}>
-            <TouchableOpacity style={[styles.button, { flex: 1 }]} onPress={addTraveler}>
-              <Text style={styles.buttonText}>Add</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.button, styles.dangerButton, { flex: 1 }]}
-              onPress={() => {
-                setShowAddTraveler(false);
-                setTravelerDraft({ firstName: '', lastName: '', email: '' });
-              }}
-            >
-              <Text style={styles.buttonText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      ) : null}
-
-      {isEditing ? (
-        <View style={{ marginTop: 12 }}>
-          <Text style={styles.headerText}>Add Trip Items</Text>
-          <View style={[styles.row, { flexWrap: 'wrap' }]}>
-            <TouchableOpacity
-              style={[styles.button, styles.smallButton]}
-              onPress={openFlightAdd}
-            >
-              <Text style={styles.buttonText}>Add Flight</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.button, styles.smallButton]}
-              onPress={() => {
-                closeLodgingModal();
-                setShowAddLodging(true);
-              }}
-            >
-              <Text style={styles.buttonText}>Add Lodging</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.button, styles.smallButton]}
-              onPress={() => {
-                closeRentalModal();
-                setShowAddRental(true);
-              }}
-            >
-              <Text style={styles.buttonText}>Add Rental Car</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.button, styles.smallButton]}
-              onPress={() => {
-                closeTourModal();
-                setShowAddTour(true);
-              }}
-            >
-              <Text style={styles.buttonText}>Add Tour</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      ) : null}
-
-      <View style={styles.divider} />
-      {!isEditing ? (
-        <>
-          <Text style={styles.headerText}>Itinerary</Text>
-          {itineraryLoading ? <Text style={styles.helperText}>Loading itinerary...</Text> : null}
-          {!itineraryLoading && !sortedItineraryDetails.length ? (
-            <Text style={styles.helperText}>No itinerary items yet.</Text>
-          ) : null}
-          {sortedItineraryDetails.length ? (
-            <View>
-              <View style={[styles.tableRow, styles.tableHeader]}>
-                <View style={[styles.cell, dayColStyle]}>
-                  <Text style={styles.headerText}>Day</Text>
-                </View>
-                <View style={[styles.cell, { flex: 1 }]}>
-                  <Text style={styles.headerText}>Time</Text>
-                </View>
-                <View style={[styles.cell, { flex: 2 }]}>
-                  <Text style={styles.headerText}>Activity</Text>
-                </View>
-                <View style={[styles.cell, { flex: 1 }]}>
-                  <Text style={styles.headerText}>Cost</Text>
-                </View>
-              </View>
-              {sortedItineraryDetails.map((d) => (
-                <View key={d.id} style={styles.tableRow}>
-                  <View style={[styles.cell, dayColStyle]}>
-                    <Text style={styles.cellText}>{d.day}</Text>
-                  </View>
-                  <View style={[styles.cell, { flex: 1 }]}>
-                    <Text style={styles.cellText}>{d.time || '-'}</Text>
-                  </View>
-                  <View style={[styles.cell, { flex: 2 }]}>
-                    <Text style={styles.cellText}>{d.activity}</Text>
-                  </View>
-                  <View style={[styles.cell, { flex: 1 }]}>
-                    <Text style={styles.cellText}>{d.cost != null ? `$${d.cost}` : '-'}</Text>
-                  </View>
-                </View>
-              ))}
-            </View>
-          ) : null}
-        </>
-      ) : null}
-      {isEditing ? (
-        <View style={[styles.card, { marginTop: 12 }]}>
-          <Text style={styles.sectionTitle}>Edit Itinerary Items</Text>
-          {!itineraryId ? (
-            <Text style={styles.helperText}>No itinerary found for this trip yet.</Text>
-          ) : (
-            <>
-              {sortedItineraryDetails.length ? (
-                sortedItineraryDetails.map((d) => (
-                  <View key={d.id} style={styles.tableRow}>
-                    <View style={[styles.cell, dayColStyle]}>
-                      {editingDetailId === d.id ? (
-                        <TextInput
-                          style={styles.input}
-                          placeholder="Day"
-                          keyboardType="numeric"
-                          value={detailDraft.day}
-                          onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, day: text }))}
-                        />
-                      ) : (
-                        <Text style={styles.cellText}>{d.day}</Text>
-                      )}
-                    </View>
-                    <View style={[styles.cell, { flex: 1 }]}>
-                      {editingDetailId === d.id ? (
-                        <TextInput
-                          style={styles.input}
-                          placeholder="Time"
-                          value={detailDraft.time}
-                          onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, time: text }))}
-                        />
-                      ) : (
-                        <Text style={styles.cellText}>{d.time || '-'}</Text>
-                      )}
-                    </View>
-                    <View style={[styles.cell, { flex: 2 }]}>
-                      {editingDetailId === d.id ? (
-                        <TextInput
-                          style={styles.input}
-                          placeholder="Activity"
-                          value={detailDraft.activity}
-                          onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, activity: text }))}
-                        />
-                      ) : (
-                        <Text style={styles.cellText}>{d.activity}</Text>
-                      )}
-                    </View>
-                    <View style={[styles.cell, { flex: 1 }]}>
-                      {editingDetailId === d.id ? (
-                        <TextInput
-                          style={styles.input}
-                          placeholder="Cost"
-                          keyboardType="numeric"
-                          value={detailDraft.cost}
-                          onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, cost: text }))}
-                        />
-                      ) : (
-                        <Text style={styles.cellText}>{d.cost != null ? `$${d.cost}` : '-'}</Text>
-                      )}
-                    </View>
-                    <View style={[styles.cell, styles.actionCell, { flex: 1 }]}>
-                      {editingDetailId === d.id ? (
-                        <>
-                          <TouchableOpacity
-                            style={[styles.button, styles.smallButton]}
-                            onPress={async () => {
-                              await saveItineraryDetail();
-                            }}
-                          >
-                            <Text style={styles.buttonText}>Save</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            style={[styles.button, styles.smallButton, styles.dangerButton]}
-                            onPress={() => {
-                              setEditingDetailId(null);
-                              setDetailDraft({ day: '1', time: '', activity: '', cost: '' });
-                            }}
-                          >
-                            <Text style={styles.buttonText}>Cancel</Text>
-                          </TouchableOpacity>
-                        </>
-                      ) : (
-                        <>
-                          <TouchableOpacity
-                            style={[styles.button, styles.smallButton]}
-                            onPress={() => {
-                              setEditingDetailId(d.id);
-                              setDetailDraft({
-                                day: String(d.day ?? '1'),
-                                time: d.time ?? '',
-                                activity: d.activity ?? '',
-                                cost: d.cost != null ? String(d.cost) : '',
-                              });
-                            }}
-                          >
-                            <Text style={styles.buttonText}>Edit</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            style={[styles.button, styles.smallButton, styles.dangerButton]}
-                            onPress={async () => {
-                              await fetch(`${backendUrl}/api/itineraries/details/${d.id}`, {
-                                method: 'DELETE',
-                                headers,
-                              });
-                              if (editingDetailId === d.id) setEditingDetailId(null);
-                              refreshItineraryDetails();
-                            }}
-                          >
-                            <Text style={styles.buttonText}>Delete</Text>
-                          </TouchableOpacity>
-                        </>
-                      )}
-                    </View>
-                  </View>
-                ))
-              ) : (
-                <Text style={styles.helperText}>No itinerary items yet.</Text>
-              )}
-              {!editingDetailId ? (
-                <View style={[styles.tableRow, styles.inputRow]}>
-                  <View style={[styles.cell, dayColStyle]}>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Day"
-                      keyboardType="numeric"
-                      value={detailDraft.day}
-                      onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, day: text }))}
-                    />
-                  </View>
-                  <View style={[styles.cell, { flex: 1 }]}>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Time"
-                      value={detailDraft.time}
-                      onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, time: text }))}
-                    />
-                  </View>
-                  <View style={[styles.cell, { flex: 2 }]}>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Activity"
-                      value={detailDraft.activity}
-                      onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, activity: text }))}
-                    />
-                  </View>
-                  <View style={[styles.cell, { flex: 1 }]}>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="Cost"
-                      keyboardType="numeric"
-                      value={detailDraft.cost}
-                      onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, cost: text }))}
-                    />
-                  </View>
-                  <View style={[styles.cell, styles.actionCell, { flex: 1 }]}>
-                    <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={saveItineraryDetail}>
-                      <Text style={styles.buttonText}>Add</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ) : null}
-            </>
-          )}
-        </View>
-      ) : null}
-
-      {selectedFlight
-        ? renderDetailModal('Flight Details', formatFlightDetails(selectedFlight), () => setSelectedFlight(null))
-        : null}
-      {selectedLodging
-        ? renderDetailModal(
-            'Lodging Details',
-            formatLodgingDetails(selectedLodging, mapApp).map((item) =>
-              item.label === 'Address' && selectedLodging.address
-                ? { ...item, onPress: () => onOpenAddress(selectedLodging.address) }
-                : item
-            ),
-            () => setSelectedLodging(null)
-          )
-        : null}
-      {selectedTour ? renderDetailModal('Tour Details', formatTourDetails(selectedTour), () => setSelectedTour(null)) : null}
-      {detailModal ? renderDetailSectionsModal(detailModal) : null}
-      <FlightEditingForm
-        visible={showFlightEditor && Boolean(editingFlightDraft && editingFlightId)}
-        flightId={editingFlightId}
-        flight={editingFlightDraft}
-        overlayStyle={{
-          justifyContent: 'flex-start',
-          paddingTop: Math.max(16, flightEditorAnchor - scrollY + 12),
-        }}
-        groupMembers={groupMembers}
-        userMembers={userMembers}
-        styles={styles}
-        formatMemberName={formatMemberName}
-        payerName={payerName}
-        airportTarget={null}
-        getLocationInputValue={getLocationInputValue}
-        showAirportDropdown={showAirportDropdown}
-        parseLayoverDuration={parseLayoverDuration}
-        openTimePicker={openTimePicker}
-        setFlight={setEditingFlightDraft}
-        setPassengerIds={setEditingFlightPassengers}
-        modalDepLocationRef={editDepLocationRef}
-        modalArrLocationRef={editArrLocationRef}
-        modalLayoverLocationRef={editLayoverLocationRef}
-        onClose={closeFlightEditor}
-        onSave={saveFlightEdit}
-      />
-      {showAddLodging ? (
-        <View style={styles.modalOverlay}>
-          <View style={styles.confirmModal}>
-            <Text style={styles.sectionTitle}>{editingLodgingId ? 'Edit Lodging' : 'Add Lodging'}</Text>
-            <ScrollView style={{ maxHeight: 420 }}>
-              <Text style={styles.modalLabel}>Name</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Hotel name"
-                value={lodgingDraft.name}
-                onChangeText={(text) => setLodgingDraft((prev) => ({ ...prev, name: text }))}
-              />
-              <Text style={styles.modalLabel}>Check-in date</Text>
-              {Platform.OS === 'web' ? (
-                <input
-                  type="date"
-                  value={lodgingDraft.checkInDate}
-                  onChange={(e) =>
-                    setLodgingDraft((prev) => ({ ...prev, checkInDate: normalizeDateString(e.target.value) }))
-                  }
-                  style={styles.input as any}
-                />
-              ) : (
-                <TouchableOpacity style={styles.input} onPress={() => openModalDatePicker('lodgingCheckIn', lodgingDraft.checkInDate)}>
-                  <Text style={styles.cellText}>{lodgingDraft.checkInDate || 'YYYY-MM-DD'}</Text>
-                </TouchableOpacity>
-              )}
-              <Text style={styles.modalLabel}>Check-out date</Text>
-              {Platform.OS === 'web' ? (
-                <input
-                  type="date"
-                  value={lodgingDraft.checkOutDate}
-                  onChange={(e) =>
-                    setLodgingDraft((prev) => ({ ...prev, checkOutDate: normalizeDateString(e.target.value) }))
-                  }
-                  style={styles.input as any}
-                />
-              ) : (
-                <TouchableOpacity style={styles.input} onPress={() => openModalDatePicker('lodgingCheckOut', lodgingDraft.checkOutDate)}>
-                  <Text style={styles.cellText}>{lodgingDraft.checkOutDate || 'YYYY-MM-DD'}</Text>
-                </TouchableOpacity>
-              )}
-              <View style={styles.modalRow}>
-                <Text style={styles.modalLabel}>Refund by</Text>
-                <TouchableOpacity onPress={() => setLodgingDraft((prev) => ({ ...prev, refundBy: '' }))}>
-                  <Text style={styles.linkText}>Clear</Text>
-                </TouchableOpacity>
-              </View>
-              {Platform.OS === 'web' ? (
-                <input
-                  type="date"
-                  value={lodgingDraft.refundBy}
-                  onChange={(e) =>
-                    setLodgingDraft((prev) => ({ ...prev, refundBy: normalizeDateString(e.target.value) }))
-                  }
-                  style={styles.input as any}
-                />
-              ) : (
-                <TouchableOpacity style={styles.input} onPress={() => openModalDatePicker('lodgingRefundBy', lodgingDraft.refundBy)}>
-                  <Text style={styles.cellText}>{lodgingDraft.refundBy || 'YYYY-MM-DD'}</Text>
-                </TouchableOpacity>
-              )}
-              <Text style={styles.modalLabel}>Rooms</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="1"
-                keyboardType="numeric"
-                value={lodgingDraft.rooms}
-                onChangeText={(text) => setLodgingDraft((prev) => ({ ...prev, rooms: text }))}
-              />
-              <Text style={styles.modalLabel}>Total cost</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="0.00"
-                keyboardType="numeric"
-                value={lodgingDraft.totalCost}
-                onChangeText={(text) => setLodgingDraft((prev) => ({ ...prev, totalCost: text }))}
-              />
-              <Text style={styles.modalLabel}>Address</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Address"
-                value={lodgingDraft.address}
-                onChangeText={(text) => setLodgingDraft((prev) => ({ ...prev, address: text }))}
-              />
-            </ScrollView>
-            <View style={styles.row}>
-              <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={closeLodgingModal}>
-                <Text style={styles.buttonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.button} onPress={saveLodging}>
-                <Text style={styles.buttonText}>Save</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      ) : null}
-      {showAddTour ? (
-        <View style={styles.modalOverlay}>
-          <View style={styles.confirmModal}>
-            <Text style={styles.sectionTitle}>{editingTourId ? 'Edit Tour' : 'Add Tour'}</Text>
-            <ScrollView style={{ maxHeight: 420 }}>
-              <Text style={styles.modalLabel}>Date</Text>
-              {Platform.OS === 'web' ? (
-                <input
-                  type="date"
-                  value={tourDraft.date}
-                  onChange={(e) =>
-                    setTourDraft((prev) => ({ ...prev, date: normalizeDateString(e.target.value) }))
-                  }
-                  style={styles.input as any}
-                />
-              ) : (
-                <TouchableOpacity style={styles.input} onPress={() => openModalDatePicker('tourDate', tourDraft.date)}>
-                  <Text style={styles.cellText}>{tourDraft.date || 'YYYY-MM-DD'}</Text>
-                </TouchableOpacity>
-              )}
-              <Text style={styles.modalLabel}>Tour name</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Tour name"
-                value={tourDraft.name}
-                onChangeText={(text) => setTourDraft((prev) => ({ ...prev, name: text }))}
-              />
-              <Text style={styles.modalLabel}>Start location</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Start location"
-                value={tourDraft.startLocation}
-                onChangeText={(text) => setTourDraft((prev) => ({ ...prev, startLocation: text }))}
-              />
-              <Text style={styles.modalLabel}>Start time</Text>
-              {Platform.OS === 'web' ? (
-                <input
-                  type="time"
-                  value={tourDraft.startTime}
-                  onChange={(e: any) => setTourDraft((prev) => ({ ...prev, startTime: e.target.value }))}
-                  style={styles.input as any}
-                />
-              ) : (
-                <TextInput
-                  style={styles.input}
-                  placeholder="HH:MM"
-                  value={tourDraft.startTime}
-                  onChangeText={(text) => setTourDraft((prev) => ({ ...prev, startTime: text }))}
-                />
-              )}
-              <Text style={styles.modalLabel}>Duration</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="2 hours"
-                value={tourDraft.duration}
-                onChangeText={(text) => setTourDraft((prev) => ({ ...prev, duration: text }))}
-              />
-              <Text style={styles.modalLabel}>Cost</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="0.00"
-                keyboardType="numeric"
-                value={tourDraft.cost}
-                onChangeText={(text) => setTourDraft((prev) => ({ ...prev, cost: text }))}
-              />
-              <View style={styles.modalRow}>
-                <Text style={styles.modalLabel}>Free cancel by</Text>
-                <TouchableOpacity onPress={() => setTourDraft((prev) => ({ ...prev, freeCancelBy: '' }))}>
-                  <Text style={styles.linkText}>Clear</Text>
-                </TouchableOpacity>
-              </View>
-              {Platform.OS === 'web' ? (
-                <input
-                  type="date"
-                  value={tourDraft.freeCancelBy}
-                  onChange={(e: any) =>
-                    setTourDraft((prev) => ({ ...prev, freeCancelBy: normalizeDateString(e.target.value) }))
-                  }
-                  style={styles.input as any}
-                />
-              ) : (
-                <TouchableOpacity style={styles.input} onPress={() => openModalDatePicker('tourFreeCancel', tourDraft.freeCancelBy)}>
-                  <Text style={styles.cellText}>{tourDraft.freeCancelBy || 'YYYY-MM-DD'}</Text>
-                </TouchableOpacity>
-              )}
-              <View style={styles.modalRow}>
-                <Text style={styles.modalLabel}>Booked on</Text>
-                <TouchableOpacity onPress={() => setTourDraft((prev) => ({ ...prev, bookedOn: '' }))}>
-                  <Text style={styles.linkText}>Clear</Text>
-                </TouchableOpacity>
-              </View>
-              {Platform.OS === 'web' ? (
-                <input
-                  type="date"
-                  value={tourDraft.bookedOn}
-                  onChange={(e: any) =>
-                    setTourDraft((prev) => ({ ...prev, bookedOn: normalizeDateString(e.target.value) }))
-                  }
-                  style={styles.input as any}
-                />
-              ) : (
-                <TouchableOpacity style={styles.input} onPress={() => openModalDatePicker('tourBookedOn', tourDraft.bookedOn)}>
-                  <Text style={styles.cellText}>{tourDraft.bookedOn || 'YYYY-MM-DD'}</Text>
-                </TouchableOpacity>
-              )}
-              <Text style={styles.modalLabel}>Reference</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Reference"
-                value={tourDraft.reference}
-                onChangeText={(text) => setTourDraft((prev) => ({ ...prev, reference: text }))}
-              />
-            </ScrollView>
-            <View style={styles.row}>
-              <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={closeTourModal}>
-                <Text style={styles.buttonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.button} onPress={saveTour}>
-                <Text style={styles.buttonText}>Save</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      ) : null}
-      {showAddRental ? (
-        <View style={styles.modalOverlay}>
-          <View style={styles.confirmModal}>
-            <Text style={styles.sectionTitle}>{editingRentalId ? 'Edit Rental Car' : 'Add Rental Car'}</Text>
-            <ScrollView style={{ maxHeight: 420 }}>
-              <Text style={styles.modalLabel}>Pickup location</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Pickup location"
-                value={rentalDraft.pickupLocation}
-                onChangeText={(text) => setRentalDraft((prev) => ({ ...prev, pickupLocation: text }))}
-              />
-              <Text style={styles.modalLabel}>Pickup date</Text>
-              {Platform.OS === 'web' ? (
-                <input
-                  type="date"
-                  value={rentalDraft.pickupDate}
-                  onChange={(e: any) =>
-                    setRentalDraft((prev) => ({ ...prev, pickupDate: normalizeDateString(e.target.value) }))
-                  }
-                  style={styles.input as any}
-                />
-              ) : (
-                <TouchableOpacity style={styles.input} onPress={() => openModalDatePicker('rentalPickup', rentalDraft.pickupDate)}>
-                  <Text style={styles.cellText}>{rentalDraft.pickupDate || 'YYYY-MM-DD'}</Text>
-                </TouchableOpacity>
-              )}
-              <Text style={styles.modalLabel}>Dropoff location</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Dropoff location"
-                value={rentalDraft.dropoffLocation}
-                onChangeText={(text) => setRentalDraft((prev) => ({ ...prev, dropoffLocation: text }))}
-              />
-              <Text style={styles.modalLabel}>Dropoff date</Text>
-              {Platform.OS === 'web' ? (
-                <input
-                  type="date"
-                  value={rentalDraft.dropoffDate}
-                  onChange={(e: any) =>
-                    setRentalDraft((prev) => ({ ...prev, dropoffDate: normalizeDateString(e.target.value) }))
-                  }
-                  style={styles.input as any}
-                />
-              ) : (
-                <TouchableOpacity style={styles.input} onPress={() => openModalDatePicker('rentalDropoff', rentalDraft.dropoffDate)}>
-                  <Text style={styles.cellText}>{rentalDraft.dropoffDate || 'YYYY-MM-DD'}</Text>
-                </TouchableOpacity>
-              )}
-              <Text style={styles.modalLabel}>Vendor</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Vendor"
-                value={rentalDraft.vendor}
-                onChangeText={(text) => setRentalDraft((prev) => ({ ...prev, vendor: text }))}
-              />
-              <Text style={styles.modalLabel}>Car model</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="SUV"
-                value={rentalDraft.model}
-                onChangeText={(text) => setRentalDraft((prev) => ({ ...prev, model: text }))}
-              />
-              <Text style={styles.modalLabel}>Reference</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Reference"
-                value={rentalDraft.reference}
-                onChangeText={(text) => setRentalDraft((prev) => ({ ...prev, reference: text }))}
-              />
-              <Text style={styles.modalLabel}>Prepaid</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Yes/No"
-                value={rentalDraft.prepaid}
-                onChangeText={(text) => setRentalDraft((prev) => ({ ...prev, prepaid: text }))}
-              />
-              <Text style={styles.modalLabel}>Cost</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="0.00"
-                keyboardType="numeric"
-                value={rentalDraft.cost}
-                onChangeText={(text) => setRentalDraft((prev) => ({ ...prev, cost: text }))}
-              />
-              <Text style={styles.modalLabel}>Notes</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Notes"
-                value={rentalDraft.notes}
-                onChangeText={(text) => setRentalDraft((prev) => ({ ...prev, notes: text }))}
-                multiline
-              />
-            </ScrollView>
-            <View style={styles.row}>
-              <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={closeRentalModal}>
-                <Text style={styles.buttonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.button} onPress={saveRental}>
-                <Text style={styles.buttonText}>Save</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      ) : null}
+    <View style={{ flex: 1 }}>
+      {renderContent()}
       {Platform.OS !== 'web' && timePickerTarget && NativeDateTimePicker ? (
         <NativeDateTimePicker
           value={timePickerValue}
@@ -2718,7 +2462,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({
           }}
         />
       ) : null}
-    </ScrollView>
+    </View>
   );
 };
 

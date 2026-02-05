@@ -4,6 +4,7 @@ import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 
 import { formatDateLong } from '../utils/formatDateLong';
 import { renderRichTextBlocks } from '../utils/richText';
 import { parsePlanToDetails } from '../utils/itineraryParser';
+import { sanitizeCostInput } from '../utils/sanitizeCost';
 import type { Trait } from './traits';
 
 type Styles = ReturnType<typeof StyleSheet.create>;
@@ -987,7 +988,9 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
                   placeholder="Cost"
                   keyboardType="numeric"
                   value={detailDraft.cost}
-                  onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, cost: text }))}
+                  onChangeText={(text) =>
+                    setDetailDraft((prev) => ({ ...prev, cost: sanitizeCostInput(text) }))
+                  }
                 />
               </View>
               <View style={[styles.cell, styles.actionCell, { flex: 1 }]}>

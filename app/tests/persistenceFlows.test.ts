@@ -85,6 +85,7 @@ describe('Persistence flows for flights and lodging', () => {
       costPerNight: '100',
       address: '123 Test',
       paidBy: ['wizard-1'],
+      travelerIds: ['wizard-1'],
       imageUrl: '',
     };
 
@@ -158,6 +159,7 @@ describe('Persistence flows for flights and lodging', () => {
       costPerNight: '100',
       address: '123 Test',
       paidBy: [],
+      travelerIds: [],
       imageUrl: '',
     };
 
@@ -229,6 +231,7 @@ describe('Persistence flows for flights and lodging', () => {
       bookedOn: '',
       reference: '',
       paidBy: [],
+      travelerIds: [],
     };
 
     const result = await createTourForTrip({

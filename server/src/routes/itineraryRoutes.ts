@@ -75,17 +75,29 @@ router.get('/images', async (req, res) => {
     const docRef = db.collection('imageCache').doc(cacheId);
     const doc = await docRef.get();
     const now = Date.now();
+    let cachedUrl: string | null = null;
     if (doc.exists) {
       const data = doc.data() as ImageCacheEntry;
+      cachedUrl = data?.url || null;
       if (data?.url && data?.fetchedAt && now - data.fetchedAt < ONE_YEAR_MS) {
         res.json({ url: data.url, cached: true });
         return;
       }
     }
 
-    const fetchedUrl = (await fetchUnsplashImage(location)) || PLACEHOLDER_IMAGE;
-    await docRef.set({ url: fetchedUrl, fetchedAt: now }, { merge: true });
-    res.json({ url: fetchedUrl, cached: false });
+    const fetchedUrl = await fetchUnsplashImage(location);
+    if (fetchedUrl) {
+      await docRef.set({ url: fetchedUrl, fetchedAt: now }, { merge: true });
+      res.json({ url: fetchedUrl, cached: false });
+      return;
+    }
+
+    if (cachedUrl) {
+      res.json({ url: cachedUrl, cached: true });
+      return;
+    }
+
+    res.json({ url: PLACEHOLDER_IMAGE, cached: false });
   } catch (err) {
     logError('[itinerary] image cache error', err);
     res.json({ url: PLACEHOLDER_IMAGE, cached: false, error: 'fallback' });

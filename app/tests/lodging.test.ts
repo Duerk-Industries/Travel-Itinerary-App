@@ -1,5 +1,5 @@
 import { describe, expect, test } from '@jest/globals';
-import { buildLodgingPayload, calculateNights, createInitialLodgingState } from '../tabs/lodging';
+import { buildLodgingPayload, calculateNights, createInitialLodgingState, createLodgingDraftForTrip } from '../tabs/lodging';
 
 describe('Lodging helpers', () => {
   test('calculateNights returns whole-night stay length', () => {
@@ -31,5 +31,27 @@ describe('Lodging helpers', () => {
     const result = buildLodgingPayload(draft, 'trip-1', 'payer-1');
     expect(result.payload?.costPerNight).toBe('50.00');
     expect(result.payload?.paidBy).toEqual(['payer-1']);
+  });
+
+  test('createLodgingDraftForTrip defaults check-in to trip start and travelers to provided list', () => {
+    const draft = createLodgingDraftForTrip({
+      tripStartDate: '2025-05-01',
+      existingLodgings: [],
+      defaultPayerId: 'payer-1',
+      defaultTravelerIds: ['t1', 't2'],
+    });
+    expect(draft.checkInDate).toBe('2025-05-01');
+    expect(draft.checkOutDate).toBe('2025-05-02');
+    expect(draft.travelerIds).toEqual(['t1', 't2']);
+  });
+
+  test('createLodgingDraftForTrip uses latest checkout for subsequent lodgings', () => {
+    const draft = createLodgingDraftForTrip({
+      tripStartDate: '2025-05-01',
+      existingLodgings: [{ checkOutDate: '2025-05-03' }, { checkOutDate: '2025-05-05' }],
+      defaultTravelerIds: ['t3'],
+    });
+    expect(draft.checkInDate).toBe('2025-05-05');
+    expect(draft.checkOutDate).toBe('2025-05-06');
   });
 });

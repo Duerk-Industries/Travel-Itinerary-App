@@ -1,6 +1,11 @@
+/**
+ * @jest-environment node
+ */
+
 import React from 'react';
 import renderer, { act } from 'react-test-renderer';
-import OverviewTab, { dedupeAttendees, formatAttendeeLabel } from '../tabs/overview';
+import { OverviewTab, dedupeAttendees, formatAttendeeLabel } from '../tabs/overview';
+import LodgingDialog from '../components/LodgingDialog';
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -30,11 +35,12 @@ const baseProps = {
   onRefreshTrips: jest.fn(),
   onRefreshGroups: jest.fn(),
   onRefreshGroupMembers: jest.fn(),
-  onRefreshFlights: jest.fn(),
-  onRefreshLodgings: jest.fn(),
-  onRefreshTours: jest.fn(),
+  onFlightDataChanged: jest.fn(),
+  onLodgingDataChanged: jest.fn(),
+  onTourDataChanged: jest.fn(),
   onAddCarRental: jest.fn(),
   openFlightInFlightsTab: jest.fn(),
+  openLodgingDetails: jest.fn(),
 };
 
 const findByText = (root: any, label: string) =>
@@ -46,6 +52,35 @@ const pressByText = (root: any, label: string) => {
     throw new Error(`Button with label "${label}" not found.`);
   }
   textNode.parent.props.onPress();
+};
+
+const pressByTextWithin = (root: any, label: string) => {
+  const textNode = root.findAll((node: any) => node.type === 'Text' && node.props.children === label).slice(-1)[0];
+  if (!textNode || !textNode.parent?.props.onPress) {
+    throw new Error(`Button with label "${label}" not found.`);
+  }
+  textNode.parent.props.onPress();
+};
+
+const pressByTextContainsWithin = (root: any, text: string) => {
+  const pressables = root.findAll((node: any) => node.type === 'TouchableOpacity' && node.props?.onPress);
+  const matches: any[] = [];
+  for (const pressable of pressables) {
+    const textNodes = pressable.findAll((node: any) => node.type === 'Text');
+    const joined = textNodes
+      .map((node: any) => {
+        const children = Array.isArray(node.props.children) ? node.props.children : [node.props.children];
+        return children.filter((child: any) => typeof child === 'string').join('');
+      })
+      .join(' ');
+    if (joined.includes(text)) {
+      matches.push(pressable);
+    }
+  }
+  if (!matches.length) {
+    throw new Error(`Button with text containing "${text}" not found.`);
+  }
+  matches[matches.length - 1].props.onPress();
 };
 
 const pressByTextContains = (root: any, text: string) => {
@@ -167,7 +202,15 @@ describe('Overview edit controls', () => {
   });
 
   test('add traveler sends guestName when email is provided', async () => {
-    const fetchMock = jest.fn(async () => ({ ok: true, json: async () => ({}) }) as any);
+    const fetchMock = jest.fn(async (url: string, options?: any) => {
+      if (String(url).includes('/api/itineraries')) {
+        return { ok: true, json: async () => [] };
+      }
+      if (String(url).includes('/api/groups/') && options?.method === 'POST') {
+        return { ok: true, json: async () => [] };
+      }
+      return { ok: true, json: async () => ({}) };
+    }) as any;
     (global as any).fetch = fetchMock;
 
     let tree: any;
@@ -185,7 +228,7 @@ describe('Overview edit controls', () => {
     });
 
     act(() => {
-      const addTravelerNode = findByText(root, 'Add Traveler');
+      const addTravelerNode = findByText(root, '+ Add');
       if (!addTravelerNode?.parent?.props.onPress) {
         throw new Error('Add Traveler button not found.');
       }
@@ -202,7 +245,7 @@ describe('Overview edit controls', () => {
     });
 
     await act(async () => {
-      pressByText(root, 'Add');
+      pressByText(root, 'Save Traveler');
     });
 
     const addCall = fetchMock.mock.calls.find((call: any[]) => String(call[0]).includes('/api/groups/'));
@@ -229,11 +272,14 @@ describe('Overview edit controls', () => {
       },
     ];
     const fetchMock = jest.fn(async (url: string, options?: any) => {
+      if (String(url).includes('/api/itineraries')) {
+        return { ok: true, json: async () => [] } as any;
+      }
       if (String(url).includes('/api/trips/') && options?.method === 'PATCH') {
         return { ok: true, json: async () => ({}) } as any;
       }
       if (String(url).includes('/api/groups/') && options?.method === 'DELETE') {
-        return { ok: true, json: async () => ({}) } as any;
+        return { ok: true, json: async () => [] } as any;
       }
       return { ok: true, json: async () => ({}) } as any;
     });
@@ -249,7 +295,9 @@ describe('Overview edit controls', () => {
       pressByText(root, 'Edit');
     });
     act(() => {
-      pressByTextContains(root, 'vduerk@gmail.com');
+      const travelerChip = root.findByProps({ testID: 'attendee-chip-vduerk-gmail-com' });
+      const removeButton = travelerChip.findByType('TouchableOpacity');
+      removeButton.props.onPress();
     });
     await act(async () => {
       pressByText(root, 'Save');
@@ -259,5 +307,79 @@ describe('Overview edit controls', () => {
       String(call[0]).includes(`/api/groups/${baseTrip.groupId}/members/member-1`)
     );
     expect(deleteCall).toBeTruthy();
+  });
+
+  test('edits lodging paid by and saves via PUT', async () => {
+    const fetchMock = jest.fn(async (url: string, options?: any): Promise<any> => {
+      if (String(url).includes('/api/itineraries')) {
+        return { ok: true, json: async () => [] } as any;
+      }
+      if (String(url).includes('/api/lodgings/') && options?.method === 'PUT') {
+        return { ok: true, json: async () => JSON.parse(options.body) };
+      }
+      return { ok: true, json: async () => ({}) } as any;
+    });
+    (global as any).fetch = fetchMock;
+
+    const attendees = [
+      { id: 'member-1', firstName: 'John', lastName: 'Doe', email: 'john@doe.com', status: 'active' as const },
+      { id: 'member-2', firstName: 'Jane', lastName: 'Doe', email: 'jane@doe.com', status: 'active' as const },
+    ];
+    const lodgings = [
+      {
+        id: 'lodging-1',
+        userId: 'user-1',
+        tripId: baseTrip.id,
+        name: 'Hotel 1',
+        checkInDate: '2026-01-02',
+        checkOutDate: '2026-01-05',
+        rooms: '1',
+        refundBy: '',
+        totalCost: '400',
+        costPerNight: '100',
+        address: '123 Main St',
+        paidBy: ['member-1'],
+        travelerIds: ['member-1'],
+      },
+    ];
+
+    let tree: any;
+    await act(async () => {
+      tree = renderer.create(
+        <OverviewTab
+          {...baseProps}
+          attendees={attendees}
+          lodgings={lodgings as any}
+          defaultPayerId="member-1"
+        />
+      );
+    });
+    const root = tree!.root;
+
+    act(() => {
+      pressByText(root, 'Edit');
+    });
+
+    act(() => {
+      pressByText(root, 'Hotel 1');
+    });
+
+    const lodgingDialog = root.findByType(LodgingDialog);
+    act(() => {
+      pressByTextContainsWithin(lodgingDialog, 'Jane Doe');
+    });
+
+    await act(async () => {
+      pressByTextWithin(lodgingDialog, 'Save');
+    });
+
+    const lodgingCall = fetchMock.mock.calls.find((call: any[]) => String(call[0]).includes('/api/lodgings/lodging-1'));
+    if (!lodgingCall) {
+      throw new Error('Expected lodging update request');
+    }
+    const options = lodgingCall[1];
+    expect(options.method).toBe('PUT');
+    const payload = JSON.parse(options.body);
+    expect(payload.paidBy).toEqual(['member-1', 'member-2']);
   });
 });

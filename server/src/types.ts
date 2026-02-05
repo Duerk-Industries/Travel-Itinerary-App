@@ -82,6 +82,8 @@ export interface Trip {
   startMonth?: number | null;
   startYear?: number | null;
   durationDays?: number | null;
+  currency?: string | null;
+  coveredBy?: Record<string, string>;
   createdAt: string;
 }
 
@@ -107,7 +109,10 @@ export interface Lodging {
   cost_per_night: number;
   address: string;
   paid_by: string[];
+  traveler_ids?: string[];
   imageUrl?: string;
+  place_id?: string;
+  placeId?: string;
 }
 
 export interface Tour {
@@ -144,6 +149,33 @@ export interface ItineraryDetail {
   time?: string | null;
   activity: string;
   cost?: number | null;
+}
+
+export interface PlaceDetailsCache {
+  placeId: string;
+  name: string;
+  details: Record<string, any>;
+  fetchedAt: string;
+}
+
+export interface Expense {
+  id: string;
+  tripId: string;
+  groupId: string;
+  userId: string;
+  expenseDate: string;
+  category: string;
+  amount: number;
+  currency: string;
+  amountInTripCurrency?: number | null;
+  exchangeRateToTripCurrency?: number | null;
+  exchangeRateDate?: string | null;
+  payerIds: string[];
+  forIds: string[];
+  sourceType?: string | null;
+  sourceId?: string | null;
+  notes?: string | null;
+  createdAt: string;
 }
 
 export interface GroupInvite {

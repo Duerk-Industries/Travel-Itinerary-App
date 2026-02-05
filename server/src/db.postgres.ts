@@ -1,7 +1,20 @@
 // server/src/db.ts
 import { Pool } from 'pg';
 import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
-import { Flight, Group, GroupMember, Trait, Trip, User, WebUser, Lodging, Tour, Itinerary, ItineraryDetail } from './types';
+import {
+  Flight,
+  Group,
+  GroupMember,
+  Trait,
+  Trip,
+  User,
+  WebUser,
+  Lodging,
+  Tour,
+  Itinerary,
+  ItineraryDetail,
+  PlaceDetailsCache,
+} from './types';
 import { logError } from './logger';
 import { getEnvValue } from './env';
 
@@ -141,6 +154,8 @@ export const initDb = async (): Promise<void> => {
       claimed_at TIMESTAMP,
       removed_at TIMESTAMP,
       guest_name TEXT,
+      first_name TEXT,
+      last_name TEXT,
       added_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       created_at TIMESTAMP DEFAULT NOW(),
       UNIQUE (group_id, user_id)
@@ -151,6 +166,8 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE group_members ADD COLUMN IF NOT EXISTS claimed_at TIMESTAMP;`);
   await p.query(`ALTER TABLE group_members ADD COLUMN IF NOT EXISTS removed_at TIMESTAMP;`);
   await p.query(`ALTER TABLE group_members ADD COLUMN IF NOT EXISTS guest_name TEXT;`);
+  await p.query(`ALTER TABLE group_members ADD COLUMN IF NOT EXISTS first_name TEXT;`);
+  await p.query(`ALTER TABLE group_members ADD COLUMN IF NOT EXISTS last_name TEXT;`);
   await p.query(`ALTER TABLE group_members ADD COLUMN IF NOT EXISTS added_by UUID;`);
   await p.query(`ALTER TABLE group_members ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();`);
 
@@ -203,6 +220,8 @@ export const initDb = async (): Promise<void> => {
       start_month INTEGER,
       start_year INTEGER,
       duration_days INTEGER,
+      currency TEXT DEFAULT 'USD',
+      covered_by JSONB DEFAULT '{}'::jsonb,
       created_at TIMESTAMP DEFAULT NOW()
     );
   `);
@@ -213,6 +232,10 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS start_month INTEGER;`);
   await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS start_year INTEGER;`);
   await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS duration_days INTEGER;`);
+  await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS currency TEXT DEFAULT 'USD';`);
+  await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS covered_by JSONB DEFAULT '{}'::jsonb;`);
+  await p.query(`UPDATE trips SET currency = 'USD' WHERE currency IS NULL;`);
+  await p.query(`UPDATE trips SET covered_by = '{}'::jsonb WHERE covered_by IS NULL;`);
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS trip_removals (
@@ -280,7 +303,9 @@ export const initDb = async (): Promise<void> => {
       total_cost NUMERIC NOT NULL DEFAULT 0,
       cost_per_night NUMERIC NOT NULL DEFAULT 0,
       address TEXT,
+      place_id TEXT,
       paid_by JSONB DEFAULT '[]'::jsonb,
+      traveler_ids JSONB DEFAULT '[]'::jsonb,
       image_url TEXT,
       created_at TIMESTAMP DEFAULT NOW()
     );
@@ -290,7 +315,9 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS total_cost NUMERIC NOT NULL DEFAULT 0;`);
   await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS cost_per_night NUMERIC NOT NULL DEFAULT 0;`);
   await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS address TEXT;`);
+  await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS place_id TEXT;`);
   await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS paid_by JSONB DEFAULT '[]'::jsonb;`);
+  await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS traveler_ids JSONB DEFAULT '[]'::jsonb;`);
   await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS image_url TEXT;`);
 
   await p.query(`
@@ -329,6 +356,16 @@ export const initDb = async (): Promise<void> => {
   await p.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_airports_iata_code ON airports(iata_code);`);
 
   await p.query(`
+    CREATE TABLE IF NOT EXISTS place_details_cache (
+      place_id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      details JSONB NOT NULL DEFAULT '{}'::jsonb,
+      fetched_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+
+  await p.query(`
     CREATE TABLE IF NOT EXISTS itineraries (
       id UUID PRIMARY KEY,
       trip_id UUID NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
@@ -351,6 +388,33 @@ export const initDb = async (): Promise<void> => {
     );
   `);
 
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS expenses (
+      id UUID PRIMARY KEY,
+      trip_id UUID NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+      group_id UUID NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      expense_date DATE NOT NULL,
+      category TEXT NOT NULL,
+      amount NUMERIC NOT NULL DEFAULT 0,
+      currency TEXT NOT NULL DEFAULT 'USD',
+      amount_in_trip_currency NUMERIC,
+      exchange_rate_to_trip_currency NUMERIC,
+      exchange_rate_date DATE,
+      payer_ids JSONB DEFAULT '[]'::jsonb,
+      for_ids JSONB DEFAULT '[]'::jsonb,
+      source_type TEXT,
+      source_id TEXT,
+      notes TEXT,
+      created_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE (source_type, source_id)
+    );
+  `);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_expenses_trip_date ON expenses(trip_id, expense_date);`);
+  await p.query(`ALTER TABLE expenses ADD COLUMN IF NOT EXISTS amount_in_trip_currency NUMERIC;`);
+  await p.query(`ALTER TABLE expenses ADD COLUMN IF NOT EXISTS exchange_rate_to_trip_currency NUMERIC;`);
+  await p.query(`ALTER TABLE expenses ADD COLUMN IF NOT EXISTS exchange_rate_date DATE;`);
+
   if (process.env.USE_IN_MEMORY_DB === '1') {
     // Clear data between test runs while keeping schema intact.
     await p.query(`DELETE FROM itinerary_details`);
@@ -359,7 +423,9 @@ export const initDb = async (): Promise<void> => {
     await p.query(`DELETE FROM lodgings`);
     await p.query(`DELETE FROM flight_shares`);
     await p.query(`DELETE FROM flights`);
+    await p.query(`DELETE FROM expenses`);
     await p.query(`DELETE FROM trips`);
+    await p.query(`DELETE FROM place_details_cache`);
     await p.query(`DELETE FROM group_invites`);
     await p.query(`DELETE FROM group_members`);
     await p.query(`DELETE FROM groups`);
@@ -905,8 +971,11 @@ export const updateFlight = async (
     );
     if (!rows.length) throw new Error('Flight not found');
     const row = rows[0] as any;
+    const tripId = row.tripId ?? row.trip_id ?? updates.tripId ?? null;
     return {
       ...(row as Flight),
+      tripId,
+      departureDate: (row as any).departureDate ?? row.departure_date ?? updates.departureDate ?? null,
       paidBy: Array.isArray(row.paid_by) ? row.paid_by : [],
       passengerIds: Array.isArray(row.passenger_ids) ? row.passenger_ids : [],
       passengerName: (row as any).passengerName ?? row.passenger_name,
@@ -965,8 +1034,11 @@ export const updateFlight = async (
   );
   if (!rows.length) throw new Error('Flight not found');
   const row = rows[0] as any;
+  const tripId = row.tripId ?? row.trip_id ?? updates.tripId ?? null;
   return {
     ...(row as Flight),
+    tripId,
+    departureDate: (row as any).departureDate ?? row.departure_date ?? updates.departureDate ?? null,
     paidBy: Array.isArray(row.paid_by) ? row.paid_by : [],
     passengerIds: Array.isArray(row.passenger_ids) ? row.passenger_ids : [],
     passengerName: (row as any).passengerName ?? row.passenger_name,
@@ -1001,6 +1073,7 @@ export const updateTripDetails = async (
     startYear?: number | null;
     durationDays?: number | null;
     dateMode?: 'range' | 'month';
+    currency?: string | null;
   }
 ): Promise<Trip> => {
   const p = getPool();
@@ -1015,7 +1088,8 @@ export const updateTripDetails = async (
          end_date = CASE WHEN $6 = 'range' THEN $4::date WHEN $6 = 'month' THEN NULL ELSE end_date END,
          start_month = CASE WHEN $6 = 'month' THEN $7::int WHEN $6 = 'range' THEN NULL ELSE start_month END,
          start_year = CASE WHEN $6 = 'month' THEN $8::int WHEN $6 = 'range' THEN NULL ELSE start_year END,
-         duration_days = CASE WHEN $6 = 'month' THEN $9::int WHEN $6 = 'range' THEN NULL ELSE duration_days END
+         duration_days = CASE WHEN $6 = 'month' THEN $9::int WHEN $6 = 'range' THEN NULL ELSE duration_days END,
+         currency = COALESCE($10, currency)
      WHERE id = $5
      RETURNING id,
        group_id as "groupId",
@@ -1027,6 +1101,8 @@ export const updateTripDetails = async (
        start_month as "startMonth",
        start_year as "startYear",
        duration_days as "durationDays",
+       currency,
+       covered_by as "coveredBy",
        created_at as "createdAt"`,
     [
       updates.description ?? null,
@@ -1038,10 +1114,39 @@ export const updateTripDetails = async (
       updates.startMonth ?? null,
       updates.startYear ?? null,
       updates.durationDays ?? null,
+      updates.currency ?? null,
     ]
   );
   if (!rows.length) throw new Error('Trip not found');
   return rows[0];
+};
+
+export const getTripCovering = async (userId: string, tripId: string): Promise<Record<string, string>> => {
+  const p = getPool();
+  const membership = await ensureUserInTrip(tripId, userId);
+  if (!membership) throw new Error('Not authorized to view this trip');
+  const { rows } = await p.query<{ coveredBy: Record<string, string> | null }>(
+    `SELECT covered_by as "coveredBy" FROM trips WHERE id = $1`,
+    [tripId]
+  );
+  if (!rows.length) throw new Error('Trip not found');
+  return rows[0].coveredBy ?? {};
+};
+
+export const updateTripCovering = async (
+  userId: string,
+  tripId: string,
+  coveredBy: Record<string, string>
+): Promise<Record<string, string>> => {
+  const p = getPool();
+  const membership = await ensureUserInTrip(tripId, userId);
+  if (!membership) throw new Error('Not authorized to update this trip');
+  const { rows } = await p.query<{ coveredBy: Record<string, string> | null }>(
+    `UPDATE trips SET covered_by = $1 WHERE id = $2 RETURNING covered_by as "coveredBy"`,
+    [coveredBy ?? {}, tripId]
+  );
+  if (!rows.length) throw new Error('Trip not found');
+  return rows[0].coveredBy ?? {};
 };
 
 export const getFlightForUser = async (flightId: string, userId: string): Promise<Flight | null> => {
@@ -1255,7 +1360,9 @@ export const listLodgings = async (userId: string, tripId?: string | null): Prom
              l.total_cost as "totalCost",
              l.cost_per_night as "costPerNight",
              l.address,
+             l.place_id as "placeId",
              COALESCE(l.paid_by, '[]'::jsonb) as "paid_by",
+             COALESCE(l.traveler_ids, '[]'::jsonb) as "traveler_ids",
              l.image_url as "imageUrl",
              l.created_at as "createdAt"
       FROM lodgings l
@@ -1269,7 +1376,14 @@ export const listLodgings = async (userId: string, tripId?: string | null): Prom
   );
   return rows.map((r: any) => {
     const paidBy = Array.isArray(r.paid_by) ? r.paid_by : [];
-    return { ...(r as Lodging), paid_by: paidBy, paidBy } as Lodging & { paidBy: string[] };
+    const travelerIds = Array.isArray(r.traveler_ids) ? r.traveler_ids : [];
+    return {
+      ...(r as Lodging),
+      paid_by: paidBy,
+      paidBy,
+      traveler_ids: travelerIds,
+      travelerIds,
+    } as Lodging & { paidBy: string[]; travelerIds: string[] };
   });
 };
 
@@ -1284,7 +1398,9 @@ export const insertLodging = async (lodging: {
   totalCost: number;
   costPerNight: number;
   address?: string;
+  place_id?: string;
   paid_by?: string[];
+  traveler_ids?: string[];
   imageUrl?: string | null;
 }): Promise<Lodging> => {
   const p = getPool();
@@ -1292,9 +1408,9 @@ export const insertLodging = async (lodging: {
   const { rows } = await p.query(
     `
       INSERT INTO lodgings (
-        id, user_id, trip_id, name, check_in_date, check_out_date, rooms, refund_by, total_cost, cost_per_night, address, paid_by, image_url
+        id, user_id, trip_id, name, check_in_date, check_out_date, rooms, refund_by, total_cost, cost_per_night, address, place_id, paid_by, traveler_ids, image_url
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
       RETURNING id,
                 user_id as "userId",
                 trip_id as "tripId",
@@ -1306,7 +1422,9 @@ export const insertLodging = async (lodging: {
                 total_cost as "totalCost",
                 cost_per_night as "costPerNight",
                 address,
+                place_id as "placeId",
                 COALESCE(paid_by, '[]'::jsonb) as "paid_by",
+                COALESCE(traveler_ids, '[]'::jsonb) as "traveler_ids",
                 image_url as "imageUrl",
                 created_at as "createdAt"
     `,
@@ -1322,13 +1440,22 @@ export const insertLodging = async (lodging: {
       lodging.totalCost,
       lodging.costPerNight,
       lodging.address ?? '',
+      lodging.place_id ?? null,
       JSON.stringify(lodging.paid_by ?? []),
+      JSON.stringify(lodging.traveler_ids ?? []),
       lodging.imageUrl ?? null,
     ]
   );
   const row = rows[0] as any;
   const paidBy = Array.isArray(row.paid_by) ? row.paid_by : [];
-  return { ...(row as Lodging), paid_by: paidBy, paidBy } as Lodging & { paidBy: string[] };
+  const travelerIds = Array.isArray(row.traveler_ids) ? row.traveler_ids : [];
+  return {
+    ...(row as Lodging),
+    paid_by: paidBy,
+    paidBy,
+    traveler_ids: travelerIds,
+    travelerIds,
+  } as Lodging & { paidBy: string[]; travelerIds: string[] };
 };
 
 // Delete a lodging row when the caller belongs to the trip's group.
@@ -1386,8 +1513,10 @@ export const updateLodging = async (
     updates.total_cost ?? null,
     updates.cost_per_night ?? null,
     updates.address ?? null,
+    updates.place_id ?? null,
     updates.imageUrl ?? null,
     typeof updates.paid_by !== 'undefined' ? JSON.stringify(updates.paid_by ?? []) : null,
+    typeof updates.traveler_ids !== 'undefined' ? JSON.stringify(updates.traveler_ids ?? []) : null,
     updates.trip_id ?? null,
   ];
 
@@ -1404,9 +1533,11 @@ export const updateLodging = async (
           total_cost = COALESCE($8, total_cost),
           cost_per_night = COALESCE($9, cost_per_night),
           address = COALESCE($10, address),
-          image_url = COALESCE($11, image_url),
-          paid_by = COALESCE($12::jsonb, paid_by),
-          trip_id = COALESCE($13, trip_id)
+          place_id = COALESCE($11, place_id),
+          image_url = COALESCE($12, image_url),
+          paid_by = COALESCE($13::jsonb, paid_by),
+          traveler_ids = COALESCE($14::jsonb, traveler_ids),
+          trip_id = COALESCE($15, trip_id)
         WHERE id = $1
         RETURNING
           id,
@@ -1420,7 +1551,9 @@ export const updateLodging = async (
           total_cost as "totalCost",
           cost_per_night as "costPerNight",
           address,
+          place_id as "placeId",
           COALESCE(paid_by, '[]'::jsonb) as "paid_by",
+          COALESCE(traveler_ids, '[]'::jsonb) as "traveler_ids",
           image_url as "imageUrl",
           created_at as "createdAt"
       `
@@ -1435,12 +1568,14 @@ export const updateLodging = async (
           total_cost = COALESCE($8, l.total_cost),
           cost_per_night = COALESCE($9, l.cost_per_night),
           address = COALESCE($10, l.address),
-          image_url = COALESCE($11, l.image_url),
-          paid_by = COALESCE($12::jsonb, l.paid_by),
-          trip_id = COALESCE($13, l.trip_id)
+          place_id = COALESCE($11, l.place_id),
+          image_url = COALESCE($12, l.image_url),
+          paid_by = COALESCE($13::jsonb, l.paid_by),
+          traveler_ids = COALESCE($14::jsonb, l.traveler_ids),
+          trip_id = COALESCE($15, l.trip_id)
         FROM trips t
         WHERE l.id = $1
-          AND t.id = COALESCE($13, l.trip_id)
+          AND t.id = COALESCE($15, l.trip_id)
           -- allow edits by any member of the trip's group
           AND t.group_id IN (SELECT group_id FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $2)
         RETURNING
@@ -1455,7 +1590,9 @@ export const updateLodging = async (
           l.total_cost as "totalCost",
           l.cost_per_night as "costPerNight",
           l.address,
+          l.place_id as "placeId",
           COALESCE(l.paid_by, '[]'::jsonb) as "paid_by",
+          COALESCE(l.traveler_ids, '[]'::jsonb) as "traveler_ids",
           l.image_url as "imageUrl",
           l.created_at as "createdAt"
       `,
@@ -1464,7 +1601,14 @@ export const updateLodging = async (
   if (!rows.length) return null;
   const row = rows[0] as any;
   const paidBy = Array.isArray(row.paid_by) ? row.paid_by : [];
-  return { ...(row as Lodging), paid_by: paidBy, paidBy } as Lodging & { paidBy: string[] };
+  const travelerIds = Array.isArray(row.traveler_ids) ? row.traveler_ids : [];
+  return {
+    ...(row as Lodging),
+    paid_by: paidBy,
+    paidBy,
+    traveler_ids: travelerIds,
+    travelerIds,
+  } as Lodging & { paidBy: string[]; travelerIds: string[] };
 };
 export const listTours = async (userId: string, tripId?: string): Promise<Tour[]> => {
   // Return tours for the given trip that the requesting user can see (anyone in the trip's group).
@@ -1604,6 +1748,289 @@ export const deleteTour = async (tourId: string, userId: string): Promise<void> 
   await p.query(`DELETE FROM tours WHERE id = $1 AND user_id = $2`, [tourId, userId]);
 };
 
+const resolveTripCurrency = async (tripId: string): Promise<string> => {
+  const p = getPool();
+  const { rows } = await p.query<{ currency: string | null }>(`SELECT currency FROM trips WHERE id = $1`, [tripId]);
+  return rows[0]?.currency ?? 'USD';
+};
+
+export const listExpenses = async (userId: string, tripId?: string | null): Promise<any[]> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `
+      SELECT e.id,
+             e.trip_id as "tripId",
+             e.group_id as "groupId",
+             e.user_id as "userId",
+             to_char(e.expense_date, 'YYYY-MM-DD') as "expenseDate",
+             e.category,
+             e.amount::numeric as amount,
+             e.currency,
+             e.amount_in_trip_currency::numeric as "amountInTripCurrency",
+             e.exchange_rate_to_trip_currency::numeric as "exchangeRateToTripCurrency",
+             to_char(e.exchange_rate_date, 'YYYY-MM-DD') as "exchangeRateDate",
+             COALESCE(e.payer_ids, '[]'::jsonb) as "payerIds",
+             COALESCE(e.for_ids, '[]'::jsonb) as "forIds",
+             e.source_type as "sourceType",
+             e.source_id as "sourceId",
+             e.notes,
+             e.created_at as "createdAt"
+      FROM expenses e
+      JOIN trips t ON e.trip_id = t.id
+      WHERE ($2::uuid IS NULL OR e.trip_id = $2)
+        AND t.group_id IN (SELECT group_id FROM group_members WHERE user_id = $1)
+      ORDER BY e.expense_date ASC, e.created_at DESC
+    `,
+    [userId, tripId ?? null]
+  );
+  const normalizeJsonArray = (value: any): string[] => {
+    if (Array.isArray(value)) return value;
+    if (typeof value === 'string') {
+      try {
+        const parsed = JSON.parse(value);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (err) {
+        return [];
+      }
+    }
+    if (value && typeof value === 'object') {
+      const keys = Object.keys(value);
+      const numericKeys = keys.filter((key) => String(Number(key)) === key);
+      if (numericKeys.length === keys.length) {
+        return numericKeys
+          .sort((a, b) => Number(a) - Number(b))
+          .map((key) => value[key])
+          .filter(Boolean);
+      }
+    }
+    return [];
+  };
+  return rows.map((row: any) => ({
+    ...row,
+    payerIds: normalizeJsonArray(row.payerIds),
+    forIds: normalizeJsonArray(row.forIds),
+  }));
+};
+
+export const insertExpense = async (expense: {
+  userId: string;
+  tripId: string;
+  groupId: string;
+  expenseDate: string;
+  category: string;
+  amount: number;
+  currency?: string | null;
+  amountInTripCurrency?: number | null;
+  exchangeRateToTripCurrency?: number | null;
+  exchangeRateDate?: string | null;
+  payerIds?: string[];
+  forIds?: string[];
+  sourceType?: string | null;
+  sourceId?: string | null;
+  notes?: string | null;
+}): Promise<any> => {
+  const p = getPool();
+  const id = randomUUID();
+  const tripCurrency = await resolveTripCurrency(expense.tripId);
+  const currency = expense.currency ?? tripCurrency;
+  const amountInTripCurrency =
+    expense.amountInTripCurrency ??
+    (currency === tripCurrency ? expense.amount ?? 0 : null);
+  const exchangeRateToTripCurrency =
+    expense.exchangeRateToTripCurrency ??
+    (currency === tripCurrency ? 1 : null);
+  const { rows } = await p.query(
+    `
+      INSERT INTO expenses (
+        id, trip_id, group_id, user_id, expense_date, category, amount, currency, amount_in_trip_currency, exchange_rate_to_trip_currency, exchange_rate_date,
+        payer_ids, for_ids, source_type, source_id, notes
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::date, $12::jsonb, $13::jsonb, $14, $15, $16
+      )
+      RETURNING
+        id,
+        trip_id as "tripId",
+        group_id as "groupId",
+        user_id as "userId",
+        to_char(expense_date, 'YYYY-MM-DD') as "expenseDate",
+        category,
+        amount::numeric as amount,
+        currency,
+        amount_in_trip_currency::numeric as "amountInTripCurrency",
+        exchange_rate_to_trip_currency::numeric as "exchangeRateToTripCurrency",
+        to_char(exchange_rate_date, 'YYYY-MM-DD') as "exchangeRateDate",
+        COALESCE(payer_ids, '[]'::jsonb) as "payerIds",
+        COALESCE(for_ids, '[]'::jsonb) as "forIds",
+        source_type as "sourceType",
+        source_id as "sourceId",
+        notes,
+        created_at as "createdAt"
+    `,
+    [
+      id,
+      expense.tripId,
+      expense.groupId,
+      expense.userId,
+      expense.expenseDate,
+      expense.category,
+      expense.amount ?? 0,
+      currency,
+      amountInTripCurrency,
+      exchangeRateToTripCurrency,
+      expense.exchangeRateDate ?? null,
+      JSON.stringify(expense.payerIds ?? []),
+      JSON.stringify(expense.forIds ?? []),
+      expense.sourceType ?? null,
+      expense.sourceId ?? null,
+      expense.notes ?? null,
+    ]
+  );
+  const row = rows[0] as any;
+  return {
+    ...row,
+    payerIds: Array.isArray(row.payerIds) ? row.payerIds : [],
+    forIds: Array.isArray(row.forIds) ? row.forIds : [],
+  };
+};
+
+export const upsertExpenseForSource = async (expense: {
+  userId: string;
+  tripId: string;
+  groupId: string;
+  expenseDate: string;
+  category: string;
+  amount: number;
+  currency?: string | null;
+  amountInTripCurrency?: number | null;
+  exchangeRateToTripCurrency?: number | null;
+  exchangeRateDate?: string | null;
+  payerIds?: string[];
+  forIds?: string[];
+  sourceType: string;
+  sourceId: string;
+  notes?: string | null;
+}): Promise<any> => {
+  const p = getPool();
+  const tripCurrency = await resolveTripCurrency(expense.tripId);
+  const currency = expense.currency ?? tripCurrency;
+  const amountInTripCurrency =
+    expense.amountInTripCurrency ??
+    (currency === tripCurrency ? expense.amount ?? 0 : null);
+  const exchangeRateToTripCurrency =
+    expense.exchangeRateToTripCurrency ??
+    (currency === tripCurrency ? 1 : null);
+  const { rows } = await p.query(
+    `
+      INSERT INTO expenses (
+        id, trip_id, group_id, user_id, expense_date, category, amount, currency, amount_in_trip_currency, exchange_rate_to_trip_currency, exchange_rate_date,
+        payer_ids, for_ids, source_type, source_id, notes
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::date, $12::jsonb, $13::jsonb, $14, $15, $16
+      )
+      ON CONFLICT (source_type, source_id)
+      DO UPDATE SET
+        trip_id = EXCLUDED.trip_id,
+        group_id = EXCLUDED.group_id,
+        user_id = EXCLUDED.user_id,
+        expense_date = EXCLUDED.expense_date,
+        category = EXCLUDED.category,
+        amount = EXCLUDED.amount,
+        currency = EXCLUDED.currency,
+        amount_in_trip_currency = EXCLUDED.amount_in_trip_currency,
+        exchange_rate_to_trip_currency = EXCLUDED.exchange_rate_to_trip_currency,
+        exchange_rate_date = EXCLUDED.exchange_rate_date,
+        payer_ids = EXCLUDED.payer_ids,
+        for_ids = EXCLUDED.for_ids,
+        notes = EXCLUDED.notes
+      RETURNING
+        id,
+        trip_id as "tripId",
+        group_id as "groupId",
+        user_id as "userId",
+        to_char(expense_date, 'YYYY-MM-DD') as "expenseDate",
+        category,
+        amount::numeric as amount,
+        currency,
+        amount_in_trip_currency::numeric as "amountInTripCurrency",
+        exchange_rate_to_trip_currency::numeric as "exchangeRateToTripCurrency",
+        to_char(exchange_rate_date, 'YYYY-MM-DD') as "exchangeRateDate",
+        COALESCE(payer_ids, '[]'::jsonb) as "payerIds",
+        COALESCE(for_ids, '[]'::jsonb) as "forIds",
+        source_type as "sourceType",
+        source_id as "sourceId",
+        notes,
+        created_at as "createdAt"
+    `,
+    [
+      randomUUID(),
+      expense.tripId,
+      expense.groupId,
+      expense.userId,
+      expense.expenseDate,
+      expense.category,
+      expense.amount ?? 0,
+      currency,
+      amountInTripCurrency,
+      exchangeRateToTripCurrency,
+      expense.exchangeRateDate ?? null,
+      JSON.stringify(expense.payerIds ?? []),
+      JSON.stringify(expense.forIds ?? []),
+      expense.sourceType,
+      expense.sourceId,
+      expense.notes ?? null,
+    ]
+  );
+  const row = rows[0] as any;
+  return {
+    ...row,
+    payerIds: Array.isArray(row.payerIds) ? row.payerIds : [],
+    forIds: Array.isArray(row.forIds) ? row.forIds : [],
+  };
+};
+
+export const deleteExpense = async (expenseId: string, userId: string): Promise<void> => {
+  const p = getPool();
+  const useInMemory = process.env.USE_IN_MEMORY_DB === '1';
+  if (useInMemory) {
+    await p.query(`DELETE FROM expenses WHERE id = $1`, [expenseId]);
+    return;
+  }
+  await p.query(
+    `
+      DELETE FROM expenses e
+      USING trips t
+      WHERE e.id = $1
+        AND t.id = e.trip_id
+        AND EXISTS (
+          SELECT 1 FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $2
+        )
+    `,
+    [expenseId, userId]
+  );
+};
+
+export const deleteExpenseForSource = async (sourceType: string, sourceId: string, userId: string): Promise<void> => {
+  const p = getPool();
+  const useInMemory = process.env.USE_IN_MEMORY_DB === '1';
+  if (useInMemory) {
+    await p.query(`DELETE FROM expenses WHERE source_type = $1 AND source_id = $2`, [sourceType, sourceId]);
+    return;
+  }
+  await p.query(
+    `
+      DELETE FROM expenses e
+      USING trips t
+      WHERE e.source_type = $1
+        AND e.source_id = $2
+        AND t.id = e.trip_id
+        AND EXISTS (
+          SELECT 1 FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $3
+        )
+    `,
+    [sourceType, sourceId, userId]
+  );
+};
+
 
 export const shareFlight = async (
   flightId: string,
@@ -1643,8 +2070,8 @@ export const listGroupMembers = async (
     `SELECT gm.id,
             gm.guest_name as "guestName",
             COALESCE(u.email, gm.invite_email) as "email",
-            COALESCE(wu.first_name, wu_pending.first_name) as "firstName",
-            COALESCE(wu.last_name, wu_pending.last_name) as "lastName",
+            COALESCE(gm.first_name, wu.first_name, wu_pending.first_name) as "firstName",
+            COALESCE(gm.last_name, wu.last_name, wu_pending.last_name) as "lastName",
             gm.removed_at as "removedAt",
             CASE
               WHEN gm.removed_at IS NOT NULL THEN 'removed'
@@ -1773,7 +2200,7 @@ export const listGroupsForUser = async (
 export const addGroupMember = async (
   ownerId: string,
   groupId: string,
-  member: { email?: string; guestName?: string }
+  member: { email?: string; guestName?: string; firstName?: string; lastName?: string }
 ): Promise<{ inviteId?: string; email?: string }> => {
   const p = getPool();
   const client = await p.connect();
@@ -1789,6 +2216,8 @@ export const addGroupMember = async (
     if (emailValue) {
       const normalizedEmail = emailValue.toLowerCase();
       const user = await findUserByEmail(normalizedEmail);
+      const firstName = member.firstName?.trim() || null;
+      const lastName = member.lastName?.trim() || null;
       if (user) {
         await client.query(
           `INSERT INTO group_members (id, group_id, user_id, added_by)
@@ -1812,16 +2241,21 @@ export const addGroupMember = async (
       );
       if (!existingPending.rowCount) {
         await client.query(
-          `INSERT INTO group_members (id, group_id, invite_email, guest_name, added_by)
-           VALUES ($1, $2, $3, $4, $5)
+          `INSERT INTO group_members (id, group_id, invite_email, guest_name, first_name, last_name, added_by)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
            ON CONFLICT DO NOTHING`,
-          [randomUUID(), groupId, normalizedEmail, member.guestName ?? null, ownerId]
+          [randomUUID(), groupId, normalizedEmail, member.guestName ?? null, firstName, lastName, ownerId]
         );
       } else {
-        await client.query(`UPDATE group_members SET removed_at = NULL, guest_name = COALESCE($1, guest_name) WHERE id = $2`, [
-          member.guestName ?? null,
-          existingPending.rows[0].id,
-        ]);
+        await client.query(
+          `UPDATE group_members
+           SET removed_at = NULL,
+               guest_name = COALESCE($1, guest_name),
+               first_name = COALESCE($2, first_name),
+               last_name = COALESCE($3, last_name)
+           WHERE id = $4`,
+          [member.guestName ?? null, firstName, lastName, existingPending.rows[0].id]
+        );
       }
 
       const inviteId = randomUUID();
@@ -1836,9 +2270,12 @@ export const addGroupMember = async (
     }
 
     if (member.guestName && member.guestName.trim()) {
+      const firstName = member.firstName?.trim() || null;
+      const lastName = member.lastName?.trim() || null;
       await client.query(
-        `INSERT INTO group_members (id, group_id, guest_name, added_by) VALUES ($1, $2, $3, $4)`,
-        [randomUUID(), groupId, member.guestName.trim(), ownerId]
+        `INSERT INTO group_members (id, group_id, guest_name, first_name, last_name, added_by)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [randomUUID(), groupId, member.guestName.trim(), firstName, lastName, ownerId]
       );
       await client.query('COMMIT');
       return {};
@@ -1954,6 +2391,25 @@ export const removeGroupMember = async (
           }
         };
 
+        const updateTravelerIdsForLodgings = async (tripId: string) => {
+          await client.query(
+            `
+            UPDATE lodgings
+            SET traveler_ids = ${jsonbRemoveMemberExpr('traveler_ids')}
+            WHERE trip_id = $1
+            `,
+            [tripId, memberId]
+          );
+          await client.query(
+            `
+            DELETE FROM lodgings
+            WHERE trip_id = $1
+              AND COALESCE(traveler_ids::text, '[]') IN ('[]', '[ ]', '[  ]', 'null')
+            `,
+            [tripId]
+          );
+        };
+
         for (const tripId of tripIds) {
           await client.query(
             `
@@ -1982,6 +2438,7 @@ export const removeGroupMember = async (
           await updatePaidByForTable('flights', tripId);
           await updatePaidByForTable('lodgings', tripId);
           await updatePaidByForTable('tours', tripId);
+          await updateTravelerIdsForLodgings(tripId);
         }
       } else {
         await client.query(
@@ -2042,6 +2499,32 @@ export const removeGroupMember = async (
         await updatePaidByForTable('flights');
         await updatePaidByForTable('lodgings');
         await updatePaidByForTable('tours');
+        await client.query(
+          `
+          UPDATE lodgings
+          SET traveler_ids = COALESCE(
+            (
+              SELECT jsonb_agg(elem.value)
+              FROM (
+                SELECT value
+                FROM jsonb_array_elements_text(COALESCE(traveler_ids, '[]'::jsonb)) value
+                WHERE value <> $2::text
+              ) elem
+            ),
+            '[]'::jsonb
+          )
+          WHERE trip_id = ANY($1::uuid[])
+          `,
+          [tripIds, memberId]
+        );
+        await client.query(
+          `
+          DELETE FROM lodgings
+          WHERE trip_id = ANY($1::uuid[])
+            AND jsonb_array_length(COALESCE(traveler_ids, '[]'::jsonb)) = 0
+          `,
+          [tripIds]
+        );
       }
     }
 
@@ -2101,6 +2584,8 @@ export const listTrips = async (userId: string): Promise<Array<Trip & { groupNam
               t.start_month as "startMonth",
               t.start_year as "startYear",
               t.duration_days as "durationDays",
+              t.currency as "currency",
+              t.covered_by as "coveredBy",
               t.created_at as "createdAt",
               g.name as "groupName"
        FROM trips t
@@ -2124,6 +2609,8 @@ export const listTrips = async (userId: string): Promise<Array<Trip & { groupNam
             t.start_month as "startMonth",
             t.start_year as "startYear",
             t.duration_days as "durationDays",
+            t.currency as "currency",
+            t.covered_by as "coveredBy",
             t.created_at as "createdAt",
             g.name as "groupName"
      FROM trips t
@@ -2151,6 +2638,7 @@ export const createTrip = async (
     startMonth?: number | null;
     startYear?: number | null;
     durationDays?: number | null;
+    currency?: string | null;
   }
 ): Promise<Trip> => {
   const p = getPool();
@@ -2178,8 +2666,8 @@ export const createTrip = async (
 
   const id = randomUUID();
   const { rows } = await p.query<Trip>(
-    `INSERT INTO trips (id, group_id, name, description, destination, start_date, end_date, start_month, start_year, duration_days)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    `INSERT INTO trips (id, group_id, name, description, destination, start_date, end_date, start_month, start_year, duration_days, currency, covered_by)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
      RETURNING id,
                group_id as "groupId",
                name,
@@ -2190,6 +2678,8 @@ export const createTrip = async (
                start_month as "startMonth",
                start_year as "startYear",
                duration_days as "durationDays",
+               currency,
+               covered_by as "coveredBy",
                created_at as "createdAt"`,
     [
       id,
@@ -2202,6 +2692,8 @@ export const createTrip = async (
       details?.startMonth ?? null,
       details?.startYear ?? null,
       details?.durationDays ?? null,
+      details?.currency ?? 'USD',
+      {},
     ]
   );
   return rows[0];
@@ -2317,6 +2809,8 @@ export const updateTripGroup = async (userId: string, tripId: string, newGroupId
        start_month as "startMonth",
        start_year as "startYear",
        duration_days as "durationDays",
+       currency,
+       covered_by as "coveredBy",
        created_at as "createdAt",
        (SELECT name FROM groups WHERE id = $1) as "groupName"`,
     [newGroupId, tripId]
@@ -2410,6 +2904,7 @@ export const createTripWithGroupAndMembers = async (payload: {
   startMonth?: number | null;
   startYear?: number | null;
   durationDays?: number | null;
+  currency?: string | null;
   members: Array<{ email?: string; guestName?: string }>;
 }): Promise<{ trip: Trip; groupId: string; invites: { id: string; email: string }[] }> => {
   const p = getPool();
@@ -2468,8 +2963,8 @@ export const createTripWithGroupAndMembers = async (payload: {
 
     const tripId = randomUUID();
     const { rows } = await client.query<Trip>(
-      `INSERT INTO trips (id, group_id, name, description, destination, start_date, end_date, start_month, start_year, duration_days)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      `INSERT INTO trips (id, group_id, name, description, destination, start_date, end_date, start_month, start_year, duration_days, currency)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING id,
                  group_id as "groupId",
                  name,
@@ -2480,6 +2975,7 @@ export const createTripWithGroupAndMembers = async (payload: {
                  start_month as "startMonth",
                  start_year as "startYear",
                  duration_days as "durationDays",
+                 currency,
                  created_at as "createdAt"`,
       [
         tripId,
@@ -2492,6 +2988,7 @@ export const createTripWithGroupAndMembers = async (payload: {
         payload.startMonth ?? null,
         payload.startYear ?? null,
         payload.durationDays ?? null,
+        payload.currency ?? 'USD',
       ]
     );
 
@@ -3394,6 +3891,47 @@ export const updateFamilyProfile = async (
   } finally {
     client.release();
   }
+};
+
+
+export const getPlaceDetailsCache = async (placeId: string): Promise<PlaceDetailsCache | null> => {
+  const p = getPool();
+  const { rows } = await p.query<PlaceDetailsCache>(
+    `SELECT place_id as "placeId", name, details, fetched_at as "fetchedAt"
+     FROM place_details_cache
+     WHERE place_id = $1
+     LIMIT 1`,
+    [placeId]
+  );
+  return rows[0] ?? null;
+};
+
+export const getTripGroupId = async (tripId: string): Promise<string | null> => {
+  const p = getPool();
+  const { rows } = await p.query<{ groupId: string }>(
+    `SELECT group_id as "groupId" FROM trips WHERE id = $1 LIMIT 1`,
+    [tripId]
+  );
+  return rows[0]?.groupId ?? null;
+};
+
+export const upsertPlaceDetailsCache = async (entry: {
+  placeId: string;
+  name: string;
+  details: Record<string, any>;
+  fetchedAt?: string | Date;
+}): Promise<void> => {
+  const p = getPool();
+  const fetchedAt = entry.fetchedAt ? new Date(entry.fetchedAt) : new Date();
+  await p.query(
+    `INSERT INTO place_details_cache (place_id, name, details, fetched_at)
+     VALUES ($1, $2, $3::jsonb, $4)
+     ON CONFLICT (place_id) DO UPDATE
+     SET name = EXCLUDED.name,
+         details = EXCLUDED.details,
+         fetched_at = EXCLUDED.fetched_at`,
+    [entry.placeId, entry.name, JSON.stringify(entry.details ?? {}), fetchedAt]
+  );
 };
 
 

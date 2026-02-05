@@ -175,6 +175,9 @@ export const saveWizardLodgings = async (params: {
 
     for (const lodging of wizardLodgings) {
       const rawPaidBy = Array.isArray((lodging as any).paidBy) ? (lodging as any).paidBy : [];
+      const rawTravelerIds = Array.isArray((lodging as any).travelerIds)
+        ? (lodging as any).travelerIds
+        : rawPaidBy;
       const resolvedPaidBy = rawPaidBy
         .map((id: string) => wizardMembersById.get(String(id)))
         .map((member: WizardGroupMember | undefined) => {
@@ -184,7 +187,17 @@ export const saveWizardLodgings = async (params: {
           return null;
         })
         .filter(Boolean) as string[];
+      const resolvedTravelerIds = rawTravelerIds
+        .map((id: string) => wizardMembersById.get(String(id)))
+        .map((member: WizardGroupMember | undefined) => {
+          if (!member) return null;
+          if (member.email) return memberByEmail.get(String(member.email).toLowerCase()) ?? null;
+          if (member.guestName) return memberByGuest.get(String(member.guestName).toLowerCase()) ?? null;
+          return null;
+        })
+        .filter(Boolean) as string[];
       const paidBy = resolvedPaidBy.length ? resolvedPaidBy : fallbackPayerId ? [fallbackPayerId] : [];
+      const travelerIds = resolvedTravelerIds.length ? resolvedTravelerIds : activeMembers.map((m) => m.id);
 
       const draft: LodgingDraft = {
         name: lodging.name,
@@ -196,6 +209,7 @@ export const saveWizardLodgings = async (params: {
         costPerNight: lodging.costPerNight || '',
         address: lodging.address || '',
         paidBy,
+        travelerIds,
       };
       const { payload, error } = buildLodgingPayload(draft, tripId, fallbackPayerId ?? undefined);
       if (error || !payload) {
@@ -203,6 +217,7 @@ export const saveWizardLodgings = async (params: {
         continue;
       }
       payload.paidBy = paidBy;
+      payload.travelerIds = travelerIds;
       const saveRes = await fetch(`${backendUrl}/api/lodgings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...headers },

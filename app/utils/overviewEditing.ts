@@ -74,6 +74,7 @@ export const buildTourDraftFromRow = (tour: Tour): TourDraft => ({
   bookedOn: tour.bookedOn,
   reference: tour.reference,
   paidBy: tour.paidBy ?? [],
+  travelerIds: (tour as any).travelerIds ?? [],
 });
 
 export const buildRentalDraftFromRow = (rental: CarRental): CarRentalDraft => ({
@@ -88,4 +89,5 @@ export const buildRentalDraftFromRow = (rental: CarRental): CarRentalDraft => ({
   model: rental.model,
   notes: rental.notes,
   paidBy: rental.paidBy ?? [],
+  travelerIds: rental.travelerIds ?? [],
 });
