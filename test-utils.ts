@@ -9,7 +9,7 @@
  *
  * @returns {Promise<{userId: string, token: string}>} A promise that resolves to an object containing authentication data.
  */
-export async function loginAsNewUser(): Promise<{ userId: string; token: string }> {
+export async function loginAsNewUser(): Promise<{ userId: string; token: string; username: string; email: string; }> {
   // Ensure fetch is available in the Node.js environment.
   // If you are using a Node.js version older than 18, you might need to install 'node-fetch'.
   // You can install it with: npm install node-fetch --save-dev
@@ -20,7 +20,9 @@ export async function loginAsNewUser(): Promise<{ userId: string; token: string 
 
   // Generate a unique username for each test run to ensure isolation
   const username = `testuser_${Math.random().toString(36).substring(2)}`;
-  const password = 'password123'; // Use a standard password for tests
+  const email = `${username}@example.com`;
+  // Use a standard password for tests
+  const password = 'password123';
 
   // IMPORTANT: Replace with the base URL of your API running in the test environment
   // You can set these in your .env file
@@ -33,7 +35,7 @@ export async function loginAsNewUser(): Promise<{ userId: string; token: string 
   const registrationBody = {
     username,
     password,
-    email: `${username}@example.com`,
+    email,
   };
 
   const registerResponse = await fetch(`${apiBaseUrl}${registerPath}`, {
@@ -83,5 +85,7 @@ export async function loginAsNewUser(): Promise<{ userId: string; token: string 
     throw new Error('Authentication failed: The login response did not contain a token and/or userId.');
   }
 
-  return { userId, token };
+  return { userId, token, username, email };
 }
+
+export const TEST_USER_PASSWORD = 'password123';

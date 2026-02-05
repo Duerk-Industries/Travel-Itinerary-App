@@ -2,17 +2,25 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
-  testMatch: ['**/tests/**/*.test.ts', '**/tests/**/*.test.tsx'],
-  moduleFileExtensions: ['ts', 'tsx', 'js', 'json'],
+
+  // All test files are in the 'tests' directory, relative to this config file.
+  roots: ['<rootDir>/tests'],
+
+  // Look for .test.ts and .test.tsx files within the roots.
+  testMatch: ['<rootDir>/tests/**/*.test.ts', '<rootDir>/tests/**/*.test.tsx'],
+
+  // Ignore the e2e directory to prevent conflicts with Playwright.
+  testPathIgnorePatterns: ['/node_modules/', '/e2e/'],
+
   transform: {
-    '^.+\\.(ts|tsx)$': ['ts-jest', { tsconfig: './tsconfig.json' }],
+    '^.+\\.(ts|tsx)$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.jest.json' }],
   },
+
   moduleNameMapper: {
-    '^react-native$': '<rootDir>/tests/__mocks__/react-native.ts',
-    '^\\./flightParsing$': '<rootDir>/tabs/flightParsing.web.ts',
-    '^@react-native-async-storage/async-storage$': '<rootDir>/tests/__mocks__/@react-native-async-storage/async-storage.ts',
+    '^canvas$': '<rootDir>/tests/__mocks__/canvas.ts',
     '^@react-native-community/datetimepicker$': '<rootDir>/tests/__mocks__/@react-native-community/datetimepicker.ts',
-    '^@react-navigation/native$': '<rootDir>/tests/__mocks__/@react-navigation/native.ts',
   },
+
+  // A setup file that runs before each test.
   setupFilesAfterEnv: ['<rootDir>/tests/setupTests.ts'],
 };

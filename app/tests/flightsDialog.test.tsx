@@ -1,3 +1,7 @@
+/**
+ * @jest-environment node
+ */
+
 import React, { useState } from 'react';
 import renderer, { act } from 'react-test-renderer';
 import { FlightEditingForm } from '../components/FlightEditingForm';

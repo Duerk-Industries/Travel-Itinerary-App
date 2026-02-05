@@ -39,13 +39,19 @@ if ($null -ne $OpenPort) {
   exit 0
 }
 
-if (Get-Command firebase -ErrorAction SilentlyContinue) {
+$LocalFirebase = Join-Path $RootDir "node_modules/.bin/firebase"
+
+if (Test-Path $LocalFirebase) {
+  Write-Host "Firebase emulators not detected. Starting..."
+  & $LocalFirebase emulators:start --import=./.firebase-data --export-on-exit=./.firebase-data
+  exit $LASTEXITCODE
+} elseif (Get-Command firebase -ErrorAction SilentlyContinue) {
   Write-Host "Firebase emulators not detected. Starting..."
   & firebase emulators:start --import=./.firebase-data --export-on-exit=./.firebase-data
   exit $LASTEXITCODE
 } elseif (Get-Command npx -ErrorAction SilentlyContinue) {
   Write-Host "Firebase emulators not detected. Starting..."
-  & npx firebase emulators:start --import=./.firebase-data --export-on-exit=./.firebase-data
+  & npx --yes firebase-tools emulators:start --import=./.firebase-data --export-on-exit=./.firebase-data
   exit $LASTEXITCODE
 } else {
   Write-Error "firebase CLI not found. Install firebase-tools or ensure npx is available."

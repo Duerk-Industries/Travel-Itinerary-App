@@ -16,7 +16,7 @@
     ]
   },
   "include": [
-    "tests/**/*.ts",
+    "app/**/*.ts",
     "test-utils.ts"
   ]
 }

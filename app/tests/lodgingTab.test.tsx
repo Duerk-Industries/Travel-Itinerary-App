@@ -1,3 +1,7 @@
+/**
+ * @jest-environment node
+ */
+
 import React from 'react';
 import { render, fireEvent, within, waitFor } from '@testing-library/react-native';
 import LodgingTab, { formatShortDate } from '../tabs/LodgingTab';

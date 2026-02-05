@@ -31,3 +31,8 @@ logs
 .gradle
 server/.gradle
 firestore-debug.log
+firebase-export-*
+playwright-report/index.html
+test-results/.last-run.json
+firestore-debug.log
+firestore-debug.log

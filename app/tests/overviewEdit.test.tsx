@@ -1,3 +1,7 @@
+/**
+ * @jest-environment node
+ */
+
 import React from 'react';
 import renderer, { act } from 'react-test-renderer';
 import { OverviewTab, dedupeAttendees, formatAttendeeLabel } from '../tabs/overview';
@@ -198,7 +202,15 @@ describe('Overview edit controls', () => {
   });
 
   test('add traveler sends guestName when email is provided', async () => {
-    const fetchMock = jest.fn(async () => ({ ok: true, json: async () => ({}) }) as any);
+    const fetchMock = jest.fn(async (url: string, options?: any) => {
+      if (String(url).includes('/api/itineraries')) {
+        return { ok: true, json: async () => [] };
+      }
+      if (String(url).includes('/api/groups/') && options?.method === 'POST') {
+        return { ok: true, json: async () => [] };
+      }
+      return { ok: true, json: async () => ({}) };
+    }) as any;
     (global as any).fetch = fetchMock;
 
     let tree: any;
@@ -260,11 +272,14 @@ describe('Overview edit controls', () => {
       },
     ];
     const fetchMock = jest.fn(async (url: string, options?: any) => {
+      if (String(url).includes('/api/itineraries')) {
+        return { ok: true, json: async () => [] } as any;
+      }
       if (String(url).includes('/api/trips/') && options?.method === 'PATCH') {
         return { ok: true, json: async () => ({}) } as any;
       }
       if (String(url).includes('/api/groups/') && options?.method === 'DELETE') {
-        return { ok: true, json: async () => ({}) } as any;
+        return { ok: true, json: async () => [] } as any;
       }
       return { ok: true, json: async () => ({}) } as any;
     });
@@ -295,9 +310,12 @@ describe('Overview edit controls', () => {
   });
 
   test('edits lodging paid by and saves via PUT', async () => {
-    const fetchMock = jest.fn(async (url: string, options?: any) => {
+    const fetchMock = jest.fn(async (url: string, options?: any): Promise<any> => {
       if (String(url).includes('/api/itineraries')) {
         return { ok: true, json: async () => [] } as any;
+      }
+      if (String(url).includes('/api/lodgings/') && options?.method === 'PUT') {
+        return { ok: true, json: async () => JSON.parse(options.body) };
       }
       return { ok: true, json: async () => ({}) } as any;
     });

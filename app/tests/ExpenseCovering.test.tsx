@@ -1,3 +1,7 @@
+/**
+ * @jest-environment node
+ */
+
 import React from 'react';
 import { render, fireEvent, waitFor, within } from '@testing-library/react-native';
 import ExpenseCovering from '../tabs/ExpenseCovering';

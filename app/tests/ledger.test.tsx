@@ -1,3 +1,7 @@
+/**
+ * @jest-environment node
+ */
+
 import React from 'react';
 import { render, waitFor, within } from '@testing-library/react-native';
 import LedgerTab from '../tabs/ledger';

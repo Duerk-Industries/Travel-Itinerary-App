@@ -55,7 +55,10 @@ A starter shared trip planner stack with a TypeScript/Node.js API backed by Post
 - `PATCH /api/trips/:id/group { groupId }` → move a trip to another group the user belongs to.
 
 ## Testing
-- App unit/UI tests: `cd app && npm test`
+- App unit/UI tests: `npm run test:app` (or `cd app && npm test`)
+- Server tests: `npm run test:server`
+- Playwright e2e tests: `npm run test:e2e`
+- Run everything: `npm test` (from repo root)
 - Day overview/day details interactions are covered in `app/tests/overview.test.tsx`.
 
 ## Notes
