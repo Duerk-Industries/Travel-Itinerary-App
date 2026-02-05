@@ -1202,9 +1202,11 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                         <Text style={styles.cellText}>{dates.startDate || 'YYYY-MM-DD'}</Text>
                       </TouchableOpacity>
                     )}
-                    <TouchableOpacity style={styles.dateIcon} onPress={() => openDatePicker('start')}>
-                      <Text style={styles.selectCaret}>v</Text>
-                    </TouchableOpacity>
+                    {Platform.OS !== 'web' ? (
+                      <TouchableOpacity style={styles.dateIcon} onPress={() => openDatePicker('start')}>
+                        <Text style={styles.selectCaret}>v</Text>
+                      </TouchableOpacity>
+                    ) : null}
                   </View>
                   <View style={[styles.dateInputWrap, { flex: 1 }]}>
                     {Platform.OS === 'web' ? (
@@ -1221,9 +1223,11 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                         <Text style={styles.cellText}>{dates.endDate || 'YYYY-MM-DD'}</Text>
                       </TouchableOpacity>
                     )}
-                    <TouchableOpacity style={styles.dateIcon} onPress={() => openDatePicker('end')}>
-                      <Text style={styles.selectCaret}>v</Text>
-                    </TouchableOpacity>
+                    {Platform.OS !== 'web' ? (
+                      <TouchableOpacity style={styles.dateIcon} onPress={() => openDatePicker('end')}>
+                        <Text style={styles.selectCaret}>v</Text>
+                      </TouchableOpacity>
+                    ) : null}
                   </View>
                 </View>
                 {computedDays ? <Text style={styles.helperText}>Trip length: {computedDays} day(s)</Text> : null}
