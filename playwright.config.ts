@@ -20,10 +20,27 @@ export default defineConfig({
     baseURL: 'http://localhost:5173',
     trace: 'on-first-retry',
   },
-  webServer: {
-    command: 'npm --prefix server run dev',
-    url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-  },
+
+  /* Run your local dev server before starting the tests */
+  webServer: [
+    {
+      command: 'npm --prefix server run dev',
+      url: 'http://localhost:3000',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120 * 1000,
+      env: {
+        PORT: '3000',
+      },
+    },
+    {
+      command: 'npm --prefix app run web -- --port 5173',
+      url: 'http://localhost:5173',
+      reuseExistingServer: !process.env.CI,
+      timeout: 120 * 1000,
+      env: {
+        BACKEND_URL: 'http://localhost:3000',
+        CI: 'true',
+      },
+    },
+  ],
 });

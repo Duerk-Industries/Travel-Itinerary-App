@@ -37,4 +37,6 @@ test-results/.last-run.json
 .firebase
 .firebase-data
 firestore-debug.log
-build/reports/problems/problems-report.html
+build/reports/problems
+playwright-report
+test-results
