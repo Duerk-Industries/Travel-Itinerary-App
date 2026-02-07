@@ -1,7 +1,7 @@
 // Metro config to normalize dev-server request URLs on Windows-style paths.
 // This keeps source map URLs clean for web devtools.
 const { getDefaultConfig } = require('expo/metro-config');
-const exclusionList = require('metro-config/src/defaults/exclusionList');
+const exclusionList = require('metro-config/private/defaults/exclusionList').default;
 
 const config = getDefaultConfig(__dirname);
 
