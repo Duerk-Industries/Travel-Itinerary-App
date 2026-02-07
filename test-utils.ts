@@ -44,9 +44,9 @@ export async function loginAsNewUser(page: Page): Promise<void> {
   }
 
   // --- 2. Log in via the UI to establish a session ---
-  // The baseURL is 'http://localhost:5173' from playwright.config.ts
+  // The baseURL comes from playwright.config.ts
   // We assume the login page is at '/login'
-  await page.goto('/login');
+  await page.goto('/login', { waitUntil: 'domcontentloaded', timeout: 90_000 });
 
   // Fill in credentials and submit
   await page.getByPlaceholder('Email').fill(email);

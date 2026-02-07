@@ -34,7 +34,7 @@ const envPaths = [
   ...(isLocalFlag ? [path.resolve(__dirname, '../.secrets'), path.resolve(__dirname, '../../.secrets')] : []),
 ];
 const loadedEnvPaths: string[] = [];
-const shouldOverride = !process.env.JEST_WORKER_ID;
+const shouldOverride = false;
 for (const envPath of envPaths) {
   if (fs.existsSync(envPath)) {
     dotenv.config({ path: envPath, override: shouldOverride });

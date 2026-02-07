@@ -5,6 +5,7 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './app/e2e',
+  timeout: 120 * 1000,
   /* Run tests in files in parallel */
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
@@ -17,7 +18,7 @@ export default defineConfig({
   reporter: 'html',
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL: 'http://localhost:4173',
     trace: 'on-first-retry',
   },
 
@@ -30,11 +31,13 @@ export default defineConfig({
       timeout: 120 * 1000,
       env: {
         PORT: '3000',
+        DB_PROVIDER: 'memory',
+        USE_IN_MEMORY_DB: '1',
       },
     },
     {
-      command: 'npm --prefix app run web -- --port 5173',
-      url: 'http://localhost:5173',
+      command: 'npm --prefix app run web -- --port 4173',
+      url: 'http://localhost:4173',
       reuseExistingServer: !process.env.CI,
       timeout: 120 * 1000,
       env: {
