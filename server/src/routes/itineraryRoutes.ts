@@ -7,24 +7,34 @@ import { logError } from '../logger';
 import { getEnvValue } from '../env';
 import { getDb } from '../db.firebase';
 import { getStorage } from 'firebase-admin/storage';
+import { getApp } from 'firebase-admin/app';
 import { getPlacePhotoUrlByPlaceId } from '../googlePlaces';
 
 type ImageCacheEntry = {
   sourceUrl: string;
   storagePath: string;
+  storageBucket?: string;
   fetchedAt: number;
   expiresAt: number;
   provider: 'unsplash' | 'google_places';
 };
 const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
 const SIGNED_URL_TTL_MS = 15 * 60 * 1000;
+const UNSPLASH_AUTH_BACKOFF_MS = 10 * 60 * 1000;
 const PLACEHOLDER_IMAGE =
   'https://images.unsplash.com/photo-1502920917128-1aa500764b0e?auto=format&fit=crop&w=1200&q=80';
+let unsplashAuthBlockedUntil = 0;
+const getHttpErrorStatus = (err: unknown): number | undefined => {
+  const status = (err as { response?: { status?: unknown } })?.response?.status;
+  const numericStatus = typeof status === 'number' ? status : Number(status);
+  return Number.isFinite(numericStatus) ? numericStatus : undefined;
+};
 
 const fetchUnsplashImage = async (query: string, retries = 2): Promise<string | null> => {
   // Prefer correctly-spelled var, but fall back to historical typo for backward compatibility.
-  const key = getEnvValue('UNSPLASH_ACCESS_KEY') ?? getEnvValue('UNSPLASE_ACCESS_KEY');
+  const key = getEnvValue('UNSPLASH_ACCESS_KEY') ?? getEnvValue('UNSPLASH_ACCESS_KEY');
   if (!key) return null;
+  if (Date.now() < unsplashAuthBlockedUntil) return null;
 
   const doFetch = async (fetchQuery: string) => {
     const url = `https://api.unsplash.com/photos/random?orientation=landscape&content_filter=high&query=${encodeURIComponent(
@@ -40,6 +50,15 @@ const fetchUnsplashImage = async (query: string, retries = 2): Promise<string | 
       const imageUrl = await doFetch(query);
       if (imageUrl) return imageUrl;
     } catch (err) {
+      const status = getHttpErrorStatus(err);
+      if (status === 401 || status === 403) {
+        unsplashAuthBlockedUntil = Date.now() + UNSPLASH_AUTH_BACKOFF_MS;
+        logError('[itinerary] Unsplash auth rejected request; disabling Unsplash fetches temporarily', {
+          status,
+          retryAt: new Date(unsplashAuthBlockedUntil).toISOString(),
+        });
+        return null;
+      }
       logError(`[itinerary] Unsplash fetch for query "${query}" failed (attempt ${i + 1})`, err);
       if (i < retries - 1) {
         await new Promise((res) => setTimeout(res, 500 * (i + 1))); // Exponential backoff
@@ -52,18 +71,76 @@ const fetchUnsplashImage = async (query: string, retries = 2): Promise<string | 
     const fallbackUrl = await doFetch('travel');
     if (fallbackUrl) return fallbackUrl;
   } catch (err) {
+    const status = getHttpErrorStatus(err);
+    if (status === 401 || status === 403) {
+      unsplashAuthBlockedUntil = Date.now() + UNSPLASH_AUTH_BACKOFF_MS;
+      logError('[itinerary] Unsplash auth rejected fallback request; disabling Unsplash fetches temporarily', {
+        status,
+        retryAt: new Date(unsplashAuthBlockedUntil).toISOString(),
+      });
+      return null;
+    }
     logError('[itinerary] Unsplash fallback fetch failed', err);
   }
 
   return null;
 };
 
-const storageBucketName = (): string => {
-  const explicit = getEnvValue('LOCATION_BUCKET') || getEnvValue('FIREBASE_STORAGE_BUCKET');
-  if (explicit) return explicit;
-  const projectId = getEnvValue('GCLOUD_PROJECT_ID') || getEnvValue('GOOGLE_CLOUD_PROJECT');
-  if (!projectId) throw new Error('Missing LOCATION_BUCKET/FIREBASE_STORAGE_BUCKET and project id');
-  return `${projectId}.appspot.com`;
+const parseFirebaseConfig = (): { projectId?: string; storageBucket?: string } => {
+  const raw = process.env.FIREBASE_CONFIG;
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw) as { projectId?: string; storageBucket?: string };
+    return {
+      projectId: parsed.projectId,
+      storageBucket: parsed.storageBucket,
+    };
+  } catch {
+    return {};
+  }
+};
+
+const storageBucketCandidates = (preferredBucket?: string): string[] => {
+  const firebaseConfig = parseFirebaseConfig();
+  let appBucket: string | undefined;
+  try {
+    const option = getApp().options.storageBucket;
+    appBucket = typeof option === 'string' ? option : undefined;
+  } catch {
+    appBucket = undefined;
+  }
+  const projectId =
+    getEnvValue('GCLOUD_PROJECT_ID') ||
+    getEnvValue('GOOGLE_CLOUD_PROJECT') ||
+    firebaseConfig.projectId;
+
+  const candidates = [
+    preferredBucket,
+    getEnvValue('LOCATION_BUCKET'),
+    getEnvValue('FIREBASE_STORAGE_BUCKET'),
+    firebaseConfig.storageBucket,
+    appBucket,
+    projectId ? `${projectId}.firebasestorage.app` : undefined,
+    projectId ? `${projectId}.appspot.com` : undefined,
+  ];
+  return Array.from(
+    new Set(
+      candidates
+        .map((value) => (value ?? '').trim())
+        .filter((value) => value.length > 0)
+    )
+  );
+};
+
+const isBucketMissingError = (err: unknown): boolean => {
+  const maybeError = err as { code?: number | string; message?: string };
+  const code = Number(maybeError?.code);
+  const message = String(maybeError?.message || '').toLowerCase();
+  return (
+    code === 404 ||
+    message.includes('specified bucket does not exist') ||
+    message.includes('bucket does not exist')
+  );
 };
 
 const encodeToken = (value: string): string =>
@@ -77,7 +154,7 @@ const ensureStorageImage = async (
   provider: 'unsplash' | 'google_places',
   key: string,
   sourceUrl: string
-): Promise<string | null> => {
+): Promise<{ storagePath: string; storageBucket: string } | null> => {
   try {
     const response = await axios.get(sourceUrl, {
       responseType: 'arraybuffer',
@@ -88,35 +165,57 @@ const ensureStorageImage = async (
     const ext = contentType.includes('png') ? 'png' : contentType.includes('webp') ? 'webp' : 'jpg';
     const folder = provider === 'google_places' ? 'images/google-places' : 'images/unsplash';
     const objectName = `${folder}/${encodeToken(key)}-${Date.now()}.${ext}`;
-    const bucket = getStorage().bucket(storageBucketName());
-    const file = bucket.file(objectName);
-    await file.save(Buffer.from(response.data), {
-      contentType,
-      resumable: false,
-      metadata: { cacheControl: 'public, max-age=86400' },
-    });
-    return objectName;
+    const bucketCandidates = storageBucketCandidates();
+    if (!bucketCandidates.length) throw new Error('No storage bucket configured');
+    let lastErr: unknown = null;
+    for (const bucketName of bucketCandidates) {
+      try {
+        const bucket = getStorage().bucket(bucketName);
+        const file = bucket.file(objectName);
+        await file.save(Buffer.from(response.data), {
+          contentType,
+          resumable: false,
+          metadata: { cacheControl: 'public, max-age=86400' },
+        });
+        return { storagePath: objectName, storageBucket: bucketName };
+      } catch (err) {
+        lastErr = err;
+        if (isBucketMissingError(err)) {
+          continue;
+        }
+        break;
+      }
+    }
+    logError('[itinerary] failed to persist image to storage', lastErr);
+    return null;
   } catch (err) {
     logError('[itinerary] failed to persist image to storage', err);
     return null;
   }
 };
 
-const signStorageImage = async (storagePath: string): Promise<string | null> => {
-  try {
-    const bucket = getStorage().bucket(storageBucketName());
-    const file = bucket.file(storagePath);
-    const [exists] = await file.exists();
-    if (!exists) return null;
-    const [signedUrl] = await file.getSignedUrl({
-      action: 'read',
-      expires: Date.now() + SIGNED_URL_TTL_MS,
-    });
-    return signedUrl;
-  } catch (err) {
-    logError('[itinerary] failed to sign storage image url', err);
-    return null;
+const signStorageImage = async (storagePath: string, preferredBucket?: string): Promise<string | null> => {
+  const bucketCandidates = storageBucketCandidates(preferredBucket);
+  if (!bucketCandidates.length) return null;
+  for (const bucketName of bucketCandidates) {
+    try {
+      const bucket = getStorage().bucket(bucketName);
+      const file = bucket.file(storagePath);
+      const [exists] = await file.exists();
+      if (!exists) continue;
+      const [signedUrl] = await file.getSignedUrl({
+        action: 'read',
+        expires: Date.now() + SIGNED_URL_TTL_MS,
+      });
+      return signedUrl;
+    } catch (err) {
+      if (isBucketMissingError(err)) {
+        continue;
+      }
+      logError('[itinerary] failed to sign storage image url', err);
+    }
   }
+  return null;
 };
 
 type ChatCompletionResponse = {
@@ -149,7 +248,7 @@ router.get('/images', async (req, res) => {
     if (doc.exists) {
       const data = doc.data() as ImageCacheEntry;
       if (data?.storagePath && data?.expiresAt && now < data.expiresAt) {
-        const signed = await signStorageImage(data.storagePath);
+        const signed = await signStorageImage(data.storagePath, data.storageBucket);
         if (signed) {
           res.json({ url: signed, cached: true });
           return;
@@ -164,8 +263,8 @@ router.get('/images', async (req, res) => {
       res.json({ url: PLACEHOLDER_IMAGE, cached: false });
       return;
     }
-    const storagePath = await ensureStorageImage(provider, placeId || location, sourceUrl);
-    if (!storagePath) {
+    const persistedImage = await ensureStorageImage(provider, placeId || location, sourceUrl);
+    if (!persistedImage) {
       res.json({ url: PLACEHOLDER_IMAGE, cached: false });
       return;
     }
@@ -173,14 +272,15 @@ router.get('/images', async (req, res) => {
     await docRef.set(
       {
         sourceUrl,
-        storagePath,
+        storagePath: persistedImage.storagePath,
+        storageBucket: persistedImage.storageBucket,
         fetchedAt: now,
         expiresAt,
         provider,
       },
       { merge: true }
     );
-    const signed = await signStorageImage(storagePath);
+    const signed = await signStorageImage(persistedImage.storagePath, persistedImage.storageBucket);
     res.json({ url: signed || PLACEHOLDER_IMAGE, cached: false });
   } catch (err) {
     logError('[itinerary] image cache error', err);

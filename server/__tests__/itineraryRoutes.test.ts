@@ -38,6 +38,11 @@ describe('/api/itinerary/images', () => {
   const mockedAxios = axios as jest.Mocked<typeof axios>;
   let docData: any = null;
   let docExists = false;
+  const missingBucketError = () => {
+    const error = new Error('The specified bucket does not exist.') as Error & { code?: number };
+    error.code = 404;
+    return error;
+  };
 
   beforeEach(() => {
     (auth.authenticate as jest.Mock).mockImplementation((req, _res, next) => {
@@ -46,6 +51,10 @@ describe('/api/itinerary/images', () => {
     });
     docExists = false;
     docData = null;
+    storageFileMock.save.mockReset();
+    storageFileMock.exists.mockReset();
+    storageFileMock.getSignedUrl.mockReset();
+    storageFileMock.save.mockResolvedValue(undefined);
     storageFileMock.exists.mockResolvedValue([true]);
     storageFileMock.getSignedUrl.mockResolvedValue(['https://signed-url/mock']);
     const doc = {
@@ -107,5 +116,45 @@ describe('/api/itinerary/images', () => {
     mockedAxios.get.mockRejectedValue(new Error('Network down'));
     const res = await request(app).get('/api/itinerary/images?location=cairo').expect(200);
     expect(String(res.body.url)).toContain('images.unsplash.com/photo-1502920917128-1aa500764b0e');
+  });
+
+  it('retries storage persistence when a bucket does not exist', async () => {
+    mockedAxios.get.mockImplementation((url: string) => {
+      if (url.includes('api.unsplash.com/photos/random')) {
+        return Promise.resolve({ data: { urls: { regular: 'https://images.unsplash.com/new-photo' } } } as any);
+      }
+      if (url.includes('images.unsplash.com/new-photo')) {
+        return Promise.resolve({ data: Buffer.from('img'), headers: { 'content-type': 'image/jpeg' } } as any);
+      }
+      return Promise.reject(new Error('Unexpected URL'));
+    });
+    storageFileMock.save
+      .mockRejectedValueOnce(missingBucketError())
+      .mockResolvedValueOnce(undefined);
+
+    const res = await request(app).get('/api/itinerary/images?location=tokyo').expect(200);
+    expect(res.body.cached).toBe(false);
+    expect(res.body.url).toBe('https://signed-url/mock');
+    expect(storageFileMock.save).toHaveBeenCalledTimes(2);
+  });
+
+  it('stops calling unsplash temporarily after auth failure (403)', async () => {
+    const unsplashAuthError = Object.assign(new Error('Request failed with status code 403'), {
+      isAxiosError: true,
+      response: { status: 403, data: { errors: ['Forbidden'] } },
+    });
+    mockedAxios.get.mockImplementation((url: string) => {
+      if (url.includes('api.unsplash.com/photos/random')) {
+        return Promise.reject(unsplashAuthError);
+      }
+      return Promise.reject(new Error('Unexpected URL'));
+    });
+
+    const first = await request(app).get('/api/itinerary/images?location=oslo').expect(200);
+    const second = await request(app).get('/api/itinerary/images?location=oslo').expect(200);
+
+    expect(String(first.body.url)).toContain('images.unsplash.com/photo-1502920917128-1aa500764b0e');
+    expect(String(second.body.url)).toContain('images.unsplash.com/photo-1502920917128-1aa500764b0e');
+    expect(mockedAxios.get).toHaveBeenCalledTimes(1);
   });
 });
