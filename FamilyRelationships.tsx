@@ -207,13 +207,13 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
           style={[styles.input, { flex: 1 }]}
           placeholder="Given name"
           value={familyForm.givenName}
-          onChangeText={(text) => setFamilyForm((p) => ({ ...p, givenName: text }))}
+          onChangeText={(text: string) => setFamilyForm((p) => ({ ...p, givenName: text }))}
         />
         <TextInput
           style={[styles.input, { flex: 1 }]}
           placeholder="Middle name"
           value={familyForm.middleName}
-          onChangeText={(text) => setFamilyForm((p) => ({ ...p, middleName: text }))}
+          onChangeText={(text: string) => setFamilyForm((p) => ({ ...p, middleName: text }))}
         />
       </View>
       <View style={styles.row}>
@@ -221,7 +221,7 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
           style={[styles.input, { flex: 1 }]}
           placeholder="Family name"
           value={familyForm.familyName}
-          onChangeText={(text) => setFamilyForm((p) => ({ ...p, familyName: text }))}
+          onChangeText={(text: string) => setFamilyForm((p) => ({ ...p, familyName: text }))}
         />
         <View style={[styles.input, styles.dropdown, { flex: 1 }]}>
           <TouchableOpacity onPress={() => setShowRelationshipDropdown((s) => !s)}>
@@ -256,7 +256,7 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
         autoCapitalize="none"
         keyboardType="email-address"
         value={familyForm.email}
-        onChangeText={(text) => setFamilyForm((p) => ({ ...p, email: text }))}
+        onChangeText={(text: string) => setFamilyForm((p) => ({ ...p, email: text }))}
       />
       <TouchableOpacity style={styles.button} onPress={addFamilyMember}>
         <Text style={styles.buttonText}>Add Family Member</Text>
@@ -326,20 +326,20 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
                         style={[styles.input, { flex: 1 }]}
                         placeholder="Given"
                         value={editingFamilyDraft.givenName}
-                        onChangeText={(text) => setEditingFamilyDraft((p) => (p ? { ...p, givenName: text } : p))}
+                        onChangeText={(text: string) => setEditingFamilyDraft((p) => (p ? { ...p, givenName: text } : p))}
                       />
                       <TextInput
                         style={[styles.input, { flex: 1 }]}
                         placeholder="Middle"
                         value={editingFamilyDraft.middleName}
-                        onChangeText={(text) => setEditingFamilyDraft((p) => (p ? { ...p, middleName: text } : p))}
+                        onChangeText={(text: string) => setEditingFamilyDraft((p) => (p ? { ...p, middleName: text } : p))}
                       />
                     </View>
                     <TextInput
                       style={styles.input}
                       placeholder="Family"
                       value={editingFamilyDraft.familyName}
-                      onChangeText={(text) => setEditingFamilyDraft((p) => (p ? { ...p, familyName: text } : p))}
+                      onChangeText={(text: string) => setEditingFamilyDraft((p) => (p ? { ...p, familyName: text } : p))}
                     />
                     <TextInput
                       style={styles.input}
@@ -347,13 +347,13 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
                       autoCapitalize="none"
                       keyboardType="email-address"
                       value={editingFamilyDraft.email}
-                      onChangeText={(text) => setEditingFamilyDraft((p) => (p ? { ...p, email: text } : p))}
+                      onChangeText={(text: string) => setEditingFamilyDraft((p) => (p ? { ...p, email: text } : p))}
                     />
                     <TextInput
                       style={styles.input}
                       placeholder="Relationship"
                       value={editingFamilyDraft.relationship}
-                      onChangeText={(text) => setEditingFamilyDraft((p) => (p ? { ...p, relationship: text } : p))}
+                      onChangeText={(text: string) => setEditingFamilyDraft((p) => (p ? { ...p, relationship: text } : p))}
                     />
                     <View style={styles.row}>
                       <TouchableOpacity style={[styles.button, { flex: 1 }]} onPress={saveFamilyProfile}>
@@ -387,13 +387,13 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
           style={[styles.input, { flex: 1 }]}
           placeholder="First name"
           value={fellowForm.firstName}
-          onChangeText={(text) => setFellowForm((p) => ({ ...p, firstName: text }))}
+          onChangeText={(text: string) => setFellowForm((p) => ({ ...p, firstName: text }))}
         />
         <TextInput
           style={[styles.input, { flex: 1 }]}
           placeholder="Last name"
           value={fellowForm.lastName}
-          onChangeText={(text) => setFellowForm((p) => ({ ...p, lastName: text }))}
+          onChangeText={(text: string) => setFellowForm((p) => ({ ...p, lastName: text }))}
         />
       </View>
       <TouchableOpacity style={styles.button} onPress={addFellowTraveler}>
@@ -430,13 +430,13 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
                         style={[styles.input, { flex: 1 }]}
                         placeholder="First name"
                         value={editingFellowDraft.firstName}
-                        onChangeText={(text) => setEditingFellowDraft((p) => (p ? { ...p, firstName: text } : p))}
+                        onChangeText={(text: string) => setEditingFellowDraft((p) => (p ? { ...p, firstName: text } : p))}
                       />
                       <TextInput
                         style={[styles.input, { flex: 1 }]}
                         placeholder="Last name"
                         value={editingFellowDraft.lastName}
-                        onChangeText={(text) => setEditingFellowDraft((p) => (p ? { ...p, lastName: text } : p))}
+                        onChangeText={(text: string) => setEditingFellowDraft((p) => (p ? { ...p, lastName: text } : p))}
                       />
                     </View>
                     <View style={styles.row}>

@@ -126,6 +126,27 @@ interface GroupMemberOption {
   removedAt?: string | null;
 }
 
+const formatMemberName = (member: GroupMemberOption): string => {
+  const norm = (val?: string | null) => {
+    const t = String(val ?? '').trim();
+    if (!t || t.toLowerCase() === 'unknown') return '';
+    return t;
+  };
+  const first = norm(member.firstName);
+  const last = norm(member.lastName);
+  const email = member.email?.trim();
+  const status = member.status;
+  if (first || last) return `${first ?? ''} ${last ?? ''}`.trim();
+  if (member.guestName) return member.guestName;
+  if (email) {
+    const local = email.split('@')[0] ?? '';
+    const parts = local.split(/[._-]+/).filter(Boolean);
+    const base = parts.length >= 2 ? `${parts[0]} ${parts.slice(1).join(' ')}`.trim() : email;
+    return status === 'pending' ? `${base} (pending)` : base;
+  }
+  return status === 'pending' ? 'Pending member' : 'Member';
+};
+
 type Page =
   | 'home'
   | 'overview'
@@ -138,7 +159,6 @@ type Page =
   | 'trips'
   | 'create-trip'
   | 'trip-details'
-  | 'traits'
   | 'itinerary'
   | 'cost'
   | 'account'
@@ -269,26 +289,6 @@ const App: React.FC = () => {
   const [coveredBy, setCoveredBy] = useState<Record<string, string>>({});
   const [fellowTravelers, setFellowTravelers] = useState<FellowTraveler[]>([]);
   const [showRelationshipDropdown, setShowRelationshipDropdown] = useState(false);
-  const formatMemberName = (member: GroupMemberOption): string => {
-    const norm = (val?: string | null) => {
-      const t = val?.trim();
-      if (!t || t.toLowerCase() === 'unknown') return '';
-      return t;
-    };
-    const first = norm(member.firstName);
-    const last = norm(member.lastName);
-    const email = member.email?.trim();
-    const status = member.status;
-    if (first || last) return `${first ?? ''} ${last ?? ''}`.trim();
-    if (member.guestName) return member.guestName;
-    if (email) {
-      const local = email.split('@')[0] ?? '';
-      const parts = local.split(/[._-]+/).filter(Boolean);
-      const base = parts.length >= 2 ? `${parts[0]} ${parts.slice(1).join(' ')}`.trim() : email;
-      return status === 'pending' ? `${base} (pending)` : base;
-    }
-    return status === 'pending' ? 'Pending member' : 'Member';
-  };
 
   const userMembers = useMemo(
     () => groupMembers.filter((m) => !m.guestName && m.status !== 'removed'),
@@ -358,8 +358,10 @@ const App: React.FC = () => {
     [trips, activeTripId]
   );
 
+  const activeTrip = useMemo(() => trips.find((t) => t.id === activeTripId) ?? null, [trips, activeTripId]);
+
   const isTripWizardOpen = activePage === 'create-trip';
-  const requestPageChange = (page: Page, opts?: { skipHistory?: boolean }) => {
+  const requestPageChange = useCallback((page: Page, opts?: { skipHistory?: boolean }) => {
     if (!shouldAllowPageChange(activePage, page)) return;
     if (page === activePage) return;
     setPageForwardHistory([]);
@@ -370,9 +372,9 @@ const App: React.FC = () => {
       });
     }
     setActivePage(page);
-  };
+  }, [activePage]);
 
-  const openMaps = (address: string) => {
+  const openMaps = useCallback((address: string) => {
     const url = buildMapUrl(address, mapApp);
     if (!url) return;
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -380,7 +382,7 @@ const App: React.FC = () => {
     } else {
       Linking.openURL(url);
     }
-  };
+  }, [mapApp]);
 
   const openFlightInFlightsTab = (flightId: string) => {
     setExternalFlightEditId(flightId);
@@ -437,10 +439,10 @@ const App: React.FC = () => {
   };
 
   // Resolve a member id to a human-friendly name for payer chips.
-  const payerName = (id: string): string => {
+  const payerName = useCallback((id: string): string => {
     const member = groupMembers.find((m) => m.id === id);
     return member ? formatMemberName(member) : 'Unknown';
-  };
+  }, [groupMembers]);
 
   const saveCoveredBy = async () => {
     const trip = findActiveTrip();
@@ -483,8 +485,8 @@ const App: React.FC = () => {
   const allMemberIds = useMemo(() => groupMembers.map(m => m.id), [groupMembers]);
 
   const allExpenses = useMemo(
-    () => buildAllExpenses(flights, lodgings, tours, carRentals, expenses, findActiveTrip()?.currency ?? 'USD', allMemberIds),
-    [flights, lodgings, tours, carRentals, expenses, allMemberIds, findActiveTrip]
+    () => buildAllExpenses(flights, lodgings, tours, carRentals, expenses, activeTrip?.currency ?? 'USD', allMemberIds),
+    [flights, lodgings, tours, carRentals, expenses, allMemberIds, activeTrip?.currency]
   );
 
   const { ledgerPaidTotals, ledgerUsedTotals, finalBalances } = useMemo(
@@ -611,6 +613,8 @@ const App: React.FC = () => {
     setUserToken(null);
     setUserName(null);
     setUserEmail(null);
+    setTrips([]);
+    setActiveTripId(null);
     setFlights([]);
     setTours([]);
     setExpenses([]);
@@ -627,7 +631,7 @@ const App: React.FC = () => {
     setSelectedTraitNames(new Set());
     setTraitAge('');
     setTraitGender('prefer-not');
-    setAccountProfile({ firstName: '', lastName: '', email: '', mapPreference: mapApp });
+    setAccountProfile({ firstName: '', lastName: '', email: '' });
     setFamilyRelationships([]);
     setFellowTravelers([]);
     setPageForwardHistory([]);
@@ -694,7 +698,7 @@ const App: React.FC = () => {
     await WebBrowser.openBrowserAsync(authUrl);
   };
 
-  const handleAuthSuccess = (token: string) => {
+  const handleAuthSuccess = useCallback((token: string) => {
     let decoded: { firstName?: string; lastName?: string; email?: string; provider?: string } | null = null;
     try {
       const payload = token.split('.')[1];
@@ -724,16 +728,8 @@ const App: React.FC = () => {
     setActivePage('home');
     setPageForwardHistory([]);
     setPageHistory([]);
-    saveSession(token, name, 'home', decoded?.email, restoredTripId, [], []);
-    fetchFlights(token);
-    fetchLodgings(token);
-    fetchTours(token);
-    fetchInvites(token);
-    loadAccountProfile(token);
-    loadFamilyRelationships(token);
-    loadFellowTravelers(token);
-    setActivePage('home');
-  }
+    saveSession(token, name, 'home', decoded?.email, restoredTripId, []);
+  }, [activeTripId]);
 
   useEffect(() => {
     const extractTokenFromUrl = (rawUrl: string) => {
@@ -750,7 +746,7 @@ const App: React.FC = () => {
           return { token: hashToken, url, source: 'hash' as const };
         }
       }
-      return { token: null, url, source: null as const };
+      return { token: null, url, source: null } as const;
     };
 
     const handleDeepLink = (event: { url: string }) => {
@@ -778,7 +774,7 @@ const App: React.FC = () => {
     return () => {
       subscription.remove();
     };
-  }, []);
+  }, [handleAuthSuccess]);
 
   const loginWithPassword = async () => {
     try {
@@ -835,7 +831,7 @@ const App: React.FC = () => {
   };
 
   // Fetch flights for the active trip; normalize paidBy casing.
-  const fetchFlights = async (token?: string) => {
+  const fetchFlights = useCallback(async (token?: string) => {
     if (!activeTripId) {
       setFlights([]);
       return;
@@ -850,29 +846,29 @@ const App: React.FC = () => {
     } catch {
       setFlights([]);
     }
-  };
+  }, [activeTripId, backendUrl, userToken]);
 
   // Fetch lodgings for the active trip; normalize nullable fields.
-  const fetchLodgings = async (token?: string) => {
-    if (!activeTripId) {
+  const fetchLodgings = useCallback(async (token?: string) => {
+    if (!activeTripId || !(token ?? userToken)) {
       setLodgings([]);
       return;
     }
-    const data = await fetchLodgingsApi(backendUrl, activeTripId, token ?? userToken);
+    const data = await fetchLodgingsApi(backendUrl, activeTripId, (token ?? userToken) as string);
     setLodgings(data);
-  };
+  }, [activeTripId, backendUrl, userToken]);
 
   // Fetch tours for the active trip; normalize string fields.
-  const fetchTours = async (token?: string) => {
+  const fetchTours = useCallback(async (token?: string) => {
     if (!activeTripId || !(token ?? userToken)) {
       setTours([]);
       return;
     }
     const data = await fetchToursForTrip({ backendUrl, activeTripId, token: token ?? userToken });
     setTours(data);
-  };
+  }, [activeTripId, backendUrl, userToken]);
 
-  const fetchExpenses = async (token?: string) => {
+  const fetchExpenses = useCallback(async (token?: string) => {
     const authToken = token ?? userToken;
     if (!activeTripId || !authToken) {
       setExpenses([]);
@@ -891,17 +887,17 @@ const App: React.FC = () => {
     } catch {
       setExpenses([]);
     }
-  };
+  }, [activeTripId, backendUrl, userToken]);
 
   // Fetch itineraries for the current user; ItinerariesTab also fetches within its own lifecycle,
   // but this keeps the call from blowing up when invoked from shared effects.
-  const fetchItineraries = async (token?: string) => {
+  const fetchItineraries = useCallback(async (token?: string) => {
     const authToken = token ?? userToken;
     if (!authToken) return;
     await fetch(`${backendUrl}/api/itineraries`, { headers }).catch(() => undefined);
-  };
+  }, [backendUrl, headers, userToken]);
 
-  const fetchInvites = async (token?: string) => {
+  const fetchInvites = useCallback(async (token?: string) => {
     const authToken = token ?? userToken;
     if (!authToken) {
       setInvites([]);
@@ -920,9 +916,9 @@ const App: React.FC = () => {
     } catch {
       setInvites([]);
     }
-  };
+  }, [backendUrl, userToken]);
 
-  const fetchGroups = async (sort?: 'created' | 'name') => {
+  const fetchGroups = useCallback(async (sort?: 'created' | 'name') => {
     const res = await fetch(`${backendUrl}/api/groups?sort=${sort ?? groupSort}`, {
       headers: { Authorization: `Bearer ${userToken}` },
     });
@@ -940,9 +936,9 @@ const App: React.FC = () => {
     if (!newTripGroupId && normalized.length) {
       setNewTripGroupId(normalized[0].id);
     }
-  };
+  }, [backendUrl, groupSort, newTripGroupId, userToken, logout]);
 
-  const fetchTrips = async (tokenOverride?: string): Promise<Trip[]> => {
+  const fetchTrips = useCallback(async (tokenOverride?: string): Promise<Trip[]> => {
     const authToken = tokenOverride ?? userToken;
     if (!authToken) {
       setTrips([]);
@@ -966,9 +962,9 @@ const App: React.FC = () => {
     } catch {
       return [];
     }
-  };
+  }, [activeTripId, backendUrl, logout, userToken]);
 
-  const fetchGroupMembersForActiveTrip = async () => {
+  const fetchGroupMembersForActiveTrip = useCallback(async () => {
     if (!userToken || !activeTripId) {
       setGroupMembers([]);
       return;
@@ -1001,18 +997,18 @@ const App: React.FC = () => {
     } catch {
       setGroupMembers([]);
     }
-  };
+  }, [activeTripId, backendUrl, trips, userToken]);
 
-  const fetchTraits = async () => {
+  const fetchTraits = useCallback(async () => {
     if (!userToken) return;
     const res = await fetch(`${backendUrl}/api/traits`, { headers: { Authorization: `Bearer ${userToken}` } });
     if (!res.ok) return;
     const data = (await res.json()) as Trait[];
     setTraits(data);
     setSelectedTraitNames(new Set(data.map((t) => t.name)));
-  };
+  }, [backendUrl, userToken]);
 
-  const fetchTraitProfile = async () => {
+  const fetchTraitProfile = useCallback(async () => {
     if (!userToken) return;
     const res = await fetch(`${backendUrl}/api/traits/profile/demographics`, { headers });
     if (!res.ok) return;
@@ -1024,9 +1020,9 @@ const App: React.FC = () => {
         setTraitGender(data.gender);
       }
     }
-  };
+  }, [backendUrl, headers, userToken]);
 
-  const fetchFlightAirports = async (q: string) => {
+  const fetchFlightAirports = useCallback(async (q: string) => {
     if (!userToken || !q.trim()) {
       setFlightAirportOptions([]);
       return;
@@ -1044,7 +1040,7 @@ const App: React.FC = () => {
     } catch {
       setFlightAirportOptions([]);
     }
-  };
+  }, [backendUrl, userToken]);
 
   const acceptInvite = async (inviteId: string) => {
     if (!userToken) return;
@@ -1062,7 +1058,7 @@ const App: React.FC = () => {
     fetchTrips();
   };
 
-  const refreshAllData = async (tokenOverride?: string) => {
+  const refreshAllData = useCallback(async (tokenOverride?: string) => {
     const authToken = tokenOverride ?? userToken;
     if (!authToken || refreshInFlightRef.current) return;
     refreshInFlightRef.current = true;
@@ -1070,34 +1066,55 @@ const App: React.FC = () => {
     try {
       const ok = await loadAccountProfile(authToken);
       if (!ok) return;
-      fetchFlights(authToken);
-      fetchLodgings(authToken);
-      fetchTours(authToken);
-      fetchExpenses(authToken);
-      fetchInvites(authToken);
-      fetchGroups();
-      fetchTrips();
-      fetchTraits();
-      fetchTraitProfile();
-      fetchItineraries(authToken);
-      loadFamilyRelationships(authToken);
-      loadFellowTravelers(authToken);
-      try {
-        const trips = await fetchFollowedTripsApi(backendUrl, { Authorization: `Bearer ${authToken}` });
-        setFollowedTrips(trips);
-      } catch (err) {
-        if ((err as any).code === 'UNAUTHORIZED') {
-          logout();
-          return;
-        }
-        setFollowedTrips([]);
-      }
+      await Promise.all([
+        fetchFlights(authToken),
+        fetchLodgings(authToken),
+        fetchTours(authToken),
+        fetchExpenses(authToken),
+        fetchInvites(authToken),
+        fetchGroups(),
+        fetchTrips(),
+        fetchTraits(),
+        fetchTraitProfile(),
+        fetchItineraries(authToken),
+        loadFamilyRelationships(authToken),
+        loadFellowTravelers(authToken),
+        (async () => {
+          try {
+            const trips = await fetchFollowedTripsApi(backendUrl, { Authorization: `Bearer ${authToken}` });
+            setFollowedTrips(trips);
+          } catch (err) {
+            if ((err as any).code === 'UNAUTHORIZED') {
+              logout();
+            } else {
+              setFollowedTrips([]);
+            }
+          }
+        })()
+      ]);
     } finally {
       refreshInFlightRef.current = false;
       setIsRefreshing(false);
       setLastRefreshAt(Date.now());
     }
-  };
+  }, [
+    userToken,
+    loadAccountProfile,
+    fetchFlights,
+    fetchLodgings,
+    fetchTours,
+    fetchExpenses,
+    fetchInvites,
+    fetchGroups,
+    fetchTrips,
+    fetchTraits,
+    fetchTraitProfile,
+    fetchItineraries,
+    loadFamilyRelationships,
+    loadFellowTravelers,
+    backendUrl,
+    logout
+  ]);
 
   useEffect(() => {
     if (userToken) {
@@ -1124,8 +1141,8 @@ const App: React.FC = () => {
         ? session.pageHistory.filter((p) => typeof p === 'string') as Page[]
         : [];
       setPageHistory(sessionHistory);
-      const sessionForwardHistory = (Array.isArray(session.pageForwardHistory)
-        ? session.pageForwardHistory.filter((p) => typeof p === 'string')
+      const sessionForwardHistory = (Array.isArray((session as any).pageForwardHistory)
+        ? (session as any).pageForwardHistory.filter((p: any) => typeof p === 'string')
         : []) as Page[];
       setPageForwardHistory(sessionForwardHistory);
       const tripId = session.tripId ?? null;
@@ -1150,7 +1167,7 @@ const App: React.FC = () => {
           sessionPage === 'account' ||
           sessionPage === 'follow'
         ) {
-          setActivePage(sessionPage === 'menu' ? 'home' : (sessionPage as Page));
+          setActivePage(sessionPage as Page);
         } else {
           setActivePage('home');
         }
@@ -1195,7 +1212,7 @@ const App: React.FC = () => {
         refreshTimerRef.current = null;
       }
     };
-  }, [activeTripId, lastRefreshAt, userToken, refreshIntervalMs]);
+  }, [activeTripId, lastRefreshAt, userToken, refreshIntervalMs, refreshAllData]);
 
   useEffect(() => {
     if (userToken) {
@@ -1204,7 +1221,7 @@ const App: React.FC = () => {
       fetchTours();
       fetchExpenses();
     }
-  }, [activeTripId]);
+  }, [activeTripId, fetchFlights, fetchLodgings, fetchTours, fetchExpenses]);
 
   useEffect(() => {
     if (userToken) {
@@ -1217,7 +1234,7 @@ const App: React.FC = () => {
     if (userToken) {
       fetchGroupMembersForActiveTrip();
     }
-  }, [userToken, activeTripId, trips]);
+  }, [userToken, activeTripId, trips, fetchGroupMembersForActiveTrip]);
 
   useEffect(() => {
     if (!userToken || !activeTripId) {
@@ -1426,7 +1443,7 @@ const App: React.FC = () => {
     fetchLodgings();
   };
 
-  const goBack = () => {
+  const goBack = useCallback(() => {
     if (pageHistory.length === 0) return;
     const previousPage = pageHistory[pageHistory.length - 1];
     if (shouldAllowPageChange(activePage, previousPage)) {
@@ -1434,14 +1451,14 @@ const App: React.FC = () => {
       setPageHistory((prev) => prev.slice(0, -1));
       setActivePage(previousPage);
     }
-  };
+  }, [pageHistory, activePage]);
 
-  const closeTripWizard = () => {
+  const closeTripWizard = useCallback(() => {
     setPageForwardHistory([]);
     setActivePage('home');
-  };
+  }, []);
 
-  const goForward = () => {
+  const goForward = useCallback(() => {
     if (pageForwardHistory.length === 0) return;
     const nextPage = pageForwardHistory[0];
     if (shouldAllowPageChange(activePage, nextPage)) {
@@ -1449,12 +1466,12 @@ const App: React.FC = () => {
       setPageForwardHistory((prev) => prev.slice(1));
       setActivePage(nextPage);
     }
-  };
+  }, [pageForwardHistory, activePage]);
 
   useEffect(() => {
     if (!userToken) return;
-    saveSession(userToken, userName ?? 'Traveler', activePage, userEmail, activeTripId, pageHistory, pageForwardHistory);
-  }, [userToken, userName, userEmail, activePage, activeTripId, pageHistory, pageForwardHistory]);
+    saveSession(userToken, userName ?? 'Traveler', activePage, userEmail, activeTripId, pageHistory);
+  }, [userToken, userName, userEmail, activePage, activeTripId, pageHistory]);
 
   const disabledPages = useMemo(() => {
     const pages: Page[] = [
@@ -1849,7 +1866,7 @@ const App: React.FC = () => {
                     style={styles.input}
                     placeholder="Pick up location"
                     value={carDraft.pickupLocation}
-                    onChangeText={(text) => setCarDraft((p) => ({ ...p, pickupLocation: text }))}
+                    onChangeText={(text: string) => setCarDraft((p) => ({ ...p, pickupLocation: text }))}
                   />
                 </View>
                 <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
@@ -1883,7 +1900,7 @@ const App: React.FC = () => {
                     style={styles.input}
                     placeholder="Drop off location"
                     value={carDraft.dropoffLocation}
-                    onChangeText={(text) => setCarDraft((p) => ({ ...p, dropoffLocation: text }))}
+                    onChangeText={(text: string) => setCarDraft((p) => ({ ...p, dropoffLocation: text }))}
                   />
                 </View>
                 <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
@@ -1917,7 +1934,7 @@ const App: React.FC = () => {
                     style={styles.input}
                     placeholder="Reference"
                     value={carDraft.reference}
-                    onChangeText={(text) => setCarDraft((p) => ({ ...p, reference: text }))}
+                    onChangeText={(text: string) => setCarDraft((p) => ({ ...p, reference: text }))}
                   />
                 </View>
                 <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
@@ -1925,7 +1942,7 @@ const App: React.FC = () => {
                     style={styles.input}
                     placeholder="Vendor"
                     value={carDraft.vendor}
-                    onChangeText={(text) => setCarDraft((p) => ({ ...p, vendor: text }))}
+                    onChangeText={(text: string) => setCarDraft((p) => ({ ...p, vendor: text }))}
                   />
                 </View>
                 <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
@@ -1961,7 +1978,7 @@ const App: React.FC = () => {
                     placeholder="Cost"
                     keyboardType="numeric"
                     value={carDraft.cost}
-                    onChangeText={(text) => setCarDraft((p) => ({ ...p, cost: sanitizeCostInput(text) }))}
+                    onChangeText={(text: string) => setCarDraft((p) => ({ ...p, cost: sanitizeCostInput(text) }))}
                   />
                 </View>
                 <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
@@ -1969,7 +1986,7 @@ const App: React.FC = () => {
                     style={styles.input}
                     placeholder="Car model"
                     value={carDraft.model}
-                    onChangeText={(text) => setCarDraft((p) => ({ ...p, model: text }))}
+                    onChangeText={(text: string) => setCarDraft((p) => ({ ...p, model: text }))}
                   />
                 </View>
                 <View style={[styles.cell, { minWidth: 220, flex: 1 }]}>
@@ -1977,7 +1994,7 @@ const App: React.FC = () => {
                     style={[styles.input, styles.cellTextWrap]}
                     placeholder="Notes"
                     value={carDraft.notes}
-                    onChangeText={(text) => setCarDraft((p) => ({ ...p, notes: text }))}
+                    onChangeText={(text: string) => setCarDraft((p) => ({ ...p, notes: text }))}
                     multiline
                   />
                 </View>
@@ -2058,7 +2075,7 @@ const App: React.FC = () => {
         <NativeDateTimePicker
           value={carDateValue}
           mode="date"
-          onChange={(_, date) => {
+          onChange={(_: any, date: Date | undefined) => {
             if (!date) {
               setCarDateField(null);
               return;
@@ -2246,7 +2263,7 @@ const App: React.FC = () => {
               }}
               onAddCarRental={addCarRentalFromOverview}
               openFlightInFlightsTab={openFlightInFlightsTab}
-              openLodgingDetails={openLodgingDetails}
+              openLodgingDetails={(lodging) => openLodgingDetails(lodging as Lodging)}
             />
           ) : null}
 
@@ -2316,13 +2333,13 @@ const App: React.FC = () => {
                 style={styles.input}
                 placeholder="First name"
                 value={authForm.firstName}
-                onChangeText={(text) => setAuthForm((p) => ({ ...p, firstName: text }))}
+                onChangeText={(text: string) => setAuthForm((p) => ({ ...p, firstName: text }))}
               />
               <TextInput
                 style={styles.input}
                 placeholder="Last name"
                 value={authForm.lastName}
-                onChangeText={(text) => setAuthForm((p) => ({ ...p, lastName: text }))}
+                onChangeText={(text: string) => setAuthForm((p) => ({ ...p, lastName: text }))}
               />
             </>
           ) : null}
@@ -2332,14 +2349,14 @@ const App: React.FC = () => {
             placeholder="Email"
             autoCapitalize="none"
             value={authForm.email}
-            onChangeText={(text) => setAuthForm((p) => ({ ...p, email: text }))}
+            onChangeText={(text: string) => setAuthForm((p) => ({ ...p, email: text }))}
           />
           <TextInput
             style={styles.input}
             placeholder="Password"
             secureTextEntry
             value={authForm.password}
-            onChangeText={(text) => setAuthForm((p) => ({ ...p, password: text }))}
+            onChangeText={(text: string) => setAuthForm((p) => ({ ...p, password: text }))}
           />
           {authMode === 'register' ? (
             <TextInput
@@ -2347,7 +2364,7 @@ const App: React.FC = () => {
               placeholder="Confirm password"
               secureTextEntry
               value={authForm.passwordConfirm}
-              onChangeText={(text) => setAuthForm((p) => ({ ...p, passwordConfirm: text }))}
+              onChangeText={(text: string) => setAuthForm((p) => ({ ...p, passwordConfirm: text }))}
             />
           ) : null}
                       <TouchableOpacity
@@ -2384,8 +2401,9 @@ const App: React.FC = () => {
       ) : null}
       {lodgingToDelete ? (
         <ConfirmDialog
+          visible={true}
           title="Delete Lodging"
-          prompt={`Are you sure you want to delete ${lodgingToDelete.name}? This cannot be undone.`}
+          message={`Are you sure you want to delete ${lodgingToDelete.name}? This cannot be undone.`}
           onConfirm={() => {
             deleteLodging(lodgingToDelete.id);
             setLodgingToDelete(null);
@@ -3520,6 +3538,26 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 420,
     boxShadow: '0 4px 10px rgba(0,0,0,0.25)',
+  },
+  payerChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+    marginBottom: 8,
+  },
+  payerChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e9ecef',
+    borderRadius: 16,
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    gap: 4,
+  },
+  payerOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
   },
 });
 
