@@ -14,8 +14,8 @@ import {
 
 describe('Create Trip Wizard helpers', () => {
   test('validates trip details', () => {
-    expect(validateTripDetails({ name: '', description: '', destination: '' })).toBe('Trip name is required.');
-    expect(validateTripDetails({ name: 'Paris', description: '', destination: '' })).toBeNull();
+    expect(validateTripDetails({ name: '', description: '' })).toBe('Trip name is required.');
+    expect(validateTripDetails({ name: 'Paris', description: '' })).toBeNull();
   });
 
   test('validates trip dates', () => {
@@ -91,7 +91,7 @@ describe('Create Trip Wizard helpers', () => {
 
   test('builds description with known info', () => {
     const description = buildTripDescription(
-      { name: 'Trip', description: 'Base', destination: '' },
+      { name: 'Trip', description: 'Base' },
       { flights: 'DL123', lodging: '', tours: 'Museum', cars: '' }
     );
     expect(description).toContain('Base');

@@ -12,6 +12,7 @@ import type {
   WebUser,
   PlaceDetailsCache,
   Expense,
+  LocationRecord,
 } from './types';
 
 const adapter = () => getDbAdapter();
@@ -110,6 +111,10 @@ export const claimInvitesForUser = async (...args: Parameters<ReturnType<typeof 
   adapter().claimInvitesForUser(...args);
 export const searchFlightLocations = async (...args: Parameters<ReturnType<typeof adapter>['searchFlightLocations']>) =>
   adapter().searchFlightLocations(...args);
+export const searchLocations = async (...args: Parameters<ReturnType<typeof adapter>['searchLocations']>): Promise<LocationRecord[]> =>
+  adapter().searchLocations(...args);
+export const getLocationsByIds = async (...args: Parameters<ReturnType<typeof adapter>['getLocationsByIds']>): Promise<LocationRecord[]> =>
+  adapter().getLocationsByIds(...args);
 export const listTraits = async (...args: Parameters<ReturnType<typeof adapter>['listTraits']>): Promise<Trait[]> =>
   adapter().listTraits(...args);
 export const createTrait = async (...args: Parameters<ReturnType<typeof adapter>['createTrait']>) =>

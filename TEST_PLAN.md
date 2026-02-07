@@ -142,3 +142,33 @@ New unit tests validate expense covering behavior on the Ledger and Cost Report:
 - `app/tests/ledgerCostReportMatch.covered.test.ts`: Cost Report totals match Ledger totals after roll-ups.
 
 By following these patterns, you can build a robust and maintainable Playwright test suite that can easily scale with your application.
+
+## 4. Location Ingestion + Selection Tests
+
+The location-driven trip flow now includes backend ingestion/search, trip persistence, and UI behavior:
+
+- `server/__tests__/locationRoutes.test.ts`
+  - Verifies `GET /api/places/search` delegates to location search and returns location rows.
+  - Verifies `POST /api/places/batch` resolves selected location IDs for UI rendering.
+- `server/__tests__/trip-wizard.test.ts`
+  - Verifies wizard trip creation persists `locationIds` in the created trip payload.
+- `server/__tests__/itineraryRoutes.test.ts`
+  - Verifies itinerary image endpoint now stores fetched image assets in Cloud Storage and returns signed URLs.
+  - Verifies cached storage records are re-used and fallback behavior remains safe when upstream image fetch fails.
+- `app/tests/createTripWizard.test.ts`
+  - Updated helper coverage for trip details validation and known-info description formatting after destination field removal.
+
+### New execution checks
+
+Run all workspace Jest suites:
+
+```bash
+npm run test:app
+npm run test:server
+```
+
+Or from repo root:
+
+```bash
+npm test
+```

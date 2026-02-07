@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { formatDateLong } from '../utils/formatDateLong';
 import { renderRichTextBlocks } from '../utils/richText';
@@ -10,6 +10,7 @@ type Trip = {
   name: string;
   description?: string | null;
   destination?: string | null;
+  locationIds?: string[];
   startDate?: string | null;
   endDate?: string | null;
   startMonth?: number | null;
@@ -27,6 +28,8 @@ type GroupView = {
 };
 
 type TripDetailsTabProps = {
+  backendUrl?: string;
+  headers?: Record<string, string>;
   trip: Trip | null;
   group: GroupView | null;
   styles: Record<string, any>;
@@ -35,7 +38,7 @@ type TripDetailsTabProps = {
   onUpdateCurrency: (tripId: string, currency: string) => void;
 };
 
-const TripDetailsTab: React.FC<TripDetailsTabProps> = ({ trip, group, styles, onSetActive, onOpenItinerary, onUpdateCurrency }) => {
+const TripDetailsTab: React.FC<TripDetailsTabProps> = ({ backendUrl, headers, trip, group, styles, onSetActive, onOpenItinerary, onUpdateCurrency }) => {
   if (!trip) {
     return (
       <View style={styles.card}>
@@ -58,6 +61,37 @@ const TripDetailsTab: React.FC<TripDetailsTabProps> = ({ trip, group, styles, on
   const monthLabel = formatMonthYear(trip.startMonth ?? null, trip.startYear ?? null);
   const pendingInvites = group?.invites ?? [];
   const members = group?.members ?? [];
+  const [locationNames, setLocationNames] = useState<string[]>([]);
+
+  useEffect(() => {
+    const ids = Array.isArray(trip?.locationIds) ? trip!.locationIds : [];
+    if (!ids.length) {
+      setLocationNames([]);
+      return;
+    }
+    if (!backendUrl || !headers) {
+      setLocationNames([]);
+      return;
+    }
+    let active = true;
+    fetch(`${backendUrl}/api/places/batch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...headers },
+      body: JSON.stringify({ ids }),
+    })
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        if (!active) return;
+        const names = Array.isArray(data) ? data.map((item: any) => String(item?.name ?? '')).filter(Boolean) : [];
+        setLocationNames(names);
+      })
+      .catch(() => {
+        if (active) setLocationNames([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [backendUrl, headers, trip?.id, trip?.locationIds]);
 
   return (
     <ScrollView style={styles.card} contentContainerStyle={{ gap: 12 }}>
@@ -66,7 +100,7 @@ const TripDetailsTab: React.FC<TripDetailsTabProps> = ({ trip, group, styles, on
       </View>
       <Text style={styles.flightTitle}>{trip.name}</Text>
       <Text style={styles.helperText}>Created: {formatDateLong(trip.createdAt)}</Text>
-      {trip.destination ? <Text style={styles.helperText}>Destination: {trip.destination}</Text> : null}
+      {locationNames.length ? <Text style={styles.helperText}>Locations: {locationNames.join(', ')}</Text> : null}
       {dateRange ? <Text style={styles.helperText}>Dates: {dateRange}</Text> : null}
       {!dateRange && monthLabel && trip.durationDays ? (
         <Text style={styles.helperText}>

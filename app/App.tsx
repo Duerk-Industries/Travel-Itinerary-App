@@ -86,6 +86,7 @@ interface Trip {
   name: string;
   description?: string | null;
   destination?: string | null;
+  locationIds?: string[];
   startDate?: string | null;
   endDate?: string | null;
   startMonth?: number | null;
@@ -2251,6 +2252,8 @@ const App: React.FC = () => {
 
       {activePage === 'trip-details' ? (
         <TripDetailsTab
+          backendUrl={backendUrl}
+          headers={headers}
           trip={trips.find((t) => t.id === selectedTripId) ?? null}
           group={groups.find((g) => g.id === trips.find((t) => t.id === selectedTripId)?.groupId) ?? null}
           styles={styles}

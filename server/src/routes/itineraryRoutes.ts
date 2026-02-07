@@ -6,9 +6,18 @@ import { listTraitsForGroupTrip } from '../db';
 import { logError } from '../logger';
 import { getEnvValue } from '../env';
 import { getDb } from '../db.firebase';
+import { getStorage } from 'firebase-admin/storage';
+import { getPlacePhotoUrlByPlaceId } from '../googlePlaces';
 
-type ImageCacheEntry = { url: string; fetchedAt: number };
+type ImageCacheEntry = {
+  sourceUrl: string;
+  storagePath: string;
+  fetchedAt: number;
+  expiresAt: number;
+  provider: 'unsplash' | 'google_places';
+};
 const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
+const SIGNED_URL_TTL_MS = 15 * 60 * 1000;
 const PLACEHOLDER_IMAGE =
   'https://images.unsplash.com/photo-1502920917128-1aa500764b0e?auto=format&fit=crop&w=1200&q=80';
 
@@ -49,6 +58,67 @@ const fetchUnsplashImage = async (query: string, retries = 2): Promise<string | 
   return null;
 };
 
+const storageBucketName = (): string => {
+  const explicit = getEnvValue('LOCATION_BUCKET') || getEnvValue('FIREBASE_STORAGE_BUCKET');
+  if (explicit) return explicit;
+  const projectId = getEnvValue('GCLOUD_PROJECT_ID') || getEnvValue('GOOGLE_CLOUD_PROJECT');
+  if (!projectId) throw new Error('Missing LOCATION_BUCKET/FIREBASE_STORAGE_BUCKET and project id');
+  return `${projectId}.appspot.com`;
+};
+
+const encodeToken = (value: string): string =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80) || 'image';
+
+const ensureStorageImage = async (
+  provider: 'unsplash' | 'google_places',
+  key: string,
+  sourceUrl: string
+): Promise<string | null> => {
+  try {
+    const response = await axios.get(sourceUrl, {
+      responseType: 'arraybuffer',
+      timeout: 15000,
+      maxRedirects: 5,
+    });
+    const contentType = String(response.headers['content-type'] || 'image/jpeg');
+    const ext = contentType.includes('png') ? 'png' : contentType.includes('webp') ? 'webp' : 'jpg';
+    const folder = provider === 'google_places' ? 'images/google-places' : 'images/unsplash';
+    const objectName = `${folder}/${encodeToken(key)}-${Date.now()}.${ext}`;
+    const bucket = getStorage().bucket(storageBucketName());
+    const file = bucket.file(objectName);
+    await file.save(Buffer.from(response.data), {
+      contentType,
+      resumable: false,
+      metadata: { cacheControl: 'public, max-age=86400' },
+    });
+    return objectName;
+  } catch (err) {
+    logError('[itinerary] failed to persist image to storage', err);
+    return null;
+  }
+};
+
+const signStorageImage = async (storagePath: string): Promise<string | null> => {
+  try {
+    const bucket = getStorage().bucket(storageBucketName());
+    const file = bucket.file(storagePath);
+    const [exists] = await file.exists();
+    if (!exists) return null;
+    const [signedUrl] = await file.getSignedUrl({
+      action: 'read',
+      expires: Date.now() + SIGNED_URL_TTL_MS,
+    });
+    return signedUrl;
+  } catch (err) {
+    logError('[itinerary] failed to sign storage image url', err);
+    return null;
+  }
+};
+
 type ChatCompletionResponse = {
   choices?: Array<{
     message?: {
@@ -68,36 +138,50 @@ router.get('/images', async (req, res) => {
     res.status(400).json({ error: 'location is required' });
     return;
   }
+  const placeId = String(req.query.placeId || '').trim();
   const dayKey = String(req.query.day || 'any').trim().toLowerCase();
-  const cacheId = `${location}|${dayKey}`;
+  const cacheId = `${placeId || location}|${dayKey}`;
   try {
     const db = getDb();
     const docRef = db.collection('imageCache').doc(cacheId);
     const doc = await docRef.get();
     const now = Date.now();
-    let cachedUrl: string | null = null;
     if (doc.exists) {
       const data = doc.data() as ImageCacheEntry;
-      cachedUrl = data?.url || null;
-      if (data?.url && data?.fetchedAt && now - data.fetchedAt < ONE_YEAR_MS) {
-        res.json({ url: data.url, cached: true });
-        return;
+      if (data?.storagePath && data?.expiresAt && now < data.expiresAt) {
+        const signed = await signStorageImage(data.storagePath);
+        if (signed) {
+          res.json({ url: signed, cached: true });
+          return;
+        }
       }
     }
 
-    const fetchedUrl = await fetchUnsplashImage(location);
-    if (fetchedUrl) {
-      await docRef.set({ url: fetchedUrl, fetchedAt: now }, { merge: true });
-      res.json({ url: fetchedUrl, cached: false });
+    const googleSource = placeId ? await getPlacePhotoUrlByPlaceId(placeId) : null;
+    const provider: 'google_places' | 'unsplash' = googleSource ? 'google_places' : 'unsplash';
+    const sourceUrl = googleSource || (await fetchUnsplashImage(location));
+    if (!sourceUrl) {
+      res.json({ url: PLACEHOLDER_IMAGE, cached: false });
       return;
     }
-
-    if (cachedUrl) {
-      res.json({ url: cachedUrl, cached: true });
+    const storagePath = await ensureStorageImage(provider, placeId || location, sourceUrl);
+    if (!storagePath) {
+      res.json({ url: PLACEHOLDER_IMAGE, cached: false });
       return;
     }
-
-    res.json({ url: PLACEHOLDER_IMAGE, cached: false });
+    const expiresAt = now + ONE_YEAR_MS;
+    await docRef.set(
+      {
+        sourceUrl,
+        storagePath,
+        fetchedAt: now,
+        expiresAt,
+        provider,
+      },
+      { merge: true }
+    );
+    const signed = await signStorageImage(storagePath);
+    res.json({ url: signed || PLACEHOLDER_IMAGE, cached: false });
   } catch (err) {
     logError('[itinerary] image cache error', err);
     res.json({ url: PLACEHOLDER_IMAGE, cached: false, error: 'fallback' });
@@ -115,10 +199,16 @@ router.post('/', async (req, res) => {
     return;
   }
 
-  const { country, days, budgetMin, budgetMax, traits, departureAirport, tripId, tripStyle } = req.body ?? {};
+  const { country, locations, days, budgetMin, budgetMax, traits, departureAirport, tripId, tripStyle } = req.body ?? {};
   const userId = (req as any).user.userId as string;
-  if (!country || !String(country).trim()) {
-    res.status(400).json({ error: 'country is required' });
+  const selectedLocations = Array.isArray(locations)
+    ? locations.map((value) => String(value ?? '').trim()).filter(Boolean)
+    : [];
+  const destinationSummary = selectedLocations.length
+    ? selectedLocations.join(', ')
+    : String(country ?? '').trim();
+  if (!destinationSummary) {
+    res.status(400).json({ error: 'locations or country is required' });
     return;
   }
   const daysNum = Number(days);
@@ -180,7 +270,8 @@ router.post('/', async (req, res) => {
 
   const prompt = [
     `You are a concise travel planner. Create a day-by-day itinerary.`,
-    `Destination country: ${String(country).trim()}`,
+    `Primary destination context: ${destinationSummary}`,
+    selectedLocations.length ? `Selected trip locations: ${selectedLocations.join(', ')}` : '',
     `Trip length: ${daysNum} day(s)`,
     `Budget range: $${min} - $${max}`,
     origin ? `Departure airport: ${origin}` : '',
@@ -196,6 +287,7 @@ router.post('/', async (req, res) => {
     ``,
     `Rules:`,
     `- Return a short markdown-style itinerary with headings per day.`,
+    `- Optimize sequence/logistics across all selected locations when more than one is provided.`,
     `- Include 2-3 activities per day, tailored to budget and traits.`,
     `- EVERY activity line MUST include a cost with a leading $ (estimate if needed). Do not omit costs.`,
     `- If a departure airport is provided, estimate a reasonable round-trip flight cost from that airport to the destination, state it explicitly, and treat it as a budget line item (round trip).`,

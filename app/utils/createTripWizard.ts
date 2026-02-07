@@ -1,7 +1,6 @@
 export type TripDetails = {
   name: string;
   description: string;
-  destination: string;
 };
 
 export type TripDates = {

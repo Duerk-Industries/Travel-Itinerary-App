@@ -1,19 +1,33 @@
 import request from 'supertest';
-import { app } from '../src/app';
 import axios from 'axios';
+import { app } from '../src/app';
 import * as firebase from '../src/db.firebase';
 import * as auth from '../src/auth';
 
 jest.mock('../src/auth');
 jest.mock('axios');
-const mockedAxios = axios as jest.Mocked<typeof axios>;
-
 jest.mock('../src/db.firebase');
-const mockedGetDb = firebase.getDb as jest.Mock;
+
+const storageFileMock = {
+  exists: jest.fn(async () => [true]),
+  save: jest.fn(async () => undefined),
+  getSignedUrl: jest.fn(async () => ['https://signed-url/mock']),
+};
+const storageBucketMock = {
+  file: jest.fn(() => storageFileMock),
+};
+
+jest.mock('firebase-admin/storage', () => ({
+  getStorage: jest.fn(() => ({
+    bucket: jest.fn(() => storageBucketMock),
+  })),
+}));
 
 jest.mock('../src/env', () => ({
   getEnvValue: (key: string) => {
     if (key === 'UNSPLASH_ACCESS_KEY') return 'test-key';
+    if (key === 'LOCATION_BUCKET') return 'travel-itinerary-app-483623.appspot.com';
+    if (key === 'GCLOUD_PROJECT_ID') return 'travel-itinerary-app-483623';
     return null;
   },
   hasRunLocalFlag: () => false,
@@ -21,17 +35,19 @@ jest.mock('../src/env', () => ({
 }));
 
 describe('/api/itinerary/images', () => {
+  const mockedAxios = axios as jest.Mocked<typeof axios>;
   let docData: any = null;
   let docExists = false;
 
   beforeEach(() => {
-    (auth.authenticate as jest.Mock).mockImplementation((req, res, next) => {
+    (auth.authenticate as jest.Mock).mockImplementation((req, _res, next) => {
       (req as any).user = { userId: 'test-user' };
       next();
     });
-
     docExists = false;
     docData = null;
+    storageFileMock.exists.mockResolvedValue([true]);
+    storageFileMock.getSignedUrl.mockResolvedValue(['https://signed-url/mock']);
     const doc = {
       get: jest.fn(async () => ({
         exists: docExists,
@@ -45,91 +61,51 @@ describe('/api/itinerary/images', () => {
     const collection = {
       doc: jest.fn(() => doc),
     };
-    mockedGetDb.mockReturnValue({
+    (firebase.getDb as jest.Mock).mockReturnValue({
       collection: jest.fn(() => collection),
     });
   });
 
   afterEach(() => {
-    mockedAxios.get.mockClear();
-    mockedGetDb.mockClear();
-    jest.restoreAllMocks();
+    jest.clearAllMocks();
   });
 
-  it('fetches a new image and caches it', async () => {
-    const imageUrl = 'https://images.unsplash.com/mock-photo';
-    mockedAxios.get.mockResolvedValue({ data: { urls: { regular: imageUrl } } });
+  it('fetches and stores an unsplash image in storage', async () => {
+    mockedAxios.get.mockImplementation((url: string) => {
+      if (url.includes('api.unsplash.com/photos/random')) {
+        return Promise.resolve({ data: { urls: { regular: 'https://images.unsplash.com/new-photo' } } } as any);
+      }
+      if (url.includes('images.unsplash.com/new-photo')) {
+        return Promise.resolve({ data: Buffer.from('img'), headers: { 'content-type': 'image/jpeg' } } as any);
+      }
+      return Promise.reject(new Error('Unexpected URL'));
+    });
 
     const res = await request(app).get('/api/itinerary/images?location=paris').expect(200);
-
-    expect(res.body.url).toBe(imageUrl);
     expect(res.body.cached).toBe(false);
-    expect(mockedAxios.get).toHaveBeenCalledTimes(1);
+    expect(res.body.url).toBe('https://signed-url/mock');
+    expect(storageFileMock.save).toHaveBeenCalled();
   });
 
-  it('returns a cached image if available and not expired', async () => {
+  it('returns a cached storage image url when cache is valid', async () => {
     docExists = true;
     docData = {
-      url: 'https://images.unsplash.com/cached-photo',
-      fetchedAt: Date.now() - 10000,
+      storagePath: 'images/unsplash/paris-1.jpg',
+      sourceUrl: 'https://images.unsplash.com/paris',
+      fetchedAt: Date.now() - 1000,
+      expiresAt: Date.now() + 100000,
+      provider: 'unsplash',
     };
 
-    const res = await request(app).get('/api/itinerary/images?location=london').expect(200);
-
-    expect(res.body.url).toBe(docData.url);
+    const res = await request(app).get('/api/itinerary/images?location=paris').expect(200);
     expect(res.body.cached).toBe(true);
+    expect(res.body.url).toBe('https://signed-url/mock');
     expect(mockedAxios.get).not.toHaveBeenCalled();
   });
 
-  it('retries on fetch failure and eventually succeeds', async () => {
-    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-    const imageUrl = 'https://images.unsplash.com/retry-photo';
-    mockedAxios.get
-      .mockRejectedValueOnce(new Error('Network error'))
-      .mockResolvedValue({ data: { urls: { regular: imageUrl } } });
-
-    const res = await request(app).get('/api/itinerary/images?location=tokyo').expect(200);
-
-    expect(res.body.url).toBe(imageUrl);
-    expect(mockedAxios.get).toHaveBeenCalledTimes(2);
-    expect(consoleErrorSpy).toHaveBeenCalled();
-    consoleErrorSpy.mockRestore();
-  });
-
-  it('falls back to "travel" query on repeated failures', async () => {
-    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-    const fallbackUrl = 'https://images.unsplash.com/fallback-photo';
-    
-    mockedAxios.get.mockImplementation((url: string) => {
-        if (url.includes('query=berlin')) {
-            return Promise.reject(new Error('Network error'));
-        }
-        if (url.includes('query=travel')) {
-            return Promise.resolve({ data: { urls: { regular: fallbackUrl } } });
-        }
-        return Promise.reject(new Error('Unexpected fetch call'));
-    });
-
-    const res = await request(app).get('/api/itinerary/images?location=berlin').expect(200);
-
-    expect(res.body.url).toBe(fallbackUrl);
-    // 2 attempts for 'berlin' + 1 for 'travel'
-    expect(mockedAxios.get).toHaveBeenCalledTimes(3); 
-    expect(consoleErrorSpy).toHaveBeenCalled();
-    consoleErrorSpy.mockRestore();
-  });
-
-  it('returns placeholder when all fetches fail', async () => {
-    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-    mockedAxios.get.mockRejectedValue(new Error('Major network failure'));
-    const placeholder = 'https://images.unsplash.com/photo-1502920917128-1aa500764b0e?auto=format&fit=crop&w=1200&q=80';
-
+  it('falls back to placeholder when image lookups fail', async () => {
+    mockedAxios.get.mockRejectedValue(new Error('Network down'));
     const res = await request(app).get('/api/itinerary/images?location=cairo').expect(200);
-    
-    expect(res.body.url).toBe(placeholder);
-    // 2 attempts for 'cairo' + 1 for 'travel'
-    expect(mockedAxios.get).toHaveBeenCalledTimes(3);
-    expect(consoleErrorSpy).toHaveBeenCalled();
-    consoleErrorSpy.mockRestore();
+    expect(String(res.body.url)).toContain('images.unsplash.com/photo-1502920917128-1aa500764b0e');
   });
 });

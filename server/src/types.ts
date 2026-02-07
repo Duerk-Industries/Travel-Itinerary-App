@@ -77,6 +77,7 @@ export interface Trip {
   name: string;
   description?: string | null;
   destination?: string | null;
+  locationIds?: string[];
   startDate?: string | null;
   endDate?: string | null;
   startMonth?: number | null;
@@ -85,6 +86,29 @@ export interface Trip {
   currency?: string | null;
   coveredBy?: Record<string, string>;
   createdAt: string;
+}
+
+export interface LocationRecord {
+  id: string;
+  sourceType: 'country_region' | 'city';
+  category?: string | null;
+  name: string;
+  address?: string | null;
+  visitorCount?: string | null;
+  climate?: string | null;
+  priceLevel?: string | null;
+  bestMonth?: string | null;
+  editorialSummary?: string | null;
+  popularityTier?: string | null;
+  unesco?: string | null;
+  rating?: number | null;
+  userRatingCount?: number | null;
+  websiteUri?: string | null;
+  googleMapsUri?: string | null;
+  keywords?: string[];
+  sourceFile?: string | null;
+  sourceRowHash?: string | null;
+  updatedAt?: string;
 }
 
 export interface Trait {

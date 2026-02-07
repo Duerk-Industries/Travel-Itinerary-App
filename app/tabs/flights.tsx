@@ -152,6 +152,7 @@ export type Trip = {
   name: string;
   description?: string | null;
   destination?: string | null;
+  locationIds?: string[];
   departureCity?: string | null;
   departureLocation?: string | null;
   departureAirport?: string | null;

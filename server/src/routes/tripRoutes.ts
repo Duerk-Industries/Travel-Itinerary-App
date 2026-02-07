@@ -15,6 +15,12 @@ import {
 } from '../db';
 import { detectCoveringConflict, detectCycle } from '../utils/coveredBy';
 
+const normalizeLocationIds = (value: unknown): string[] => {
+  if (!Array.isArray(value)) return [];
+  const ids = value.map((id) => String(id ?? '').trim()).filter(Boolean);
+  return Array.from(new Set(ids));
+};
+
 // Trips API: create/list/delete trips for the authenticated user.
 const router = Router();
 router.use(bodyParser.json());
@@ -83,7 +89,7 @@ router.put('/:id/covered-by', async (req, res) => {
 
 router.post('/', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const { name, groupId, description, destination, startDate, endDate, startMonth, startYear, durationDays, currency } = req.body ?? {};
+  const { name, groupId, description, locationIds, startDate, endDate, startMonth, startYear, durationDays, currency } = req.body ?? {};
   if (!name || !groupId) {
     res.status(400).json({ error: 'name and groupId are required' });
     return;
@@ -91,7 +97,8 @@ router.post('/', async (req, res) => {
   try {
     const trip = await createTrip(userId, groupId, name.trim(), {
       description: typeof description === 'string' ? description.trim() || null : null,
-      destination: typeof destination === 'string' ? destination.trim() || null : null,
+      destination: null,
+      locationIds: normalizeLocationIds(locationIds),
       startDate: typeof startDate === 'string' ? startDate : null,
       endDate: typeof endDate === 'string' ? endDate : null,
       startMonth: Number.isFinite(Number(startMonth)) ? Number(startMonth) : null,
@@ -112,7 +119,7 @@ router.post('/', async (req, res) => {
 
 router.post('/wizard', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const { name, description, destination, startDate, endDate, startMonth, startYear, durationDays, participants, currency } = req.body ?? {};
+  const { name, description, locationIds, startDate, endDate, startMonth, startYear, durationDays, participants, currency } = req.body ?? {};
   if (!name || !String(name).trim()) {
     res.status(400).json({ error: 'Trip name is required' });
     return;
@@ -144,7 +151,8 @@ router.post('/wizard', async (req, res) => {
       ownerId: userId,
       tripName: String(name).trim(),
       description: typeof description === 'string' ? description.trim() || null : null,
-      destination: typeof destination === 'string' ? destination.trim() || null : null,
+      destination: null,
+      locationIds: normalizeLocationIds(locationIds),
       startDate: typeof startDate === 'string' ? startDate : null,
       endDate: typeof endDate === 'string' ? endDate : null,
       startMonth: Number.isFinite(Number(startMonth)) ? Number(startMonth) : null,
@@ -198,15 +206,16 @@ router.patch('/:id/group', async (req, res) => {
 
 router.patch('/:id', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const { description, destination, startDate, endDate, startMonth, startYear, durationDays, dateMode, currency } = req.body ?? {};
-  if (description == null && destination == null && startDate == null && endDate == null && startMonth == null && startYear == null && durationDays == null && currency == null) {
+  const { description, locationIds, startDate, endDate, startMonth, startYear, durationDays, dateMode, currency } = req.body ?? {};
+  if (description == null && locationIds == null && startDate == null && endDate == null && startMonth == null && startYear == null && durationDays == null && currency == null) {
     res.status(400).json({ error: 'At least one field is required' });
     return;
   }
   try {
     const updated = await updateTripDetails(userId, req.params.id, {
       description: typeof description === 'string' ? description : null,
-      destination: typeof destination === 'string' ? destination : null,
+      destination: null,
+      locationIds: locationIds == null ? undefined : normalizeLocationIds(locationIds),
       startDate: typeof startDate === 'string' ? startDate : null,
       endDate: typeof endDate === 'string' ? endDate : null,
       startMonth: Number.isFinite(Number(startMonth)) ? Number(startMonth) : null,

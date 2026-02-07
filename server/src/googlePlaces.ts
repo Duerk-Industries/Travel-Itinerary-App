@@ -47,6 +47,15 @@ const getPhotoUrl = (photoName: string, apiKey: string): string => {
   return `https://places.googleapis.com/v1/${photoName}/media?maxHeightPx=1200&key=${apiKey}`;
 };
 
+export const getPlacePhotoUrlByPlaceId = async (placeId: string): Promise<string | null> => {
+  const apiKey = getEnvValue('GOOGLE_PLACES_API_KEY');
+  if (!apiKey) return null;
+  const details = await getPlaceDetails(placeId, ['id', 'photos']);
+  const photoName = details?.details?.photos?.[0]?.name;
+  if (!photoName || typeof photoName !== 'string') return null;
+  return getPhotoUrl(photoName, apiKey);
+};
+
 const getDisplayName = (details: any, fallback: string): string => {
   if (!details) return fallback;
   if (typeof details.displayName === 'string') return details.displayName;

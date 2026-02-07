@@ -12,10 +12,13 @@
     "lint": "echo \"Add linters per workspace\"",
     "test": "npm run test:app && npm run test:server",
     "test:e2e": "npx playwright test",
+    "emulators:container": "docker build -f functions/Dockerfile.local -t travel-itinerary-emulators . && docker run --rm -p 4001:4001 -p 5001:5001 -p 8080:8080 -p 9099:9099 -p 9199:9199 travel-itinerary-emulators",
     "postinstall": "patch-package",
     "playwright:install": "node ./node_modules/@playwright/test/cli.js install",
     "test:app": "npm --prefix app test",
     "test:server": "npm --prefix server test",
+    "locations:upload": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/upload-location-csvs.ts",
+    "images:migrate-cache": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/migrate-image-cache-to-storage.ts",
     "list-users": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/list_users.ts",
     "list-trips": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/list_trips_and_users.ts"
   },

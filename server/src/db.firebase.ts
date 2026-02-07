@@ -15,6 +15,7 @@ import {
   Group,
   GroupMember,
   PlaceDetailsCache,
+  LocationRecord,
 } from './types';
 import { logError, logInfo } from './logger';
 import { getEnvValue, isLocalEnv } from './env';
@@ -607,6 +608,7 @@ export const listTrips = async (userId: string): Promise<Array<Trip & { groupNam
       name: data.name,
       description: data.description ?? null,
       destination: data.destination ?? null,
+      locationIds: Array.isArray(data.locationIds) ? data.locationIds : [],
       startDate: data.startDate ?? null,
       endDate: data.endDate ?? null,
       startMonth: data.startMonth ?? null,
@@ -643,6 +645,7 @@ export const createTrip = async (
     name,
     description: details.description ?? null,
     destination: details.destination ?? null,
+    locationIds: Array.isArray(details.locationIds) ? details.locationIds : [],
     startDate: details.startDate ?? null,
     endDate: details.endDate ?? null,
     startMonth: details.startMonth ?? null,
@@ -673,6 +676,7 @@ export const updateTripDetails = async (
     .update({
       description: updates.description ?? data.description ?? null,
       destination: updates.destination ?? data.destination ?? null,
+      locationIds: Array.isArray(updates.locationIds) ? updates.locationIds : (Array.isArray(data.locationIds) ? data.locationIds : []),
       startDate: updates.startDate ?? data.startDate ?? null,
       endDate: updates.endDate ?? data.endDate ?? null,
       startMonth: updates.startMonth ?? data.startMonth ?? null,
@@ -783,6 +787,7 @@ export const createTripWithGroupAndMembers = async (payload: {
   tripName: string;
   description?: string | null;
   destination?: string | null;
+  locationIds?: string[];
   startDate?: string | null;
   endDate?: string | null;
   startMonth?: number | null;
@@ -799,6 +804,7 @@ export const createTripWithGroupAndMembers = async (payload: {
   const trip = await createTrip(payload.ownerId, group.groupId, payload.tripName, {
     description: payload.description ?? null,
     destination: payload.destination ?? null,
+    locationIds: Array.isArray(payload.locationIds) ? payload.locationIds : [],
     startDate: payload.startDate ?? null,
     endDate: payload.endDate ?? null,
     startMonth: payload.startMonth ?? null,
@@ -951,6 +957,72 @@ export const searchFlightLocations = async (_userId: string, query: string): Pro
     .catch(() => null);
   if (!airports || airports.empty) return [];
   return airports.docs.map((d) => d.data().label as string);
+};
+
+const toLocationRecord = (id: string, data: any): LocationRecord => ({
+  id,
+  sourceType: data.sourceType,
+  category: data.category ?? null,
+  name: data.name,
+  address: data.address ?? null,
+  visitorCount: data.visitorCount ?? null,
+  climate: data.climate ?? null,
+  priceLevel: data.priceLevel ?? null,
+  bestMonth: data.bestMonth ?? null,
+  editorialSummary: data.editorialSummary ?? null,
+  popularityTier: data.popularityTier ?? null,
+  unesco: data.unesco ?? null,
+  rating: data.rating ?? null,
+  userRatingCount: data.userRatingCount ?? null,
+  websiteUri: data.websiteUri ?? null,
+  googleMapsUri: data.googleMapsUri ?? null,
+  keywords: Array.isArray(data.keywords) ? data.keywords : [],
+  sourceFile: data.sourceFile ?? null,
+  sourceRowHash: data.sourceRowHash ?? null,
+  updatedAt: data.updatedAt ?? undefined,
+});
+
+export const searchLocations = async (
+  _userId: string,
+  query: string,
+  sourceTypes?: Array<'country_region' | 'city'>,
+  limit = 15
+): Promise<LocationRecord[]> => {
+  const db = getDb();
+  const normalized = String(query ?? '').trim().toLowerCase();
+  if (!normalized) return [];
+  const safeLimit = Math.min(Math.max(Number(limit) || 15, 1), 50);
+  const snapshot = await db.collection('locations').limit(200).get();
+  let docs = snapshot.docs;
+  if (Array.isArray(sourceTypes) && sourceTypes.length) {
+    const allowed = new Set(sourceTypes);
+    docs = docs.filter((doc) => allowed.has((doc.data() as any).sourceType as 'country_region' | 'city'));
+  }
+  const filtered = docs
+    .filter((doc) => {
+      const data = doc.data() as any;
+      const name = String(data.name ?? '').toLowerCase();
+      const searchName = String(data.searchName ?? '').toLowerCase();
+      const address = String(data.address ?? '').toLowerCase();
+      return name.includes(normalized) || searchName.includes(normalized) || address.includes(normalized);
+    })
+    .sort((a, b) => String((a.data() as any).name ?? '').localeCompare(String((b.data() as any).name ?? '')))
+    .slice(0, safeLimit)
+    .map((doc) => toLocationRecord(doc.id, doc.data()));
+  return filtered;
+};
+
+export const getLocationsByIds = async (_userId: string, ids: string[]): Promise<LocationRecord[]> => {
+  const db = getDb();
+  const normalized = Array.from(new Set((ids ?? []).map((id) => String(id).trim()).filter(Boolean)));
+  if (!normalized.length) return [];
+  const docs = await Promise.all(normalized.map((id) => db.collection('locations').doc(id).get()));
+  const byId = new Map<string, LocationRecord>();
+  for (const doc of docs) {
+    if (!doc.exists) continue;
+    byId.set(doc.id, toLocationRecord(doc.id, doc.data() as any));
+  }
+  return normalized.map((id) => byId.get(id)).filter(Boolean) as LocationRecord[];
 };
 
 // Lodgings

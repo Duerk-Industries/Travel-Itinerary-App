@@ -14,6 +14,7 @@ import {
   Itinerary,
   ItineraryDetail,
   PlaceDetailsCache,
+  LocationRecord,
 } from './types';
 import { logError } from './logger';
 import { getEnvValue } from './env';
@@ -215,6 +216,7 @@ export const initDb = async (): Promise<void> => {
       name TEXT NOT NULL,
       description TEXT,
       destination TEXT,
+      location_ids JSONB DEFAULT '[]'::jsonb,
       start_date DATE,
       end_date DATE,
       start_month INTEGER,
@@ -227,6 +229,7 @@ export const initDb = async (): Promise<void> => {
   `);
   await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS description TEXT;`);
   await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS destination TEXT;`);
+  await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS location_ids JSONB DEFAULT '[]'::jsonb;`);
   await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS start_date DATE;`);
   await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS end_date DATE;`);
   await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS start_month INTEGER;`);
@@ -236,6 +239,24 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE trips ADD COLUMN IF NOT EXISTS covered_by JSONB DEFAULT '{}'::jsonb;`);
   await p.query(`UPDATE trips SET currency = 'USD' WHERE currency IS NULL;`);
   await p.query(`UPDATE trips SET covered_by = '{}'::jsonb WHERE covered_by IS NULL;`);
+  await p.query(`UPDATE trips SET location_ids = '[]'::jsonb WHERE location_ids IS NULL;`);
+
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS locations (
+      id TEXT PRIMARY KEY,
+      source_type TEXT NOT NULL,
+      category TEXT,
+      name TEXT NOT NULL,
+      address TEXT,
+      search_name TEXT NOT NULL,
+      payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+      source_file TEXT,
+      source_row_hash TEXT,
+      updated_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_locations_source_type ON locations(source_type);`);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_locations_search_name ON locations(search_name);`);
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS trip_removals (
@@ -1067,6 +1088,7 @@ export const updateTripDetails = async (
   updates: {
     description?: string | null;
     destination?: string | null;
+    locationIds?: string[];
     startDate?: string | null;
     endDate?: string | null;
     startMonth?: number | null;
@@ -1084,18 +1106,20 @@ export const updateTripDetails = async (
     `UPDATE trips
      SET description = COALESCE($1, description),
          destination = COALESCE($2, destination),
-         start_date = CASE WHEN $6 = 'range' THEN $3::date WHEN $6 = 'month' THEN NULL ELSE start_date END,
-         end_date = CASE WHEN $6 = 'range' THEN $4::date WHEN $6 = 'month' THEN NULL ELSE end_date END,
-         start_month = CASE WHEN $6 = 'month' THEN $7::int WHEN $6 = 'range' THEN NULL ELSE start_month END,
-         start_year = CASE WHEN $6 = 'month' THEN $8::int WHEN $6 = 'range' THEN NULL ELSE start_year END,
-         duration_days = CASE WHEN $6 = 'month' THEN $9::int WHEN $6 = 'range' THEN NULL ELSE duration_days END,
-         currency = COALESCE($10, currency)
-     WHERE id = $5
+         location_ids = COALESCE($3::jsonb, location_ids),
+         start_date = CASE WHEN $7 = 'range' THEN $4::date WHEN $7 = 'month' THEN NULL ELSE start_date END,
+         end_date = CASE WHEN $7 = 'range' THEN $5::date WHEN $7 = 'month' THEN NULL ELSE end_date END,
+         start_month = CASE WHEN $7 = 'month' THEN $8::int WHEN $7 = 'range' THEN NULL ELSE start_month END,
+         start_year = CASE WHEN $7 = 'month' THEN $9::int WHEN $7 = 'range' THEN NULL ELSE start_year END,
+         duration_days = CASE WHEN $7 = 'month' THEN $10::int WHEN $7 = 'range' THEN NULL ELSE duration_days END,
+         currency = COALESCE($11, currency)
+     WHERE id = $6
      RETURNING id,
        group_id as "groupId",
        name,
        description,
        destination,
+       COALESCE(location_ids, '[]'::jsonb) as "locationIds",
        start_date as "startDate",
        end_date as "endDate",
        start_month as "startMonth",
@@ -1107,6 +1131,7 @@ export const updateTripDetails = async (
     [
       updates.description ?? null,
       updates.destination ?? null,
+      Array.isArray(updates.locationIds) ? JSON.stringify(updates.locationIds) : null,
       updates.startDate ?? null,
       updates.endDate ?? null,
       tripId,
@@ -2579,6 +2604,7 @@ export const listTrips = async (userId: string): Promise<Array<Trip & { groupNam
               t.name,
               t.description,
               t.destination,
+              COALESCE(t.location_ids, '[]'::jsonb) as "locationIds",
               t.start_date as "startDate",
               t.end_date as "endDate",
               t.start_month as "startMonth",
@@ -2604,6 +2630,7 @@ export const listTrips = async (userId: string): Promise<Array<Trip & { groupNam
             t.name,
             t.description,
             t.destination,
+            COALESCE(t.location_ids, '[]'::jsonb) as "locationIds",
             t.start_date as "startDate",
             t.end_date as "endDate",
             t.start_month as "startMonth",
@@ -2633,6 +2660,7 @@ export const createTrip = async (
   details?: {
     description?: string | null;
     destination?: string | null;
+    locationIds?: string[];
     startDate?: string | null;
     endDate?: string | null;
     startMonth?: number | null;
@@ -2666,13 +2694,14 @@ export const createTrip = async (
 
   const id = randomUUID();
   const { rows } = await p.query<Trip>(
-    `INSERT INTO trips (id, group_id, name, description, destination, start_date, end_date, start_month, start_year, duration_days, currency, covered_by)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+    `INSERT INTO trips (id, group_id, name, description, destination, location_ids, start_date, end_date, start_month, start_year, duration_days, currency, covered_by)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
      RETURNING id,
                group_id as "groupId",
                name,
                description,
                destination,
+               COALESCE(location_ids, '[]'::jsonb) as "locationIds",
                start_date as "startDate",
                end_date as "endDate",
                start_month as "startMonth",
@@ -2687,6 +2716,7 @@ export const createTrip = async (
       name,
       details?.description ?? null,
       details?.destination ?? null,
+      JSON.stringify(Array.isArray(details?.locationIds) ? details?.locationIds : []),
       details?.startDate ?? null,
       details?.endDate ?? null,
       details?.startMonth ?? null,
@@ -2804,6 +2834,7 @@ export const updateTripGroup = async (userId: string, tripId: string, newGroupId
        name,
        description,
        destination,
+       COALESCE(location_ids, '[]'::jsonb) as "locationIds",
        start_date as "startDate",
        end_date as "endDate",
        start_month as "startMonth",
@@ -2899,6 +2930,7 @@ export const createTripWithGroupAndMembers = async (payload: {
   tripName: string;
   description?: string | null;
   destination?: string | null;
+  locationIds?: string[];
   startDate?: string | null;
   endDate?: string | null;
   startMonth?: number | null;
@@ -2963,13 +2995,14 @@ export const createTripWithGroupAndMembers = async (payload: {
 
     const tripId = randomUUID();
     const { rows } = await client.query<Trip>(
-      `INSERT INTO trips (id, group_id, name, description, destination, start_date, end_date, start_month, start_year, duration_days, currency)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      `INSERT INTO trips (id, group_id, name, description, destination, location_ids, start_date, end_date, start_month, start_year, duration_days, currency)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
        RETURNING id,
                  group_id as "groupId",
                  name,
                  description,
                  destination,
+                 COALESCE(location_ids, '[]'::jsonb) as "locationIds",
                  start_date as "startDate",
                  end_date as "endDate",
                  start_month as "startMonth",
@@ -2983,6 +3016,7 @@ export const createTripWithGroupAndMembers = async (payload: {
         payload.tripName,
         payload.description ?? null,
         payload.destination ?? null,
+        JSON.stringify(Array.isArray(payload.locationIds) ? payload.locationIds : []),
         payload.startDate ?? null,
         payload.endDate ?? null,
         payload.startMonth ?? null,
@@ -3105,6 +3139,88 @@ export const searchFlightLocations = async (userId: string, query: string): Prom
     [like]
   );
   return rows.map((r) => r.label).filter(Boolean);
+};
+
+const toLocationRecord = (row: any): LocationRecord => {
+  const payload = row.payload && typeof row.payload === 'object' ? row.payload : {};
+  return {
+    id: row.id,
+    sourceType: row.sourceType,
+    category: row.category ?? payload.category ?? null,
+    name: row.name,
+    address: row.address ?? payload.address ?? null,
+    visitorCount: payload.visitorCount ?? null,
+    climate: payload.climate ?? null,
+    priceLevel: payload.priceLevel ?? null,
+    bestMonth: payload.bestMonth ?? null,
+    editorialSummary: payload.editorialSummary ?? null,
+    popularityTier: payload.popularityTier ?? null,
+    unesco: payload.unesco ?? null,
+    rating: payload.rating ?? null,
+    userRatingCount: payload.userRatingCount ?? null,
+    websiteUri: payload.websiteUri ?? null,
+    googleMapsUri: payload.googleMapsUri ?? null,
+    keywords: Array.isArray(payload.keywords) ? payload.keywords : [],
+    sourceFile: row.sourceFile ?? null,
+    sourceRowHash: row.sourceRowHash ?? null,
+    updatedAt: row.updatedAt ? new Date(row.updatedAt).toISOString() : undefined,
+  };
+};
+
+export const searchLocations = async (
+  _userId: string,
+  query: string,
+  sourceTypes?: Array<'country_region' | 'city'>,
+  limit = 15
+): Promise<LocationRecord[]> => {
+  const trimmed = String(query ?? '').trim().toLowerCase();
+  if (!trimmed) return [];
+  const p = getPool();
+  const safeLimit = Math.min(Math.max(Number(limit) || 15, 1), 50);
+  const types = Array.isArray(sourceTypes) ? sourceTypes.filter(Boolean) : [];
+  const pattern = `%${trimmed}%`;
+  const { rows } = await p.query(
+    `SELECT id,
+            source_type as "sourceType",
+            category,
+            name,
+            address,
+            payload,
+            source_file as "sourceFile",
+            source_row_hash as "sourceRowHash",
+            updated_at as "updatedAt"
+       FROM locations
+      WHERE ($1::text[] IS NULL OR source_type = ANY($1::text[]))
+        AND (LOWER(search_name) LIKE $2 OR LOWER(name) LIKE $2 OR LOWER(COALESCE(address, '')) LIKE $2)
+      ORDER BY
+        CASE WHEN LOWER(name) = $3 THEN 0 ELSE 1 END,
+        name ASC
+      LIMIT $4`,
+    [types.length ? types : null, pattern, trimmed, safeLimit]
+  );
+  return rows.map(toLocationRecord);
+};
+
+export const getLocationsByIds = async (_userId: string, ids: string[]): Promise<LocationRecord[]> => {
+  const normalized = Array.from(new Set((ids ?? []).map((id) => String(id).trim()).filter(Boolean)));
+  if (!normalized.length) return [];
+  const p = getPool();
+  const { rows } = await p.query(
+    `SELECT id,
+            source_type as "sourceType",
+            category,
+            name,
+            address,
+            payload,
+            source_file as "sourceFile",
+            source_row_hash as "sourceRowHash",
+            updated_at as "updatedAt"
+       FROM locations
+      WHERE id = ANY($1::text[])`,
+    [normalized]
+  );
+  const byId = new Map(rows.map((row: any) => [row.id, toLocationRecord(row)]));
+  return normalized.map((id) => byId.get(id)).filter(Boolean) as LocationRecord[];
 };
 
 const clampTraitLevel = (level?: number | null): number => {

@@ -49,6 +49,13 @@ type Suggestion = {
   source?: 'user' | 'fellow';
 };
 
+type LocationOption = {
+  id: string;
+  sourceType: 'country_region' | 'city';
+  name: string;
+  address?: string | null;
+};
+
 type CreateTripWizardProps = {
   backendUrl: string;
   userToken: string | null;
@@ -128,7 +135,10 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   );
   const isNarrowLayout = viewportWidth < 720;
   const [stepIndex, setStepIndex] = useState(0);
-  const [details, setDetails] = useState<TripDetails>({ name: '', description: '', destination: '' });
+  const [details, setDetails] = useState<TripDetails>({ name: '', description: '' });
+  const [locationQuery, setLocationQuery] = useState('');
+  const [locationSuggestions, setLocationSuggestions] = useState<LocationOption[]>([]);
+  const [selectedLocations, setSelectedLocations] = useState<LocationOption[]>([]);
   const [dates, setDates] = useState<TripDates>({
     startDate: '',
     endDate: '',
@@ -200,6 +210,10 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   }, [createdTripId, handleTripCreated]);
 
   const totalSteps = steps.length;
+  const selectedLocationLabel = useMemo(() => {
+    if (!selectedLocations.length) return null;
+    return selectedLocations.map((loc) => loc.name).join(', ');
+  }, [selectedLocations]);
   const wizardTripDefaults = useMemo<Trip>(
     () => ({
       id: 'wizard',
@@ -207,7 +221,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
       groupName: 'Wizard',
       name: details.name || 'Trip',
       description: details.description || null,
-      destination: details.destination || null,
+      destination: selectedLocationLabel || null,
       departureLocation: itineraryDepartureAirport.trim() || null,
       startDate: dates.mode === 'range' ? dates.startDate || null : null,
       endDate: dates.mode === 'range' ? dates.endDate || null : null,
@@ -216,7 +230,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
       durationDays: dates.mode === 'month' ? Number(dates.durationDays) || null : null,
       createdAt: new Date().toISOString(),
     }),
-    [dates, details, itineraryDepartureAirport]
+    [dates, details, itineraryDepartureAirport, selectedLocationLabel]
   );
   const computedDays = useMemo(() => computeTripDays(dates.startDate, dates.endDate), [dates.startDate, dates.endDate]);
   const monthLabel = useMemo(
@@ -496,6 +510,29 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   }, [backendUrl, headers, participantSearch, userToken]);
 
   useEffect(() => {
+    if (!userToken) return;
+    const query = locationQuery.trim();
+    if (!query) {
+      setLocationSuggestions([]);
+      return;
+    }
+    const handle = setTimeout(async () => {
+      const res = await fetch(`${backendUrl}/api/places/search?q=${encodeURIComponent(query)}&types=country_region,city&limit=12`, {
+        headers,
+      });
+      if (!res.ok) {
+        setLocationSuggestions([]);
+        return;
+      }
+      const data = await res.json().catch(() => []);
+      const next = Array.isArray(data) ? data : [];
+      const selected = new Set(selectedLocations.map((loc) => loc.id));
+      setLocationSuggestions(next.filter((item) => !selected.has(String(item?.id ?? ''))));
+    }, 250);
+    return () => clearTimeout(handle);
+  }, [backendUrl, headers, locationQuery, selectedLocations, userToken]);
+
+  useEffect(() => {
     if (hasSeededCurrentUser) return;
     setParticipants((prev) => ensureParticipantIncluded(prev, currentUserName, currentUserEmail));
     setHasSeededCurrentUser(true);
@@ -524,6 +561,18 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     setParticipants((prev) => [...prev, normalized]);
     setParticipantDraft({ firstName: '', lastName: '', email: '' });
     setWizardError('');
+  };
+
+  const addLocation = (location: LocationOption) => {
+    if (!location?.id) return;
+    if (selectedLocations.some((entry) => entry.id === location.id)) return;
+    setSelectedLocations((prev) => [...prev, location]);
+    setLocationQuery('');
+    setLocationSuggestions([]);
+  };
+
+  const removeLocation = (locationId: string) => {
+    setSelectedLocations((prev) => prev.filter((location) => location.id !== locationId));
   };
 
   const addItineraryItem = () => {
@@ -973,7 +1022,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
         body: JSON.stringify({
           name: details.name.trim(),
           description: description.trim() || undefined,
-          destination: details.destination.trim() || undefined,
+          locationIds: selectedLocations.map((location) => location.id),
           startDate: dates.mode === 'range' ? dates.startDate || undefined : undefined,
           endDate: dates.mode === 'range' ? dates.endDate || undefined : undefined,
           startMonth: dates.mode === 'month' ? Number(dates.startMonth) || undefined : undefined,
@@ -1013,7 +1062,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
         const days =
           (dates.mode === 'range' ? rangeDays : null) ??
           (Number(itineraryDays) > 0 ? Number(itineraryDays) : Number(dates.durationDays) || 1);
-        const destination = details.destination.trim() || details.name.trim() || 'Trip';
+        const locationNames = selectedLocations.map((location) => location.name).filter(Boolean);
+        const destination = locationNames.length ? locationNames.join(', ') : details.name.trim() || 'Trip';
         try {
           const createRes = await fetchWithTimeout(
             `${backendUrl}/api/itineraries`,
@@ -1063,6 +1113,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                   headers: { 'Content-Type': 'application/json', ...headers },
                   body: JSON.stringify({
                     country: destination,
+                    locations: locationNames,
                     days,
                     budgetMin: budgetRange.min,
                     budgetMax: budgetRange.max,
@@ -1131,10 +1182,38 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             />
             <TextInput
               style={styles.input}
-              placeholder="Destination (optional, can include multiple locations)"
-              value={details.destination}
-              onChangeText={(text) => setDetails((prev) => ({ ...prev, destination: text }))}
+              placeholder="Search locations (countries/regions/cities)"
+              value={locationQuery}
+              onChangeText={setLocationQuery}
             />
+            {locationSuggestions.length ? (
+              <View style={[styles.card, { marginTop: 6 }]}>
+                {locationSuggestions.map((location) => (
+                  <TouchableOpacity
+                    key={`location-suggestion-${location.id}`}
+                    style={[styles.row, { justifyContent: 'space-between', marginBottom: 6 }]}
+                    onPress={() => addLocation(location)}
+                  >
+                    <Text style={styles.bodyText}>{location.name}</Text>
+                    <Text style={styles.helperText}>{location.sourceType === 'city' ? 'City' : 'Country/Region'}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ) : null}
+            {selectedLocations.length ? (
+              <View style={[styles.row, { flexWrap: 'wrap', gap: 8 }]}>
+                {selectedLocations.map((location) => (
+                  <View key={`selected-location-${location.id}`} style={styles.payerChip}>
+                    <Text style={styles.cellText}>{location.name}</Text>
+                    <TouchableOpacity onPress={() => removeLocation(location.id)}>
+                      <Text style={styles.removeText}>x</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <Text style={styles.helperText}>Select one or more locations for this trip.</Text>
+            )}
             <TextInput
               style={[styles.input, { minHeight: 120 }]}
               placeholder="Description (optional)"
@@ -2173,7 +2252,9 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             <Text style={styles.helperText}>Confirm everything looks good before creating the trip.</Text>
             <Text style={styles.headerText}>Trip</Text>
             <Text style={styles.bodyText}>Name: {details.name || 'Untitled trip'}</Text>
-            {details.destination ? <Text style={styles.bodyText}>Destination: {details.destination}</Text> : null}
+            {selectedLocations.length ? (
+              <Text style={styles.bodyText}>Locations: {selectedLocations.map((loc) => loc.name).join(', ')}</Text>
+            ) : null}
             {dates.mode === 'range' && (dates.startDate || dates.endDate) ? (
               <Text style={styles.bodyText}>Dates: {dates.startDate || 'TBD'} - {dates.endDate || 'TBD'}</Text>
             ) : null}
