@@ -34,6 +34,7 @@ const config: ExpoConfig = {
       process.env.EXPO_PUBLIC_BACKEND_URL ??
       (process.env.NODE_ENV === 'development' ? 'http://localhost:4000' : 'https://duerk.org'),
     refreshIntervalMs: Number(process.env.REFRESH_INTERVAL_MS) || 60000,
+    sessionCacheTimeoutMinutes: Number(process.env.SESSION_CACHE_TIMEOUT_MINUTES) || 720,
     eas: {
         projectId: "06966c0b-d878-4346-850c-090c762f1916"
     }

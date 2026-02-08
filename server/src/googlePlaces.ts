@@ -5,7 +5,15 @@ import { getPlaceDetailsCache, upsertPlaceDetailsCache } from './db';
 
 const PLACES_API_URL = 'https://places.googleapis.com/v1/places:searchText';
 const PLACE_DETAILS_URL = 'https://places.googleapis.com/v1/places';
-const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+const readTimeoutMinutes = (key: string, fallbackMinutes: number): number => {
+  const raw = Number(getEnvValue(key));
+  if (Number.isFinite(raw) && raw > 0) {
+    return Math.floor(raw);
+  }
+  return fallbackMinutes;
+};
+const PLACE_DETAILS_CACHE_TIMEOUT_MS =
+  readTimeoutMinutes('GOOGLE_PLACES_DETAILS_CACHE_TIMEOUT_MINUTES', 24 * 60) * 60 * 1000;
 const DEFAULT_PLACE_DETAILS_FIELDS = [
   'id',
   'displayName',
@@ -123,7 +131,7 @@ export const getPlaceDetails = async (
     const cached = await getPlaceDetailsCache(trimmedId);
     if (cached?.fetchedAt) {
       const fetchedAtMs = new Date(cached.fetchedAt).getTime();
-      if (Number.isFinite(fetchedAtMs) && Date.now() - fetchedAtMs < ONE_DAY_MS) {
+      if (Number.isFinite(fetchedAtMs) && Date.now() - fetchedAtMs < PLACE_DETAILS_CACHE_TIMEOUT_MS) {
         logInfo(`[googlePlaces] Using cached Place Details for placeId: ${trimmedId}`);
         return { placeId: trimmedId, name: cached.name, details: cached.details, cached: true };
       }

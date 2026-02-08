@@ -353,12 +353,21 @@ const App: React.FC = () => {
     [setAccountProfile]
   );
 
-  const findActiveTrip = useCallback(
-    () => trips.find((t) => t.id === activeTripId),
-    [trips, activeTripId]
-  );
-
   const activeTrip = useMemo(() => trips.find((t) => t.id === activeTripId) ?? null, [trips, activeTripId]);
+  const tripById = useMemo(() => new Map(trips.map((trip) => [trip.id, trip] as const)), [trips]);
+  const groupById = useMemo(() => new Map(groups.map((group) => [group.id, group] as const)), [groups]);
+  const activeGroup = useMemo(
+    () => (activeTrip?.groupId ? groupById.get(activeTrip.groupId) ?? null : null),
+    [activeTrip?.groupId, groupById]
+  );
+  const selectedTrip = useMemo(
+    () => (selectedTripId ? tripById.get(selectedTripId) ?? null : null),
+    [selectedTripId, tripById]
+  );
+  const selectedTripGroup = useMemo(
+    () => (selectedTrip?.groupId ? groupById.get(selectedTrip.groupId) ?? null : null),
+    [selectedTrip?.groupId, groupById]
+  );
 
   const isTripWizardOpen = activePage === 'create-trip';
   const requestPageChange = useCallback((page: Page, opts?: { skipHistory?: boolean }) => {
@@ -384,15 +393,15 @@ const App: React.FC = () => {
     }
   }, [mapApp]);
 
-  const openFlightInFlightsTab = (flightId: string) => {
+  const openFlightInFlightsTab = useCallback((flightId: string) => {
     setExternalFlightEditId(flightId);
-  };
+  }, []);
 
-  const applyCarDate = (field: 'pickup' | 'dropoff', value: string) => {
+  const applyCarDate = useCallback((field: 'pickup' | 'dropoff', value: string) => {
     setCarDraft((prev) => ({ ...prev, [field === 'pickup' ? 'pickupDate' : 'dropoffDate']: value }));
-  };
+  }, []);
 
-  const addCarRental = () => {
+  const addCarRental = useCallback(() => {
     if (!activeTripId) {
       alert('Select an active trip before adding a car rental.');
       return;
@@ -404,21 +413,21 @@ const App: React.FC = () => {
     }
     setCarRentals((prev) => [...prev, result.rental as CarRental]);
     setCarDraft(createInitialCarRentalDraft());
-  };
+  }, [activeTripId, carDraft, defaultPayerId, memberIds]);
 
-  const addCarRentalFromOverview = (rental: CarRental) => {
+  const addCarRentalFromOverview = useCallback((rental: CarRental) => {
     if (!activeTripId) {
       alert('Select an active trip before adding a car rental.');
       return;
     }
     setCarRentals((prev) => [...prev, rental]);
-  };
+  }, [activeTripId]);
 
-  const removeCarRental = (id: string) => {
+  const removeCarRental = useCallback((id: string) => {
     setCarRentals((prev) => prev.filter((c) => c.id !== id));
-  };
+  }, []);
 
-  const openCarDatePicker = (field: 'pickup' | 'dropoff') => {
+  const openCarDatePicker = useCallback((field: 'pickup' | 'dropoff') => {
     if (Platform.OS !== 'web' && NativeDateTimePicker) {
       const base = (field === 'pickup' ? carDraft.pickupDate : carDraft.dropoffDate) || '';
       const date = base ? new Date(base) : new Date();
@@ -436,17 +445,19 @@ const App: React.FC = () => {
       return;
     }
     ref?.focus();
-  };
+  }, [carDraft.dropoffDate, carDraft.pickupDate]);
 
   // Resolve a member id to a human-friendly name for payer chips.
+  const memberNameById = useMemo(
+    () => new Map(groupMembers.map((member) => [member.id, formatMemberName(member)] as const)),
+    [groupMembers]
+  );
   const payerName = useCallback((id: string): string => {
-    const member = groupMembers.find((m) => m.id === id);
-    return member ? formatMemberName(member) : 'Unknown';
-  }, [groupMembers]);
+    return memberNameById.get(id) ?? 'Unknown';
+  }, [memberNameById]);
 
-  const saveCoveredBy = async () => {
-    const trip = findActiveTrip();
-    if (!trip?.id) {
+  const saveCoveredBy = useCallback(async () => {
+    if (!activeTrip?.id) {
       alert('An active trip is required.');
       return;
     }
@@ -458,7 +469,7 @@ const App: React.FC = () => {
     }
 
     try {
-      const res = await fetch(`${backendUrl}/api/trips/${trip.id}/covered-by`, {
+      const res = await fetch(`${backendUrl}/api/trips/${activeTrip.id}/covered-by`, {
         method: 'PUT',
         headers: jsonHeaders,
         body: JSON.stringify(coveredBy),
@@ -468,7 +479,7 @@ const App: React.FC = () => {
     } catch (err) {
       alert((err as Error).message);
     }
-  };
+  }, [activeTrip?.id, backendUrl, coveredBy, jsonHeaders]);
 
   const coveredTravelerIds = useMemo(() => new Set(Object.keys(coveredBy)), [coveredBy]);
 
@@ -1424,10 +1435,10 @@ const App: React.FC = () => {
     fetchTrips();
   };
 
-  const openLodgingDetails = (lodging: Lodging) => {
+  const openLodgingDetails = useCallback((lodging: Lodging) => {
     setSelectedLodging(lodging);
     setShowLodgingDetails(true);
-  };
+  }, []);
 
   const deleteLodging = async (lodgingId: string) => {
     if (!activeTripId) return;
@@ -1491,6 +1502,29 @@ const App: React.FC = () => {
     ];
     return new Set(pages.filter((page) => shouldDisableTab(activePage, page)));
   }, [activePage]);
+  const activeTripName = useMemo(
+    () => activeTrip?.name?.replace(/\s/g, '_') ?? 'export',
+    [activeTrip?.name]
+  );
+  const getActiveTrip = useCallback(() => activeTrip ?? undefined, [activeTrip]);
+  const handleHomeNavigate = useCallback((page: string) => requestPageChange(page as Page), [requestPageChange]);
+  const handleFlightsDataChanged = useCallback(() => {
+    fetchFlights();
+    fetchExpenses();
+  }, [fetchExpenses, fetchFlights]);
+  const handleLodgingsDataChanged = useCallback(() => {
+    fetchLodgings();
+    fetchExpenses();
+  }, [fetchExpenses, fetchLodgings]);
+  const handleToursDataChanged = useCallback(() => {
+    fetchTours();
+    fetchExpenses();
+  }, [fetchExpenses, fetchTours]);
+  const handleExternalEditHandled = useCallback(() => setExternalFlightEditId(null), []);
+  const handleOpenTripItinerary = useCallback((tripId: string) => {
+    setActiveTripId(tripId);
+    requestPageChange('itinerary');
+  }, [requestPageChange]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -1543,7 +1577,7 @@ const App: React.FC = () => {
                 onPress={() => setShowActiveTripDropdown((s) => !s)}
               >
                 <Text style={styles.cellText}>
-                  Active Trip: {activeTripId ? trips.find((t) => t.id === activeTripId)?.name ?? 'Select' : 'Select'}
+                  Active Trip: {activeTrip?.name ?? 'Select'}
                 </Text>
                 {showActiveTripDropdown && (
                   <View style={styles.dropdownList}>
@@ -1582,7 +1616,7 @@ const App: React.FC = () => {
               trips={trips}
               styles={styles}
               onSelectTrip={setActiveTripId}
-              onNavigate={(page) => requestPageChange(page as Page)}
+              onNavigate={handleHomeNavigate}
               disabledPages={disabledPages}
             />
           ) : null}
@@ -1592,7 +1626,7 @@ const App: React.FC = () => {
               backendUrl={backendUrl}
               userToken={userToken}
               activeTripId={activeTripId}
-              activeTrip={findActiveTrip() ?? null}
+              activeTrip={activeTrip}
               traits={traits}
               headers={headers}
               setActiveTripId={setActiveTripId}
@@ -1625,7 +1659,7 @@ const App: React.FC = () => {
               backendUrl={backendUrl}
               headers={headers}
               jsonHeaders={jsonHeaders}
-              trip={findActiveTrip() ?? null}
+              trip={activeTrip}
               groupMembers={groupMembers}
               expenses={expenses}
               setExpenses={setExpenses}
@@ -1636,7 +1670,7 @@ const App: React.FC = () => {
 
           {activePage === 'ledger' ? (
             <LedgerTab
-              trip={findActiveTrip() ?? null}
+              trip={activeTrip}
               groupMembers={groupMembers}
               reportableMembers={reportableMembers}
               paidTotals={ledgerPaidTotals}
@@ -1644,7 +1678,7 @@ const App: React.FC = () => {
               styles={styles}
               onNavigate={requestPageChange}
               downloadCsv={downloadCsv}
-              findActiveTrip={findActiveTrip}
+              findActiveTrip={getActiveTrip}
               coveredBy={coveredBy}
               setCoveredBy={setCoveredBy}
               formatMemberName={formatMemberName}
@@ -1662,7 +1696,7 @@ const App: React.FC = () => {
                     style={[styles.button, styles.smallButton]}
                     onPress={() => {
                       const csv = convertExpensesToCsv('paid');
-                      const fileName = `paid-expenses-${findActiveTrip()?.name?.replace(/\s/g, '_') ?? 'export'}.csv`;
+                      const fileName = `paid-expenses-${activeTripName}.csv`;
                       downloadCsv(csv, fileName);
                     }}
                   >
@@ -1672,7 +1706,7 @@ const App: React.FC = () => {
                     style={[styles.button, styles.smallButton]}
                     onPress={() => {
                       const csv = convertExpensesToCsv('incurred');
-                      const fileName = `incurred-expenses-${findActiveTrip()?.name?.replace(/\s/g, '_') ?? 'export'}.csv`;
+                      const fileName = `incurred-expenses-${activeTripName}.csv`;
                       downloadCsv(csv, fileName);
                     }}
                   >
@@ -1784,7 +1818,7 @@ const App: React.FC = () => {
           backendUrl={backendUrl}
           jsonHeaders={jsonHeaders}
           requestHeaders={headers}
-          trip={findActiveTrip() ?? null}
+          trip={activeTrip}
           lodgings={lodgings}
           groupMembers={groupMembers}
           defaultPayerId={defaultPayerId}
@@ -2101,17 +2135,14 @@ const App: React.FC = () => {
           payerName={payerName}
           headers={headers}
           jsonHeaders={jsonHeaders}
-          findActiveTrip={findActiveTrip}
+          findActiveTrip={getActiveTrip}
           fetchGroupMembersForActiveTrip={fetchGroupMembersForActiveTrip}
           styles={styles}
           airportOptions={flightAirportOptions}
           onSearchAirports={fetchFlightAirports}
           externalEditFlightId={externalFlightEditId}
-          onDataChanged={() => {
-            fetchFlights();
-            fetchExpenses();
-          }}
-          onExternalEditHandled={() => setExternalFlightEditId(null)}
+          onDataChanged={handleFlightsDataChanged}
+          onExternalEditHandled={handleExternalEditHandled}
           showList={activePage === 'flights'}
         />
       ) : null}
@@ -2151,7 +2182,7 @@ const App: React.FC = () => {
                   <TouchableOpacity onPress={() => setShowTripGroupDropdown((s) => !s)}>
                     <Text style={styles.cellText}>
                       {newTripGroupId
-                        ? groups.find((g) => g.id === newTripGroupId)?.name ?? 'Select group'
+                        ? groupById.get(newTripGroupId)?.name ?? 'Select group'
                         : 'Select group'}
                     </Text>
                   </TouchableOpacity>
@@ -2184,7 +2215,7 @@ const App: React.FC = () => {
                       <Text style={styles.flightTitle}>{trip.name}</Text>
                       <Text style={styles.helperText}>Created: {formatDateLong(trip.createdAt)}</Text>
                       {(() => {
-                        const group = groups.find((g) => g.id === trip.groupId);
+                        const group = groupById.get(trip.groupId);
                         const pending = group?.invites ?? [];
                         if (!pending.length) return null;
                         return (
@@ -2235,8 +2266,8 @@ const App: React.FC = () => {
               backendUrl={backendUrl}
               headers={headers}
               jsonHeaders={jsonHeaders}
-              trip={findActiveTrip() ?? null}
-              group={groups.find((g) => g.id === findActiveTrip()?.groupId) ?? null}
+              trip={activeTrip}
+              group={activeGroup}
               attendees={groupMembers}
               flights={flights}
               lodgings={lodgings}
@@ -2249,18 +2280,9 @@ const App: React.FC = () => {
               onRefreshTrips={fetchTrips}
               onRefreshGroups={fetchGroups}
               onRefreshGroupMembers={fetchGroupMembersForActiveTrip}
-              onFlightDataChanged={() => {
-                fetchFlights();
-                fetchExpenses();
-              }}
-              onLodgingDataChanged={() => {
-                fetchLodgings();
-                fetchExpenses();
-              }}
-              onTourDataChanged={() => {
-                fetchTours();
-                fetchExpenses();
-              }}
+              onFlightDataChanged={handleFlightsDataChanged}
+              onLodgingDataChanged={handleLodgingsDataChanged}
+              onTourDataChanged={handleToursDataChanged}
               onAddCarRental={addCarRentalFromOverview}
               openFlightInFlightsTab={openFlightInFlightsTab}
               openLodgingDetails={(lodging) => openLodgingDetails(lodging as Lodging)}
@@ -2271,14 +2293,11 @@ const App: React.FC = () => {
         <TripDetailsTab
           backendUrl={backendUrl}
           headers={headers}
-          trip={trips.find((t) => t.id === selectedTripId) ?? null}
-          group={groups.find((g) => g.id === trips.find((t) => t.id === selectedTripId)?.groupId) ?? null}
+          trip={selectedTrip}
+          group={selectedTripGroup}
           styles={styles}
           onSetActive={(tripId) => setActiveTripId(tripId)}
-          onOpenItinerary={(tripId) => {
-            setActiveTripId(tripId);
-            requestPageChange('itinerary');
-          }}
+          onOpenItinerary={handleOpenTripItinerary}
           onUpdateCurrency={updateTripCurrency}
         />
       ) : null}

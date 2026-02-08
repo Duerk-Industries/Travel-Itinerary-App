@@ -18,9 +18,20 @@ type ImageCacheEntry = {
   expiresAt: number;
   provider: 'unsplash' | 'google_places';
 };
-const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
-const SIGNED_URL_TTL_MS = 15 * 60 * 1000;
-const UNSPLASH_AUTH_BACKOFF_MS = 10 * 60 * 1000;
+const readTimeoutMinutes = (key: string, fallbackMinutes: number): number => {
+  const raw = Number(getEnvValue(key));
+  if (Number.isFinite(raw) && raw > 0) {
+    return Math.floor(raw);
+  }
+  return fallbackMinutes;
+};
+const IMAGE_CACHE_TIMEOUT_MS = readTimeoutMinutes('UNSPLASH_IMAGE_CACHE_TIMEOUT_MINUTES', 365 * 24 * 60) * 60 * 1000;
+const SIGNED_IMAGE_URL_CACHE_TIMEOUT_MS =
+  readTimeoutMinutes('SIGNED_IMAGE_URL_CACHE_TIMEOUT_MINUTES', 15) * 60 * 1000;
+const UNSPLASH_AUTH_BLOCK_CACHE_TIMEOUT_MS =
+  readTimeoutMinutes('UNSPLASH_AUTH_BLOCK_CACHE_TIMEOUT_MINUTES', 10) * 60 * 1000;
+const STORAGE_IMAGE_CACHE_CONTROL_MAX_AGE_SECONDS =
+  readTimeoutMinutes('STORAGE_IMAGE_CACHE_CONTROL_TIMEOUT_MINUTES', 24 * 60) * 60;
 const PLACEHOLDER_IMAGE =
   'https://images.unsplash.com/photo-1502920917128-1aa500764b0e?auto=format&fit=crop&w=1200&q=80';
 let unsplashAuthBlockedUntil = 0;
@@ -52,7 +63,7 @@ const fetchUnsplashImage = async (query: string, retries = 2): Promise<string | 
     } catch (err) {
       const status = getHttpErrorStatus(err);
       if (status === 401 || status === 403) {
-        unsplashAuthBlockedUntil = Date.now() + UNSPLASH_AUTH_BACKOFF_MS;
+        unsplashAuthBlockedUntil = Date.now() + UNSPLASH_AUTH_BLOCK_CACHE_TIMEOUT_MS;
         logError('[itinerary] Unsplash auth rejected request; disabling Unsplash fetches temporarily', {
           status,
           retryAt: new Date(unsplashAuthBlockedUntil).toISOString(),
@@ -73,7 +84,7 @@ const fetchUnsplashImage = async (query: string, retries = 2): Promise<string | 
   } catch (err) {
     const status = getHttpErrorStatus(err);
     if (status === 401 || status === 403) {
-      unsplashAuthBlockedUntil = Date.now() + UNSPLASH_AUTH_BACKOFF_MS;
+      unsplashAuthBlockedUntil = Date.now() + UNSPLASH_AUTH_BLOCK_CACHE_TIMEOUT_MS;
       logError('[itinerary] Unsplash auth rejected fallback request; disabling Unsplash fetches temporarily', {
         status,
         retryAt: new Date(unsplashAuthBlockedUntil).toISOString(),
@@ -175,7 +186,7 @@ const ensureStorageImage = async (
         await file.save(Buffer.from(response.data), {
           contentType,
           resumable: false,
-          metadata: { cacheControl: 'public, max-age=86400' },
+          metadata: { cacheControl: `public, max-age=${STORAGE_IMAGE_CACHE_CONTROL_MAX_AGE_SECONDS}` },
         });
         return { storagePath: objectName, storageBucket: bucketName };
       } catch (err) {
@@ -205,7 +216,7 @@ const signStorageImage = async (storagePath: string, preferredBucket?: string): 
       if (!exists) continue;
       const [signedUrl] = await file.getSignedUrl({
         action: 'read',
-        expires: Date.now() + SIGNED_URL_TTL_MS,
+        expires: Date.now() + SIGNED_IMAGE_URL_CACHE_TIMEOUT_MS,
       });
       return signedUrl;
     } catch (err) {
@@ -268,7 +279,7 @@ router.get('/images', async (req, res) => {
       res.json({ url: PLACEHOLDER_IMAGE, cached: false });
       return;
     }
-    const expiresAt = now + ONE_YEAR_MS;
+    const expiresAt = now + IMAGE_CACHE_TIMEOUT_MS;
     await docRef.set(
       {
         sourceUrl,
