@@ -31,7 +31,8 @@ const isLocalFlag = localEnvPaths.some((envPath) => hasRunLocalFlag(envPath));
 const envPaths = [
   path.resolve(__dirname, '../.env'),
   path.resolve(__dirname, '../../.env'),
-  ...(isLocalFlag ? [path.resolve(__dirname, '../.secrets'), path.resolve(__dirname, '../../.secrets')] : []),
+  path.resolve(__dirname, '../.secrets'),
+  path.resolve(__dirname, '../../.secrets'),
 ];
 const loadedEnvPaths: string[] = [];
 const shouldOverride = false;

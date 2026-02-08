@@ -72,6 +72,15 @@ function Parse-DotEnv([string]$Path) {
   return $vars
 }
 
+function Normalize-BucketName([string]$Value) {
+  if (-not $Value) { return '' }
+  $v = $Value.Trim()
+  $v = $v -replace '^gs://', ''
+  $v = $v -replace '^https?://storage.googleapis.com/', ''
+  $v = ($v -split '[/?#]', 2)[0]
+  return $v.Trim()
+}
+
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..')
 $envFileFallback = Join-Path $repoRoot 'server/.env'
 
@@ -87,6 +96,8 @@ $GCLOUD_PROJECT_ID = if ($env:GCLOUD_PROJECT_ID) { $env:GCLOUD_PROJECT_ID } else
 $GCLOUD_PROJECT_NUMBER = $envVars['GCLOUD_PROJECT_NUMBER']
 $DEPLOYER_SERVICE_ACCOUNT_EMAIL = $envVars['DEPLOYER_SERVICE_ACCOUNT_EMAIL']
 $RUNTIME_SERVICE_ACCOUNT_EMAIL = $envVars['RUNTIME_SERVICE_ACCOUNT_EMAIL']
+$LOCATION_BUCKET = if ($env:LOCATION_BUCKET) { $env:LOCATION_BUCKET } else { $envVars['LOCATION_BUCKET'] }
+$FIREBASE_STORAGE_BUCKET = if ($env:FIREBASE_STORAGE_BUCKET) { $env:FIREBASE_STORAGE_BUCKET } else { $envVars['FIREBASE_STORAGE_BUCKET'] }
 
 if (-not $GCLOUD_PROJECT_ID) { Write-Fail "GCLOUD_PROJECT_ID must be set in '$SecretsFile'." }
 if (-not $GCLOUD_PROJECT_NUMBER) { Write-Fail "GCLOUD_PROJECT_NUMBER must be set in '$SecretsFile'." }
@@ -95,12 +106,17 @@ if (-not $DEPLOYER_SERVICE_ACCOUNT_EMAIL) { Write-Fail "DEPLOYER_SERVICE_ACCOUNT
 if (-not $RUNTIME_SERVICE_ACCOUNT_EMAIL) {
   $RUNTIME_SERVICE_ACCOUNT_EMAIL = "$GCLOUD_PROJECT_NUMBER-compute@developer.gserviceaccount.com"
 }
+$bucketRaw = if ($LOCATION_BUCKET) { $LOCATION_BUCKET } else { $FIREBASE_STORAGE_BUCKET }
+$bucketName = Normalize-BucketName $bucketRaw
 $CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL = "$GCLOUD_PROJECT_NUMBER@cloudbuild.gserviceaccount.com"
 
 Write-Info "Project:                  $GCLOUD_PROJECT_ID"
 Write-Info "Deployer SA (CI/CD):      $DEPLOYER_SERVICE_ACCOUNT_EMAIL"
 Write-Info "Cloud Build SA (Builder): $CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL"
 Write-Info "Runtime SA (Cloud Run):   $RUNTIME_SERVICE_ACCOUNT_EMAIL"
+if ($bucketName) {
+  Write-Info "Storage bucket:           $bucketName"
+}
 Write-Info "-----------------------------------------------------"
 
 Write-Info "Granting permissions to Deployer Service Account ($DEPLOYER_SERVICE_ACCOUNT_EMAIL)..."
@@ -146,6 +162,21 @@ foreach ($role in $runtimeRoles) {
     --role $role `
     --condition None | Out-Null
 }
+
+if ($bucketName) {
+  Write-Info "  - Ensuring bucket role: roles/storage.objectAdmin on gs://$bucketName"
+  & gcloud storage buckets add-iam-policy-binding "gs://$bucketName" `
+    --member "serviceAccount:$RUNTIME_SERVICE_ACCOUNT_EMAIL" `
+    --role "roles/storage.objectAdmin" | Out-Null
+} else {
+  Write-Info "  - Skipping bucket IAM because LOCATION_BUCKET/FIREBASE_STORAGE_BUCKET is not set."
+}
+
+Write-Info "  - Ensuring Runtime SA can sign URLs (roles/iam.serviceAccountTokenCreator on itself)"
+& gcloud iam service-accounts add-iam-policy-binding $RUNTIME_SERVICE_ACCOUNT_EMAIL `
+  --project $GCLOUD_PROJECT_ID `
+  --member "serviceAccount:$RUNTIME_SERVICE_ACCOUNT_EMAIL" `
+  --role "roles/iam.serviceAccountTokenCreator" | Out-Null
 
 Write-Info "-----------------------------------------------------"
 Write-Info "IAM configuration complete."

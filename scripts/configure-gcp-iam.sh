@@ -16,6 +16,7 @@
 #   - GCLOUD_PROJECT_NUMBER (required)
 #   - DEPLOYER_SERVICE_ACCOUNT_EMAIL (required)
 #   - RUNTIME_SERVICE_ACCOUNT_EMAIL (optional, defaults to Compute Engine default SA)
+#   - LOCATION_BUCKET or FIREBASE_STORAGE_BUCKET (optional, used for bucket-level IAM)
 #
 set -euo pipefail
 
@@ -58,6 +59,17 @@ read_env_value() {
   ' "$file" | tail -n 1
 }
 
+normalize_bucket_name() {
+  local value="${1:-}"
+  value="${value#gs://}"
+  value="${value#https://storage.googleapis.com/}"
+  value="${value#http://storage.googleapis.com/}"
+  value="${value%%/*}"
+  value="${value%%\?*}"
+  value="${value%%\#*}"
+  printf '%s' "$value"
+}
+
 # Source the env file to load variables.
 set -a
 # shellcheck source=/dev/null
@@ -76,6 +88,12 @@ if [[ -f "./server/.secrets" ]]; then
   fi
   if [[ -z "${RUNTIME_SERVICE_ACCOUNT_EMAIL:-}" ]]; then
     RUNTIME_SERVICE_ACCOUNT_EMAIL="$(read_env_value "./server/.secrets" "RUNTIME_SERVICE_ACCOUNT_EMAIL")"
+  fi
+  if [[ -z "${LOCATION_BUCKET:-}" ]]; then
+    LOCATION_BUCKET="$(read_env_value "./server/.secrets" "LOCATION_BUCKET")"
+  fi
+  if [[ -z "${FIREBASE_STORAGE_BUCKET:-}" ]]; then
+    FIREBASE_STORAGE_BUCKET="$(read_env_value "./server/.secrets" "FIREBASE_STORAGE_BUCKET")"
   fi
 fi
 
@@ -97,11 +115,16 @@ GCLOUD_PROJECT_NUMBER="${GCLOUD_PROJECT_NUMBER}"
 DEPLOYER_SERVICE_ACCOUNT_EMAIL="${DEPLOYER_SERVICE_ACCOUNT_EMAIL}"
 RUNTIME_SERVICE_ACCOUNT_EMAIL="${RUNTIME_SERVICE_ACCOUNT_EMAIL:-${GCLOUD_PROJECT_NUMBER}-compute@developer.gserviceaccount.com}"
 CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL="${GCLOUD_PROJECT_NUMBER}@cloudbuild.gserviceaccount.com"
+BUCKET_NAME_RAW="${LOCATION_BUCKET:-${FIREBASE_STORAGE_BUCKET:-}}"
+BUCKET_NAME="$(normalize_bucket_name "$BUCKET_NAME_RAW")"
 
 log "Project:                  $GCLOUD_PROJECT_ID"
 log "Deployer SA (CI/CD):      $DEPLOYER_SERVICE_ACCOUNT_EMAIL"
 log "Cloud Build SA (Builder): $CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL"
 log "Runtime SA (Cloud Run):   $RUNTIME_SERVICE_ACCOUNT_EMAIL"
+if [[ -n "$BUCKET_NAME" ]]; then
+  log "Storage bucket:           $BUCKET_NAME"
+fi
 log "-----------------------------------------------------"
 
 # --- IAM Bindings for Deployer Service Account ---
@@ -165,6 +188,21 @@ for role in "${RUNTIME_ROLES[@]}"; do
     --role="$role" \
     --condition=None >/dev/null
 done
+
+if [[ -n "$BUCKET_NAME" ]]; then
+  log "  - Ensuring bucket role: roles/storage.objectAdmin on gs://$BUCKET_NAME"
+  gcloud storage buckets add-iam-policy-binding "gs://$BUCKET_NAME" \
+    --member="serviceAccount:$RUNTIME_SERVICE_ACCOUNT_EMAIL" \
+    --role="roles/storage.objectAdmin" >/dev/null
+else
+  log "  - Skipping bucket IAM because LOCATION_BUCKET/FIREBASE_STORAGE_BUCKET is not set."
+fi
+
+log "  - Ensuring Runtime SA can sign URLs (roles/iam.serviceAccountTokenCreator on itself)"
+gcloud iam service-accounts add-iam-policy-binding "$RUNTIME_SERVICE_ACCOUNT_EMAIL" \
+  --project="$GCLOUD_PROJECT_ID" \
+  --member="serviceAccount:$RUNTIME_SERVICE_ACCOUNT_EMAIL" \
+  --role="roles/iam.serviceAccountTokenCreator" >/dev/null
 
 log "-----------------------------------------------------"
 log "IAM configuration complete."

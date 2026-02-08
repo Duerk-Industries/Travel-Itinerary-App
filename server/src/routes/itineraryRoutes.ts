@@ -36,6 +36,7 @@ const PLACEHOLDER_IMAGE =
   'https://images.unsplash.com/photo-1502920917128-1aa500764b0e?auto=format&fit=crop&w=1200&q=80';
 let unsplashAuthBlockedUntil = 0;
 let missingStorageBucketsSignature: string | null = null;
+let missingStorageCredentialsLogged = false;
 const getHttpErrorStatus = (err: unknown): number | undefined => {
   const status = (err as { response?: { status?: unknown } })?.response?.status;
   const numericStatus = typeof status === 'number' ? status : Number(status);
@@ -209,6 +210,22 @@ const isBucketMissingError = (err: unknown): boolean => {
   );
 };
 
+const isMissingDefaultCredentialsError = (err: unknown): boolean => {
+  const message = String((err as { message?: string })?.message || '').toLowerCase();
+  return message.includes('could not load the default credentials');
+};
+
+const reportMissingStorageCredentials = (err?: unknown): void => {
+  if (missingStorageCredentialsLogged) return;
+  missingStorageCredentialsLogged = true;
+  logError(
+    '[itinerary] storage auth is not configured. Configure FIREBASE_CLIENT_EMAIL/FIREBASE_PRIVATE_KEY or set GOOGLE_APPLICATION_CREDENTIALS / run `gcloud auth application-default login`.'
+  );
+  if (err && !isMissingDefaultCredentialsError(err)) {
+    logError('[itinerary] failed to persist image to storage', err);
+  }
+};
+
 const encodeToken = (value: string): string =>
   value
     .toLowerCase()
@@ -252,6 +269,10 @@ const ensureStorageImage = async (
         if (isBucketMissingError(err)) {
           continue;
         }
+        if (isMissingDefaultCredentialsError(err)) {
+          reportMissingStorageCredentials(err);
+          return null;
+        }
         logError('[itinerary] failed to persist image to storage', err);
         return null;
       }
@@ -279,6 +300,10 @@ const signStorageImage = async (storagePath: string, preferredBucket?: string): 
       });
       return signedUrl;
     } catch (err) {
+      if (isMissingDefaultCredentialsError(err)) {
+        reportMissingStorageCredentials(err);
+        return null;
+      }
       if (isBucketMissingError(err)) {
         continue;
       }
