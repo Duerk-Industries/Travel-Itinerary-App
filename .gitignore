@@ -41,3 +41,4 @@ build/reports/problems
 playwright-report
 test-results
 server/config/firebase-service-account-key.json
+firestore-debug.log

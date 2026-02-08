@@ -1,7 +1,14 @@
+// c:\Git\Tristan\Travel-Itinerary-App\server\__tests__\lodging.test.ts
+
 import request from 'supertest';
 
 jest.mock('../src/googlePlaces', () => ({
   findPlacePhoto: jest.fn().mockResolvedValue('https://example.com/mock-lodging.jpg'),
+}));
+
+// Also mock image-service in case the controller uses it
+jest.mock('../src/image-service', () => ({
+  getGooglePlaceImage: jest.fn().mockResolvedValue('https://example.com/mock-lodging.jpg'),
 }));
 
 import { app } from '../src/app';

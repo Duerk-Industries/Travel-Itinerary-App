@@ -66,11 +66,13 @@ async function cacheImage(filepath: string, imageUrl: string): Promise<string> {
 /**
  * Fetches an image URL from the Google Places API for a given location.
  * @param {string} locationName The name of the location (e.g., "Paris").
+ * @param {string} [placeId] Optional Google Place ID. If provided, skips text search and uses this ID.
  * @returns {Promise<string>} A promise that resolves to an image URL.
  * @throws {Error} If no image can be found.
  */
-export async function getGooglePlaceImage(locationName: string): Promise<string> {
-    const filename = sanitizeFilename(locationName);
+export async function getGooglePlaceImage(locationName: string, placeId?: string): Promise<string> {
+    // Use placeId for cache key if available for stability, otherwise fallback to locationName
+    const filename = sanitizeFilename(placeId || locationName);
     const cachePath = `google-places/${filename}.jpg`;
     
     const cachedUrl = await getCachedImageUrl(cachePath);
@@ -81,18 +83,21 @@ export async function getGooglePlaceImage(locationName: string): Promise<string>
         throw new Error('Google Places API key is not configured.');
     }
 
-    // 1. Use Text Search to find a place_id for the location
-    const searchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(locationName)}&key=${apiKey}`;
-    const searchResponse = await axios.get(searchUrl);
+    let finalPlaceId = placeId;
 
-    if (!searchResponse.data.results || searchResponse.data.results.length === 0) {
-        throw new Error('No results found in Google Places Text Search.');
+    if (!finalPlaceId) {
+        // 1. Use Text Search to find a place_id for the location
+        const searchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(locationName)}&key=${apiKey}`;
+        const searchResponse = await axios.get(searchUrl);
+
+        if (!searchResponse.data.results || searchResponse.data.results.length === 0) {
+            throw new Error('No results found in Google Places Text Search.');
+        }
+        finalPlaceId = searchResponse.data.results[0].place_id;
     }
 
-    const placeId = searchResponse.data.results[0].place_id;
-
     // 2. Use the place_id to get Place Details, including photos
-    const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=photos&key=${apiKey}`;
+    const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${finalPlaceId}&fields=photos&key=${apiKey}`;
     const detailsResponse = await axios.get(detailsUrl);
 
     const photos = detailsResponse.data.result?.photos;

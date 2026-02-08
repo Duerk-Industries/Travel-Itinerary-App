@@ -2,7 +2,7 @@ import { Router } from 'express';
 import bodyParser from 'body-parser';
 import { authenticate } from '../auth';
 import { deleteExpenseForSource, deleteLodging, ensureUserInTrip, insertLodging, listLodgings, updateLodging, upsertExpenseForSource } from '../db';
-import { findPlacePhoto } from '../googlePlaces';
+import { getGooglePlaceImage } from '../image-service';
 
 // Lodgings API: CRUD for lodgings scoped to the authenticated user / their group trips.
 const router = Router();
@@ -41,7 +41,12 @@ router.post('/', async (req, res) => {
     res.status(403).json({ error: 'You must be in the group for this trip' });
     return;
   }
-  const imageUrl = await findPlacePhoto(address ? `${name}, ${address}` : name);
+  let imageUrl: string | null = null;
+  try {
+    imageUrl = await getGooglePlaceImage(address ? `${name}, ${address}` : name);
+  } catch (error) {
+    console.error('Failed to fetch image for lodging:', error);
+  }
   const lodging = await insertLodging({
     userId,
     tripId,
@@ -103,7 +108,11 @@ router.put('/:id', async (req, res) => {
         const nameChanged = typeof name === 'string' && name.trim() && name !== currentLodging.name;
         const addressChanged = typeof address === 'string' && address.trim() && address !== currentLodging.address;
         if ((nameChanged || addressChanged) || !currentLodging.imageUrl) {
-          imageUrl = await findPlacePhoto(nextAddress ? `${nextName}, ${nextAddress}` : nextName);
+          try {
+            imageUrl = await getGooglePlaceImage(nextAddress ? `${nextName}, ${nextAddress}` : nextName);
+          } catch (error) {
+            console.error('Failed to fetch image for lodging:', error);
+          }
         }
       }
     }
@@ -187,7 +196,11 @@ router.patch('/:id', async (req, res) => {
         const nameChanged = typeof name === 'string' && name.trim() && name !== currentLodging.name;
         const addressChanged = typeof address === 'string' && address.trim() && address !== currentLodging.address;
         if ((nameChanged || addressChanged) || !currentLodging.imageUrl) {
-          imageUrl = await findPlacePhoto(nextAddress ? `${nextName}, ${nextAddress}` : nextName);
+          try {
+            imageUrl = await getGooglePlaceImage(nextAddress ? `${nextName}, ${nextAddress}` : nextName);
+          } catch (error) {
+            console.error('Failed to fetch image for lodging:', error);
+          }
         }
       }
     }
