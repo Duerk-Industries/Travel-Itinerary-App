@@ -290,12 +290,33 @@ const App: React.FC = () => {
   const [fellowTravelers, setFellowTravelers] = useState<FellowTraveler[]>([]);
   const [showRelationshipDropdown, setShowRelationshipDropdown] = useState(false);
 
+  const headers = useMemo<Record<string, string>>(
+    () => (userToken ? { Authorization: `Bearer ${userToken}` } : ({} as Record<string, string>)),
+    [userToken]
+  );
+  const jsonHeaders = useMemo<Record<string, string>>(
+    () => ({ 'Content-Type': 'application/json', ...(userToken ? { Authorization: `Bearer ${userToken}` } : {}) }),
+    [userToken]
+  );
+
   const userMembers = useMemo(
     () => groupMembers.filter((m) => !m.guestName && m.status !== 'removed'),
     [groupMembers]
   );
 
   const memberIds = useMemo(() => userMembers.map((m) => m.id), [userMembers]);
+
+  const currentUserMemberId = useMemo(() => {
+    if (!userEmail) return null;
+    const match = userMembers.find((m) => m.email && m.email.toLowerCase() === userEmail.toLowerCase());
+    return match?.id ?? null;
+  }, [userMembers, userEmail]);
+
+  const defaultPayerId = useMemo(() => {
+    if (currentUserMemberId) return currentUserMemberId;
+    if (userMembers.length) return userMembers[0].id;
+    return null;
+  }, [currentUserMemberId, userMembers]);
 
   const flightsTotal = useMemo(
     () => flights.reduce((sum, f) => sum + (Number(f.cost) || 0), 0),
@@ -505,18 +526,6 @@ const App: React.FC = () => {
     [allExpenses, allMemberIds, reportableMemberIds, coveredBy]
   );
 
-  const currentUserMemberId = useMemo(() => {
-    if (!userEmail) return null;
-    const match = userMembers.find((m) => m.email && m.email.toLowerCase() === userEmail.toLowerCase());
-    return match?.id ?? null;
-  }, [userMembers, userEmail]);
-  
-  const defaultPayerId = useMemo(() => {
-    if (currentUserMemberId) return currentUserMemberId;
-    if (userMembers.length) return userMembers[0].id;
-    return null;
-  }, [currentUserMemberId, userMembers]);
-
   const overallCost = useMemo(() => allExpenses.reduce((sum, e) => sum + e.amount, 0), [allExpenses]);
 
   const costReportRows = useMemo(() => {
@@ -612,14 +621,6 @@ const App: React.FC = () => {
     URL.revokeObjectURL(link.href);
   };
 
-  const headers = useMemo<Record<string, string>>(
-    () => (userToken ? { Authorization: `Bearer ${userToken}` } : ({} as Record<string, string>)),
-    [userToken]
-  );
-  const jsonHeaders = useMemo<Record<string, string>>(
-    () => ({ 'Content-Type': 'application/json', ...(userToken ? { Authorization: `Bearer ${userToken}` } : {}) }),
-    [userToken]
-  );
   const logout = useCallback(() => {
     setUserToken(null);
     setUserName(null);
