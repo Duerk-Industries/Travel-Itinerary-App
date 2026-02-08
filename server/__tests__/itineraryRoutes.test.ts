@@ -16,17 +16,18 @@ const storageFileMock = {
 const storageBucketMock = {
   file: jest.fn(() => storageFileMock),
 };
+const storageBucketFnMock = jest.fn(() => storageBucketMock);
 
 jest.mock('firebase-admin/storage', () => ({
   getStorage: jest.fn(() => ({
-    bucket: jest.fn(() => storageBucketMock),
+    bucket: storageBucketFnMock,
   })),
 }));
 
 jest.mock('../src/env', () => ({
   getEnvValue: (key: string) => {
     if (key === 'UNSPLASH_ACCESS_KEY') return 'test-key';
-    if (key === 'LOCATION_BUCKET') return 'travel-itinerary-app-483623.appspot.com';
+    if (key === 'LOCATION_BUCKET') return 'gs://travel-itinerary-app-483623.firebasestorage.app/';
     if (key === 'GCLOUD_PROJECT_ID') return 'travel-itinerary-app-483623';
     return null;
   },
@@ -54,6 +55,7 @@ describe('/api/itinerary/images', () => {
     storageFileMock.save.mockReset();
     storageFileMock.exists.mockReset();
     storageFileMock.getSignedUrl.mockReset();
+    storageBucketFnMock.mockClear();
     storageFileMock.save.mockResolvedValue(undefined);
     storageFileMock.exists.mockResolvedValue([true]);
     storageFileMock.getSignedUrl.mockResolvedValue(['https://signed-url/mock']);
@@ -94,6 +96,7 @@ describe('/api/itinerary/images', () => {
     expect(res.body.cached).toBe(false);
     expect(res.body.url).toBe('https://signed-url/mock');
     expect(storageFileMock.save).toHaveBeenCalled();
+    expect(storageBucketFnMock).toHaveBeenCalledWith('travel-itinerary-app-483623.firebasestorage.app');
   });
 
   it('returns a cached storage image url when cache is valid', async () => {
@@ -136,6 +139,8 @@ describe('/api/itinerary/images', () => {
     expect(res.body.cached).toBe(false);
     expect(res.body.url).toBe('https://signed-url/mock');
     expect(storageFileMock.save).toHaveBeenCalledTimes(2);
+    expect(storageBucketFnMock).toHaveBeenNthCalledWith(1, 'travel-itinerary-app-483623.firebasestorage.app');
+    expect(storageBucketFnMock).toHaveBeenNthCalledWith(2, 'travel-itinerary-app-483623.appspot.com');
   });
 
   it('stops calling unsplash temporarily after auth failure (403)', async () => {

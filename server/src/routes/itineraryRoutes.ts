@@ -35,6 +35,7 @@ const STORAGE_IMAGE_CACHE_CONTROL_MAX_AGE_SECONDS =
 const PLACEHOLDER_IMAGE =
   'https://images.unsplash.com/photo-1502920917128-1aa500764b0e?auto=format&fit=crop&w=1200&q=80';
 let unsplashAuthBlockedUntil = 0;
+let missingStorageBucketsSignature: string | null = null;
 const getHttpErrorStatus = (err: unknown): number | undefined => {
   const status = (err as { response?: { status?: unknown } })?.response?.status;
   const numericStatus = typeof status === 'number' ? status : Number(status);
@@ -97,14 +98,58 @@ const fetchUnsplashImage = async (query: string, retries = 2): Promise<string | 
   return null;
 };
 
+const normalizeBucketName = (value?: string): string | undefined => {
+  if (!value) return undefined;
+  let normalized = value.trim();
+  if (!normalized) return undefined;
+
+  normalized = normalized.replace(/^gs:\/\//i, '');
+  normalized = normalized.replace(/^https?:\/\/storage.googleapis.com\//i, '');
+  normalized = normalized.replace(/^https?:\/\/firebasestorage.googleapis.com\/v0\/b\//i, '');
+  normalized = normalized.split('?')[0].split('#')[0];
+  normalized = normalized.replace(/\/+$/, '');
+  if (normalized.includes('/')) {
+    normalized = normalized.split('/')[0];
+  }
+  return normalized || undefined;
+};
+
+const expandBucketCandidates = (value?: string): string[] => {
+  const normalized = normalizeBucketName(value);
+  if (!normalized) return [];
+
+  const variants = [normalized];
+  const appspotMatch = normalized.match(/^([a-z0-9-]+)\.appspot\.com$/i);
+  if (appspotMatch?.[1]) {
+    variants.push(`${appspotMatch[1]}.firebasestorage.app`);
+  }
+
+  const firebaseStorageMatch = normalized.match(/^([a-z0-9-]+)\.firebasestorage\.app$/i);
+  if (firebaseStorageMatch?.[1]) {
+    variants.push(`${firebaseStorageMatch[1]}.appspot.com`);
+  }
+
+  if (!normalized.includes('.')) {
+    variants.push(`${normalized}.firebasestorage.app`);
+    variants.push(`${normalized}.appspot.com`);
+  }
+
+  return Array.from(new Set(variants));
+};
+
 const parseFirebaseConfig = (): { projectId?: string; storageBucket?: string } => {
   const raw = process.env.FIREBASE_CONFIG;
   if (!raw) return {};
   try {
-    const parsed = JSON.parse(raw) as { projectId?: string; storageBucket?: string };
+    const parsed = JSON.parse(raw) as {
+      projectId?: string;
+      project_id?: string;
+      storageBucket?: string;
+      storage_bucket?: string;
+    };
     return {
-      projectId: parsed.projectId,
-      storageBucket: parsed.storageBucket,
+      projectId: parsed.projectId || parsed.project_id,
+      storageBucket: parsed.storageBucket || parsed.storage_bucket,
     };
   } catch {
     return {};
@@ -126,21 +171,31 @@ const storageBucketCandidates = (preferredBucket?: string): string[] => {
     firebaseConfig.projectId;
 
   const candidates = [
-    preferredBucket,
-    getEnvValue('LOCATION_BUCKET'),
-    getEnvValue('FIREBASE_STORAGE_BUCKET'),
-    firebaseConfig.storageBucket,
-    appBucket,
-    projectId ? `${projectId}.firebasestorage.app` : undefined,
-    projectId ? `${projectId}.appspot.com` : undefined,
+    ...expandBucketCandidates(preferredBucket),
+    ...expandBucketCandidates(getEnvValue('LOCATION_BUCKET')),
+    ...expandBucketCandidates(getEnvValue('FIREBASE_STORAGE_BUCKET')),
+    ...expandBucketCandidates(firebaseConfig.storageBucket),
+    ...expandBucketCandidates(appBucket),
+    ...expandBucketCandidates(projectId),
   ];
-  return Array.from(
-    new Set(
-      candidates
-        .map((value) => (value ?? '').trim())
-        .filter((value) => value.length > 0)
-    )
-  );
+  return Array.from(new Set(candidates));
+};
+
+const reportMissingStorageBuckets = (bucketCandidates: string[], err?: unknown): void => {
+  const signature = bucketCandidates.join('|');
+  if (signature && missingStorageBucketsSignature === signature) {
+    return;
+  }
+  missingStorageBucketsSignature = signature || 'none';
+  const message = bucketCandidates.length
+    ? `[itinerary] image storage bucket not found. Configure LOCATION_BUCKET or FIREBASE_STORAGE_BUCKET to an existing bucket. Tried: ${bucketCandidates.join(
+        ', '
+      )}`
+    : '[itinerary] image storage bucket is not configured. Set LOCATION_BUCKET or FIREBASE_STORAGE_BUCKET.';
+  logError(message);
+  if (err && !isBucketMissingError(err)) {
+    logError('[itinerary] failed to persist image to storage', err);
+  }
 };
 
 const isBucketMissingError = (err: unknown): boolean => {
@@ -177,7 +232,10 @@ const ensureStorageImage = async (
     const folder = provider === 'google_places' ? 'images/google-places' : 'images/unsplash';
     const objectName = `${folder}/${encodeToken(key)}-${Date.now()}.${ext}`;
     const bucketCandidates = storageBucketCandidates();
-    if (!bucketCandidates.length) throw new Error('No storage bucket configured');
+    if (!bucketCandidates.length) {
+      reportMissingStorageBuckets(bucketCandidates);
+      return null;
+    }
     let lastErr: unknown = null;
     for (const bucketName of bucketCandidates) {
       try {
@@ -194,10 +252,11 @@ const ensureStorageImage = async (
         if (isBucketMissingError(err)) {
           continue;
         }
-        break;
+        logError('[itinerary] failed to persist image to storage', err);
+        return null;
       }
     }
-    logError('[itinerary] failed to persist image to storage', lastErr);
+    reportMissingStorageBuckets(bucketCandidates, lastErr);
     return null;
   } catch (err) {
     logError('[itinerary] failed to persist image to storage', err);
