@@ -2,9 +2,14 @@ import request from 'supertest';
 import { app } from '../src/app';
 import * as auth from '../src/auth';
 import * as db from '../src/db';
+import * as placeService from '../src/services/placeService';
 
 jest.mock('../src/auth');
 jest.mock('../src/db');
+jest.mock('../src/services/placeService', () => ({
+  autocompletePlaces: jest.fn(),
+  getPlaceDetailsFromGoogle: jest.fn(),
+}));
 
 describe('/api/places location endpoints', () => {
   beforeEach(() => {
@@ -38,5 +43,26 @@ describe('/api/places location endpoints', () => {
       .expect(200);
     expect(res.body).toHaveLength(2);
     expect(db.getLocationsByIds).toHaveBeenCalledWith('user-1', ['rome-1', 'milan-1']);
+  });
+
+  it('caches missing locations in batch request', async () => {
+    (db.getLocationsByIds as jest.Mock).mockResolvedValue([]);
+    (placeService.getPlaceDetailsFromGoogle as jest.Mock).mockResolvedValue({
+      place_id: 'new-place-1',
+      name: 'New Place',
+      formatted_address: 'Address',
+      geometry: { location: { lat: 10, lng: 20 } },
+      types: ['point_of_interest'],
+    });
+    (db.upsertLocation as jest.Mock).mockResolvedValue({
+      id: 'new-place-1',
+      name: 'New Place',
+    });
+
+    const res = await request(app).post('/api/places/batch').send({ ids: ['new-place-1'] }).expect(200);
+    
+    expect(placeService.getPlaceDetailsFromGoogle).toHaveBeenCalledWith('new-place-1');
+    expect(db.upsertLocation).toHaveBeenCalled();
+    expect(res.body).toHaveLength(1);
   });
 });

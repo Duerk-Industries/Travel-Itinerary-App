@@ -167,7 +167,11 @@ type Page =
 // Resolve backend URL; keep Expo web on localhost hitting the local API over HTTP to avoid HTTPS upgrades/CORS issues.
 const resolveBackendUrl = (): string => {
   const envConfigured =
-    (typeof process !== 'undefined' && (process.env.EXPO_PUBLIC_BACKEND_URL ?? process.env.REACT_NATIVE_APP_BACKEND_URL)) || '';
+    (typeof process !== 'undefined' &&
+      (process.env.EXPO_PUBLIC_BACKEND_URL ??
+        process.env.REACT_NATIVE_APP_BACKEND_URL ??
+        process.env.BACKEND_URL)) ||
+    '';
   const appConfigured = Constants.expoConfig?.extra?.backendUrl;
   const configuredBackend = [envConfigured, appConfigured].find(
     (val) => typeof val === 'string' && val.trim().length > 0

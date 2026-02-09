@@ -3223,6 +3223,55 @@ export const getLocationsByIds = async (_userId: string, ids: string[]): Promise
   return normalized.map((id) => byId.get(id)).filter(Boolean) as LocationRecord[];
 };
 
+export const upsertLocation = async (data: {
+  place_id: string;
+  name: string;
+  address?: string;
+  lat?: number;
+  lng?: number;
+  types?: string[];
+  image_url?: string | null;
+}): Promise<LocationRecord> => {
+  const p = getPool();
+  const id = data.place_id;
+  const name = data.name;
+  const address = data.address ?? null;
+  const searchName = name.toLowerCase();
+
+  let sourceType = 'city';
+  if (data.types?.includes('country')) sourceType = 'country_region';
+  else if (data.types?.includes('administrative_area_level_1')) sourceType = 'country_region';
+
+  const payload: any = {
+    lat: data.lat,
+    lng: data.lng,
+    types: data.types,
+    googleMapsUri: `https://www.google.com/maps/place/?q=place_id:${id}`,
+  };
+  if (data.image_url) {
+    payload.image_url = data.image_url;
+  }
+
+  // pg-mem doesn't support jsonb concatenation (||), so we handle it manually in memory mode.
+  if (process.env.USE_IN_MEMORY_DB === '1') {
+    const existing = await p.query('SELECT payload FROM locations WHERE id = $1', [id]);
+    if (existing.rows.length > 0) {
+      const oldPayload = existing.rows[0].payload || {};
+      const newPayload = { ...oldPayload, ...payload };
+      await p.query(
+        `UPDATE locations SET name = $2, address = $3, search_name = $4, payload = $5, updated_at = NOW() WHERE id = $1`,
+        [id, name, address, searchName, JSON.stringify(newPayload)]
+      );
+      const { rows } = await p.query('SELECT * FROM locations WHERE id = $1', [id]);
+      return toLocationRecord(rows[0]);
+    }
+  }
+
+  const query = `INSERT INTO locations (id, source_type, name, address, search_name, payload, updated_at) VALUES ($1, $2, $3, $4, $5, $6, NOW()) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, address = EXCLUDED.address, search_name = EXCLUDED.search_name, payload = locations.payload || EXCLUDED.payload, updated_at = NOW() RETURNING *`;
+  const { rows } = await p.query(query, [id, sourceType, name, address, searchName, JSON.stringify(payload)]);
+  return toLocationRecord(rows[0]);
+};
+
 const clampTraitLevel = (level?: number | null): number => {
   const parsed = Number(level);
   if (!Number.isFinite(parsed)) return 1;

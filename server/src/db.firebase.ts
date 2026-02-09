@@ -1025,6 +1025,47 @@ export const getLocationsByIds = async (_userId: string, ids: string[]): Promise
   return normalized.map((id) => byId.get(id)).filter(Boolean) as LocationRecord[];
 };
 
+export const upsertLocation = async (data: {
+  place_id: string;
+  name: string;
+  address?: string;
+  lat?: number;
+  lng?: number;
+  types?: string[];
+  image_url?: string | null;
+}): Promise<LocationRecord> => {
+  const db = getDb();
+  const id = data.place_id;
+
+  let sourceType = 'city';
+  if (data.types?.includes('country')) sourceType = 'country_region';
+  else if (data.types?.includes('administrative_area_level_1')) sourceType = 'country_region';
+
+  const payload: any = {
+    lat: data.lat,
+    lng: data.lng,
+    types: data.types,
+    googleMapsUri: `https://www.google.com/maps/place/?q=place_id:${id}`,
+  };
+  if (data.image_url) {
+    payload.image_url = data.image_url;
+  }
+
+  const docRef = db.collection('locations').doc(id);
+  const now = nowIso();
+
+  await db.runTransaction(async (t) => {
+    const doc = await t.get(docRef);
+    const existing = doc.exists ? (doc.data() as any) : {};
+    const mergedPayload = { ...(existing.payload || {}), ...payload };
+    const updateData = { id, sourceType, name: data.name, address: data.address ?? null, searchName: data.name.toLowerCase(), payload: mergedPayload, updatedAt: now };
+    t.set(docRef, updateData, { merge: true });
+  });
+
+  const saved = await docRef.get();
+  return toLocationRecord(id, saved.data());
+};
+
 // Lodgings
 export const listLodgings = async (userId: string, tripId?: string | null): Promise<Lodging[]> => {
   const db = getDb();

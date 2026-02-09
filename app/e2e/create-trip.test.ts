@@ -13,7 +13,7 @@ test.describe('Create Trip Flow', () => {
     page,
   }) => {
     // Navigate to the trips page to start
-    await page.getByText('Trips').click();
+    await page.getByTestId('home-nav-trips').click();
     await expect(page.getByText('Open Wizard')).toBeVisible();
 
     // Open the wizard

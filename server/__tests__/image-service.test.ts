@@ -1,6 +1,7 @@
 // c:\Git\Tristan\Travel-Itinerary-App\server\__tests__\image-service.test.ts
 
 import axios from 'axios';
+import { EventEmitter } from 'events';
 // Remove top-level import to avoid hoisting issues with mocks
 // import { getGooglePlaceImage } from '../src/image-service';
 
@@ -81,10 +82,7 @@ describe('image-service', () => {
     });
     
     // Mock write stream
-    const mockWriteStream = {
-        on: jest.fn().mockReturnThis(),
-        emit: jest.fn()
-    };
+    const mockWriteStream = new EventEmitter();
     mockFile.createWriteStream.mockReturnValue(mockWriteStream);
     mockFile.getSignedUrl.mockResolvedValue(['http://signed.url/img.jpg']);
 

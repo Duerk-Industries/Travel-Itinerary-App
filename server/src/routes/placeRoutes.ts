@@ -1,10 +1,33 @@
 import { Router } from 'express';
 import { authenticate } from '../auth';
 import { getPlaceDetails } from '../googlePlaces';
-import { getLocationsByIds, searchLocations } from '../db';
+import { getLocationsByIds, searchLocations, upsertLocation } from '../db';
+import { autocompletePlaces, getPlaceDetailsFromGoogle } from '../services/placeService';
+import { getEnvValue } from '../env';
+
+interface LocationResult {
+  id: string;
+  place_id: string;
+  name: string;
+  address?: string;
+  lat?: number;
+  lng?: number;
+  types?: string[];
+  image_url?: string | null;
+}
 
 const router = Router();
 router.use(authenticate);
+
+router.get('/autocomplete', async (req, res) => {
+  const q = String(req.query.q ?? '').trim();
+  if (!q) {
+    res.json([]);
+    return;
+  }
+  const results = await autocompletePlaces(q);
+  res.json(results);
+});
 
 router.get('/search', async (req, res) => {
   const userId = (req as any).user.userId as string;
@@ -27,12 +50,40 @@ router.get('/search', async (req, res) => {
 
 router.post('/batch', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const ids = Array.isArray(req.body?.ids) ? req.body.ids.map((id: unknown) => String(id ?? '').trim()).filter(Boolean) : [];
+  const ids: string[] = Array.isArray(req.body?.ids) ? req.body.ids.map((id: unknown) => String(id ?? '').trim()).filter(Boolean) : [];
   if (!ids.length) {
     res.json([]);
     return;
   }
-  const results = await getLocationsByIds(userId, ids);
+  
+  const results = (await getLocationsByIds(userId, ids)) as unknown as LocationResult[];
+  const foundIds = new Set(results.map((r) => r.place_id || r.id));
+  const missingIds = ids.filter((id) => !foundIds.has(id));
+
+  if (missingIds.length > 0) {
+    for (const id of missingIds) {
+      const details = await getPlaceDetailsFromGoogle(id);
+      if (details) {
+        const apiKey = getEnvValue('GOOGLE_PLACES_API_KEY');
+        const locationData = {
+          place_id: details.place_id,
+          name: details.name,
+          address: details.formatted_address,
+          lat: details.geometry?.location?.lat,
+          lng: details.geometry?.location?.lng,
+          types: details.types,
+          image_url: details.photos?.[0]?.photo_reference ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${details.photos[0].photo_reference}&key=${apiKey}` : null
+        };
+        try {
+          const saved = await upsertLocation(locationData);
+          if (saved) results.push(saved as unknown as LocationResult);
+        } catch (err) {
+          console.error(`Failed to cache location ${id}`, err);
+        }
+      }
+    }
+  }
+
   res.json(results);
 });
 

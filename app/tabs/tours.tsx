@@ -452,6 +452,7 @@ export const TourTab: React.FC<TourTabProps> = ({
                 <input
                   style={{ ...StyleSheet.flatten(styles.input), width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
                   type="date"
+                  title="Tour date"
                   value={editingTour.date}
                   onChange={(e) => setEditingTour((p) => (p ? { ...p, date: e.target.value } : p))}
                 />
@@ -479,6 +480,7 @@ export const TourTab: React.FC<TourTabProps> = ({
                 <input
                   style={{ ...StyleSheet.flatten(styles.input), width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
                   type="time"
+                  title="Start time"
                   value={editingTour.startTime}
                   onChange={(e) => setEditingTour((p) => (p ? { ...p, startTime: e.target.value } : p))}
                 />
@@ -512,6 +514,7 @@ export const TourTab: React.FC<TourTabProps> = ({
                 <input
                   style={{ ...StyleSheet.flatten(styles.input), width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
                   type="date"
+                  title="Free cancellation by date"
                   value={editingTour.freeCancelBy}
                   onChange={(e) => setEditingTour((p) => (p ? { ...p, freeCancelBy: e.target.value } : p))}
                 />

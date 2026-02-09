@@ -61,7 +61,7 @@ export async function loginAsNewUser(page: Page): Promise<void> {
   // Wait for a post-login element to be visible. The test that calls this
   // function immediately looks for a "Trips" button, so we'll wait for that.
   // This makes the helper function more robust.
-  await expect(page.getByText('Trips')).toBeVisible();
+  await expect(page.getByTestId('home-nav-trips')).toBeVisible({ timeout: 15000 });
 }
 
 export const TEST_USER_PASSWORD = 'password123';

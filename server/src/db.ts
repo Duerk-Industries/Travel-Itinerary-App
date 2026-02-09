@@ -115,6 +115,8 @@ export const searchLocations = async (...args: Parameters<ReturnType<typeof adap
   adapter().searchLocations(...args);
 export const getLocationsByIds = async (...args: Parameters<ReturnType<typeof adapter>['getLocationsByIds']>): Promise<LocationRecord[]> =>
   adapter().getLocationsByIds(...args);
+export const upsertLocation = async (...args: Parameters<ReturnType<typeof adapter>['upsertLocation']>) =>
+  adapter().upsertLocation(...args);
 export const listTraits = async (...args: Parameters<ReturnType<typeof adapter>['listTraits']>): Promise<Trait[]> =>
   adapter().listTraits(...args);
 export const createTrait = async (...args: Parameters<ReturnType<typeof adapter>['createTrait']>) =>

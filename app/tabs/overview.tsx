@@ -1892,16 +1892,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   {Platform.OS === 'web' ? (
                     <>
                       <select
+                        aria-label="Start month"
                         value={parseDateParts(dateDraft.startDate).month}
                         onChange={(e) => setDatePart('start', 'month', e.target.value)}
-                        style={{
-                          minWidth: 140,
-                          maxWidth: 160,
-                          padding: 8,
-                          borderRadius: 6,
-                          borderColor: '#ccc',
-                          borderWidth: 1,
-                        }}
+                        className="dateSelect"
                       >
                         <option value="">Month</option>
                         {monthOptions.map((m) => (
@@ -1911,16 +1905,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                         ))}
                       </select>
                       <select
+                        aria-label="Start day"
                         value={parseDateParts(dateDraft.startDate).day}
                         onChange={(e) => setDatePart('start', 'day', e.target.value)}
-                        style={{
-                          minWidth: 120,
-                          maxWidth: 140,
-                          padding: 8,
-                          borderRadius: 6,
-                          borderColor: '#ccc',
-                          borderWidth: 1,
-                        }}
+                        className="dateSelect"
                       >
                         <option value="">Day</option>
                         {dayOptions.map((d) => (
@@ -1930,16 +1918,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                         ))}
                       </select>
                       <select
+                        aria-label="Start year"
                         value={parseDateParts(dateDraft.startDate).year}
                         onChange={(e) => setDatePart('start', 'year', e.target.value)}
-                        style={{
-                          minWidth: 140,
-                          maxWidth: 160,
-                          padding: 8,
-                          borderRadius: 6,
-                          borderColor: '#ccc',
-                          borderWidth: 1,
-                        }}
+                        className="dateSelect"
                       >
                         <option value="">Year</option>
                         {yearOptions.map((y) => (
@@ -1967,16 +1949,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   {Platform.OS === 'web' ? (
                     <>
                       <select
+                        aria-label="End month"
                         value={parseDateParts(dateDraft.endDate).month}
                         onChange={(e) => setDatePart('end', 'month', e.target.value)}
-                        style={{
-                          minWidth: 140,
-                          maxWidth: 160,
-                          padding: 8,
-                          borderRadius: 6,
-                          borderColor: '#ccc',
-                          borderWidth: 1,
-                        }}
+                        className="dateSelect"
                       >
                         <option value="">Month</option>
                         {monthOptions.map((m) => (
@@ -1986,16 +1962,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                         ))}
                       </select>
                       <select
+                        aria-label="End day"
                         value={parseDateParts(dateDraft.endDate).day}
                         onChange={(e) => setDatePart('end', 'day', e.target.value)}
-                        style={{
-                          minWidth: 120,
-                          maxWidth: 140,
-                          padding: 8,
-                          borderRadius: 6,
-                          borderColor: '#ccc',
-                          borderWidth: 1,
-                        }}
+                        className="dateSelect"
                       >
                         <option value="">Day</option>
                         {dayOptions.map((d) => (
@@ -2005,16 +1975,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                         ))}
                       </select>
                       <select
+                        aria-label="End year"
                         value={parseDateParts(dateDraft.endDate).year}
                         onChange={(e) => setDatePart('end', 'year', e.target.value)}
-                        style={{
-                          minWidth: 140,
-                          maxWidth: 160,
-                          padding: 8,
-                          borderRadius: 6,
-                          borderColor: '#ccc',
-                          borderWidth: 1,
-                        }}
+                        className="dateSelect"
                       >
                         <option value="">Year</option>
                         {yearOptions.map((y) => (
@@ -2045,16 +2009,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   <>
                     <View style={[styles.row, { gap: 8 }]}>
                       <select
+                        aria-label="Trip start month"
                         value={dateDraft.startMonth}
                         onChange={(e) => setDateDraft((prev) => ({ ...prev, startMonth: e.target.value }))}
-                        style={{
-                          minWidth: 160,
-                          maxWidth: 180,
-                          padding: 8,
-                          borderRadius: 6,
-                          borderColor: '#ccc',
-                          borderWidth: 1,
-                        }}
+                        className="dateSelect"
                       >
                         <option value="">Select month</option>
                         {monthOptions.map((m) => (
@@ -2064,16 +2022,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                         ))}
                       </select>
                       <select
+                        aria-label="Trip start year"
                         value={dateDraft.startYear}
                         onChange={(e) => setDateDraft((prev) => ({ ...prev, startYear: e.target.value }))}
-                        style={{
-                          minWidth: 140,
-                          maxWidth: 160,
-                          padding: 8,
-                          borderRadius: 6,
-                          borderColor: '#ccc',
-                          borderWidth: 1,
-                        }}
+                        className="dateSelect"
                       >
                         <option value="">Year</option>
                         {yearOptions.map((y) => (
@@ -2084,17 +2036,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                       </select>
                     </View>
                     <select
+                      aria-label="Trip duration in days"
                       value={dateDraft.durationDays}
                       onChange={(e) => setDateDraft((prev) => ({ ...prev, durationDays: e.target.value }))}
-                      style={{
-                        minWidth: 180,
-                        maxWidth: 220,
-                        padding: 8,
-                        borderRadius: 6,
-                        borderColor: '#ccc',
-                        borderWidth: 1,
-                        marginTop: 8,
-                      }}
+                      className="dateSelect durationSelect"
                     >
                       <option value="">Number of days</option>
                       {durationOptions.map((d) => (

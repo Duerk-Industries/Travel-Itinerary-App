@@ -40,7 +40,7 @@ import {
   validateTripDetails,
 } from '../utils/createTripWizard';
 import LodgingDialog from '../components/LodgingDialog';
-
+  
 type Suggestion = {
   id: string;
   firstName?: string;
@@ -157,7 +157,6 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   const [wizardLodgings, setWizardLodgings] = useState<Lodging[]>([]);
   const [wizardTours, setWizardTours] = useState<Tour[]>([]);
   const [wizardCarRentals, setWizardCarRentals] = useState<CarRental[]>([]);
-  const [wizardLodgingDraft, setWizardLodgingDraft] = useState<LodgingDraft>(createInitialLodgingState());
   const [wizardCarDraft, setWizardCarDraft] = useState<CarRentalDraft>(createInitialCarRentalDraft());
   const [wizardCarDateField, setWizardCarDateField] = useState<'pickup' | 'dropoff' | null>(null);
   const [wizardCarDateValue, setWizardCarDateValue] = useState<Date>(new Date());
@@ -165,7 +164,6 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   const [editingWizardLodgingId, setEditingWizardLodgingId] = useState<string | null>(null);
   const [editingWizardLodging, setEditingWizardLodging] = useState<LodgingDraft | null>(null);
   const [wizardLodgingDateField, setWizardLodgingDateField] = useState<'checkIn' | 'checkOut' | 'refund' | null>(null);
-  const [wizardLodgingDateContext, setWizardLodgingDateContext] = useState<'draft' | 'edit'>('draft');
   const [wizardLodgingDateValue, setWizardLodgingDateValue] = useState<Date>(new Date());
   const [itineraryEnabled, setItineraryEnabled] = useState(false);
   const [itineraryItems, setItineraryItems] = useState<ItineraryItemInput[]>([]);
@@ -176,7 +174,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   const [itineraryDepartureAirport, setItineraryDepartureAirport] = useState('');
   const [itineraryAirportSuggestions, setItineraryAirportSuggestions] = useState<string[]>([]);
   const [showItineraryAirportSuggestions, setShowItineraryAirportSuggestions] = useState(false);
-  const itineraryAirportRef = useRef<TextInput | null>(null);
+  const itineraryAirportRef = useRef<any>(null);
   const [itineraryAirportAnchor, setItineraryAirportAnchor] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const [budgetLevel, setBudgetLevel] = useState<'cheap' | 'middle' | 'expensive'>('middle');
   const [generateItinerary, setGenerateItinerary] = useState(false);
@@ -193,15 +191,13 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   const [showMonthDropdown, setShowMonthDropdown] = useState(false);
   const [showYearDropdown, setShowYearDropdown] = useState(false);
   const [showDaysDropdown, setShowDaysDropdown] = useState(false);
-  const startDateRef = useRef<HTMLInputElement | null>(null);
-  const endDateRef = useRef<HTMLInputElement | null>(null);
-  const itineraryDateRef = useRef<HTMLInputElement | null>(null);
-  const wizardLodgingCheckInRef = useRef<HTMLInputElement | null>(null);
-  const wizardLodgingCheckOutRef = useRef<HTMLInputElement | null>(null);
-  const wizardEditLodgingCheckInRef = useRef<HTMLInputElement | null>(null);
-  const wizardEditLodgingCheckOutRef = useRef<HTMLInputElement | null>(null);
-  const wizardCarPickupDateRef = useRef<HTMLInputElement | null>(null);
-  const wizardCarDropoffDateRef = useRef<HTMLInputElement | null>(null);
+  const startDateRef = useRef<any>(null);
+  const endDateRef = useRef<any>(null);
+  const itineraryDateRef = useRef<any>(null);
+  const wizardEditLodgingCheckInRef = useRef<any>(null);
+  const wizardEditLodgingCheckOutRef = useRef<any>(null);
+  const wizardCarPickupDateRef = useRef<any>(null);
+  const wizardCarDropoffDateRef = useRef<any>(null);
 
   useEffect(() => {
     if (createdTripId) {
@@ -361,10 +357,10 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   }, [computedDays, dates.durationDays, dates.mode, itineraryDays]);
 
   useEffect(() => {
-    if (wizardDefaultPayerId && (!wizardLodgingDraft.paidBy || wizardLodgingDraft.paidBy.length === 0)) {
-      setWizardLodgingDraft((prev) => ({ ...prev, paidBy: [wizardDefaultPayerId] }));
+    if (wizardDefaultPayerId && (!wizardCarDraft.paidBy || wizardCarDraft.paidBy.length === 0)) {
+      setWizardCarDraft((prev) => ({ ...prev, paidBy: [wizardDefaultPayerId] }));
     }
-  }, [wizardDefaultPayerId]);
+  }, [wizardDefaultPayerId, wizardCarDraft.paidBy.length]);
 
   useEffect(() => {
     if (dates.mode === 'range' && computedDays && !itineraryDaysTouched) {
@@ -408,13 +404,6 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     setShowItineraryAirportSuggestions(false);
     setItineraryAirportAnchor(null);
   };
-
-  useEffect(() => {
-    const nights = calculateNights(wizardLodgingDraft.checkInDate, wizardLodgingDraft.checkOutDate);
-    const totalNum = Number(wizardLodgingDraft.totalCost) || 0;
-    const computed = nights > 0 && totalNum ? (totalNum / nights).toFixed(2) : '';
-    setWizardLodgingDraft((prev) => ({ ...prev, costPerNight: computed }));
-  }, [wizardLodgingDraft.checkInDate, wizardLodgingDraft.checkOutDate, wizardLodgingDraft.totalCost]);
 
   useEffect(() => {
     if (!editingWizardLodging) return;
@@ -732,26 +721,20 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     }
   };
 
-  const applyWizardLodgingDate = (field: 'checkIn' | 'checkOut', value: string, context: 'draft' | 'edit') => {
-    if (context === 'edit') {
-      setEditingWizardLodging((prev) =>
-        prev ? { ...prev, [field === 'checkIn' ? 'checkInDate' : 'checkOutDate']: value } : prev
-      );
-    } else {
-      setWizardLodgingDraft((prev) => ({ ...prev, [field === 'checkIn' ? 'checkInDate' : 'checkOutDate']: value }));
-    }
+  const applyWizardLodgingDate = (field: 'checkIn' | 'checkOut', value: string) => {
+    setEditingWizardLodging((prev) =>
+      prev ? { ...prev, [field === 'checkIn' ? 'checkInDate' : 'checkOutDate']: value } : prev
+    );
   };
 
-  const openWizardLodgingDatePicker = (field: 'checkIn' | 'checkOut', context: 'draft' | 'edit', current?: string) => {
+  const openWizardLodgingDatePicker = (field: 'checkIn' | 'checkOut' | 'refundBy', current?: string) => {
     if (Platform.OS === 'web') {
       const ref =
-        context === 'edit'
-          ? field === 'checkIn'
-            ? wizardEditLodgingCheckInRef.current
-            : wizardEditLodgingCheckOutRef.current
-          : field === 'checkIn'
-            ? wizardLodgingCheckInRef.current
-            : wizardLodgingCheckOutRef.current;
+        field === 'checkIn'
+          ? wizardEditLodgingCheckInRef.current
+          : field === 'checkOut'
+            ? wizardEditLodgingCheckOutRef.current
+            : null;
       if ((ref as any)?.showPicker) {
         (ref as any).showPicker();
         return;
@@ -769,8 +752,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
         setWizardLodgingDateValue(parsed);
       }
     }
-    setWizardLodgingDateField(field);
-    setWizardLodgingDateContext(context);
+    setWizardLodgingDateField(field as 'checkIn' | 'checkOut' | null);
   };
 
   const openWizardLodgingEditor = (lodging: Lodging | null) => {
@@ -849,6 +831,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     const paidBy = draft.paidBy.length ? draft.paidBy : wizardDefaultPayerId ? [wizardDefaultPayerId] : [];
     const next: Lodging = {
       id: lodgingId ?? `wizard-lodging-${Date.now()}-${Math.round(Math.random() * 10000)}`,
+      userId: '',
+      tripId: '',
       name,
       checkInDate: normalizeDateString(draft.checkInDate),
       checkOutDate: normalizeDateString(draft.checkOutDate),
@@ -858,6 +842,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
       costPerNight: computed,
       address: draft.address,
       paidBy,
+      travelerIds: [],
     };
     setWizardLodgings((prev) => {
       if (lodgingId) {
@@ -970,6 +955,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           bookedOn: tour.bookedOn,
           reference: tour.reference,
           paidBy,
+          travelerIds: [],
         };
         const { payload, error } = buildTourPayload(draft, fallbackPayerId ?? undefined);
         if (error || !payload) {
@@ -1177,12 +1163,14 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             <TextInput
               style={styles.input}
               placeholder="Trip name"
+              title="Trip name"
               value={details.name}
-              onChangeText={(text) => setDetails((prev) => ({ ...prev, name: text }))}
+              onChangeText={(text: string) => setDetails((prev) => ({ ...prev, name: text }))}
             />
             <TextInput
               style={styles.input}
               placeholder="Search locations (countries/regions/cities)"
+              title="Search locations"
               value={locationQuery}
               onChangeText={setLocationQuery}
             />
@@ -1217,9 +1205,10 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             <TextInput
               style={[styles.input, { minHeight: 120 }]}
               placeholder="Description (optional)"
+              title="Description"
               multiline
               value={details.description}
-              onChangeText={(text) => setDetails((prev) => ({ ...prev, description: text }))}
+              onChangeText={(text: string) => setDetails((prev) => ({ ...prev, description: text }))}
             />
           </>
         );
@@ -1291,10 +1280,11 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                       <input
                         ref={startDateRef as any}
                         type="date"
+                        title="Start date"
                         value={dates.startDate}
                         onChange={(e) => setStartDateWithRangeGuard(e.target.value)}
                         onFocus={primeRangeDates}
-                        style={{ ...(styles.input as any), width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
+                        style={[styles.input, styles.webDateInput] as any}
                       />
                     ) : (
                       <TouchableOpacity style={[styles.input, styles.dateTouchable]} onPress={() => openDatePicker('start')}>
@@ -1312,10 +1302,11 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                       <input
                         ref={endDateRef as any}
                         type="date"
+                        title="End date"
                         value={dates.endDate}
                         onChange={(e) => setDates((prev) => ({ ...prev, endDate: normalizeDateString(e.target.value) }))}
                         onFocus={primeRangeDates}
-                        style={{ ...(styles.input as any), width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
+                        style={[styles.input, styles.webDateInput] as any}
                       />
                     ) : (
                       <TouchableOpacity style={[styles.input, styles.dateTouchable]} onPress={() => openDatePicker('end')}>
@@ -1336,7 +1327,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                 <View style={styles.row}>
                   {Platform.OS === 'web' ? (
                     <select
-                      style={webInputStyleFlex as any}
+                      style={[styles.input, styles.webDateInput, { flex: 1 }] as any}
+                      title="Select month"
                       value={dates.startMonth}
                       onChange={(e) => setDates((prev) => ({ ...prev, startMonth: e.target.value }))}
                     >
@@ -1384,7 +1376,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                   )}
                   {Platform.OS === 'web' ? (
                     <select
-                      style={webInputStyleFlex as any}
+                      style={[styles.input, styles.webDateInput, { flex: 1 }] as any}
+                      title="Select year"
                       value={dates.startYear}
                       onChange={(e) => setDates((prev) => ({ ...prev, startYear: e.target.value }))}
                     >
@@ -1433,7 +1426,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                 </View>
                 {Platform.OS === 'web' ? (
                   <select
-                    style={webInputStyle as any}
+                    style={[styles.input, styles.webDateInput] as any}
+                    title="Select number of days"
                     value={dates.durationDays}
                     onChange={(e) => setDates((prev) => ({ ...prev, durationDays: e.target.value }))}
                   >
@@ -1498,6 +1492,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             <TextInput
               style={styles.input}
               placeholder="Search past travelers"
+              title="Search participants"
               value={participantSearch}
               onChangeText={setParticipantSearch}
             />
@@ -1529,23 +1524,26 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               <TextInput
                 style={[styles.input, { flex: 1 }]}
                 placeholder="First name"
+                title="First name"
                 value={participantDraft.firstName}
-                onChangeText={(text) => setParticipantDraft((prev) => ({ ...prev, firstName: text }))}
+                onChangeText={(text: string) => setParticipantDraft((prev) => ({ ...prev, firstName: text }))}
               />
               <TextInput
                 style={[styles.input, { flex: 1 }]}
                 placeholder="Last name"
+                title="Last name"
                 value={participantDraft.lastName}
-                onChangeText={(text) => setParticipantDraft((prev) => ({ ...prev, lastName: text }))}
+                onChangeText={(text: string) => setParticipantDraft((prev) => ({ ...prev, lastName: text }))}
               />
             </View>
             <TextInput
               style={styles.input}
               placeholder="Email (optional)"
+              title="Email"
               autoCapitalize="none"
               keyboardType="email-address"
               value={participantDraft.email ?? ''}
-              onChangeText={(text) => setParticipantDraft((prev) => ({ ...prev, email: text }))}
+              onChangeText={(text: any) => setParticipantDraft((prev) => ({ ...prev, email: text }))}
             />
             <TouchableOpacity style={styles.button} onPress={() => addParticipant(participantDraft)}>
               <Text style={styles.buttonText}>Add Participant</Text>
@@ -1612,26 +1610,26 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                   The AI itinerary will be generated after you complete all steps of the trip wizard.
                 </Text>
                 <TextInput
-                  style={[
+                    style={[
                     styles.input,
-                    dates.mode === 'range' && computedDays
-                      ? { backgroundColor: '#e5e7eb', color: '#6b7280' }
-                      : null,
-                  ]}
-                  placeholder="Trip days (optional if dates are set)"
-                  keyboardType="numeric"
-                  value={itineraryDays}
-                  onChangeText={(text) => {
+                    dates.mode === 'range' && computedDays ? styles.disabledInput : null,
+                    ]}
+                    placeholder="Trip days (optional if dates are set)"
+                    title="Trip days"
+                    keyboardType="numeric"
+                    value={itineraryDays}
+                    onChangeText={(text: string) => {
                     setItineraryDaysTouched(true);
                     setItineraryDays(text);
-                  }}
-                  editable={!(dates.mode === 'range' && computedDays)}
-                />
+                    }}
+                    editable={!(dates.mode === 'range' && computedDays)}
+                  />
                 <TextInput
                   style={styles.input}
                   placeholder="Trip style (optional)"
+                  title="Trip style"
                   value={itineraryTripStyle}
-                  onChangeText={setItineraryTripStyle}
+                  onChangeText={(text: string) => setItineraryTripStyle(text)}
                 />
                 <Text style={styles.helperText}>Suggested styles</Text>
                 <View style={[styles.row, { flexWrap: 'wrap' }]}>
@@ -1656,9 +1654,10 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     ref={itineraryAirportRef}
                     style={styles.input}
                     placeholder="Departure airport (optional)"
+                    title="Departure airport"
                     value={itineraryDepartureAirport}
                     onFocus={() => showItineraryAirportDropdown(itineraryDepartureAirport)}
-                    onChangeText={(text) => {
+                    onChangeText={(text: string) => {
                       setItineraryDepartureAirport(text);
                       showItineraryAirportDropdown(text);
                     }}
@@ -1708,6 +1707,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                   <TextInput
                     style={styles.input}
                     placeholder="Trip days (optional if dates are set)"
+                    title="Trip days"
                     keyboardType="numeric"
                     value={itineraryDays}
                     onChangeText={setItineraryDays}
@@ -1717,6 +1717,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                   <TextInput
                     style={styles.input}
                     placeholder="Trip days (optional if dates are set)"
+                    title="Trip days"
                     keyboardType="numeric"
                     value={itineraryDays}
                     onChangeText={setItineraryDays}
@@ -1745,6 +1746,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                         <TouchableOpacity
                           style={[styles.button, styles.smallButton]}
                           onPress={() => setManualDay(day)}
+                          title={`Add item to ${formatManualDayLabel(day)}`}
                         >
                           <Text style={styles.buttonText}>Add item</Text>
                         </TouchableOpacity>
@@ -1758,14 +1760,16 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     <TextInput
                       style={styles.input}
                       placeholder="Time (optional)"
+                      title="Time"
                       value={manualDraft.time}
-                      onChangeText={(text) => setManualDraft((prev) => ({ ...prev, time: text }))}
+                      onChangeText={(text: any) => setManualDraft((prev) => ({ ...prev, time: text }))}
                     />
                     <TextInput
                       style={styles.input}
                       placeholder="Activity description"
+                      title="Activity description"
                       value={manualDraft.activity}
-                      onChangeText={(text) => setManualDraft((prev) => ({ ...prev, activity: text }))}
+                      onChangeText={(text: any) => setManualDraft((prev) => ({ ...prev, activity: text }))}
                     />
                     <TouchableOpacity style={styles.button} onPress={() => addManualItem(manualDay)}>
                       <Text style={styles.buttonText}>Add Itinerary Item</Text>
@@ -1927,7 +1931,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                 visible={!!editingWizardLodging}
                 title={editingWizardLodgingId ? 'Lodging Details' : 'Add Lodging'}
                 draft={editingWizardLodging}
-                setDraft={setEditingWizardLodging}
+                setDraft={setEditingWizardLodging as React.Dispatch<React.SetStateAction<LodgingDraft>>}
                 groupMembers={wizardGroupMembers}
                 formatMemberName={formatWizardMemberName}
                 payerName={wizardPayerName}
@@ -1940,7 +1944,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     : undefined
                 }
                 onCancel={closeWizardLodgingEditor}
-                onOpenDatePicker={(field) => openWizardLodgingDatePicker(field, 'edit')}
+                onOpenDatePicker={(field) => openWizardLodgingDatePicker(field)}
               />
             ) : null}
             <View style={{ marginTop: 12 }}>
@@ -2049,8 +2053,9 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     <TextInput
                       style={styles.input}
                       placeholder="Pick up location"
+                      title="Pick up location"
                       value={wizardCarDraft.pickupLocation}
-                      onChangeText={(text) => setWizardCarDraft((p) => ({ ...p, pickupLocation: text }))}
+                      onChangeText={(text: any) => setWizardCarDraft((p) => ({ ...p, pickupLocation: text }))}
                     />
                   </View>
                   <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
@@ -2059,9 +2064,10 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                         <input
                           ref={wizardCarPickupDateRef as any}
                           type="date"
+                          title="Pick up date"
                           value={wizardCarDraft.pickupDate}
                           onChange={(e) => setWizardCarDraft((p) => ({ ...p, pickupDate: e.target.value }))}
-                          style={styles.input as any}
+                          style={[styles.input, styles.webDateInput] as any}
                         />
                       ) : (
                         <TouchableOpacity
@@ -2075,7 +2081,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                         style={styles.dateIcon}
                         onPress={() => openWizardCarDatePicker('pickup')}
                       >
-                        <Text style={styles.selectCaret}>dY".</Text>
+                        <Text style={styles.selectCaret}>v</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -2083,8 +2089,9 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     <TextInput
                       style={styles.input}
                       placeholder="Drop off location"
+                      title="Drop off location"
                       value={wizardCarDraft.dropoffLocation}
-                      onChangeText={(text) => setWizardCarDraft((p) => ({ ...p, dropoffLocation: text }))}
+                      onChangeText={(text: any) => setWizardCarDraft((p) => ({ ...p, dropoffLocation: text }))}
                     />
                   </View>
                   <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
@@ -2093,9 +2100,10 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                         <input
                           ref={wizardCarDropoffDateRef as any}
                           type="date"
+                          title="Drop off date"
                           value={wizardCarDraft.dropoffDate}
                           onChange={(e) => setWizardCarDraft((p) => ({ ...p, dropoffDate: e.target.value }))}
-                          style={styles.input as any}
+                          style={[styles.input, styles.webDateInput] as any}
                         />
                       ) : (
                         <TouchableOpacity
@@ -2109,7 +2117,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                         style={styles.dateIcon}
                         onPress={() => openWizardCarDatePicker('dropoff')}
                       >
-                        <Text style={styles.selectCaret}>dY".</Text>
+                          <Text style={styles.selectCaret}>v</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -2117,22 +2125,25 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     <TextInput
                       style={styles.input}
                       placeholder="Reference"
+                      title="Reference"
                       value={wizardCarDraft.reference}
-                      onChangeText={(text) => setWizardCarDraft((p) => ({ ...p, reference: text }))}
+                      onChangeText={(text: any) => setWizardCarDraft((p) => ({ ...p, reference: text }))}
                     />
                   </View>
                   <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
                     <TextInput
                       style={styles.input}
                       placeholder="Vendor"
+                      title="Vendor"
                       value={wizardCarDraft.vendor}
-                      onChangeText={(text) => setWizardCarDraft((p) => ({ ...p, vendor: text }))}
+                      onChangeText={(text: any) => setWizardCarDraft((p) => ({ ...p, vendor: text }))}
                     />
                   </View>
                   <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
                     <View style={[styles.dropdown, { width: '100%' }]}>
                       <TouchableOpacity
                         style={[styles.input, styles.selectButtonRow]}
+                        title="Prepaid status"
                         onPress={() => setWizardCarPrepaidOpen((s) => !s)}
                       >
                         <Text style={styles.cellText}>{wizardCarDraft.prepaid || 'Select Yes/No'}</Text>
@@ -2160,9 +2171,10 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     <TextInput
                       style={styles.input}
                       placeholder="Cost"
+                      title="Cost"
                       keyboardType="numeric"
                       value={wizardCarDraft.cost}
-                      onChangeText={(text) =>
+                      onChangeText={(text: string) =>
                         setWizardCarDraft((p) => ({ ...p, cost: sanitizeCostInput(text) }))
                       }
                     />
@@ -2171,16 +2183,18 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     <TextInput
                       style={styles.input}
                       placeholder="Car model"
+                      title="Car model"
                       value={wizardCarDraft.model}
-                      onChangeText={(text) => setWizardCarDraft((p) => ({ ...p, model: text }))}
+                      onChangeText={(text: any) => setWizardCarDraft((p) => ({ ...p, model: text }))}
                     />
                   </View>
                   <View style={[styles.cell, { minWidth: 220, flex: 1 }]}>
                     <TextInput
                       style={[styles.input, styles.cellTextWrap]}
                       placeholder="Notes"
+                      title="Notes"
                       value={wizardCarDraft.notes}
-                      onChangeText={(text) => setWizardCarDraft((p) => ({ ...p, notes: text }))}
+                      onChangeText={(text: any) => setWizardCarDraft((p) => ({ ...p, notes: text }))}
                       multiline
                     />
                   </View>
@@ -2464,7 +2478,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               setWizardLodgingDateField(null);
               return;
             }
-            applyWizardLodgingDate(wizardLodgingDateField, iso, wizardLodgingDateContext);
+            applyWizardLodgingDate(wizardLodgingDateField, iso);
             setWizardLodgingDateField(null);
           }}
         />
@@ -2493,8 +2507,10 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               <Text style={styles.modalLabel}>Name</Text>
               <TextInput
                 style={styles.input}
+                placeholder="Lodging name"
+                title="Lodging name"
                 value={editingWizardLodging.name}
-                onChangeText={(text) => setEditingWizardLodging((prev) => (prev ? { ...prev, name: text } : prev))}
+                onChangeText={(text: any) => setEditingWizardLodging((prev) => (prev ? { ...prev, name: text } : prev))}
               />
               <Text style={styles.modalLabel}>Check-in</Text>
               <View style={styles.dateInputWrap}>
@@ -2502,27 +2518,28 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                   <input
                     ref={wizardEditLodgingCheckInRef as any}
                     type="date"
+                    title="Check-in date"
                     value={editingWizardLodging.checkInDate}
                     onChange={(e) =>
                       setEditingWizardLodging((prev) =>
                         prev ? { ...prev, checkInDate: normalizeDateString(e.target.value) } : prev
                       )
                     }
-                    style={styles.input as any}
+                    style={[styles.input, styles.webDateInput] as any}
                   />
                 ) : (
                   <TouchableOpacity
                     style={[styles.input, styles.dateTouchable]}
-                    onPress={() => openWizardLodgingDatePicker('checkIn', 'edit', editingWizardLodging.checkInDate)}
+                    onPress={() => openWizardLodgingDatePicker('checkIn', editingWizardLodging.checkInDate)}
                   >
                     <Text style={styles.cellText}>{editingWizardLodging.checkInDate || 'YYYY-MM-DD'}</Text>
                   </TouchableOpacity>
                 )}
                 <TouchableOpacity
                   style={styles.dateIcon}
-                  onPress={() => openWizardLodgingDatePicker('checkIn', 'edit', editingWizardLodging.checkInDate)}
+                  onPress={() => openWizardLodgingDatePicker('checkIn', editingWizardLodging.checkInDate)}
                 >
-                  <Text style={styles.selectCaret}>dY".</Text>
+                  <Text style={styles.selectCaret}>v</Text>
                 </TouchableOpacity>
               </View>
               <Text style={styles.modalLabel}>Check-out</Text>
@@ -2531,50 +2548,55 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                   <input
                     ref={wizardEditLodgingCheckOutRef as any}
                     type="date"
+                    title="Check-out date"
                     value={editingWizardLodging.checkOutDate}
                     onChange={(e) =>
                       setEditingWizardLodging((prev) =>
                         prev ? { ...prev, checkOutDate: normalizeDateString(e.target.value) } : prev
                       )
                     }
-                    style={styles.input as any}
+                    style={[styles.input, styles.webDateInput] as any}
                   />
                 ) : (
                   <TouchableOpacity
                     style={[styles.input, styles.dateTouchable]}
-                    onPress={() => openWizardLodgingDatePicker('checkOut', 'edit', editingWizardLodging.checkOutDate)}
+                    onPress={() => openWizardLodgingDatePicker('checkOut', editingWizardLodging.checkOutDate)}
                   >
                     <Text style={styles.cellText}>{editingWizardLodging.checkOutDate || 'YYYY-MM-DD'}</Text>
                   </TouchableOpacity>
                 )}
                 <TouchableOpacity
                   style={styles.dateIcon}
-                  onPress={() => openWizardLodgingDatePicker('checkOut', 'edit', editingWizardLodging.checkOutDate)}
+                  onPress={() => openWizardLodgingDatePicker('checkOut', editingWizardLodging.checkOutDate)}
                 >
-                  <Text style={styles.selectCaret}>dY".</Text>
+                  <Text style={styles.selectCaret}>v</Text>
                 </TouchableOpacity>
               </View>
               <Text style={styles.modalLabel}>Rooms</Text>
               <TextInput
                 style={styles.input}
+                placeholder="Number of rooms"
+                title="Rooms"
                 keyboardType="numeric"
                 value={editingWizardLodging.rooms}
-                onChangeText={(text) => setEditingWizardLodging((prev) => (prev ? { ...prev, rooms: text } : prev))}
+                onChangeText={(text: any) => setEditingWizardLodging((prev) => (prev ? { ...prev, rooms: text } : prev))}
               />
               <Text style={styles.modalLabel}>Refund by</Text>
               {Platform.OS === 'web' ? (
                 <input
                   type="date"
+                  title="Refund by date"
                   value={editingWizardLodging.refundBy}
                   onChange={(e) => setEditingWizardLodging((prev) => (prev ? { ...prev, refundBy: e.target.value } : prev))}
-                  style={styles.input as any}
+                  style={[styles.input, styles.webDateInput] as any}
                 />
               ) : (
                 <TextInput
                   style={styles.input}
                   value={editingWizardLodging.refundBy}
                   placeholder="YYYY-MM-DD"
-                  onChangeText={(text) =>
+                  title="Refund by date"
+                  onChangeText={(text: string) =>
                     setEditingWizardLodging((prev) => (prev ? { ...prev, refundBy: normalizeDateString(text) } : prev))
                   }
                 />
@@ -2582,9 +2604,11 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               <Text style={styles.modalLabel}>Total cost</Text>
               <TextInput
                 style={styles.input}
+                placeholder="Total cost"
+                title="Total cost"
                 value={editingWizardLodging.totalCost}
                 keyboardType="numeric"
-                onChangeText={(text) => setEditingWizardLodging((prev) => (prev ? { ...prev, totalCost: text } : prev))}
+                onChangeText={(text: any) => setEditingWizardLodging((prev) => (prev ? { ...prev, totalCost: text } : prev))}
               />
               <Text style={styles.modalLabel}>Cost per night</Text>
               <Text style={styles.helperText}>{editingWizardLodging.costPerNight ? `$${editingWizardLodging.costPerNight}` : '-'}</Text>
@@ -2632,8 +2656,10 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               <Text style={styles.modalLabel}>Address</Text>
               <TextInput
                 style={styles.input}
+                placeholder="Address"
+                title="Address"
                 value={editingWizardLodging.address}
-                onChangeText={(text) => setEditingWizardLodging((prev) => (prev ? { ...prev, address: text } : prev))}
+                onChangeText={(text: any) => setEditingWizardLodging((prev) => (prev ? { ...prev, address: text } : prev))}
               />
             </ScrollView>
             <View style={styles.row}>

@@ -42,6 +42,7 @@ export default defineConfig({
       timeout: 120 * 1000,
       env: {
         BACKEND_URL: 'http://localhost:3000',
+        EXPO_PUBLIC_BACKEND_URL: 'http://localhost:3000',
         CI: 'true',
       },
     },
