@@ -3,6 +3,7 @@ import { authenticate } from '../auth';
 import { getPlaceDetails } from '../googlePlaces';
 import { getLocationsByIds, searchLocations, upsertLocation } from '../db';
 import { autocompletePlaces, getPlaceDetailsFromGoogle } from '../services/placeService';
+import { searchCityOptions, searchCountryStateOptions } from '../services/locationServices';
 import { getEnvValue } from '../env';
 
 interface LocationResult {
@@ -46,6 +47,34 @@ router.get('/search', async (req, res) => {
   const limit = Number(req.query.limit);
   const results = await searchLocations(userId, q, types, Number.isFinite(limit) ? limit : 15);
   res.json(results);
+});
+
+router.get('/location-options', async (req, res) => {
+  const q = String(req.query.q ?? '').trim();
+  if (!q) {
+    res.json([]);
+    return;
+  }
+  const kind = String(req.query.kind ?? 'country_state').trim();
+  const limit = Number(req.query.limit);
+  try {
+    if (kind === 'city') {
+      const countryIds = String(req.query.countryIds ?? '').split(',').map((item) => item.trim()).filter(Boolean);
+      const stateIds = String(req.query.stateIds ?? '').split(',').map((item) => item.trim()).filter(Boolean);
+      const results = await searchCityOptions(q, {
+        countryIds,
+        stateIds,
+        limit: Number.isFinite(limit) ? limit : 10,
+      });
+      res.json(results);
+      return;
+    }
+    const results = await searchCountryStateOptions(q, Number.isFinite(limit) ? limit : 10);
+    res.json(results);
+  } catch (err) {
+    console.error('Failed to load location options from JSON storage', err);
+    res.status(500).json({ error: 'Failed to load location options' });
+  }
 });
 
 router.post('/batch', async (req, res) => {

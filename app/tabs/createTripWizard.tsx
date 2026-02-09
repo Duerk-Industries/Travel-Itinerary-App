@@ -40,6 +40,7 @@ import {
   validateTripDetails,
 } from '../utils/createTripWizard';
 import LodgingDialog from '../components/LodgingDialog';
+import { LocationSelector, type LocationOption } from '../components/LocationSelector';
   
 type Suggestion = {
   id: string;
@@ -47,13 +48,6 @@ type Suggestion = {
   lastName?: string;
   email?: string | null;
   source?: 'user' | 'fellow';
-};
-
-type LocationOption = {
-  id: string;
-  sourceType: 'country_region' | 'city';
-  name: string;
-  address?: string | null;
 };
 
 type CreateTripWizardProps = {
@@ -136,8 +130,6 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   const isNarrowLayout = viewportWidth < 720;
   const [stepIndex, setStepIndex] = useState(0);
   const [details, setDetails] = useState<TripDetails>({ name: '', description: '' });
-  const [locationQuery, setLocationQuery] = useState('');
-  const [locationSuggestions, setLocationSuggestions] = useState<LocationOption[]>([]);
   const [selectedLocations, setSelectedLocations] = useState<LocationOption[]>([]);
   const [dates, setDates] = useState<TripDates>({
     startDate: '',
@@ -198,6 +190,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   const wizardEditLodgingCheckOutRef = useRef<any>(null);
   const wizardCarPickupDateRef = useRef<any>(null);
   const wizardCarDropoffDateRef = useRef<any>(null);
+  const descriptionRef = useRef<any>(null);
 
   useEffect(() => {
     if (createdTripId) {
@@ -292,9 +285,10 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     const match = wizardGroupMembers.find((m) => m.id === id);
     return match ? formatWizardMemberName(match) : 'Traveler';
   };
+  const stableHeaders = useMemo(() => headers, [JSON.stringify(headers)]);
   const wizardJsonHeaders = useMemo(
-    () => ({ 'Content-Type': 'application/json', ...headers }),
-    [headers]
+    () => ({ 'Content-Type': 'application/json', ...stableHeaders }),
+    [stableHeaders]
   );
   const wizardMemberIds = useMemo(() => wizardGroupMembers.map((m) => m.id), [wizardGroupMembers]);
   const wizardLodgingTotal = useMemo(
@@ -487,7 +481,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
       return;
     }
     const handle = setTimeout(async () => {
-      const res = await fetch(`${backendUrl}/api/trips/participants/search?q=${encodeURIComponent(query)}`, { headers });
+      const res = await fetch(`${backendUrl}/api/trips/participants/search?q=${encodeURIComponent(query)}`, { headers: stableHeaders });
       if (!res.ok) {
         setParticipantSuggestions([]);
         return;
@@ -496,30 +490,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
       setParticipantSuggestions(Array.isArray(data) ? data : []);
     }, 300);
     return () => clearTimeout(handle);
-  }, [backendUrl, headers, participantSearch, userToken]);
-
-  useEffect(() => {
-    if (!userToken) return;
-    const query = locationQuery.trim();
-    if (!query) {
-      setLocationSuggestions([]);
-      return;
-    }
-    const handle = setTimeout(async () => {
-      const res = await fetch(`${backendUrl}/api/places/search?q=${encodeURIComponent(query)}&types=country_region,city&limit=12`, {
-        headers,
-      });
-      if (!res.ok) {
-        setLocationSuggestions([]);
-        return;
-      }
-      const data = await res.json().catch(() => []);
-      const next = Array.isArray(data) ? data : [];
-      const selected = new Set(selectedLocations.map((loc) => loc.id));
-      setLocationSuggestions(next.filter((item) => !selected.has(String(item?.id ?? ''))));
-    }, 250);
-    return () => clearTimeout(handle);
-  }, [backendUrl, headers, locationQuery, selectedLocations, userToken]);
+  }, [backendUrl, stableHeaders, participantSearch, userToken]);
 
   useEffect(() => {
     if (hasSeededCurrentUser) return;
@@ -556,8 +527,6 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     if (!location?.id) return;
     if (selectedLocations.some((entry) => entry.id === location.id)) return;
     setSelectedLocations((prev) => [...prev, location]);
-    setLocationQuery('');
-    setLocationSuggestions([]);
   };
 
   const removeLocation = (locationId: string) => {
@@ -964,7 +933,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
         }
         const saveRes = await fetch(`${backendUrl}/api/tours`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...headers },
+          headers: wizardJsonHeaders,
           body: JSON.stringify({
             ...payload,
             tripId,
@@ -1004,7 +973,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     try {
       const res = await fetch(`${backendUrl}/api/trips/wizard`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...headers },
+        headers: wizardJsonHeaders,
         body: JSON.stringify({
           name: details.name.trim(),
           description: description.trim() || undefined,
@@ -1167,42 +1136,21 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               value={details.name}
               onChangeText={(text: string) => setDetails((prev) => ({ ...prev, name: text }))}
             />
-            <TextInput
-              style={styles.input}
+            <LocationSelector
+              backendUrl={backendUrl}
+              headers={stableHeaders}
+              selectedLocations={selectedLocations}
+              onAddLocation={addLocation}
+              onRemoveLocation={removeLocation}
+              onNext={() => descriptionRef.current?.focus()}
+              styles={styles}
               placeholder="Search locations (countries/regions/cities)"
-              title="Search locations"
-              value={locationQuery}
-              onChangeText={setLocationQuery}
             />
-            {locationSuggestions.length ? (
-              <View style={[styles.card, { marginTop: 6 }]}>
-                {locationSuggestions.map((location) => (
-                  <TouchableOpacity
-                    key={`location-suggestion-${location.id}`}
-                    style={[styles.row, { justifyContent: 'space-between', marginBottom: 6 }]}
-                    onPress={() => addLocation(location)}
-                  >
-                    <Text style={styles.bodyText}>{location.name}</Text>
-                    <Text style={styles.helperText}>{location.sourceType === 'city' ? 'City' : 'Country/Region'}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            ) : null}
-            {selectedLocations.length ? (
-              <View style={[styles.row, { flexWrap: 'wrap', gap: 8 }]}>
-                {selectedLocations.map((location) => (
-                  <View key={`selected-location-${location.id}`} style={styles.payerChip}>
-                    <Text style={styles.cellText}>{location.name}</Text>
-                    <TouchableOpacity onPress={() => removeLocation(location.id)}>
-                      <Text style={styles.removeText}>x</Text>
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </View>
-            ) : (
+            {selectedLocations.length === 0 ? (
               <Text style={styles.helperText}>Select one or more locations for this trip.</Text>
-            )}
+            ) : null}
             <TextInput
+              ref={descriptionRef}
               style={[styles.input, { minHeight: 120 }]}
               placeholder="Description (optional)"
               title="Description"

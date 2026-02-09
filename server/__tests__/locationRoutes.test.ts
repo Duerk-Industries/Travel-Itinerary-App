@@ -3,12 +3,17 @@ import { app } from '../src/app';
 import * as auth from '../src/auth';
 import * as db from '../src/db';
 import * as placeService from '../src/services/placeService';
+import * as locationServices from '../src/services/locationServices';
 
 jest.mock('../src/auth');
 jest.mock('../src/db');
 jest.mock('../src/services/placeService', () => ({
   autocompletePlaces: jest.fn(),
   getPlaceDetailsFromGoogle: jest.fn(),
+}));
+jest.mock('../src/services/locationServices', () => ({
+  searchCountryStateOptions: jest.fn(),
+  searchCityOptions: jest.fn(),
 }));
 
 describe('/api/places location endpoints', () => {
@@ -30,6 +35,50 @@ describe('/api/places location endpoints', () => {
     const res = await request(app).get('/api/places/search?q=rom').expect(200);
     expect(res.body).toHaveLength(1);
     expect(db.searchLocations).toHaveBeenCalledWith('user-1', 'rom', undefined, 15);
+  });
+
+  it('returns country/state location options from JSON storage proxy', async () => {
+    (locationServices.searchCountryStateOptions as jest.Mock).mockResolvedValue([
+      { id: 'country:33', sourceType: 'country', name: 'France' },
+    ]);
+    const res = await request(app)
+      .get('/api/places/location-options?kind=country_state&q=fra&limit=5')
+      .expect(200);
+    expect(res.body).toEqual([{ id: 'country:33', sourceType: 'country', name: 'France' }]);
+    expect(locationServices.searchCountryStateOptions).toHaveBeenCalledWith('fra', 5);
+  });
+
+  it('returns city options filtered by selected locations', async () => {
+    (locationServices.searchCityOptions as jest.Mock).mockResolvedValue([
+      {
+        id: 'city:1',
+        sourceType: 'city',
+        name: 'Paris',
+        countryId: 'country:33',
+        countryName: 'France',
+        stateId: 'state:10',
+        stateName: 'Ile-de-France',
+      },
+    ]);
+    const res = await request(app)
+      .get('/api/places/location-options?kind=city&q=par&countryIds=country:33&stateIds=state:10&limit=5')
+      .expect(200);
+    expect(res.body).toEqual([
+      {
+        id: 'city:1',
+        sourceType: 'city',
+        name: 'Paris',
+        countryId: 'country:33',
+        countryName: 'France',
+        stateId: 'state:10',
+        stateName: 'Ile-de-France',
+      },
+    ]);
+    expect(locationServices.searchCityOptions).toHaveBeenCalledWith('par', {
+      countryIds: ['country:33'],
+      stateIds: ['state:10'],
+      limit: 5,
+    });
   });
 
   it('returns batched locations by ids', async () => {

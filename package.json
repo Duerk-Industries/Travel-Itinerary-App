@@ -17,7 +17,8 @@
     "playwright:install": "node ./node_modules/@playwright/test/cli.js install",
     "test:app": "npm --prefix app test",
     "test:server": "npm --prefix server test",
-    "locations:upload": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/upload-location-csvs.ts",
+    "locations:update": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/update-location-jsons.ts",
+    "locations:upload": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/update-location-jsons.ts",
     "images:migrate-cache": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/migrate-image-cache-to-storage.ts",
     "list-users": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/list_users.ts",
     "list-trips": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/list_trips_and_users.ts"
