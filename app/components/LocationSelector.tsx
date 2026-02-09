@@ -152,11 +152,22 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
     return { id, name, sourceType: 'state', countryId, countryName };
   };
 
+  const normalizeName = (value?: string) => String(value ?? '').trim().toLowerCase();
+
   const handleAddCountryState = (loc: LocationOption) => {
     const toAdd: LocationOption[] = [];
     if (loc.sourceType === 'state') {
+      const stateName = normalizeName(loc.name);
+      const countryName = normalizeName(loc.countryName);
       const countryOption = buildCountryOption(loc.countryId, loc.countryName);
       if (countryOption) toAdd.push(countryOption);
+      if (stateName && countryName && stateName === countryName) {
+        addLocations(toAdd);
+        setCountryStateQuery('');
+        setCountryStateSuggestions([]);
+        countryStateInputRef.current?.focus();
+        return;
+      }
     }
     toAdd.push(loc);
     addLocations(toAdd);
@@ -166,6 +177,31 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
   };
 
   const handleAddCity = (loc: LocationOption) => {
+    const cityName = normalizeName(loc.name);
+    const stateName = normalizeName(loc.stateName);
+    const countryName = normalizeName(loc.countryName);
+    if (cityName && stateName && cityName === stateName) {
+      const countryOption = buildCountryOption(loc.countryId, loc.countryName);
+      const stateOption = buildStateOption(loc.stateId, loc.stateName, loc.countryId, loc.countryName);
+      const toAdd: LocationOption[] = [];
+      if (countryOption) toAdd.push(countryOption);
+      if (stateOption) toAdd.push(stateOption);
+      addLocations(toAdd);
+      setCityQuery('');
+      setCitySuggestions([]);
+      cityInputRef.current?.focus();
+      return;
+    }
+    if (cityName && countryName && cityName === countryName) {
+      const countryOption = buildCountryOption(loc.countryId, loc.countryName);
+      const toAdd: LocationOption[] = [];
+      if (countryOption) toAdd.push(countryOption);
+      addLocations(toAdd);
+      setCityQuery('');
+      setCitySuggestions([]);
+      cityInputRef.current?.focus();
+      return;
+    }
     const toAdd: LocationOption[] = [];
     const countryOption = buildCountryOption(loc.countryId, loc.countryName);
     const stateOption = buildStateOption(loc.stateId, loc.stateName, loc.countryId, loc.countryName);
@@ -192,6 +228,35 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
   const handleCityManualAdd = () => {
     const trimmed = cityQuery.trim();
     if (!trimmed) return;
+    const normalized = normalizeName(trimmed);
+    const matchingState = selectedLocations.find(
+      (item) => item.sourceType === 'state' && normalizeName(item.name) === normalized
+    );
+    if (matchingState) {
+      handleAddCity({
+        id: matchingState.id,
+        name: matchingState.name,
+        sourceType: 'city',
+        countryId: matchingState.countryId,
+        countryName: matchingState.countryName,
+        stateId: matchingState.id,
+        stateName: matchingState.name,
+      });
+      return;
+    }
+    const matchingCountry = selectedLocations.find(
+      (item) => item.sourceType === 'country' && normalizeName(item.name) === normalized
+    );
+    if (matchingCountry) {
+      handleAddCity({
+        id: matchingCountry.id,
+        name: matchingCountry.name,
+        sourceType: 'city',
+        countryId: matchingCountry.id,
+        countryName: matchingCountry.name,
+      });
+      return;
+    }
     const manualLocation: LocationOption = {
       id: `manual-city-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       sourceType: 'city',

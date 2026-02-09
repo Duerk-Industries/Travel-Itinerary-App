@@ -2,6 +2,7 @@
         "cSpell.words": [
             "AAPT",
             "allprojects",
+            "APPCHECK",
             "appspot",
             "armeabi",
             "artifactregistry",
@@ -13,6 +14,7 @@
             "dropoff",
             "emscripten",
             "entr",
+            "firebaseapp",
             "firebasestorage",
             "Firestore",
             "geoloc",

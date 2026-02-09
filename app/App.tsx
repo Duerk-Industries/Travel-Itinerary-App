@@ -16,6 +16,7 @@ import Constants from 'expo-constants';
 import { formatDateLong } from './utils/formatDateLong';
 import { normalizeDateString } from './utils/normalizeDateString';
 import { sanitizeCostInput } from './utils/sanitizeCost';
+import { initializeAppCheck } from './utils/firebaseAppCheck';
 import { FlightsTab, type Flight, fetchFlightsForTrip } from './tabs/flights';
 import { type Tour, TourTab, fetchToursForTrip } from './tabs/tours';
 import { type Trait } from './tabs/traits';
@@ -221,6 +222,10 @@ const sessionKey = 'stp.session';
 const sessionDurationMs = 12 * 60 * 60 * 1000;
 
 const App: React.FC = () => {
+  useEffect(() => {
+    initializeAppCheck();
+  }, []);
+
   const [userToken, setUserToken] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
   const [lastRefreshAt, setLastRefreshAt] = useState<number | null>(null);
