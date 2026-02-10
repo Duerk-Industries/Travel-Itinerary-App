@@ -272,7 +272,8 @@ describe('Account lifecycle API with shared trip', () => {
       .get(`/api/account/trips/${tripId}/members`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
-    expect(membersAfter.body.some((m: any) => (m.email ?? m.userEmail) === joiner.email)).toBe(false);
+    const removedMember = membersAfter.body.find((m: any) => (m.email ?? m.userEmail) === joiner.email);
+    expect(removedMember?.status).toBe('pending');
   });
 });
 

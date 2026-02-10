@@ -2,6 +2,7 @@
 
 import axios from 'axios';
 import { EventEmitter } from 'events';
+import * as googlePlaces from '../src/googlePlaces';
 // Remove top-level import to avoid hoisting issues with mocks
 // import { getGooglePlaceImage } from '../src/image-service';
 
@@ -48,24 +49,26 @@ describe('image-service', () => {
       if (url.includes('textsearch')) {
         return Promise.reject(new Error('Should not call textsearch'));
       }
-      if (url.includes('details')) {
-        return Promise.resolve({
-          data: { result: { photos: [{ photo_reference: 'ref123' }] } }
-        });
-      }
-      if (url.includes('photo')) {
-         // Simulate redirect behavior
-         return Promise.resolve({
-           status: 302,
-           headers: { location: 'http://final-image.url/img.jpg' }
-         });
-      }
       return Promise.reject(new Error(`Unexpected URL: ${url}`));
     });
 
+    // Mock axios.post for search candidates (should not be called)
+    (axios.post as jest.Mock).mockImplementation(() => {
+      return Promise.reject(new Error('Should not call searchText'));
+    });
+
+    jest.spyOn(googlePlaces, 'getPlaceDetails').mockResolvedValue({
+      placeId: 'place123',
+      name: 'Paris',
+      cached: false,
+      details: {
+        photos: [{ name: 'photos/abc' }],
+      },
+    } as any);
+
     // Mock axios default export for streaming the image
     (axios as unknown as jest.Mock).mockImplementation((config) => {
-        if (config.url === 'http://final-image.url/img.jpg') {
+        if (config.url.includes('places.googleapis.com/v1/photos/')) {
             return Promise.resolve({
                 data: {
                     pipe: (dest: any) => {
@@ -90,7 +93,7 @@ describe('image-service', () => {
 
     expect(result).toBe('http://signed.url/img.jpg');
     expect(axios.get).not.toHaveBeenCalledWith(expect.stringContaining('textsearch'));
-    expect(axios.get).toHaveBeenCalledWith(expect.stringContaining('place_id=place123'));
-    expect(mockBucket.file).toHaveBeenCalledWith('google-places/place123.jpg');
+    expect(axios.post).not.toHaveBeenCalled();
+    expect(mockBucket.file).toHaveBeenCalledWith('google-places/place123/photo-1.jpg');
   });
 });

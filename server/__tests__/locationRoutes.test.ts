@@ -14,6 +14,7 @@ jest.mock('../src/services/placeService', () => ({
 jest.mock('../src/services/locationServices', () => ({
   searchCountryStateOptions: jest.fn(),
   searchCityOptions: jest.fn(),
+  getLocationOptionsByIds: jest.fn(),
 }));
 
 describe('/api/places location endpoints', () => {

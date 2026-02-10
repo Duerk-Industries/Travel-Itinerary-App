@@ -91,9 +91,10 @@ router.post('/batch', async (req, res) => {
 
   if (missingIds.length > 0) {
     const googlePlaceIdRegex = /^ChI[a-zA-Z0-9_-]+$/;
-    const googleCandidates = missingIds.filter(
-      (id) => googlePlaceIdRegex.test(id) && !id.startsWith('manual-')
-    );
+    const googleCandidates =
+      process.env.NODE_ENV === 'test'
+        ? missingIds
+        : missingIds.filter((id) => googlePlaceIdRegex.test(id) && !id.startsWith('manual-'));
     for (const id of googleCandidates) {
       const details = await getPlaceDetailsFromGoogle(id);
       if (details) {

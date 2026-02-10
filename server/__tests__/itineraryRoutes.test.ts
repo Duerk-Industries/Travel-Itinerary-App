@@ -4,7 +4,9 @@ import * as auth from '../src/auth';
 import * as imageService from '../src/image-service';
 
 jest.mock('../src/auth');
-jest.mock('../src/image-service');
+jest.mock('../src/image-service', () => ({
+  getItineraryImage: jest.fn(),
+}));
 jest.mock('../src/db.firebase');
 
 describe('/api/itinerary/images', () => {
@@ -17,28 +19,51 @@ describe('/api/itinerary/images', () => {
   });
 
   it('returns image url from unsplash service when no placeId provided', async () => {
-    (imageService.getUnsplashImage as jest.Mock).mockResolvedValue('https://mock-service-url.com/img.jpg');
+    (imageService.getItineraryImage as jest.Mock).mockResolvedValue({
+      url: 'https://mock-service-url.com/img.jpg',
+      cached: true,
+      provider: 'unsplash',
+      fallbackUsed: false,
+    });
     
     const res = await request(app).get('/api/itinerary/images?location=paris').expect(200);
     
     expect(res.body.url).toBe('https://mock-service-url.com/img.jpg');
     expect(res.body.cached).toBe(true);
-    expect(imageService.getUnsplashImage).toHaveBeenCalledWith('paris');
-    expect(imageService.getGooglePlaceImage).not.toHaveBeenCalled();
+    expect(imageService.getItineraryImage).toHaveBeenCalledWith({
+      locationName: 'paris',
+      placeId: undefined,
+      day: undefined,
+      contextText: undefined,
+    });
   });
 
   it('uses google place image service when placeId is provided', async () => {
-     (imageService.getGooglePlaceImage as jest.Mock).mockResolvedValue('https://google-place/img.jpg');
+     (imageService.getItineraryImage as jest.Mock).mockResolvedValue({
+       url: 'https://google-place/img.jpg',
+       cached: false,
+       provider: 'google',
+       fallbackUsed: false,
+     });
      
      const res = await request(app).get('/api/itinerary/images?location=paris&placeId=place123').expect(200);
      
      expect(res.body.url).toBe('https://google-place/img.jpg');
-     expect(imageService.getGooglePlaceImage).toHaveBeenCalledWith('paris', 'place123');
-     expect(imageService.getUnsplashImage).not.toHaveBeenCalled();
+     expect(imageService.getItineraryImage).toHaveBeenCalledWith({
+       locationName: 'paris',
+       placeId: 'place123',
+       day: undefined,
+       contextText: undefined,
+     });
   });
 
   it('falls back to placeholder when service throws error', async () => {
-    (imageService.getUnsplashImage as jest.Mock).mockRejectedValue(new Error('Service failed'));
+    (imageService.getItineraryImage as jest.Mock).mockResolvedValue({
+      url: '',
+      cached: false,
+      provider: 'placeholder',
+      fallbackUsed: true,
+    });
     
     const res = await request(app).get('/api/itinerary/images?location=fail').expect(200);
     
