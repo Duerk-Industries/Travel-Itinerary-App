@@ -5,7 +5,7 @@ import axios from 'axios';
 import { listTraitsForGroupTrip } from '../db';
 import { logError } from '../logger';
 import { getEnvValue } from '../env';
-import { getGooglePlaceImage, getUnsplashImage } from '../image-service';
+import { getItineraryImage } from '../image-service';
 
 const PLACEHOLDER_IMAGE =
   'https://images.unsplash.com/photo-1502920917128-1aa500764b0e?auto=format&fit=crop&w=1200&q=80';
@@ -32,13 +32,22 @@ router.get('/images', async (req, res) => {
 
   try {
     const placeId = req.query.placeId ? String(req.query.placeId).trim() : undefined;
-    const url = placeId
-      ? await getGooglePlaceImage(location, placeId)
-      : await getUnsplashImage(location);
-    res.json({ url, cached: true });
+    const day = req.query.day ? String(req.query.day).trim() : undefined;
+    const contextText = req.query.context ? String(req.query.context).trim() : undefined;
+    const result = await getItineraryImage({ locationName: location, placeId, day, contextText });
+    if (!result.url) {
+      res.json({ url: PLACEHOLDER_IMAGE, cached: false, provider: 'placeholder', fallbackUsed: true });
+      return;
+    }
+    res.json({
+      url: result.url,
+      cached: result.cached,
+      provider: result.provider,
+      fallbackUsed: result.fallbackUsed,
+    });
   } catch (err) {
     logError('[itinerary] image fetch error', err);
-    res.json({ url: PLACEHOLDER_IMAGE, cached: false });
+    res.json({ url: PLACEHOLDER_IMAGE, cached: false, provider: 'placeholder', fallbackUsed: true });
   }
 });
 
@@ -135,7 +144,11 @@ router.post('/', async (req, res) => {
     `Group members and their traits (consider everyone when planning shared activities):`,
     groupTraits.length
       ? groupTraits
-          .map((g) => `- ${g.name}: ${g.traits.length ? g.traits.join(', ') : 'No traits provided'}`)
+          .map((g) => {
+            const name = String(g?.name ?? 'Group member').trim() || 'Group member';
+            const traitsList = Array.isArray(g?.traits) ? g.traits : [];
+            return `- ${name}: ${traitsList.length ? traitsList.join(', ') : 'No traits provided'}`;
+          })
           .join('\n')
       : '- No group traits available',
     ``,

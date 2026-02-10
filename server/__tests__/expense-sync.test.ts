@@ -2,6 +2,7 @@ import request from 'supertest';
 import { Pool } from 'pg';
 import { app } from '../src/app';
 import { initDb, closePool } from '../src/db';
+import { registerAndLoginWebUser, registerWebUser } from './helpers';
 
 describe('Expense sync for source-backed items', () => {
   const uniq = Date.now();
@@ -19,11 +20,8 @@ describe('Expense sync for source-backed items', () => {
     await initDb();
     pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
-    const regA = await request(app)
-      .post('/api/web-auth/register')
-      .send({ firstName: userA.firstName, lastName: userA.lastName, email: userA.email, password: userA.password, passwordConfirm: userA.password })
-      .expect(201);
-    tokenA = regA.body.token as string;
+    const loginA = await registerAndLoginWebUser(pool, userA);
+    tokenA = loginA.token;
 
     const groupsA = await request(app).get('/api/groups').set('Authorization', `Bearer ${tokenA}`).expect(200);
     groupId = groupsA.body[0]?.id as string;
@@ -35,10 +33,7 @@ describe('Expense sync for source-backed items', () => {
       .expect(201);
     tripId = trip.body.id as string;
 
-    await request(app)
-      .post('/api/web-auth/register')
-      .send({ firstName: userB.firstName, lastName: userB.lastName, email: userB.email, password: userB.password, passwordConfirm: userB.password })
-      .expect(201);
+    await registerWebUser(userB);
 
     await request(app)
       .post(`/api/groups/${groupId}/members`)

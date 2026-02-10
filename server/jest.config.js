@@ -4,7 +4,6 @@ const config = {
   testEnvironment: 'node',
   rootDir: __dirname,
   testMatch: ['**/__tests__/**/*.test.ts'],
-  verbose: false,
   roots: ['<rootDir>/src', '<rootDir>/__tests__'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'json'],
   maxWorkers: 1,

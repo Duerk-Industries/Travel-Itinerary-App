@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
-import { Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import type { LodgingDraft } from '../tabs/lodging';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
+import { toWebStyle } from '../utils/webStyle';
 
 type MemberOption = {
   id: string;
@@ -95,7 +96,7 @@ const LodgingForm: React.FC<LodgingFormProps> = ({
           type="date"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          style={{ ...StyleSheet.flatten(styles.input), width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
+          style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
         />
       );
     }

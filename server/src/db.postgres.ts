@@ -1,6 +1,6 @@
 // server/src/db.ts
 import { Pool } from 'pg';
-import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
+import { createHash, randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
 import {
   Flight,
   Group,
@@ -23,6 +23,8 @@ import { getEnvValue } from './env';
 type PoolCtor = typeof Pool;
 let PoolFactory: PoolCtor = Pool;
 let pool: Pool | null = null;
+
+const hashToken = (token: string): string => createHash('sha256').update(token).digest('hex');
 
 export const setPoolFactory = (factory: PoolCtor): void => {
   PoolFactory = factory;
@@ -87,6 +89,8 @@ export const initDb = async (): Promise<void> => {
       picture TEXT,
       first_name TEXT,
       last_name TEXT,
+      email_verified BOOLEAN DEFAULT TRUE,
+      email_verified_at TIMESTAMP,
       created_at TIMESTAMP DEFAULT NOW()
     );
   `);
@@ -94,6 +98,8 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS picture TEXT;`);
   await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name TEXT;`);
   await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name TEXT;`);
+  await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT TRUE;`);
+  await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMP;`);
 
 
   await p.query(`
@@ -105,6 +111,8 @@ export const initDb = async (): Promise<void> => {
       last_name TEXT NOT NULL,
       password_hash TEXT NOT NULL,
       salt TEXT NOT NULL,
+      first_login_at TIMESTAMP,
+      last_login_at TIMESTAMP,
       created_at TIMESTAMP DEFAULT NOW()
     );
   `);
@@ -116,9 +124,22 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS last_name TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS password_hash TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS salt TEXT;`);
+  await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS first_login_at TIMESTAMP;`);
+  await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMP;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS age INTEGER;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS gender TEXT;`);
+
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS email_verifications (
+      id UUID PRIMARY KEY,
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      token_hash TEXT NOT NULL,
+      expires_at TIMESTAMP NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW(),
+      used_at TIMESTAMP
+    );
+  `);
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS traits (
@@ -176,6 +197,7 @@ export const initDb = async (): Promise<void> => {
     CREATE TABLE IF NOT EXISTS group_invites (
       id UUID PRIMARY KEY,
       group_id UUID NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+      trip_id UUID,
       inviter_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       invitee_user_id UUID REFERENCES users(id) ON DELETE CASCADE,
       invitee_email TEXT NOT NULL,
@@ -185,6 +207,7 @@ export const initDb = async (): Promise<void> => {
   `);
 
   await p.query(`ALTER TABLE group_invites ALTER COLUMN invitee_user_id DROP NOT NULL;`);
+  await p.query(`ALTER TABLE group_invites ADD COLUMN IF NOT EXISTS trip_id UUID;`);
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS family_relationships (
@@ -385,6 +408,16 @@ export const initDb = async (): Promise<void> => {
       created_at TIMESTAMP DEFAULT NOW()
     );
   `);
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS place_lookup_cache (
+      query_key TEXT PRIMARY KEY,
+      place_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      likelihood NUMERIC NOT NULL DEFAULT 0,
+      fetched_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS itineraries (
@@ -447,6 +480,7 @@ export const initDb = async (): Promise<void> => {
     await p.query(`DELETE FROM expenses`);
     await p.query(`DELETE FROM trips`);
     await p.query(`DELETE FROM place_details_cache`);
+    await p.query(`DELETE FROM place_lookup_cache`);
     await p.query(`DELETE FROM group_invites`);
     await p.query(`DELETE FROM group_members`);
     await p.query(`DELETE FROM groups`);
@@ -471,7 +505,7 @@ export const findOrCreateUser = async (
 
 
   const id = randomUUID();
-  await p.query(`INSERT INTO users (id, email, provider) VALUES ($1, $2, $3)`, [id, email, provider]);
+  await p.query(`INSERT INTO users (id, email, provider, email_verified) VALUES ($1, $2, $3, true)`, [id, email, provider]);
   return { id, email, provider };
 };
 
@@ -485,7 +519,7 @@ const ensureOwnerUserRow = async (db: Queryable, ownerId: string): Promise<void>
   if (!email) {
     throw new Error('User not found. Please log in again.');
   }
-  await db.query(`INSERT INTO users (id, email, provider) VALUES ($1, $2, $3)`, [ownerId, email, 'email']);
+  await db.query(`INSERT INTO users (id, email, provider, email_verified) VALUES ($1, $2, $3, true)`, [ownerId, email, 'email']);
 };
 
 export const ensureDefaultGroupForUser = async (userId: string, email: string): Promise<void> => {
@@ -558,7 +592,7 @@ export const createWebUser = async (
   const id = randomUUID();
   try {
     // create auth user row for flights ownership
-    await p.query(`INSERT INTO users (id, email, provider) VALUES ($1, $2, 'email')`, [id, email]);
+    await p.query(`INSERT INTO users (id, email, provider, email_verified) VALUES ($1, $2, 'email', false)`, [id, email]);
   } catch (err: any) {
     if (err?.code === '23505') {
       const dup = new Error('User already exists');
@@ -594,13 +628,26 @@ export const verifyWebUserCredentials = async (
     last_name: string;
     passwordHash: string;
     salt: string;
-  }>(`SELECT id, email, first_name, last_name, password_hash as "passwordHash", salt FROM web_users WHERE email = $1`, [email]);
+    emailVerified: boolean;
+  }>(
+    `SELECT wu.id,
+            wu.email,
+            wu.first_name,
+            wu.last_name,
+            wu.password_hash as "passwordHash",
+            wu.salt,
+            COALESCE(u.email_verified, TRUE) as "emailVerified"
+     FROM web_users wu
+     JOIN users u ON u.id = wu.id
+     WHERE wu.email = $1`,
+    [email]
+  );
 
 
   if (!rows.length) return null;
 
 
-  const [{ id, first_name, last_name, passwordHash, salt }] = rows;
+  const [{ id, first_name, last_name, passwordHash, salt, emailVerified }] = rows;
   const providedHash = hashPassword(password, salt);
 
 
@@ -612,11 +659,104 @@ export const verifyWebUserCredentials = async (
     storedBuffer.length === providedBuffer.length &&
     timingSafeEqual(storedBuffer, providedBuffer)
   ) {
-    return { id, email, firstName: first_name, lastName: last_name };
+    return { id, email, firstName: first_name, lastName: last_name, emailVerified };
   }
 
 
   return null;
+};
+
+export const getUserById = async (userId: string): Promise<User | null> => {
+  const p = getPool();
+  const { rows } = await p.query<User>(`SELECT * FROM users WHERE id = $1 LIMIT 1`, [userId]);
+  return rows[0] ?? null;
+};
+
+export const recordWebUserLogin = async (userId: string): Promise<{ firstLogin: boolean }> => {
+  const p = getPool();
+  const { rows } = await p.query<{ firstLogin: boolean }>(
+    `
+    WITH current AS (
+      SELECT first_login_at FROM web_users WHERE id = $1
+    ),
+    updated AS (
+      UPDATE web_users
+      SET last_login_at = NOW(),
+          first_login_at = COALESCE(first_login_at, NOW())
+      WHERE id = $1
+      RETURNING first_login_at
+    )
+    SELECT COALESCE(current.first_login_at IS NULL, false) as "firstLogin" FROM current
+    `,
+    [userId]
+  );
+  return { firstLogin: rows[0]?.firstLogin ?? false };
+};
+
+export const createEmailVerification = async (
+  userId: string,
+  ttlHours = 24
+): Promise<{ token: string; expiresAt: string }> => {
+  const p = getPool();
+  const token = randomBytes(32).toString('base64url');
+  const tokenHash = hashToken(token);
+  const expiresAt = new Date(Date.now() + ttlHours * 60 * 60 * 1000);
+  await p.query(
+    `INSERT INTO email_verifications (id, user_id, token_hash, expires_at)
+     VALUES ($1, $2, $3, $4)`,
+    [randomUUID(), userId, tokenHash, expiresAt]
+  );
+  return { token, expiresAt: expiresAt.toISOString() };
+};
+
+export const getPendingEmailVerification = async (
+  userId: string
+): Promise<{ id: string; expiresAt: string } | null> => {
+  const p = getPool();
+  const { rows } = await p.query<{ id: string; expiresAt: string }>(
+    `SELECT id, expires_at as "expiresAt"
+     FROM email_verifications
+     WHERE user_id = $1 AND used_at IS NULL
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [userId]
+  );
+  return rows[0] ?? null;
+};
+
+export const consumeEmailVerificationToken = async (
+  token: string
+): Promise<{ id: string; userId: string; email: string; expiresAt: string } | null> => {
+  const p = getPool();
+  const tokenHash = hashToken(token);
+  const { rows } = await p.query<{ id: string; userId: string; email: string; expiresAt: string }>(
+    `SELECT ev.id,
+            ev.user_id as "userId",
+            u.email as "email",
+            ev.expires_at as "expiresAt"
+     FROM email_verifications ev
+     JOIN users u ON u.id = ev.user_id
+     WHERE ev.token_hash = $1 AND ev.used_at IS NULL
+     LIMIT 1`,
+    [tokenHash]
+  );
+  return rows[0] ?? null;
+};
+
+export const markEmailVerificationUsed = async (verificationId: string): Promise<void> => {
+  const p = getPool();
+  await p.query(`UPDATE email_verifications SET used_at = NOW() WHERE id = $1`, [verificationId]);
+};
+
+export const markUserEmailVerified = async (userId: string): Promise<void> => {
+  const p = getPool();
+  await p.query(`UPDATE users SET email_verified = true, email_verified_at = NOW() WHERE id = $1`, [userId]);
+};
+
+export const deleteUserRecord = async (userId: string): Promise<void> => {
+  const p = getPool();
+  await p.query(`DELETE FROM web_users WHERE id = $1`, [userId]);
+  await p.query(`DELETE FROM users WHERE id = $1`, [userId]);
 };
 
 export const getWebUserProfile = async (
@@ -2244,20 +2384,56 @@ export const addGroupMember = async (
       const firstName = member.firstName?.trim() || null;
       const lastName = member.lastName?.trim() || null;
       if (user) {
-        await client.query(
-          `INSERT INTO group_members (id, group_id, user_id, added_by)
-           VALUES ($1, $2, $3, $4)
-           ON CONFLICT (group_id, user_id) DO NOTHING`,
-          [randomUUID(), groupId, user.id, ownerId]
-        );
-        await client.query(
-          `UPDATE group_members SET removed_at = NULL, invite_email = NULL, claimed_at = NOW()
-           WHERE group_id = $1 AND user_id = $2`,
+        const { rowCount: activeMember } = await client.query(
+          `SELECT 1 FROM group_members WHERE group_id = $1 AND user_id = $2 AND removed_at IS NULL LIMIT 1`,
           [groupId, user.id]
         );
-        await client.query(`DELETE FROM group_invites WHERE group_id = $1 AND invitee_email = $2`, [groupId, user.email]);
+        if (activeMember) {
+          await client.query('COMMIT');
+          return {};
+        }
+
+        const existingPending = await client.query(
+          `SELECT id FROM group_members WHERE group_id = $1 AND invite_email = $2`,
+          [groupId, normalizedEmail]
+        );
+        if (!existingPending.rowCount) {
+          await client.query(
+            `INSERT INTO group_members (id, group_id, invite_email, guest_name, first_name, last_name, added_by)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
+             ON CONFLICT DO NOTHING`,
+            [randomUUID(), groupId, normalizedEmail, member.guestName ?? null, firstName, lastName, ownerId]
+          );
+        } else {
+          await client.query(
+            `UPDATE group_members
+             SET removed_at = NULL,
+                 guest_name = COALESCE($1, guest_name),
+                 first_name = COALESCE($2, first_name),
+                 last_name = COALESCE($3, last_name)
+             WHERE id = $4`,
+            [member.guestName ?? null, firstName, lastName, existingPending.rows[0].id]
+          );
+        }
+
+        const existingInvite = await client.query(
+          `SELECT id FROM group_invites WHERE group_id = $1 AND LOWER(invitee_email) = LOWER($2) AND status = 'pending'`,
+          [groupId, normalizedEmail]
+        );
+        if (existingInvite.rowCount) {
+          await client.query('COMMIT');
+          return { inviteId: existingInvite.rows[0].id, email: normalizedEmail };
+        }
+
+        const inviteId = randomUUID();
+        await client.query(
+          `INSERT INTO group_invites (id, group_id, inviter_id, invitee_user_id, invitee_email, status)
+           VALUES ($1, $2, $3, $4, $5, 'pending')
+           ON CONFLICT DO NOTHING`,
+          [inviteId, groupId, ownerId, user.id, normalizedEmail]
+        );
         await client.query('COMMIT');
-        return {};
+        return { inviteId, email: normalizedEmail };
       }
 
       const existingPending = await client.query(
@@ -2281,6 +2457,15 @@ export const addGroupMember = async (
            WHERE id = $4`,
           [member.guestName ?? null, firstName, lastName, existingPending.rows[0].id]
         );
+      }
+
+      const existingInvite = await client.query(
+        `SELECT id FROM group_invites WHERE group_id = $1 AND LOWER(invitee_email) = LOWER($2) AND status = 'pending'`,
+        [groupId, normalizedEmail]
+      );
+      if (existingInvite.rowCount) {
+        await client.query('COMMIT');
+        return { inviteId: existingInvite.rows[0].id, email: normalizedEmail };
       }
 
       const inviteId = randomUUID();
@@ -2742,15 +2927,13 @@ export const deleteTrip = async (userId: string, tripId: string): Promise<void> 
     const groupId = rows[0].groupId;
 
     const membership = await client.query(
-      `SELECT gm.id, u.email
+      `SELECT gm.id
        FROM group_members gm
-       JOIN users u ON gm.user_id = u.id
        WHERE gm.group_id = $1 AND gm.user_id = $2 AND gm.removed_at IS NULL`,
       [groupId, userId]
     );
     if (!membership.rowCount) throw new Error('Not authorized to delete this trip');
     const memberId = membership.rows[0].id;
-    const memberEmail = membership.rows[0].email;
 
     await client.query(
       `INSERT INTO trip_removals (trip_id, user_id)
@@ -2759,26 +2942,7 @@ export const deleteTrip = async (userId: string, tripId: string): Promise<void> 
       [tripId, userId]
     );
 
-    // Convert the member to a pending invite for the trip while keeping their passenger links intact.
-    await client.query(
-      `UPDATE group_members
-         SET user_id = NULL,
-             invite_email = COALESCE(invite_email, $1),
-             claimed_at = NULL,
-             removed_at = NULL
-       WHERE id = $2`,
-      [memberEmail, memberId]
-    );
-
-    // Ensure they are no longer a payer on any flights for this trip.
-    const { rows: flights } = await client.query<{ id: string; paid_by: string[] | null }>(
-      `SELECT id, COALESCE(paid_by, '[]'::jsonb) as paid_by FROM flights WHERE trip_id = $1`,
-      [tripId]
-    );
-    for (const flight of flights) {
-      const filtered = Array.isArray(flight.paid_by) ? flight.paid_by.filter((p) => p !== memberId) : [];
-      await client.query(`UPDATE flights SET paid_by = $2 WHERE id = $1`, [flight.id, JSON.stringify(filtered)]);
-    }
+    await removeMemberFromTripData(client, tripId, memberId);
 
     const { rows: remainingMembers } = await client.query<{ user_id: string | null }>(
       `SELECT user_id FROM group_members WHERE group_id = $1 AND removed_at IS NULL`,
@@ -2888,30 +3052,20 @@ export const createGroupWithMembers = async (
       if (member.email && member.email.trim().length) {
         const normalizedEmail = member.email.trim().toLowerCase();
         const user = await findUserByEmail(normalizedEmail);
-        if (user) {
-          await client.query(
-            `INSERT INTO group_members (id, group_id, user_id, guest_name, added_by, invite_email, claimed_at)
-             VALUES ($1, $2, $3, $4, $5, NULL, NOW())
-             ON CONFLICT (group_id, user_id) DO NOTHING`,
-            [randomUUID(), groupId, user.id, guestName ?? null, ownerId]
-          );
-          await client.query(`DELETE FROM group_invites WHERE group_id = $1 AND invitee_email = $2`, [groupId, user.email]);
-        } else {
-          const inviteId = randomUUID();
-          await client.query(
-            `INSERT INTO group_invites (id, group_id, inviter_id, invitee_user_id, invitee_email, status)
-             VALUES ($1, $2, $3, $4, $5, 'pending')
-             ON CONFLICT DO NOTHING`,
-            [inviteId, groupId, ownerId, null, normalizedEmail]
-          );
-          await client.query(
-            `INSERT INTO group_members (id, group_id, invite_email, guest_name, added_by)
-             VALUES ($1, $2, $3, $4, $5)
-             ON CONFLICT DO NOTHING`,
-            [randomUUID(), groupId, normalizedEmail, guestName ?? null, ownerId]
-          );
-          invites.push({ id: inviteId, email: normalizedEmail });
-        }
+        const inviteId = randomUUID();
+        await client.query(
+          `INSERT INTO group_invites (id, group_id, inviter_id, invitee_user_id, invitee_email, status)
+           VALUES ($1, $2, $3, $4, $5, 'pending')
+           ON CONFLICT DO NOTHING`,
+          [inviteId, groupId, ownerId, user?.id ?? null, normalizedEmail]
+        );
+        await client.query(
+          `INSERT INTO group_members (id, group_id, invite_email, guest_name, added_by)
+           VALUES ($1, $2, $3, $4, $5)
+           ON CONFLICT DO NOTHING`,
+          [randomUUID(), groupId, normalizedEmail, guestName ?? null, ownerId]
+        );
+        invites.push({ id: inviteId, email: normalizedEmail });
       }
     }
 
@@ -2964,24 +3118,20 @@ export const createTripWithGroupAndMembers = async (payload: {
         const email = member.email!.trim().toLowerCase();
         const userRes = await client.query<User>('SELECT id, email FROM users WHERE email = $1', [email]);
         const user = userRes.rows[0] ?? null;
-        if (user) {
-          await client.query(
-            `INSERT INTO group_members (id, group_id, user_id, added_by)
-             VALUES ($1, $2, $3, $4)
-             ON CONFLICT (group_id, user_id) DO NOTHING`,
-            [randomUUID(), groupId, user.id, payload.ownerId]
-          );
-          await client.query(`DELETE FROM group_invites WHERE group_id = $1 AND invitee_email = $2`, [groupId, user.email]);
-        } else {
-          const inviteId = randomUUID();
-         await client.query(
-            `INSERT INTO group_invites (id, group_id, inviter_id, invitee_user_id, invitee_email, status)
-             VALUES ($1, $2, $3, $4, $5, 'pending')
-             ON CONFLICT DO NOTHING`,
-            [inviteId, groupId, payload.ownerId, null, email]
-          );
-          invites.push({ id: inviteId, email });
-        }
+        const inviteId = randomUUID();
+        await client.query(
+          `INSERT INTO group_invites (id, group_id, inviter_id, invitee_user_id, invitee_email, status)
+           VALUES ($1, $2, $3, $4, $5, 'pending')
+           ON CONFLICT DO NOTHING`,
+          [inviteId, groupId, payload.ownerId, user?.id ?? null, email]
+        );
+        await client.query(
+          `INSERT INTO group_members (id, group_id, invite_email, added_by)
+           VALUES ($1, $2, $3, $4)
+           ON CONFLICT DO NOTHING`,
+          [randomUUID(), groupId, email, payload.ownerId]
+        );
+        invites.push({ id: inviteId, email });
         continue;
       }
 
@@ -3026,6 +3176,11 @@ export const createTripWithGroupAndMembers = async (payload: {
       ]
     );
 
+    if (invites.length) {
+      const inviteIds = invites.map((inv) => inv.id);
+      await client.query(`UPDATE group_invites SET trip_id = $2 WHERE id = ANY($1::uuid[])`, [inviteIds, tripId]);
+    }
+
     await client.query('COMMIT');
     return { trip: rows[0], groupId, invites };
   } catch (err) {
@@ -3038,19 +3193,102 @@ export const createTripWithGroupAndMembers = async (payload: {
 
 export const listGroupInvitesForUser = async (userId: string, email: string) => {
   const p = getPool();
+  const useInMemory = process.env.USE_IN_MEMORY_DB === '1';
+  if (useInMemory) {
+    const { rows } = await p.query(
+      `SELECT gi.id,
+              gi.group_id as "groupId",
+              gi.trip_id as "tripId",
+              gi.inviter_id as "inviterId",
+              gi.invitee_user_id as "inviteeUserId",
+              gi.invitee_email as "inviteeEmail",
+              gi.status,
+              gi.created_at as "createdAt",
+              g.name as "groupName",
+              u.email as "inviterEmail",
+              wu.first_name as "inviterFirstName",
+              wu.last_name as "inviterLastName",
+              t_explicit.id as "explicitTripId",
+              t_explicit.name as "explicitTripName"
+       FROM group_invites gi
+       JOIN groups g ON gi.group_id = g.id
+       JOIN users u ON gi.inviter_id = u.id
+       LEFT JOIN web_users wu ON wu.id = u.id
+       LEFT JOIN trips t_explicit ON t_explicit.id = gi.trip_id
+       WHERE (gi.invitee_user_id = $1 OR LOWER(gi.invitee_email) = LOWER($2)) AND gi.status = 'pending'
+       ORDER BY gi.created_at DESC`,
+      [userId, email]
+    );
+
+    const missingTripGroups = Array.from(
+      new Set(rows.filter((row: any) => !row.tripId).map((row: any) => row.groupId))
+    );
+    let fallbackByGroup = new Map<string, { id: string; name: string; createdAt?: string | null }>();
+    if (missingTripGroups.length) {
+      const { rows: tripRows } = await p.query(
+        `SELECT id, name, group_id as "groupId", created_at as "createdAt"
+         FROM trips
+         WHERE group_id = ANY($1::uuid[])`,
+        [missingTripGroups]
+      );
+      for (const trip of tripRows) {
+        const existing = fallbackByGroup.get(trip.groupId as string);
+        if (!existing) {
+          fallbackByGroup.set(trip.groupId as string, { id: trip.id, name: trip.name, createdAt: trip.createdAt });
+          continue;
+        }
+        const existingDate = new Date(existing.createdAt ?? 0).getTime();
+        const candidateDate = new Date(trip.createdAt ?? 0).getTime();
+        if (candidateDate >= existingDate) {
+          fallbackByGroup.set(trip.groupId as string, { id: trip.id, name: trip.name, createdAt: trip.createdAt });
+        }
+      }
+    }
+
+    return rows.map((row: any) => {
+      const fallback = row.tripId ? null : fallbackByGroup.get(row.groupId);
+      return {
+        id: row.id,
+        groupId: row.groupId,
+        tripId: row.tripId ?? null,
+        inviterId: row.inviterId,
+        inviteeUserId: row.inviteeUserId ?? null,
+        inviteeEmail: row.inviteeEmail,
+        status: row.status,
+        createdAt: row.createdAt,
+        groupName: row.groupName,
+        inviterEmail: row.inviterEmail,
+        inviterFirstName: row.inviterFirstName,
+        inviterLastName: row.inviterLastName,
+        resolvedTripId: row.tripId ?? fallback?.id ?? null,
+        resolvedTripName: row.tripId ? row.explicitTripName : fallback?.name ?? null,
+      };
+    });
+  }
+
   const { rows } = await p.query(
     `SELECT gi.id,
             gi.group_id as "groupId",
+            gi.trip_id as "tripId",
             gi.inviter_id as "inviterId",
             gi.invitee_user_id as "inviteeUserId",
             gi.invitee_email as "inviteeEmail",
             gi.status,
             gi.created_at as "createdAt",
             g.name as "groupName",
-            u.email as "inviterEmail"
+            u.email as "inviterEmail",
+            wu.first_name as "inviterFirstName",
+            wu.last_name as "inviterLastName",
+            COALESCE(t_explicit.id, t_fallback.id) as "resolvedTripId",
+            COALESCE(t_explicit.name, t_fallback.name) as "resolvedTripName"
      FROM group_invites gi
      JOIN groups g ON gi.group_id = g.id
      JOIN users u ON gi.inviter_id = u.id
+     LEFT JOIN web_users wu ON wu.id = u.id
+     LEFT JOIN trips t_explicit ON t_explicit.id = gi.trip_id
+     LEFT JOIN LATERAL (
+        SELECT id, name FROM trips WHERE group_id = gi.group_id ORDER BY created_at DESC LIMIT 1
+     ) t_fallback ON t_explicit.id IS NULL
      WHERE (gi.invitee_user_id = $1 OR LOWER(gi.invitee_email) = LOWER($2)) AND gi.status = 'pending'
      ORDER BY gi.created_at DESC`,
     [userId, email]
@@ -3058,21 +3296,287 @@ export const listGroupInvitesForUser = async (userId: string, email: string) => 
   return rows;
 };
 
-export const acceptGroupInvite = async (inviteId: string, userId: string): Promise<void> => {
+export const attachInviteToTrip = async (inviteId: string, tripId: string): Promise<void> => {
+  const p = getPool();
+  await p.query(`UPDATE group_invites SET trip_id = $2 WHERE id = $1`, [inviteId, tripId]);
+};
+
+const removeMemberFromTripData = async (client: any, tripId: string, memberId: string) => {
+  const useInMemory = process.env.USE_IN_MEMORY_DB === '1';
+  if (useInMemory) {
+    const jsonbRemoveMemberExpr = (column: string) => `
+      COALESCE(
+        (
+          replace(
+            replace(
+              replace(
+                replace(
+                  replace(
+                    replace(COALESCE(${column}::text, '[]'), ',"' || $2 || '"', ''),
+                    ', \"' || $2 || '\"',
+                    ''
+                  ),
+                  '"' || $2 || '", ',
+                  ''
+                ),
+                '"' || $2 || '",',
+                ''
+              ),
+              '"' || $2 || '"',
+              ''
+            ),
+            '"' || $2 || '" ',
+            ''
+          )
+        ),
+        '[]'
+      )::jsonb
+    `;
+
+    const updateJsonArray = async (table: string, column: string) => {
+      await client.query(
+        `
+        UPDATE ${table}
+        SET ${column} = ${jsonbRemoveMemberExpr(column)}
+        WHERE trip_id = $1
+        `,
+        [tripId, memberId]
+      );
+    };
+
+    await updateJsonArray('flights', 'passenger_ids');
+    await updateJsonArray('flights', 'paid_by');
+    await updateJsonArray('lodgings', 'traveler_ids');
+    await updateJsonArray('lodgings', 'paid_by');
+    await updateJsonArray('tours', 'paid_by');
+    await updateJsonArray('expenses', 'payer_ids');
+    await updateJsonArray('expenses', 'for_ids');
+
+    await client.query(
+      `DELETE FROM flights WHERE trip_id = $1 AND COALESCE(passenger_ids::text, '[]') IN ('[]', '[ ]', '[  ]', 'null')`,
+      [tripId]
+    );
+    await client.query(
+      `DELETE FROM lodgings WHERE trip_id = $1 AND COALESCE(traveler_ids::text, '[]') IN ('[]', '[ ]', '[  ]', 'null')`,
+      [tripId]
+    );
+    await client.query(
+      `DELETE FROM tours WHERE trip_id = $1 AND COALESCE(paid_by::text, '[]') IN ('[]', '[ ]', '[  ]', 'null')`,
+      [tripId]
+    );
+    await client.query(
+      `DELETE FROM expenses
+       WHERE trip_id = $1
+         AND (
+           COALESCE(payer_ids::text, '[]') IN ('[]', '[ ]', '[  ]', 'null')
+           OR COALESCE(for_ids::text, '[]') IN ('[]', '[ ]', '[  ]', 'null')
+         )`,
+      [tripId]
+    );
+    return;
+  }
+
+  await client.query(
+    `
+    UPDATE flights
+    SET passenger_ids = COALESCE(
+      (
+        SELECT jsonb_agg(elem.value)
+        FROM jsonb_array_elements_text(COALESCE(passenger_ids, '[]'::jsonb)) elem
+        WHERE elem.value <> $2::text
+      ),
+      '[]'::jsonb
+    )
+    WHERE trip_id = $1
+    `,
+    [tripId, memberId]
+  );
+  await client.query(
+    `
+    UPDATE flights
+    SET paid_by = COALESCE(
+      (
+        SELECT jsonb_agg(elem.value)
+        FROM jsonb_array_elements_text(COALESCE(paid_by, '[]'::jsonb)) elem
+        WHERE elem.value <> $2::text
+      ),
+      '[]'::jsonb
+    )
+    WHERE trip_id = $1
+    `,
+    [tripId, memberId]
+  );
+  await client.query(
+    `
+    UPDATE lodgings
+    SET traveler_ids = COALESCE(
+      (
+        SELECT jsonb_agg(elem.value)
+        FROM jsonb_array_elements_text(COALESCE(traveler_ids, '[]'::jsonb)) elem
+        WHERE elem.value <> $2::text
+      ),
+      '[]'::jsonb
+    )
+    WHERE trip_id = $1
+    `,
+    [tripId, memberId]
+  );
+  await client.query(
+    `
+    UPDATE lodgings
+    SET paid_by = COALESCE(
+      (
+        SELECT jsonb_agg(elem.value)
+        FROM jsonb_array_elements_text(COALESCE(paid_by, '[]'::jsonb)) elem
+        WHERE elem.value <> $2::text
+      ),
+      '[]'::jsonb
+    )
+    WHERE trip_id = $1
+    `,
+    [tripId, memberId]
+  );
+  await client.query(
+    `
+    UPDATE tours
+    SET paid_by = COALESCE(
+      (
+        SELECT jsonb_agg(elem.value)
+        FROM jsonb_array_elements_text(COALESCE(paid_by, '[]'::jsonb)) elem
+        WHERE elem.value <> $2::text
+      ),
+      '[]'::jsonb
+    )
+    WHERE trip_id = $1
+    `,
+    [tripId, memberId]
+  );
+  await client.query(
+    `
+    UPDATE expenses
+    SET payer_ids = COALESCE(
+      (
+        SELECT jsonb_agg(elem.value)
+        FROM jsonb_array_elements_text(COALESCE(payer_ids, '[]'::jsonb)) elem
+        WHERE elem.value <> $2::text
+      ),
+      '[]'::jsonb
+    ),
+    for_ids = COALESCE(
+      (
+        SELECT jsonb_agg(elem.value)
+        FROM jsonb_array_elements_text(COALESCE(for_ids, '[]'::jsonb)) elem
+        WHERE elem.value <> $2::text
+      ),
+      '[]'::jsonb
+    )
+    WHERE trip_id = $1
+    `,
+    [tripId, memberId]
+  );
+
+  await client.query(
+    `DELETE FROM flights WHERE trip_id = $1 AND jsonb_array_length(COALESCE(passenger_ids, '[]'::jsonb)) = 0`,
+    [tripId]
+  );
+  await client.query(
+    `DELETE FROM lodgings WHERE trip_id = $1 AND jsonb_array_length(COALESCE(traveler_ids, '[]'::jsonb)) = 0`,
+    [tripId]
+  );
+  await client.query(
+    `DELETE FROM tours WHERE trip_id = $1 AND jsonb_array_length(COALESCE(paid_by, '[]'::jsonb)) = 0`,
+    [tripId]
+  );
+  await client.query(
+    `DELETE FROM expenses
+     WHERE trip_id = $1
+       AND (
+         jsonb_array_length(COALESCE(payer_ids, '[]'::jsonb)) = 0
+         OR jsonb_array_length(COALESCE(for_ids, '[]'::jsonb)) = 0
+       )`,
+    [tripId]
+  );
+};
+
+export const rejectGroupInvite = async (inviteId: string, userId: string, email?: string): Promise<void> => {
+  const p = getPool();
+  const client = await p.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query<{
+      groupId: string;
+      tripId: string | null;
+      inviteeEmail: string;
+    }>(
+      `SELECT group_id as "groupId",
+              trip_id as "tripId",
+              invitee_email as "inviteeEmail"
+       FROM group_invites
+       WHERE id = $1 AND (invitee_user_id = $2 OR ($3 IS NOT NULL AND LOWER(invitee_email) = LOWER($3)))
+       FOR UPDATE`,
+      [inviteId, userId, email ?? null]
+    );
+    if (!rows.length) throw new Error('Invite not found');
+    const invite = rows[0];
+
+    const { rows: memberRows } = await client.query<{ id: string }>(
+      `SELECT id FROM group_members
+       WHERE group_id = $1
+         AND removed_at IS NULL
+         AND (
+           user_id = $2
+           OR (invite_email IS NOT NULL AND LOWER(invite_email) = LOWER($3))
+         )
+       LIMIT 1`,
+      [invite.groupId, userId, invite.inviteeEmail]
+    );
+    const memberId = memberRows[0]?.id ?? null;
+
+    const tripId = invite.tripId
+      ? invite.tripId
+      : (await client.query<{ id: string }>(
+          `SELECT id FROM trips WHERE group_id = $1 ORDER BY created_at DESC LIMIT 1`,
+          [invite.groupId]
+        )).rows[0]?.id ?? null;
+
+    if (memberId && tripId) {
+      await removeMemberFromTripData(client, tripId, memberId);
+      await client.query(`UPDATE group_members SET removed_at = NOW() WHERE id = $1`, [memberId]);
+    } else if (memberId) {
+      await client.query(`UPDATE group_members SET removed_at = NOW() WHERE id = $1`, [memberId]);
+    }
+
+    await client.query(`DELETE FROM group_invites WHERE id = $1`, [inviteId]);
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
+export const acceptGroupInvite = async (inviteId: string, userId: string, email?: string): Promise<void> => {
   const p = getPool();
   const client = await p.connect();
   try {
     await client.query('BEGIN');
     const { rows } = await client.query(
-      `SELECT id, group_id as "groupId", inviter_id as "inviterId", status
-       FROM group_invites WHERE id = $1 AND invitee_user_id = $2 FOR UPDATE`,
-      [inviteId, userId]
+      `SELECT id,
+              group_id as "groupId",
+              inviter_id as "inviterId",
+              invitee_email as "inviteeEmail",
+              status
+       FROM group_invites
+       WHERE id = $1 AND (invitee_user_id = $2 OR ($3 IS NOT NULL AND LOWER(invitee_email) = LOWER($3)))
+       FOR UPDATE`,
+      [inviteId, userId, email ?? null]
     );
 
     if (!rows.length) {
       throw new Error('Invite not found');
     }
-    const invite = rows[0];
+    const invite = rows[0] as { groupId: string; inviterId: string; status: string; inviteeEmail: string };
     if (invite.status !== 'pending') {
       throw new Error('Invite already processed');
     }
@@ -3094,7 +3598,12 @@ export const acceptGroupInvite = async (inviteId: string, userId: string): Promi
       );
     }
 
-    await client.query(`UPDATE group_invites SET status = 'accepted' WHERE id = $1`, [inviteId]);
+    await client.query(
+      `UPDATE group_invites
+       SET status = 'accepted', invitee_user_id = $2
+       WHERE id = $1`,
+      [inviteId, userId]
+    );
     await client.query('COMMIT');
   } catch (err) {
     await client.query('ROLLBACK');
@@ -4080,6 +4589,44 @@ export const getTripGroupId = async (tripId: string): Promise<string | null> => 
   return rows[0]?.groupId ?? null;
 };
 
+export const getTripById = async (tripId: string): Promise<Trip | null> => {
+  const p = getPool();
+  const { rows } = await p.query<Trip>(
+    `SELECT id,
+            group_id as "groupId",
+            name,
+            description,
+            destination,
+            COALESCE(location_ids, '[]'::jsonb) as "locationIds",
+            start_date as "startDate",
+            end_date as "endDate",
+            start_month as "startMonth",
+            start_year as "startYear",
+            duration_days as "durationDays",
+            currency,
+            created_at as "createdAt"
+     FROM trips WHERE id = $1 LIMIT 1`,
+    [tripId]
+  );
+  return rows[0] ?? null;
+};
+
+export const getPlaceLookupCache = async (queryKey: string): Promise<{ queryKey: string; placeId: string; name: string; likelihood: number; fetchedAt: string } | null> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `SELECT query_key as "queryKey",
+            place_id as "placeId",
+            name,
+            likelihood,
+            fetched_at as "fetchedAt"
+     FROM place_lookup_cache
+     WHERE query_key = $1
+     LIMIT 1`,
+    [queryKey]
+  );
+  return rows[0] ?? null;
+};
+
 export const upsertPlaceDetailsCache = async (entry: {
   placeId: string;
   name: string;
@@ -4096,6 +4643,27 @@ export const upsertPlaceDetailsCache = async (entry: {
          details = EXCLUDED.details,
          fetched_at = EXCLUDED.fetched_at`,
     [entry.placeId, entry.name, JSON.stringify(entry.details ?? {}), fetchedAt]
+  );
+};
+
+export const upsertPlaceLookupCache = async (entry: {
+  queryKey: string;
+  placeId: string;
+  name: string;
+  likelihood: number;
+  fetchedAt?: string | Date;
+}): Promise<void> => {
+  const p = getPool();
+  const fetchedAt = entry.fetchedAt ? new Date(entry.fetchedAt) : new Date();
+  await p.query(
+    `INSERT INTO place_lookup_cache (query_key, place_id, name, likelihood, fetched_at)
+     VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT (query_key) DO UPDATE
+     SET place_id = EXCLUDED.place_id,
+         name = EXCLUDED.name,
+         likelihood = EXCLUDED.likelihood,
+         fetched_at = EXCLUDED.fetched_at`,
+    [entry.queryKey, entry.placeId, entry.name, entry.likelihood, fetchedAt]
   );
 };
 
@@ -4116,7 +4684,7 @@ export const findOrCreateGoogleUser = async (profile: any): Promise<User> => {
     if (existing.rows.length) {
         const user = existing.rows[0];
         await p.query(
-            `UPDATE users SET email = $1, picture = $2, first_name = $3, last_name = $4 WHERE id = $5`,
+            `UPDATE users SET email = $1, picture = $2, first_name = $3, last_name = $4, email_verified = true, email_verified_at = NOW() WHERE id = $5`,
             [email, photos?.[0]?.value, name?.givenName, name?.familyName, user.id]
         );
         return user;
@@ -4126,7 +4694,7 @@ export const findOrCreateGoogleUser = async (profile: any): Promise<User> => {
     if (existingByEmail.rows.length) {
         const user = existingByEmail.rows[0];
         await p.query(
-            `UPDATE users SET google_id = $1, picture = $2, first_name = $3, last_name = $4 WHERE id = $5`,
+            `UPDATE users SET google_id = $1, picture = $2, first_name = $3, last_name = $4, email_verified = true, email_verified_at = NOW() WHERE id = $5`,
             [id, photos?.[0]?.value, name?.givenName, name?.familyName, user.id]
         );
         return user;
@@ -4134,7 +4702,8 @@ export const findOrCreateGoogleUser = async (profile: any): Promise<User> => {
 
     const newUserId = randomUUID();
     await p.query(
-        `INSERT INTO users (id, email, provider, google_id, picture, first_name, last_name) VALUES ($1, $2, 'google', $3, $4, $5, $6)`,
+        `INSERT INTO users (id, email, provider, google_id, picture, first_name, last_name, email_verified, email_verified_at)
+         VALUES ($1, $2, 'google', $3, $4, $5, $6, true, NOW())`,
         [newUserId, email, id, photos?.[0]?.value, name?.givenName, name?.familyName]
     );
 

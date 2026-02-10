@@ -22,6 +22,7 @@ import { normalizeDateString } from '../utils/normalizeDateString';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { saveWizardFlights, saveWizardLodgings } from '../utils/wizardSaves';
 import { buildMapUrl, loadStoredMapPreference } from '../utils/mapLinks';
+import { toWebStyle } from '../utils/webStyle';
 import {
   TripDetails,
   TripDates,
@@ -248,8 +249,19 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     return Array.from({ length: 11 }, (_, i) => start + i);
   }, []);
   const dayOptions = useMemo(() => Array.from({ length: 90 }, (_, i) => i + 1), []);
-  const webInputStyle = useMemo(() => StyleSheet.flatten(styles.input) ?? {}, [styles]);
+  const webInputStyle = useMemo(() => toWebStyle(styles.input), [styles]);
   const webInputStyleFlex = useMemo(() => ({ ...webInputStyle, flex: 1 }), [webInputStyle]);
+  const webDateInputStyle = useMemo(
+    () =>
+      toWebStyle([styles.input, styles.webDateInput], {
+        width: '100%',
+        maxWidth: '100%',
+        minWidth: 0,
+        boxSizing: 'border-box',
+      }),
+    [styles]
+  );
+  const webDateInputStyleFlex = useMemo(() => ({ ...webDateInputStyle, flex: 1 }), [webDateInputStyle]);
   const hasKnownInfo = useMemo(
     () => [knownInfo.flights, knownInfo.lodging, knownInfo.tours, knownInfo.cars].some((val) => val.trim().length > 0),
     [knownInfo]
@@ -1232,7 +1244,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                         value={dates.startDate}
                         onChange={(e) => setStartDateWithRangeGuard(e.target.value)}
                         onFocus={primeRangeDates}
-                        style={[styles.input, styles.webDateInput] as any}
+                        style={webDateInputStyle}
                       />
                     ) : (
                       <TouchableOpacity style={[styles.input, styles.dateTouchable]} onPress={() => openDatePicker('start')}>
@@ -1254,7 +1266,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                         value={dates.endDate}
                         onChange={(e) => setDates((prev) => ({ ...prev, endDate: normalizeDateString(e.target.value) }))}
                         onFocus={primeRangeDates}
-                        style={[styles.input, styles.webDateInput] as any}
+                        style={webDateInputStyle}
                       />
                     ) : (
                       <TouchableOpacity style={[styles.input, styles.dateTouchable]} onPress={() => openDatePicker('end')}>
@@ -1275,7 +1287,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                 <View style={styles.row}>
                   {Platform.OS === 'web' ? (
                     <select
-                      style={[styles.input, styles.webDateInput, { flex: 1 }] as any}
+                      style={webDateInputStyleFlex}
                       title="Select month"
                       value={dates.startMonth}
                       onChange={(e) => setDates((prev) => ({ ...prev, startMonth: e.target.value }))}
@@ -1324,7 +1336,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                   )}
                   {Platform.OS === 'web' ? (
                     <select
-                      style={[styles.input, styles.webDateInput, { flex: 1 }] as any}
+                      style={webDateInputStyleFlex}
                       title="Select year"
                       value={dates.startYear}
                       onChange={(e) => setDates((prev) => ({ ...prev, startYear: e.target.value }))}
@@ -1374,7 +1386,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                 </View>
                 {Platform.OS === 'web' ? (
                   <select
-                    style={[styles.input, styles.webDateInput] as any}
+                    style={webDateInputStyle}
                     title="Select number of days"
                     value={dates.durationDays}
                     onChange={(e) => setDates((prev) => ({ ...prev, durationDays: e.target.value }))}
@@ -2015,7 +2027,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                           title="Pick up date"
                           value={wizardCarDraft.pickupDate}
                           onChange={(e) => setWizardCarDraft((p) => ({ ...p, pickupDate: e.target.value }))}
-                          style={[styles.input, styles.webDateInput] as any}
+                          style={webDateInputStyle}
                         />
                       ) : (
                         <TouchableOpacity
@@ -2051,7 +2063,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                           title="Drop off date"
                           value={wizardCarDraft.dropoffDate}
                           onChange={(e) => setWizardCarDraft((p) => ({ ...p, dropoffDate: e.target.value }))}
-                          style={[styles.input, styles.webDateInput] as any}
+                          style={webDateInputStyle}
                         />
                       ) : (
                         <TouchableOpacity
@@ -2473,7 +2485,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                         prev ? { ...prev, checkInDate: normalizeDateString(e.target.value) } : prev
                       )
                     }
-                    style={[styles.input, styles.webDateInput] as any}
+                    style={webDateInputStyle}
                   />
                 ) : (
                   <TouchableOpacity
@@ -2503,7 +2515,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                         prev ? { ...prev, checkOutDate: normalizeDateString(e.target.value) } : prev
                       )
                     }
-                    style={[styles.input, styles.webDateInput] as any}
+                    style={webDateInputStyle}
                   />
                 ) : (
                   <TouchableOpacity
@@ -2536,7 +2548,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                   title="Refund by date"
                   value={editingWizardLodging.refundBy}
                   onChange={(e) => setEditingWizardLodging((prev) => (prev ? { ...prev, refundBy: e.target.value } : prev))}
-                  style={[styles.input, styles.webDateInput] as any}
+                  style={webDateInputStyle}
                 />
               ) : (
                 <TextInput

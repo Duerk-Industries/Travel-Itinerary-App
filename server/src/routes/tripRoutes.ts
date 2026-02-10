@@ -14,6 +14,7 @@ import {
   updateTripGroup,
 } from '../db';
 import { detectCoveringConflict, detectCycle } from '../utils/coveredBy';
+import { sendTripInviteEmailBestEffort } from '../mailer';
 
 const normalizeLocationIds = (value: unknown): string[] => {
   if (!Array.isArray(value)) return [];
@@ -172,6 +173,16 @@ router.post('/wizard', async (req, res) => {
         }
       }
     }
+
+    const ownerEmail = (req as any).user?.email as string | undefined;
+    const tripName = result.trip?.name ?? String(name).trim();
+    const inviteEmails = memberInputs.map((p) => String(p.email ?? '').trim()).filter(Boolean);
+    const uniqueEmails = Array.from(new Set(inviteEmails));
+    await Promise.all(
+      uniqueEmails.map((inviteEmail) =>
+        sendTripInviteEmailBestEffort(inviteEmail, tripName, ownerEmail ?? null).catch(() => undefined)
+      )
+    );
 
     res.status(201).json({ trip: result.trip, groupId: result.groupId, invites: result.invites });
   } catch (err) {

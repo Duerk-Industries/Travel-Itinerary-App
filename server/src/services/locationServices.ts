@@ -298,3 +298,14 @@ export const searchCityOptions = async (
 export const clearLocationCache = () => {
   cache = null;
 };
+
+export const getLocationOptionsByIds = async (ids: string[]): Promise<LocationOption[]> => {
+  const normalized = Array.from(new Set((ids ?? []).map((id) => String(id).trim()).filter(Boolean)));
+  if (!normalized.length) return [];
+  const dataset = await getCachedDataset();
+  const byId = new Map<string, LocationOption>();
+  [...dataset.countries, ...dataset.states, ...dataset.cities].forEach(({ searchName, ...rest }) => {
+    byId.set(rest.id, rest);
+  });
+  return normalized.map((id) => byId.get(id)).filter(Boolean) as LocationOption[];
+};

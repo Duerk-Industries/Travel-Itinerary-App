@@ -1,6 +1,5 @@
 import axios from 'axios';
 import { getEnvValue } from './env';
-import { logError, logInfo } from './logger';
 import { getPlaceDetailsCache, upsertPlaceDetailsCache } from './db';
 
 const PLACES_API_URL = 'https://places.googleapis.com/v1/places:searchText';
@@ -31,6 +30,10 @@ const DEFAULT_PLACE_DETAILS_FIELDS = [
 
 type PlaceResult = {
   places: {
+    id?: string;
+    displayName?: { text?: string };
+    formattedAddress?: string;
+    types?: string[];
     photos: {
       name: string;
       widthPx: number;
@@ -83,7 +86,6 @@ const normalizeFields = (fields?: string[]): string[] => {
 export const findPlacePhoto = async (query: string): Promise<string | null> => {
   const apiKey = getEnvValue('GOOGLE_PLACES_API_KEY');
   if (!apiKey) {
-    logError('[googlePlaces] GOOGLE_PLACES_API_KEY is not set.');
     return null;
   }
 
@@ -108,15 +110,76 @@ export const findPlacePhoto = async (query: string): Promise<string | null> => {
 
     if (photo?.name) {
       const photoUrl = getPhotoUrl(photo.name, apiKey);
-      logInfo(`[googlePlaces] Found photo for query: ${query}`);
       return photoUrl;
-    } else {
-      logInfo(`[googlePlaces] No photo found for query: ${query}`);
-      return null;
     }
-  } catch (error) {
-    logError(`[googlePlaces] Error finding place photo for query: ${query}`, error);
     return null;
+  } catch (error) {
+    return null;
+  }
+};
+
+export type PlaceCandidate = {
+  placeId: string;
+  name: string;
+  formattedAddress?: string;
+  types?: string[];
+};
+
+export const searchPlaceCandidates = async (
+  query: string,
+  options?: { locationBias?: { latitude: number; longitude: number; radiusMeters: number } }
+): Promise<PlaceCandidate[]> => {
+  const apiKey = getEnvValue('GOOGLE_PLACES_API_KEY');
+  if (!apiKey) {
+    return [];
+  }
+
+  try {
+    const payload: Record<string, any> = {
+      textQuery: query,
+      languageCode: 'en',
+    };
+    if (options?.locationBias) {
+      payload.locationBias = {
+        circle: {
+          center: {
+            latitude: options.locationBias.latitude,
+            longitude: options.locationBias.longitude,
+          },
+          radius: options.locationBias.radiusMeters,
+        },
+      };
+    }
+
+    const response = await axios.post(
+      PLACES_API_URL,
+      payload,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': apiKey,
+          'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.types',
+        },
+      }
+    );
+
+    const data = response.data as PlaceResult;
+    const places = data?.places ?? [];
+    return places
+      .map((place) => {
+        const name = place.displayName?.text ?? '';
+        const id = place.id ?? '';
+        if (!id || !name) return null;
+        return {
+          placeId: id,
+          name,
+          formattedAddress: place.formattedAddress,
+          types: place.types ?? [],
+        } as PlaceCandidate;
+      })
+      .filter(Boolean) as PlaceCandidate[];
+  } catch {
+    return [];
   }
 };
 
@@ -132,17 +195,15 @@ export const getPlaceDetails = async (
     if (cached?.fetchedAt) {
       const fetchedAtMs = new Date(cached.fetchedAt).getTime();
       if (Number.isFinite(fetchedAtMs) && Date.now() - fetchedAtMs < PLACE_DETAILS_CACHE_TIMEOUT_MS) {
-        logInfo(`[googlePlaces] Using cached Place Details for placeId: ${trimmedId}`);
         return { placeId: trimmedId, name: cached.name, details: cached.details, cached: true };
       }
     }
-  } catch (error) {
-    logError(`[googlePlaces] Error reading cached Place Details for placeId: ${trimmedId}`, error);
+  } catch {
+    // ignore cache errors
   }
 
   const apiKey = getEnvValue('GOOGLE_PLACES_API_KEY');
   if (!apiKey) {
-    logError('[googlePlaces] GOOGLE_PLACES_API_KEY is not set.');
     return null;
   }
 
@@ -157,17 +218,15 @@ export const getPlaceDetails = async (
     const details = response.data as Record<string, any>;
     const name = getDisplayName(details, trimmedId);
     await upsertPlaceDetailsCache({ placeId: trimmedId, name, details, fetchedAt: new Date() });
-    logInfo(`[googlePlaces] Retrieved Place Details for placeId: ${trimmedId}`);
     return { placeId: trimmedId, name, details, cached: false };
-  } catch (error) {
-    logError(`[googlePlaces] Error fetching Place Details for placeId: ${trimmedId}`, error);
+  } catch {
     try {
       const cached = await getPlaceDetailsCache(trimmedId);
       if (cached) {
         return { placeId: trimmedId, name: cached.name, details: cached.details, cached: true };
       }
-    } catch (cacheError) {
-      logError(`[googlePlaces] Error reading fallback Place Details cache for placeId: ${trimmedId}`, cacheError);
+    } catch {
+      // ignore cache errors
     }
     return null;
   }

@@ -41,6 +41,7 @@ import { Buffer } from 'buffer';
 import { loadSession, saveSession, clearSession } from './utils/session';
 import LodgingDetailsDialog from './components/LodgingDetailsDialog';
 import ConfirmDialog from './components/ConfirmDialog';
+import { toWebStyle } from './utils/webStyle';
 
 import LodgingTab from './tabs/LodgingTab';
 
@@ -59,9 +60,16 @@ if (Platform.OS !== 'web') {
 interface GroupInvite {
   id: string;
   groupId: string;
-  groupName: string;
-  inviterEmail: string;
-  createdAt: string;
+  groupName?: string | null;
+  inviterEmail?: string | null;
+  inviterFirstName?: string | null;
+  inviterLastName?: string | null;
+  inviteeEmail?: string | null;
+  status?: 'pending' | 'accepted';
+  createdAt?: string;
+  tripId?: string | null;
+  resolvedTripId?: string | null;
+  resolvedTripName?: string | null;
 }
 
 interface GroupMemberView {
@@ -235,6 +243,13 @@ const App: React.FC = () => {
   const [flights, setFlights] = useState<Flight[]>([]);
   const [externalFlightEditId, setExternalFlightEditId] = useState<string | null>(null);
   const [invites, setInvites] = useState<GroupInvite[]>([]);
+  const [pendingInviteModalOpen, setPendingInviteModalOpen] = useState(false);
+  const [invitesLoaded, setInvitesLoaded] = useState(false);
+  const [deferFirstLoginRedirect, setDeferFirstLoginRedirect] = useState(false);
+  const [showResendConfirmation, setShowResendConfirmation] = useState(false);
+  const [resendConfirmationLoading, setResendConfirmationLoading] = useState(false);
+  const [isFirstLogin, setIsFirstLogin] = useState(false);
+  const [emailConfirmationMessage, setEmailConfirmationMessage] = useState<string | null>(null);
   const [followInviteCode, setFollowInviteCode] = useState('');
   const [followLoading, setFollowLoading] = useState(false);
   const [followError, setFollowError] = useState('');
@@ -719,7 +734,7 @@ const App: React.FC = () => {
     await WebBrowser.openBrowserAsync(authUrl);
   };
 
-  const handleAuthSuccess = useCallback((token: string) => {
+  const handleAuthSuccess = useCallback((token: string, firstLoginOverride?: boolean) => {
     let decoded: { firstName?: string; lastName?: string; email?: string; provider?: string } | null = null;
     try {
       const payload = token.split('.')[1];
@@ -735,6 +750,7 @@ const App: React.FC = () => {
       `${decoded?.firstName ?? ''} ${decoded?.lastName ?? ''}`.trim() || decoded?.email || 'Traveler';
     setUserToken(token);
     setUserName(name);
+    setInvitesLoaded(false);
     if (decoded?.email) {
       setUserEmail(decoded.email);
     }
@@ -746,41 +762,73 @@ const App: React.FC = () => {
     const previousSession = loadSession();
     const restoredTripId = previousSession?.tripId ?? activeTripId ?? null;
     setActiveTripId(restoredTripId);
-    setActivePage('home');
+    const firstLogin = Boolean(firstLoginOverride);
+    setIsFirstLogin(firstLogin);
+    if (firstLogin) {
+      setDeferFirstLoginRedirect(true);
+      setActivePage('home');
+    } else {
+      setActivePage('overview');
+    }
     setPageForwardHistory([]);
     setPageHistory([]);
-    saveSession(token, name, 'home', decoded?.email, restoredTripId, []);
+    saveSession(token, name, firstLogin ? 'home' : 'overview', decoded?.email, restoredTripId, []);
   }, [activeTripId]);
 
   useEffect(() => {
     const extractTokenFromUrl = (rawUrl: string) => {
       const url = new URL(rawUrl);
       const token = url.searchParams.get('token');
+      const isConfirm = url.pathname.endsWith('/confirm');
       if (token) {
-        return { token, url, source: 'query' as const };
+        return { token, url, source: 'query' as const, isConfirm };
       }
       const hash = url.hash.startsWith('#') ? url.hash.slice(1) : url.hash;
       if (hash) {
         const hashParams = new URLSearchParams(hash);
         const hashToken = hashParams.get('token');
         if (hashToken) {
-          return { token: hashToken, url, source: 'hash' as const };
+          return { token: hashToken, url, source: 'hash' as const, isConfirm };
         }
       }
-      return { token: null, url, source: null } as const;
+      return { token: null, url, source: null, isConfirm: false } as const;
     };
 
     const handleDeepLink = (event: { url: string }) => {
-      const { token } = extractTokenFromUrl(event.url);
+      const { token, isConfirm } = extractTokenFromUrl(event.url);
+      if (token && isConfirm) {
+        confirmEmailToken(token, event.url);
+        return;
+      }
       if (token) {
         handleAuthSuccess(token);
       }
     };
 
+    const confirmEmailToken = async (token: string, rawUrl: string) => {
+      try {
+        const res = await fetch(`${backendUrl}/api/web-auth/confirm?token=${encodeURIComponent(token)}`);
+        const data = await res.json().catch(() => ({}));
+        const message = res.ok ? (data.message ?? 'Email confirmed. You can now log in.') : (data.error ?? 'Email confirmation failed.');
+        setEmailConfirmationMessage(message);
+        alert(message);
+      } catch {
+        alert('Email confirmation failed.');
+      } finally {
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+          const url = new URL(rawUrl);
+          url.searchParams.delete('token');
+          window.history.replaceState({}, '', url.toString());
+        }
+      }
+    };
+
     const subscription = Linking.addEventListener('url', handleDeepLink);
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      const { token, url } = extractTokenFromUrl(window.location.href);
-      if (token) {
+      const { token, url, isConfirm } = extractTokenFromUrl(window.location.href);
+      if (token && isConfirm) {
+        confirmEmailToken(token, window.location.href);
+      } else if (token) {
         handleAuthSuccess(token);
         url.searchParams.delete('token');
         if (url.hash) {
@@ -806,16 +854,47 @@ const App: React.FC = () => {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
+        const message = String(data.error ?? '');
+        if (res.status === 403 && /confirm/i.test(message)) {
+          setShowResendConfirmation(true);
+        }
         alert(data.error || 'Login failed');
         return;
       }
+      setShowResendConfirmation(false);
       if (!data?.user || typeof data.token !== 'string') {
         alert(data.error || 'Login failed');
         return;
       }
-      handleAuthSuccess(data.token);
+      handleAuthSuccess(data.token, Boolean(data.firstLogin));
     } catch (err) {
       alert((err as Error).message || 'Login failed');
+    }
+  };
+
+  const resendConfirmationEmail = async () => {
+    const email = authForm.email.trim();
+    if (!email) {
+      alert('Enter your email first.');
+      return;
+    }
+    try {
+      setResendConfirmationLoading(true);
+      const res = await fetch(`${backendUrl}/api/web-auth/resend-confirmation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data.error || 'Failed to resend confirmation email.');
+        return;
+      }
+      alert(data.message || 'If an account exists for this email, a confirmation link has been sent.');
+    } catch (err) {
+      alert((err as Error).message || 'Failed to resend confirmation email.');
+    } finally {
+      setResendConfirmationLoading(false);
     }
   };
 
@@ -841,11 +920,16 @@ const App: React.FC = () => {
         alert(data.error || 'Registration failed');
         return;
       }
+      if (data?.verificationRequired) {
+        alert(data.message || 'Check your email to confirm your account.');
+        setAuthMode('login');
+        return;
+      }
       if (!data?.user || typeof data.token !== 'string') {
         alert(data.error || 'Registration failed');
         return;
       }
-      handleAuthSuccess(data.token);
+      handleAuthSuccess(data.token, Boolean(data.firstLogin));
     } catch (err) {
       alert((err as Error).message || 'Registration failed');
     }
@@ -922,6 +1006,7 @@ const App: React.FC = () => {
     const authToken = token ?? userToken;
     if (!authToken) {
       setInvites([]);
+      setInvitesLoaded(true);
       return;
     }
     try {
@@ -936,6 +1021,8 @@ const App: React.FC = () => {
       setInvites(data);
     } catch {
       setInvites([]);
+    } finally {
+      setInvitesLoaded(true);
     }
   }, [backendUrl, userToken]);
 
@@ -1063,15 +1150,41 @@ const App: React.FC = () => {
     }
   }, [backendUrl, userToken]);
 
-  const acceptInvite = async (inviteId: string) => {
+  const acceptInvite = async (invite: GroupInvite) => {
     if (!userToken) return;
-    const res = await fetch(`${backendUrl}/api/groups/invites/${inviteId}/accept`, {
+    const res = await fetch(`${backendUrl}/api/groups/invites/${invite.id}/accept`, {
       method: 'POST',
       headers: headers,
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
       alert(data.error || 'Unable to accept invite');
+      return;
+    }
+    const nextTripId = invite.tripId ?? invite.resolvedTripId ?? null;
+    if (nextTripId) {
+      setActiveTripId(nextTripId);
+    }
+    if (isFirstLogin) {
+      setDeferFirstLoginRedirect(false);
+      setActivePage('account');
+    } else {
+      setActivePage('overview');
+    }
+    fetchInvites();
+    fetchGroups();
+    fetchTrips();
+  };
+
+  const rejectInvite = async (invite: GroupInvite) => {
+    if (!userToken) return;
+    const res = await fetch(`${backendUrl}/api/groups/invites/${invite.id}/reject`, {
+      method: 'POST',
+      headers: headers,
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'Unable to reject invite');
       return;
     }
     fetchInvites();
@@ -1142,6 +1255,34 @@ const App: React.FC = () => {
       refreshAllData();
     }
   }, [userToken]);
+
+  useEffect(() => {
+    if (!userToken) {
+      setPendingInviteModalOpen(false);
+      setInvitesLoaded(false);
+      return;
+    }
+    setPendingInviteModalOpen(invites.length > 0);
+  }, [invites, userToken]);
+
+  useEffect(() => {
+    if (!userToken || !deferFirstLoginRedirect) return;
+    if (!invitesLoaded) return;
+    if (pendingInviteModalOpen || invites.length) return;
+    setDeferFirstLoginRedirect(false);
+    setActivePage('account');
+    saveSession(userToken, userName ?? 'Traveler', 'account', userEmail ?? undefined, activeTripId ?? null, pageHistory);
+  }, [
+    activeTripId,
+    deferFirstLoginRedirect,
+    invites.length,
+    invitesLoaded,
+    pageHistory,
+    pendingInviteModalOpen,
+    userEmail,
+    userName,
+    userToken,
+  ]);
 
   useEffect(() => {
     if (userToken) {
@@ -1699,9 +1840,9 @@ const App: React.FC = () => {
 
           {activePage === 'cost' ? (
             <View style={[styles.card, styles.flightsSection]}>
-              <View style={styles.row}>
+              <View style={styles.sectionHeaderRow}>
                 <Text style={styles.sectionTitle}>Cost Report</Text>
-                <View style={[styles.row, { marginLeft: 'auto' }]}>
+                <View style={[styles.row, styles.sectionActions]}>
                   <TouchableOpacity
                     style={[styles.button, styles.smallButton]}
                     onPress={() => {
@@ -1722,13 +1863,13 @@ const App: React.FC = () => {
                   >
                     <Text style={styles.buttonText}>Export Incurred CSV</Text>
                   </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.button, styles.smallButton]}
+                    onPress={() => requestPageChange('ledger')}
+                  >
+                    <Text style={styles.buttonText}>📒 Ledger</Text>
+                  </TouchableOpacity>
                 </View>
-                <TouchableOpacity
-                  style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
-                  onPress={() => requestPageChange('ledger')}
-                >
-                  <Text style={styles.buttonText}>📒 Ledger</Text>
-                </TouchableOpacity>
               </View>
               <Text style={styles.helperText}>Combined totals by category and user.</Text>
               <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
@@ -1921,7 +2062,7 @@ const App: React.FC = () => {
                         type="date"
                         value={carDraft.pickupDate}
                         onChange={(e) => setCarDraft((p) => ({ ...p, pickupDate: e.target.value }))}
-                        style={styles.input as any}
+                        style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
                       />
                     ) : (
                       <TouchableOpacity
@@ -1955,7 +2096,7 @@ const App: React.FC = () => {
                         type="date"
                         value={carDraft.dropoffDate}
                         onChange={(e) => setCarDraft((p) => ({ ...p, dropoffDate: e.target.value }))}
-                        style={styles.input as any}
+                        style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
                       />
                     ) : (
                       <TouchableOpacity
@@ -2396,6 +2537,23 @@ const App: React.FC = () => {
               onChangeText={(text: string) => setAuthForm((p) => ({ ...p, passwordConfirm: text }))}
             />
           ) : null}
+          {authMode === 'login' && showResendConfirmation ? (
+            <View style={styles.row}>
+              <TouchableOpacity
+                style={[styles.button, styles.smallButton, resendConfirmationLoading && styles.buttonDisabled]}
+                onPress={resendConfirmationEmail}
+                disabled={resendConfirmationLoading}
+              >
+                <Text style={styles.buttonText}>{resendConfirmationLoading ? 'Resending...' : 'Resend confirmation'}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, styles.smallButton]}
+                onPress={() => setShowResendConfirmation(false)}
+              >
+                <Text style={styles.buttonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
                       <TouchableOpacity
                         style={styles.button}
                         onPress={authMode === 'login' ? loginWithPassword : register}
@@ -2407,6 +2565,48 @@ const App: React.FC = () => {
                       </TouchableOpacity>
                     </View>
                   )}
+      {userToken && pendingInviteModalOpen ? (
+        <View style={styles.wizardOverlay}>
+          <View style={[styles.wizardModal, styles.pendingInviteModal]}>
+            <View style={styles.card}>
+              <View style={styles.sectionHeaderRow}>
+                <Text style={styles.sectionTitle}>Trip Invites</Text>
+                <TouchableOpacity
+                  style={[styles.button, styles.smallButton]}
+                  onPress={() => setPendingInviteModalOpen(false)}
+                >
+                  <Text style={styles.buttonText}>Close</Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.helperText}>Choose which trips you want to join.</Text>
+              <ScrollView style={styles.inviteList} contentContainerStyle={styles.inviteListContent}>
+                {invites.map((invite) => {
+                  const tripLabel = invite.resolvedTripName ?? invite.groupName ?? 'Upcoming Trip';
+                  const inviterName = `${invite.inviterFirstName ?? ''} ${invite.inviterLastName ?? ''}`.trim();
+                  const inviterLine = inviterName || invite.inviterEmail || 'Someone';
+                  return (
+                    <View key={invite.id} style={styles.inviteCard}>
+                      <Text style={styles.bodyText}>{tripLabel}</Text>
+                      <Text style={styles.helperText}>Invited by {inviterLine}</Text>
+                      <View style={styles.row}>
+                        <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => acceptInvite(invite)}>
+                          <Text style={styles.buttonText}>Join</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.button, styles.smallButton, styles.dangerButton]}
+                          onPress={() => rejectInvite(invite)}
+                        >
+                          <Text style={styles.buttonText}>Decline</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          </View>
+        </View>
+      ) : null}
       {userToken && isTripWizardOpen ? (
         <View style={styles.wizardOverlay}>
           <View style={styles.wizardModal}>
@@ -2842,6 +3042,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     flexWrap: 'wrap',
   },
+  sectionActions: {
+    marginLeft: 'auto',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
   groupRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -3253,6 +3458,9 @@ const styles = StyleSheet.create({
   dateInputWrap: {
     position: 'relative',
     justifyContent: 'center',
+    flex: 1,
+    minWidth: 220,
+    maxWidth: '100%',
   },
   dateIcon: {
     position: 'absolute',
@@ -3547,6 +3755,22 @@ const styles = StyleSheet.create({
     maxWidth: 1200,
     maxHeight: '90%',
     alignSelf: 'center',
+  },
+  pendingInviteModal: {
+    maxWidth: 720,
+  },
+  inviteList: {
+    maxHeight: 360,
+  },
+  inviteListContent: {
+    gap: 12,
+  },
+  inviteCard: {
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 8,
+    padding: 12,
+    backgroundColor: '#fff',
   },
   modalOverlay: {
     position: 'absolute',

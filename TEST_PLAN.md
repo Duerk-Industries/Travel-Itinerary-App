@@ -172,3 +172,26 @@ Or from repo root:
 ```bash
 npm test
 ```
+
+## 5. Email Verification + Invite Onboarding Tests
+
+New server-side tests cover email confirmation and pending invite acceptance/rejection:
+- `server/__tests__/account.test.ts`
+  - Registration requires verification; login blocked until confirmation.
+  - Confirmation link expiration deletes unverified users.
+  - Pending trip invites list correctly and acceptance adds trip access.
+  - Invite rejection removes the pending member and cleans related trip items.
+
+### Execution
+
+Run server tests:
+
+```bash
+npm run test:server
+```
+
+Or all tests:
+
+```bash
+npm test
+```

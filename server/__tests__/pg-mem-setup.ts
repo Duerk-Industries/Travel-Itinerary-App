@@ -30,6 +30,7 @@ jest.setTimeout(30000);
 
 // Silence expected console output so Jest only reports pass/fail lines.
 const silenceConsole = () => {
+  if (process.env.SHOW_TEST_LOGS === '1') return;
   jest.spyOn(console, 'log').mockImplementation(() => {});
   jest.spyOn(console, 'info').mockImplementation(() => {});
   jest.spyOn(console, 'warn').mockImplementation(() => {});

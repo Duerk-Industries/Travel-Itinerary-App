@@ -2,6 +2,7 @@ import request from 'supertest';
 import { Pool } from 'pg';
 import { app } from '../src/app';
 import { initDb, closePool } from '../src/db';
+import { registerAndLoginWebUser, registerWebUser } from './helpers';
 import { buildFlightDraftFromRow } from '../../app/utils/overviewEditing';
 const buildPayload = (draft: any, defaultPayerId?: string | null) => {
   const trim = (v?: string | null) => (v ?? '').trim();
@@ -46,17 +47,10 @@ describe('Overview flight edit retains passengers', () => {
     pool = new Pool({ connectionString: process.env.DATABASE_URL });
     await pool.query('DELETE FROM users WHERE email IN ($1, $2, $3)', [owner.email, member.email, pendingEmail]);
 
-    const regOwner = await request(app)
-      .post('/api/web-auth/register')
-      .send({ firstName: owner.firstName, lastName: owner.lastName, email: owner.email, password: owner.password, passwordConfirm: owner.password })
-      .expect(201);
-    ownerToken = regOwner.body.token as string;
+    const ownerLogin = await registerAndLoginWebUser(pool, owner);
+    ownerToken = ownerLogin.token;
 
-    const regMember = await request(app)
-      .post('/api/web-auth/register')
-      .send({ firstName: member.firstName, lastName: member.lastName, email: member.email, password: member.password, passwordConfirm: member.password })
-      .expect(201);
-    expect(regMember.body.token).toBeTruthy();
+    await registerWebUser(member);
 
     const groups = await request(app).get('/api/groups').set('Authorization', `Bearer ${ownerToken}`).expect(200);
     groupId = groups.body[0]?.id as string;

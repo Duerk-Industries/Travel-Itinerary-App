@@ -643,14 +643,25 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   );
 
   const allDates = useMemo(() => {
+    const parseDateUtc = (value?: string | null): Date | null => {
+      if (!value) return null;
+      const parts = String(value).split('-').map((v) => Number(v));
+      if (parts.length !== 3 || parts.some((n) => !Number.isFinite(n))) {
+        const d = new Date(value);
+        return Number.isNaN(d.valueOf()) ? null : new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+      }
+      return new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+    };
     const dates: string[] = [];
     const start = displayStartDate || effectiveRangeDates.startDate;
     const end = displayEndDate || effectiveRangeDates.endDate;
     if (start && end) {
-      const s = new Date(start);
-      const e = new Date(end);
-      for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
-        dates.push(d.toISOString().slice(0, 10));
+      const s = parseDateUtc(start);
+      const e = parseDateUtc(end);
+      if (s && e) {
+        for (let d = new Date(s); d <= e; d.setUTCDate(d.getUTCDate() + 1)) {
+          dates.push(d.toISOString().slice(0, 10));
+        }
       }
     } else if (flights.length || lodgings.length) {
       const all = [
@@ -659,11 +670,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         ...lodgings.map((l) => l.checkOutDate),
       ]
         .filter(Boolean)
-        .map((d) => new Date(d as string).getTime());
+        .map((d) => parseDateUtc(d as string))
+        .filter(Boolean)
+        .map((d) => (d as Date).getTime());
       if (all.length) {
         const min = new Date(Math.min(...all));
         const max = new Date(Math.max(...all));
-        for (let d = new Date(min); d <= max; d.setDate(d.getDate() + 1)) {
+        for (let d = new Date(min); d <= max; d.setUTCDate(d.getUTCDate() + 1)) {
           dates.push(d.toISOString().slice(0, 10));
         }
       }
@@ -671,7 +684,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     if (!dates.length) {
       dates.push(new Date().toISOString().slice(0, 10));
     }
-    return dates;
+    return Array.from(new Set(dates));
   }, [displayStartDate, displayEndDate, effectiveRangeDates.startDate, effectiveRangeDates.endDate, flights, lodgings]);
 
   useEffect(() => {
@@ -736,12 +749,29 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     const fetchImages = async () => {
       if (!dayCards.length) return;
       const next: Record<string, string> = {};
-      for (const card of dayCards) {
+      for (let idx = 0; idx < dayCards.length; idx += 1) {
+        const card = dayCards[idx];
+        const dayNumber = idx + 1;
+        const activities = itineraryDetails
+          .filter((detail) => detail.day === dayNumber)
+          .map((detail) => detail.activity)
+          .filter(Boolean);
+        const tourNames = tours
+          .filter((tour) => tour.date === card.date)
+          .map((tour) => tour.name)
+          .filter(Boolean);
+        const contextParts = [...activities, ...tourNames].filter(Boolean);
+        const context = contextParts.join(' | ').slice(0, 200);
         try {
-          const res = await fetch(
-            `${backendUrl}/api/itinerary/images?location=${encodeURIComponent(card.location || tripLocationLabel || 'travel')}&day=${encodeURIComponent(card.date)}`,
-            { headers }
-          );
+          const baseLocation = card.location || tripLocationLabel || trip?.destination || 'travel';
+          const query = [
+            `location=${encodeURIComponent(baseLocation)}`,
+            `day=${encodeURIComponent(card.date)}`,
+            context ? `context=${encodeURIComponent(context)}` : '',
+          ]
+            .filter(Boolean)
+            .join('&');
+          const res = await fetch(`${backendUrl}/api/itinerary/images?${query}`, { headers });
           const data = await res.json().catch(() => ({}));
           if (data?.url) {
             next[card.date] = data.url;

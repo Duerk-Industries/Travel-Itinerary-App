@@ -18,6 +18,7 @@ import {
   removeFellowTraveler,
   addGroupMember,
   createGroupWithMembers,
+  attachInviteToTrip,
   listGroupInvitesForUser,
   listGroupsForUser,
   removeGroupMember,
@@ -27,8 +28,10 @@ import {
   ensureUserInTrip,
   removeGroupInvite,
   acceptGroupInvite,
+  rejectGroupInvite,
+  getTripById,
 } from '../db';
-import { isEmailConfigured, sendShareEmail } from '../mailer';
+import { sendShareEmailBestEffort, sendTripInviteEmailBestEffort } from '../mailer';
 
 // Account management (profile, password, deletion) for authenticated web users.
 const router = Router();
@@ -310,6 +313,15 @@ router.post('/trips/:tripId/members', async (req, res) => {
   };
   try {
     const result = await addGroupMember(userId, membership.groupId, { email, guestName, firstName, lastName });
+    if (result.inviteId) {
+      await attachInviteToTrip(result.inviteId, req.params.tripId);
+    }
+    if (result.email) {
+      const trip = await getTripById(req.params.tripId);
+      const tripName = trip?.name ?? 'Trip';
+      const inviterEmail = (req as any).user?.email as string | undefined;
+      await sendTripInviteEmailBestEffort(result.email, tripName, inviterEmail ?? null).catch(() => undefined);
+    }
     res.status(201).json(result);
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });
@@ -353,9 +365,19 @@ groupsRouter.get('/invites', async (req, res) => {
 });
 
 groupsRouter.post('/invites/:id/accept', async (req, res) => {
-  const userId = (req as any).user.userId as string;
+  const user = (req as any).user as { userId: string; email: string };
   try {
-    await acceptGroupInvite(req.params.id, userId);
+    await acceptGroupInvite(req.params.id, user.userId, user.email);
+    res.status(204).send();
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+groupsRouter.post('/invites/:id/reject', async (req, res) => {
+  const user = (req as any).user as { userId: string; email: string };
+  try {
+    await rejectGroupInvite(req.params.id, user.userId, user.email);
     res.status(204).send();
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });
@@ -392,20 +414,18 @@ groupsRouter.post('/', async (req, res) => {
   try {
     const { groupId, invites } = await createGroupWithMembers(user.userId, name.trim(), normalizedMembers);
 
-    if (isEmailConfigured()) {
-      await Promise.all(
-        invites.map(({ email }) => {
-          const subject = `${user.email} invited you to a group: ${name}`;
-          const body = [
-            `Hi,`,
-            ``,
-            `${user.email} invited you to join the group "${name}".`,
-            `Log in to Shared Trip Planner to accept this invitation.`, 
-          ].join('\n');
-          return sendShareEmail(email, subject, body).catch(() => undefined);
-        })
-      );
-    }
+    await Promise.all(
+      invites.map(({ email }) => {
+        const subject = `${user.email} invited you to a group: ${name}`;
+        const body = [
+          `Hi,`,
+          ``,
+          `${user.email} invited you to join the group "${name}".`,
+          `Log in to Shared Trip Planner to accept this invitation.`, 
+        ].join('\n');
+        return sendShareEmailBestEffort(email, subject, body).catch(() => undefined);
+      })
+    );
 
     res.status(201).json({ id: groupId, invites });
   } catch (err) {
@@ -430,10 +450,10 @@ groupsRouter.post('/:id/members', async (req, res) => {
       firstName: given || undefined,
       lastName: family || undefined,
     });
-    if (result.email && result.inviteId && isEmailConfigured()) {
+    if (result.email && result.inviteId) {
       const subject = `${user.email} invited you to a group`;
       const body = `${user.email} invited you to join a group. Log in to accept.`;
-      await sendShareEmail(result.email, subject, body);
+      await sendShareEmailBestEffort(result.email, subject, body);
     }
     res.status(201).json(result);
   } catch (err) {

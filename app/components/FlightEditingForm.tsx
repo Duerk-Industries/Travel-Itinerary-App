@@ -3,6 +3,7 @@ import { Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } 
 import { formatDateLong } from '../utils/formatDateLong';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import type { FlightEditDraft, GroupMemberOption } from '../tabs/flights';
+import { toWebStyle } from '../utils/webStyle';
 
 type AirportTarget = 'dep' | 'arr' | 'modal-dep' | 'modal-arr' | 'modal-layover' | null;
 
@@ -154,7 +155,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
                       return { ...prev, departureDate: dep, arrivalDate: nextArrival };
                     })
                   }
-                  style={{ ...(styles.input as any), width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
+                  style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
                 />
               ) : (
                 <TextInput
@@ -179,7 +180,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
                   type="time"
                   value={flight.departureTime}
                   onChange={(e) => setFlight((prev) => (prev ? { ...prev, departureTime: e.target.value } : prev))}
-                  style={{ ...(styles.input as any), width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
+                  style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
                 />
               ) : (
                 <TouchableOpacity
@@ -225,7 +226,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
                   type="date"
                   value={flight.arrivalDate}
                   onChange={(e) => setFlight((prev) => (prev ? { ...prev, arrivalDate: e.target.value } : prev))}
-                  style={{ ...(styles.input as any), width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
+                  style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
                 />
               ) : (
                 <TextInput
@@ -243,7 +244,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
                   type="time"
                   value={flight.arrivalTime}
                   onChange={(e) => setFlight((prev) => (prev ? { ...prev, arrivalTime: e.target.value } : prev))}
-                  style={{ ...(styles.input as any), width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
+                  style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
                 />
               ) : (
                 <TouchableOpacity

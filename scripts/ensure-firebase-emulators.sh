@@ -29,6 +29,10 @@ if [[ -n "$OPEN_PORT" ]]; then
   exit 0
 fi
 
+if command -v node >/dev/null 2>&1; then
+  node scripts/select-latest-firebase-export.js || true
+fi
+
 if command -v firebase >/dev/null 2>&1; then
   FIREBASE_CMD=(firebase)
 elif command -v npx >/dev/null 2>&1; then

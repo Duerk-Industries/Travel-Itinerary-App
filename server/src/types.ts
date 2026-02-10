@@ -6,6 +6,8 @@ export interface User {
   picture?: string;
   firstName?: string;
   lastName?: string;
+  emailVerified?: boolean;
+  emailVerifiedAt?: string | null;
 }
 
 export interface WebUser {
@@ -13,6 +15,9 @@ export interface WebUser {
   email: string;
   firstName: string;
   lastName: string;
+  emailVerified?: boolean;
+  firstLoginAt?: string | null;
+  lastLoginAt?: string | null;
 }
 
 export interface Flight {
@@ -179,6 +184,14 @@ export interface PlaceDetailsCache {
   placeId: string;
   name: string;
   details: Record<string, any>;
+  fetchedAt: string;
+}
+
+export interface PlaceLookupCache {
+  queryKey: string;
+  placeId: string;
+  name: string;
+  likelihood: number;
   fetchedAt: string;
 }
 

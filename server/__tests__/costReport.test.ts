@@ -2,6 +2,7 @@ import request from 'supertest';
 import { Pool } from 'pg';
 import { app } from '../src/app';
 import { initDb, closePool } from '../src/db';
+import { registerAndLoginWebUser } from './helpers';
 
 describe('Cost report calculations across lodging, tours, and flights', () => {
   const uniq = Date.now();
@@ -21,11 +22,8 @@ describe('Cost report calculations across lodging, tours, and flights', () => {
     pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
     // Register users (unique emails avoid collision; no deletion afterward)
-    const regA = await request(app)
-      .post('/api/web-auth/register')
-      .send({ firstName: userA.firstName, lastName: userA.lastName, email: userA.email, password: userA.password, passwordConfirm: userA.password })
-      .expect(201);
-    tokenA = regA.body.token as string;
+    const loginA = await registerAndLoginWebUser(pool, userA);
+    tokenA = loginA.token;
 
     const groupsA = await request(app).get('/api/groups').set('Authorization', `Bearer ${tokenA}`).expect(200);
     groupId = groupsA.body[0]?.id as string;
@@ -38,11 +36,8 @@ describe('Cost report calculations across lodging, tours, and flights', () => {
       .expect(201);
     tripId = trip.body.id as string;
 
-    const regB = await request(app)
-      .post('/api/web-auth/register')
-      .send({ firstName: userB.firstName, lastName: userB.lastName, email: userB.email, password: userB.password, passwordConfirm: userB.password })
-      .expect(201);
-    tokenB = regB.body.token as string;
+    const loginB = await registerAndLoginWebUser(pool, userB);
+    tokenB = loginB.token;
 
     await request(app)
       .post(`/api/groups/${groupId}/members`)

@@ -40,6 +40,10 @@ if ($null -ne $OpenPort) {
 }
 
 $LocalFirebase = Join-Path $RootDir "node_modules/.bin/firebase"
+$SelectScript = Join-Path $RootDir "scripts/select-latest-firebase-export.js"
+if (Test-Path $SelectScript) {
+  node $SelectScript
+}
 
 if (Test-Path $LocalFirebase) {
   Write-Host "Firebase emulators not detected. Starting..."

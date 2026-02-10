@@ -43,6 +43,9 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
   const countryStateInputRef = useRef<any>(null);
   const cityInputRef = useRef<any>(null);
   const addGuardRef = useRef<Set<string>>(new Set());
+  const countryStateCacheRef = useRef<Map<string, { ts: number; results: LocationOption[] }>>(new Map());
+  const cityCacheRef = useRef<Map<string, { ts: number; results: LocationOption[] }>>(new Map());
+  const cacheTtlMs = 5 * 60 * 1000;
 
   const selectedIds = useMemo(() => new Set(selectedLocations.map((item) => item.id)), [selectedLocations]);
   const selectedCountryIds = useMemo(
@@ -61,8 +64,15 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
 
   useEffect(() => {
     const q = countryStateQuery.trim();
-    if (!q || q.length < 2) {
+    if (!q || q.length < 1) {
       setCountryStateSuggestions([]);
+      setCountryStateLoading(false);
+      return;
+    }
+    const cacheKey = q.toLowerCase();
+    const cached = countryStateCacheRef.current.get(cacheKey);
+    if (cached && Date.now() - cached.ts < cacheTtlMs) {
+      setCountryStateSuggestions(cached.results.filter((item) => !selectedIds.has(String(item.id))));
       setCountryStateLoading(false);
       return;
     }
@@ -81,13 +91,14 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
         const data = await res.json();
         if (!active) return;
         const next = Array.isArray(data) ? data : [];
+        countryStateCacheRef.current.set(cacheKey, { ts: Date.now(), results: next });
         setCountryStateSuggestions(next.filter((item: LocationOption) => !selectedIds.has(String(item.id))));
       } catch {
         if (active) setCountryStateSuggestions([]);
       } finally {
         if (active) setCountryStateLoading(false);
       }
-    }, 250);
+    }, 150);
     return () => {
       active = false;
       clearTimeout(handle);
@@ -98,6 +109,13 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
     const q = cityQuery.trim();
     if (!q || q.length < 2 || !canSearchCities) {
       setCitySuggestions([]);
+      setCityLoading(false);
+      return;
+    }
+    const cacheKey = `${q.toLowerCase()}|${selectedCountryIds.join(',')}|${selectedStateIds.join(',')}`;
+    const cached = cityCacheRef.current.get(cacheKey);
+    if (cached && Date.now() - cached.ts < cacheTtlMs) {
+      setCitySuggestions(cached.results.filter((item) => !selectedIds.has(String(item.id))));
       setCityLoading(false);
       return;
     }
@@ -118,13 +136,14 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
         const data = await res.json();
         if (!active) return;
         const next = Array.isArray(data) ? data : [];
+        cityCacheRef.current.set(cacheKey, { ts: Date.now(), results: next });
         setCitySuggestions(next.filter((item: LocationOption) => !selectedIds.has(String(item.id))));
       } catch {
         if (active) setCitySuggestions([]);
       } finally {
         if (active) setCityLoading(false);
       }
-    }, 250);
+    }, 150);
     return () => {
       active = false;
       clearTimeout(handle);

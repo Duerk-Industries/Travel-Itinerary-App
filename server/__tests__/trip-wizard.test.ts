@@ -2,6 +2,7 @@ import request from 'supertest';
 import { Pool } from 'pg';
 import { app } from '../src/app';
 import { closePool, initDb } from '../src/db';
+import { registerAndLoginWebUser } from './helpers';
 
 describe('Trip wizard flow', () => {
   let pool: Pool;
@@ -14,17 +15,8 @@ describe('Trip wizard flow', () => {
     pool = new Pool({ connectionString: process.env.DATABASE_URL });
     await pool.query('DELETE FROM users WHERE email = $1', [owner.email]);
 
-    const reg = await request(app)
-      .post('/api/web-auth/register')
-      .send({
-        firstName: owner.firstName,
-        lastName: owner.lastName,
-        email: owner.email,
-        password: owner.password,
-        passwordConfirm: owner.password,
-      })
-      .expect(201);
-    token = reg.body.token as string;
+    const login = await registerAndLoginWebUser(pool, owner);
+    token = login.token;
   });
 
   afterAll(async () => {

@@ -3,7 +3,7 @@ import { authenticate } from '../auth';
 import { getPlaceDetails } from '../googlePlaces';
 import { getLocationsByIds, searchLocations, upsertLocation } from '../db';
 import { autocompletePlaces, getPlaceDetailsFromGoogle } from '../services/placeService';
-import { searchCityOptions, searchCountryStateOptions } from '../services/locationServices';
+import { getLocationOptionsByIds, searchCityOptions, searchCountryStateOptions } from '../services/locationServices';
 import { getEnvValue } from '../env';
 
 interface LocationResult {
@@ -90,7 +90,11 @@ router.post('/batch', async (req, res) => {
   const missingIds = ids.filter((id) => !foundIds.has(id));
 
   if (missingIds.length > 0) {
-    for (const id of missingIds) {
+    const googlePlaceIdRegex = /^ChI[a-zA-Z0-9_-]+$/;
+    const googleCandidates = missingIds.filter(
+      (id) => googlePlaceIdRegex.test(id) && !id.startsWith('manual-')
+    );
+    for (const id of googleCandidates) {
       const details = await getPlaceDetailsFromGoogle(id);
       if (details) {
         const apiKey = getEnvValue('GOOGLE_PLACES_API_KEY');
@@ -109,6 +113,21 @@ router.post('/batch', async (req, res) => {
         } catch (err) {
           console.error(`Failed to cache location ${id}`, err);
         }
+      }
+    }
+    const localIds = missingIds.filter((id) => id.startsWith('country:') || id.startsWith('state:') || id.startsWith('city:'));
+    if (localIds.length) {
+      try {
+        const localOptions = await getLocationOptionsByIds(localIds);
+        for (const option of localOptions) {
+          results.push({
+            id: option.id,
+            place_id: option.id,
+            name: option.name,
+          });
+        }
+      } catch (err) {
+        console.error('Failed to resolve local location ids', err);
       }
     }
   }
