@@ -229,6 +229,28 @@ const refreshIntervalMs = resolveRefreshIntervalMs();
 const sessionKey = 'stp.session';
 const sessionDurationMs = 12 * 60 * 60 * 1000;
 
+const extractTokenFromUrl = (rawUrl: string) => {
+  try {
+    const url = new URL(rawUrl);
+    const token = url.searchParams.get('token');
+    const isConfirm = url.pathname.endsWith('/confirm');
+    if (token) {
+      return { token, url, source: 'query' as const, isConfirm };
+    }
+    const hash = url.hash.startsWith('#') ? url.hash.slice(1) : url.hash;
+    if (hash) {
+      const hashParams = new URLSearchParams(hash);
+      const hashToken = hashParams.get('token');
+      if (hashToken) {
+        return { token: hashToken, url, source: 'hash' as const, isConfirm };
+      }
+    }
+  } catch (e) {
+    // ignore invalid URLs
+  }
+  return { token: null, url: null, source: null, isConfirm: false } as const;
+};
+
 const App: React.FC = () => {
   useEffect(() => {
     initializeAppCheck();
@@ -717,11 +739,19 @@ const App: React.FC = () => {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       return `${window.location.origin}/login`;
     }
-    if (typeof Linking?.createURL === 'function') {
-      return Linking.createURL('/login');
+
+    if (typeof Linking?.createURL !== 'function') {
+      // This should not happen in a standard Expo/React Native environment.
+      console.error('Linking.createURL is not available. OAuth redirect will likely fail.');
+      // Fallback to a URL that is unlikely to work for a native app redirect.
+      return `${backendUrl}/login`;
     }
-    const base = typeof window !== 'undefined' ? window.location.origin : backendUrl;
-    return `${base}/login`;
+
+    const scheme =
+      Constants.expoConfig?.scheme ||
+      (Constants as any)?.manifest2?.extra?.expoClient?.scheme ||
+      undefined;
+    return Linking.createURL('login', scheme ? { scheme } : undefined);
   };
 
   const loginWithGoogle = async () => {
@@ -731,7 +761,17 @@ const App: React.FC = () => {
       window.location.assign(authUrl);
       return;
     }
-    await WebBrowser.openBrowserAsync(authUrl);
+    try {
+      const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUrl);
+      if (result.type === 'success' && result.url) {
+        const { token } = extractTokenFromUrl(result.url);
+        if (token) {
+          handleAuthSuccess(token);
+        }
+      }
+    } catch (err) {
+      console.log('Auth session cancelled or failed', err);
+    }
   };
 
   const handleAuthSuccess = useCallback((token: string, firstLoginOverride?: boolean) => {
@@ -776,24 +816,6 @@ const App: React.FC = () => {
   }, [activeTripId]);
 
   useEffect(() => {
-    const extractTokenFromUrl = (rawUrl: string) => {
-      const url = new URL(rawUrl);
-      const token = url.searchParams.get('token');
-      const isConfirm = url.pathname.endsWith('/confirm');
-      if (token) {
-        return { token, url, source: 'query' as const, isConfirm };
-      }
-      const hash = url.hash.startsWith('#') ? url.hash.slice(1) : url.hash;
-      if (hash) {
-        const hashParams = new URLSearchParams(hash);
-        const hashToken = hashParams.get('token');
-        if (hashToken) {
-          return { token: hashToken, url, source: 'hash' as const, isConfirm };
-        }
-      }
-      return { token: null, url, source: null, isConfirm: false } as const;
-    };
-
     const handleDeepLink = (event: { url: string }) => {
       const { token, isConfirm } = extractTokenFromUrl(event.url);
       if (token && isConfirm) {

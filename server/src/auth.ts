@@ -5,6 +5,7 @@ import { User } from './types';
 import { getEnvValue } from './env';
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
+import crypto from 'crypto';
 
 const secret = getEnvValue('AUTH_SECRET', { defaultValue: 'development-secret' })!;
 
@@ -46,6 +47,32 @@ export const createToken = (payload: TokenPayload): string => {
 
 export const createWebUserToken = (payload: { userId: string; username: string }): string => {
   return jwt.sign(payload, secret, { expiresIn: '7d' });
+};
+
+type OAuthStatePayload = {
+  redirectUri?: string;
+  nonce: string;
+};
+
+const OAUTH_STATE_ISSUER = 'travel-itinerary-app';
+const OAUTH_STATE_TTL = '10m';
+
+export const createOAuthState = (payload: { redirectUri?: string }): string => {
+  const nonce = crypto.randomBytes(16).toString('hex');
+  const state: OAuthStatePayload = {
+    redirectUri: payload.redirectUri,
+    nonce,
+  };
+  return jwt.sign(state, secret, { expiresIn: OAUTH_STATE_TTL, issuer: OAUTH_STATE_ISSUER });
+};
+
+export const decodeOAuthState = (state: string): { redirectUri?: string } | null => {
+  try {
+    const decoded = jwt.verify(state, secret, { issuer: OAUTH_STATE_ISSUER }) as OAuthStatePayload;
+    return { redirectUri: decoded.redirectUri };
+  } catch {
+    return null;
+  }
 };
 
 export const authenticate = (req: Request, res: Response, next: NextFunction): void => {

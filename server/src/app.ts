@@ -62,7 +62,7 @@ export const app = express();
 app.set('trust proxy', 1);
 
 const isRunningLocally = isLocalEnv();
-const webUrl = getEnvValue('WEB_URL', { defaultValue: 'https://duerk.org' });
+const webUrl = getEnvValue('WEB_URL', { defaultValue: 'https://duerk.org' }) || 'https://duerk.org';
 const allowedOrigins = isRunningLocally
   ? [/^http:\/\/localhost(:\d+)?$/, /^http:\/\/127\.0\.0\.1(:\d+)?$/]
   : [webUrl];
@@ -127,6 +127,16 @@ app.get('/login', (_req, res) => {
   res.sendFile(loginPath);
 });
 
+app.get('/api/diagnostics/google-client-id', (_req, res) => {
+  const clientId = getEnvValue('GOOGLE_CLIENT_ID') || '';
+  const trimmed = clientId.trim();
+  const suffix = trimmed ? trimmed.slice(-6) : '';
+  res.json({
+    configured: Boolean(trimmed),
+    last6: suffix || null,
+  });
+});
+
 if (!hasWebApp) {
   app.get('/', (_req, res) => {
     res.sendFile(loginPath);
@@ -136,7 +146,8 @@ if (!hasWebApp) {
 app.use(express.static(publicDir));
 
 import passport from 'passport';
-import { initPassport, createToken } from './auth';
+import { initPassport, createToken, createOAuthState, decodeOAuthState } from './auth';
+import { appendTokenToRedirect, isRedirectUriAllowed, resolveAndValidateRedirectUri } from './redirects';
 import { logError } from './logger';
 
 initPassport();
@@ -146,9 +157,17 @@ if (!isLocalEnv() && getEnvValue('AUTH_SECRET') === 'development-secret') {
     logError('[WARNING] AUTH_SECRET is not set or is using the default value in a non-local environment. This is a security risk and will cause authentication to fail.');
 }
 
-app.get('/api/auth/google', (req, _res, next) => {
-  next();
-}, passport.authenticate('google', { scope: ['profile', 'email'] }));
+app.get('/api/auth/google', (req, res, next) => {
+  const rawRedirectUri = typeof req.query.redirect_uri === 'string' ? req.query.redirect_uri : undefined;
+  const { redirectUri, error } = resolveAndValidateRedirectUri(rawRedirectUri, webUrl);
+  if (error) {
+    res.status(400).json({ error });
+    return;
+  }
+  const state = redirectUri ? createOAuthState({ redirectUri }) : undefined;
+  const handler = passport.authenticate('google', { scope: ['profile', 'email'], state });
+  handler(req, res, next);
+});
 
 app.get(
   '/api/auth/google/callback',
@@ -159,6 +178,15 @@ app.get(
   (req, res) => {
     const user = req.user as any;
     const token = createToken({ userId: user.id, email: user.email, provider: user.provider });
+    const state = typeof req.query.state === 'string' ? decodeOAuthState(req.query.state) : null;
+    let redirectUri = state?.redirectUri;
+    if (redirectUri && !isRedirectUriAllowed(redirectUri, webUrl)) {
+      redirectUri = undefined;
+    }
+    if (redirectUri) {
+      res.redirect(appendTokenToRedirect(redirectUri, token));
+      return;
+    }
     res.redirect(`/login?token=${token}`);
   }
 );

@@ -9,14 +9,20 @@ export const initializeAppCheck = async () => {
       const { initializeApp, getApp, getApps } = await import('firebase/app');
       const { initializeAppCheck: initAppCheck, ReCaptchaV3Provider } = await import('firebase/app-check');
 
+      const extra =
+        Constants.expoConfig?.extra ||
+        (Constants as any)?.manifest?.extra ||
+        (Constants as any)?.manifest2?.extra ||
+        {};
+
       // Load configuration from environment variables (local .env) or Expo config
-      const apiKey = process.env.EXPO_PUBLIC_FIREBASE_API_KEY || process.env.FIREBASE_API_KEY || Constants.expoConfig?.extra?.firebaseApiKey;
-      const authDomain = process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || process.env.FIREBASE_AUTH_DOMAIN || Constants.expoConfig?.extra?.firebaseAuthDomain;
-      const projectId = process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID || Constants.expoConfig?.extra?.firebaseProjectId;
-      const storageBucket = process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || process.env.FIREBASE_STORAGE_BUCKET || Constants.expoConfig?.extra?.firebaseStorageBucket;
-      const messagingSenderId = process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || process.env.FIREBASE_MESSAGING_SENDER_ID || Constants.expoConfig?.extra?.firebaseMessagingSenderId;
-      const appId = process.env.EXPO_PUBLIC_FIREBASE_APP_ID || process.env.FIREBASE_APP_ID || Constants.expoConfig?.extra?.firebaseAppId;
-      const recaptchaSiteKey = process.env.EXPO_PUBLIC_RECAPTCHA_SITE_KEY || process.env.RECAPTCHA_SITE_KEY || Constants.expoConfig?.extra?.recaptchaSiteKey;
+      const apiKey = process.env.EXPO_PUBLIC_FIREBASE_API_KEY || process.env.FIREBASE_API_KEY || extra.firebaseApiKey;
+      const authDomain = process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || process.env.FIREBASE_AUTH_DOMAIN || extra.firebaseAuthDomain;
+      const projectId = process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID || extra.firebaseProjectId;
+      const storageBucket = process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || process.env.FIREBASE_STORAGE_BUCKET || extra.firebaseStorageBucket;
+      const messagingSenderId = process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || process.env.FIREBASE_MESSAGING_SENDER_ID || extra.firebaseMessagingSenderId;
+      const appId = process.env.EXPO_PUBLIC_FIREBASE_APP_ID || process.env.FIREBASE_APP_ID || extra.firebaseAppId;
+      const recaptchaSiteKey = process.env.EXPO_PUBLIC_RECAPTCHA_SITE_KEY || process.env.RECAPTCHA_SITE_KEY || extra.recaptchaSiteKey;
 
       if (!apiKey || !authDomain || !projectId || !appId || !recaptchaSiteKey) {
         console.error('Firebase App Check: Missing required configuration. Please set FIREBASE_API_KEY, FIREBASE_AUTH_DOMAIN, FIREBASE_PROJECT_ID, FIREBASE_APP_ID, and RECAPTCHA_SITE_KEY in your .env file or app.json.');
