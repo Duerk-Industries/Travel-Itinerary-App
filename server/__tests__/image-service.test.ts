@@ -1,99 +1,32 @@
-// c:\Git\Tristan\Travel-Itinerary-App\server\__tests__\image-service.test.ts
-
 import axios from 'axios';
-import { EventEmitter } from 'events';
-import * as googlePlaces from '../src/googlePlaces';
-// Remove top-level import to avoid hoisting issues with mocks
-// import { getGooglePlaceImage } from '../src/image-service';
-
-// Define mocks before importing the module under test
-const mockFile = {
-  exists: jest.fn(),
-  getMetadata: jest.fn(),
-  getSignedUrl: jest.fn(),
-  createWriteStream: jest.fn(),
-};
-
-const mockBucket = {
-  file: jest.fn(() => mockFile),
-};
-
-const mockStorageInstance = {
-  bucket: jest.fn(() => mockBucket),
-};
+import { getGooglePlaceImage } from '../src/image-service';
 
 jest.mock('@google-cloud/storage', () => ({
-  Storage: jest.fn(() => mockStorageInstance),
+  Storage: jest.fn(() => ({ bucket: jest.fn() })),
 }));
-
 jest.mock('axios');
 
 describe('image-service', () => {
-  // Import the module here so that mock variables are initialized
-  const { getGooglePlaceImage } = require('../src/image-service');
-
   beforeEach(() => {
     jest.clearAllMocks();
-    // Reset default behaviors
-    mockBucket.file.mockReturnValue(mockFile);
-    process.env.GOOGLE_PLACES_API_KEY = 'TEST_KEY';
-    process.env.LOCATION_BUCKET = 'test-bucket';
+    process.env.UNSPLASH_ACCESS_KEY = 'test-unsplash-key';
   });
 
-  it('should use placeId directly if provided and skip text search', async () => {
-    // Mock cache miss
-    mockFile.exists.mockResolvedValue([false]);
-    
-    // Mock axios.get for API calls
-    (axios.get as jest.Mock).mockImplementation((url) => {
-      if (url.includes('textsearch')) {
-        return Promise.reject(new Error('Should not call textsearch'));
-      }
-      return Promise.reject(new Error(`Unexpected URL: ${url}`));
-    });
-
-    // Mock axios.post for search candidates (should not be called)
-    (axios.post as jest.Mock).mockImplementation(() => {
-      return Promise.reject(new Error('Should not call searchText'));
-    });
-
-    jest.spyOn(googlePlaces, 'getPlaceDetails').mockResolvedValue({
-      placeId: 'place123',
-      name: 'Paris',
-      cached: false,
-      details: {
-        photos: [{ name: 'photos/abc' }],
+  it('getGooglePlaceImage falls back to Unsplash', async () => {
+    (axios.get as jest.Mock).mockResolvedValue({
+      data: {
+        results: [{ urls: { regular: 'https://images.example.com/unsplash-paris.jpg' } }],
       },
-    } as any);
-
-    // Mock axios default export for streaming the image
-    (axios as unknown as jest.Mock).mockImplementation((config) => {
-        if (config.url.includes('places.googleapis.com/v1/photos/')) {
-            return Promise.resolve({
-                data: {
-                    pipe: (dest: any) => {
-                        // Simulate piping data to the write stream asynchronously
-                        // so the .on('finish') handler has time to be attached
-                        setTimeout(() => dest.emit('finish'), 0);
-                        return dest;
-                    }
-                },
-                headers: { 'content-type': 'image/jpeg' }
-            });
-        }
-        return Promise.reject(new Error('Unexpected axios stream call'));
     });
-    
-    // Mock write stream
-    const mockWriteStream = new EventEmitter();
-    mockFile.createWriteStream.mockReturnValue(mockWriteStream);
-    mockFile.getSignedUrl.mockResolvedValue(['http://signed.url/img.jpg']);
 
     const result = await getGooglePlaceImage('Paris', 'place123');
 
-    expect(result).toBe('http://signed.url/img.jpg');
-    expect(axios.get).not.toHaveBeenCalledWith(expect.stringContaining('textsearch'));
-    expect(axios.post).not.toHaveBeenCalled();
-    expect(mockBucket.file).toHaveBeenCalledWith('google-places/place123/photo-1.jpg');
+    expect(result).toBe('https://images.example.com/unsplash-paris.jpg');
+    expect(axios.get).toHaveBeenCalledWith(
+      expect.stringContaining('api.unsplash.com/search/photos?query=Paris'),
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: expect.stringContaining('Client-ID') }),
+      })
+    );
   });
 });

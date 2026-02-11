@@ -4,7 +4,6 @@ import { Pool } from 'pg';
 import { app } from '../src/app';
 import { initDb, closePool } from '../src/db';
 import { registerAndLoginWebUser } from './helpers';
-import * as googlePlaces from '../src/googlePlaces';
 
 jest.mock('@google-cloud/storage', () => {
   const { PassThrough } = require('stream');
@@ -38,20 +37,15 @@ jest.mock('axios', () => {
     return Promise.resolve({ data: {} });
   };
   axios.get = (url: string) => {
-    if (url.includes('places.googleapis.com/v1/places/')) {
+    if (url.includes('api.unsplash.com/search/photos')) {
       return Promise.resolve({
-        data: { id: 'place123', displayName: { text: 'Frida Kahlo Museum' }, photos: [{ name: 'photos/abc' }] },
+        data: {
+          results: [{ urls: { regular: 'https://images.example.com/unsplash-museum.jpg' } }],
+        },
       });
-    }
-    if (url.includes('maps.googleapis.com/maps/api/place/details/json')) {
-      return Promise.resolve({ data: { result: { photos: [{ photo_reference: 'ref123' }] } } });
-    }
-    if (url.includes('maps.googleapis.com/maps/api/place/photo')) {
-      return Promise.resolve({ status: 302, headers: { location: 'https://example.com/photo.jpg' } });
     }
     return Promise.resolve({ data: {} });
   };
-  axios.post = () => Promise.resolve({ data: { places: [] } });
   return axios;
 });
 
@@ -62,8 +56,6 @@ describe('GET /api/itinerary/images', () => {
 
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
-    process.env.PLACE_MATCH_THRESHOLD = '0.75';
-    process.env.GOOGLE_PLACES_API_KEY = 'test-key';
     process.env.UNSPLASH_ACCESS_KEY = 'test-unsplash';
 
     await initDb();
@@ -85,11 +77,7 @@ describe('GET /api/itinerary/images', () => {
     await closePool();
   });
 
-  it('uses Google Places when a likely place match is found', async () => {
-    jest.spyOn(googlePlaces, 'searchPlaceCandidates').mockResolvedValue([
-      { placeId: 'place123', name: 'Frida Kahlo Museum', formattedAddress: 'Mexico City', types: [] },
-    ]);
-
+  it('uses Unsplash for itinerary image resolution', async () => {
     const res = await request(app)
       .get('/api/itinerary/images')
       .set('Authorization', `Bearer ${token}`)
@@ -100,7 +88,7 @@ describe('GET /api/itinerary/images', () => {
       })
       .expect(200);
 
-    expect(res.body.provider).toBe('google');
+    expect(res.body.provider).toBe('unsplash');
     expect(res.body.url).toBeTruthy();
   });
 });
