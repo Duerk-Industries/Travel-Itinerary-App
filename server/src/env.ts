@@ -33,6 +33,21 @@ export const getEnvValue = (key: string, options: EnvOptions = {}): string | und
   return undefined;
 };
 
+type EnvFlagOptions = {
+  defaultValue?: boolean;
+};
+
+export const getEnvFlag = (key: string, options: EnvFlagOptions = {}): boolean => {
+  const raw = getEnvValue(key);
+  if (!raw) {
+    return options.defaultValue ?? false;
+  }
+  const normalized = raw.trim().toLowerCase();
+  if (['1', 'true', 'yes', 'on'].includes(normalized)) return true;
+  if (['0', 'false', 'no', 'off'].includes(normalized)) return false;
+  return options.defaultValue ?? false;
+};
+
 export const hasRunLocalFlag = (filePath: string): boolean => {
   if (!fs.existsSync(filePath)) {
     return false;

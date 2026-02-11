@@ -1,9 +1,10 @@
 import axios from 'axios';
-import { getEnvValue } from './env';
+import { getEnvFlag, getEnvValue } from './env';
 import { getPlaceDetailsCache, upsertPlaceDetailsCache } from './db';
 
 const PLACES_API_URL = 'https://places.googleapis.com/v1/places:searchText';
 const PLACE_DETAILS_URL = 'https://places.googleapis.com/v1/places';
+const GOOGLE_PLACES_API_CALLS_DISABLED = getEnvFlag('DISABLE_GOOGLE_PLACES_API', { defaultValue: false });
 const readTimeoutMinutes = (key: string, fallbackMinutes: number): number => {
   const raw = Number(getEnvValue(key));
   if (Number.isFinite(raw) && raw > 0) {
@@ -84,6 +85,9 @@ const normalizeFields = (fields?: string[]): string[] => {
 };
 
 export const findPlacePhoto = async (query: string): Promise<string | null> => {
+  if (GOOGLE_PLACES_API_CALLS_DISABLED) {
+    return null;
+  }
   const apiKey = getEnvValue('GOOGLE_PLACES_API_KEY');
   if (!apiKey) {
     return null;
@@ -129,6 +133,9 @@ export const searchPlaceCandidates = async (
   query: string,
   options?: { locationBias?: { latitude: number; longitude: number; radiusMeters: number } }
 ): Promise<PlaceCandidate[]> => {
+  if (GOOGLE_PLACES_API_CALLS_DISABLED) {
+    return [];
+  }
   const apiKey = getEnvValue('GOOGLE_PLACES_API_KEY');
   if (!apiKey) {
     return [];
@@ -200,6 +207,10 @@ export const getPlaceDetails = async (
     }
   } catch {
     // ignore cache errors
+  }
+
+  if (GOOGLE_PLACES_API_CALLS_DISABLED) {
+    return null;
   }
 
   const apiKey = getEnvValue('GOOGLE_PLACES_API_KEY');

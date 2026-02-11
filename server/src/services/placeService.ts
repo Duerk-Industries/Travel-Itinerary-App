@@ -1,9 +1,13 @@
 import axios from 'axios';
-import { getEnvValue } from '../env';
+import { getEnvFlag, getEnvValue } from '../env';
 
 const GOOGLE_PLACES_API_URL = 'https://maps.googleapis.com/maps/api/place';
+const GOOGLE_PLACES_API_CALLS_DISABLED = getEnvFlag('DISABLE_GOOGLE_PLACES_API', { defaultValue: false });
 
 export const autocompletePlaces = async (input: string): Promise<any[]> => {
+  if (GOOGLE_PLACES_API_CALLS_DISABLED) {
+    return [];
+  }
   const apiKey = getEnvValue('GOOGLE_PLACES_API_KEY');
   if (!apiKey) {
     console.warn('Google Places API key not configured');
@@ -32,6 +36,9 @@ export const autocompletePlaces = async (input: string): Promise<any[]> => {
 };
 
 export const getPlaceDetailsFromGoogle = async (placeId: string): Promise<any | null> => {
+  if (GOOGLE_PLACES_API_CALLS_DISABLED) {
+    return null;
+  }
   const apiKey = getEnvValue('GOOGLE_PLACES_API_KEY');
   if (!apiKey) {
     console.warn('Google Places API key not configured');
