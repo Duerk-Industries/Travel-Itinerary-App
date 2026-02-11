@@ -16,5 +16,11 @@
         "lastName":"Bobson",
         "email":"jobs.duerk@gmail.com",
         "password":"testtest"
+    },
+    {
+        "firstName": "Tristan",
+        "lastName":"Duerk",
+        "email":"tristan.duerk@gmail.com",
+        "password":"testtest"
     }
 ]
