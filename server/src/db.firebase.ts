@@ -1087,14 +1087,24 @@ export const listGroupInvitesForUser = async (userId: string, email: string) => 
   const fallbackTripMap = new Map<string, { id: string; name: string } | null>();
   await Promise.all(
     groupIds.map(async (groupId) => {
-      const snap = await db.collection('trips').where('groupId', '==', groupId).orderBy('createdAt', 'desc').limit(1).get();
+      // Avoid requiring a composite Firestore index on (groupId, createdAt).
+      const snap = await db.collection('trips').where('groupId', '==', groupId).get();
       if (snap.empty) {
         fallbackTripMap.set(groupId, null);
         return;
       }
-      const tripDoc = snap.docs[0];
-      const data = tripDoc.data() as any;
-      fallbackTripMap.set(groupId, { id: tripDoc.id, name: data?.name ?? '' });
+      const latestTrip = snap.docs
+        .map((doc) => {
+          const data = doc.data() as any;
+          const createdAt = data?.createdAt;
+          const createdAtMs =
+            createdAt && typeof createdAt.toMillis === 'function'
+              ? createdAt.toMillis()
+              : new Date(createdAt ?? 0).getTime();
+          return { id: doc.id, name: data?.name ?? '', createdAtMs };
+        })
+        .sort((a, b) => b.createdAtMs - a.createdAtMs)[0];
+      fallbackTripMap.set(groupId, latestTrip ? { id: latestTrip.id, name: latestTrip.name } : null);
     })
   );
   return inviteDocs.map((invite) => {
@@ -1243,8 +1253,21 @@ export const rejectGroupInvite = async (inviteId: string, userId: string, email?
 
   let tripId = invite.tripId ?? null;
   if (!tripId) {
-    const tripsSnap = await db.collection('trips').where('groupId', '==', groupId).orderBy('createdAt', 'desc').limit(1).get();
-    tripId = tripsSnap.empty ? null : tripsSnap.docs[0].id;
+    const tripsSnap = await db.collection('trips').where('groupId', '==', groupId).get();
+    if (!tripsSnap.empty) {
+      const latestTrip = tripsSnap.docs
+        .map((doc) => {
+          const data = doc.data() as any;
+          const createdAt = data?.createdAt;
+          const createdAtMs =
+            createdAt && typeof createdAt.toMillis === 'function'
+              ? createdAt.toMillis()
+              : new Date(createdAt ?? 0).getTime();
+          return { id: doc.id, createdAtMs };
+        })
+        .sort((a, b) => b.createdAtMs - a.createdAtMs)[0];
+      tripId = latestTrip?.id ?? null;
+    }
   }
 
   if (memberId && tripId) {
