@@ -1,10 +1,8 @@
 import { Router } from 'express';
 import { authenticate } from '../auth';
-import { getPlaceDetails } from '../googlePlaces';
-import { getLocationsByIds, searchLocations, upsertLocation } from '../db';
-import { autocompletePlaces, getPlaceDetailsFromGoogle } from '../services/placeService';
+import { getLocationsByIds, searchLocations } from '../db';
+import { autocompletePlaces } from '../services/placeService';
 import { getLocationOptionsByIds, searchCityOptions, searchCountryStateOptions } from '../services/locationServices';
-import { getEnvValue } from '../env';
 
 interface LocationResult {
   id: string;
@@ -90,32 +88,6 @@ router.post('/batch', async (req, res) => {
   const missingIds = ids.filter((id) => !foundIds.has(id));
 
   if (missingIds.length > 0) {
-    const googlePlaceIdRegex = /^ChI[a-zA-Z0-9_-]+$/;
-    const googleCandidates =
-      process.env.NODE_ENV === 'test'
-        ? missingIds
-        : missingIds.filter((id) => googlePlaceIdRegex.test(id) && !id.startsWith('manual-'));
-    for (const id of googleCandidates) {
-      const details = await getPlaceDetailsFromGoogle(id);
-      if (details) {
-        const apiKey = getEnvValue('GOOGLE_PLACES_API_KEY');
-        const locationData = {
-          place_id: details.place_id,
-          name: details.name,
-          address: details.formatted_address,
-          lat: details.geometry?.location?.lat,
-          lng: details.geometry?.location?.lng,
-          types: details.types,
-          image_url: details.photos?.[0]?.photo_reference ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${details.photos[0].photo_reference}&key=${apiKey}` : null
-        };
-        try {
-          const saved = await upsertLocation(locationData);
-          if (saved) results.push(saved as unknown as LocationResult);
-        } catch (err) {
-          console.error(`Failed to cache location ${id}`, err);
-        }
-      }
-    }
     const localIds = missingIds.filter((id) => id.startsWith('country:') || id.startsWith('state:') || id.startsWith('city:'));
     if (localIds.length) {
       try {
@@ -143,14 +115,7 @@ router.get('/:placeId', async (req, res) => {
     return;
   }
 
-  const rawFieldMask = String(req.query.fieldMask || '').trim();
-  const fieldMask = rawFieldMask ? rawFieldMask.split(',').map((field) => field.trim()).filter(Boolean) : undefined;
-  const details = await getPlaceDetails(placeId, fieldMask);
-  if (!details) {
-    res.status(404).json({ error: 'Place details not found' });
-    return;
-  }
-  res.json(details);
+  res.status(404).json({ error: 'Place details endpoint is temporarily unavailable' });
 });
 
 export default router;
