@@ -147,6 +147,7 @@ app.use(express.static(publicDir));
 
 import passport from 'passport';
 import { initPassport, createToken, createOAuthState, decodeOAuthState } from './auth';
+import { ensureDefaultGroupForUser, ensureWebPasswordAccountForOAuth } from './db';
 import { appendTokenToRedirect, isRedirectUriAllowed, resolveAndValidateRedirectUri } from './redirects';
 import { logError } from './logger';
 
@@ -175,8 +176,15 @@ app.get(
     next();
   },
   passport.authenticate('google', { failureRedirect: '/login', session: false }),
-  (req, res) => {
+  async (req, res) => {
     const user = req.user as any;
+    await ensureDefaultGroupForUser(user.id, user.email);
+    const { requiresPasswordSetup } = await ensureWebPasswordAccountForOAuth(
+      user.id,
+      user.email,
+      user.firstName,
+      user.lastName
+    );
     const token = createToken({ userId: user.id, email: user.email, provider: user.provider });
     const state = typeof req.query.state === 'string' ? decodeOAuthState(req.query.state) : null;
     let redirectUri = state?.redirectUri;
@@ -184,10 +192,15 @@ app.get(
       redirectUri = undefined;
     }
     if (redirectUri) {
-      res.redirect(appendTokenToRedirect(redirectUri, token));
+      const next = new URL(appendTokenToRedirect(redirectUri, token));
+      if (requiresPasswordSetup) {
+        next.searchParams.set('require_password_setup', '1');
+      }
+      res.redirect(next.toString());
       return;
     }
-    res.redirect(`/login?token=${token}`);
+    const suffix = requiresPasswordSetup ? `&require_password_setup=1` : '';
+    res.redirect(`/login?token=${encodeURIComponent(token)}${suffix}`);
   }
 );
 

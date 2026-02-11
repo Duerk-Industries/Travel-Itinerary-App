@@ -129,6 +129,7 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS age INTEGER;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS gender TEXT;`);
+  await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS password_setup_required BOOLEAN NOT NULL DEFAULT FALSE;`);
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS email_verifications (
@@ -580,37 +581,75 @@ export const createWebUser = async (
 ): Promise<WebUser> => {
   const p = getPool();
 
-
-  const existing = await p.query(`SELECT 1 FROM web_users WHERE email = $1`, [email]);
-  if (existing.rowCount) {
-    const err = new Error('User already exists');
-    (err as any).code = 'USER_EXISTS';
-    throw err;
+  const existingUser = await p.query<{ id: string; emailVerified: boolean }>(
+    `SELECT id, COALESCE(email_verified, TRUE) as "emailVerified" FROM users WHERE email = $1 LIMIT 1`,
+    [email]
+  );
+  if (existingUser.rows.length) {
+    const user = existingUser.rows[0];
+    const existingWebUser = await p.query(`SELECT 1 FROM web_users WHERE id = $1`, [user.id]);
+    if (existingWebUser.rowCount) {
+      const err = new Error('User already exists');
+      (err as any).code = 'USER_EXISTS';
+      throw err;
+    }
+    const salt = randomBytes(16).toString('hex');
+    const passwordHash = hashPassword(password, salt);
+    await p.query(
+      `INSERT INTO web_users (id, email, first_name, last_name, password_hash, salt, password_setup_required)
+       VALUES ($1, $2, $3, $4, $5, $6, FALSE)`,
+      [user.id, email, firstName, lastName, passwordHash, salt]
+    );
+    await p.query(
+      `UPDATE users
+       SET first_name = COALESCE($1, first_name),
+           last_name = COALESCE($2, last_name),
+           email_verified = COALESCE(email_verified, TRUE),
+           email_verified_at = CASE WHEN COALESCE(email_verified, TRUE) THEN COALESCE(email_verified_at, NOW()) ELSE email_verified_at END
+       WHERE id = $3`,
+      [firstName, lastName, user.id]
+    );
+    return { id: user.id, email, firstName, lastName, emailVerified: user.emailVerified };
   }
-
 
   const id = randomUUID();
-  try {
-    // create auth user row for flights ownership
-    await p.query(`INSERT INTO users (id, email, provider, email_verified) VALUES ($1, $2, 'email', false)`, [id, email]);
-  } catch (err: any) {
-    if (err?.code === '23505') {
-      const dup = new Error('User already exists');
-      (dup as any).code = 'USER_EXISTS';
-      throw dup;
-    }
-    throw err;
-  }
+  await p.query(`INSERT INTO users (id, email, provider, email_verified) VALUES ($1, $2, 'email', false)`, [id, email]);
 
   const salt = randomBytes(16).toString('hex');
   const passwordHash = hashPassword(password, salt);
   await p.query(
-    `INSERT INTO web_users (id, email, first_name, last_name, password_hash, salt) VALUES ($1, $2, $3, $4, $5, $6)`,
+    `INSERT INTO web_users (id, email, first_name, last_name, password_hash, salt, password_setup_required)
+     VALUES ($1, $2, $3, $4, $5, $6, FALSE)`,
     [id, email, firstName, lastName, passwordHash, salt]
   );
 
+  return { id, email, firstName, lastName, emailVerified: false };
+};
 
-  return { id, email, firstName, lastName };
+export const ensureWebPasswordAccountForOAuth = async (
+  userId: string,
+  email: string,
+  firstName?: string,
+  lastName?: string
+): Promise<{ requiresPasswordSetup: boolean }> => {
+  const p = getPool();
+  const existing = await p.query<{ passwordSetupRequired: boolean }>(
+    `SELECT password_setup_required as "passwordSetupRequired" FROM web_users WHERE id = $1 LIMIT 1`,
+    [userId]
+  );
+  if (existing.rows.length) {
+    return { requiresPasswordSetup: Boolean(existing.rows[0].passwordSetupRequired) };
+  }
+
+  const salt = randomBytes(16).toString('hex');
+  const randomSecret = randomBytes(32).toString('hex');
+  const passwordHash = hashPassword(randomSecret, salt);
+  await p.query(
+    `INSERT INTO web_users (id, email, first_name, last_name, password_hash, salt, password_setup_required)
+     VALUES ($1, $2, COALESCE($3, ''), COALESCE($4, ''), $5, $6, TRUE)`,
+    [userId, email, firstName ?? '', lastName ?? '', passwordHash, salt]
+  );
+  return { requiresPasswordSetup: true };
 };
 
 
@@ -865,7 +904,40 @@ export const updateWebUserPassword = async (
 
   const newSalt = randomBytes(16).toString('hex');
   const newHash = hashPassword(newPassword, newSalt);
-  await p.query(`UPDATE web_users SET password_hash = $1, salt = $2 WHERE id = $3`, [newHash, newSalt, userId]);
+  await p.query(`UPDATE web_users SET password_hash = $1, salt = $2, password_setup_required = FALSE WHERE id = $3`, [newHash, newSalt, userId]);
+};
+
+export const setInitialWebUserPassword = async (userId: string, newPassword: string): Promise<void> => {
+  const p = getPool();
+  const { rows } = await p.query<{ passwordSetupRequired: boolean }>(
+    `SELECT password_setup_required as "passwordSetupRequired" FROM web_users WHERE id = $1 LIMIT 1`,
+    [userId]
+  );
+  if (!rows.length) {
+    throw new Error('User not found');
+  }
+  if (!rows[0].passwordSetupRequired) {
+    const err = new Error('Initial password setup is not required');
+    (err as any).code = 'PASSWORD_SETUP_NOT_REQUIRED';
+    throw err;
+  }
+  const salt = randomBytes(16).toString('hex');
+  const passwordHash = hashPassword(newPassword, salt);
+  await p.query(
+    `UPDATE web_users
+     SET password_hash = $1, salt = $2, password_setup_required = FALSE
+     WHERE id = $3`,
+    [passwordHash, salt, userId]
+  );
+};
+
+export const isPasswordSetupRequired = async (userId: string): Promise<boolean> => {
+  const p = getPool();
+  const { rows } = await p.query<{ passwordSetupRequired: boolean }>(
+    `SELECT password_setup_required as "passwordSetupRequired" FROM web_users WHERE id = $1 LIMIT 1`,
+    [userId]
+  );
+  return Boolean(rows[0]?.passwordSetupRequired);
 };
 
 export const deleteWebUserAndCleanup = async (userId: string): Promise<void> => {
@@ -4675,7 +4747,7 @@ export const findOrCreateGoogleUser = async (profile: any): Promise<User> => {
     const p = getPool();
     const { id, displayName, emails, photos, name } = profile;
 
-    const email = emails?.[0]?.value;
+    const email = String(emails?.[0]?.value ?? '').trim().toLowerCase();
     if (!email) {
         throw new Error('Google profile did not return an email');
     }

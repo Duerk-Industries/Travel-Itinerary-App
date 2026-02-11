@@ -194,10 +194,19 @@ export const createWebUser = async (
       lastName,
       passwordHash,
       salt,
+      passwordSetupRequired: false,
       createdAt: nowIso(),
     });
     await db.collection('users').doc(existingUser.id).update({ firstName, lastName });
-    return { id: existingUser.id, email: normalizedEmail, firstName, lastName };
+    const userDoc = await db.collection('users').doc(existingUser.id).get();
+    const userData = userDoc.exists ? (userDoc.data() as any) : {};
+    return {
+      id: existingUser.id,
+      email: normalizedEmail,
+      firstName,
+      lastName,
+      emailVerified: Boolean(userData.emailVerified),
+    };
   }
   const id = randomUUID();
   const salt = randomBytes(16).toString('hex');
@@ -216,9 +225,38 @@ export const createWebUser = async (
     lastName,
     passwordHash,
     salt,
+    passwordSetupRequired: false,
     createdAt: nowIso(),
   });
-  return { id, email: normalizedEmail, firstName, lastName };
+  return { id, email: normalizedEmail, firstName, lastName, emailVerified: false };
+};
+
+export const ensureWebPasswordAccountForOAuth = async (
+  userId: string,
+  email: string,
+  firstName?: string,
+  lastName?: string
+): Promise<{ requiresPasswordSetup: boolean }> => {
+  const db = getDb();
+  const doc = await db.collection('web_users').doc(userId).get();
+  if (doc.exists) {
+    const data = doc.data() as any;
+    return { requiresPasswordSetup: Boolean(data.passwordSetupRequired) };
+  }
+
+  const salt = randomBytes(16).toString('hex');
+  const randomSecret = randomBytes(32).toString('hex');
+  const passwordHash = hashPassword(randomSecret, salt);
+  await db.collection('web_users').doc(userId).set({
+    email: normalizeEmail(email),
+    firstName: firstName ?? '',
+    lastName: lastName ?? '',
+    passwordHash,
+    salt,
+    passwordSetupRequired: true,
+    createdAt: nowIso(),
+  });
+  return { requiresPasswordSetup: true };
 };
 
 export const verifyWebUserCredentials = async (
@@ -373,7 +411,30 @@ export const updateWebUserPassword = async (userId: string, oldPassword: string,
   }
   const salt = randomBytes(16).toString('hex');
   const passwordHash = hashPassword(newPassword, salt);
-  await db.collection('web_users').doc(userId).update({ salt, passwordHash });
+  await db.collection('web_users').doc(userId).update({ salt, passwordHash, passwordSetupRequired: false });
+};
+
+export const setInitialWebUserPassword = async (userId: string, newPassword: string): Promise<void> => {
+  const db = getDb();
+  const doc = await db.collection('web_users').doc(userId).get();
+  if (!doc.exists) throw new Error('User not found');
+  const data = doc.data() as any;
+  if (!data.passwordSetupRequired) {
+    const err: any = new Error('Initial password setup is not required');
+    err.code = 'PASSWORD_SETUP_NOT_REQUIRED';
+    throw err;
+  }
+  const salt = randomBytes(16).toString('hex');
+  const passwordHash = hashPassword(newPassword, salt);
+  await db.collection('web_users').doc(userId).update({ salt, passwordHash, passwordSetupRequired: false });
+};
+
+export const isPasswordSetupRequired = async (userId: string): Promise<boolean> => {
+  const db = getDb();
+  const doc = await db.collection('web_users').doc(userId).get();
+  if (!doc.exists) return false;
+  const data = doc.data() as any;
+  return Boolean(data.passwordSetupRequired);
 };
 
 export const deleteWebUserAndCleanup = async (userId: string): Promise<void> => {
@@ -985,12 +1046,26 @@ export const createTripWithGroupAndMembers = async (payload: {
   return { trip, groupId: group.groupId, invites: group.invites };
 };
 
-export const listGroupInvitesForUser = async (_userId: string, email: string) => {
+export const listGroupInvitesForUser = async (userId: string, email: string) => {
   const db = getDb();
   const normalized = normalizeEmail(email);
-  const invitesSnap = await db.collection('group_invites').where('inviteeEmail', '==', normalized).where('status', '==', 'pending').get();
-  if (invitesSnap.empty) return [];
-  const inviteDocs = invitesSnap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+  // Keep these as single-field queries and filter status in memory to avoid
+  // requiring composite indexes in production Firestore.
+  const [byEmailSnap, byUserSnap] = await Promise.all([
+    db.collection('group_invites').where('inviteeEmail', '==', normalized).get(),
+    db.collection('group_invites').where('inviteeUserId', '==', userId).get(),
+  ]);
+  const inviteDocsMap = new Map<string, any>();
+  byEmailSnap.docs.forEach((d) => {
+    const data = d.data() as any;
+    if (data.status === 'pending') inviteDocsMap.set(d.id, { id: d.id, ...data });
+  });
+  byUserSnap.docs.forEach((d) => {
+    const data = d.data() as any;
+    if (data.status === 'pending') inviteDocsMap.set(d.id, { id: d.id, ...data });
+  });
+  const inviteDocs = Array.from(inviteDocsMap.values());
+  if (!inviteDocs.length) return [];
   const groupIds = Array.from(new Set(inviteDocs.map((d) => d.groupId).filter(Boolean)));
   const inviterIds = Array.from(new Set(inviteDocs.map((d) => d.inviterId).filter(Boolean)));
   const groupMap = new Map<string, any>();
@@ -1109,7 +1184,9 @@ export const acceptGroupInvite = async (inviteId: string, userId: string, email?
   const invite = await db.collection('group_invites').doc(inviteId).get();
   if (!invite.exists) throw new Error('Invite not found');
   const data = invite.data() as any;
-  if (data.inviteeEmail && email && normalizeEmail(data.inviteeEmail) !== normalizeEmail(email)) {
+  const inviteEmailMatches = Boolean(data.inviteeEmail && email && normalizeEmail(data.inviteeEmail) === normalizeEmail(email));
+  const inviteUserMatches = Boolean(data.inviteeUserId && data.inviteeUserId === userId);
+  if (!inviteEmailMatches && !inviteUserMatches) {
     throw new Error('Invite not found');
   }
   const memberSnap = await db
@@ -1143,7 +1220,9 @@ export const rejectGroupInvite = async (inviteId: string, userId: string, email?
   const inviteDoc = await db.collection('group_invites').doc(inviteId).get();
   if (!inviteDoc.exists) throw new Error('Invite not found');
   const invite = inviteDoc.data() as any;
-  if (invite.inviteeEmail && email && normalizeEmail(invite.inviteeEmail) !== normalizeEmail(email)) {
+  const inviteEmailMatches = Boolean(invite.inviteeEmail && email && normalizeEmail(invite.inviteeEmail) === normalizeEmail(email));
+  const inviteUserMatches = Boolean(invite.inviteeUserId && invite.inviteeUserId === userId);
+  if (!inviteEmailMatches && !inviteUserMatches) {
     throw new Error('Invite not found');
   }
   const groupId = invite.groupId;

@@ -33,6 +33,9 @@ export const getUserById = async (...args: Parameters<ReturnType<typeof adapter>
   adapter().getUserById(...args);
 export const createWebUser = async (...args: Parameters<ReturnType<typeof adapter>['createWebUser']>) =>
   adapter().createWebUser(...args);
+export const ensureWebPasswordAccountForOAuth = async (
+  ...args: Parameters<ReturnType<typeof adapter>['ensureWebPasswordAccountForOAuth']>
+) => adapter().ensureWebPasswordAccountForOAuth(...args);
 export const verifyWebUserCredentials = async (...args: Parameters<ReturnType<typeof adapter>['verifyWebUserCredentials']>) =>
   adapter().verifyWebUserCredentials(...args);
 export const recordWebUserLogin = async (...args: Parameters<ReturnType<typeof adapter>['recordWebUserLogin']>) =>
@@ -55,6 +58,10 @@ export const updateWebUserProfile = async (...args: Parameters<ReturnType<typeof
   adapter().updateWebUserProfile(...args);
 export const updateWebUserPassword = async (...args: Parameters<ReturnType<typeof adapter>['updateWebUserPassword']>) =>
   adapter().updateWebUserPassword(...args);
+export const setInitialWebUserPassword = async (...args: Parameters<ReturnType<typeof adapter>['setInitialWebUserPassword']>) =>
+  adapter().setInitialWebUserPassword(...args);
+export const isPasswordSetupRequired = async (...args: Parameters<ReturnType<typeof adapter>['isPasswordSetupRequired']>) =>
+  adapter().isPasswordSetupRequired(...args);
 export const deleteWebUserAndCleanup = async (...args: Parameters<ReturnType<typeof adapter>['deleteWebUserAndCleanup']>) =>
   adapter().deleteWebUserAndCleanup(...args);
 export const insertFlight = async (...args: Parameters<ReturnType<typeof adapter>['insertFlight']>) =>

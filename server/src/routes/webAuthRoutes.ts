@@ -46,6 +46,13 @@ router.post('/register', async (req, res) => {
 
   try {
     const user = await createWebUser(firstName.trim(), lastName.trim(), email.trim().toLowerCase(), password.trim());
+    if (user.emailVerified) {
+      await ensureDefaultGroupForUser(user.id, user.email);
+      const { firstLogin } = await recordWebUserLogin(user.id);
+      const token = createToken({ userId: user.id, email: user.email, provider: 'email' });
+      res.status(201).json({ message: 'Account created', token, user, firstLogin });
+      return;
+    }
     const verification = await createEmailVerification(user.id);
     await sendVerificationEmailBestEffort(user.email, verification.token);
     res.status(201).json({ message: 'Verification required. Check your email to confirm your account.', verificationRequired: true });

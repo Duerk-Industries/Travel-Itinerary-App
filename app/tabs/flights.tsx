@@ -1067,27 +1067,13 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   }, [defaultPayerId, editingFlight]);
 
   useEffect(() => {
-    const loadAirports = async () => {
-      try {
-        const res = await fetch('https://raw.githubusercontent.com/algolia/datasets/master/airports/airports.json');
-        const data = await res.json();
-        setAirports(
-          (data as any[])
-            .filter((a) => a.iata_code && a.iata_code.length === 3)
-            .map((a) => ({
-              name: a.name,
-              city: a.city,
-              country: a.country,
-              iata_code: a.iata_code,
-            }))
-        );
-      } catch {
-        setAirports(fallbackAirports);
-      }
-    };
-    loadAirports();
+    if (airportOptions.length) {
+      setAirports(airportOptions.map(parseAirportLabel));
+    } else {
+      setAirports(fallbackAirports);
+    }
     measureContainerOffset();
-  }, []);
+  }, [airportOptions]);
 
   useEffect(() => {
     if (!locationTarget || !locationSearch.trim()) return;

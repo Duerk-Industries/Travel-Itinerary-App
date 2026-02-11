@@ -233,22 +233,23 @@ const extractTokenFromUrl = (rawUrl: string) => {
   try {
     const url = new URL(rawUrl);
     const token = url.searchParams.get('token');
+    const requirePasswordSetup = url.searchParams.get('require_password_setup') === '1';
     const isConfirm = url.pathname.endsWith('/confirm');
     if (token) {
-      return { token, url, source: 'query' as const, isConfirm };
+      return { token, url, source: 'query' as const, isConfirm, requirePasswordSetup };
     }
     const hash = url.hash.startsWith('#') ? url.hash.slice(1) : url.hash;
     if (hash) {
       const hashParams = new URLSearchParams(hash);
       const hashToken = hashParams.get('token');
       if (hashToken) {
-        return { token: hashToken, url, source: 'hash' as const, isConfirm };
+        return { token: hashToken, url, source: 'hash' as const, isConfirm, requirePasswordSetup };
       }
     }
   } catch (e) {
     // ignore invalid URLs
   }
-  return { token: null, url: null, source: null, isConfirm: false } as const;
+  return { token: null, url: null, source: null, isConfirm: false, requirePasswordSetup: false } as const;
 };
 
 const App: React.FC = () => {
@@ -270,6 +271,9 @@ const App: React.FC = () => {
   const [deferFirstLoginRedirect, setDeferFirstLoginRedirect] = useState(false);
   const [showResendConfirmation, setShowResendConfirmation] = useState(false);
   const [resendConfirmationLoading, setResendConfirmationLoading] = useState(false);
+  const [requirePasswordSetup, setRequirePasswordSetup] = useState(false);
+  const [passwordSetupLoading, setPasswordSetupLoading] = useState(false);
+  const [passwordSetupForm, setPasswordSetupForm] = useState({ newPassword: '', newPasswordConfirm: '' });
   const [isFirstLogin, setIsFirstLogin] = useState(false);
   const [emailConfirmationMessage, setEmailConfirmationMessage] = useState<string | null>(null);
   const [followInviteCode, setFollowInviteCode] = useState('');
@@ -692,6 +696,9 @@ const App: React.FC = () => {
     setAccountProfile({ firstName: '', lastName: '', email: '' });
     setFamilyRelationships([]);
     setFellowTravelers([]);
+    setRequirePasswordSetup(false);
+    setPasswordSetupLoading(false);
+    setPasswordSetupForm({ newPassword: '', newPasswordConfirm: '' });
     setPageForwardHistory([]);
     setActivePage('home');
     setPageHistory([]);
@@ -764,9 +771,9 @@ const App: React.FC = () => {
     try {
       const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUrl);
       if (result.type === 'success' && result.url) {
-        const { token } = extractTokenFromUrl(result.url);
+        const { token, requirePasswordSetup } = extractTokenFromUrl(result.url);
         if (token) {
-          handleAuthSuccess(token);
+          handleAuthSuccess(token, undefined, { requirePasswordSetup });
         }
       }
     } catch (err) {
@@ -774,7 +781,8 @@ const App: React.FC = () => {
     }
   };
 
-  const handleAuthSuccess = useCallback((token: string, firstLoginOverride?: boolean) => {
+  const handleAuthSuccess = useCallback(
+    (token: string, firstLoginOverride?: boolean, options?: { requirePasswordSetup?: boolean }) => {
     let decoded: { firstName?: string; lastName?: string; email?: string; provider?: string } | null = null;
     try {
       const payload = token.split('.')[1];
@@ -804,6 +812,11 @@ const App: React.FC = () => {
     setActiveTripId(restoredTripId);
     const firstLogin = Boolean(firstLoginOverride);
     setIsFirstLogin(firstLogin);
+    const mustSetPassword = Boolean(options?.requirePasswordSetup);
+    setRequirePasswordSetup(mustSetPassword);
+    if (mustSetPassword) {
+      setPasswordSetupForm({ newPassword: '', newPasswordConfirm: '' });
+    }
     if (firstLogin) {
       setDeferFirstLoginRedirect(true);
       setActivePage('home');
@@ -813,17 +826,19 @@ const App: React.FC = () => {
     setPageForwardHistory([]);
     setPageHistory([]);
     saveSession(token, name, firstLogin ? 'home' : 'overview', decoded?.email, restoredTripId, []);
-  }, [activeTripId]);
+    },
+    [activeTripId]
+  );
 
   useEffect(() => {
     const handleDeepLink = (event: { url: string }) => {
-      const { token, isConfirm } = extractTokenFromUrl(event.url);
+      const { token, isConfirm, requirePasswordSetup } = extractTokenFromUrl(event.url);
       if (token && isConfirm) {
         confirmEmailToken(token, event.url);
         return;
       }
       if (token) {
-        handleAuthSuccess(token);
+        handleAuthSuccess(token, undefined, { requirePasswordSetup });
       }
     };
 
@@ -847,12 +862,13 @@ const App: React.FC = () => {
 
     const subscription = Linking.addEventListener('url', handleDeepLink);
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      const { token, url, isConfirm } = extractTokenFromUrl(window.location.href);
+      const { token, url, isConfirm, requirePasswordSetup } = extractTokenFromUrl(window.location.href);
       if (token && isConfirm) {
         confirmEmailToken(token, window.location.href);
       } else if (token) {
-        handleAuthSuccess(token);
+        handleAuthSuccess(token, undefined, { requirePasswordSetup });
         url.searchParams.delete('token');
+        url.searchParams.delete('require_password_setup');
         if (url.hash) {
           const hashParams = new URLSearchParams(url.hash.slice(1));
           hashParams.delete('token');
@@ -866,6 +882,41 @@ const App: React.FC = () => {
       subscription.remove();
     };
   }, [handleAuthSuccess]);
+
+  const completeInitialPasswordSetup = async () => {
+    if (!userToken) return;
+    if (passwordSetupForm.newPassword !== passwordSetupForm.newPasswordConfirm) {
+      alert('Passwords do not match');
+      return;
+    }
+    if (passwordSetupForm.newPassword.trim().length < 6) {
+      alert('New password must be at least 6 characters');
+      return;
+    }
+    try {
+      setPasswordSetupLoading(true);
+      const res = await fetch(`${backendUrl}/api/account/password`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
+        body: JSON.stringify({
+          newPassword: passwordSetupForm.newPassword,
+          newPasswordConfirm: passwordSetupForm.newPasswordConfirm,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data.error || 'Unable to set password');
+        return;
+      }
+      setRequirePasswordSetup(false);
+      setPasswordSetupForm({ newPassword: '', newPasswordConfirm: '' });
+      alert('Password set. You can now sign in with email/password too.');
+    } catch (err) {
+      alert((err as Error).message || 'Unable to set password');
+    } finally {
+      setPasswordSetupLoading(false);
+    }
+  };
 
   const loginWithPassword = async () => {
     try {
@@ -2587,6 +2638,39 @@ const App: React.FC = () => {
                       </TouchableOpacity>
                     </View>
                   )}
+      {userToken && requirePasswordSetup ? (
+        <View style={styles.wizardOverlay}>
+          <View style={[styles.wizardModal, styles.pendingInviteModal]}>
+            <View style={styles.card}>
+              <Text style={styles.sectionTitle}>Set Your Password</Text>
+              <Text style={styles.helperText}>
+                This is your first Google sign-in for this account. Set a password now to finish account setup.
+              </Text>
+              <TextInput
+                style={styles.input}
+                placeholder="New password"
+                secureTextEntry
+                value={passwordSetupForm.newPassword}
+                onChangeText={(text: string) => setPasswordSetupForm((p) => ({ ...p, newPassword: text }))}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Confirm new password"
+                secureTextEntry
+                value={passwordSetupForm.newPasswordConfirm}
+                onChangeText={(text: string) => setPasswordSetupForm((p) => ({ ...p, newPasswordConfirm: text }))}
+              />
+              <TouchableOpacity
+                style={[styles.button, passwordSetupLoading && styles.buttonDisabled]}
+                onPress={completeInitialPasswordSetup}
+                disabled={passwordSetupLoading}
+              >
+                <Text style={styles.buttonText}>{passwordSetupLoading ? 'Saving...' : 'Set Password'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      ) : null}
       {userToken && pendingInviteModalOpen ? (
         <View style={styles.wizardOverlay}>
           <View style={[styles.wizardModal, styles.pendingInviteModal]}>

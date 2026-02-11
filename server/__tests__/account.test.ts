@@ -121,6 +121,41 @@ describe('Password validation', () => {
 
     expect(resp.body).toEqual({ age: null, gender: null });
   });
+
+  it('restricts non-invite endpoints until password setup is completed', async () => {
+    const email = 'password-test+guard@example.com';
+    await pool.query('DELETE FROM users WHERE email = $1', [email]);
+
+    const { token, userId } = await registerAndLoginWebUser(pool, {
+      firstName: 'Guard',
+      lastName: 'User',
+      email,
+      password: 'testtest',
+    });
+
+    await pool.query(`UPDATE web_users SET password_setup_required = TRUE WHERE id = $1`, [userId]);
+
+    await request(app)
+      .get('/api/groups/invites')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    await request(app)
+      .get('/api/trips')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(403);
+
+    await request(app)
+      .patch('/api/account/password')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ newPassword: 'newpass1', newPasswordConfirm: 'newpass1' })
+      .expect(200);
+
+    await request(app)
+      .get('/api/trips')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+  });
 });
 
 describe('Family relationships', () => {
