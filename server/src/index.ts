@@ -3,6 +3,7 @@ import { app, envLoadedFrom } from './app';
 import { initDb, refreshAirportsDaily } from './db';
 import { getEnvValue } from './env';
 import { logError, logInfo } from './logger';
+import { doesApiLimitsConfigExist, getResolvedApiLimitsConfigPath } from './config/apiLimits';
 
 const defaultPort = Number(process.env.PORT) || 4000;
 
@@ -34,7 +35,10 @@ export const startServer = async (portOverride?: number): Promise<Server> => {
   const projectId = getEnvValue('GCLOUD_PROJECT_ID') || getEnvValue('GOOGLE_CLOUD_PROJECT');
   const resolvedStorageBucket = explicitBucket || (projectId ? `${projectId}.appspot.com` : undefined);
   const bucketSource = explicitBucket ? 'LOCATION_BUCKET/FIREBASE_STORAGE_BUCKET' : 'GCLOUD_PROJECT_ID/GOOGLE_CLOUD_PROJECT fallback';
+  const apiLimitsConfigPath = getResolvedApiLimitsConfigPath();
+  const apiLimitsConfigExists = doesApiLimitsConfigExist();
   logInfo(`[startup] resolved storage bucket: ${resolvedStorageBucket || '(not set)'} (source: ${bucketSource})`);
+  logInfo(`[startup] API limits config path: ${apiLimitsConfigPath} (exists: ${apiLimitsConfigExists})`);
   if (envLoadedFrom) {
     logInfo(`[startup] env loaded from: ${envLoadedFrom}`);
   }

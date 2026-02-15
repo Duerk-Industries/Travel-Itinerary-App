@@ -1,5 +1,11 @@
 import axios from 'axios';
 import { Storage } from '@google-cloud/storage';
+import { getEnvValue } from './env';
+import {
+  fetchUnsplashImageForGooglePlaceFallback,
+  fetchUnsplashImageForItinerary,
+  fetchUnsplashImageForLocation,
+} from './apis/unsplashCallers';
 
 const storage = new Storage();
 const bucketName = process.env.LOCATION_BUCKET || 'duerk-travel-itinerary-app-location-data';
@@ -49,6 +55,14 @@ export const computePlaceMatchLikelihood = (query: string, candidate: string): n
   const union = new Set([...queryTokens, ...candidateTokens]).size;
   if (!union) return 0;
   return Math.max(0, Math.min(1, intersection / union));
+};
+
+const getUnsplashAccessKeyOrThrow = (): string => {
+  const accessKey = getEnvValue('UNSPLASH_ACCESS_KEY');
+  if (!accessKey) {
+    throw new Error('Unsplash Access Key is not configured.');
+  }
+  return accessKey;
 };
 
 async function getCachedImageUrl(filepath: string): Promise<string | null> {
@@ -118,30 +132,24 @@ const fetchAndCache = async (cachePath: string, fetcher: () => Promise<string>):
 };
 
 const fetchUnsplashImageNoCache = async (locationName: string): Promise<string> => {
-  const accessKey = process.env.UNSPLASH_ACCESS_KEY;
-  if (!accessKey) {
-    throw new Error('Unsplash Access Key is not configured.');
-  }
-
-  const unsplashUrl = `https://api.unsplash.com/search/photos?query=${encodeURIComponent(locationName)}&per_page=1&orientation=landscape`;
-  const unsplashResponse = await axios.get(unsplashUrl, {
-    headers: {
-      Authorization: `Client-ID ${accessKey}`,
-    },
-  });
-
-  if (!unsplashResponse.data.results || unsplashResponse.data.results.length === 0) {
+  const accessKey = getUnsplashAccessKeyOrThrow();
+  const imageUrl = await fetchUnsplashImageForLocation(accessKey, locationName);
+  if (!imageUrl) {
     throw new Error('No photos found for the location on Unsplash.');
   }
-
-  return unsplashResponse.data.results[0].urls.regular;
+  return imageUrl;
 };
 
 // Kept for compatibility: Google Places is disabled, so this now falls back to Unsplash.
 export async function getGooglePlaceImage(locationName: string, placeId?: string): Promise<string> {
   void placeId;
   const fallbackQuery = String(locationName ?? '').trim() || 'travel destination';
-  return fetchUnsplashImageNoCache(fallbackQuery);
+  const accessKey = getUnsplashAccessKeyOrThrow();
+  const imageUrl = await fetchUnsplashImageForGooglePlaceFallback(accessKey, fallbackQuery);
+  if (!imageUrl) {
+    throw new Error('No photos found for the location on Unsplash.');
+  }
+  return imageUrl;
 }
 
 export async function getUnsplashImage(locationName: string): Promise<string> {
@@ -165,7 +173,14 @@ export async function getItineraryImage(params: {
   try {
     const unsplashPath = `unsplash/${cacheSuffix}.jpg`;
     const unsplashQuery = queryText || params.locationName;
-    const unsplash = await fetchAndCache(unsplashPath, () => fetchUnsplashImageNoCache(unsplashQuery));
+    const accessKey = getUnsplashAccessKeyOrThrow();
+    const unsplash = await fetchAndCache(unsplashPath, async () => {
+      const imageUrl = await fetchUnsplashImageForItinerary(accessKey, unsplashQuery);
+      if (!imageUrl) {
+        throw new Error('No photos found for itinerary image query.');
+      }
+      return imageUrl;
+    });
     return { url: unsplash.url, cached: unsplash.cached, provider: 'unsplash', fallbackUsed: false };
   } catch {
     return { url: '', cached: false, provider: 'placeholder', fallbackUsed: true };

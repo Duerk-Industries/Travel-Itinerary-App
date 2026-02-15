@@ -18,6 +18,7 @@ import {
 } from './types';
 import { logError } from './logger';
 import { getEnvValue } from './env';
+import { downloadAirportDatasetForDailyRefresh } from './apis/airportDatasetCallers';
 
 
 type PoolCtor = typeof Pool;
@@ -3931,11 +3932,9 @@ export const deleteTrait = async (userId: string, traitId: string): Promise<void
 
 export const refreshAirportsDaily = async (): Promise<void> => {
   const p = getPool();
-  const url = 'https://raw.githubusercontent.com/algolia/datasets/master/airports/airports.json';
   let data: any[] = [];
   try {
-    const res = await fetch(url);
-    data = (await res.json()) as any[];
+    data = await downloadAirportDatasetForDailyRefresh();
   } catch (err) {
     logError('Failed to download airports dataset', err);
     return;

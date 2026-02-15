@@ -1,8 +1,8 @@
-import axios from 'axios';
 import type { AxiosResponse } from 'axios';
 import { lookup } from 'dns/promises';
 import { getEnvValue } from './env';
 import { logError, logInfo } from './logger';
+import { requestUnsplashHealthCheck } from './apis/unsplashCallers';
 
 type UnsplashHealthResult = {
   ok: boolean;
@@ -118,9 +118,9 @@ export const runUnsplashHealthCheck = async (context: string): Promise<UnsplashH
     }
     try {
       const startedAt = Date.now();
-      const response = await axios.get(url, {
-        headers: { Authorization: `Client-ID ${key}` },
-        timeout: timeoutMs,
+      const response = await requestUnsplashHealthCheck({
+        accessKey: key,
+        timeoutMs,
         validateStatus: () => true,
       });
       const elapsedMs = Date.now() - startedAt;

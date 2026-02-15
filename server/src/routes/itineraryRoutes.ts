@@ -1,22 +1,15 @@
 import { Router } from 'express';
 import bodyParser from 'body-parser';
 import { authenticate } from '../auth';
-import axios from 'axios';
 import { listTraitsForGroupTrip } from '../db';
 import { logError } from '../logger';
 import { getEnvValue } from '../env';
 import { getItineraryImage } from '../image-service';
+import { generateItineraryPlanViaOpenAi } from '../apis/openaiCallers';
+import { ApiLimitExceededError } from '../apis/usageLimiter';
 
 const PLACEHOLDER_IMAGE =
   'https://images.unsplash.com/photo-1502920917128-1aa500764b0e?auto=format&fit=crop&w=1200&q=80';
-
-type ChatCompletionResponse = {
-  choices?: Array<{
-    message?: {
-      content?: string;
-    };
-  }>;
-};
 
 // Itineraries API: manage itineraries, details, and sharing helpers.
 const router = Router();
@@ -164,27 +157,7 @@ router.post('/', async (req, res) => {
   ].join('\n');
 
   try {
-    const aiRes = await axios.post(
-      'https://api.openai.com/v1/chat/completions',
-      {
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: 'You write concise, actionable travel itineraries.' },
-          { role: 'user', content: prompt },
-        ],
-        temperature: 0.7,
-        max_tokens: 500,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
-
-    const data = aiRes.data as ChatCompletionResponse;
-    const content = data?.choices?.[0]?.message?.content;
+    const content = await generateItineraryPlanViaOpenAi({ apiKey, prompt });
     if (!content) {
       res.status(500).json({ error: 'No itinerary returned' });
       return;
@@ -192,6 +165,10 @@ router.post('/', async (req, res) => {
 
     res.json({ plan: content });
   } catch (err: any) {
+    if (err instanceof ApiLimitExceededError) {
+      res.status(429).json({ error: err.message });
+      return;
+    }
     const detail = err.response?.data || err.message || String(err);
     logError(`[itinerary] OpenAI API error`, detail);
     res.status(500).json({ error: 'Failed to generate itinerary', detail });

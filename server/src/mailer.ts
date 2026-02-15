@@ -1,6 +1,11 @@
 import nodemailer from 'nodemailer';
 import { getEnvValue } from './env';
 import { logError, logInfo } from './logger';
+import {
+  sendShareEmailViaSmtpApi,
+  sendTripInviteEmailViaSmtpApi,
+  sendVerificationEmailViaSmtpApi,
+} from './apis/smtpCallers';
 
 const isMailEnabled = (): boolean => {
   const raw = String(process.env.MAIL_ENABLED ?? '').trim().toLowerCase();
@@ -42,7 +47,7 @@ export const sendShareEmail = async (to: string, subject: string, body: string):
     throw new Error('Email is not configured; set SMTP_HOST, SMTP_PORT, and SMTP_FROM');
   }
 
-  await transporter.sendMail({
+  await sendShareEmailViaSmtpApi(transporter, {
     from,
     to,
     subject,
@@ -72,6 +77,14 @@ export const sendShareEmailBestEffort = async (
   body: string,
   options: { maxAttempts?: number; baseDelayMs?: number } = {}
 ): Promise<{ sent: boolean; attempts: number }> => {
+  return sendWithRetry(() => sendShareEmail(to, subject, body), to, options);
+};
+
+const sendWithRetry = async (
+  sender: () => Promise<void>,
+  to: string,
+  options: { maxAttempts?: number; baseDelayMs?: number } = {}
+): Promise<{ sent: boolean; attempts: number }> => {
   if (!isEmailConfigured()) {
     return { sent: false, attempts: 0 };
   }
@@ -81,7 +94,7 @@ export const sendShareEmailBestEffort = async (
   while (attempt < maxAttempts) {
     attempt += 1;
     try {
-      await sendShareEmail(to, subject, body);
+      await sender();
       if (attempt > 1) {
         logInfo(`[mailer] succeeded after ${attempt} attempts for ${to}`);
       }
@@ -99,6 +112,10 @@ export const sendShareEmailBestEffort = async (
 };
 
 export const sendVerificationEmail = async (to: string, token: string): Promise<void> => {
+  const { transporter, from } = buildTransporter();
+  if (!transporter) {
+    throw new Error('Email is not configured; set SMTP_HOST, SMTP_PORT, and SMTP_FROM');
+  }
   const link = `https://duerk.org/confirm?token=${encodeURIComponent(token)}`;
   const subject = 'Confirm your Shared Trip Planner account';
   const body = [
@@ -111,26 +128,23 @@ export const sendVerificationEmail = async (to: string, token: string): Promise<
     ``,
     `If you did not create this account, you can ignore this email.`,
   ].join('\n');
-  await sendShareEmail(to, subject, body);
+  await sendVerificationEmailViaSmtpApi(transporter, {
+    from,
+    to,
+    subject,
+    text: body,
+  });
 };
 
 export const sendVerificationEmailBestEffort = async (to: string, token: string): Promise<{ sent: boolean; attempts: number }> => {
-  const link = `https://duerk.org/confirm?token=${encodeURIComponent(token)}`;
-  const subject = 'Confirm your Shared Trip Planner account';
-  const body = [
-    `Hi,`,
-    ``,
-    `Please confirm your email address to activate your Shared Trip Planner account.`,
-    `This link expires in 24 hours.`,
-    ``,
-    link,
-    ``,
-    `If you did not create this account, you can ignore this email.`,
-  ].join('\n');
-  return sendShareEmailBestEffort(to, subject, body);
+  return sendWithRetry(() => sendVerificationEmail(to, token), to);
 };
 
 export const sendTripInviteEmail = async (to: string, tripName: string, inviterEmail?: string | null): Promise<void> => {
+  const { transporter, from } = buildTransporter();
+  if (!transporter) {
+    throw new Error('Email is not configured; set SMTP_HOST, SMTP_PORT, and SMTP_FROM');
+  }
   const link = `https://duerk.org`;
   const subject = inviterEmail
     ? `${inviterEmail} added you to a trip: ${tripName}`
@@ -143,7 +157,12 @@ export const sendTripInviteEmail = async (to: string, tripName: string, inviterE
     ``,
     link,
   ].join('\n');
-  await sendShareEmail(to, subject, body);
+  await sendTripInviteEmailViaSmtpApi(transporter, {
+    from,
+    to,
+    subject,
+    text: body,
+  });
 };
 
 export const sendTripInviteEmailBestEffort = async (
@@ -151,17 +170,5 @@ export const sendTripInviteEmailBestEffort = async (
   tripName: string,
   inviterEmail?: string | null
 ): Promise<{ sent: boolean; attempts: number }> => {
-  const link = `https://duerk.org`;
-  const subject = inviterEmail
-    ? `${inviterEmail} added you to a trip: ${tripName}`
-    : `You've been added to a trip: ${tripName}`;
-  const body = [
-    `Hi,`,
-    ``,
-    inviterEmail ? `${inviterEmail} added you to the trip "${tripName}".` : `You've been added to the trip "${tripName}".`,
-    `Log in to Shared Trip Planner to accept or decline the invite.`,
-    ``,
-    link,
-  ].join('\n');
-  return sendShareEmailBestEffort(to, subject, body);
+  return sendWithRetry(() => sendTripInviteEmail(to, tripName, inviterEmail), to);
 };
