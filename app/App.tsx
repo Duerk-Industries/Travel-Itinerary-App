@@ -1762,6 +1762,26 @@ const App: React.FC = () => {
     setActiveTripId(tripId);
     requestPageChange('itinerary');
   }, [requestPageChange]);
+  const handleUnfollowTrip = useCallback(
+    async (tripId: string) => {
+      const res = await fetch(`${backendUrl}/api/trips/${tripId}/follow`, {
+        method: 'DELETE',
+        headers,
+      });
+      if (res.status === 401 || res.status === 403) {
+        logout();
+        return;
+      }
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || 'Unable to unfollow trip');
+        return;
+      }
+      setFollowedTrips((prev) => prev.filter((trip) => trip.tripId !== tripId));
+      setSelectedFollowedTripId((prev) => (prev === tripId ? null : prev));
+    },
+    [backendUrl, headers, logout]
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -2579,6 +2599,7 @@ const App: React.FC = () => {
               onRequireLogin={logout}
               selectedTripId={selectedFollowedTripId}
               onSelectTrip={setSelectedFollowedTripId}
+              onUnfollowTrip={handleUnfollowTrip}
             />
           ) : null}
         </ScrollView>

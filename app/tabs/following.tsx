@@ -10,6 +10,7 @@ type FollowingTabProps = {
   onRequireLogin: () => void;
   selectedTripId: string | null;
   onSelectTrip: (tripId: string | null) => void;
+  onUnfollowTrip: (tripId: string) => Promise<void>;
 };
 
 type FollowedTripDetail = {
@@ -29,10 +30,12 @@ const FollowingTab: React.FC<FollowingTabProps> = ({
   onRequireLogin,
   selectedTripId,
   onSelectTrip,
+  onUnfollowTrip,
 }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
   const [detail, setDetail] = useState<FollowedTripDetail | null>(null);
+  const [unfollowingTripId, setUnfollowingTripId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!selectedTripId) {
@@ -135,6 +138,24 @@ const FollowingTab: React.FC<FollowingTabProps> = ({
                 {(trip.destination ? `${trip.destination}  · ` : '') +
                   (trip.inviterName ? `Invited by ${trip.inviterName}` : 'Shared')}
               </Text>
+              <View style={[styles.row, { marginTop: 6 }]}>
+                <TouchableOpacity
+                  style={[styles.button, styles.smallButton, styles.dangerButton]}
+                  onPress={async () => {
+                    setUnfollowingTripId(trip.tripId);
+                    try {
+                      await onUnfollowTrip(trip.tripId);
+                    } finally {
+                      setUnfollowingTripId(null);
+                    }
+                  }}
+                  disabled={unfollowingTripId === trip.tripId}
+                >
+                  <Text style={styles.buttonText}>
+                    {unfollowingTripId === trip.tripId ? 'Unfollowing...' : 'Unfollow'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </TouchableOpacity>
           ))
         )}
