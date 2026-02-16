@@ -21,6 +21,7 @@ import { FlightsTab, type Flight, fetchFlightsForTrip } from './tabs/flights';
 import { type Tour, TourTab, fetchToursForTrip } from './tabs/tours';
 import { type Trait } from './tabs/traits';
 import { FollowTab, fetchFollowedTripsApi, loadFollowCodes, loadFollowPayloads, saveFollowCodes, saveFollowPayloads, type FollowedTrip } from './tabs/follow';
+import FollowingTab from './tabs/following';
 import ItinerariesTab from './tabs/itineraries';
 import HomeTab from './tabs/HomeTab';
 import DailyExpensesTab from './tabs/dailyExpenses';
@@ -171,7 +172,8 @@ type Page =
   | 'itinerary'
   | 'cost'
   | 'account'
-  | 'follow';
+  | 'follow'
+  | 'following';
 
 // Resolve backend URL; keep Expo web on localhost hitting the local API over HTTP to avoid HTTPS upgrades/CORS issues.
 const resolveBackendUrl = (): string => {
@@ -284,6 +286,7 @@ const App: React.FC = () => {
   const [followCodeLoading, setFollowCodeLoading] = useState<Record<string, boolean>>({});
   const [followCodeError, setFollowCodeError] = useState<string | null>(null);
   const [followCodePayloads, setFollowCodePayloads] = useState<Record<string, InvitePayload>>({});
+  const [selectedFollowedTripId, setSelectedFollowedTripId] = useState<string | null>(null);
   const [groupName, setGroupName] = useState('');
   const [groupUserEmails, setGroupUserEmails] = useState('');
   const [groupGuestNames, setGroupGuestNames] = useState('');
@@ -685,6 +688,7 @@ const App: React.FC = () => {
     setFollowInviteCode('');
     setFollowError('');
     setFollowCodes({});
+    setSelectedFollowedTripId(null);
     setGroups([]);
     setGroupMembers([]);
     setGroupAddEmail({});
@@ -1400,7 +1404,8 @@ const App: React.FC = () => {
           sessionPage === 'ledger' ||
           sessionPage === 'cost' ||
           sessionPage === 'account' ||
-          sessionPage === 'follow'
+          sessionPage === 'follow' ||
+          sessionPage === 'following'
         ) {
           setActivePage(sessionPage as Page);
         } else {
@@ -1428,6 +1433,13 @@ const App: React.FC = () => {
   useEffect(() => {
     saveFollowPayloads(followCodePayloads);
   }, [followCodePayloads]);
+
+  useEffect(() => {
+    if (!selectedFollowedTripId) return;
+    if (!followedTrips.some((trip) => trip.tripId === selectedFollowedTripId)) {
+      setSelectedFollowedTripId(null);
+    }
+  }, [followedTrips, selectedFollowedTripId]);
 
   useEffect(() => {
     if (!userToken) return;
@@ -1722,6 +1734,7 @@ const App: React.FC = () => {
       'create-trip',
       'account',
       'follow',
+      'following',
       'itinerary',
     ];
     return new Set(pages.filter((page) => shouldDisableTab(activePage, page)));
@@ -2550,6 +2563,22 @@ const App: React.FC = () => {
               setFollowCodePayloads={setFollowCodePayloads}
               styles={styles}
               logout={logout}
+              onOpenFollowedTrip={(tripId) => {
+                setSelectedFollowedTripId(tripId);
+                requestPageChange('following');
+              }}
+            />
+          ) : null}
+
+          {activePage === 'following' ? (
+            <FollowingTab
+              backendUrl={backendUrl}
+              headers={headers}
+              followedTrips={followedTrips}
+              styles={styles}
+              onRequireLogin={logout}
+              selectedTripId={selectedFollowedTripId}
+              onSelectTrip={setSelectedFollowedTripId}
             />
           ) : null}
         </ScrollView>

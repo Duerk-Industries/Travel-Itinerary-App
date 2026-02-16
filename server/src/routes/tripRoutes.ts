@@ -6,9 +6,15 @@ import {
   createTrip,
   createTripWithGroupAndMembers,
   deleteTrip,
+  ensureUserCanReadTrip,
+  followTripByCode,
+  getTripById,
   getTripCovering,
+  getTripFollowCode,
+  listFollowedTrips,
   listTrips,
   searchTripContacts,
+  unfollowTrip,
   updateTripCovering,
   updateTripDetails,
   updateTripGroup,
@@ -28,16 +34,50 @@ router.use(bodyParser.json());
 router.use(authenticate);
 
 // Following is not yet implemented server-side; return empty data instead of 404s for client calls.
-router.get('/followed', async (_req, res) => {
-  res.json([]);
+router.get('/followed', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const trips = await listFollowedTrips(userId);
+  res.json(trips);
 });
 
-router.post('/follow', async (_req, res) => {
-  res.status(501).json({ error: 'Trip following is not implemented server-side yet.' });
+router.post('/follow', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const inviteCode = String(req.body?.inviteCode ?? req.body?.code ?? '').trim();
+  if (!inviteCode) {
+    res.status(400).json({ error: 'inviteCode is required' });
+    return;
+  }
+  try {
+    const result = await followTripByCode(userId, inviteCode);
+    res.status(result.alreadyFollowing ? 200 : 201).json({
+      trip: result.trip,
+      inviterName: result.inviterName,
+      alreadyFollowing: result.alreadyFollowing,
+      todayDetails: [],
+    });
+  } catch (err) {
+    const message = (err as Error).message;
+    if (/invalid|expired/i.test(message)) {
+      res.status(404).json({ error: message });
+      return;
+    }
+    res.status(400).json({ error: message });
+  }
 });
 
-router.get('/:id/follow-code', async (_req, res) => {
-  res.status(501).json({ error: 'Trip follow codes are not implemented server-side yet.' });
+router.get('/:id/follow-code', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  try {
+    const code = await getTripFollowCode(userId, req.params.id);
+    res.json({ inviteCode: code.code, tripId: code.tripId, id: code.id, status: code.status });
+  } catch (err) {
+    const message = (err as Error).message;
+    if (/not authorized/i.test(message)) {
+      res.status(403).json({ error: message });
+      return;
+    }
+    res.status(400).json({ error: message });
+  }
 });
 
 router.get('/', async (req, res) => {
@@ -55,6 +95,21 @@ router.get('/participants/search', async (req, res) => {
   }
   const results = await searchTripContacts(userId, q);
   res.json(results);
+});
+
+router.get('/:id', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const access = await ensureUserCanReadTrip(req.params.id, userId);
+  if (!access) {
+    res.status(403).json({ error: 'Not authorized to view this trip' });
+    return;
+  }
+  const trip = await getTripById(req.params.id);
+  if (!trip) {
+    res.status(404).json({ error: 'Trip not found' });
+    return;
+  }
+  res.json({ ...trip, access: access.access });
 });
 
 router.get('/:id/covered-by', async (req, res) => {
@@ -84,7 +139,12 @@ router.put('/:id/covered-by', async (req, res) => {
     const updated = await updateTripCovering(userId, req.params.id, coveredBy);
     res.json(updated || {});
   } catch (err) {
-    res.status(400).json({ error: (err as Error).message });
+    const message = (err as Error).message;
+    if (/not authorized/i.test(message)) {
+      res.status(403).json({ error: message });
+      return;
+    }
+    res.status(400).json({ error: message });
   }
 });
 
@@ -196,8 +256,19 @@ router.delete('/:id', async (req, res) => {
     await deleteTrip(userId, req.params.id);
     res.status(204).send();
   } catch (err) {
-    res.status(400).json({ error: (err as Error).message });
+    const message = (err as Error).message;
+    if (/not authorized/i.test(message)) {
+      res.status(403).json({ error: message });
+      return;
+    }
+    res.status(400).json({ error: message });
   }
+});
+
+router.delete('/:id/follow', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  await unfollowTrip(userId, req.params.id);
+  res.status(204).send();
 });
 
 router.patch('/:id/group', async (req, res) => {
@@ -211,7 +282,12 @@ router.patch('/:id/group', async (req, res) => {
     const updated = await updateTripGroup(userId, req.params.id, groupId);
     res.json(updated);
   } catch (err) {
-    res.status(400).json({ error: (err as Error).message });
+    const message = (err as Error).message;
+    if (/not authorized/i.test(message)) {
+      res.status(403).json({ error: message });
+      return;
+    }
+    res.status(400).json({ error: message });
   }
 });
 
@@ -237,7 +313,12 @@ router.patch('/:id', async (req, res) => {
     });
     res.json(updated);
   } catch (err) {
-    res.status(400).json({ error: (err as Error).message });
+    const message = (err as Error).message;
+    if (/not authorized/i.test(message)) {
+      res.status(403).json({ error: message });
+      return;
+    }
+    res.status(400).json({ error: message });
   }
 });
 

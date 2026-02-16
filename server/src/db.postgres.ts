@@ -25,6 +25,17 @@ let PoolFactory: PoolCtor = Pool;
 let pool: Pool | null = null;
 
 const hashToken = (token: string): string => createHash('sha256').update(token).digest('hex');
+const FOLLOW_CODE_LENGTH = 6;
+const FOLLOW_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+const generateFollowCode = (): string => {
+  const bytes = randomBytes(FOLLOW_CODE_LENGTH);
+  let out = '';
+  for (let i = 0; i < FOLLOW_CODE_LENGTH; i += 1) {
+    out += FOLLOW_CODE_CHARS[bytes[i] % FOLLOW_CODE_CHARS.length];
+  }
+  return out;
+};
 
 export const setPoolFactory = (factory: PoolCtor): void => {
   PoolFactory = factory;
@@ -264,6 +275,45 @@ export const initDb = async (): Promise<void> => {
   await p.query(`UPDATE trips SET currency = 'USD' WHERE currency IS NULL;`);
   await p.query(`UPDATE trips SET covered_by = '{}'::jsonb WHERE covered_by IS NULL;`);
   await p.query(`UPDATE trips SET location_ids = '[]'::jsonb WHERE location_ids IS NULL;`);
+
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS follow_codes (
+      id UUID PRIMARY KEY,
+      trip_id UUID NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+      code TEXT NOT NULL UNIQUE,
+      status TEXT NOT NULL DEFAULT 'active',
+      expires_at TIMESTAMP,
+      max_uses INTEGER,
+      uses_count INTEGER NOT NULL DEFAULT 0,
+      created_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      created_at TIMESTAMP DEFAULT NOW(),
+      revoked_at TIMESTAMP
+    );
+  `);
+  await p.query(`ALTER TABLE follow_codes ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP;`);
+  await p.query(`ALTER TABLE follow_codes ADD COLUMN IF NOT EXISTS max_uses INTEGER;`);
+  await p.query(`ALTER TABLE follow_codes ADD COLUMN IF NOT EXISTS uses_count INTEGER NOT NULL DEFAULT 0;`);
+  await p.query(`ALTER TABLE follow_codes ADD COLUMN IF NOT EXISTS revoked_at TIMESTAMP;`);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_follow_codes_trip_id ON follow_codes(trip_id);`);
+  await p.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_follow_codes_code ON follow_codes(code);`);
+
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS trip_followers (
+      id UUID PRIMARY KEY,
+      trip_id UUID NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+      follower_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      role TEXT NOT NULL DEFAULT 'follower',
+      follow_code_id UUID REFERENCES follow_codes(id) ON DELETE SET NULL,
+      created_at TIMESTAMP DEFAULT NOW(),
+      last_viewed_at TIMESTAMP,
+      UNIQUE (trip_id, follower_user_id)
+    );
+  `);
+  await p.query(`ALTER TABLE trip_followers ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'follower';`);
+  await p.query(`ALTER TABLE trip_followers ADD COLUMN IF NOT EXISTS follow_code_id UUID REFERENCES follow_codes(id) ON DELETE SET NULL;`);
+  await p.query(`ALTER TABLE trip_followers ADD COLUMN IF NOT EXISTS last_viewed_at TIMESTAMP;`);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_trip_followers_trip_id ON trip_followers(trip_id);`);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_trip_followers_user_id ON trip_followers(follower_user_id);`);
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS locations (
@@ -1294,6 +1344,192 @@ export const ensureUserInTrip = async (tripId: string, userId: string): Promise<
   return rows[0] ?? null;
 };
 
+export const ensureUserCanReadTrip = async (
+  tripId: string,
+  userId: string
+): Promise<{ groupId: string; access: 'member' | 'follower' } | null> => {
+  const p = getPool();
+  const { rows } = await p.query<{ groupId: string; access: 'member' | 'follower' }>(
+    `SELECT t.group_id as "groupId", 'member'::text as "access"
+     FROM trips t
+     JOIN group_members gm ON gm.group_id = t.group_id AND gm.user_id = $2 AND gm.removed_at IS NULL
+     WHERE t.id = $1
+       AND NOT EXISTS (
+         SELECT 1 FROM trip_removals tr WHERE tr.trip_id = $1 AND tr.user_id = $2
+       )
+     UNION
+     SELECT t.group_id as "groupId", 'follower'::text as "access"
+     FROM trips t
+     JOIN trip_followers tf ON tf.trip_id = t.id AND tf.follower_user_id = $2
+     WHERE t.id = $1
+     LIMIT 1`,
+    [tripId, userId]
+  );
+  return rows[0] ?? null;
+};
+
+export const getTripFollowCode = async (
+  userId: string,
+  tripId: string
+): Promise<{ id: string; tripId: string; code: string; status: string; createdAt: string }> => {
+  const p = getPool();
+  const owner = await p.query(
+    `SELECT 1
+     FROM trips t
+     JOIN groups g ON g.id = t.group_id
+     WHERE t.id = $1 AND g.owner_id = $2
+     LIMIT 1`,
+    [tripId, userId]
+  );
+  if (!owner.rowCount) throw new Error('Not authorized to manage follow codes');
+
+  const existing = await p.query<{ id: string; tripId: string; code: string; status: string; createdAt: string }>(
+    `SELECT id,
+            trip_id as "tripId",
+            code,
+            status,
+            created_at as "createdAt"
+     FROM follow_codes
+     WHERE trip_id = $1
+       AND status = 'active'
+       AND revoked_at IS NULL
+       AND (expires_at IS NULL OR expires_at > NOW()::timestamp)
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [tripId]
+  );
+  if (existing.rowCount) return existing.rows[0];
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const code = generateFollowCode();
+    const id = randomUUID();
+    try {
+      const { rows } = await p.query<{ id: string; tripId: string; code: string; status: string; createdAt: string }>(
+        `INSERT INTO follow_codes (id, trip_id, code, status, created_by)
+         VALUES ($1, $2, $3, 'active', $4)
+         RETURNING id,
+                   trip_id as "tripId",
+                   code,
+                   status,
+                   created_at as "createdAt"`,
+        [id, tripId, code, userId]
+      );
+      return rows[0];
+    } catch (err: any) {
+      if (String(err?.code) !== '23505') throw err;
+    }
+  }
+
+  throw new Error('Unable to create follow code. Try again.');
+};
+
+export const followTripByCode = async (
+  userId: string,
+  inviteCode: string
+): Promise<{ trip: { id: string; name: string; destination?: string | null }; inviterName: string | null; alreadyFollowing: boolean }> => {
+  const p = getPool();
+  const code = String(inviteCode ?? '').trim().toUpperCase();
+  if (!code) throw new Error('inviteCode is required');
+
+  const codeRow = await p.query<{
+    id: string;
+    tripId: string;
+    maxUses: number | null;
+    usesCount: number;
+  }>(
+    `SELECT id,
+            trip_id as "tripId",
+            max_uses as "maxUses",
+            uses_count as "usesCount"
+     FROM follow_codes
+     WHERE code = $1
+       AND status = 'active'
+       AND revoked_at IS NULL
+       AND (expires_at IS NULL OR expires_at > NOW()::timestamp)
+     LIMIT 1`,
+    [code]
+  );
+  if (!codeRow.rowCount) throw new Error('Invalid or expired follow code');
+
+  const followCode = codeRow.rows[0];
+  const inserted = await p.query(
+    `INSERT INTO trip_followers (id, trip_id, follower_user_id, follow_code_id, role)
+     VALUES ($1, $2, $3, $4, 'follower')
+     ON CONFLICT (trip_id, follower_user_id) DO NOTHING`,
+    [randomUUID(), followCode.tripId, userId, followCode.id]
+  );
+  const alreadyFollowing = !inserted.rowCount;
+
+  if (!alreadyFollowing) {
+    await p.query(
+      `UPDATE follow_codes
+       SET uses_count = uses_count + 1
+       WHERE id = $1
+         AND (max_uses IS NULL OR uses_count < max_uses)`,
+      [followCode.id]
+    );
+  }
+
+  const tripRow = await p.query<{ id: string; name: string; destination: string | null; inviterName: string | null }>(
+    `SELECT t.id,
+            t.name,
+            t.destination,
+            CASE
+              WHEN COALESCE(wu.first_name, '') <> '' OR COALESCE(wu.last_name, '') <> ''
+                THEN CONCAT(COALESCE(wu.first_name, ''), CASE WHEN COALESCE(wu.last_name, '') <> '' THEN CONCAT(' ', wu.last_name) ELSE '' END)
+              ELSE u.email
+            END as "inviterName"
+     FROM trips t
+     JOIN groups g ON g.id = t.group_id
+     JOIN users u ON u.id = g.owner_id
+     LEFT JOIN web_users wu ON wu.id = g.owner_id
+     WHERE t.id = $1
+     LIMIT 1`,
+    [followCode.tripId]
+  );
+  if (!tripRow.rowCount) throw new Error('Trip not found');
+
+  return {
+    trip: {
+      id: tripRow.rows[0].id,
+      name: tripRow.rows[0].name,
+      destination: tripRow.rows[0].destination,
+    },
+    inviterName: tripRow.rows[0].inviterName,
+    alreadyFollowing,
+  };
+};
+
+export const listFollowedTrips = async (
+  userId: string
+): Promise<Array<{ tripId: string; tripName: string; destination?: string | null; inviterName?: string | null }>> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `SELECT t.id as "tripId",
+            t.name as "tripName",
+            t.destination,
+            CASE
+              WHEN COALESCE(wu.first_name, '') <> '' OR COALESCE(wu.last_name, '') <> ''
+                THEN CONCAT(COALESCE(wu.first_name, ''), CASE WHEN COALESCE(wu.last_name, '') <> '' THEN CONCAT(' ', wu.last_name) ELSE '' END)
+              ELSE u.email
+            END as "inviterName"
+     FROM trip_followers tf
+     JOIN trips t ON t.id = tf.trip_id
+     JOIN groups g ON g.id = t.group_id
+     JOIN users u ON u.id = g.owner_id
+     LEFT JOIN web_users wu ON wu.id = g.owner_id
+     WHERE tf.follower_user_id = $1
+     ORDER BY tf.created_at DESC`,
+    [userId]
+  );
+  return rows as Array<{ tripId: string; tripName: string; destination?: string | null; inviterName?: string | null }>;
+};
+
+export const unfollowTrip = async (userId: string, tripId: string): Promise<void> => {
+  const p = getPool();
+  await p.query(`DELETE FROM trip_followers WHERE trip_id = $1 AND follower_user_id = $2`, [tripId, userId]);
+};
+
 export const updateTripDetails = async (
   userId: string,
   tripId: string,
@@ -1360,7 +1596,7 @@ export const updateTripDetails = async (
 
 export const getTripCovering = async (userId: string, tripId: string): Promise<Record<string, string>> => {
   const p = getPool();
-  const membership = await ensureUserInTrip(tripId, userId);
+  const membership = await ensureUserCanReadTrip(tripId, userId);
   if (!membership) throw new Error('Not authorized to view this trip');
   const { rows } = await p.query<{ coveredBy: Record<string, string> | null }>(
     `SELECT covered_by as "coveredBy" FROM trips WHERE id = $1`,
@@ -1509,7 +1745,15 @@ export const listFlights = async (userId: string, tripId?: string): Promise<Flig
       FROM flights
       WHERE ($2::uuid IS NULL OR trip_id = $2)
         AND trip_id IN (
-          SELECT t.id FROM trips t JOIN group_members gm ON gm.group_id = t.group_id WHERE gm.user_id = $1
+          SELECT t.id
+          FROM trips t
+          JOIN group_members gm ON gm.group_id = t.group_id
+          WHERE gm.user_id = $1
+            AND gm.removed_at IS NULL
+          UNION
+          SELECT tf.trip_id
+          FROM trip_followers tf
+          WHERE tf.follower_user_id = $1
         )
       ORDER BY departure_date DESC
       `,
@@ -1567,8 +1811,15 @@ export const listFlights = async (userId: string, tripId?: string): Promise<Flig
      LEFT JOIN airports apa ON apa.iata_code = f.arrival_location
      LEFT JOIN airports apl ON apl.iata_code = f.layover_location
      WHERE ($2::uuid IS NULL OR f.trip_id = $2)
-       -- authorize by shared trip membership, not owner
-       AND t.group_id IN (SELECT group_id FROM group_members WHERE user_id = $1)
+       -- authorize by shared trip membership or explicit trip following
+       AND (
+         EXISTS (
+           SELECT 1 FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $1 AND gm.removed_at IS NULL
+         )
+         OR EXISTS (
+           SELECT 1 FROM trip_followers tf WHERE tf.trip_id = t.id AND tf.follower_user_id = $1
+         )
+       )
      ORDER BY f.departure_date DESC`,
     [userId, tripId ?? null]
   );
@@ -1605,8 +1856,14 @@ export const listLodgings = async (userId: string, tripId?: string | null): Prom
       FROM lodgings l
       JOIN trips t ON l.trip_id = t.id
       WHERE ($2::uuid IS NULL OR l.trip_id = $2)
-        -- authorize by shared trip membership, not owner
-        AND t.group_id IN (SELECT group_id FROM group_members WHERE user_id = $1)
+        AND (
+          EXISTS (
+            SELECT 1 FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $1 AND gm.removed_at IS NULL
+          )
+          OR EXISTS (
+            SELECT 1 FROM trip_followers tf WHERE tf.trip_id = t.id AND tf.follower_user_id = $1
+          )
+        )
       ORDER BY l.check_in_date ASC
     `,
     [userId, tripId ?? null]
@@ -1870,8 +2127,14 @@ export const listTours = async (userId: string, tripId?: string): Promise<Tour[]
     FROM tours tu
     JOIN trips t ON tu.trip_id = t.id
     WHERE ($2::uuid IS NULL OR tu.trip_id = $2)
-      -- authorize by shared trip membership, not owner
-      AND t.group_id IN (SELECT group_id FROM group_members WHERE user_id = $1)
+      AND (
+        EXISTS (
+          SELECT 1 FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $1 AND gm.removed_at IS NULL
+        )
+        OR EXISTS (
+          SELECT 1 FROM trip_followers tf WHERE tf.trip_id = t.id AND tf.follower_user_id = $1
+        )
+      )
     ORDER BY tu.date ASC, tu.created_at DESC
     `,
     [userId, tripId ?? null]
@@ -4077,7 +4340,19 @@ export const listItineraries = async (userId: string): Promise<Array<Itinerary &
      FROM itineraries i
      JOIN trips t ON t.id = i.trip_id
      JOIN groups g ON g.id = t.group_id
-     JOIN group_members gm ON gm.group_id = g.id AND gm.user_id = $1
+     WHERE (
+       EXISTS (
+         SELECT 1 FROM group_members gm
+         WHERE gm.group_id = g.id
+           AND gm.user_id = $1
+           AND gm.removed_at IS NULL
+       )
+       OR EXISTS (
+         SELECT 1 FROM trip_followers tf
+         WHERE tf.trip_id = t.id
+           AND tf.follower_user_id = $1
+       )
+     )
      ORDER BY i.created_at DESC`,
     [userId]
   );
@@ -4175,7 +4450,7 @@ export const listItineraryDetails = async (userId: string, itineraryId: string):
     [itineraryId]
   );
   if (!rows.length) throw new Error('Itinerary not found');
-  const membership = await ensureUserInTrip(rows[0].tripId, userId);
+  const membership = await ensureUserCanReadTrip(rows[0].tripId, userId);
   if (!membership) throw new Error('Not authorized to view this itinerary');
   const details = await p.query<ItineraryDetail>(
     `SELECT id,
@@ -4676,6 +4951,7 @@ export const getTripById = async (tripId: string): Promise<Trip | null> => {
             start_year as "startYear",
             duration_days as "durationDays",
             currency,
+            covered_by as "coveredBy",
             created_at as "createdAt"
      FROM trips WHERE id = $1 LIMIT 1`,
     [tripId]

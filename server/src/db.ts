@@ -72,6 +72,8 @@ export const updateFlight = async (...args: Parameters<ReturnType<typeof adapter
   adapter().updateFlight(...args);
 export const ensureUserInTrip = async (...args: Parameters<ReturnType<typeof adapter>['ensureUserInTrip']>) =>
   adapter().ensureUserInTrip(...args);
+export const ensureUserCanReadTrip = async (...args: Parameters<ReturnType<typeof adapter>['ensureUserCanReadTrip']>) =>
+  adapter().ensureUserCanReadTrip(...args);
 export const getTripGroupId = async (...args: Parameters<ReturnType<typeof adapter>['getTripGroupId']>) =>
   adapter().getTripGroupId(...args);
 export const getTripById = async (...args: Parameters<ReturnType<typeof adapter>['getTripById']>) =>
@@ -126,6 +128,14 @@ export const deleteTrip = async (...args: Parameters<ReturnType<typeof adapter>[
   adapter().deleteTrip(...args);
 export const updateTripGroup = async (...args: Parameters<ReturnType<typeof adapter>['updateTripGroup']>) =>
   adapter().updateTripGroup(...args);
+export const getTripFollowCode = async (...args: Parameters<ReturnType<typeof adapter>['getTripFollowCode']>) =>
+  adapter().getTripFollowCode(...args);
+export const followTripByCode = async (...args: Parameters<ReturnType<typeof adapter>['followTripByCode']>) =>
+  adapter().followTripByCode(...args);
+export const listFollowedTrips = async (...args: Parameters<ReturnType<typeof adapter>['listFollowedTrips']>) =>
+  adapter().listFollowedTrips(...args);
+export const unfollowTrip = async (...args: Parameters<ReturnType<typeof adapter>['unfollowTrip']>) =>
+  adapter().unfollowTrip(...args);
 export const createGroupWithMembers = async (...args: Parameters<ReturnType<typeof adapter>['createGroupWithMembers']>) =>
   adapter().createGroupWithMembers(...args);
 export const createTripWithGroupAndMembers = async (
