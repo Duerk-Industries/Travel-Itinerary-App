@@ -17,6 +17,7 @@ import {
   LocationRecord,
   TripActivity,
   TripActivityType,
+  TripComment,
 } from './types';
 import { logError } from './logger';
 import { getEnvValue } from './env';
@@ -360,6 +361,17 @@ export const initDb = async (): Promise<void> => {
   await p.query(`CREATE INDEX IF NOT EXISTS idx_trip_activity_trip_created ON trip_activity(trip_id, created_at DESC, id DESC);`);
 
   await p.query(`
+    CREATE TABLE IF NOT EXISTS trip_comments (
+      id UUID PRIMARY KEY,
+      trip_id UUID NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+      actor_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      body TEXT NOT NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+  `);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_trip_comments_trip_created ON trip_comments(trip_id, created_at DESC, id DESC);`);
+
+  await p.query(`
     CREATE TABLE IF NOT EXISTS locations (
       id TEXT PRIMARY KEY,
       source_type TEXT NOT NULL,
@@ -566,6 +578,7 @@ export const initDb = async (): Promise<void> => {
 
   if (process.env.USE_IN_MEMORY_DB === '1') {
     // Clear data between test runs while keeping schema intact.
+    await p.query(`DELETE FROM trip_comments`);
     await p.query(`DELETE FROM trip_activity`);
     await p.query(`DELETE FROM itinerary_details`);
     await p.query(`DELETE FROM itineraries`);
@@ -1475,6 +1488,54 @@ export const listTripActivity = async (
   const last = events[events.length - 1];
   const nextCursor = hasNext && last ? `${new Date(last.createdAt).toISOString()}::${last.id}` : null;
   return { events, nextCursor };
+};
+
+export const listTripComments = async (tripId: string): Promise<TripComment[]> => {
+  const p = getPool();
+  const { rows } = await p.query<TripComment>(
+    `SELECT c.id,
+            c.trip_id as "tripId",
+            c.actor_user_id as "actorUserId",
+            c.body,
+            c.created_at as "createdAt",
+            CASE
+              WHEN COALESCE(wu.first_name, '') <> '' OR COALESCE(wu.last_name, '') <> ''
+                THEN CONCAT(COALESCE(wu.first_name, ''), CASE WHEN COALESCE(wu.last_name, '') <> '' THEN CONCAT(' ', wu.last_name) ELSE '' END)
+              ELSE u.email
+            END as "authorName",
+            u.email as "authorEmail"
+     FROM trip_comments c
+     JOIN users u ON u.id = c.actor_user_id
+     LEFT JOIN web_users wu ON wu.id = c.actor_user_id
+     WHERE c.trip_id = $1
+     ORDER BY c.created_at ASC, c.id ASC`,
+    [tripId]
+  );
+  return rows;
+};
+
+export const addTripComment = async (
+  tripId: string,
+  actorUserId: string,
+  body: string
+): Promise<TripComment> => {
+  const p = getPool();
+  const text = String(body ?? '').trim();
+  if (!text) throw new Error('Comment body is required');
+  const { rows } = await p.query<TripComment>(
+    `INSERT INTO trip_comments (id, trip_id, actor_user_id, body)
+     VALUES ($1, $2, $3, $4)
+     RETURNING id,
+               trip_id as "tripId",
+               actor_user_id as "actorUserId",
+               body,
+               created_at as "createdAt"`,
+    [randomUUID(), tripId, actorUserId, text]
+  );
+  const created = rows[0];
+  await writeActivity(tripId, actorUserId, 'NOTE_ADDED', 'Comment added', text, { commentId: created.id });
+  const withAuthor = await listTripComments(tripId);
+  return withAuthor.find((comment) => comment.id === created.id) ?? created;
 };
 
 export const getTripFollowCode = async (

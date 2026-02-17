@@ -2,6 +2,7 @@ import { Router } from 'express';
 import bodyParser from 'body-parser';
 import { authenticate } from '../auth';
 import {
+  addTripComment,
   createFellowTraveler,
   createTrip,
   createTripWithGroupAndMembers,
@@ -12,6 +13,7 @@ import {
   getTripCovering,
   getTripFollowCode,
   listFollowedTrips,
+  listTripComments,
   listTripActivity,
   listTrips,
   searchTripContacts,
@@ -156,6 +158,41 @@ router.get('/:id/activity', async (req, res) => {
     events,
     nextCursor: result.nextCursor,
   });
+});
+
+router.get('/:id/comments', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const access = await ensureUserCanReadTrip(req.params.id, userId);
+  if (!access) {
+    res.status(403).json({ error: 'Not authorized to view this trip comments' });
+    return;
+  }
+  const comments = await listTripComments(req.params.id);
+  res.json({ tripId: req.params.id, comments });
+});
+
+router.post('/:id/comments', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const access = await ensureUserCanReadTrip(req.params.id, userId);
+  if (!access) {
+    res.status(403).json({ error: 'Not authorized to comment on this trip' });
+    return;
+  }
+  const body = String(req.body?.body ?? '').trim();
+  if (!body) {
+    res.status(400).json({ error: 'Comment body is required' });
+    return;
+  }
+  if (body.length > 4000) {
+    res.status(400).json({ error: 'Comment is too long (max 4000 chars)' });
+    return;
+  }
+  try {
+    const comment = await addTripComment(req.params.id, userId, body);
+    res.status(201).json(comment);
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
 });
 
 router.get('/:id/covered-by', async (req, res) => {

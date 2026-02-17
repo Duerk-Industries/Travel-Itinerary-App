@@ -15,6 +15,7 @@ import type {
   Expense,
   LocationRecord,
   TripActivity,
+  TripComment,
 } from './types';
 
 const adapter = () => getDbAdapter();
@@ -141,6 +142,10 @@ export const writeActivity = async (...args: Parameters<ReturnType<typeof adapte
   adapter().writeActivity(...args);
 export const listTripActivity = async (...args: Parameters<ReturnType<typeof adapter>['listTripActivity']>) =>
   adapter().listTripActivity(...args) as Promise<{ events: TripActivity[]; nextCursor: string | null }>;
+export const listTripComments = async (...args: Parameters<ReturnType<typeof adapter>['listTripComments']>) =>
+  adapter().listTripComments(...args) as Promise<TripComment[]>;
+export const addTripComment = async (...args: Parameters<ReturnType<typeof adapter>['addTripComment']>) =>
+  adapter().addTripComment(...args) as Promise<TripComment>;
 export const createGroupWithMembers = async (...args: Parameters<ReturnType<typeof adapter>['createGroupWithMembers']>) =>
   adapter().createGroupWithMembers(...args);
 export const createTripWithGroupAndMembers = async (

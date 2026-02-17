@@ -258,3 +258,13 @@ export interface TripActivity {
   metadata: Record<string, any>;
   createdAt: string;
 }
+
+export interface TripComment {
+  id: string;
+  tripId: string;
+  actorUserId?: string | null;
+  body: string;
+  createdAt: string;
+  authorName?: string | null;
+  authorEmail?: string | null;
+}

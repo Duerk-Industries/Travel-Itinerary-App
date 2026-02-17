@@ -18,6 +18,7 @@ import {
   LocationRecord,
   TripActivity,
   TripActivityType,
+  TripComment,
 } from './types';
 import { logError, logInfo } from './logger';
 import { getEnvValue, isLocalEnv } from './env';
@@ -1597,6 +1598,58 @@ export const listTripActivity = async (
   const last = page[page.length - 1];
   const nextCursor = hasNext && last ? `${last.createdAt}::${last.id}` : null;
   return { events: page, nextCursor };
+};
+
+export const listTripComments = async (tripId: string): Promise<TripComment[]> => {
+  const db = getDb();
+  const rows = await db
+    .collection('trip_comments')
+    .where('tripId', '==', tripId)
+    .orderBy('createdAt', 'asc')
+    .orderBy(FieldPath.documentId(), 'asc')
+    .get();
+  return rows.docs.map((doc) => {
+    const data = doc.data() as any;
+    return {
+      id: doc.id,
+      tripId: data.tripId,
+      actorUserId: data.actorUserId ?? null,
+      body: data.body ?? '',
+      createdAt: data.createdAt ?? nowIso(),
+      authorName: data.authorName ?? null,
+      authorEmail: data.authorEmail ?? null,
+    } as TripComment;
+  });
+};
+
+export const addTripComment = async (
+  tripId: string,
+  actorUserId: string,
+  body: string
+): Promise<TripComment> => {
+  const db = getDb();
+  const text = String(body ?? '').trim();
+  if (!text) throw new Error('Comment body is required');
+  const userDoc = await db.collection('users').doc(actorUserId).get();
+  const webUserDoc = await db.collection('web_users').doc(actorUserId).get();
+  const web = webUserDoc.exists ? (webUserDoc.data() as any) : {};
+  const fullName = `${web.firstName ?? ''} ${web.lastName ?? ''}`.trim();
+  const authorEmail = userDoc.exists ? ((userDoc.data() as any).email ?? null) : null;
+  const authorName = fullName || authorEmail || null;
+  const id = randomUUID();
+  const createdAt = nowIso();
+  const payload: TripComment = {
+    id,
+    tripId,
+    actorUserId,
+    body: text,
+    createdAt,
+    authorName,
+    authorEmail,
+  };
+  await db.collection('trip_comments').doc(id).set(payload);
+  await writeActivity(tripId, actorUserId, 'NOTE_ADDED', 'Comment added', text, { commentId: id });
+  return payload;
 };
 
 export const getTripGroupId = async (tripId: string): Promise<string | null> => {

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { FollowedTrip } from './follow';
 
 type FollowingTabProps = {
@@ -20,6 +20,14 @@ type FollowedTripDetail = {
   tours: any[];
   itineraries: any[];
   itineraryDetailsById: Record<string, any[]>;
+  comments: Array<{
+    id: string;
+    actorUserId?: string | null;
+    body: string;
+    createdAt: string;
+    authorName?: string | null;
+    authorEmail?: string | null;
+  }>;
   activity: Array<{
     id: string;
     kind?: 'group' | 'event';
@@ -118,6 +126,9 @@ const FollowingTab: React.FC<FollowingTabProps> = ({
   const [error, setError] = useState<string>('');
   const [detail, setDetail] = useState<FollowedTripDetail | null>(null);
   const [unfollowingTripId, setUnfollowingTripId] = useState<string | null>(null);
+  const [newComment, setNewComment] = useState('');
+  const [postingComment, setPostingComment] = useState(false);
+  const [commentError, setCommentError] = useState('');
 
   useEffect(() => {
     if (!selectedTripId) {
@@ -126,18 +137,21 @@ const FollowingTab: React.FC<FollowingTabProps> = ({
       return;
     }
     let active = true;
+    setNewComment('');
+    setCommentError('');
     const load = async () => {
       setLoading(true);
       setError('');
       try {
-        const [tripRes, flightsRes, lodgingsRes, toursRes, activityRes] = await Promise.all([
+        const [tripRes, flightsRes, lodgingsRes, toursRes, activityRes, commentsRes] = await Promise.all([
           fetch(`${backendUrl}/api/trips/${selectedTripId}`, { headers }),
           fetch(`${backendUrl}/api/flights?tripId=${encodeURIComponent(selectedTripId)}`, { headers }),
           fetch(`${backendUrl}/api/lodgings?tripId=${encodeURIComponent(selectedTripId)}`, { headers }),
           fetch(`${backendUrl}/api/tours?tripId=${encodeURIComponent(selectedTripId)}`, { headers }),
           fetch(`${backendUrl}/api/trips/${selectedTripId}/activity?limit=30&group=true`, { headers }),
+          fetch(`${backendUrl}/api/trips/${selectedTripId}/comments`, { headers }),
         ]);
-        if ([tripRes, flightsRes, lodgingsRes, toursRes, activityRes].some((res) => res.status === 401 || res.status === 403)) {
+        if ([tripRes, flightsRes, lodgingsRes, toursRes, activityRes, commentsRes].some((res) => res.status === 401 || res.status === 403)) {
           onRequireLogin();
           return;
         }
@@ -145,7 +159,7 @@ const FollowingTab: React.FC<FollowingTabProps> = ({
           const data = await tripRes.json().catch(() => ({}));
           throw new Error(data.error || 'Unable to load followed trip');
         }
-        const [trip, flights, lodgings, tours, itinerariesRaw, activityRaw] = await Promise.all([
+        const [trip, flights, lodgings, tours, itinerariesRaw, activityRaw, commentsRaw] = await Promise.all([
           tripRes.json().catch(() => null),
           flightsRes.ok ? flightsRes.json().catch(() => []) : [],
           lodgingsRes.ok ? lodgingsRes.json().catch(() => []) : [],
@@ -154,6 +168,7 @@ const FollowingTab: React.FC<FollowingTabProps> = ({
             .then((res) => (res.ok ? res.json().catch(() => []) : []))
             .catch(() => []),
           activityRes.ok ? activityRes.json().catch(() => ({ events: [] })) : { events: [] },
+          commentsRes.ok ? commentsRes.json().catch(() => ({ comments: [] })) : { comments: [] },
         ]);
         const itineraries = Array.isArray(itinerariesRaw)
           ? itinerariesRaw.filter((item: any) => String(item?.tripId ?? '') === selectedTripId)
@@ -180,6 +195,7 @@ const FollowingTab: React.FC<FollowingTabProps> = ({
           tours: Array.isArray(tours) ? tours : [],
           itineraries,
           itineraryDetailsById,
+          comments: Array.isArray(commentsRaw?.comments) ? commentsRaw.comments : [],
           activity: Array.isArray(activityRaw?.events) ? activityRaw.events : [],
         });
       } catch (err) {
@@ -217,6 +233,39 @@ const FollowingTab: React.FC<FollowingTabProps> = ({
     }
     return groups;
   }, [detail?.activity]);
+
+  const postComment = async () => {
+    if (!selectedTripId) return;
+    const body = newComment.trim();
+    if (!body) return;
+    setPostingComment(true);
+    setCommentError('');
+    try {
+      const res = await fetch(`${backendUrl}/api/trips/${selectedTripId}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...headers },
+        body: JSON.stringify({ body }),
+      });
+      if (res.status === 401 || res.status === 403) {
+        onRequireLogin();
+        return;
+      }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setCommentError(data.error || 'Unable to post comment');
+        return;
+      }
+      setDetail((prev) => {
+        if (!prev) return prev;
+        return { ...prev, comments: [...(prev.comments ?? []), data] };
+      });
+      setNewComment('');
+    } catch (err) {
+      setCommentError((err as Error).message || 'Unable to post comment');
+    } finally {
+      setPostingComment(false);
+    }
+  };
 
   return (
     <>
@@ -309,6 +358,29 @@ const FollowingTab: React.FC<FollowingTabProps> = ({
                 </View>
               ))}
               {groupedActivityByDate.length ? null : <Text style={styles.helperText}>No activity yet.</Text>}
+              <View style={styles.divider} />
+              <Text style={styles.headerText}>Discussion ({detail?.comments?.length ?? 0})</Text>
+              {(detail?.comments ?? []).map((comment: any) => (
+                <View key={comment?.id} style={{ marginTop: 6, paddingTop: 6, borderTopWidth: 1, borderTopColor: '#e5e7eb' }}>
+                  <Text style={[styles.bodyText, { fontWeight: '700' }]}>{comment?.authorName || comment?.authorEmail || 'Traveler'}</Text>
+                  <Text style={styles.bodyText}>{comment?.body ?? ''}</Text>
+                  <Text style={styles.helperText}>{comment?.createdAt ? new Date(comment.createdAt).toLocaleString() : ''}</Text>
+                </View>
+              ))}
+              {detail?.comments?.length ? null : <Text style={styles.helperText}>No comments yet. Start the discussion.</Text>}
+              <View style={{ marginTop: 8 }}>
+                <TextInput
+                  style={[styles.input, { minHeight: 70, textAlignVertical: 'top' }]}
+                  placeholder="Write a comment..."
+                  multiline
+                  value={newComment}
+                  onChangeText={setNewComment}
+                />
+                {commentError ? <Text style={styles.errorText}>{commentError}</Text> : null}
+                <TouchableOpacity style={[styles.button, { marginTop: 6 }]} onPress={postComment} disabled={postingComment || !newComment.trim()}>
+                  <Text style={styles.buttonText}>{postingComment ? 'Posting...' : 'Post Comment'}</Text>
+                </TouchableOpacity>
+              </View>
               <View style={styles.divider} />
               <Text style={styles.headerText}>Flights ({detail?.flights.length ?? 0})</Text>
               {(detail?.flights ?? []).slice(0, 8).map((f: any) => (

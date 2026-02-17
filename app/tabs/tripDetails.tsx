@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { formatDateLong } from '../utils/formatDateLong';
 import { renderRichTextBlocks } from '../utils/richText';
 import { formatMonthYear } from '../utils/tripDates';
@@ -49,6 +49,10 @@ const TripDetailsTab: React.FC<TripDetailsTabProps> = ({ backendUrl, headers, tr
   }
 
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
+  const [comments, setComments] = useState<Array<{ id: string; body: string; createdAt: string; authorName?: string | null; authorEmail?: string | null }>>([]);
+  const [commentDraft, setCommentDraft] = useState('');
+  const [commentLoading, setCommentLoading] = useState(false);
+  const [commentError, setCommentError] = useState('');
   const currencyOptions = useMemo(
     () => ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY', 'INR', 'MXN'],
     []
@@ -92,6 +96,52 @@ const TripDetailsTab: React.FC<TripDetailsTabProps> = ({ backendUrl, headers, tr
       active = false;
     };
   }, [backendUrl, headers, trip?.id, trip?.locationIds]);
+
+  useEffect(() => {
+    if (!backendUrl || !headers || !trip?.id) {
+      setComments([]);
+      return;
+    }
+    let active = true;
+    fetch(`${backendUrl}/api/trips/${trip.id}/comments`, { headers })
+      .then((res) => (res.ok ? res.json() : { comments: [] }))
+      .then((payload) => {
+        if (!active) return;
+        setComments(Array.isArray(payload?.comments) ? payload.comments : []);
+      })
+      .catch(() => {
+        if (active) setComments([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [backendUrl, headers, trip?.id]);
+
+  const postComment = async () => {
+    if (!backendUrl || !headers || !trip?.id) return;
+    const body = commentDraft.trim();
+    if (!body) return;
+    setCommentLoading(true);
+    setCommentError('');
+    try {
+      const res = await fetch(`${backendUrl}/api/trips/${trip.id}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...headers },
+        body: JSON.stringify({ body }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setCommentError(data.error || 'Unable to post comment');
+        return;
+      }
+      setComments((prev) => [...prev, data]);
+      setCommentDraft('');
+    } catch (err) {
+      setCommentError((err as Error).message || 'Unable to post comment');
+    } finally {
+      setCommentLoading(false);
+    }
+  };
 
   return (
     <ScrollView style={styles.card} contentContainerStyle={{ gap: 12 }}>
@@ -147,6 +197,31 @@ const TripDetailsTab: React.FC<TripDetailsTabProps> = ({ backendUrl, headers, tr
           </View>
         ) : null}
       </View>
+
+      <View style={styles.divider} />
+      <Text style={styles.headerText}>Discussion ({comments.length})</Text>
+      {comments.length ? (
+        comments.map((comment) => (
+          <View key={comment.id} style={{ marginTop: 6 }}>
+            <Text style={[styles.bodyText, { fontWeight: '700' }]}>{comment.authorName || comment.authorEmail || 'Traveler'}</Text>
+            <Text style={styles.bodyText}>{comment.body}</Text>
+            <Text style={styles.helperText}>{comment.createdAt ? new Date(comment.createdAt).toLocaleString() : ''}</Text>
+          </View>
+        ))
+      ) : (
+        <Text style={styles.helperText}>No comments yet. Start the discussion.</Text>
+      )}
+      <TextInput
+        style={[styles.input, { marginTop: 8, minHeight: 70, textAlignVertical: 'top' }]}
+        placeholder="Write a comment..."
+        multiline
+        value={commentDraft}
+        onChangeText={setCommentDraft}
+      />
+      {commentError ? <Text style={styles.errorText}>{commentError}</Text> : null}
+      <TouchableOpacity style={[styles.button, { marginTop: 6 }]} onPress={postComment} disabled={commentLoading || !commentDraft.trim()}>
+        <Text style={styles.buttonText}>{commentLoading ? 'Posting...' : 'Post Comment'}</Text>
+      </TouchableOpacity>
 
       <View style={styles.divider} />
       <Text style={styles.headerText}>Participants</Text>

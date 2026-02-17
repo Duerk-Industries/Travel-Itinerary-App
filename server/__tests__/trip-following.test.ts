@@ -114,4 +114,30 @@ describe('Trip following (read-only)', () => {
     const followed = await request(app).get('/api/trips/followed').set('Authorization', `Bearer ${followerToken}`).expect(200);
     expect((followed.body as any[]).some((t: any) => t.tripId === tripId)).toBe(false);
   });
+
+  it('allows followers and members to discuss via trip comments', async () => {
+    await request(app)
+      .post('/api/trips/follow')
+      .set('Authorization', `Bearer ${followerToken}`)
+      .send({ inviteCode })
+      .expect((res) => {
+        if (res.status !== 200 && res.status !== 201) {
+          throw new Error(`Expected follow status 200/201, got ${res.status}: ${JSON.stringify(res.body)}`);
+        }
+      });
+
+    const post = await request(app)
+      .post(`/api/trips/${tripId}/comments`)
+      .set('Authorization', `Bearer ${followerToken}`)
+      .send({ body: 'Looking forward to this trip!' })
+      .expect(201);
+    expect(post.body.body).toContain('Looking forward');
+
+    const commentsAsOwner = await request(app)
+      .get(`/api/trips/${tripId}/comments`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+    expect(Array.isArray(commentsAsOwner.body.comments)).toBe(true);
+    expect(commentsAsOwner.body.comments.some((c: any) => String(c.body).includes('Looking forward'))).toBe(true);
+  });
 });
