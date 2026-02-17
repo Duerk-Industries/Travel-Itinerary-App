@@ -1533,7 +1533,6 @@ export const addTripComment = async (
     [randomUUID(), tripId, actorUserId, text]
   );
   const created = rows[0];
-  await writeActivity(tripId, actorUserId, 'NOTE_ADDED', 'Comment added', text, { commentId: created.id });
   const withAuthor = await listTripComments(tripId);
   return withAuthor.find((comment) => comment.id === created.id) ?? created;
 };

@@ -1648,7 +1648,6 @@ export const addTripComment = async (
     authorEmail,
   };
   await db.collection('trip_comments').doc(id).set(payload);
-  await writeActivity(tripId, actorUserId, 'NOTE_ADDED', 'Comment added', text, { commentId: id });
   return payload;
 };
 
