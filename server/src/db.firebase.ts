@@ -16,6 +16,8 @@ import {
   GroupMember,
   PlaceDetailsCache,
   LocationRecord,
+  TripActivity,
+  TripActivityType,
 } from './types';
 import { logError, logInfo } from './logger';
 import { getEnvValue, isLocalEnv } from './env';
@@ -38,6 +40,19 @@ const generateFollowCode = (): string => {
   }
   return out;
 };
+
+const TRIP_ACTIVITY_TYPES: TripActivityType[] = [
+  'TRIP_CREATED',
+  'FOLLOW_ADDED',
+  'FOLLOW_REMOVED',
+  'ITINERARY_ITEM_ADDED',
+  'ITINERARY_ITEM_UPDATED',
+  'ITINERARY_ITEM_DELETED',
+  'FLIGHT_ADDED',
+  'LODGING_ADDED',
+  'TOUR_ADDED',
+  'NOTE_ADDED',
+];
 
 export const getDb = (): Firestore => {
   if (!app) {
@@ -1427,6 +1442,10 @@ export const followTripByCode = async (
       },
       { merge: true }
     );
+    await writeActivity(tripId, userId, 'FOLLOW_ADDED', 'New follower', 'A user started following this trip.', {
+      inviteCode: code,
+      followerUserId: userId,
+    });
   }
 
   const tripDoc = await db.collection('trips').doc(tripId).get();
@@ -1502,6 +1521,82 @@ export const unfollowTrip = async (userId: string, tripId: string): Promise<void
   for (const doc of followers.docs) {
     await doc.ref.delete();
   }
+  if (!followers.empty) {
+    await writeActivity(tripId, userId, 'FOLLOW_REMOVED', 'Follower left', 'A user unfollowed this trip.', {
+      followerUserId: userId,
+    });
+  }
+};
+
+export const writeActivity = async (
+  tripId: string,
+  actorUserId: string | null,
+  type: TripActivityType,
+  title: string,
+  summary: string,
+  metadata: Record<string, any> = {}
+): Promise<TripActivity> => {
+  if (!TRIP_ACTIVITY_TYPES.includes(type)) {
+    throw new Error(`Unsupported activity type: ${type}`);
+  }
+  const db = getDb();
+  const id = randomUUID();
+  const createdAt = nowIso();
+  const payload: TripActivity = {
+    id,
+    tripId,
+    actorUserId: actorUserId ?? null,
+    type,
+    title: String(title ?? '').trim(),
+    summary: String(summary ?? '').trim(),
+    metadata: metadata ?? {},
+    createdAt,
+  };
+  await db.collection('trip_activity').doc(id).set(payload);
+  return payload;
+};
+
+export const listTripActivity = async (
+  tripId: string,
+  options?: { limit?: number; cursor?: { createdAt: string; id: string } | null }
+): Promise<{ events: TripActivity[]; nextCursor: string | null }> => {
+  const db = getDb();
+  const limit = Math.min(Math.max(Number(options?.limit ?? 20), 1), 100);
+  const rows = await db
+    .collection('trip_activity')
+    .where('tripId', '==', tripId)
+    .orderBy('createdAt', 'desc')
+    .orderBy(FieldPath.documentId(), 'desc')
+    .limit(limit + 1)
+    .get();
+  let events = rows.docs.map((doc) => {
+    const data = doc.data() as any;
+    return {
+      id: doc.id,
+      tripId: data.tripId,
+      actorUserId: data.actorUserId ?? null,
+      type: data.type,
+      title: data.title ?? '',
+      summary: data.summary ?? '',
+      metadata: data.metadata ?? {},
+      createdAt: data.createdAt ?? nowIso(),
+    } as TripActivity;
+  });
+
+  const cursor = options?.cursor;
+  if (cursor?.createdAt && cursor?.id) {
+    events = events.filter((event) => {
+      if (event.createdAt < cursor.createdAt) return true;
+      if (event.createdAt > cursor.createdAt) return false;
+      return event.id < cursor.id;
+    });
+  }
+
+  const hasNext = events.length > limit;
+  const page = hasNext ? events.slice(0, limit) : events;
+  const last = page[page.length - 1];
+  const nextCursor = hasNext && last ? `${last.createdAt}::${last.id}` : null;
+  return { events: page, nextCursor };
 };
 
 export const getTripGroupId = async (tripId: string): Promise<string | null> => {
@@ -2260,6 +2355,13 @@ export const addItineraryDetail = async (
     cost: detail.cost ?? null,
   };
   await db.collection('itinerary_details').doc(id).set(payload);
+  await writeActivity(tripId, userId, 'ITINERARY_ITEM_ADDED', 'Itinerary item added', payload.activity, {
+    itineraryId,
+    detailId: id,
+    day: payload.day,
+    time: payload.time ?? null,
+    cost: payload.cost ?? null,
+  });
   return payload;
 };
 
@@ -2267,10 +2369,21 @@ export const deleteItineraryDetail = async (userId: string, detailId: string): P
   const db = getDb();
   const detail = await db.collection('itinerary_details').doc(detailId).get();
   if (!detail.exists) return;
-  const itineraryId = (detail.data() as any).itineraryId;
+  const detailData = detail.data() as any;
+  const itineraryId = detailData.itineraryId;
   const itinerary = await db.collection('itineraries').doc(itineraryId).get();
   if (!itinerary.exists || (itinerary.data() as any).userId !== userId) throw new Error('Not authorized');
+  const tripId = String((itinerary.data() as any).tripId ?? '');
   await db.collection('itinerary_details').doc(detailId).delete();
+  if (tripId) {
+    await writeActivity(tripId, userId, 'ITINERARY_ITEM_DELETED', 'Itinerary item removed', detailData.activity ?? '', {
+      itineraryId,
+      detailId,
+      day: detailData.day ?? null,
+      time: detailData.time ?? null,
+      cost: detailData.cost ?? null,
+    });
+  }
 };
 
 export const updateItineraryDetail = async (
@@ -2286,7 +2399,18 @@ export const updateItineraryDetail = async (
   if (!itinerary.exists || (itinerary.data() as any).userId !== userId) throw new Error('Not authorized');
   await db.collection('itinerary_details').doc(detailId).update(updates);
   const updated = await db.collection('itinerary_details').doc(detailId).get();
-  return updated.data() as ItineraryDetail;
+  const payload = updated.data() as ItineraryDetail;
+  const tripId = String((itinerary.data() as any).tripId ?? '');
+  if (tripId) {
+    await writeActivity(tripId, userId, 'ITINERARY_ITEM_UPDATED', 'Itinerary item updated', payload.activity ?? '', {
+      itineraryId,
+      detailId,
+      day: payload.day ?? null,
+      time: payload.time ?? null,
+      cost: payload.cost ?? null,
+    });
+  }
+  return payload;
 };
 
 export const getPlaceDetailsCache = async (placeId: string): Promise<PlaceDetailsCache | null> => {

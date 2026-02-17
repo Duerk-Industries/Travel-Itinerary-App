@@ -20,6 +20,88 @@ type FollowedTripDetail = {
   tours: any[];
   itineraries: any[];
   itineraryDetailsById: Record<string, any[]>;
+  activity: Array<{
+    id: string;
+    kind?: 'group' | 'event';
+    type: string;
+    title: string;
+    summary: string;
+    createdAt: string;
+    startAt?: string;
+    endAt?: string;
+    count?: number;
+    itemsPreview?: Array<{ id: string; title: string; summary: string; metadata?: Record<string, any>; createdAt: string }>;
+    itemsTotal?: number;
+    actorUserId?: string | null;
+    metadata?: Record<string, any>;
+  }>;
+};
+
+const EVENT_ICON: Record<string, string> = {
+  TRIP_CREATED: '🧭',
+  FOLLOW_ADDED: '👀',
+  FOLLOW_REMOVED: '👋',
+  ITINERARY_ITEM_ADDED: '🗓️',
+  ITINERARY_ITEM_UPDATED: '✏️',
+  ITINERARY_ITEM_DELETED: '🗑️',
+  FLIGHT_ADDED: '✈️',
+  LODGING_ADDED: '🏨',
+  TOUR_ADDED: '🎟️',
+  NOTE_ADDED: '📝',
+};
+
+const RELATIVE_TIME = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
+
+const getEventTimestamp = (event: any): string => {
+  if (event?.kind === 'group') return String(event?.endAt ?? event?.startAt ?? '');
+  return String(event?.createdAt ?? '');
+};
+
+const getDateHeader = (date: Date): string => {
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const targetStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const diffDays = Math.round((todayStart.getTime() - targetStart.getTime()) / (24 * 60 * 60 * 1000));
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Yesterday';
+  return targetStart.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+};
+
+const getRelativeTime = (value: string): string => {
+  const ts = new Date(value).getTime();
+  if (!Number.isFinite(ts)) return '';
+  const diffMs = ts - Date.now();
+  const abs = Math.abs(diffMs);
+  const minute = 60 * 1000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+  if (abs < hour) return RELATIVE_TIME.format(Math.round(diffMs / minute), 'minute');
+  if (abs < day) return RELATIVE_TIME.format(Math.round(diffMs / hour), 'hour');
+  return RELATIVE_TIME.format(Math.round(diffMs / day), 'day');
+};
+
+const getPrimaryText = (event: any): string => {
+  if (event?.kind === 'group') {
+    const count = Number(event?.count ?? event?.itemsTotal ?? 0);
+    const label = String(event?.type ?? '').replaceAll('_', ' ').toLowerCase();
+    return `${count} ${label}`;
+  }
+  return event?.title || String(event?.type ?? 'Update').replaceAll('_', ' ');
+};
+
+const getSecondaryText = (event: any): string => {
+  if (event?.kind === 'group') {
+    const preview = Array.isArray(event?.itemsPreview) ? event.itemsPreview : [];
+    const summary = preview
+      .map((item: any) => String(item?.summary ?? item?.title ?? '').trim())
+      .filter(Boolean)
+      .slice(0, 2)
+      .join('  ·  ');
+    if (!summary) return '';
+    const remaining = Math.max(0, Number(event?.itemsTotal ?? preview.length) - 2);
+    return remaining > 0 ? `${summary}  +${remaining} more` : summary;
+  }
+  return String(event?.summary ?? '').trim();
 };
 
 const FollowingTab: React.FC<FollowingTabProps> = ({
@@ -48,13 +130,14 @@ const FollowingTab: React.FC<FollowingTabProps> = ({
       setLoading(true);
       setError('');
       try {
-        const [tripRes, flightsRes, lodgingsRes, toursRes] = await Promise.all([
+        const [tripRes, flightsRes, lodgingsRes, toursRes, activityRes] = await Promise.all([
           fetch(`${backendUrl}/api/trips/${selectedTripId}`, { headers }),
           fetch(`${backendUrl}/api/flights?tripId=${encodeURIComponent(selectedTripId)}`, { headers }),
           fetch(`${backendUrl}/api/lodgings?tripId=${encodeURIComponent(selectedTripId)}`, { headers }),
           fetch(`${backendUrl}/api/tours?tripId=${encodeURIComponent(selectedTripId)}`, { headers }),
+          fetch(`${backendUrl}/api/trips/${selectedTripId}/activity?limit=30&group=true`, { headers }),
         ]);
-        if ([tripRes, flightsRes, lodgingsRes, toursRes].some((res) => res.status === 401 || res.status === 403)) {
+        if ([tripRes, flightsRes, lodgingsRes, toursRes, activityRes].some((res) => res.status === 401 || res.status === 403)) {
           onRequireLogin();
           return;
         }
@@ -62,7 +145,7 @@ const FollowingTab: React.FC<FollowingTabProps> = ({
           const data = await tripRes.json().catch(() => ({}));
           throw new Error(data.error || 'Unable to load followed trip');
         }
-        const [trip, flights, lodgings, tours, itinerariesRaw] = await Promise.all([
+        const [trip, flights, lodgings, tours, itinerariesRaw, activityRaw] = await Promise.all([
           tripRes.json().catch(() => null),
           flightsRes.ok ? flightsRes.json().catch(() => []) : [],
           lodgingsRes.ok ? lodgingsRes.json().catch(() => []) : [],
@@ -70,6 +153,7 @@ const FollowingTab: React.FC<FollowingTabProps> = ({
           fetch(`${backendUrl}/api/itineraries`, { headers })
             .then((res) => (res.ok ? res.json().catch(() => []) : []))
             .catch(() => []),
+          activityRes.ok ? activityRes.json().catch(() => ({ events: [] })) : { events: [] },
         ]);
         const itineraries = Array.isArray(itinerariesRaw)
           ? itinerariesRaw.filter((item: any) => String(item?.tripId ?? '') === selectedTripId)
@@ -96,6 +180,7 @@ const FollowingTab: React.FC<FollowingTabProps> = ({
           tours: Array.isArray(tours) ? tours : [],
           itineraries,
           itineraryDetailsById,
+          activity: Array.isArray(activityRaw?.events) ? activityRaw.events : [],
         });
       } catch (err) {
         if (!active) return;
@@ -115,6 +200,23 @@ const FollowingTab: React.FC<FollowingTabProps> = ({
     () => followedTrips.find((trip) => trip.tripId === selectedTripId) ?? null,
     [followedTrips, selectedTripId]
   );
+
+  const groupedActivityByDate = useMemo(() => {
+    const groups: Array<{ label: string; items: any[] }> = [];
+    const byLabel = new Map<string, any[]>();
+    for (const event of detail?.activity ?? []) {
+      const raw = getEventTimestamp(event);
+      const date = new Date(raw);
+      if (!Number.isFinite(date.getTime())) continue;
+      const label = getDateHeader(date);
+      if (!byLabel.has(label)) byLabel.set(label, []);
+      byLabel.get(label)!.push(event);
+    }
+    for (const [label, items] of byLabel.entries()) {
+      groups.push({ label, items });
+    }
+    return groups;
+  }, [detail?.activity]);
 
   return (
     <>
@@ -178,6 +280,35 @@ const FollowingTab: React.FC<FollowingTabProps> = ({
                   Dates: {detail?.trip?.startDate ?? 'Start'} - {detail?.trip?.endDate ?? 'End'}
                 </Text>
               ) : null}
+              <View style={styles.divider} />
+              <Text style={styles.headerText}>Activity Feed ({detail?.activity?.length ?? 0})</Text>
+              {groupedActivityByDate.map((dateGroup) => (
+                <View key={dateGroup.label} style={{ marginTop: 6 }}>
+                  <Text style={[styles.helperText, { fontWeight: '700', marginBottom: 4 }]}>{dateGroup.label}</Text>
+                  {dateGroup.items.map((event: any) => {
+                    const timestamp = getEventTimestamp(event);
+                    const secondary = getSecondaryText(event);
+                    return (
+                      <View
+                        key={event?.id ?? `${timestamp}-${event?.type}`}
+                        style={{ paddingVertical: 6, borderTopWidth: 1, borderTopColor: '#e5e7eb' }}
+                      >
+                        <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+                          <View style={{ flexDirection: 'row', flex: 1, gap: 8 }}>
+                            <Text style={{ width: 20, fontSize: 14 }}>{EVENT_ICON[event?.type] ?? '•'}</Text>
+                            <View style={{ flex: 1 }}>
+                              <Text style={[styles.bodyText, { fontWeight: '700' }]}>{getPrimaryText(event)}</Text>
+                              {secondary ? <Text style={styles.helperText}>{secondary}</Text> : null}
+                            </View>
+                          </View>
+                          <Text style={[styles.helperText, { minWidth: 56, textAlign: 'right' }]}>{getRelativeTime(timestamp)}</Text>
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
+              ))}
+              {groupedActivityByDate.length ? null : <Text style={styles.helperText}>No activity yet.</Text>}
               <View style={styles.divider} />
               <Text style={styles.headerText}>Flights ({detail?.flights.length ?? 0})</Text>
               {(detail?.flights ?? []).slice(0, 8).map((f: any) => (

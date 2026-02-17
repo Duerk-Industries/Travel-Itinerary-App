@@ -15,6 +15,8 @@ import {
   ItineraryDetail,
   PlaceDetailsCache,
   LocationRecord,
+  TripActivity,
+  TripActivityType,
 } from './types';
 import { logError } from './logger';
 import { getEnvValue } from './env';
@@ -36,6 +38,19 @@ const generateFollowCode = (): string => {
   }
   return out;
 };
+
+const TRIP_ACTIVITY_TYPES: TripActivityType[] = [
+  'TRIP_CREATED',
+  'FOLLOW_ADDED',
+  'FOLLOW_REMOVED',
+  'ITINERARY_ITEM_ADDED',
+  'ITINERARY_ITEM_UPDATED',
+  'ITINERARY_ITEM_DELETED',
+  'FLIGHT_ADDED',
+  'LODGING_ADDED',
+  'TOUR_ADDED',
+  'NOTE_ADDED',
+];
 
 export const setPoolFactory = (factory: PoolCtor): void => {
   PoolFactory = factory;
@@ -316,6 +331,35 @@ export const initDb = async (): Promise<void> => {
   await p.query(`CREATE INDEX IF NOT EXISTS idx_trip_followers_user_id ON trip_followers(follower_user_id);`);
 
   await p.query(`
+    CREATE TABLE IF NOT EXISTS trip_activity (
+      id UUID PRIMARY KEY,
+      trip_id UUID NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+      actor_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+      type TEXT NOT NULL,
+      title TEXT NOT NULL,
+      summary TEXT NOT NULL,
+      metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+  `);
+  await p.query(`ALTER TABLE trip_activity ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb;`);
+  await p.query(`ALTER TABLE trip_activity ADD COLUMN IF NOT EXISTS actor_user_id UUID REFERENCES users(id) ON DELETE SET NULL;`);
+  try {
+    await p.query(
+      `ALTER TABLE trip_activity
+       ADD CONSTRAINT chk_trip_activity_type
+       CHECK (type IN ('TRIP_CREATED','FOLLOW_ADDED','FOLLOW_REMOVED','ITINERARY_ITEM_ADDED','ITINERARY_ITEM_UPDATED','ITINERARY_ITEM_DELETED','FLIGHT_ADDED','LODGING_ADDED','TOUR_ADDED','NOTE_ADDED'))`
+    );
+  } catch (err: any) {
+    const code = String(err?.code ?? '');
+    const message = String(err?.message ?? '').toLowerCase();
+    if (code !== '42710' && !message.includes('already exists') && !message.includes('duplicate')) {
+      throw err;
+    }
+  }
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_trip_activity_trip_created ON trip_activity(trip_id, created_at DESC, id DESC);`);
+
+  await p.query(`
     CREATE TABLE IF NOT EXISTS locations (
       id TEXT PRIMARY KEY,
       source_type TEXT NOT NULL,
@@ -522,6 +566,7 @@ export const initDb = async (): Promise<void> => {
 
   if (process.env.USE_IN_MEMORY_DB === '1') {
     // Clear data between test runs while keeping schema intact.
+    await p.query(`DELETE FROM trip_activity`);
     await p.query(`DELETE FROM itinerary_details`);
     await p.query(`DELETE FROM itineraries`);
     await p.query(`DELETE FROM tours`);
@@ -1368,6 +1413,70 @@ export const ensureUserCanReadTrip = async (
   return rows[0] ?? null;
 };
 
+export const writeActivity = async (
+  tripId: string,
+  actorUserId: string | null,
+  type: TripActivityType,
+  title: string,
+  summary: string,
+  metadata: Record<string, any> = {}
+): Promise<TripActivity> => {
+  if (!TRIP_ACTIVITY_TYPES.includes(type)) {
+    throw new Error(`Unsupported activity type: ${type}`);
+  }
+  const p = getPool();
+  const { rows } = await p.query<TripActivity>(
+    `INSERT INTO trip_activity (id, trip_id, actor_user_id, type, title, summary, metadata)
+     VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)
+     RETURNING id,
+               trip_id as "tripId",
+               actor_user_id as "actorUserId",
+               type,
+               title,
+               summary,
+               metadata,
+               created_at as "createdAt"`,
+    [randomUUID(), tripId, actorUserId, type, title.trim(), summary.trim(), JSON.stringify(metadata ?? {})]
+  );
+  return rows[0];
+};
+
+export const listTripActivity = async (
+  tripId: string,
+  options?: { limit?: number; cursor?: { createdAt: string; id: string } | null }
+): Promise<{ events: TripActivity[]; nextCursor: string | null }> => {
+  const p = getPool();
+  const limit = Math.min(Math.max(Number(options?.limit ?? 20), 1), 100);
+  const cursorCreatedAt = options?.cursor?.createdAt ?? null;
+  const cursorId = options?.cursor?.id ?? null;
+  const { rows } = await p.query<TripActivity>(
+    `SELECT id,
+            trip_id as "tripId",
+            actor_user_id as "actorUserId",
+            type,
+            title,
+            summary,
+            metadata,
+            created_at as "createdAt"
+     FROM trip_activity
+     WHERE trip_id = $1
+       AND (
+         $2::timestamp IS NULL
+         OR created_at < $2::timestamp
+         OR (created_at = $2::timestamp AND id < $3)
+       )
+     ORDER BY created_at DESC, id DESC
+     LIMIT $4`,
+    [tripId, cursorCreatedAt, cursorId, limit + 1]
+  );
+
+  const hasNext = rows.length > limit;
+  const events = hasNext ? rows.slice(0, limit) : rows;
+  const last = events[events.length - 1];
+  const nextCursor = hasNext && last ? `${new Date(last.createdAt).toISOString()}::${last.id}` : null;
+  return { events, nextCursor };
+};
+
 export const getTripFollowCode = async (
   userId: string,
   tripId: string
@@ -1489,6 +1598,17 @@ export const followTripByCode = async (
   );
   if (!tripRow.rowCount) throw new Error('Trip not found');
 
+  if (!alreadyFollowing) {
+    await writeActivity(
+      followCode.tripId,
+      userId,
+      'FOLLOW_ADDED',
+      'New follower',
+      'A user started following this trip.',
+      { inviteCode: code, followerUserId: userId }
+    );
+  }
+
   return {
     trip: {
       id: tripRow.rows[0].id,
@@ -1527,7 +1647,17 @@ export const listFollowedTrips = async (
 
 export const unfollowTrip = async (userId: string, tripId: string): Promise<void> => {
   const p = getPool();
-  await p.query(`DELETE FROM trip_followers WHERE trip_id = $1 AND follower_user_id = $2`, [tripId, userId]);
+  const removed = await p.query(`DELETE FROM trip_followers WHERE trip_id = $1 AND follower_user_id = $2`, [tripId, userId]);
+  if (removed.rowCount) {
+    await writeActivity(
+      tripId,
+      userId,
+      'FOLLOW_REMOVED',
+      'Follower left',
+      'A user unfollowed this trip.',
+      { followerUserId: userId }
+    );
+  }
 };
 
 export const updateTripDetails = async (
@@ -4486,13 +4616,28 @@ export const addItineraryDetail = async (
      RETURNING id, itinerary_id as "itineraryId", day, time, activity, cost`,
     [randomUUID(), itineraryId, Math.max(1, Math.round(detail.day)), detail.time ?? null, detail.activity.trim(), detail.cost ?? null]
   );
+  await writeActivity(
+    rows[0].tripId,
+    userId,
+    'ITINERARY_ITEM_ADDED',
+    'Itinerary item added',
+    inserted[0].activity,
+    {
+      itineraryId,
+      detailId: inserted[0].id,
+      day: inserted[0].day,
+      time: inserted[0].time ?? null,
+      cost: inserted[0].cost ?? null,
+    }
+  );
   return inserted[0];
 };
 
 export const deleteItineraryDetail = async (userId: string, detailId: string): Promise<void> => {
   const p = getPool();
-  const { rows } = await p.query<{ itineraryId: string; tripId: string }>(
+  const { rows } = await p.query<{ itineraryId: string; tripId: string; activity: string; day: number; time: string | null; cost: number | null }>(
     `SELECT d.itinerary_id as "itineraryId", i.trip_id as "tripId"
+            ,d.activity, d.day, d.time, d.cost
      FROM itinerary_details d
      JOIN itineraries i ON i.id = d.itinerary_id
      WHERE d.id = $1`,
@@ -4502,6 +4647,20 @@ export const deleteItineraryDetail = async (userId: string, detailId: string): P
   const membership = await ensureUserInTrip(rows[0].tripId, userId);
   if (!membership) throw new Error('Not authorized to edit this itinerary');
   await p.query(`DELETE FROM itinerary_details WHERE id = $1`, [detailId]);
+  await writeActivity(
+    rows[0].tripId,
+    userId,
+    'ITINERARY_ITEM_DELETED',
+    'Itinerary item removed',
+    rows[0].activity,
+    {
+      itineraryId: rows[0].itineraryId,
+      detailId,
+      day: rows[0].day,
+      time: rows[0].time ?? null,
+      cost: rows[0].cost ?? null,
+    }
+  );
 };
 
 export const updateItineraryDetail = async (
@@ -4537,6 +4696,20 @@ export const updateItineraryDetail = async (
      WHERE id = $5
      RETURNING id, itinerary_id as "itineraryId", day, time, activity, cost`,
     [day ?? null, time, activity, cost, detailId]
+  );
+  await writeActivity(
+    rows[0].tripId,
+    userId,
+    'ITINERARY_ITEM_UPDATED',
+    'Itinerary item updated',
+    updated[0].activity,
+    {
+      itineraryId: rows[0].itineraryId,
+      detailId: updated[0].id,
+      day: updated[0].day,
+      time: updated[0].time ?? null,
+      cost: updated[0].cost ?? null,
+    }
   );
   return updated[0];
 };

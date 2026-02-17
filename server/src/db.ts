@@ -14,6 +14,7 @@ import type {
   PlaceLookupCache,
   Expense,
   LocationRecord,
+  TripActivity,
 } from './types';
 
 const adapter = () => getDbAdapter();
@@ -136,6 +137,10 @@ export const listFollowedTrips = async (...args: Parameters<ReturnType<typeof ad
   adapter().listFollowedTrips(...args);
 export const unfollowTrip = async (...args: Parameters<ReturnType<typeof adapter>['unfollowTrip']>) =>
   adapter().unfollowTrip(...args);
+export const writeActivity = async (...args: Parameters<ReturnType<typeof adapter>['writeActivity']>) =>
+  adapter().writeActivity(...args);
+export const listTripActivity = async (...args: Parameters<ReturnType<typeof adapter>['listTripActivity']>) =>
+  adapter().listTripActivity(...args) as Promise<{ events: TripActivity[]; nextCursor: string | null }>;
 export const createGroupWithMembers = async (...args: Parameters<ReturnType<typeof adapter>['createGroupWithMembers']>) =>
   adapter().createGroupWithMembers(...args);
 export const createTripWithGroupAndMembers = async (
