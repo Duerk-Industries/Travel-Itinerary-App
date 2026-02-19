@@ -310,6 +310,7 @@ router.get('/trips/:tripId/members', async (req, res) => {
 
 router.post('/trips/:tripId/members', async (req, res) => {
   const userId = (req as any).user.userId as string;
+  console.log('[DEBUG] Add member request body:', req.body);
   const membership = await ensureUserInTrip(req.params.tripId, userId);
   if (!membership) {
     res.status(403).json({ error: 'Not authorized to add members to this trip' });
@@ -323,17 +324,22 @@ router.post('/trips/:tripId/members', async (req, res) => {
   };
   try {
     const result = await addGroupMember(userId, membership.groupId, { email, guestName, firstName, lastName });
+    console.log('[DEBUG] addGroupMember result:', result);
     if (result.inviteId) {
       await attachInviteToTrip(result.inviteId, req.params.tripId);
     }
     if (result.email) {
+      console.log('[DEBUG] Attempting to send trip invite email');
       const trip = await getTripById(req.params.tripId);
       const tripName = trip?.name ?? 'Trip';
       const inviterEmail = (req as any).user?.email as string | undefined;
-      await sendTripInviteEmailBestEffort(result.email, tripName, inviterEmail ?? null).catch(() => undefined);
+      await sendTripInviteEmailBestEffort(result.email, tripName, inviterEmail ?? null).catch((err) => {
+        console.error('[DEBUG] Failed to send trip invite email:', err);
+      });
     }
     res.status(201).json(result);
   } catch (err) {
+    console.error('[DEBUG] Error in add member endpoint:', err);
     res.status(400).json({ error: (err as Error).message });
   }
 });
