@@ -235,3 +235,36 @@ export interface FamilyRelationship {
   status: 'pending' | 'accepted' | 'rejected';
   createdAt: string;
 }
+
+export type TripActivityType =
+  | 'TRIP_CREATED'
+  | 'FOLLOW_ADDED'
+  | 'FOLLOW_REMOVED'
+  | 'ITINERARY_ITEM_ADDED'
+  | 'ITINERARY_ITEM_UPDATED'
+  | 'ITINERARY_ITEM_DELETED'
+  | 'FLIGHT_ADDED'
+  | 'LODGING_ADDED'
+  | 'TOUR_ADDED'
+  | 'NOTE_ADDED';
+
+export interface TripActivity {
+  id: string;
+  tripId: string;
+  actorUserId?: string | null;
+  type: TripActivityType;
+  title: string;
+  summary: string;
+  metadata: Record<string, any>;
+  createdAt: string;
+}
+
+export interface TripComment {
+  id: string;
+  tripId: string;
+  actorUserId?: string | null;
+  body: string;
+  createdAt: string;
+  authorName?: string | null;
+  authorEmail?: string | null;
+}

@@ -16,6 +16,9 @@ import {
   GroupMember,
   PlaceDetailsCache,
   LocationRecord,
+  TripActivity,
+  TripActivityType,
+  TripComment,
 } from './types';
 import { logError, logInfo } from './logger';
 import { getEnvValue, isLocalEnv } from './env';
@@ -27,6 +30,30 @@ const hashPassword = (password: string, salt: string) => scryptSync(password, sa
 const stripUndefined = <T extends Record<string, any>>(updates: T): Partial<T> =>
   Object.fromEntries(Object.entries(updates).filter(([, value]) => typeof value !== 'undefined')) as Partial<T>;
 const hashToken = (token: string): string => createHash('sha256').update(token).digest('hex');
+const FOLLOW_CODE_LENGTH = 6;
+const FOLLOW_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+const generateFollowCode = (): string => {
+  const bytes = randomBytes(FOLLOW_CODE_LENGTH);
+  let out = '';
+  for (let i = 0; i < FOLLOW_CODE_LENGTH; i += 1) {
+    out += FOLLOW_CODE_CHARS[bytes[i] % FOLLOW_CODE_CHARS.length];
+  }
+  return out;
+};
+
+const TRIP_ACTIVITY_TYPES: TripActivityType[] = [
+  'TRIP_CREATED',
+  'FOLLOW_ADDED',
+  'FOLLOW_REMOVED',
+  'ITINERARY_ITEM_ADDED',
+  'ITINERARY_ITEM_UPDATED',
+  'ITINERARY_ITEM_DELETED',
+  'FLIGHT_ADDED',
+  'LODGING_ADDED',
+  'TOUR_ADDED',
+  'NOTE_ADDED',
+];
 
 export const getDb = (): Firestore => {
   if (!app) {
@@ -874,7 +901,7 @@ export const updateTripDetails = async (
 
 export const getTripCovering = async (userId: string, tripId: string): Promise<Record<string, string>> => {
   const db = getDb();
-  const membership = await ensureUserInTrip(tripId, userId);
+  const membership = await ensureUserCanReadTrip(tripId, userId);
   if (!membership) throw new Error('Not authorized to view this trip');
   const tripDoc = await db.collection('trips').doc(tripId).get();
   if (!tripDoc.exists) throw new Error('Trip not found');
@@ -1303,6 +1330,327 @@ export const ensureUserInTrip = async (tripId: string, userId: string): Promise<
   return { groupId: data.groupId };
 };
 
+export const ensureUserCanReadTrip = async (
+  tripId: string,
+  userId: string
+): Promise<{ groupId: string; access: 'member' | 'follower' } | null> => {
+  const membership = await ensureUserInTrip(tripId, userId);
+  if (membership) return { groupId: membership.groupId, access: 'member' };
+  const db = getDb();
+  const follower = await db
+    .collection('trip_followers')
+    .where('tripId', '==', tripId)
+    .where('followerUserId', '==', userId)
+    .limit(1)
+    .get();
+  if (follower.empty) return null;
+  const trip = await db.collection('trips').doc(tripId).get();
+  if (!trip.exists) return null;
+  const data = trip.data() as any;
+  return { groupId: data.groupId, access: 'follower' };
+};
+
+export const getTripFollowCode = async (
+  userId: string,
+  tripId: string
+): Promise<{ id: string; tripId: string; code: string; status: string; createdAt: string }> => {
+  const db = getDb();
+  const trip = await db.collection('trips').doc(tripId).get();
+  if (!trip.exists) throw new Error('Trip not found');
+  const tripData = trip.data() as any;
+  const group = await db.collection('groups').doc(tripData.groupId).get();
+  if (!group.exists || (group.data() as any).ownerId !== userId) {
+    throw new Error('Not authorized to manage follow codes');
+  }
+
+  const existing = await db
+    .collection('follow_codes')
+    .where('tripId', '==', tripId)
+    .where('status', '==', 'active')
+    .orderBy('createdAt', 'desc')
+    .limit(1)
+    .get();
+  if (!existing.empty) {
+    const doc = existing.docs[0];
+    const data = doc.data() as any;
+    return {
+      id: doc.id,
+      tripId: data.tripId,
+      code: data.code,
+      status: data.status,
+      createdAt: data.createdAt,
+    };
+  }
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const code = generateFollowCode();
+    const codeDoc = await db.collection('follow_codes').doc(code).get();
+    if (codeDoc.exists) continue;
+    const payload = {
+      tripId,
+      code,
+      status: 'active',
+      expiresAt: null,
+      maxUses: null,
+      usesCount: 0,
+      createdBy: userId,
+      createdAt: nowIso(),
+      revokedAt: null,
+    };
+    await db.collection('follow_codes').doc(code).set(payload);
+    return { id: code, tripId, code, status: 'active', createdAt: payload.createdAt };
+  }
+
+  throw new Error('Unable to create follow code. Try again.');
+};
+
+export const followTripByCode = async (
+  userId: string,
+  inviteCode: string
+): Promise<{ trip: { id: string; name: string; destination?: string | null }; inviterName: string | null; alreadyFollowing: boolean }> => {
+  const db = getDb();
+  const code = String(inviteCode ?? '').trim().toUpperCase();
+  if (!code) throw new Error('inviteCode is required');
+  const codeDoc = await db.collection('follow_codes').doc(code).get();
+  if (!codeDoc.exists) throw new Error('Invalid or expired follow code');
+  const codeData = codeDoc.data() as any;
+  if (codeData.status !== 'active' || codeData.revokedAt) throw new Error('Invalid or expired follow code');
+  if (codeData.expiresAt && new Date(codeData.expiresAt).getTime() <= Date.now()) {
+    throw new Error('Invalid or expired follow code');
+  }
+  const tripId = String(codeData.tripId ?? '').trim();
+  if (!tripId) throw new Error('Invalid or expired follow code');
+
+  const existing = await db
+    .collection('trip_followers')
+    .where('tripId', '==', tripId)
+    .where('followerUserId', '==', userId)
+    .limit(1)
+    .get();
+  const alreadyFollowing = !existing.empty;
+  if (!alreadyFollowing) {
+    await db.collection('trip_followers').doc(randomUUID()).set({
+      tripId,
+      followerUserId: userId,
+      role: 'follower',
+      followCode: code,
+      createdAt: nowIso(),
+      lastViewedAt: null,
+    });
+    await db.collection('follow_codes').doc(code).set(
+      {
+        usesCount: Number(codeData.usesCount ?? 0) + 1,
+      },
+      { merge: true }
+    );
+    await writeActivity(tripId, userId, 'FOLLOW_ADDED', 'New follower', 'A user started following this trip.', {
+      inviteCode: code,
+      followerUserId: userId,
+    });
+  }
+
+  const tripDoc = await db.collection('trips').doc(tripId).get();
+  if (!tripDoc.exists) throw new Error('Trip not found');
+  const tripData = tripDoc.data() as any;
+  const groupDoc = await db.collection('groups').doc(tripData.groupId).get();
+  const ownerId = groupDoc.exists ? (groupDoc.data() as any).ownerId : null;
+  let inviterName: string | null = null;
+  if (ownerId) {
+    const profile = await db.collection('web_users').doc(ownerId).get();
+    const profileData = profile.exists ? (profile.data() as any) : {};
+    const full = `${profileData.firstName ?? ''} ${profileData.lastName ?? ''}`.trim();
+    if (full) {
+      inviterName = full;
+    } else {
+      const userDoc = await db.collection('users').doc(ownerId).get();
+      inviterName = userDoc.exists ? ((userDoc.data() as any).email ?? null) : null;
+    }
+  }
+
+  return {
+    trip: {
+      id: tripId,
+      name: tripData.name ?? 'Trip',
+      destination: tripData.destination ?? null,
+    },
+    inviterName,
+    alreadyFollowing,
+  };
+};
+
+export const listFollowedTrips = async (
+  userId: string
+): Promise<Array<{ tripId: string; tripName: string; destination?: string | null; inviterName?: string | null }>> => {
+  const db = getDb();
+  const followers = await db.collection('trip_followers').where('followerUserId', '==', userId).get();
+  const results: Array<{ tripId: string; tripName: string; destination?: string | null; inviterName?: string | null }> = [];
+  for (const doc of followers.docs) {
+    const data = doc.data() as any;
+    const tripId = String(data.tripId ?? '').trim();
+    if (!tripId) continue;
+    const tripDoc = await db.collection('trips').doc(tripId).get();
+    if (!tripDoc.exists) continue;
+    const trip = tripDoc.data() as any;
+    const groupDoc = await db.collection('groups').doc(trip.groupId).get();
+    const ownerId = groupDoc.exists ? (groupDoc.data() as any).ownerId : null;
+    let inviterName: string | null = null;
+    if (ownerId) {
+      const profileDoc = await db.collection('web_users').doc(ownerId).get();
+      if (profileDoc.exists) {
+        const profile = profileDoc.data() as any;
+        const full = `${profile.firstName ?? ''} ${profile.lastName ?? ''}`.trim();
+        inviterName = full || null;
+      }
+    }
+    results.push({
+      tripId,
+      tripName: trip.name ?? 'Trip',
+      destination: trip.destination ?? null,
+      inviterName,
+    });
+  }
+  return results;
+};
+
+export const unfollowTrip = async (userId: string, tripId: string): Promise<void> => {
+  const db = getDb();
+  const followers = await db
+    .collection('trip_followers')
+    .where('tripId', '==', tripId)
+    .where('followerUserId', '==', userId)
+    .get();
+  for (const doc of followers.docs) {
+    await doc.ref.delete();
+  }
+  if (!followers.empty) {
+    await writeActivity(tripId, userId, 'FOLLOW_REMOVED', 'Follower left', 'A user unfollowed this trip.', {
+      followerUserId: userId,
+    });
+  }
+};
+
+export const writeActivity = async (
+  tripId: string,
+  actorUserId: string | null,
+  type: TripActivityType,
+  title: string,
+  summary: string,
+  metadata: Record<string, any> = {}
+): Promise<TripActivity> => {
+  if (!TRIP_ACTIVITY_TYPES.includes(type)) {
+    throw new Error(`Unsupported activity type: ${type}`);
+  }
+  const db = getDb();
+  const id = randomUUID();
+  const createdAt = nowIso();
+  const payload: TripActivity = {
+    id,
+    tripId,
+    actorUserId: actorUserId ?? null,
+    type,
+    title: String(title ?? '').trim(),
+    summary: String(summary ?? '').trim(),
+    metadata: metadata ?? {},
+    createdAt,
+  };
+  await db.collection('trip_activity').doc(id).set(payload);
+  return payload;
+};
+
+export const listTripActivity = async (
+  tripId: string,
+  options?: { limit?: number; cursor?: { createdAt: string; id: string } | null }
+): Promise<{ events: TripActivity[]; nextCursor: string | null }> => {
+  const db = getDb();
+  const limit = Math.min(Math.max(Number(options?.limit ?? 20), 1), 100);
+  const rows = await db
+    .collection('trip_activity')
+    .where('tripId', '==', tripId)
+    .orderBy('createdAt', 'desc')
+    .orderBy(FieldPath.documentId(), 'desc')
+    .limit(limit + 1)
+    .get();
+  let events = rows.docs.map((doc) => {
+    const data = doc.data() as any;
+    return {
+      id: doc.id,
+      tripId: data.tripId,
+      actorUserId: data.actorUserId ?? null,
+      type: data.type,
+      title: data.title ?? '',
+      summary: data.summary ?? '',
+      metadata: data.metadata ?? {},
+      createdAt: data.createdAt ?? nowIso(),
+    } as TripActivity;
+  });
+
+  const cursor = options?.cursor;
+  if (cursor?.createdAt && cursor?.id) {
+    events = events.filter((event) => {
+      if (event.createdAt < cursor.createdAt) return true;
+      if (event.createdAt > cursor.createdAt) return false;
+      return event.id < cursor.id;
+    });
+  }
+
+  const hasNext = events.length > limit;
+  const page = hasNext ? events.slice(0, limit) : events;
+  const last = page[page.length - 1];
+  const nextCursor = hasNext && last ? `${last.createdAt}::${last.id}` : null;
+  return { events: page, nextCursor };
+};
+
+export const listTripComments = async (tripId: string): Promise<TripComment[]> => {
+  const db = getDb();
+  const rows = await db
+    .collection('trip_comments')
+    .where('tripId', '==', tripId)
+    .orderBy('createdAt', 'asc')
+    .orderBy(FieldPath.documentId(), 'asc')
+    .get();
+  return rows.docs.map((doc) => {
+    const data = doc.data() as any;
+    return {
+      id: doc.id,
+      tripId: data.tripId,
+      actorUserId: data.actorUserId ?? null,
+      body: data.body ?? '',
+      createdAt: data.createdAt ?? nowIso(),
+      authorName: data.authorName ?? null,
+      authorEmail: data.authorEmail ?? null,
+    } as TripComment;
+  });
+};
+
+export const addTripComment = async (
+  tripId: string,
+  actorUserId: string,
+  body: string
+): Promise<TripComment> => {
+  const db = getDb();
+  const text = String(body ?? '').trim();
+  if (!text) throw new Error('Comment body is required');
+  const userDoc = await db.collection('users').doc(actorUserId).get();
+  const webUserDoc = await db.collection('web_users').doc(actorUserId).get();
+  const web = webUserDoc.exists ? (webUserDoc.data() as any) : {};
+  const fullName = `${web.firstName ?? ''} ${web.lastName ?? ''}`.trim();
+  const authorEmail = userDoc.exists ? ((userDoc.data() as any).email ?? null) : null;
+  const authorName = fullName || authorEmail || null;
+  const id = randomUUID();
+  const createdAt = nowIso();
+  const payload: TripComment = {
+    id,
+    tripId,
+    actorUserId,
+    body: text,
+    createdAt,
+    authorName,
+    authorEmail,
+  };
+  await db.collection('trip_comments').doc(id).set(payload);
+  return payload;
+};
+
 export const getTripGroupId = async (tripId: string): Promise<string | null> => {
   const db = getDb();
   const trip = await db.collection('trips').doc(tripId).get();
@@ -1359,11 +1707,42 @@ export const getFlightForUser = async (flightId: string, userId: string): Promis
 
 export const listFlights = async (userId: string, tripId?: string): Promise<Flight[]> => {
   const db = getDb();
-  let query: FirebaseFirestore.Query = db.collection('flights');
+  const chunk = <T>(items: T[], size = 10): T[][] => {
+    const chunks: T[][] = [];
+    for (let i = 0; i < items.length; i += size) {
+      chunks.push(items.slice(i, i + size));
+    }
+    return chunks;
+  };
   if (tripId) {
-    query = query.where('tripId', '==', tripId);
+    const access = await ensureUserCanReadTrip(tripId, userId);
+    if (!access) return [];
   }
-  const snapshot = await query.get();
+  let allowedTripIds: string[] = [];
+  if (tripId) {
+    allowedTripIds = [tripId];
+  } else {
+    const memberSnap = await db.collection('group_members').where('userId', '==', userId).where('removedAt', '==', null).get();
+    const memberGroupIds = memberSnap.docs.map((d) => (d.data() as any).groupId).filter(Boolean);
+    if (memberGroupIds.length) {
+      const tripSnaps = await Promise.all(
+        Array.from(new Set(memberGroupIds)).map((groupId) => db.collection('trips').where('groupId', '==', groupId).get())
+      );
+      tripSnaps.forEach((snap) => snap.docs.forEach((doc) => allowedTripIds.push(doc.id)));
+    }
+    const followSnap = await db.collection('trip_followers').where('followerUserId', '==', userId).get();
+    followSnap.docs.forEach((doc) => {
+      const data = doc.data() as any;
+      if (data.tripId) allowedTripIds.push(String(data.tripId));
+    });
+    allowedTripIds = Array.from(new Set(allowedTripIds));
+  }
+  if (!allowedTripIds.length) return [];
+  const docs: FirebaseFirestore.QueryDocumentSnapshot[] = [];
+  for (const ids of chunk(allowedTripIds)) {
+    const snap = await db.collection('flights').where('tripId', 'in', ids).get();
+    docs.push(...snap.docs);
+  }
   let validPassengerIds: Set<string> | null = null;
   if (tripId) {
     const tripDoc = await db.collection('trips').doc(tripId).get();
@@ -1374,7 +1753,7 @@ export const listFlights = async (userId: string, tripId?: string): Promise<Flig
       validPassengerIds = new Set(members.map((m) => String(m.id)));
     }
   }
-  return snapshot.docs.map((d) => {
+  return docs.map((d) => {
     const data = d.data() as Flight;
     const ids: string[] = Array.isArray((data as any).passengerIds)
       ? (data as any).passengerIds
@@ -1526,7 +1905,7 @@ export const listLodgings = async (userId: string, tripId?: string | null): Prom
   };
 
   if (tripId) {
-    const membership = await ensureUserInTrip(tripId, userId);
+    const membership = await ensureUserCanReadTrip(tripId, userId);
     if (!membership) return [];
     const snapshot = await db.collection('lodgings').where('trip_id', '==', tripId).get();
     return snapshot.docs.map((d) => d.data() as Lodging);
@@ -1538,7 +1917,6 @@ export const listLodgings = async (userId: string, tripId?: string | null): Prom
     .where('removedAt', '==', null)
     .get();
   const groupIds = memberSnap.docs.map((doc) => (doc.data() as any).groupId).filter(Boolean);
-  if (!groupIds.length) return [];
 
   const tripIds: string[] = [];
   for (const groupChunk of chunk(groupIds)) {
@@ -1547,10 +1925,17 @@ export const listLodgings = async (userId: string, tripId?: string | null): Prom
       tripIds.push(doc.id);
     });
   }
-  if (!tripIds.length) return [];
+
+  const followedSnap = await db.collection('trip_followers').where('followerUserId', '==', userId).get();
+  followedSnap.docs.forEach((doc) => {
+    const data = doc.data() as any;
+    if (data.tripId) tripIds.push(String(data.tripId));
+  });
+  const uniqueTripIds = Array.from(new Set(tripIds));
+  if (!uniqueTripIds.length) return [];
 
   const lodgings: Lodging[] = [];
-  for (const tripChunk of chunk(tripIds)) {
+  for (const tripChunk of chunk(uniqueTripIds)) {
     const lodgingsSnap = await db.collection('lodgings').where('trip_id', 'in', tripChunk).get();
     lodgingsSnap.docs.forEach((doc) => lodgings.push(doc.data() as Lodging));
   }
@@ -1628,10 +2013,39 @@ export const updateLodging = async (lodgingId: string, userId: string, updates: 
 // Tours
 export const listTours = async (userId: string, tripId?: string): Promise<Tour[]> => {
   const db = getDb();
-  let query: FirebaseFirestore.Query = db.collection('tours').where('userId', '==', userId);
-  if (tripId) query = query.where('tripId', '==', tripId);
-  const snapshot = await query.get();
-  return snapshot.docs.map((d) => d.data() as Tour);
+  const chunk = <T>(items: T[], size = 10): T[][] => {
+    const chunks: T[][] = [];
+    for (let i = 0; i < items.length; i += size) {
+      chunks.push(items.slice(i, i + size));
+    }
+    return chunks;
+  };
+  if (tripId) {
+    const access = await ensureUserCanReadTrip(tripId, userId);
+    if (!access) return [];
+    const snapshot = await db.collection('tours').where('tripId', '==', tripId).get();
+    return snapshot.docs.map((d) => d.data() as Tour);
+  }
+  const memberSnap = await db.collection('group_members').where('userId', '==', userId).where('removedAt', '==', null).get();
+  const groupIds = memberSnap.docs.map((d) => (d.data() as any).groupId).filter(Boolean);
+  const tripIds: string[] = [];
+  for (const groupId of Array.from(new Set(groupIds))) {
+    const trips = await db.collection('trips').where('groupId', '==', groupId).get();
+    trips.docs.forEach((doc) => tripIds.push(doc.id));
+  }
+  const followed = await db.collection('trip_followers').where('followerUserId', '==', userId).get();
+  followed.docs.forEach((doc) => {
+    const data = doc.data() as any;
+    if (data.tripId) tripIds.push(String(data.tripId));
+  });
+  const uniqueTripIds = Array.from(new Set(tripIds));
+  if (!uniqueTripIds.length) return [];
+  const tours: Tour[] = [];
+  for (const ids of chunk(uniqueTripIds)) {
+    const snapshot = await db.collection('tours').where('tripId', 'in', ids).get();
+    snapshot.docs.forEach((d) => tours.push(d.data() as Tour));
+  }
+  return tours;
 };
 
 export const insertTour = async (tour: Omit<Tour, 'id' | 'createdAt'>): Promise<Tour> => {
@@ -1876,13 +2290,17 @@ export const saveUserDemographics = async (userId: string, data: any) => {
 // Itineraries
 export const listItineraries = async (userId: string): Promise<Array<Itinerary & { tripName: string }>> => {
   const db = getDb();
-  const itineraries = await db.collection('itineraries').where('userId', '==', userId).get();
+  const itineraries = await db.collection('itineraries').get();
   const trips = await listTrips(userId);
   const tripNames = Object.fromEntries(trips.map((t) => [t.id, t.name]));
-  return itineraries.docs.map((d) => {
+  const visible: Array<Itinerary & { tripName: string }> = [];
+  for (const d of itineraries.docs) {
     const data = d.data() as any;
-    return { ...(data as any), id: d.id, tripName: tripNames[data.tripId] ?? '' };
-  });
+    const access = await ensureUserCanReadTrip(String(data.tripId ?? ''), userId);
+    if (!access) continue;
+    visible.push({ ...(data as any), id: d.id, tripName: tripNames[data.tripId] ?? '' });
+  }
+  return visible;
 };
 
 export const createItineraryRecord = async (
@@ -1958,7 +2376,10 @@ export const updateItineraryRecord = async (
 export const listItineraryDetails = async (userId: string, itineraryId: string): Promise<ItineraryDetail[]> => {
   const db = getDb();
   const itinerary = await db.collection('itineraries').doc(itineraryId).get();
-  if (!itinerary.exists || (itinerary.data() as any).userId !== userId) throw new Error('Not authorized');
+  if (!itinerary.exists) throw new Error('Itinerary not found');
+  const itineraryData = itinerary.data() as any;
+  const membership = await ensureUserCanReadTrip(String(itineraryData.tripId ?? ''), userId);
+  if (!membership) throw new Error('Not authorized');
   const details = await db.collection('itinerary_details').where('itineraryId', '==', itineraryId).get();
   return details.docs.map((d) => d.data() as ItineraryDetail);
 };
@@ -1986,6 +2407,13 @@ export const addItineraryDetail = async (
     cost: detail.cost ?? null,
   };
   await db.collection('itinerary_details').doc(id).set(payload);
+  await writeActivity(tripId, userId, 'ITINERARY_ITEM_ADDED', 'Itinerary item added', payload.activity, {
+    itineraryId,
+    detailId: id,
+    day: payload.day,
+    time: payload.time ?? null,
+    cost: payload.cost ?? null,
+  });
   return payload;
 };
 
@@ -1993,10 +2421,21 @@ export const deleteItineraryDetail = async (userId: string, detailId: string): P
   const db = getDb();
   const detail = await db.collection('itinerary_details').doc(detailId).get();
   if (!detail.exists) return;
-  const itineraryId = (detail.data() as any).itineraryId;
+  const detailData = detail.data() as any;
+  const itineraryId = detailData.itineraryId;
   const itinerary = await db.collection('itineraries').doc(itineraryId).get();
   if (!itinerary.exists || (itinerary.data() as any).userId !== userId) throw new Error('Not authorized');
+  const tripId = String((itinerary.data() as any).tripId ?? '');
   await db.collection('itinerary_details').doc(detailId).delete();
+  if (tripId) {
+    await writeActivity(tripId, userId, 'ITINERARY_ITEM_DELETED', 'Itinerary item removed', detailData.activity ?? '', {
+      itineraryId,
+      detailId,
+      day: detailData.day ?? null,
+      time: detailData.time ?? null,
+      cost: detailData.cost ?? null,
+    });
+  }
 };
 
 export const updateItineraryDetail = async (
@@ -2012,7 +2451,18 @@ export const updateItineraryDetail = async (
   if (!itinerary.exists || (itinerary.data() as any).userId !== userId) throw new Error('Not authorized');
   await db.collection('itinerary_details').doc(detailId).update(updates);
   const updated = await db.collection('itinerary_details').doc(detailId).get();
-  return updated.data() as ItineraryDetail;
+  const payload = updated.data() as ItineraryDetail;
+  const tripId = String((itinerary.data() as any).tripId ?? '');
+  if (tripId) {
+    await writeActivity(tripId, userId, 'ITINERARY_ITEM_UPDATED', 'Itinerary item updated', payload.activity ?? '', {
+      itineraryId,
+      detailId,
+      day: payload.day ?? null,
+      time: payload.time ?? null,
+      cost: payload.cost ?? null,
+    });
+  }
+  return payload;
 };
 
 export const getPlaceDetailsCache = async (placeId: string): Promise<PlaceDetailsCache | null> => {
