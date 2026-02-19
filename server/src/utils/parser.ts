@@ -40,7 +40,7 @@ const MARKDOWN_CHUNK_SIZE = 100000;
 
 async function parseChunk(chunk: string, openai: OpenAI): Promise<TravelData | null> {
   try {
-    const response = await openai.beta.chat.completions.parse({
+    const response = await openai.chat.completions.parse({
       model: 'gpt-4o-mini',
       messages: [
         { 
@@ -81,7 +81,7 @@ export async function parseTravelDocument(filePath: string): Promise<TravelData 
       to_formats: ['md']
     });
 
-    const markdownContent = conversion.document?.md || "";
+    const markdownContent = conversion.document?.md_content || "";
 
     if (!markdownContent) {
       throw new Error("Failed to extract markdown from document.");
