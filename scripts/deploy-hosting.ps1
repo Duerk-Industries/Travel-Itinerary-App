@@ -37,7 +37,12 @@ foreach ($src in $expoMap.Keys) {
 }
 
 Write-Host "Building web bundle..."
-& npx expo export --platform web
+Push-Location (Join-Path $PSScriptRoot "..\\app")
+try {
+  & npx expo export --platform web --output-dir ../dist
+} finally {
+  Pop-Location
+}
 
 Write-Host "Deploying frontend to Firebase Hosting..."
 & npx firebase-tools deploy --only hosting

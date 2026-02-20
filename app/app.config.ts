@@ -5,6 +5,7 @@ const config: ExpoConfig = {
   slug: 'travel-itinerary-planner',
   scheme: 'travelitineraryplanner',
   owner: 'duerk-industries',
+  platforms: ['ios', 'android', 'web'],
   web: {
     bundler: 'metro'
   },
