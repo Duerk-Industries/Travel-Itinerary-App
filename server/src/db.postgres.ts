@@ -2046,15 +2046,15 @@ export const listLodgings = async (userId: string, tripId?: string | null): Prom
              l.created_at as "createdAt"
       FROM lodgings l
       JOIN trips t ON l.trip_id = t.id
+      LEFT JOIN group_members gm
+        ON gm.group_id = t.group_id
+       AND gm.user_id = $1
+       AND gm.removed_at IS NULL
+      LEFT JOIN trip_followers tf
+        ON tf.trip_id = t.id
+       AND tf.follower_user_id = $1
       WHERE ($2::uuid IS NULL OR l.trip_id = $2)
-        AND (
-          EXISTS (
-            SELECT 1 FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $1 AND gm.removed_at IS NULL
-          )
-          OR EXISTS (
-            SELECT 1 FROM trip_followers tf WHERE tf.trip_id = t.id AND tf.follower_user_id = $1
-          )
-        )
+        AND (gm.id IS NOT NULL OR tf.id IS NOT NULL)
       ORDER BY l.check_in_date ASC
     `,
     [userId, tripId ?? null]
@@ -2317,15 +2317,15 @@ export const listTours = async (userId: string, tripId?: string): Promise<Tour[]
       tu.created_at as "createdAt"
     FROM tours tu
     JOIN trips t ON tu.trip_id = t.id
+    LEFT JOIN group_members gm
+      ON gm.group_id = t.group_id
+     AND gm.user_id = $1
+     AND gm.removed_at IS NULL
+    LEFT JOIN trip_followers tf
+      ON tf.trip_id = t.id
+     AND tf.follower_user_id = $1
     WHERE ($2::uuid IS NULL OR tu.trip_id = $2)
-      AND (
-        EXISTS (
-          SELECT 1 FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $1 AND gm.removed_at IS NULL
-        )
-        OR EXISTS (
-          SELECT 1 FROM trip_followers tf WHERE tf.trip_id = t.id AND tf.follower_user_id = $1
-        )
-      )
+      AND (gm.id IS NOT NULL OR tf.id IS NOT NULL)
     ORDER BY tu.date ASC, tu.created_at DESC
     `,
     [userId, tripId ?? null]
