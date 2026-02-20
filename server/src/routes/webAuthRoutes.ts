@@ -1,8 +1,21 @@
 import { Router } from 'express';
 import bodyParser from 'body-parser';
-import { claimInvitesForUser, createWebUser, ensureDefaultGroupForUser, verifyWebUserCredentials } from '../db';
+import {
+  consumeEmailVerificationToken,
+  createEmailVerification,
+  createWebUser,
+  deleteUserRecord,
+  ensureDefaultGroupForUser,
+  findUserByEmail,
+  getPendingEmailVerification,
+  markEmailVerificationUsed,
+  markUserEmailVerified,
+  recordWebUserLogin,
+  verifyWebUserCredentials,
+} from '../db';
 import { createToken } from '../auth';
 import { logError, logInfo } from '../logger';
+import { sendVerificationEmailBestEffort } from '../mailer';
 
 // Web auth routes for email/password login/registration.
 const router = Router();
@@ -33,10 +46,16 @@ router.post('/register', async (req, res) => {
 
   try {
     const user = await createWebUser(firstName.trim(), lastName.trim(), email.trim().toLowerCase(), password.trim());
-    await ensureDefaultGroupForUser(user.id, user.email);
-    await claimInvitesForUser(user.email, user.id);
-    const token = createToken({ userId: user.id, email: user.email, provider: 'email' });
-    res.status(201).json({ message: 'User created', token, user });
+    if (user.emailVerified) {
+      await ensureDefaultGroupForUser(user.id, user.email);
+      const { firstLogin } = await recordWebUserLogin(user.id);
+      const token = createToken({ userId: user.id, email: user.email, provider: 'email' });
+      res.status(201).json({ message: 'Account created', token, user, firstLogin });
+      return;
+    }
+    const verification = await createEmailVerification(user.id);
+    await sendVerificationEmailBestEffort(user.email, verification.token);
+    res.status(201).json({ message: 'Verification required. Check your email to confirm your account.', verificationRequired: true });
   } catch (err: any) {
     if (err?.code === 'USER_EXISTS') {
       res.status(409).json({ error: 'User already exists' });
@@ -54,7 +73,33 @@ router.post('/register', async (req, res) => {
       return;
     }
     logError('Failed to create user', err);
+    if (process.env.NODE_ENV === 'test') {
+      res.status(500).json({ error: 'Failed to create user', details: (err as Error)?.message });
+      return;
+    }
     res.status(500).json({ error: 'Failed to create user' });
+  }
+});
+
+router.post('/resend-confirmation', async (req, res) => {
+  const email = String(req.body?.email ?? '').trim().toLowerCase();
+  if (!email) {
+    res.status(400).json({ error: 'email is required' });
+    return;
+  }
+  try {
+    const user = await findUserByEmail(email);
+    if (user && user.emailVerified) {
+      res.json({ message: 'This account is already confirmed.' });
+      return;
+    }
+    if (user) {
+      const verification = await createEmailVerification(user.id);
+      await sendVerificationEmailBestEffort(user.email, verification.token);
+    }
+    res.json({ message: 'If an account exists for this email, a confirmation link has been sent.' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to resend confirmation email.' });
   }
 });
 
@@ -78,12 +123,22 @@ router.post('/login', async (req, res) => {
       res.status(401).json({ error: 'Invalid email or password' });
       return;
     }
+    if (!user.emailVerified) {
+      const pending = await getPendingEmailVerification(user.id);
+      if (pending && new Date(pending.expiresAt).getTime() < Date.now()) {
+        await deleteUserRecord(user.id);
+        res.status(410).json({ error: 'Confirmation link expired. Account deleted; please register again.' });
+        return;
+      }
+      res.status(403).json({ error: 'Please confirm your email address before logging in.' });
+      return;
+    }
     await ensureDefaultGroupForUser(user.id, user.email);
-    await claimInvitesForUser(user.email, user.id);
+    const { firstLogin } = await recordWebUserLogin(user.id);
     const token = createToken({ userId: user.id, email: user.email, provider: 'email' });
     // TEMPORARY: auth logging (remove later)
     logInfo(`[web-auth] login success for ${user.email}`);
-    res.json({ message: 'Login successful', token, user });
+    res.json({ message: 'Login successful', token, user, firstLogin });
   } catch (err) {
     const message = (err as Error)?.message ?? '';
     const unavailable =
@@ -100,6 +155,35 @@ router.post('/login', async (req, res) => {
     logError('Login failed with unexpected error', err);
     logError('Failed to login', err);
     res.status(500).json({ error: 'Failed to login' });
+  }
+});
+
+router.get('/confirm', async (req, res) => {
+  const token = String(req.query.token ?? '').trim();
+  if (!token) {
+    res.status(400).json({ error: 'token is required' });
+    return;
+  }
+  try {
+    const verification = await consumeEmailVerificationToken(token);
+    if (!verification) {
+      res.status(400).json({ error: 'Invalid or expired confirmation link.' });
+      return;
+    }
+    const expiresAt = new Date(verification.expiresAt).getTime();
+    if (expiresAt < Date.now()) {
+      await markEmailVerificationUsed(verification.id);
+      await deleteUserRecord(verification.userId);
+      res.status(410).json({ error: 'Confirmation link expired. Account deleted; please register again.' });
+      return;
+    }
+    await markUserEmailVerified(verification.userId);
+    await markEmailVerificationUsed(verification.id);
+    await ensureDefaultGroupForUser(verification.userId, verification.email);
+    res.json({ message: 'Email confirmed. You can now log in.' });
+  } catch (err) {
+    logError('Failed to confirm email', err);
+    res.status(500).json({ error: 'Failed to confirm email' });
   }
 });
 

@@ -2,6 +2,7 @@ import request from 'supertest';
 import { Pool } from 'pg';
 import { app } from '../src/app';
 import { initDb, closePool } from '../src/db';
+import { registerAndLoginWebUser, registerWebUser } from './helpers';
 
 describe('Flights API passenger validation', () => {
   const user = { email: 'flight-user@example.com', firstName: 'Flight', lastName: 'Owner', password: 'testtest' };
@@ -16,17 +17,11 @@ describe('Flights API passenger validation', () => {
     await initDb();
     pool = new Pool({ connectionString: process.env.DATABASE_URL });
     await pool.query('DELETE FROM users WHERE email IN ($1, $2)', [user.email, member.email]);
-    const reg = await request(app)
-      .post('/api/web-auth/register')
-      .send({ firstName: user.firstName, lastName: user.lastName, email: user.email, password: user.password, passwordConfirm: user.password })
-      .expect(201);
-    token = reg.body.token as string;
+    const login = await registerAndLoginWebUser(pool, user);
+    token = login.token;
 
     // Create the passenger as a real user so they can be added to the group.
-    await request(app)
-      .post('/api/web-auth/register')
-      .send({ firstName: member.firstName, lastName: member.lastName, email: member.email, password: member.password, passwordConfirm: member.password })
-      .expect(201);
+    await registerWebUser(member);
 
     // Create a trip and add a second member
     const groups = await request(app).get('/api/groups').set('Authorization', `Bearer ${token}`).expect(200);
@@ -284,11 +279,8 @@ describe('Pending passengers and payer rules', () => {
     pool = new Pool({ connectionString: process.env.DATABASE_URL });
     await pool.query('DELETE FROM users WHERE email = $1', [owner.email]);
 
-    const reg = await request(app)
-      .post('/api/web-auth/register')
-      .send({ firstName: owner.firstName, lastName: owner.lastName, email: owner.email, password: owner.password, passwordConfirm: owner.password })
-      .expect(201);
-    token = reg.body.token as string;
+    const login = await registerAndLoginWebUser(pool, owner);
+    token = login.token;
 
     const groups = await request(app).get('/api/groups').set('Authorization', `Bearer ${token}`).expect(200);
     groupId = groups.body[0]?.id as string;
@@ -400,17 +392,11 @@ describe('Trip removal keeps passengers but strips payer status', () => {
     pool = new Pool({ connectionString: process.env.DATABASE_URL });
     await pool.query('DELETE FROM users WHERE email IN ($1, $2)', [owner.email, member.email]);
 
-    const regOwner = await request(app)
-      .post('/api/web-auth/register')
-      .send({ firstName: owner.firstName, lastName: owner.lastName, email: owner.email, password: owner.password, passwordConfirm: owner.password })
-      .expect(201);
-    ownerToken = regOwner.body.token as string;
+    const ownerLogin = await registerAndLoginWebUser(pool, owner);
+    ownerToken = ownerLogin.token;
 
-    const regMember = await request(app)
-      .post('/api/web-auth/register')
-      .send({ firstName: member.firstName, lastName: member.lastName, email: member.email, password: member.password, passwordConfirm: member.password })
-      .expect(201);
-    memberToken = regMember.body.token as string;
+    const memberLogin = await registerAndLoginWebUser(pool, member);
+    memberToken = memberLogin.token;
 
     const groups = await request(app).get('/api/groups').set('Authorization', `Bearer ${ownerToken}`).expect(200);
     groupId = groups.body[0]?.id as string;
@@ -426,6 +412,11 @@ describe('Trip removal keeps passengers but strips payer status', () => {
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({ email: member.email })
       .expect(201);
+
+    const invites = await request(app).get('/api/groups/invites').set('Authorization', `Bearer ${memberToken}`).expect(200);
+    const inviteId = invites.body[0]?.id as string;
+    expect(inviteId).toBeTruthy();
+    await request(app).post(`/api/groups/invites/${inviteId}/accept`).set('Authorization', `Bearer ${memberToken}`).expect(204);
 
     const members = await request(app).get(`/api/groups/${groupId}/members`).set('Authorization', `Bearer ${ownerToken}`).expect(200);
     ownerMemberId = members.body.find((m: any) => (m.email ?? m.userEmail) === owner.email)?.id;
@@ -460,18 +451,18 @@ describe('Trip removal keeps passengers but strips payer status', () => {
     await closePool();
   });
 
-  it('removes payer status and keeps passenger when member drops the trip', async () => {
+  it('removes member from trip data without removing them from the group', async () => {
     await request(app).delete(`/api/trips/${tripId}`).set('Authorization', `Bearer ${memberToken}`).expect(204);
 
     const flights = await request(app).get(`/api/flights?tripId=${tripId}`).set('Authorization', `Bearer ${ownerToken}`).expect(200);
     const flight = flights.body.find((f: any) => f.id === flightId);
     expect(flight).toBeTruthy();
-    expect(flight.passengerIds || flight.passenger_ids).toContain(memberMemberId);
+    expect(flight.passengerIds || flight.passenger_ids || []).not.toContain(memberMemberId);
     expect(flight.paidBy || flight.paid_by || []).not.toContain(memberMemberId);
 
     const membersAfter = await request(app).get(`/api/groups/${groupId}/members`).set('Authorization', `Bearer ${ownerToken}`).expect(200);
-    const pendingMember = membersAfter.body.find((m: any) => (m.email ?? m.userEmail) === member.email);
-    expect(pendingMember).toBeTruthy();
-    expect(pendingMember.status).toBe('pending');
+    const activeMember = membersAfter.body.find((m: any) => (m.email ?? m.userEmail) === member.email);
+    expect(activeMember).toBeTruthy();
+    expect(activeMember.status).toBe('active');
   });
 });

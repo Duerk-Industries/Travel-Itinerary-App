@@ -2,6 +2,7 @@ import request from 'supertest';
 import { Pool } from 'pg';
 import { app } from '../src/app';
 import { initDb, closePool } from '../src/db';
+import { registerAndLoginWebUser } from './helpers';
 
 describe('Expenses API', () => {
   const uniq = Date.now();
@@ -17,11 +18,8 @@ describe('Expenses API', () => {
     await initDb();
     pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
-    const reg = await request(app)
-      .post('/api/web-auth/register')
-      .send({ firstName: user.firstName, lastName: user.lastName, email: user.email, password: user.password, passwordConfirm: user.password })
-      .expect(201);
-    token = reg.body.token as string;
+    const login = await registerAndLoginWebUser(pool, user);
+    token = login.token;
 
     const groups = await request(app).get('/api/groups').set('Authorization', `Bearer ${token}`).expect(200);
     groupId = groups.body[0]?.id as string;

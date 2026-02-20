@@ -1,10 +1,12 @@
 import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
 import { findOrCreateUser, findOrCreateGoogleUser } from './db';
+import { isPasswordSetupRequired } from './db';
 import { User } from './types';
 import { getEnvValue } from './env';
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
+import crypto from 'crypto';
 
 const secret = getEnvValue('AUTH_SECRET', { defaultValue: 'development-secret' })!;
 
@@ -48,7 +50,43 @@ export const createWebUserToken = (payload: { userId: string; username: string }
   return jwt.sign(payload, secret, { expiresIn: '7d' });
 };
 
-export const authenticate = (req: Request, res: Response, next: NextFunction): void => {
+type OAuthStatePayload = {
+  redirectUri?: string;
+  nonce: string;
+};
+
+const OAUTH_STATE_ISSUER = 'travel-itinerary-app';
+const OAUTH_STATE_TTL = '10m';
+
+export const createOAuthState = (payload: { redirectUri?: string }): string => {
+  const nonce = crypto.randomBytes(16).toString('hex');
+  const state: OAuthStatePayload = {
+    redirectUri: payload.redirectUri,
+    nonce,
+  };
+  return jwt.sign(state, secret, { expiresIn: OAUTH_STATE_TTL, issuer: OAUTH_STATE_ISSUER });
+};
+
+export const decodeOAuthState = (state: string): { redirectUri?: string } | null => {
+  try {
+    const decoded = jwt.verify(state, secret, { issuer: OAUTH_STATE_ISSUER }) as OAuthStatePayload;
+    return { redirectUri: decoded.redirectUri };
+  } catch {
+    return null;
+  }
+};
+
+const isPasswordSetupAllowlistedRequest = (req: Request): boolean => {
+  if (req.method.toUpperCase() === 'OPTIONS') return true;
+  const path = (req.originalUrl || req.url || '').split('?')[0];
+  const method = req.method.toUpperCase();
+  if (method === 'PATCH' && path === '/api/account/password') return true;
+  if (method === 'GET' && path === '/api/groups/invites') return true;
+  if (method === 'POST' && /^\/api\/groups\/invites\/[^/]+\/(accept|reject)$/.test(path)) return true;
+  return false;
+};
+
+export const authenticate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const authHeader = req.headers.authorization;
   if (!authHeader) {
     res.status(401).json({ error: 'Missing authorization header' });
@@ -57,6 +95,11 @@ export const authenticate = (req: Request, res: Response, next: NextFunction): v
   const [, token] = authHeader.split(' ');
   try {
     const decoded = jwt.verify(token, secret) as TokenPayload;
+    const mustSetupPassword = await isPasswordSetupRequired(decoded.userId);
+    if (mustSetupPassword && !isPasswordSetupAllowlistedRequest(req)) {
+      res.status(403).json({ error: 'Password setup required before accessing this endpoint.' });
+      return;
+    }
     (req as Request & { user?: TokenPayload }).user = decoded;
     next();
   } catch (err) {

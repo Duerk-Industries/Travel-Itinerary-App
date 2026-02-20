@@ -37,3 +37,10 @@ test-results/.last-run.json
 .firebase
 .firebase-data
 firestore-debug.log
+build/reports/problems
+playwright-report
+test-results
+server/config/firebase-service-account-key.json
+firestore-debug.log
+app/desktop.ini
+server/desktop.ini

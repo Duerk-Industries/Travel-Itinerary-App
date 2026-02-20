@@ -12,17 +12,26 @@
     "lint": "echo \"Add linters per workspace\"",
     "test": "npm run test:app && npm run test:server",
     "test:e2e": "npx playwright test",
+    "emulators:container": "docker build -f functions/Dockerfile.local -t travel-itinerary-emulators . && docker run --rm -p 4001:4001 -p 5001:5001 -p 8080:8080 -p 9099:9099 -p 9199:9199 travel-itinerary-emulators",
     "postinstall": "patch-package",
     "playwright:install": "node ./node_modules/@playwright/test/cli.js install",
     "test:app": "npm --prefix app test",
     "test:server": "npm --prefix server test",
+    "locations:update": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/update-location-jsons.ts",
+    "locations:upload": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/update-location-jsons.ts",
+    "emulators:start": "node scripts/select-latest-firebase-export.js && firebase emulators:start --import=./.firebase-data --export-on-exit=./.firebase-data",
+    "images:migrate-cache": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/migrate-image-cache-to-storage.ts",
     "list-users": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/list_users.ts",
-    "list-trips": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/list_trips_and_users.ts"
+    "list-trips": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/list_trips_and_users.ts",
+    "accounts:seed": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/create-test-accounts.ts"
   },
   "overrides": {
-    "react": "18.2.0",
-    "react-dom": "18.2.0",
-    "react-test-renderer": "18.2.0"
+    "glob": "13.0.5",
+    "minimatch": "10.2.1",
+    "rimraf": "6.1.3",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "react-test-renderer": "19.2.4"
   },
   "engines": {
     "node": ">=20.x"
@@ -30,28 +39,36 @@
   "packageManager": "npm@10.8.2",
   "devDependencies": {
     "@playwright/test": "^1.58.1",
-    "@types/react-test-renderer": "^18.0.7",
+    "@types/react-test-renderer": "^19.1.0",
     "patch-package": "^8.0.1",
     "react-native-dotenv": "^3.4.11",
     "react-refresh": "^0.18.0",
-    "react-test-renderer": "18.2.0",
+    "react-test-renderer": "19.2.4",
     "ts-node": "^10.9.2"
   },
   "dependencies": {
-    "24": "^0.0.0",
-    "@expo/metro-runtime": "~3.1.3",
-    "@react-native-async-storage/async-storage": "^1.23.1",
-    "expo-web-browser": "~12.8.2",
-    "expo": "~50.0.20",
-    "firebase": "^12.8.0",
+    "@expo/metro-runtime": "~6.1.2",
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-native-community/datetimepicker": "8.4.4",
+    "@react-native-firebase/app": "^23.8.6",
+    "@react-native-firebase/app-check": "^23.8.6",
+    "@react-native-firebase/auth": "^23.8.6",
+    "@types/react": "~19.1.10",
+    "axios": "^1.13.5",
+    "docling-sdk": "^2.0.4",
+    "expo": "^54.0.33",
+    "expo-web-browser": "~15.0.10",
+    "firebase": "^12.9.0",
     "firebase-admin": "^13.6.1",
-    "firebase-tools": "^15.5.1",
-    "outdated": "^0.1.1",
+    "firebase-tools": "^15.6.0",
+    "openai": "^6.22.0",
+    "p-limit": "^7.3.0",
     "passport-google-oauth20": "^2.0.0",
-    "react": "18.2.0",
-    "react-dom": "18.2.0",
-    "react-native": "0.73.6",
-    "react-native-web": "~0.19.6",
-    "update": "^0.7.4"
+    "quickjs-emscripten": "^0.31.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "react-native": "0.81.5",
+    "react-native-web": "^0.21.0",
+    "zod": "^4.3.6"
   }
 }

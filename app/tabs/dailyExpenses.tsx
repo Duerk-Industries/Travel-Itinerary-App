@@ -3,6 +3,7 @@ import { Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } 
 import ConfirmDialog from '../components/ConfirmDialog';
 import { fetchExchangeRate, getLocalDateString } from '../utils/exchangeRates';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
+import { toWebStyle } from '../utils/webStyle';
 
 type Trip = {
   id: string;
@@ -324,7 +325,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                         value={draftDate}
                         onChange={(event) => setDraftDate(event.target.value)}
                         style={{
-                          ...(styles.input as any),
+                          ...toWebStyle(styles.input),
                           width: '100%',
                           maxWidth: '100%',
                           boxSizing: 'border-box',

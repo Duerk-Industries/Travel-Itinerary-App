@@ -2,18 +2,52 @@ import { Router } from 'express';
 import bodyParser from 'body-parser';
 import { authenticate } from '../auth';
 import {
+  addTripComment,
   createFellowTraveler,
   createTrip,
   createTripWithGroupAndMembers,
   deleteTrip,
+  ensureUserCanReadTrip,
+  followTripByCode,
+  getTripById,
   getTripCovering,
+  getTripFollowCode,
+  listFollowedTrips,
+  listTripComments,
+  listTripActivity,
   listTrips,
   searchTripContacts,
+  unfollowTrip,
   updateTripCovering,
   updateTripDetails,
   updateTripGroup,
 } from '../db';
 import { detectCoveringConflict, detectCycle } from '../utils/coveredBy';
+import { sendTripInviteEmailBestEffort } from '../mailer';
+import { aggregateTripActivity } from '../services/activityFeed';
+
+const normalizeLocationIds = (value: unknown): string[] => {
+  if (!Array.isArray(value)) return [];
+  const ids = value.map((id) => String(id ?? '').trim()).filter(Boolean);
+  return Array.from(new Set(ids));
+};
+
+const parseActivityCursor = (raw: unknown): { createdAt: string; id: string } | null => {
+  const value = String(raw ?? '').trim();
+  if (!value) return null;
+  const [createdAt, id] = value.split('::');
+  if (!createdAt || !id) return null;
+  const date = new Date(createdAt);
+  if (Number.isNaN(date.getTime())) return null;
+  return { createdAt: date.toISOString(), id };
+};
+
+const parseGroupParam = (raw: unknown): boolean => {
+  if (typeof raw === 'undefined') return true;
+  const value = String(raw).trim().toLowerCase();
+  if (value === 'false' || value === '0' || value === 'no') return false;
+  return true;
+};
 
 // Trips API: create/list/delete trips for the authenticated user.
 const router = Router();
@@ -21,16 +55,50 @@ router.use(bodyParser.json());
 router.use(authenticate);
 
 // Following is not yet implemented server-side; return empty data instead of 404s for client calls.
-router.get('/followed', async (_req, res) => {
-  res.json([]);
+router.get('/followed', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const trips = await listFollowedTrips(userId);
+  res.json(trips);
 });
 
-router.post('/follow', async (_req, res) => {
-  res.status(501).json({ error: 'Trip following is not implemented server-side yet.' });
+router.post('/follow', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const inviteCode = String(req.body?.inviteCode ?? req.body?.code ?? '').trim();
+  if (!inviteCode) {
+    res.status(400).json({ error: 'inviteCode is required' });
+    return;
+  }
+  try {
+    const result = await followTripByCode(userId, inviteCode);
+    res.status(result.alreadyFollowing ? 200 : 201).json({
+      trip: result.trip,
+      inviterName: result.inviterName,
+      alreadyFollowing: result.alreadyFollowing,
+      todayDetails: [],
+    });
+  } catch (err) {
+    const message = (err as Error).message;
+    if (/invalid|expired/i.test(message)) {
+      res.status(404).json({ error: message });
+      return;
+    }
+    res.status(400).json({ error: message });
+  }
 });
 
-router.get('/:id/follow-code', async (_req, res) => {
-  res.status(501).json({ error: 'Trip follow codes are not implemented server-side yet.' });
+router.get('/:id/follow-code', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  try {
+    const code = await getTripFollowCode(userId, req.params.id);
+    res.json({ inviteCode: code.code, tripId: code.tripId, id: code.id, status: code.status });
+  } catch (err) {
+    const message = (err as Error).message;
+    if (/not authorized/i.test(message)) {
+      res.status(403).json({ error: message });
+      return;
+    }
+    res.status(400).json({ error: message });
+  }
 });
 
 router.get('/', async (req, res) => {
@@ -48,6 +116,83 @@ router.get('/participants/search', async (req, res) => {
   }
   const results = await searchTripContacts(userId, q);
   res.json(results);
+});
+
+router.get('/:id', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const access = await ensureUserCanReadTrip(req.params.id, userId);
+  if (!access) {
+    res.status(403).json({ error: 'Not authorized to view this trip' });
+    return;
+  }
+  const trip = await getTripById(req.params.id);
+  if (!trip) {
+    res.status(404).json({ error: 'Trip not found' });
+    return;
+  }
+  res.json({ ...trip, access: access.access });
+});
+
+router.get('/:id/activity', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const access = await ensureUserCanReadTrip(req.params.id, userId);
+  if (!access) {
+    res.status(403).json({ error: 'Not authorized to view this trip activity' });
+    return;
+  }
+
+  const rawLimit = Number(req.query.limit ?? 20);
+  const limit = Number.isFinite(rawLimit) ? rawLimit : 20;
+  const cursor = parseActivityCursor(req.query.cursor);
+  const grouped = parseGroupParam(req.query.group);
+  if (req.query.cursor && !cursor) {
+    res.status(400).json({ error: 'Invalid cursor format' });
+    return;
+  }
+
+  const result = await listTripActivity(req.params.id, { limit, cursor });
+  const events = grouped ? aggregateTripActivity(result.events) : result.events;
+  res.json({
+    tripId: req.params.id,
+    grouped,
+    events,
+    nextCursor: result.nextCursor,
+  });
+});
+
+router.get('/:id/comments', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const access = await ensureUserCanReadTrip(req.params.id, userId);
+  if (!access) {
+    res.status(403).json({ error: 'Not authorized to view this trip comments' });
+    return;
+  }
+  const comments = await listTripComments(req.params.id);
+  res.json({ tripId: req.params.id, comments });
+});
+
+router.post('/:id/comments', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const access = await ensureUserCanReadTrip(req.params.id, userId);
+  if (!access) {
+    res.status(403).json({ error: 'Not authorized to comment on this trip' });
+    return;
+  }
+  const body = String(req.body?.body ?? '').trim();
+  if (!body) {
+    res.status(400).json({ error: 'Comment body is required' });
+    return;
+  }
+  if (body.length > 4000) {
+    res.status(400).json({ error: 'Comment is too long (max 4000 chars)' });
+    return;
+  }
+  try {
+    const comment = await addTripComment(req.params.id, userId, body);
+    res.status(201).json(comment);
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
 });
 
 router.get('/:id/covered-by', async (req, res) => {
@@ -77,13 +222,18 @@ router.put('/:id/covered-by', async (req, res) => {
     const updated = await updateTripCovering(userId, req.params.id, coveredBy);
     res.json(updated || {});
   } catch (err) {
-    res.status(400).json({ error: (err as Error).message });
+    const message = (err as Error).message;
+    if (/not authorized/i.test(message)) {
+      res.status(403).json({ error: message });
+      return;
+    }
+    res.status(400).json({ error: message });
   }
 });
 
 router.post('/', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const { name, groupId, description, destination, startDate, endDate, startMonth, startYear, durationDays, currency } = req.body ?? {};
+  const { name, groupId, description, locationIds, startDate, endDate, startMonth, startYear, durationDays, currency } = req.body ?? {};
   if (!name || !groupId) {
     res.status(400).json({ error: 'name and groupId are required' });
     return;
@@ -91,7 +241,8 @@ router.post('/', async (req, res) => {
   try {
     const trip = await createTrip(userId, groupId, name.trim(), {
       description: typeof description === 'string' ? description.trim() || null : null,
-      destination: typeof destination === 'string' ? destination.trim() || null : null,
+      destination: null,
+      locationIds: normalizeLocationIds(locationIds),
       startDate: typeof startDate === 'string' ? startDate : null,
       endDate: typeof endDate === 'string' ? endDate : null,
       startMonth: Number.isFinite(Number(startMonth)) ? Number(startMonth) : null,
@@ -112,7 +263,7 @@ router.post('/', async (req, res) => {
 
 router.post('/wizard', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const { name, description, destination, startDate, endDate, startMonth, startYear, durationDays, participants, currency } = req.body ?? {};
+  const { name, description, locationIds, startDate, endDate, startMonth, startYear, durationDays, participants, currency } = req.body ?? {};
   if (!name || !String(name).trim()) {
     res.status(400).json({ error: 'Trip name is required' });
     return;
@@ -144,7 +295,8 @@ router.post('/wizard', async (req, res) => {
       ownerId: userId,
       tripName: String(name).trim(),
       description: typeof description === 'string' ? description.trim() || null : null,
-      destination: typeof destination === 'string' ? destination.trim() || null : null,
+      destination: null,
+      locationIds: normalizeLocationIds(locationIds),
       startDate: typeof startDate === 'string' ? startDate : null,
       endDate: typeof endDate === 'string' ? endDate : null,
       startMonth: Number.isFinite(Number(startMonth)) ? Number(startMonth) : null,
@@ -165,6 +317,16 @@ router.post('/wizard', async (req, res) => {
       }
     }
 
+    const ownerEmail = (req as any).user?.email as string | undefined;
+    const tripName = result.trip?.name ?? String(name).trim();
+    const inviteEmails = memberInputs.map((p) => String(p.email ?? '').trim()).filter(Boolean);
+    const uniqueEmails = Array.from(new Set(inviteEmails));
+    await Promise.all(
+      uniqueEmails.map((inviteEmail) =>
+        sendTripInviteEmailBestEffort(inviteEmail, tripName, ownerEmail ?? null).catch(() => undefined)
+      )
+    );
+
     res.status(201).json({ trip: result.trip, groupId: result.groupId, invites: result.invites });
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });
@@ -177,8 +339,19 @@ router.delete('/:id', async (req, res) => {
     await deleteTrip(userId, req.params.id);
     res.status(204).send();
   } catch (err) {
-    res.status(400).json({ error: (err as Error).message });
+    const message = (err as Error).message;
+    if (/not authorized/i.test(message)) {
+      res.status(403).json({ error: message });
+      return;
+    }
+    res.status(400).json({ error: message });
   }
+});
+
+router.delete('/:id/follow', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  await unfollowTrip(userId, req.params.id);
+  res.status(204).send();
 });
 
 router.patch('/:id/group', async (req, res) => {
@@ -192,21 +365,27 @@ router.patch('/:id/group', async (req, res) => {
     const updated = await updateTripGroup(userId, req.params.id, groupId);
     res.json(updated);
   } catch (err) {
-    res.status(400).json({ error: (err as Error).message });
+    const message = (err as Error).message;
+    if (/not authorized/i.test(message)) {
+      res.status(403).json({ error: message });
+      return;
+    }
+    res.status(400).json({ error: message });
   }
 });
 
 router.patch('/:id', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const { description, destination, startDate, endDate, startMonth, startYear, durationDays, dateMode, currency } = req.body ?? {};
-  if (description == null && destination == null && startDate == null && endDate == null && startMonth == null && startYear == null && durationDays == null && currency == null) {
+  const { description, locationIds, startDate, endDate, startMonth, startYear, durationDays, dateMode, currency } = req.body ?? {};
+  if (description == null && locationIds == null && startDate == null && endDate == null && startMonth == null && startYear == null && durationDays == null && currency == null) {
     res.status(400).json({ error: 'At least one field is required' });
     return;
   }
   try {
     const updated = await updateTripDetails(userId, req.params.id, {
       description: typeof description === 'string' ? description : null,
-      destination: typeof destination === 'string' ? destination : null,
+      destination: null,
+      locationIds: locationIds == null ? undefined : normalizeLocationIds(locationIds),
       startDate: typeof startDate === 'string' ? startDate : null,
       endDate: typeof endDate === 'string' ? endDate : null,
       startMonth: Number.isFinite(Number(startMonth)) ? Number(startMonth) : null,
@@ -217,7 +396,12 @@ router.patch('/:id', async (req, res) => {
     });
     res.json(updated);
   } catch (err) {
-    res.status(400).json({ error: (err as Error).message });
+    const message = (err as Error).message;
+    if (/not authorized/i.test(message)) {
+      res.status(403).json({ error: message });
+      return;
+    }
+    res.status(400).json({ error: message });
   }
 });
 

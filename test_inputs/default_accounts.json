@@ -1,0 +1,26 @@
+[
+    {
+        "firstName": "Bryan",
+        "lastName":"Duerk",
+        "email":"bryan.duerk@gmail.com",
+        "password":"testtest"
+    },
+    {
+        "firstName": "Vicky",
+        "lastName":"Duerk",
+        "email":"vduerk@gmail.com",
+        "password":"testtest"
+    },
+    {
+        "firstName": "Bob",
+        "lastName":"Bobson",
+        "email":"jobs.duerk@gmail.com",
+        "password":"testtest"
+    },
+    {
+        "firstName": "Tristan",
+        "lastName":"Duerk",
+        "email":"tristan.duerk@gmail.com",
+        "password":"testtest"
+    }
+]

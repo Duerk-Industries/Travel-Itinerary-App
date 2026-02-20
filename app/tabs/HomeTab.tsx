@@ -112,6 +112,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
     { key: 'create-trip', label: 'Create Trip', icon: '➕' },
     { key: 'account', label: 'Account', icon: '👤' },
     { key: 'follow', label: 'Follow Trip', icon: '🔗' },
+    { key: 'following', label: 'Following Trips', icon: '👀' },
   ];
 
   return (

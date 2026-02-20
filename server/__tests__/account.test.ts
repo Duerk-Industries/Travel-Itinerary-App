@@ -1,7 +1,8 @@
 import request from 'supertest';
 import { Pool } from 'pg';
 import { app } from '../src/app';
-import { initDb, closePool, createWebUser } from '../src/db';
+import { initDb, closePool, createWebUser, createEmailVerification } from '../src/db';
+import { confirmWebUser, loginWebUser, registerAndLoginWebUser, registerWebUser } from './helpers';
 
 describe('Password validation', () => {
   let pool: Pool;
@@ -32,17 +33,12 @@ describe('Password validation', () => {
   it('requires correct current password and matching confirms when changing password', async () => {
     const email = 'password-test+change@example.com';
     await pool.query('DELETE FROM users WHERE email = $1', [email]);
-    const reg = await request(app)
-      .post('/api/web-auth/register')
-      .send({
-        firstName: 'Change',
-        lastName: 'User',
-        email,
-        password: 'oldpass',
-        passwordConfirm: 'oldpass',
-      })
-      .expect(201);
-    const token = reg.body.token as string;
+    const { token } = await registerAndLoginWebUser(pool, {
+      firstName: 'Change',
+      lastName: 'User',
+      email,
+      password: 'oldpass',
+    });
 
     await request(app)
       .patch('/api/account/password')
@@ -112,24 +108,53 @@ describe('Password validation', () => {
     const email = 'demographics-test@example.com';
     await pool.query('DELETE FROM users WHERE email = $1', [email]);
 
-    const reg = await request(app)
-      .post('/api/web-auth/register')
-      .send({
-        firstName: 'Demo',
-        lastName: 'Graphics',
-        email,
-        password: 'testtest',
-        passwordConfirm: 'testtest',
-      })
-      .expect(201);
-
-    const token = reg.body.token as string;
+    const { token } = await registerAndLoginWebUser(pool, {
+      firstName: 'Demo',
+      lastName: 'Graphics',
+      email,
+      password: 'testtest',
+    });
     const resp = await request(app)
       .get('/api/traits/profile/demographics')
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
 
     expect(resp.body).toEqual({ age: null, gender: null });
+  });
+
+  it('restricts non-invite endpoints until password setup is completed', async () => {
+    const email = 'password-test+guard@example.com';
+    await pool.query('DELETE FROM users WHERE email = $1', [email]);
+
+    const { token, userId } = await registerAndLoginWebUser(pool, {
+      firstName: 'Guard',
+      lastName: 'User',
+      email,
+      password: 'testtest',
+    });
+
+    await pool.query(`UPDATE web_users SET password_setup_required = TRUE WHERE id = $1`, [userId]);
+
+    await request(app)
+      .get('/api/groups/invites')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    await request(app)
+      .get('/api/trips')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(403);
+
+    await request(app)
+      .patch('/api/account/password')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ newPassword: 'newpass1', newPasswordConfirm: 'newpass1' })
+      .expect(200);
+
+    await request(app)
+      .get('/api/trips')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
   });
 });
 
@@ -159,17 +184,11 @@ describe('Family relationships', () => {
   });
 
   it('creates relationships, accepts, edits, and removes', async () => {
-    const regOwner = await request(app)
-      .post('/api/web-auth/register')
-      .send({ firstName: owner.firstName, lastName: owner.lastName, email: owner.email, password: owner.password, passwordConfirm: owner.password })
-      .expect(201);
-    ownerToken = regOwner.body.token as string;
+    const ownerLogin = await registerAndLoginWebUser(pool, owner);
+    ownerToken = ownerLogin.token;
 
-    const regMember = await request(app)
-      .post('/api/web-auth/register')
-      .send({ firstName: member.firstName, lastName: member.lastName, email: member.email, password: member.password, passwordConfirm: member.password })
-      .expect(201);
-    memberToken = regMember.body.token as string;
+    const memberLogin = await registerAndLoginWebUser(pool, member);
+    memberToken = memberLogin.token;
 
     // Add a non-user family profile (auto-accepted, editable)
     const addGuest = await request(app)
@@ -253,11 +272,8 @@ describe('Account lifecycle API with shared trip', () => {
   });
 
   it('adds and removes a member for a trip via account routes', async () => {
-    const reg1 = await request(app)
-      .post('/api/web-auth/register')
-      .send({ firstName: owner.firstName, lastName: owner.lastName, email: owner.email, password: owner.password, passwordConfirm: owner.password })
-      .expect(201);
-    ownerToken = reg1.body.token as string;
+    const ownerLogin = await registerAndLoginWebUser(pool, owner);
+    ownerToken = ownerLogin.token;
 
     const trip = await request(app)
       .post('/api/trips/wizard')
@@ -267,10 +283,7 @@ describe('Account lifecycle API with shared trip', () => {
     tripId = trip.body.trip?.id as string;
     expect(tripId).toBeTruthy();
 
-    await request(app)
-      .post('/api/web-auth/register')
-      .send({ firstName: joiner.firstName, lastName: joiner.lastName, email: joiner.email, password: joiner.password, passwordConfirm: joiner.password })
-      .expect(201);
+    await registerWebUser(joiner);
 
     await request(app)
       .post(`/api/account/trips/${tripId}/members`)
@@ -294,7 +307,8 @@ describe('Account lifecycle API with shared trip', () => {
       .get(`/api/account/trips/${tripId}/members`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
-    expect(membersAfter.body.some((m: any) => (m.email ?? m.userEmail) === joiner.email)).toBe(false);
+    const removedMember = membersAfter.body.find((m: any) => (m.email ?? m.userEmail) === joiner.email);
+    expect(removedMember?.status).toBe('pending');
   });
 });
 
@@ -321,11 +335,8 @@ describe('Pending group invites', () => {
   });
 
   it('claims a pending invite for an existing email on login', async () => {
-    const regOwner = await request(app)
-      .post('/api/web-auth/register')
-      .send({ firstName: owner.firstName, lastName: owner.lastName, email: owner.email, password: owner.password, passwordConfirm: owner.password })
-      .expect(201);
-    ownerToken = regOwner.body.token as string;
+    const ownerLogin = await registerAndLoginWebUser(pool, owner);
+    ownerToken = ownerLogin.token;
 
     const tripRes = await request(app)
       .post('/api/trips/wizard')
@@ -348,13 +359,20 @@ describe('Pending group invites', () => {
     const pending = pendingMembers.body.find((m: any) => m.email === invitee.email && m.status === 'pending');
     expect(pending).toBeTruthy();
 
-    await createWebUser(invitee.firstName, invitee.lastName, invitee.email, invitee.password);
+    const inviteeLogin = await registerAndLoginWebUser(pool, invitee);
 
-    const login = await request(app)
-      .post('/api/web-auth/login')
-      .send({ email: invitee.email, password: invitee.password })
+    const inviteList = await request(app)
+      .get('/api/groups/invites')
+      .set('Authorization', `Bearer ${inviteeLogin.token}`)
       .expect(200);
-    expect(login.body.token).toBeTruthy();
+    expect(Array.isArray(inviteList.body)).toBe(true);
+    const invite = inviteList.body.find((inv: any) => inv.groupId && inv.inviteeEmail === invitee.email);
+    expect(invite).toBeTruthy();
+
+    await request(app)
+      .post(`/api/groups/invites/${invite.id}/accept`)
+      .set('Authorization', `Bearer ${inviteeLogin.token}`)
+      .expect(204);
 
     const membersAfter = await request(app)
       .get(`/api/account/trips/${tripId}/members`)
@@ -363,6 +381,146 @@ describe('Pending group invites', () => {
     const claimed = membersAfter.body.find((m: any) => m.email === invitee.email && m.status === 'active');
     expect(claimed).toBeTruthy();
     expect(claimed.firstName).toBe(invitee.firstName);
+  });
+
+  it('removes pending member data when an invite is rejected', async () => {
+    const suffix = Date.now();
+    const rejectInvitee = {
+      email: `reject-invitee+${suffix}@example.com`,
+      firstName: 'Reject',
+      lastName: 'Invitee',
+      password: 'testtest',
+    };
+
+    const groups = await request(app)
+      .get('/api/groups')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+    const groupId = groups.body[0]?.id as string;
+    expect(groupId).toBeTruthy();
+
+    const tripRes = await request(app)
+      .post('/api/trips')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ name: `Reject Trip ${suffix}`, groupId })
+      .expect(201);
+    const rejectTripId = tripRes.body.id as string;
+
+    await request(app)
+      .post(`/api/account/trips/${rejectTripId}/members`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ email: rejectInvitee.email })
+      .expect(201);
+
+    const members = await request(app)
+      .get(`/api/account/trips/${rejectTripId}/members`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+    const pending = members.body.find((m: any) => m.email === rejectInvitee.email && m.status === 'pending');
+    expect(pending).toBeTruthy();
+    const pendingMemberId = pending.id;
+
+    await request(app)
+      .post('/api/flights')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({
+        passengerIds: [pendingMemberId],
+        departureDate: '2026-06-01',
+        departureTime: '08:00',
+        arrivalTime: '10:00',
+        carrier: 'AA',
+        flightNumber: 'RJ1',
+        bookingReference: 'RJ-REF',
+        tripId: rejectTripId,
+        cost: 100,
+        paidBy: [pendingMemberId],
+      })
+      .expect(201);
+
+    await request(app)
+      .post('/api/lodgings')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({
+        tripId: rejectTripId,
+        name: 'Reject Lodging',
+        checkInDate: '2026-06-01',
+        checkOutDate: '2026-06-03',
+        rooms: '1',
+        totalCost: '200',
+        costPerNight: '100',
+        paidBy: [pendingMemberId],
+        travelerIds: [pendingMemberId],
+      })
+      .expect(201);
+
+    await request(app)
+      .post('/api/tours')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({
+        tripId: rejectTripId,
+        date: '2026-06-02',
+        name: 'Reject Tour',
+        startLocation: 'Test',
+        startTime: '09:00',
+        duration: '2h',
+        cost: '50',
+        paidBy: [pendingMemberId],
+      })
+      .expect(201);
+
+    await request(app)
+      .post('/api/expenses')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({
+        tripId: rejectTripId,
+        expenseDate: '2026-06-02',
+        category: 'Lunch',
+        amount: 20,
+        currency: 'USD',
+        amountInTripCurrency: 20,
+        exchangeRateToTripCurrency: 1,
+        exchangeRateDate: '2026-06-02',
+        payerIds: [pendingMemberId],
+        forIds: [pendingMemberId],
+      })
+      .expect(201);
+
+    const rejectLogin = await registerAndLoginWebUser(pool, rejectInvitee);
+    const inviteList = await request(app)
+      .get('/api/groups/invites')
+      .set('Authorization', `Bearer ${rejectLogin.token}`)
+      .expect(200);
+    const invite = inviteList.body.find((inv: any) => inv.inviteeEmail === rejectInvitee.email);
+    expect(invite).toBeTruthy();
+
+    await request(app)
+      .post(`/api/groups/invites/${invite.id}/reject`)
+      .set('Authorization', `Bearer ${rejectLogin.token}`)
+      .expect(204);
+
+    const flights = await request(app)
+      .get(`/api/flights?tripId=${rejectTripId}`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+    expect(flights.body.length).toBe(0);
+
+    const lodgings = await request(app)
+      .get(`/api/lodgings?tripId=${rejectTripId}`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+    expect(lodgings.body.length).toBe(0);
+
+    const tours = await request(app)
+      .get(`/api/tours?tripId=${rejectTripId}`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+    expect(tours.body.length).toBe(0);
+
+    const expenses = await request(app)
+      .get(`/api/expenses?tripId=${rejectTripId}`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+    expect(expenses.body.length).toBe(0);
   });
 });
 
@@ -390,12 +548,9 @@ describe('Account onboarding trip flow', () => {
     await closePool();
   });
 
-  it('returns trips for a newly registered user who was invited to a trip', async () => {
-    const regOwner = await request(app)
-      .post('/api/web-auth/register')
-      .send({ firstName: owner.firstName, lastName: owner.lastName, email: owner.email, password: owner.password, passwordConfirm: owner.password })
-      .expect(201);
-    ownerToken = regOwner.body.token as string;
+  it('returns trips only after an invited user accepts the invite', async () => {
+    const regOwner = await registerAndLoginWebUser(pool, owner);
+    ownerToken = regOwner.token;
 
     const tripRes = await request(app)
       .post('/api/trips/wizard')
@@ -411,43 +566,41 @@ describe('Account onboarding trip flow', () => {
       .send({ email: invited.email })
       .expect(201);
 
-    const regInvited = await request(app)
-      .post('/api/web-auth/register')
-      .send({
-        firstName: invited.firstName,
-        lastName: invited.lastName,
-        email: invited.email,
-        password: invited.password,
-        passwordConfirm: invited.password,
-      })
-      .expect(201);
-    const invitedToken = regInvited.body.token as string;
+    const invitedLogin = await registerAndLoginWebUser(pool, invited);
+
+    const preTrips = await request(app)
+      .get('/api/trips')
+      .set('Authorization', `Bearer ${invitedLogin.token}`)
+      .expect(200);
+    expect(Array.isArray(preTrips.body)).toBe(true);
+    expect(preTrips.body.length).toBe(0);
+
+    const inviteList = await request(app)
+      .get('/api/groups/invites')
+      .set('Authorization', `Bearer ${invitedLogin.token}`)
+      .expect(200);
+    const invite = inviteList.body.find((inv: any) => inv.groupId && inv.inviteeEmail === invited.email);
+    expect(invite).toBeTruthy();
+
+    await request(app)
+      .post(`/api/groups/invites/${invite.id}/accept`)
+      .set('Authorization', `Bearer ${invitedLogin.token}`)
+      .expect(204);
 
     const trips = await request(app)
       .get('/api/trips')
-      .set('Authorization', `Bearer ${invitedToken}`)
+      .set('Authorization', `Bearer ${invitedLogin.token}`)
       .expect(200);
     expect(Array.isArray(trips.body)).toBe(true);
-    expect(trips.body.length).toBeGreaterThanOrEqual(1);
     expect(trips.body.some((t: any) => t.id === tripId)).toBe(true);
   });
 
   it('returns no trips for a newly registered user without invites', async () => {
-    const regSolo = await request(app)
-      .post('/api/web-auth/register')
-      .send({
-        firstName: solo.firstName,
-        lastName: solo.lastName,
-        email: solo.email,
-        password: solo.password,
-        passwordConfirm: solo.password,
-      })
-      .expect(201);
-    const soloToken = regSolo.body.token as string;
+    const soloLogin = await registerAndLoginWebUser(pool, solo);
 
     const trips = await request(app)
       .get('/api/trips')
-      .set('Authorization', `Bearer ${soloToken}`)
+      .set('Authorization', `Bearer ${soloLogin.token}`)
       .expect(200);
     expect(Array.isArray(trips.body)).toBe(true);
     expect(trips.body).toHaveLength(0);
@@ -479,16 +632,9 @@ describe('Web Authentication', () => {
   });
 
   it('successfully registers a new user', async () => {
-    const res = await request(app)
-      .post('/api/web-auth/register')
-      .send({
-        ...testUser,
-        passwordConfirm: testUser.password,
-      })
-      .expect(201);
-
-    expect(res.body.token).toBeDefined();
-    expect(res.body.user.email).toBe(testUser.email);
+    const res = await registerWebUser(testUser);
+    expect(res.body.verificationRequired).toBe(true);
+    expect(res.body.token).toBeUndefined();
   });
 
   it('rejects registration for an existing user', async () => {
@@ -501,14 +647,21 @@ describe('Web Authentication', () => {
       .expect(409);
   });
 
-  it('successfully logs in an existing user', async () => {
+  it('rejects login before email confirmation', async () => {
     const res = await request(app)
       .post('/api/web-auth/login')
       .send({
         email: testUser.email,
         password: testUser.password,
       })
-      .expect(200);
+      .expect(403);
+
+    expect(res.body.error).toMatch(/confirm/i);
+  });
+
+  it('successfully logs in an existing user after confirmation', async () => {
+    await confirmWebUser(pool, testUser.email);
+    const res = await loginWebUser(testUser);
 
     expect(res.body.token).toBeDefined();
     expect(res.body.user.email).toBe(testUser.email);
@@ -532,5 +685,28 @@ describe('Web Authentication', () => {
         password: 'password123',
       })
       .expect(401);
+  });
+
+  it('deletes unconfirmed users after expiration', async () => {
+    const expired = {
+      firstName: 'Expire',
+      lastName: 'Soon',
+      email: 'expire-user@example.com',
+      password: 'password123',
+    };
+    await pool.query('DELETE FROM users WHERE email = $1', [expired.email]);
+    await registerWebUser(expired);
+    const { rows } = await pool.query('SELECT id FROM users WHERE email = $1', [expired.email]);
+    const userId = rows[0]?.id as string | undefined;
+    expect(userId).toBeTruthy();
+    const verification = await createEmailVerification(userId as string, -1);
+
+    await request(app)
+      .get('/api/web-auth/confirm')
+      .query({ token: verification.token })
+      .expect(410);
+
+    const after = await pool.query('SELECT id FROM users WHERE email = $1', [expired.email]);
+    expect(after.rows.length).toBe(0);
   });
 });

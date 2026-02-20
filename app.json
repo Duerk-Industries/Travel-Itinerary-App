@@ -1,7 +1,15 @@
 {
   "expo": {
+    "scheme": "travel-itinerary",
     "extra": {
       "backendUrl": "https://duerk.org",
+      "firebaseApiKey": "AIzaSyBeN8J2zrt86un5r7W5EGBN0RAn4JKJe6E",
+      "firebaseAuthDomain": "travel-itinerary-app-483623.firebaseapp.com",
+      "firebaseProjectId": "travel-itinerary-app-483623",
+      "firebaseStorageBucket": "travel-itinerary-app-483623.firebasestorage.app",
+      "firebaseMessagingSenderId": "62364014972",
+      "firebaseAppId": "1:62364014972:web:b4518add31ad5be991acf9",
+      "recaptchaSiteKey": "6Le1BGYsAAAAAFer3kZv4X1HcpkxmQqapRpnpy7Z",
       "eas": {
         "projectId": "06966c0b-d878-4346-850c-090c762f1916"
       }
@@ -16,6 +24,11 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
-    }
+    },
+    "plugins": [
+      "@react-native-firebase/app",
+      "@react-native-firebase/app-check",
+      "@react-native-firebase/auth"
+    ]
   }
 }

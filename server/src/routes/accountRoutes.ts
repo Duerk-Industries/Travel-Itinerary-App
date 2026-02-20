@@ -9,6 +9,7 @@ import {
   rejectFamilyRelationship,
   removeFamilyRelationship,
   getWebUserProfile,
+  setInitialWebUserPassword,
   updateWebUserPassword,
   updateFamilyProfile,
   updateWebUserProfile,
@@ -18,6 +19,7 @@ import {
   removeFellowTraveler,
   addGroupMember,
   createGroupWithMembers,
+  attachInviteToTrip,
   listGroupInvitesForUser,
   listGroupsForUser,
   removeGroupMember,
@@ -27,8 +29,11 @@ import {
   ensureUserInTrip,
   removeGroupInvite,
   acceptGroupInvite,
+  rejectGroupInvite,
+  getTripById,
 } from '../db';
-import { isEmailConfigured, sendShareEmail } from '../mailer';
+import { sendShareEmailBestEffort, sendTripInviteEmailBestEffort } from '../mailer';
+import { logError } from '../logger';
 
 // Account management (profile, password, deletion) for authenticated web users.
 const router = Router();
@@ -72,8 +77,8 @@ router.patch('/profile', async (req, res) => {
 router.patch('/password', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const { currentPassword, newPassword, newPasswordConfirm } = req.body ?? {};
-  if (!currentPassword || !newPassword || !newPasswordConfirm) {
-    res.status(400).json({ error: 'currentPassword, newPassword, and newPasswordConfirm are required' });
+  if (!newPassword || !newPasswordConfirm) {
+    res.status(400).json({ error: 'newPassword and newPasswordConfirm are required' });
     return;
   }
   if (String(newPassword).length < 6) {
@@ -85,11 +90,19 @@ router.patch('/password', async (req, res) => {
     return;
   }
   try {
-    await updateWebUserPassword(userId, currentPassword, newPassword);
+    if (typeof currentPassword === 'string' && currentPassword.trim().length > 0) {
+      await updateWebUserPassword(userId, currentPassword, newPassword);
+    } else {
+      await setInitialWebUserPassword(userId, newPassword);
+    }
     res.json({ message: 'Password updated' });
   } catch (err: any) {
     if (err?.code === 'INVALID_PASSWORD') {
       res.status(401).json({ error: 'Current password is incorrect' });
+      return;
+    }
+    if (err?.code === 'PASSWORD_SETUP_NOT_REQUIRED') {
+      res.status(400).json({ error: 'Current password is required to change password.' });
       return;
     }
     res.status(400).json({ error: (err as Error).message });
@@ -297,6 +310,7 @@ router.get('/trips/:tripId/members', async (req, res) => {
 
 router.post('/trips/:tripId/members', async (req, res) => {
   const userId = (req as any).user.userId as string;
+  console.log('[DEBUG] Add member request body:', req.body);
   const membership = await ensureUserInTrip(req.params.tripId, userId);
   if (!membership) {
     res.status(403).json({ error: 'Not authorized to add members to this trip' });
@@ -310,8 +324,22 @@ router.post('/trips/:tripId/members', async (req, res) => {
   };
   try {
     const result = await addGroupMember(userId, membership.groupId, { email, guestName, firstName, lastName });
+    console.log('[DEBUG] addGroupMember result:', result);
+    if (result.inviteId) {
+      await attachInviteToTrip(result.inviteId, req.params.tripId);
+    }
+    if (result.email) {
+      console.log('[DEBUG] Attempting to send trip invite email');
+      const trip = await getTripById(req.params.tripId);
+      const tripName = trip?.name ?? 'Trip';
+      const inviterEmail = (req as any).user?.email as string | undefined;
+      await sendTripInviteEmailBestEffort(result.email, tripName, inviterEmail ?? null).catch((err) => {
+        console.error('[DEBUG] Failed to send trip invite email:', err);
+      });
+    }
     res.status(201).json(result);
   } catch (err) {
+    console.error('[DEBUG] Error in add member endpoint:', err);
     res.status(400).json({ error: (err as Error).message });
   }
 });
@@ -348,14 +376,29 @@ groupsRouter.use(authenticate);
 
 groupsRouter.get('/invites', async (req, res) => {
   const user = (req as any).user as { userId: string; email: string };
-  const invites = await listGroupInvitesForUser(user.userId, user.email);
-  res.json(invites);
+  try {
+    const invites = await listGroupInvitesForUser(user.userId, user.email);
+    res.json(invites);
+  } catch (err) {
+    logError('Failed to list group invites', err);
+    res.status(503).json({ error: 'Invites temporarily unavailable. Please try again.' });
+  }
 });
 
 groupsRouter.post('/invites/:id/accept', async (req, res) => {
-  const userId = (req as any).user.userId as string;
+  const user = (req as any).user as { userId: string; email: string };
   try {
-    await acceptGroupInvite(req.params.id, userId);
+    await acceptGroupInvite(req.params.id, user.userId, user.email);
+    res.status(204).send();
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+groupsRouter.post('/invites/:id/reject', async (req, res) => {
+  const user = (req as any).user as { userId: string; email: string };
+  try {
+    await rejectGroupInvite(req.params.id, user.userId, user.email);
     res.status(204).send();
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });
@@ -392,20 +435,18 @@ groupsRouter.post('/', async (req, res) => {
   try {
     const { groupId, invites } = await createGroupWithMembers(user.userId, name.trim(), normalizedMembers);
 
-    if (isEmailConfigured()) {
-      await Promise.all(
-        invites.map(({ email }) => {
-          const subject = `${user.email} invited you to a group: ${name}`;
-          const body = [
-            `Hi,`,
-            ``,
-            `${user.email} invited you to join the group "${name}".`,
-            `Log in to Shared Trip Planner to accept this invitation.`, 
-          ].join('\n');
-          return sendShareEmail(email, subject, body).catch(() => undefined);
-        })
-      );
-    }
+    await Promise.all(
+      invites.map(({ email }) => {
+        const subject = `${user.email} invited you to a group: ${name}`;
+        const body = [
+          `Hi,`,
+          ``,
+          `${user.email} invited you to join the group "${name}".`,
+          `Log in to Shared Trip Planner to accept this invitation.`, 
+        ].join('\n');
+        return sendShareEmailBestEffort(email, subject, body).catch(() => undefined);
+      })
+    );
 
     res.status(201).json({ id: groupId, invites });
   } catch (err) {
@@ -430,10 +471,10 @@ groupsRouter.post('/:id/members', async (req, res) => {
       firstName: given || undefined,
       lastName: family || undefined,
     });
-    if (result.email && result.inviteId && isEmailConfigured()) {
+    if (result.email && result.inviteId) {
       const subject = `${user.email} invited you to a group`;
       const body = `${user.email} invited you to join a group. Log in to accept.`;
-      await sendShareEmail(result.email, subject, body);
+      await sendShareEmailBestEffort(result.email, subject, body);
     }
     res.status(201).json(result);
   } catch (err) {

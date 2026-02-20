@@ -17,18 +17,29 @@ export type WizardSaveResult = {
   fatal?: string;
 };
 
+const normalizeLookupKey = (value?: string | null): string => String(value ?? '').trim().toLowerCase();
+
 const buildMemberLookups = (members: WizardGroupMember[]) => {
   const memberByEmail = new Map(
-    members
-      .map((m) => [String(m.email ?? '').toLowerCase(), m.id] as const)
-      .filter(([email]) => email)
+    members.map((m) => [normalizeLookupKey(m.email), m.id] as const).filter(([email]) => email)
   );
   const memberByGuest = new Map(
-    members
-      .map((m) => [String(m.guestName ?? '').toLowerCase(), m.id] as const)
-      .filter(([name]) => name)
+    members.map((m) => [normalizeLookupKey(m.guestName), m.id] as const).filter(([name]) => name)
   );
   return { memberByEmail, memberByGuest };
+};
+
+const resolveMemberId = (
+  member: WizardGroupMember | undefined,
+  memberByEmail: Map<string, string>,
+  memberByGuest: Map<string, string>
+): string | null => {
+  if (!member) return null;
+  const emailKey = normalizeLookupKey(member.email);
+  if (emailKey) return memberByEmail.get(emailKey) ?? null;
+  const guestKey = normalizeLookupKey(member.guestName);
+  if (guestKey) return memberByGuest.get(guestKey) ?? null;
+  return null;
 };
 
 export const saveWizardFlights = async (params: {
@@ -65,18 +76,15 @@ export const saveWizardFlights = async (params: {
     const fallbackPassengerId = activeMembers[0]?.id ?? members[0]?.id ?? null;
     const fallbackPayerId = activeMembers[0]?.id ?? null;
     const failures: string[] = [];
+    const todayIso = new Date().toISOString().slice(0, 10);
 
     for (const flight of wizardFlights) {
       const rawPassengerIds = Array.isArray(flight.passenger_ids) ? flight.passenger_ids : [];
-      const resolvedPassengerIds = rawPassengerIds
-        .map((id) => wizardMembersById.get(String(id)))
-        .map((member) => {
-          if (!member) return null;
-          if (member.email) return memberByEmail.get(String(member.email).toLowerCase()) ?? null;
-          if (member.guestName) return memberByGuest.get(String(member.guestName).toLowerCase()) ?? null;
-          return null;
-        })
-        .filter(Boolean) as string[];
+      const resolvedPassengerIds: string[] = [];
+      for (const id of rawPassengerIds) {
+        const resolvedId = resolveMemberId(wizardMembersById.get(String(id)), memberByEmail, memberByGuest);
+        if (resolvedId) resolvedPassengerIds.push(resolvedId);
+      }
 
       const passengerIds = resolvedPassengerIds.length ? resolvedPassengerIds : fallbackPassengerId ? [fallbackPassengerId] : [];
       if (!passengerIds.length) {
@@ -89,23 +97,24 @@ export const saveWizardFlights = async (params: {
         : Array.isArray((flight as any).paid_by)
           ? (flight as any).paid_by
           : [];
-      const resolvedPaidBy = rawPaidBy
-        .map((id: any) => wizardMembersById.get(String(id)))
-        .map((member: WizardGroupMember | undefined) => {
-          if (!member || !member.email) return null;
-          return memberByEmail.get(String(member.email).toLowerCase()) ?? null;
-        })
-        .filter(Boolean) as string[];
+      const resolvedPaidBy: string[] = [];
+      for (const id of rawPaidBy) {
+        const member = wizardMembersById.get(String(id));
+        const emailKey = normalizeLookupKey(member?.email);
+        if (!emailKey) continue;
+        const resolvedId = memberByEmail.get(emailKey);
+        if (resolvedId) resolvedPaidBy.push(resolvedId);
+      }
       const paidBy = resolvedPaidBy.length ? resolvedPaidBy : fallbackPayerId ? [fallbackPayerId] : [];
 
       const draft: FlightEditDraft = {
         passengerName: flight.passenger_name || 'Traveler',
         passengerIds,
-        departureDate: normalizeDateString(flight.departure_date || '') || new Date().toISOString().slice(0, 10),
+        departureDate: normalizeDateString(flight.departure_date || '') || todayIso,
         arrivalDate:
           normalizeDateString((flight as any).arrival_date || '') ||
           normalizeDateString(flight.departure_date || '') ||
-          new Date().toISOString().slice(0, 10),
+          todayIso,
         departureLocation: flight.departure_location ?? '',
         departureAirportCode: flight.departure_airport_code ?? '',
         departureTime: flight.departure_time || '00:00',
@@ -178,24 +187,16 @@ export const saveWizardLodgings = async (params: {
       const rawTravelerIds = Array.isArray((lodging as any).travelerIds)
         ? (lodging as any).travelerIds
         : rawPaidBy;
-      const resolvedPaidBy = rawPaidBy
-        .map((id: string) => wizardMembersById.get(String(id)))
-        .map((member: WizardGroupMember | undefined) => {
-          if (!member) return null;
-          if (member.email) return memberByEmail.get(String(member.email).toLowerCase()) ?? null;
-          if (member.guestName) return memberByGuest.get(String(member.guestName).toLowerCase()) ?? null;
-          return null;
-        })
-        .filter(Boolean) as string[];
-      const resolvedTravelerIds = rawTravelerIds
-        .map((id: string) => wizardMembersById.get(String(id)))
-        .map((member: WizardGroupMember | undefined) => {
-          if (!member) return null;
-          if (member.email) return memberByEmail.get(String(member.email).toLowerCase()) ?? null;
-          if (member.guestName) return memberByGuest.get(String(member.guestName).toLowerCase()) ?? null;
-          return null;
-        })
-        .filter(Boolean) as string[];
+      const resolvedPaidBy: string[] = [];
+      for (const id of rawPaidBy) {
+        const resolvedId = resolveMemberId(wizardMembersById.get(String(id)), memberByEmail, memberByGuest);
+        if (resolvedId) resolvedPaidBy.push(resolvedId);
+      }
+      const resolvedTravelerIds: string[] = [];
+      for (const id of rawTravelerIds) {
+        const resolvedId = resolveMemberId(wizardMembersById.get(String(id)), memberByEmail, memberByGuest);
+        if (resolvedId) resolvedTravelerIds.push(resolvedId);
+      }
       const paidBy = resolvedPaidBy.length ? resolvedPaidBy : fallbackPayerId ? [fallbackPayerId] : [];
       const travelerIds = resolvedTravelerIds.length ? resolvedTravelerIds : activeMembers.map((m) => m.id);
 

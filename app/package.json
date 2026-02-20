@@ -7,15 +7,37 @@
     "export:web": "expo export --platform web",
     "web": "expo start --web"
   },
+  "overrides": {
+    "glob": "13.0.5",
+    "minimatch": "10.2.1"
+  },
   "dependencies": {
-    "@expo/metro-runtime": "~3.1.3",
-    "react-dom": "18.2.0",
-    "react-native-web": "~0.19.6"
+    "@expo/metro-runtime": "~6.1.2",
+    "@react-native-async-storage/async-storage": "^2.2.0",
+    "@react-native-community/datetimepicker": "^8.4.4",
+    "@react-native-firebase/app": "^23.8.6",
+    "@react-native-firebase/app-check": "^23.8.6",
+    "@react-native-firebase/auth": "^23.8.6",
+    "caniuse-lite": "^1.0.30001770",
+    "expo": "^54.0.33",
+    "expo-constants": "~18.0.10",
+    "expo-web-browser": "~15.0.10",
+    "firebase": "^12.9.0",
+    "pdfjs-dist": "^5.4.624",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "react-native": "0.81.5",
+    "react-native-web": "^0.21.0"
   },
   "devDependencies": {
     "@testing-library/react-native": "^12.4.3",
-    "@types/react": "^18.2.79",
-    "jest-environment-jsdom": "^29.7.0",
-    "react-native-svg-transformer": "^1.4.0"
+    "@types/jest": "^30.0.0",
+    "@types/react": "~19.1.10",
+    "jest": "^30.2.0",
+    "jest-environment-jsdom": "^30.2.0",
+    "react-native-dotenv": "^3.4.11",
+    "react-native-svg-transformer": "^1.4.0",
+    "react-test-renderer": "19.2.4",
+    "ts-jest": "^29.4.6"
   }
 }

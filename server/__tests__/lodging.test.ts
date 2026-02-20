@@ -1,27 +1,35 @@
+// c:\Git\Tristan\Travel-Itinerary-App\server\__tests__\lodging.test.ts
+
 import request from 'supertest';
 
 jest.mock('../src/googlePlaces', () => ({
   findPlacePhoto: jest.fn().mockResolvedValue('https://example.com/mock-lodging.jpg'),
 }));
 
+// Also mock image-service in case the controller uses it
+jest.mock('../src/image-service', () => ({
+  getGooglePlaceImage: jest.fn().mockResolvedValue('https://example.com/mock-lodging.jpg'),
+}));
+
+import { Pool } from 'pg';
 import { app } from '../src/app';
 import { closePool, initDb } from '../src/db';
+import { registerAndLoginWebUser } from './helpers';
 
 describe('Lodging creation with image URL', () => {
   const uniq = Date.now();
   const user = { email: `lodging+${uniq}@example.com`, firstName: 'Lodging', lastName: 'Tester', password: 'testtest' };
   let token: string;
   let tripId: string;
+  let pool: Pool;
 
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
     await initDb();
+    pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
-    const reg = await request(app)
-      .post('/api/web-auth/register')
-      .send({ firstName: user.firstName, lastName: user.lastName, email: user.email, password: user.password, passwordConfirm: user.password })
-      .expect(201);
-    token = reg.body.token as string;
+    const login = await registerAndLoginWebUser(pool, user);
+    token = login.token;
 
     const groups = await request(app).get('/api/groups').set('Authorization', `Bearer ${token}`).expect(200);
     const groupId = groups.body[0]?.id as string;
@@ -36,6 +44,9 @@ describe('Lodging creation with image URL', () => {
   });
 
   afterAll(async () => {
+    if (pool) {
+      await pool.end();
+    }
     await closePool();
   });
 

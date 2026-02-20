@@ -32,6 +32,43 @@ A starter shared trip planner stack with a TypeScript/Node.js API backed by Post
    npm run web # or npm run ios / npm run android
    ```
 
+## API usage limits (external providers)
+
+The server supports configurable usage limits for external API providers (OpenAI, Unsplash, SMTP, and airport dataset download).
+
+### How to configure
+
+Limits are configured in `server/config/api-limits.yaml` (tracked in git).
+
+You can optionally override the file path with:
+
+- `API_LIMITS_CONFIG_PATH`
+
+YAML structure:
+
+```yaml
+providers:
+  OPENAI:
+    window: hour
+    windowHours: 24
+    overall: 200
+    callers:
+      ITINERARY_GENERATE_PLAN: 200
+```
+
+### Behavior
+
+- Limits reset by provider time window (UTC-based):
+  - Default is `day`.
+  - Unsplash defaults to `hour`.
+  - When `window: hour`, `windowHours` controls bucket size (for example `24`).
+- If a limit is missing, empty, non-numeric, or non-positive, that scope is treated as unlimited.
+- Logs are emitted at `50%`, `75%`, `90%`, and `100%` for:
+  - provider overall usage
+  - caller usage
+- Calls are blocked at `100%` of a configured limit.
+- Some routes may return `429` when a limit blocks a call (for example itinerary generation via OpenAI).
+
 ## API quick reference
 - `POST /api/auth/email { email }` → create/login a user via email, returning a JWT.
 - `POST /api/auth/oauth { email, provider }` → Google or Apple login using the provider name and email claim.
@@ -60,6 +97,17 @@ A starter shared trip planner stack with a TypeScript/Node.js API backed by Post
 - Playwright e2e tests: `npm run test:e2e`
 - Run everything: `npm test` (from repo root)
 - Day overview/day details interactions are covered in `app/tests/overview.test.tsx`.
+
+## FAQ and Specifications
+- Full single-page implementation FAQ: [`FAQ.md`](FAQ.md)
+- Split topic docs index: [`docs/faq/README.md`](docs/faq/README.md)
+- [`docs/faq/overview.md`](docs/faq/overview.md)
+- [`docs/faq/auth-and-access.md`](docs/faq/auth-and-access.md)
+- [`docs/faq/api-usage.md`](docs/faq/api-usage.md)
+- [`docs/faq/testing-and-coverage.md`](docs/faq/testing-and-coverage.md)
+- [`docs/faq/user-administration.md`](docs/faq/user-administration.md)
+- [`docs/faq/look-and-feel.md`](docs/faq/look-and-feel.md)
+- [`docs/faq/operations-and-constraints.md`](docs/faq/operations-and-constraints.md)
 
 ## Notes
 - This project is a base implementation; plug in real OAuth client IDs/secrets and production storage for secure deployments.

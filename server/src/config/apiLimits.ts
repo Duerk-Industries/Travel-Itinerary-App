@@ -1,0 +1,121 @@
+import fs from 'fs';
+import path from 'path';
+import { parse } from 'yaml';
+import { logError } from '../logger';
+
+type LimitWindow = 'hour' | 'day';
+
+type ProviderLimits = {
+  window?: LimitWindow;
+  windowHours?: number;
+  overall?: number;
+  callers: Record<string, number>;
+};
+
+type ApiLimitsConfig = {
+  providers: Record<string, ProviderLimits>;
+};
+
+type RawProviderLimits = {
+  window?: unknown;
+  windowHours?: unknown;
+  overall?: unknown;
+  callers?: Record<string, unknown>;
+};
+
+type RawApiLimitsConfig = {
+  providers?: Record<string, RawProviderLimits>;
+};
+
+const DEFAULT_CONFIG_RELATIVE_PATH = '../../config/api-limits.yaml';
+
+const normalizeKeyPart = (value: string): string =>
+  value
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
+const parsePositiveInt = (raw: unknown): number | undefined => {
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value <= 0) return undefined;
+  return Math.floor(value);
+};
+
+const normalizeWindow = (raw: unknown): LimitWindow | undefined => {
+  const normalized = String(raw ?? '')
+    .trim()
+    .toLowerCase();
+  if (normalized === 'hour' || normalized === 'day') return normalized;
+  return undefined;
+};
+
+const normalizeProviderLimits = (raw: RawProviderLimits | undefined): ProviderLimits => {
+  const normalizedCallers: Record<string, number> = {};
+  const callers = raw?.callers ?? {};
+  for (const [caller, limit] of Object.entries(callers)) {
+    const parsed = parsePositiveInt(limit);
+    if (parsed !== undefined) {
+      normalizedCallers[normalizeKeyPart(caller)] = parsed;
+    }
+  }
+  return {
+    window: normalizeWindow(raw?.window),
+    windowHours: parsePositiveInt(raw?.windowHours),
+    overall: parsePositiveInt(raw?.overall),
+    callers: normalizedCallers,
+  };
+};
+
+const resolveConfigPath = (): string => {
+  const override = String(process.env.API_LIMITS_CONFIG_PATH ?? '').trim();
+  if (override) {
+    return path.isAbsolute(override) ? override : path.resolve(process.cwd(), override);
+  }
+  return path.resolve(__dirname, DEFAULT_CONFIG_RELATIVE_PATH);
+};
+
+export const getResolvedApiLimitsConfigPath = (): string => resolveConfigPath();
+
+export const doesApiLimitsConfigExist = (): boolean => fs.existsSync(resolveConfigPath());
+
+let cachedConfig: ApiLimitsConfig | null = null;
+let cachedPath: string | null = null;
+let cachedMtimeMs = -1;
+
+const loadConfigFromFile = (): ApiLimitsConfig => {
+  const configPath = resolveConfigPath();
+  if (!fs.existsSync(configPath)) {
+    return { providers: {} };
+  }
+  const stat = fs.statSync(configPath);
+  if (
+    cachedConfig &&
+    cachedPath === configPath &&
+    Number.isFinite(cachedMtimeMs) &&
+    cachedMtimeMs === stat.mtimeMs
+  ) {
+    return cachedConfig;
+  }
+
+  try {
+    const rawText = fs.readFileSync(configPath, 'utf8');
+    const parsed = (parse(rawText) ?? {}) as RawApiLimitsConfig;
+    const providers: Record<string, ProviderLimits> = {};
+    for (const [provider, rawProvider] of Object.entries(parsed.providers ?? {})) {
+      providers[normalizeKeyPart(provider)] = normalizeProviderLimits(rawProvider);
+    }
+    cachedConfig = { providers };
+    cachedPath = configPath;
+    cachedMtimeMs = stat.mtimeMs;
+    return cachedConfig;
+  } catch (err) {
+    logError(`[api-usage] Failed to load YAML config from ${configPath}`, err);
+    return { providers: {} };
+  }
+};
+
+export const getApiLimitProviderConfig = (provider: string): ProviderLimits | undefined => {
+  const config = loadConfigFromFile();
+  return config.providers[normalizeKeyPart(provider)];
+};

@@ -83,6 +83,7 @@ type Trip = {
   name: string;
   description?: string | null;
   destination?: string | null;
+  locationIds?: string[];
   startDate?: string | null;
   endDate?: string | null;
   startMonth?: number | null;
@@ -318,6 +319,34 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const [travelerDraft, setTravelerDraft] = useState({ firstName: '', lastName: '', email: '' });
   const [pendingRemovalIds, setPendingRemovalIds] = useState<string[]>([]);
   const [showAddLodging, setShowAddLodging] = useState(false);
+  const [locationNames, setLocationNames] = useState<string[]>([]);
+
+  useEffect(() => {
+    const ids = Array.isArray(trip?.locationIds) ? trip!.locationIds : [];
+    if (!ids.length) {
+      setLocationNames([]);
+      return;
+    }
+    let active = true;
+    fetch(`${backendUrl}/api/places/batch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...headers },
+      body: JSON.stringify({ ids }),
+    })
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        if (!active) return;
+        const names = Array.isArray(data) ? data.map((item: any) => String(item?.name ?? '')).filter(Boolean) : [];
+        setLocationNames(names);
+      })
+      .catch(() => {
+        if (active) setLocationNames([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [backendUrl, headers, trip?.id, trip?.locationIds]);
+  const tripLocationLabel = locationNames.length ? locationNames.join(', ') : trip?.destination || '';
   const [showAddTour, setShowAddTour] = useState(false);
   const [showAddRental, setShowAddRental] = useState(false);
   const [lodgingDraft, setLodgingDraft] = useState<LodgingDraft>(createInitialLodgingState());
@@ -614,14 +643,25 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   );
 
   const allDates = useMemo(() => {
+    const parseDateUtc = (value?: string | null): Date | null => {
+      if (!value) return null;
+      const parts = String(value).split('-').map((v) => Number(v));
+      if (parts.length !== 3 || parts.some((n) => !Number.isFinite(n))) {
+        const d = new Date(value);
+        return Number.isNaN(d.valueOf()) ? null : new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+      }
+      return new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+    };
     const dates: string[] = [];
     const start = displayStartDate || effectiveRangeDates.startDate;
     const end = displayEndDate || effectiveRangeDates.endDate;
     if (start && end) {
-      const s = new Date(start);
-      const e = new Date(end);
-      for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
-        dates.push(d.toISOString().slice(0, 10));
+      const s = parseDateUtc(start);
+      const e = parseDateUtc(end);
+      if (s && e) {
+        for (let d = new Date(s); d <= e; d.setUTCDate(d.getUTCDate() + 1)) {
+          dates.push(d.toISOString().slice(0, 10));
+        }
       }
     } else if (flights.length || lodgings.length) {
       const all = [
@@ -630,11 +670,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         ...lodgings.map((l) => l.checkOutDate),
       ]
         .filter(Boolean)
-        .map((d) => new Date(d as string).getTime());
+        .map((d) => parseDateUtc(d as string))
+        .filter(Boolean)
+        .map((d) => (d as Date).getTime());
       if (all.length) {
         const min = new Date(Math.min(...all));
         const max = new Date(Math.max(...all));
-        for (let d = new Date(min); d <= max; d.setDate(d.getDate() + 1)) {
+        for (let d = new Date(min); d <= max; d.setUTCDate(d.getUTCDate() + 1)) {
           dates.push(d.toISOString().slice(0, 10));
         }
       }
@@ -642,7 +684,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     if (!dates.length) {
       dates.push(new Date().toISOString().slice(0, 10));
     }
-    return dates;
+    return Array.from(new Set(dates));
   }, [displayStartDate, displayEndDate, effectiveRangeDates.startDate, effectiveRangeDates.endDate, flights, lodgings]);
 
   useEffect(() => {
@@ -667,13 +709,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         rentalsForDay.forEach((r) => items.push(`Rental car (${r.vendor || 'vendor'}) ${r.pickupDate} -> ${r.dropoffDate}`));
         const label = `Day ${idx + 1}`;
         if (!items.length) items.push('Free Day');
-        return { date, label, items, location: trip?.destination ?? null };
+        return { date, label, items, location: tripLocationLabel || null };
       });
       setDayCards(cards);
       setSelectedDay((prev) => (prev && cards.some((card) => card.date === prev) ? prev : null));
     };
     buildDayCards();
-  }, [allDates, flights, lodgings, tours, carRentals, trip?.destination]);
+  }, [allDates, flights, lodgings, tours, carRentals, tripLocationLabel]);
 
   useEffect(() => {
     const cache = async () => {
@@ -707,12 +749,29 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     const fetchImages = async () => {
       if (!dayCards.length) return;
       const next: Record<string, string> = {};
-      for (const card of dayCards) {
+      for (let idx = 0; idx < dayCards.length; idx += 1) {
+        const card = dayCards[idx];
+        const dayNumber = idx + 1;
+        const activities = itineraryDetails
+          .filter((detail) => detail.day === dayNumber)
+          .map((detail) => detail.activity)
+          .filter(Boolean);
+        const tourNames = tours
+          .filter((tour) => tour.date === card.date)
+          .map((tour) => tour.name)
+          .filter(Boolean);
+        const contextParts = [...activities, ...tourNames].filter(Boolean);
+        const context = contextParts.join(' | ').slice(0, 200);
         try {
-          const res = await fetch(
-            `${backendUrl}/api/itinerary/images?location=${encodeURIComponent(card.location || trip?.destination || 'travel')}&day=${encodeURIComponent(card.date)}`,
-            { headers }
-          );
+          const baseLocation = card.location || tripLocationLabel || trip?.destination || 'travel';
+          const query = [
+            `location=${encodeURIComponent(baseLocation)}`,
+            `day=${encodeURIComponent(card.date)}`,
+            context ? `context=${encodeURIComponent(context)}` : '',
+          ]
+            .filter(Boolean)
+            .join('&');
+          const res = await fetch(`${backendUrl}/api/itinerary/images?${query}`, { headers });
           const data = await res.json().catch(() => ({}));
           if (data?.url) {
             next[card.date] = data.url;
@@ -724,7 +783,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       if (Object.keys(next).length) setDayImages(next);
     };
     fetchImages().catch(() => undefined);
-  }, [backendUrl, headers, dayCards, trip?.destination]);
+  }, [backendUrl, headers, dayCards, tripLocationLabel]);
 
   useEffect(() => {
     if (!trip?.id || !trip.startDate) return;
@@ -1421,16 +1480,16 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       .join(', ');
 
   const buildDayStartLocation = (info?: { flights: Flight[]; lodgings: Lodging[]; tours: Tour[]; rentals: CarRental[] }) => {
-    if (!info) return trip?.destination || 'Trip Day';
+    if (!info) return tripLocationLabel || 'Trip Day';
     const flight = info.flights[0];
-    if (flight) return flight.departure_location || flight.departure_airport_code || trip?.destination || 'Trip Day';
+    if (flight) return flight.departure_location || flight.departure_airport_code || tripLocationLabel || 'Trip Day';
     const lodging = info.lodgings[0];
-    if (lodging) return lodging.name || trip?.destination || 'Trip Day';
+    if (lodging) return lodging.name || tripLocationLabel || 'Trip Day';
     const tour = info.tours[0];
-    if (tour) return tour.startLocation || tour.name || trip?.destination || 'Trip Day';
+    if (tour) return tour.startLocation || tour.name || tripLocationLabel || 'Trip Day';
     const rental = info.rentals[0];
-    if (rental) return rental.pickupLocation || rental.vendor || trip?.destination || 'Trip Day';
-    return trip?.destination || 'Trip Day';
+    if (rental) return rental.pickupLocation || rental.vendor || tripLocationLabel || 'Trip Day';
+    return tripLocationLabel || 'Trip Day';
   };
 
   const buildDaySummary = (info?: { flights: Flight[]; lodgings: Lodging[]; tours: Tour[]; rentals: CarRental[]; details: ItineraryDetail[] }) => {
@@ -1573,7 +1632,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             >
               <Text style={styles.sectionTitle}>My itinerary</Text>
               <Text style={styles.flightTitle}>{trip.name}</Text>
-              {trip.destination ? <Text style={styles.helperText}>{trip.destination}</Text> : null}
+              {tripLocationLabel ? <Text style={styles.helperText}>{tripLocationLabel}</Text> : null}
               {renderDayBar(selectedDay)}
               {renderHeroCard(activeDayCard, heroTitle, false, undefined, 'day-details-hero')}
               <View style={styles.dayNarrativeBox}>
@@ -1769,7 +1828,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             </TouchableOpacity>
           </View>
           <Text style={styles.flightTitle}>{trip.name}</Text>
-          {trip.destination ? <Text style={styles.helperText}>Destination: {trip.destination}</Text> : null}
+          {tripLocationLabel ? <Text style={styles.helperText}>Locations: {tripLocationLabel}</Text> : null}
           {dateRange ? <Text style={styles.helperText}>Dates: {dateRange}</Text> : null}
           {!dateRange && monthLabel && trip.durationDays ? (
             <Text style={styles.helperText}>
@@ -1829,7 +1888,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           )}
         </View>
         <Text style={styles.flightTitle}>{trip.name}</Text>
-        {trip.destination ? <Text style={styles.helperText}>Destination: {trip.destination}</Text> : null}
+        {tripLocationLabel ? <Text style={styles.helperText}>Locations: {tripLocationLabel}</Text> : null}
         {dateRange ? <Text style={styles.helperText}>Dates: {dateRange}</Text> : null}
         {!dateRange && monthLabel && trip.durationDays ? (
           <Text style={styles.helperText}>
@@ -1863,16 +1922,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   {Platform.OS === 'web' ? (
                     <>
                       <select
+                        aria-label="Start month"
                         value={parseDateParts(dateDraft.startDate).month}
                         onChange={(e) => setDatePart('start', 'month', e.target.value)}
-                        style={{
-                          minWidth: 140,
-                          maxWidth: 160,
-                          padding: 8,
-                          borderRadius: 6,
-                          borderColor: '#ccc',
-                          borderWidth: 1,
-                        }}
+                        className="dateSelect"
                       >
                         <option value="">Month</option>
                         {monthOptions.map((m) => (
@@ -1882,16 +1935,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                         ))}
                       </select>
                       <select
+                        aria-label="Start day"
                         value={parseDateParts(dateDraft.startDate).day}
                         onChange={(e) => setDatePart('start', 'day', e.target.value)}
-                        style={{
-                          minWidth: 120,
-                          maxWidth: 140,
-                          padding: 8,
-                          borderRadius: 6,
-                          borderColor: '#ccc',
-                          borderWidth: 1,
-                        }}
+                        className="dateSelect"
                       >
                         <option value="">Day</option>
                         {dayOptions.map((d) => (
@@ -1901,16 +1948,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                         ))}
                       </select>
                       <select
+                        aria-label="Start year"
                         value={parseDateParts(dateDraft.startDate).year}
                         onChange={(e) => setDatePart('start', 'year', e.target.value)}
-                        style={{
-                          minWidth: 140,
-                          maxWidth: 160,
-                          padding: 8,
-                          borderRadius: 6,
-                          borderColor: '#ccc',
-                          borderWidth: 1,
-                        }}
+                        className="dateSelect"
                       >
                         <option value="">Year</option>
                         {yearOptions.map((y) => (
@@ -1938,16 +1979,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   {Platform.OS === 'web' ? (
                     <>
                       <select
+                        aria-label="End month"
                         value={parseDateParts(dateDraft.endDate).month}
                         onChange={(e) => setDatePart('end', 'month', e.target.value)}
-                        style={{
-                          minWidth: 140,
-                          maxWidth: 160,
-                          padding: 8,
-                          borderRadius: 6,
-                          borderColor: '#ccc',
-                          borderWidth: 1,
-                        }}
+                        className="dateSelect"
                       >
                         <option value="">Month</option>
                         {monthOptions.map((m) => (
@@ -1957,16 +1992,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                         ))}
                       </select>
                       <select
+                        aria-label="End day"
                         value={parseDateParts(dateDraft.endDate).day}
                         onChange={(e) => setDatePart('end', 'day', e.target.value)}
-                        style={{
-                          minWidth: 120,
-                          maxWidth: 140,
-                          padding: 8,
-                          borderRadius: 6,
-                          borderColor: '#ccc',
-                          borderWidth: 1,
-                        }}
+                        className="dateSelect"
                       >
                         <option value="">Day</option>
                         {dayOptions.map((d) => (
@@ -1976,16 +2005,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                         ))}
                       </select>
                       <select
+                        aria-label="End year"
                         value={parseDateParts(dateDraft.endDate).year}
                         onChange={(e) => setDatePart('end', 'year', e.target.value)}
-                        style={{
-                          minWidth: 140,
-                          maxWidth: 160,
-                          padding: 8,
-                          borderRadius: 6,
-                          borderColor: '#ccc',
-                          borderWidth: 1,
-                        }}
+                        className="dateSelect"
                       >
                         <option value="">Year</option>
                         {yearOptions.map((y) => (
@@ -2016,16 +2039,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   <>
                     <View style={[styles.row, { gap: 8 }]}>
                       <select
+                        aria-label="Trip start month"
                         value={dateDraft.startMonth}
                         onChange={(e) => setDateDraft((prev) => ({ ...prev, startMonth: e.target.value }))}
-                        style={{
-                          minWidth: 160,
-                          maxWidth: 180,
-                          padding: 8,
-                          borderRadius: 6,
-                          borderColor: '#ccc',
-                          borderWidth: 1,
-                        }}
+                        className="dateSelect"
                       >
                         <option value="">Select month</option>
                         {monthOptions.map((m) => (
@@ -2035,16 +2052,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                         ))}
                       </select>
                       <select
+                        aria-label="Trip start year"
                         value={dateDraft.startYear}
                         onChange={(e) => setDateDraft((prev) => ({ ...prev, startYear: e.target.value }))}
-                        style={{
-                          minWidth: 140,
-                          maxWidth: 160,
-                          padding: 8,
-                          borderRadius: 6,
-                          borderColor: '#ccc',
-                          borderWidth: 1,
-                        }}
+                        className="dateSelect"
                       >
                         <option value="">Year</option>
                         {yearOptions.map((y) => (
@@ -2055,17 +2066,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                       </select>
                     </View>
                     <select
+                      aria-label="Trip duration in days"
                       value={dateDraft.durationDays}
                       onChange={(e) => setDateDraft((prev) => ({ ...prev, durationDays: e.target.value }))}
-                      style={{
-                        minWidth: 180,
-                        maxWidth: 220,
-                        padding: 8,
-                        borderRadius: 6,
-                        borderColor: '#ccc',
-                        borderWidth: 1,
-                        marginTop: 8,
-                      }}
+                      className="dateSelect durationSelect"
                     >
                       <option value="">Number of days</option>
                       {durationOptions.map((d) => (

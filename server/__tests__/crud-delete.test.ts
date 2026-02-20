@@ -1,29 +1,45 @@
 import request from 'supertest';
+import { Pool } from 'pg';
 import { app } from '../src/app';
 import { closePool, initDb } from '../src/db';
+import { registerAndLoginWebUser } from './helpers';
 
 describe('CRUD delete endpoints for flights, lodgings, tours, and trips', () => {
   jest.setTimeout(60000);
   const uniq = Date.now();
   const user = { email: `delete+${uniq}@example.com`, firstName: 'Delete', lastName: 'Tester', password: 'testtest' };
+  const member = { email: `delete-member+${uniq}@example.com`, firstName: 'Delete', lastName: 'Member', password: 'testtest' };
   let token: string;
+  let memberToken: string;
   let groupId: string;
   let memberId: string;
   let tripId: string;
+  let pool: Pool;
 
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
     await initDb();
+    pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
-    const reg = await request(app)
-      .post('/api/web-auth/register')
-      .send({ firstName: user.firstName, lastName: user.lastName, email: user.email, password: user.password, passwordConfirm: user.password })
-      .expect(201);
-    token = reg.body.token as string;
+    const login = await registerAndLoginWebUser(pool, user);
+    token = login.token;
+    const memberLogin = await registerAndLoginWebUser(pool, member);
+    memberToken = memberLogin.token;
 
     const groups = await request(app).get('/api/groups').set('Authorization', `Bearer ${token}`).expect(200);
     groupId = groups.body[0]?.id as string;
     expect(groupId).toBeTruthy();
+
+    await request(app)
+      .post(`/api/groups/${groupId}/members`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ email: member.email })
+      .expect(201);
+
+    const invites = await request(app).get('/api/groups/invites').set('Authorization', `Bearer ${memberToken}`).expect(200);
+    const inviteId = invites.body[0]?.id as string;
+    expect(inviteId).toBeTruthy();
+    await request(app).post(`/api/groups/invites/${inviteId}/accept`).set('Authorization', `Bearer ${memberToken}`).expect(204);
 
     const members = await request(app).get(`/api/groups/${groupId}/members`).set('Authorization', `Bearer ${token}`).expect(200);
     memberId = members.body.find((m: any) => (m.email ?? m.userEmail) === user.email)?.id as string;
@@ -39,6 +55,10 @@ describe('CRUD delete endpoints for flights, lodgings, tours, and trips', () => 
   });
 
   afterAll(async () => {
+    if (pool) {
+      await pool.query('DELETE FROM users WHERE email IN ($1, $2)', [user.email, member.email]);
+      await pool.end();
+    }
     await closePool();
   });
 
@@ -121,5 +141,28 @@ describe('CRUD delete endpoints for flights, lodgings, tours, and trips', () => 
     const trips = await request(app).get('/api/trips').set('Authorization', `Bearer ${token}`).expect(200);
     const exists = (trips.body as any[]).some((t) => t.id === deleteTripId);
     expect(exists).toBe(false);
+  });
+
+  it('removes only the deleting user unless they are the last traveler', async () => {
+    const tripRes = await request(app)
+      .post('/api/trips')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: `Shared Delete Trip ${uniq}`, groupId })
+      .expect(201);
+    const sharedTripId = tripRes.body.id as string;
+    expect(sharedTripId).toBeTruthy();
+
+    await request(app).delete(`/api/trips/${sharedTripId}`).set('Authorization', `Bearer ${token}`).expect(204);
+
+    const ownerTrips = await request(app).get('/api/trips').set('Authorization', `Bearer ${token}`).expect(200);
+    expect((ownerTrips.body as any[]).some((t) => t.id === sharedTripId)).toBe(false);
+
+    const memberTrips = await request(app).get('/api/trips').set('Authorization', `Bearer ${memberToken}`).expect(200);
+    expect((memberTrips.body as any[]).some((t) => t.id === sharedTripId)).toBe(true);
+
+    await request(app).delete(`/api/trips/${sharedTripId}`).set('Authorization', `Bearer ${memberToken}`).expect(204);
+
+    const memberTripsAfter = await request(app).get('/api/trips').set('Authorization', `Bearer ${memberToken}`).expect(200);
+    expect((memberTripsAfter.body as any[]).some((t) => t.id === sharedTripId)).toBe(false);
   });
 });

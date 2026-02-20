@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto';
 import { Pool } from 'pg';
 import { app } from '../src/app';
 import { closePool, getPool, initDb } from '../src/db';
+import { registerAndLoginDeviceUser } from './helpers';
 
 describe('Pending group members display names', () => {
   const owner = { email: 'pending-owner@example.com', firstName: 'Owner', lastName: 'Pending', password: 'testtest' };
@@ -21,18 +22,12 @@ describe('Pending group members display names', () => {
     await pool.query('DELETE FROM group_members WHERE invite_email IN ($1, $2, $3)', [owner.email, invitee.email, benEmail]);
     await pool.query('DELETE FROM users WHERE email IN ($1, $2, $3)', [owner.email, invitee.email, benEmail]);
 
-    const ownerRes = await request(app)
-      .post('/api/auth/register')
-      .send({ ...owner, passwordConfirm: owner.password })
-      .expect(201);
-    ownerToken = ownerRes.body.token;
-    ownerId = ownerRes.body.user.id;
+    const ownerLogin = await registerAndLoginDeviceUser(pool, owner);
+    ownerToken = ownerLogin.token;
+    ownerId = ownerLogin.userId;
 
-    const inviteeRes = await request(app)
-      .post('/api/auth/register')
-      .send({ ...invitee, passwordConfirm: invitee.password })
-      .expect(201);
-    inviteeId = inviteeRes.body.user.id;
+    const inviteeLogin = await registerAndLoginDeviceUser(pool, invitee);
+    inviteeId = inviteeLogin.userId;
 
     const groupsRes = await request(app).get('/api/groups').set('Authorization', `Bearer ${ownerToken}`).expect(200);
     groupId = groupsRes.body[0]?.id as string;

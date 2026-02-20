@@ -36,12 +36,16 @@ describe('Mailer', () => {
     });
 
     test('returns true if SMTP settings are provided', () => {
+        const originalNodeEnv = process.env.NODE_ENV;
+        process.env.NODE_ENV = 'development';
         const mockedGetEnvValue = getMockedEnv();
         mockedGetEnvValue.mockImplementation((key, _options) => {
             switch (key) {
                 case 'SMTP_HOST': return 'smtp.example.com';
                 case 'SMTP_PORT': return '587';
                 case 'SMTP_FROM': return 'from@example.com';
+                case 'SMTP_USER': return 'user';
+                case 'SMTP_PASS': return 'pass';
                 default: return undefined;
             }
         });
@@ -51,6 +55,7 @@ describe('Mailer', () => {
         });
         const { isEmailConfigured } = mailer!;
         expect(isEmailConfigured()).toBe(true);
+        process.env.NODE_ENV = originalNodeEnv;
     });
   });
 

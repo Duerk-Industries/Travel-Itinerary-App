@@ -94,7 +94,12 @@ if ($EnvFile) {
   }
   foreach ($pair in (Parse-DotEnv $EnvFile)) {
     if (Should-IgnoreKey $pair.Key $IgnoreKeys) { continue }
-    $value = $pair.Value -replace ',', '\,'
+    $value = $pair.Value
+    if ($pair.Key -eq 'AUTH_REDIRECT_URI_ALLOWLIST') {
+      $value = ($value -split ',') | ForEach-Object { $_.Trim() } | Where-Object { $_ }
+      $value = ($value -join ';')
+    }
+    $value = $value -replace ',', '\,'
     $envPairs += "$($pair.Key)=$value"
   }
 }

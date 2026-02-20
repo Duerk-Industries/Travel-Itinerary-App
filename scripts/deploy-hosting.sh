@@ -2,10 +2,15 @@
 set -euo pipefail
 
 # This script deploys the frontend application to Firebase Hosting.
-# It assumes you have already built the web app (e.g., via `npx expo export:web`).
+# It builds the web app from app/ into dist/ first.
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+echo "Building web bundle..."
+(cd "$REPO_ROOT/app" && npx expo export --platform web --output-dir ../dist)
 
 echo "Deploying frontend to Firebase Hosting..."
-
-firebase deploy --only hosting
+(cd "$REPO_ROOT" && firebase deploy --only hosting)
 
 echo "Firebase Hosting deployment completed."

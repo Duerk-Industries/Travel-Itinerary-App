@@ -6,6 +6,8 @@ export interface User {
   picture?: string;
   firstName?: string;
   lastName?: string;
+  emailVerified?: boolean;
+  emailVerifiedAt?: string | null;
 }
 
 export interface WebUser {
@@ -13,6 +15,9 @@ export interface WebUser {
   email: string;
   firstName: string;
   lastName: string;
+  emailVerified?: boolean;
+  firstLoginAt?: string | null;
+  lastLoginAt?: string | null;
 }
 
 export interface Flight {
@@ -77,6 +82,7 @@ export interface Trip {
   name: string;
   description?: string | null;
   destination?: string | null;
+  locationIds?: string[];
   startDate?: string | null;
   endDate?: string | null;
   startMonth?: number | null;
@@ -85,6 +91,29 @@ export interface Trip {
   currency?: string | null;
   coveredBy?: Record<string, string>;
   createdAt: string;
+}
+
+export interface LocationRecord {
+  id: string;
+  sourceType: 'country_region' | 'city';
+  category?: string | null;
+  name: string;
+  address?: string | null;
+  visitorCount?: string | null;
+  climate?: string | null;
+  priceLevel?: string | null;
+  bestMonth?: string | null;
+  editorialSummary?: string | null;
+  popularityTier?: string | null;
+  unesco?: string | null;
+  rating?: number | null;
+  userRatingCount?: number | null;
+  websiteUri?: string | null;
+  googleMapsUri?: string | null;
+  keywords?: string[];
+  sourceFile?: string | null;
+  sourceRowHash?: string | null;
+  updatedAt?: string;
 }
 
 export interface Trait {
@@ -158,6 +187,14 @@ export interface PlaceDetailsCache {
   fetchedAt: string;
 }
 
+export interface PlaceLookupCache {
+  queryKey: string;
+  placeId: string;
+  name: string;
+  likelihood: number;
+  fetchedAt: string;
+}
+
 export interface Expense {
   id: string;
   tripId: string;
@@ -197,4 +234,37 @@ export interface FamilyRelationship {
   relationship: string;
   status: 'pending' | 'accepted' | 'rejected';
   createdAt: string;
+}
+
+export type TripActivityType =
+  | 'TRIP_CREATED'
+  | 'FOLLOW_ADDED'
+  | 'FOLLOW_REMOVED'
+  | 'ITINERARY_ITEM_ADDED'
+  | 'ITINERARY_ITEM_UPDATED'
+  | 'ITINERARY_ITEM_DELETED'
+  | 'FLIGHT_ADDED'
+  | 'LODGING_ADDED'
+  | 'TOUR_ADDED'
+  | 'NOTE_ADDED';
+
+export interface TripActivity {
+  id: string;
+  tripId: string;
+  actorUserId?: string | null;
+  type: TripActivityType;
+  title: string;
+  summary: string;
+  metadata: Record<string, any>;
+  createdAt: string;
+}
+
+export interface TripComment {
+  id: string;
+  tripId: string;
+  actorUserId?: string | null;
+  body: string;
+  createdAt: string;
+  authorName?: string | null;
+  authorEmail?: string | null;
 }

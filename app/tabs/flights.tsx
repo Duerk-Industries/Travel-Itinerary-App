@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { formatDateLong } from '../utils/formatDateLong';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { normalizeDateString } from '../utils/normalizeDateString';
 import { FlightEditingForm } from '../components/FlightEditingForm';
+import { toWebStyle } from '../utils/webStyle';
 
 type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
 let NativeDateTimePicker: NativeDateTimePickerType | null = null;
@@ -152,6 +153,7 @@ export type Trip = {
   name: string;
   description?: string | null;
   destination?: string | null;
+  locationIds?: string[];
   departureCity?: string | null;
   departureLocation?: string | null;
   departureAirport?: string | null;
@@ -1065,27 +1067,13 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   }, [defaultPayerId, editingFlight]);
 
   useEffect(() => {
-    const loadAirports = async () => {
-      try {
-        const res = await fetch('https://raw.githubusercontent.com/algolia/datasets/master/airports/airports.json');
-        const data = await res.json();
-        setAirports(
-          (data as any[])
-            .filter((a) => a.iata_code && a.iata_code.length === 3)
-            .map((a) => ({
-              name: a.name,
-              city: a.city,
-              country: a.country,
-              iata_code: a.iata_code,
-            }))
-        );
-      } catch {
-        setAirports(fallbackAirports);
-      }
-    };
-    loadAirports();
+    if (airportOptions.length) {
+      setAirports(airportOptions.map(parseAirportLabel));
+    } else {
+      setAirports(fallbackAirports);
+    }
     measureContainerOffset();
-  }, []);
+  }, [airportOptions]);
 
   useEffect(() => {
     if (!locationTarget || !locationSearch.trim()) return;
@@ -1355,7 +1343,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                           type="time"
                           value={valueMap[col.key]}
                           onChange={(e) => setters[col.key](e.target.value)}
-                          style={styles.input as any}
+                          style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
                         />
                       </View>
                     );

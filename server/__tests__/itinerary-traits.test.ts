@@ -2,6 +2,7 @@ import request from 'supertest';
 import { Pool } from 'pg';
 import { app } from '../src/app';
 import { initDb, closePool } from '../src/db';
+import { registerAndLoginWebUser } from './helpers';
 import axios from 'axios';
 
 jest.mock('axios');
@@ -34,17 +35,13 @@ describe('Itinerary generation and trait lifecycle', () => {
 
   it('creates and deletes a custom trait via API', async () => {
     const email = `itinerary-trait-test+${Date.now()}@example.com`;
-    const reg = await request(app)
-      .post('/api/web-auth/register')
-      .send({
-        firstName: 'Trait',
-        lastName: 'Tester',
-        email,
-        password: 'testpass1!',
-        passwordConfirm: 'testpass1!',
-      })
-      .expect(201);
-    token = reg.body.token;
+    const login = await registerAndLoginWebUser(pool, {
+      firstName: 'Trait',
+      lastName: 'Tester',
+      email,
+      password: 'testpass1!',
+    });
+    token = login.token;
     expect(token).toBeTruthy();
 
     // Create trait

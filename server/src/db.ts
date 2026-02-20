@@ -11,7 +11,11 @@ import type {
   User,
   WebUser,
   PlaceDetailsCache,
+  PlaceLookupCache,
   Expense,
+  LocationRecord,
+  TripActivity,
+  TripComment,
 } from './types';
 
 const adapter = () => getDbAdapter();
@@ -27,16 +31,39 @@ export const findOrCreateGoogleUser = async (...args: Parameters<ReturnType<type
 export const ensureDefaultGroupForUser = async (...args: Parameters<ReturnType<typeof adapter>['ensureDefaultGroupForUser']>) =>
   adapter().ensureDefaultGroupForUser(...args);
 export const findUserByEmail = async (email: string): Promise<User | null> => adapter().findUserByEmail(email);
+export const getUserById = async (...args: Parameters<ReturnType<typeof adapter>['getUserById']>) =>
+  adapter().getUserById(...args);
 export const createWebUser = async (...args: Parameters<ReturnType<typeof adapter>['createWebUser']>) =>
   adapter().createWebUser(...args);
+export const ensureWebPasswordAccountForOAuth = async (
+  ...args: Parameters<ReturnType<typeof adapter>['ensureWebPasswordAccountForOAuth']>
+) => adapter().ensureWebPasswordAccountForOAuth(...args);
 export const verifyWebUserCredentials = async (...args: Parameters<ReturnType<typeof adapter>['verifyWebUserCredentials']>) =>
   adapter().verifyWebUserCredentials(...args);
+export const recordWebUserLogin = async (...args: Parameters<ReturnType<typeof adapter>['recordWebUserLogin']>) =>
+  adapter().recordWebUserLogin(...args);
+export const createEmailVerification = async (...args: Parameters<ReturnType<typeof adapter>['createEmailVerification']>) =>
+  adapter().createEmailVerification(...args);
+export const getPendingEmailVerification = async (...args: Parameters<ReturnType<typeof adapter>['getPendingEmailVerification']>) =>
+  adapter().getPendingEmailVerification(...args);
+export const consumeEmailVerificationToken = async (...args: Parameters<ReturnType<typeof adapter>['consumeEmailVerificationToken']>) =>
+  adapter().consumeEmailVerificationToken(...args);
+export const markEmailVerificationUsed = async (...args: Parameters<ReturnType<typeof adapter>['markEmailVerificationUsed']>) =>
+  adapter().markEmailVerificationUsed(...args);
+export const markUserEmailVerified = async (...args: Parameters<ReturnType<typeof adapter>['markUserEmailVerified']>) =>
+  adapter().markUserEmailVerified(...args);
+export const deleteUserRecord = async (...args: Parameters<ReturnType<typeof adapter>['deleteUserRecord']>) =>
+  adapter().deleteUserRecord(...args);
 export const getWebUserProfile = async (...args: Parameters<ReturnType<typeof adapter>['getWebUserProfile']>) =>
   adapter().getWebUserProfile(...args);
 export const updateWebUserProfile = async (...args: Parameters<ReturnType<typeof adapter>['updateWebUserProfile']>) =>
   adapter().updateWebUserProfile(...args);
 export const updateWebUserPassword = async (...args: Parameters<ReturnType<typeof adapter>['updateWebUserPassword']>) =>
   adapter().updateWebUserPassword(...args);
+export const setInitialWebUserPassword = async (...args: Parameters<ReturnType<typeof adapter>['setInitialWebUserPassword']>) =>
+  adapter().setInitialWebUserPassword(...args);
+export const isPasswordSetupRequired = async (...args: Parameters<ReturnType<typeof adapter>['isPasswordSetupRequired']>) =>
+  adapter().isPasswordSetupRequired(...args);
 export const deleteWebUserAndCleanup = async (...args: Parameters<ReturnType<typeof adapter>['deleteWebUserAndCleanup']>) =>
   adapter().deleteWebUserAndCleanup(...args);
 export const insertFlight = async (...args: Parameters<ReturnType<typeof adapter>['insertFlight']>) =>
@@ -47,8 +74,12 @@ export const updateFlight = async (...args: Parameters<ReturnType<typeof adapter
   adapter().updateFlight(...args);
 export const ensureUserInTrip = async (...args: Parameters<ReturnType<typeof adapter>['ensureUserInTrip']>) =>
   adapter().ensureUserInTrip(...args);
+export const ensureUserCanReadTrip = async (...args: Parameters<ReturnType<typeof adapter>['ensureUserCanReadTrip']>) =>
+  adapter().ensureUserCanReadTrip(...args);
 export const getTripGroupId = async (...args: Parameters<ReturnType<typeof adapter>['getTripGroupId']>) =>
   adapter().getTripGroupId(...args);
+export const getTripById = async (...args: Parameters<ReturnType<typeof adapter>['getTripById']>) =>
+  adapter().getTripById(...args);
 export const updateTripDetails = async (...args: Parameters<ReturnType<typeof adapter>['updateTripDetails']>) =>
   adapter().updateTripDetails(...args);
 export const getTripCovering = async (...args: Parameters<ReturnType<typeof adapter>['getTripCovering']>) =>
@@ -87,6 +118,8 @@ export const removeGroupMember = async (...args: Parameters<ReturnType<typeof ad
   adapter().removeGroupMember(...args);
 export const removeGroupInvite = async (...args: Parameters<ReturnType<typeof adapter>['removeGroupInvite']>) =>
   adapter().removeGroupInvite(...args);
+export const attachInviteToTrip = async (...args: Parameters<ReturnType<typeof adapter>['attachInviteToTrip']>) =>
+  adapter().attachInviteToTrip(...args);
 export const deleteGroup = async (...args: Parameters<ReturnType<typeof adapter>['deleteGroup']>) =>
   adapter().deleteGroup(...args);
 export const listTrips = async (...args: Parameters<ReturnType<typeof adapter>['listTrips']>): Promise<Array<Trip & { groupName: string }>> =>
@@ -97,6 +130,22 @@ export const deleteTrip = async (...args: Parameters<ReturnType<typeof adapter>[
   adapter().deleteTrip(...args);
 export const updateTripGroup = async (...args: Parameters<ReturnType<typeof adapter>['updateTripGroup']>) =>
   adapter().updateTripGroup(...args);
+export const getTripFollowCode = async (...args: Parameters<ReturnType<typeof adapter>['getTripFollowCode']>) =>
+  adapter().getTripFollowCode(...args);
+export const followTripByCode = async (...args: Parameters<ReturnType<typeof adapter>['followTripByCode']>) =>
+  adapter().followTripByCode(...args);
+export const listFollowedTrips = async (...args: Parameters<ReturnType<typeof adapter>['listFollowedTrips']>) =>
+  adapter().listFollowedTrips(...args);
+export const unfollowTrip = async (...args: Parameters<ReturnType<typeof adapter>['unfollowTrip']>) =>
+  adapter().unfollowTrip(...args);
+export const writeActivity = async (...args: Parameters<ReturnType<typeof adapter>['writeActivity']>) =>
+  adapter().writeActivity(...args);
+export const listTripActivity = async (...args: Parameters<ReturnType<typeof adapter>['listTripActivity']>) =>
+  adapter().listTripActivity(...args) as Promise<{ events: TripActivity[]; nextCursor: string | null }>;
+export const listTripComments = async (...args: Parameters<ReturnType<typeof adapter>['listTripComments']>) =>
+  adapter().listTripComments(...args) as Promise<TripComment[]>;
+export const addTripComment = async (...args: Parameters<ReturnType<typeof adapter>['addTripComment']>) =>
+  adapter().addTripComment(...args) as Promise<TripComment>;
 export const createGroupWithMembers = async (...args: Parameters<ReturnType<typeof adapter>['createGroupWithMembers']>) =>
   adapter().createGroupWithMembers(...args);
 export const createTripWithGroupAndMembers = async (
@@ -106,10 +155,18 @@ export const listGroupInvitesForUser = async (...args: Parameters<ReturnType<typ
   adapter().listGroupInvitesForUser(...args);
 export const acceptGroupInvite = async (...args: Parameters<ReturnType<typeof adapter>['acceptGroupInvite']>) =>
   adapter().acceptGroupInvite(...args);
+export const rejectGroupInvite = async (...args: Parameters<ReturnType<typeof adapter>['rejectGroupInvite']>) =>
+  adapter().rejectGroupInvite(...args);
 export const claimInvitesForUser = async (...args: Parameters<ReturnType<typeof adapter>['claimInvitesForUser']>) =>
   adapter().claimInvitesForUser(...args);
 export const searchFlightLocations = async (...args: Parameters<ReturnType<typeof adapter>['searchFlightLocations']>) =>
   adapter().searchFlightLocations(...args);
+export const searchLocations = async (...args: Parameters<ReturnType<typeof adapter>['searchLocations']>): Promise<LocationRecord[]> =>
+  adapter().searchLocations(...args);
+export const getLocationsByIds = async (...args: Parameters<ReturnType<typeof adapter>['getLocationsByIds']>): Promise<LocationRecord[]> =>
+  adapter().getLocationsByIds(...args);
+export const upsertLocation = async (...args: Parameters<ReturnType<typeof adapter>['upsertLocation']>) =>
+  adapter().upsertLocation(...args);
 export const listTraits = async (...args: Parameters<ReturnType<typeof adapter>['listTraits']>): Promise<Trait[]> =>
   adapter().listTraits(...args);
 export const createTrait = async (...args: Parameters<ReturnType<typeof adapter>['createTrait']>) =>
@@ -161,6 +218,12 @@ export const getPlaceDetailsCache = async (
 export const upsertPlaceDetailsCache = async (
   entry: Parameters<ReturnType<typeof adapter>['upsertPlaceDetailsCache']>[0]
 ): Promise<void> => adapter().upsertPlaceDetailsCache(entry);
+export const getPlaceLookupCache = async (
+  queryKey: string
+): Promise<PlaceLookupCache | null> => adapter().getPlaceLookupCache(queryKey);
+export const upsertPlaceLookupCache = async (
+  entry: Parameters<ReturnType<typeof adapter>['upsertPlaceLookupCache']>[0]
+): Promise<void> => adapter().upsertPlaceLookupCache(entry);
 export const listFamilyRelationships = async (...args: Parameters<ReturnType<typeof adapter>['listFamilyRelationships']>) =>
   adapter().listFamilyRelationships(...args);
 export const listFellowTravelers = async (...args: Parameters<ReturnType<typeof adapter>['listFellowTravelers']>) =>

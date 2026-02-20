@@ -1,0 +1,34 @@
+providers:
+  OPENAI:
+    window: hour
+    windowHours: 24
+    overall: 200
+    callers:
+      ITINERARY_GENERATE_PLAN: 200
+
+  UNSPLASH:
+    window: hour
+    windowHours: 1
+    overall: 50
+    callers:
+      IMAGE_SERVICE_LOCATION_IMAGE: 50
+      IMAGE_SERVICE_ITINERARY_IMAGE: 50
+      IMAGE_SERVICE_GOOGLE_PLACE_FALLBACK: 50
+      UNSPLASH_HEALTH_CHECK: 50
+
+  SMTP:
+    window: hour
+    windowHours: 24
+    overall: 100
+    callers:
+      SHARE_EMAIL: 100
+      VERIFICATION_EMAIL: 100
+      TRIP_INVITE_EMAIL: 100
+
+  AIRPORT_DATASET:
+    window: hour
+    windowHours: 24
+    overall: 1000
+    callers:
+      DAILY_REFRESH: 500
+

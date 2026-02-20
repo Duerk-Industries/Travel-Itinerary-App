@@ -2,6 +2,7 @@ import request from 'supertest';
 import { Pool } from 'pg';
 import { app } from '../src/app';
 import { closePool, getPool, initDb } from '../src/db';
+import { registerAndLoginDeviceUser, registerDeviceUser } from './helpers';
 
 describe('Group member removal cleans related items', () => {
   const owner = { email: 'remove-owner@example.com', firstName: 'Remove', lastName: 'Owner', password: 'testtest' };
@@ -18,16 +19,10 @@ describe('Group member removal cleans related items', () => {
     await initDb();
     await pool.query('DELETE FROM users WHERE email IN ($1, $2)', [owner.email, member.email]);
 
-    const ownerRes = await request(app)
-      .post('/api/auth/register')
-      .send({ ...owner, passwordConfirm: owner.password })
-      .expect(201);
-    ownerToken = ownerRes.body.token;
+    const ownerLogin = await registerAndLoginDeviceUser(pool, owner);
+    ownerToken = ownerLogin.token;
 
-    await request(app)
-      .post('/api/auth/register')
-      .send({ ...member, passwordConfirm: member.password })
-      .expect(201);
+    await registerDeviceUser(member);
 
     const groupRes = await request(app)
       .post('/api/groups')

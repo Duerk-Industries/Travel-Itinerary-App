@@ -1,91 +1,67 @@
 /**
  * This file can be used to store utility functions that are shared across your tests.
  */
+import { Page, expect } from '@playwright/test';
 
 /**
  * A function to handle user creation and login for tests.
- * You should implement this function based on your application's authentication logic.
- * It makes API requests to register and then log in a new user.
+ * It registers a new user via the API, then logs them in via the UI
+ * to establish a valid browser session for the test.
  *
- * @returns {Promise<{userId: string, token: string}>} A promise that resolves to an object containing authentication data.
+ * @param page The Playwright page object.
  */
-export async function loginAsNewUser(): Promise<{ userId: string; token: string; username: string; email: string; }> {
-  // Ensure fetch is available in the Node.js environment.
-  // If you are using a Node.js version older than 18, you might need to install 'node-fetch'.
-  // You can install it with: npm install node-fetch --save-dev
-  // And then add `import fetch from 'node-fetch';` at the top of this file.
-  if (typeof fetch === 'undefined') {
-    throw new Error('The `fetch` function is not available. Please use Node.js 18+ or install `node-fetch`.');
-  }
-
+export async function loginAsNewUser(page: Page): Promise<void> {
   // Generate a unique username for each test run to ensure isolation
-  const username = `testuser_${Math.random().toString(36).substring(2)}`;
-  const email = `${username}@example.com`;
+  const randomId = Date.now();
+  const email = `testuser_${randomId}@example.com`;
   // Use a standard password for tests
   const password = 'password123';
+  const firstName = 'Test';
+  const lastName = `User_${randomId}`;
 
-  // IMPORTANT: Replace with the base URL of your API running in the test environment
-  // You can set these in your .env file
+  // The API URL is taken from your playwright.config.ts webServer setup
   const apiBaseUrl = process.env.API_BASE_URL || 'http://localhost:3000';
   const registerPath = process.env.API_REGISTER_PATH || '/api/auth/register';
-  const loginPath = process.env.API_LOGIN_PATH || '/api/auth/login';
 
   // --- 1. Register a new user ---
-  // The structure of this body should match what your registration endpoint expects
   const registrationBody = {
-    username,
+    username: `testuser_${randomId}`,
     password,
     email,
+    firstName,
+    lastName,
   };
 
-  const registerResponse = await fetch(`${apiBaseUrl}${registerPath}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(registrationBody),
+  const registerResponse = await page.request.post(`${apiBaseUrl}${registerPath}`, {
+    data: registrationBody,
   });
 
-  if (!registerResponse.ok) {
+  if (!registerResponse.ok()) {
     const errorBody = await registerResponse.text();
     throw new Error(
-      `Failed to register test user. Status: ${registerResponse.status} ${registerResponse.statusText}. URL: ${registerResponse.url}. Body: ${errorBody}`
+      `Failed to register test user. Status: ${registerResponse.status()} ${registerResponse.statusText()}. URL: ${registerResponse.url()}. Body: ${errorBody}`
     );
   }
 
-  // --- 2. Log in as the new user ---
-  // The structure of this body should match what your login endpoint expects
-  const loginBody = { username, password };
+  // --- 2. Log in via the UI to establish a session ---
+  // The baseURL comes from playwright.config.ts
+  // We assume the login page is at '/login'
+  await page.goto('/login', { waitUntil: 'domcontentloaded', timeout: 90_000 });
 
-  const loginResponse = await fetch(`${apiBaseUrl}${loginPath}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(loginBody),
-  });
+  // Fill in credentials and submit
+  await page.getByPlaceholder('Email').fill(email);
+  await page.getByPlaceholder('Password').fill(password);
+  // The login "button" is not a standard <button> element and lacks role="button",
+  // so we must use a different locator. The page has two "Login" texts,
+  // one in the header and one for the form. We can reliably select the form's
+  // button by taking the last one.
+  await page.getByText('Login').last().click();
 
-  if (!loginResponse.ok) {
-    const errorBody = await loginResponse.text();
-    throw new Error(
-      `Failed to log in as test user. Status: ${loginResponse.status} ${loginResponse.statusText}. URL: ${loginResponse.url}. Body: ${errorBody}`
-    );
-  }
-
-  // --- 3. Extract and return authentication data ---
-  // The structure of the response should match what your login endpoint returns
-  const authData = await loginResponse.json();
-
-  // Example: your API might return { "token": "...", "user": { "id": "..." } }
-  // Adjust these lines to match your API's response structure.
-  const token = authData.token;
-  const userId = authData.user?.id || authData.userId;
-
-  if (!token || !userId) {
-    throw new Error('Authentication failed: The login response did not contain a token and/or userId.');
-  }
-
-  return { userId, token, username, email };
+  // --- 3. Verify that login was successful ---
+  // Wait for a post-login element to be visible. The test that calls this
+  // function immediately looks for a "Trips" button, so we'll wait for that.
+  // This makes the helper function more robust.
+  await expect(page.getByTestId('home-nav-trips')).toBeVisible({ timeout: 15000 });
 }
 
 export const TEST_USER_PASSWORD = 'password123';

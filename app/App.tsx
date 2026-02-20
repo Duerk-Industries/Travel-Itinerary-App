@@ -16,10 +16,12 @@ import Constants from 'expo-constants';
 import { formatDateLong } from './utils/formatDateLong';
 import { normalizeDateString } from './utils/normalizeDateString';
 import { sanitizeCostInput } from './utils/sanitizeCost';
+import { initializeAppCheck } from './utils/firebaseAppCheck';
 import { FlightsTab, type Flight, fetchFlightsForTrip } from './tabs/flights';
 import { type Tour, TourTab, fetchToursForTrip } from './tabs/tours';
 import { type Trait } from './tabs/traits';
 import { FollowTab, fetchFollowedTripsApi, loadFollowCodes, loadFollowPayloads, saveFollowCodes, saveFollowPayloads, type FollowedTrip } from './tabs/follow';
+import FollowingTab from './tabs/following';
 import ItinerariesTab from './tabs/itineraries';
 import HomeTab from './tabs/HomeTab';
 import DailyExpensesTab from './tabs/dailyExpenses';
@@ -40,6 +42,7 @@ import { Buffer } from 'buffer';
 import { loadSession, saveSession, clearSession } from './utils/session';
 import LodgingDetailsDialog from './components/LodgingDetailsDialog';
 import ConfirmDialog from './components/ConfirmDialog';
+import { toWebStyle } from './utils/webStyle';
 
 import LodgingTab from './tabs/LodgingTab';
 
@@ -58,9 +61,16 @@ if (Platform.OS !== 'web') {
 interface GroupInvite {
   id: string;
   groupId: string;
-  groupName: string;
-  inviterEmail: string;
-  createdAt: string;
+  groupName?: string | null;
+  inviterEmail?: string | null;
+  inviterFirstName?: string | null;
+  inviterLastName?: string | null;
+  inviteeEmail?: string | null;
+  status?: 'pending' | 'accepted';
+  createdAt?: string;
+  tripId?: string | null;
+  resolvedTripId?: string | null;
+  resolvedTripName?: string | null;
 }
 
 interface GroupMemberView {
@@ -86,6 +96,7 @@ interface Trip {
   name: string;
   description?: string | null;
   destination?: string | null;
+  locationIds?: string[];
   startDate?: string | null;
   endDate?: string | null;
   startMonth?: number | null;
@@ -125,6 +136,27 @@ interface GroupMemberOption {
   removedAt?: string | null;
 }
 
+const formatMemberName = (member: GroupMemberOption): string => {
+  const norm = (val?: string | null) => {
+    const t = String(val ?? '').trim();
+    if (!t || t.toLowerCase() === 'unknown') return '';
+    return t;
+  };
+  const first = norm(member.firstName);
+  const last = norm(member.lastName);
+  const email = member.email?.trim();
+  const status = member.status;
+  if (first || last) return `${first ?? ''} ${last ?? ''}`.trim();
+  if (member.guestName) return member.guestName;
+  if (email) {
+    const local = email.split('@')[0] ?? '';
+    const parts = local.split(/[._-]+/).filter(Boolean);
+    const base = parts.length >= 2 ? `${parts[0]} ${parts.slice(1).join(' ')}`.trim() : email;
+    return status === 'pending' ? `${base} (pending)` : base;
+  }
+  return status === 'pending' ? 'Pending member' : 'Member';
+};
+
 type Page =
   | 'home'
   | 'overview'
@@ -137,16 +169,20 @@ type Page =
   | 'trips'
   | 'create-trip'
   | 'trip-details'
-  | 'traits'
   | 'itinerary'
   | 'cost'
   | 'account'
-  | 'follow';
+  | 'follow'
+  | 'following';
 
 // Resolve backend URL; keep Expo web on localhost hitting the local API over HTTP to avoid HTTPS upgrades/CORS issues.
 const resolveBackendUrl = (): string => {
   const envConfigured =
-    (typeof process !== 'undefined' && (process.env.EXPO_PUBLIC_BACKEND_URL ?? process.env.REACT_NATIVE_APP_BACKEND_URL)) || '';
+    (typeof process !== 'undefined' &&
+      (process.env.EXPO_PUBLIC_BACKEND_URL ??
+        process.env.REACT_NATIVE_APP_BACKEND_URL ??
+        process.env.BACKEND_URL)) ||
+    '';
   const appConfigured = Constants.expoConfig?.extra?.backendUrl;
   const configuredBackend = [envConfigured, appConfigured].find(
     (val) => typeof val === 'string' && val.trim().length > 0
@@ -195,7 +231,34 @@ const refreshIntervalMs = resolveRefreshIntervalMs();
 const sessionKey = 'stp.session';
 const sessionDurationMs = 12 * 60 * 60 * 1000;
 
+const extractTokenFromUrl = (rawUrl: string) => {
+  try {
+    const url = new URL(rawUrl);
+    const token = url.searchParams.get('token');
+    const requirePasswordSetup = url.searchParams.get('require_password_setup') === '1';
+    const isConfirm = url.pathname.endsWith('/confirm');
+    if (token) {
+      return { token, url, source: 'query' as const, isConfirm, requirePasswordSetup };
+    }
+    const hash = url.hash.startsWith('#') ? url.hash.slice(1) : url.hash;
+    if (hash) {
+      const hashParams = new URLSearchParams(hash);
+      const hashToken = hashParams.get('token');
+      if (hashToken) {
+        return { token: hashToken, url, source: 'hash' as const, isConfirm, requirePasswordSetup };
+      }
+    }
+  } catch (e) {
+    // ignore invalid URLs
+  }
+  return { token: null, url: null, source: null, isConfirm: false, requirePasswordSetup: false } as const;
+};
+
 const App: React.FC = () => {
+  useEffect(() => {
+    initializeAppCheck();
+  }, []);
+
   const [userToken, setUserToken] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
   const [lastRefreshAt, setLastRefreshAt] = useState<number | null>(null);
@@ -205,6 +268,16 @@ const App: React.FC = () => {
   const [flights, setFlights] = useState<Flight[]>([]);
   const [externalFlightEditId, setExternalFlightEditId] = useState<string | null>(null);
   const [invites, setInvites] = useState<GroupInvite[]>([]);
+  const [pendingInviteModalOpen, setPendingInviteModalOpen] = useState(false);
+  const [invitesLoaded, setInvitesLoaded] = useState(false);
+  const [deferFirstLoginRedirect, setDeferFirstLoginRedirect] = useState(false);
+  const [showResendConfirmation, setShowResendConfirmation] = useState(false);
+  const [resendConfirmationLoading, setResendConfirmationLoading] = useState(false);
+  const [requirePasswordSetup, setRequirePasswordSetup] = useState(false);
+  const [passwordSetupLoading, setPasswordSetupLoading] = useState(false);
+  const [passwordSetupForm, setPasswordSetupForm] = useState({ newPassword: '', newPasswordConfirm: '' });
+  const [isFirstLogin, setIsFirstLogin] = useState(false);
+  const [emailConfirmationMessage, setEmailConfirmationMessage] = useState<string | null>(null);
   const [followInviteCode, setFollowInviteCode] = useState('');
   const [followLoading, setFollowLoading] = useState(false);
   const [followError, setFollowError] = useState('');
@@ -213,6 +286,7 @@ const App: React.FC = () => {
   const [followCodeLoading, setFollowCodeLoading] = useState<Record<string, boolean>>({});
   const [followCodeError, setFollowCodeError] = useState<string | null>(null);
   const [followCodePayloads, setFollowCodePayloads] = useState<Record<string, InvitePayload>>({});
+  const [selectedFollowedTripId, setSelectedFollowedTripId] = useState<string | null>(null);
   const [groupName, setGroupName] = useState('');
   const [groupUserEmails, setGroupUserEmails] = useState('');
   const [groupGuestNames, setGroupGuestNames] = useState('');
@@ -268,26 +342,15 @@ const App: React.FC = () => {
   const [coveredBy, setCoveredBy] = useState<Record<string, string>>({});
   const [fellowTravelers, setFellowTravelers] = useState<FellowTraveler[]>([]);
   const [showRelationshipDropdown, setShowRelationshipDropdown] = useState(false);
-  const formatMemberName = (member: GroupMemberOption): string => {
-    const norm = (val?: string | null) => {
-      const t = val?.trim();
-      if (!t || t.toLowerCase() === 'unknown') return '';
-      return t;
-    };
-    const first = norm(member.firstName);
-    const last = norm(member.lastName);
-    const email = member.email?.trim();
-    const status = member.status;
-    if (first || last) return `${first ?? ''} ${last ?? ''}`.trim();
-    if (member.guestName) return member.guestName;
-    if (email) {
-      const local = email.split('@')[0] ?? '';
-      const parts = local.split(/[._-]+/).filter(Boolean);
-      const base = parts.length >= 2 ? `${parts[0]} ${parts.slice(1).join(' ')}`.trim() : email;
-      return status === 'pending' ? `${base} (pending)` : base;
-    }
-    return status === 'pending' ? 'Pending member' : 'Member';
-  };
+
+  const headers = useMemo<Record<string, string>>(
+    () => (userToken ? { Authorization: `Bearer ${userToken}` } : ({} as Record<string, string>)),
+    [userToken]
+  );
+  const jsonHeaders = useMemo<Record<string, string>>(
+    () => ({ 'Content-Type': 'application/json', ...(userToken ? { Authorization: `Bearer ${userToken}` } : {}) }),
+    [userToken]
+  );
 
   const userMembers = useMemo(
     () => groupMembers.filter((m) => !m.guestName && m.status !== 'removed'),
@@ -295,6 +358,18 @@ const App: React.FC = () => {
   );
 
   const memberIds = useMemo(() => userMembers.map((m) => m.id), [userMembers]);
+
+  const currentUserMemberId = useMemo(() => {
+    if (!userEmail) return null;
+    const match = userMembers.find((m) => m.email && m.email.toLowerCase() === userEmail.toLowerCase());
+    return match?.id ?? null;
+  }, [userMembers, userEmail]);
+
+  const defaultPayerId = useMemo(() => {
+    if (currentUserMemberId) return currentUserMemberId;
+    if (userMembers.length) return userMembers[0].id;
+    return null;
+  }, [currentUserMemberId, userMembers]);
 
   const flightsTotal = useMemo(
     () => flights.reduce((sum, f) => sum + (Number(f.cost) || 0), 0),
@@ -352,13 +427,24 @@ const App: React.FC = () => {
     [setAccountProfile]
   );
 
-  const findActiveTrip = useCallback(
-    () => trips.find((t) => t.id === activeTripId),
-    [trips, activeTripId]
+  const activeTrip = useMemo(() => trips.find((t) => t.id === activeTripId) ?? null, [trips, activeTripId]);
+  const tripById = useMemo(() => new Map(trips.map((trip) => [trip.id, trip] as const)), [trips]);
+  const groupById = useMemo(() => new Map(groups.map((group) => [group.id, group] as const)), [groups]);
+  const activeGroup = useMemo(
+    () => (activeTrip?.groupId ? groupById.get(activeTrip.groupId) ?? null : null),
+    [activeTrip?.groupId, groupById]
+  );
+  const selectedTrip = useMemo(
+    () => (selectedTripId ? tripById.get(selectedTripId) ?? null : null),
+    [selectedTripId, tripById]
+  );
+  const selectedTripGroup = useMemo(
+    () => (selectedTrip?.groupId ? groupById.get(selectedTrip.groupId) ?? null : null),
+    [selectedTrip?.groupId, groupById]
   );
 
   const isTripWizardOpen = activePage === 'create-trip';
-  const requestPageChange = (page: Page, opts?: { skipHistory?: boolean }) => {
+  const requestPageChange = useCallback((page: Page, opts?: { skipHistory?: boolean }) => {
     if (!shouldAllowPageChange(activePage, page)) return;
     if (page === activePage) return;
     setPageForwardHistory([]);
@@ -369,9 +455,9 @@ const App: React.FC = () => {
       });
     }
     setActivePage(page);
-  };
+  }, [activePage]);
 
-  const openMaps = (address: string) => {
+  const openMaps = useCallback((address: string) => {
     const url = buildMapUrl(address, mapApp);
     if (!url) return;
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -379,17 +465,17 @@ const App: React.FC = () => {
     } else {
       Linking.openURL(url);
     }
-  };
+  }, [mapApp]);
 
-  const openFlightInFlightsTab = (flightId: string) => {
+  const openFlightInFlightsTab = useCallback((flightId: string) => {
     setExternalFlightEditId(flightId);
-  };
+  }, []);
 
-  const applyCarDate = (field: 'pickup' | 'dropoff', value: string) => {
+  const applyCarDate = useCallback((field: 'pickup' | 'dropoff', value: string) => {
     setCarDraft((prev) => ({ ...prev, [field === 'pickup' ? 'pickupDate' : 'dropoffDate']: value }));
-  };
+  }, []);
 
-  const addCarRental = () => {
+  const addCarRental = useCallback(() => {
     if (!activeTripId) {
       alert('Select an active trip before adding a car rental.');
       return;
@@ -401,21 +487,21 @@ const App: React.FC = () => {
     }
     setCarRentals((prev) => [...prev, result.rental as CarRental]);
     setCarDraft(createInitialCarRentalDraft());
-  };
+  }, [activeTripId, carDraft, defaultPayerId, memberIds]);
 
-  const addCarRentalFromOverview = (rental: CarRental) => {
+  const addCarRentalFromOverview = useCallback((rental: CarRental) => {
     if (!activeTripId) {
       alert('Select an active trip before adding a car rental.');
       return;
     }
     setCarRentals((prev) => [...prev, rental]);
-  };
+  }, [activeTripId]);
 
-  const removeCarRental = (id: string) => {
+  const removeCarRental = useCallback((id: string) => {
     setCarRentals((prev) => prev.filter((c) => c.id !== id));
-  };
+  }, []);
 
-  const openCarDatePicker = (field: 'pickup' | 'dropoff') => {
+  const openCarDatePicker = useCallback((field: 'pickup' | 'dropoff') => {
     if (Platform.OS !== 'web' && NativeDateTimePicker) {
       const base = (field === 'pickup' ? carDraft.pickupDate : carDraft.dropoffDate) || '';
       const date = base ? new Date(base) : new Date();
@@ -433,17 +519,19 @@ const App: React.FC = () => {
       return;
     }
     ref?.focus();
-  };
+  }, [carDraft.dropoffDate, carDraft.pickupDate]);
 
   // Resolve a member id to a human-friendly name for payer chips.
-  const payerName = (id: string): string => {
-    const member = groupMembers.find((m) => m.id === id);
-    return member ? formatMemberName(member) : 'Unknown';
-  };
+  const memberNameById = useMemo(
+    () => new Map(groupMembers.map((member) => [member.id, formatMemberName(member)] as const)),
+    [groupMembers]
+  );
+  const payerName = useCallback((id: string): string => {
+    return memberNameById.get(id) ?? 'Unknown';
+  }, [memberNameById]);
 
-  const saveCoveredBy = async () => {
-    const trip = findActiveTrip();
-    if (!trip?.id) {
+  const saveCoveredBy = useCallback(async () => {
+    if (!activeTrip?.id) {
       alert('An active trip is required.');
       return;
     }
@@ -455,7 +543,7 @@ const App: React.FC = () => {
     }
 
     try {
-      const res = await fetch(`${backendUrl}/api/trips/${trip.id}/covered-by`, {
+      const res = await fetch(`${backendUrl}/api/trips/${activeTrip.id}/covered-by`, {
         method: 'PUT',
         headers: jsonHeaders,
         body: JSON.stringify(coveredBy),
@@ -465,7 +553,7 @@ const App: React.FC = () => {
     } catch (err) {
       alert((err as Error).message);
     }
-  };
+  }, [activeTrip?.id, backendUrl, coveredBy, jsonHeaders]);
 
   const coveredTravelerIds = useMemo(() => new Set(Object.keys(coveredBy)), [coveredBy]);
 
@@ -482,26 +570,14 @@ const App: React.FC = () => {
   const allMemberIds = useMemo(() => groupMembers.map(m => m.id), [groupMembers]);
 
   const allExpenses = useMemo(
-    () => buildAllExpenses(flights, lodgings, tours, carRentals, expenses, findActiveTrip()?.currency ?? 'USD', allMemberIds),
-    [flights, lodgings, tours, carRentals, expenses, allMemberIds, findActiveTrip]
+    () => buildAllExpenses(flights, lodgings, tours, carRentals, expenses, activeTrip?.currency ?? 'USD', allMemberIds),
+    [flights, lodgings, tours, carRentals, expenses, allMemberIds, activeTrip?.currency]
   );
 
   const { ledgerPaidTotals, ledgerUsedTotals, finalBalances } = useMemo(
     () => calculateAllTotals(allExpenses, allMemberIds, reportableMemberIds, coveredBy),
     [allExpenses, allMemberIds, reportableMemberIds, coveredBy]
   );
-
-  const currentUserMemberId = useMemo(() => {
-    if (!userEmail) return null;
-    const match = userMembers.find((m) => m.email && m.email.toLowerCase() === userEmail.toLowerCase());
-    return match?.id ?? null;
-  }, [userMembers, userEmail]);
-  
-  const defaultPayerId = useMemo(() => {
-    if (currentUserMemberId) return currentUserMemberId;
-    if (userMembers.length) return userMembers[0].id;
-    return null;
-  }, [currentUserMemberId, userMembers]);
 
   const overallCost = useMemo(() => allExpenses.reduce((sum, e) => sum + e.amount, 0), [allExpenses]);
 
@@ -598,18 +674,12 @@ const App: React.FC = () => {
     URL.revokeObjectURL(link.href);
   };
 
-  const headers = useMemo<Record<string, string>>(
-    () => (userToken ? { Authorization: `Bearer ${userToken}` } : ({} as Record<string, string>)),
-    [userToken]
-  );
-  const jsonHeaders = useMemo<Record<string, string>>(
-    () => ({ 'Content-Type': 'application/json', ...(userToken ? { Authorization: `Bearer ${userToken}` } : {}) }),
-    [userToken]
-  );
   const logout = useCallback(() => {
     setUserToken(null);
     setUserName(null);
     setUserEmail(null);
+    setTrips([]);
+    setActiveTripId(null);
     setFlights([]);
     setTours([]);
     setExpenses([]);
@@ -618,6 +688,7 @@ const App: React.FC = () => {
     setFollowInviteCode('');
     setFollowError('');
     setFollowCodes({});
+    setSelectedFollowedTripId(null);
     setGroups([]);
     setGroupMembers([]);
     setGroupAddEmail({});
@@ -626,9 +697,12 @@ const App: React.FC = () => {
     setSelectedTraitNames(new Set());
     setTraitAge('');
     setTraitGender('prefer-not');
-    setAccountProfile({ firstName: '', lastName: '', email: '', mapPreference: mapApp });
+    setAccountProfile({ firstName: '', lastName: '', email: '' });
     setFamilyRelationships([]);
     setFellowTravelers([]);
+    setRequirePasswordSetup(false);
+    setPasswordSetupLoading(false);
+    setPasswordSetupForm({ newPassword: '', newPasswordConfirm: '' });
     setPageForwardHistory([]);
     setActivePage('home');
     setPageHistory([]);
@@ -676,11 +750,19 @@ const App: React.FC = () => {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       return `${window.location.origin}/login`;
     }
-    if (typeof Linking?.createURL === 'function') {
-      return Linking.createURL('/login');
+
+    if (typeof Linking?.createURL !== 'function') {
+      // This should not happen in a standard Expo/React Native environment.
+      console.error('Linking.createURL is not available. OAuth redirect will likely fail.');
+      // Fallback to a URL that is unlikely to work for a native app redirect.
+      return `${backendUrl}/login`;
     }
-    const base = typeof window !== 'undefined' ? window.location.origin : backendUrl;
-    return `${base}/login`;
+
+    const scheme =
+      Constants.expoConfig?.scheme ||
+      (Constants as any)?.manifest2?.extra?.expoClient?.scheme ||
+      undefined;
+    return Linking.createURL('login', scheme ? { scheme } : undefined);
   };
 
   const loginWithGoogle = async () => {
@@ -690,10 +772,21 @@ const App: React.FC = () => {
       window.location.assign(authUrl);
       return;
     }
-    await WebBrowser.openBrowserAsync(authUrl);
+    try {
+      const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUrl);
+      if (result.type === 'success' && result.url) {
+        const { token, requirePasswordSetup } = extractTokenFromUrl(result.url);
+        if (token) {
+          handleAuthSuccess(token, undefined, { requirePasswordSetup });
+        }
+      }
+    } catch (err) {
+      console.log('Auth session cancelled or failed', err);
+    }
   };
 
-  const handleAuthSuccess = (token: string) => {
+  const handleAuthSuccess = useCallback(
+    (token: string, firstLoginOverride?: boolean, options?: { requirePasswordSetup?: boolean }) => {
     let decoded: { firstName?: string; lastName?: string; email?: string; provider?: string } | null = null;
     try {
       const payload = token.split('.')[1];
@@ -709,6 +802,7 @@ const App: React.FC = () => {
       `${decoded?.firstName ?? ''} ${decoded?.lastName ?? ''}`.trim() || decoded?.email || 'Traveler';
     setUserToken(token);
     setUserName(name);
+    setInvitesLoaded(false);
     if (decoded?.email) {
       setUserEmail(decoded.email);
     }
@@ -720,51 +814,65 @@ const App: React.FC = () => {
     const previousSession = loadSession();
     const restoredTripId = previousSession?.tripId ?? activeTripId ?? null;
     setActiveTripId(restoredTripId);
-    setActivePage('home');
+    const firstLogin = Boolean(firstLoginOverride);
+    setIsFirstLogin(firstLogin);
+    const mustSetPassword = Boolean(options?.requirePasswordSetup);
+    setRequirePasswordSetup(mustSetPassword);
+    if (mustSetPassword) {
+      setPasswordSetupForm({ newPassword: '', newPasswordConfirm: '' });
+    }
+    if (firstLogin) {
+      setDeferFirstLoginRedirect(true);
+      setActivePage('home');
+    } else {
+      setActivePage('overview');
+    }
     setPageForwardHistory([]);
     setPageHistory([]);
-    saveSession(token, name, 'home', decoded?.email, restoredTripId, [], []);
-    fetchFlights(token);
-    fetchLodgings(token);
-    fetchTours(token);
-    fetchInvites(token);
-    loadAccountProfile(token);
-    loadFamilyRelationships(token);
-    loadFellowTravelers(token);
-    setActivePage('home');
-  }
+    saveSession(token, name, firstLogin ? 'home' : 'overview', decoded?.email, restoredTripId, []);
+    },
+    [activeTripId]
+  );
 
   useEffect(() => {
-    const extractTokenFromUrl = (rawUrl: string) => {
-      const url = new URL(rawUrl);
-      const token = url.searchParams.get('token');
+    const handleDeepLink = (event: { url: string }) => {
+      const { token, isConfirm, requirePasswordSetup } = extractTokenFromUrl(event.url);
+      if (token && isConfirm) {
+        confirmEmailToken(token, event.url);
+        return;
+      }
       if (token) {
-        return { token, url, source: 'query' as const };
+        handleAuthSuccess(token, undefined, { requirePasswordSetup });
       }
-      const hash = url.hash.startsWith('#') ? url.hash.slice(1) : url.hash;
-      if (hash) {
-        const hashParams = new URLSearchParams(hash);
-        const hashToken = hashParams.get('token');
-        if (hashToken) {
-          return { token: hashToken, url, source: 'hash' as const };
-        }
-      }
-      return { token: null, url, source: null as const };
     };
 
-    const handleDeepLink = (event: { url: string }) => {
-      const { token } = extractTokenFromUrl(event.url);
-      if (token) {
-        handleAuthSuccess(token);
+    const confirmEmailToken = async (token: string, rawUrl: string) => {
+      try {
+        const res = await fetch(`${backendUrl}/api/web-auth/confirm?token=${encodeURIComponent(token)}`);
+        const data = await res.json().catch(() => ({}));
+        const message = res.ok ? (data.message ?? 'Email confirmed. You can now log in.') : (data.error ?? 'Email confirmation failed.');
+        setEmailConfirmationMessage(message);
+        alert(message);
+      } catch {
+        alert('Email confirmation failed.');
+      } finally {
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+          const url = new URL(rawUrl);
+          url.searchParams.delete('token');
+          window.history.replaceState({}, '', url.toString());
+        }
       }
     };
 
     const subscription = Linking.addEventListener('url', handleDeepLink);
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      const { token, url } = extractTokenFromUrl(window.location.href);
-      if (token) {
-        handleAuthSuccess(token);
+      const { token, url, isConfirm, requirePasswordSetup } = extractTokenFromUrl(window.location.href);
+      if (token && isConfirm) {
+        confirmEmailToken(token, window.location.href);
+      } else if (token) {
+        handleAuthSuccess(token, undefined, { requirePasswordSetup });
         url.searchParams.delete('token');
+        url.searchParams.delete('require_password_setup');
         if (url.hash) {
           const hashParams = new URLSearchParams(url.hash.slice(1));
           hashParams.delete('token');
@@ -777,7 +885,42 @@ const App: React.FC = () => {
     return () => {
       subscription.remove();
     };
-  }, []);
+  }, [handleAuthSuccess]);
+
+  const completeInitialPasswordSetup = async () => {
+    if (!userToken) return;
+    if (passwordSetupForm.newPassword !== passwordSetupForm.newPasswordConfirm) {
+      alert('Passwords do not match');
+      return;
+    }
+    if (passwordSetupForm.newPassword.trim().length < 6) {
+      alert('New password must be at least 6 characters');
+      return;
+    }
+    try {
+      setPasswordSetupLoading(true);
+      const res = await fetch(`${backendUrl}/api/account/password`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
+        body: JSON.stringify({
+          newPassword: passwordSetupForm.newPassword,
+          newPasswordConfirm: passwordSetupForm.newPasswordConfirm,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data.error || 'Unable to set password');
+        return;
+      }
+      setRequirePasswordSetup(false);
+      setPasswordSetupForm({ newPassword: '', newPasswordConfirm: '' });
+      alert('Password set. You can now sign in with email/password too.');
+    } catch (err) {
+      alert((err as Error).message || 'Unable to set password');
+    } finally {
+      setPasswordSetupLoading(false);
+    }
+  };
 
   const loginWithPassword = async () => {
     try {
@@ -788,16 +931,47 @@ const App: React.FC = () => {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
+        const message = String(data.error ?? '');
+        if (res.status === 403 && /confirm/i.test(message)) {
+          setShowResendConfirmation(true);
+        }
         alert(data.error || 'Login failed');
         return;
       }
+      setShowResendConfirmation(false);
       if (!data?.user || typeof data.token !== 'string') {
         alert(data.error || 'Login failed');
         return;
       }
-      handleAuthSuccess(data.token);
+      handleAuthSuccess(data.token, Boolean(data.firstLogin));
     } catch (err) {
       alert((err as Error).message || 'Login failed');
+    }
+  };
+
+  const resendConfirmationEmail = async () => {
+    const email = authForm.email.trim();
+    if (!email) {
+      alert('Enter your email first.');
+      return;
+    }
+    try {
+      setResendConfirmationLoading(true);
+      const res = await fetch(`${backendUrl}/api/web-auth/resend-confirmation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data.error || 'Failed to resend confirmation email.');
+        return;
+      }
+      alert(data.message || 'If an account exists for this email, a confirmation link has been sent.');
+    } catch (err) {
+      alert((err as Error).message || 'Failed to resend confirmation email.');
+    } finally {
+      setResendConfirmationLoading(false);
     }
   };
 
@@ -823,18 +997,23 @@ const App: React.FC = () => {
         alert(data.error || 'Registration failed');
         return;
       }
+      if (data?.verificationRequired) {
+        alert(data.message || 'Check your email to confirm your account.');
+        setAuthMode('login');
+        return;
+      }
       if (!data?.user || typeof data.token !== 'string') {
         alert(data.error || 'Registration failed');
         return;
       }
-      handleAuthSuccess(data.token);
+      handleAuthSuccess(data.token, Boolean(data.firstLogin));
     } catch (err) {
       alert((err as Error).message || 'Registration failed');
     }
   };
 
   // Fetch flights for the active trip; normalize paidBy casing.
-  const fetchFlights = async (token?: string) => {
+  const fetchFlights = useCallback(async (token?: string) => {
     if (!activeTripId) {
       setFlights([]);
       return;
@@ -849,29 +1028,29 @@ const App: React.FC = () => {
     } catch {
       setFlights([]);
     }
-  };
+  }, [activeTripId, backendUrl, userToken]);
 
   // Fetch lodgings for the active trip; normalize nullable fields.
-  const fetchLodgings = async (token?: string) => {
-    if (!activeTripId) {
+  const fetchLodgings = useCallback(async (token?: string) => {
+    if (!activeTripId || !(token ?? userToken)) {
       setLodgings([]);
       return;
     }
-    const data = await fetchLodgingsApi(backendUrl, activeTripId, token ?? userToken);
+    const data = await fetchLodgingsApi(backendUrl, activeTripId, (token ?? userToken) as string);
     setLodgings(data);
-  };
+  }, [activeTripId, backendUrl, userToken]);
 
   // Fetch tours for the active trip; normalize string fields.
-  const fetchTours = async (token?: string) => {
+  const fetchTours = useCallback(async (token?: string) => {
     if (!activeTripId || !(token ?? userToken)) {
       setTours([]);
       return;
     }
     const data = await fetchToursForTrip({ backendUrl, activeTripId, token: token ?? userToken });
     setTours(data);
-  };
+  }, [activeTripId, backendUrl, userToken]);
 
-  const fetchExpenses = async (token?: string) => {
+  const fetchExpenses = useCallback(async (token?: string) => {
     const authToken = token ?? userToken;
     if (!activeTripId || !authToken) {
       setExpenses([]);
@@ -890,20 +1069,21 @@ const App: React.FC = () => {
     } catch {
       setExpenses([]);
     }
-  };
+  }, [activeTripId, backendUrl, userToken]);
 
   // Fetch itineraries for the current user; ItinerariesTab also fetches within its own lifecycle,
   // but this keeps the call from blowing up when invoked from shared effects.
-  const fetchItineraries = async (token?: string) => {
+  const fetchItineraries = useCallback(async (token?: string) => {
     const authToken = token ?? userToken;
     if (!authToken) return;
     await fetch(`${backendUrl}/api/itineraries`, { headers }).catch(() => undefined);
-  };
+  }, [backendUrl, headers, userToken]);
 
-  const fetchInvites = async (token?: string) => {
+  const fetchInvites = useCallback(async (token?: string) => {
     const authToken = token ?? userToken;
     if (!authToken) {
       setInvites([]);
+      setInvitesLoaded(true);
       return;
     }
     try {
@@ -918,10 +1098,12 @@ const App: React.FC = () => {
       setInvites(data);
     } catch {
       setInvites([]);
+    } finally {
+      setInvitesLoaded(true);
     }
-  };
+  }, [backendUrl, userToken]);
 
-  const fetchGroups = async (sort?: 'created' | 'name') => {
+  const fetchGroups = useCallback(async (sort?: 'created' | 'name') => {
     const res = await fetch(`${backendUrl}/api/groups?sort=${sort ?? groupSort}`, {
       headers: { Authorization: `Bearer ${userToken}` },
     });
@@ -939,9 +1121,9 @@ const App: React.FC = () => {
     if (!newTripGroupId && normalized.length) {
       setNewTripGroupId(normalized[0].id);
     }
-  };
+  }, [backendUrl, groupSort, newTripGroupId, userToken, logout]);
 
-  const fetchTrips = async (tokenOverride?: string): Promise<Trip[]> => {
+  const fetchTrips = useCallback(async (tokenOverride?: string): Promise<Trip[]> => {
     const authToken = tokenOverride ?? userToken;
     if (!authToken) {
       setTrips([]);
@@ -965,9 +1147,9 @@ const App: React.FC = () => {
     } catch {
       return [];
     }
-  };
+  }, [activeTripId, backendUrl, logout, userToken]);
 
-  const fetchGroupMembersForActiveTrip = async () => {
+  const fetchGroupMembersForActiveTrip = useCallback(async () => {
     if (!userToken || !activeTripId) {
       setGroupMembers([]);
       return;
@@ -1000,18 +1182,18 @@ const App: React.FC = () => {
     } catch {
       setGroupMembers([]);
     }
-  };
+  }, [activeTripId, backendUrl, trips, userToken]);
 
-  const fetchTraits = async () => {
+  const fetchTraits = useCallback(async () => {
     if (!userToken) return;
     const res = await fetch(`${backendUrl}/api/traits`, { headers: { Authorization: `Bearer ${userToken}` } });
     if (!res.ok) return;
     const data = (await res.json()) as Trait[];
     setTraits(data);
     setSelectedTraitNames(new Set(data.map((t) => t.name)));
-  };
+  }, [backendUrl, userToken]);
 
-  const fetchTraitProfile = async () => {
+  const fetchTraitProfile = useCallback(async () => {
     if (!userToken) return;
     const res = await fetch(`${backendUrl}/api/traits/profile/demographics`, { headers });
     if (!res.ok) return;
@@ -1023,9 +1205,9 @@ const App: React.FC = () => {
         setTraitGender(data.gender);
       }
     }
-  };
+  }, [backendUrl, headers, userToken]);
 
-  const fetchFlightAirports = async (q: string) => {
+  const fetchFlightAirports = useCallback(async (q: string) => {
     if (!userToken || !q.trim()) {
       setFlightAirportOptions([]);
       return;
@@ -1043,11 +1225,11 @@ const App: React.FC = () => {
     } catch {
       setFlightAirportOptions([]);
     }
-  };
+  }, [backendUrl, userToken]);
 
-  const acceptInvite = async (inviteId: string) => {
+  const acceptInvite = async (invite: GroupInvite) => {
     if (!userToken) return;
-    const res = await fetch(`${backendUrl}/api/groups/invites/${inviteId}/accept`, {
+    const res = await fetch(`${backendUrl}/api/groups/invites/${invite.id}/accept`, {
       method: 'POST',
       headers: headers,
     });
@@ -1056,12 +1238,38 @@ const App: React.FC = () => {
       alert(data.error || 'Unable to accept invite');
       return;
     }
+    const nextTripId = invite.tripId ?? invite.resolvedTripId ?? null;
+    if (nextTripId) {
+      setActiveTripId(nextTripId);
+    }
+    if (isFirstLogin) {
+      setDeferFirstLoginRedirect(false);
+      setActivePage('account');
+    } else {
+      setActivePage('overview');
+    }
     fetchInvites();
     fetchGroups();
     fetchTrips();
   };
 
-  const refreshAllData = async (tokenOverride?: string) => {
+  const rejectInvite = async (invite: GroupInvite) => {
+    if (!userToken) return;
+    const res = await fetch(`${backendUrl}/api/groups/invites/${invite.id}/reject`, {
+      method: 'POST',
+      headers: headers,
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'Unable to reject invite');
+      return;
+    }
+    fetchInvites();
+    fetchGroups();
+    fetchTrips();
+  };
+
+  const refreshAllData = useCallback(async (tokenOverride?: string) => {
     const authToken = tokenOverride ?? userToken;
     if (!authToken || refreshInFlightRef.current) return;
     refreshInFlightRef.current = true;
@@ -1069,40 +1277,89 @@ const App: React.FC = () => {
     try {
       const ok = await loadAccountProfile(authToken);
       if (!ok) return;
-      fetchFlights(authToken);
-      fetchLodgings(authToken);
-      fetchTours(authToken);
-      fetchExpenses(authToken);
-      fetchInvites(authToken);
-      fetchGroups();
-      fetchTrips();
-      fetchTraits();
-      fetchTraitProfile();
-      fetchItineraries(authToken);
-      loadFamilyRelationships(authToken);
-      loadFellowTravelers(authToken);
-      try {
-        const trips = await fetchFollowedTripsApi(backendUrl, { Authorization: `Bearer ${authToken}` });
-        setFollowedTrips(trips);
-      } catch (err) {
-        if ((err as any).code === 'UNAUTHORIZED') {
-          logout();
-          return;
-        }
-        setFollowedTrips([]);
-      }
+      await Promise.all([
+        fetchFlights(authToken),
+        fetchLodgings(authToken),
+        fetchTours(authToken),
+        fetchExpenses(authToken),
+        fetchInvites(authToken),
+        fetchGroups(),
+        fetchTrips(),
+        fetchTraits(),
+        fetchTraitProfile(),
+        fetchItineraries(authToken),
+        loadFamilyRelationships(authToken),
+        loadFellowTravelers(authToken),
+        (async () => {
+          try {
+            const trips = await fetchFollowedTripsApi(backendUrl, { Authorization: `Bearer ${authToken}` });
+            setFollowedTrips(trips);
+          } catch (err) {
+            if ((err as any).code === 'UNAUTHORIZED') {
+              logout();
+            } else {
+              setFollowedTrips([]);
+            }
+          }
+        })()
+      ]);
     } finally {
       refreshInFlightRef.current = false;
       setIsRefreshing(false);
       setLastRefreshAt(Date.now());
     }
-  };
+  }, [
+    userToken,
+    loadAccountProfile,
+    fetchFlights,
+    fetchLodgings,
+    fetchTours,
+    fetchExpenses,
+    fetchInvites,
+    fetchGroups,
+    fetchTrips,
+    fetchTraits,
+    fetchTraitProfile,
+    fetchItineraries,
+    loadFamilyRelationships,
+    loadFellowTravelers,
+    backendUrl,
+    logout
+  ]);
 
   useEffect(() => {
     if (userToken) {
       refreshAllData();
     }
   }, [userToken]);
+
+  useEffect(() => {
+    if (!userToken) {
+      setPendingInviteModalOpen(false);
+      setInvitesLoaded(false);
+      return;
+    }
+    setPendingInviteModalOpen(invites.length > 0);
+  }, [invites, userToken]);
+
+  useEffect(() => {
+    if (!userToken || !deferFirstLoginRedirect) return;
+    if (!invitesLoaded) return;
+    if (pendingInviteModalOpen || invites.length) return;
+    setDeferFirstLoginRedirect(false);
+    setActivePage('account');
+    saveSession(userToken, userName ?? 'Traveler', 'account', userEmail ?? undefined, activeTripId ?? null, pageHistory);
+  }, [
+    activeTripId,
+    deferFirstLoginRedirect,
+    invites.length,
+    invitesLoaded,
+    pageHistory,
+    pendingInviteModalOpen,
+    userEmail,
+    userName,
+    userToken,
+  ]);
 
   useEffect(() => {
     if (userToken) {
@@ -1123,8 +1380,8 @@ const App: React.FC = () => {
         ? session.pageHistory.filter((p) => typeof p === 'string') as Page[]
         : [];
       setPageHistory(sessionHistory);
-      const sessionForwardHistory = (Array.isArray(session.pageForwardHistory)
-        ? session.pageForwardHistory.filter((p) => typeof p === 'string')
+      const sessionForwardHistory = (Array.isArray((session as any).pageForwardHistory)
+        ? (session as any).pageForwardHistory.filter((p: any) => typeof p === 'string')
         : []) as Page[];
       setPageForwardHistory(sessionForwardHistory);
       const tripId = session.tripId ?? null;
@@ -1147,9 +1404,10 @@ const App: React.FC = () => {
           sessionPage === 'ledger' ||
           sessionPage === 'cost' ||
           sessionPage === 'account' ||
-          sessionPage === 'follow'
+          sessionPage === 'follow' ||
+          sessionPage === 'following'
         ) {
-          setActivePage(sessionPage === 'menu' ? 'home' : (sessionPage as Page));
+          setActivePage(sessionPage as Page);
         } else {
           setActivePage('home');
         }
@@ -1177,6 +1435,13 @@ const App: React.FC = () => {
   }, [followCodePayloads]);
 
   useEffect(() => {
+    if (!selectedFollowedTripId) return;
+    if (!followedTrips.some((trip) => trip.tripId === selectedFollowedTripId)) {
+      setSelectedFollowedTripId(null);
+    }
+  }, [followedTrips, selectedFollowedTripId]);
+
+  useEffect(() => {
     if (!userToken) return;
     if (!Number.isFinite(refreshIntervalMs) || refreshIntervalMs <= 0) return;
     const now = Date.now();
@@ -1194,7 +1459,7 @@ const App: React.FC = () => {
         refreshTimerRef.current = null;
       }
     };
-  }, [activeTripId, lastRefreshAt, userToken, refreshIntervalMs]);
+  }, [activeTripId, lastRefreshAt, userToken, refreshIntervalMs, refreshAllData]);
 
   useEffect(() => {
     if (userToken) {
@@ -1203,7 +1468,7 @@ const App: React.FC = () => {
       fetchTours();
       fetchExpenses();
     }
-  }, [activeTripId]);
+  }, [activeTripId, fetchFlights, fetchLodgings, fetchTours, fetchExpenses]);
 
   useEffect(() => {
     if (userToken) {
@@ -1216,7 +1481,7 @@ const App: React.FC = () => {
     if (userToken) {
       fetchGroupMembersForActiveTrip();
     }
-  }, [userToken, activeTripId, trips]);
+  }, [userToken, activeTripId, trips, fetchGroupMembersForActiveTrip]);
 
   useEffect(() => {
     if (!userToken || !activeTripId) {
@@ -1406,10 +1671,10 @@ const App: React.FC = () => {
     fetchTrips();
   };
 
-  const openLodgingDetails = (lodging: Lodging) => {
+  const openLodgingDetails = useCallback((lodging: Lodging) => {
     setSelectedLodging(lodging);
     setShowLodgingDetails(true);
-  };
+  }, []);
 
   const deleteLodging = async (lodgingId: string) => {
     if (!activeTripId) return;
@@ -1425,7 +1690,7 @@ const App: React.FC = () => {
     fetchLodgings();
   };
 
-  const goBack = () => {
+  const goBack = useCallback(() => {
     if (pageHistory.length === 0) return;
     const previousPage = pageHistory[pageHistory.length - 1];
     if (shouldAllowPageChange(activePage, previousPage)) {
@@ -1433,14 +1698,14 @@ const App: React.FC = () => {
       setPageHistory((prev) => prev.slice(0, -1));
       setActivePage(previousPage);
     }
-  };
+  }, [pageHistory, activePage]);
 
-  const closeTripWizard = () => {
+  const closeTripWizard = useCallback(() => {
     setPageForwardHistory([]);
     setActivePage('home');
-  };
+  }, []);
 
-  const goForward = () => {
+  const goForward = useCallback(() => {
     if (pageForwardHistory.length === 0) return;
     const nextPage = pageForwardHistory[0];
     if (shouldAllowPageChange(activePage, nextPage)) {
@@ -1448,12 +1713,12 @@ const App: React.FC = () => {
       setPageForwardHistory((prev) => prev.slice(1));
       setActivePage(nextPage);
     }
-  };
+  }, [pageForwardHistory, activePage]);
 
   useEffect(() => {
     if (!userToken) return;
-    saveSession(userToken, userName ?? 'Traveler', activePage, userEmail, activeTripId, pageHistory, pageForwardHistory);
-  }, [userToken, userName, userEmail, activePage, activeTripId, pageHistory, pageForwardHistory]);
+    saveSession(userToken, userName ?? 'Traveler', activePage, userEmail, activeTripId, pageHistory);
+  }, [userToken, userName, userEmail, activePage, activeTripId, pageHistory]);
 
   const disabledPages = useMemo(() => {
     const pages: Page[] = [
@@ -1469,10 +1734,54 @@ const App: React.FC = () => {
       'create-trip',
       'account',
       'follow',
+      'following',
       'itinerary',
     ];
     return new Set(pages.filter((page) => shouldDisableTab(activePage, page)));
   }, [activePage]);
+  const activeTripName = useMemo(
+    () => activeTrip?.name?.replace(/\s/g, '_') ?? 'export',
+    [activeTrip?.name]
+  );
+  const getActiveTrip = useCallback(() => activeTrip ?? undefined, [activeTrip]);
+  const handleHomeNavigate = useCallback((page: string) => requestPageChange(page as Page), [requestPageChange]);
+  const handleFlightsDataChanged = useCallback(() => {
+    fetchFlights();
+    fetchExpenses();
+  }, [fetchExpenses, fetchFlights]);
+  const handleLodgingsDataChanged = useCallback(() => {
+    fetchLodgings();
+    fetchExpenses();
+  }, [fetchExpenses, fetchLodgings]);
+  const handleToursDataChanged = useCallback(() => {
+    fetchTours();
+    fetchExpenses();
+  }, [fetchExpenses, fetchTours]);
+  const handleExternalEditHandled = useCallback(() => setExternalFlightEditId(null), []);
+  const handleOpenTripItinerary = useCallback((tripId: string) => {
+    setActiveTripId(tripId);
+    requestPageChange('itinerary');
+  }, [requestPageChange]);
+  const handleUnfollowTrip = useCallback(
+    async (tripId: string) => {
+      const res = await fetch(`${backendUrl}/api/trips/${tripId}/follow`, {
+        method: 'DELETE',
+        headers,
+      });
+      if (res.status === 401 || res.status === 403) {
+        logout();
+        return;
+      }
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || 'Unable to unfollow trip');
+        return;
+      }
+      setFollowedTrips((prev) => prev.filter((trip) => trip.tripId !== tripId));
+      setSelectedFollowedTripId((prev) => (prev === tripId ? null : prev));
+    },
+    [backendUrl, headers, logout]
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -1525,7 +1834,7 @@ const App: React.FC = () => {
                 onPress={() => setShowActiveTripDropdown((s) => !s)}
               >
                 <Text style={styles.cellText}>
-                  Active Trip: {activeTripId ? trips.find((t) => t.id === activeTripId)?.name ?? 'Select' : 'Select'}
+                  Active Trip: {activeTrip?.name ?? 'Select'}
                 </Text>
                 {showActiveTripDropdown && (
                   <View style={styles.dropdownList}>
@@ -1564,7 +1873,7 @@ const App: React.FC = () => {
               trips={trips}
               styles={styles}
               onSelectTrip={setActiveTripId}
-              onNavigate={(page) => requestPageChange(page as Page)}
+              onNavigate={handleHomeNavigate}
               disabledPages={disabledPages}
             />
           ) : null}
@@ -1574,7 +1883,7 @@ const App: React.FC = () => {
               backendUrl={backendUrl}
               userToken={userToken}
               activeTripId={activeTripId}
-              activeTrip={findActiveTrip() ?? null}
+              activeTrip={activeTrip}
               traits={traits}
               headers={headers}
               setActiveTripId={setActiveTripId}
@@ -1607,7 +1916,7 @@ const App: React.FC = () => {
               backendUrl={backendUrl}
               headers={headers}
               jsonHeaders={jsonHeaders}
-              trip={findActiveTrip() ?? null}
+              trip={activeTrip}
               groupMembers={groupMembers}
               expenses={expenses}
               setExpenses={setExpenses}
@@ -1618,7 +1927,7 @@ const App: React.FC = () => {
 
           {activePage === 'ledger' ? (
             <LedgerTab
-              trip={findActiveTrip() ?? null}
+              trip={activeTrip}
               groupMembers={groupMembers}
               reportableMembers={reportableMembers}
               paidTotals={ledgerPaidTotals}
@@ -1626,7 +1935,7 @@ const App: React.FC = () => {
               styles={styles}
               onNavigate={requestPageChange}
               downloadCsv={downloadCsv}
-              findActiveTrip={findActiveTrip}
+              findActiveTrip={getActiveTrip}
               coveredBy={coveredBy}
               setCoveredBy={setCoveredBy}
               formatMemberName={formatMemberName}
@@ -1637,14 +1946,14 @@ const App: React.FC = () => {
 
           {activePage === 'cost' ? (
             <View style={[styles.card, styles.flightsSection]}>
-              <View style={styles.row}>
+              <View style={styles.sectionHeaderRow}>
                 <Text style={styles.sectionTitle}>Cost Report</Text>
-                <View style={[styles.row, { marginLeft: 'auto' }]}>
+                <View style={[styles.row, styles.sectionActions]}>
                   <TouchableOpacity
                     style={[styles.button, styles.smallButton]}
                     onPress={() => {
                       const csv = convertExpensesToCsv('paid');
-                      const fileName = `paid-expenses-${findActiveTrip()?.name?.replace(/\s/g, '_') ?? 'export'}.csv`;
+                      const fileName = `paid-expenses-${activeTripName}.csv`;
                       downloadCsv(csv, fileName);
                     }}
                   >
@@ -1654,19 +1963,19 @@ const App: React.FC = () => {
                     style={[styles.button, styles.smallButton]}
                     onPress={() => {
                       const csv = convertExpensesToCsv('incurred');
-                      const fileName = `incurred-expenses-${findActiveTrip()?.name?.replace(/\s/g, '_') ?? 'export'}.csv`;
+                      const fileName = `incurred-expenses-${activeTripName}.csv`;
                       downloadCsv(csv, fileName);
                     }}
                   >
                     <Text style={styles.buttonText}>Export Incurred CSV</Text>
                   </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.button, styles.smallButton]}
+                    onPress={() => requestPageChange('ledger')}
+                  >
+                    <Text style={styles.buttonText}>📒 Ledger</Text>
+                  </TouchableOpacity>
                 </View>
-                <TouchableOpacity
-                  style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
-                  onPress={() => requestPageChange('ledger')}
-                >
-                  <Text style={styles.buttonText}>📒 Ledger</Text>
-                </TouchableOpacity>
               </View>
               <Text style={styles.helperText}>Combined totals by category and user.</Text>
               <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
@@ -1766,7 +2075,7 @@ const App: React.FC = () => {
           backendUrl={backendUrl}
           jsonHeaders={jsonHeaders}
           requestHeaders={headers}
-          trip={findActiveTrip() ?? null}
+          trip={activeTrip}
           lodgings={lodgings}
           groupMembers={groupMembers}
           defaultPayerId={defaultPayerId}
@@ -1848,7 +2157,7 @@ const App: React.FC = () => {
                     style={styles.input}
                     placeholder="Pick up location"
                     value={carDraft.pickupLocation}
-                    onChangeText={(text) => setCarDraft((p) => ({ ...p, pickupLocation: text }))}
+                    onChangeText={(text: string) => setCarDraft((p) => ({ ...p, pickupLocation: text }))}
                   />
                 </View>
                 <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
@@ -1859,7 +2168,7 @@ const App: React.FC = () => {
                         type="date"
                         value={carDraft.pickupDate}
                         onChange={(e) => setCarDraft((p) => ({ ...p, pickupDate: e.target.value }))}
-                        style={styles.input as any}
+                        style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
                       />
                     ) : (
                       <TouchableOpacity
@@ -1882,7 +2191,7 @@ const App: React.FC = () => {
                     style={styles.input}
                     placeholder="Drop off location"
                     value={carDraft.dropoffLocation}
-                    onChangeText={(text) => setCarDraft((p) => ({ ...p, dropoffLocation: text }))}
+                    onChangeText={(text: string) => setCarDraft((p) => ({ ...p, dropoffLocation: text }))}
                   />
                 </View>
                 <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
@@ -1893,7 +2202,7 @@ const App: React.FC = () => {
                         type="date"
                         value={carDraft.dropoffDate}
                         onChange={(e) => setCarDraft((p) => ({ ...p, dropoffDate: e.target.value }))}
-                        style={styles.input as any}
+                        style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
                       />
                     ) : (
                       <TouchableOpacity
@@ -1916,7 +2225,7 @@ const App: React.FC = () => {
                     style={styles.input}
                     placeholder="Reference"
                     value={carDraft.reference}
-                    onChangeText={(text) => setCarDraft((p) => ({ ...p, reference: text }))}
+                    onChangeText={(text: string) => setCarDraft((p) => ({ ...p, reference: text }))}
                   />
                 </View>
                 <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
@@ -1924,7 +2233,7 @@ const App: React.FC = () => {
                     style={styles.input}
                     placeholder="Vendor"
                     value={carDraft.vendor}
-                    onChangeText={(text) => setCarDraft((p) => ({ ...p, vendor: text }))}
+                    onChangeText={(text: string) => setCarDraft((p) => ({ ...p, vendor: text }))}
                   />
                 </View>
                 <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
@@ -1960,7 +2269,7 @@ const App: React.FC = () => {
                     placeholder="Cost"
                     keyboardType="numeric"
                     value={carDraft.cost}
-                    onChangeText={(text) => setCarDraft((p) => ({ ...p, cost: sanitizeCostInput(text) }))}
+                    onChangeText={(text: string) => setCarDraft((p) => ({ ...p, cost: sanitizeCostInput(text) }))}
                   />
                 </View>
                 <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
@@ -1968,7 +2277,7 @@ const App: React.FC = () => {
                     style={styles.input}
                     placeholder="Car model"
                     value={carDraft.model}
-                    onChangeText={(text) => setCarDraft((p) => ({ ...p, model: text }))}
+                    onChangeText={(text: string) => setCarDraft((p) => ({ ...p, model: text }))}
                   />
                 </View>
                 <View style={[styles.cell, { minWidth: 220, flex: 1 }]}>
@@ -1976,7 +2285,7 @@ const App: React.FC = () => {
                     style={[styles.input, styles.cellTextWrap]}
                     placeholder="Notes"
                     value={carDraft.notes}
-                    onChangeText={(text) => setCarDraft((p) => ({ ...p, notes: text }))}
+                    onChangeText={(text: string) => setCarDraft((p) => ({ ...p, notes: text }))}
                     multiline
                   />
                 </View>
@@ -2057,7 +2366,7 @@ const App: React.FC = () => {
         <NativeDateTimePicker
           value={carDateValue}
           mode="date"
-          onChange={(_, date) => {
+          onChange={(_: any, date: Date | undefined) => {
             if (!date) {
               setCarDateField(null);
               return;
@@ -2083,17 +2392,14 @@ const App: React.FC = () => {
           payerName={payerName}
           headers={headers}
           jsonHeaders={jsonHeaders}
-          findActiveTrip={findActiveTrip}
+          findActiveTrip={getActiveTrip}
           fetchGroupMembersForActiveTrip={fetchGroupMembersForActiveTrip}
           styles={styles}
           airportOptions={flightAirportOptions}
           onSearchAirports={fetchFlightAirports}
           externalEditFlightId={externalFlightEditId}
-          onDataChanged={() => {
-            fetchFlights();
-            fetchExpenses();
-          }}
-          onExternalEditHandled={() => setExternalFlightEditId(null)}
+          onDataChanged={handleFlightsDataChanged}
+          onExternalEditHandled={handleExternalEditHandled}
           showList={activePage === 'flights'}
         />
       ) : null}
@@ -2133,7 +2439,7 @@ const App: React.FC = () => {
                   <TouchableOpacity onPress={() => setShowTripGroupDropdown((s) => !s)}>
                     <Text style={styles.cellText}>
                       {newTripGroupId
-                        ? groups.find((g) => g.id === newTripGroupId)?.name ?? 'Select group'
+                        ? groupById.get(newTripGroupId)?.name ?? 'Select group'
                         : 'Select group'}
                     </Text>
                   </TouchableOpacity>
@@ -2166,7 +2472,7 @@ const App: React.FC = () => {
                       <Text style={styles.flightTitle}>{trip.name}</Text>
                       <Text style={styles.helperText}>Created: {formatDateLong(trip.createdAt)}</Text>
                       {(() => {
-                        const group = groups.find((g) => g.id === trip.groupId);
+                        const group = groupById.get(trip.groupId);
                         const pending = group?.invites ?? [];
                         if (!pending.length) return null;
                         return (
@@ -2217,8 +2523,8 @@ const App: React.FC = () => {
               backendUrl={backendUrl}
               headers={headers}
               jsonHeaders={jsonHeaders}
-              trip={findActiveTrip() ?? null}
-              group={groups.find((g) => g.id === findActiveTrip()?.groupId) ?? null}
+              trip={activeTrip}
+              group={activeGroup}
               attendees={groupMembers}
               flights={flights}
               lodgings={lodgings}
@@ -2231,34 +2537,24 @@ const App: React.FC = () => {
               onRefreshTrips={fetchTrips}
               onRefreshGroups={fetchGroups}
               onRefreshGroupMembers={fetchGroupMembersForActiveTrip}
-              onFlightDataChanged={() => {
-                fetchFlights();
-                fetchExpenses();
-              }}
-              onLodgingDataChanged={() => {
-                fetchLodgings();
-                fetchExpenses();
-              }}
-              onTourDataChanged={() => {
-                fetchTours();
-                fetchExpenses();
-              }}
+              onFlightDataChanged={handleFlightsDataChanged}
+              onLodgingDataChanged={handleLodgingsDataChanged}
+              onTourDataChanged={handleToursDataChanged}
               onAddCarRental={addCarRentalFromOverview}
               openFlightInFlightsTab={openFlightInFlightsTab}
-              openLodgingDetails={openLodgingDetails}
+              openLodgingDetails={(lodging) => openLodgingDetails(lodging as Lodging)}
             />
           ) : null}
 
       {activePage === 'trip-details' ? (
         <TripDetailsTab
-          trip={trips.find((t) => t.id === selectedTripId) ?? null}
-          group={groups.find((g) => g.id === trips.find((t) => t.id === selectedTripId)?.groupId) ?? null}
+          backendUrl={backendUrl}
+          headers={headers}
+          trip={selectedTrip}
+          group={selectedTripGroup}
           styles={styles}
           onSetActive={(tripId) => setActiveTripId(tripId)}
-          onOpenItinerary={(tripId) => {
-            setActiveTripId(tripId);
-            requestPageChange('itinerary');
-          }}
+          onOpenItinerary={handleOpenTripItinerary}
           onUpdateCurrency={updateTripCurrency}
         />
       ) : null}
@@ -2287,6 +2583,23 @@ const App: React.FC = () => {
               setFollowCodePayloads={setFollowCodePayloads}
               styles={styles}
               logout={logout}
+              onOpenFollowedTrip={(tripId) => {
+                setSelectedFollowedTripId(tripId);
+                requestPageChange('following');
+              }}
+            />
+          ) : null}
+
+          {activePage === 'following' ? (
+            <FollowingTab
+              backendUrl={backendUrl}
+              headers={headers}
+              followedTrips={followedTrips}
+              styles={styles}
+              onRequireLogin={logout}
+              selectedTripId={selectedFollowedTripId}
+              onSelectTrip={setSelectedFollowedTripId}
+              onUnfollowTrip={handleUnfollowTrip}
             />
           ) : null}
         </ScrollView>
@@ -2313,13 +2626,13 @@ const App: React.FC = () => {
                 style={styles.input}
                 placeholder="First name"
                 value={authForm.firstName}
-                onChangeText={(text) => setAuthForm((p) => ({ ...p, firstName: text }))}
+                onChangeText={(text: string) => setAuthForm((p) => ({ ...p, firstName: text }))}
               />
               <TextInput
                 style={styles.input}
                 placeholder="Last name"
                 value={authForm.lastName}
-                onChangeText={(text) => setAuthForm((p) => ({ ...p, lastName: text }))}
+                onChangeText={(text: string) => setAuthForm((p) => ({ ...p, lastName: text }))}
               />
             </>
           ) : null}
@@ -2329,14 +2642,14 @@ const App: React.FC = () => {
             placeholder="Email"
             autoCapitalize="none"
             value={authForm.email}
-            onChangeText={(text) => setAuthForm((p) => ({ ...p, email: text }))}
+            onChangeText={(text: string) => setAuthForm((p) => ({ ...p, email: text }))}
           />
           <TextInput
             style={styles.input}
             placeholder="Password"
             secureTextEntry
             value={authForm.password}
-            onChangeText={(text) => setAuthForm((p) => ({ ...p, password: text }))}
+            onChangeText={(text: string) => setAuthForm((p) => ({ ...p, password: text }))}
           />
           {authMode === 'register' ? (
             <TextInput
@@ -2344,8 +2657,25 @@ const App: React.FC = () => {
               placeholder="Confirm password"
               secureTextEntry
               value={authForm.passwordConfirm}
-              onChangeText={(text) => setAuthForm((p) => ({ ...p, passwordConfirm: text }))}
+              onChangeText={(text: string) => setAuthForm((p) => ({ ...p, passwordConfirm: text }))}
             />
+          ) : null}
+          {authMode === 'login' && showResendConfirmation ? (
+            <View style={styles.row}>
+              <TouchableOpacity
+                style={[styles.button, styles.smallButton, resendConfirmationLoading && styles.buttonDisabled]}
+                onPress={resendConfirmationEmail}
+                disabled={resendConfirmationLoading}
+              >
+                <Text style={styles.buttonText}>{resendConfirmationLoading ? 'Resending...' : 'Resend confirmation'}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, styles.smallButton]}
+                onPress={() => setShowResendConfirmation(false)}
+              >
+                <Text style={styles.buttonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
           ) : null}
                       <TouchableOpacity
                         style={styles.button}
@@ -2358,6 +2688,81 @@ const App: React.FC = () => {
                       </TouchableOpacity>
                     </View>
                   )}
+      {userToken && requirePasswordSetup ? (
+        <View style={styles.wizardOverlay}>
+          <View style={[styles.wizardModal, styles.pendingInviteModal]}>
+            <View style={styles.card}>
+              <Text style={styles.sectionTitle}>Set Your Password</Text>
+              <Text style={styles.helperText}>
+                This is your first Google sign-in for this account. Set a password now to finish account setup.
+              </Text>
+              <TextInput
+                style={styles.input}
+                placeholder="New password"
+                secureTextEntry
+                value={passwordSetupForm.newPassword}
+                onChangeText={(text: string) => setPasswordSetupForm((p) => ({ ...p, newPassword: text }))}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Confirm new password"
+                secureTextEntry
+                value={passwordSetupForm.newPasswordConfirm}
+                onChangeText={(text: string) => setPasswordSetupForm((p) => ({ ...p, newPasswordConfirm: text }))}
+              />
+              <TouchableOpacity
+                style={[styles.button, passwordSetupLoading && styles.buttonDisabled]}
+                onPress={completeInitialPasswordSetup}
+                disabled={passwordSetupLoading}
+              >
+                <Text style={styles.buttonText}>{passwordSetupLoading ? 'Saving...' : 'Set Password'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      ) : null}
+      {userToken && pendingInviteModalOpen ? (
+        <View style={styles.wizardOverlay}>
+          <View style={[styles.wizardModal, styles.pendingInviteModal]}>
+            <View style={styles.card}>
+              <View style={styles.sectionHeaderRow}>
+                <Text style={styles.sectionTitle}>Trip Invites</Text>
+                <TouchableOpacity
+                  style={[styles.button, styles.smallButton]}
+                  onPress={() => setPendingInviteModalOpen(false)}
+                >
+                  <Text style={styles.buttonText}>Close</Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.helperText}>Choose which trips you want to join.</Text>
+              <ScrollView style={styles.inviteList} contentContainerStyle={styles.inviteListContent}>
+                {invites.map((invite) => {
+                  const tripLabel = invite.resolvedTripName ?? invite.groupName ?? 'Upcoming Trip';
+                  const inviterName = `${invite.inviterFirstName ?? ''} ${invite.inviterLastName ?? ''}`.trim();
+                  const inviterLine = inviterName || invite.inviterEmail || 'Someone';
+                  return (
+                    <View key={invite.id} style={styles.inviteCard}>
+                      <Text style={styles.bodyText}>{tripLabel}</Text>
+                      <Text style={styles.helperText}>Invited by {inviterLine}</Text>
+                      <View style={styles.row}>
+                        <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => acceptInvite(invite)}>
+                          <Text style={styles.buttonText}>Join</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.button, styles.smallButton, styles.dangerButton]}
+                          onPress={() => rejectInvite(invite)}
+                        >
+                          <Text style={styles.buttonText}>Decline</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          </View>
+        </View>
+      ) : null}
       {userToken && isTripWizardOpen ? (
         <View style={styles.wizardOverlay}>
           <View style={styles.wizardModal}>
@@ -2381,8 +2786,9 @@ const App: React.FC = () => {
       ) : null}
       {lodgingToDelete ? (
         <ConfirmDialog
+          visible={true}
           title="Delete Lodging"
-          prompt={`Are you sure you want to delete ${lodgingToDelete.name}? This cannot be undone.`}
+          message={`Are you sure you want to delete ${lodgingToDelete.name}? This cannot be undone.`}
           onConfirm={() => {
             deleteLodging(lodgingToDelete.id);
             setLodgingToDelete(null);
@@ -2791,6 +3197,11 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 8,
     flexWrap: 'wrap',
+  },
+  sectionActions: {
+    marginLeft: 'auto',
+    flexWrap: 'wrap',
+    gap: 8,
   },
   groupRow: {
     flexDirection: 'row',
@@ -3203,6 +3614,9 @@ const styles = StyleSheet.create({
   dateInputWrap: {
     position: 'relative',
     justifyContent: 'center',
+    flex: 1,
+    minWidth: 220,
+    maxWidth: '100%',
   },
   dateIcon: {
     position: 'absolute',
@@ -3498,6 +3912,22 @@ const styles = StyleSheet.create({
     maxHeight: '90%',
     alignSelf: 'center',
   },
+  pendingInviteModal: {
+    maxWidth: 720,
+  },
+  inviteList: {
+    maxHeight: 360,
+  },
+  inviteListContent: {
+    gap: 12,
+  },
+  inviteCard: {
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 8,
+    padding: 12,
+    backgroundColor: '#fff',
+  },
   modalOverlay: {
     position: 'absolute',
     top: 0,
@@ -3517,6 +3947,26 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 420,
     boxShadow: '0 4px 10px rgba(0,0,0,0.25)',
+  },
+  payerChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+    marginBottom: 8,
+  },
+  payerChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e9ecef',
+    borderRadius: 16,
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    gap: 4,
+  },
+  payerOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
   },
 });
 

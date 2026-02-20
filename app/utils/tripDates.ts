@@ -1,4 +1,6 @@
 export type TripDateMode = 'range' | 'month';
+const DAY_MS = 24 * 60 * 60 * 1000;
+const monthYearFormatter = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' });
 
 export const parseDate = (value?: string | null): Date | null => {
   if (!value) return null;
@@ -10,14 +12,14 @@ export const computeDurationFromRange = (startDate?: string | null, endDate?: st
   const start = parseDate(startDate);
   const end = parseDate(endDate);
   if (!start || !end) return null;
-  const diff = Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  const diff = Math.floor((end.getTime() - start.getTime()) / DAY_MS) + 1;
   return diff > 0 ? diff : null;
 };
 
 export const computeEndDateFromDuration = (startDate: string, days: number): string | null => {
   const start = parseDate(startDate);
   if (!start || !Number.isFinite(days) || days <= 0) return null;
-  const end = new Date(start.getTime() + (days - 1) * 24 * 60 * 60 * 1000);
+  const end = new Date(start.getTime() + (days - 1) * DAY_MS);
   return end.toISOString().slice(0, 10);
 };
 
@@ -25,7 +27,7 @@ export const formatMonthYear = (month?: number | null, year?: number | null): st
   if (!month || !year) return null;
   const date = new Date(year, month - 1, 1);
   if (Number.isNaN(date.valueOf())) return null;
-  return date.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+  return monthYearFormatter.format(date);
 };
 
 export const adjustStartDateForEarliest = (params: {
@@ -44,10 +46,15 @@ export const adjustStartDateForEarliest = (params: {
 };
 
 export const getEarliestTripEventDate = (dates: Array<string | undefined | null>): string | null => {
-  const parsed = dates
-    .map((d) => parseDate(d))
-    .filter(Boolean)
-    .sort((a, b) => (a as Date).getTime() - (b as Date).getTime());
-  if (!parsed.length) return null;
-  return (parsed[0] as Date).toISOString().slice(0, 10);
+  let earliestMs: number | null = null;
+  for (const value of dates) {
+    const parsed = parseDate(value);
+    if (!parsed) continue;
+    const ms = parsed.getTime();
+    if (earliestMs === null || ms < earliestMs) {
+      earliestMs = ms;
+    }
+  }
+  if (earliestMs === null) return null;
+  return new Date(earliestMs).toISOString().slice(0, 10);
 };

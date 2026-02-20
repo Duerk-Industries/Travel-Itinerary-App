@@ -87,6 +87,7 @@ type FollowTabProps = {
   setFollowCodePayloads: React.Dispatch<React.SetStateAction<Record<string, InvitePayload>>>;
   styles: any;
   logout: () => void;
+  onOpenFollowedTrip?: (tripId: string) => void;
 };
 
 export const FollowTab: React.FC<FollowTabProps> = ({
@@ -112,6 +113,7 @@ export const FollowTab: React.FC<FollowTabProps> = ({
   setFollowCodePayloads,
   styles,
   logout,
+  onOpenFollowedTrip,
 }) => {
   const followTripByInvite = async () => {
     if (!userToken) return;
@@ -122,38 +124,6 @@ export const FollowTab: React.FC<FollowTabProps> = ({
     }
     const decoded = decodeInviteCode(code);
     const payload = followCodePayloads[code] ?? decoded ?? null;
-    const resolvedTripId = payload?.tripId ?? null;
-    const resolvedName = payload?.tripName ?? trips.find((t) => t.id === resolvedTripId)?.name ?? 'Trip';
-    if (resolvedTripId) {
-      setFollowedTrips((prev) => {
-        const filtered = prev.filter((t) => t.tripId !== resolvedTripId);
-        return [
-          ...filtered,
-          {
-            tripId: resolvedTripId,
-            tripName: resolvedName,
-            destination: payload?.destination,
-            inviterName: payload ? 'Shared' : 'You',
-            todayDetails: [],
-          },
-        ];
-      });
-      if (payload && payload.tripId) {
-        setFollowCodes((prev) => {
-          const next = { ...prev, [payload.tripId]: code };
-          saveFollowCodes(next);
-          return next;
-        });
-        setFollowCodePayloads((prev) => {
-          const next = { ...prev, [code]: payload };
-          saveFollowPayloads(next);
-          return next;
-        });
-      }
-      setFollowInviteCode('');
-      setFollowError('');
-      return;
-    }
     setFollowLoading(true);
     setFollowError('');
     try {
@@ -199,14 +169,32 @@ export const FollowTab: React.FC<FollowTabProps> = ({
             tripId,
             tripName,
             inviterName: data.inviterName ?? tripData.inviterName,
-            destination: tripData.destination,
+            destination: tripData.destination ?? payload?.destination,
             todayDetails: normalizeDetails,
           },
         ];
       });
       setFollowInviteCode('');
     } catch (err) {
-      setFollowError((err as Error).message);
+      const fallbackTripId = payload?.tripId ?? null;
+      if (fallbackTripId) {
+        setFollowedTrips((prev) => {
+          const filtered = prev.filter((t) => t.tripId !== fallbackTripId);
+          return [
+            ...filtered,
+            {
+              tripId: fallbackTripId,
+              tripName: payload?.tripName ?? trips.find((t) => t.id === fallbackTripId)?.name ?? 'Trip',
+              destination: payload?.destination,
+              inviterName: 'Shared (local only)',
+              todayDetails: [],
+            },
+          ];
+        });
+        setFollowError('Used a local-only code. Ask for a server code to make this persist across refresh/devices.');
+      } else {
+        setFollowError((err as Error).message);
+      }
     } finally {
       setFollowLoading(false);
     }
@@ -292,7 +280,7 @@ export const FollowTab: React.FC<FollowTabProps> = ({
     <>
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Follow a trip</Text>
-        <Text style={styles.helperText}>Enter an invite code to view a shared trip and today's itinerary.</Text>
+        <Text style={styles.helperText}>Enter a server invite code to follow a shared trip.</Text>
         <TextInput style={styles.input} placeholder="Invite code" value={followInviteCode} onChangeText={setFollowInviteCode} autoCapitalize="none" />
         {followError ? <Text style={styles.errorText}>{followError}</Text> : null}
         <TouchableOpacity style={styles.button} onPress={followTripByInvite} disabled={followLoading}>
@@ -306,11 +294,20 @@ export const FollowTab: React.FC<FollowTabProps> = ({
           <Text style={styles.helperText}>No followed trips yet.</Text>
         ) : (
           followedTrips.map((f) => (
-            <View key={f.tripId} style={styles.followTripItem}>
+            <TouchableOpacity
+              key={f.tripId}
+              style={styles.followTripItem}
+              activeOpacity={0.85}
+              onPress={() => onOpenFollowedTrip?.(f.tripId)}
+              disabled={!onOpenFollowedTrip}
+            >
               <Text style={styles.flightTitle}>{f.tripName}</Text>
               <Text style={styles.helperText}>
                 {(f.destination ? `${f.destination}  · ` : '') + (f.inviterName ? `Invited by ${f.inviterName}` : 'Shared')}
               </Text>
+              {onOpenFollowedTrip ? (
+                <Text style={styles.linkText ?? styles.buttonText}>Open followed trip</Text>
+              ) : null}
               <Text style={[styles.bodyText, { fontWeight: '700', marginTop: 6 }]}>Today's itinerary</Text>
               {f.todayDetails && f.todayDetails.length ? (
                 f.todayDetails.map((d) => (
@@ -324,14 +321,14 @@ export const FollowTab: React.FC<FollowTabProps> = ({
               ) : (
                 <Text style={styles.helperText}>No shared activities for today.</Text>
               )}
-            </View>
+            </TouchableOpacity>
           ))
         )}
       </View>
 
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Share your trips</Text>
-        <Text style={styles.helperText}>Grab an invite code to share so others can follow along.</Text>
+        <Text style={styles.helperText}>Grab a server invite code to share so others can follow along.</Text>
         {followCodeError ? <Text style={styles.errorText}>{followCodeError}</Text> : null}
         {!trips.length ? (
           <Text style={styles.helperText}>No trips available. Create one first.</Text>
@@ -360,11 +357,11 @@ export const FollowTab: React.FC<FollowTabProps> = ({
                       </TouchableOpacity>
                     </View>
                   ) : null}
-                  <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => generateLocalFollowCode(trip.id, trip.name)} disabled={loading}>
-                    <Text style={styles.buttonText}>Get invite code</Text>
-                  </TouchableOpacity>
                   <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => fetchFollowCode(trip.id)} disabled={loading}>
-                    <Text style={styles.buttonText}>{loading ? 'Fetching...' : 'Fetch server invite code'}</Text>
+                    <Text style={styles.buttonText}>{loading ? 'Fetching...' : 'Get invite code'}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => generateLocalFollowCode(trip.id, trip.name)} disabled={loading}>
+                    <Text style={styles.buttonText}>Local test code</Text>
                   </TouchableOpacity>
                 </View>
               </View>

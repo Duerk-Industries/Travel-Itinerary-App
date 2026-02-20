@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { formatDateLong } from '../utils/formatDateLong';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
+import { toWebStyle } from '../utils/webStyle';
 
 export type Tour = {
   id: string;
@@ -450,8 +451,9 @@ export const TourTab: React.FC<TourTabProps> = ({
               <Text style={styles.modalLabel}>Date</Text>
               {Platform.OS === 'web' ? (
                 <input
-                  style={{ ...StyleSheet.flatten(styles.input), width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
+                  style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
                   type="date"
+                  title="Tour date"
                   value={editingTour.date}
                   onChange={(e) => setEditingTour((p) => (p ? { ...p, date: e.target.value } : p))}
                 />
@@ -477,8 +479,9 @@ export const TourTab: React.FC<TourTabProps> = ({
               <Text style={styles.modalLabel}>Start time</Text>
               {Platform.OS === 'web' ? (
                 <input
-                  style={{ ...StyleSheet.flatten(styles.input), width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
+                  style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
                   type="time"
+                  title="Start time"
                   value={editingTour.startTime}
                   onChange={(e) => setEditingTour((p) => (p ? { ...p, startTime: e.target.value } : p))}
                 />
@@ -510,8 +513,9 @@ export const TourTab: React.FC<TourTabProps> = ({
               </View>
               {Platform.OS === 'web' ? (
                 <input
-                  style={{ ...StyleSheet.flatten(styles.input), width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
+                  style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
                   type="date"
+                  title="Free cancellation by date"
                   value={editingTour.freeCancelBy}
                   onChange={(e) => setEditingTour((p) => (p ? { ...p, freeCancelBy: e.target.value } : p))}
                 />

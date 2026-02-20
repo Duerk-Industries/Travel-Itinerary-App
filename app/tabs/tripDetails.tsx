@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { formatDateLong } from '../utils/formatDateLong';
 import { renderRichTextBlocks } from '../utils/richText';
 import { formatMonthYear } from '../utils/tripDates';
@@ -10,6 +10,7 @@ type Trip = {
   name: string;
   description?: string | null;
   destination?: string | null;
+  locationIds?: string[];
   startDate?: string | null;
   endDate?: string | null;
   startMonth?: number | null;
@@ -27,6 +28,8 @@ type GroupView = {
 };
 
 type TripDetailsTabProps = {
+  backendUrl?: string;
+  headers?: Record<string, string>;
   trip: Trip | null;
   group: GroupView | null;
   styles: Record<string, any>;
@@ -35,7 +38,7 @@ type TripDetailsTabProps = {
   onUpdateCurrency: (tripId: string, currency: string) => void;
 };
 
-const TripDetailsTab: React.FC<TripDetailsTabProps> = ({ trip, group, styles, onSetActive, onOpenItinerary, onUpdateCurrency }) => {
+const TripDetailsTab: React.FC<TripDetailsTabProps> = ({ backendUrl, headers, trip, group, styles, onSetActive, onOpenItinerary, onUpdateCurrency }) => {
   if (!trip) {
     return (
       <View style={styles.card}>
@@ -46,6 +49,10 @@ const TripDetailsTab: React.FC<TripDetailsTabProps> = ({ trip, group, styles, on
   }
 
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
+  const [comments, setComments] = useState<Array<{ id: string; body: string; createdAt: string; authorName?: string | null; authorEmail?: string | null }>>([]);
+  const [commentDraft, setCommentDraft] = useState('');
+  const [commentLoading, setCommentLoading] = useState(false);
+  const [commentError, setCommentError] = useState('');
   const currencyOptions = useMemo(
     () => ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY', 'INR', 'MXN'],
     []
@@ -58,6 +65,83 @@ const TripDetailsTab: React.FC<TripDetailsTabProps> = ({ trip, group, styles, on
   const monthLabel = formatMonthYear(trip.startMonth ?? null, trip.startYear ?? null);
   const pendingInvites = group?.invites ?? [];
   const members = group?.members ?? [];
+  const [locationNames, setLocationNames] = useState<string[]>([]);
+
+  useEffect(() => {
+    const ids = Array.isArray(trip?.locationIds) ? trip!.locationIds : [];
+    if (!ids.length) {
+      setLocationNames([]);
+      return;
+    }
+    if (!backendUrl || !headers) {
+      setLocationNames([]);
+      return;
+    }
+    let active = true;
+    fetch(`${backendUrl}/api/places/batch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...headers },
+      body: JSON.stringify({ ids }),
+    })
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        if (!active) return;
+        const names = Array.isArray(data) ? data.map((item: any) => String(item?.name ?? '')).filter(Boolean) : [];
+        setLocationNames(names);
+      })
+      .catch(() => {
+        if (active) setLocationNames([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [backendUrl, headers, trip?.id, trip?.locationIds]);
+
+  useEffect(() => {
+    if (!backendUrl || !headers || !trip?.id) {
+      setComments([]);
+      return;
+    }
+    let active = true;
+    fetch(`${backendUrl}/api/trips/${trip.id}/comments`, { headers })
+      .then((res) => (res.ok ? res.json() : { comments: [] }))
+      .then((payload) => {
+        if (!active) return;
+        setComments(Array.isArray(payload?.comments) ? payload.comments : []);
+      })
+      .catch(() => {
+        if (active) setComments([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [backendUrl, headers, trip?.id]);
+
+  const postComment = async () => {
+    if (!backendUrl || !headers || !trip?.id) return;
+    const body = commentDraft.trim();
+    if (!body) return;
+    setCommentLoading(true);
+    setCommentError('');
+    try {
+      const res = await fetch(`${backendUrl}/api/trips/${trip.id}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...headers },
+        body: JSON.stringify({ body }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setCommentError(data.error || 'Unable to post comment');
+        return;
+      }
+      setComments((prev) => [...prev, data]);
+      setCommentDraft('');
+    } catch (err) {
+      setCommentError((err as Error).message || 'Unable to post comment');
+    } finally {
+      setCommentLoading(false);
+    }
+  };
 
   return (
     <ScrollView style={styles.card} contentContainerStyle={{ gap: 12 }}>
@@ -66,7 +150,7 @@ const TripDetailsTab: React.FC<TripDetailsTabProps> = ({ trip, group, styles, on
       </View>
       <Text style={styles.flightTitle}>{trip.name}</Text>
       <Text style={styles.helperText}>Created: {formatDateLong(trip.createdAt)}</Text>
-      {trip.destination ? <Text style={styles.helperText}>Destination: {trip.destination}</Text> : null}
+      {locationNames.length ? <Text style={styles.helperText}>Locations: {locationNames.join(', ')}</Text> : null}
       {dateRange ? <Text style={styles.helperText}>Dates: {dateRange}</Text> : null}
       {!dateRange && monthLabel && trip.durationDays ? (
         <Text style={styles.helperText}>
@@ -113,6 +197,31 @@ const TripDetailsTab: React.FC<TripDetailsTabProps> = ({ trip, group, styles, on
           </View>
         ) : null}
       </View>
+
+      <View style={styles.divider} />
+      <Text style={styles.headerText}>Discussion ({comments.length})</Text>
+      {comments.length ? (
+        comments.map((comment) => (
+          <View key={comment.id} style={{ marginTop: 6 }}>
+            <Text style={[styles.bodyText, { fontWeight: '700' }]}>{comment.authorName || comment.authorEmail || 'Traveler'}</Text>
+            <Text style={styles.bodyText}>{comment.body}</Text>
+            <Text style={styles.helperText}>{comment.createdAt ? new Date(comment.createdAt).toLocaleString() : ''}</Text>
+          </View>
+        ))
+      ) : (
+        <Text style={styles.helperText}>No comments yet. Start the discussion.</Text>
+      )}
+      <TextInput
+        style={[styles.input, { marginTop: 8, minHeight: 70, textAlignVertical: 'top' }]}
+        placeholder="Write a comment..."
+        multiline
+        value={commentDraft}
+        onChangeText={setCommentDraft}
+      />
+      {commentError ? <Text style={styles.errorText}>{commentError}</Text> : null}
+      <TouchableOpacity style={[styles.button, { marginTop: 6 }]} onPress={postComment} disabled={commentLoading || !commentDraft.trim()}>
+        <Text style={styles.buttonText}>{commentLoading ? 'Posting...' : 'Post Comment'}</Text>
+      </TouchableOpacity>
 
       <View style={styles.divider} />
       <Text style={styles.headerText}>Participants</Text>
