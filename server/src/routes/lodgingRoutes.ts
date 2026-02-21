@@ -1,9 +1,21 @@
 import { Router } from 'express';
 import bodyParser from 'body-parser';
 import { authenticate } from '../auth';
-import { deleteExpenseForSource, deleteLodging, ensureUserInTrip, insertLodging, listLodgings, updateLodging, upsertExpenseForSource } from '../db';
+import {
+  castItemVote,
+  deleteExpenseForSource,
+  deleteLodging,
+  ensureUserInTrip,
+  getItemVoteSummaries,
+  getLodgingById,
+  insertLodging,
+  listLodgings,
+  updateLodging,
+  upsertExpenseForSource,
+} from '../db';
 import { getGooglePlaceImage } from '../image-service';
 import { normalizeItineraryStatus, shouldRelaxRequiredFields } from '../utils/itineraryStatus';
+import { applyVoteSummary } from '../services/itemVoteService';
 
 // Lodgings API: CRUD for lodgings scoped to the authenticated user / their group trips.
 const router = Router();
@@ -14,7 +26,25 @@ router.get('/', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const tripId = req.query.tripId as string | undefined;
   const lodgings = await listLodgings(userId, tripId);
-  res.json(lodgings);
+  if (tripId) {
+    const withVotes = await applyVoteSummary(userId, tripId, 'lodging', lodgings as any[]);
+    res.json(withVotes);
+    return;
+  }
+  const grouped = new Map<string, any[]>();
+  (lodgings as any[]).forEach((lodging) => {
+    const tId = String((lodging as any).tripId ?? (lodging as any).trip_id ?? '');
+    if (!tId) return;
+    const bucket = grouped.get(tId) ?? [];
+    bucket.push(lodging);
+    grouped.set(tId, bucket);
+  });
+  const merged: any[] = [];
+  for (const [tId, items] of grouped.entries()) {
+    const withVotes = await applyVoteSummary(userId, tId, 'lodging', items);
+    merged.push(...withVotes);
+  }
+  res.json(merged.length ? merged : lodgings);
 });
 
 router.post('/', async (req, res) => {
@@ -277,6 +307,43 @@ router.delete('/:id', async (req, res) => {
     }
     res.status(400).json({ error: message });
   }
+});
+
+router.post('/:id/vote', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const valueRaw = Number(req.body?.value);
+  const value = valueRaw === 1 ? 1 : valueRaw === -1 ? -1 : null;
+  if (value == null) {
+    res.status(400).json({ error: 'value must be 1 or -1' });
+    return;
+  }
+  const lodging = await getLodgingById(req.params.id);
+  if (!lodging) {
+    res.status(404).json({ error: 'Lodging not found' });
+    return;
+  }
+  const tripId = String((lodging as any).tripId ?? (lodging as any).trip_id ?? '');
+  if (!tripId) {
+    res.status(400).json({ error: 'Lodging has no trip' });
+    return;
+  }
+  const membership = await ensureUserInTrip(tripId, userId);
+  if (!membership) {
+    res.status(403).json({ error: 'Only trip members may vote' });
+    return;
+  }
+  const status = normalizeItineraryStatus((lodging as any).status);
+  if (status !== 'Proposed') {
+    res.status(400).json({ error: 'Voting is only allowed for Proposed items' });
+    return;
+  }
+  await castItemVote(userId, tripId, 'lodging', req.params.id, value);
+  const summary = await getItemVoteSummaries(userId, tripId, 'lodging', [req.params.id]);
+  res.json({
+    itemId: req.params.id,
+    netVotes: summary[req.params.id]?.netVotes ?? 0,
+    userVote: summary[req.params.id]?.userVote ?? value,
+  });
 });
 
 export default router;

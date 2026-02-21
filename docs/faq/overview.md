@@ -19,3 +19,6 @@ Itinerary items now include a status lifecycle for flights, lodging, tours, and 
 
 Business required fields are relaxed for `Needed` and `Cancelled`, and enforced for `Proposed`, `Booked`, and `Completed`.
 
+Voting is available for proposed itinerary items (flights, lodging, tours, and car rentals).  
+See `docs/faq/voting-on-items.md`.
+

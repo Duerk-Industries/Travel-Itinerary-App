@@ -98,6 +98,14 @@ providers:
 - Run everything: `npm test` (from repo root)
 - Day overview/day details interactions are covered in `app/tests/overview.test.tsx`.
 
+## Proposed Item Voting
+
+- Voting is available on Flights, Lodging, Tours, and Car Rentals.
+- The `Votes` column appears immediately after `Status`.
+- If an item is `Proposed` and you have not voted yet, you can vote `👍` or `👎`.
+- If an item is not `Proposed`, or you already voted, the UI shows net votes.
+- Only full trip members can vote. Followers can view items but cannot vote.
+
 ## FAQ and Specifications
 - Full single-page implementation FAQ: [`FAQ.md`](FAQ.md)
 - Split topic docs index: [`docs/faq/README.md`](docs/faq/README.md)

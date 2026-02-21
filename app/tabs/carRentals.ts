@@ -8,7 +8,10 @@ import {
 
 export type CarRental = {
   id: string;
+  tripId?: string;
   status: ItineraryStatus;
+  netVotes?: number;
+  userVote?: -1 | 1 | null;
   pickupLocation: string;
   pickupDate: string;
   dropoffLocation: string;
@@ -84,4 +87,39 @@ export const buildCarRentalFromDraft = (
     travelerIds,
   };
   return { rental };
+};
+
+export const normalizeCarRentalFromApi = (r: any): CarRental => ({
+  id: String(r.id ?? ''),
+  tripId: r.tripId ?? r.trip_id ?? undefined,
+  status: normalizeItineraryStatus(r.status, DEFAULT_NEW_ITINERARY_STATUS),
+  netVotes: Number(r.netVotes ?? 0) || 0,
+  userVote: r.userVote === 1 || r.userVote === -1 ? r.userVote : null,
+  pickupLocation: String(r.pickupLocation ?? r.pickup_location ?? ''),
+  pickupDate: String(r.pickupDate ?? r.pickup_date ?? ''),
+  dropoffLocation: String(r.dropoffLocation ?? r.dropoff_location ?? ''),
+  dropoffDate: String(r.dropoffDate ?? r.dropoff_date ?? ''),
+  reference: String(r.reference ?? ''),
+  vendor: String(r.vendor ?? ''),
+  prepaid: String(r.prepaid ?? ''),
+  cost: sanitizeCostInput(String(r.cost ?? '')),
+  model: String(r.model ?? ''),
+  notes: String(r.notes ?? ''),
+  paidBy: Array.isArray(r.paidBy) ? r.paidBy : Array.isArray(r.paid_by) ? r.paid_by : [],
+  travelerIds: Array.isArray(r.travelerIds) ? r.travelerIds : Array.isArray(r.traveler_ids) ? r.traveler_ids : [],
+});
+
+export const fetchCarRentalsForTrip = async (params: {
+  backendUrl: string;
+  activeTripId: string | null;
+  token?: string | null;
+}): Promise<CarRental[]> => {
+  const { backendUrl, activeTripId, token } = params;
+  if (!activeTripId || !token) return [];
+  const res = await fetch(`${backendUrl}/api/car-rentals?tripId=${activeTripId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) return [];
+  const data = await res.json();
+  return Array.isArray(data) ? data.map((item) => normalizeCarRentalFromApi(item)) : [];
 };

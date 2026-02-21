@@ -5,6 +5,7 @@ import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { normalizeDateString } from '../utils/normalizeDateString';
 import { FlightEditingForm } from '../components/FlightEditingForm';
 import { toWebStyle } from '../utils/webStyle';
+import { formatNetVotes, shouldShowVoteButtons } from '../utils/votes';
 import {
   DEFAULT_NEW_ITINERARY_STATUS,
   LEGACY_ITINERARY_STATUS,
@@ -27,6 +28,8 @@ if (Platform.OS !== 'web') {
 export interface Flight {
   id: string;
   status?: ItineraryStatus;
+  netVotes?: number;
+  userVote?: -1 | 1 | null;
   passenger_name: string;
   passenger_ids?: string[];
   arrival_date?: string | null;
@@ -340,6 +343,8 @@ export const removeFlightApi = async (
 export const normalizeFlightFromApi = (f: any): Flight => ({
   ...f,
   status: normalizeItineraryStatus(f.status, LEGACY_ITINERARY_STATUS),
+  netVotes: Number(f.netVotes ?? 0) || 0,
+  userVote: f.userVote === 1 || f.userVote === -1 ? f.userVote : null,
   passenger_name: f.passenger_name ?? f.passengerName ?? '',
   passenger_ids: Array.isArray(f.passenger_ids)
     ? f.passenger_ids
@@ -440,9 +445,10 @@ const fallbackAirports: Airport[] = [
   { name: 'Dubai International', city: 'Dubai', country: 'UAE', iata_code: 'DXB' },
 ];
 
-const columns: { key: keyof Flight | 'actions' | 'costPerPerson'; label: string; minWidth?: number }[] = [
+const columns: { key: keyof Flight | 'actions' | 'costPerPerson' | 'votes'; label: string; minWidth?: number }[] = [
   { key: 'passenger_name', label: 'Passenger', minWidth: 130 },
   { key: 'status', label: 'Status', minWidth: 120 },
+  { key: 'votes', label: 'Votes', minWidth: 120 },
   { key: 'departure_date', label: 'Departure Date' },
   { key: 'departure_location', label: 'Departure Location' },
   { key: 'departure_time', label: 'Departure Time' },
@@ -1050,6 +1056,23 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     onDataChanged ? onDataChanged() : fetchFlights();
   };
 
+  const voteOnFlight = async (id: string, value: 1 | -1) => {
+    try {
+      const res = await fetch(`${backendUrl}/api/flights/${id}/vote`, {
+        method: 'POST',
+        headers: jsonHeaders,
+        body: JSON.stringify({ value }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Unable to submit vote');
+      }
+      onDataChanged ? onDataChanged() : fetchFlights();
+    } catch (err: any) {
+      alert(err?.message || 'Unable to submit vote');
+    }
+  };
+
   const openLocationOverlay = (target: 'dep' | 'arr', initialValue: string) => {
     setLocationFieldTarget(target);
     setLocationTarget(target);
@@ -1192,6 +1215,44 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                     </View>
                   );
                 }
+                if (col.key === 'votes') {
+                  const showButtons = shouldShowVoteButtons(
+                    normalizeItineraryStatus(item.status, LEGACY_ITINERARY_STATUS),
+                    item.userVote
+                  );
+                  return (
+                    <View
+                      key={`${item.id}-${col.key}`}
+                      style={[
+                        styles.cell,
+                        styles.actionCell,
+                        { minWidth: col.minWidth ?? 120, flex: 1 },
+                        isLast && styles.lastCell,
+                      ]}
+                    >
+                      {showButtons ? (
+                        <>
+                          <TouchableOpacity
+                            style={[styles.button, styles.smallButton]}
+                            onPress={() => voteOnFlight(item.id, 1)}
+                            testID={`flight-vote-up-${item.id}`}
+                          >
+                            <Text style={styles.buttonText}>👍</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[styles.button, styles.smallButton, styles.dangerButton]}
+                            onPress={() => voteOnFlight(item.id, -1)}
+                            testID={`flight-vote-down-${item.id}`}
+                          >
+                            <Text style={styles.buttonText}>👎</Text>
+                          </TouchableOpacity>
+                        </>
+                      ) : (
+                        <Text style={styles.cellText}>{formatNetVotes(item.netVotes ?? 0)}</Text>
+                      )}
+                    </View>
+                  );
+                }
                 const value = item[col.key as keyof Flight];
                 const baseDisplay = value != null ? String(value) : '-';
                 const display =
@@ -1267,6 +1328,20 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                       ]}
                     >
                       <Text style={styles.cellText}>{`$${per.toFixed(2)}`}</Text>
+                    </View>
+                  );
+                }
+                if (col.key === 'votes') {
+                  return (
+                    <View
+                      key={`input-${col.key}`}
+                      style={[
+                        styles.cell,
+                        { minWidth: col.minWidth ?? 120, flex: 1 },
+                        isLast && styles.lastCell,
+                      ]}
+                    >
+                      <Text style={styles.cellText}>-</Text>
                     </View>
                   );
                 }

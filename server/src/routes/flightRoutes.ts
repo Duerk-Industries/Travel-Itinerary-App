@@ -4,9 +4,12 @@ import { authenticate } from '../auth';
 import {
   deleteFlight,
   deleteExpenseForSource,
+  castItemVote,
   ensureUserInTrip,
+  getItemVoteSummaries,
   getTripGroupId,
   getCurrentDbProvider,
+  getFlightById,
   getFlightForUser,
   insertFlight,
   listFlights,
@@ -18,6 +21,7 @@ import {
 } from '../db';
 import { isEmailConfigured, sendShareEmail } from '../mailer';
 import { normalizeItineraryStatus, shouldRelaxRequiredFields } from '../utils/itineraryStatus';
+import { applyVoteSummary } from '../services/itemVoteService';
 
 // Flights API: CRUD for flights scoped to the authenticated user / their group trips.
 const router = Router();
@@ -28,7 +32,25 @@ router.get('/', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const tripId = req.query.tripId as string | undefined;
   const flights = await listFlights(userId, tripId);
-  res.json(flights);
+  if (tripId) {
+    const withVotes = await applyVoteSummary(userId, tripId, 'flight', flights as any[]);
+    res.json(withVotes);
+    return;
+  }
+  const grouped = new Map<string, any[]>();
+  (flights as any[]).forEach((flight) => {
+    const tId = String((flight as any).tripId ?? (flight as any).trip_id ?? '');
+    if (!tId) return;
+    const bucket = grouped.get(tId) ?? [];
+    bucket.push(flight);
+    grouped.set(tId, bucket);
+  });
+  const merged: any[] = [];
+  for (const [tId, items] of grouped.entries()) {
+    const withVotes = await applyVoteSummary(userId, tId, 'flight', items);
+    merged.push(...withVotes);
+  }
+  res.json(merged.length ? merged : flights);
 });
 
 router.get('/locations', async (req, res) => {
@@ -402,6 +424,43 @@ router.post('/:id/share', async (req, res) => {
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });
   }
+});
+
+router.post('/:id/vote', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const valueRaw = Number(req.body?.value);
+  const value = valueRaw === 1 ? 1 : valueRaw === -1 ? -1 : null;
+  if (value == null) {
+    res.status(400).json({ error: 'value must be 1 or -1' });
+    return;
+  }
+  const flight = await getFlightById(req.params.id);
+  if (!flight) {
+    res.status(404).json({ error: 'Flight not found' });
+    return;
+  }
+  const tripId = String((flight as any).tripId ?? (flight as any).trip_id ?? '');
+  if (!tripId) {
+    res.status(400).json({ error: 'Flight has no trip' });
+    return;
+  }
+  const membership = await ensureUserInTrip(tripId, userId);
+  if (!membership) {
+    res.status(403).json({ error: 'Only trip members may vote' });
+    return;
+  }
+  const status = normalizeItineraryStatus((flight as any).status);
+  if (status !== 'Proposed') {
+    res.status(400).json({ error: 'Voting is only allowed for Proposed items' });
+    return;
+  }
+  await castItemVote(userId, tripId, 'flight', req.params.id, value);
+  const summary = await getItemVoteSummaries(userId, tripId, 'flight', [req.params.id]);
+  res.json({
+    itemId: req.params.id,
+    netVotes: summary[req.params.id]?.netVotes ?? 0,
+    userVote: summary[req.params.id]?.userVote ?? value,
+  });
 });
 
 export default router;

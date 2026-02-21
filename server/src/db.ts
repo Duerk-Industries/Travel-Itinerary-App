@@ -16,6 +16,7 @@ import type {
   LocationRecord,
   TripActivity,
   TripComment,
+  CarRental,
 } from './types';
 
 const adapter = () => getDbAdapter();
@@ -100,12 +101,32 @@ export const updateLodging = async (...args: Parameters<ReturnType<typeof adapte
   adapter().updateLodging(...args);
 export const listTours = async (...args: Parameters<ReturnType<typeof adapter>['listTours']>): Promise<Tour[]> =>
   adapter().listTours(...args);
+export const listCarRentals = async (...args: Parameters<ReturnType<typeof adapter>['listCarRentals']>): Promise<CarRental[]> =>
+  adapter().listCarRentals(...args);
 export const insertTour = async (...args: Parameters<ReturnType<typeof adapter>['insertTour']>) =>
   adapter().insertTour(...args);
+export const insertCarRental = async (...args: Parameters<ReturnType<typeof adapter>['insertCarRental']>) =>
+  adapter().insertCarRental(...args);
 export const updateTour = async (...args: Parameters<ReturnType<typeof adapter>['updateTour']>) =>
   adapter().updateTour(...args);
+export const updateCarRental = async (...args: Parameters<ReturnType<typeof adapter>['updateCarRental']>) =>
+  adapter().updateCarRental(...args);
 export const deleteTour = async (...args: Parameters<ReturnType<typeof adapter>['deleteTour']>) =>
   adapter().deleteTour(...args);
+export const deleteCarRental = async (...args: Parameters<ReturnType<typeof adapter>['deleteCarRental']>) =>
+  adapter().deleteCarRental(...args);
+export const getCarRentalById = async (...args: Parameters<ReturnType<typeof adapter>['getCarRentalById']>) =>
+  adapter().getCarRentalById(...args);
+export const getFlightById = async (...args: Parameters<ReturnType<typeof adapter>['getFlightById']>) =>
+  adapter().getFlightById(...args);
+export const getLodgingById = async (...args: Parameters<ReturnType<typeof adapter>['getLodgingById']>) =>
+  adapter().getLodgingById(...args);
+export const getTourById = async (...args: Parameters<ReturnType<typeof adapter>['getTourById']>) =>
+  adapter().getTourById(...args);
+export const castItemVote = async (...args: Parameters<ReturnType<typeof adapter>['castItemVote']>) =>
+  adapter().castItemVote(...args);
+export const getItemVoteSummaries = async (...args: Parameters<ReturnType<typeof adapter>['getItemVoteSummaries']>) =>
+  adapter().getItemVoteSummaries(...args);
 export const shareFlight = async (...args: Parameters<ReturnType<typeof adapter>['shareFlight']>) =>
   adapter().shareFlight(...args);
 export const listGroupMembers = async (...args: Parameters<ReturnType<typeof adapter>['listGroupMembers']>) =>

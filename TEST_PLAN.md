@@ -217,3 +217,11 @@ Behavior covered in Jest:
   - `app/tests/lodging.test.ts`
   - `app/tests/tours.test.ts`
   - `app/tests/carRentals.test.ts`
+  - `app/tests/votes.test.ts`
+
+Voting feature route coverage:
+- `server/__tests__/itemVotesRoutes.test.ts`
+  - member can vote on proposed items
+  - followers/non-members are blocked from voting
+  - non-proposed items reject votes
+  - list endpoints include `netVotes` and `userVote`

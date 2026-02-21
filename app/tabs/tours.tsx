@@ -3,6 +3,7 @@ import { Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpac
 import { formatDateLong } from '../utils/formatDateLong';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { toWebStyle } from '../utils/webStyle';
+import { formatNetVotes, shouldShowVoteButtons } from '../utils/votes';
 import {
   DEFAULT_NEW_ITINERARY_STATUS,
   LEGACY_ITINERARY_STATUS,
@@ -15,6 +16,8 @@ import {
 export type Tour = {
   id: string;
   status: ItineraryStatus;
+  netVotes?: number;
+  userVote?: -1 | 1 | null;
   date: string;
   name: string;
   startLocation: string;
@@ -141,6 +144,8 @@ export const fetchToursForTrip = async ({
   return (data as any[]).map((t) => ({
     ...t,
     status: normalizeItineraryStatus(t.status, LEGACY_ITINERARY_STATUS),
+    netVotes: Number(t.netVotes ?? 0) || 0,
+    userVote: t.userVote === 1 || t.userVote === -1 ? t.userVote : null,
     cost: String(t.cost ?? ''),
     paidBy: Array.isArray(t.paidBy) ? t.paidBy : [],
     bookedOn: t.bookedOn ?? '',
@@ -343,6 +348,23 @@ export const TourTab: React.FC<TourTabProps> = ({
       .catch((err) => alert(err.message));
   };
 
+  const voteOnTour = async (id: string, value: 1 | -1) => {
+    try {
+      const res = await fetch(`${backendUrl}/api/tours/${id}/vote`, {
+        method: 'POST',
+        headers: jsonHeaders,
+        body: JSON.stringify({ value }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Unable to submit vote');
+      }
+      onDataChanged ? onDataChanged() : await fetchTours();
+    } catch (err: any) {
+      alert(err?.message || 'Unable to submit vote');
+    }
+  };
+
   const payerTotalsList = useMemo(() => Object.entries(payerTotals), [payerTotals]);
 
   return (
@@ -384,6 +406,7 @@ export const TourTab: React.FC<TourTabProps> = ({
             {[
               { label: 'Date', width: 140 },
               { label: 'Status', width: 130 },
+              { label: 'Votes', width: 120 },
               { label: 'Tour', width: 180 },
               { label: 'Start Location', width: 180 },
               { label: 'Start Time', width: 120 },
@@ -407,6 +430,20 @@ export const TourTab: React.FC<TourTabProps> = ({
               </View>
               <View style={[styles.cell, { minWidth: 130, flex: 1 }]}>
                 <Text style={styles.cellText}>{normalizeItineraryStatus(t.status, LEGACY_ITINERARY_STATUS)}</Text>
+              </View>
+              <View style={[styles.cell, styles.actionCell, { minWidth: 120, flex: 1 }]}>
+                {shouldShowVoteButtons(t.status, t.userVote) ? (
+                  <>
+                    <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => voteOnTour(t.id, 1)}>
+                      <Text style={styles.buttonText}>👍</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => voteOnTour(t.id, -1)}>
+                      <Text style={styles.buttonText}>👎</Text>
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <Text style={styles.cellText}>{formatNetVotes(t.netVotes ?? 0)}</Text>
+                )}
               </View>
               <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
                 <Text style={styles.cellText}>{t.name || '-'}</Text>

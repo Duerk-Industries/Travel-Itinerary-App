@@ -26,6 +26,8 @@ export interface Flight {
   id: string;
   userId: string;
   status: ItineraryStatus;
+  netVotes?: number;
+  userVote?: -1 | 1 | null;
   passengerName: string;
   passengerIds?: string[];
   departureDate: string;
@@ -133,6 +135,8 @@ export interface Lodging {
   user_id: string;
   trip_id: string;
   status: ItineraryStatus;
+  netVotes?: number;
+  userVote?: -1 | 1 | null;
   name: string;
   check_in_date: string;
   check_out_date: string;
@@ -153,6 +157,8 @@ export interface Tour {
   userId: string;
   tripId: string;
   status: ItineraryStatus;
+  netVotes?: number;
+  userVote?: -1 | 1 | null;
   date: string;
   name: string;
   startLocation: string;
@@ -163,6 +169,28 @@ export interface Tour {
   bookedOn: string;
   reference: string;
   paidBy: string[];
+  createdAt: string;
+}
+
+export interface CarRental {
+  id: string;
+  userId: string;
+  tripId: string;
+  status: ItineraryStatus;
+  netVotes?: number;
+  userVote?: -1 | 1 | null;
+  pickupLocation: string;
+  pickupDate: string;
+  dropoffLocation: string;
+  dropoffDate: string;
+  reference: string;
+  vendor: string;
+  prepaid: string;
+  cost: number;
+  model: string;
+  notes: string;
+  paidBy: string[];
+  travelerIds: string[];
   createdAt: string;
 }
 

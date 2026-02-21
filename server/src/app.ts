@@ -13,6 +13,7 @@ import itineraryDataRoutes from './routes/itineraryDataRoutes';
 import traitRoutes from './routes/traitRoutes';
 import lodgingRoutes from './routes/lodgingRoutes';
 import tourRoutes from './routes/tourRoutes';
+import carRentalRoutes from './routes/carRentalRoutes';
 import accountRoutes, { groupsRouter } from './routes/accountRoutes';
 import placeRoutes from './routes/placeRoutes';
 import expenseRoutes from './routes/expenseRoutes';
@@ -217,6 +218,7 @@ app.use('/api/traits', traitRoutes);
 app.use('/api/lodgings', lodgingRoutes);
 app.use('/api/places', placeRoutes);
 app.use('/api/tours', tourRoutes);
+app.use('/api/car-rentals', carRentalRoutes);
 app.use('/api/account', accountRoutes);
 app.use('/api/expenses', expenseRoutes);
 

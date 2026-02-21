@@ -32,7 +32,7 @@ import { buildAllExpenses, calculateAllTotals, type UnifiedExpense, computePayer
 import { rollUpTotals, validateCoveringRules } from './utils/coveredBy';
 import TripDetailsTab from './tabs/tripDetails';
 import AccountTab, { fetchAccountProfile, fetchFamilyRelationships, fetchFellowTravelers, type FellowTraveler } from './tabs/account';
-import { CarRental, CarRentalDraft, buildCarRentalFromDraft, createInitialCarRentalDraft } from './tabs/carRentals';
+import { CarRental, CarRentalDraft, buildCarRentalFromDraft, createInitialCarRentalDraft, fetchCarRentalsForTrip } from './tabs/carRentals';
 import {
   DEFAULT_NEW_ITINERARY_STATUS,
   ITINERARY_STATUSES,
@@ -49,6 +49,7 @@ import { loadSession, saveSession, clearSession } from './utils/session';
 import LodgingDetailsDialog from './components/LodgingDetailsDialog';
 import ConfirmDialog from './components/ConfirmDialog';
 import { toWebStyle } from './utils/webStyle';
+import { formatNetVotes, shouldShowVoteButtons } from './utils/votes';
 
 import LodgingTab from './tabs/LodgingTab';
 
@@ -481,7 +482,7 @@ const App: React.FC = () => {
     setCarDraft((prev) => ({ ...prev, [field === 'pickup' ? 'pickupDate' : 'dropoffDate']: value }));
   }, []);
 
-  const addCarRental = useCallback(() => {
+  const addCarRental = useCallback(async () => {
     if (!activeTripId) {
       alert('Select an active trip before adding a car rental.');
       return;
@@ -491,24 +492,109 @@ const App: React.FC = () => {
       alert(result.error || 'Unable to add car rental.');
       return;
     }
-    setCarRentals((prev) => [...prev, result.rental as CarRental]);
+    const res = await fetch(`${backendUrl}/api/car-rentals`, {
+      method: 'POST',
+      headers: jsonHeaders,
+      body: JSON.stringify({
+        ...result.rental,
+        tripId: activeTripId,
+        cost: Number(result.rental.cost) || 0,
+      }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'Unable to add car rental.');
+      return;
+    }
+    if (activeTripId && userToken) {
+      const expRes = await fetch(`${backendUrl}/api/expenses?tripId=${activeTripId}`, {
+        headers: { Authorization: `Bearer ${userToken}` },
+      });
+      if (expRes.ok) {
+        const expData = await expRes.json().catch(() => []);
+        setExpenses(Array.isArray(expData) ? expData : []);
+      }
+    }
+    if (activeTripId && userToken) {
+      const cars = await fetchCarRentalsForTrip({ backendUrl, activeTripId, token: userToken });
+      setCarRentals(cars);
+    }
     setCarDraft(createInitialCarRentalDraft());
-  }, [activeTripId, carDraft, defaultPayerId, memberIds]);
+  }, [activeTripId, carDraft, defaultPayerId, memberIds, backendUrl, jsonHeaders, userToken]);
 
-  const addCarRentalFromOverview = useCallback((rental: CarRental) => {
+  const addCarRentalFromOverview = useCallback(async (rental: CarRental) => {
     if (!activeTripId) {
       alert('Select an active trip before adding a car rental.');
       return;
     }
-    setCarRentals((prev) => [
-      ...prev,
-      { ...rental, status: normalizeItineraryStatus((rental as any).status, DEFAULT_NEW_ITINERARY_STATUS) },
-    ]);
-  }, [activeTripId]);
+    const res = await fetch(`${backendUrl}/api/car-rentals`, {
+      method: 'POST',
+      headers: jsonHeaders,
+      body: JSON.stringify({
+        ...rental,
+        tripId: activeTripId,
+        status: normalizeItineraryStatus((rental as any).status, DEFAULT_NEW_ITINERARY_STATUS),
+        cost: Number(rental.cost) || 0,
+      }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'Unable to add car rental.');
+      return;
+    }
+    if (activeTripId && userToken) {
+      const expRes = await fetch(`${backendUrl}/api/expenses?tripId=${activeTripId}`, {
+        headers: { Authorization: `Bearer ${userToken}` },
+      });
+      if (expRes.ok) {
+        const expData = await expRes.json().catch(() => []);
+        setExpenses(Array.isArray(expData) ? expData : []);
+      }
+    }
+    if (activeTripId && userToken) {
+      const cars = await fetchCarRentalsForTrip({ backendUrl, activeTripId, token: userToken });
+      setCarRentals(cars);
+    }
+  }, [activeTripId, backendUrl, jsonHeaders, userToken]);
 
-  const removeCarRental = useCallback((id: string) => {
-    setCarRentals((prev) => prev.filter((c) => c.id !== id));
-  }, []);
+  const removeCarRental = useCallback(async (id: string) => {
+    const res = await fetch(`${backendUrl}/api/car-rentals/${id}`, { method: 'DELETE', headers: jsonHeaders });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'Unable to delete car rental.');
+      return;
+    }
+    if (activeTripId && userToken) {
+      const expRes = await fetch(`${backendUrl}/api/expenses?tripId=${activeTripId}`, {
+        headers: { Authorization: `Bearer ${userToken}` },
+      });
+      if (expRes.ok) {
+        const expData = await expRes.json().catch(() => []);
+        setExpenses(Array.isArray(expData) ? expData : []);
+      }
+    }
+    if (activeTripId && userToken) {
+      const cars = await fetchCarRentalsForTrip({ backendUrl, activeTripId, token: userToken });
+      setCarRentals(cars);
+    }
+  }, [backendUrl, jsonHeaders, activeTripId, userToken]);
+
+  const voteOnCarRental = useCallback(async (id: string, value: 1 | -1) => {
+    const res = await fetch(`${backendUrl}/api/car-rentals/${id}/vote`, {
+      method: 'POST',
+      headers: jsonHeaders,
+      body: JSON.stringify({ value }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'Unable to submit vote');
+      return;
+    }
+    if (activeTripId && userToken) {
+      const cars = await fetchCarRentalsForTrip({ backendUrl, activeTripId, token: userToken });
+      setCarRentals(cars);
+    }
+  }, [backendUrl, jsonHeaders, activeTripId, userToken]);
 
   const openCarDatePicker = useCallback((field: 'pickup' | 'dropoff') => {
     if (Platform.OS !== 'web' && NativeDateTimePicker) {
@@ -1059,6 +1145,15 @@ const App: React.FC = () => {
     setTours(data);
   }, [activeTripId, backendUrl, userToken]);
 
+  const fetchCarRentals = useCallback(async (token?: string) => {
+    if (!activeTripId || !(token ?? userToken)) {
+      setCarRentals([]);
+      return;
+    }
+    const data = await fetchCarRentalsForTrip({ backendUrl, activeTripId, token: token ?? userToken });
+    setCarRentals(data);
+  }, [activeTripId, backendUrl, userToken]);
+
   const fetchExpenses = useCallback(async (token?: string) => {
     const authToken = token ?? userToken;
     if (!activeTripId || !authToken) {
@@ -1290,6 +1385,7 @@ const App: React.FC = () => {
         fetchFlights(authToken),
         fetchLodgings(authToken),
         fetchTours(authToken),
+        fetchCarRentals(authToken),
         fetchExpenses(authToken),
         fetchInvites(authToken),
         fetchGroups(),
@@ -1323,6 +1419,7 @@ const App: React.FC = () => {
     fetchFlights,
     fetchLodgings,
     fetchTours,
+    fetchCarRentals,
     fetchExpenses,
     fetchInvites,
     fetchGroups,
@@ -2104,7 +2201,7 @@ const App: React.FC = () => {
           <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
             <View style={styles.table}>
               <View style={[styles.tableRow, styles.tableHeader]}>
-                {['Pick Up Location', 'Pick Up Date', 'Drop Off Location', 'Drop Off Date', 'Status', 'Reference', 'Vendor', 'Prepaid?', 'Cost', 'Car Model', 'Notes', 'For', 'Paid By', 'Actions'].map((label, idx, arr) => (
+                {['Pick Up Location', 'Pick Up Date', 'Drop Off Location', 'Drop Off Date', 'Status', 'Votes', 'Reference', 'Vendor', 'Prepaid?', 'Cost', 'Car Model', 'Notes', 'For', 'Paid By', 'Actions'].map((label, idx, arr) => (
                   <View
                     key={label}
                     style={[styles.cell, { minWidth: 140, flex: 1 }, idx === arr.length - 1 && styles.lastCell]}
@@ -2129,6 +2226,20 @@ const App: React.FC = () => {
                   </View>
                   <View style={[styles.cell, { minWidth: 130, flex: 1 }]}>
                     <Text style={styles.cellText}>{normalizeItineraryStatus((car as any).status, LEGACY_ITINERARY_STATUS)}</Text>
+                  </View>
+                  <View style={[styles.cell, styles.actionCell, { minWidth: 130, flex: 1 }]}>
+                    {shouldShowVoteButtons((car as any).status, (car as any).userVote) ? (
+                      <>
+                        <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => voteOnCarRental(car.id, 1)}>
+                          <Text style={styles.buttonText}>👍</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => voteOnCarRental(car.id, -1)}>
+                          <Text style={styles.buttonText}>👎</Text>
+                        </TouchableOpacity>
+                      </>
+                    ) : (
+                      <Text style={styles.cellText}>{formatNetVotes((car as any).netVotes ?? 0)}</Text>
+                    )}
                   </View>
                   <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
                     <Text style={styles.cellText}>{car.reference || '-'}</Text>
@@ -2248,6 +2359,9 @@ const App: React.FC = () => {
                   ) : (
                     <Text style={styles.cellText}>{normalizeItineraryStatus(carDraft.status, DEFAULT_NEW_ITINERARY_STATUS)}</Text>
                   )}
+                </View>
+                <View style={[styles.cell, { minWidth: 130, flex: 1 }]}>
+                  <Text style={styles.cellText}>-</Text>
                 </View>
                 <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
                   <TextInput

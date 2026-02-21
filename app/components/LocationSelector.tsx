@@ -46,6 +46,9 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
   const countryStateCacheRef = useRef<Map<string, { ts: number; results: LocationOption[] }>>(new Map());
   const cityCacheRef = useRef<Map<string, { ts: number; results: LocationOption[] }>>(new Map());
   const cacheTtlMs = 5 * 60 * 1000;
+  const countryStateMinChars = 2;
+  const cityMinChars = 2;
+  const debounceMs = 220;
 
   const selectedIds = useMemo(() => new Set(selectedLocations.map((item) => item.id)), [selectedLocations]);
   const selectedCountryIds = useMemo(
@@ -64,7 +67,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
 
   useEffect(() => {
     const q = countryStateQuery.trim();
-    if (!q || q.length < 1) {
+    if (!q || q.length < countryStateMinChars) {
       setCountryStateSuggestions([]);
       setCountryStateLoading(false);
       return;
@@ -98,16 +101,16 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
       } finally {
         if (active) setCountryStateLoading(false);
       }
-    }, 150);
+    }, debounceMs);
     return () => {
       active = false;
       clearTimeout(handle);
     };
-  }, [countryStateQuery, backendUrl, JSON.stringify(headers), selectedIds]);
+  }, [countryStateQuery, backendUrl, JSON.stringify(headers), selectedIds, countryStateMinChars, debounceMs]);
 
   useEffect(() => {
     const q = cityQuery.trim();
-    if (!q || q.length < 2 || !canSearchCities) {
+    if (!q || q.length < cityMinChars || !canSearchCities) {
       setCitySuggestions([]);
       setCityLoading(false);
       return;
@@ -143,12 +146,12 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
       } finally {
         if (active) setCityLoading(false);
       }
-    }, 150);
+    }, debounceMs);
     return () => {
       active = false;
       clearTimeout(handle);
     };
-  }, [cityQuery, backendUrl, JSON.stringify(headers), selectedIds, selectedCountryIds.join('|'), selectedStateIds.join('|'), canSearchCities]);
+  }, [cityQuery, backendUrl, JSON.stringify(headers), selectedIds, selectedCountryIds.join('|'), selectedStateIds.join('|'), canSearchCities, cityMinChars, debounceMs]);
 
   const addLocations = (items: LocationOption[]) => {
     const seen = new Set(addGuardRef.current);

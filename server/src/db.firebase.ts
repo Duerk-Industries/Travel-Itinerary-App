@@ -6,6 +6,7 @@ import {
   Flight,
   Lodging,
   Tour,
+  CarRental,
   Trait,
   Trip,
   User,
@@ -1706,6 +1707,12 @@ export const getFlightForUser = async (flightId: string, userId: string): Promis
   return data as Flight;
 };
 
+export const getFlightById = async (flightId: string): Promise<Flight | null> => {
+  const doc = await getDb().collection('flights').doc(flightId).get();
+  if (!doc.exists) return null;
+  return doc.data() as Flight;
+};
+
 export const listFlights = async (userId: string, tripId?: string): Promise<Flight[]> => {
   const db = getDb();
   const chunk = <T>(items: T[], size = 10): T[][] => {
@@ -2014,6 +2021,12 @@ export const updateLodging = async (lodgingId: string, userId: string, updates: 
   return { ...(updated.data() as Lodging), status: normalizeItineraryStatus((updated.data() as any)?.status) };
 };
 
+export const getLodgingById = async (lodgingId: string): Promise<Lodging | null> => {
+  const doc = await getDb().collection('lodgings').doc(lodgingId).get();
+  if (!doc.exists) return null;
+  return { ...(doc.data() as Lodging), status: normalizeItineraryStatus((doc.data() as any)?.status) };
+};
+
 // Tours
 export const listTours = async (userId: string, tripId?: string): Promise<Tour[]> => {
   const db = getDb();
@@ -2079,6 +2092,165 @@ export const deleteTour = async (tourId: string, userId: string): Promise<void> 
   if (!doc.exists) return;
   if ((doc.data() as any).userId !== userId) throw new Error('Not authorized');
   await db.collection('tours').doc(tourId).delete();
+};
+
+export const getTourById = async (id: string): Promise<Tour | null> => {
+  const doc = await getDb().collection('tours').doc(id).get();
+  if (!doc.exists) return null;
+  return { ...(doc.data() as Tour), status: normalizeItineraryStatus((doc.data() as any)?.status) };
+};
+
+// Car rentals
+export const listCarRentals = async (userId: string, tripId?: string): Promise<CarRental[]> => {
+  const db = getDb();
+  const chunk = <T>(items: T[], size = 10): T[][] => {
+    const chunks: T[][] = [];
+    for (let i = 0; i < items.length; i += size) chunks.push(items.slice(i, i + size));
+    return chunks;
+  };
+
+  if (tripId) {
+    const access = await ensureUserCanReadTrip(tripId, userId);
+    if (!access) return [];
+    const snapshot = await db.collection('car_rentals').where('tripId', '==', tripId).get();
+    return snapshot.docs.map((d) => ({ ...(d.data() as CarRental), status: normalizeItineraryStatus((d.data() as any).status) }));
+  }
+
+  const memberSnap = await db.collection('group_members').where('userId', '==', userId).where('removedAt', '==', null).get();
+  const groupIds = memberSnap.docs.map((d) => (d.data() as any).groupId).filter(Boolean);
+  const tripIds: string[] = [];
+  for (const groupId of Array.from(new Set(groupIds))) {
+    const trips = await db.collection('trips').where('groupId', '==', groupId).get();
+    trips.docs.forEach((doc) => tripIds.push(doc.id));
+  }
+  const followed = await db.collection('trip_followers').where('followerUserId', '==', userId).get();
+  followed.docs.forEach((doc) => {
+    const data = doc.data() as any;
+    if (data.tripId) tripIds.push(String(data.tripId));
+  });
+  const uniqueTripIds = Array.from(new Set(tripIds));
+  if (!uniqueTripIds.length) return [];
+  const rentals: CarRental[] = [];
+  for (const ids of chunk(uniqueTripIds)) {
+    const snapshot = await db.collection('car_rentals').where('tripId', 'in', ids).get();
+    snapshot.docs.forEach((d) =>
+      rentals.push({ ...(d.data() as CarRental), status: normalizeItineraryStatus((d.data() as any).status) })
+    );
+  }
+  return rentals;
+};
+
+export const getCarRentalById = async (id: string): Promise<CarRental | null> => {
+  const doc = await getDb().collection('car_rentals').doc(id).get();
+  if (!doc.exists) return null;
+  return { ...(doc.data() as CarRental), status: normalizeItineraryStatus((doc.data() as any)?.status) };
+};
+
+export const insertCarRental = async (rental: Omit<CarRental, 'id' | 'createdAt'>): Promise<CarRental> => {
+  const db = getDb();
+  const id = randomUUID();
+  const payload: CarRental = {
+    ...rental,
+    id,
+    status: normalizeItineraryStatus((rental as any).status),
+    cost: Number((rental as any).cost) || 0,
+    createdAt: nowIso(),
+  };
+  await db.collection('car_rentals').doc(id).set(payload);
+  return payload;
+};
+
+export const updateCarRental = async (id: string, userId: string, updates: Partial<CarRental>): Promise<CarRental | null> => {
+  const db = getDb();
+  const doc = await db.collection('car_rentals').doc(id).get();
+  if (!doc.exists) return null;
+  const data = doc.data() as any;
+  const tripId = data.tripId;
+  const membership = await ensureUserInTrip(tripId, userId);
+  if (!membership) return null;
+  const payload = stripUndefined({
+    ...updates,
+    status: typeof updates.status === 'undefined' ? undefined : normalizeItineraryStatus((updates as any).status),
+    cost: typeof updates.cost === 'undefined' ? undefined : Number(updates.cost) || 0,
+  });
+  await db.collection('car_rentals').doc(id).update(payload);
+  const updated = await db.collection('car_rentals').doc(id).get();
+  return { ...(updated.data() as CarRental), status: normalizeItineraryStatus((updated.data() as any)?.status) };
+};
+
+export const deleteCarRental = async (id: string, userId: string): Promise<void> => {
+  const db = getDb();
+  const doc = await db.collection('car_rentals').doc(id).get();
+  if (!doc.exists) return;
+  const data = doc.data() as any;
+  const tripId = data.tripId;
+  const membership = await ensureUserInTrip(tripId, userId);
+  if (!membership) return;
+  await db.collection('car_rentals').doc(id).delete();
+};
+
+type VoteItemType = 'flight' | 'lodging' | 'tour' | 'car_rental';
+
+export const castItemVote = async (
+  userId: string,
+  tripId: string,
+  itemType: VoteItemType,
+  itemId: string,
+  value: 1 | -1
+): Promise<void> => {
+  const db = getDb();
+  const existing = await db
+    .collection('item_votes')
+    .where('itemType', '==', itemType)
+    .where('itemId', '==', itemId)
+    .where('userId', '==', userId)
+    .limit(1)
+    .get();
+  const payload = { tripId, itemType, itemId, userId, value, updatedAt: nowIso() };
+  if (!existing.empty) {
+    await existing.docs[0].ref.update(payload);
+    return;
+  }
+  await db.collection('item_votes').doc(randomUUID()).set({ ...payload, createdAt: nowIso() });
+};
+
+export const getItemVoteSummaries = async (
+  userId: string,
+  tripId: string,
+  itemType: VoteItemType,
+  itemIds: string[]
+): Promise<Record<string, { netVotes: number; userVote: -1 | 1 | null }>> => {
+  const normalized = Array.from(new Set((itemIds ?? []).map((id) => String(id).trim()).filter(Boolean)));
+  if (!normalized.length) return {};
+  const db = getDb();
+  const result: Record<string, { netVotes: number; userVote: -1 | 1 | null }> = {};
+  normalized.forEach((id) => {
+    result[id] = { netVotes: 0, userVote: null };
+  });
+  const chunk = <T>(items: T[], size = 10): T[][] => {
+    const chunks: T[][] = [];
+    for (let i = 0; i < items.length; i += size) chunks.push(items.slice(i, i + size));
+    return chunks;
+  };
+  for (const ids of chunk(normalized)) {
+    const snap = await db
+      .collection('item_votes')
+      .where('tripId', '==', tripId)
+      .where('itemType', '==', itemType)
+      .where('itemId', 'in', ids)
+      .get();
+    snap.docs.forEach((doc) => {
+      const vote = doc.data() as any;
+      const itemId = String(vote.itemId ?? '');
+      if (!result[itemId]) return;
+      const value = vote.value === -1 ? -1 : 1;
+      result[itemId].netVotes += value;
+      if (String(vote.userId) === String(userId)) {
+        result[itemId].userVote = value;
+      }
+    });
+  }
+  return result;
 };
 
 // Expenses
