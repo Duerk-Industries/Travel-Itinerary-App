@@ -28,6 +28,8 @@ export interface Flight {
   status: ItineraryStatus;
   netVotes?: number;
   userVote?: -1 | 1 | null;
+  netRating?: number;
+  userRating?: -1 | 1 | null;
   passengerName: string;
   passengerIds?: string[];
   departureDate: string;
@@ -137,6 +139,8 @@ export interface Lodging {
   status: ItineraryStatus;
   netVotes?: number;
   userVote?: -1 | 1 | null;
+  netRating?: number;
+  userRating?: -1 | 1 | null;
   name: string;
   check_in_date: string;
   check_out_date: string;
@@ -159,6 +163,8 @@ export interface Tour {
   status: ItineraryStatus;
   netVotes?: number;
   userVote?: -1 | 1 | null;
+  netRating?: number;
+  userRating?: -1 | 1 | null;
   date: string;
   name: string;
   startLocation: string;
@@ -179,6 +185,8 @@ export interface CarRental {
   status: ItineraryStatus;
   netVotes?: number;
   userVote?: -1 | 1 | null;
+  netRating?: number;
+  userRating?: -1 | 1 | null;
   pickupLocation: string;
   pickupDate: string;
   dropoffLocation: string;

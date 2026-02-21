@@ -2852,15 +2852,20 @@ export const deleteCarRental = async (id: string, userId: string): Promise<void>
 };
 
 type VoteItemType = 'flight' | 'lodging' | 'tour' | 'car_rental';
+type ReactionKind = 'vote' | 'rating';
+const reactionItemTypeKey = (itemType: VoteItemType, kind: ReactionKind): string =>
+  kind === 'rating' ? `${itemType}:rating` : itemType;
 
 export const castItemVote = async (
   userId: string,
   tripId: string,
   itemType: VoteItemType,
   itemId: string,
-  value: 1 | -1
+  value: 1 | -1,
+  kind: ReactionKind = 'vote'
 ): Promise<void> => {
   const p = getPool();
+  const itemTypeKey = reactionItemTypeKey(itemType, kind);
   await p.query(
     `
       INSERT INTO item_votes (id, trip_id, item_type, item_id, user_id, value, created_at, updated_at)
@@ -2868,7 +2873,7 @@ export const castItemVote = async (
       ON CONFLICT (item_type, item_id, user_id)
       DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()
     `,
-    [randomUUID(), tripId, itemType, itemId, userId, value]
+    [randomUUID(), tripId, itemTypeKey, itemId, userId, value]
   );
 };
 
@@ -2876,11 +2881,13 @@ export const getItemVoteSummaries = async (
   userId: string,
   tripId: string,
   itemType: VoteItemType,
-  itemIds: string[]
+  itemIds: string[],
+  kind: ReactionKind = 'vote'
 ): Promise<Record<string, { netVotes: number; userVote: -1 | 1 | null }>> => {
   const normalizedIds = Array.from(new Set((itemIds ?? []).map((id) => String(id).trim()).filter(Boolean)));
   if (!normalizedIds.length) return {};
   const p = getPool();
+  const itemTypeKey = reactionItemTypeKey(itemType, kind);
   const { rows } = await p.query(
     `
       SELECT item_id::text as "itemId",
@@ -2892,7 +2899,7 @@ export const getItemVoteSummaries = async (
         AND item_id = ANY($4::uuid[])
       GROUP BY item_id
     `,
-    [userId, tripId, itemType, normalizedIds]
+    [userId, tripId, itemTypeKey, normalizedIds]
   );
   const result: Record<string, { netVotes: number; userVote: -1 | 1 | null }> = {};
   normalizedIds.forEach((id) => {

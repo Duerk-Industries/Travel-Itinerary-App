@@ -8,7 +8,7 @@ import LodgingDialog from '../components/LodgingDialog';
 import LodgingDetailsDialog from '../components/LodgingDetailsDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from '../utils/itineraryStatus';
-import { formatNetVotes, shouldShowVoteButtons } from '../utils/votes';
+import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from '../utils/votes';
 
 type LodgingTabProps = {
   backendUrl: string;
@@ -149,6 +149,20 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
     }
     onRefreshLodgings?.();
   };
+
+  const rateOnLodging = async (lodgingId: string, value: 1 | -1) => {
+    const res = await fetch(`${backendUrl}/api/lodgings/${lodgingId}/rating`, {
+      method: 'POST',
+      headers: jsonHeaders,
+      body: JSON.stringify({ value }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'Unable to submit rating');
+      return;
+    }
+    onRefreshLodgings?.();
+  };
   
   const sortedLodgings = useMemo(() => {
     return [...lodgings].sort((a, b) => new Date(a.checkInDate).getTime() - new Date(b.checkInDate).getTime());
@@ -192,6 +206,9 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
             <View style={[styles.tableHeaderCell, styles.lodgingTabDateCol]}>
               <Text style={styles.headerText}>Votes</Text>
             </View>
+            <View style={[styles.tableHeaderCell, styles.lodgingTabDateCol]}>
+              <Text style={styles.headerText}>Rating</Text>
+            </View>
             <View style={[styles.tableHeaderCell, styles.lodgingTabActionsCol, styles.lastCell]}>
               <Text style={styles.headerText}>Actions</Text>
             </View>
@@ -227,6 +244,22 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
                   </View>
                 ) : (
                   <Text style={styles.cellText}>{formatNetVotes((lodging as any).netVotes ?? 0)}</Text>
+                )}
+              </View>
+              <View style={[styles.tableCell, styles.lodgingTabDateCol]}>
+                {shouldShowRatingButtons(lodging.status, (lodging as any).userRating) ? (
+                  <View style={styles.actionCell}>
+                    <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => rateOnLodging(lodging.id, 1)}>
+                      <Text style={styles.buttonText}>👍</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => rateOnLodging(lodging.id, -1)}>
+                      <Text style={styles.buttonText}>👎</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : normalizeItineraryStatus(lodging.status, LEGACY_ITINERARY_STATUS) === 'Completed' ? (
+                  <Text style={styles.cellText}>{formatNetVotes((lodging as any).netRating ?? 0)}</Text>
+                ) : (
+                  <Text style={styles.cellText}>-</Text>
                 )}
               </View>
               <View style={[styles.tableCell, styles.lodgingTabActionsCol, styles.lastCell]}>

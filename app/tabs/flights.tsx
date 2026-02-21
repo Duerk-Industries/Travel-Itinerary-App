@@ -5,7 +5,7 @@ import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { normalizeDateString } from '../utils/normalizeDateString';
 import { FlightEditingForm } from '../components/FlightEditingForm';
 import { toWebStyle } from '../utils/webStyle';
-import { formatNetVotes, shouldShowVoteButtons } from '../utils/votes';
+import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from '../utils/votes';
 import {
   DEFAULT_NEW_ITINERARY_STATUS,
   LEGACY_ITINERARY_STATUS,
@@ -30,6 +30,8 @@ export interface Flight {
   status?: ItineraryStatus;
   netVotes?: number;
   userVote?: -1 | 1 | null;
+  netRating?: number;
+  userRating?: -1 | 1 | null;
   passenger_name: string;
   passenger_ids?: string[];
   arrival_date?: string | null;
@@ -345,6 +347,8 @@ export const normalizeFlightFromApi = (f: any): Flight => ({
   status: normalizeItineraryStatus(f.status, LEGACY_ITINERARY_STATUS),
   netVotes: Number(f.netVotes ?? 0) || 0,
   userVote: f.userVote === 1 || f.userVote === -1 ? f.userVote : null,
+  netRating: Number(f.netRating ?? 0) || 0,
+  userRating: f.userRating === 1 || f.userRating === -1 ? f.userRating : null,
   passenger_name: f.passenger_name ?? f.passengerName ?? '',
   passenger_ids: Array.isArray(f.passenger_ids)
     ? f.passenger_ids
@@ -445,10 +449,11 @@ const fallbackAirports: Airport[] = [
   { name: 'Dubai International', city: 'Dubai', country: 'UAE', iata_code: 'DXB' },
 ];
 
-const columns: { key: keyof Flight | 'actions' | 'costPerPerson' | 'votes'; label: string; minWidth?: number }[] = [
+const columns: { key: keyof Flight | 'actions' | 'costPerPerson' | 'votes' | 'rating'; label: string; minWidth?: number }[] = [
   { key: 'passenger_name', label: 'Passenger', minWidth: 130 },
   { key: 'status', label: 'Status', minWidth: 120 },
   { key: 'votes', label: 'Votes', minWidth: 120 },
+  { key: 'rating', label: 'Rating', minWidth: 120 },
   { key: 'departure_date', label: 'Departure Date' },
   { key: 'departure_location', label: 'Departure Location' },
   { key: 'departure_time', label: 'Departure Time' },
@@ -1073,6 +1078,23 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     }
   };
 
+  const rateFlight = async (id: string, value: 1 | -1) => {
+    try {
+      const res = await fetch(`${backendUrl}/api/flights/${id}/rating`, {
+        method: 'POST',
+        headers: jsonHeaders,
+        body: JSON.stringify({ value }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Unable to submit rating');
+      }
+      onDataChanged ? onDataChanged() : await fetchFlights();
+    } catch (err: any) {
+      alert(err?.message || 'Unable to submit rating');
+    }
+  };
+
   const openLocationOverlay = (target: 'dep' | 'arr', initialValue: string) => {
     setLocationFieldTarget(target);
     setLocationTarget(target);
@@ -1253,6 +1275,43 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                     </View>
                   );
                 }
+                if (col.key === 'rating') {
+                  const showButtons = shouldShowRatingButtons(
+                    normalizeItineraryStatus(item.status, LEGACY_ITINERARY_STATUS),
+                    item.userRating
+                  );
+                  return (
+                    <View
+                      key={`${item.id}-${col.key}`}
+                      style={[
+                        styles.cell,
+                        { minWidth: col.minWidth ?? 120, flex: 1 },
+                        isLast && styles.lastCell,
+                      ]}
+                    >
+                      {showButtons ? (
+                        <View style={styles.actionCell}>
+                          <TouchableOpacity
+                            style={[styles.button, styles.smallButton]}
+                            onPress={() => rateFlight(item.id, 1)}
+                          >
+                            <Text style={styles.buttonText}>👍</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[styles.button, styles.smallButton, styles.dangerButton]}
+                            onPress={() => rateFlight(item.id, -1)}
+                          >
+                            <Text style={styles.buttonText}>👎</Text>
+                          </TouchableOpacity>
+                        </View>
+                      ) : normalizeItineraryStatus(item.status, LEGACY_ITINERARY_STATUS) === 'Completed' ? (
+                        <Text style={styles.cellText}>{formatNetVotes(item.netRating ?? 0)}</Text>
+                      ) : (
+                        <Text style={styles.cellText}>-</Text>
+                      )}
+                    </View>
+                  );
+                }
                 const value = item[col.key as keyof Flight];
                 const baseDisplay = value != null ? String(value) : '-';
                 const display =
@@ -1331,7 +1390,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                     </View>
                   );
                 }
-                if (col.key === 'votes') {
+                if (col.key === 'votes' || col.key === 'rating') {
                   return (
                     <View
                       key={`input-${col.key}`}

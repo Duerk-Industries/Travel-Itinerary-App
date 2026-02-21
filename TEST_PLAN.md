@@ -222,6 +222,8 @@ Behavior covered in Jest:
 Voting feature route coverage:
 - `server/__tests__/itemVotesRoutes.test.ts`
   - member can vote on proposed items
+  - member can rate completed items
   - followers/non-members are blocked from voting
   - non-proposed items reject votes
-  - list endpoints include `netVotes` and `userVote`
+  - non-completed items reject ratings
+  - list endpoints include `netVotes`/`userVote` and `netRating`/`userRating`

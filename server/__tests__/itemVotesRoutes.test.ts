@@ -35,7 +35,7 @@ describe('Item vote routes', () => {
     const app = appFor('/api/flights', flightRoutes);
     const res = await request(app).post('/api/flights/f1/vote').send({ value: 1 }).expect(200);
 
-    expect(db.castItemVote).toHaveBeenCalledWith('user-1', 't1', 'flight', 'f1', 1);
+    expect(db.castItemVote).toHaveBeenCalledWith('user-1', 't1', 'flight', 'f1', 1, 'vote');
     expect(res.body).toEqual({ itemId: 'f1', netVotes: 1, userVote: 1 });
   });
 
@@ -77,5 +77,27 @@ describe('Item vote routes', () => {
     const res = await request(app).post('/api/car-rentals/c1/vote').send({ value: 1 }).expect(200);
 
     expect(res.body).toEqual({ itemId: 'c1', netVotes: 3, userVote: 1 });
+  });
+
+  test('allows rating on completed flight', async () => {
+    (db.getFlightById as jest.Mock).mockResolvedValue({ id: 'f1', tripId: 't1', status: 'Completed' });
+    (db.ensureUserInTrip as jest.Mock).mockResolvedValue({ groupId: 'g1' });
+    (db.castItemVote as jest.Mock).mockResolvedValue(undefined);
+    (db.getItemVoteSummaries as jest.Mock).mockResolvedValue({ f1: { netVotes: -1, userVote: -1 } });
+
+    const app = appFor('/api/flights', flightRoutes);
+    const res = await request(app).post('/api/flights/f1/rating').send({ value: -1 }).expect(200);
+
+    expect(db.castItemVote).toHaveBeenCalledWith('user-1', 't1', 'flight', 'f1', -1, 'rating');
+    expect(res.body).toEqual({ itemId: 'f1', netRating: -1, userRating: -1 });
+  });
+
+  test('rejects rating when item is not completed', async () => {
+    (db.getTourById as jest.Mock).mockResolvedValue({ id: 'to1', tripId: 't1', status: 'Booked' });
+    (db.ensureUserInTrip as jest.Mock).mockResolvedValue({ groupId: 'g1' });
+
+    const app = appFor('/api/tours', tourRoutes);
+    await request(app).post('/api/tours/to1/rating').send({ value: 1 }).expect(400);
+    expect(db.castItemVote).not.toHaveBeenCalled();
   });
 });

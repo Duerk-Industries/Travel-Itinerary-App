@@ -9,9 +9,12 @@
 
 ## How voting behaves
 
-- A `Votes` column is shown immediately after `Status` on each page.
+- A `Votes` and `Rating` column are shown immediately after `Status` on each page.
 - If status is `Proposed` and the current user has not voted yet, `👍` and `👎` buttons are shown.
 - If status is anything else, or the user already voted, the cell shows net votes.
+- If status is `Completed` and the current user has not rated yet, `👍` and `👎` buttons are shown in `Rating`.
+- If status is `Completed` and the user already rated, `Rating` shows net rating.
+- For non-`Completed` statuses, `Rating` is not actionable.
 
 ## Authorization rules
 
@@ -24,6 +27,10 @@
 - `POST /api/lodgings/:id/vote`
 - `POST /api/tours/:id/vote`
 - `POST /api/car-rentals/:id/vote`
+- `POST /api/flights/:id/rating`
+- `POST /api/lodgings/:id/rating`
+- `POST /api/tours/:id/rating`
+- `POST /api/car-rentals/:id/rating`
 
 Request body:
 

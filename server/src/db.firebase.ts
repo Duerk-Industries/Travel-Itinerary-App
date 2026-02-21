@@ -2190,23 +2190,28 @@ export const deleteCarRental = async (id: string, userId: string): Promise<void>
 };
 
 type VoteItemType = 'flight' | 'lodging' | 'tour' | 'car_rental';
+type ReactionKind = 'vote' | 'rating';
+const reactionItemTypeKey = (itemType: VoteItemType, kind: ReactionKind): string =>
+  kind === 'rating' ? `${itemType}:rating` : itemType;
 
 export const castItemVote = async (
   userId: string,
   tripId: string,
   itemType: VoteItemType,
   itemId: string,
-  value: 1 | -1
+  value: 1 | -1,
+  kind: ReactionKind = 'vote'
 ): Promise<void> => {
   const db = getDb();
+  const itemTypeKey = reactionItemTypeKey(itemType, kind);
   const existing = await db
     .collection('item_votes')
-    .where('itemType', '==', itemType)
+    .where('itemType', '==', itemTypeKey)
     .where('itemId', '==', itemId)
     .where('userId', '==', userId)
     .limit(1)
     .get();
-  const payload = { tripId, itemType, itemId, userId, value, updatedAt: nowIso() };
+  const payload = { tripId, itemType: itemTypeKey, itemId, userId, value, updatedAt: nowIso() };
   if (!existing.empty) {
     await existing.docs[0].ref.update(payload);
     return;
@@ -2218,11 +2223,13 @@ export const getItemVoteSummaries = async (
   userId: string,
   tripId: string,
   itemType: VoteItemType,
-  itemIds: string[]
+  itemIds: string[],
+  kind: ReactionKind = 'vote'
 ): Promise<Record<string, { netVotes: number; userVote: -1 | 1 | null }>> => {
   const normalized = Array.from(new Set((itemIds ?? []).map((id) => String(id).trim()).filter(Boolean)));
   if (!normalized.length) return {};
   const db = getDb();
+  const itemTypeKey = reactionItemTypeKey(itemType, kind);
   const result: Record<string, { netVotes: number; userVote: -1 | 1 | null }> = {};
   normalized.forEach((id) => {
     result[id] = { netVotes: 0, userVote: null };
@@ -2236,7 +2243,7 @@ export const getItemVoteSummaries = async (
     const snap = await db
       .collection('item_votes')
       .where('tripId', '==', tripId)
-      .where('itemType', '==', itemType)
+      .where('itemType', '==', itemTypeKey)
       .where('itemId', 'in', ids)
       .get();
     snap.docs.forEach((doc) => {

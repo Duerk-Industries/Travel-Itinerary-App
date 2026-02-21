@@ -15,6 +15,8 @@ export type Lodging = {
   status: ItineraryStatus;
   netVotes?: number;
   userVote?: -1 | 1 | null;
+  netRating?: number;
+  userRating?: -1 | 1 | null;
   name: string;
   checkInDate: string;
   checkOutDate: string;
@@ -79,6 +81,8 @@ export const normalizeLodgingFromApi = (l: any): Lodging => ({
   status: normalizeItineraryStatus(l.status, LEGACY_ITINERARY_STATUS),
   netVotes: Number(l.netVotes ?? 0) || 0,
   userVote: l.userVote === 1 || l.userVote === -1 ? l.userVote : null,
+  netRating: Number(l.netRating ?? 0) || 0,
+  userRating: l.userRating === 1 || l.userRating === -1 ? l.userRating : null,
   name: l.name,
   checkInDate: normalizeDate(l.check_in_date),
   checkOutDate: normalizeDate(l.check_out_date),

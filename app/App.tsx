@@ -49,7 +49,7 @@ import { loadSession, saveSession, clearSession } from './utils/session';
 import LodgingDetailsDialog from './components/LodgingDetailsDialog';
 import ConfirmDialog from './components/ConfirmDialog';
 import { toWebStyle } from './utils/webStyle';
-import { formatNetVotes, shouldShowVoteButtons } from './utils/votes';
+import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from './utils/votes';
 
 import LodgingTab from './tabs/LodgingTab';
 
@@ -588,6 +588,23 @@ const App: React.FC = () => {
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
       alert(data.error || 'Unable to submit vote');
+      return;
+    }
+    if (activeTripId && userToken) {
+      const cars = await fetchCarRentalsForTrip({ backendUrl, activeTripId, token: userToken });
+      setCarRentals(cars);
+    }
+  }, [backendUrl, jsonHeaders, activeTripId, userToken]);
+
+  const rateOnCarRental = useCallback(async (id: string, value: 1 | -1) => {
+    const res = await fetch(`${backendUrl}/api/car-rentals/${id}/rating`, {
+      method: 'POST',
+      headers: jsonHeaders,
+      body: JSON.stringify({ value }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'Unable to submit rating');
       return;
     }
     if (activeTripId && userToken) {
@@ -2201,7 +2218,7 @@ const App: React.FC = () => {
           <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
             <View style={styles.table}>
               <View style={[styles.tableRow, styles.tableHeader]}>
-                {['Pick Up Location', 'Pick Up Date', 'Drop Off Location', 'Drop Off Date', 'Status', 'Votes', 'Reference', 'Vendor', 'Prepaid?', 'Cost', 'Car Model', 'Notes', 'For', 'Paid By', 'Actions'].map((label, idx, arr) => (
+                {['Pick Up Location', 'Pick Up Date', 'Drop Off Location', 'Drop Off Date', 'Status', 'Votes', 'Rating', 'Reference', 'Vendor', 'Prepaid?', 'Cost', 'Car Model', 'Notes', 'For', 'Paid By', 'Actions'].map((label, idx, arr) => (
                   <View
                     key={label}
                     style={[styles.cell, { minWidth: 140, flex: 1 }, idx === arr.length - 1 && styles.lastCell]}
@@ -2239,6 +2256,22 @@ const App: React.FC = () => {
                       </>
                     ) : (
                       <Text style={styles.cellText}>{formatNetVotes((car as any).netVotes ?? 0)}</Text>
+                    )}
+                  </View>
+                  <View style={[styles.cell, styles.actionCell, { minWidth: 130, flex: 1 }]}>
+                    {shouldShowRatingButtons((car as any).status, (car as any).userRating) ? (
+                      <>
+                        <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => rateOnCarRental(car.id, 1)}>
+                          <Text style={styles.buttonText}>👍</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => rateOnCarRental(car.id, -1)}>
+                          <Text style={styles.buttonText}>👎</Text>
+                        </TouchableOpacity>
+                      </>
+                    ) : normalizeItineraryStatus((car as any).status, LEGACY_ITINERARY_STATUS) === 'Completed' ? (
+                      <Text style={styles.cellText}>{formatNetVotes((car as any).netRating ?? 0)}</Text>
+                    ) : (
+                      <Text style={styles.cellText}>-</Text>
                     )}
                   </View>
                   <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
@@ -2359,6 +2392,9 @@ const App: React.FC = () => {
                   ) : (
                     <Text style={styles.cellText}>{normalizeItineraryStatus(carDraft.status, DEFAULT_NEW_ITINERARY_STATUS)}</Text>
                   )}
+                </View>
+                <View style={[styles.cell, { minWidth: 130, flex: 1 }]}>
+                  <Text style={styles.cellText}>-</Text>
                 </View>
                 <View style={[styles.cell, { minWidth: 130, flex: 1 }]}>
                   <Text style={styles.cellText}>-</Text>
