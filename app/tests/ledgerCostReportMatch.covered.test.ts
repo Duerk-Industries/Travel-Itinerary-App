@@ -20,7 +20,7 @@ const getExpenseAmount = (expense: Expense) => Number(expense.amountInTripCurren
 describe('Ledger vs Cost Report totals with covering', () => {
   test('overall cost report shares match ledger paid totals after rollups', () => {
     const memberIds = ['m1', 'm2', 'm3'];
-    const coveredBy = { m2: 'm1' };
+    const coveredBy: Record<string, string> = { m2: 'm1' };
     const reportableMemberIds = memberIds.filter((id) => !coveredBy[id]);
 
     const flights: Flight[] = [{ cost: 300, paidBy: ['m2'] }];

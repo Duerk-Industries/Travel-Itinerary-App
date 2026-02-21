@@ -1,6 +1,7 @@
 import { buildFlightPayload, type Flight, type FlightEditDraft } from '../tabs/flights';
 import { buildLodgingPayload, type Lodging, type LodgingDraft } from '../tabs/lodging';
 import { normalizeDateString } from './normalizeDateString';
+import { LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from './itineraryStatus';
 
 export type WizardGroupMember = {
   id: string;
@@ -108,6 +109,7 @@ export const saveWizardFlights = async (params: {
       const paidBy = resolvedPaidBy.length ? resolvedPaidBy : fallbackPayerId ? [fallbackPayerId] : [];
 
       const draft: FlightEditDraft = {
+        status: normalizeItineraryStatus((flight as any).status, LEGACY_ITINERARY_STATUS),
         passengerName: flight.passenger_name || 'Traveler',
         passengerIds,
         departureDate: normalizeDateString(flight.departure_date || '') || todayIso,
@@ -201,6 +203,7 @@ export const saveWizardLodgings = async (params: {
       const travelerIds = resolvedTravelerIds.length ? resolvedTravelerIds : activeMembers.map((m) => m.id);
 
       const draft: LodgingDraft = {
+        status: normalizeItineraryStatus((lodging as any).status, LEGACY_ITINERARY_STATUS),
         name: lodging.name,
         checkInDate: normalizeDateString(lodging.checkInDate),
         checkOutDate: normalizeDateString(lodging.checkOutDate),

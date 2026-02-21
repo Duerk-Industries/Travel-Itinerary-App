@@ -33,6 +33,12 @@ import { rollUpTotals, validateCoveringRules } from './utils/coveredBy';
 import TripDetailsTab from './tabs/tripDetails';
 import AccountTab, { fetchAccountProfile, fetchFamilyRelationships, fetchFellowTravelers, type FellowTraveler } from './tabs/account';
 import { CarRental, CarRentalDraft, buildCarRentalFromDraft, createInitialCarRentalDraft } from './tabs/carRentals';
+import {
+  DEFAULT_NEW_ITINERARY_STATUS,
+  ITINERARY_STATUSES,
+  LEGACY_ITINERARY_STATUS,
+  normalizeItineraryStatus,
+} from './utils/itineraryStatus';
 import { Lodging, fetchLodgingsApi } from './tabs/lodging';
 import { InvitePayload } from './utils/inviteCodes';
 import { type MapApp, buildMapUrl, loadStoredMapPreference, persistMapPreference } from './utils/mapLinks';
@@ -494,7 +500,10 @@ const App: React.FC = () => {
       alert('Select an active trip before adding a car rental.');
       return;
     }
-    setCarRentals((prev) => [...prev, rental]);
+    setCarRentals((prev) => [
+      ...prev,
+      { ...rental, status: normalizeItineraryStatus((rental as any).status, DEFAULT_NEW_ITINERARY_STATUS) },
+    ]);
   }, [activeTripId]);
 
   const removeCarRental = useCallback((id: string) => {
@@ -2095,7 +2104,7 @@ const App: React.FC = () => {
           <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
             <View style={styles.table}>
               <View style={[styles.tableRow, styles.tableHeader]}>
-                {['Pick Up Location', 'Pick Up Date', 'Drop Off Location', 'Drop Off Date', 'Reference', 'Vendor', 'Prepaid?', 'Cost', 'Car Model', 'Notes', 'For', 'Paid By', 'Actions'].map((label, idx, arr) => (
+                {['Pick Up Location', 'Pick Up Date', 'Drop Off Location', 'Drop Off Date', 'Status', 'Reference', 'Vendor', 'Prepaid?', 'Cost', 'Car Model', 'Notes', 'For', 'Paid By', 'Actions'].map((label, idx, arr) => (
                   <View
                     key={label}
                     style={[styles.cell, { minWidth: 140, flex: 1 }, idx === arr.length - 1 && styles.lastCell]}
@@ -2117,6 +2126,9 @@ const App: React.FC = () => {
                   </View>
                   <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
                     <Text style={styles.cellText}>{car.dropoffDate || '-'}</Text>
+                  </View>
+                  <View style={[styles.cell, { minWidth: 130, flex: 1 }]}>
+                    <Text style={styles.cellText}>{normalizeItineraryStatus((car as any).status, LEGACY_ITINERARY_STATUS)}</Text>
                   </View>
                   <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
                     <Text style={styles.cellText}>{car.reference || '-'}</Text>
@@ -2220,6 +2232,23 @@ const App: React.FC = () => {
                 </TouchableOpacity>
               </View>
             </View>
+                <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                  {Platform.OS === 'web' ? (
+                    <select
+                      value={normalizeItineraryStatus(carDraft.status, DEFAULT_NEW_ITINERARY_STATUS)}
+                      onChange={(e) => setCarDraft((p) => ({ ...p, status: normalizeItineraryStatus(e.target.value, DEFAULT_NEW_ITINERARY_STATUS) }))}
+                      style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
+                    >
+                      {ITINERARY_STATUSES.map((opt) => (
+                        <option key={`car-status-${opt}`} value={opt}>
+                          {opt}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <Text style={styles.cellText}>{normalizeItineraryStatus(carDraft.status, DEFAULT_NEW_ITINERARY_STATUS)}</Text>
+                  )}
+                </View>
                 <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
                   <TextInput
                     style={styles.input}

@@ -3,6 +3,7 @@ import bodyParser from 'body-parser';
 import { authenticate } from '../auth';
 import { deleteExpenseForSource, deleteLodging, ensureUserInTrip, insertLodging, listLodgings, updateLodging, upsertExpenseForSource } from '../db';
 import { getGooglePlaceImage } from '../image-service';
+import { normalizeItineraryStatus, shouldRelaxRequiredFields } from '../utils/itineraryStatus';
 
 // Lodgings API: CRUD for lodgings scoped to the authenticated user / their group trips.
 const router = Router();
@@ -31,8 +32,11 @@ router.post('/', async (req, res) => {
     tripId,
     paidBy,
     travelerIds,
+    status: incomingStatus,
   } = req.body;
-  if (!name || !checkInDate || !checkOutDate || !tripId) {
+  const status = normalizeItineraryStatus(incomingStatus);
+  const relaxed = shouldRelaxRequiredFields(status);
+  if ((!relaxed && (!name || !checkInDate || !checkOutDate)) || !tripId) {
     res.status(400).json({ error: 'Missing required fields' });
     return;
   }
@@ -50,9 +54,10 @@ router.post('/', async (req, res) => {
   const lodging = await insertLodging({
     userId,
     tripId,
+    status,
     name,
-    checkInDate,
-    checkOutDate,
+    checkInDate: checkInDate || new Date().toISOString().slice(0, 10),
+    checkOutDate: checkOutDate || checkInDate || new Date().toISOString().slice(0, 10),
     rooms: Number(rooms) || 1,
     refundBy: refundBy || null,
     totalCost: Number(totalCost) || 0,
@@ -67,7 +72,7 @@ router.post('/', async (req, res) => {
     userId,
     tripId,
     groupId: tripGroup.groupId,
-    expenseDate: checkInDate,
+      expenseDate: checkInDate || new Date().toISOString().slice(0, 10),
     category: 'Lodging',
     amount: Number(totalCost) || 0,
     currency: undefined,
@@ -95,6 +100,7 @@ router.put('/:id', async (req, res) => {
       tripId,
       paidBy,
       travelerIds,
+      status: incomingStatus,
     } = req.body;
     const normalizedPaidBy = Array.isArray(paidBy) ? (paidBy.length ? paidBy : undefined) : undefined;
     const normalizedTravelerIds = Array.isArray(travelerIds) ? (travelerIds.length ? travelerIds : []) : undefined;
@@ -130,6 +136,7 @@ router.put('/:id', async (req, res) => {
       paid_by: normalizedPaidBy,
       traveler_ids: typeof normalizedTravelerIds === 'undefined' ? undefined : normalizedTravelerIds,
       trip_id: tripId,
+      status: typeof incomingStatus === 'undefined' ? undefined : normalizeItineraryStatus(incomingStatus),
       imageUrl: imageUrl ?? undefined,
     });
     if (!updated) {
@@ -183,6 +190,7 @@ router.patch('/:id', async (req, res) => {
       tripId,
       paidBy,
       travelerIds,
+      status: incomingStatus,
     } = req.body;
     const normalizedPaidBy = Array.isArray(paidBy) ? (paidBy.length ? paidBy : undefined) : undefined;
     const normalizedTravelerIds = Array.isArray(travelerIds) ? (travelerIds.length ? travelerIds : []) : undefined;
@@ -218,6 +226,7 @@ router.patch('/:id', async (req, res) => {
       paid_by: normalizedPaidBy,
       traveler_ids: typeof normalizedTravelerIds === 'undefined' ? undefined : normalizedTravelerIds,
       trip_id: tripId,
+      status: typeof incomingStatus === 'undefined' ? undefined : normalizeItineraryStatus(incomingStatus),
       imageUrl: imageUrl ?? undefined,
     });
     if (!updated) {

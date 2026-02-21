@@ -1,10 +1,18 @@
 import { formatDateLong } from '../utils/formatDateLong';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
+import {
+  DEFAULT_NEW_ITINERARY_STATUS,
+  LEGACY_ITINERARY_STATUS,
+  type ItineraryStatus,
+  normalizeItineraryStatus,
+  shouldRelaxRequiredFields,
+} from '../utils/itineraryStatus';
 
 export type Lodging = {
   id: string;
   userId: string;
   tripId: string;
+  status: ItineraryStatus;
   name: string;
   checkInDate: string;
   checkOutDate: string;
@@ -20,6 +28,7 @@ export type Lodging = {
 };
 
 export type LodgingDraft = {
+  status: ItineraryStatus;
   name: string;
   checkInDate: string;
   checkOutDate: string;
@@ -36,6 +45,7 @@ export type LodgingDraft = {
 
 // Build a blank lodging draft with today's dates and default room count.
 export const createInitialLodgingState = (overrides: Partial<LodgingDraft> = {}): LodgingDraft => ({
+  status: DEFAULT_NEW_ITINERARY_STATUS,
   name: '',
   checkInDate: normalizeDate(new Date().toISOString()),
   checkOutDate: normalizeDate(new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()),
@@ -64,6 +74,7 @@ export const normalizeLodgingFromApi = (l: any): Lodging => ({
   id: l.id,
   userId: l.user_id,
   tripId: l.trip_id,
+  status: normalizeItineraryStatus(l.status, LEGACY_ITINERARY_STATUS),
   name: l.name,
   checkInDate: normalizeDate(l.check_in_date),
   checkOutDate: normalizeDate(l.check_out_date),
@@ -92,21 +103,23 @@ export const buildLodgingPayload = (
   activeTripId: string,
   defaultPayerId?: string | null
 ): { payload?: any; error?: string } => {
-  if (!draft.name.trim()) return { error: 'Please enter a lodging name and select an active trip.' };
+  const status = normalizeItineraryStatus(draft.status, DEFAULT_NEW_ITINERARY_STATUS);
+  if (!shouldRelaxRequiredFields(status) && !draft.name.trim()) return { error: 'Please enter a lodging name and select an active trip.' };
 
   const nights = calculateNights(draft.checkInDate, draft.checkOutDate);
-  if (nights <= 0) return { error: 'Check-out must be after check-in.' };
+  if (!shouldRelaxRequiredFields(status) && nights <= 0) return { error: 'Check-out must be after check-in.' };
 
   const cleanTotal = sanitizeCostInput(draft.totalCost);
   const totalNum = Number(cleanTotal) || 0;
   const rooms = Number(draft.rooms) || 1;
-  const costPerNight = totalNum && rooms > 0 ? (totalNum / (nights * rooms)).toFixed(2) : '0';
+  const costPerNight = totalNum && rooms > 0 && nights > 0 ? (totalNum / (nights * rooms)).toFixed(2) : '0';
   const paidBy = draft.paidBy.length ? draft.paidBy : defaultPayerId ? [defaultPayerId] : [];
   const travelerIds = draft.travelerIds.length ? draft.travelerIds : paidBy;
 
   return {
     payload: {
       ...draft,
+      status,
       totalCost: cleanTotal,
       tripId: activeTripId,
       rooms,
@@ -221,6 +234,7 @@ export const toLodgingDraft = (
 ): LodgingDraft => {
   const normalize = opts?.normalize ?? ((v: string) => v);
   return {
+    status: normalizeItineraryStatus(lodging.status, LEGACY_ITINERARY_STATUS),
     name: lodging.name,
     checkInDate: normalize(lodging.checkInDate),
     checkOutDate: normalize(lodging.checkOutDate),

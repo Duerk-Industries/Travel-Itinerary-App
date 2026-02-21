@@ -3,9 +3,18 @@ import { Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpac
 import { formatDateLong } from '../utils/formatDateLong';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { toWebStyle } from '../utils/webStyle';
+import {
+  DEFAULT_NEW_ITINERARY_STATUS,
+  LEGACY_ITINERARY_STATUS,
+  type ItineraryStatus,
+  normalizeItineraryStatus,
+  shouldRelaxRequiredFields,
+  ITINERARY_STATUSES,
+} from '../utils/itineraryStatus';
 
 export type Tour = {
   id: string;
+  status: ItineraryStatus;
   date: string;
   name: string;
   startLocation: string;
@@ -20,6 +29,7 @@ export type Tour = {
 };
 
 export type TourDraft = {
+  status: ItineraryStatus;
   date: string;
   name: string;
   startLocation: string;
@@ -45,6 +55,7 @@ export type GroupMemberOption = {
 
 // Build a blank tour draft with today's date and zero cost.
 export const createInitialTourState = (): TourDraft => ({
+  status: DEFAULT_NEW_ITINERARY_STATUS,
   date: new Date().toISOString().slice(0, 10),
   name: '',
   startLocation: '',
@@ -59,9 +70,10 @@ export const createInitialTourState = (): TourDraft => ({
 });
 
 export const buildTourPayload = (draft: TourDraft, defaultPayerId?: string | null): { payload?: TourDraft; error?: string } => {
-  if (!draft.name.trim()) return { error: 'Please enter a tour name.' };
+  const status = normalizeItineraryStatus(draft.status, DEFAULT_NEW_ITINERARY_STATUS);
+  if (!shouldRelaxRequiredFields(status) && !draft.name.trim()) return { error: 'Please enter a tour name.' };
   const cleanCost = sanitizeCostInput(draft.cost || '');
-  let payload: TourDraft = { ...draft, cost: cleanCost };
+  let payload: TourDraft = { ...draft, status, cost: cleanCost };
   if ((!payload.paidBy || payload.paidBy.length === 0) && defaultPayerId) {
     payload = { ...payload, paidBy: [defaultPayerId] };
   }
@@ -128,6 +140,7 @@ export const fetchToursForTrip = async ({
   const data = await res.json();
   return (data as any[]).map((t) => ({
     ...t,
+    status: normalizeItineraryStatus(t.status, LEGACY_ITINERARY_STATUS),
     cost: String(t.cost ?? ''),
     paidBy: Array.isArray(t.paidBy) ? t.paidBy : [],
     bookedOn: t.bookedOn ?? '',
@@ -263,12 +276,13 @@ export const TourTab: React.FC<TourTabProps> = ({
 
   const saveTour = () => {
     if (!editingTour) return;
-    if (!editingTour.name.trim()) {
+    const status = normalizeItineraryStatus(editingTour.status, DEFAULT_NEW_ITINERARY_STATUS);
+    if (!shouldRelaxRequiredFields(status) && !editingTour.name.trim()) {
       alert('Please enter a tour name.');
       return;
     }
     const cleanCost = (editingTour.cost || '').replace(/[^0-9.]/g, '');
-    let payload: TourDraft = { ...editingTour, cost: cleanCost };
+    let payload: TourDraft = { ...editingTour, status, cost: cleanCost };
     if ((!payload.paidBy || payload.paidBy.length === 0) && defaultPayerId) {
       payload = { ...payload, paidBy: [defaultPayerId] };
     }
@@ -369,6 +383,7 @@ export const TourTab: React.FC<TourTabProps> = ({
           <View style={[styles.tableRow, styles.tableHeader]}>
             {[
               { label: 'Date', width: 140 },
+              { label: 'Status', width: 130 },
               { label: 'Tour', width: 180 },
               { label: 'Start Location', width: 180 },
               { label: 'Start Time', width: 120 },
@@ -389,6 +404,9 @@ export const TourTab: React.FC<TourTabProps> = ({
             <View key={t.id} style={styles.tableRow}>
               <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
                 <Text style={styles.cellText}>{formatDateLong(t.date)}</Text>
+              </View>
+              <View style={[styles.cell, { minWidth: 130, flex: 1 }]}>
+                <Text style={styles.cellText}>{normalizeItineraryStatus(t.status, LEGACY_ITINERARY_STATUS)}</Text>
               </View>
               <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
                 <Text style={styles.cellText}>{t.name || '-'}</Text>
@@ -461,6 +479,35 @@ export const TourTab: React.FC<TourTabProps> = ({
                 <TouchableOpacity style={styles.input} onPress={() => openTourDatePicker('date')}>
                   <Text style={styles.cellText}>{formatDateLong(editingTour.date)}</Text>
                 </TouchableOpacity>
+              )}
+              <Text style={styles.modalLabel}>Status</Text>
+              {Platform.OS === 'web' ? (
+                <select
+                  value={normalizeItineraryStatus(editingTour.status, DEFAULT_NEW_ITINERARY_STATUS)}
+                  onChange={(e) => setEditingTour((p) => (p ? { ...p, status: normalizeItineraryStatus(e.target.value, DEFAULT_NEW_ITINERARY_STATUS) } : p))}
+                  style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
+                >
+                  {ITINERARY_STATUSES.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <View style={styles.payerChips}>
+                  {ITINERARY_STATUSES.map((opt) => {
+                    const selected = normalizeItineraryStatus(editingTour.status, DEFAULT_NEW_ITINERARY_STATUS) === opt;
+                    return (
+                      <TouchableOpacity
+                        key={`tour-status-${opt}`}
+                        style={[toggleBaseStyle, selected && toggleSelectedStyle]}
+                        onPress={() => setEditingTour((p) => (p ? { ...p, status: opt } : p))}
+                      >
+                        <Text style={[toggleTextStyle, selected && toggleTextSelectedStyle]}>{opt}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
               )}
               <Text style={styles.modalLabel}>Tour</Text>
               <TextInput

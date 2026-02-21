@@ -5,6 +5,13 @@ import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { normalizeDateString } from '../utils/normalizeDateString';
 import { FlightEditingForm } from '../components/FlightEditingForm';
 import { toWebStyle } from '../utils/webStyle';
+import {
+  DEFAULT_NEW_ITINERARY_STATUS,
+  LEGACY_ITINERARY_STATUS,
+  type ItineraryStatus,
+  normalizeItineraryStatus,
+  shouldRelaxRequiredFields,
+} from '../utils/itineraryStatus';
 
 type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
 let NativeDateTimePicker: NativeDateTimePickerType | null = null;
@@ -19,6 +26,7 @@ if (Platform.OS !== 'web') {
 
 export interface Flight {
   id: string;
+  status?: ItineraryStatus;
   passenger_name: string;
   passenger_ids?: string[];
   arrival_date?: string | null;
@@ -49,6 +57,7 @@ export interface Flight {
 }
 
 export type FlightDraft = {
+  status: ItineraryStatus;
   passengerName: string;
   passengerIds: string[];
   departureDate: string;
@@ -70,6 +79,7 @@ export type FlightDraft = {
 };
 
 export type FlightEditDraft = {
+  status: ItineraryStatus;
   passengerName: string;
   passengerIds: string[];
   departureDate: string;
@@ -91,6 +101,7 @@ export type FlightEditDraft = {
 };
 
 export type FlightCreateDraft = {
+  status: ItineraryStatus;
   passengerName: string;
   passengerIds: string[];
   departureLocation?: string;
@@ -119,6 +130,7 @@ const isValidTime = (value: string): boolean => {
 };
 
 export const createInitialFlightCreateDraft = (): FlightCreateDraft => ({
+  status: DEFAULT_NEW_ITINERARY_STATUS,
   passengerName: '',
   passengerIds: [],
   departureDate: new Date().toISOString().slice(0, 10),
@@ -167,6 +179,7 @@ export type Trip = {
 };
 
 export const createInitialFlightState = (): FlightDraft => ({
+  status: DEFAULT_NEW_ITINERARY_STATUS,
   passengerName: '',
   passengerIds: [],
   departureDate: new Date().toISOString().slice(0, 10),
@@ -240,6 +253,7 @@ export const buildFlightPayload = (flight: FlightEditDraft, tripId?: string | nu
   const layoverLocationCode = trim(flight.layoverLocationCode);
   const passengerIds = Array.isArray(flight.passengerIds) ? flight.passengerIds.filter(Boolean) : [];
   return {
+    status: normalizeItineraryStatus(flight.status, DEFAULT_NEW_ITINERARY_STATUS),
     passengerName: trim(flight.passengerName) || 'Traveler',
     passengerIds,
     departureDate,
@@ -268,13 +282,17 @@ export const buildFlightPayloadForCreate = (
   defaultPayerId?: string | null
 ): { payload?: any; error?: string } => {
   if (!tripId) return { error: 'Select an active trip before adding a flight.' };
+  const status = normalizeItineraryStatus((draft as FlightEditDraft).status, DEFAULT_NEW_ITINERARY_STATUS);
   const departureDate = (draft as FlightEditDraft).departureDate?.trim();
   const departureTime = (draft as FlightEditDraft).departureTime?.trim();
   const arrivalTime = (draft as FlightEditDraft).arrivalTime?.trim();
-  if (!departureDate) return { error: 'Departure date is required.' };
-  if (!departureTime || !arrivalTime) return { error: 'Departure and arrival times are required.' };
-  if (!isValidTime(departureTime) || !isValidTime(arrivalTime)) return { error: 'Enter valid departure and arrival times (HH:MM).' };
-  if (!Array.isArray(draft.passengerIds) || draft.passengerIds.filter(Boolean).length === 0) {
+  const relaxed = shouldRelaxRequiredFields(status);
+  if (!relaxed && !departureDate) return { error: 'Departure date is required.' };
+  if (!relaxed && (!departureTime || !arrivalTime)) return { error: 'Departure and arrival times are required.' };
+  if ((departureTime && !isValidTime(departureTime)) || (arrivalTime && !isValidTime(arrivalTime))) {
+    return { error: 'Enter valid departure and arrival times (HH:MM).' };
+  }
+  if (!relaxed && (!Array.isArray(draft.passengerIds) || draft.passengerIds.filter(Boolean).length === 0)) {
     return { error: 'Select at least one passenger' };
   }
   const payload = buildFlightPayload(draft as FlightEditDraft, tripId, defaultPayerId);
@@ -321,6 +339,7 @@ export const removeFlightApi = async (
 
 export const normalizeFlightFromApi = (f: any): Flight => ({
   ...f,
+  status: normalizeItineraryStatus(f.status, LEGACY_ITINERARY_STATUS),
   passenger_name: f.passenger_name ?? f.passengerName ?? '',
   passenger_ids: Array.isArray(f.passenger_ids)
     ? f.passenger_ids
@@ -423,6 +442,7 @@ const fallbackAirports: Airport[] = [
 
 const columns: { key: keyof Flight | 'actions' | 'costPerPerson'; label: string; minWidth?: number }[] = [
   { key: 'passenger_name', label: 'Passenger', minWidth: 130 },
+  { key: 'status', label: 'Status', minWidth: 120 },
   { key: 'departure_date', label: 'Departure Date' },
   { key: 'departure_location', label: 'Departure Location' },
   { key: 'departure_time', label: 'Departure Time' },
@@ -529,6 +549,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     const arrivalDate = normalizeDateString(draft.arrivalDate) || departureDate;
     return {
       id: localId,
+      status: normalizeItineraryStatus(draft.status, DEFAULT_NEW_ITINERARY_STATUS),
       passenger_name: draft.passengerName || 'Traveler',
       passenger_ids: draft.passengerIds ?? [],
       trip_id: activeTripId ?? 'wizard',
@@ -868,6 +889,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   const openFlightDetails = (flight: Flight) => {
     setEditingFlightId(flight.id);
     const base: FlightEditDraft = {
+      status: normalizeItineraryStatus((flight as any).status, LEGACY_ITINERARY_STATUS),
       passengerName: flight.passenger_name,
       passengerIds: Array.isArray(flight.passenger_ids) ? flight.passenger_ids : [],
       departureDate: normalizeDateString(flight.departure_date),
@@ -912,11 +934,15 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
 
   const saveFlightDetails = async () => {
     if (!editingFlightId || !editingFlight) return;
-    if (!isValidTime(editingFlight.departureTime) || !isValidTime(editingFlight.arrivalTime)) {
+    const relaxed = shouldRelaxRequiredFields(editingFlight.status);
+    if (
+      (editingFlight.departureTime && !isValidTime(editingFlight.departureTime)) ||
+      (editingFlight.arrivalTime && !isValidTime(editingFlight.arrivalTime))
+    ) {
       alert('Enter valid departure and arrival times (HH:MM).');
       return;
     }
-    if (!editingFlight.passengerIds.length) {
+    if (!relaxed && !editingFlight.passengerIds.length) {
       alert('Select at least one passenger');
       return;
     }
@@ -982,7 +1008,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       return false;
     }
 
-    if (!newFlight.passengerIds.length) {
+    if (!shouldRelaxRequiredFields(newFlight.status) && !newFlight.passengerIds.length) {
       alert('Select at least one passenger');
       return false;
     }
@@ -1246,6 +1272,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                 }
                 const valueMap: Record<string, string> = {
                   passenger_name: buildPassengerName(newFlight.passengerIds) || 'Select passengers',
+                  status: normalizeItineraryStatus(newFlight.status, DEFAULT_NEW_ITINERARY_STATUS),
                   departure_date: newFlight.departureDate,
                   departure_location: newFlight.departureLocation,
                   departure_time: newFlight.departureTime,
@@ -1260,6 +1287,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                 };
 
                 const setters: Record<string, (text: string) => void> = {
+                  status: (text) => setNewFlight((prev) => ({ ...prev, status: normalizeItineraryStatus(text, DEFAULT_NEW_ITINERARY_STATUS) })),
                   departure_date: (text) =>
                     setNewFlight((prev) => {
                       const nextArrival = !prev.arrivalDate || prev.arrivalDate === prev.departureDate ? text : prev.arrivalDate;
@@ -1295,6 +1323,35 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                       >
                         <Text style={styles.cellText}>{displayName}</Text>
                       </TouchableOpacity>
+                    </View>
+                  );
+                }
+
+                if (col.key === 'status') {
+                  return (
+                    <View
+                      key={`input-${col.key}`}
+                      style={[
+                        styles.cell,
+                        { minWidth: col.minWidth ?? 120, flex: 1 },
+                        isLast && styles.lastCell,
+                      ]}
+                    >
+                      {Platform.OS === 'web' ? (
+                        <select
+                          value={valueMap.status}
+                          onChange={(e) => setters.status(e.target.value)}
+                          style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
+                        >
+                          {['Needed', 'Proposed', 'Booked', 'Cancelled', 'Completed'].map((opt) => (
+                            <option key={opt} value={opt}>
+                              {opt}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <Text style={styles.cellText}>{valueMap.status}</Text>
+                      )}
                     </View>
                   );
                 }

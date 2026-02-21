@@ -4,6 +4,7 @@ import { type MapApp, isMapApp } from '../utils/mapLinks';
 import FamilyRelationships from './FamilyRelationships';
 import AccountTraits from './AccountTraits';
 import AccountProfileManagement from './AccountProfileManagement';
+import { type Trait } from './traits';
 
 type Setter<T> = React.Dispatch<React.SetStateAction<T>>;
 

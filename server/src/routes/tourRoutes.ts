@@ -2,6 +2,7 @@ import { Router } from 'express';
 import bodyParser from 'body-parser';
 import { authenticate } from '../auth';
 import { deleteExpenseForSource, deleteTour, ensureUserInTrip, insertTour, listGroupMembers, listTours, updateTour, upsertExpenseForSource } from '../db';
+import { normalizeItineraryStatus, shouldRelaxRequiredFields } from '../utils/itineraryStatus';
 
 // Tours API: CRUD for tours scoped to the authenticated user / their group trips.
 const router = Router();
@@ -17,8 +18,10 @@ router.get('/', async (req, res) => {
 
 router.post('/', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const { tripId, date, name, startLocation, startTime, duration, cost, freeCancelBy, bookedOn, reference, paidBy, travelerIds } = req.body;
-  if (!tripId || !date || !name) {
+  const { tripId, date, name, startLocation, startTime, duration, cost, freeCancelBy, bookedOn, reference, paidBy, travelerIds, status: incomingStatus } = req.body;
+  const status = normalizeItineraryStatus(incomingStatus);
+  const relaxed = shouldRelaxRequiredFields(status);
+  if (!tripId || (!relaxed && (!date || !name))) {
     res.status(400).json({ error: 'Missing required fields' });
     return;
   }
@@ -30,7 +33,8 @@ router.post('/', async (req, res) => {
   const tour = await insertTour({
     userId,
     tripId,
-    date,
+    status,
+    date: date || new Date().toISOString().slice(0, 10),
     name,
     startLocation: startLocation ?? '',
     startTime: startTime ?? '',
@@ -51,7 +55,7 @@ router.post('/', async (req, res) => {
     userId,
     tripId,
     groupId: tripGroup.groupId,
-    expenseDate: date,
+    expenseDate: date || new Date().toISOString().slice(0, 10),
     category: 'Tours',
     amount: Number(cost) || 0,
     currency: undefined,
@@ -66,9 +70,11 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const id = req.params.id;
-  const { date, name, startLocation, startTime, duration, cost, freeCancelBy, bookedOn, reference, paidBy, travelerIds } = req.body;
+  const { date, name, startLocation, startTime, duration, cost, freeCancelBy, bookedOn, reference, paidBy, travelerIds, status: incomingStatus } = req.body;
   const normalizedPaidBy = Array.isArray(paidBy) ? (paidBy.length ? paidBy : undefined) : undefined;
+  const finalStatus = typeof incomingStatus === 'undefined' ? undefined : normalizeItineraryStatus(incomingStatus);
   const updated = await updateTour(id, userId, {
+    status: finalStatus,
     date,
     name,
     startLocation,
@@ -113,9 +119,11 @@ router.put('/:id', async (req, res) => {
 router.patch('/:id', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const id = req.params.id;
-  const { date, name, startLocation, startTime, duration, cost, freeCancelBy, bookedOn, reference, paidBy, travelerIds } = req.body;
+  const { date, name, startLocation, startTime, duration, cost, freeCancelBy, bookedOn, reference, paidBy, travelerIds, status: incomingStatus } = req.body;
   const normalizedPaidBy = Array.isArray(paidBy) ? (paidBy.length ? paidBy : undefined) : undefined;
+  const finalStatus = typeof incomingStatus === 'undefined' ? undefined : normalizeItineraryStatus(incomingStatus);
   const updated = await updateTour(id, userId, {
+    status: finalStatus,
     date,
     name,
     startLocation,

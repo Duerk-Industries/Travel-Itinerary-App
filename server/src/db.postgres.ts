@@ -403,6 +403,7 @@ export const initDb = async (): Promise<void> => {
       id UUID PRIMARY KEY,
       user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       trip_id UUID REFERENCES trips(id) ON DELETE SET NULL,
+      status TEXT NOT NULL DEFAULT 'Booked',
       passenger_name TEXT NOT NULL,
       passenger_ids JSONB DEFAULT '[]'::jsonb,
       departure_date DATE NOT NULL,
@@ -439,6 +440,7 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE flights ADD COLUMN IF NOT EXISTS layover_location_code TEXT;`);
   await p.query(`ALTER TABLE flights ADD COLUMN IF NOT EXISTS arrival_date DATE;`);
   await p.query(`ALTER TABLE flights ADD COLUMN IF NOT EXISTS trip_id UUID REFERENCES trips(id) ON DELETE SET NULL;`);
+  await p.query(`ALTER TABLE flights ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'Booked';`);
   await p.query(`ALTER TABLE flights ADD COLUMN IF NOT EXISTS paid_by JSONB DEFAULT '[]'::jsonb;`);
   await p.query(`ALTER TABLE flights ADD COLUMN IF NOT EXISTS passenger_ids JSONB DEFAULT '[]'::jsonb;`);
 
@@ -447,6 +449,7 @@ export const initDb = async (): Promise<void> => {
       id UUID PRIMARY KEY,
       user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       trip_id UUID REFERENCES trips(id) ON DELETE SET NULL,
+      status TEXT NOT NULL DEFAULT 'Booked',
       name TEXT NOT NULL,
       check_in_date DATE NOT NULL,
       check_out_date DATE NOT NULL,
@@ -468,6 +471,7 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS cost_per_night NUMERIC NOT NULL DEFAULT 0;`);
   await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS address TEXT;`);
   await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS place_id TEXT;`);
+  await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'Booked';`);
   await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS paid_by JSONB DEFAULT '[]'::jsonb;`);
   await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS traveler_ids JSONB DEFAULT '[]'::jsonb;`);
   await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS image_url TEXT;`);
@@ -477,6 +481,7 @@ export const initDb = async (): Promise<void> => {
       id UUID PRIMARY KEY,
       user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       trip_id UUID REFERENCES trips(id) ON DELETE SET NULL,
+      status TEXT NOT NULL DEFAULT 'Booked',
       date DATE NOT NULL,
       name TEXT NOT NULL,
       start_location TEXT,
@@ -492,6 +497,7 @@ export const initDb = async (): Promise<void> => {
   `);
   await p.query(`ALTER TABLE tours ADD COLUMN IF NOT EXISTS paid_by JSONB DEFAULT '[]'::jsonb;`);
   await p.query(`ALTER TABLE tours ADD COLUMN IF NOT EXISTS booked_on TEXT;`);
+  await p.query(`ALTER TABLE tours ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'Booked';`);
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS airports (
@@ -1145,14 +1151,15 @@ export const insertFlight = async (
 
   const id = randomUUID();
   const query = `INSERT INTO flights (
-    id, user_id, trip_id, passenger_name, passenger_ids, departure_date, departure_location, departure_airport_code, departure_time,
+    id, user_id, trip_id, status, passenger_name, passenger_ids, departure_date, departure_location, departure_airport_code, departure_time,
     arrival_location, arrival_airport_code, layover_location, layover_location_code, layover_duration,
     arrival_date, arrival_time, cost, carrier, flight_number, booking_reference, paid_by
-  ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
+  ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)
   RETURNING
     id,
     user_id as "userId",
     trip_id as "tripId",
+    status,
     passenger_name as "passengerName",
     passenger_ids,
     departure_date as "departureDate",
@@ -1177,6 +1184,7 @@ export const insertFlight = async (
     id,
     flight.userId,
     flight.tripId,
+    flight.status,
     flight.passengerName,
     JSON.stringify(flight.passengerIds ?? []),
     flight.departureDate,
@@ -1269,27 +1277,29 @@ export const updateFlight = async (
     const { rows } = await p.query(
       `UPDATE flights
        SET passenger_name = COALESCE($1, passenger_name),
-           departure_date = COALESCE($2, departure_date),
-           departure_location = COALESCE($3, departure_location),
-           departure_airport_code = COALESCE($4, departure_airport_code),
-           departure_time = COALESCE($5, departure_time),
-           arrival_location = COALESCE($6, arrival_location),
-           arrival_airport_code = COALESCE($7, arrival_airport_code),
-           layover_location = COALESCE($8, layover_location),
-           layover_location_code = COALESCE($9, layover_location_code),
-           layover_duration = COALESCE($10, layover_duration),
-           arrival_date = COALESCE($11, arrival_date),
-           arrival_time = COALESCE($12, arrival_time),
-           cost = COALESCE($13, cost),
-           carrier = COALESCE($14, carrier),
-           flight_number = COALESCE($15, flight_number),
-           booking_reference = COALESCE($16, booking_reference),
-           paid_by = COALESCE($17::jsonb, paid_by),
-           passenger_ids = COALESCE($18::jsonb, passenger_ids)
-      WHERE id = $19 AND user_id = $20
+           status = COALESCE($2, status),
+           departure_date = COALESCE($3, departure_date),
+           departure_location = COALESCE($4, departure_location),
+           departure_airport_code = COALESCE($5, departure_airport_code),
+           departure_time = COALESCE($6, departure_time),
+           arrival_location = COALESCE($7, arrival_location),
+           arrival_airport_code = COALESCE($8, arrival_airport_code),
+           layover_location = COALESCE($9, layover_location),
+           layover_location_code = COALESCE($10, layover_location_code),
+           layover_duration = COALESCE($11, layover_duration),
+           arrival_date = COALESCE($12, arrival_date),
+           arrival_time = COALESCE($13, arrival_time),
+           cost = COALESCE($14, cost),
+           carrier = COALESCE($15, carrier),
+           flight_number = COALESCE($16, flight_number),
+           booking_reference = COALESCE($17, booking_reference),
+           paid_by = COALESCE($18::jsonb, paid_by),
+           passenger_ids = COALESCE($19::jsonb, passenger_ids)
+      WHERE id = $20 AND user_id = $21
       RETURNING *`,
       [
         updates.passengerName ?? null,
+        updates.status ?? null,
         updates.departureDate ?? null,
         departureCode,
         departureCode,
@@ -1328,31 +1338,33 @@ export const updateFlight = async (
   const { rows } = await p.query<Flight>(
     `UPDATE flights f
      SET passenger_name = COALESCE($1, f.passenger_name),
-         departure_date = COALESCE($2, f.departure_date),
-         departure_location = COALESCE($3, f.departure_location),
-         departure_airport_code = COALESCE($4, f.departure_airport_code),
-         departure_time = COALESCE($5, f.departure_time),
-         arrival_location = COALESCE($6, f.arrival_location),
-         arrival_airport_code = COALESCE($7, f.arrival_airport_code),
-         layover_location = COALESCE($8, f.layover_location),
-         layover_location_code = COALESCE($9, f.layover_location_code),
-         layover_duration = COALESCE($10, f.layover_duration),
-         arrival_date = COALESCE($11, f.arrival_date),
-         arrival_time = COALESCE($12, f.arrival_time),
-         cost = COALESCE($13, f.cost),
-         carrier = COALESCE($14, f.carrier),
-         flight_number = COALESCE($15, f.flight_number),
-         booking_reference = COALESCE($16, f.booking_reference),
-         paid_by = COALESCE($17::jsonb, f.paid_by),
-         passenger_ids = COALESCE($18::jsonb, f.passenger_ids)
+         status = COALESCE($2, f.status),
+         departure_date = COALESCE($3, f.departure_date),
+         departure_location = COALESCE($4, f.departure_location),
+         departure_airport_code = COALESCE($5, f.departure_airport_code),
+         departure_time = COALESCE($6, f.departure_time),
+         arrival_location = COALESCE($7, f.arrival_location),
+         arrival_airport_code = COALESCE($8, f.arrival_airport_code),
+         layover_location = COALESCE($9, f.layover_location),
+         layover_location_code = COALESCE($10, f.layover_location_code),
+         layover_duration = COALESCE($11, f.layover_duration),
+         arrival_date = COALESCE($12, f.arrival_date),
+         arrival_time = COALESCE($13, f.arrival_time),
+         cost = COALESCE($14, f.cost),
+         carrier = COALESCE($15, f.carrier),
+         flight_number = COALESCE($16, f.flight_number),
+         booking_reference = COALESCE($17, f.booking_reference),
+         paid_by = COALESCE($18::jsonb, f.paid_by),
+         passenger_ids = COALESCE($19::jsonb, f.passenger_ids)
     FROM trips t
-    WHERE f.id = $19
+    WHERE f.id = $20
       AND t.id = f.trip_id
       -- allow edits by any member of the trip's group
-      AND t.group_id IN (SELECT group_id FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $20)
+      AND t.group_id IN (SELECT group_id FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $21)
     RETURNING f.*`,
     [
       updates.passengerName,
+      updates.status ?? null,
       updates.departureDate,
       departureCode,
       departureCode,
@@ -1822,6 +1834,7 @@ export const getFlightForUser = async (flightId: string, userId: string): Promis
       `SELECT id,
               user_id as "userId",
               trip_id as "tripId",
+              status,
               passenger_name as "passengerName",
               COALESCE(passenger_ids, '[]'::jsonb) as passenger_ids,
               departure_date as "departureDate",
@@ -1860,6 +1873,7 @@ export const getFlightForUser = async (flightId: string, userId: string): Promis
        f.id,
        f.user_id as "userId",
        f.trip_id as "tripId",
+       f.status,
        f.passenger_name as "passengerName",
        f.departure_date as "departureDate",
        f.departure_location as "departureLocation",
@@ -1922,6 +1936,7 @@ export const listFlights = async (userId: string, tripId?: string): Promise<Flig
       SELECT id,
              user_id as "userId",
              trip_id as "tripId",
+             status,
              passenger_name as "passengerName",
              COALESCE(passenger_ids, '[]'::jsonb) as passenger_ids,
              departure_date as "departureDate",
@@ -2031,6 +2046,7 @@ export const listLodgings = async (userId: string, tripId?: string | null): Prom
       SELECT l.id,
              l.user_id as "userId",
              l.trip_id as "tripId",
+             l.status,
              l.name,
              l.check_in_date as "checkInDate",
              l.check_out_date as "checkOutDate",
@@ -2075,6 +2091,7 @@ export const listLodgings = async (userId: string, tripId?: string | null): Prom
 export const insertLodging = async (lodging: {
   userId: string;
   tripId: string;
+  status: string;
   name: string;
   checkInDate: string;
   checkOutDate: string;
@@ -2093,12 +2110,13 @@ export const insertLodging = async (lodging: {
   const { rows } = await p.query(
     `
       INSERT INTO lodgings (
-        id, user_id, trip_id, name, check_in_date, check_out_date, rooms, refund_by, total_cost, cost_per_night, address, place_id, paid_by, traveler_ids, image_url
+        id, user_id, trip_id, status, name, check_in_date, check_out_date, rooms, refund_by, total_cost, cost_per_night, address, place_id, paid_by, traveler_ids, image_url
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
       RETURNING id,
                 user_id as "userId",
                 trip_id as "tripId",
+                status,
                 name,
                 check_in_date as "checkInDate",
                 check_out_date as "checkOutDate",
@@ -2117,6 +2135,7 @@ export const insertLodging = async (lodging: {
       id,
       lodging.userId,
       lodging.tripId,
+      lodging.status,
       lodging.name,
       lodging.checkInDate,
       lodging.checkOutDate,
@@ -2191,6 +2210,7 @@ export const updateLodging = async (
     lodgingId,
     userId,
     updates.name ?? null,
+    updates.status ?? null,
     updates.check_in_date ?? null,
     updates.check_out_date ?? null,
     updates.rooms ?? null,
@@ -2211,23 +2231,25 @@ export const updateLodging = async (
         UPDATE lodgings
         SET
           name = COALESCE($3, name),
-          check_in_date = COALESCE($4, check_in_date),
-          check_out_date = COALESCE($5, check_out_date),
-          rooms = COALESCE($6, rooms),
-          refund_by = COALESCE($7, refund_by),
-          total_cost = COALESCE($8, total_cost),
-          cost_per_night = COALESCE($9, cost_per_night),
-          address = COALESCE($10, address),
-          place_id = COALESCE($11, place_id),
-          image_url = COALESCE($12, image_url),
-          paid_by = COALESCE($13::jsonb, paid_by),
-          traveler_ids = COALESCE($14::jsonb, traveler_ids),
-          trip_id = COALESCE($15, trip_id)
+          status = COALESCE($4, status),
+          check_in_date = COALESCE($5, check_in_date),
+          check_out_date = COALESCE($6, check_out_date),
+          rooms = COALESCE($7, rooms),
+          refund_by = COALESCE($8, refund_by),
+          total_cost = COALESCE($9, total_cost),
+          cost_per_night = COALESCE($10, cost_per_night),
+          address = COALESCE($11, address),
+          place_id = COALESCE($12, place_id),
+          image_url = COALESCE($13, image_url),
+          paid_by = COALESCE($14::jsonb, paid_by),
+          traveler_ids = COALESCE($15::jsonb, traveler_ids),
+          trip_id = COALESCE($16, trip_id)
         WHERE id = $1
         RETURNING
           id,
           user_id as "userId",
           trip_id as "tripId",
+          status,
           name,
           check_in_date as "checkInDate",
           check_out_date as "checkOutDate",
@@ -2246,27 +2268,29 @@ export const updateLodging = async (
         UPDATE lodgings l
         SET
           name = COALESCE($3, l.name),
-          check_in_date = COALESCE($4, l.check_in_date),
-          check_out_date = COALESCE($5, l.check_out_date),
-          rooms = COALESCE($6, l.rooms),
-          refund_by = COALESCE($7, l.refund_by),
-          total_cost = COALESCE($8, l.total_cost),
-          cost_per_night = COALESCE($9, l.cost_per_night),
-          address = COALESCE($10, l.address),
-          place_id = COALESCE($11, l.place_id),
-          image_url = COALESCE($12, l.image_url),
-          paid_by = COALESCE($13::jsonb, l.paid_by),
-          traveler_ids = COALESCE($14::jsonb, l.traveler_ids),
-          trip_id = COALESCE($15, l.trip_id)
+          status = COALESCE($4, l.status),
+          check_in_date = COALESCE($5, l.check_in_date),
+          check_out_date = COALESCE($6, l.check_out_date),
+          rooms = COALESCE($7, l.rooms),
+          refund_by = COALESCE($8, l.refund_by),
+          total_cost = COALESCE($9, l.total_cost),
+          cost_per_night = COALESCE($10, l.cost_per_night),
+          address = COALESCE($11, l.address),
+          place_id = COALESCE($12, l.place_id),
+          image_url = COALESCE($13, l.image_url),
+          paid_by = COALESCE($14::jsonb, l.paid_by),
+          traveler_ids = COALESCE($15::jsonb, l.traveler_ids),
+          trip_id = COALESCE($16, l.trip_id)
         FROM trips t
         WHERE l.id = $1
-          AND t.id = COALESCE($15, l.trip_id)
+          AND t.id = COALESCE($16, l.trip_id)
           -- allow edits by any member of the trip's group
           AND t.group_id IN (SELECT group_id FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $2)
         RETURNING
           l.id,
           l.user_id as "userId",
           l.trip_id as "tripId",
+          l.status,
           l.name,
           l.check_in_date as "checkInDate",
           l.check_out_date as "checkOutDate",
@@ -2304,6 +2328,7 @@ export const listTours = async (userId: string, tripId?: string): Promise<Tour[]
       tu.id,
       tu.user_id as "userId",
       tu.trip_id as "tripId",
+      tu.status,
       to_char(tu.date, 'YYYY-MM-DD') as date,
       tu.name,
       tu.start_location as "startLocation",
@@ -2340,14 +2365,15 @@ export const insertTour = async (tour: Omit<Tour, 'id' | 'createdAt'>): Promise<
   const { rows } = await p.query<Tour>(
     `
     INSERT INTO tours (
-      id, user_id, trip_id, date, name, start_location, start_time, duration, cost, free_cancel_by, booked_on, reference, paid_by
+      id, user_id, trip_id, status, date, name, start_location, start_time, duration, cost, free_cancel_by, booked_on, reference, paid_by
     ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
     )
     RETURNING
       id,
       user_id as "userId",
       trip_id as "tripId",
+      status,
       to_char(date, 'YYYY-MM-DD') as date,
       name,
       start_location as "startLocation",
@@ -2364,6 +2390,7 @@ export const insertTour = async (tour: Omit<Tour, 'id' | 'createdAt'>): Promise<
       id,
       tour.userId,
       tour.tripId,
+      tour.status,
       tour.date,
       tour.name,
       tour.startLocation,
@@ -2387,21 +2414,23 @@ export const updateTour = async (id: string, userId: string, tour: Partial<Tour>
     `
     UPDATE tours
     SET
-      date = COALESCE($3, date),
-      name = COALESCE($4, name),
-      start_location = COALESCE($5, start_location),
-      start_time = COALESCE($6, start_time),
-      duration = COALESCE($7, duration),
-      cost = COALESCE($8, cost),
-      free_cancel_by = COALESCE($9, free_cancel_by),
-      booked_on = COALESCE($10, booked_on),
-      reference = COALESCE($11, reference),
-      paid_by = COALESCE($12::jsonb, paid_by)
+      status = COALESCE($3, status),
+      date = COALESCE($4, date),
+      name = COALESCE($5, name),
+      start_location = COALESCE($6, start_location),
+      start_time = COALESCE($7, start_time),
+      duration = COALESCE($8, duration),
+      cost = COALESCE($9, cost),
+      free_cancel_by = COALESCE($10, free_cancel_by),
+      booked_on = COALESCE($11, booked_on),
+      reference = COALESCE($12, reference),
+      paid_by = COALESCE($13::jsonb, paid_by)
     WHERE id = $1 AND user_id = $2
     RETURNING
       id,
       user_id as "userId",
       trip_id as "tripId",
+      status,
       to_char(date, 'YYYY-MM-DD') as date,
       name,
       start_location as "startLocation",
@@ -2417,6 +2446,7 @@ export const updateTour = async (id: string, userId: string, tour: Partial<Tour>
     [
       id,
       userId,
+      tour.status ?? null,
       tour.date ?? null,
       tour.name ?? null,
       tour.startLocation ?? null,

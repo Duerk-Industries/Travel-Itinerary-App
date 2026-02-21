@@ -1,7 +1,14 @@
 import { sanitizeCostInput } from '../utils/sanitizeCost';
+import {
+  DEFAULT_NEW_ITINERARY_STATUS,
+  type ItineraryStatus,
+  normalizeItineraryStatus,
+  shouldRelaxRequiredFields,
+} from '../utils/itineraryStatus';
 
 export type CarRental = {
   id: string;
+  status: ItineraryStatus;
   pickupLocation: string;
   pickupDate: string;
   dropoffLocation: string;
@@ -17,6 +24,7 @@ export type CarRental = {
 };
 
 export type CarRentalDraft = {
+  status: ItineraryStatus;
   pickupLocation: string;
   pickupDate: string;
   dropoffLocation: string;
@@ -32,6 +40,7 @@ export type CarRentalDraft = {
 };
 
 export const createInitialCarRentalDraft = (): CarRentalDraft => ({
+  status: DEFAULT_NEW_ITINERARY_STATUS,
   pickupLocation: '',
   pickupDate: '',
   dropoffLocation: '',
@@ -51,7 +60,8 @@ export const buildCarRentalFromDraft = (
   defaultPayerId?: string | null,
   defaultTravelerIds: string[] = []
 ): { rental?: CarRental; error?: string } => {
-  if (!draft.vendor.trim() && !draft.model.trim() && !draft.pickupLocation.trim()) {
+  const status = normalizeItineraryStatus(draft.status, DEFAULT_NEW_ITINERARY_STATUS);
+  if (!shouldRelaxRequiredFields(status) && !draft.vendor.trim() && !draft.model.trim() && !draft.pickupLocation.trim()) {
     return { error: 'Enter at least a pickup location, vendor, or car model.' };
   }
   const cleanCost = sanitizeCostInput(draft.cost || '');
@@ -59,6 +69,7 @@ export const buildCarRentalFromDraft = (
   const travelerIds = draft.travelerIds.length ? draft.travelerIds : paidBy.length ? paidBy : defaultTravelerIds;
   const rental: CarRental = {
     id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    status,
     pickupLocation: draft.pickupLocation.trim(),
     pickupDate: draft.pickupDate.trim(),
     dropoffLocation: draft.dropoffLocation.trim(),

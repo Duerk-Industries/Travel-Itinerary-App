@@ -17,6 +17,7 @@ import {
   listGroupMembers,
 } from '../db';
 import { isEmailConfigured, sendShareEmail } from '../mailer';
+import { normalizeItineraryStatus, shouldRelaxRequiredFields } from '../utils/itineraryStatus';
 
 // Flights API: CRUD for flights scoped to the authenticated user / their group trips.
 const router = Router();
@@ -62,15 +63,17 @@ router.post('/', async (req, res) => {
     bookingReference,
     tripId,
     paidBy,
+    status: incomingStatus,
   } = req.body;
-  if (!Array.isArray(passengerIds) || passengerIds.length === 0 || !departureDate || !departureTime || !arrivalTime || !tripId) {
+  const status = normalizeItineraryStatus(incomingStatus);
+  const relaxed = shouldRelaxRequiredFields(status);
+  if ((!relaxed && (!Array.isArray(passengerIds) || passengerIds.length === 0 || !departureDate || !departureTime || !arrivalTime)) || !tripId) {
     res.status(400).json({ error: 'Missing required fields (need at least one passenger)' });
     return;
   }
   const normalizedCarrier = typeof carrier === 'string' ? carrier : '';
   const normalizedFlightNumber = typeof flightNumber === 'string' ? flightNumber : '';
   const normalizedBookingReference = typeof bookingReference === 'string' ? bookingReference : '';
-  const allZeroPassengerIds = passengerIds.every((id: any) => String(id).startsWith('0000'));
   const tripGroup = (await ensureUserInTrip(tripId, userId)) || (process.env.USE_IN_MEMORY_DB === '1' ? { groupId: tripId } : null);
   if (!tripGroup) {
     res.status(403).json({ error: 'You must be in the group for this trip' });
@@ -79,23 +82,19 @@ router.post('/', async (req, res) => {
   const members = await listGroupMembers(tripGroup.groupId, userId);
   const memberIdSet = new Set(members.map((m) => String(m.id)));
   const validPassengerIds = new Set<string>(memberIdSet);
-  const normalizedPassengerIds = passengerIds.map((id: any) => String(id));
+  const normalizedPassengerIds = Array.isArray(passengerIds) ? passengerIds.map((id: any) => String(id)) : [];
   const allValid = normalizedPassengerIds.every((id: string) => validPassengerIds.has(id));
   const allZero = normalizedPassengerIds.every((id: string) => id.startsWith('0000'));
-  if (!allValid) {
+  if (normalizedPassengerIds.length && !allValid) {
     if (allZero) {
       res.status(400).json({ error: 'Passengers must be members of the trip group' });
       return;
-    }
-    if (process.env.USE_IN_MEMORY_DB === '1' && memberIdSet.size) {
-      // Fall back to the first member in tests to keep flows moving.
-      normalizedPassengerIds.splice(0, normalizedPassengerIds.length, Array.from(memberIdSet)[0]);
     }
   }
   const passengers = normalizedPassengerIds
     .map((id) => members.find((m) => String(m.id) === id))
     .filter(Boolean) as any[];
-  if (passengers.length !== normalizedPassengerIds.length && process.env.USE_IN_MEMORY_DB !== '1') {
+  if (normalizedPassengerIds.length && passengers.length !== normalizedPassengerIds.length && process.env.USE_IN_MEMORY_DB !== '1') {
     res.status(400).json({ error: 'Passengers must be members of the trip group' });
     return;
   }
@@ -110,19 +109,20 @@ router.post('/', async (req, res) => {
   const flight = await insertFlight({
     userId,
     tripId,
+    status,
     passengerName,
-    passengerIds,
-    departureDate,
+    passengerIds: normalizedPassengerIds,
+    departureDate: departureDate || new Date().toISOString().slice(0, 10),
     departureLocation,
     departureAirportCode,
-    departureTime,
+    departureTime: departureTime || '00:00',
     arrivalLocation,
     arrivalAirportCode,
     layoverLocation,
     layoverLocationCode,
     layoverDuration,
-    arrivalDate: arrivalDate || departureDate,
-    arrivalTime,
+    arrivalDate: arrivalDate || departureDate || new Date().toISOString().slice(0, 10),
+    arrivalTime: arrivalTime || '00:00',
     cost: Number(cost) ?? 0,
     carrier: normalizedCarrier,
     flightNumber: normalizedFlightNumber,
@@ -134,12 +134,12 @@ router.post('/', async (req, res) => {
       userId,
       tripId,
       groupId: tripGroup.groupId,
-      expenseDate: departureDate,
+      expenseDate: departureDate || new Date().toISOString().slice(0, 10),
       category: 'Flights',
       amount: Number(cost) ?? 0,
       currency: undefined,
       payerIds: normalizedPaidBy,
-      forIds: normalizedPassengerIds,
+      forIds: normalizedPassengerIds.length ? normalizedPassengerIds : normalizedPaidBy,
       sourceType: 'flight',
       sourceId: flight.id,
     });
@@ -167,6 +167,7 @@ router.patch('/:id', async (req, res) => {
     flightNumber,
     bookingReference,
     paidBy,
+    status: incomingStatus,
   } = req.body;
   const passengerIds = Array.isArray(req.body.passengerIds) ? req.body.passengerIds : null;
   const normalizedPaidBy = Array.isArray(paidBy) ? (paidBy.length ? paidBy : undefined) : undefined;
@@ -202,7 +203,7 @@ router.patch('/:id', async (req, res) => {
           normalizedPassengerIds.length === (flight.passengerIds as any[]).length &&
           normalizedPassengerIds.every((id: string) => (flight.passengerIds as any[]).includes(id));
         const allValid = normalizedPassengerIds.every((id: string) => memberIdSet.has(id));
-        if (!allValid && !matchesExisting) {
+        if (!allValid && !matchesExisting && !useInMemory) {
           throw new Error('Passengers must be members of the trip group');
         }
         const passengers = normalizedPassengerIds
@@ -221,6 +222,7 @@ router.patch('/:id', async (req, res) => {
     if (!passengerName) {
       passengerName = flight.passengerName || 'Passenger';
     }
+    const finalStatus = normalizeItineraryStatus(typeof incomingStatus === 'undefined' ? flight.status : incomingStatus);
 
     if (normalizedPaidBy) {
       const members = await listGroupMembers(tripGroup.groupId, userId);
@@ -233,6 +235,7 @@ router.patch('/:id', async (req, res) => {
 
     const updated = await updateFlight(req.params.id, userId, {
       passengerName,
+      status: finalStatus,
       passengerIds: normalizedPassengerIds ?? undefined,
       departureDate,
       departureLocation,
@@ -302,11 +305,14 @@ router.put('/:id', async (req, res) => {
     flightNumber,
     bookingReference,
     paidBy,
+    status: incomingStatus,
   } = req.body;
+  const finalStatus = normalizeItineraryStatus(incomingStatus);
   const normalizedPaidBy = Array.isArray(paidBy) ? (paidBy.length ? paidBy : undefined) : undefined;
   try {
     const updated = await updateFlight(req.params.id, userId, {
       passengerName,
+      status: finalStatus,
       departureDate,
       departureLocation,
       departureAirportCode,

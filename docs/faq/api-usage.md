@@ -30,6 +30,10 @@
 - Passenger/payer/traveler IDs are validated against trip/group members.
 - Covered-by rules reject cycles and conflict states.
 - Flights, lodging, and tours create/update routes synchronize source-backed expense records.
+- Flights, lodging, and tours accept a `status` field with values:
+  - `Needed`, `Proposed`, `Booked`, `Cancelled`, `Completed`
+  - Missing legacy status values default server-side to `Booked`.
+  - Business required fields are relaxed for `Needed`/`Cancelled`, and enforced for `Proposed`/`Booked`/`Completed`.
 
 ## What external APIs/services are used?
 

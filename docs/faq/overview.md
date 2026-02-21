@@ -10,3 +10,12 @@ It is a monorepo with:
 
 The app supports trip planning across flights, lodging, tours, itinerary notes/details, expenses, ledger/cost reporting, groups, and account/family management.
 
+Itinerary items now include a status lifecycle for flights, lodging, tours, and rental cars:
+- `Needed`
+- `Proposed`
+- `Booked`
+- `Cancelled`
+- `Completed`
+
+Business required fields are relaxed for `Needed` and `Cancelled`, and enforced for `Proposed`, `Booked`, and `Completed`.
+

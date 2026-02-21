@@ -37,6 +37,7 @@ describe('Persistence flows for flights and lodging', () => {
         {
           id: 'flight-1',
           passenger_name: 'Traveler',
+          status: 'Booked',
           passenger_ids: ['wizard-1'],
           trip_id: 'trip-1',
           departure_date: '2026-05-01',
@@ -76,6 +77,7 @@ describe('Persistence flows for flights and lodging', () => {
       id: 'lodging-1',
       userId: 'user-1',
       tripId: 'trip-1',
+      status: 'Booked',
       name: 'Test Hotel',
       checkInDate: '2026-05-01',
       checkOutDate: '2026-05-03',
@@ -113,6 +115,7 @@ describe('Persistence flows for flights and lodging', () => {
     fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
 
     const draft: FlightCreateDraft = {
+      status: 'Booked',
       passengerName: 'Traveler',
       passengerIds: ['member-1'],
       departureDate: '2026-06-01',
@@ -150,6 +153,7 @@ describe('Persistence flows for flights and lodging', () => {
     fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
 
     const draft: LodgingDraft = {
+      status: 'Booked',
       name: 'Test Hotel',
       checkInDate: '2026-06-01',
       checkOutDate: '2026-06-03',
@@ -221,6 +225,7 @@ describe('Persistence flows for flights and lodging', () => {
     fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
 
     const draft: TourDraft = {
+      status: 'Booked',
       name: 'Test Tour',
       date: '2026-06-01',
       startLocation: 'Test',

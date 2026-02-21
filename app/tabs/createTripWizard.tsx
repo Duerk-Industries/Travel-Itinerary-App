@@ -24,6 +24,13 @@ import { saveWizardFlights, saveWizardLodgings } from '../utils/wizardSaves';
 import { buildMapUrl, loadStoredMapPreference } from '../utils/mapLinks';
 import { toWebStyle } from '../utils/webStyle';
 import {
+  DEFAULT_NEW_ITINERARY_STATUS,
+  ITINERARY_STATUSES,
+  LEGACY_ITINERARY_STATUS,
+  normalizeItineraryStatus,
+  shouldRelaxRequiredFields,
+} from '../utils/itineraryStatus';
+import {
   TripDetails,
   TripDates,
   ParticipantInput,
@@ -798,12 +805,13 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
 
   const saveWizardLodging = (draft: LodgingDraft, lodgingId?: string | null, opts?: { addAnother?: boolean }) => {
     const name = draft.name.trim();
-    if (!name) {
+    const relaxed = shouldRelaxRequiredFields(draft.status);
+    if (!relaxed && !name) {
       setWizardError('Please enter a lodging name.');
       return;
     }
     const nights = calculateNights(draft.checkInDate, draft.checkOutDate);
-    if (nights <= 0) {
+    if (!relaxed && nights <= 0) {
       setWizardError('Check-out must be after check-in.');
       return;
     }
@@ -814,6 +822,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
       id: lodgingId ?? `wizard-lodging-${Date.now()}-${Math.round(Math.random() * 10000)}`,
       userId: '',
       tripId: '',
+      status: normalizeItineraryStatus(draft.status, DEFAULT_NEW_ITINERARY_STATUS),
       name,
       checkInDate: normalizeDateString(draft.checkInDate),
       checkOutDate: normalizeDateString(draft.checkOutDate),
@@ -1803,6 +1812,9 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                   <View style={[styles.cell, styles.lodgingDateCol]}>
                     <Text style={styles.headerText}>Check-out</Text>
                   </View>
+                  <View style={[styles.cell, styles.lodgingDateCol]}>
+                    <Text style={styles.headerText}>Status</Text>
+                  </View>
                   <View style={[styles.cell, styles.lodgingRoomsCol]}>
                     <Text style={styles.headerText}>Rooms</Text>
                   </View>
@@ -1836,6 +1848,9 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     </View>
                     <View style={[styles.cell, styles.lodgingDateCol]}>
                       <Text style={[styles.cellText, styles.cellTextWrap]}>{formatDateLong(normalizeDateString(l.checkOutDate))}</Text>
+                    </View>
+                    <View style={[styles.cell, styles.lodgingDateCol]}>
+                      <Text style={[styles.cellText, styles.cellTextWrap]}>{normalizeItineraryStatus((l as any).status, LEGACY_ITINERARY_STATUS)}</Text>
                     </View>
                     <View style={[styles.cell, styles.lodgingRoomsCol]}>
                       <Text style={[styles.cellText, styles.cellTextWrap]}>{l.rooms || '-'}</Text>
@@ -1952,7 +1967,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
               <View style={styles.table}>
                 <View style={[styles.tableRow, styles.tableHeader]}>
-                  {['Pick Up Location', 'Pick Up Date', 'Drop Off Location', 'Drop Off Date', 'Reference', 'Vendor', 'Prepaid?', 'Cost', 'Car Model', 'Notes', 'For', 'Paid By', 'Actions'].map((label, idx, arr) => (
+                {['Pick Up Location', 'Pick Up Date', 'Drop Off Location', 'Drop Off Date', 'Status', 'Reference', 'Vendor', 'Prepaid?', 'Cost', 'Car Model', 'Notes', 'For', 'Paid By', 'Actions'].map((label, idx, arr) => (
                     <View
                       key={label}
                       style={[styles.cell, { minWidth: 140, flex: 1 }, idx === arr.length - 1 && styles.lastCell]}
@@ -1974,6 +1989,9 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     </View>
                     <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
                       <Text style={styles.cellText}>{car.dropoffDate || '-'}</Text>
+                    </View>
+                    <View style={[styles.cell, { minWidth: 130, flex: 1 }]}>
+                      <Text style={styles.cellText}>{normalizeItineraryStatus((car as any).status, LEGACY_ITINERARY_STATUS)}</Text>
                     </View>
                     <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
                       <Text style={styles.cellText}>{car.reference || '-'}</Text>
@@ -2080,6 +2098,28 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                           <Text style={styles.selectCaret}>v</Text>
                       </TouchableOpacity>
                     </View>
+                  </View>
+                  <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                    {Platform.OS === 'web' ? (
+                      <select
+                        value={normalizeItineraryStatus(wizardCarDraft.status, DEFAULT_NEW_ITINERARY_STATUS)}
+                        onChange={(e) =>
+                          setWizardCarDraft((p) => ({
+                            ...p,
+                            status: normalizeItineraryStatus(e.target.value, DEFAULT_NEW_ITINERARY_STATUS),
+                          }))
+                        }
+                        style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
+                      >
+                        {ITINERARY_STATUSES.map((opt) => (
+                          <option key={`wizard-car-status-${opt}`} value={opt}>
+                            {opt}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <Text style={styles.cellText}>{normalizeItineraryStatus(wizardCarDraft.status, DEFAULT_NEW_ITINERARY_STATUS)}</Text>
+                    )}
                   </View>
                   <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
                     <TextInput

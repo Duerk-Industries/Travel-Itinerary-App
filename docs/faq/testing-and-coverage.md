@@ -20,6 +20,10 @@
 
 Coverage includes auth/account lifecycle, invites and membership effects, trip wizard/location flows, flights/lodging/tours + expense sync, ledger/cost-report consistency, and core UI helpers/components.
 
+Recent coverage additions include itinerary status behavior for flights/lodging/tours/car rentals:
+- Status defaulting for new vs legacy items.
+- Status-based required-field relaxation (`Needed`/`Cancelled`) vs enforcement (`Proposed`/`Booked`/`Completed`).
+
 ## Is there a global coverage gate?
 
 - No explicit `collectCoverage`/coverage threshold enforcement in current Jest configs/scripts.

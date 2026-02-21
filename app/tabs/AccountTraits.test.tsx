@@ -1,10 +1,10 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import AccountTraits from '../tabs/AccountTraits';
+import AccountTraits from './AccountTraits';
 
 // Mock the child component
-jest.mock('../tabs/traits', () => ({
-  TraitsTab: (props) => <div data-testid="traits-tab" {...props} />,
+jest.mock('./traits', () => ({
+  TraitsTab: (props: any) => <div data-testid="traits-tab" {...props} />,
 }));
 
 const styles = {
@@ -19,7 +19,7 @@ describe('AccountTraits', () => {
     jsonHeaders: {},
     traits: [],
     setTraits: jest.fn(),
-    selectedTraitNames: new Set(),
+    selectedTraitNames: new Set<string>(),
     setSelectedTraitNames: jest.fn(),
     traitAge: '',
     setTraitAge: jest.fn(),

@@ -129,10 +129,10 @@ const AccountProfileManagement = ({
         </View>
       ) : null}
       <View style={styles.row}>
-        <TextInput style={[styles.input, { flex: 1 }]} placeholder="First name" value={accountProfile.firstName} onChangeText={(text) => setAccountProfile((p) => ({ ...p, firstName: text }))} />
-        <TextInput style={[styles.input, { flex: 1 }]} placeholder="Last name" value={accountProfile.lastName} onChangeText={(text) => setAccountProfile((p) => ({ ...p, lastName: text }))} />
+        <TextInput style={[styles.input, { flex: 1 }]} placeholder="First name" value={accountProfile.firstName} onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, firstName: text }))} />
+        <TextInput style={[styles.input, { flex: 1 }]} placeholder="Last name" value={accountProfile.lastName} onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, lastName: text }))} />
       </View>
-      <TextInput style={styles.input} placeholder="Email" autoCapitalize="none" keyboardType="email-address" value={accountProfile.email} onChangeText={(text) => setAccountProfile((p) => ({ ...p, email: text }))} />
+      <TextInput style={styles.input} placeholder="Email" autoCapitalize="none" keyboardType="email-address" value={accountProfile.email} onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, email: text }))} />
       <Text style={styles.modalLabel}>Preferred maps app</Text>
       <View style={[styles.row, { flexWrap: 'wrap' }]}>
         {mapAppOptions.map((opt) => (
@@ -167,9 +167,9 @@ const AccountProfileManagement = ({
       ) : (
         <>
           <Text style={styles.modalLabel}>Change password</Text>
-          <TextInput style={styles.input} placeholder="Current password" secureTextEntry value={passwordForm.currentPassword} onChangeText={(text) => setPasswordForm(p => ({ ...p, currentPassword: text }))} />
-          <TextInput style={styles.input} placeholder="New password" secureTextEntry value={passwordForm.newPassword} onChangeText={(text) => setPasswordForm(p => ({ ...p, newPassword: text }))} />
-          <TextInput style={styles.input} placeholder="Confirm new password" secureTextEntry value={passwordForm.newPasswordConfirm} onChangeText={(text) => setPasswordForm(p => ({ ...p, newPasswordConfirm: text }))} />
+          <TextInput style={styles.input} placeholder="Current password" secureTextEntry value={passwordForm.currentPassword} onChangeText={(text: string) => setPasswordForm(p => ({ ...p, currentPassword: text }))} />
+          <TextInput style={styles.input} placeholder="New password" secureTextEntry value={passwordForm.newPassword} onChangeText={(text: string) => setPasswordForm(p => ({ ...p, newPassword: text }))} />
+          <TextInput style={styles.input} placeholder="Confirm new password" secureTextEntry value={passwordForm.newPasswordConfirm} onChangeText={(text: string) => setPasswordForm(p => ({ ...p, newPasswordConfirm: text }))} />
           <View style={styles.row}>
             <TouchableOpacity
               style={[styles.button, styles.dangerButton, { flex: 1 }]}

@@ -3,6 +3,7 @@ import { StyleSheet, ScrollView, Text, View, TouchableOpacity, useWindowDimensio
 import { type Lodging, fetchPlaceDetailsApi, type PlaceDetailsPayload } from '../tabs/lodging';
 import { formatDateLong } from '../utils/formatDateLong';
 import { buildStaticMapUrl } from '../utils/googleMaps';
+import { LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from '../utils/itineraryStatus';
 
 type DetailRow = {
   label: string;
@@ -163,7 +164,7 @@ const LodgingDetailsDialog: React.FC<LodgingDetailsDialogProps> = ({
               </Text>
             </View>
             <View style={detailStyles.statusBadge}>
-              <Text style={detailStyles.statusText}>Confirmed</Text>
+              <Text style={detailStyles.statusText}>{normalizeItineraryStatus(lodging.status, LEGACY_ITINERARY_STATUS)}</Text>
             </View>
           </View>
           <View style={detailStyles.detailList}>
@@ -172,6 +173,7 @@ const LodgingDetailsDialog: React.FC<LodgingDetailsDialogProps> = ({
                 { label: 'Check-in', value: lodging.checkInDate ? formatDateLong(lodging.checkInDate) : 'TBD' },
                 { label: 'Check-out', value: lodging.checkOutDate ? formatDateLong(lodging.checkOutDate) : 'TBD' },
                 { label: 'Rooms', value: lodging.rooms || '1' },
+                { label: 'Status', value: normalizeItineraryStatus(lodging.status, LEGACY_ITINERARY_STATUS) },
                 { label: 'Refund By', value: lodging.refundBy ? formatDateLong(lodging.refundBy) : 'N/A' },
                 {
                   label: 'Address',

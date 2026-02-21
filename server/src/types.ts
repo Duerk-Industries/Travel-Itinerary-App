@@ -1,3 +1,5 @@
+export type ItineraryStatus = 'Needed' | 'Proposed' | 'Booked' | 'Cancelled' | 'Completed';
+
 export interface User {
   id: string;
   email: string;
@@ -23,6 +25,7 @@ export interface WebUser {
 export interface Flight {
   id: string;
   userId: string;
+  status: ItineraryStatus;
   passengerName: string;
   passengerIds?: string[];
   departureDate: string;
@@ -129,6 +132,7 @@ export interface Lodging {
   id: string;
   user_id: string;
   trip_id: string;
+  status: ItineraryStatus;
   name: string;
   check_in_date: string;
   check_out_date: string;
@@ -148,6 +152,7 @@ export interface Tour {
   id: string;
   userId: string;
   tripId: string;
+  status: ItineraryStatus;
   date: string;
   name: string;
   startLocation: string;

@@ -41,8 +41,8 @@ const styles = {
 };
 
 const mockLodgings: Lodging[] = [
-    { id: 'l1', userId: 'u1', tripId: 't1', name: 'Hotel 1', checkInDate: '2025-01-01', checkOutDate: '2025-01-05', rooms: '1', refundBy: '', totalCost: '400', costPerNight: '100', address: '123 Main St', paidBy: ['m1'], travelerIds: ['m1'] },
-    { id: 'l2', userId: 'u1', tripId: 't1', name: 'Hotel 2', checkInDate: '2025-01-05', checkOutDate: '2025-01-10', rooms: '2', refundBy: '', totalCost: '1000', costPerNight: '100', address: '456 Oak Ave', paidBy: ['m2'], travelerIds: ['m1', 'm2'] },
+    { id: 'l1', userId: 'u1', tripId: 't1', status: 'Booked', name: 'Hotel 1', checkInDate: '2025-01-01', checkOutDate: '2025-01-05', rooms: '1', refundBy: '', totalCost: '400', costPerNight: '100', address: '123 Main St', paidBy: ['m1'], travelerIds: ['m1'] },
+    { id: 'l2', userId: 'u1', tripId: 't1', status: 'Booked', name: 'Hotel 2', checkInDate: '2025-01-05', checkOutDate: '2025-01-10', rooms: '2', refundBy: '', totalCost: '1000', costPerNight: '100', address: '456 Oak Ave', paidBy: ['m2'], travelerIds: ['m1', 'm2'] },
 ];
 
 const groupMembers = [

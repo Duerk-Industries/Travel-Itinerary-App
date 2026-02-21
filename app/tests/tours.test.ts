@@ -66,6 +66,7 @@ describe('Tours', () => {
     const result = buildTourPayload(
       {
         date: '2025-04-10',
+        status: 'Booked',
         name: 'Food Tour',
         startLocation: 'Downtown',
         startTime: '10:00',
@@ -81,5 +82,27 @@ describe('Tours', () => {
     );
     expect(result.payload?.cost).toBe('120');
     expect(result.payload?.paidBy).toEqual(['payer-1']);
+  });
+
+  test('buildTourPayload allows blank name when status is Needed', () => {
+    const result = buildTourPayload(
+      {
+        date: '2025-04-10',
+        status: 'Needed',
+        name: '',
+        startLocation: '',
+        startTime: '',
+        duration: '',
+        cost: '0',
+        freeCancelBy: '',
+        bookedOn: '',
+        reference: '',
+        paidBy: [],
+        travelerIds: [],
+      },
+      null
+    );
+    expect(result.error).toBeUndefined();
+    expect(result.payload?.status).toBe('Needed');
   });
 });

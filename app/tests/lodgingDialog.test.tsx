@@ -45,6 +45,7 @@ describe('Lodging Dialogs', () => {
     id: 'l1',
     userId: 'u1',
     tripId: 't1',
+    status: 'Booked',
     name: 'Test Hotel',
     checkInDate: '2025-04-10',
     checkOutDate: '2025-04-12',

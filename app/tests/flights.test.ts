@@ -11,10 +11,12 @@ describe('Flights helpers', () => {
   test('requires times and at least one passenger', () => {
     const draft = {
       ...createInitialFlightCreateDraft(),
+      status: 'Booked' as const,
       departureDate: '2025-04-10',
       departureTime: '',
       arrivalTime: '',
       passengerIds: [],
+      paidBy: [],
     };
     const result = buildFlightPayloadForCreate(draft, 'trip-1', null);
     expect(result.error).toBe('Departure and arrival times are required.');
@@ -23,6 +25,7 @@ describe('Flights helpers', () => {
   test('builds payload with optional carrier/flight/booking and passengers', () => {
     const draft = {
       ...createInitialFlightCreateDraft(),
+      status: 'Booked' as const,
       passengerName: '',
       passengerIds: ['p1', 'p2'],
       departureDate: '2025-04-10',
@@ -34,6 +37,7 @@ describe('Flights helpers', () => {
       flightNumber: '',
       bookingReference: '',
       cost: '200',
+      paidBy: [],
     };
     const result = buildFlightPayloadForCreate(draft, 'trip-1', 'payer-1');
     expect(result.payload?.tripId).toBe('trip-1');
@@ -48,10 +52,12 @@ describe('Flights helpers', () => {
   test('fails when no passengers selected', () => {
     const draft = {
       ...createInitialFlightCreateDraft(),
+      status: 'Booked' as const,
       departureDate: '2025-04-10',
       departureTime: '08:00',
       arrivalTime: '11:00',
       passengerIds: [],
+      paidBy: [],
     };
     const result = buildFlightPayloadForCreate(draft, 'trip-1', null);
     expect(result.error).toBe('Select at least one passenger');
@@ -72,6 +78,7 @@ describe('Flights helpers', () => {
       flightNumber: '',
       bookingReference: '',
       paidBy: ['m1'],
+      status: 'Booked' as const,
     };
     const normalized = normalizeFlightFromApi(apiFlight);
     expect(normalized.passenger_ids).toEqual(['m1']);
@@ -80,5 +87,31 @@ describe('Flights helpers', () => {
     expect(normalized.flight_number).toBe('');
     expect(normalized.booking_reference).toBe('');
     expect(normalized.paid_by).toEqual(['m1']);
+    expect(normalized.status).toBe('Booked');
+  });
+
+  test('allows missing business fields when status is Needed', () => {
+    const draft = {
+      ...createInitialFlightCreateDraft(),
+      status: 'Needed' as const,
+      departureDate: '',
+      departureTime: '',
+      arrivalTime: '',
+      passengerIds: [],
+      paidBy: [],
+    };
+    const result = buildFlightPayloadForCreate(draft, 'trip-1', null);
+    expect(result.error).toBeUndefined();
+  });
+
+  test('defaults missing legacy status to Booked', () => {
+    const normalized = normalizeFlightFromApi({
+      id: 'f2',
+      departureDate: '2026-05-15',
+      arrivalDate: '2026-05-15',
+      departureTime: '08:00',
+      arrivalTime: '10:00',
+    });
+    expect(normalized.status).toBe('Booked');
   });
 });

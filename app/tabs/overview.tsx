@@ -64,6 +64,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import LodgingDialog from '../components/LodgingDialog';
 import LodgingDetailsDialog from '../components/LodgingDetailsDialog';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from '../utils/itineraryStatus';
 
 type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
 let NativeDateTimePicker: NativeDateTimePickerType | null = null;
@@ -101,6 +102,7 @@ type GroupView = {
 
 type Lodging = {
   id: string;
+  status?: string;
   name: string;
   checkInDate: string;
   checkOutDate: string;
@@ -114,6 +116,7 @@ type Lodging = {
 
 type Tour = {
   id: string;
+  status?: string;
   date: string;
   name: string;
   startLocation: string;
@@ -1313,6 +1316,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   };
 
   const formatRentalDetails = (rental: CarRental): DetailItem[] => [
+    { label: 'Status', value: normalizeItineraryStatus((rental as any).status, LEGACY_ITINERARY_STATUS) },
     { label: 'Pickup Location', value: rental.pickupLocation || 'N/A' },
     { label: 'Pickup Date', value: formatFriendlyDate(rental.pickupDate) || rental.pickupDate || 'N/A' },
     { label: 'Dropoff Location', value: rental.dropoffLocation || 'N/A' },
@@ -2272,6 +2276,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   <Text style={styles.helperText}>
                     {formatFriendlyDate(flight.departure_date, flight.departure_time)}
                   </Text>
+                  <Text style={styles.helperText}>Status: {normalizeItineraryStatus((flight as any).status, LEGACY_ITINERARY_STATUS)}</Text>
                   <Text style={styles.helperText}>{buildPassengerName((flight as any).passenger_ids ?? [])}</Text>
                 </TouchableOpacity>
               );
@@ -2327,6 +2332,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   <Text style={styles.helperText}>
                     {formatFriendlyDate(lodging.checkInDate)} – {formatFriendlyDate(lodging.checkOutDate)}
                   </Text>
+                  <Text style={styles.helperText}>Status: {normalizeItineraryStatus(lodging.status, LEGACY_ITINERARY_STATUS)}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -2353,6 +2359,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   <Text style={styles.helperText}>
                     {formatFriendlyDate(tour.date, tour.startTime)} @ {tour.startLocation}
                   </Text>
+                  <Text style={styles.helperText}>Status: {normalizeItineraryStatus(tour.status, LEGACY_ITINERARY_STATUS)}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -2380,6 +2387,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                     {rental.pickupLocation} {formatFriendlyDate(rental.pickupDate)} – {rental.dropoffLocation}{' '}
                     {formatFriendlyDate(rental.dropoffDate)}
                   </Text>
+                  <Text style={styles.helperText}>Status: {normalizeItineraryStatus((rental as any).status, LEGACY_ITINERARY_STATUS)}</Text>
                 </TouchableOpacity>
               );
             })}

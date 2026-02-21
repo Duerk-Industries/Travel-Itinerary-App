@@ -3,7 +3,7 @@ import { buildCarRentalFromDraft, createInitialCarRentalDraft } from '../tabs/ca
 
 describe('Car rental helpers', () => {
   test('requires at least a pickup location, vendor, or model', () => {
-    const draft = createInitialCarRentalDraft();
+    const draft = { ...createInitialCarRentalDraft(), status: 'Booked' as const };
     const result = buildCarRentalFromDraft(draft, null);
     expect(result.error).toBe('Enter at least a pickup location, vendor, or car model.');
   });
@@ -11,6 +11,7 @@ describe('Car rental helpers', () => {
   test('applies default payer and trims fields', () => {
     const result = buildCarRentalFromDraft(
       {
+        status: 'Booked',
         pickupLocation: ' Airport ',
         pickupDate: '2025-04-10',
         dropoffLocation: '',
@@ -32,5 +33,18 @@ describe('Car rental helpers', () => {
     expect(result.rental?.pickupLocation).toBe('Airport');
     expect(result.rental?.vendor).toBe('Hertz');
     expect(result.rental?.model).toBe('SUV');
+    expect(result.rental?.status).toBe('Booked');
+  });
+
+  test('allows blank business fields when status is Needed', () => {
+    const result = buildCarRentalFromDraft(
+      {
+        ...createInitialCarRentalDraft(),
+        status: 'Needed',
+      },
+      null
+    );
+    expect(result.error).toBeUndefined();
+    expect(result.rental?.status).toBe('Needed');
   });
 });

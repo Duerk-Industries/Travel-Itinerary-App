@@ -7,6 +7,7 @@ import { formatUserDisplayName } from './overview';
 import LodgingDialog from '../components/LodgingDialog';
 import LodgingDetailsDialog from '../components/LodgingDetailsDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
+import { LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from '../utils/itineraryStatus';
 
 type LodgingTabProps = {
   backendUrl: string;
@@ -170,6 +171,9 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
             <View style={[styles.tableHeaderCell, styles.lodgingTabDateCol]}>
               <Text style={styles.headerText}>Check-Out</Text>
             </View>
+            <View style={[styles.tableHeaderCell, styles.lodgingTabDateCol]}>
+              <Text style={styles.headerText}>Status</Text>
+            </View>
             <View style={[styles.tableHeaderCell, styles.lodgingTabActionsCol, styles.lastCell]}>
               <Text style={styles.headerText}>Actions</Text>
             </View>
@@ -189,6 +193,9 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
               </View>
               <View style={[styles.tableCell, styles.lodgingTabDateCol]}>
                 <Text style={styles.cellText}>{formatShortDate(lodging.checkOutDate)}</Text>
+              </View>
+              <View style={[styles.tableCell, styles.lodgingTabDateCol]}>
+                <Text style={styles.cellText}>{normalizeItineraryStatus(lodging.status, LEGACY_ITINERARY_STATUS)}</Text>
               </View>
               <View style={[styles.tableCell, styles.lodgingTabActionsCol, styles.lastCell]}>
                 <View style={[styles.actionCell, { flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'flex-start' }]}>

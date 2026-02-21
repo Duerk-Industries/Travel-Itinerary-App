@@ -1,11 +1,11 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
 import { View } from 'react-native';
-import AccountTab from '../tabs/account';
+import AccountTab from './tabs/account';
 
-jest.mock('../tabs/AccountProfileManagement', () => (props: any) => <View testID="account-profile-management" {...props} />);
-jest.mock('../tabs/FamilyRelationships', () => (props: any) => <View testID="family-relationships" {...props} />);
-jest.mock('../tabs/AccountTraits', () => (props: any) => <View testID="account-traits" {...props} />);
+jest.mock('./tabs/AccountProfileManagement', () => (props: any) => <View testID="account-profile-management" {...props} />);
+jest.mock('./tabs/FamilyRelationships', () => (props: any) => <View testID="family-relationships" {...props} />);
+jest.mock('./tabs/AccountTraits', () => (props: any) => <View testID="account-traits" {...props} />);
 
 const styles = {
   card: {},
@@ -58,7 +58,7 @@ describe('AccountTab', () => {
     styles: styles,
     traits: [],
     setTraits: jest.fn(),
-    selectedTraitNames: new Set(),
+    selectedTraitNames: new Set<string>(),
     setSelectedTraitNames: jest.fn(),
     traitAge: '',
     setTraitAge: jest.fn(),

@@ -777,7 +777,7 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
             placeholder="Departure airport (e.g., JFK, LAX, CDG)"
             value={itineraryAirport}
             onFocus={() => fetchItineraryAirports(itineraryAirport)}
-            onChangeText={(text) => {
+            onChangeText={(text: string) => {
               setItineraryAirport(text);
               fetchItineraryAirports(text);
             }}
@@ -805,13 +805,13 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
           placeholder="How many days will your vacation be?"
           keyboardType="numeric"
           value={itineraryDays}
-          onChangeText={(text) => setItineraryDays(text.replace(/[^0-9]/g, ''))}
+          onChangeText={(text: string) => setItineraryDays(text.replace(/[^0-9]/g, ''))}
         />
         <TextInput
           style={styles.input}
           placeholder="What kind of trip do you want? (e.g., foodie weekend, outdoor adventure, museum crawl)"
           value={itineraryTripStyle}
-          onChangeText={setItineraryTripStyle}
+          onChangeText={(text: string) => setItineraryTripStyle(text)}
           multiline
         />
 
@@ -963,7 +963,7 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
                   placeholder="Day"
                   keyboardType="numeric"
                   value={detailDraft.day}
-                  onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, day: text }))}
+                  onChangeText={(text: string) => setDetailDraft((prev) => ({ ...prev, day: text }))}
                 />
               </View>
               <View style={[styles.cell, { flex: 1 }]}>
@@ -971,7 +971,7 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
                   style={styles.input}
                   placeholder="Time"
                   value={detailDraft.time}
-                  onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, time: text }))}
+                  onChangeText={(text: string) => setDetailDraft((prev) => ({ ...prev, time: text }))}
                 />
               </View>
               <View style={[styles.cell, { flex: 2 }]}>
@@ -979,7 +979,7 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
                   style={styles.input}
                   placeholder="Activity"
                   value={detailDraft.activity}
-                  onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, activity: text }))}
+                  onChangeText={(text: string) => setDetailDraft((prev) => ({ ...prev, activity: text }))}
                 />
               </View>
               <View style={[styles.cell, { flex: 1 }]}>
@@ -988,7 +988,7 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
                   placeholder="Cost"
                   keyboardType="numeric"
                   value={detailDraft.cost}
-                  onChangeText={(text) =>
+                  onChangeText={(text: string) =>
                     setDetailDraft((prev) => ({ ...prev, cost: sanitizeCostInput(text) }))
                   }
                 />
@@ -1014,7 +1014,7 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
               style={[styles.input, styles.inlineInput]}
               placeholder="Search countries"
               value={countrySearch}
-              onChangeText={setCountrySearch}
+              onChangeText={(text: string) => setCountrySearch(text)}
               autoFocus
             />
             <ScrollView style={styles.dropdownScroll}>
@@ -1049,7 +1049,7 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
               style={[styles.input, styles.inlineInput]}
               placeholder="Search regions / states"
               value={regionSearch}
-              onChangeText={setRegionSearch}
+              onChangeText={(text: string) => setRegionSearch(text)}
               autoFocus
             />
             <ScrollView style={styles.dropdownScroll}>

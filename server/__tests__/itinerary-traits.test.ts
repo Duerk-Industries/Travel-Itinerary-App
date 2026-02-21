@@ -16,7 +16,7 @@ describe('Itinerary generation and trait lifecycle', () => {
 
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
-    process.env.OPENAI_API_KEY = 'test-openai-key';
+    process.env.OPENAI_API_KEY = 'REDACTED';
     await initDb();
     pool = new Pool({ connectionString: process.env.DATABASE_URL });
   });

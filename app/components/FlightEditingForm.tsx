@@ -4,6 +4,7 @@ import { formatDateLong } from '../utils/formatDateLong';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import type { FlightEditDraft, GroupMemberOption } from '../tabs/flights';
 import { toWebStyle } from '../utils/webStyle';
+import { DEFAULT_NEW_ITINERARY_STATUS, ITINERARY_STATUSES, normalizeItineraryStatus } from '../utils/itineraryStatus';
 
 type AirportTarget = 'dep' | 'arr' | 'modal-dep' | 'modal-arr' | 'modal-layover' | null;
 
@@ -139,6 +140,36 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
               );
             })}
           </View>
+          <Text style={styles.modalLabel}>Departure</Text>
+          <Text style={styles.modalLabel}>Status</Text>
+          {Platform.OS === 'web' ? (
+            <select
+              value={normalizeItineraryStatus(flight.status, DEFAULT_NEW_ITINERARY_STATUS)}
+              onChange={(e) => setFlight((prev) => (prev ? { ...prev, status: normalizeItineraryStatus(e.target.value, DEFAULT_NEW_ITINERARY_STATUS) } : prev))}
+              style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
+            >
+              {ITINERARY_STATUSES.map((opt) => (
+                <option key={`flight-status-${opt}`} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <View style={styles.payerChips}>
+              {ITINERARY_STATUSES.map((opt) => {
+                const selected = normalizeItineraryStatus(flight.status, DEFAULT_NEW_ITINERARY_STATUS) === opt;
+                return (
+                  <TouchableOpacity
+                    key={`flight-status-${opt}`}
+                    style={[toggleBaseStyle, selected && toggleSelectedStyle]}
+                    onPress={() => setFlight((prev) => (prev ? { ...prev, status: opt } : prev))}
+                  >
+                    <Text style={[toggleTextStyle, selected && toggleTextSelectedStyle]}>{opt}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
           <Text style={styles.modalLabel}>Departure</Text>
           <View style={rowStyle}>
             <View style={dateFieldStyle}>

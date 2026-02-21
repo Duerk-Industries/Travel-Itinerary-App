@@ -22,6 +22,7 @@ import {
 } from './types';
 import { logError, logInfo } from './logger';
 import { getEnvValue, isLocalEnv } from './env';
+import { normalizeItineraryStatus } from './utils/itineraryStatus';
 
 let app: App | null = null;
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
@@ -1670,10 +1671,10 @@ export const getTripById = async (tripId: string): Promise<Trip | null> => {
 export const insertFlight = async (flight: Omit<Flight, 'id'>): Promise<Flight> => {
   const db = getDb();
   const id = randomUUID();
-  const payload = { ...flight, id, createdAt: nowIso() };
+  const payload = { ...flight, status: normalizeItineraryStatus((flight as any).status), id, createdAt: nowIso() };
   await db.collection('flights').doc(id).set(payload);
   const saved = await db.collection('flights').doc(id).get();
-  return { ...flight, id };
+  return { ...flight, status: normalizeItineraryStatus((flight as any).status), id };
 };
 
 export const deleteFlight = async (flightId: string, userId: string): Promise<void> => {
@@ -1694,7 +1695,7 @@ export const updateFlight = async (flightId: string, userId: string, updates: Pa
   const updatePayload = stripUndefined(updates);
   await db.collection('flights').doc(flightId).update(updatePayload);
   const updated = await db.collection('flights').doc(flightId).get();
-  return updated.data() as Flight;
+  return { ...(updated.data() as Flight), status: normalizeItineraryStatus((updated.data() as any)?.status) };
 };
 
 export const getFlightForUser = async (flightId: string, userId: string): Promise<Flight | null> => {
@@ -1761,7 +1762,7 @@ export const listFlights = async (userId: string, tripId?: string): Promise<Flig
         ? (data as any).passenger_ids
         : [];
     const passengerInGroup = validPassengerIds ? ids.every((id: string) => validPassengerIds!.has(String(id))) : true;
-    return { ...data, passengerInGroup };
+    return { ...data, status: normalizeItineraryStatus((data as any).status), passengerInGroup };
   });
 };
 
@@ -1908,7 +1909,7 @@ export const listLodgings = async (userId: string, tripId?: string | null): Prom
     const membership = await ensureUserCanReadTrip(tripId, userId);
     if (!membership) return [];
     const snapshot = await db.collection('lodgings').where('trip_id', '==', tripId).get();
-    return snapshot.docs.map((d) => d.data() as Lodging);
+    return snapshot.docs.map((d) => ({ ...(d.data() as Lodging), status: normalizeItineraryStatus((d.data() as any).status) }));
   }
 
   const memberSnap = await db
@@ -1937,7 +1938,9 @@ export const listLodgings = async (userId: string, tripId?: string | null): Prom
   const lodgings: Lodging[] = [];
   for (const tripChunk of chunk(uniqueTripIds)) {
     const lodgingsSnap = await db.collection('lodgings').where('trip_id', 'in', tripChunk).get();
-    lodgingsSnap.docs.forEach((doc) => lodgings.push(doc.data() as Lodging));
+    lodgingsSnap.docs.forEach((doc) =>
+      lodgings.push({ ...(doc.data() as Lodging), status: normalizeItineraryStatus((doc.data() as any).status) })
+    );
   }
   return lodgings;
 };
@@ -1966,6 +1969,7 @@ export const insertLodging = async (lodging: {
     id,
     user_id: lodging.userId,
     trip_id: lodging.tripId,
+    status: normalizeItineraryStatus((lodging as any).status),
     name: lodging.name,
     check_in_date: lodging.checkInDate,
     check_out_date: lodging.checkOutDate,
@@ -2007,7 +2011,7 @@ export const updateLodging = async (lodgingId: string, userId: string, updates: 
   const updatePayload = stripUndefined(updates);
   await db.collection('lodgings').doc(lodgingId).update(updatePayload);
   const updated = await db.collection('lodgings').doc(lodgingId).get();
-  return updated.data() as Lodging;
+  return { ...(updated.data() as Lodging), status: normalizeItineraryStatus((updated.data() as any)?.status) };
 };
 
 // Tours
@@ -2024,7 +2028,7 @@ export const listTours = async (userId: string, tripId?: string): Promise<Tour[]
     const access = await ensureUserCanReadTrip(tripId, userId);
     if (!access) return [];
     const snapshot = await db.collection('tours').where('tripId', '==', tripId).get();
-    return snapshot.docs.map((d) => d.data() as Tour);
+    return snapshot.docs.map((d) => ({ ...(d.data() as Tour), status: normalizeItineraryStatus((d.data() as any).status) }));
   }
   const memberSnap = await db.collection('group_members').where('userId', '==', userId).where('removedAt', '==', null).get();
   const groupIds = memberSnap.docs.map((d) => (d.data() as any).groupId).filter(Boolean);
@@ -2043,7 +2047,9 @@ export const listTours = async (userId: string, tripId?: string): Promise<Tour[]
   const tours: Tour[] = [];
   for (const ids of chunk(uniqueTripIds)) {
     const snapshot = await db.collection('tours').where('tripId', 'in', ids).get();
-    snapshot.docs.forEach((d) => tours.push(d.data() as Tour));
+    snapshot.docs.forEach((d) =>
+      tours.push({ ...(d.data() as Tour), status: normalizeItineraryStatus((d.data() as any).status) })
+    );
   }
   return tours;
 };
@@ -2051,7 +2057,7 @@ export const listTours = async (userId: string, tripId?: string): Promise<Tour[]
 export const insertTour = async (tour: Omit<Tour, 'id' | 'createdAt'>): Promise<Tour> => {
   const db = getDb();
   const id = randomUUID();
-  const payload = { ...tour, id, createdAt: nowIso() };
+  const payload = { ...tour, status: normalizeItineraryStatus((tour as any).status), id, createdAt: nowIso() };
   await db.collection('tours').doc(id).set(payload);
   return payload;
 };
@@ -2064,7 +2070,7 @@ export const updateTour = async (id: string, userId: string, tour: Partial<Tour>
   const updatePayload = stripUndefined(tour);
   await db.collection('tours').doc(id).update(updatePayload);
   const updated = await db.collection('tours').doc(id).get();
-  return updated.data() as Tour;
+  return { ...(updated.data() as Tour), status: normalizeItineraryStatus((updated.data() as any)?.status) };
 };
 
 export const deleteTour = async (tourId: string, userId: string): Promise<void> => {
