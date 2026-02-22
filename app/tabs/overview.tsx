@@ -11,6 +11,7 @@ import {
   View,
   Image,
   type LayoutChangeEvent,
+  useWindowDimensions,
 } from 'react-native';
 import { computeTripDays, validateTripDates } from '../utils/createTripWizard';
 import { renderRichTextBlocks } from '../utils/richText';
@@ -290,6 +291,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   openFlightInFlightsTab: _openFlightInFlightsTab,
   openLodgingDetails,
 }) => {
+  const { width: viewportWidth } = useWindowDimensions();
+  const isPhoneLayout = viewportWidth < 700;
+  const isTabletLayout = viewportWidth >= 700 && viewportWidth < 1100;
   const stripResizeMode = useCallback((style: any) => {
     const flattened = StyleSheet.flatten(style);
     if (!flattened || typeof flattened !== 'object' || !('resizeMode' in flattened)) {
@@ -300,6 +304,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   }, []);
   const dayHeroImageStyle = useMemo(() => stripResizeMode(styles.dayHeroImage), [stripResizeMode, styles.dayHeroImage]);
   const lodgingImageStyle = useMemo(() => stripResizeMode(styles.lodgingImage), [stripResizeMode, styles.lodgingImage]);
+  const responsiveCardStyle = useMemo(
+    () => ({
+      padding: isPhoneLayout ? 12 : 16,
+      borderRadius: isPhoneLayout ? 10 : 12,
+    }),
+    [isPhoneLayout]
+  );
   const [itineraryDetails, setItineraryDetails] = useState<ItineraryDetail[]>([]);
   const [itineraryLoading, setItineraryLoading] = useState(false);
   const [itineraryId, setItineraryId] = useState<string | null>(null);
@@ -1531,7 +1542,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   };
 
   const renderDayBar = (activeDate: string | null) => (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 8 }}>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 8 }} contentContainerStyle={{ paddingRight: 8 }}>
       <TouchableOpacity
         testID="overview-day-pill-overview"
         style={[styles.dayPill, !activeDate && styles.dayPillActive]}
@@ -1559,7 +1570,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const renderContent = () => {
     if (!trip) {
       return (
-        <View style={styles.card}>
+        <View style={[styles.card, responsiveCardStyle]}>
           <Text style={styles.sectionTitle}>Overview</Text>
           <Text style={styles.helperText}>Select a trip to view its overview.</Text>
         </View>
@@ -1576,7 +1587,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       const renderHeroCard = (card: DayCard, title: string, showAction: boolean, onPress?: () => void, testID?: string) => {
         const img = dayImages[card.date];
         return (
-          <TouchableOpacity testID={testID} style={styles.dayHeroCard} onPress={onPress} disabled={!onPress}>
+          <TouchableOpacity
+            testID={testID}
+            style={[
+              styles.dayHeroCard,
+              isPhoneLayout ? { height: 150 } : isTabletLayout ? { height: 170 } : null,
+            ]}
+            onPress={onPress}
+            disabled={!onPress}
+          >
             {img ? (
               <Image style={dayHeroImageStyle} source={{ uri: img }} resizeMode="cover" />
             ) : (
@@ -1587,8 +1606,19 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               <Text style={styles.dayHeroBadgeText}>{card.label.toUpperCase()}</Text>
             </View>
             <View style={styles.dayHeroTextWrap}>
-              <Text style={styles.dayHeroTitle}>{title}</Text>
-              {showAction ? <Text style={styles.dayHeroAction}>View details</Text> : null}
+              <Text
+                style={[
+                  styles.dayHeroTitle,
+                  isPhoneLayout ? { fontSize: 18 } : isTabletLayout ? { fontSize: 20 } : null,
+                ]}
+                numberOfLines={2}
+                ellipsizeMode="tail"
+              >
+                {title}
+              </Text>
+              {showAction ? (
+                <Text style={[styles.dayHeroAction, isPhoneLayout ? { fontSize: 11 } : null]}>View details</Text>
+              ) : null}
             </View>
           </TouchableOpacity>
         );
@@ -1623,14 +1653,14 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         const showLodgingNames = new Set(lodgingParticipantKeys).size > 1;
 
         return (
-          <View style={[styles.card, { position: 'relative' }]}>
+          <View style={[styles.card, responsiveCardStyle, { position: 'relative' }]}>
             <TouchableOpacity testID="day-details-back" style={styles.dayDetailsBackButton} onPress={() => setSelectedDay(null)}>
               <Text style={styles.dayDetailsBackText}>← Back</Text>
             </TouchableOpacity>
             <ScrollView
               ref={scrollRef}
               style={{ flex: 1 }}
-              contentContainerStyle={{ gap: 16, paddingTop: 56 }}
+              contentContainerStyle={{ gap: isPhoneLayout ? 12 : 16, paddingTop: isPhoneLayout ? 48 : 56 }}
               onScroll={(e: any) => setScrollY(e.nativeEvent.contentOffset.y)}
               scrollEventThrottle={16}
             >
@@ -1817,15 +1847,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       return (
         <ScrollView
           ref={scrollRef}
-          style={styles.card}
-          contentContainerStyle={{ gap: 12 }}
+          style={[styles.card, responsiveCardStyle]}
+          contentContainerStyle={{ gap: isPhoneLayout ? 10 : 12 }}
           onScroll={(e: any) => setScrollY(e.nativeEvent.contentOffset.y)}
           scrollEventThrottle={16}
         >
-          <View style={styles.row}>
+          <View style={[styles.row, isPhoneLayout ? { rowGap: 8 } : null]}>
             <Text style={styles.sectionTitle}>Overview</Text>
             <TouchableOpacity
-              style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
+              style={[styles.button, styles.smallButton, { marginLeft: 'auto' }, isPhoneLayout ? { marginLeft: 0 } : null]}
               onPress={() => setIsEditing(true)}
             >
               <Text style={styles.buttonText}>Edit</Text>
@@ -1863,15 +1893,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     return (
       <ScrollView
         ref={scrollRef}
-        style={styles.card}
-        contentContainerStyle={{ gap: 12 }}
+        style={[styles.card, responsiveCardStyle]}
+        contentContainerStyle={{ gap: isPhoneLayout ? 10 : 12 }}
         onScroll={(e: any) => setScrollY(e.nativeEvent.contentOffset.y)}
         scrollEventThrottle={16}
       >
-        <View style={styles.row}>
+        <View style={[styles.row, isPhoneLayout ? { rowGap: 8 } : null]}>
           <Text style={styles.sectionTitle}>Overview</Text>
           {isEditing ? (
-            <View style={[styles.row, { marginLeft: 'auto', gap: 8 }]}>
+            <View style={[styles.row, { marginLeft: 'auto', gap: 8 }, isPhoneLayout ? { marginLeft: 0 } : null]}>
               <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={saveOverviewEdits}>
                 <Text style={styles.buttonText}>Save</Text>
               </TouchableOpacity>

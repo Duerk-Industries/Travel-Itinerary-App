@@ -11,7 +11,7 @@
  * then UI sections render conditionally based on the active page.
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import Constants from 'expo-constants';
 import { formatDateLong } from './utils/formatDateLong';
 import { normalizeDateString } from './utils/normalizeDateString';
@@ -262,9 +262,63 @@ const extractTokenFromUrl = (rawUrl: string) => {
 };
 
 const App: React.FC = () => {
+  const { width: viewportWidth } = useWindowDimensions();
+  const isNarrowLayout = viewportWidth < 980;
+  const isPhoneLayout = viewportWidth < 680;
+  const isWebIOSSafari = useMemo(() => {
+    if (Platform.OS !== 'web' || typeof navigator === 'undefined') return false;
+    const ua = navigator.userAgent || '';
+    const isIOS =
+      /iP(hone|ad|od)/i.test(ua) ||
+      ((navigator as any).platform === 'MacIntel' && Number((navigator as any).maxTouchPoints || 0) > 1);
+    const isSafari = /Safari/i.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS|YaBrowser/i.test(ua);
+    return isIOS && isSafari;
+  }, []);
+  const [webViewportHeight, setWebViewportHeight] = useState<number | null>(null);
+
   useEffect(() => {
     initializeAppCheck();
   }, []);
+
+  useEffect(() => {
+    if (!isWebIOSSafari || typeof window === 'undefined') return;
+    const updateViewport = () => {
+      const vv = window.visualViewport;
+      const next = Math.round(vv?.height ?? window.innerHeight ?? 0);
+      if (next > 0) setWebViewportHeight(next);
+    };
+    updateViewport();
+    window.addEventListener('resize', updateViewport);
+    window.visualViewport?.addEventListener('resize', updateViewport);
+    window.visualViewport?.addEventListener('scroll', updateViewport);
+    return () => {
+      window.removeEventListener('resize', updateViewport);
+      window.visualViewport?.removeEventListener('resize', updateViewport);
+      window.visualViewport?.removeEventListener('scroll', updateViewport);
+    };
+  }, [isWebIOSSafari]);
+
+  const iosSafariSafeAreaStyle = useMemo(
+    () =>
+      isWebIOSSafari
+        ? ({
+            paddingTop: 'env(safe-area-inset-top, 0px)',
+            paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+            minHeight: webViewportHeight ? `${webViewportHeight}px` : '100dvh',
+          } as any)
+        : null,
+    [isWebIOSSafari, webViewportHeight]
+  );
+
+  const iosSafariContentInsetStyle = useMemo(
+    () =>
+      isWebIOSSafari
+        ? ({
+            paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))',
+          } as any)
+        : null,
+    [isWebIOSSafari]
+  );
 
   const [userToken, setUserToken] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
@@ -1907,9 +1961,9 @@ const App: React.FC = () => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.topBar}>
-        <View style={styles.topBarLeft}>
+    <SafeAreaView style={[styles.container, iosSafariSafeAreaStyle]}>
+      <View style={[styles.topBar, isNarrowLayout && styles.topBarStacked]}>
+        <View style={[styles.topBarLeft, isNarrowLayout && styles.topBarLeftNarrow]}>
           {userToken && activePage !== 'home' ? (
             <TouchableOpacity
               style={styles.homeButton}
@@ -1939,10 +1993,12 @@ const App: React.FC = () => {
               <Text style={styles.backButtonText}>{'>'}</Text>
             </TouchableOpacity>
           ) : null}
-          <Text style={styles.title}>Shared Trip Planner</Text>
+          <Text style={[styles.title, isPhoneLayout && styles.titleNarrow]} numberOfLines={1} ellipsizeMode="tail">
+            Shared Trip Planner
+          </Text>
         </View>
         {userToken ? (
-          <View style={styles.topRightWrapper}>
+          <View style={[styles.topRightWrapper, isNarrowLayout && styles.topRightWrapperNarrow]}>
             {trips.length ? (
               <TouchableOpacity
                 activeOpacity={0.8}
@@ -1952,11 +2008,12 @@ const App: React.FC = () => {
                   styles.inlineInput,
                   styles.dropdown,
                   styles.activeTrip,
+                  isNarrowLayout && styles.activeTripNarrow,
                   isTripWizardOpen && styles.buttonDisabled,
                 ]}
                 onPress={() => setShowActiveTripDropdown((s) => !s)}
               >
-                <Text style={styles.cellText}>
+                <Text style={styles.cellText} numberOfLines={1} ellipsizeMode="tail">
                   Active Trip: {activeTrip?.name ?? 'Select'}
                 </Text>
                 {showActiveTripDropdown && (
@@ -1977,8 +2034,8 @@ const App: React.FC = () => {
                 )}
               </TouchableOpacity>
             ) : null}
-            <View style={styles.topRight}>
-              <Text style={styles.bodyText}>{userName ?? 'Traveler'}</Text>
+            <View style={[styles.topRight, isNarrowLayout && styles.topRightNarrow]}>
+              {!isPhoneLayout ? <Text style={styles.bodyText}>{userName ?? 'Traveler'}</Text> : null}
               <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={logout}>
                 <Text style={styles.buttonText}>Logout</Text>
               </TouchableOpacity>
@@ -1987,7 +2044,10 @@ const App: React.FC = () => {
         ) : null}
       </View>
       {userToken ? (
-        <ScrollView style={styles.contentScroll} contentContainerStyle={styles.contentScrollContent}>
+        <ScrollView
+          style={styles.contentScroll}
+          contentContainerStyle={[styles.contentScrollContent, iosSafariContentInsetStyle]}
+        >
           {activePage === 'home' ? (
             <HomeTab
               backendUrl={backendUrl}
@@ -3023,10 +3083,18 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: '#d1d5db',
   },
+  topBarStacked: {
+    alignItems: 'stretch',
+    rowGap: 8,
+  },
   topBarLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+  },
+  topBarLeftNarrow: {
+    flexWrap: 'wrap',
+    minWidth: 0,
   },
   homeButton: {
     width: 32,
@@ -3059,10 +3127,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 16,
   },
+  topRightWrapperNarrow: {
+    width: '100%',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
   topRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  topRightNarrow: {
+    marginLeft: 'auto',
   },
   contentScroll: {
     flex: 1,
@@ -3242,6 +3318,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
+    flexShrink: 1,
+  },
+  titleNarrow: {
+    fontSize: 18,
   },
   auth: {
     width: '100%',
@@ -3671,9 +3751,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
     paddingVertical: 6,
+    alignItems: 'flex-start',
   },
   dayInfoText: {
     flex: 1,
+    minWidth: 0,
   },
   lodgingImage: {
     width: 80,
@@ -3693,6 +3775,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#0f172a',
+    flexShrink: 1,
+    flexWrap: 'wrap',
   },
   dayInfoButton: {
     alignSelf: 'center',
@@ -3811,6 +3895,11 @@ const styles = StyleSheet.create({
     minWidth: 180,
     position: 'relative',
     zIndex: 2000,
+  },
+  activeTripNarrow: {
+    flex: 1,
+    minWidth: 0,
+    maxWidth: '72%',
   },
   warningText: {
     color: '#dc2626',
