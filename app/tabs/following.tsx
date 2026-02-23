@@ -147,7 +147,7 @@ const FollowingTab: React.FC<FollowingTabProps> = ({
           fetch(`${backendUrl}/api/trips/${selectedTripId}`, { headers }),
           fetch(`${backendUrl}/api/flights?tripId=${encodeURIComponent(selectedTripId)}`, { headers }),
           fetch(`${backendUrl}/api/lodgings?tripId=${encodeURIComponent(selectedTripId)}`, { headers }),
-          fetch(`${backendUrl}/api/tours?tripId=${encodeURIComponent(selectedTripId)}`, { headers }),
+          fetch(`${backendUrl}/api/activities?tripId=${encodeURIComponent(selectedTripId)}`, { headers }),
           fetch(`${backendUrl}/api/trips/${selectedTripId}/activity?limit=30&group=true`, { headers }),
           fetch(`${backendUrl}/api/trips/${selectedTripId}/comments`, { headers }),
         ]);
@@ -450,3 +450,4 @@ const FollowingTab: React.FC<FollowingTabProps> = ({
 };
 
 export default FollowingTab;
+

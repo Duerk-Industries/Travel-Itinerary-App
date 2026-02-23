@@ -100,7 +100,7 @@ describe('CRUD delete endpoints for flights, lodgings, tours, and trips', () => 
     expect(lodgingId).toBeTruthy();
 
     const tourRes = await request(app)
-      .post('/api/tours')
+      .post('/api/activities')
       .set('Authorization', `Bearer ${token}`)
       .send({
         tripId,
@@ -118,13 +118,13 @@ describe('CRUD delete endpoints for flights, lodgings, tours, and trips', () => 
 
     await request(app).delete(`/api/flights/${flightId}`).set('Authorization', `Bearer ${token}`).expect(204);
     await request(app).delete(`/api/lodgings/${lodgingId}`).set('Authorization', `Bearer ${token}`).expect(204);
-    await request(app).delete(`/api/tours/${tourId}`).set('Authorization', `Bearer ${token}`).expect(204);
+    await request(app).delete(`/api/activities/${tourId}`).set('Authorization', `Bearer ${token}`).expect(204);
 
     const flights = await request(app).get(`/api/flights?tripId=${tripId}`).set('Authorization', `Bearer ${token}`).expect(200);
     expect(flights.body).toHaveLength(0);
     const lodgings = await request(app).get(`/api/lodgings?tripId=${tripId}`).set('Authorization', `Bearer ${token}`).expect(200);
     expect(lodgings.body).toHaveLength(0);
-    const tours = await request(app).get(`/api/tours?tripId=${tripId}`).set('Authorization', `Bearer ${token}`).expect(200);
+    const tours = await request(app).get(`/api/activities?tripId=${tripId}`).set('Authorization', `Bearer ${token}`).expect(200);
     expect(tours.body).toHaveLength(0);
   });
 
@@ -166,3 +166,4 @@ describe('CRUD delete endpoints for flights, lodgings, tours, and trips', () => 
     expect((memberTripsAfter.body as any[]).some((t) => t.id === sharedTripId)).toBe(false);
   });
 });
+

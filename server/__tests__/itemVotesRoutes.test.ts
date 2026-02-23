@@ -2,7 +2,7 @@ import express from 'express';
 import request from 'supertest';
 import flightRoutes from '../src/routes/transferRoutes';
 import lodgingRoutes from '../src/routes/lodgingRoutes';
-import tourRoutes from '../src/routes/tourRoutes';
+import activityRoutes from '../src/routes/activityRoutes';
 import carRentalRoutes from '../src/routes/carRentalRoutes';
 import * as auth from '../src/auth';
 import * as db from '../src/db';
@@ -49,11 +49,11 @@ describe('Item vote routes', () => {
   });
 
   test('returns vote metadata for tour list responses', async () => {
-    (db.listTours as jest.Mock).mockResolvedValue([{ id: 'to1', tripId: 't1', status: 'Proposed', name: 'Tour A' }]);
+    (db.listActivities as jest.Mock).mockResolvedValue([{ id: 'to1', tripId: 't1', status: 'Proposed', name: 'Tour A' }]);
     (db.getItemVoteSummaries as jest.Mock).mockResolvedValue({ to1: { netVotes: -2, userVote: null } });
 
-    const app = appFor('/api/tours', tourRoutes);
-    const res = await request(app).get('/api/tours?tripId=t1').expect(200);
+    const app = appFor('/api/activities', activityRoutes);
+    const res = await request(app).get('/api/activities?tripId=t1').expect(200);
 
     expect(res.body[0]).toMatchObject({ id: 'to1', netVotes: -2, userVote: null });
   });
@@ -93,12 +93,13 @@ describe('Item vote routes', () => {
   });
 
   test('rejects rating when item is not completed', async () => {
-    (db.getTourById as jest.Mock).mockResolvedValue({ id: 'to1', tripId: 't1', status: 'Booked' });
+    (db.getActivityById as jest.Mock).mockResolvedValue({ id: 'to1', tripId: 't1', status: 'Booked' });
     (db.ensureUserInTrip as jest.Mock).mockResolvedValue({ groupId: 'g1' });
 
-    const app = appFor('/api/tours', tourRoutes);
-    await request(app).post('/api/tours/to1/rating').send({ value: 1 }).expect(400);
+    const app = appFor('/api/activities', activityRoutes);
+    await request(app).post('/api/activities/to1/rating').send({ value: 1 }).expect(400);
     expect(db.castItemVote).not.toHaveBeenCalled();
   });
 });
+
 

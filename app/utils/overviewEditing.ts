@@ -1,6 +1,6 @@
 import { type CarRental, type CarRentalDraft } from '../tabs/carRentals';
 import { type Flight, type FlightCreateDraft } from '../tabs/transfers';
-import { type Tour, type TourDraft } from '../tabs/tours';
+import { type Tour, type TourDraft } from '../tabs/activities';
 import { DEFAULT_NEW_ITINERARY_STATUS, LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from './itineraryStatus';
 
 type TripSnapshot = {
@@ -71,6 +71,7 @@ export const buildFlightDraftFromRow = (flight: Flight): FlightCreateDraft & { p
 
 export const buildTourDraftFromRow = (tour: Tour): TourDraft => ({
   status: normalizeItineraryStatus((tour as any).status, LEGACY_ITINERARY_STATUS),
+  activityType: (tour as any).activityType ?? 'Tour',
   date: tour.date,
   name: tour.name,
   startLocation: tour.startLocation,
@@ -99,4 +100,5 @@ export const buildRentalDraftFromRow = (rental: CarRental): CarRentalDraft => ({
   paidBy: rental.paidBy ?? [],
   travelerIds: rental.travelerIds ?? [],
 });
+
 

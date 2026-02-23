@@ -34,7 +34,7 @@ describe('Ledger vs Cost Report totals with covering', () => {
       { amount: 30, category: 'Dinner', payerIds: ['m3'], forIds: ['m3'] },
       { amount: 300, category: 'Flights', payerIds: ['m2'], forIds: ['m2'] },
       { amount: 200, category: 'Lodging', payerIds: ['m2'], forIds: ['m1', 'm2', 'm3'] },
-      { amount: 120, category: 'Tours', payerIds: ['m1', 'm3'], forIds: ['m1', 'm3'] },
+      { amount: 120, category: 'Activities', payerIds: ['m1', 'm3'], forIds: ['m1', 'm3'] },
     ];
 
     const expenseCategories = ['Breakfast', 'Lunch', 'Dinner', 'Other Food', 'Rides', 'Souvenirs', 'Other'];

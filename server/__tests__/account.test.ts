@@ -454,7 +454,7 @@ describe('Pending group invites', () => {
       .expect(201);
 
     await request(app)
-      .post('/api/tours')
+      .post('/api/activities')
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({
         tripId: rejectTripId,
@@ -511,7 +511,7 @@ describe('Pending group invites', () => {
     expect(lodgings.body.length).toBe(0);
 
     const tours = await request(app)
-      .get(`/api/tours?tripId=${rejectTripId}`)
+      .get(`/api/activities?tripId=${rejectTripId}`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
     expect(tours.body.length).toBe(0);
@@ -710,3 +710,4 @@ describe('Web Authentication', () => {
     expect(after.rows.length).toBe(0);
   });
 });
+

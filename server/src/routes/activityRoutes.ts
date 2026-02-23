@@ -4,20 +4,33 @@ import { authenticate } from '../auth';
 import {
   castItemVote,
   deleteExpenseForSource,
-  deleteTour,
+  deleteActivity,
   ensureUserInTrip,
   getItemVoteSummaries,
-  getTourById,
-  insertTour,
+  getActivityById,
+  insertActivity,
   listGroupMembers,
-  listTours,
-  updateTour,
+  listActivities,
+  updateActivity,
   upsertExpenseForSource,
 } from '../db';
 import { normalizeItineraryStatus, shouldRelaxRequiredFields } from '../utils/itineraryStatus';
 import { applyVoteSummary } from '../services/itemVoteService';
+import type { ActivityType } from '../types';
 
-// Tours API: CRUD for tours scoped to the authenticated user / their group trips.
+const ACTIVITY_TYPES: ActivityType[] = [
+  'Ticketed Attraction',
+  'Reservation',
+  'Tour',
+  'Open Access',
+  'Event',
+];
+const normalizeActivityType = (value: unknown): ActivityType | null => {
+  const str = typeof value === 'string' ? value.trim() : '';
+  return (ACTIVITY_TYPES as string[]).includes(str) ? (str as ActivityType) : null;
+};
+
+// Activities API: CRUD for activities scoped to the authenticated user / their group trips.
 const router = Router();
 router.use(bodyParser.json());
 router.use(authenticate);
@@ -25,31 +38,32 @@ router.use(authenticate);
 router.get('/', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const tripId = req.query.tripId as string | undefined;
-  const tours = await listTours(userId, tripId);
+  const activities = await listActivities(userId, tripId);
   if (tripId) {
-    const withVotes = await applyVoteSummary(userId, tripId, 'tour', tours as any[]);
+    const withVotes = await applyVoteSummary(userId, tripId, 'activity', activities as any[]);
     res.json(withVotes);
     return;
   }
   const grouped = new Map<string, any[]>();
-  (tours as any[]).forEach((tour) => {
-    const tId = String((tour as any).tripId ?? (tour as any).trip_id ?? '');
+  (activities as any[]).forEach((activity) => {
+    const tId = String((activity as any).tripId ?? (activity as any).trip_id ?? '');
     if (!tId) return;
     const bucket = grouped.get(tId) ?? [];
-    bucket.push(tour);
+    bucket.push(activity);
     grouped.set(tId, bucket);
   });
   const merged: any[] = [];
   for (const [tId, items] of grouped.entries()) {
-    const withVotes = await applyVoteSummary(userId, tId, 'tour', items);
+    const withVotes = await applyVoteSummary(userId, tId, 'activity', items);
     merged.push(...withVotes);
   }
-  res.json(merged.length ? merged : tours);
+  res.json(merged.length ? merged : activities);
 });
 
 router.post('/', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const { tripId, date, name, startLocation, startTime, duration, cost, freeCancelBy, bookedOn, reference, paidBy, travelerIds, status: incomingStatus } = req.body;
+  const { tripId, date, name, startLocation, startTime, duration, cost, freeCancelBy, bookedOn, reference, paidBy, travelerIds, activityType: incomingActivityType, status: incomingStatus } = req.body;
+  const activityType = normalizeActivityType(incomingActivityType) ?? 'Tour';
   const status = normalizeItineraryStatus(incomingStatus);
   const relaxed = shouldRelaxRequiredFields(status);
   if (!tripId || (!relaxed && (!date || !name))) {
@@ -61,10 +75,11 @@ router.post('/', async (req, res) => {
     res.status(403).json({ error: 'You must be in the group for this trip' });
     return;
   }
-  const tour = await insertTour({
+  const activity = await insertActivity({
     userId,
     tripId,
     status,
+    activityType,
     date: date || new Date().toISOString().slice(0, 10),
     name,
     startLocation: startLocation ?? '',
@@ -87,24 +102,30 @@ router.post('/', async (req, res) => {
     tripId,
     groupId: tripGroup.groupId,
     expenseDate: date || new Date().toISOString().slice(0, 10),
-    category: 'Tours',
+    category: 'Activities',
     amount: Number(cost) || 0,
     currency: undefined,
     payerIds: Array.isArray(paidBy) ? paidBy : [],
     forIds,
-    sourceType: 'tour',
-    sourceId: tour.id,
+    sourceType: 'activity',
+    sourceId: activity.id,
   });
-  res.status(201).json(tour);
+  res.status(201).json(activity);
 });
 
 router.put('/:id', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const id = req.params.id;
-  const { date, name, startLocation, startTime, duration, cost, freeCancelBy, bookedOn, reference, paidBy, travelerIds, status: incomingStatus } = req.body;
+  const { date, name, startLocation, startTime, duration, cost, freeCancelBy, bookedOn, reference, paidBy, travelerIds, activityType: incomingActivityType, status: incomingStatus } = req.body;
   const normalizedPaidBy = Array.isArray(paidBy) ? (paidBy.length ? paidBy : undefined) : undefined;
+  const finalActivityType = typeof incomingActivityType === 'undefined' ? undefined : normalizeActivityType(incomingActivityType);
+  if (typeof incomingActivityType !== 'undefined' && !finalActivityType) {
+    res.status(400).json({ error: 'Invalid activityType' });
+    return;
+  }
   const finalStatus = typeof incomingStatus === 'undefined' ? undefined : normalizeItineraryStatus(incomingStatus);
-  const updated = await updateTour(id, userId, {
+  const updated = await updateActivity(id, userId, {
+    activityType: finalActivityType,
     status: finalStatus,
     date,
     name,
@@ -118,7 +139,7 @@ router.put('/:id', async (req, res) => {
     paidBy: normalizedPaidBy,
   });
   if (!updated) {
-    res.status(404).json({ error: 'Tour not found' });
+    res.status(404).json({ error: 'Activity not found' });
     return;
   }
   const membership = await ensureUserInTrip(updated.tripId, userId);
@@ -134,12 +155,12 @@ router.put('/:id', async (req, res) => {
       tripId: updated.tripId,
       groupId: membership.groupId,
       expenseDate: updated.date,
-      category: 'Tours',
+      category: 'Activities',
       amount: Number(updated.cost) || 0,
       currency: undefined,
       payerIds: Array.isArray((updated as any).paidBy) ? (updated as any).paidBy : [],
       forIds,
-      sourceType: 'tour',
+      sourceType: 'activity',
       sourceId: updated.id,
     });
   }
@@ -150,10 +171,16 @@ router.put('/:id', async (req, res) => {
 router.patch('/:id', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const id = req.params.id;
-  const { date, name, startLocation, startTime, duration, cost, freeCancelBy, bookedOn, reference, paidBy, travelerIds, status: incomingStatus } = req.body;
+  const { date, name, startLocation, startTime, duration, cost, freeCancelBy, bookedOn, reference, paidBy, travelerIds, activityType: incomingActivityType, status: incomingStatus } = req.body;
   const normalizedPaidBy = Array.isArray(paidBy) ? (paidBy.length ? paidBy : undefined) : undefined;
+  const finalActivityType = typeof incomingActivityType === 'undefined' ? undefined : normalizeActivityType(incomingActivityType);
+  if (typeof incomingActivityType !== 'undefined' && !finalActivityType) {
+    res.status(400).json({ error: 'Invalid activityType' });
+    return;
+  }
   const finalStatus = typeof incomingStatus === 'undefined' ? undefined : normalizeItineraryStatus(incomingStatus);
-  const updated = await updateTour(id, userId, {
+  const updated = await updateActivity(id, userId, {
+    activityType: finalActivityType,
     status: finalStatus,
     date,
     name,
@@ -167,7 +194,7 @@ router.patch('/:id', async (req, res) => {
     paidBy: normalizedPaidBy,
   });
   if (!updated) {
-    res.status(404).json({ error: 'Tour not found' });
+    res.status(404).json({ error: 'Activity not found' });
     return;
   }
   const membership = await ensureUserInTrip(updated.tripId, userId);
@@ -183,12 +210,12 @@ router.patch('/:id', async (req, res) => {
       tripId: updated.tripId,
       groupId: membership.groupId,
       expenseDate: updated.date,
-      category: 'Tours',
+      category: 'Activities',
       amount: Number(updated.cost) || 0,
       currency: undefined,
       payerIds: Array.isArray((updated as any).paidBy) ? (updated as any).paidBy : [],
       forIds,
-      sourceType: 'tour',
+      sourceType: 'activity',
       sourceId: updated.id,
     });
   }
@@ -197,8 +224,8 @@ router.patch('/:id', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  await deleteTour(req.params.id, userId);
-  await deleteExpenseForSource('tour', req.params.id, userId);
+  await deleteActivity(req.params.id, userId);
+  await deleteExpenseForSource('activity', req.params.id, userId);
   res.status(204).send();
 });
 
@@ -210,14 +237,14 @@ router.post('/:id/vote', async (req, res) => {
     res.status(400).json({ error: 'value must be 1 or -1' });
     return;
   }
-  const tour = await getTourById(req.params.id);
-  if (!tour) {
-    res.status(404).json({ error: 'Tour not found' });
+  const activity = await getActivityById(req.params.id);
+  if (!activity) {
+    res.status(404).json({ error: 'Activity not found' });
     return;
   }
-  const tripId = String((tour as any).tripId ?? (tour as any).trip_id ?? '');
+  const tripId = String((activity as any).tripId ?? (activity as any).trip_id ?? '');
   if (!tripId) {
-    res.status(400).json({ error: 'Tour has no trip' });
+    res.status(400).json({ error: 'Activity has no trip' });
     return;
   }
   const membership = await ensureUserInTrip(tripId, userId);
@@ -225,13 +252,13 @@ router.post('/:id/vote', async (req, res) => {
     res.status(403).json({ error: 'Only trip members may vote' });
     return;
   }
-  const status = normalizeItineraryStatus((tour as any).status);
+  const status = normalizeItineraryStatus((activity as any).status);
   if (status !== 'Proposed') {
     res.status(400).json({ error: 'Voting is only allowed for Proposed items' });
     return;
   }
-  await castItemVote(userId, tripId, 'tour', req.params.id, value, 'vote');
-  const summary = await getItemVoteSummaries(userId, tripId, 'tour', [req.params.id], 'vote');
+  await castItemVote(userId, tripId, 'activity', req.params.id, value, 'vote');
+  const summary = await getItemVoteSummaries(userId, tripId, 'activity', [req.params.id], 'vote');
   res.json({
     itemId: req.params.id,
     netVotes: summary[req.params.id]?.netVotes ?? 0,
@@ -247,14 +274,14 @@ router.post('/:id/rating', async (req, res) => {
     res.status(400).json({ error: 'value must be 1 or -1' });
     return;
   }
-  const tour = await getTourById(req.params.id);
-  if (!tour) {
-    res.status(404).json({ error: 'Tour not found' });
+  const activity = await getActivityById(req.params.id);
+  if (!activity) {
+    res.status(404).json({ error: 'Activity not found' });
     return;
   }
-  const tripId = String((tour as any).tripId ?? (tour as any).trip_id ?? '');
+  const tripId = String((activity as any).tripId ?? (activity as any).trip_id ?? '');
   if (!tripId) {
-    res.status(400).json({ error: 'Tour has no trip' });
+    res.status(400).json({ error: 'Activity has no trip' });
     return;
   }
   const membership = await ensureUserInTrip(tripId, userId);
@@ -262,13 +289,13 @@ router.post('/:id/rating', async (req, res) => {
     res.status(403).json({ error: 'Only trip members may rate' });
     return;
   }
-  const status = normalizeItineraryStatus((tour as any).status);
+  const status = normalizeItineraryStatus((activity as any).status);
   if (status !== 'Completed') {
     res.status(400).json({ error: 'Rating is only allowed for Completed items' });
     return;
   }
-  await castItemVote(userId, tripId, 'tour', req.params.id, value, 'rating');
-  const summary = await getItemVoteSummaries(userId, tripId, 'tour', [req.params.id], 'rating');
+  await castItemVote(userId, tripId, 'activity', req.params.id, value, 'rating');
+  const summary = await getItemVoteSummaries(userId, tripId, 'activity', [req.params.id], 'rating');
   res.json({
     itemId: req.params.id,
     netRating: summary[req.params.id]?.netVotes ?? 0,
@@ -277,3 +304,4 @@ router.post('/:id/rating', async (req, res) => {
 });
 
 export default router;
+

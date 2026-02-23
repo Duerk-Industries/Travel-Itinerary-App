@@ -121,7 +121,7 @@ export const buildAllExpenses = (
     allExpenses.push({
       id: `tour-${t.id}`,
       date: t.date,
-      category: 'Tours',
+      category: 'Activities',
       description: t.name ?? '',
       amount: Number(t.cost) || 0,
       currency: tripCurrency,

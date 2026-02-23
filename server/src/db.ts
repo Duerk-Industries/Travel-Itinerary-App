@@ -3,7 +3,7 @@ import type { Pool } from 'pg';
 import type {
   Flight,
   Lodging,
-  Tour,
+  Activity,
   Trait,
   Trip,
   Itinerary,
@@ -99,20 +99,20 @@ export const deleteLodging = async (...args: Parameters<ReturnType<typeof adapte
   adapter().deleteLodging(...args);
 export const updateLodging = async (...args: Parameters<ReturnType<typeof adapter>['updateLodging']>) =>
   adapter().updateLodging(...args);
-export const listTours = async (...args: Parameters<ReturnType<typeof adapter>['listTours']>): Promise<Tour[]> =>
-  adapter().listTours(...args);
+export const listActivities = async (...args: Parameters<ReturnType<typeof adapter>['listActivities']>): Promise<Activity[]> =>
+  adapter().listActivities(...args);
 export const listCarRentals = async (...args: Parameters<ReturnType<typeof adapter>['listCarRentals']>): Promise<CarRental[]> =>
   adapter().listCarRentals(...args);
-export const insertTour = async (...args: Parameters<ReturnType<typeof adapter>['insertTour']>) =>
-  adapter().insertTour(...args);
+export const insertActivity = async (...args: Parameters<ReturnType<typeof adapter>['insertActivity']>) =>
+  adapter().insertActivity(...args);
 export const insertCarRental = async (...args: Parameters<ReturnType<typeof adapter>['insertCarRental']>) =>
   adapter().insertCarRental(...args);
-export const updateTour = async (...args: Parameters<ReturnType<typeof adapter>['updateTour']>) =>
-  adapter().updateTour(...args);
+export const updateActivity = async (...args: Parameters<ReturnType<typeof adapter>['updateActivity']>) =>
+  adapter().updateActivity(...args);
 export const updateCarRental = async (...args: Parameters<ReturnType<typeof adapter>['updateCarRental']>) =>
   adapter().updateCarRental(...args);
-export const deleteTour = async (...args: Parameters<ReturnType<typeof adapter>['deleteTour']>) =>
-  adapter().deleteTour(...args);
+export const deleteActivity = async (...args: Parameters<ReturnType<typeof adapter>['deleteActivity']>) =>
+  adapter().deleteActivity(...args);
 export const deleteCarRental = async (...args: Parameters<ReturnType<typeof adapter>['deleteCarRental']>) =>
   adapter().deleteCarRental(...args);
 export const getCarRentalById = async (...args: Parameters<ReturnType<typeof adapter>['getCarRentalById']>) =>
@@ -121,8 +121,8 @@ export const getFlightById = async (...args: Parameters<ReturnType<typeof adapte
   adapter().getFlightById(...args);
 export const getLodgingById = async (...args: Parameters<ReturnType<typeof adapter>['getLodgingById']>) =>
   adapter().getLodgingById(...args);
-export const getTourById = async (...args: Parameters<ReturnType<typeof adapter>['getTourById']>) =>
-  adapter().getTourById(...args);
+export const getActivityById = async (...args: Parameters<ReturnType<typeof adapter>['getActivityById']>) =>
+  adapter().getActivityById(...args);
 export const castItemVote = async (...args: Parameters<ReturnType<typeof adapter>['castItemVote']>) =>
   adapter().castItemVote(...args);
 export const getItemVoteSummaries = async (...args: Parameters<ReturnType<typeof adapter>['getItemVoteSummaries']>) =>
@@ -270,3 +270,4 @@ export const updateFamilyProfile = async (...args: Parameters<ReturnType<typeof 
   adapter().updateFamilyProfile(...args);
 export const poolClient = (): Pool => adapter().poolClient();
 export const getPool = (): Pool => adapter().poolClient();
+

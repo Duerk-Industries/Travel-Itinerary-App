@@ -5,7 +5,7 @@ import { createHash, randomBytes, randomUUID, scryptSync, timingSafeEqual } from
 import {
   Flight,
   Lodging,
-  Tour,
+  Activity,
   CarRental,
   Trait,
   Trip,
@@ -2033,7 +2033,7 @@ export const getLodgingById = async (lodgingId: string): Promise<Lodging | null>
 };
 
 // Tours
-export const listTours = async (userId: string, tripId?: string): Promise<Tour[]> => {
+export const listActivities = async (userId: string, tripId?: string): Promise<Activity[]> => {
   const db = getDb();
   const chunk = <T>(items: T[], size = 10): T[][] => {
     const chunks: T[][] = [];
@@ -2046,7 +2046,11 @@ export const listTours = async (userId: string, tripId?: string): Promise<Tour[]
     const access = await ensureUserCanReadTrip(tripId, userId);
     if (!access) return [];
     const snapshot = await db.collection('tours').where('tripId', '==', tripId).get();
-    return snapshot.docs.map((d) => ({ ...(d.data() as Tour), status: normalizeItineraryStatus((d.data() as any).status) }));
+    return snapshot.docs.map((d) => ({
+      ...(d.data() as Activity),
+      activityType: ((d.data() as any).activityType ?? 'Tour') as Activity['activityType'],
+      status: normalizeItineraryStatus((d.data() as any).status),
+    }));
   }
   const memberSnap = await db.collection('group_members').where('userId', '==', userId).where('removedAt', '==', null).get();
   const groupIds = memberSnap.docs.map((d) => (d.data() as any).groupId).filter(Boolean);
@@ -2062,36 +2066,53 @@ export const listTours = async (userId: string, tripId?: string): Promise<Tour[]
   });
   const uniqueTripIds = Array.from(new Set(tripIds));
   if (!uniqueTripIds.length) return [];
-  const tours: Tour[] = [];
+  const activities: Activity[] = [];
   for (const ids of chunk(uniqueTripIds)) {
     const snapshot = await db.collection('tours').where('tripId', 'in', ids).get();
     snapshot.docs.forEach((d) =>
-      tours.push({ ...(d.data() as Tour), status: normalizeItineraryStatus((d.data() as any).status) })
+      activities.push({
+        ...(d.data() as Activity),
+        activityType: ((d.data() as any).activityType ?? 'Tour') as Activity['activityType'],
+        status: normalizeItineraryStatus((d.data() as any).status),
+      })
     );
   }
-  return tours;
+  return activities;
 };
 
-export const insertTour = async (tour: Omit<Tour, 'id' | 'createdAt'>): Promise<Tour> => {
+export const insertActivity = async (activity: Omit<Activity, 'id' | 'createdAt'>): Promise<Activity> => {
   const db = getDb();
   const id = randomUUID();
-  const payload = { ...tour, status: normalizeItineraryStatus((tour as any).status), id, createdAt: nowIso() };
+  const payload = {
+    ...activity,
+    activityType: (activity as any).activityType ?? 'Tour',
+    status: normalizeItineraryStatus((activity as any).status),
+    id,
+    createdAt: nowIso(),
+  };
   await db.collection('tours').doc(id).set(payload);
   return payload;
 };
 
-export const updateTour = async (id: string, userId: string, tour: Partial<Tour>): Promise<Tour | null> => {
+export const updateActivity = async (id: string, userId: string, activity: Partial<Activity>): Promise<Activity | null> => {
   const db = getDb();
   const doc = await db.collection('tours').doc(id).get();
   if (!doc.exists) return null;
   if ((doc.data() as any).userId !== userId) throw new Error('Not authorized');
-  const updatePayload = stripUndefined(tour);
+  const updatePayload = stripUndefined({
+    ...activity,
+    activityType: typeof (activity as any).activityType === 'undefined' ? undefined : (activity as any).activityType,
+  });
   await db.collection('tours').doc(id).update(updatePayload);
   const updated = await db.collection('tours').doc(id).get();
-  return { ...(updated.data() as Tour), status: normalizeItineraryStatus((updated.data() as any)?.status) };
+  return {
+    ...(updated.data() as Activity),
+    activityType: ((updated.data() as any)?.activityType ?? 'Tour') as Activity['activityType'],
+    status: normalizeItineraryStatus((updated.data() as any)?.status),
+  };
 };
 
-export const deleteTour = async (tourId: string, userId: string): Promise<void> => {
+export const deleteActivity = async (tourId: string, userId: string): Promise<void> => {
   const db = getDb();
   const doc = await db.collection('tours').doc(tourId).get();
   if (!doc.exists) return;
@@ -2099,10 +2120,14 @@ export const deleteTour = async (tourId: string, userId: string): Promise<void> 
   await db.collection('tours').doc(tourId).delete();
 };
 
-export const getTourById = async (id: string): Promise<Tour | null> => {
+export const getActivityById = async (id: string): Promise<Activity | null> => {
   const doc = await getDb().collection('tours').doc(id).get();
   if (!doc.exists) return null;
-  return { ...(doc.data() as Tour), status: normalizeItineraryStatus((doc.data() as any)?.status) };
+  return {
+    ...(doc.data() as Activity),
+    activityType: ((doc.data() as any)?.activityType ?? 'Tour') as Activity['activityType'],
+    status: normalizeItineraryStatus((doc.data() as any)?.status),
+  };
 };
 
 // Car rentals
@@ -2194,7 +2219,7 @@ export const deleteCarRental = async (id: string, userId: string): Promise<void>
   await db.collection('car_rentals').doc(id).delete();
 };
 
-type VoteItemType = 'flight' | 'lodging' | 'tour' | 'car_rental';
+type VoteItemType = 'flight' | 'lodging' | 'activity' | 'car_rental';
 type ReactionKind = 'vote' | 'rating';
 const reactionItemTypeKey = (itemType: VoteItemType, kind: ReactionKind): string =>
   kind === 'rating' ? `${itemType}:rating` : itemType;
@@ -2909,12 +2934,12 @@ export const removeTravelerFromTrip = async (userId: string, tripId: string, tra
     // 4. Process Tours
     const toursSnap = await db.collection('tours').where('tripId', '==', tripId).get();
     for (const tourDoc of toursSnap.docs) {
-      const tour = tourDoc.data() as Tour & { paidBy?: string[] };
+      const tour = tourDoc.data() as Activity & { paidBy?: string[] };
       if (tour.paidBy?.includes(userIdToRemove)) {
         if (tour.paidBy.length === 1) {
           batch.delete(tourDoc.ref);
         } else {
-          const updates: Partial<Tour> = {
+          const updates: Partial<Activity> = {
             paidBy: tour.paidBy.filter((id) => id !== userIdToRemove),
           };
           batch.update(tourDoc.ref, updates);
@@ -3011,3 +3036,4 @@ export const findOrCreateGoogleUser = async (profile: any): Promise<User> => {
 
     return { id: newUserId, email: normalizedEmail, provider: 'google' };
 };
+

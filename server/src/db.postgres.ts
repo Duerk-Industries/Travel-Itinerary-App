@@ -10,7 +10,7 @@ import {
   User,
   WebUser,
   Lodging,
-  Tour,
+  Activity,
   CarRental,
   Itinerary,
   ItineraryDetail,
@@ -501,6 +501,8 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE tours ADD COLUMN IF NOT EXISTS paid_by JSONB DEFAULT '[]'::jsonb;`);
   await p.query(`ALTER TABLE tours ADD COLUMN IF NOT EXISTS booked_on TEXT;`);
   await p.query(`ALTER TABLE tours ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'Booked';`);
+  await p.query(`ALTER TABLE tours ADD COLUMN IF NOT EXISTS activity_type TEXT NOT NULL DEFAULT 'Tour';`);
+  await p.query(`UPDATE tours SET activity_type = 'Tour' WHERE activity_type IS NULL OR trim(activity_type) = '';`);
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS car_rentals (
@@ -2454,16 +2456,17 @@ export const updateLodging = async (
     travelerIds,
   } as Lodging & { paidBy: string[]; travelerIds: string[] };
 };
-export const listTours = async (userId: string, tripId?: string): Promise<Tour[]> => {
+export const listActivities = async (userId: string, tripId?: string): Promise<Activity[]> => {
   // Return tours for the given trip that the requesting user can see (anyone in the trip's group).
   const p = getPool();
-  const { rows } = await p.query<Tour>(
+  const { rows } = await p.query<Activity>(
     `
     SELECT
       tu.id,
       tu.user_id as "userId",
       tu.trip_id as "tripId",
       tu.status,
+      COALESCE(NULLIF(tu.activity_type, ''), 'Tour') as "activityType",
       to_char(tu.date, 'YYYY-MM-DD') as date,
       tu.name,
       tu.start_location as "startLocation",
@@ -2493,15 +2496,16 @@ export const listTours = async (userId: string, tripId?: string): Promise<Tour[]
   return rows.map((r) => ({ ...r, paidBy: Array.isArray((r as any).paidBy) ? (r as any).paidBy : [] }));
 };
 
-export const getTourById = async (id: string): Promise<Tour | null> => {
+export const getActivityById = async (id: string): Promise<Activity | null> => {
   const p = getPool();
-  const { rows } = await p.query<Tour>(
+  const { rows } = await p.query<Activity>(
     `
     SELECT
       tu.id,
       tu.user_id as "userId",
       tu.trip_id as "tripId",
       tu.status,
+      COALESCE(NULLIF(tu.activity_type, ''), 'Tour') as "activityType",
       to_char(tu.date, 'YYYY-MM-DD') as date,
       tu.name,
       tu.start_location as "startLocation",
@@ -2524,22 +2528,23 @@ export const getTourById = async (id: string): Promise<Tour | null> => {
   return { ...row, paidBy: Array.isArray((row as any).paidBy) ? (row as any).paidBy : [] };
 };
 
-export const insertTour = async (tour: Omit<Tour, 'id' | 'createdAt'>): Promise<Tour> => {
+export const insertActivity = async (activity: Omit<Activity, 'id' | 'createdAt'>): Promise<Activity> => {
   const p = getPool();
   const id = randomUUID();
-  const paidBy = JSON.stringify(tour.paidBy ?? []);
-  const { rows } = await p.query<Tour>(
+  const paidBy = JSON.stringify(activity.paidBy ?? []);
+  const { rows } = await p.query<Activity>(
     `
     INSERT INTO tours (
-      id, user_id, trip_id, status, date, name, start_location, start_time, duration, cost, free_cancel_by, booked_on, reference, paid_by
+      id, user_id, trip_id, status, activity_type, date, name, start_location, start_time, duration, cost, free_cancel_by, booked_on, reference, paid_by
     ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
     )
     RETURNING
       id,
       user_id as "userId",
       trip_id as "tripId",
       status,
+      COALESCE(NULLIF(activity_type, ''), 'Tour') as "activityType",
       to_char(date, 'YYYY-MM-DD') as date,
       name,
       start_location as "startLocation",
@@ -2554,18 +2559,19 @@ export const insertTour = async (tour: Omit<Tour, 'id' | 'createdAt'>): Promise<
     `,
     [
       id,
-      tour.userId,
-      tour.tripId,
-      tour.status,
-      tour.date,
-      tour.name,
-      tour.startLocation,
-      tour.startTime,
-      tour.duration,
-      tour.cost,
-      tour.freeCancelBy ?? null,
-      tour.bookedOn,
-      tour.reference,
+      activity.userId,
+      activity.tripId,
+      activity.status,
+      activity.activityType ?? 'Tour',
+      activity.date,
+      activity.name,
+      activity.startLocation,
+      activity.startTime,
+      activity.duration,
+      activity.cost,
+      activity.freeCancelBy ?? null,
+      activity.bookedOn,
+      activity.reference,
       paidBy,
     ]
   );
@@ -2573,30 +2579,32 @@ export const insertTour = async (tour: Omit<Tour, 'id' | 'createdAt'>): Promise<
   return { ...row, paidBy: Array.isArray((row as any).paidBy) ? (row as any).paidBy : [] };
 };
 
-export const updateTour = async (id: string, userId: string, tour: Partial<Tour>): Promise<Tour | null> => {
+export const updateActivity = async (id: string, userId: string, activity: Partial<Activity>): Promise<Activity | null> => {
   const p = getPool();
-  const paidBy = typeof tour.paidBy !== 'undefined' ? JSON.stringify(tour.paidBy ?? []) : undefined;
-  const { rows } = await p.query<Tour>(
+  const paidBy = typeof activity.paidBy !== 'undefined' ? JSON.stringify(activity.paidBy ?? []) : undefined;
+  const { rows } = await p.query<Activity>(
     `
     UPDATE tours
     SET
       status = COALESCE($3, status),
-      date = COALESCE($4, date),
-      name = COALESCE($5, name),
-      start_location = COALESCE($6, start_location),
-      start_time = COALESCE($7, start_time),
-      duration = COALESCE($8, duration),
-      cost = COALESCE($9, cost),
-      free_cancel_by = COALESCE($10, free_cancel_by),
-      booked_on = COALESCE($11, booked_on),
-      reference = COALESCE($12, reference),
-      paid_by = COALESCE($13::jsonb, paid_by)
+      activity_type = COALESCE($4, activity_type),
+      date = COALESCE($5, date),
+      name = COALESCE($6, name),
+      start_location = COALESCE($7, start_location),
+      start_time = COALESCE($8, start_time),
+      duration = COALESCE($9, duration),
+      cost = COALESCE($10, cost),
+      free_cancel_by = COALESCE($11, free_cancel_by),
+      booked_on = COALESCE($12, booked_on),
+      reference = COALESCE($13, reference),
+      paid_by = COALESCE($14::jsonb, paid_by)
     WHERE id = $1 AND user_id = $2
     RETURNING
       id,
       user_id as "userId",
       trip_id as "tripId",
       status,
+      COALESCE(NULLIF(activity_type, ''), 'Tour') as "activityType",
       to_char(date, 'YYYY-MM-DD') as date,
       name,
       start_location as "startLocation",
@@ -2612,16 +2620,17 @@ export const updateTour = async (id: string, userId: string, tour: Partial<Tour>
     [
       id,
       userId,
-      tour.status ?? null,
-      tour.date ?? null,
-      tour.name ?? null,
-      tour.startLocation ?? null,
-      tour.startTime ?? null,
-      tour.duration ?? null,
-      tour.cost ?? null,
-      tour.freeCancelBy ?? null,
-      tour.bookedOn ?? null,
-      tour.reference ?? null,
+      activity.status ?? null,
+      activity.activityType ?? null,
+      activity.date ?? null,
+      activity.name ?? null,
+      activity.startLocation ?? null,
+      activity.startTime ?? null,
+      activity.duration ?? null,
+      activity.cost ?? null,
+      activity.freeCancelBy ?? null,
+      activity.bookedOn ?? null,
+      activity.reference ?? null,
       paidBy ?? null,
     ]
   );
@@ -2630,7 +2639,7 @@ export const updateTour = async (id: string, userId: string, tour: Partial<Tour>
   return { ...row, paidBy: Array.isArray((row as any).paidBy) ? (row as any).paidBy : [] };
 };
 
-export const deleteTour = async (tourId: string, userId: string): Promise<void> => {
+export const deleteActivity = async (tourId: string, userId: string): Promise<void> => {
   const p = getPool();
   await p.query(`DELETE FROM tours WHERE id = $1 AND user_id = $2`, [tourId, userId]);
 };
@@ -2863,7 +2872,7 @@ export const deleteCarRental = async (id: string, userId: string): Promise<void>
   );
 };
 
-type VoteItemType = 'flight' | 'lodging' | 'tour' | 'car_rental';
+type VoteItemType = 'flight' | 'lodging' | 'activity' | 'car_rental';
 type ReactionKind = 'vote' | 'rating';
 const reactionItemTypeKey = (itemType: VoteItemType, kind: ReactionKind): string =>
   kind === 'rating' ? `${itemType}:rating` : itemType;
@@ -5781,3 +5790,4 @@ export const deleteAllUsers = async (userIds: string[]): Promise<void> => {
   const p = getPool();
   await p.query(`DELETE FROM users WHERE id = ANY($1::uuid[])`, [userIds]);
 };
+

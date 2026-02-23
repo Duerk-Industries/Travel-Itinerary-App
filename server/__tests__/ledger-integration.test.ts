@@ -119,7 +119,7 @@ describe('Ledger integration data setup', () => {
     const tourTravelers = pickTravelers();
     const tourPayers = pickPayers();
     await request(app)
-      .post('/api/tours')
+      .post('/api/activities')
       .set('Authorization', `Bearer ${token}`)
       .send({
         tripId,
@@ -183,3 +183,4 @@ describe('Ledger integration data setup', () => {
     });
   });
 });
+

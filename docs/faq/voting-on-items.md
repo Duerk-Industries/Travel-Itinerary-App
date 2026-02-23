@@ -25,11 +25,11 @@
 
 - `POST /api/flights/:id/vote`
 - `POST /api/lodgings/:id/vote`
-- `POST /api/tours/:id/vote`
+- `POST /api/activities/:id/vote`
 - `POST /api/car-rentals/:id/vote`
 - `POST /api/flights/:id/rating`
 - `POST /api/lodgings/:id/rating`
-- `POST /api/tours/:id/rating`
+- `POST /api/activities/:id/rating`
 - `POST /api/car-rentals/:id/rating`
 
 Request body:
@@ -39,3 +39,4 @@ Request body:
 ```
 
 `value` must be `1` (thumbs up) or `-1` (thumbs down).
+

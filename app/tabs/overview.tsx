@@ -48,11 +48,11 @@ import {
   type LodgingDraft,
 } from '../tabs/lodging';
 import {
-  buildTourPayload,
-  createInitialTourState,
-  createTourForTrip,
+  buildActivityPayload,
+  createInitialActivityState,
+  createActivityForTrip,
   type TourDraft,
-} from '../tabs/tours';
+} from '../tabs/activities';
 import {
   buildCarRentalFromDraft,
   createInitialCarRentalDraft,
@@ -364,7 +364,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const [showAddTour, setShowAddTour] = useState(false);
   const [showAddRental, setShowAddRental] = useState(false);
   const [lodgingDraft, setLodgingDraft] = useState<LodgingDraft>(createInitialLodgingState());
-  const [tourDraft, setTourDraft] = useState<TourDraft>(createInitialTourState());
+  const [tourDraft, setTourDraft] = useState<TourDraft>(createInitialActivityState());
   const [rentalDraft, setRentalDraft] = useState<CarRentalDraft>(createInitialCarRentalDraft());
   const [editingFlightId, setEditingFlightId] = useState<string | null>(null);
   const [editingFlightDraft, setEditingFlightDraft] = useState<FlightEditDraft | null>(null);
@@ -1143,12 +1143,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   const saveTour = async () => {
     if (editingTourId) {
-      const { payload, error } = buildTourPayload(tourDraft, defaultPayerId);
+      const { payload, error } = buildActivityPayload(tourDraft, defaultPayerId);
       if (error || !payload) {
         alert(error || 'Unable to save tour');
         return;
       }
-      const res = await fetch(`${backendUrl}/api/tours/${editingTourId}`, {
+      const res = await fetch(`${backendUrl}/api/activities/${editingTourId}`, {
         method: 'PUT',
         headers: jsonHeaders,
         body: JSON.stringify({ ...payload, tripId: trip?.id }),
@@ -1162,7 +1162,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       onTourDataChanged();
       return;
     }
-    const result = await createTourForTrip({
+    const result = await createActivityForTrip({
       backendUrl,
       jsonHeaders,
       draft: tourDraft,
@@ -1209,7 +1209,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const closeTourModal = () => {
     setShowAddTour(false);
     setEditingTourId(null);
-    setTourDraft(createInitialTourState());
+    setTourDraft(createInitialActivityState());
   };
 
   const closeRentalModal = () => {
@@ -1287,7 +1287,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const openAddTour = () => {
     if (!isEditing) return;
     setEditingTourId(null);
-    setTourDraft(createInitialTourState());
+    setTourDraft(createInitialActivityState());
     setShowAddTour(true);
   };
 
@@ -2509,5 +2509,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 };
 
 export default OverviewTab;
+
 
 

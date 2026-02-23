@@ -143,7 +143,7 @@ describe('Expense sync for source-backed items', () => {
 
   it('updates tour expense travelers when travelerIds change', async () => {
     const tourRes = await request(app)
-      .post('/api/tours')
+      .post('/api/activities')
       .set('Authorization', `Bearer ${tokenA}`)
       .send({
         tripId,
@@ -165,13 +165,13 @@ describe('Expense sync for source-backed items', () => {
       .set('Authorization', `Bearer ${tokenA}`)
       .expect(200);
 
-    let tourExpenses = expenses.body.filter((e: any) => e.sourceType === 'tour' && e.sourceId === tourId);
+    let tourExpenses = expenses.body.filter((e: any) => e.sourceType === 'activity' && e.sourceId === tourId);
     expect(tourExpenses).toHaveLength(1);
     expect(tourExpenses[0].payerIds).toEqual([memberA]);
     expect(tourExpenses[0].forIds).toEqual([memberA]);
 
     await request(app)
-      .patch(`/api/tours/${tourId}`)
+      .patch(`/api/activities/${tourId}`)
       .set('Authorization', `Bearer ${tokenA}`)
       .send({ travelerIds: [memberA, memberB] })
       .expect(200);
@@ -181,8 +181,9 @@ describe('Expense sync for source-backed items', () => {
       .set('Authorization', `Bearer ${tokenA}`)
       .expect(200);
 
-    tourExpenses = expenses.body.filter((e: any) => e.sourceType === 'tour' && e.sourceId === tourId);
+    tourExpenses = expenses.body.filter((e: any) => e.sourceType === 'activity' && e.sourceId === tourId);
     expect(tourExpenses).toHaveLength(1);
     expect(new Set(tourExpenses[0].forIds)).toEqual(new Set([memberA, memberB]));
   });
 });
+

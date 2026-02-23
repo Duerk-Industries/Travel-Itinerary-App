@@ -14,7 +14,7 @@ import {
 import { balanceCategoryTotals, computePayerTotals } from './costReport';
 import { renderRichTextBlocks } from '../utils/richText';
 import { formatDateLong } from '../utils/formatDateLong';
-import { TourTab, type Tour, buildTourPayload } from './tours';
+import { ActivityTab, type Tour, buildActivityPayload } from './activities';
 import { type CarRental, type CarRentalDraft, buildCarRentalFromDraft, createInitialCarRentalDraft } from './carRentals';
 import { parsePlanToDetails } from '../utils/itineraryParser';
 import { computeDurationFromRange, formatMonthYear } from '../utils/tripDates';
@@ -935,6 +935,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
         const paidBy = resolvedPaidBy.length ? resolvedPaidBy : fallbackPayerId ? [fallbackPayerId] : [];
 
         const draft = {
+          status: (tour as any).status ?? 'Needed',
+          activityType: (tour as any).activityType ?? 'Tour',
           date: tour.date,
           name: tour.name,
           startLocation: tour.startLocation,
@@ -947,12 +949,12 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           paidBy,
           travelerIds: [],
         };
-        const { payload, error } = buildTourPayload(draft, fallbackPayerId ?? undefined);
+        const { payload, error } = buildActivityPayload(draft, fallbackPayerId ?? undefined);
         if (error || !payload) {
           failures.push(error || 'Failed to save tour');
           continue;
         }
-        const saveRes = await fetch(`${backendUrl}/api/tours`, {
+        const saveRes = await fetch(`${backendUrl}/api/activities`, {
           method: 'POST',
           headers: wizardJsonHeaders,
           body: JSON.stringify({
@@ -1939,7 +1941,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           <>
             <Text style={styles.sectionTitle}>Tours & Activities</Text>
             <Text style={styles.helperText}>Optional. Add tours using the full tours interface.</Text>
-            <TourTab
+            <ActivityTab
               backendUrl={backendUrl}
               userToken={userToken}
               activeTripId={null}
@@ -2703,3 +2705,4 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
 };
 
 export default CreateTripWizard;
+

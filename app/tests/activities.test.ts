@@ -1,6 +1,6 @@
 import { describe, expect, test } from '@jest/globals';
 import { computePayerTotals } from '../tabs/costReport';
-import { buildTourPayload } from '../tabs/tours';
+import { buildActivityPayload } from '../tabs/activities';
 
 type Tour = {
   id: string;
@@ -62,11 +62,12 @@ describe('Tours', () => {
     expect(totals).toEqual({ alice: 30, bob: 30, charlie: 30 });
   });
 
-  test('buildTourPayload cleans cost and applies default payer', () => {
-    const result = buildTourPayload(
+  test('buildActivityPayload cleans cost and applies default payer', () => {
+    const result = buildActivityPayload(
       {
         date: '2025-04-10',
         status: 'Booked',
+        activityType: 'Tour',
         name: 'Food Tour',
         startLocation: 'Downtown',
         startTime: '10:00',
@@ -84,11 +85,12 @@ describe('Tours', () => {
     expect(result.payload?.paidBy).toEqual(['payer-1']);
   });
 
-  test('buildTourPayload allows blank name when status is Needed', () => {
-    const result = buildTourPayload(
+  test('buildActivityPayload allows blank name when status is Needed', () => {
+    const result = buildActivityPayload(
       {
         date: '2025-04-10',
         status: 'Needed',
+        activityType: 'Tour',
         name: '',
         startLocation: '',
         startTime: '',
@@ -106,3 +108,4 @@ describe('Tours', () => {
     expect(result.payload?.status).toBe('Needed');
   });
 });
+

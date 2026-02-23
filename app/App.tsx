@@ -18,7 +18,7 @@ import { normalizeDateString } from './utils/normalizeDateString';
 import { sanitizeCostInput } from './utils/sanitizeCost';
 import { initializeAppCheck } from './utils/firebaseAppCheck';
 import { FlightsTab, type Flight, fetchFlightsForTrip } from './tabs/transfers';
-import { type Tour, TourTab, fetchToursForTrip } from './tabs/tours';
+import { type Tour, ActivityTab, fetchActivitiesForTrip } from './tabs/activities';
 import { type Trait } from './tabs/traits';
 import { FollowTab, fetchFollowedTripsApi, loadFollowCodes, loadFollowPayloads, saveFollowCodes, saveFollowPayloads, type FollowedTrip } from './tabs/follow';
 import FollowingTab from './tabs/following';
@@ -1212,7 +1212,7 @@ const App: React.FC = () => {
       setTours([]);
       return;
     }
-    const data = await fetchToursForTrip({ backendUrl, activeTripId, token: token ?? userToken });
+    const data = await fetchActivitiesForTrip({ backendUrl, activeTripId, token: token ?? userToken });
     setTours(data);
   }, [activeTripId, backendUrl, userToken]);
 
@@ -2075,7 +2075,7 @@ const App: React.FC = () => {
           ) : null}
 
           {activePage === 'tours' ? (
-            <TourTab
+            <ActivityTab
               backendUrl={backendUrl}
               userToken={userToken}
               activeTripId={activeTripId}
@@ -4239,4 +4239,5 @@ const styles = StyleSheet.create({
 });
 
 export default App;
+
 

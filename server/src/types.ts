@@ -1,4 +1,10 @@
 export type ItineraryStatus = 'Needed' | 'Proposed' | 'Booked' | 'Cancelled' | 'Completed';
+export type ActivityType =
+  | 'Ticketed Attraction'
+  | 'Reservation'
+  | 'Tour'
+  | 'Open Access'
+  | 'Event';
 
 export interface User {
   id: string;
@@ -157,11 +163,12 @@ export interface Lodging {
   placeId?: string;
 }
 
-export interface Tour {
+export interface Activity {
   id: string;
   userId: string;
   tripId: string;
   status: ItineraryStatus;
+  activityType: ActivityType;
   netVotes?: number;
   userVote?: -1 | 1 | null;
   netRating?: number;
@@ -178,6 +185,9 @@ export interface Tour {
   paidBy: string[];
   createdAt: string;
 }
+
+// Temporary compatibility alias while call sites transition to Activity naming.
+export type Tour = Activity;
 
 export interface CarRental {
   id: string;

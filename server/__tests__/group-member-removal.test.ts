@@ -106,7 +106,7 @@ describe('Group member removal cleans related items', () => {
       .expect(201);
 
     await request(app)
-      .post('/api/tours')
+      .post('/api/activities')
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({
         tripId,
@@ -153,10 +153,11 @@ describe('Group member removal cleans related items', () => {
     expect(lodgingsRes.body).toHaveLength(0);
 
     const toursRes = await request(app)
-      .get(`/api/tours?tripId=${tripId}`)
+      .get(`/api/activities?tripId=${tripId}`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
     const tourPaidBy = toursRes.body[0].paidBy || toursRes.body[0].paid_by;
     expect(tourPaidBy).toEqual([ownerMemberId]);
   });
 });
+

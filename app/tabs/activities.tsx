@@ -13,9 +13,13 @@ import {
   ITINERARY_STATUSES,
 } from '../utils/itineraryStatus';
 
+export type ActivityType = 'Ticketed Attraction' | 'Reservation' | 'Tour' | 'Open Access' | 'Event';
+const ACTIVITY_TYPES: ActivityType[] = ['Ticketed Attraction', 'Reservation', 'Tour', 'Open Access', 'Event'];
+
 export type Tour = {
   id: string;
   status: ItineraryStatus;
+  activityType: ActivityType;
   netVotes?: number;
   userVote?: -1 | 1 | null;
   netRating?: number;
@@ -35,6 +39,7 @@ export type Tour = {
 
 export type TourDraft = {
   status: ItineraryStatus;
+  activityType: ActivityType;
   date: string;
   name: string;
   startLocation: string;
@@ -59,8 +64,9 @@ export type GroupMemberOption = {
 };
 
 // Build a blank tour draft with today's date and zero cost.
-export const createInitialTourState = (): TourDraft => ({
+export const createInitialActivityState = (): TourDraft => ({
   status: DEFAULT_NEW_ITINERARY_STATUS,
+  activityType: 'Tour',
   date: new Date().toISOString().slice(0, 10),
   name: '',
   startLocation: '',
@@ -74,18 +80,19 @@ export const createInitialTourState = (): TourDraft => ({
   travelerIds: [],
 });
 
-export const buildTourPayload = (draft: TourDraft, defaultPayerId?: string | null): { payload?: TourDraft; error?: string } => {
+export const buildActivityPayload = (draft: TourDraft, defaultPayerId?: string | null): { payload?: TourDraft; error?: string } => {
   const status = normalizeItineraryStatus(draft.status, DEFAULT_NEW_ITINERARY_STATUS);
+  const activityType = ACTIVITY_TYPES.includes(draft.activityType) ? draft.activityType : 'Tour';
   if (!shouldRelaxRequiredFields(status) && !draft.name.trim()) return { error: 'Please enter a tour name.' };
   const cleanCost = sanitizeCostInput(draft.cost || '');
-  let payload: TourDraft = { ...draft, status, cost: cleanCost };
+  let payload: TourDraft = { ...draft, activityType, status, cost: cleanCost };
   if ((!payload.paidBy || payload.paidBy.length === 0) && defaultPayerId) {
     payload = { ...payload, paidBy: [defaultPayerId] };
   }
   return { payload };
 };
 
-export const createTourForTrip = async (params: {
+export const createActivityForTrip = async (params: {
   backendUrl: string;
   jsonHeaders: Record<string, string>;
   draft: TourDraft;
@@ -94,9 +101,9 @@ export const createTourForTrip = async (params: {
 }): Promise<{ ok: boolean; error?: string }> => {
   const { backendUrl, jsonHeaders, draft, activeTripId, defaultPayerId } = params;
   if (!activeTripId) return { ok: false, error: 'Select an active trip before saving a tour.' };
-  const { payload, error } = buildTourPayload(draft, defaultPayerId);
+  const { payload, error } = buildActivityPayload(draft, defaultPayerId);
   if (error || !payload) return { ok: false, error };
-  const res = await fetch(`${backendUrl}/api/tours`, {
+  const res = await fetch(`${backendUrl}/api/activities`, {
     method: 'POST',
     headers: jsonHeaders,
     body: JSON.stringify({
@@ -110,12 +117,12 @@ export const createTourForTrip = async (params: {
   return { ok: true };
 };
 
-export const removeTourApi = async (
+export const removeActivityApi = async (
   backendUrl: string,
   jsonHeaders: Record<string, string>,
   id: string
 ): Promise<{ ok: boolean; error?: string }> => {
-  const res = await fetch(`${backendUrl}/api/tours/${id}`, { method: 'DELETE', headers: jsonHeaders });
+  const res = await fetch(`${backendUrl}/api/activities/${id}`, { method: 'DELETE', headers: jsonHeaders });
   if (!res.ok) {
     let data: any = {};
     try {
@@ -128,7 +135,7 @@ export const removeTourApi = async (
   return { ok: true };
 };
 
-export const fetchToursForTrip = async ({
+export const fetchActivitiesForTrip = async ({
   backendUrl,
   activeTripId,
   token,
@@ -138,13 +145,14 @@ export const fetchToursForTrip = async ({
   token?: string | null;
 }): Promise<Tour[]> => {
   if (!activeTripId || !token) return [];
-  const res = await fetch(`${backendUrl}/api/tours?tripId=${activeTripId}`, {
+  const res = await fetch(`${backendUrl}/api/activities?tripId=${activeTripId}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) return [];
   const data = await res.json();
   return (data as any[]).map((t) => ({
     ...t,
+    activityType: ACTIVITY_TYPES.includes(t.activityType) ? t.activityType : 'Tour',
     status: normalizeItineraryStatus(t.status, LEGACY_ITINERARY_STATUS),
     netVotes: Number(t.netVotes ?? 0) || 0,
     userVote: t.userVote === 1 || t.userVote === -1 ? t.userVote : null,
@@ -179,7 +187,7 @@ type TourTabProps = {
   mode?: 'live' | 'wizard';
 };
 
-export const TourTab: React.FC<TourTabProps> = ({
+export const ActivityTab: React.FC<TourTabProps> = ({
   backendUrl,
   userToken,
   activeTripId,
@@ -239,7 +247,7 @@ export const TourTab: React.FC<TourTabProps> = ({
       alert('Select an active trip before adding a tour.');
       return;
     }
-    const base = tour ? { ...tour, travelerIds: tour.travelerIds ?? (tour as any).travelerIds ?? [] } : createInitialTourState();
+    const base = tour ? { ...tour, travelerIds: tour.travelerIds ?? (tour as any).travelerIds ?? [] } : createInitialActivityState();
     if (!base.travelerIds?.length) {
       base.travelerIds = activeMembers.map((m) => m.id);
     }
@@ -291,7 +299,12 @@ export const TourTab: React.FC<TourTabProps> = ({
       return;
     }
     const cleanCost = (editingTour.cost || '').replace(/[^0-9.]/g, '');
-    let payload: TourDraft = { ...editingTour, status, cost: cleanCost };
+    let payload: TourDraft = {
+      ...editingTour,
+      activityType: ACTIVITY_TYPES.includes(editingTour.activityType) ? editingTour.activityType : 'Tour',
+      status,
+      cost: cleanCost,
+    };
     if ((!payload.paidBy || payload.paidBy.length === 0) && defaultPayerId) {
       payload = { ...payload, paidBy: [defaultPayerId] };
     }
@@ -314,7 +327,7 @@ export const TourTab: React.FC<TourTabProps> = ({
       return;
     }
     const method = editingTourId ? 'PUT' : 'POST';
-    const url = editingTourId ? `${backendUrl}/api/tours/${editingTourId}` : `${backendUrl}/api/tours`;
+    const url = editingTourId ? `${backendUrl}/api/activities/${editingTourId}` : `${backendUrl}/api/activities`;
     (async () => {
       try {
         const res = await fetch(url, {
@@ -344,7 +357,7 @@ export const TourTab: React.FC<TourTabProps> = ({
       setTours((prev) => prev.filter((t) => t.id !== id));
       return;
     }
-    removeTourApi(backendUrl, jsonHeaders, id)
+    removeActivityApi(backendUrl, jsonHeaders, id)
       .then((result) => {
         if (!result.ok) throw new Error(result.error || 'Unable to delete tour');
         onDataChanged ? onDataChanged() : fetchTours();
@@ -354,7 +367,7 @@ export const TourTab: React.FC<TourTabProps> = ({
 
   const voteOnTour = async (id: string, value: 1 | -1) => {
     try {
-      const res = await fetch(`${backendUrl}/api/tours/${id}/vote`, {
+      const res = await fetch(`${backendUrl}/api/activities/${id}/vote`, {
         method: 'POST',
         headers: jsonHeaders,
         body: JSON.stringify({ value }),
@@ -371,7 +384,7 @@ export const TourTab: React.FC<TourTabProps> = ({
 
   const rateTour = async (id: string, value: 1 | -1) => {
     try {
-      const res = await fetch(`${backendUrl}/api/tours/${id}/rating`, {
+      const res = await fetch(`${backendUrl}/api/activities/${id}/rating`, {
         method: 'POST',
         headers: jsonHeaders,
         body: JSON.stringify({ value }),
@@ -430,6 +443,7 @@ export const TourTab: React.FC<TourTabProps> = ({
               { label: 'Votes', width: 120 },
               { label: 'Rating', width: 120 },
               { label: 'Tour', width: 180 },
+              { label: 'Type', width: 180 },
               { label: 'Start Location', width: 180 },
               { label: 'Start Time', width: 120 },
               { label: 'Duration', width: 120 },
@@ -485,6 +499,9 @@ export const TourTab: React.FC<TourTabProps> = ({
               </View>
               <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
                 <Text style={styles.cellText}>{t.name || '-'}</Text>
+              </View>
+              <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
+                <Text style={styles.cellText}>{t.activityType || 'Tour'}</Text>
               </View>
               <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
                 <Text style={styles.cellText}>{t.startLocation || '-'}</Text>
@@ -577,6 +594,46 @@ export const TourTab: React.FC<TourTabProps> = ({
                         key={`tour-status-${opt}`}
                         style={[toggleBaseStyle, selected && toggleSelectedStyle]}
                         onPress={() => setEditingTour((p) => (p ? { ...p, status: opt } : p))}
+                      >
+                        <Text style={[toggleTextStyle, selected && toggleTextSelectedStyle]}>{opt}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
+              <Text style={styles.modalLabel}>Activity Type</Text>
+              {Platform.OS === 'web' ? (
+                <select
+                  value={editingTour.activityType || 'Tour'}
+                  onChange={(e) =>
+                    setEditingTour((p) =>
+                      p
+                        ? {
+                            ...p,
+                            activityType: ACTIVITY_TYPES.includes(e.target.value as ActivityType)
+                              ? (e.target.value as ActivityType)
+                              : 'Tour',
+                          }
+                        : p
+                    )
+                  }
+                  style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
+                >
+                  {ACTIVITY_TYPES.map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <View style={styles.payerChips}>
+                  {ACTIVITY_TYPES.map((opt) => {
+                    const selected = (editingTour.activityType || 'Tour') === opt;
+                    return (
+                      <TouchableOpacity
+                        key={`activity-type-${opt}`}
+                        style={[toggleBaseStyle, selected && toggleSelectedStyle]}
+                        onPress={() => setEditingTour((p) => (p ? { ...p, activityType: opt } : p))}
                       >
                         <Text style={[toggleTextStyle, selected && toggleTextSelectedStyle]}>{opt}</Text>
                       </TouchableOpacity>
@@ -719,3 +776,4 @@ export const TourTab: React.FC<TourTabProps> = ({
     </View>
   );
 };
+

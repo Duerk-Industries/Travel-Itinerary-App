@@ -1,6 +1,6 @@
 import { getItemVoteSummaries } from '../db';
 
-export type VoteItemType = 'flight' | 'lodging' | 'tour' | 'car_rental';
+export type VoteItemType = 'flight' | 'lodging' | 'activity' | 'car_rental';
 
 export const applyVoteSummary = async <T extends { id: string }>(
   userId: string,
