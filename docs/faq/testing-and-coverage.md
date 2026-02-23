@@ -18,9 +18,9 @@
 - Server test files: 30 (`server/__tests__`)
 - E2E test specs: 1 (`app/e2e/create-trip.test.ts`)
 
-Coverage includes auth/account lifecycle, invites and membership effects, trip wizard/location flows, transfers/flights-lodging-tours + expense sync, ledger/cost-report consistency, and core UI helpers/components.
+Coverage includes auth/account lifecycle, invites and membership effects, trip wizard/location flows, transfers/flights-lodging-activities + expense sync, ledger/cost-report consistency, and core UI helpers/components.
 
-Recent coverage additions include itinerary status behavior for transfers/flights-lodging-tours-car rentals:
+Recent coverage additions include itinerary status behavior for transfers/flights-lodging-activities-car rentals:
 - Status defaulting for new vs legacy items.
 - Status-based required-field relaxation (`Needed`/`Cancelled`) vs enforcement (`Proposed`/`Booked`/`Completed`).
 - Transfer type support on transfer rows (`Flight`, `Train`, `Bus`, `Private`, `Ferry`, `Other`) with default `Flight`.

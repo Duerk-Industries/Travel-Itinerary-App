@@ -100,7 +100,7 @@ providers:
 
 ## Proposed Item Voting
 
-- Voting is available on Flights, Lodging, Tours, and Car Rentals.
+- Voting is available on Flights, Lodging, Activities, and Car Rentals.
 - The `Votes` and `Rating` columns appear immediately after `Status`.
 - If an item is `Proposed` and you have not voted yet, you can vote `👍` or `👎`.
 - If an item is not `Proposed`, or you already voted, the UI shows net votes.

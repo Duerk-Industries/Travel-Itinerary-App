@@ -10,7 +10,7 @@
 - Account/family/fellow-travelers: `accountRoutes`
 - Groups/invites: `groupsRouter`
 - Trips/wizard/covered-by: `tripRoutes`
-- Transfers (API: flights)/lodging/tours: CRUD + expense sync
+- Transfers (API: flights)/lodging/activities: CRUD + expense sync
 - Manual expenses: `expenseRoutes`
 - Itinerary generation and itinerary records/details
 - Traits and demographics
@@ -26,14 +26,20 @@
 ## What key validation/authorization rules should clients expect?
 
 - Most feature endpoints require `Authorization: Bearer <token>`.
-- Trip/group membership checks gate writes for trips, flights, lodging, tours, and expenses.
+- Trip/group membership checks gate writes for trips, flights, lodging, activities, and expenses.
 - Passenger/payer/traveler IDs are validated against trip/group members.
 - Covered-by rules reject cycles and conflict states.
-- Flights, lodging, and tours create/update routes synchronize source-backed expense records.
-- Flights, lodging, and tours accept a `status` field with values:
+- Flights, lodging, and activities create/update routes synchronize source-backed expense records.
+- Flights, lodging, and activities accept a `status` field with values:
   - `Needed`, `Proposed`, `Booked`, `Cancelled`, `Completed`
   - Missing legacy status values default server-side to `Booked`.
   - Business required fields are relaxed for `Needed`/`Cancelled`, and enforced for `Proposed`/`Booked`/`Completed`.
+- Activities additionally accept an `activityType` enum:
+  - `Ticketed Attraction`
+  - `Reservation`
+  - `Tour`
+  - `Open Access`
+  - `Event`
 
 ## What external APIs/services are used?
 

@@ -196,7 +196,7 @@ Or all tests:
 npm test
 ```
 
-## 6. Itinerary Status Coverage (Flights, Lodging, Tours, Car Rentals)
+## 6. Itinerary Status Coverage (Flights, Lodging, Activities, Car Rentals)
 
 The app now supports itinerary item status values:
 - `Needed`
@@ -215,7 +215,7 @@ Behavior covered in Jest:
 - Helper-level tests:
   - `app/tests/flights.test.ts`
   - `app/tests/lodging.test.ts`
-  - `app/tests/tours.test.ts`
+  - `app/tests/activities.test.ts`
   - `app/tests/carRentals.test.ts`
   - `app/tests/votes.test.ts`
 

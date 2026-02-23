@@ -4,7 +4,7 @@
 
 - Flights
 - Lodging
-- Tours
+- Activities
 - Car Rentals
 
 ## How voting behaves
