@@ -431,6 +431,11 @@ describe('Pending group invites', () => {
   });
 
   it('removes pending member data when an invite is rejected', async () => {
+    if (!ownerToken) {
+      const ownerLogin = await registerAndLoginWebUser(pool, owner);
+      ownerToken = ownerLogin.token;
+    }
+
     const suffix = Date.now();
     const rejectInvitee = {
       email: `reject-invitee+${suffix}@example.com`,
@@ -545,11 +550,11 @@ describe('Pending group invites', () => {
       .set('Authorization', `Bearer ${rejectLogin.token}`)
       .expect(204);
 
-    const flights = await request(app)
+    const transfers = await request(app)
       .get(`/api/transfers?tripId=${rejectTripId}`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
-    expect(flights.body.length).toBe(0);
+    expect(transfers.body.length).toBe(0);
 
     const lodgings = await request(app)
       .get(`/api/lodgings?tripId=${rejectTripId}`)
@@ -557,11 +562,11 @@ describe('Pending group invites', () => {
       .expect(200);
     expect(lodgings.body.length).toBe(0);
 
-    const tours = await request(app)
+    const activities = await request(app)
       .get(`/api/activities?tripId=${rejectTripId}`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
-    expect(tours.body.length).toBe(0);
+    expect(activities.body.length).toBe(0);
 
     const expenses = await request(app)
       .get(`/api/expenses?tripId=${rejectTripId}`)

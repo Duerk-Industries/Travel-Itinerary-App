@@ -16,6 +16,15 @@ const formatDate = (value: any) => {
 db.public.registerFunction({ name: 'to_char', args: [DataType.date, DataType.text], returns: DataType.text, implementation: formatDate });
 db.public.registerFunction({ name: 'to_char', args: [DataType.timestamp, DataType.text], returns: DataType.text, implementation: formatDate });
 db.public.registerFunction({
+  name: 'nullif',
+  args: [DataType.text, DataType.text],
+  returns: DataType.text,
+  implementation: (value: string | null, compare: string | null) => {
+    if (value == null) return null;
+    return value === compare ? null : value;
+  },
+});
+db.public.registerFunction({
   name: 'replace',
   args: [DataType.text, DataType.text, DataType.text],
   returns: DataType.text,
