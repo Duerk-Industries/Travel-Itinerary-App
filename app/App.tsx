@@ -397,7 +397,13 @@ const App: React.FC = () => {
     password: '',
     passwordConfirm: '',
   });
-  const [accountProfile, setAccountProfile] = useState({ firstName: '', lastName: '', email: '' });
+  const [accountProfile, setAccountProfile] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    homeAddress: '',
+    preferredAirport: '',
+  });
   const [mapApp, setMapApp] = useState<MapApp>(() => loadStoredMapPreference('google'));
   const [familyRelationships, setFamilyRelationships] = useState<any[]>([]);
   const [coveredBy, setCoveredBy] = useState<Record<string, string>>({});
@@ -863,7 +869,7 @@ const App: React.FC = () => {
     setSelectedTraitNames(new Set());
     setTraitAge('');
     setTraitGender('prefer-not');
-    setAccountProfile({ firstName: '', lastName: '', email: '' });
+    setAccountProfile({ firstName: '', lastName: '', email: '', homeAddress: '', preferredAirport: '' });
     setFamilyRelationships([]);
     setFellowTravelers([]);
     setRequirePasswordSetup(false);
@@ -976,6 +982,8 @@ const App: React.FC = () => {
       firstName: decoded?.firstName ?? '',
       lastName: decoded?.lastName ?? '',
       email: decoded?.email ?? '',
+      homeAddress: '',
+      preferredAirport: '',
     });
     const previousSession = loadSession();
     const restoredTripId = previousSession?.tripId ?? activeTripId ?? null;

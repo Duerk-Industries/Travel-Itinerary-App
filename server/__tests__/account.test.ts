@@ -13,7 +13,10 @@ describe('Password validation', () => {
   });
 
   afterAll(async () => {
-    await pool.query('DELETE FROM users WHERE email LIKE $1', ['password-test+%@example.com']);
+    await pool.query('DELETE FROM users WHERE email LIKE $1 OR email LIKE $2', [
+      'password-test+%@example.com',
+      'profile-test+%@example.com',
+    ]);
     await pool.end();
   });
 
@@ -120,6 +123,50 @@ describe('Password validation', () => {
       .expect(200);
 
     expect(resp.body).toEqual({ age: null, gender: null });
+  });
+
+  it('supports optional home address and preferred airport on account profile', async () => {
+    const email = 'profile-test+optional@example.com';
+    await pool.query('DELETE FROM users WHERE email = $1', [email]);
+
+    const { token } = await registerAndLoginWebUser(pool, {
+      firstName: 'Profile',
+      lastName: 'Fields',
+      email,
+      password: 'testtest',
+    });
+
+    const updateRes = await request(app)
+      .patch('/api/account/profile')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        homeAddress: '123 Main St, Austin, TX',
+        preferredAirport: 'AUS',
+      })
+      .expect(200);
+
+    expect(updateRes.body.user.homeAddress).toBe('123 Main St, Austin, TX');
+    expect(updateRes.body.user.preferredAirport).toBe('AUS');
+
+    const profileRes = await request(app)
+      .get('/api/account')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(profileRes.body.homeAddress).toBe('123 Main St, Austin, TX');
+    expect(profileRes.body.preferredAirport).toBe('AUS');
+
+    const clearRes = await request(app)
+      .patch('/api/account/profile')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        homeAddress: '',
+        preferredAirport: '',
+      })
+      .expect(200);
+
+    expect(clearRes.body.user.homeAddress).toBeNull();
+    expect(clearRes.body.user.preferredAirport).toBeNull();
   });
 
   it('restricts non-invite endpoints until password setup is completed', async () => {

@@ -138,6 +138,8 @@ export const initDb = async (): Promise<void> => {
       first_name TEXT NOT NULL,
       middle_name TEXT,
       last_name TEXT NOT NULL,
+      home_address TEXT,
+      preferred_airport TEXT,
       password_hash TEXT NOT NULL,
       salt TEXT NOT NULL,
       first_login_at TIMESTAMP,
@@ -151,6 +153,8 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS first_name TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS middle_name TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS last_name TEXT;`);
+  await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS home_address TEXT;`);
+  await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS preferred_airport TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS password_hash TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS salt TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS first_login_at TIMESTAMP;`);
@@ -502,7 +506,7 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE tours ADD COLUMN IF NOT EXISTS booked_on TEXT;`);
   await p.query(`ALTER TABLE tours ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'Booked';`);
   await p.query(`ALTER TABLE tours ADD COLUMN IF NOT EXISTS activity_type TEXT NOT NULL DEFAULT 'Tour';`);
-  await p.query(`UPDATE tours SET activity_type = 'Tour' WHERE activity_type IS NULL OR trim(activity_type) = '';`);
+  await p.query(`UPDATE tours SET activity_type = 'Tour' WHERE activity_type IS NULL OR COALESCE(activity_type, '') = '';`);
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS car_rentals (
@@ -962,15 +966,36 @@ export const deleteUserRecord = async (userId: string): Promise<void> => {
 
 export const getWebUserProfile = async (
   userId: string
-): Promise<{ id: string; email: string; firstName: string; lastName: string } | null> => {
+): Promise<{
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  homeAddress?: string | null;
+  preferredAirport?: string | null;
+} | null> => {
   const p = getPool();
-  const { rows } = await p.query<{ id: string; email: string; first_name: string; last_name: string }>(
-    `SELECT id, email, first_name, last_name FROM web_users WHERE id = $1 LIMIT 1`,
+  const { rows } = await p.query<{
+    id: string;
+    email: string;
+    first_name: string;
+    last_name: string;
+    home_address: string | null;
+    preferred_airport: string | null;
+  }>(
+    `SELECT id, email, first_name, last_name, home_address, preferred_airport FROM web_users WHERE id = $1 LIMIT 1`,
     [userId]
   );
   if (rows.length) {
     const row = rows[0];
-    return { id: row.id, email: row.email, firstName: row.first_name, lastName: row.last_name };
+    return {
+      id: row.id,
+      email: row.email,
+      firstName: row.first_name,
+      lastName: row.last_name,
+      homeAddress: row.home_address ?? null,
+      preferredAirport: row.preferred_airport ?? null,
+    };
   }
 
   const { rows: userRows } = await p.query<{ id: string; email: string; first_name: string; last_name: string }>(
@@ -987,8 +1012,15 @@ export const getWebUserProfile = async (
 
 export const updateWebUserProfile = async (
   userId: string,
-  updates: { firstName?: string; lastName?: string; email?: string }
-): Promise<{ id: string; email: string; firstName: string; lastName: string }> => {
+  updates: { firstName?: string; lastName?: string; email?: string; homeAddress?: string; preferredAirport?: string }
+): Promise<{
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  homeAddress?: string | null;
+  preferredAirport?: string | null;
+}> => {
   const p = getPool();
   const client = await p.connect();
   try {
@@ -1011,11 +1043,26 @@ export const updateWebUserProfile = async (
       SET
         first_name = COALESCE($2, first_name),
         last_name = COALESCE($3, last_name),
-        email = COALESCE($4, email)
+        email = COALESCE($4, email),
+        home_address = CASE WHEN $5::text IS NULL THEN home_address ELSE NULLIF($5::text, '') END,
+        preferred_airport = CASE WHEN $6::text IS NULL THEN preferred_airport ELSE NULLIF($6::text, '') END
       WHERE id = $1
-      RETURNING id, email, first_name as "firstName", last_name as "lastName"
+      RETURNING
+        id,
+        email,
+        first_name as "firstName",
+        last_name as "lastName",
+        home_address as "homeAddress",
+        preferred_airport as "preferredAirport"
     `,
-      [userId, updates.firstName ?? null, updates.lastName ?? null, updates.email ?? null]
+      [
+        userId,
+        updates.firstName ?? null,
+        updates.lastName ?? null,
+        updates.email ?? null,
+        typeof updates.homeAddress === 'string' ? updates.homeAddress.trim() : null,
+        typeof updates.preferredAirport === 'string' ? updates.preferredAirport.trim() : null,
+      ]
     );
 
     if (!rows.length) {

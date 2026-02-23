@@ -23,6 +23,8 @@ export interface WebUser {
   email: string;
   firstName: string;
   lastName: string;
+  homeAddress?: string | null;
+  preferredAirport?: string | null;
   emailVerified?: boolean;
   firstLoginAt?: string | null;
   lastLoginAt?: string | null;

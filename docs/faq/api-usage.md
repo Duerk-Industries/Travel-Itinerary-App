@@ -26,6 +26,7 @@
 ## What key validation/authorization rules should clients expect?
 
 - Most feature endpoints require `Authorization: Bearer <token>`.
+- Account profile supports optional `homeAddress` and `preferredAirport` fields via `PATCH /api/account/profile`.
 - Trip/group membership checks gate writes for trips, transfers, lodging, activities, and expenses.
 - Passenger/payer/traveler IDs are validated against trip/group members.
 - Covered-by rules reject cycles and conflict states.

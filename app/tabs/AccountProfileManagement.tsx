@@ -80,6 +80,8 @@ const AccountProfileManagement = ({
       firstName: updatedUser.firstName ?? '',
       lastName: updatedUser.lastName ?? '',
       email: updatedUser.email ?? '',
+      homeAddress: updatedUser.homeAddress ?? '',
+      preferredAirport: updatedUser.preferredAirport ?? '',
       mapPreference: nextMapPreference,
     });
     setAccountMessage('Profile updated');
@@ -133,6 +135,18 @@ const AccountProfileManagement = ({
         <TextInput style={[styles.input, { flex: 1 }]} placeholder="Last name" value={accountProfile.lastName} onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, lastName: text }))} />
       </View>
       <TextInput style={styles.input} placeholder="Email" autoCapitalize="none" keyboardType="email-address" value={accountProfile.email} onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, email: text }))} />
+      <TextInput
+        style={styles.input}
+        placeholder="Home address (optional)"
+        value={accountProfile.homeAddress ?? ''}
+        onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, homeAddress: text }))}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Preferred airport (optional)"
+        value={accountProfile.preferredAirport ?? ''}
+        onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, preferredAirport: text }))}
+      />
       <Text style={styles.modalLabel}>Preferred maps app</Text>
       <View style={[styles.row, { flexWrap: 'wrap' }]}>
         {mapAppOptions.map((opt) => (

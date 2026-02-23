@@ -118,10 +118,14 @@ router.put('/:id', async (req, res) => {
   const id = req.params.id;
   const { date, name, startLocation, startTime, duration, cost, freeCancelBy, bookedOn, reference, paidBy, travelerIds, activityType: incomingActivityType, status: incomingStatus } = req.body;
   const normalizedPaidBy = Array.isArray(paidBy) ? (paidBy.length ? paidBy : undefined) : undefined;
-  const finalActivityType = typeof incomingActivityType === 'undefined' ? undefined : normalizeActivityType(incomingActivityType);
-  if (typeof incomingActivityType !== 'undefined' && !finalActivityType) {
-    res.status(400).json({ error: 'Invalid activityType' });
-    return;
+  let finalActivityType: ActivityType | undefined;
+  if (typeof incomingActivityType !== 'undefined') {
+    const normalizedActivityType = normalizeActivityType(incomingActivityType);
+    if (!normalizedActivityType) {
+      res.status(400).json({ error: 'Invalid activityType' });
+      return;
+    }
+    finalActivityType = normalizedActivityType;
   }
   const finalStatus = typeof incomingStatus === 'undefined' ? undefined : normalizeItineraryStatus(incomingStatus);
   const updated = await updateActivity(id, userId, {
@@ -173,10 +177,14 @@ router.patch('/:id', async (req, res) => {
   const id = req.params.id;
   const { date, name, startLocation, startTime, duration, cost, freeCancelBy, bookedOn, reference, paidBy, travelerIds, activityType: incomingActivityType, status: incomingStatus } = req.body;
   const normalizedPaidBy = Array.isArray(paidBy) ? (paidBy.length ? paidBy : undefined) : undefined;
-  const finalActivityType = typeof incomingActivityType === 'undefined' ? undefined : normalizeActivityType(incomingActivityType);
-  if (typeof incomingActivityType !== 'undefined' && !finalActivityType) {
-    res.status(400).json({ error: 'Invalid activityType' });
-    return;
+  let finalActivityType: ActivityType | undefined;
+  if (typeof incomingActivityType !== 'undefined') {
+    const normalizedActivityType = normalizeActivityType(incomingActivityType);
+    if (!normalizedActivityType) {
+      res.status(400).json({ error: 'Invalid activityType' });
+      return;
+    }
+    finalActivityType = normalizedActivityType;
   }
   const finalStatus = typeof incomingStatus === 'undefined' ? undefined : normalizeItineraryStatus(incomingStatus);
   const updated = await updateActivity(id, userId, {

@@ -409,13 +409,27 @@ export const getWebUserProfile = async (userId: string): Promise<WebUser | null>
   const doc = await db.collection('web_users').doc(userId).get();
   if (doc.exists) {
     const data = doc.data() as any;
-    return { id: userId, email: data.email, firstName: data.firstName, lastName: data.lastName };
+    return {
+      id: userId,
+      email: data.email,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      homeAddress: data.homeAddress ?? null,
+      preferredAirport: data.preferredAirport ?? null,
+    };
   }
 
   const userDoc = await db.collection('users').doc(userId).get();
   if (userDoc.exists) {
     const data = userDoc.data() as any;
-    return { id: userId, email: data.email, firstName: data.firstName, lastName: data.lastName };
+    return {
+      id: userId,
+      email: data.email,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      homeAddress: data.homeAddress ?? null,
+      preferredAirport: data.preferredAirport ?? null,
+    };
   }
 
   return null;
@@ -428,10 +442,25 @@ export const updateWebUserProfile = async (
   const db = getDb();
   const doc = await db.collection('web_users').doc(userId).get();
   if (!doc.exists) throw new Error('User not found');
-  await db.collection('web_users').doc(userId).update(payload);
+  const updates = stripUndefined({
+    ...payload,
+    homeAddress: typeof (payload as any).homeAddress === 'string' && !(payload as any).homeAddress.trim() ? null : (payload as any).homeAddress,
+    preferredAirport:
+      typeof (payload as any).preferredAirport === 'string' && !(payload as any).preferredAirport.trim()
+        ? null
+        : (payload as any).preferredAirport,
+  });
+  await db.collection('web_users').doc(userId).update(updates);
   const updated = await db.collection('web_users').doc(userId).get();
   const data = updated.data() as any;
-  return { id: userId, email: data.email, firstName: data.firstName, lastName: data.lastName };
+  return {
+    id: userId,
+    email: data.email,
+    firstName: data.firstName,
+    lastName: data.lastName,
+    homeAddress: data.homeAddress ?? null,
+    preferredAirport: data.preferredAirport ?? null,
+  };
 };
 
 export const updateWebUserPassword = async (userId: string, oldPassword: string, newPassword: string): Promise<void> => {

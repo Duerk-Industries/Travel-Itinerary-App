@@ -24,6 +24,7 @@ Recent coverage additions include itinerary status behavior for transfers-lodgin
 - Status defaulting for new vs legacy items.
 - Status-based required-field relaxation (`Needed`/`Cancelled`) vs enforcement (`Proposed`/`Booked`/`Completed`).
 - Transfer type support on transfer rows (`Flight`, `Train`, `Bus`, `Private`, `Ferry`, `Other`) with default `Flight`.
+- Account profile optional fields (`homeAddress`, `preferredAirport`) on API + account form tests.
 
 ## Test Plan Update: Flights -> Transfers
 

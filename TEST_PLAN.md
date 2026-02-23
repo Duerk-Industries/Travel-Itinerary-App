@@ -227,3 +227,17 @@ Voting feature route coverage:
   - non-proposed items reject votes
   - non-completed items reject ratings
   - list endpoints include `netVotes`/`userVote` and `netRating`/`userRating`
+
+## 7. Account Profile Optional Fields
+
+Account profile now includes optional:
+- `homeAddress`
+- `preferredAirport`
+
+Coverage:
+- `server/__tests__/account.test.ts`
+  - profile update persists optional fields
+  - profile fetch returns optional fields
+  - optional fields can be cleared
+- `app/tests/AccountProfileManagement.test.tsx`
+  - account profile form renders optional field inputs

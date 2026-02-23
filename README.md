@@ -72,6 +72,8 @@ providers:
 ## API quick reference
 - `POST /api/auth/email { email }` → create/login a user via email, returning a JWT.
 - `POST /api/auth/oauth { email, provider }` → Google or Apple login using the provider name and email claim.
+- `GET /api/account` → fetch account profile (includes optional `homeAddress` and `preferredAirport`).
+- `PATCH /api/account/profile` → update account profile fields (`firstName`, `lastName`, `email`, optional `homeAddress`, optional `preferredAirport`).
 - `GET /api/transfers` → list transfers for the authenticated user.
 - `POST /api/transfers` → add a transfer with passenger, dates/times, layover, carrier/number, booking reference, and cost.
 - `PATCH /api/transfers/:id` → update a transfer's details.

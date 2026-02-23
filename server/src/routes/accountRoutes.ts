@@ -52,8 +52,12 @@ router.get('/', async (req, res) => {
 
 router.patch('/profile', async (req, res) => {
   const user = (req as any).user as { userId: string; email: string };
-  const { firstName, lastName, email } = req.body ?? {};
-  if (!firstName && !lastName && !email) {
+  const body = req.body ?? {};
+  const { firstName, lastName, email, homeAddress, preferredAirport } = req.body ?? {};
+  const hasAnyProfileField = ['firstName', 'lastName', 'email', 'homeAddress', 'preferredAirport'].some((key) =>
+    Object.prototype.hasOwnProperty.call(body, key)
+  );
+  if (!hasAnyProfileField) {
     res.status(400).json({ error: 'At least one field is required' });
     return;
   }
@@ -62,6 +66,8 @@ router.patch('/profile', async (req, res) => {
       firstName: typeof firstName === 'string' ? firstName.trim() : undefined,
       lastName: typeof lastName === 'string' ? lastName.trim() : undefined,
       email: typeof email === 'string' ? email.trim().toLowerCase() : undefined,
+      homeAddress: typeof homeAddress === 'string' ? homeAddress.trim() : undefined,
+      preferredAirport: typeof preferredAirport === 'string' ? preferredAirport.trim() : undefined,
     });
     const token = createToken({ userId: updated.id, email: updated.email, provider: 'email' });
     res.json({ user: updated, token });

@@ -12,6 +12,8 @@ export interface AccountProfile {
   firstName: string;
   lastName: string;
   email: string;
+  homeAddress?: string;
+  preferredAirport?: string;
   mapPreference?: MapApp;
 }
 
@@ -66,6 +68,8 @@ export const fetchAccountProfile = async ({
       firstName: data.firstName ?? '',
       lastName: data.lastName ?? '',
       email: data.email ?? '',
+      homeAddress: data.homeAddress ?? '',
+      preferredAirport: data.preferredAirport ?? '',
       mapPreference: mapPreference ?? prev.mapPreference ?? 'google',
     }));
     setUserName(fullName);

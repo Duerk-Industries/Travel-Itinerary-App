@@ -29,7 +29,13 @@ describe('AccountProfileManagement', () => {
     backendUrl: '',
     userToken: 'test-token',
     activePage: 'account',
-    accountProfile: { firstName: 'Test', lastName: 'User', email: 'test@test.com' },
+    accountProfile: {
+      firstName: 'Test',
+      lastName: 'User',
+      email: 'test@test.com',
+      homeAddress: '123 Main St, Austin, TX',
+      preferredAirport: 'AUS',
+    },
     setAccountProfile: jest.fn(),
     setUserToken: jest.fn(),
     setUserName: jest.fn(),
@@ -47,6 +53,8 @@ describe('AccountProfileManagement', () => {
     const { getByText, getByPlaceholderText } = render(<AccountProfileManagement {...defaultProps} />);
     expect(getByText('Account')).toBeTruthy();
     expect(getByPlaceholderText('First name')).toBeTruthy();
+    expect(getByPlaceholderText('Home address (optional)')).toBeTruthy();
+    expect(getByPlaceholderText('Preferred airport (optional)')).toBeTruthy();
     expect(getByText('Save Profile')).toBeTruthy();
   });
 
