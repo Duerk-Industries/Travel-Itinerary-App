@@ -47,7 +47,7 @@ export const startServer = async (portOverride?: number): Promise<Server> => {
     refreshAirportsDaily().catch((err: any) => logError('Airport refresh failed', err));
   }
   const portToUse = portOverride ?? defaultPort;
-  return app.listen(portToUse, () => console.log(`API server running on port ${portToUse}`));
+  return app.listen(portToUse, '0.0.0.0', () => console.log(`API server running on port ${portToUse}`));
 };
 
 if (process.env.NODE_ENV !== 'test') {

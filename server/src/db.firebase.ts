@@ -134,7 +134,12 @@ export const initDb = async (): Promise<void> => {
         });
         if(saResponse.ok) {
             const serviceAccount = await saResponse.text();
-            logInfo(`Cloud Run service is using service account: ${serviceAccount}. Ensure this service account has the 'Cloud Datastore User' role on project ${getEnvValue('GCLOUD_PROJECT_ID')}.`);
+            const projectIdForLog =
+              getEnvValue('GCLOUD_PROJECT_ID') ||
+              getEnvValue('GOOGLE_CLOUD_PROJECT') ||
+              getEnvValue('FIREBASE_PROJECT_ID') ||
+              'unknown';
+            logInfo(`Cloud Run service is using service account: ${serviceAccount}. Ensure this service account has the 'Cloud Datastore User' role on project ${projectIdForLog}.`);
         } else {
             logError('Could not retrieve service account from metadata server.', await saResponse.text());
         }

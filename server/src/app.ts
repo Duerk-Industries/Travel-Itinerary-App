@@ -154,12 +154,17 @@ import { logError } from './logger';
 
 initPassport();
 app.use(passport.initialize());
+const googleOAuthConfigured = Boolean(getEnvValue('GOOGLE_CLIENT_ID') && getEnvValue('GOOGLE_CLIENT_SECRET'));
 
 if (!isLocalEnv() && getEnvValue('AUTH_SECRET') === 'development-secret') {
     logError('[WARNING] AUTH_SECRET is not set or is using the default value in a non-local environment. This is a security risk and will cause authentication to fail.');
 }
 
 app.get('/api/auth/google', (req, res, next) => {
+  if (!googleOAuthConfigured) {
+    res.status(503).json({ error: 'Google OAuth is not configured on the server.' });
+    return;
+  }
   const rawRedirectUri = typeof req.query.redirect_uri === 'string' ? req.query.redirect_uri : undefined;
   const { redirectUri, error } = resolveAndValidateRedirectUri(rawRedirectUri, webUrl);
   if (error) {
@@ -173,6 +178,13 @@ app.get('/api/auth/google', (req, res, next) => {
 
 app.get(
   '/api/auth/google/callback',
+  (_req, res, next) => {
+    if (!googleOAuthConfigured) {
+      res.status(503).json({ error: 'Google OAuth is not configured on the server.' });
+      return;
+    }
+    next();
+  },
   (req, _res, next) => {
     next();
   },

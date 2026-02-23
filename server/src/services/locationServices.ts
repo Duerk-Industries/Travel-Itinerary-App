@@ -72,6 +72,8 @@ type LocationDataset = {
 
 let cache: LocationDataset | null = null;
 let cacheLoadPromise: Promise<LocationDataset> | null = null;
+let refreshCooldownUntil = 0;
+let consecutiveRefreshFailures = 0;
 const countryStateQueryCache = new Map<string, { ts: number; results: LocationOption[] }>();
 const cityQueryCache = new Map<string, { ts: number; results: LocationOption[] }>();
 
@@ -115,6 +117,11 @@ const cacheTtlMs = (): number => {
   if (!Number.isFinite(minutes) || minutes <= 0) return 60 * 60 * 1000;
   return minutes * 60 * 1000;
 };
+const refreshCooldownMs = (): number => {
+  const seconds = Number(getEnvValue('LOCATION_CSV_REFRESH_COOLDOWN_SECONDS', { defaultValue: '15' }));
+  if (!Number.isFinite(seconds) || seconds <= 0) return 15_000;
+  return Math.min(Math.floor(seconds * 1000), 120_000);
+};
 
 const ensureFirebaseApp = (bucketName: string) => {
   if (!getApps().length) {
@@ -125,6 +132,11 @@ const ensureFirebaseApp = (bucketName: string) => {
 
 const safeLower = (value: string) => value.toLowerCase();
 const normalizeQuery = (value: string) => value.trim().toLowerCase().replace(/\s+/g, ' ');
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const isTransientNetworkError = (err: unknown): boolean => {
+  const code = String((err as any)?.code ?? '').toUpperCase();
+  return code === 'ECONNRESET' || code === 'ETIMEDOUT' || code === 'ECONNABORTED' || code === 'EAI_AGAIN';
+};
 
 const normalizeId = (prefix: string, id: number | string) => `${prefix}:${id}`;
 
@@ -192,12 +204,23 @@ const loadDatasetFromStorage = async (): Promise<LocationDataset> => {
   ensureFirebaseApp(bucketName);
   const bucket = getStorage().bucket(bucketName);
   const files = ['countries.json', 'states.json', 'cities.json', 'regions.json', 'subregions.json'];
-  const buffers = await Promise.all(
-    files.map(async (fileName) => {
-      const [buffer] = await bucket.file(`${prefix}${fileName}`).download();
-      return buffer.toString('utf8');
-    })
-  );
+  const downloadWithRetry = async (fileName: string): Promise<string> => {
+    const filePath = `${prefix}${fileName}`;
+    const attempts = 3;
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      try {
+        const [buffer] = await bucket.file(filePath).download();
+        return buffer.toString('utf8');
+      } catch (err) {
+        if (!isTransientNetworkError(err) || attempt === attempts) {
+          throw err;
+        }
+        await sleep(150 * attempt);
+      }
+    }
+    throw new Error(`Unable to download ${filePath}`);
+  };
+  const buffers = await Promise.all(files.map((fileName) => downloadWithRetry(fileName)));
 
   const countries = parseJson<CountryRow>(buffers[0], 'countries.json');
   const states = parseJson<StateRow>(buffers[1], 'states.json');
@@ -312,13 +335,31 @@ const getCachedDataset = async (): Promise<LocationDataset> => {
   if (cache && now - cache.loadedAt < cacheTtlMs()) {
     return cache;
   }
+  if (now < refreshCooldownUntil) {
+    if (cache) return cache;
+    throw new Error('Location dataset refresh is temporarily in cooldown after repeated failures.');
+  }
   if (cacheLoadPromise) {
     return cacheLoadPromise;
   }
   cacheLoadPromise = (async () => {
-    const dataset = await loadDatasetFromStorage();
-    cache = dataset;
-    return dataset;
+    try {
+      const dataset = await loadDatasetFromStorage();
+      cache = dataset;
+      consecutiveRefreshFailures = 0;
+      refreshCooldownUntil = 0;
+      return dataset;
+    } catch (err) {
+      consecutiveRefreshFailures += 1;
+      if (consecutiveRefreshFailures >= 2 && isTransientNetworkError(err)) {
+        refreshCooldownUntil = Date.now() + refreshCooldownMs();
+      }
+      // If refresh fails (for example transient network reset), keep serving stale cache.
+      if (cache) {
+        return cache;
+      }
+      throw err;
+    }
   })();
   try {
     return await cacheLoadPromise;

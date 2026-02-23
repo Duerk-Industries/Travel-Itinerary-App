@@ -15,6 +15,18 @@ interface LocationResult {
   image_url?: string | null;
 }
 
+const isTransientNetworkError = (err: unknown): boolean => {
+  const code = String((err as any)?.code ?? '').toUpperCase();
+  return code === 'ECONNRESET' || code === 'ETIMEDOUT' || code === 'ECONNABORTED' || code === 'EAI_AGAIN';
+};
+
+const fallbackLocationNameFromId = (id: string): string => {
+  const [kind, raw] = String(id).split(':', 2);
+  const normalizedKind =
+    kind === 'country' ? 'Country' : kind === 'state' ? 'State' : kind === 'city' ? 'City' : 'Location';
+  return raw ? `${normalizedKind} ${raw}` : normalizedKind;
+};
+
 const router = Router();
 router.use(authenticate);
 
@@ -100,7 +112,19 @@ router.post('/batch', async (req, res) => {
           });
         }
       } catch (err) {
-        console.error('Failed to resolve local location ids', err);
+        if (isTransientNetworkError(err)) {
+          console.warn('Failed to resolve local location ids (transient network issue)');
+        } else {
+          console.error('Failed to resolve local location ids', err);
+        }
+        // Fallback to id-based labels so batch response remains usable.
+        for (const id of localIds) {
+          results.push({
+            id,
+            place_id: id,
+            name: fallbackLocationNameFromId(id),
+          });
+        }
       }
     }
   }

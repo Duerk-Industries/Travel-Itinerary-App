@@ -11,8 +11,7 @@ async function getSecretFromLocalFile(secretName: string): Promise<string | unde
   }
 
   const fileContent = fs.readFileSync(secretsFilePath, 'utf8');
-  const lines = fileContent.split('
-');
+  const lines = fileContent.split('\n');
   for (const line of lines) {
     const parts = line.split('=');
     if (parts.length === 2 && parts[0].trim() === secretName) {

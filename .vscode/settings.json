@@ -27,7 +27,9 @@
             "Klook",
             "Metaspace",
             "networkidle",
+            "newpass",
             "nonbinary",
+            "oldpass",
             "ossp",
             "Preact",
             "predeploy",
@@ -43,7 +45,8 @@
             "testuser",
             "themself",
             "travelitineraryplanner",
-            "webp"
+            "webp",
+            "wrongpassword"
         ],
     "diffEditor.codeLens": true,
     "geminicodeassist.codeGenerationPaneViewEnabled": true,

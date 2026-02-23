@@ -1,0 +1,22 @@
+{
+  "trip_traits": {
+    "pace": { "enum": ["Relaxed", "Balanced", "Fast"] },
+    "comfort": { "enum": ["Budget", "Midrange", "Luxury"] },
+    "mobility_walking_tolerance": { "enum": ["Low", "Medium", "High"] },
+    "car_preference": { "enum": ["PublicTransitOnly", "DayTripsOnly", "FullTripRental"] },
+    "activity_mix": {
+      "description": "Target weights summing to 100",
+      "fields": {
+        "Outdoors": "integer",
+        "Culture": "integer",
+        "Food": "integer",
+        "Nightlife": "integer",
+        "Relax": "integer"
+      }
+    },
+    "logistics_logic": {
+      "hub_preference": "Same airport for entry/exit if total transit penalty < 4 hours",
+      "rental_car": "List as separate requirement with specific pickup/drop-off hubs"
+    }
+  }
+}
