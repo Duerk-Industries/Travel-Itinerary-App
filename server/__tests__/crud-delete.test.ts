@@ -64,7 +64,7 @@ describe('CRUD delete endpoints for flights, lodgings, tours, and trips', () => 
 
   it('creates and deletes a flight, lodging, and tour', async () => {
     const flightRes = await request(app)
-      .post('/api/flights')
+      .post('/api/transfers')
       .set('Authorization', `Bearer ${token}`)
       .send({
         passengerIds: [memberId],
@@ -116,11 +116,11 @@ describe('CRUD delete endpoints for flights, lodgings, tours, and trips', () => 
     const tourId = tourRes.body.id as string;
     expect(tourId).toBeTruthy();
 
-    await request(app).delete(`/api/flights/${flightId}`).set('Authorization', `Bearer ${token}`).expect(204);
+    await request(app).delete(`/api/transfers/${flightId}`).set('Authorization', `Bearer ${token}`).expect(204);
     await request(app).delete(`/api/lodgings/${lodgingId}`).set('Authorization', `Bearer ${token}`).expect(204);
     await request(app).delete(`/api/activities/${tourId}`).set('Authorization', `Bearer ${token}`).expect(204);
 
-    const flights = await request(app).get(`/api/flights?tripId=${tripId}`).set('Authorization', `Bearer ${token}`).expect(200);
+    const flights = await request(app).get(`/api/transfers?tripId=${tripId}`).set('Authorization', `Bearer ${token}`).expect(200);
     expect(flights.body).toHaveLength(0);
     const lodgings = await request(app).get(`/api/lodgings?tripId=${tripId}`).set('Authorization', `Bearer ${token}`).expect(200);
     expect(lodgings.body).toHaveLength(0);

@@ -80,7 +80,7 @@ describe('Ledger integration data setup', () => {
     const passengerIds = pickTravelers();
     const paidByFlight = pickPayers();
     await request(app)
-      .post('/api/flights')
+      .post('/api/transfers')
       .set('Authorization', `Bearer ${token}`)
       .send({
         tripId,

@@ -54,7 +54,7 @@ describe('Flights API passenger validation', () => {
 
   it('rejects creating a flight without passengers', async () => {
     await request(app)
-      .post('/api/flights')
+      .post('/api/transfers')
       .set('Authorization', `Bearer ${token}`)
       .send({
         passengerIds: [],
@@ -72,7 +72,7 @@ describe('Flights API passenger validation', () => {
 
   it('rejects passengers not in group', async () => {
     await request(app)
-      .post('/api/flights')
+      .post('/api/transfers')
       .set('Authorization', `Bearer ${token}`)
       .send({
         passengerIds: ['00000000-0000-0000-0000-000000000000'],
@@ -90,7 +90,7 @@ describe('Flights API passenger validation', () => {
 
   it('creates and updates a flight with group passengers', async () => {
     const createRes = await request(app)
-      .post('/api/flights')
+      .post('/api/transfers')
       .set('Authorization', `Bearer ${token}`)
       .send({
         passengerIds: [memberId],
@@ -110,7 +110,7 @@ describe('Flights API passenger validation', () => {
 
     // Update with empty passengers keeps existing passengers and succeeds
     const emptyUpdate = await request(app)
-      .patch(`/api/flights/${flightId}`)
+      .patch(`/api/transfers/${flightId}`)
       .set('Authorization', `Bearer ${token}`)
       .send({ passengerIds: [] })
       .expect(200);
@@ -118,7 +118,7 @@ describe('Flights API passenger validation', () => {
 
     // Update with same passenger succeeds
     await request(app)
-      .patch(`/api/flights/${flightId}`)
+      .patch(`/api/transfers/${flightId}`)
       .set('Authorization', `Bearer ${token}`)
       .send({ passengerIds: [memberId], carrier: 'DL2' })
       .expect(200);
@@ -126,7 +126,7 @@ describe('Flights API passenger validation', () => {
 
   it('creates a flight with optional carrier, flight number, and booking reference', async () => {
     const createRes = await request(app)
-      .post('/api/flights')
+      .post('/api/transfers')
       .set('Authorization', `Bearer ${token}`)
       .send({
         passengerIds: [memberId],
@@ -148,7 +148,7 @@ describe('Flights API passenger validation', () => {
 
   it('creates a transfer with a non-flight transfer type', async () => {
     const createRes = await request(app)
-      .post('/api/flights')
+      .post('/api/transfers')
       .set('Authorization', `Bearer ${token}`)
       .send({
         passengerIds: [memberId],
@@ -170,7 +170,7 @@ describe('Flights API passenger validation', () => {
   it('defaults arrival date to departure date and allows updating it', async () => {
     const depDate = '2025-01-05';
     const createRes = await request(app)
-      .post('/api/flights')
+      .post('/api/transfers')
       .set('Authorization', `Bearer ${token}`)
       .send({
         passengerIds: [memberId],
@@ -191,7 +191,7 @@ describe('Flights API passenger validation', () => {
 
     const newArrivalDate = '2025-01-06';
     const updateRes = await request(app)
-      .patch(`/api/flights/${flightId}`)
+      .patch(`/api/transfers/${flightId}`)
       .set('Authorization', `Bearer ${token}`)
       .send({ arrivalDate: newArrivalDate })
       .expect(200);
@@ -208,7 +208,7 @@ describe('Flights API passenger validation', () => {
     const payerMemberId = membersRes.body[0]?.id as string;
     expect(payerMemberId).toBeTruthy();
     const createRes = await request(app)
-      .post('/api/flights')
+      .post('/api/transfers')
       .set('Authorization', `Bearer ${token}`)
       .send({
         passengerIds: [payerMemberId],
@@ -228,7 +228,7 @@ describe('Flights API passenger validation', () => {
     const flightId = createRes.body.id as string;
 
     const patchRes = await request(app)
-      .patch(`/api/flights/${flightId}`)
+      .patch(`/api/transfers/${flightId}`)
       .set('Authorization', `Bearer ${token}`)
       .send({ paidBy: [payerMemberId] });
     if (patchRes.status !== 200) {
@@ -260,7 +260,7 @@ describe('Flights API passenger validation', () => {
     const insertSpy = jest.spyOn(db, 'insertFlight').mockImplementation(async (payload: any) => ({ ...payload, id: 'fake-flight' }));
 
     await request(app)
-      .post('/api/flights')
+      .post('/api/transfers')
       .set('Authorization', `Bearer ${token}`)
       .send({
         passengerIds: ['m-member'],
@@ -337,7 +337,7 @@ describe('Pending passengers and payer rules', () => {
 
   it('allows creating a flight with a pending passenger', async () => {
     const res = await request(app)
-      .post('/api/flights')
+      .post('/api/transfers')
       .set('Authorization', `Bearer ${token}`)
       .send({
         passengerIds: [pendingId],
@@ -358,7 +358,7 @@ describe('Pending passengers and payer rules', () => {
 
   it('allows pending passengers as payers', async () => {
     await request(app)
-      .post('/api/flights')
+      .post('/api/transfers')
       .set('Authorization', `Bearer ${token}`)
       .send({
         passengerIds: [pendingId],
@@ -376,7 +376,7 @@ describe('Pending passengers and payer rules', () => {
 
     // Owner can still be a payer
     await request(app)
-      .post('/api/flights')
+      .post('/api/transfers')
       .set('Authorization', `Bearer ${token}`)
       .send({
         passengerIds: [pendingId],
@@ -446,7 +446,7 @@ describe('Trip removal keeps passengers but strips payer status', () => {
     expect(memberMemberId).toBeTruthy();
 
     const flight = await request(app)
-      .post('/api/flights')
+      .post('/api/transfers')
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({
         passengerIds: [ownerMemberId, memberMemberId],
@@ -475,7 +475,7 @@ describe('Trip removal keeps passengers but strips payer status', () => {
   it('removes member from trip data without removing them from the group', async () => {
     await request(app).delete(`/api/trips/${tripId}`).set('Authorization', `Bearer ${memberToken}`).expect(204);
 
-    const flights = await request(app).get(`/api/flights?tripId=${tripId}`).set('Authorization', `Bearer ${ownerToken}`).expect(200);
+    const flights = await request(app).get(`/api/transfers?tripId=${tripId}`).set('Authorization', `Bearer ${ownerToken}`).expect(200);
     const flight = flights.body.find((f: any) => f.id === flightId);
     expect(flight).toBeTruthy();
     expect(flight.passengerIds || flight.passenger_ids || []).not.toContain(memberMemberId);

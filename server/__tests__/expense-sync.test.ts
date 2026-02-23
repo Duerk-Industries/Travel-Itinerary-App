@@ -53,7 +53,7 @@ describe('Expense sync for source-backed items', () => {
 
   it('updates a single flight expense row when paidBy changes', async () => {
     const flightRes = await request(app)
-      .post('/api/flights')
+      .post('/api/transfers')
       .set('Authorization', `Bearer ${tokenA}`)
       .send({
         tripId,
@@ -81,7 +81,7 @@ describe('Expense sync for source-backed items', () => {
     expect(flightExpenses[0].forIds).toEqual([memberA]);
 
     await request(app)
-      .patch(`/api/flights/${flightId}`)
+      .patch(`/api/transfers/${flightId}`)
       .set('Authorization', `Bearer ${tokenA}`)
       .send({ paidBy: [memberA, memberB] })
       .expect(200);

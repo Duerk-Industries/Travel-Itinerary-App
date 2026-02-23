@@ -145,7 +145,7 @@ const FollowingTab: React.FC<FollowingTabProps> = ({
       try {
         const [tripRes, flightsRes, lodgingsRes, toursRes, activityRes, commentsRes] = await Promise.all([
           fetch(`${backendUrl}/api/trips/${selectedTripId}`, { headers }),
-          fetch(`${backendUrl}/api/flights?tripId=${encodeURIComponent(selectedTripId)}`, { headers }),
+          fetch(`${backendUrl}/api/transfers?tripId=${encodeURIComponent(selectedTripId)}`, { headers }),
           fetch(`${backendUrl}/api/lodgings?tripId=${encodeURIComponent(selectedTripId)}`, { headers }),
           fetch(`${backendUrl}/api/activities?tripId=${encodeURIComponent(selectedTripId)}`, { headers }),
           fetch(`${backendUrl}/api/trips/${selectedTripId}/activity?limit=30&group=true`, { headers }),

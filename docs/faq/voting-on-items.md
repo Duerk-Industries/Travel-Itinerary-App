@@ -2,7 +2,7 @@
 
 ## What can be voted on?
 
-- Flights
+- Transfers
 - Lodging
 - Activities
 - Car Rentals
@@ -23,11 +23,11 @@
 
 ## API endpoints
 
-- `POST /api/flights/:id/vote`
+- `POST /api/transfers/:id/vote`
 - `POST /api/lodgings/:id/vote`
 - `POST /api/activities/:id/vote`
 - `POST /api/car-rentals/:id/vote`
-- `POST /api/flights/:id/rating`
+- `POST /api/transfers/:id/rating`
 - `POST /api/lodgings/:id/rating`
 - `POST /api/activities/:id/rating`
 - `POST /api/car-rentals/:id/rating`

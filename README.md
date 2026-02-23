@@ -1,10 +1,10 @@
 # Shared-Trip-Planner
 
-A starter shared trip planner stack with a TypeScript/Node.js API backed by PostgreSQL and an Expo (React Native) client that runs on web, Android, and iOS. Flights are tied to the authenticated user but can be shared with other accounts via email.
+A starter shared trip planner stack with a TypeScript/Node.js API backed by PostgreSQL and an Expo (React Native) client that runs on web, Android, and iOS. Transfers are tied to the authenticated user but can be shared with other accounts via email.
 
 ## What's inside
-- **server**: Express API with JWT auth, PostgreSQL schema for flights, and endpoints to add/remove/share flights.
-- **app**: Expo application with Apple/Google/email login flows and a simple UI to list and manage flights across web, Android, and iOS.
+- **server**: Express API with JWT auth, PostgreSQL schema for transfers, and endpoints to add/remove/share transfers.
+- **app**: Expo application with Apple/Google/email login flows and a simple UI to list and manage transfers across web, Android, and iOS.
 
 ## Getting started
 1. Install dependencies (workspace aware):
@@ -72,11 +72,12 @@ providers:
 ## API quick reference
 - `POST /api/auth/email { email }` → create/login a user via email, returning a JWT.
 - `POST /api/auth/oauth { email, provider }` → Google or Apple login using the provider name and email claim.
-- `GET /api/flights` → list flights for the authenticated user.
-- `POST /api/flights` → add a flight with passenger, dates/times, layover, carrier/number, booking reference, and cost.
-- `PATCH /api/flights/:id` → update a flight's details.
-- `DELETE /api/flights/:id` → remove a flight owned by the user.
-- `POST /api/flights/:id/share { email }` → share a flight with another account by email.
+- `GET /api/transfers` → list transfers for the authenticated user.
+- `POST /api/transfers` → add a transfer with passenger, dates/times, layover, carrier/number, booking reference, and cost.
+- `PATCH /api/transfers/:id` → update a transfer's details.
+- `DELETE /api/transfers/:id` → remove a transfer owned by the user.
+- `POST /api/transfers/:id/share { email }` → share a transfer with another account by email.
+- `transferType` enum values: `Flight`, `Train`, `Bus`, `Private`, `Ferry`, `Other`.
 - `POST /api/groups { name, members[] }` → create a group and invite users/guests (members use `email` for existing users or `guestName` for non-login members).
 - `GET /api/groups/invites` → list pending group invites for the authenticated user.
 - `POST /api/groups/invites/:id/accept` → accept a pending group invite.
@@ -100,7 +101,7 @@ providers:
 
 ## Proposed Item Voting
 
-- Voting is available on Flights, Lodging, Activities, and Car Rentals.
+- Voting is available on Transfers, Lodging, Activities, and Car Rentals.
 - The `Votes` and `Rating` columns appear immediately after `Status`.
 - If an item is `Proposed` and you have not voted yet, you can vote `👍` or `👎`.
 - If an item is not `Proposed`, or you already voted, the UI shows net votes.

@@ -55,7 +55,7 @@ describe('Group member removal cleans related items', () => {
     tripId = tripRes.body.id;
 
     await request(app)
-      .post('/api/flights')
+      .post('/api/transfers')
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({
         passengerIds: [memberId],
@@ -72,7 +72,7 @@ describe('Group member removal cleans related items', () => {
       .expect(201);
 
     await request(app)
-      .post('/api/flights')
+      .post('/api/transfers')
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({
         passengerIds: [memberId, ownerMemberId],
@@ -138,7 +138,7 @@ describe('Group member removal cleans related items', () => {
     }
 
     const flightsRes = await request(app)
-      .get(`/api/flights?tripId=${tripId}`)
+      .get(`/api/transfers?tripId=${tripId}`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
     const flights = flightsRes.body as any[];

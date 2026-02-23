@@ -1035,7 +1035,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       defaultPayerId
     );
     if (editingFlightId === 'new') {
-      const res = await fetch(`${backendUrl}/api/flights`, {
+      const res = await fetch(`${backendUrl}/api/transfers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...headers },
         body: JSON.stringify(payload),
@@ -1050,7 +1050,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       onFlightDataChanged();
       return;
     }
-    const res = await fetch(`${backendUrl}/api/flights/${editingFlightId}`, {
+    const res = await fetch(`${backendUrl}/api/transfers/${editingFlightId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', ...headers },
       body: JSON.stringify(payload),

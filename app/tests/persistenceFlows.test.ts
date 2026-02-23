@@ -116,6 +116,7 @@ describe('Persistence flows for flights and lodging', () => {
 
     const draft: FlightCreateDraft = {
       status: 'Booked',
+      transferType: 'Flight',
       passengerName: 'Traveler',
       passengerIds: ['member-1'],
       departureDate: '2026-06-01',
@@ -198,14 +199,14 @@ describe('Persistence flows for flights and lodging', () => {
     expect(call[1].method).toBe('PUT');
   });
 
-  test('flight delete uses DELETE /api/flights/:id', async () => {
+  test('flight delete uses DELETE /api/transfers/:id', async () => {
     const fetchMock = (global as any).fetch as jest.Mock;
     fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
 
     const result = await removeFlightApi(backendUrl, headers, 'flight-1');
     expect(result.ok).toBe(true);
     const call = fetchMock.mock.calls[0];
-    expect(call[0]).toBe(`${backendUrl}/api/flights/flight-1`);
+    expect(call[0]).toBe(`${backendUrl}/api/transfers/flight-1`);
     expect(call[1].method).toBe('DELETE');
   });
 

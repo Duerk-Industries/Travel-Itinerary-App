@@ -99,13 +99,13 @@ describe('Overview flight edit retains passengers', () => {
       },
       ownerMemberId
     );
-    return request(app).patch(`/api/flights/${flight.id}`).set('Authorization', `Bearer ${ownerToken}`).send(payload);
+    return request(app).patch(`/api/transfers/${flight.id}`).set('Authorization', `Bearer ${ownerToken}`).send(payload);
   };
 
   it('saves edits for flights with pending passengers and full members', async () => {
     // Pending passenger flight
     const pendingFlight = await request(app)
-      .post('/api/flights')
+      .post('/api/transfers')
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({
         passengerIds: [pendingMemberId],
@@ -125,7 +125,7 @@ describe('Overview flight edit retains passengers', () => {
 
     // Member passenger flight
     const memberFlight = await request(app)
-      .post('/api/flights')
+      .post('/api/transfers')
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({
         passengerIds: [memberMemberId],

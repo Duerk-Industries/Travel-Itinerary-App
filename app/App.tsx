@@ -1388,7 +1388,7 @@ const App: React.FC = () => {
       return;
     }
     try {
-      const res = await fetch(`${backendUrl}/api/flights/locations?q=${encodeURIComponent(q.trim())}`, {
+      const res = await fetch(`${backendUrl}/api/transfers/locations?q=${encodeURIComponent(q.trim())}`, {
         headers: { Authorization: `Bearer ${userToken}` },
       });
       if (!res.ok) {

@@ -196,7 +196,7 @@ Or all tests:
 npm test
 ```
 
-## 6. Itinerary Status Coverage (Flights, Lodging, Activities, Car Rentals)
+## 6. Itinerary Status Coverage (Transfers, Lodging, Activities, Car Rentals)
 
 The app now supports itinerary item status values:
 - `Needed`
@@ -213,7 +213,7 @@ Behavior covered in Jest:
   - `Needed` and `Cancelled` relax business required fields.
   - `Proposed`, `Booked`, and `Completed` keep required-field enforcement.
 - Helper-level tests:
-  - `app/tests/flights.test.ts`
+  - `app/tests/transfers.test.ts`
   - `app/tests/lodging.test.ts`
   - `app/tests/activities.test.ts`
   - `app/tests/carRentals.test.ts`

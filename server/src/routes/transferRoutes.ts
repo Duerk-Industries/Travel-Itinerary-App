@@ -26,7 +26,7 @@ import { applyVoteSummary } from '../services/itemVoteService';
 const TRANSFER_TYPES = ['Flight', 'Train', 'Bus', 'Private', 'Ferry', 'Other'] as const;
 type TransferType = (typeof TRANSFER_TYPES)[number];
 
-// Flights API: CRUD for flights scoped to the authenticated user / their group trips.
+// Transfers API: CRUD for transfers scoped to the authenticated user / their group trips.
 const router = Router();
 router.use(bodyParser.json());
 router.use(authenticate);
@@ -209,7 +209,7 @@ router.patch('/:id', async (req, res) => {
     const useInMemory = process.env.USE_IN_MEMORY_DB === '1';
     const flight = await getFlightForUser(req.params.id, userId);
     if (!flight) {
-      res.status(404).json({ error: 'Flight not found' });
+      res.status(404).json({ error: 'Transfer not found' });
       return;
     }
     const tripGroup = (await ensureUserInTrip(flight.tripId, userId)) || (useInMemory ? { groupId: flight.tripId } : null);
@@ -421,7 +421,7 @@ router.post('/:id/share', async (req, res) => {
 
     const flight = await getFlightForUser(req.params.id, user.userId);
     if (!flight) {
-      res.status(404).json({ error: 'Flight not found' });
+      res.status(404).json({ error: 'Transfer not found' });
       return;
     }
 
@@ -430,11 +430,11 @@ router.post('/:id/share', async (req, res) => {
       return;
     }
 
-    const subject = `Flight shared with you: ${flight.carrier} ${flight.flightNumber}`;
+    const subject = `Transfer shared with you: ${flight.carrier} ${flight.flightNumber}`;
     const body = [
       `Hi,`,
       ``,
-      `${user.email} shared a flight with you.`,
+      `${user.email} shared a transfer with you.`,
       ``,
       `Passenger: ${flight.passengerName}`,
       `Carrier: ${flight.carrier} ${flight.flightNumber}`,
@@ -442,7 +442,7 @@ router.post('/:id/share', async (req, res) => {
       `Arrival: ${flight.arrivalTime}`,
       `Booking Reference: ${flight.bookingReference}`,
       ``,
-      `You can view this flight in the Shared Trip Planner using this email address.`,
+      `You can view this transfer in the Shared Trip Planner using this email address.`,
     ].join('\n');
 
     await sendShareEmail(email, subject, body);
@@ -462,12 +462,12 @@ router.post('/:id/vote', async (req, res) => {
   }
   const flight = await getFlightById(req.params.id);
   if (!flight) {
-    res.status(404).json({ error: 'Flight not found' });
+    res.status(404).json({ error: 'Transfer not found' });
     return;
   }
   const tripId = String((flight as any).tripId ?? (flight as any).trip_id ?? '');
   if (!tripId) {
-    res.status(400).json({ error: 'Flight has no trip' });
+    res.status(400).json({ error: 'Transfer has no trip' });
     return;
   }
   const membership = await ensureUserInTrip(tripId, userId);
@@ -499,12 +499,12 @@ router.post('/:id/rating', async (req, res) => {
   }
   const flight = await getFlightById(req.params.id);
   if (!flight) {
-    res.status(404).json({ error: 'Flight not found' });
+    res.status(404).json({ error: 'Transfer not found' });
     return;
   }
   const tripId = String((flight as any).tripId ?? (flight as any).trip_id ?? '');
   if (!tripId) {
-    res.status(400).json({ error: 'Flight has no trip' });
+    res.status(400).json({ error: 'Transfer has no trip' });
     return;
   }
   const membership = await ensureUserInTrip(tripId, userId);

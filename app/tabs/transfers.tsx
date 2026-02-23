@@ -325,7 +325,7 @@ export const createFlightForTrip = async (params: {
   const { backendUrl, headers, draft, tripId, defaultPayerId } = params;
   const { payload, error } = buildFlightPayloadForCreate(draft, tripId, defaultPayerId);
   if (error || !payload) return { ok: false, error };
-  const res = await fetch(`${backendUrl}/api/flights`, {
+  const res = await fetch(`${backendUrl}/api/transfers`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...headers },
     body: JSON.stringify(payload),
@@ -340,7 +340,7 @@ export const removeFlightApi = async (
   headers: Record<string, string>,
   id: string
 ): Promise<{ ok: boolean; error?: string }> => {
-  const res = await fetch(`${backendUrl}/api/flights/${id}`, { method: 'DELETE', headers });
+  const res = await fetch(`${backendUrl}/api/transfers/${id}`, { method: 'DELETE', headers });
   if (!res.ok) {
     let data: any = {};
     try {
@@ -414,7 +414,7 @@ export const fetchFlightsForTrip = async ({
 }): Promise<Flight[]> => {
   if (!activeTripId || !token) return [];
   try {
-    const res = await fetch(`${backendUrl}/api/flights?tripId=${activeTripId}`, {
+    const res = await fetch(`${backendUrl}/api/transfers?tripId=${activeTripId}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) return [];
@@ -760,7 +760,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       // fall through to local fetch
     }
     try {
-      const res = await fetch(`${backendUrl}/api/flights/locations?q=${encodeURIComponent(q)}`, {
+      const res = await fetch(`${backendUrl}/api/transfers/locations?q=${encodeURIComponent(q)}`, {
         headers: { Authorization: `Bearer ${userToken}` },
       });
       if (!res.ok) {
@@ -1014,7 +1014,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
         alert(error || 'Unable to add flight');
         return;
       }
-      res = await fetch(`${backendUrl}/api/flights`, {
+      res = await fetch(`${backendUrl}/api/transfers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...headers },
         body: JSON.stringify(payload),
@@ -1025,7 +1025,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
         undefined,
         defaultPayerId
       );
-      res = await fetch(`${backendUrl}/api/flights/${editingFlightId}`, {
+      res = await fetch(`${backendUrl}/api/transfers/${editingFlightId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', ...headers },
         body: JSON.stringify(payload),
@@ -1057,7 +1057,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       activeTripId,
       defaultPayerId
     );
-    const res = await fetch(`${backendUrl}/api/flights`, {
+    const res = await fetch(`${backendUrl}/api/transfers`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...headers },
       body: JSON.stringify({
@@ -1092,7 +1092,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
 
   const voteOnFlight = async (id: string, value: 1 | -1) => {
     try {
-      const res = await fetch(`${backendUrl}/api/flights/${id}/vote`, {
+      const res = await fetch(`${backendUrl}/api/transfers/${id}/vote`, {
         method: 'POST',
         headers: jsonHeaders,
         body: JSON.stringify({ value }),
@@ -1109,7 +1109,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
 
   const rateFlight = async (id: string, value: 1 | -1) => {
     try {
-      const res = await fetch(`${backendUrl}/api/flights/${id}/rating`, {
+      const res = await fetch(`${backendUrl}/api/transfers/${id}/rating`, {
         method: 'POST',
         headers: jsonHeaders,
         body: JSON.stringify({ value }),

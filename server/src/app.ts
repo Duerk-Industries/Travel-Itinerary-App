@@ -5,7 +5,7 @@ import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
 import authRoutes from './routes/authRoutes';
-import flightRoutes from './routes/transferRoutes';
+import transferRoutes from './routes/transferRoutes';
 import webAuthRoutes from './routes/webAuthRoutes';
 import tripRoutes from './routes/tripRoutes';
 import itineraryRoutes from './routes/itineraryRoutes';
@@ -221,7 +221,9 @@ app.use('/api/auth', authRoutes);
 // Alias web-auth routes under /api/auth to keep legacy tests and clients working.
 app.use('/api/auth', webAuthRoutes);
 app.use('/api/web-auth', webAuthRoutes);
-app.use('/api/flights', flightRoutes);
+app.use('/api/transfers', transferRoutes);
+// Backward-compatible alias for older clients/tests still calling flights endpoints.
+app.use('/api/flights', transferRoutes);
 app.use('/api/groups', groupsRouter);
 app.use('/api/trips', tripRoutes);
 app.use('/api/itinerary', itineraryRoutes);

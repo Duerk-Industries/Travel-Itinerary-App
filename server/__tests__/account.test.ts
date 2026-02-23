@@ -421,7 +421,7 @@ describe('Pending group invites', () => {
     const pendingMemberId = pending.id;
 
     await request(app)
-      .post('/api/flights')
+      .post('/api/transfers')
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({
         passengerIds: [pendingMemberId],
@@ -499,7 +499,7 @@ describe('Pending group invites', () => {
       .expect(204);
 
     const flights = await request(app)
-      .get(`/api/flights?tripId=${rejectTripId}`)
+      .get(`/api/transfers?tripId=${rejectTripId}`)
       .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
     expect(flights.body.length).toBe(0);

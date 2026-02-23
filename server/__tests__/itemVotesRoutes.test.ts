@@ -32,8 +32,8 @@ describe('Item vote routes', () => {
     (db.castItemVote as jest.Mock).mockResolvedValue(undefined);
     (db.getItemVoteSummaries as jest.Mock).mockResolvedValue({ f1: { netVotes: 1, userVote: 1 } });
 
-    const app = appFor('/api/flights', flightRoutes);
-    const res = await request(app).post('/api/flights/f1/vote').send({ value: 1 }).expect(200);
+    const app = appFor('/api/transfers', flightRoutes);
+    const res = await request(app).post('/api/transfers/f1/vote').send({ value: 1 }).expect(200);
 
     expect(db.castItemVote).toHaveBeenCalledWith('user-1', 't1', 'flight', 'f1', 1, 'vote');
     expect(res.body).toEqual({ itemId: 'f1', netVotes: 1, userVote: 1 });
@@ -43,8 +43,8 @@ describe('Item vote routes', () => {
     (db.getFlightById as jest.Mock).mockResolvedValue({ id: 'f1', tripId: 't1', status: 'Proposed' });
     (db.ensureUserInTrip as jest.Mock).mockResolvedValue(null);
 
-    const app = appFor('/api/flights', flightRoutes);
-    await request(app).post('/api/flights/f1/vote').send({ value: 1 }).expect(403);
+    const app = appFor('/api/transfers', flightRoutes);
+    await request(app).post('/api/transfers/f1/vote').send({ value: 1 }).expect(403);
     expect(db.castItemVote).not.toHaveBeenCalled();
   });
 
@@ -85,8 +85,8 @@ describe('Item vote routes', () => {
     (db.castItemVote as jest.Mock).mockResolvedValue(undefined);
     (db.getItemVoteSummaries as jest.Mock).mockResolvedValue({ f1: { netVotes: -1, userVote: -1 } });
 
-    const app = appFor('/api/flights', flightRoutes);
-    const res = await request(app).post('/api/flights/f1/rating').send({ value: -1 }).expect(200);
+    const app = appFor('/api/transfers', flightRoutes);
+    const res = await request(app).post('/api/transfers/f1/rating').send({ value: -1 }).expect(200);
 
     expect(db.castItemVote).toHaveBeenCalledWith('user-1', 't1', 'flight', 'f1', -1, 'rating');
     expect(res.body).toEqual({ itemId: 'f1', netRating: -1, userRating: -1 });

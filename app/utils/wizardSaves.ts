@@ -1,4 +1,4 @@
-import { buildFlightPayload, type Flight, type FlightEditDraft } from '../tabs/transfers';
+import { TRANSFER_TYPES, buildFlightPayload, type Flight, type FlightEditDraft, type TransferType } from '../tabs/transfers';
 import { buildLodgingPayload, type Lodging, type LodgingDraft } from '../tabs/lodging';
 import { normalizeDateString } from './normalizeDateString';
 import { LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from './itineraryStatus';
@@ -60,7 +60,7 @@ export const saveWizardFlights = async (params: {
       headers: { Authorization: `Bearer ${userToken}` },
     });
     if (!res.ok) {
-      return { ok: false, failures: [], fatal: 'Trip created, but flights could not be saved.' };
+      return { ok: false, failures: [], fatal: 'Trip created, but transfers could not be saved.' };
     }
     const data = await res.json().catch(() => []);
     const members = (Array.isArray(data) ? data : []).map((m: any) => ({
@@ -110,6 +110,9 @@ export const saveWizardFlights = async (params: {
 
       const draft: FlightEditDraft = {
         status: normalizeItineraryStatus((flight as any).status, LEGACY_ITINERARY_STATUS),
+        transferType: TRANSFER_TYPES.includes((((flight as any).transfer_type ?? (flight as any).transferType) || 'Flight') as TransferType)
+          ? ((((flight as any).transfer_type ?? (flight as any).transferType) || 'Flight') as TransferType)
+          : 'Flight',
         passengerName: flight.passenger_name || 'Traveler',
         passengerIds,
         departureDate: normalizeDateString(flight.departure_date || '') || todayIso,
@@ -133,20 +136,20 @@ export const saveWizardFlights = async (params: {
         paidBy,
       };
       const payload = buildFlightPayload(draft, tripId, fallbackPayerId ?? undefined);
-      const saveRes = await fetch(`${backendUrl}/api/flights`, {
+      const saveRes = await fetch(`${backendUrl}/api/transfers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...headers },
         body: JSON.stringify(payload),
       });
       if (!saveRes.ok) {
         const errData = await saveRes.json().catch(() => ({}));
-        failures.push(errData.error || 'Failed to save flight');
+        failures.push(errData.error || 'Failed to save transfer');
       }
     }
 
     return { ok: failures.length === 0, failures };
   } catch {
-    return { ok: false, failures: [], fatal: 'Trip created, but flights could not be saved.' };
+    return { ok: false, failures: [], fatal: 'Trip created, but transfers could not be saved.' };
   }
 };
 
