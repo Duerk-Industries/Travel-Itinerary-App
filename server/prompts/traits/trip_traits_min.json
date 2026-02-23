@@ -1,0 +1,1 @@
+{"$":"tt1","p":"enum R/B/F (pace)","c":"enum B/M/L (comfort)","mob":"enum L/M/H","car":"enum P/D/R","w":"weights sum=100 {o,c,f,n,r} ints","tm":"enum E/B/S (Explorer/Balanced/Slow)"}

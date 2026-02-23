@@ -1,0 +1,1 @@
+{"$":"it1","eh":"str","xh":"str","b":"bases (same as step1)","x":"transfers (same as step1)","rc":"rental car (same as step1) or null","dy":"[ {d:int,dt:date,b:str,it:[[t,k,str]],me:[\"BQ\",\"LC\",\"DL\"],sl:str,ln:[str],cf:\"H|M|L\"} ] (it<=5,total; evening<=2; ln<=2; t in M|D|E; k in A|R|T|O|E)","a":"[str] assumptions","cf":"('H'|'M'|'L') confidence"}

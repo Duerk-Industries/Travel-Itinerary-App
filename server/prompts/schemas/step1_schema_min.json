@@ -1,0 +1,1 @@
+{"$":"r1","eh":"str entry_hub","xh":"str exit_hub","b":"[ {l:str, ci:date, co:date, dn:[str]} ] bases","x":"[ {dt:date, m:('Flight'|'Train'|'Bus'|'Private'|'Ferry'|'Other'), fr:str, to:str, td:num?, n:str?} ] transfers","rc":"{pu:str, do:str, r:str}? rental car","w":"{o,c,f,n,r}","a":"[str] assumptions"}

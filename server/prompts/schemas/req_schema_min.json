@@ -1,0 +1,1 @@
+{"$":"req1","d":"[str] destinations labels","sd":"str? start_date YYYY-MM-DD","ed":"str? end_date YYYY-MM-DD","m":"str? month YYYY-MM","dur":"int? duration_days","s":"str? start_city_or_airport","e":"str? end_city_or_airport","p":"[obj]? party list {a:int? age, t:[str]? traits}","tt":"obj trip traits","ut":"obj user traits overrides","rs":"int? routing_stability_seed"}
