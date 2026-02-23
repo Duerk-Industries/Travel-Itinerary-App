@@ -3,6 +3,7 @@ const path = require('path');
 const { getDefaultConfig } = require('expo/metro-config');
 
 const projectRoot = __dirname;
+const workspaceRoot = path.resolve(projectRoot, '..');
 
 const config = getDefaultConfig(__dirname);
 const { resolver } = config;
@@ -32,14 +33,19 @@ config.resolver = {
     ...(resolver.extraNodeModules || {}),
     'pdfjs-dist': path.join(projectRoot, 'node_modules', 'pdfjs-dist'),
   },
-  nodeModulesPaths: [path.join(projectRoot, 'node_modules')],
+  nodeModulesPaths: [
+    path.join(projectRoot, 'node_modules'),
+    path.join(workspaceRoot, 'node_modules'),
+  ],
   disableHierarchicalLookup: true,
 };
 
 const installHookMapPath = path.join(__dirname, 'installHook.js.map');
 const existingEnhanceMiddleware = config.server?.enhanceMiddleware;
 
-config.watchFolders = Array.from(new Set([...(config.watchFolders || []), projectRoot]));
+config.watchFolders = Array.from(
+  new Set([...(config.watchFolders || []), projectRoot, workspaceRoot]),
+);
 
 config.server = {
   ...(config.server || {}),
