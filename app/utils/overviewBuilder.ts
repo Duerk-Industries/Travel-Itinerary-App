@@ -129,7 +129,8 @@ export const formatFriendlyDate = (dateStr?: string | null, timeStr?: string | n
 };
 
 export const formatFlightSummary = (flight: FlightLike): string => {
-  const carrier = flight.carrier || 'Carrier';
+  const transferType = (flight as any).transfer_type || (flight as any).transferType || 'Flight';
+  const carrier = flight.carrier || transferType;
   const number = flight.flight_number || flight.flightNumber || '';
   const depCode = flight.departure_airport_code || flight.departureAirportCode || 'DEP';
   const arrCode = flight.arrival_airport_code || flight.arrivalAirportCode || 'ARR';
@@ -141,8 +142,9 @@ export const formatFlightSummary = (flight: FlightLike): string => {
 
 export const formatFlightDetails = (flight: FlightLike): DetailItem[] => {
   const details: DetailItem[] = [];
+  details.push({ label: 'Type', value: (flight as any).transfer_type || (flight as any).transferType || 'Flight' });
   details.push({ label: 'Carrier', value: flight.carrier || 'N/A' });
-  details.push({ label: 'Flight Number', value: flight.flight_number || flight.flightNumber || 'N/A' });
+  details.push({ label: 'Transfer Number', value: flight.flight_number || flight.flightNumber || 'N/A' });
   details.push({ label: 'Departure', value: flight.departure_airport_code || flight.departureAirportCode || 'N/A' });
   details.push({ label: 'Arrival', value: flight.arrival_airport_code || flight.arrivalAirportCode || 'N/A' });
   const depDate = flight.departure_date || flight.departureDate || '';

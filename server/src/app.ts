@@ -5,7 +5,7 @@ import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
 import authRoutes from './routes/authRoutes';
-import flightRoutes from './routes/flightRoutes';
+import flightRoutes from './routes/transferRoutes';
 import webAuthRoutes from './routes/webAuthRoutes';
 import tripRoutes from './routes/tripRoutes';
 import itineraryRoutes from './routes/itineraryRoutes';
@@ -253,3 +253,4 @@ app.use((req, res, _next) => {
 });
 
 export default app;
+

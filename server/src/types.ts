@@ -26,6 +26,7 @@ export interface Flight {
   id: string;
   userId: string;
   status: ItineraryStatus;
+  transferType?: 'Flight' | 'Train' | 'Bus' | 'Private' | 'Ferry' | 'Other';
   netVotes?: number;
   userVote?: -1 | 1 | null;
   netRating?: number;

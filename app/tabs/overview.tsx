@@ -37,7 +37,7 @@ import {
   type Flight,
   type FlightEditDraft,
   type GroupMemberOption,
-} from '../tabs/flights';
+} from '../tabs/transfers';
 import {
   buildLodgingPayload,
   createInitialLodgingState,
@@ -60,7 +60,7 @@ import {
   type CarRentalDraft,
 } from '../tabs/carRentals';
 import { buildRentalDraftFromRow, buildTourDraftFromRow, getOverviewSaveFlags } from '../utils/overviewEditing';
-import { FlightEditingForm } from '../components/FlightEditingForm';
+import { FlightEditingForm } from '../components/TransferEditingForm';
 import ConfirmDialog from '../components/ConfirmDialog';
 import LodgingDialog from '../components/LodgingDialog';
 import LodgingDetailsDialog from '../components/LodgingDetailsDialog';
@@ -707,7 +707,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         const items: string[] = [];
         const flightsForDay = flights.filter((f) => f.departure_date === date || f.arrival_date === date);
         flightsForDay.forEach((f) =>
-          items.push(`Flight ${f.departure_location || f.departure_airport_code || 'DEP'} -> ${f.arrival_location || f.arrival_airport_code || 'ARR'} dep ${f.departure_time || '?'} arr ${f.arrival_time || '?'}`)
+          items.push(`Transfer ${f.departure_location || f.departure_airport_code || 'DEP'} -> ${f.arrival_location || f.arrival_airport_code || 'ARR'} dep ${f.departure_time || '?'} arr ${f.arrival_time || '?'}`)
         );
         const lodgingsForDay = lodgings.filter((l) => {
           const ci = l.checkInDate;
@@ -1526,7 +1526,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       return info.flights.map((f) => {
         const dep = f.departure_location || f.departure_airport_code || 'Departure';
         const arr = f.arrival_location || f.arrival_airport_code || 'Arrival';
-        return `Flight from ${dep} to ${arr}.`;
+        return `Transfer from ${dep} to ${arr}.`;
       });
     }
     if (info.tours.length) {
@@ -1679,7 +1679,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
               {flightsForDay.length ? (
                 <View style={styles.dayInfoCard}>
-                  <Text style={styles.sectionTitle}>Your flight</Text>
+                  <Text style={styles.sectionTitle}>Your transfer</Text>
                   {flightsForDay.map((flight) => {
                     const dep = flight.departure_location || flight.departure_airport_code || 'DEP';
                     const arr = flight.arrival_location || flight.arrival_airport_code || 'ARR';
@@ -1709,15 +1709,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                             ? formatTravelerNames(flight.passenger_ids)
                             : flight.passenger_name || '';
                         return {
-                          title: flightsForDay.length > 1 ? `Flight ${idx + 1} · ${dep} → ${arr}` : undefined,
+                          title: flightsForDay.length > 1 ? `Transfer ${idx + 1} · ${dep} → ${arr}` : undefined,
                           subtitle: showFlightNames && passengers ? `Travelers: ${passengers}` : undefined,
                           items: formatFlightDetails(flight),
                         };
                       });
-                      setDetailModal({ title: 'Flight Details', sections });
+                      setDetailModal({ title: 'Transfer Details', sections });
                     }}
                   >
-                    <Text style={styles.dayInfoButtonText}>See flight details →</Text>
+                    <Text style={styles.dayInfoButtonText}>See transfer details →</Text>
                   </TouchableOpacity>
                 </View>
               ) : null}
@@ -2251,13 +2251,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         <View style={styles.divider} />
 
         <View style={[styles.row, { flexWrap: 'wrap' }]}>
-          <Text style={styles.headerText}>Flights</Text>
+          <Text style={styles.headerText}>Transfers</Text>
           {isEditing && (
             <TouchableOpacity
               style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
               onPress={() => openFlightAdd()}
             >
-              <Text style={styles.buttonText}>+ Add Flight</Text>
+              <Text style={styles.buttonText}>+ Add Transfer</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -2509,3 +2509,5 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 };
 
 export default OverviewTab;
+
+

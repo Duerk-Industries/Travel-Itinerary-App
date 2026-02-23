@@ -315,7 +315,7 @@ describe('Overview UI (nested itinerary)', () => {
     );
     fireEvent.press(await findByTestId('overview-day-card-1'));
     fireEvent.press(await findByTestId('day-details-flight-details'));
-    expect(await findByText('Flight Details')).toBeTruthy();
+    expect(await findByText('Transfer Details')).toBeTruthy();
   });
 
   test('shows next day button in day details', async () => {

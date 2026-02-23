@@ -1,4 +1,4 @@
-import { createFlightForTrip, removeFlightApi, type FlightCreateDraft } from '../tabs/flights';
+import { createFlightForTrip, removeFlightApi, type FlightCreateDraft } from '../tabs/transfers';
 import { createLodgingForTrip, removeLodgingApi, saveLodgingApi, type LodgingDraft, type Lodging } from '../tabs/lodging';
 import { createTourForTrip, removeTourApi, type TourDraft } from '../tabs/tours';
 import { saveWizardFlights, saveWizardLodgings } from '../utils/wizardSaves';
@@ -265,3 +265,4 @@ describe('Persistence flows for flights and lodging', () => {
     expect(call[1].method).toBe('DELETE');
   });
 });
+

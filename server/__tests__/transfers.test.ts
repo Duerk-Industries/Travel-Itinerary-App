@@ -146,6 +146,27 @@ describe('Flights API passenger validation', () => {
     expect(createRes.body.bookingReference ?? createRes.body.booking_reference ?? '').toBe('');
   });
 
+  it('creates a transfer with a non-flight transfer type', async () => {
+    const createRes = await request(app)
+      .post('/api/flights')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        passengerIds: [memberId],
+        departureDate: '2025-01-04',
+        departureTime: '08:30',
+        arrivalTime: '10:30',
+        carrier: '',
+        flightNumber: '',
+        bookingReference: '',
+        transferType: 'Train',
+        tripId,
+        cost: 150,
+      })
+      .expect(201);
+
+    expect(createRes.body.transferType ?? createRes.body.transfer_type ?? 'Flight').toBe('Train');
+  });
+
   it('defaults arrival date to departure date and allows updating it', async () => {
     const depDate = '2025-01-05';
     const createRes = await request(app)

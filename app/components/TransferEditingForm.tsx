@@ -2,11 +2,12 @@ import React from 'react';
 import { Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { formatDateLong } from '../utils/formatDateLong';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
-import type { FlightEditDraft, GroupMemberOption } from '../tabs/flights';
+import type { FlightEditDraft, GroupMemberOption, TransferType } from '../tabs/transfers';
 import { toWebStyle } from '../utils/webStyle';
 import { DEFAULT_NEW_ITINERARY_STATUS, ITINERARY_STATUSES, normalizeItineraryStatus } from '../utils/itineraryStatus';
 
 type AirportTarget = 'dep' | 'arr' | 'modal-dep' | 'modal-arr' | 'modal-layover' | null;
+const TRANSFER_TYPES: TransferType[] = ['Flight', 'Train', 'Bus', 'Private', 'Ferry', 'Other'];
 
 export type FlightEditingFormProps = {
   visible: boolean;
@@ -116,7 +117,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
       <View style={[styles.passengerOverlay, baseOverlayStyle, overlayStyle]}>
         <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={onClose} />
         <View style={[styles.modalCard, baseCardStyle, cardStyle]}>
-        <Text style={styles.sectionTitle}>Flight Details</Text>
+        <Text style={styles.sectionTitle}>Transfer Details</Text>
         <Text style={styles.helperText}>
           Current Departure: {formatDateLong(flight.departureDate)} at {flight.departureTime || '?'}
         </Text>
@@ -163,6 +164,46 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
                     key={`flight-status-${opt}`}
                     style={[toggleBaseStyle, selected && toggleSelectedStyle]}
                     onPress={() => setFlight((prev) => (prev ? { ...prev, status: opt } : prev))}
+                  >
+                    <Text style={[toggleTextStyle, selected && toggleTextSelectedStyle]}>{opt}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+          <Text style={styles.modalLabel}>Type</Text>
+          {Platform.OS === 'web' ? (
+            <select
+              value={TRANSFER_TYPES.includes((flight as any).transferType as TransferType) ? (flight as any).transferType : 'Flight'}
+              onChange={(e) =>
+                setFlight((prev) =>
+                  prev
+                    ? {
+                        ...prev,
+                        transferType: TRANSFER_TYPES.includes(e.target.value as TransferType)
+                          ? (e.target.value as TransferType)
+                          : 'Flight',
+                      }
+                    : prev
+                )
+              }
+              style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
+            >
+              {TRANSFER_TYPES.map((opt) => (
+                <option key={`transfer-type-${opt}`} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <View style={styles.payerChips}>
+              {TRANSFER_TYPES.map((opt) => {
+                const selected = (flight as any).transferType === opt;
+                return (
+                  <TouchableOpacity
+                    key={`transfer-type-${opt}`}
+                    style={[toggleBaseStyle, selected && toggleSelectedStyle]}
+                    onPress={() => setFlight((prev) => (prev ? { ...prev, transferType: opt } : prev))}
                   >
                     <Text style={[toggleTextStyle, selected && toggleTextSelectedStyle]}>{opt}</Text>
                   </TouchableOpacity>
@@ -371,7 +412,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
               </View>
             </View>
           </View>
-          <Text style={styles.modalLabel}>Flight</Text>
+          <Text style={styles.modalLabel}>Transfer</Text>
           <View style={rowStyle}>
             <View style={locationFieldStyle}>
               <Text style={styles.modalLabelSmall}>Carrier</Text>
@@ -383,7 +424,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
               />
             </View>
             <View style={locationFieldStyle}>
-              <Text style={styles.modalLabelSmall}>Flight #</Text>
+              <Text style={styles.modalLabelSmall}>Transfer #</Text>
               <TextInput
                 style={styles.input}
                 testID="flight-modal-flight-number"
@@ -481,3 +522,4 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
     </Modal>
   );
 };
+

@@ -10,7 +10,7 @@
 - Account/family/fellow-travelers: `accountRoutes`
 - Groups/invites: `groupsRouter`
 - Trips/wizard/covered-by: `tripRoutes`
-- Flights/lodging/tours: CRUD + expense sync
+- Transfers (API: flights)/lodging/tours: CRUD + expense sync
 - Manual expenses: `expenseRoutes`
 - Itinerary generation and itinerary records/details
 - Traits and demographics

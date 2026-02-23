@@ -405,6 +405,7 @@ export const initDb = async (): Promise<void> => {
       user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       trip_id UUID REFERENCES trips(id) ON DELETE SET NULL,
       status TEXT NOT NULL DEFAULT 'Booked',
+      transfer_type TEXT NOT NULL DEFAULT 'Flight',
       passenger_name TEXT NOT NULL,
       passenger_ids JSONB DEFAULT '[]'::jsonb,
       departure_date DATE NOT NULL,
@@ -442,6 +443,7 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE flights ADD COLUMN IF NOT EXISTS arrival_date DATE;`);
   await p.query(`ALTER TABLE flights ADD COLUMN IF NOT EXISTS trip_id UUID REFERENCES trips(id) ON DELETE SET NULL;`);
   await p.query(`ALTER TABLE flights ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'Booked';`);
+  await p.query(`ALTER TABLE flights ADD COLUMN IF NOT EXISTS transfer_type TEXT NOT NULL DEFAULT 'Flight';`);
   await p.query(`ALTER TABLE flights ADD COLUMN IF NOT EXISTS paid_by JSONB DEFAULT '[]'::jsonb;`);
   await p.query(`ALTER TABLE flights ADD COLUMN IF NOT EXISTS passenger_ids JSONB DEFAULT '[]'::jsonb;`);
 
@@ -1194,15 +1196,16 @@ export const insertFlight = async (
 
   const id = randomUUID();
   const query = `INSERT INTO flights (
-    id, user_id, trip_id, status, passenger_name, passenger_ids, departure_date, departure_location, departure_airport_code, departure_time,
+    id, user_id, trip_id, status, transfer_type, passenger_name, passenger_ids, departure_date, departure_location, departure_airport_code, departure_time,
     arrival_location, arrival_airport_code, layover_location, layover_location_code, layover_duration,
     arrival_date, arrival_time, cost, carrier, flight_number, booking_reference, paid_by
-  ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)
+  ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
   RETURNING
     id,
     user_id as "userId",
     trip_id as "tripId",
     status,
+    transfer_type as "transferType",
     passenger_name as "passengerName",
     passenger_ids,
     departure_date as "departureDate",
@@ -1228,6 +1231,7 @@ export const insertFlight = async (
     flight.userId,
     flight.tripId,
     flight.status,
+    (flight as any).transferType ?? 'Flight',
     flight.passengerName,
     JSON.stringify(flight.passengerIds ?? []),
     flight.departureDate,
@@ -1321,28 +1325,30 @@ export const updateFlight = async (
       `UPDATE flights
        SET passenger_name = COALESCE($1, passenger_name),
            status = COALESCE($2, status),
-           departure_date = COALESCE($3, departure_date),
-           departure_location = COALESCE($4, departure_location),
-           departure_airport_code = COALESCE($5, departure_airport_code),
-           departure_time = COALESCE($6, departure_time),
-           arrival_location = COALESCE($7, arrival_location),
-           arrival_airport_code = COALESCE($8, arrival_airport_code),
-           layover_location = COALESCE($9, layover_location),
-           layover_location_code = COALESCE($10, layover_location_code),
-           layover_duration = COALESCE($11, layover_duration),
-           arrival_date = COALESCE($12, arrival_date),
-           arrival_time = COALESCE($13, arrival_time),
-           cost = COALESCE($14, cost),
-           carrier = COALESCE($15, carrier),
-           flight_number = COALESCE($16, flight_number),
-           booking_reference = COALESCE($17, booking_reference),
-           paid_by = COALESCE($18::jsonb, paid_by),
-           passenger_ids = COALESCE($19::jsonb, passenger_ids)
-      WHERE id = $20 AND user_id = $21
+           transfer_type = COALESCE($3, transfer_type),
+           departure_date = COALESCE($4, departure_date),
+           departure_location = COALESCE($5, departure_location),
+           departure_airport_code = COALESCE($6, departure_airport_code),
+           departure_time = COALESCE($7, departure_time),
+           arrival_location = COALESCE($8, arrival_location),
+           arrival_airport_code = COALESCE($9, arrival_airport_code),
+           layover_location = COALESCE($10, layover_location),
+           layover_location_code = COALESCE($11, layover_location_code),
+           layover_duration = COALESCE($12, layover_duration),
+           arrival_date = COALESCE($13, arrival_date),
+           arrival_time = COALESCE($14, arrival_time),
+           cost = COALESCE($15, cost),
+           carrier = COALESCE($16, carrier),
+           flight_number = COALESCE($17, flight_number),
+           booking_reference = COALESCE($18, booking_reference),
+           paid_by = COALESCE($19::jsonb, paid_by),
+           passenger_ids = COALESCE($20::jsonb, passenger_ids)
+      WHERE id = $21 AND user_id = $22
       RETURNING *`,
       [
         updates.passengerName ?? null,
         updates.status ?? null,
+        (updates as any).transferType ?? null,
         updates.departureDate ?? null,
         departureCode,
         departureCode,
@@ -1382,32 +1388,34 @@ export const updateFlight = async (
     `UPDATE flights f
      SET passenger_name = COALESCE($1, f.passenger_name),
          status = COALESCE($2, f.status),
-         departure_date = COALESCE($3, f.departure_date),
-         departure_location = COALESCE($4, f.departure_location),
-         departure_airport_code = COALESCE($5, f.departure_airport_code),
-         departure_time = COALESCE($6, f.departure_time),
-         arrival_location = COALESCE($7, f.arrival_location),
-         arrival_airport_code = COALESCE($8, f.arrival_airport_code),
-         layover_location = COALESCE($9, f.layover_location),
-         layover_location_code = COALESCE($10, f.layover_location_code),
-         layover_duration = COALESCE($11, f.layover_duration),
-         arrival_date = COALESCE($12, f.arrival_date),
-         arrival_time = COALESCE($13, f.arrival_time),
-         cost = COALESCE($14, f.cost),
-         carrier = COALESCE($15, f.carrier),
-         flight_number = COALESCE($16, f.flight_number),
-         booking_reference = COALESCE($17, f.booking_reference),
-         paid_by = COALESCE($18::jsonb, f.paid_by),
-         passenger_ids = COALESCE($19::jsonb, f.passenger_ids)
+         transfer_type = COALESCE($3, f.transfer_type),
+         departure_date = COALESCE($4, f.departure_date),
+         departure_location = COALESCE($5, f.departure_location),
+         departure_airport_code = COALESCE($6, f.departure_airport_code),
+         departure_time = COALESCE($7, f.departure_time),
+         arrival_location = COALESCE($8, f.arrival_location),
+         arrival_airport_code = COALESCE($9, f.arrival_airport_code),
+         layover_location = COALESCE($10, f.layover_location),
+         layover_location_code = COALESCE($11, f.layover_location_code),
+         layover_duration = COALESCE($12, f.layover_duration),
+         arrival_date = COALESCE($13, f.arrival_date),
+         arrival_time = COALESCE($14, f.arrival_time),
+         cost = COALESCE($15, f.cost),
+         carrier = COALESCE($16, f.carrier),
+         flight_number = COALESCE($17, f.flight_number),
+         booking_reference = COALESCE($18, f.booking_reference),
+         paid_by = COALESCE($19::jsonb, f.paid_by),
+         passenger_ids = COALESCE($20::jsonb, f.passenger_ids)
     FROM trips t
-    WHERE f.id = $20
+    WHERE f.id = $21
       AND t.id = f.trip_id
       -- allow edits by any member of the trip's group
-      AND t.group_id IN (SELECT group_id FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $21)
+      AND t.group_id IN (SELECT group_id FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $22)
     RETURNING f.*`,
     [
       updates.passengerName,
       updates.status ?? null,
+      (updates as any).transferType ?? null,
       updates.departureDate,
       departureCode,
       departureCode,
@@ -1878,6 +1886,7 @@ export const getFlightForUser = async (flightId: string, userId: string): Promis
               user_id as "userId",
               trip_id as "tripId",
               status,
+              transfer_type as "transferType",
               passenger_name as "passengerName",
               COALESCE(passenger_ids, '[]'::jsonb) as passenger_ids,
               departure_date as "departureDate",
@@ -1917,6 +1926,7 @@ export const getFlightForUser = async (flightId: string, userId: string): Promis
        f.user_id as "userId",
        f.trip_id as "tripId",
        f.status,
+       f.transfer_type as "transferType",
        f.passenger_name as "passengerName",
        f.departure_date as "departureDate",
        f.departure_location as "departureLocation",
@@ -1976,6 +1986,7 @@ export const getFlightById = async (flightId: string): Promise<Flight | null> =>
        f.user_id as "userId",
        f.trip_id as "tripId",
        f.status,
+       f.transfer_type as "transferType",
        f.passenger_name as "passengerName",
        COALESCE(f.passenger_ids, '[]'::jsonb) as passenger_ids,
        f.departure_date as "departureDate",
@@ -2020,6 +2031,7 @@ export const listFlights = async (userId: string, tripId?: string): Promise<Flig
              user_id as "userId",
              trip_id as "tripId",
              status,
+             transfer_type as "transferType",
              passenger_name as "passengerName",
              COALESCE(passenger_ids, '[]'::jsonb) as passenger_ids,
              departure_date as "departureDate",

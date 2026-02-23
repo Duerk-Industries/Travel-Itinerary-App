@@ -17,7 +17,7 @@ import { formatDateLong } from './utils/formatDateLong';
 import { normalizeDateString } from './utils/normalizeDateString';
 import { sanitizeCostInput } from './utils/sanitizeCost';
 import { initializeAppCheck } from './utils/firebaseAppCheck';
-import { FlightsTab, type Flight, fetchFlightsForTrip } from './tabs/flights';
+import { FlightsTab, type Flight, fetchFlightsForTrip } from './tabs/transfers';
 import { type Tour, TourTab, fetchToursForTrip } from './tabs/tours';
 import { type Trait } from './tabs/traits';
 import { FollowTab, fetchFollowedTripsApi, loadFollowCodes, loadFollowPayloads, saveFollowCodes, saveFollowPayloads, type FollowedTrip } from './tabs/follow';
@@ -4239,3 +4239,4 @@ const styles = StyleSheet.create({
 });
 
 export default App;
+

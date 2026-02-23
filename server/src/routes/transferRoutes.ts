@@ -23,6 +23,9 @@ import { isEmailConfigured, sendShareEmail } from '../mailer';
 import { normalizeItineraryStatus, shouldRelaxRequiredFields } from '../utils/itineraryStatus';
 import { applyVoteSummary } from '../services/itemVoteService';
 
+const TRANSFER_TYPES = ['Flight', 'Train', 'Bus', 'Private', 'Ferry', 'Other'] as const;
+type TransferType = (typeof TRANSFER_TYPES)[number];
+
 // Flights API: CRUD for flights scoped to the authenticated user / their group trips.
 const router = Router();
 router.use(bodyParser.json());
@@ -86,6 +89,8 @@ router.post('/', async (req, res) => {
     tripId,
     paidBy,
     status: incomingStatus,
+    transferType: incomingTransferType,
+    transfer_type: incomingTransferTypeSnake,
   } = req.body;
   const status = normalizeItineraryStatus(incomingStatus);
   const relaxed = shouldRelaxRequiredFields(status);
@@ -96,6 +101,10 @@ router.post('/', async (req, res) => {
   const normalizedCarrier = typeof carrier === 'string' ? carrier : '';
   const normalizedFlightNumber = typeof flightNumber === 'string' ? flightNumber : '';
   const normalizedBookingReference = typeof bookingReference === 'string' ? bookingReference : '';
+  const transferTypeInput = incomingTransferType ?? incomingTransferTypeSnake;
+  const normalizedTransferType: TransferType = TRANSFER_TYPES.includes(transferTypeInput as TransferType)
+    ? (transferTypeInput as TransferType)
+    : 'Flight';
   const tripGroup = (await ensureUserInTrip(tripId, userId)) || (process.env.USE_IN_MEMORY_DB === '1' ? { groupId: tripId } : null);
   if (!tripGroup) {
     res.status(403).json({ error: 'You must be in the group for this trip' });
@@ -132,6 +141,7 @@ router.post('/', async (req, res) => {
     userId,
     tripId,
     status,
+    transferType: normalizedTransferType,
     passengerName,
     passengerIds: normalizedPassengerIds,
     departureDate: departureDate || new Date().toISOString().slice(0, 10),
@@ -190,6 +200,8 @@ router.patch('/:id', async (req, res) => {
     bookingReference,
     paidBy,
     status: incomingStatus,
+    transferType: incomingTransferType,
+    transfer_type: incomingTransferTypeSnake,
   } = req.body;
   const passengerIds = Array.isArray(req.body.passengerIds) ? req.body.passengerIds : null;
   const normalizedPaidBy = Array.isArray(paidBy) ? (paidBy.length ? paidBy : undefined) : undefined;
@@ -245,6 +257,12 @@ router.patch('/:id', async (req, res) => {
       passengerName = flight.passengerName || 'Passenger';
     }
     const finalStatus = normalizeItineraryStatus(typeof incomingStatus === 'undefined' ? flight.status : incomingStatus);
+    const transferTypeInput = incomingTransferType ?? incomingTransferTypeSnake;
+    const finalTransferType: TransferType = TRANSFER_TYPES.includes(transferTypeInput as TransferType)
+      ? (transferTypeInput as TransferType)
+      : TRANSFER_TYPES.includes((flight as any)?.transferType as TransferType)
+        ? ((flight as any).transferType as TransferType)
+        : 'Flight';
 
     if (normalizedPaidBy) {
       const members = await listGroupMembers(tripGroup.groupId, userId);
@@ -258,6 +276,7 @@ router.patch('/:id', async (req, res) => {
     const updated = await updateFlight(req.params.id, userId, {
       passengerName,
       status: finalStatus,
+      transferType: finalTransferType,
       passengerIds: normalizedPassengerIds ?? undefined,
       departureDate,
       departureLocation,
@@ -328,13 +347,20 @@ router.put('/:id', async (req, res) => {
     bookingReference,
     paidBy,
     status: incomingStatus,
+    transferType: incomingTransferType,
+    transfer_type: incomingTransferTypeSnake,
   } = req.body;
   const finalStatus = normalizeItineraryStatus(incomingStatus);
+  const transferTypeInput = incomingTransferType ?? incomingTransferTypeSnake;
+  const finalTransferType = TRANSFER_TYPES.includes(transferTypeInput as TransferType)
+    ? (transferTypeInput as TransferType)
+    : undefined;
   const normalizedPaidBy = Array.isArray(paidBy) ? (paidBy.length ? paidBy : undefined) : undefined;
   try {
     const updated = await updateFlight(req.params.id, userId, {
       passengerName,
       status: finalStatus,
+      transferType: finalTransferType,
       departureDate,
       departureLocation,
       departureAirportCode,

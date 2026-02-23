@@ -1,6 +1,6 @@
 import express from 'express';
 import request from 'supertest';
-import flightRoutes from '../src/routes/flightRoutes';
+import flightRoutes from '../src/routes/transferRoutes';
 import lodgingRoutes from '../src/routes/lodgingRoutes';
 import tourRoutes from '../src/routes/tourRoutes';
 import carRentalRoutes from '../src/routes/carRentalRoutes';
@@ -101,3 +101,4 @@ describe('Item vote routes', () => {
     expect(db.castItemVote).not.toHaveBeenCalled();
   });
 });
+

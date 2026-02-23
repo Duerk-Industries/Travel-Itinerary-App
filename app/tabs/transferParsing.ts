@@ -6,4 +6,5 @@ export default {
   extractTextFromImage,
   extractTextFromPdf,
 };
-export * from './flightParsing.web';
+export * from './transferParsing.web';
+

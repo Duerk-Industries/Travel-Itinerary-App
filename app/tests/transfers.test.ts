@@ -1,11 +1,11 @@
 import { describe, expect, test } from '@jest/globals';
-import { buildFlightPayloadForCreate, createInitialFlightCreateDraft, normalizeFlightFromApi } from '../tabs/flights';
+import { buildFlightPayloadForCreate, createInitialFlightCreateDraft, normalizeFlightFromApi } from '../tabs/transfers';
 
 describe('Flights helpers', () => {
   test('requires an active trip id', () => {
     const draft = createInitialFlightCreateDraft();
     const result = buildFlightPayloadForCreate(draft, null, null);
-    expect(result.error).toBe('Select an active trip before adding a flight.');
+    expect(result.error).toBe('Select an active trip before adding a transfer.');
   });
 
   test('requires times and at least one passenger', () => {
@@ -41,6 +41,7 @@ describe('Flights helpers', () => {
     };
     const result = buildFlightPayloadForCreate(draft, 'trip-1', 'payer-1');
     expect(result.payload?.tripId).toBe('trip-1');
+    expect(result.payload?.transferType).toBe('Flight');
     expect(result.payload?.passengerName).toBe('Traveler');
     expect(result.payload?.passengerIds).toEqual(['p1', 'p2']);
     expect(result.payload?.carrier).toBe('');
@@ -79,6 +80,7 @@ describe('Flights helpers', () => {
       bookingReference: '',
       paidBy: ['m1'],
       status: 'Booked' as const,
+      transferType: 'Train' as const,
     };
     const normalized = normalizeFlightFromApi(apiFlight);
     expect(normalized.passenger_ids).toEqual(['m1']);
@@ -88,6 +90,8 @@ describe('Flights helpers', () => {
     expect(normalized.booking_reference).toBe('');
     expect(normalized.paid_by).toEqual(['m1']);
     expect(normalized.status).toBe('Booked');
+    expect(normalized.transfer_type).toBe('Train');
+    expect(normalized.transferType).toBe('Train');
   });
 
   test('allows missing business fields when status is Needed', () => {
@@ -115,3 +119,4 @@ describe('Flights helpers', () => {
     expect(normalized.status).toBe('Booked');
   });
 });
+

@@ -2,7 +2,7 @@
 
 ## What is the current UI style?
 
-- Single-app shell with page-style navigation (`home`, `overview`, `flights`, `lodging`, `tours`, `expenses`, `ledger`, `trips`, etc.)
+- Single-app shell with page-style navigation (`home`, `overview`, `flights` [shown as Transfers], `lodging`, `tours`, `expenses`, `ledger`, `trips`, etc.)
 - Light theme with neutral gray/white surfaces and blue primary actions
 - Card/table-centric layouts with rounded corners and compact controls
 - Home screen hero imagery plus icon-labeled navigation rows

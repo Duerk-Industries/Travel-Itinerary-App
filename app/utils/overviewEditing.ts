@@ -1,5 +1,5 @@
 import { type CarRental, type CarRentalDraft } from '../tabs/carRentals';
-import { type Flight, type FlightCreateDraft } from '../tabs/flights';
+import { type Flight, type FlightCreateDraft } from '../tabs/transfers';
 import { type Tour, type TourDraft } from '../tabs/tours';
 import { DEFAULT_NEW_ITINERARY_STATUS, LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from './itineraryStatus';
 
@@ -47,6 +47,10 @@ export const getOverviewSaveFlags = (
 
 export const buildFlightDraftFromRow = (flight: Flight): FlightCreateDraft & { passengerIds: string[]; paidBy?: string[] } => ({
   status: normalizeItineraryStatus((flight as any).status, LEGACY_ITINERARY_STATUS),
+  transferType:
+    (flight as any).transferType ??
+    (flight as any).transfer_type ??
+    'Flight',
   passengerName: flight.passenger_name,
   arrivalDate: (flight as any).arrival_date || (flight as any).arrivalDate || flight.departure_date,
   passengerIds: Array.isArray(flight.passenger_ids) ? flight.passenger_ids : Array.isArray((flight as any).passengerIds) ? (flight as any).passengerIds : [],
@@ -95,3 +99,4 @@ export const buildRentalDraftFromRow = (rental: CarRental): CarRentalDraft => ({
   paidBy: rental.paidBy ?? [],
   travelerIds: rental.travelerIds ?? [],
 });
+

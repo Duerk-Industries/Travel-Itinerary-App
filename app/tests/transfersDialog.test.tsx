@@ -4,14 +4,14 @@
 
 import React, { useState } from 'react';
 import renderer, { act } from 'react-test-renderer';
-import { FlightEditingForm } from '../components/FlightEditingForm';
+import { FlightEditingForm } from '../components/TransferEditingForm';
 import {
   buildFlightPayloadForCreate,
   createFlightDraftForTrip,
   type FlightEditDraft,
   type GroupMemberOption,
   type Trip,
-} from '../tabs/flights';
+} from '../tabs/transfers';
 
 // Silence React act warnings in react-test-renderer.
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
@@ -118,6 +118,7 @@ describe('Flights dialog', () => {
     expect(saved[0].bookingReference).toBe('ABC123');
     expect(saved[0].cost).toBe(200);
     expect(saved[0].tripId).toBe(trip.id);
+    expect(saved[0].transferType).toBe('Flight');
   });
 
   test('uses traveler names for toggles and updates payers/passengers', () => {
@@ -250,3 +251,4 @@ describe('Flights dialog', () => {
     expect(layoverContainer.findAllByType('TouchableOpacity')).toHaveLength(0);
   });
 });
+

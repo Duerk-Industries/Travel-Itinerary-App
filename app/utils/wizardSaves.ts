@@ -1,4 +1,4 @@
-import { buildFlightPayload, type Flight, type FlightEditDraft } from '../tabs/flights';
+import { buildFlightPayload, type Flight, type FlightEditDraft } from '../tabs/transfers';
 import { buildLodgingPayload, type Lodging, type LodgingDraft } from '../tabs/lodging';
 import { normalizeDateString } from './normalizeDateString';
 import { LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from './itineraryStatus';
@@ -238,3 +238,4 @@ export const saveWizardLodgings = async (params: {
     return { ok: false, failures: [], fatal: 'Trip created, but lodging could not be saved.' };
   }
 };
+

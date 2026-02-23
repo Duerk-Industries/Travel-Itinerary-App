@@ -3,7 +3,7 @@ import { Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, Vi
 import { formatDateLong } from '../utils/formatDateLong';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { normalizeDateString } from '../utils/normalizeDateString';
-import { FlightEditingForm } from '../components/FlightEditingForm';
+import { FlightEditingForm } from '../components/TransferEditingForm';
 import { toWebStyle } from '../utils/webStyle';
 import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from '../utils/votes';
 import {
@@ -28,6 +28,8 @@ if (Platform.OS !== 'web') {
 export interface Flight {
   id: string;
   status?: ItineraryStatus;
+  transfer_type?: TransferType;
+  transferType?: TransferType;
   netVotes?: number;
   userVote?: -1 | 1 | null;
   netRating?: number;
@@ -61,8 +63,12 @@ export interface Flight {
   layoverAirportLabel?: string;
 }
 
+export type TransferType = 'Flight' | 'Train' | 'Bus' | 'Private' | 'Ferry' | 'Other';
+export const TRANSFER_TYPES: TransferType[] = ['Flight', 'Train', 'Bus', 'Private', 'Ferry', 'Other'];
+
 export type FlightDraft = {
   status: ItineraryStatus;
+  transferType: TransferType;
   passengerName: string;
   passengerIds: string[];
   departureDate: string;
@@ -85,6 +91,7 @@ export type FlightDraft = {
 
 export type FlightEditDraft = {
   status: ItineraryStatus;
+  transferType: TransferType;
   passengerName: string;
   passengerIds: string[];
   departureDate: string;
@@ -107,6 +114,7 @@ export type FlightEditDraft = {
 
 export type FlightCreateDraft = {
   status: ItineraryStatus;
+  transferType: TransferType;
   passengerName: string;
   passengerIds: string[];
   departureLocation?: string;
@@ -136,6 +144,7 @@ const isValidTime = (value: string): boolean => {
 
 export const createInitialFlightCreateDraft = (): FlightCreateDraft => ({
   status: DEFAULT_NEW_ITINERARY_STATUS,
+  transferType: 'Flight',
   passengerName: '',
   passengerIds: [],
   departureDate: new Date().toISOString().slice(0, 10),
@@ -185,6 +194,7 @@ export type Trip = {
 
 export const createInitialFlightState = (): FlightDraft => ({
   status: DEFAULT_NEW_ITINERARY_STATUS,
+  transferType: 'Flight',
   passengerName: '',
   passengerIds: [],
   departureDate: new Date().toISOString().slice(0, 10),
@@ -259,6 +269,7 @@ export const buildFlightPayload = (flight: FlightEditDraft, tripId?: string | nu
   const passengerIds = Array.isArray(flight.passengerIds) ? flight.passengerIds.filter(Boolean) : [];
   return {
     status: normalizeItineraryStatus(flight.status, DEFAULT_NEW_ITINERARY_STATUS),
+    transferType: TRANSFER_TYPES.includes(flight.transferType) ? flight.transferType : 'Flight',
     passengerName: trim(flight.passengerName) || 'Traveler',
     passengerIds,
     departureDate,
@@ -286,7 +297,7 @@ export const buildFlightPayloadForCreate = (
   tripId?: string | null,
   defaultPayerId?: string | null
 ): { payload?: any; error?: string } => {
-  if (!tripId) return { error: 'Select an active trip before adding a flight.' };
+  if (!tripId) return { error: 'Select an active trip before adding a transfer.' };
   const status = normalizeItineraryStatus((draft as FlightEditDraft).status, DEFAULT_NEW_ITINERARY_STATUS);
   const departureDate = (draft as FlightEditDraft).departureDate?.trim();
   const departureTime = (draft as FlightEditDraft).departureTime?.trim();
@@ -345,6 +356,16 @@ export const removeFlightApi = async (
 export const normalizeFlightFromApi = (f: any): Flight => ({
   ...f,
   status: normalizeItineraryStatus(f.status, LEGACY_ITINERARY_STATUS),
+  transfer_type: TRANSFER_TYPES.includes(f.transfer_type)
+    ? f.transfer_type
+    : TRANSFER_TYPES.includes(f.transferType)
+      ? f.transferType
+      : 'Flight',
+  transferType: TRANSFER_TYPES.includes(f.transferType)
+    ? f.transferType
+    : TRANSFER_TYPES.includes(f.transfer_type)
+      ? f.transfer_type
+      : 'Flight',
   netVotes: Number(f.netVotes ?? 0) || 0,
   userVote: f.userVote === 1 || f.userVote === -1 ? f.userVote : null,
   netRating: Number(f.netRating ?? 0) || 0,
@@ -452,6 +473,7 @@ const fallbackAirports: Airport[] = [
 const columns: { key: keyof Flight | 'actions' | 'costPerPerson' | 'votes' | 'rating'; label: string; minWidth?: number }[] = [
   { key: 'passenger_name', label: 'Passenger', minWidth: 130 },
   { key: 'status', label: 'Status', minWidth: 120 },
+  { key: 'transfer_type', label: 'Type', minWidth: 120 },
   { key: 'votes', label: 'Votes', minWidth: 120 },
   { key: 'rating', label: 'Rating', minWidth: 120 },
   { key: 'departure_date', label: 'Departure Date' },
@@ -561,6 +583,8 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     return {
       id: localId,
       status: normalizeItineraryStatus(draft.status, DEFAULT_NEW_ITINERARY_STATUS),
+      transfer_type: TRANSFER_TYPES.includes(draft.transferType) ? draft.transferType : 'Flight',
+      transferType: TRANSFER_TYPES.includes(draft.transferType) ? draft.transferType : 'Flight',
       passenger_name: draft.passengerName || 'Traveler',
       passenger_ids: draft.passengerIds ?? [],
       trip_id: activeTripId ?? 'wizard',
@@ -901,6 +925,11 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     setEditingFlightId(flight.id);
     const base: FlightEditDraft = {
       status: normalizeItineraryStatus((flight as any).status, LEGACY_ITINERARY_STATUS),
+      transferType: TRANSFER_TYPES.includes((flight as any).transferType)
+        ? (flight as any).transferType
+        : TRANSFER_TYPES.includes((flight as any).transfer_type)
+          ? (flight as any).transfer_type
+          : 'Flight',
       passengerName: flight.passenger_name,
       passengerIds: Array.isArray(flight.passenger_ids) ? flight.passenger_ids : [],
       departureDate: normalizeDateString(flight.departure_date),
@@ -958,7 +987,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       return;
     }
     if (editingFlightId === 'new' && !activeTripId && !isWizard) {
-      alert('Select an active trip before adding a flight.');
+      alert('Select an active trip before adding a transfer.');
       return;
     }
     if (isWizard) {
@@ -1015,7 +1044,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   const addFlight = async () => {
     if (!userToken) return false;
     if (!activeTripId) {
-      alert('Select an active trip before adding a flight.');
+      alert('Select an active trip before adding a transfer.');
       return false;
     }
 
@@ -1113,7 +1142,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
 
   const handleAddPress = () => {
     if (!activeTripId && !isWizard) {
-      alert('Select an active trip before adding a flight.');
+      alert('Select an active trip before adding a transfer.');
       return;
     }
     setEditingFlightId('new');
@@ -1189,7 +1218,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       {showList ? (
         <>
       <View style={styles.row}>
-        <Text style={styles.sectionTitle}>Flights</Text>
+        <Text style={styles.sectionTitle}>Transfers</Text>
         <TouchableOpacity style={[styles.button, styles.roundButton]} onPress={handleAddPress}>
           <Text style={styles.buttonText}>+</Text>
         </TouchableOpacity>
@@ -1407,6 +1436,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                 const valueMap: Record<string, string> = {
                   passenger_name: buildPassengerName(newFlight.passengerIds) || 'Select passengers',
                   status: normalizeItineraryStatus(newFlight.status, DEFAULT_NEW_ITINERARY_STATUS),
+                  transfer_type: TRANSFER_TYPES.includes(newFlight.transferType) ? newFlight.transferType : 'Flight',
                   departure_date: newFlight.departureDate,
                   departure_location: newFlight.departureLocation,
                   departure_time: newFlight.departureTime,
@@ -1422,6 +1452,11 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
 
                 const setters: Record<string, (text: string) => void> = {
                   status: (text) => setNewFlight((prev) => ({ ...prev, status: normalizeItineraryStatus(text, DEFAULT_NEW_ITINERARY_STATUS) })),
+                  transfer_type: (text) =>
+                    setNewFlight((prev) => ({
+                      ...prev,
+                      transferType: TRANSFER_TYPES.includes(text as TransferType) ? (text as TransferType) : 'Flight',
+                    })),
                   departure_date: (text) =>
                     setNewFlight((prev) => {
                       const nextArrival = !prev.arrivalDate || prev.arrivalDate === prev.departureDate ? text : prev.arrivalDate;
@@ -1485,6 +1520,34 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                         </select>
                       ) : (
                         <Text style={styles.cellText}>{valueMap.status}</Text>
+                      )}
+                    </View>
+                  );
+                }
+                if (col.key === 'transfer_type') {
+                  return (
+                    <View
+                      key={`input-${col.key}`}
+                      style={[
+                        styles.cell,
+                        { minWidth: col.minWidth ?? 120, flex: 1 },
+                        isLast && styles.lastCell,
+                      ]}
+                    >
+                      {Platform.OS === 'web' ? (
+                        <select
+                          value={valueMap.transfer_type}
+                          onChange={(e) => setters.transfer_type(e.target.value)}
+                          style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
+                        >
+                          {TRANSFER_TYPES.map((opt) => (
+                            <option key={opt} value={opt}>
+                              {opt}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <Text style={styles.cellText}>{valueMap.transfer_type}</Text>
                       )}
                     </View>
                   );
@@ -1770,3 +1833,4 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
 
 export const mergeFlightsFromApi = (list: Flight[]): Flight[] =>
   list.map((f) => normalizeFlightFromApi(f));
+
