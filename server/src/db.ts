@@ -138,6 +138,14 @@ export const listFollowedTrips = async (...args: Parameters<ReturnType<typeof ad
   adapter().listFollowedTrips(...args);
 export const unfollowTrip = async (...args: Parameters<ReturnType<typeof adapter>['unfollowTrip']>) =>
   adapter().unfollowTrip(...args);
+export const listTripShareInvites = async (...args: Parameters<ReturnType<typeof adapter>['listTripShareInvites']>) =>
+  adapter().listTripShareInvites(...args);
+export const createTripShareInvite = async (...args: Parameters<ReturnType<typeof adapter>['createTripShareInvite']>) =>
+  adapter().createTripShareInvite(...args);
+export const acceptTripShareInvite = async (...args: Parameters<ReturnType<typeof adapter>['acceptTripShareInvite']>) =>
+  adapter().acceptTripShareInvite(...args);
+export const revokeTripShareInvite = async (...args: Parameters<ReturnType<typeof adapter>['revokeTripShareInvite']>) =>
+  adapter().revokeTripShareInvite(...args);
 export const writeActivity = async (...args: Parameters<ReturnType<typeof adapter>['writeActivity']>) =>
   adapter().writeActivity(...args);
 export const listTripActivity = async (...args: Parameters<ReturnType<typeof adapter>['listTripActivity']>) =>

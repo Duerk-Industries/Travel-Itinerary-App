@@ -268,3 +268,19 @@ export interface TripComment {
   authorName?: string | null;
   authorEmail?: string | null;
 }
+
+export interface TripShareInvite {
+  id: string;
+  tripId: string;
+  groupId: string;
+  inviterId: string;
+  inviteeUserId?: string | null;
+  inviteeEmail: string;
+  role: 'member' | 'follower';
+  status: 'pending' | 'accepted' | 'revoked' | 'expired';
+  expiresAt?: string | null;
+  acceptedAt?: string | null;
+  revokedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import bodyParser from 'body-parser';
 import { handleLogin, createToken } from '../auth';
 import {
+  claimInvitesForUser,
   createEmailVerification,
   createWebUser,
   deleteUserRecord,
@@ -42,6 +43,7 @@ router.post('/register', async (req, res) => {
     const user = await createWebUser(firstName.trim(), lastName.trim(), email.trim().toLowerCase(), password.trim());
     if (user.emailVerified) {
       await ensureDefaultGroupForUser(user.id, user.email);
+      await claimInvitesForUser(user.email, user.id);
       const { firstLogin } = await recordWebUserLogin(user.id);
       const token = createToken({ userId: user.id, email: user.email, provider: 'email' });
       res.status(201).json({ message: 'Account created', token, user, firstLogin });
@@ -128,6 +130,7 @@ router.post('/login', async (req, res) => {
       return;
     }
     await ensureDefaultGroupForUser(user.id, user.email);
+    await claimInvitesForUser(user.email, user.id);
     const { firstLogin } = await recordWebUserLogin(user.id);
     const token = createToken({ userId: user.id, email: user.email, provider: 'email' });
     res.json({ message: 'Login successful', token, user, firstLogin });
@@ -158,6 +161,7 @@ router.get('/confirm', async (req, res) => {
     await markUserEmailVerified(verification.userId);
     await markEmailVerificationUsed(verification.id);
     await ensureDefaultGroupForUser(verification.userId, verification.email);
+    await claimInvitesForUser(verification.email, verification.userId);
     res.json({ message: 'Email confirmed. You can now log in.' });
   } catch {
     res.status(500).json({ error: 'Failed to confirm email' });
