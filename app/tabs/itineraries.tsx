@@ -3,7 +3,12 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { formatDateLong } from '../utils/formatDateLong';
 import { renderRichTextBlocks } from '../utils/richText';
-import { parsePlanToDetails } from '../utils/itineraryParser';
+import {
+  addGeneratedItemsToTrip,
+  getGeneratedItineraryDetails,
+  type ItineraryGenerationResponse,
+} from '../utils/itineraryGeneration';
+import { extractPromptTraitsFromTraits } from '../utils/promptTraits';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import type { Trait } from './traits';
 
@@ -43,6 +48,7 @@ interface ItinerariesTabProps {
   traits: Trait[];
   headers: Record<string, string>;
   setActiveTripId: Setter<string | null>;
+  onAiItineraryQueued?: (tripId: string, jobId: string) => void;
   styles: Styles;
 }
 const countryOptions = [
@@ -352,6 +358,7 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
   traits,
   headers,
   setActiveTripId,
+  onAiItineraryQueued,
   styles,
 }) => {
   const [itineraryCountry, setItineraryCountry] = useState('');
@@ -377,6 +384,7 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
   const [editingItineraryId, setEditingItineraryId] = useState<string | null>(null);
   const [editingDetailId, setEditingDetailId] = useState<string | null>(null);
   const [detailDraft, setDetailDraft] = useState({ day: '1', time: '', activity: '', cost: '' });
+  const promptTraits = useMemo(() => extractPromptTraitsFromTraits(traits).profile, [traits]);
 
   const filteredCountries = useMemo(() => {
     const query = (showItineraryCountryDropdown ? countrySearch : itineraryCountry).trim().toLowerCase();
@@ -475,7 +483,7 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
     setItineraryAirportOptions(data);
     setShowItineraryAirportDropdown(true);
   };
-  const saveGeneratedItinerary = async (plan: string) => {
+  const saveGeneratedItinerary = async (generated: ItineraryGenerationResponse) => {
     if (!activeTripId) {
       setItineraryError('Select an active trip before saving the itinerary.');
       return;
@@ -516,7 +524,7 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
       setSelectedItineraryId(itineraryId);
     }
 
-    const parsedDetails = parsePlanToDetails(plan);
+    const parsedDetails = getGeneratedItineraryDetails(generated);
     if (parsedDetails.length) {
       const uniqueKeys = new Set<string>();
       for (const d of parsedDetails) {
@@ -551,7 +559,7 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
     setItineraryError('');
     setItineraryPlan('');
     try {
-      const res = await fetch(`${backendUrl}/api/itinerary`, {
+      const res = await fetch(`${backendUrl}/api/itinerary/async`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...headers },
         body: JSON.stringify({
@@ -562,7 +570,8 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
           departureAirport: itineraryAirport.trim() || undefined,
           tripStyle: itineraryTripStyle.trim() || undefined,
           tripId: activeTripId,
-          traits: traits.map((t) => ({ name: t.name })),
+          tt: promptTraits.tt,
+          ut: promptTraits.ut,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -571,8 +580,12 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
         setItineraryError((data.error || 'Failed to generate itinerary') + detail);
         return;
       }
-      setItineraryPlan(data.plan || '');
-      await saveGeneratedItinerary(data.plan || '');
+      if (data.jobId) {
+        onAiItineraryQueued?.(activeTripId, String(data.jobId));
+        setItineraryPlan('AI itinerary generation started. It will be added to your trip automatically.');
+      } else {
+        setItineraryError('AI itinerary generation did not return a job id.');
+      }
     } catch (err) {
       setItineraryError((err as Error).message);
     } finally {

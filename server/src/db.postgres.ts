@@ -16,6 +16,8 @@ import {
   ItineraryDetail,
   PlaceDetailsCache,
   LocationRecord,
+  AttractionCatalogEntry,
+  AttractionShortlistBlob,
   TripActivity,
   TripActivityType,
   TripComment,
@@ -499,10 +501,12 @@ export const initDb = async (): Promise<void> => {
       booked_on TEXT,
       reference TEXT,
       paid_by JSONB DEFAULT '[]'::jsonb,
+      traveler_ids JSONB DEFAULT '[]'::jsonb,
       created_at TIMESTAMP DEFAULT NOW()
     );
   `);
   await p.query(`ALTER TABLE tours ADD COLUMN IF NOT EXISTS paid_by JSONB DEFAULT '[]'::jsonb;`);
+  await p.query(`ALTER TABLE tours ADD COLUMN IF NOT EXISTS traveler_ids JSONB DEFAULT '[]'::jsonb;`);
   await p.query(`ALTER TABLE tours ADD COLUMN IF NOT EXISTS booked_on TEXT;`);
   await p.query(`ALTER TABLE tours ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'Booked';`);
   await p.query(`ALTER TABLE tours ADD COLUMN IF NOT EXISTS activity_type TEXT NOT NULL DEFAULT 'Tour';`);
@@ -2524,6 +2528,7 @@ export const listActivities = async (userId: string, tripId?: string): Promise<A
       tu.booked_on as "bookedOn",
       tu.reference,
       COALESCE(tu.paid_by, '[]'::jsonb) as "paidBy",
+      COALESCE(tu.traveler_ids, '[]'::jsonb) as "travelerIds",
       tu.created_at as "createdAt"
     FROM tours tu
     JOIN trips t ON tu.trip_id = t.id
@@ -2540,7 +2545,11 @@ export const listActivities = async (userId: string, tripId?: string): Promise<A
     `,
     [userId, tripId ?? null]
   );
-  return rows.map((r) => ({ ...r, paidBy: Array.isArray((r as any).paidBy) ? (r as any).paidBy : [] }));
+  return rows.map((r) => ({
+    ...r,
+    paidBy: Array.isArray((r as any).paidBy) ? (r as any).paidBy : [],
+    travelerIds: Array.isArray((r as any).travelerIds) ? (r as any).travelerIds : [],
+  }));
 };
 
 export const getActivityById = async (id: string): Promise<Activity | null> => {
@@ -2563,6 +2572,7 @@ export const getActivityById = async (id: string): Promise<Activity | null> => {
       tu.booked_on as "bookedOn",
       tu.reference,
       COALESCE(tu.paid_by, '[]'::jsonb) as "paidBy",
+      COALESCE(tu.traveler_ids, '[]'::jsonb) as "travelerIds",
       tu.created_at as "createdAt"
     FROM tours tu
     WHERE tu.id = $1
@@ -2572,19 +2582,24 @@ export const getActivityById = async (id: string): Promise<Activity | null> => {
   );
   if (!rows.length) return null;
   const row = rows[0];
-  return { ...row, paidBy: Array.isArray((row as any).paidBy) ? (row as any).paidBy : [] };
+  return {
+    ...row,
+    paidBy: Array.isArray((row as any).paidBy) ? (row as any).paidBy : [],
+    travelerIds: Array.isArray((row as any).travelerIds) ? (row as any).travelerIds : [],
+  };
 };
 
 export const insertActivity = async (activity: Omit<Activity, 'id' | 'createdAt'>): Promise<Activity> => {
   const p = getPool();
   const id = randomUUID();
   const paidBy = JSON.stringify(activity.paidBy ?? []);
+  const travelerIds = JSON.stringify(activity.travelerIds ?? []);
   const { rows } = await p.query<Activity>(
     `
     INSERT INTO tours (
-      id, user_id, trip_id, status, activity_type, date, name, start_location, start_time, duration, cost, free_cancel_by, booked_on, reference, paid_by
+      id, user_id, trip_id, status, activity_type, date, name, start_location, start_time, duration, cost, free_cancel_by, booked_on, reference, paid_by, traveler_ids
     ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
     )
     RETURNING
       id,
@@ -2602,6 +2617,7 @@ export const insertActivity = async (activity: Omit<Activity, 'id' | 'createdAt'
       booked_on as "bookedOn",
       reference,
       COALESCE(paid_by, '[]'::jsonb) as "paidBy",
+      COALESCE(traveler_ids, '[]'::jsonb) as "travelerIds",
       created_at as "createdAt"
     `,
     [
@@ -2620,15 +2636,22 @@ export const insertActivity = async (activity: Omit<Activity, 'id' | 'createdAt'
       activity.bookedOn,
       activity.reference,
       paidBy,
+      travelerIds,
     ]
   );
   const row = rows[0];
-  return { ...row, paidBy: Array.isArray((row as any).paidBy) ? (row as any).paidBy : [] };
+  return {
+    ...row,
+    paidBy: Array.isArray((row as any).paidBy) ? (row as any).paidBy : [],
+    travelerIds: Array.isArray((row as any).travelerIds) ? (row as any).travelerIds : [],
+  };
 };
 
 export const updateActivity = async (id: string, userId: string, activity: Partial<Activity>): Promise<Activity | null> => {
   const p = getPool();
   const paidBy = typeof activity.paidBy !== 'undefined' ? JSON.stringify(activity.paidBy ?? []) : undefined;
+  const travelerIds =
+    typeof activity.travelerIds !== 'undefined' ? JSON.stringify(activity.travelerIds ?? []) : undefined;
   const { rows } = await p.query<Activity>(
     `
     UPDATE tours
@@ -2644,7 +2667,8 @@ export const updateActivity = async (id: string, userId: string, activity: Parti
       free_cancel_by = COALESCE($11, free_cancel_by),
       booked_on = COALESCE($12, booked_on),
       reference = COALESCE($13, reference),
-      paid_by = COALESCE($14::jsonb, paid_by)
+      paid_by = COALESCE($14::jsonb, paid_by),
+      traveler_ids = COALESCE($15::jsonb, traveler_ids)
     WHERE id = $1 AND user_id = $2
     RETURNING
       id,
@@ -2662,6 +2686,7 @@ export const updateActivity = async (id: string, userId: string, activity: Parti
       booked_on as "bookedOn",
       reference,
       COALESCE(paid_by, '[]'::jsonb) as "paidBy",
+      COALESCE(traveler_ids, '[]'::jsonb) as "travelerIds",
       created_at as "createdAt"
     `,
     [
@@ -2679,11 +2704,16 @@ export const updateActivity = async (id: string, userId: string, activity: Parti
       activity.bookedOn ?? null,
       activity.reference ?? null,
       paidBy ?? null,
+      travelerIds ?? null,
     ]
   );
   if (!rows.length) return null;
   const row = rows[0];
-  return { ...row, paidBy: Array.isArray((row as any).paidBy) ? (row as any).paidBy : [] };
+  return {
+    ...row,
+    paidBy: Array.isArray((row as any).paidBy) ? (row as any).paidBy : [],
+    travelerIds: Array.isArray((row as any).travelerIds) ? (row as any).travelerIds : [],
+  };
 };
 
 export const deleteActivity = async (tourId: string, userId: string): Promise<void> => {
@@ -3292,7 +3322,20 @@ export const shareFlight = async (
 export const listGroupMembers = async (
   groupId: string,
   userId: string
-): Promise<Array<{ id: string; guestName?: string; email?: string; firstName?: string; lastName?: string; status?: string; removedAt?: string | null }>> => {
+): Promise<
+  Array<{
+    id: string;
+    userId?: string | null;
+    guestName?: string;
+    email?: string;
+    firstName?: string;
+    lastName?: string;
+    preferredAirport?: string | null;
+    isGroupOwner?: boolean;
+    status?: string;
+    removedAt?: string | null;
+  }>
+> => {
   const p = getPool();
   const membership = await p.query(
     `SELECT 1 FROM group_members WHERE group_id = $1 AND user_id = $2 AND removed_at IS NULL`,
@@ -3302,10 +3345,13 @@ export const listGroupMembers = async (
 
   const { rows } = await p.query(
     `SELECT gm.id,
+            gm.user_id as "userId",
             gm.guest_name as "guestName",
             COALESCE(u.email, gm.invite_email) as "email",
             COALESCE(gm.first_name, wu.first_name, wu_pending.first_name) as "firstName",
             COALESCE(gm.last_name, wu.last_name, wu_pending.last_name) as "lastName",
+            COALESCE(wu.preferred_airport, wu_pending.preferred_airport) as "preferredAirport",
+            CASE WHEN gm.user_id = g.owner_id THEN true ELSE false END as "isGroupOwner",
             gm.removed_at as "removedAt",
             CASE
               WHEN gm.removed_at IS NOT NULL THEN 'removed'
@@ -3314,6 +3360,7 @@ export const listGroupMembers = async (
               ELSE 'active'
             END as status
      FROM group_members gm
+     JOIN groups g ON g.id = gm.group_id
      LEFT JOIN users u ON gm.user_id = u.id
      LEFT JOIN web_users wu ON gm.user_id = wu.id
      LEFT JOIN users u_pending ON gm.user_id IS NULL AND LOWER(u_pending.email) = LOWER(gm.invite_email)
@@ -3324,12 +3371,16 @@ export const listGroupMembers = async (
   );
   const { rows: inviteRows } = await p.query(
     `SELECT gi.id,
+            u.id as "userId",
             gi.invitee_email as "guestName",
             gi.invitee_email as "email",
             wu.first_name as "firstName",
             wu.last_name as "lastName",
+            wu.preferred_airport as "preferredAirport",
+            CASE WHEN u.id = g.owner_id THEN true ELSE false END as "isGroupOwner",
             gi.status
      FROM group_invites gi
+     JOIN groups g ON g.id = gi.group_id
      LEFT JOIN users u ON LOWER(u.email) = LOWER(gi.invitee_email)
      LEFT JOIN web_users wu ON u.id = wu.id
      WHERE gi.group_id = $1 AND gi.status = 'pending'
@@ -4745,6 +4796,56 @@ const toLocationRecord = (row: any): LocationRecord => {
   };
 };
 
+const toAttractionCatalogEntry = (row: any): AttractionCatalogEntry => {
+  const payload = row.payload && typeof row.payload === 'object' ? row.payload : {};
+  const rawTags = Array.isArray(payload.interestTags) ? payload.interestTags : [];
+  const tags = rawTags.map((tag: unknown) => String(tag).trim()).filter(Boolean) as AttractionCatalogEntry['interestTags'];
+  return {
+    id: row.id,
+    destinationKey: String(payload.destinationKey ?? '').trim(),
+    destinationDisplayName: String(payload.destinationDisplayName ?? '').trim(),
+    name: row.name,
+    rank: Number(payload.rank) || 999,
+    activityType: String(payload.activityType ?? 'Tour') as AttractionCatalogEntry['activityType'],
+    interestTags: tags,
+    sourceUrl: typeof payload.sourceUrl === 'string' ? payload.sourceUrl : null,
+    sourceLabel: typeof payload.sourceLabel === 'string' ? payload.sourceLabel : null,
+    snippet: typeof payload.snippet === 'string' ? payload.snippet : null,
+    sourceCount: Number(payload.sourceCount) || undefined,
+    budgetTier:
+      typeof payload.budgetTier === 'string' ? (payload.budgetTier as AttractionCatalogEntry['budgetTier']) : undefined,
+    updatedAt: row.updatedAt ? new Date(row.updatedAt).toISOString() : new Date().toISOString(),
+  };
+};
+
+const toAttractionShortlistBlob = (row: any): AttractionShortlistBlob | null => {
+  const payload = row?.payload && typeof row.payload === 'object' ? row.payload : {};
+  const destinationKey = String(payload.destinationKey ?? '').trim();
+  const dateKey = String(payload.dateKey ?? '').trim();
+  const promptBlock = String(payload.promptBlock ?? '').trim();
+  if (!destinationKey || !dateKey || !promptBlock) return null;
+  return {
+    id: row.id,
+    destinationKey,
+    destinationDisplayName: String(payload.destinationDisplayName ?? '').trim(),
+    dateKey,
+    promptBlock,
+    compact: String(payload.compact ?? ''),
+    itemCount: Number(payload.itemCount) || 0,
+    updatedAt: row.updatedAt ? new Date(row.updatedAt).toISOString() : new Date().toISOString(),
+  };
+};
+
+const toShortlistBlobId = (destinationKey: string, dateKey: string): string => {
+  const clean = (value: string) =>
+    String(value ?? '')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  return `attr-blob:${clean(destinationKey)}:${clean(dateKey)}`.slice(0, 180);
+};
+
 export const searchLocations = async (
   _userId: string,
   query: string,
@@ -4848,6 +4949,115 @@ export const upsertLocation = async (data: {
   const query = `INSERT INTO locations (id, source_type, name, address, search_name, payload, updated_at) VALUES ($1, $2, $3, $4, $5, $6, NOW()) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, address = EXCLUDED.address, search_name = EXCLUDED.search_name, payload = locations.payload || EXCLUDED.payload, updated_at = NOW() RETURNING *`;
   const { rows } = await p.query(query, [id, sourceType, name, address, searchName, JSON.stringify(payload)]);
   return toLocationRecord(rows[0]);
+};
+
+export const listAttractionCatalogEntries = async (
+  _userId: string,
+  destinationKey: string,
+  limit = 20
+): Promise<AttractionCatalogEntry[]> => {
+  const key = String(destinationKey ?? '').trim().toLowerCase();
+  if (!key) return [];
+  const p = getPool();
+  const safeLimit = Math.min(Math.max(Number(limit) || 20, 1), 100);
+  const { rows } = await p.query(
+    `SELECT id, name, payload, updated_at as "updatedAt"
+       FROM locations
+      WHERE source_type = 'attraction'
+        AND LOWER(COALESCE(payload->>'destinationKey', '')) = $1
+      ORDER BY
+        COALESCE((payload->>'rank')::int, 999) ASC,
+        name ASC
+      LIMIT $2`,
+    [key, safeLimit]
+  );
+  return rows.map(toAttractionCatalogEntry);
+};
+
+export const upsertAttractionCatalogEntry = async (entry: AttractionCatalogEntry): Promise<AttractionCatalogEntry> => {
+  const p = getPool();
+  const payload = {
+    destinationKey: entry.destinationKey,
+    destinationDisplayName: entry.destinationDisplayName,
+    rank: Number(entry.rank) || 999,
+    activityType: entry.activityType,
+    interestTags: Array.isArray(entry.interestTags) ? entry.interestTags : [],
+    sourceUrl: entry.sourceUrl ?? null,
+    sourceLabel: entry.sourceLabel ?? null,
+    snippet: entry.snippet ?? null,
+    sourceCount: Number(entry.sourceCount) || 1,
+    budgetTier: entry.budgetTier ?? 'paid',
+    updatedAt: entry.updatedAt,
+  };
+  const searchName = `${entry.name} ${entry.destinationDisplayName}`.toLowerCase();
+  const { rows } = await p.query(
+    `INSERT INTO locations (id, source_type, category, name, address, search_name, payload, updated_at)
+     VALUES ($1, 'attraction', 'attraction', $2, NULL, $3, $4::jsonb, NOW())
+     ON CONFLICT (id) DO UPDATE SET
+       source_type = 'attraction',
+       category = 'attraction',
+       name = EXCLUDED.name,
+       search_name = EXCLUDED.search_name,
+       payload = locations.payload || EXCLUDED.payload,
+       updated_at = NOW()
+     RETURNING id, name, payload, updated_at as "updatedAt"`,
+    [entry.id, entry.name, searchName, JSON.stringify(payload)]
+  );
+  return toAttractionCatalogEntry(rows[0]);
+};
+
+export const getAttractionShortlistBlob = async (
+  _userId: string,
+  destinationKey: string,
+  dateKey: string
+): Promise<AttractionShortlistBlob | null> => {
+  const key = String(destinationKey ?? '').trim().toLowerCase();
+  const date = String(dateKey ?? '').trim();
+  if (!key || !date) return null;
+  const id = toShortlistBlobId(key, date);
+  const p = getPool();
+  const { rows } = await p.query(
+    `SELECT id, payload, updated_at as "updatedAt"
+       FROM locations
+      WHERE id = $1
+        AND source_type = 'attraction_shortlist_blob'
+      LIMIT 1`,
+    [id]
+  );
+  if (!rows.length) return null;
+  return toAttractionShortlistBlob(rows[0]);
+};
+
+export const upsertAttractionShortlistBlob = async (entry: AttractionShortlistBlob): Promise<AttractionShortlistBlob> => {
+  const p = getPool();
+  const payload = {
+    destinationKey: entry.destinationKey,
+    destinationDisplayName: entry.destinationDisplayName,
+    dateKey: entry.dateKey,
+    promptBlock: entry.promptBlock,
+    compact: entry.compact,
+    itemCount: Number(entry.itemCount) || 0,
+    updatedAt: entry.updatedAt,
+  };
+  const searchName = `${entry.destinationDisplayName} ${entry.dateKey} attraction shortlist`.toLowerCase();
+  const { rows } = await p.query(
+    `INSERT INTO locations (id, source_type, category, name, address, search_name, payload, updated_at)
+     VALUES ($1, 'attraction_shortlist_blob', 'attraction_shortlist_blob', $2, NULL, $3, $4::jsonb, NOW())
+     ON CONFLICT (id) DO UPDATE SET
+       source_type = 'attraction_shortlist_blob',
+       category = 'attraction_shortlist_blob',
+       name = EXCLUDED.name,
+       search_name = EXCLUDED.search_name,
+       payload = locations.payload || EXCLUDED.payload,
+       updated_at = NOW()
+     RETURNING id, payload, updated_at as "updatedAt"`,
+    [entry.id, entry.destinationDisplayName, searchName, JSON.stringify(payload)]
+  );
+  const parsed = toAttractionShortlistBlob(rows[0]);
+  if (!parsed) {
+    throw new Error('Failed to parse attraction shortlist blob after upsert.');
+  }
+  return parsed;
 };
 
 const clampTraitLevel = (level?: number | null): number => {

@@ -97,7 +97,7 @@ describe('Create Trip Wizard helpers', () => {
     expect(description).toContain('Base');
     expect(description).toContain('## Known Info');
     expect(description).toContain('Flights: DL123');
-    expect(description).toContain('Tours & Activities: Museum');
+    expect(description).toContain('Activities: Museum');
   });
 
   test('normalizes emails', () => {

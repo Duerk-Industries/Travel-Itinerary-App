@@ -12,8 +12,8 @@ export interface AccountProfile {
   firstName: string;
   lastName: string;
   email: string;
-  homeAddress?: string;
-  preferredAirport?: string;
+  homeAddress: string;
+  preferredAirport: string;
   mapPreference?: MapApp;
 }
 
@@ -136,6 +136,8 @@ interface AccountTabProps {
   saveSession: (token: string, name: string, page?: string, email?: string | null) => void;
   headers: Headers;
   jsonHeaders: Headers;
+  airportOptions: string[];
+  onSearchAirports: (q: string) => Promise<void> | void;
   logout: () => void;
   styles: Styles;
   traits: Trait[];
@@ -186,6 +188,8 @@ const AccountTab: React.FC<AccountTabProps> = ({
   saveSession,
   headers,
   jsonHeaders,
+  airportOptions,
+  onSearchAirports,
   logout,
   styles,
   traits,
@@ -217,6 +221,8 @@ const AccountTab: React.FC<AccountTabProps> = ({
         saveSession={saveSession}
         headers={headers}
         jsonHeaders={jsonHeaders}
+        airportOptions={airportOptions}
+        onSearchAirports={onSearchAirports}
         logout={logout}
         styles={styles}
       />

@@ -51,9 +51,32 @@ providers:
   OPENAI:
     window: hour
     windowHours: 24
-    overall: 200
+    overall: 1000
     callers:
-      ITINERARY_GENERATE_PLAN: 200
+      ITINERARY_GENERATE_PLAN: 50
+      ITINERARY_PLAN_P0_NORM: 200
+      ITINERARY_PLAN_P1_ROUTE: 200
+      ITINERARY_PLAN_P2_DAYS: 200
+      ITINERARY_PLAN_P3_VALIDATE: 200
+      ITINERARY_PLAN_P4_RENDER: 200
+caching:
+  attractions:
+    refreshDays: 365
+    limitPerDestination: 20
+    shortlistPromptItemsPerDestination: 8
+    minDistinctSourcesPerAttraction: 2
+    minAttractionsAfterConfidenceFilter: 6
+    promptBlobRefreshDays: 30
+  locations:
+    csvCacheTtlMinutes: 60
+    refreshCooldownSeconds: 15
+  images:
+    cacheTtlMs: 604800000
+    signedUrlTtlMs: 3600000
+  googlePlaces:
+    detailsCacheTimeoutMinutes: 1440
+  unsplash:
+    dnsLogTtlMs: 300000
 ```
 
 ### Behavior
@@ -69,11 +92,52 @@ providers:
 - Calls are blocked at `100%` of a configured limit.
 - Some routes may return `429` when a limit blocks a call (for example itinerary generation via OpenAI).
 
+### Itinerary prompt pipeline
+
+- `POST /api/itinerary` now runs a multi-step prompt pipeline using assets in `server/prompts/`:
+  - normalize input (`p0_norm`)
+  - route/bases/transfers (`p1_route`)
+  - day expansion (`p2_days`)
+  - validation/repair (`p3_validate`)
+  - markdown rendering (`p4_render_md`)
+- Response includes:
+  - `plan` (markdown)
+  - `details` (structured itinerary detail rows)
+  - `generatedItems` (`transfers`, `lodgings`, `activities`, `carRentals`)
+- Generated trip items are emitted in app-ready shape and should be inserted with `status: "Needed"`.
+
+### Destination attraction catalog (web search + CSV + DB)
+
+- The server now maintains a destination attraction catalog used by itinerary generation.
+- For each destination, it discovers up to 20 ranked attractions from web-search sources:
+  - `SERPAPI_API_KEY` provider (if configured)
+  - Wikipedia search fallback (always available)
+- Refresh behavior and shortlist sizing are controlled in `server/config/api-limits.yaml` under `caching.attractions.*`.
+- Each attraction is stored with:
+  - inferred `activityType`
+  - inferred interest tags from:
+    - `outdoors`, `culture`, `food`, `nightlife`, `relax`, `shopping`, `day trips`, `events`, `classes`
+- Persistence:
+  - Database: `locations` records with `source_type=attraction`
+  - CSV:
+    - local: `server/data/attractions_catalog.csv` (default)
+    - GCP: `gs://<LOCATION_BUCKET>/<ATTRACTIONS_CSV_PATH>` (default path: `locations/attractions_catalog.csv`)
+- Startup behavior:
+  - server imports the attractions CSV into DB on boot
+  - new destination discovery appends/merges into CSV and DB
+- Prompt usage:
+  - itinerary prompts now prioritize ranked shortlist items first, then generic-safe fallback when needed
+  - source-confidence filter is applied before shortlist admission using distinct source groups
+  - per-destination refresh lock prevents duplicate concurrent discovery calls
+  - compact prompt-ready shortlist blobs are stored by destination/date and reused for generation
+  - shortlist entries include budget tiers (`free`, `paid`, `premium`) and prompt assembly prioritizes tiers based on trip budget
+
 ## API quick reference
 - `POST /api/auth/email { email }` → create/login a user via email, returning a JWT.
 - `POST /api/auth/oauth { email, provider }` → Google or Apple login using the provider name and email claim.
 - `GET /api/account` → fetch account profile (includes optional `homeAddress` and `preferredAirport`).
 - `PATCH /api/account/profile` → update account profile fields (`firstName`, `lastName`, `email`, optional `homeAddress`, optional `preferredAirport`).
+- `POST /api/itinerary` → generate itinerary markdown + structured details + structured generated trip items from the prompt-pack service.
 - `GET /api/transfers` → list transfers for the authenticated user.
 - `POST /api/transfers` → add a transfer with passenger, dates/times, layover, carrier/number, booking reference, and cost.
 - `PATCH /api/transfers/:id` → update a transfer's details.

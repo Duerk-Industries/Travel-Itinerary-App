@@ -13,8 +13,41 @@ import {
   ITINERARY_STATUSES,
 } from '../utils/itineraryStatus';
 
-export type ActivityType = 'Ticketed Attraction' | 'Reservation' | 'Tour' | 'Open Access' | 'Event';
-const ACTIVITY_TYPES: ActivityType[] = ['Ticketed Attraction', 'Reservation', 'Tour', 'Open Access', 'Event'];
+export type ActivityType =
+  | 'Class'
+  | 'Concert/Show'
+  | 'Day Trip'
+  | 'Event'
+  | 'Food & Drink'
+  | 'Fun & Games'
+  | 'Hike'
+  | 'Nightlife'
+  | 'Open Access'
+  | 'Outdoor Activity'
+  | 'Reservation'
+  | 'Shopping'
+  | 'Sights & Landmarks'
+  | 'Spa/Wellness'
+  | 'Ticketed Attraction'
+  | 'Tour';
+const ACTIVITY_TYPES: ActivityType[] = [
+  'Class',
+  'Concert/Show',
+  'Day Trip',
+  'Event',
+  'Food & Drink',
+  'Fun & Games',
+  'Hike',
+  'Nightlife',
+  'Open Access',
+  'Outdoor Activity',
+  'Reservation',
+  'Shopping',
+  'Sights & Landmarks',
+  'Spa/Wellness',
+  'Ticketed Attraction',
+  'Tour',
+];
 
 export type Tour = {
   id: string;
@@ -63,7 +96,7 @@ export type GroupMemberOption = {
   removedAt?: string | null;
 };
 
-// Build a blank tour draft with today's date and zero cost.
+// Build a blank activity draft with today's date and zero cost.
 export const createInitialActivityState = (): TourDraft => ({
   status: DEFAULT_NEW_ITINERARY_STATUS,
   activityType: 'Tour',
@@ -83,7 +116,7 @@ export const createInitialActivityState = (): TourDraft => ({
 export const buildActivityPayload = (draft: TourDraft, defaultPayerId?: string | null): { payload?: TourDraft; error?: string } => {
   const status = normalizeItineraryStatus(draft.status, DEFAULT_NEW_ITINERARY_STATUS);
   const activityType = ACTIVITY_TYPES.includes(draft.activityType) ? draft.activityType : 'Tour';
-  if (!shouldRelaxRequiredFields(status) && !draft.name.trim()) return { error: 'Please enter a tour name.' };
+  if (!shouldRelaxRequiredFields(status) && !draft.name.trim()) return { error: 'Please enter an activity name.' };
   const cleanCost = sanitizeCostInput(draft.cost || '');
   let payload: TourDraft = { ...draft, activityType, status, cost: cleanCost };
   if ((!payload.paidBy || payload.paidBy.length === 0) && defaultPayerId) {
@@ -100,7 +133,7 @@ export const createActivityForTrip = async (params: {
   defaultPayerId?: string | null;
 }): Promise<{ ok: boolean; error?: string }> => {
   const { backendUrl, jsonHeaders, draft, activeTripId, defaultPayerId } = params;
-  if (!activeTripId) return { ok: false, error: 'Select an active trip before saving a tour.' };
+  if (!activeTripId) return { ok: false, error: 'Select an active trip before saving an activity.' };
   const { payload, error } = buildActivityPayload(draft, defaultPayerId);
   if (error || !payload) return { ok: false, error };
   const res = await fetch(`${backendUrl}/api/activities`, {
@@ -113,7 +146,7 @@ export const createActivityForTrip = async (params: {
     }),
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) return { ok: false, error: data.error || 'Unable to save tour' };
+  if (!res.ok) return { ok: false, error: data.error || 'Unable to save activity' };
   return { ok: true };
 };
 
@@ -130,7 +163,7 @@ export const removeActivityApi = async (
     } catch {
       // ignore
     }
-    return { ok: false, error: data.error || 'Unable to delete tour' };
+    return { ok: false, error: data.error || 'Unable to delete activity' };
   }
   return { ok: true };
 };
@@ -160,6 +193,7 @@ export const fetchActivitiesForTrip = async ({
     userRating: t.userRating === 1 || t.userRating === -1 ? t.userRating : null,
     cost: String(t.cost ?? ''),
     paidBy: Array.isArray(t.paidBy) ? t.paidBy : [],
+    travelerIds: Array.isArray(t.travelerIds) ? t.travelerIds : [],
     bookedOn: t.bookedOn ?? '',
     freeCancelBy: t.freeCancelBy ?? '',
   }));
@@ -244,7 +278,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
 
   const openTourEditor = (tour?: Tour) => {
     if (mode !== 'wizard' && !activeTripId) {
-      alert('Select an active trip before adding a tour.');
+      alert('Select an active trip before adding an activity.');
       return;
     }
     const base = tour ? { ...tour, travelerIds: tour.travelerIds ?? (tour as any).travelerIds ?? [] } : createInitialActivityState();
@@ -295,7 +329,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
     if (!editingTour) return;
     const status = normalizeItineraryStatus(editingTour.status, DEFAULT_NEW_ITINERARY_STATUS);
     if (!shouldRelaxRequiredFields(status) && !editingTour.name.trim()) {
-      alert('Please enter a tour name.');
+      alert('Please enter an activity name.');
       return;
     }
     const cleanCost = (editingTour.cost || '').replace(/[^0-9.]/g, '');
@@ -323,7 +357,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
       return;
     }
     if (!activeTripId) {
-      alert('Select an active trip before saving a tour.');
+      alert('Select an active trip before saving an activity.');
       return;
     }
     const method = editingTourId ? 'PUT' : 'POST';
@@ -341,13 +375,13 @@ export const ActivityTab: React.FC<TourTabProps> = ({
         });
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
-          throw new Error(data.error || `Unable to save tour (status ${res.status})`);
+          throw new Error(data.error || `Unable to save activity (status ${res.status})`);
         }
         onDataChanged ? onDataChanged() : await fetchTours();
         closeTourEditor();
       } catch (err: any) {
-        console.error('saveTour failed', err);
-        alert(err.message || 'Unable to save tour');
+        console.error('saveActivity failed', err);
+        alert(err.message || 'Unable to save activity');
       }
     })();
   };
@@ -359,7 +393,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
     }
     removeActivityApi(backendUrl, jsonHeaders, id)
       .then((result) => {
-        if (!result.ok) throw new Error(result.error || 'Unable to delete tour');
+        if (!result.ok) throw new Error(result.error || 'Unable to delete activity');
         onDataChanged ? onDataChanged() : fetchTours();
       })
       .catch((err) => alert(err.message));
@@ -400,11 +434,28 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   };
 
   const payerTotalsList = useMemo(() => Object.entries(payerTotals), [payerTotals]);
+  const sortedTours = useMemo(() => {
+    const safeDate = (value?: string | null) => {
+      const text = String(value ?? '').trim();
+      return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : '9999-12-31';
+    };
+    const safeTime = (value?: string | null) => {
+      const text = String(value ?? '').trim();
+      return /^\d{2}:\d{2}$/.test(text) ? text : '23:59';
+    };
+    return [...tours].sort((a, b) => {
+      const byDate = safeDate(a.date).localeCompare(safeDate(b.date));
+      if (byDate !== 0) return byDate;
+      const byTime = safeTime(a.startTime).localeCompare(safeTime(b.startTime));
+      if (byTime !== 0) return byTime;
+      return String(a.name ?? '').localeCompare(String(b.name ?? ''), undefined, { sensitivity: 'base' });
+    });
+  }, [tours]);
 
   return (
     <View style={styles.card}>
       <View style={styles.sectionHeaderRow}>
-        <Text style={styles.sectionTitle}>Tours</Text>
+        <Text style={styles.sectionTitle}>Activities</Text>
         <TouchableOpacity style={[styles.button, styles.roundButton]} onPress={() => openTourEditor()}>
           <Text style={styles.buttonText}>+</Text>
         </TouchableOpacity>
@@ -442,7 +493,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
               { label: 'Status', width: 130 },
               { label: 'Votes', width: 120 },
               { label: 'Rating', width: 120 },
-              { label: 'Tour', width: 180 },
+              { label: 'Activity', width: 180 },
               { label: 'Type', width: 180 },
               { label: 'Start Location', width: 180 },
               { label: 'Start Time', width: 120 },
@@ -459,7 +510,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
               </View>
             ))}
           </View>
-          {tours.map((t) => (
+          {sortedTours.map((t) => (
             <View key={t.id} style={styles.tableRow}>
               <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
                 <Text style={styles.cellText}>{formatDateLong(t.date)}</Text>
@@ -540,7 +591,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
         </View>
       </ScrollView>
       <View style={{ marginTop: 8 }}>
-        <Text style={styles.flightTitle}>Total tour cost: ${toursTotal.toFixed(2)}</Text>
+            <Text style={styles.flightTitle}>Total activity cost: ${toursTotal.toFixed(2)}</Text>
         {payerTotalsList.length ? (
           <View style={{ marginTop: 4 }}>
             {payerTotalsList.map(([id, total]) => (
@@ -556,14 +607,14 @@ export const ActivityTab: React.FC<TourTabProps> = ({
           <View style={styles.modalOverlay}>
             <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={closeTourEditor} />
             <View style={[styles.modalCard, { marginTop: 0 }]}>
-            <Text style={styles.sectionTitle}>{editingTourId ? 'Edit Tour' : 'Add Tour'}</Text>
+            <Text style={styles.sectionTitle}>{editingTourId ? 'Edit Activity' : 'Add Activity'}</Text>
             <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ paddingRight: 12 }}>
               <Text style={styles.modalLabel}>Date</Text>
               {Platform.OS === 'web' ? (
                 <input
                   style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
                   type="date"
-                  title="Tour date"
+                  title="Activity date"
                   value={editingTour.date}
                   onChange={(e) => setEditingTour((p) => (p ? { ...p, date: e.target.value } : p))}
                 />
@@ -641,10 +692,10 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                   })}
                 </View>
               )}
-              <Text style={styles.modalLabel}>Tour</Text>
+              <Text style={styles.modalLabel}>Activity</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Tour name"
+                placeholder="Activity name"
                 value={editingTour.name}
                 onChangeText={(text: string) => setEditingTour((p) => (p ? { ...p, name: text } : p))}
               />

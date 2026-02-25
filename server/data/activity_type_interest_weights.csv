@@ -1,0 +1,17 @@
+activity_type,outdoors,culture,food,nightlife,relax,shopping,day_trips,events,classes
+Class,5,35,25,5,10,0,0,5,90
+Concert/Show,0,35,0,45,5,0,0,75,0
+Day Trip,25,25,10,0,10,0,90,5,0
+Event,0,30,10,30,5,0,0,95,0
+Food & Drink,0,10,95,20,10,0,0,5,15
+Fun & Games,15,5,10,40,15,5,0,20,5
+Hike,95,5,0,0,5,0,10,0,0
+Nightlife,0,5,25,95,5,5,0,25,0
+Open Access,20,40,10,5,15,10,10,5,0
+Outdoor Activity,90,10,0,0,20,0,20,0,5
+Reservation,5,35,20,5,10,5,10,10,10
+Shopping,0,5,0,5,10,95,0,0,0
+Sights & Landmarks,10,95,0,0,10,0,5,5,0
+Spa/Wellness,0,5,0,0,95,0,0,0,20
+Ticketed Attraction,5,90,5,0,5,0,5,0,5
+Tour,20,45,15,10,10,5,20,10,10

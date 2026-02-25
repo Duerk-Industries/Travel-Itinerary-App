@@ -60,6 +60,8 @@ describe('AccountTab', () => {
     saveSession: jest.fn(),
     headers: {},
     jsonHeaders: {},
+    airportOptions: [],
+    onSearchAirports: jest.fn(),
     logout: jest.fn(),
     styles: styles,
     traits: [],

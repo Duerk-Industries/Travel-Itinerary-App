@@ -374,4 +374,47 @@ describe('Overview UI (nested itinerary)', () => {
     expect(await findByText(/Travelers: Vicky Duerk/i)).toBeTruthy();
     expect(await findByText(/Travelers: Bryan Duerk/i)).toBeTruthy();
   });
+
+  test('uses event date bounds for overview range when trip range is stale', async () => {
+    const staleTripProps = {
+      ...baseProps,
+      trip: {
+        ...baseProps.trip,
+        startDate: '2025-11-14',
+        endDate: '2025-11-21',
+      },
+      tours: [
+        {
+          id: 'tour-1',
+          date: '2026-03-03',
+          name: 'Visit Museo Nacional de Antropologia',
+          startLocation: "Lodging at 'Mexico City'",
+          startTime: '09:00',
+          duration: '2h',
+          cost: '0',
+          freeCancelBy: '',
+          bookedOn: '',
+          reference: '',
+          paidBy: [],
+        },
+      ] as any[],
+      lodgings: [
+        {
+          id: 'lodging-1',
+          name: "Lodging at 'Mexico City'",
+          checkInDate: '2026-03-03',
+          checkOutDate: '2026-03-10',
+          rooms: '1',
+          refundBy: '',
+          totalCost: '0',
+          costPerNight: '0',
+          address: 'Mexico City',
+        },
+      ] as any[],
+    };
+
+    const { findByText } = await renderOverview(<OverviewTab {...staleTripProps} />);
+    expect(await findByText(/Dates: .*March.*2026/i)).toBeTruthy();
+    expect(await findByText('Tue. 3')).toBeTruthy();
+  });
 });

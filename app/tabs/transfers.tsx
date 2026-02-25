@@ -534,6 +534,28 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     groupMembers.forEach((m) => map.set(m.id, formatPassengerLabel(m)));
     return map;
   }, [groupMembers]);
+  const sortedFlights = useMemo(() => {
+    const safeDate = (value?: string | null) => {
+      const text = String(value ?? '').trim();
+      return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : '9999-12-31';
+    };
+    const safeTime = (value?: string | null) => {
+      const text = String(value ?? '').trim();
+      return /^\d{2}:\d{2}$/.test(text) ? text : '23:59';
+    };
+    const passengerLabel = (flight: Flight): string => {
+      const ids = Array.isArray(flight.passenger_ids) ? flight.passenger_ids : [];
+      const names = ids.map((id) => memberNames.get(id)).filter(Boolean) as string[];
+      return names.length ? names.join(', ') : String(flight.passenger_name ?? '');
+    };
+    return [...flights].sort((a, b) => {
+      const byDate = safeDate(a.departure_date).localeCompare(safeDate(b.departure_date));
+      if (byDate !== 0) return byDate;
+      const byTime = safeTime(a.departure_time).localeCompare(safeTime(b.departure_time));
+      if (byTime !== 0) return byTime;
+      return passengerLabel(a).localeCompare(passengerLabel(b), undefined, { sensitivity: 'base' });
+    });
+  }, [flights, memberNames]);
 
   const buildPassengerName = (ids: string[]) => {
     const names = ids.map((id) => memberNames.get(id)).filter(Boolean) as string[];
@@ -1239,7 +1261,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
               </View>
             ))}
           </View>
-          {flights.map((item) => (
+          {sortedFlights.map((item) => (
             <View key={item.id} style={styles.tableRow}>
               {columns.map((col, idx) => {
                 const isLast = idx === columns.length - 1;

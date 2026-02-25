@@ -160,7 +160,7 @@ export const buildTripDescription = (details: TripDetails, knownInfo?: KnownInfo
   const sections: string[] = [];
   if (knownInfo.flights.trim()) sections.push(`- Flights: ${knownInfo.flights.trim()}`);
   if (knownInfo.lodging.trim()) sections.push(`- Accommodation: ${knownInfo.lodging.trim()}`);
-  if (knownInfo.tours.trim()) sections.push(`- Tours & Activities: ${knownInfo.tours.trim()}`);
+  if (knownInfo.tours.trim()) sections.push(`- Activities: ${knownInfo.tours.trim()}`);
   if (knownInfo.cars.trim()) sections.push(`- Rental cars: ${knownInfo.cars.trim()}`);
   if (!sections.length) return base;
   const header = '## Known Info';

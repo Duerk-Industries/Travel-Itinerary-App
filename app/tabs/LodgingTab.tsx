@@ -165,7 +165,17 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
   };
   
   const sortedLodgings = useMemo(() => {
-    return [...lodgings].sort((a, b) => new Date(a.checkInDate).getTime() - new Date(b.checkInDate).getTime());
+    const safeDate = (value?: string | null) => {
+      const text = String(value ?? '').trim();
+      return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : '9999-12-31';
+    };
+    return [...lodgings].sort((a, b) => {
+      const byCheckIn = safeDate(a.checkInDate).localeCompare(safeDate(b.checkInDate));
+      if (byCheckIn !== 0) return byCheckIn;
+      const byCheckOut = safeDate(a.checkOutDate).localeCompare(safeDate(b.checkOutDate));
+      if (byCheckOut !== 0) return byCheckOut;
+      return String(a.name ?? '').localeCompare(String(b.name ?? ''), undefined, { sensitivity: 'base' });
+    });
   }, [lodgings]);
 
   const travelerNames = useMemo(() => {

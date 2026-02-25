@@ -22,6 +22,9 @@ const styles = {
   dangerButton: {},
   modalOverlay: {},
   confirmModal: {},
+  dropdownList: {},
+  dropdownOption: {},
+  cellText: {},
 };
 
 describe('AccountProfileManagement', () => {
@@ -45,6 +48,8 @@ describe('AccountProfileManagement', () => {
     saveSession: jest.fn(),
     headers: {},
     jsonHeaders: {},
+    airportOptions: [],
+    onSearchAirports: jest.fn(),
     logout: jest.fn(),
     styles: styles,
   };
@@ -68,5 +73,23 @@ describe('AccountProfileManagement', () => {
     const { getByText } = render(<AccountProfileManagement {...defaultProps} />);
     fireEvent.press(getByText('Delete Account'));
     expect(getByText('Delete account?')).toBeTruthy();
+  });
+
+  it('uses airport autocomplete suggestions for preferred airport', () => {
+    const onSearchAirports = jest.fn();
+    const setAccountProfile = jest.fn();
+    const { getByPlaceholderText, getByText } = render(
+      <AccountProfileManagement
+        {...defaultProps}
+        setAccountProfile={setAccountProfile}
+        onSearchAirports={onSearchAirports}
+        airportOptions={['Austin, TX (AUS)', 'Los Angeles, CA (LAX)']}
+      />
+    );
+
+    fireEvent.changeText(getByPlaceholderText('Preferred airport (optional)'), 'aus');
+    expect(onSearchAirports).toHaveBeenCalledWith('aus');
+    fireEvent.press(getByText('Austin, TX (AUS)'));
+    expect(setAccountProfile).toHaveBeenCalled();
   });
 });

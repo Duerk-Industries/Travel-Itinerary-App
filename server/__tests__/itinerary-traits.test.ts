@@ -75,12 +75,138 @@ describe('Itinerary generation and trait lifecycle', () => {
   });
 
   it('generates an itinerary successfully', async () => {
-    // Mock OpenAI response
-    mockedAxios.post.mockResolvedValue({
-      data: {
-        choices: [{ message: { content: 'Day 1: Activity $100\nDay 2: Fun $150' } }],
-      },
-    });
+    mockedAxios.post
+      .mockResolvedValueOnce({
+        data: {
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  $: 'norm1',
+                  sd: '2026-07-01',
+                  ed: '2026-07-02',
+                  p: 'B',
+                  c: 'M',
+                  mob: 'M',
+                  car: 'P',
+                  w: { o: 25, c: 25, f: 20, n: 10, r: 20 },
+                  a: [],
+                  tm: 'B',
+                }),
+              },
+            },
+          ],
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  $: 'r1',
+                  eh: 'JFK',
+                  xh: 'JFK',
+                  b: [{ l: 'United States', ci: '2026-07-01', co: '2026-07-03', dn: [] }],
+                  x: [{ dt: '2026-07-01', m: 'Train', fr: 'JFK', to: 'United States' }],
+                  rc: null,
+                  w: { o: 25, c: 25, f: 20, n: 10, r: 20 },
+                  a: [],
+                }),
+              },
+            },
+          ],
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  $: 'it1',
+                  eh: 'JFK',
+                  xh: 'JFK',
+                  b: [{ l: 'United States', ci: '2026-07-01', co: '2026-07-03', dn: [] }],
+                  x: [{ dt: '2026-07-01', m: 'Train', fr: 'JFK', to: 'United States' }],
+                  rc: null,
+                  dy: [
+                    {
+                      d: 1,
+                      dt: '2026-07-01',
+                      b: 'United States',
+                      it: [['M', 'R', 'Timed museum entry'], ['D', 'T', 'Guided city walk']],
+                      me: ['BQ', 'LC', 'DL'],
+                      sl: "Lodging at 'United States'",
+                      ln: [],
+                      cf: 'M',
+                    },
+                    {
+                      d: 2,
+                      dt: '2026-07-02',
+                      b: 'United States',
+                      it: [['D', 'O', 'Neighborhood exploration']],
+                      me: ['BQ', 'LC', 'DL'],
+                      sl: "Lodging at 'United States'",
+                      ln: [],
+                      cf: 'M',
+                    },
+                  ],
+                  a: [],
+                  cf: 'M',
+                }),
+              },
+            },
+          ],
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  $: 'it1',
+                  eh: 'JFK',
+                  xh: 'JFK',
+                  b: [{ l: 'United States', ci: '2026-07-01', co: '2026-07-03', dn: [] }],
+                  x: [{ dt: '2026-07-01', m: 'Train', fr: 'JFK', to: 'United States' }],
+                  rc: null,
+                  dy: [
+                    {
+                      d: 1,
+                      dt: '2026-07-01',
+                      b: 'United States',
+                      it: [['M', 'R', 'Timed museum entry'], ['D', 'T', 'Guided city walk']],
+                      me: ['BQ', 'LC', 'DL'],
+                      sl: "Lodging at 'United States'",
+                      ln: [],
+                      cf: 'M',
+                    },
+                    {
+                      d: 2,
+                      dt: '2026-07-02',
+                      b: 'United States',
+                      it: [['D', 'O', 'Neighborhood exploration']],
+                      me: ['BQ', 'LC', 'DL'],
+                      sl: "Lodging at 'United States'",
+                      ln: [],
+                      cf: 'M',
+                    },
+                  ],
+                  a: [],
+                  cf: 'M',
+                }),
+              },
+            },
+          ],
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          choices: [{ message: { content: '## Day-by-day\n- Day 1\n- Day 2' } }],
+        },
+      });
 
     // Create group
     const groupRes = await request(app)
@@ -111,11 +237,17 @@ describe('Itinerary generation and trait lifecycle', () => {
         departureAirport: 'JFK',
         tripStyle: 'Automated test',
         tripId,
-        traits: [],
+        tt: { p: 'B', c: 'M', mob: 'M', car: 'P', w: { o: 25, c: 25, f: 20, n: 10, r: 20 }, tm: 'B' },
+        ut: { i: ['Culture'], eb: false, no: false },
       })
       .expect(200);
 
     expect(itinRes.body.plan).toBeTruthy();
     expect(typeof itinRes.body.plan).toBe('string');
+    expect(Array.isArray(itinRes.body.details)).toBe(true);
+    expect(itinRes.body.generatedItems?.transfers?.[0]?.status).toBe('Needed');
+    expect(itinRes.body.generatedItems?.lodgings?.[0]?.status).toBe('Needed');
+    expect(itinRes.body.generatedItems?.activities?.[0]?.status).toBe('Needed');
+    expect(itinRes.body.generatedItems?.activities?.[0]?.activityType).toBe('Reservation');
   });
 });

@@ -2,9 +2,14 @@ providers:
   OPENAI:
     window: hour
     windowHours: 24
-    overall: 200
+    overall: 1000
     callers:
-      ITINERARY_GENERATE_PLAN: 200
+      ITINERARY_GENERATE_PLAN: 50
+      ITINERARY_PLAN_P0_NORM: 200
+      ITINERARY_PLAN_P1_ROUTE: 200
+      ITINERARY_PLAN_P2_DAYS: 200
+      ITINERARY_PLAN_P3_VALIDATE: 200
+      ITINERARY_PLAN_P4_RENDER: 200
 
   UNSPLASH:
     window: hour
@@ -31,4 +36,23 @@ providers:
     overall: 1000
     callers:
       DAILY_REFRESH: 500
+
+caching:
+  attractions:
+    refreshDays: 365
+    limitPerDestination: 20
+    shortlistPromptItemsPerDestination: 8
+    minDistinctSourcesPerAttraction: 2
+    minAttractionsAfterConfidenceFilter: 6
+    promptBlobRefreshDays: 30
+  locations:
+    csvCacheTtlMinutes: 60
+    refreshCooldownSeconds: 15
+  images:
+    cacheTtlMs: 604800000
+    signedUrlTtlMs: 3600000
+  googlePlaces:
+    detailsCacheTimeoutMinutes: 1440
+  unsplash:
+    dnsLogTtlMs: 300000
 

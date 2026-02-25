@@ -17,6 +17,8 @@ import {
   GroupMember,
   PlaceDetailsCache,
   LocationRecord,
+  AttractionCatalogEntry,
+  AttractionShortlistBlob,
   TripActivity,
   TripActivityType,
   TripComment,
@@ -529,10 +531,25 @@ const ensureMembership = async (groupId: string, userId: string): Promise<boolea
 export const listGroupMembers = async (
   groupId: string,
   userId: string
-): Promise<Array<{ id: string; userId?: string; guestName?: string; email?: string; firstName?: string; lastName?: string; status?: string; removedAt?: string | null }>> => {
+): Promise<
+  Array<{
+    id: string;
+    userId?: string | null;
+    guestName?: string;
+    email?: string;
+    firstName?: string;
+    lastName?: string;
+    preferredAirport?: string | null;
+    isGroupOwner?: boolean;
+    status?: string;
+    removedAt?: string | null;
+  }>
+> => {
   const db = getDb();
   const allowed = await ensureMembership(groupId, userId);
   if (!allowed) throw new Error('Not authorized to view members');
+  const groupDoc = await db.collection('groups').doc(groupId).get();
+  const groupOwnerId = (groupDoc.data()?.ownerId as string | undefined) ?? '';
   const membersSnap = await db.collection('group_members').where('groupId', '==', groupId).where('removedAt', '==', null).get();
   const invitesSnap = await db.collection('group_invites').where('groupId', '==', groupId).where('status', '==', 'pending').get();
   const memberDocs = membersSnap.docs.map((d) => ({ id: d.id, data: d.data() as any }));
@@ -549,14 +566,16 @@ export const listGroupMembers = async (
       }
     });
   }
-  const inviteEmails = Array.from(
-    new Set(
-      memberDocs
-        .map((m) => m.data.inviteEmail)
-        .filter((email) => typeof email === 'string' && email.trim().length)
-        .map((email) => normalizeEmail(email))
-    )
-  );
+  const inviteEmails = Array.from(new Set([
+    ...memberDocs
+      .map((m) => m.data.inviteEmail)
+      .filter((email) => typeof email === 'string' && email.trim().length)
+      .map((email) => normalizeEmail(email)),
+    ...invitesSnap.docs
+      .map((d) => (d.data() as any)?.inviteeEmail)
+      .filter((email) => typeof email === 'string' && email.trim().length)
+      .map((email) => normalizeEmail(email)),
+  ]));
   const emailToUserId = new Map<string, string>();
   if (inviteEmails.length) {
     await Promise.all(
@@ -602,6 +621,8 @@ export const listGroupMembers = async (
       email,
       firstName: data.firstName ?? profile?.firstName ?? inviteProfile?.firstName ?? null,
       lastName: data.lastName ?? profile?.lastName ?? inviteProfile?.lastName ?? null,
+      preferredAirport: profile?.preferredAirport ?? inviteProfile?.preferredAirport ?? null,
+      isGroupOwner: Boolean(resolvedUserId && groupOwnerId && resolvedUserId === groupOwnerId),
       status: resolvedUserId ? 'active' : data.inviteEmail ? 'pending' : 'active',
       removedAt: data.removedAt ?? null,
     };
@@ -615,10 +636,20 @@ export const listGroupMembers = async (
   const invites = invitesSnap.docs
     .map((d) => {
       const data = d.data() as any;
+      const email = normalizeEmail(data.inviteeEmail ?? '');
+      const resolvedUserId = emailToUserId.get(email);
+      const profile = resolvedUserId
+        ? userProfiles.get(resolvedUserId)
+        : (email ? emailProfiles.get(email) : null);
       return {
         id: d.id,
         guestName: data.inviteeEmail,
         email: data.inviteeEmail,
+        userId: resolvedUserId ?? null,
+        firstName: profile?.firstName ?? null,
+        lastName: profile?.lastName ?? null,
+        preferredAirport: profile?.preferredAirport ?? null,
+        isGroupOwner: Boolean(resolvedUserId && groupOwnerId && resolvedUserId === groupOwnerId),
         status: data.status,
       };
     })
@@ -1851,6 +1882,56 @@ const toLocationRecord = (id: string, data: any): LocationRecord => ({
   updatedAt: data.updatedAt ?? undefined,
 });
 
+const toAttractionCatalogEntry = (id: string, data: any): AttractionCatalogEntry => {
+  const payload = data.payload && typeof data.payload === 'object' ? data.payload : {};
+  const rawTags = Array.isArray(payload.interestTags) ? payload.interestTags : [];
+  const interestTags = rawTags.map((tag: unknown) => String(tag).trim()).filter(Boolean) as AttractionCatalogEntry['interestTags'];
+  return {
+    id,
+    destinationKey: String(payload.destinationKey ?? '').trim(),
+    destinationDisplayName: String(payload.destinationDisplayName ?? '').trim(),
+    name: String(data.name ?? ''),
+    rank: Number(payload.rank) || 999,
+    activityType: String(payload.activityType ?? 'Tour') as AttractionCatalogEntry['activityType'],
+    interestTags,
+    sourceUrl: typeof payload.sourceUrl === 'string' ? payload.sourceUrl : null,
+    sourceLabel: typeof payload.sourceLabel === 'string' ? payload.sourceLabel : null,
+    snippet: typeof payload.snippet === 'string' ? payload.snippet : null,
+    sourceCount: Number(payload.sourceCount) || undefined,
+    budgetTier:
+      typeof payload.budgetTier === 'string' ? (payload.budgetTier as AttractionCatalogEntry['budgetTier']) : undefined,
+    updatedAt: String(data.updatedAt ?? nowIso()),
+  };
+};
+
+const toAttractionShortlistBlob = (id: string, data: any): AttractionShortlistBlob | null => {
+  const payload = data?.payload && typeof data.payload === 'object' ? data.payload : {};
+  const destinationKey = String(payload.destinationKey ?? '').trim();
+  const dateKey = String(payload.dateKey ?? '').trim();
+  const promptBlock = String(payload.promptBlock ?? '').trim();
+  if (!destinationKey || !dateKey || !promptBlock) return null;
+  return {
+    id,
+    destinationKey,
+    destinationDisplayName: String(payload.destinationDisplayName ?? '').trim(),
+    dateKey,
+    promptBlock,
+    compact: String(payload.compact ?? ''),
+    itemCount: Number(payload.itemCount) || 0,
+    updatedAt: String(data.updatedAt ?? nowIso()),
+  };
+};
+
+const toShortlistBlobId = (destinationKey: string, dateKey: string): string => {
+  const clean = (value: string) =>
+    String(value ?? '')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  return `attr-blob:${clean(destinationKey)}:${clean(dateKey)}`.slice(0, 180);
+};
+
 export const searchLocations = async (
   _userId: string,
   query: string,
@@ -1933,6 +2014,120 @@ export const upsertLocation = async (data: {
 
   const saved = await docRef.get();
   return toLocationRecord(id, saved.data());
+};
+
+export const listAttractionCatalogEntries = async (
+  _userId: string,
+  destinationKey: string,
+  limit = 20
+): Promise<AttractionCatalogEntry[]> => {
+  const key = String(destinationKey ?? '').trim().toLowerCase();
+  if (!key) return [];
+  const db = getDb();
+  const safeLimit = Math.min(Math.max(Number(limit) || 20, 1), 100);
+  const snapshot = await db.collection('locations').where('sourceType', '==', 'attraction').limit(500).get();
+  const filtered = snapshot.docs
+    .filter((doc) => {
+      const payload = ((doc.data() as any).payload ?? {}) as Record<string, unknown>;
+      return String(payload.destinationKey ?? '').trim().toLowerCase() === key;
+    })
+    .map((doc) => toAttractionCatalogEntry(doc.id, doc.data()))
+    .sort((a, b) => (a.rank !== b.rank ? a.rank - b.rank : a.name.localeCompare(b.name)))
+    .slice(0, safeLimit);
+  return filtered;
+};
+
+export const upsertAttractionCatalogEntry = async (entry: AttractionCatalogEntry): Promise<AttractionCatalogEntry> => {
+  const db = getDb();
+  const payload = {
+    destinationKey: entry.destinationKey,
+    destinationDisplayName: entry.destinationDisplayName,
+    rank: Number(entry.rank) || 999,
+    activityType: entry.activityType,
+    interestTags: Array.isArray(entry.interestTags) ? entry.interestTags : [],
+    sourceUrl: entry.sourceUrl ?? null,
+    sourceLabel: entry.sourceLabel ?? null,
+    snippet: entry.snippet ?? null,
+    sourceCount: Number(entry.sourceCount) || 1,
+    budgetTier: entry.budgetTier ?? 'paid',
+    updatedAt: entry.updatedAt,
+  };
+  const docRef = db.collection('locations').doc(entry.id);
+  await db.runTransaction(async (tx) => {
+    const doc = await tx.get(docRef);
+    const existing = doc.exists ? (doc.data() as any) : {};
+    const mergedPayload = { ...(existing.payload || {}), ...payload };
+    tx.set(
+      docRef,
+      {
+        id: entry.id,
+        sourceType: 'attraction',
+        category: 'attraction',
+        name: entry.name,
+        address: null,
+        searchName: `${entry.name} ${entry.destinationDisplayName}`.toLowerCase(),
+        payload: mergedPayload,
+        updatedAt: nowIso(),
+      },
+      { merge: true }
+    );
+  });
+  const saved = await docRef.get();
+  return toAttractionCatalogEntry(saved.id, saved.data() as any);
+};
+
+export const getAttractionShortlistBlob = async (
+  _userId: string,
+  destinationKey: string,
+  dateKey: string
+): Promise<AttractionShortlistBlob | null> => {
+  const key = String(destinationKey ?? '').trim().toLowerCase();
+  const date = String(dateKey ?? '').trim();
+  if (!key || !date) return null;
+  const id = toShortlistBlobId(key, date);
+  const db = getDb();
+  const doc = await db.collection('locations').doc(id).get();
+  if (!doc.exists) return null;
+  return toAttractionShortlistBlob(doc.id, doc.data() as any);
+};
+
+export const upsertAttractionShortlistBlob = async (entry: AttractionShortlistBlob): Promise<AttractionShortlistBlob> => {
+  const db = getDb();
+  const payload = {
+    destinationKey: entry.destinationKey,
+    destinationDisplayName: entry.destinationDisplayName,
+    dateKey: entry.dateKey,
+    promptBlock: entry.promptBlock,
+    compact: entry.compact,
+    itemCount: Number(entry.itemCount) || 0,
+    updatedAt: entry.updatedAt,
+  };
+  const docRef = db.collection('locations').doc(entry.id);
+  await db.runTransaction(async (tx) => {
+    const doc = await tx.get(docRef);
+    const existing = doc.exists ? (doc.data() as any) : {};
+    const mergedPayload = { ...(existing.payload || {}), ...payload };
+    tx.set(
+      docRef,
+      {
+        id: entry.id,
+        sourceType: 'attraction_shortlist_blob',
+        category: 'attraction_shortlist_blob',
+        name: entry.destinationDisplayName,
+        address: null,
+        searchName: `${entry.destinationDisplayName} ${entry.dateKey} attraction shortlist`.toLowerCase(),
+        payload: mergedPayload,
+        updatedAt: nowIso(),
+      },
+      { merge: true }
+    );
+  });
+  const saved = await docRef.get();
+  const parsed = toAttractionShortlistBlob(saved.id, saved.data() as any);
+  if (!parsed) {
+    throw new Error('Failed to parse attraction shortlist blob after upsert.');
+  }
+  return parsed;
 };
 
 // Lodgings

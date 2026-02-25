@@ -1,10 +1,21 @@
 export type ItineraryStatus = 'Needed' | 'Proposed' | 'Booked' | 'Cancelled' | 'Completed';
 export type ActivityType =
-  | 'Ticketed Attraction'
-  | 'Reservation'
-  | 'Tour'
+  | 'Class'
+  | 'Concert/Show'
+  | 'Day Trip'
+  | 'Event'
+  | 'Food & Drink'
+  | 'Fun & Games'
+  | 'Hike'
+  | 'Nightlife'
   | 'Open Access'
-  | 'Event';
+  | 'Outdoor Activity'
+  | 'Reservation'
+  | 'Shopping'
+  | 'Sights & Landmarks'
+  | 'Spa/Wellness'
+  | 'Ticketed Attraction'
+  | 'Tour';
 
 export interface User {
   id: string;
@@ -132,6 +143,46 @@ export interface LocationRecord {
   updatedAt?: string;
 }
 
+export type InterestTag =
+  | 'outdoors'
+  | 'culture'
+  | 'food'
+  | 'nightlife'
+  | 'relax'
+  | 'shopping'
+  | 'day trips'
+  | 'events'
+  | 'classes';
+
+export type AttractionBudgetTier = 'free' | 'paid' | 'premium';
+
+export interface AttractionCatalogEntry {
+  id: string;
+  destinationKey: string;
+  destinationDisplayName: string;
+  name: string;
+  rank: number;
+  activityType: ActivityType;
+  interestTags: InterestTag[];
+  sourceUrl?: string | null;
+  sourceLabel?: string | null;
+  snippet?: string | null;
+  sourceCount?: number;
+  budgetTier?: AttractionBudgetTier;
+  updatedAt: string;
+}
+
+export interface AttractionShortlistBlob {
+  id: string;
+  destinationKey: string;
+  destinationDisplayName: string;
+  dateKey: string;
+  promptBlock: string;
+  compact: string;
+  itemCount: number;
+  updatedAt: string;
+}
+
 export interface Trait {
   id: string;
   userId: string;
@@ -185,6 +236,7 @@ export interface Activity {
   bookedOn: string;
   reference: string;
   paidBy: string[];
+  travelerIds?: string[];
   createdAt: string;
 }
 
@@ -232,6 +284,90 @@ export interface ItineraryDetail {
   time?: string | null;
   activity: string;
   cost?: number | null;
+}
+
+export type ItineraryPromptPace = 'Relaxed' | 'Balanced' | 'Fast';
+export type ItineraryPromptComfort = 'Budget' | 'Midrange' | 'Luxury';
+export type ItineraryPromptMobility = 'Low' | 'Medium' | 'High';
+export type ItineraryPromptCarPreference = 'PublicTransitOnly' | 'DayTripsOnly' | 'FullTripRental';
+export type ItineraryPromptTripMode = 'Explorer' | 'Balanced' | 'Slow';
+export type TransferMode = 'Flight' | 'Train' | 'Bus' | 'Private' | 'Ferry' | 'Other';
+
+export interface ItineraryPromptProfile {
+  pace: ItineraryPromptPace;
+  comfort: ItineraryPromptComfort;
+  mobility: ItineraryPromptMobility;
+  carPreference: ItineraryPromptCarPreference;
+  tripMode: ItineraryPromptTripMode;
+  weights: { o: number; c: number; f: number; n: number; r: number };
+}
+
+export interface ItineraryGeneratedTransfer {
+  status: 'Needed';
+  transferType: TransferMode;
+  departureDate: string;
+  arrivalDate: string;
+  departureLocation: string;
+  arrivalLocation: string;
+  departureTime: string;
+  arrivalTime: string;
+  carrier: string;
+  flightNumber: string;
+  bookingReference: string;
+  note?: string;
+}
+
+export interface ItineraryGeneratedLodging {
+  status: 'Needed';
+  name: string;
+  checkInDate: string;
+  checkOutDate: string;
+  rooms: string;
+  totalCost: string;
+  costPerNight: string;
+  address: string;
+}
+
+export interface ItineraryGeneratedActivity {
+  status: 'Needed';
+  activityType: ActivityType;
+  date: string;
+  name: string;
+  startLocation: string;
+  startTime: string;
+  duration: string;
+  cost: string;
+  freeCancelBy: string;
+  bookedOn: string;
+  reference: string;
+}
+
+export interface ItineraryGeneratedCarRental {
+  status: 'Needed';
+  pickupLocation: string;
+  pickupDate: string;
+  dropoffLocation: string;
+  dropoffDate: string;
+  reference: string;
+  vendor: string;
+  prepaid: string;
+  cost: string;
+  model: string;
+  notes: string;
+}
+
+export interface ItineraryGeneratedItems {
+  transfers: ItineraryGeneratedTransfer[];
+  lodgings: ItineraryGeneratedLodging[];
+  activities: ItineraryGeneratedActivity[];
+  carRentals: ItineraryGeneratedCarRental[];
+}
+
+export interface ItineraryGeneratedDetail {
+  day: number;
+  time: string | null;
+  activity: string;
+  cost: number | null;
 }
 
 export interface PlaceDetailsCache {

@@ -1,6 +1,7 @@
 import { getApps, initializeApp } from 'firebase-admin/app';
 import { getStorage } from 'firebase-admin/storage';
 import { getEnvValue } from '../env';
+import { getApiCacheSetting } from '../config/apiLimits';
 
 export type LocationOption = {
   id: string;
@@ -113,12 +114,16 @@ const resolveStorageConfig = (): { bucketName: string; prefix: string } => {
 };
 
 const cacheTtlMs = (): number => {
-  const minutes = Number(getEnvValue('LOCATION_CSV_CACHE_TTL_MINUTES', { defaultValue: '60' }));
+  const minutes =
+    Number(getApiCacheSetting('locations', 'csvCacheTtlMinutes')) ||
+    Number(getEnvValue('LOCATION_CSV_CACHE_TTL_MINUTES', { defaultValue: '60' }));
   if (!Number.isFinite(minutes) || minutes <= 0) return 60 * 60 * 1000;
   return minutes * 60 * 1000;
 };
 const refreshCooldownMs = (): number => {
-  const seconds = Number(getEnvValue('LOCATION_CSV_REFRESH_COOLDOWN_SECONDS', { defaultValue: '15' }));
+  const seconds =
+    Number(getApiCacheSetting('locations', 'refreshCooldownSeconds')) ||
+    Number(getEnvValue('LOCATION_CSV_REFRESH_COOLDOWN_SECONDS', { defaultValue: '15' }));
   if (!Number.isFinite(seconds) || seconds <= 0) return 15_000;
   return Math.min(Math.floor(seconds * 1000), 120_000);
 };

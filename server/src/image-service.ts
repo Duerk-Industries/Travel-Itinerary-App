@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { Storage } from '@google-cloud/storage';
 import { getEnvValue } from './env';
+import { getApiCacheSetting } from './config/apiLimits';
 import {
   fetchUnsplashImageForGooglePlaceFallback,
   fetchUnsplashImageForItinerary,
@@ -10,7 +11,11 @@ import {
 const storage = new Storage();
 const bucketName = process.env.LOCATION_BUCKET || 'duerk-travel-itinerary-app-location-data';
 const bucket = storage.bucket(bucketName);
-const CACHE_TTL_MS = Number(process.env.IMAGE_CACHE_TTL_MS) || 1000 * 60 * 60 * 24 * 7; // 7 days default
+const CACHE_TTL_MS =
+  Number(getApiCacheSetting('images', 'cacheTtlMs')) ||
+  Number(process.env.IMAGE_CACHE_TTL_MS) ||
+  1000 * 60 * 60 * 24 * 7;
+const SIGNED_URL_TTL_MS = Number(getApiCacheSetting('images', 'signedUrlTtlMs')) || 1000 * 60 * 60;
 
 function sanitizeFilename(name: string): string {
   return name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
@@ -79,7 +84,7 @@ async function getCachedImageUrl(filepath: string): Promise<string | null> {
 
     const [url] = await file.getSignedUrl({
       action: 'read',
-      expires: Date.now() + 1000 * 60 * 60, // 1 hour
+      expires: Date.now() + SIGNED_URL_TTL_MS,
     });
     return url;
   } catch (error) {
@@ -112,7 +117,7 @@ async function cacheImage(filepath: string, imageUrl: string): Promise<string> {
 
     const [url] = await file.getSignedUrl({
       action: 'read',
-      expires: Date.now() + 1000 * 60 * 60, // 1 hour
+      expires: Date.now() + SIGNED_URL_TTL_MS,
     });
     return url;
   } catch (error) {

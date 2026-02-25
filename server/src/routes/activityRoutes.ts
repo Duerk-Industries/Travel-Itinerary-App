@@ -19,11 +19,22 @@ import { applyVoteSummary } from '../services/itemVoteService';
 import type { ActivityType } from '../types';
 
 const ACTIVITY_TYPES: ActivityType[] = [
-  'Ticketed Attraction',
-  'Reservation',
-  'Tour',
-  'Open Access',
+  'Class',
+  'Concert/Show',
+  'Day Trip',
   'Event',
+  'Food & Drink',
+  'Fun & Games',
+  'Hike',
+  'Nightlife',
+  'Open Access',
+  'Outdoor Activity',
+  'Reservation',
+  'Shopping',
+  'Sights & Landmarks',
+  'Spa/Wellness',
+  'Ticketed Attraction',
+  'Tour',
 ];
 const normalizeActivityType = (value: unknown): ActivityType | null => {
   const str = typeof value === 'string' ? value.trim() : '';
@@ -90,6 +101,7 @@ router.post('/', async (req, res) => {
     bookedOn: bookedOn ?? '',
     reference: reference ?? '',
     paidBy: Array.isArray(paidBy) ? paidBy : [],
+    travelerIds: Array.isArray(travelerIds) ? travelerIds.map((id: any) => String(id)).filter(Boolean) : [],
   });
   const members = await listGroupMembers(tripGroup.groupId, userId).catch(() => []);
   const defaultTravelers = members.map((m) => String((m as any).id));
@@ -141,6 +153,7 @@ router.put('/:id', async (req, res) => {
     bookedOn,
     reference,
     paidBy: normalizedPaidBy,
+    travelerIds: Array.isArray(travelerIds) ? travelerIds.map((id: any) => String(id)).filter(Boolean) : undefined,
   });
   if (!updated) {
     res.status(404).json({ error: 'Activity not found' });
@@ -200,6 +213,7 @@ router.patch('/:id', async (req, res) => {
     bookedOn,
     reference,
     paidBy: normalizedPaidBy,
+    travelerIds: Array.isArray(travelerIds) ? travelerIds.map((id: any) => String(id)).filter(Boolean) : undefined,
   });
   if (!updated) {
     res.status(404).json({ error: 'Activity not found' });

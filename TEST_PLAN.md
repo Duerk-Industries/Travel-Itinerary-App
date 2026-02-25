@@ -178,6 +178,24 @@ npm test
 New server-side tests cover email confirmation and pending invite acceptance/rejection:
 - `server/__tests__/account.test.ts`
   - Registration requires verification; login blocked until confirmation.
+
+## 6. Attraction Catalog + Cache Config Tests
+
+- `server/__tests__/attractionsCatalogService.test.ts`
+  - Verifies destination discovery falls back safely and CSV parsing/serialization stays stable.
+  - Verifies inferred activity type and interest-tag mapping for catalog entries.
+- `server/__tests__/itinerary-prompt-plan.test.ts`
+  - Verifies prompt-plan generation accepts attraction shortlist context and returns structured results.
+- `server/__tests__/attractionsCatalogConcurrency.test.ts`
+  - Verifies concurrent destination refresh requests are coalesced (single discovery pass).
+  - Verifies prompt-block blob reuse when compact shortlist signature is unchanged.
+- Manual config verification:
+  - Update `server/config/api-limits.yaml` `caching.*` values and confirm:
+    - attraction refresh interval changes behavior (`caching.attractions.refreshDays`)
+    - confidence gate and minimum shortlist safety threshold apply (`caching.attractions.minDistinctSourcesPerAttraction`, `caching.attractions.minAttractionsAfterConfidenceFilter`)
+    - prompt blob staleness window applies (`caching.attractions.promptBlobRefreshDays`)
+    - location CSV cache and cooldown timings apply (`caching.locations.*`)
+    - image cache/signed URL TTL applies (`caching.images.*`)
   - Confirmation link expiration deletes unverified users.
   - Pending trip invites list correctly and acceptance adds trip access.
   - Invite rejection removes the pending member and cleans related trip items.
@@ -238,6 +256,60 @@ Coverage:
 - `server/__tests__/account.test.ts`
   - profile update persists optional fields
   - profile fetch returns optional fields
+
+## 8. Destination Attraction Catalog + Prompt Shortlist
+
+New server-side coverage validates the attractions-catalog pipeline used by itinerary generation:
+
+- `server/__tests__/attractionsCatalogService.test.ts`
+  - activity-type inference from attraction text
+  - interest-tag inference for supported tags
+  - CSV serialize/parse round-trip for catalog rows
+  - prompt shortlist block formatting for destination-specific prompt injection
+
+Execution:
+
+```bash
+npm run test:server
+```
   - optional fields can be cleared
 - `app/tests/AccountProfileManagement.test.tsx`
   - account profile form renders optional field inputs
+
+## 8. Prompt-Pack Itinerary Generation + Needed Item Insertion
+
+Itinerary generation now uses the prompt-pack workflow in `server/prompts/plan.md` with staged prompts/schemas:
+- `p0_norm` → normalized traits and dates
+- `p1_route` → hubs, bases, transfers
+- `p2_days` → day items
+- `p3_validate` → repair/cleanup
+- `p4_render_md` → markdown render
+
+### Server coverage
+
+- `server/__tests__/itinerary-prompt-plan.test.ts`
+  - verifies short enum mapping (`R/B/F`, `B/M/L`, `L/M/H`, `P/D/R`, activity `A/R/T/O/E`) to long codebase enums.
+  - verifies generated items are emitted with `status: "Needed"`.
+  - verifies markdown fallback when render stage is empty.
+- `server/__tests__/itinerary-traits.test.ts`
+  - verifies `/api/itinerary` returns `plan`, `details`, and `generatedItems`.
+  - verifies generated `activities` map to long activity types and keep `Needed` status.
+
+Run targeted server coverage for prompt-pack files:
+
+```bash
+npm --prefix server test -- --runInBand --coverage --coverageProvider=v8 --collectCoverageFrom=src/services/itineraryPromptPlanService.ts --collectCoverageFrom=src/routes/itineraryRoutes.ts --collectCoverageFrom=src/apis/openaiCallers.ts __tests__/itinerary-prompt-plan.test.ts __tests__/itinerary-traits.test.ts __tests__/itineraryRoutes.test.ts
+```
+
+### App coverage
+
+- `app/tests/itineraryGeneration.test.ts`
+  - verifies shared response parsing for structured `details`.
+  - verifies fallback markdown parsing.
+  - verifies generated `transfers`, `lodgings`, `activities`, and `carRentals` are posted to trip APIs with `status: "Needed"`.
+
+Run targeted app coverage for itinerary generation helpers:
+
+```bash
+npm --prefix app test -- --runInBand --coverage --coverageProvider=v8 --collectCoverageFrom=utils/itineraryGeneration.ts --collectCoverageFrom=utils/itineraryParser.ts tests/itineraryGeneration.test.ts tests/itineraryParser.test.ts
+```

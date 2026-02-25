@@ -2,6 +2,7 @@ import type { AxiosResponse } from 'axios';
 import { lookup } from 'dns/promises';
 import { getEnvValue } from './env';
 import { logError, logInfo } from './logger';
+import { getApiCacheSetting } from './config/apiLimits';
 import { requestUnsplashHealthCheck } from './apis/unsplashCallers';
 
 type UnsplashHealthResult = {
@@ -14,7 +15,7 @@ type UnsplashHealthResult = {
 const UNSPLASH_HOST = 'api.unsplash.com';
 const UNSPLASH_URL =
   'https://api.unsplash.com/photos/random?orientation=landscape&content_filter=high&query=travel';
-const DNS_LOG_TTL_MS = 5 * 60 * 1000;
+const DNS_LOG_TTL_MS = Number(getApiCacheSetting('unsplash', 'dnsLogTtlMs')) || 5 * 60 * 1000;
 let lastDnsLogAt = 0;
 let networkEnvLogged = false;
 const isTestEnv = () => process.env.NODE_ENV === 'test' || Boolean(process.env.JEST_WORKER_ID);

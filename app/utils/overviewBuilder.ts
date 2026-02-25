@@ -83,7 +83,9 @@ export type OverviewRow = {
 
 const parseDate = (value?: string | null): Date | null => {
   if (!value) return null;
-  const d = new Date(value);
+  const text = String(value).trim();
+  const parts = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const d = parts ? new Date(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3])) : new Date(text);
   return Number.isNaN(d.valueOf()) ? null : d;
 };
 
@@ -108,8 +110,8 @@ const compareByTimeThenLabel = (a: OverviewRow, b: OverviewRow) => {
 
 export const formatFriendlyDate = (dateStr?: string | null, timeStr?: string | null): string | null => {
   if (!dateStr) return null;
-  const date = new Date(dateStr);
-  if (Number.isNaN(date.valueOf())) return dateStr;
+  const date = parseDate(dateStr);
+  if (!date || Number.isNaN(date.valueOf())) return dateStr;
   const dateText = date.toLocaleDateString(undefined, {
     weekday: 'long',
     month: 'long',

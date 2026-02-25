@@ -398,13 +398,13 @@ const FollowingTab: React.FC<FollowingTabProps> = ({
               ))}
               {detail?.lodgings?.length ? null : <Text style={styles.helperText}>No lodging shared yet.</Text>}
               <View style={styles.divider} />
-              <Text style={styles.headerText}>Tours ({detail?.tours.length ?? 0})</Text>
+              <Text style={styles.headerText}>Activities ({detail?.tours.length ?? 0})</Text>
               {(detail?.tours ?? []).slice(0, 8).map((t: any) => (
                 <Text key={t.id ?? `${t.date}-${t.name}`} style={styles.bodyText}>
-                  {`${t.date ?? ''}  ${t.name ?? 'Tour'}${t.startTime ? ` at ${t.startTime}` : ''}`}
+                  {`${t.date ?? ''}  ${t.name ?? 'Activity'}${t.startTime ? ` at ${t.startTime}` : ''}`}
                 </Text>
               ))}
-              {detail?.tours?.length ? null : <Text style={styles.helperText}>No tours shared yet.</Text>}
+              {detail?.tours?.length ? null : <Text style={styles.helperText}>No activities shared yet.</Text>}
               <View style={styles.divider} />
               <Text style={styles.headerText}>Itinerary ({detail?.itineraries.length ?? 0})</Text>
               {(detail?.itineraries ?? []).length ? (

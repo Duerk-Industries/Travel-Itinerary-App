@@ -133,6 +133,12 @@ interface Expense {
   createdAt: string;
 }
 
+type AsyncItineraryTracker = {
+  jobId: string;
+  status: 'pending' | 'failed';
+  error?: string;
+};
+
 interface GroupMemberOption {
   id: string;
   guestName?: string;
@@ -409,6 +415,7 @@ const App: React.FC = () => {
   const [coveredBy, setCoveredBy] = useState<Record<string, string>>({});
   const [fellowTravelers, setFellowTravelers] = useState<FellowTraveler[]>([]);
   const [showRelationshipDropdown, setShowRelationshipDropdown] = useState(false);
+  const [asyncItineraryByTrip, setAsyncItineraryByTrip] = useState<Record<string, AsyncItineraryTracker>>({});
 
   const headers = useMemo<Record<string, string>>(
     () => (userToken ? { Authorization: `Bearer ${userToken}` } : ({} as Record<string, string>)),
@@ -1398,7 +1405,12 @@ const App: React.FC = () => {
     try {
       const res = await fetch(`${backendUrl}/api/transfers/locations?q=${encodeURIComponent(q.trim())}`, {
         headers: { Authorization: `Bearer ${userToken}` },
+        cache: 'no-store',
       });
+      if (res.status === 304) {
+        // Keep existing options when the browser serves a conditional-cache hit.
+        return;
+      }
       if (!res.ok) {
         setFlightAirportOptions([]);
         return;
@@ -1517,6 +1529,69 @@ const App: React.FC = () => {
       refreshAllData();
     }
   }, [userToken]);
+
+  useEffect(() => {
+    if (!userToken) return;
+    const pendingEntries = Object.entries(asyncItineraryByTrip).filter(([, tracker]) => tracker.status === 'pending');
+    if (!pendingEntries.length) return;
+
+    let cancelled = false;
+    const poll = async () => {
+      const nextEntries = await Promise.all(
+        pendingEntries.map(async ([tripId, tracker]) => {
+          try {
+            const res = await fetch(`${backendUrl}/api/itinerary/async/${encodeURIComponent(tracker.jobId)}`, {
+              headers,
+              cache: 'no-store',
+            });
+            if (!res.ok) return [tripId, { ...tracker, status: 'failed', error: `status ${res.status}` }] as const;
+            const data = await res.json().catch(() => ({}));
+            const status = String((data as any).status ?? '').toLowerCase();
+            if (status === 'completed') return [tripId, null] as const;
+            if (status === 'failed') {
+              return [tripId, { ...tracker, status: 'failed', error: String((data as any).error ?? 'generation failed') }] as const;
+            }
+            return [tripId, tracker] as const;
+          } catch (err) {
+            return [tripId, { ...tracker, status: 'failed', error: (err as Error).message }] as const;
+          }
+        })
+      );
+      if (cancelled) return;
+
+      let changed = false;
+      let completedCount = 0;
+      const nextState = { ...asyncItineraryByTrip };
+      for (const [tripId, nextTracker] of nextEntries) {
+        if (nextTracker === null) {
+          if (nextState[tripId]) {
+            delete nextState[tripId];
+            changed = true;
+            completedCount += 1;
+          }
+          continue;
+        }
+        const prev = asyncItineraryByTrip[tripId];
+        if (!prev || prev.status !== nextTracker.status || prev.error !== nextTracker.error || prev.jobId !== nextTracker.jobId) {
+          nextState[tripId] = nextTracker;
+          changed = true;
+        }
+      }
+      if (changed) {
+        setAsyncItineraryByTrip(nextState);
+      }
+      if (completedCount > 0) {
+        await refreshAllData();
+      }
+    };
+
+    void poll();
+    const interval = setInterval(() => void poll(), 5000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [asyncItineraryByTrip, backendUrl, headers, refreshAllData, userToken]);
 
   useEffect(() => {
     if (!userToken) {
@@ -1798,6 +1873,16 @@ const App: React.FC = () => {
     setActivePage('overview');
   };
 
+  const onAiItineraryQueued = useCallback((tripId: string, jobId: string) => {
+    setAsyncItineraryByTrip((prev) => ({
+      ...prev,
+      [tripId]: {
+        jobId,
+        status: 'pending',
+      },
+    }));
+  }, []);
+
   const deleteTrip = async (tripId: string) => {
     if (!userToken) return;
     const res = await fetch(`${backendUrl}/api/trips/${tripId}`, {
@@ -2078,6 +2163,7 @@ const App: React.FC = () => {
               traits={traits}
               headers={headers}
               setActiveTripId={setActiveTripId}
+              onAiItineraryQueued={onAiItineraryQueued}
               styles={styles}
             />
           ) : null}
@@ -2244,6 +2330,8 @@ const App: React.FC = () => {
               saveSession={saveSession}
               headers={headers}
               jsonHeaders={jsonHeaders}
+              airportOptions={flightAirportOptions}
+              onSearchAirports={fetchFlightAirports}
               logout={logout}
               styles={styles}
               traits={traits}
@@ -2780,6 +2868,12 @@ const App: React.FC = () => {
               defaultPayerId={defaultPayerId}
               styles={styles}
               mapApp={mapApp}
+              aiItineraryPending={Boolean(activeTripId && asyncItineraryByTrip[activeTripId]?.status === 'pending')}
+              aiItineraryFailedMessage={
+                activeTripId && asyncItineraryByTrip[activeTripId]?.status === 'failed'
+                  ? asyncItineraryByTrip[activeTripId]?.error ?? 'generation failed'
+                  : null
+              }
               onOpenAddress={openMaps}
               onRefreshTrips={fetchTrips}
               onRefreshGroups={fetchGroups}
@@ -3023,6 +3117,7 @@ const App: React.FC = () => {
               styles={styles}
               onCancel={closeTripWizard}
               onTripCreated={onTripCreated}
+              onAiItineraryQueued={onAiItineraryQueued}
               onUnauthorized={logout}
               onWizardCarRentals={setCarRentals}
               currentUserName={userName}

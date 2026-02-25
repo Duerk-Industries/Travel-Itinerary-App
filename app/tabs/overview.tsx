@@ -160,6 +160,8 @@ type OverviewTabProps = {
   defaultPayerId: string | null;
   styles: Record<string, any>;
   mapApp: MapApp;
+  aiItineraryPending?: boolean;
+  aiItineraryFailedMessage?: string | null;
   onOpenAddress: (address: string) => void;
   onRefreshTrips: () => void;
   onRefreshGroups: () => void;
@@ -280,6 +282,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   defaultPayerId,
   styles,
   mapApp,
+  aiItineraryPending,
+  aiItineraryFailedMessage,
   onOpenAddress,
   onRefreshTrips,
   onRefreshGroups,
@@ -619,6 +623,37 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   const displayStartDate = effectiveRangeDates.startDate ?? trip?.startDate ?? null;
   const displayEndDate = effectiveRangeDates.endDate ?? trip?.endDate ?? null;
+  const eventDateBounds = useMemo(() => {
+    const parseDateUtc = (value?: string | null): Date | null => {
+      const text = String(value ?? '').trim();
+      if (!text) return null;
+      const iso = normalizeDateString(text);
+      if (!iso) return null;
+      const parts = iso.split('-').map((v) => Number(v));
+      if (parts.length !== 3 || parts.some((n) => !Number.isFinite(n))) return null;
+      return new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+    };
+
+    const dates = [
+      ...flights.map((f) => f.departure_date),
+      ...flights.map((f) => f.arrival_date),
+      ...lodgings.map((l) => l.checkInDate),
+      ...lodgings.map((l) => l.checkOutDate),
+      ...tours.map((t) => t.date),
+      ...carRentals.map((r) => r.pickupDate),
+      ...carRentals.map((r) => r.dropoffDate),
+    ]
+      .map((value) => parseDateUtc(value))
+      .filter(Boolean) as Date[];
+
+    if (!dates.length) return null;
+    const min = new Date(Math.min(...dates.map((d) => d.getTime()))).toISOString().slice(0, 10);
+    const max = new Date(Math.max(...dates.map((d) => d.getTime()))).toISOString().slice(0, 10);
+    return { startDate: min, endDate: max };
+  }, [flights, lodgings, tours, carRentals]);
+
+  const overviewStartDate = eventDateBounds?.startDate ?? displayStartDate;
+  const overviewEndDate = eventDateBounds?.endDate ?? displayEndDate;
   const monthLabel = useMemo(
     () => formatMonthYear(trip?.startMonth ?? null, trip?.startYear ?? null),
     [trip?.startMonth, trip?.startYear]
@@ -637,10 +672,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   const tripLength = useMemo(() => {
     if (trip?.startDate || trip?.endDate) {
-      return computeTripDays(displayStartDate ?? null, displayEndDate ?? null);
+      return computeTripDays(overviewStartDate ?? null, overviewEndDate ?? null);
     }
     return trip?.durationDays ?? null;
-  }, [trip, displayStartDate, displayEndDate]);
+  }, [trip, overviewStartDate, overviewEndDate]);
 
   const rows = useMemo<OverviewRow[]>(
     () =>
@@ -667,8 +702,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       return new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
     };
     const dates: string[] = [];
-    const start = displayStartDate || effectiveRangeDates.startDate;
-    const end = displayEndDate || effectiveRangeDates.endDate;
+    const start = overviewStartDate || effectiveRangeDates.startDate;
+    const end = overviewEndDate || effectiveRangeDates.endDate;
     if (start && end) {
       const s = parseDateUtc(start);
       const e = parseDateUtc(end);
@@ -677,11 +712,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           dates.push(d.toISOString().slice(0, 10));
         }
       }
-    } else if (flights.length || lodgings.length) {
+    } else if (flights.length || lodgings.length || tours.length || carRentals.length) {
       const all = [
         ...flights.map((f) => f.departure_date),
+        ...flights.map((f) => f.arrival_date),
         ...lodgings.map((l) => l.checkInDate),
         ...lodgings.map((l) => l.checkOutDate),
+        ...tours.map((t) => t.date),
+        ...carRentals.map((r) => r.pickupDate),
+        ...carRentals.map((r) => r.dropoffDate),
       ]
         .filter(Boolean)
         .map((d) => parseDateUtc(d as string))
@@ -699,7 +738,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       dates.push(new Date().toISOString().slice(0, 10));
     }
     return Array.from(new Set(dates));
-  }, [displayStartDate, displayEndDate, effectiveRangeDates.startDate, effectiveRangeDates.endDate, flights, lodgings]);
+  }, [overviewStartDate, overviewEndDate, effectiveRangeDates.startDate, effectiveRangeDates.endDate, flights, lodgings, tours, carRentals]);
 
   useEffect(() => {
     const buildDayCards = () => {
@@ -718,7 +757,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         });
         lodgingsForDay.forEach((l) => items.push(`Lodging at ${l.name} (${l.checkInDate} - ${l.checkOutDate})`));
         const toursForDay = tours.filter((t) => t.date === date);
-        toursForDay.forEach((t) => items.push(`Tour: ${t.name} at ${t.startTime || 'time TBD'}`));
+        toursForDay.forEach((t) => items.push(`Activity: ${t.name} at ${t.startTime || 'time TBD'}`));
         const rentalsForDay = carRentals.filter((r) => r.pickupDate === date || r.dropoffDate === date);
         rentalsForDay.forEach((r) => items.push(`Rental car (${r.vendor || 'vendor'}) ${r.pickupDate} -> ${r.dropoffDate}`));
         const label = `Day ${idx + 1}`;
@@ -748,6 +787,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         if (raw) {
           const parsed = JSON.parse(raw) as DayCard[];
           if (Array.isArray(parsed) && parsed.length) {
+            const cachedDates = parsed.map((card) => String(card?.date ?? '')).filter(Boolean);
+            const computedDates = allDates.map((date) => String(date ?? '')).filter(Boolean);
+            const cacheMatchesComputedRange =
+              cachedDates.length === computedDates.length &&
+              cachedDates.every((date, idx) => date === computedDates[idx]);
+            if (!cacheMatchesComputedRange) return;
             setDayCards(parsed);
             setSelectedDay((prev) => (prev && parsed.some((card) => card.date === prev) ? prev : null));
           }
@@ -757,15 +802,17 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       }
     };
     loadCache().catch(() => undefined);
-  }, [trip?.id, dayCards.length]);
+  }, [trip?.id, dayCards.length, allDates]);
 
   useEffect(() => {
     const fetchImages = async () => {
       if (!dayCards.length) return;
+      const missingCards = dayCards.filter((card) => !dayImages[card.date]);
+      if (!missingCards.length) return;
       const next: Record<string, string> = {};
-      for (let idx = 0; idx < dayCards.length; idx += 1) {
-        const card = dayCards[idx];
-        const dayNumber = idx + 1;
+      for (let idx = 0; idx < missingCards.length; idx += 1) {
+        const card = missingCards[idx];
+        const dayNumber = Math.max(1, dayCards.findIndex((candidate) => candidate.date === card.date) + 1);
         const activities = itineraryDetails
           .filter((detail) => detail.day === dayNumber)
           .map((detail) => detail.activity)
@@ -794,10 +841,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           // ignore
         }
       }
-      if (Object.keys(next).length) setDayImages(next);
+      if (Object.keys(next).length) {
+        setDayImages((prev) => ({ ...prev, ...next }));
+      }
     };
     fetchImages().catch(() => undefined);
-  }, [backendUrl, headers, dayCards, tripLocationLabel]);
+  }, [backendUrl, headers, dayCards, dayImages, itineraryDetails, tours, tripLocationLabel, trip?.destination]);
 
   useEffect(() => {
     if (!trip?.id || !trip.startDate) return;
@@ -1145,7 +1194,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     if (editingTourId) {
       const { payload, error } = buildActivityPayload(tourDraft, defaultPayerId);
       if (error || !payload) {
-        alert(error || 'Unable to save tour');
+        alert(error || 'Unable to save activity');
         return;
       }
       const res = await fetch(`${backendUrl}/api/activities/${editingTourId}`, {
@@ -1155,7 +1204,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        alert(data.error || 'Unable to save tour');
+        alert(data.error || 'Unable to save activity');
         return;
       }
       closeTourModal();
@@ -1170,7 +1219,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       defaultPayerId,
     });
     if (!result.ok) {
-      alert(result.error || 'Unable to save tour');
+      alert(result.error || 'Unable to save activity');
       return;
     }
     closeTourModal();
@@ -1402,8 +1451,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     </View>
   );
 
-  const startLabel = formatFriendlyDate(displayStartDate);
-  const endLabel = formatFriendlyDate(displayEndDate);
+  const startLabel = formatFriendlyDate(overviewStartDate);
+  const endLabel = formatFriendlyDate(overviewEndDate);
   const dateRange = startLabel || endLabel ? `${startLabel ?? 'Start'} - ${endLabel ?? 'End'}` : null;
   const dayColStyle = { minWidth: 90, width: 90 };
   const dateColStyle = { minWidth: 200, width: 200 };
@@ -1510,7 +1559,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const buildDaySummary = (info?: { flights: Flight[]; lodgings: Lodging[]; tours: Tour[]; rentals: CarRental[]; details: ItineraryDetail[] }) => {
     if (!info) return 'Free day';
     if (info.details.length) return info.details[0].activity;
-    if (info.tours.length) return info.tours[0].name || 'Tour day';
+    if (info.tours.length) return info.tours[0].name || 'Activity day';
     if (info.flights.length) return 'Travel day';
     if (info.lodgings.length) return `Stay at ${info.lodgings[0].name || 'lodging'}`;
     if (info.rentals.length) return 'Drive day';
@@ -1753,7 +1802,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
               {toursForDay.length ? (
                 <View style={styles.dayInfoCard}>
-                  <Text style={styles.sectionTitle}>Tours</Text>
+                  <Text style={styles.sectionTitle}>Activities</Text>
                   {toursForDay.map((tour) => {
                     const participants =
                       Array.isArray(tour.paidBy) && tour.paidBy.length
@@ -1779,12 +1828,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                             ? formatTravelerNames(tour.paidBy)
                             : formatTravelerNames(allMemberIds);
                         return {
-                          title: toursForDay.length > 1 ? `Tour ${idx + 1}` : undefined,
+                          title: toursForDay.length > 1 ? `Activity ${idx + 1}` : undefined,
                           subtitle: showTourNames && participants ? `Travelers: ${participants}` : undefined,
                           items: formatTourDetails(tour),
                         };
                       });
-                      setDetailModal({ title: 'Tour Details', sections });
+                      setDetailModal({ title: 'Activity Details', sections });
                     }}
                   >
                     <Text style={styles.dayInfoButtonText}>See tour details →</Text>
@@ -2371,10 +2420,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         <View style={styles.divider} />
 
         <View style={styles.row}>
-          <Text style={styles.headerText}>Tours & Activities</Text>
+          <Text style={styles.headerText}>Activities</Text>
           {isEditing && (
             <TouchableOpacity style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]} onPress={openAddTour}>
-              <Text style={styles.buttonText}>+ Add Tour</Text>
+              <Text style={styles.buttonText}>+ Add Activity</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -2428,6 +2477,19 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   return (
     <View style={{ flex: 1 }}>
+      {trip && aiItineraryPending ? (
+        <View style={[styles.card, { borderColor: '#93c5fd', borderWidth: 1, marginBottom: 10 }]}>
+          <Text style={styles.sectionTitle}>AI Itinerary In Progress</Text>
+          <Text style={styles.helperText}>Your AI trip plan is being generated and will appear here automatically.</Text>
+        </View>
+      ) : null}
+      {trip && !aiItineraryPending && aiItineraryFailedMessage ? (
+        <View style={[styles.card, { borderColor: '#fecaca', borderWidth: 1, marginBottom: 10, paddingVertical: 8 }]}>
+          <Text style={[styles.helperText, { color: '#7f1d1d' }]}>
+            AI itinerary failed. You can retry from the Itinerary tab.
+          </Text>
+        </View>
+      ) : null}
       {renderContent()}
       {Platform.OS !== 'web' && timePickerTarget && NativeDateTimePicker ? (
         <NativeDateTimePicker

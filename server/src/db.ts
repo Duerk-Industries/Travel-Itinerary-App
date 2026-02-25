@@ -14,6 +14,8 @@ import type {
   PlaceLookupCache,
   Expense,
   LocationRecord,
+  AttractionCatalogEntry,
+  AttractionShortlistBlob,
   TripActivity,
   TripComment,
   CarRental,
@@ -188,6 +190,18 @@ export const getLocationsByIds = async (...args: Parameters<ReturnType<typeof ad
   adapter().getLocationsByIds(...args);
 export const upsertLocation = async (...args: Parameters<ReturnType<typeof adapter>['upsertLocation']>) =>
   adapter().upsertLocation(...args);
+export const listAttractionCatalogEntries = async (
+  ...args: Parameters<ReturnType<typeof adapter>['listAttractionCatalogEntries']>
+): Promise<AttractionCatalogEntry[]> => adapter().listAttractionCatalogEntries(...args);
+export const upsertAttractionCatalogEntry = async (
+  ...args: Parameters<ReturnType<typeof adapter>['upsertAttractionCatalogEntry']>
+) => adapter().upsertAttractionCatalogEntry(...args);
+export const getAttractionShortlistBlob = async (
+  ...args: Parameters<ReturnType<typeof adapter>['getAttractionShortlistBlob']>
+): Promise<AttractionShortlistBlob | null> => adapter().getAttractionShortlistBlob(...args);
+export const upsertAttractionShortlistBlob = async (
+  ...args: Parameters<ReturnType<typeof adapter>['upsertAttractionShortlistBlob']>
+) => adapter().upsertAttractionShortlistBlob(...args);
 export const listTraits = async (...args: Parameters<ReturnType<typeof adapter>['listTraits']>): Promise<Trait[]> =>
   adapter().listTraits(...args);
 export const createTrait = async (...args: Parameters<ReturnType<typeof adapter>['createTrait']>) =>
