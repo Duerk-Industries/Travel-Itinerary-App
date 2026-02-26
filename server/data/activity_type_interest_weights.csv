@@ -1,17 +1,17 @@
-activity_type,outdoors,culture,food,nightlife,relax,shopping,day_trips,events,classes
-Class,5,35,25,5,10,0,0,5,90
-Concert/Show,0,35,0,45,5,0,0,75,0
-Day Trip,25,25,10,0,10,0,90,5,0
-Event,0,30,10,30,5,0,0,95,0
-Food & Drink,0,10,95,20,10,0,0,5,15
-Fun & Games,15,5,10,40,15,5,0,20,5
-Hike,95,5,0,0,5,0,10,0,0
-Nightlife,0,5,25,95,5,5,0,25,0
-Open Access,20,40,10,5,15,10,10,5,0
-Outdoor Activity,90,10,0,0,20,0,20,0,5
-Reservation,5,35,20,5,10,5,10,10,10
-Shopping,0,5,0,5,10,95,0,0,0
-Sights & Landmarks,10,95,0,0,10,0,5,5,0
-Spa/Wellness,0,5,0,0,95,0,0,0,20
-Ticketed Attraction,5,90,5,0,5,0,5,0,5
-Tour,20,45,15,10,10,5,20,10,10
+activity_type,outdoors,adventure,culture,food,nightlife,relax,photography,authentic_local,iconic_landmarks
+Class,5,10,35,30,5,10,20,40,10
+Concert/Show,0,10,25,5,55,10,20,25,10
+Day Trip,35,45,20,10,5,15,50,35,25
+Event,5,15,25,25,35,10,25,35,30
+Food & Drink,0,5,10,95,25,20,25,85,10
+Fun & Games,15,45,5,15,40,15,20,20,5
+Hike,95,75,5,0,0,10,65,20,10
+Nightlife,0,20,10,30,95,10,25,35,5
+Open Access,25,20,30,15,10,25,45,40,30
+Outdoor Activity,90,85,5,0,5,20,55,20,15
+Reservation,10,15,35,25,10,10,25,25,20
+Shopping,5,10,5,10,20,20,30,55,10
+Sights & Landmarks,20,15,95,5,5,10,60,20,95
+Spa/Wellness,5,5,5,0,0,95,20,15,0
+Ticketed Attraction,10,10,90,10,5,10,45,25,80
+Tour,25,30,55,20,20,15,45,60,55

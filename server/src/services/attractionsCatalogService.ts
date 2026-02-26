@@ -28,6 +28,12 @@ type DiscoveryCandidate = {
   snippet?: string | null;
 };
 
+type DestinationSignals = {
+  normalized: string;
+  aliases: string[];
+  tokenSets: string[][];
+};
+
 const CSV_HEADER = [
   'id',
   'destination_key',
@@ -56,6 +62,27 @@ const slugify = (value: string): string =>
     .replace(/^-|-$/g, '');
 
 export const normalizeDestinationKey = (value: string): string => normalizeTextKey(value).replace(/\s+/g, ' ').trim();
+
+const destinationAliases = (value: string): string[] => {
+  const key = normalizeDestinationKey(value);
+  if (!key) return [];
+  const aliases = new Set<string>([key]);
+  if (key === 'mexico city' || key === 'ciudad de mexico' || key === 'cdmx') {
+    aliases.add('mexico city');
+    aliases.add('ciudad de mexico');
+    aliases.add('cdmx');
+  }
+  return Array.from(aliases);
+};
+
+const buildDestinationSignals = (destination: string): DestinationSignals => {
+  const aliases = destinationAliases(destination);
+  return {
+    normalized: normalizeDestinationKey(destination),
+    aliases,
+    tokenSets: aliases.map((alias) => alias.split(' ').filter(Boolean)).filter((tokens) => tokens.length > 0),
+  };
+};
 const toBudgetTier = (raw: unknown): AttractionBudgetTier => {
   const value = String(raw ?? '').trim().toLowerCase();
   if (value === 'free' || value === 'paid' || value === 'premium') return value;
@@ -77,7 +104,26 @@ const shouldExcludeCandidate = (name: string): boolean => {
   if (lower.startsWith('category:')) return true;
   if (lower.startsWith('template:')) return true;
   if (lower.includes('disambiguation')) return true;
+  if (/^(law enforcement|tourism in|history of|economy of|demographics of|geography of|culture of)\b/.test(lower))
+    return true;
+  if (/\bin mexico\b/.test(lower) && !/\bmexico city\b/.test(lower)) return true;
   return false;
+};
+
+const localityRelevanceScore = (candidate: DiscoveryCandidate, signals: DestinationSignals): number => {
+  const nameKey = normalizeTextKey(candidate.name || '');
+  const snippetKey = normalizeTextKey(candidate.snippet || '');
+  const urlKey = normalizeTextKey(candidate.sourceUrl || '');
+  if (!nameKey && !snippetKey && !urlKey) return 0;
+
+  let score = 0;
+  for (const alias of signals.aliases) {
+    if (!alias) continue;
+    if (nameKey.includes(alias)) score += 6;
+    if (snippetKey.includes(alias)) score += 5;
+    if (urlKey.includes(alias.replace(/\s+/g, '-')) || urlKey.includes(alias)) score += 4;
+  }
+  return score;
 };
 
 export const inferActivityType = (name: string, snippet?: string): ActivityType => {
@@ -225,10 +271,12 @@ type RankedDiscoveryCandidate = DiscoveryCandidate & { sourceCount: number };
 
 const dedupeAndRankCandidates = (
   candidates: DiscoveryCandidate[],
+  destination: string,
   limit: number,
   minDistinctSources: number,
   minResultsAfterFilter: number
 ): RankedDiscoveryCandidate[] => {
+  const destinationSignals = buildDestinationSignals(destination);
   const merged = new Map<
     string,
     {
@@ -241,6 +289,7 @@ const dedupeAndRankCandidates = (
   for (const raw of candidates) {
     const name = sanitizeCandidateName(raw.name);
     if (shouldExcludeCandidate(name)) continue;
+    if (normalizeDestinationKey(name) === destinationSignals.normalized) continue;
     const key = normalizeTextKey(name);
     if (!key) continue;
     const existing = merged.get(key) ?? {
@@ -270,7 +319,9 @@ const dedupeAndRankCandidates = (
     .map((item) => ({
       ...item.candidate,
       sourceCount: Math.max(item.sourceGroups.size, item.sourceLabels.size > 0 ? 1 : 0),
+      localityScore: localityRelevanceScore(item.candidate, destinationSignals),
     }))
+    .filter((item) => item.localityScore >= 5 || (item.localityScore >= 4 && item.sourceCount >= 2))
     .sort((a, b) => (b.sourceCount !== a.sourceCount ? b.sourceCount - a.sourceCount : a.name.localeCompare(b.name)));
 
   const strictThreshold = Math.max(1, minDistinctSources);
@@ -310,7 +361,7 @@ const discoverTopAttractions = async (
   } catch (err) {
     logError(`[attractions] Wikipedia lookup failed destination="${destination}"`, err);
   }
-  const ranked = dedupeAndRankCandidates(discoveryPool, limit, minDistinctSources, minResultsAfterFilter);
+  const ranked = dedupeAndRankCandidates(discoveryPool, destination, limit, minDistinctSources, minResultsAfterFilter);
   logInfo(
     `[attractions] discovery destination="${destination}" serp=${serpCount} wiki=${wikiCount} deduped=${ranked.length}`
   );
@@ -501,6 +552,101 @@ const mergeCatalogRows = (existing: AttractionCatalogEntry[], incoming: Attracti
   return Array.from(map.values());
 };
 
+const isCuratedRow = (row: AttractionCatalogEntry): boolean =>
+  String(row.sourceLabel ?? '')
+    .trim()
+    .toLowerCase() === 'curated';
+
+const mergeCuratedWithDiscovered = (
+  current: AttractionCatalogEntry[],
+  discovered: AttractionCatalogEntry[],
+  limit: number,
+  destinationKey: string,
+  destinationDisplayName: string,
+  timestamp: string
+): AttractionCatalogEntry[] => {
+  const curated = current
+    .filter(isCuratedRow)
+    .sort((a, b) => (a.rank !== b.rank ? a.rank - b.rank : a.name.localeCompare(b.name)));
+  const curatedIdSet = new Set(curated.map((row) => row.id));
+  const curatedNameSet = new Set(curated.map((row) => normalizeTextKey(row.name)));
+  const discoveredFiltered = discovered.filter(
+    (row) => !curatedIdSet.has(row.id) && !curatedNameSet.has(normalizeTextKey(row.name))
+  );
+  const combined = [...curated, ...discoveredFiltered].slice(0, Math.max(1, limit));
+  return combined.map((row, idx) => ({
+    ...row,
+    destinationKey,
+    destinationDisplayName,
+    rank: idx + 1,
+    sourceLabel: isCuratedRow(row) ? 'curated' : row.sourceLabel ?? null,
+    updatedAt: isCuratedRow(row) ? row.updatedAt : timestamp,
+  }));
+};
+
+const replaceDestinationRows = (
+  existing: AttractionCatalogEntry[],
+  destinationKey: string,
+  incoming: AttractionCatalogEntry[]
+): AttractionCatalogEntry[] => {
+  const key = normalizeDestinationKey(destinationKey);
+  const retained = existing.filter((row) => normalizeDestinationKey(row.destinationKey) !== key);
+  return [...retained, ...incoming];
+};
+
+const catalogRowsEquivalent = (left: AttractionCatalogEntry[], right: AttractionCatalogEntry[]): boolean => {
+  if (left.length !== right.length) return false;
+  const toMap = (rows: AttractionCatalogEntry[]) =>
+    new Map(
+      rows.map((row) => [
+        row.id,
+        JSON.stringify({
+          id: row.id,
+          destinationKey: row.destinationKey,
+          destinationDisplayName: row.destinationDisplayName,
+          name: row.name,
+          rank: row.rank,
+          activityType: row.activityType,
+          interestTags: row.interestTags,
+          sourceUrl: row.sourceUrl ?? null,
+          sourceLabel: row.sourceLabel ?? null,
+          snippet: row.snippet ?? null,
+          sourceCount: Number(row.sourceCount) || 1,
+          budgetTier: row.budgetTier ?? 'paid',
+          updatedAt: row.updatedAt,
+        }),
+      ])
+    );
+  const a = toMap(left);
+  const b = toMap(right);
+  if (a.size !== b.size) return false;
+  for (const [id, payload] of a.entries()) {
+    if (b.get(id) !== payload) return false;
+  }
+  return true;
+};
+
+const persistCatalogRowsToCsv = async (rows: AttractionCatalogEntry[]): Promise<void> => {
+  if (!rows.length) return;
+  if (process.env.NODE_ENV === 'test') return;
+  const existing = await readCatalogCsv();
+  const merged = mergeCatalogRows(existing, rows);
+  if (catalogRowsEquivalent(existing, merged)) return;
+  await writeCatalogCsv(merged);
+};
+
+const persistDestinationCatalogRowsToCsv = async (
+  destinationKey: string,
+  rows: AttractionCatalogEntry[]
+): Promise<void> => {
+  if (!rows.length) return;
+  if (process.env.NODE_ENV === 'test') return;
+  const existing = await readCatalogCsv();
+  const replaced = replaceDestinationRows(existing, destinationKey, rows);
+  if (catalogRowsEquivalent(existing, replaced)) return;
+  await writeCatalogCsv(replaced);
+};
+
 const isStale = (rows: AttractionCatalogEntry[], refreshDays: number): boolean => {
   if (!rows.length) return true;
   const newestMs = rows.reduce((max, row) => {
@@ -615,12 +761,14 @@ const ensureDestinationCatalog = async (params: {
 
   const existing = await listAttractionCatalogEntries(params.userId, destinationKey, params.limit);
   if (existing.length >= params.limit && !isStale(existing, params.refreshDays)) {
+    await persistCatalogRowsToCsv(existing.slice(0, params.limit));
     return existing.slice(0, params.limit);
   }
 
   return withDestinationRefreshLock(destinationKey, async () => {
     const current = await listAttractionCatalogEntries(params.userId, destinationKey, params.limit);
     if (current.length >= params.limit && !isStale(current, params.refreshDays)) {
+      await persistCatalogRowsToCsv(current.slice(0, params.limit));
       return current.slice(0, params.limit);
     }
 
@@ -650,14 +798,21 @@ const ensureDestinationCatalog = async (params: {
       };
     });
 
-    if (!entries.length) return current.slice(0, params.limit);
-    for (const entry of entries) {
+    const finalEntries = mergeCuratedWithDiscovered(
+      current,
+      entries,
+      params.limit,
+      destinationKey,
+      destinationDisplayName,
+      timestamp
+    );
+    if (!finalEntries.length) return current.slice(0, params.limit);
+    for (const entry of finalEntries) {
       await upsertAttractionCatalogEntry(entry);
     }
-    const csvRows = mergeCatalogRows(await readCatalogCsv(), entries);
-    await writeCatalogCsv(csvRows);
+    await persistDestinationCatalogRowsToCsv(destinationKey, finalEntries);
     logInfo(
-      `[attractions] refreshed destination="${destinationDisplayName}" discovered=${entries.length} key=${destinationKey}`
+      `[attractions] refreshed destination="${destinationDisplayName}" discovered=${entries.length} final=${finalEntries.length} curatedKept=${finalEntries.filter(isCuratedRow).length} key=${destinationKey}`
     );
     return listAttractionCatalogEntries(params.userId, destinationKey, params.limit);
   });

@@ -4,14 +4,19 @@
     "comfort": { "enum": ["Budget", "Midrange", "Luxury"] },
     "mobility_walking_tolerance": { "enum": ["Low", "Medium", "High"] },
     "car_preference": { "enum": ["PublicTransitOnly", "DayTripsOnly", "FullTripRental"] },
+    "interaction_style": { "enum": ["self_guided", "mixed", "guided"] },
     "activity_mix": {
       "description": "Target weights summing to 100",
       "fields": {
         "Outdoors": "integer",
+        "Adventure": "integer",
         "Culture": "integer",
         "Food": "integer",
         "Nightlife": "integer",
-        "Relax": "integer"
+        "Relax": "integer",
+        "Photography": "integer",
+        "AuthenticLocal": "integer",
+        "IconicLandmarks": "integer"
       }
     },
     "logistics_logic": {

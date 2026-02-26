@@ -503,7 +503,7 @@ const persistResult = async (params: {
     const saved = await insertActivity({
       userId: params.userId,
       tripId: params.tripId,
-      status: 'Needed',
+      status: safeString(activity.status) === 'Needed' ? 'Needed' : 'Proposed',
       activityType: validActivityType(activity.activityType),
       date,
       name: safeString(activity.name) || 'Suggested activity',

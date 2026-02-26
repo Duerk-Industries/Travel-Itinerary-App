@@ -368,14 +368,10 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
   const [showItineraryCountryDropdown, setShowItineraryCountryDropdown] = useState(false);
   const [showItineraryRegionDropdown, setShowItineraryRegionDropdown] = useState(false);
   const [itineraryDays, setItineraryDays] = useState('5');
-  const [budgetMin, setBudgetMin] = useState(500);
-  const [budgetMax, setBudgetMax] = useState(2500);
-  const [budgetLevel, setBudgetLevel] = useState<'cheap' | 'middle' | 'expensive'>('middle');
   const [itineraryAirport, setItineraryAirport] = useState('');
   const [itineraryAirportOptions, setItineraryAirportOptions] = useState<string[]>([]);
   const [showItineraryAirportDropdown, setShowItineraryAirportDropdown] = useState(false);
   const [itineraryPlan, setItineraryPlan] = useState('');
-  const [itineraryTripStyle, setItineraryTripStyle] = useState('');
   const [itineraryLoading, setItineraryLoading] = useState(false);
   const [itineraryError, setItineraryError] = useState('');
   const [itineraryRecords, setItineraryRecords] = useState<ItineraryRecord[]>([]);
@@ -385,6 +381,11 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
   const [editingDetailId, setEditingDetailId] = useState<string | null>(null);
   const [detailDraft, setDetailDraft] = useState({ day: '1', time: '', activity: '', cost: '' });
   const promptTraits = useMemo(() => extractPromptTraitsFromTraits(traits).profile, [traits]);
+  const budgetRange = useMemo(() => {
+    if (promptTraits.tt.c === 'B') return { min: 500, max: 1500 };
+    if (promptTraits.tt.c === 'L') return { min: 4000, max: 8000 };
+    return { min: 1500, max: 4000 };
+  }, [promptTraits.tt.c]);
 
   const filteredCountries = useMemo(() => {
     const query = (showItineraryCountryDropdown ? countrySearch : itineraryCountry).trim().toLowerCase();
@@ -442,7 +443,6 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
     setActiveTripId(it.tripId);
     setItineraryCountry(it.destination);
     setItineraryDays(String(it.days));
-    if (it.budget != null) setBudgetMax(Number(it.budget));
     fetchItineraryDetails(it.id);
   };
 
@@ -490,7 +490,7 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
     }
     const destination = itineraryCountry.trim() || 'Unknown';
     const daysNum = Number(itineraryDays || '1');
-    const existing = findExistingItinerary(activeTripId, destination, daysNum, null, budgetMax);
+    const existing = findExistingItinerary(activeTripId, destination, daysNum, null, budgetRange.max);
     let itineraryId = existing?.id;
     if (!itineraryId) {
       const createRes = await fetch(`${backendUrl}/api/itineraries`, {
@@ -500,7 +500,7 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
           tripId: activeTripId,
           destination,
           days: daysNum,
-          budget: budgetMax,
+          budget: budgetRange.max,
         }),
       });
       const created = await createRes.json().catch(() => ({}));
@@ -565,10 +565,9 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
         body: JSON.stringify({
           country,
           days: Number(days),
-          budgetMin,
-          budgetMax,
+          budgetMin: budgetRange.min,
+          budgetMax: budgetRange.max,
           departureAirport: itineraryAirport.trim() || undefined,
-          tripStyle: itineraryTripStyle.trim() || undefined,
           tripId: activeTripId,
           tt: promptTraits.tt,
           ut: promptTraits.ut,
@@ -605,7 +604,7 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
     }
     const destination = itineraryCountry.trim();
     const daysNum = Number(itineraryDays);
-    const existing = findExistingItinerary(activeTripId, destination, daysNum, editingItineraryId, budgetMax);
+    const existing = findExistingItinerary(activeTripId, destination, daysNum, editingItineraryId, budgetRange.max);
     if (existing) {
       alert('Itinerary already exists for this trip');
       return;
@@ -619,7 +618,7 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
         tripId: activeTripId,
         destination,
         days: daysNum,
-        budget: budgetMax,
+        budget: budgetRange.max,
       }),
     });
     const data = await res.json().catch(() => ({}));
@@ -695,17 +694,6 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
     if (!userToken) return;
     fetchItineraries();
   }, [userToken]);
-
-  useEffect(() => {
-    const presets: Record<typeof budgetLevel, { min: number; max: number }> = {
-      cheap: { min: 500, max: 1500 },
-      middle: { min: 1500, max: 4000 },
-      expensive: { min: 4000, max: 8000 },
-    };
-    const preset = presets[budgetLevel];
-    setBudgetMin(preset.min);
-    setBudgetMax(preset.max);
-  }, [budgetLevel]);
 
   useEffect(() => {
     setItineraryRegion('');
@@ -820,38 +808,6 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
           value={itineraryDays}
           onChangeText={(text: string) => setItineraryDays(text.replace(/[^0-9]/g, ''))}
         />
-        <TextInput
-          style={styles.input}
-          placeholder="What kind of trip do you want? (e.g., foodie weekend, outdoor adventure, museum crawl)"
-          value={itineraryTripStyle}
-          onChangeText={(text: string) => setItineraryTripStyle(text)}
-          multiline
-        />
-
-        <Text style={styles.modalLabel}>Budget</Text>
-        <View style={styles.addRow}>
-          {(['cheap', 'middle', 'expensive'] as const).map((level) => (
-            <TouchableOpacity
-              key={level}
-              style={[
-                styles.button,
-                styles.smallButton,
-                budgetLevel === level && styles.toggleActive,
-                { flex: 1 },
-              ]}
-              onPress={() => setBudgetLevel(level)}
-            >
-              <View style={styles.budgetRow}>
-                <Text style={styles.buttonText}>
-                  {level === 'cheap' ? 'Cheap' : level === 'middle' ? 'Middle' : 'Expensive'}
-                </Text>
-                <View style={[styles.budgetIndicator, budgetLevel === level && styles.budgetIndicatorActive]} />
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
-        <Text style={styles.helperText}>Cheap ~$500-$1,500 | Middle ~$1,500-$4,000 | Expensive ~$4,000-$8,000</Text>
-
         <TouchableOpacity style={styles.button} onPress={generateItinerary} disabled={itineraryLoading}>
           <Text style={styles.buttonText}>{itineraryLoading ? 'Generating...' : 'Generate Itinerary'}</Text>
         </TouchableOpacity>

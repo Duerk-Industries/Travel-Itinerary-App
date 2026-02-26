@@ -290,7 +290,7 @@ export type ItineraryPromptPace = 'Relaxed' | 'Balanced' | 'Fast';
 export type ItineraryPromptComfort = 'Budget' | 'Midrange' | 'Luxury';
 export type ItineraryPromptMobility = 'Low' | 'Medium' | 'High';
 export type ItineraryPromptCarPreference = 'PublicTransitOnly' | 'DayTripsOnly' | 'FullTripRental';
-export type ItineraryPromptTripMode = 'Explorer' | 'Balanced' | 'Slow';
+export type ItineraryPromptInteractionStyle = 'Self-Guided' | 'Mixed' | 'Guided';
 export type TransferMode = 'Flight' | 'Train' | 'Bus' | 'Private' | 'Ferry' | 'Other';
 
 export interface ItineraryPromptProfile {
@@ -298,8 +298,18 @@ export interface ItineraryPromptProfile {
   comfort: ItineraryPromptComfort;
   mobility: ItineraryPromptMobility;
   carPreference: ItineraryPromptCarPreference;
-  tripMode: ItineraryPromptTripMode;
-  weights: { o: number; c: number; f: number; n: number; r: number };
+  interactionStyle: ItineraryPromptInteractionStyle;
+  weights: {
+    outdoors: number;
+    adventure: number;
+    culture: number;
+    food: number;
+    nightlife: number;
+    relax: number;
+    photography: number;
+    authentic_local: number;
+    iconic_landmarks: number;
+  };
 }
 
 export interface ItineraryGeneratedTransfer {
@@ -329,7 +339,7 @@ export interface ItineraryGeneratedLodging {
 }
 
 export interface ItineraryGeneratedActivity {
-  status: 'Needed';
+  status: 'Proposed';
   activityType: ActivityType;
   date: string;
   name: string;

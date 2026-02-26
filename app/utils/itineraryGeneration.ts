@@ -46,7 +46,7 @@ type GeneratedLodging = {
 };
 
 type GeneratedActivity = {
-  status?: 'Needed';
+  status?: 'Needed' | 'Proposed';
   activityType?: ActivityType;
   date?: string;
   name?: string;
@@ -443,7 +443,7 @@ export const addGeneratedItemsToTrip = async (params: {
   for (let i = 0; i < activities.length; i += 1) {
     const activity = activities[i];
     const payload = {
-      status: 'Needed',
+      status: safeString(activity.status) === 'Needed' ? 'Needed' : 'Proposed',
       tripId,
       activityType: validActivityType(activity.activityType),
       date: safeString(activity.date) || today,

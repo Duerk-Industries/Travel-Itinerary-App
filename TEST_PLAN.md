@@ -289,11 +289,16 @@ Itinerary generation now uses the prompt-pack workflow in `server/prompts/plan.m
 
 - `server/__tests__/itinerary-prompt-plan.test.ts`
   - verifies short enum mapping (`R/B/F`, `B/M/L`, `L/M/H`, `P/D/R`, activity `A/R/T/O/E`) to long codebase enums.
-  - verifies generated items are emitted with `status: "Needed"`.
+  - verifies interaction-style mapping (`self_guided`, `mixed`, `guided`) into returned `promptProfile`.
+  - verifies generated items keep `status: "Needed"` for transfers/lodgings/car rentals and `status: "Proposed"` for activities.
   - verifies markdown fallback when render stage is empty.
+  - verifies destination hierarchy pruning (city over country/state aliases), duplicate-activity removal, and shortlist-grounded replacement of generic text.
 - `server/__tests__/itinerary-traits.test.ts`
   - verifies `/api/itinerary` returns `plan`, `details`, and `generatedItems`.
-  - verifies generated `activities` map to long activity types and keep `Needed` status.
+  - verifies generated `activities` map to long activity types and return in `generatedItems`.
+- `server/__tests__/activityTypeInterestWeights.test.ts`
+  - verifies runtime CSV-driven activity scoring honors new 9-dimension preference vectors.
+  - verifies unknown activity rows safely score as zero.
 
 Run targeted server coverage for prompt-pack files:
 

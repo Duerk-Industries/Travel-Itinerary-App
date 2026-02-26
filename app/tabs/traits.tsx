@@ -4,14 +4,15 @@ import type { TraitRecord } from './traitsLogic';
 import {
   PROMPT_CAR_OPTIONS,
   PROMPT_COMFORT_OPTIONS,
+  PROMPT_INTERACTION_STYLE_OPTIONS,
   PROMPT_INTEREST_OPTIONS,
   PROMPT_MOBILITY_OPTIONS,
   PROMPT_PACE_OPTIONS,
   PROMPT_PROFILE_TRAIT_NAME,
-  PROMPT_TRIP_MODE_OPTIONS,
   extractPromptTraitsFromTraits,
   normalizePromptTraits,
   serializePromptTraits,
+  type PromptInterestWeights,
   type PromptPaceCode,
   type PromptMobilityCode,
 } from '../utils/promptTraits';
@@ -66,7 +67,7 @@ export function TraitsTab<T extends TraitRecord>({
     setPromptTraits(normalizePromptTraits(storedPromptProfile.profile));
   }, [promptTraitsDigest]);
 
-  const setTripWeight = (key: 'o' | 'c' | 'f' | 'n' | 'r', raw: string) => {
+  const setTripWeight = (key: keyof PromptInterestWeights, raw: string) => {
     const value = raw.replace(/[^0-9]/g, '');
     setPromptTraits((prev) => ({
       ...prev,
@@ -245,15 +246,15 @@ export function TraitsTab<T extends TraitRecord>({
           })}
         </View>
 
-        <Text style={styles.modalLabel}>Trip Mode</Text>
+        <Text style={styles.modalLabel}>Interaction Style</Text>
         <View style={styles.traitGrid}>
-          {PROMPT_TRIP_MODE_OPTIONS.map((opt) => {
-            const selected = promptTraits.tt.tm === opt.value;
+          {PROMPT_INTERACTION_STYLE_OPTIONS.map((opt) => {
+            const selected = promptTraits.tt.is === opt.value;
             return (
               <TouchableOpacity
                 key={opt.value}
                 style={[styles.traitChip, selected && styles.traitChipSelected]}
-                onPress={() => setPromptTraits((prev) => ({ ...prev, tt: { ...prev.tt, tm: opt.value } }))}
+                onPress={() => setPromptTraits((prev) => ({ ...prev, tt: { ...prev.tt, is: opt.value } }))}
               >
                 <Text style={[styles.traitChipText, selected && styles.traitChipTextSelected]}>{opt.label}</Text>
               </TouchableOpacity>
@@ -267,36 +268,64 @@ export function TraitsTab<T extends TraitRecord>({
             style={[styles.input, { minWidth: 120 }]}
             placeholder="Outdoors"
             keyboardType="numeric"
-            value={String(promptTraits.tt.w.o)}
-            onChangeText={(text: string) => setTripWeight('o', text)}
+            value={String(promptTraits.tt.w.outdoors)}
+            onChangeText={(text: string) => setTripWeight('outdoors', text)}
+          />
+          <TextInput
+            style={[styles.input, { minWidth: 120 }]}
+            placeholder="Adventure"
+            keyboardType="numeric"
+            value={String(promptTraits.tt.w.adventure)}
+            onChangeText={(text: string) => setTripWeight('adventure', text)}
           />
           <TextInput
             style={[styles.input, { minWidth: 120 }]}
             placeholder="Culture"
             keyboardType="numeric"
-            value={String(promptTraits.tt.w.c)}
-            onChangeText={(text: string) => setTripWeight('c', text)}
+            value={String(promptTraits.tt.w.culture)}
+            onChangeText={(text: string) => setTripWeight('culture', text)}
           />
           <TextInput
             style={[styles.input, { minWidth: 120 }]}
             placeholder="Food"
             keyboardType="numeric"
-            value={String(promptTraits.tt.w.f)}
-            onChangeText={(text: string) => setTripWeight('f', text)}
+            value={String(promptTraits.tt.w.food)}
+            onChangeText={(text: string) => setTripWeight('food', text)}
           />
           <TextInput
             style={[styles.input, { minWidth: 120 }]}
             placeholder="Nightlife"
             keyboardType="numeric"
-            value={String(promptTraits.tt.w.n)}
-            onChangeText={(text: string) => setTripWeight('n', text)}
+            value={String(promptTraits.tt.w.nightlife)}
+            onChangeText={(text: string) => setTripWeight('nightlife', text)}
           />
           <TextInput
             style={[styles.input, { minWidth: 120 }]}
             placeholder="Relax"
             keyboardType="numeric"
-            value={String(promptTraits.tt.w.r)}
-            onChangeText={(text: string) => setTripWeight('r', text)}
+            value={String(promptTraits.tt.w.relax)}
+            onChangeText={(text: string) => setTripWeight('relax', text)}
+          />
+          <TextInput
+            style={[styles.input, { minWidth: 120 }]}
+            placeholder="Photography"
+            keyboardType="numeric"
+            value={String(promptTraits.tt.w.photography)}
+            onChangeText={(text: string) => setTripWeight('photography', text)}
+          />
+          <TextInput
+            style={[styles.input, { minWidth: 120 }]}
+            placeholder="Authentic/Local"
+            keyboardType="numeric"
+            value={String(promptTraits.tt.w.authentic_local)}
+            onChangeText={(text: string) => setTripWeight('authentic_local', text)}
+          />
+          <TextInput
+            style={[styles.input, { minWidth: 120 }]}
+            placeholder="Iconic Landmarks"
+            keyboardType="numeric"
+            value={String(promptTraits.tt.w.iconic_landmarks)}
+            onChangeText={(text: string) => setTripWeight('iconic_landmarks', text)}
           />
         </View>
 

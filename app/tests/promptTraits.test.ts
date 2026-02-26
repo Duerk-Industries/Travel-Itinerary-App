@@ -13,21 +13,40 @@ describe('promptTraits utility', () => {
     const normalized = normalizePromptTraits({
       tt: {
         ...DEFAULT_PROMPT_TRAITS.tt,
-        w: { o: 50, c: 50, f: 50, n: 50, r: 50 },
+        w: {
+          outdoors: 50,
+          adventure: 50,
+          culture: 50,
+          food: 50,
+          nightlife: 50,
+          relax: 50,
+          photography: 50,
+          authentic_local: 50,
+          iconic_landmarks: 50,
+        },
       },
     });
-    const sum = normalized.tt.w.o + normalized.tt.w.c + normalized.tt.w.f + normalized.tt.w.n + normalized.tt.w.r;
+    const sum =
+      normalized.tt.w.outdoors +
+      normalized.tt.w.adventure +
+      normalized.tt.w.culture +
+      normalized.tt.w.food +
+      normalized.tt.w.nightlife +
+      normalized.tt.w.relax +
+      normalized.tt.w.photography +
+      normalized.tt.w.authentic_local +
+      normalized.tt.w.iconic_landmarks;
     expect(sum).toBe(100);
   });
 
   test('serializes and parses prompt traits payload', () => {
     const raw = serializePromptTraits({
-      tt: { ...DEFAULT_PROMPT_TRAITS.tt, p: 'F', tm: 'E' },
+      tt: { ...DEFAULT_PROMPT_TRAITS.tt, p: 'F', is: 'guided' },
       ut: { i: ['Food', 'Culture'], eb: true, no: false },
     });
     const parsed = parsePromptTraits(raw);
     expect(parsed?.tt.p).toBe('F');
-    expect(parsed?.tt.tm).toBe('E');
+    expect(parsed?.tt.is).toBe('guided');
     expect(parsed?.ut.i).toEqual(['Food', 'Culture']);
     expect(parsed?.ut.eb).toBe(true);
   });

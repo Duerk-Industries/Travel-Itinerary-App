@@ -1,18 +1,28 @@
-type PromptPaceCode = 'R' | 'B' | 'F';
-type PromptComfortCode = 'B' | 'M' | 'L';
-type PromptMobilityCode = 'L' | 'M' | 'H';
-type PromptCarCode = 'P' | 'D' | 'R';
-type PromptTripModeCode = 'E' | 'B' | 'S';
+export type PromptPaceCode = 'R' | 'B' | 'F';
+export type PromptComfortCode = 'B' | 'M' | 'L';
+export type PromptMobilityCode = 'L' | 'M' | 'H';
+export type PromptCarCode = 'P' | 'D' | 'R';
+export type PromptInteractionStyleCode = 'self_guided' | 'mixed' | 'guided';
 
-type PromptWeights = { o: number; c: number; f: number; n: number; r: number };
+export type PromptInterestWeights = {
+  outdoors: number;
+  adventure: number;
+  culture: number;
+  food: number;
+  nightlife: number;
+  relax: number;
+  photography: number;
+  authentic_local: number;
+  iconic_landmarks: number;
+};
 
 export type PromptTripTraitsPayload = {
   p: PromptPaceCode;
   c: PromptComfortCode;
   mob: PromptMobilityCode;
   car: PromptCarCode;
-  w: PromptWeights;
-  tm: PromptTripModeCode;
+  w: PromptInterestWeights;
+  is: PromptInteractionStyleCode;
 };
 
 export type PromptUserTraitsPayload = {
@@ -56,22 +66,22 @@ export const PROMPT_CAR_OPTIONS: Array<{ value: PromptCarCode; label: string }> 
   { value: 'R', label: 'Full Trip Rental' },
 ];
 
-export const PROMPT_TRIP_MODE_OPTIONS: Array<{ value: PromptTripModeCode; label: string }> = [
-  { value: 'E', label: 'Explorer' },
-  { value: 'B', label: 'Balanced' },
-  { value: 'S', label: 'Slow' },
+export const PROMPT_INTERACTION_STYLE_OPTIONS: Array<{ value: PromptInteractionStyleCode; label: string }> = [
+  { value: 'self_guided', label: 'Self-Guided' },
+  { value: 'mixed', label: 'Mixed' },
+  { value: 'guided', label: 'Guided' },
 ];
 
 export const PROMPT_INTEREST_OPTIONS: string[] = [
   'Outdoors',
+  'Adventure',
   'Culture',
   'Food',
   'Nightlife',
   'Relax',
   'Photography',
-  'Family Friendly',
-  'Museums',
-  'Road Trips',
+  'Authentic/Local',
+  'Iconic Landmarks',
 ];
 
 export const DEFAULT_PROMPT_TRAITS: PromptTraitsPayload = {
@@ -80,8 +90,18 @@ export const DEFAULT_PROMPT_TRAITS: PromptTraitsPayload = {
     c: 'M',
     mob: 'M',
     car: 'P',
-    w: { o: 25, c: 25, f: 20, n: 10, r: 20 },
-    tm: 'B',
+    w: {
+      outdoors: 15,
+      adventure: 10,
+      culture: 15,
+      food: 15,
+      nightlife: 10,
+      relax: 10,
+      photography: 10,
+      authentic_local: 8,
+      iconic_landmarks: 7,
+    },
+    is: 'mixed',
   },
   ut: {
     i: [],
@@ -90,30 +110,81 @@ export const DEFAULT_PROMPT_TRAITS: PromptTraitsPayload = {
   },
 };
 
-const normalizeWeights = (weights: PromptWeights): PromptWeights => {
-  const safe: PromptWeights = {
-    o: Math.max(0, Math.round(Number(weights.o) || 0)),
-    c: Math.max(0, Math.round(Number(weights.c) || 0)),
-    f: Math.max(0, Math.round(Number(weights.f) || 0)),
-    n: Math.max(0, Math.round(Number(weights.n) || 0)),
-    r: Math.max(0, Math.round(Number(weights.r) || 0)),
+const INTEREST_WEIGHT_KEYS: Array<keyof PromptInterestWeights> = [
+  'outdoors',
+  'adventure',
+  'culture',
+  'food',
+  'nightlife',
+  'relax',
+  'photography',
+  'authentic_local',
+  'iconic_landmarks',
+];
+
+const toLegacyWeight = (weights: Record<string, unknown>, key: 'o' | 'c' | 'f' | 'n' | 'r'): number =>
+  Math.max(0, Math.round(Number(weights[key]) || 0));
+
+const coerceWeights = (raw: unknown): PromptInterestWeights => {
+  const source = (raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {}) as Record<string, unknown>;
+  const hasModernKeys = INTEREST_WEIGHT_KEYS.some((key) => key in source);
+  if (hasModernKeys) {
+    return {
+      outdoors: Number(source.outdoors) || 0,
+      adventure: Number(source.adventure) || 0,
+      culture: Number(source.culture) || 0,
+      food: Number(source.food) || 0,
+      nightlife: Number(source.nightlife) || 0,
+      relax: Number(source.relax) || 0,
+      photography: Number(source.photography) || 0,
+      authentic_local: Number(source.authentic_local) || 0,
+      iconic_landmarks: Number(source.iconic_landmarks) || 0,
+    };
+  }
+  const legacy = {
+    o: toLegacyWeight(source, 'o'),
+    c: toLegacyWeight(source, 'c'),
+    f: toLegacyWeight(source, 'f'),
+    n: toLegacyWeight(source, 'n'),
+    r: toLegacyWeight(source, 'r'),
   };
-  const sum = safe.o + safe.c + safe.f + safe.n + safe.r;
+  return {
+    outdoors: legacy.o,
+    adventure: Math.round(legacy.o * 0.7),
+    culture: legacy.c,
+    food: legacy.f,
+    nightlife: legacy.n,
+    relax: legacy.r,
+    photography: Math.round((legacy.o + legacy.c + legacy.r) / 3),
+    authentic_local: Math.round((legacy.c + legacy.f) / 2),
+    iconic_landmarks: Math.round(legacy.c * 0.8 + legacy.o * 0.2),
+  };
+};
+
+const normalizeWeights = (weights: PromptInterestWeights): PromptInterestWeights => {
+  const safe: PromptInterestWeights = {
+    outdoors: Math.max(0, Math.round(Number(weights.outdoors) || 0)),
+    adventure: Math.max(0, Math.round(Number(weights.adventure) || 0)),
+    culture: Math.max(0, Math.round(Number(weights.culture) || 0)),
+    food: Math.max(0, Math.round(Number(weights.food) || 0)),
+    nightlife: Math.max(0, Math.round(Number(weights.nightlife) || 0)),
+    relax: Math.max(0, Math.round(Number(weights.relax) || 0)),
+    photography: Math.max(0, Math.round(Number(weights.photography) || 0)),
+    authentic_local: Math.max(0, Math.round(Number(weights.authentic_local) || 0)),
+    iconic_landmarks: Math.max(0, Math.round(Number(weights.iconic_landmarks) || 0)),
+  };
+  const sum = INTEREST_WEIGHT_KEYS.reduce((acc, key) => acc + safe[key], 0);
   if (sum === 100) return safe;
   if (sum <= 0) return { ...DEFAULT_PROMPT_TRAITS.tt.w };
 
-  const scaled: PromptWeights = {
-    o: Math.round((safe.o / sum) * 100),
-    c: Math.round((safe.c / sum) * 100),
-    f: Math.round((safe.f / sum) * 100),
-    n: Math.round((safe.n / sum) * 100),
-    r: Math.round((safe.r / sum) * 100),
-  };
-  const total = scaled.o + scaled.c + scaled.f + scaled.n + scaled.r;
+  const scaled = INTEREST_WEIGHT_KEYS.reduce((acc, key) => {
+    (acc as any)[key] = Math.round((safe[key] / sum) * 100);
+    return acc;
+  }, {} as PromptInterestWeights);
+  const total = INTEREST_WEIGHT_KEYS.reduce((acc, key) => acc + scaled[key], 0);
   if (total === 100) return scaled;
 
-  const keys: Array<keyof PromptWeights> = ['o', 'c', 'f', 'n', 'r'];
-  const largest = keys.sort((a, b) => scaled[b] - scaled[a])[0];
+  const largest = [...INTEREST_WEIGHT_KEYS].sort((a, b) => scaled[b] - scaled[a])[0];
   scaled[largest] += 100 - total;
   return scaled;
 };
@@ -132,14 +203,10 @@ export const normalizePromptTraits = (input: Partial<PromptTraitsPayload> | null
       car: (['P', 'D', 'R'] as const).includes((ttRaw as any).car)
         ? (ttRaw as any).car
         : DEFAULT_PROMPT_TRAITS.tt.car,
-      w: normalizeWeights({
-        o: Number(weightsRaw?.o) || DEFAULT_PROMPT_TRAITS.tt.w.o,
-        c: Number(weightsRaw?.c) || DEFAULT_PROMPT_TRAITS.tt.w.c,
-        f: Number(weightsRaw?.f) || DEFAULT_PROMPT_TRAITS.tt.w.f,
-        n: Number(weightsRaw?.n) || DEFAULT_PROMPT_TRAITS.tt.w.n,
-        r: Number(weightsRaw?.r) || DEFAULT_PROMPT_TRAITS.tt.w.r,
-      }),
-      tm: (['E', 'B', 'S'] as const).includes((ttRaw as any).tm) ? (ttRaw as any).tm : DEFAULT_PROMPT_TRAITS.tt.tm,
+      w: normalizeWeights(coerceWeights(weightsRaw)),
+      is: (['self_guided', 'mixed', 'guided'] as const).includes((ttRaw as any).is)
+        ? (ttRaw as any).is
+        : DEFAULT_PROMPT_TRAITS.tt.is,
     },
     ut: {
       po: (['R', 'B', 'F'] as const).includes((utRaw as any).po) ? (utRaw as any).po : undefined,
@@ -176,4 +243,3 @@ export const extractPromptTraitsFromTraits = (traits: TraitLike[]): { profile: P
   const parsed = parsePromptTraits(profileTrait?.notes ?? null);
   return { profile: parsed ?? { ...DEFAULT_PROMPT_TRAITS }, traitId: profileTrait?.id ?? null };
 };
-

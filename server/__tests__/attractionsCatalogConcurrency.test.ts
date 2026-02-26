@@ -1,4 +1,5 @@
 import axios from 'axios';
+import fs from 'fs';
 import {
   getAttractionPromptBlockForDestinations,
   getAttractionShortlistForDestinations,
@@ -131,5 +132,164 @@ describe('attractions shortlist locking and prompt blob reuse', () => {
 
     expect(result.promptBlock).toContain('Destination: Mexico City');
     expect(mockedDb.upsertAttractionShortlistBlob).not.toHaveBeenCalled();
+  });
+
+  it('syncs cached destination rows to CSV without forcing discovery refresh', async () => {
+    const previousNodeEnv = process.env.NODE_ENV;
+    const previousCsvPath = process.env.ATTRACTIONS_CSV_LOCAL_PATH;
+    process.env.NODE_ENV = 'development';
+    process.env.ATTRACTIONS_CSV_LOCAL_PATH = 'server/data/attractions_catalog.csv';
+
+    const mkdirSpy = jest.spyOn(fs, 'mkdirSync').mockImplementation(() => undefined as any);
+    const writeSpy = jest.spyOn(fs, 'writeFileSync').mockImplementation(() => undefined as any);
+
+    mockedDb.listAttractionCatalogEntries.mockResolvedValue([
+      {
+        id: 'attr:mexico-city:mna',
+        destinationKey: 'mexico city',
+        destinationDisplayName: 'Mexico City',
+        name: 'Museo Nacional de Antropologia',
+        rank: 1,
+        activityType: 'Ticketed Attraction',
+        interestTags: ['culture'],
+        sourceCount: 2,
+        budgetTier: 'paid',
+        updatedAt: new Date().toISOString(),
+      },
+    ]);
+
+    await getAttractionShortlistForDestinations({
+      userId: 'u1',
+      destinations: ['Mexico City'],
+      limitPerDestination: 1,
+      refreshDays: 365,
+    });
+
+    expect(mockedAxios.get).not.toHaveBeenCalled();
+    expect(writeSpy).toHaveBeenCalled();
+
+    mkdirSpy.mockRestore();
+    writeSpy.mockRestore();
+    if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = previousNodeEnv;
+    if (previousCsvPath === undefined) delete process.env.ATTRACTIONS_CSV_LOCAL_PATH;
+    else process.env.ATTRACTIONS_CSV_LOCAL_PATH = previousCsvPath;
+  });
+
+  it('filters out weakly related cross-city discoveries during refresh', async () => {
+    mockedDb.listAttractionCatalogEntries.mockResolvedValue([]);
+    mockedDb.upsertAttractionCatalogEntry.mockResolvedValue(null);
+
+    mockedAxios.get.mockImplementation(async (url: string) => {
+      if (url.includes('serpapi.com')) {
+        return {
+          data: {
+            organic_results: [
+              {
+                title: 'Museo Nacional de Antropologia',
+                link: 'https://example.com/mna',
+                snippet: 'Top attraction in Mexico City',
+              },
+              {
+                title: 'Cancun Beach Guide',
+                link: 'https://example.com/cancun',
+                snippet: 'Best beaches in Cancun',
+              },
+            ],
+            local_results: { places: [] },
+          },
+        } as any;
+      }
+      return {
+        data: {
+          query: {
+            search: [
+              { title: 'Historic center of Mexico City', snippet: 'Main historic district in Mexico City' },
+              { title: 'La Quebrada (Acapulco)', snippet: 'Top attraction in Acapulco' },
+            ],
+          },
+        },
+      } as any;
+    });
+
+    await getAttractionShortlistForDestinations({
+      userId: 'u1',
+      destinations: ['Mexico City'],
+      limitPerDestination: 20,
+      refreshDays: 1,
+    });
+
+    const upsertedNames = mockedDb.upsertAttractionCatalogEntry.mock.calls
+      .map((call) => call[0]?.name)
+      .filter(Boolean);
+    expect(upsertedNames.length).toBeGreaterThan(0);
+    expect(upsertedNames.some((name: string) => /mexico city|museo nacional|historic center/i.test(name))).toBe(true);
+    expect(upsertedNames.some((name: string) => /cancun|acapulco/i.test(name))).toBe(false);
+  });
+
+  it('preserves curated rows during refresh and prevents overwrite by discovery', async () => {
+    const curatedRow = {
+      id: 'attr:mexico-city:mna',
+      destinationKey: 'mexico city',
+      destinationDisplayName: 'Mexico City',
+      name: 'Museo Nacional de Antropologia',
+      rank: 1,
+      activityType: 'Ticketed Attraction',
+      interestTags: ['culture', 'iconic_landmarks'],
+      sourceUrl: 'https://example.com/curated-mna',
+      sourceLabel: 'curated',
+      snippet: 'Curated top attraction',
+      sourceCount: 3,
+      budgetTier: 'paid',
+      updatedAt: '2026-02-25T22:20:00.000Z',
+    };
+    mockedDb.listAttractionCatalogEntries
+      .mockResolvedValueOnce([curatedRow])
+      .mockResolvedValueOnce([curatedRow])
+      .mockResolvedValueOnce([curatedRow]);
+    mockedDb.upsertAttractionCatalogEntry.mockResolvedValue(null);
+
+    mockedAxios.get.mockImplementation(async (url: string) => {
+      if (url.includes('serpapi.com')) {
+        return {
+          data: {
+            organic_results: [
+              {
+                title: 'Museo Nacional de Antropologia',
+                link: 'https://example.com/discovered-mna',
+                snippet: 'Discovered source should not override curated row',
+              },
+              {
+                title: 'Palacio de Bellas Artes Mexico City',
+                link: 'https://example.com/bellas-artes',
+                snippet: 'Iconic attraction in Mexico City',
+              },
+            ],
+            local_results: { places: [] },
+          },
+        } as any;
+      }
+      return {
+        data: {
+          query: {
+            search: [{ title: 'Palacio de Bellas Artes', snippet: 'Main attraction in Mexico City' }],
+          },
+        },
+      } as any;
+    });
+
+    await getAttractionShortlistForDestinations({
+      userId: 'u1',
+      destinations: ['Mexico City'],
+      limitPerDestination: 5,
+      refreshDays: 1,
+    });
+
+    const upsertedRows = mockedDb.upsertAttractionCatalogEntry.mock.calls.map((call) => call[0]);
+    const curatedUpsert = upsertedRows.find((row: any) => row.id === curatedRow.id);
+    expect(curatedUpsert).toBeTruthy();
+    expect(curatedUpsert.sourceLabel).toBe('curated');
+    expect(curatedUpsert.sourceUrl).toBe(curatedRow.sourceUrl);
+    expect(curatedUpsert.snippet).toBe(curatedRow.snippet);
   });
 });

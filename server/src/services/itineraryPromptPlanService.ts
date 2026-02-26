@@ -9,22 +9,24 @@ import {
   runItineraryPromptStageViaOpenAi,
 } from '../apis/openaiCallers';
 import { logError, logInfo } from '../logger';
-import type { ActivityType } from '../types';
+import type { ActivityType, AttractionCatalogEntry } from '../types';
 import { getApiCacheSetting } from '../config/apiLimits';
 import {
   getAttractionPromptBlockForDestinations,
 } from './attractionsCatalogService';
+import { scoreActivityTypeByPreferences, type InterestWeights } from './activityTypeInterestWeights';
 
 type PromptPaceCode = 'R' | 'B' | 'F';
 type PromptComfortCode = 'B' | 'M' | 'L';
 type PromptMobilityCode = 'L' | 'M' | 'H';
 type PromptCarCode = 'P' | 'D' | 'R';
-type PromptTripModeCode = 'E' | 'B' | 'S';
+type PromptInteractionStyleCode = 'self_guided' | 'mixed' | 'guided';
 type PromptDayTimeCode = 'M' | 'D' | 'E';
 type PromptActivityCode = 'A' | 'R' | 'T' | 'O' | 'E';
 type PromptTransferMode = 'Flight' | 'Train' | 'Bus' | 'Private' | 'Ferry' | 'Other';
 
-type PromptWeights = { o: number; c: number; f: number; n: number; r: number };
+type LegacyPromptWeights = { o: number; c: number; f: number; n: number; r: number };
+type PromptWeights = InterestWeights;
 
 type PromptReq = {
   $: 'req1';
@@ -42,7 +44,7 @@ type PromptReq = {
     mob?: PromptMobilityCode;
     car?: PromptCarCode;
     w?: PromptWeights;
-    tm?: PromptTripModeCode;
+    is?: PromptInteractionStyleCode;
   };
   ut?: {
     po?: PromptPaceCode;
@@ -67,7 +69,7 @@ type PromptNorm = {
   car: PromptCarCode;
   w: PromptWeights;
   a: string[];
-  tm: PromptTripModeCode;
+  is: PromptInteractionStyleCode;
 };
 
 type PromptBase = {
@@ -147,7 +149,7 @@ export type ItineraryGeneratedLodging = {
 };
 
 export type ItineraryGeneratedActivity = {
-  status: 'Needed';
+  status: 'Proposed';
   activityType: ActivityType;
   date: string;
   name: string;
@@ -193,7 +195,7 @@ export type ItineraryPromptProfile = {
   comfort: 'Budget' | 'Midrange' | 'Luxury';
   mobility: 'Low' | 'Medium' | 'High';
   carPreference: 'PublicTransitOnly' | 'DayTripsOnly' | 'FullTripRental';
-  tripMode: 'Explorer' | 'Balanced' | 'Slow';
+  interactionStyle: 'Self-Guided' | 'Mixed' | 'Guided';
   weights: PromptWeights;
 };
 
@@ -224,7 +226,7 @@ type ServiceInput = {
       mob: PromptMobilityCode;
       car: PromptCarCode;
       w: Partial<PromptWeights>;
-      tm: PromptTripModeCode;
+      is: PromptInteractionStyleCode;
     }>;
     ut?: Partial<{
       po: PromptPaceCode;
@@ -288,7 +290,29 @@ const closestGeneratedActivityType = (text: string, fallback: ActivityType): Act
   return fallback;
 };
 
-const DEFAULT_WEIGHTS: PromptWeights = { o: 25, c: 25, f: 20, n: 10, r: 20 };
+const PROMPT_WEIGHT_KEYS: Array<keyof PromptWeights> = [
+  'outdoors',
+  'adventure',
+  'culture',
+  'food',
+  'nightlife',
+  'relax',
+  'photography',
+  'authentic_local',
+  'iconic_landmarks',
+];
+
+const DEFAULT_WEIGHTS: PromptWeights = {
+  outdoors: 15,
+  adventure: 10,
+  culture: 15,
+  food: 15,
+  nightlife: 10,
+  relax: 10,
+  photography: 10,
+  authentic_local: 8,
+  iconic_landmarks: 7,
+};
 
 const PROMPTS_ROOT = path.resolve(__dirname, '../../prompts');
 let cachedBundle: PromptBundle | null = null;
@@ -414,6 +438,128 @@ const addDays = (isoDate: string, days: number): string => {
 };
 
 const normalizeText = (value: unknown): string => String(value ?? '').trim();
+
+const normalizeLocalityKey = (value: string): string =>
+  String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const localityAliases = (value: string): string[] => {
+  const key = normalizeLocalityKey(value);
+  if (!key) return [];
+  const aliases = new Set<string>([key]);
+  if (key === 'mexico city' || key === 'ciudad de mexico' || key === 'cdmx') {
+    aliases.add('mexico city');
+    aliases.add('ciudad de mexico');
+    aliases.add('cdmx');
+  }
+  return Array.from(aliases);
+};
+
+const canonicalizeToRequestedLocality = (value: string, requestedDestinations: string[]): string => {
+  const raw = normalizeText(value);
+  if (!raw) return raw;
+  const requested = requestedDestinations.map((item) => normalizeText(item)).filter(Boolean);
+  if (!requested.length) return raw;
+  const rawAliases = localityAliases(raw);
+
+  for (const candidate of requested) {
+    const candidateAliases = localityAliases(candidate);
+    if (rawAliases.some((alias) => candidateAliases.includes(alias))) return candidate;
+  }
+
+  const scored = requested
+    .map((candidate) => {
+      const candidateKey = normalizeLocalityKey(candidate);
+      const rawKey = normalizeLocalityKey(raw);
+      const includesMatch =
+        rawKey.includes(candidateKey) ||
+        candidateKey.includes(rawKey) ||
+        rawKey.split(' ').some((token) => token && candidateKey.includes(token));
+      return { candidate, score: includesMatch ? candidate.length : -1 };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  return scored[0]?.score > 0 ? scored[0].candidate : raw;
+};
+
+const isAllowedLocality = (value: string, requestedDestinations: string[]): boolean => {
+  const rawAliases = localityAliases(value);
+  return requestedDestinations.some((candidate) => {
+    const candidateAliases = localityAliases(candidate);
+    return rawAliases.some((alias) => candidateAliases.includes(alias));
+  });
+};
+
+const strictCanonicalizeToRequestedLocality = (value: string, requestedDestinations: string[]): string => {
+  const mapped = canonicalizeToRequestedLocality(value, requestedDestinations);
+  if (!requestedDestinations.length) return mapped;
+  if (isAllowedLocality(mapped, requestedDestinations)) return mapped;
+  return requestedDestinations[0];
+};
+
+const TRANSIT_HUB_PATTERN = /\b(airport|station|port|terminal)\b|\b[A-Z]{3}\b|\([A-Z]{3}\)/;
+
+const canonicalizeTransferEndpoint = (
+  value: string,
+  fallback: string,
+  requestedDestinations: string[]
+): string => {
+  const raw = normalizeText(value) || fallback;
+  if (!raw) return fallback;
+  if (TRANSIT_HUB_PATTERN.test(raw)) return raw;
+  const mapped = strictCanonicalizeToRequestedLocality(raw, requestedDestinations);
+  return normalizeText(mapped) || fallback;
+};
+
+const dropBroaderLevelIfSpecificSelected = (value: string, requestedDestinations: string[]): string => {
+  const normalized = normalizeLocalityKey(value);
+  if (!normalized) return value;
+  const tokens = normalized.split(' ').filter(Boolean);
+  if (tokens.length > 1) return value;
+  const hasSpecific = requestedDestinations.some((candidate) => {
+    const key = normalizeLocalityKey(candidate);
+    const candidateTokens = key.split(' ').filter(Boolean);
+    return candidateTokens.length > 1 && candidateTokens.includes(tokens[0]);
+  });
+  if (!hasSpecific) return value;
+  const mapped = requestedDestinations.find((candidate) => normalizeLocalityKey(candidate).includes(tokens[0]));
+  return mapped ? mapped : value;
+};
+
+const pruneDestinationHierarchy = (destinations: string[]): string[] => {
+  const cleaned = destinations.map((v) => normalizeText(v)).filter(Boolean);
+  if (!cleaned.length) return ['Destination'];
+
+  const canonicalMap = new Map<string, string>();
+  for (const item of cleaned) {
+    const aliases = localityAliases(item);
+    const key = aliases.sort((a, b) => a.localeCompare(b))[0] || normalizeLocalityKey(item);
+    if (!canonicalMap.has(key)) canonicalMap.set(key, item);
+  }
+  const deduped = Array.from(canonicalMap.values());
+  if (deduped.length <= 1) return deduped;
+
+  const keys = deduped.map((value) => ({ value, key: normalizeLocalityKey(value), tokens: normalizeLocalityKey(value).split(' ').filter(Boolean) }));
+  const keep = keys.filter((candidate) => {
+    const candidateTokenCount = candidate.tokens.length;
+    const overshadowed = keys.some((other) => {
+      if (other.value === candidate.value) return false;
+      if (!other.key || !candidate.key) return false;
+      if (other.tokens.length <= candidateTokenCount) return false;
+      return (
+        other.key.includes(candidate.key) ||
+        candidate.tokens.every((token) => token && other.tokens.includes(token))
+      );
+    });
+    return !overshadowed;
+  });
+  return keep.length ? keep.map((item) => item.value) : deduped;
+};
 const GENERIC_ACTIVITY_PATTERNS: RegExp[] = [
   /\bnearby\b/i,
   /\blocal (park|event|festival|market|eatery|restaurant)\b/i,
@@ -489,28 +635,57 @@ const diffDaysInclusive = (startIso: string, endIso: string): number => {
   return Math.max(1, Math.round((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000)) + 1);
 };
 
-const normalizeWeights = (weights: PromptWeights): PromptWeights => {
-  const safe: PromptWeights = {
-    o: Math.max(0, Math.round(Number(weights.o) || 0)),
-    c: Math.max(0, Math.round(Number(weights.c) || 0)),
-    f: Math.max(0, Math.round(Number(weights.f) || 0)),
-    n: Math.max(0, Math.round(Number(weights.n) || 0)),
-    r: Math.max(0, Math.round(Number(weights.r) || 0)),
+const coerceToInterestWeights = (value: unknown): PromptWeights => {
+  const raw = (value && typeof value === 'object' ? (value as Record<string, unknown>) : {}) as Record<string, unknown>;
+  const hasModern = PROMPT_WEIGHT_KEYS.some((key) => key in raw);
+  if (hasModern) {
+    return {
+      outdoors: Number(raw.outdoors) || 0,
+      adventure: Number(raw.adventure) || 0,
+      culture: Number(raw.culture) || 0,
+      food: Number(raw.food) || 0,
+      nightlife: Number(raw.nightlife) || 0,
+      relax: Number(raw.relax) || 0,
+      photography: Number(raw.photography) || 0,
+      authentic_local: Number(raw.authentic_local) || 0,
+      iconic_landmarks: Number(raw.iconic_landmarks) || 0,
+    };
+  }
+  const legacy: LegacyPromptWeights = {
+    o: Math.max(0, Math.round(Number(raw.o) || 0)),
+    c: Math.max(0, Math.round(Number(raw.c) || 0)),
+    f: Math.max(0, Math.round(Number(raw.f) || 0)),
+    n: Math.max(0, Math.round(Number(raw.n) || 0)),
+    r: Math.max(0, Math.round(Number(raw.r) || 0)),
   };
-  const sum = safe.o + safe.c + safe.f + safe.n + safe.r;
+  return {
+    outdoors: legacy.o,
+    adventure: Math.round(legacy.o * 0.7),
+    culture: legacy.c,
+    food: legacy.f,
+    nightlife: legacy.n,
+    relax: legacy.r,
+    photography: Math.round((legacy.o + legacy.c + legacy.r) / 3),
+    authentic_local: Math.round((legacy.c + legacy.f) / 2),
+    iconic_landmarks: Math.round(legacy.c * 0.8 + legacy.o * 0.2),
+  };
+};
+
+const normalizeWeights = (weights: PromptWeights): PromptWeights => {
+  const safe = PROMPT_WEIGHT_KEYS.reduce((acc, key) => {
+    (acc as any)[key] = Math.max(0, Math.round(Number(weights[key]) || 0));
+    return acc;
+  }, {} as PromptWeights);
+  const sum = PROMPT_WEIGHT_KEYS.reduce((acc, key) => acc + safe[key], 0);
   if (sum === 100) return safe;
   if (sum <= 0) return { ...DEFAULT_WEIGHTS };
-  const scaled: PromptWeights = {
-    o: Math.round((safe.o / sum) * 100),
-    c: Math.round((safe.c / sum) * 100),
-    f: Math.round((safe.f / sum) * 100),
-    n: Math.round((safe.n / sum) * 100),
-    r: Math.round((safe.r / sum) * 100),
-  };
-  const total = scaled.o + scaled.c + scaled.f + scaled.n + scaled.r;
+  const scaled = PROMPT_WEIGHT_KEYS.reduce((acc, key) => {
+    (acc as any)[key] = Math.round((safe[key] / sum) * 100);
+    return acc;
+  }, {} as PromptWeights);
+  const total = PROMPT_WEIGHT_KEYS.reduce((acc, key) => acc + scaled[key], 0);
   if (total === 100) return scaled;
-  const order: Array<keyof PromptWeights> = ['o', 'c', 'f', 'n', 'r'];
-  const largest = order.sort((a, b) => scaled[b] - scaled[a])[0];
+  const largest = [...PROMPT_WEIGHT_KEYS].sort((a, b) => scaled[b] - scaled[a])[0];
   scaled[largest] += 100 - total;
   return scaled;
 };
@@ -518,21 +693,16 @@ const normalizeWeights = (weights: PromptWeights): PromptWeights => {
 const normalizePromptTraitInput = (input?: ServiceInput['promptTraits']) => {
   const tt = input?.tt ?? {};
   const ut = input?.ut ?? {};
-  const w = tt.w ?? {};
   return {
     tt: {
       p: (['R', 'B', 'F'] as const).includes(tt.p as PromptPaceCode) ? (tt.p as PromptPaceCode) : 'B',
       c: (['B', 'M', 'L'] as const).includes(tt.c as PromptComfortCode) ? (tt.c as PromptComfortCode) : 'M',
       mob: (['L', 'M', 'H'] as const).includes(tt.mob as PromptMobilityCode) ? (tt.mob as PromptMobilityCode) : 'M',
       car: (['P', 'D', 'R'] as const).includes(tt.car as PromptCarCode) ? (tt.car as PromptCarCode) : 'P',
-      tm: (['E', 'B', 'S'] as const).includes(tt.tm as PromptTripModeCode) ? (tt.tm as PromptTripModeCode) : 'B',
-      w: normalizeWeights({
-        o: Number(w.o) || DEFAULT_WEIGHTS.o,
-        c: Number(w.c) || DEFAULT_WEIGHTS.c,
-        f: Number(w.f) || DEFAULT_WEIGHTS.f,
-        n: Number(w.n) || DEFAULT_WEIGHTS.n,
-        r: Number(w.r) || DEFAULT_WEIGHTS.r,
-      }),
+      is: (['self_guided', 'mixed', 'guided'] as const).includes(tt.is as PromptInteractionStyleCode)
+        ? (tt.is as PromptInteractionStyleCode)
+        : 'mixed',
+      w: normalizeWeights(coerceToInterestWeights(tt.w)),
     },
     ut: {
       po: (['R', 'B', 'F'] as const).includes(ut.po as PromptPaceCode) ? (ut.po as PromptPaceCode) : undefined,
@@ -550,7 +720,7 @@ const normalizePromptTraitInput = (input?: ServiceInput['promptTraits']) => {
 
 const normalizeDestinations = (destinations: string[]): string[] => {
   const cleaned = destinations.map((v) => String(v ?? '').trim()).filter(Boolean);
-  return cleaned.length ? Array.from(new Set(cleaned)) : ['Destination'];
+  return pruneDestinationHierarchy(cleaned);
 };
 
 const buildPromptRequest = (input: ServiceInput): PromptReq => {
@@ -602,15 +772,11 @@ const sanitizeNorm = (raw: unknown, req: PromptReq): PromptNorm => {
   const comfort = (['B', 'M', 'L'] as const).includes((raw as any)?.c) ? (raw as any).c : req.tt?.c ?? 'M';
   const mobility = (['L', 'M', 'H'] as const).includes((raw as any)?.mob) ? (raw as any).mob : req.tt?.mob ?? 'M';
   const car = (['P', 'D', 'R'] as const).includes((raw as any)?.car) ? (raw as any).car : req.tt?.car ?? 'P';
-  const tm = (['E', 'B', 'S'] as const).includes((raw as any)?.tm) ? (raw as any).tm : req.tt?.tm ?? 'B';
+  const interactionStyle = (['self_guided', 'mixed', 'guided'] as const).includes((raw as any)?.is)
+    ? (raw as any).is
+    : req.tt?.is ?? 'mixed';
   const weightsRaw = (raw as any)?.w ?? req.tt?.w ?? DEFAULT_WEIGHTS;
-  const weights = normalizeWeights({
-    o: Number(weightsRaw?.o) || DEFAULT_WEIGHTS.o,
-    c: Number(weightsRaw?.c) || DEFAULT_WEIGHTS.c,
-    f: Number(weightsRaw?.f) || DEFAULT_WEIGHTS.f,
-    n: Number(weightsRaw?.n) || DEFAULT_WEIGHTS.n,
-    r: Number(weightsRaw?.r) || DEFAULT_WEIGHTS.r,
-  });
+  const weights = normalizeWeights(coerceToInterestWeights(weightsRaw));
   const assumptions = Array.isArray((raw as any)?.a)
     ? (raw as any).a.map((line: any) => String(line)).filter(Boolean)
     : [];
@@ -625,13 +791,14 @@ const sanitizeNorm = (raw: unknown, req: PromptReq): PromptNorm => {
     car,
     w: weights,
     a: assumptions,
-    tm,
+    is: interactionStyle,
   };
 };
 
 const sanitizeRoute = (raw: unknown, norm: PromptNorm, req: PromptReq): PromptRoute => {
   const start = norm.sd;
   const end = norm.ed;
+  const requestedDestinations = Array.isArray(req.d) ? req.d.map((item) => normalizeText(item)).filter(Boolean) : [];
   const defaultBase: PromptBase = {
     l: req.d[0] ?? 'Base',
     ci: start,
@@ -641,13 +808,39 @@ const sanitizeRoute = (raw: unknown, norm: PromptNorm, req: PromptReq): PromptRo
   const basesRaw = Array.isArray((raw as any)?.b) ? (raw as any).b : [defaultBase];
   const bases: PromptBase[] = basesRaw
     .map((base: any) => ({
-      l: String(base?.l ?? '').trim() || defaultBase.l,
+      l:
+        dropBroaderLevelIfSpecificSelected(
+          strictCanonicalizeToRequestedLocality(String(base?.l ?? '').trim() || defaultBase.l, requestedDestinations),
+          requestedDestinations
+        ) || defaultBase.l,
       ci: isIsoDate(base?.ci) ? String(base.ci) : start,
       co: isIsoDate(base?.co) ? String(base.co) : addDays(end, 1),
-      dn: Array.isArray(base?.dn) ? base.dn.map((v: any) => String(v)).filter(Boolean) : [],
+      dn: Array.isArray(base?.dn)
+        ? base.dn
+            .map((v: any) =>
+              canonicalizeToRequestedLocality(
+                strictCanonicalizeToRequestedLocality(
+                dropBroaderLevelIfSpecificSelected(String(v ?? '').trim(), requestedDestinations),
+                requestedDestinations
+                ),
+                requestedDestinations
+              )
+            )
+            .filter(Boolean)
+        : [],
     }))
     .filter((base: PromptBase) => Boolean(base.l));
   if (!bases.length) bases.push(defaultBase);
+  const compactBases: PromptBase[] = [];
+  for (const base of bases) {
+    const prev = compactBases[compactBases.length - 1];
+    if (prev && normalizeLocalityKey(prev.l) === normalizeLocalityKey(base.l)) {
+      prev.co = base.co;
+      prev.dn = Array.from(new Set([...(prev.dn ?? []), ...(base.dn ?? [])]));
+    } else {
+      compactBases.push({ ...base });
+    }
+  }
 
   const transfersRaw = Array.isArray((raw as any)?.x) ? (raw as any).x : [];
   const transfers: PromptTransfer[] = transfersRaw
@@ -661,28 +854,39 @@ const sanitizeRoute = (raw: unknown, norm: PromptNorm, req: PromptReq): PromptRo
       return {
         dt: isIsoDate(transfer?.dt) ? String(transfer.dt) : start,
         m: validMode,
-        fr: String(transfer?.fr ?? '').trim() || bases[0].l,
-        to: String(transfer?.to ?? '').trim() || bases[Math.max(0, bases.length - 1)].l,
+        fr:
+          dropBroaderLevelIfSpecificSelected(
+            canonicalizeTransferEndpoint(
+              String(transfer?.fr ?? '').trim(),
+              compactBases[0].l,
+              requestedDestinations
+            ),
+            requestedDestinations
+          ) || compactBases[0].l,
+        to:
+          dropBroaderLevelIfSpecificSelected(
+            canonicalizeTransferEndpoint(
+              String(transfer?.to ?? '').trim(),
+              compactBases[Math.max(0, compactBases.length - 1)].l,
+              requestedDestinations
+            ),
+            requestedDestinations
+          ) || compactBases[Math.max(0, compactBases.length - 1)].l,
         td: Number.isFinite(Number(transfer?.td)) ? Number(transfer.td) : undefined,
         n: typeof transfer?.n === 'string' ? transfer.n : undefined,
       };
     })
-    .filter((transfer: PromptTransfer) => transfer.fr && transfer.to);
+    .filter((transfer: PromptTransfer) => transfer.fr && transfer.to)
+    .filter((transfer: PromptTransfer) => normalizeLocalityKey(transfer.fr) !== normalizeLocalityKey(transfer.to));
 
   const weightsRaw = (raw as any)?.w ?? norm.w;
-  const weights = normalizeWeights({
-    o: Number(weightsRaw?.o) || norm.w.o,
-    c: Number(weightsRaw?.c) || norm.w.c,
-    f: Number(weightsRaw?.f) || norm.w.f,
-    n: Number(weightsRaw?.n) || norm.w.n,
-    r: Number(weightsRaw?.r) || norm.w.r,
-  });
+  const weights = normalizeWeights(coerceToInterestWeights(weightsRaw));
 
   return {
     $: 'r1',
     eh: String((raw as any)?.eh ?? req.s ?? req.d[0] ?? 'Entry Hub').trim(),
     xh: String((raw as any)?.xh ?? req.e ?? req.d[0] ?? 'Exit Hub').trim(),
-    b: bases,
+    b: compactBases,
     x: transfers,
     rc:
       raw && typeof (raw as any)?.rc === 'object' && (raw as any).rc
@@ -697,7 +901,7 @@ const sanitizeRoute = (raw: unknown, norm: PromptNorm, req: PromptReq): PromptRo
   };
 };
 
-const sanitizeItinerary = (raw: unknown, route: PromptRoute, norm: PromptNorm): PromptItinerary => {
+const sanitizeItinerary = (raw: unknown, route: PromptRoute, norm: PromptNorm, req: PromptReq): PromptItinerary => {
   const dayCount = diffDaysInclusive(norm.sd, norm.ed);
   const fallbackDays: PromptDay[] = Array.from({ length: dayCount }, (_, idx) => {
     const date = addDays(norm.sd, idx);
@@ -719,25 +923,34 @@ const sanitizeItinerary = (raw: unknown, route: PromptRoute, norm: PromptNorm): 
   });
 
   const daysRaw = Array.isArray((raw as any)?.dy) ? (raw as any).dy : fallbackDays;
+  const seenActivityKeys = new Set<string>();
   const days: PromptDay[] = daysRaw.map((day: any, idx: number) => {
     const date = isIsoDate(day?.dt) ? String(day.dt) : addDays(norm.sd, idx);
-    const defaultBase = route.b.find((b) => date >= b.ci && date < b.co)?.l ?? route.b[0]?.l ?? 'Base';
+    const defaultBaseRaw = route.b.find((b) => date >= b.ci && date < b.co)?.l ?? route.b[0]?.l ?? 'Base';
+    const defaultBase = strictCanonicalizeToRequestedLocality(defaultBaseRaw, req.d);
     const itemsRaw = Array.isArray(day?.it) ? day.it : [];
-    const items: Array<[PromptDayTimeCode, PromptActivityCode, string]> = itemsRaw
+    const items = itemsRaw
       .map((item: any): [PromptDayTimeCode, PromptActivityCode, string] => {
         const time = (['M', 'D', 'E'] as const).includes(item?.[0]) ? item[0] : 'D';
         const code = (['A', 'R', 'T', 'O', 'E'] as const).includes(item?.[1]) ? item[1] : 'O';
-        const baseForDay = String(day?.b ?? '').trim() || defaultBase;
+        const baseForDay = strictCanonicalizeToRequestedLocality(String(day?.b ?? '').trim() || defaultBase, req.d);
         const normalized = sanitizeActivityText(String(item?.[2] ?? ''), { base: baseForDay, activityCode: code });
         return [time, normalized.activityCode, normalized.text];
+      })
+      .filter((item: [PromptDayTimeCode, PromptActivityCode, string]) => {
+        const key = normalizeText(item[2]).toLowerCase();
+        if (!key) return false;
+        if (seenActivityKeys.has(key)) return false;
+        seenActivityKeys.add(key);
+        return true;
       })
       .slice(0, 5);
 
     return {
       d: Number.isFinite(Number(day?.d)) ? Math.max(1, Math.round(Number(day.d))) : idx + 1,
       dt: date,
-      b: String(day?.b ?? '').trim() || defaultBase,
-      it: items.length ? items : [['D', 'O', 'Flexible activity block']],
+      b: strictCanonicalizeToRequestedLocality(String(day?.b ?? '').trim() || defaultBase, req.d),
+      it: items.length ? items : [['D', 'O', `Flexible exploration in ${defaultBase}`]],
       me: ['BQ', 'LC', 'DL'],
       sl: String(day?.sl ?? '').trim() || `Lodging at '${defaultBase}'`,
       ln: Array.isArray(day?.ln) ? day.ln.map((line: any) => String(line)).filter(Boolean).slice(0, 2) : [],
@@ -749,8 +962,8 @@ const sanitizeItinerary = (raw: unknown, route: PromptRoute, norm: PromptNorm): 
     $: 'it1',
     eh: String((raw as any)?.eh ?? route.eh).trim() || route.eh,
     xh: String((raw as any)?.xh ?? route.xh).trim() || route.xh,
-    b: Array.isArray((raw as any)?.b) ? sanitizeRoute(raw, norm, { ...({ d: ['Base'] } as PromptReq), dur: days.length }).b : route.b,
-    x: Array.isArray((raw as any)?.x) ? sanitizeRoute(raw, norm, { ...({ d: ['Base'] } as PromptReq), dur: days.length }).x : route.x,
+    b: Array.isArray((raw as any)?.b) ? sanitizeRoute(raw, norm, { ...req, dur: days.length }).b : route.b,
+    x: Array.isArray((raw as any)?.x) ? sanitizeRoute(raw, norm, { ...req, dur: days.length }).x : route.x,
     rc:
       raw && typeof (raw as any)?.rc === 'object' && (raw as any).rc
         ? {
@@ -765,12 +978,180 @@ const sanitizeItinerary = (raw: unknown, route: PromptRoute, norm: PromptNorm): 
   };
 };
 
+const EXTRA_GENERIC_ACTIVITY_PATTERNS: RegExp[] = [
+  /\b(local (art gallery|food stalls|restaurant|market|spot|district))\b/i,
+  /\b(traditional (mexican|local) restaurant)\b/i,
+  /\b(main historic district)\b/i,
+  /\b(cultural district)\b/i,
+  /^\s*visit to\s+/i,
+];
+
+const ATTRACTION_NAME_HINT_PATTERN =
+  /\b(museum|museo|temple|templo|pyramid|pyramids|cathedral|basilica|palace|castillo|castle|park|bosque|zocalo|market|mercado|plaza|centro|historic|tour|walk|neighborhood|barrio|avenida|ruins|site|gallery|teatro|theater|food|restaurant|cafe|caf[eé])\b/i;
+
+const isLikelyStandaloneLocalityLabel = (value: string): boolean => {
+  const text = normalizeText(value);
+  if (!text) return true;
+  if (ATTRACTION_NAME_HINT_PATTERN.test(text)) return false;
+  const unwrapped = text.replace(/\([^)]*\)/g, ' ').trim();
+  const words = normalizeLocalityKey(unwrapped).split(' ').filter(Boolean);
+  return words.length > 0 && words.length <= 4;
+};
+
+const buildShortlistPools = (
+  shortlistByDestination: Record<string, AttractionCatalogEntry[]>,
+  requestedDestinations: string[]
+): { byDestination: Record<string, string[]>; global: string[] } => {
+  const byDestination: Record<string, string[]> = {};
+  const global: string[] = [];
+  const seenGlobal = new Set<string>();
+
+  const addName = (bucket: string[], name: string) => {
+    const cleaned = normalizeText(name);
+    if (!cleaned) return;
+    if (!bucket.some((existing) => existing.toLowerCase() === cleaned.toLowerCase())) bucket.push(cleaned);
+    if (!seenGlobal.has(cleaned.toLowerCase())) {
+      seenGlobal.add(cleaned.toLowerCase());
+      global.push(cleaned);
+    }
+  };
+
+  for (const [destination, entries] of Object.entries(shortlistByDestination ?? {})) {
+    const canonicalDestination = canonicalizeToRequestedLocality(destination, requestedDestinations);
+    const bucket = byDestination[canonicalDestination] ?? [];
+    for (const entry of entries ?? []) addName(bucket, entry?.name ?? '');
+    byDestination[canonicalDestination] = bucket;
+  }
+  return { byDestination, global };
+};
+
+const enforceShortlistGrounding = (
+  itinerary: PromptItinerary,
+  req: PromptReq,
+  shortlistByDestination: Record<string, AttractionCatalogEntry[]>
+): PromptItinerary => {
+  const requested = Array.isArray(req.d) ? req.d.map((item) => normalizeText(item)).filter(Boolean) : [];
+  const pools = buildShortlistPools(shortlistByDestination, requested);
+  if (!pools.global.length) return itinerary;
+
+  const usedText = new Set<string>();
+  const usedShortlist = new Set<string>();
+  const destinationSpecific = requested.filter((value) => normalizeLocalityKey(value).split(' ').length > 1);
+
+  const nextReplacement = (base: string): string | null => {
+    const bucket = pools.byDestination[base] ?? [];
+    const local = bucket.find(
+      (name) => !usedShortlist.has(name.toLowerCase()) && !isLikelyStandaloneLocalityLabel(name)
+    );
+    if (local) {
+      usedShortlist.add(local.toLowerCase());
+      return local;
+    }
+    if (requested.length <= 1) return null;
+    const global = pools.global.find((name) => !usedShortlist.has(name.toLowerCase()));
+    if (!global) return null;
+    if (isLikelyStandaloneLocalityLabel(global)) return null;
+    usedShortlist.add(global.toLowerCase());
+    return global;
+  };
+
+  const hasBroaderLevelDrift = (text: string): boolean =>
+    destinationSpecific.some((dest) => {
+      const key = normalizeLocalityKey(dest);
+      const tokens = key.split(' ').filter(Boolean);
+      if (tokens.length < 2) return false;
+      const head = tokens[0];
+      const textKey = normalizeLocalityKey(text);
+      return new RegExp(`\\b${head}\\b`, 'i').test(textKey) && !textKey.includes(key);
+    });
+
+  for (const day of itinerary.dy) {
+    day.b = strictCanonicalizeToRequestedLocality(day.b, requested);
+    day.sl = `Lodging at '${day.b}'`;
+    day.it = day.it.map((item) => {
+      const text = normalizeText(item[2]);
+      const textKey = text.toLowerCase();
+      const isDuplicate = usedText.has(textKey);
+      const isGeneric =
+        GENERIC_ACTIVITY_PATTERNS.some((pattern) => pattern.test(text)) ||
+        EXTRA_GENERIC_ACTIVITY_PATTERNS.some((pattern) => pattern.test(text));
+      const invalidLocality = hasBroaderLevelDrift(text) || isLikelyStandaloneLocalityLabel(text);
+      if (isDuplicate || isGeneric || invalidLocality) {
+        const replacement = nextReplacement(day.b);
+        if (replacement) {
+          usedText.add(replacement.toLowerCase());
+          return [item[0], item[1], replacement];
+        }
+      }
+      usedText.add(textKey);
+      return item;
+    });
+  }
+
+  const primaryDestination = requested[0];
+  const primaryTop = (pools.byDestination[primaryDestination] ?? []).slice(0, 3);
+  const pickInjectionDay = (): PromptDay | undefined => {
+    const middleDay = itinerary.dy.find((day, idx) => idx > 0 && idx < itinerary.dy.length - 1 && day.it.length > 0);
+    if (middleDay) return middleDay;
+    return itinerary.dy.find((day) => day.it.length > 0);
+  };
+  const forceInjectTopAttraction = (topName: string): void => {
+    if (!topName) return;
+    const alreadyPresent = itinerary.dy.some((day) =>
+      day.it.some((item) => normalizeText(item[2]).toLowerCase() === normalizeText(topName).toLowerCase())
+    );
+    if (alreadyPresent) return;
+    const injectionDay = pickInjectionDay();
+    if (!injectionDay) return;
+    const current = injectionDay.it[0];
+    injectionDay.it[0] = [current[0], current[1], topName];
+  };
+
+  forceInjectTopAttraction(primaryTop[0] ?? '');
+
+  for (const topName of primaryTop.slice(1)) {
+    const alreadyPresent = itinerary.dy.some((day) =>
+      day.it.some((item) => normalizeText(item[2]).toLowerCase() === normalizeText(topName).toLowerCase())
+    );
+    if (alreadyPresent) continue;
+    let injected = false;
+    for (const day of itinerary.dy) {
+      const replaceIndex = day.it.findIndex((item) => {
+        const text = normalizeText(item[2]);
+        return (
+          GENERIC_ACTIVITY_PATTERNS.some((pattern) => pattern.test(text)) ||
+          EXTRA_GENERIC_ACTIVITY_PATTERNS.some((pattern) => pattern.test(text))
+        );
+      });
+      if (replaceIndex >= 0) {
+        const current = day.it[replaceIndex];
+        day.it[replaceIndex] = [current[0], current[1], topName];
+        injected = true;
+        break;
+      }
+    }
+    if (!injected) {
+      const injectionDay = pickInjectionDay();
+      if (!injectionDay) continue;
+      if (injectionDay.it.length < 5) {
+        const seed = injectionDay.it[injectionDay.it.length - 1] ?? ['D', 'A', topName];
+        injectionDay.it.push([seed[0], seed[1], topName]);
+      } else {
+        const current = injectionDay.it[0];
+        injectionDay.it[0] = [current[0], current[1], topName];
+      }
+    }
+  }
+
+  return itinerary;
+};
+
 const mapProfile = (norm: PromptNorm): ItineraryPromptProfile => ({
   pace: norm.p === 'R' ? 'Relaxed' : norm.p === 'F' ? 'Fast' : 'Balanced',
   comfort: norm.c === 'B' ? 'Budget' : norm.c === 'L' ? 'Luxury' : 'Midrange',
   mobility: norm.mob === 'L' ? 'Low' : norm.mob === 'H' ? 'High' : 'Medium',
   carPreference: norm.car === 'P' ? 'PublicTransitOnly' : norm.car === 'R' ? 'FullTripRental' : 'DayTripsOnly',
-  tripMode: norm.tm === 'E' ? 'Explorer' : norm.tm === 'S' ? 'Slow' : 'Balanced',
+  interactionStyle: norm.is === 'self_guided' ? 'Self-Guided' : norm.is === 'guided' ? 'Guided' : 'Mixed',
   weights: norm.w,
 });
 
@@ -801,7 +1182,47 @@ const getActivityBlockedDates = (itinerary: PromptItinerary, norm: PromptNorm): 
   return blocked;
 };
 
-const mapItems = (itinerary: PromptItinerary): ItineraryGeneratedItems => {
+const ALL_ACTIVITY_TYPES: ActivityType[] = [
+  'Class',
+  'Concert/Show',
+  'Day Trip',
+  'Event',
+  'Food & Drink',
+  'Fun & Games',
+  'Hike',
+  'Nightlife',
+  'Open Access',
+  'Outdoor Activity',
+  'Reservation',
+  'Shopping',
+  'Sights & Landmarks',
+  'Spa/Wellness',
+  'Ticketed Attraction',
+  'Tour',
+];
+
+const pickActivityTypeForPreferences = (
+  text: string,
+  fallback: ActivityType,
+  preferenceWeights: PromptWeights
+): ActivityType => {
+  const heuristic = closestGeneratedActivityType(text, fallback);
+  let best = heuristic;
+  let bestScore = Number.NEGATIVE_INFINITY;
+  for (const candidate of ALL_ACTIVITY_TYPES) {
+    const baseScore = scoreActivityTypeByPreferences(candidate, preferenceWeights);
+    const heuristicBonus = candidate === heuristic ? 500 : 0;
+    const fallbackBonus = candidate === fallback ? 250 : 0;
+    const score = baseScore + heuristicBonus + fallbackBonus;
+    if (score > bestScore) {
+      best = candidate;
+      bestScore = score;
+    }
+  }
+  return best;
+};
+
+const mapItems = (itinerary: PromptItinerary, preferenceWeights: PromptWeights): ItineraryGeneratedItems => {
   const transfers: ItineraryGeneratedTransfer[] = itinerary.x.map((transfer) => ({
     status: 'Needed',
     transferType: transfer.m,
@@ -831,9 +1252,9 @@ const mapItems = (itinerary: PromptItinerary): ItineraryGeneratedItems => {
   const activities: ItineraryGeneratedActivity[] = itinerary.dy.flatMap((day) =>
     day.it.map(([timeCode, activityCode, text]) => {
       const mapped = ACTIVITY_CODE_TO_LONG[activityCode];
-      const closest = closestGeneratedActivityType(text, mapped);
+      const closest = pickActivityTypeForPreferences(text, mapped, preferenceWeights);
       return {
-        status: 'Needed',
+        status: 'Proposed',
         activityType: closest,
         date: day.dt,
         name: text,
@@ -888,7 +1309,7 @@ const renderMarkdownFallback = (itinerary: PromptItinerary, profile: ItineraryPr
   lines.push(`- Entry hub: ${itinerary.eh}`);
   lines.push(`- Exit hub: ${itinerary.xh}`);
   lines.push(
-    `- Style: ${profile.pace}, ${profile.comfort}, mobility ${profile.mobility}, car ${profile.carPreference}, mode ${profile.tripMode}`
+    `- Style: ${profile.pace}, ${profile.comfort}, mobility ${profile.mobility}, car ${profile.carPreference}, interaction ${profile.interactionStyle}`
   );
   lines.push('');
   lines.push('## Day-by-day');
@@ -993,6 +1414,7 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
   );
 
   let attractionShortlistBlock = 'none';
+  let shortlistByDestination: Record<string, AttractionCatalogEntry[]> = {};
   if (input.userId) {
     try {
       const limitPerDestination = Number(getApiCacheSetting('attractions', 'limitPerDestination')) || 20;
@@ -1008,6 +1430,7 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
         promptItemsPerDestination: shortlistPromptItemsPerDestination,
       });
       attractionShortlistBlock = shortlist.promptBlock;
+      shortlistByDestination = shortlist.shortlistByDestination ?? {};
       const totalItems = Object.values(shortlist.shortlistByDestination).reduce((sum, list) => sum + list.length, 0);
       logInfo(
         `[itinerary] attractions shortlist loaded destinations=${Object.keys(shortlist.shortlistByDestination).length} items=${totalItems}`
@@ -1015,6 +1438,7 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
     } catch (err) {
       logError('[itinerary] attractions shortlist load failed; continuing without shortlist', err);
       attractionShortlistBlock = 'none';
+      shortlistByDestination = {};
     }
   }
 
@@ -1049,7 +1473,7 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
     maxTokens: Math.max(1100, Math.min(3500, Math.round(promptRequest.dur ?? 1) * 280)),
     fallbackValue: {},
   });
-  const dayItinerary = sanitizeItinerary(dayRaw, route, normalized);
+  const dayItinerary = sanitizeItinerary(dayRaw, route, normalized, promptRequest);
   logInfo(
     `[itinerary] stage done caller=${OPENAI_CALLER_ITINERARY_PLAN_P2_DAYS} days=${dayItinerary.dy.length} transfers=${dayItinerary.x.length}`
   );
@@ -1065,7 +1489,11 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
     maxTokens: 1400,
     fallbackValue: dayItinerary,
   });
-  const itinerary = sanitizeItinerary(validatedRaw, route, normalized);
+  const itinerary = enforceShortlistGrounding(
+    sanitizeItinerary(validatedRaw, route, normalized, promptRequest),
+    promptRequest,
+    shortlistByDestination
+  );
   const blockedActivityDates = getActivityBlockedDates(itinerary, normalized);
   const filteredItinerary: PromptItinerary = {
     ...itinerary,
@@ -1108,7 +1536,7 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
           cost: null,
         },
       ];
-  const items = mapItems(filteredItinerary);
+  const items = mapItems(filteredItinerary, profile.weights);
   logInfo(
     `[itinerary] prompt-plan done details=${safeDetails.length} transfers=${items.transfers.length} lodgings=${items.lodgings.length} activities=${items.activities.length} carRentals=${items.carRentals.length} usedRenderFallback=${planMarkdown === fallbackMarkdown ? 'yes' : 'no'}`
   );

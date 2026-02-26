@@ -4,12 +4,15 @@
       "pace_override": ["Relaxed", "Balanced", "Fast"],
       "mobility": ["Low", "Medium", "High"],
       "interests": [
-        "Hiking",
+        "Outdoors",
+        "Adventure",
+        "Culture",
+        "Food",
+        "Nightlife",
+        "Relax",
         "Photography",
-        "Museums",
-        "Cafes",
-        "RoadTrips",
-        "FamilyFriendly"
+        "AuthenticLocal",
+        "IconicLandmarks"
       ]
     },
     "scheduling": {

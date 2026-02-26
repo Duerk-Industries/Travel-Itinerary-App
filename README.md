@@ -116,7 +116,7 @@ caching:
 - Each attraction is stored with:
   - inferred `activityType`
   - inferred interest tags from:
-    - `outdoors`, `culture`, `food`, `nightlife`, `relax`, `shopping`, `day trips`, `events`, `classes`
+    - `outdoors`, `adventure`, `culture`, `food`, `nightlife`, `relax`, `photography`, `authentic_local`, `iconic_landmarks`
 - Persistence:
   - Database: `locations` records with `source_type=attraction`
   - CSV:
@@ -131,6 +131,16 @@ caching:
   - per-destination refresh lock prevents duplicate concurrent discovery calls
   - compact prompt-ready shortlist blobs are stored by destination/date and reused for generation
   - shortlist entries include budget tiers (`free`, `paid`, `premium`) and prompt assembly prioritizes tiers based on trip budget
+  - itinerary preference profiles now include:
+    - pace, comfort, mobility, car preference
+    - interaction style (`self_guided`, `mixed`, `guided`)
+    - 9 interest weights (`outdoors`, `adventure`, `culture`, `food`, `nightlife`, `relax`, `photography`, `authentic_local`, `iconic_landmarks`)
+  - activity-type scoring now loads `server/data/activity_type_interest_weights.csv` at runtime to bias generated activity typing against the selected interest weights
+  - itinerary sanitization now applies strict locality controls:
+    - destination hierarchy pruning keeps specific requested localities (for example, `Mexico City`) and drops broader duplicates (`Mexico`)
+    - day bases are canonicalized to requested destinations only
+    - transfer endpoints preserve hubs (`MEX`, `JFK`, airports/stations) while pruning destination drift
+    - generic/duplicate day activities are replaced from destination shortlists, with top-ranked shortlist attractions force-injected when missing
 
 ## API quick reference
 - `POST /api/auth/email { email }` → create/login a user via email, returning a JWT.

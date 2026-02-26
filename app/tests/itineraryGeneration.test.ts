@@ -82,7 +82,7 @@ describe('itineraryGeneration utils', () => {
     const activityCall = fetchMock.mock.calls.find((call) => call[0] === 'http://localhost:4000/api/activities');
     expect(activityCall).toBeTruthy();
     const activityPayload = JSON.parse(String(activityCall?.[1]?.body ?? '{}'));
-    expect(activityPayload.status).toBe('Needed');
+    expect(activityPayload.status).toBe('Proposed');
     expect(activityPayload.tripId).toBe('trip-1');
 
     const carCall = fetchMock.mock.calls.find((call) => call[0] === 'http://localhost:4000/api/car-rentals');

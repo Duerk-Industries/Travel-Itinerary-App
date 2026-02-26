@@ -96,7 +96,7 @@ describe('LocationSelector', () => {
     });
   });
 
-  it('adds city and auto-selects country when only state selected', async () => {
+  it('adds only the city when a city suggestion is selected', async () => {
     const selectedLocations: LocationOption[] = [
       { id: 'state-1', name: 'California', sourceType: 'state', countryId: 'country-1', countryName: 'United States' },
     ];
@@ -126,11 +126,6 @@ describe('LocationSelector', () => {
     await waitFor(() => getByText('San Francisco'));
     fireEvent.press(getByText('San Francisco'));
 
-    expect(defaultProps.onAddLocation).toHaveBeenCalledWith({
-      id: 'country-1',
-      name: 'United States',
-      sourceType: 'country',
-    });
     expect(defaultProps.onAddLocation).toHaveBeenCalledWith({
       id: 'city-1',
       name: 'San Francisco',
@@ -193,6 +188,36 @@ describe('LocationSelector', () => {
       sourceType: 'city',
       id: expect.stringMatching(/^manual-city-/),
     }));
+  });
+
+  it('adds manual city even when name matches selected state/country', async () => {
+    const selectedLocations: LocationOption[] = [
+      { id: 'country-1', name: 'United States', sourceType: 'country' },
+      { id: 'state-1', name: 'California', sourceType: 'state', countryId: 'country-1', countryName: 'United States' },
+    ];
+
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => [],
+    });
+
+    const { getByPlaceholderText, findByText } = render(
+      <LocationSelector {...defaultProps} selectedLocations={selectedLocations} />
+    );
+    const input = getByPlaceholderText('Search cities');
+
+    fireEvent.changeText(input, 'California');
+
+    const manualOption = await findByText('Add "California"');
+    fireEvent.press(manualOption);
+
+    expect(defaultProps.onAddLocation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'California',
+        sourceType: 'city',
+        id: expect.stringMatching(/^manual-city-/),
+      })
+    );
   });
 
   it('calls onNext when country/state input is empty', () => {
