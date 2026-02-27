@@ -5936,14 +5936,6 @@
     ]
   },
   {
-    "destination": "Phumi Boeng (1)",
-    "country": "Cambodia",
-    "sources": [
-      "https://en.wikipedia.org/wiki/Phumi_Boeng_(1)",
-      "https://en.wikivoyage.org/wiki/Phumi_Boeng_(1)"
-    ]
-  },
-  {
     "destination": "Phumi Chhuk",
     "country": "Cambodia",
     "sources": [
@@ -6093,6 +6085,14 @@
     "sources": [
       "https://en.wikipedia.org/wiki/Sr%C5%8Fk_Ban%C4%83n",
       "https://en.wikivoyage.org/wiki/Sr%C5%8Fk_Ban%C4%83n"
+    ]
+  },
+  {
+    "destination": "Srŏk Bâvĭl",
+    "country": "Cambodia",
+    "sources": [
+      "https://en.wikipedia.org/wiki/Sr%C5%8Fk_B%C3%A2v%C4%ADl",
+      "https://en.wikivoyage.org/wiki/Sr%C5%8Fk_B%C3%A2v%C4%ADl"
     ]
   },
   {
@@ -12488,22 +12488,6 @@
     ]
   },
   {
-    "destination": "Administrative Zone 2",
-    "country": "Ethiopia",
-    "sources": [
-      "https://en.wikipedia.org/wiki/Administrative_Zone_2",
-      "https://en.wikivoyage.org/wiki/Administrative_Zone_2"
-    ]
-  },
-  {
-    "destination": "Administrative Zone 3",
-    "country": "Ethiopia",
-    "sources": [
-      "https://en.wikipedia.org/wiki/Administrative_Zone_3",
-      "https://en.wikivoyage.org/wiki/Administrative_Zone_3"
-    ]
-  },
-  {
     "destination": "Asaita",
     "country": "Ethiopia",
     "sources": [
@@ -12701,6 +12685,22 @@
     "sources": [
       "https://en.wikipedia.org/wiki/Kombolcha",
       "https://en.wikivoyage.org/wiki/Kombolcha"
+    ]
+  },
+  {
+    "destination": "Lalibela",
+    "country": "Ethiopia",
+    "sources": [
+      "https://en.wikipedia.org/wiki/Lalibela",
+      "https://en.wikivoyage.org/wiki/Lalibela"
+    ]
+  },
+  {
+    "destination": "North Shewa Zone (Amhara)",
+    "country": "Ethiopia",
+    "sources": [
+      "https://en.wikipedia.org/wiki/North_Shewa_Zone_(Amhara)",
+      "https://en.wikivoyage.org/wiki/North_Shewa_Zone_(Amhara)"
     ]
   },
   {
@@ -23336,19 +23336,19 @@
     ]
   },
   {
-    "destination": "Bt9 Cheras/Sg Raya/Tmn Suntex",
-    "country": "Malaysia",
-    "sources": [
-      "https://en.wikipedia.org/wiki/Bt9_Cheras%2FSg_Raya%2FTmn_Suntex",
-      "https://en.wikivoyage.org/wiki/Bt9_Cheras%2FSg_Raya%2FTmn_Suntex"
-    ]
-  },
-  {
     "destination": "Kulim",
     "country": "Malaysia",
     "sources": [
       "https://en.wikipedia.org/wiki/Kulim",
       "https://en.wikivoyage.org/wiki/Kulim"
+    ]
+  },
+  {
+    "destination": "Lahad Datu",
+    "country": "Malaysia",
+    "sources": [
+      "https://en.wikipedia.org/wiki/Lahad_Datu",
+      "https://en.wikivoyage.org/wiki/Lahad_Datu"
     ]
   },
   {

@@ -455,6 +455,16 @@ function normalizeKey(value: string): string {
     .trim();
 }
 
+function isLikelySyntheticName(name: string): boolean {
+  const value = name.trim();
+  if (!value) return true;
+  if (/^administrative zone\b/i.test(value)) return true;
+  if (/\(\d+\)/.test(value)) return true;
+  if (/^[A-Za-z]{1,4}\d{1,4}\b/.test(value)) return true;
+  if (/[/\\]/.test(value) && /[A-Za-z]{1,6}\d/.test(value)) return true;
+  return false;
+}
+
 function csvEscape(value: string): string {
   const safe = value.replace(/"/g, '""');
   return `"${safe}"`;
@@ -649,6 +659,45 @@ function ensureEnglishCapitalCoverage(
   return dedupeDestinations(rows);
 }
 
+function applyDestinationQualityGates(
+  destinations: Destination[],
+  countriesByName: Map<string, Country>
+): { rows: Destination[]; rejected: Destination[] } {
+  const rejected: Destination[] = [];
+  const accepted = destinations.filter((row) => {
+    const shouldReject =
+      isLikelySyntheticName(row['Destination English Name']) ||
+      isLikelySyntheticName(row['Nearest City']) ||
+      (!row.Country || row.Country.trim().length === 0);
+    if (shouldReject) rejected.push(row);
+    return !shouldReject;
+  });
+
+  const grouped = new Map<string, Destination[]>();
+  for (const row of accepted) {
+    if (!grouped.has(row.Country)) grouped.set(row.Country, []);
+    grouped.get(row.Country)?.push(row);
+  }
+
+  for (const [countryName, country] of countriesByName.entries()) {
+    const rows = grouped.get(countryName) ?? [];
+    if (rows.length > 0) continue;
+    const fallback = buildFallbackDestination(country);
+    grouped.set(countryName, [
+      {
+        'Destination English Name': fallback.name,
+        Country: countryName,
+        'State/Provence': fallback.state,
+        'Nearest City': fallback.city,
+        'Destination Official Name': fallback.officialName ?? fallback.name,
+      },
+    ]);
+  }
+
+  const flattened = Array.from(grouped.values()).flat();
+  return { rows: dedupeDestinations(flattened), rejected };
+}
+
 async function canonicalizeDestinationEnglishNames(destinations: Destination[], baseDir: string): Promise<Destination[]> {
   const cachePath = path.resolve(baseDir, 'destination_english_name_cache.json');
   const cache = loadNameCanonicalizationCache(cachePath);
@@ -752,7 +801,10 @@ async function fetchTopCitySeeds(countryName: string, targetCount: number): Prom
 
     const seedsFromPopulation = uniqueSeeds(
       populationRecords
-        .filter((record) => (record.city ?? '').trim().length > 0)
+        .filter((record) => {
+          const city = (record.city ?? '').trim();
+          return city.length > 0 && !isLikelySyntheticName(city);
+        })
         .map((record) => {
           const rawName = (record.city ?? '').trim();
           const parenthetical = rawName.match(/\(([^)]+)\)\s*$/);
@@ -778,7 +830,10 @@ async function fetchTopCitySeeds(countryName: string, targetCount: number): Prom
       const cityNames = Array.isArray(data?.data) ? data.data : [];
       const fallbackSeeds = uniqueSeeds(
         cityNames
-          .filter((name) => (name ?? '').trim().length > 0)
+          .filter((name) => {
+            const city = String(name ?? '').trim();
+            return city.length > 0 && !isLikelySyntheticName(city);
+          })
           .slice(0, Math.min(1200, targetCount * 20))
           .map((name) => {
             const cityName = String(name).trim();
@@ -1006,7 +1061,9 @@ async function main() {
   const capitalByCountry = new Map<string, string>(
     countries.map((country) => [country.name, Array.isArray(country.capital) ? country.capital[0] ?? '' : ''])
   );
-  const finalizedDestinations = ensureEnglishCapitalCoverage(canonicalDestinations, capitalByCountry);
+  const capitalNormalizedDestinations = ensureEnglishCapitalCoverage(canonicalDestinations, capitalByCountry);
+  const countriesByName = new Map(countries.map((country) => [country.name, country]));
+  const { rows: finalizedDestinations, rejected } = applyDestinationQualityGates(capitalNormalizedDestinations, countriesByName);
   const destinationSources: Array<{ destination: string; country: string; sources: string[] }> = [];
 
   for (const row of finalizedDestinations) {
@@ -1052,6 +1109,9 @@ async function main() {
   fs.writeFileSync(sourcesPath, JSON.stringify(destinationSources, null, 2), 'utf8');
 
   console.log(`Generated ${finalizedDestinations.length} destinations for ${countries.length} countries at ${serverDataCsvPath}.`);
+  if (rejected.length > 0) {
+    console.log(`Rejected ${rejected.length} destinations by quality gates.`);
+  }
   await verifyDestinations(serverDataCsvPath);
 }
 
@@ -1114,7 +1174,7 @@ async function verifyDestinations(filePath: string) {
     const name = values[nameIndex].replace(/"/g, '');
     const country = values[countryIndex].replace(/"/g, '');
 
-    if (/\d/.test(name)) {
+    if (isLikelySyntheticName(name)) {
       console.log(`Found synthetic-looking destination: ${name}`);
       syntheticCount += 1;
     }
