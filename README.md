@@ -197,6 +197,18 @@ caching:
 - [`docs/faq/look-and-feel.md`](docs/faq/look-and-feel.md)
 - [`docs/faq/operations-and-constraints.md`](docs/faq/operations-and-constraints.md)
 
+## Design System + Theming
+- UI design source of truth lives in `docs/design/`:
+  - `docs/design/travel_app_design_system.md`
+  - `docs/design/component_specs.md`
+  - `docs/design/dark_mode.md`
+  - `docs/design/react_native_theme.md`
+  - `docs/design/tokens.ts` / `docs/design/tokens.json`
+- Account profile now persists both:
+  - `appearancePreference`: `light | dark | auto`
+  - `mapPreference`: `google | apple | waze`
+- `auto` appearance follows system color scheme and is also cached locally for first paint before auth/profile fetch.
+
 ## Notes
 - This project is a base implementation; plug in real OAuth client IDs/secrets and production storage for secure deployments.
 - The Expo client uses React Native Web so the same code runs on web, Android, and iOS.

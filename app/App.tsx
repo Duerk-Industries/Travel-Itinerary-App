@@ -11,7 +11,7 @@
  * then UI sections render conditionally based on the active page.
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme, useWindowDimensions } from 'react-native';
 import Constants from 'expo-constants';
 import { formatDateLong } from './utils/formatDateLong';
 import { normalizeDateString } from './utils/normalizeDateString';
@@ -42,6 +42,12 @@ import {
 import { Lodging, fetchLodgingsApi } from './tabs/lodging';
 import { InvitePayload } from './utils/inviteCodes';
 import { type MapApp, buildMapUrl, loadStoredMapPreference, persistMapPreference } from './utils/mapLinks';
+import {
+  type AppearancePreference,
+  loadStoredAppearancePreference,
+  persistAppearancePreference,
+} from './utils/appearancePreference';
+import { getAppTheme, type AppTheme } from './theme/theme';
 import { shouldAllowPageChange, shouldDisableTab } from './utils/wizardGuard';
 import * as WebBrowser from 'expo-web-browser';
 import { Buffer } from 'buffer';
@@ -269,6 +275,7 @@ const extractTokenFromUrl = (rawUrl: string) => {
 
 const App: React.FC = () => {
   const { width: viewportWidth } = useWindowDimensions();
+  const systemColorScheme = useColorScheme();
   const isNarrowLayout = viewportWidth < 980;
   const isPhoneLayout = viewportWidth < 680;
   const isWebIOSSafari = useMemo(() => {
@@ -409,8 +416,14 @@ const App: React.FC = () => {
     email: '',
     homeAddress: '',
     preferredAirport: '',
+    appearancePreference: 'auto' as AppearancePreference,
   });
   const [mapApp, setMapApp] = useState<MapApp>(() => loadStoredMapPreference('google'));
+  const [appearancePreference, setAppearancePreference] = useState<AppearancePreference>(() =>
+    loadStoredAppearancePreference('auto')
+  );
+  const theme = useMemo(() => getAppTheme(appearancePreference, systemColorScheme), [appearancePreference, systemColorScheme]);
+  const styles = useMemo(() => buildStyles(theme), [theme]);
   const [familyRelationships, setFamilyRelationships] = useState<any[]>([]);
   const [coveredBy, setCoveredBy] = useState<Record<string, string>>({});
   const [fellowTravelers, setFellowTravelers] = useState<FellowTraveler[]>([]);
@@ -497,6 +510,15 @@ const App: React.FC = () => {
       setMapApp(pref);
       persistMapPreference(pref);
       setAccountProfile((prev) => ({ ...prev, mapPreference: pref }));
+    },
+    [setAccountProfile]
+  );
+
+  const updateAppearancePreference = useCallback(
+    (pref: AppearancePreference) => {
+      setAppearancePreference(pref);
+      persistAppearancePreference(pref);
+      setAccountProfile((prev) => ({ ...prev, appearancePreference: pref }));
     },
     [setAccountProfile]
   );
@@ -876,7 +898,7 @@ const App: React.FC = () => {
     setSelectedTraitNames(new Set());
     setTraitAge('');
     setTraitGender('prefer-not');
-    setAccountProfile({ firstName: '', lastName: '', email: '', homeAddress: '', preferredAirport: '' });
+    setAccountProfile({ firstName: '', lastName: '', email: '', homeAddress: '', preferredAirport: '', appearancePreference: 'auto' });
     setFamilyRelationships([]);
     setFellowTravelers([]);
     setRequirePasswordSetup(false);
@@ -899,10 +921,11 @@ const App: React.FC = () => {
         logout,
         setAccountProfile,
         setMapPreference: updateMapPreference,
+        setAppearancePreference: updateAppearancePreference,
         setUserName,
         setUserEmail,
       }),
-    [backendUrl, logout, setAccountProfile, setUserEmail, setUserName, updateMapPreference, userToken]
+    [backendUrl, logout, setAccountProfile, setUserEmail, setUserName, updateAppearancePreference, updateMapPreference, userToken]
   );
 
   const loadFamilyRelationships = useCallback(
@@ -991,6 +1014,7 @@ const App: React.FC = () => {
       email: decoded?.email ?? '',
       homeAddress: '',
       preferredAirport: '',
+      appearancePreference: 'auto',
     });
     const previousSession = loadSession();
     const restoredTripId = previousSession?.tripId ?? activeTripId ?? null;
@@ -2327,6 +2351,8 @@ const App: React.FC = () => {
               setUserEmail={setUserEmail}
               mapApp={mapApp}
               onChangeMapApp={updateMapPreference}
+              appearancePreference={appearancePreference}
+              onChangeAppearancePreference={updateAppearancePreference}
               saveSession={saveSession}
               headers={headers}
               jsonHeaders={jsonHeaders}
@@ -3167,10 +3193,10 @@ const App: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const buildStyles = (theme: AppTheme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: theme.colors.backgroundAlt,
     alignItems: 'center',
     justifyContent: 'flex-start',
     width: '100%',
@@ -3182,9 +3208,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderBottomWidth: 1,
-    borderColor: '#d1d5db',
+    borderColor: theme.colors.border,
   },
   topBarStacked: {
     alignItems: 'stretch',
@@ -3203,27 +3229,27 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#000',
+    backgroundColor: theme.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   homeButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
+    color: theme.colors.onPrimary,
+    fontSize: theme.typography.body,
+    fontWeight: theme.typography.weightBold,
   },
   backButton: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#000',
+    backgroundColor: theme.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   backButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
+    color: theme.colors.onPrimary,
+    fontSize: theme.typography.body,
+    fontWeight: theme.typography.weightBold,
   },
   topRightWrapper: {
     flexDirection: 'row',
@@ -3255,19 +3281,19 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 1200,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: theme.colors.border,
   },
   homeScrollContent: {
     gap: 16,
   },
   homeTitle: {
-    fontSize: 28,
-    fontWeight: '600',
-    color: '#111827',
+    fontSize: theme.typography.h1,
+    fontWeight: theme.typography.weightSemibold,
+    color: theme.colors.text,
     marginBottom: 4,
   },
   homeHeroCard: {
@@ -3419,8 +3445,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: theme.typography.h2,
+    fontWeight: theme.typography.weightBold,
+    color: theme.colors.text,
     flexShrink: 1,
   },
   titleNarrow: {
@@ -3431,8 +3458,10 @@ const styles = StyleSheet.create({
     maxWidth: 420,
     marginTop: 40,
     padding: 16,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   toggleRow: {
     flexDirection: 'row',
@@ -3442,15 +3471,15 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 10,
     borderBottomWidth: 2,
-    borderColor: '#d1d5db',
+    borderColor: theme.colors.border,
   },
   toggleActive: {
-    borderColor: '#0d6efd',
+    borderColor: theme.colors.link,
   },
   toggleText: {
     textAlign: 'center',
-    fontWeight: '600',
-    color: '#6b7280',
+    fontWeight: theme.typography.weightSemibold,
+    color: theme.colors.textMuted,
   },
   toggleGroup: {
     flexDirection: 'row',
@@ -3484,28 +3513,30 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: '#d1d5db',
+    borderColor: theme.colors.border,
     borderRadius: 6,
     padding: 10,
     marginBottom: 12,
     width: '100%',
+    color: theme.colors.text,
+    backgroundColor: theme.colors.surface,
   },
   button: {
-    backgroundColor: '#0d6efd',
+    backgroundColor: theme.colors.cta,
     padding: 10,
     borderRadius: 6,
     alignItems: 'center',
   },
   buttonText: {
-    color: '#fff',
-    fontWeight: 'bold',
+    color: '#0B1726',
+    fontWeight: theme.typography.weightBold,
   },
   smallButton: {
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
   dangerButton: {
-    backgroundColor: '#dc3545',
+    backgroundColor: theme.colors.error,
   },
   navRow: {
     flexDirection: 'row',
@@ -3517,34 +3548,37 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
-    backgroundColor: '#e9ecef',
+    backgroundColor: theme.colors.surfaceMuted,
   },
   navButtonActive: {
-    backgroundColor: '#0d6efd',
+    backgroundColor: theme.colors.primary,
   },
   navButtonText: {
-    color: '#000',
-    fontWeight: '600',
+    color: theme.colors.text,
+    fontWeight: theme.typography.weightSemibold,
   },
   navButtonActiveText: {
-    color: '#fff',
+    color: theme.colors.onPrimary,
   },
   section: {
     width: '100%',
     maxWidth: 1200,
     padding: 16,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: theme.typography.h3,
+    fontWeight: theme.typography.weightBold,
+    color: theme.colors.text,
     marginBottom: 8,
   },
   helperText: {
-    color: '#6b7280',
+    color: theme.colors.textMuted,
     marginBottom: 8,
-    fontSize: 13,
+    fontSize: theme.typography.small,
   },
   row: {
     flexDirection: 'row',
@@ -3571,7 +3605,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: theme.colors.border,
     gap: 8,
   },
   groupRowLast: {
@@ -3580,46 +3614,48 @@ const styles = StyleSheet.create({
   table: {
     width: '100%',
     borderWidth: 1,
-    borderColor: '#dee2e6',
+    borderColor: theme.colors.border,
     borderRadius: 6,
   },
   tableRow: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderColor: '#dee2e6',
+    borderColor: theme.colors.border,
   },
   tableHeaderRow: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: theme.colors.surfaceMuted,
   },
   lastRow: {
     borderBottomWidth: 0,
   },
   tableHeader: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: theme.colors.surfaceMuted,
   },
   cell: {
     padding: 8,
     borderRightWidth: 1,
-    borderColor: '#dee2e6',
+    borderColor: theme.colors.border,
   },
   tableHeaderCell: {
     padding: 8,
     borderRightWidth: 1,
-    borderColor: '#dee2e6',
+    borderColor: theme.colors.border,
   },
   tableCell: {
     padding: 8,
     borderRightWidth: 1,
-    borderColor: '#dee2e6',
+    borderColor: theme.colors.border,
   },
   lastCell: {
     borderRightWidth: 0,
   },
   headerText: {
-    fontWeight: 'bold',
+    fontWeight: theme.typography.weightBold,
+    color: theme.colors.text,
   },
   cellText: {
     flexWrap: 'wrap',
+    color: theme.colors.text,
   },
   actionCell: {
     flexDirection: 'row',
@@ -3635,10 +3671,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   tableActionButtonPrimary: {
-    backgroundColor: '#2563eb',
+    backgroundColor: theme.colors.link,
   },
   tableActionButtonDanger: {
-    backgroundColor: '#dc2626',
+    backgroundColor: theme.colors.error,
   },
   tableNameButton: {
     alignSelf: 'flex-start',
@@ -3652,7 +3688,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   bodyText: {
-    fontSize: 14,
+    fontSize: theme.typography.small,
+    color: theme.colors.text,
   },
   flightsSection: {
     gap: 12,
@@ -3662,14 +3699,15 @@ const styles = StyleSheet.create({
   },
   flightCard: {
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: theme.colors.border,
     borderRadius: 8,
     padding: 12,
     gap: 4,
   },
   flightTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: theme.typography.body,
+    fontWeight: theme.typography.weightSemibold,
+    color: theme.colors.text,
   },
   attendeeList: {
     flexDirection: 'row',
@@ -3680,7 +3718,7 @@ const styles = StyleSheet.create({
   attendeeChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#e9ecef',
+    backgroundColor: theme.colors.surfaceMuted,
     borderRadius: 16,
     paddingVertical: 4,
     paddingHorizontal: 10,
@@ -3693,7 +3731,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff3cd',
   },
   attendeeText: {
-    fontWeight: '600',
+    fontWeight: theme.typography.weightSemibold,
+    color: theme.colors.text,
   },
   attendeeRemoveButton: {
     marginLeft: 4,
@@ -3704,7 +3743,7 @@ const styles = StyleSheet.create({
   },
   addTravelerForm: {
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: theme.colors.border,
     borderRadius: 8,
     padding: 12,
     marginTop: 8,
@@ -3712,25 +3751,25 @@ const styles = StyleSheet.create({
   },
   flightEditorWrap: {
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: theme.colors.border,
     borderRadius: 8,
     padding: 12,
     marginVertical: 4,
   },
   flightRow: {
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: theme.colors.border,
     borderRadius: 8,
     padding: 12,
     gap: 4,
   },
   divider: {
     height: 1,
-    backgroundColor: '#e2e8f0',
+    backgroundColor: theme.colors.border,
     marginVertical: 12,
   },
   dayPill: {
-    backgroundColor: '#e5e7eb',
+    backgroundColor: theme.colors.surfaceMuted,
     borderRadius: 999,
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -3740,22 +3779,23 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   dayPillActive: {
-    backgroundColor: '#111827',
+    backgroundColor: theme.colors.primary,
   },
   dayPillText: {
-    fontWeight: '600',
+    fontWeight: theme.typography.weightSemibold,
+    color: theme.colors.text,
   },
   dayPillActiveText: {
     color: '#fff',
   },
   dayPillNumber: {
-    fontWeight: '800',
-    color: '#111827',
-    fontSize: 13,
+    fontWeight: theme.typography.weightBold,
+    color: theme.colors.text,
+    fontSize: theme.typography.caption,
   },
   dayPillDate: {
-    color: '#4b5563',
-    fontSize: 13,
+    color: theme.colors.textMuted,
+    fontSize: theme.typography.caption,
   },
   dayHeroCard: {
     borderRadius: 16,
@@ -3843,11 +3883,11 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   dayInfoCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: theme.colors.border,
     gap: 8,
   },
   dayInfoRow: {
@@ -3875,9 +3915,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dayInfoRoute: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#0f172a',
+    fontSize: theme.typography.body,
+    fontWeight: theme.typography.weightSemibold,
+    color: theme.colors.text,
     flexShrink: 1,
     flexWrap: 'wrap',
   },
@@ -3886,11 +3926,11 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   dayInfoButtonText: {
-    color: '#111827',
-    fontWeight: '600',
+    color: theme.colors.text,
+    fontWeight: theme.typography.weightSemibold,
   },
   dayNextButton: {
-    backgroundColor: '#e5e7eb',
+    backgroundColor: theme.colors.surfaceMuted,
     borderRadius: 16,
     padding: 12,
   },
@@ -3905,11 +3945,11 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   removeText: {
-    color: '#dc2626',
-    fontWeight: '600',
+    color: theme.colors.error,
+    fontWeight: theme.typography.weightSemibold,
   },
   linkText: {
-    color: '#0d6efd',
+    color: theme.colors.link,
     textDecorationLine: 'underline',
   },
   lodgingNameCol: { minWidth: 120, maxWidth: 320, flex: 1 },
@@ -3952,11 +3992,11 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   placeholderText: {
-    color: '#9ca3af',
+    color: theme.colors.textMuted,
   },
   selectCaret: {
-    color: '#6b7280',
-    fontSize: 12,
+    color: theme.colors.textMuted,
+    fontSize: theme.typography.caption,
     marginLeft: 8,
   },
   dropdownList: {
@@ -3964,9 +4004,9 @@ const styles = StyleSheet.create({
     top: 40,
     left: 0,
     right: 0,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: '#d1d5db',
+    borderColor: theme.colors.border,
     borderRadius: 6,
     zIndex: 20000,
     elevation: 24,
@@ -3974,8 +4014,8 @@ const styles = StyleSheet.create({
   dropdownOption: {
     padding: 10,
     borderBottomWidth: 1,
-    borderColor: '#e5e7eb',
-    backgroundColor: '#fff',
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
   },
   dateInputWrap: {
     position: 'relative',
@@ -4005,8 +4045,8 @@ const styles = StyleSheet.create({
     maxWidth: '72%',
   },
   warningText: {
-    color: '#dc2626',
-    fontWeight: '600',
+    color: theme.colors.error,
+    fontWeight: theme.typography.weightSemibold,
   },
   passengerDropdown: {
     zIndex: 3000,
@@ -4034,15 +4074,15 @@ const styles = StyleSheet.create({
   },
   passengerOverlayList: {
     position: 'absolute',
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: '#d1d5db',
+    borderColor: theme.colors.border,
     borderRadius: 6,
     zIndex: 13000,
     elevation: 32,
   },
   modalCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderRadius: 8,
     padding: 12,
     marginHorizontal: 16,
@@ -4113,13 +4153,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   modalLabel: {
-    fontSize: 12,
-    color: '#6b7280',
+    fontSize: theme.typography.caption,
+    color: theme.colors.textMuted,
     marginTop: 8,
   },
   modalLabelSmall: {
-    fontSize: 12,
-    color: '#6b7280',
+    fontSize: theme.typography.caption,
+    color: theme.colors.textMuted,
     marginBottom: 4,
   },
   modalRow: {
@@ -4140,9 +4180,9 @@ const styles = StyleSheet.create({
     top: '100%',
     left: 0,
     right: 0,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: '#d1d5db',
+    borderColor: theme.colors.border,
     borderRadius: 6,
     zIndex: 14000,
     elevation: 40, // keep above other inputs on native
@@ -4202,9 +4242,9 @@ const styles = StyleSheet.create({
     top: 80,
     left: 16,
     right: 16,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: '#d1d5db',
+    borderColor: theme.colors.border,
     borderRadius: 8,
     padding: 8,
     maxHeight: 360,
@@ -4226,16 +4266,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#cbd5e1',
-    backgroundColor: '#fff',
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
   },
   traitChipSelected: {
-    backgroundColor: '#0d6efd',
-    borderColor: '#0d6efd',
+    backgroundColor: theme.colors.link,
+    borderColor: theme.colors.link,
   },
   traitChipText: {
-    color: '#0f172a',
-    fontWeight: '600',
+    color: theme.colors.text,
+    fontWeight: theme.typography.weightSemibold,
   },
   traitChipTextSelected: {
     color: '#fff',
@@ -4258,8 +4298,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#c7c7c7',
   },
   badgeText: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: theme.typography.caption,
+    fontWeight: theme.typography.weightSemibold,
     color: '#2b2b2b',
   },
   buttonDisabled: {
@@ -4294,10 +4334,10 @@ const styles = StyleSheet.create({
   },
   inviteCard: {
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: theme.colors.border,
     borderRadius: 8,
     padding: 12,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
   },
   modalOverlay: {
     position: 'absolute',
@@ -4312,12 +4352,14 @@ const styles = StyleSheet.create({
     zIndex: 20000,
   },
   confirmModal: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     padding: 16,
     borderRadius: 10,
     width: '100%',
     maxWidth: 420,
     boxShadow: '0 4px 10px rgba(0,0,0,0.25)',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   payerChips: {
     flexDirection: 'row',
@@ -4328,11 +4370,31 @@ const styles = StyleSheet.create({
   payerChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#e9ecef',
+    backgroundColor: theme.colors.surfaceMuted,
     borderRadius: 16,
     paddingVertical: 2,
     paddingHorizontal: 8,
     gap: 4,
+  },
+  mapOptionButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+  },
+  mapOptionActive: {
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.primary,
+  },
+  mapOptionText: {
+    color: theme.colors.text,
+    fontSize: theme.typography.small,
+    fontWeight: theme.typography.weightSemibold,
+  },
+  mapOptionActiveText: {
+    color: theme.colors.onPrimary,
   },
   payerOptions: {
     flexDirection: 'row',

@@ -418,6 +418,8 @@ export const getWebUserProfile = async (userId: string): Promise<WebUser | null>
       lastName: data.lastName,
       homeAddress: data.homeAddress ?? null,
       preferredAirport: data.preferredAirport ?? null,
+      mapPreference: data.mapPreference ?? null,
+      appearancePreference: data.appearancePreference ?? null,
     };
   }
 
@@ -431,6 +433,8 @@ export const getWebUserProfile = async (userId: string): Promise<WebUser | null>
       lastName: data.lastName,
       homeAddress: data.homeAddress ?? null,
       preferredAirport: data.preferredAirport ?? null,
+      mapPreference: data.mapPreference ?? null,
+      appearancePreference: data.appearancePreference ?? null,
     };
   }
 
@@ -451,6 +455,20 @@ export const updateWebUserProfile = async (
       typeof (payload as any).preferredAirport === 'string' && !(payload as any).preferredAirport.trim()
         ? null
         : (payload as any).preferredAirport,
+    mapPreference:
+      (payload as any).mapPreference === 'google' || (payload as any).mapPreference === 'apple' || (payload as any).mapPreference === 'waze'
+        ? (payload as any).mapPreference
+        : typeof (payload as any).mapPreference === 'undefined'
+          ? undefined
+          : null,
+    appearancePreference:
+      (payload as any).appearancePreference === 'light' ||
+      (payload as any).appearancePreference === 'dark' ||
+      (payload as any).appearancePreference === 'auto'
+        ? (payload as any).appearancePreference
+        : typeof (payload as any).appearancePreference === 'undefined'
+          ? undefined
+          : null,
   });
   await db.collection('web_users').doc(userId).update(updates);
   const updated = await db.collection('web_users').doc(userId).get();
@@ -462,6 +480,8 @@ export const updateWebUserProfile = async (
     lastName: data.lastName,
     homeAddress: data.homeAddress ?? null,
     preferredAirport: data.preferredAirport ?? null,
+    mapPreference: data.mapPreference ?? null,
+    appearancePreference: data.appearancePreference ?? null,
   };
 };
 

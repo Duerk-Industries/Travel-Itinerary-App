@@ -36,6 +36,8 @@ export interface WebUser {
   lastName: string;
   homeAddress?: string | null;
   preferredAirport?: string | null;
+  mapPreference?: 'google' | 'apple' | 'waze' | null;
+  appearancePreference?: 'light' | 'dark' | 'auto' | null;
   emailVerified?: boolean;
   firstLoginAt?: string | null;
   lastLoginAt?: string | null;

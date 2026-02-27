@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { type MapApp, isMapApp } from '../utils/mapLinks';
+import { type AppearancePreference, isAppearancePreference } from '../utils/appearancePreference';
 import FamilyRelationships from './FamilyRelationships';
 import AccountTraits from './AccountTraits';
 import AccountProfileManagement from './AccountProfileManagement';
@@ -15,6 +16,7 @@ export interface AccountProfile {
   homeAddress: string;
   preferredAirport: string;
   mapPreference?: MapApp;
+  appearancePreference: AppearancePreference;
 }
 
 export interface FellowTraveler {
@@ -37,6 +39,7 @@ interface FetchAccountProfileParams {
   logout: () => void;
   setAccountProfile: Setter<AccountProfile>;
   setMapPreference?: (pref: MapApp) => void;
+  setAppearancePreference?: (pref: AppearancePreference) => void;
   setUserName: Setter<string | null>;
   setUserEmail: Setter<string | null>;
 }
@@ -47,6 +50,7 @@ export const fetchAccountProfile = async ({
   logout,
   setAccountProfile,
   setMapPreference,
+  setAppearancePreference,
   setUserName,
   setUserEmail,
 }: FetchAccountProfileParams): Promise<boolean> => {
@@ -63,7 +67,9 @@ export const fetchAccountProfile = async ({
     const data = await res.json();
     const fullName = `${data.firstName ?? ''} ${data.lastName ?? ''}`.trim() || 'Traveler';
     const mapPreference = isMapApp(data.mapPreference) ? data.mapPreference : undefined;
+    const appearancePreference = isAppearancePreference(data.appearancePreference) ? data.appearancePreference : undefined;
     if (mapPreference && setMapPreference) setMapPreference(mapPreference);
+    if (appearancePreference && setAppearancePreference) setAppearancePreference(appearancePreference);
     setAccountProfile((prev) => ({
       firstName: data.firstName ?? '',
       lastName: data.lastName ?? '',
@@ -71,6 +77,7 @@ export const fetchAccountProfile = async ({
       homeAddress: data.homeAddress ?? '',
       preferredAirport: data.preferredAirport ?? '',
       mapPreference: mapPreference ?? prev.mapPreference ?? 'google',
+      appearancePreference: appearancePreference ?? prev.appearancePreference ?? 'auto',
     }));
     setUserName(fullName);
     setUserEmail(data.email ?? null);
@@ -133,6 +140,8 @@ interface AccountTabProps {
   setUserEmail: Setter<string | null>;
   mapApp: MapApp;
   onChangeMapApp: (pref: MapApp) => void;
+  appearancePreference: AppearancePreference;
+  onChangeAppearancePreference: (pref: AppearancePreference) => void;
   saveSession: (token: string, name: string, page?: string, email?: string | null) => void;
   headers: Headers;
   jsonHeaders: Headers;
@@ -185,6 +194,8 @@ const AccountTab: React.FC<AccountTabProps> = ({
   setUserEmail,
   mapApp,
   onChangeMapApp,
+  appearancePreference,
+  onChangeAppearancePreference,
   saveSession,
   headers,
   jsonHeaders,
@@ -218,6 +229,8 @@ const AccountTab: React.FC<AccountTabProps> = ({
         setUserEmail={setUserEmail}
         mapApp={mapApp}
         onChangeMapApp={onChangeMapApp}
+        appearancePreference={appearancePreference}
+        onChangeAppearancePreference={onChangeAppearancePreference}
         saveSession={saveSession}
         headers={headers}
         jsonHeaders={jsonHeaders}

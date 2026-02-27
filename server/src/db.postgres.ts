@@ -142,6 +142,8 @@ export const initDb = async (): Promise<void> => {
       last_name TEXT NOT NULL,
       home_address TEXT,
       preferred_airport TEXT,
+      map_preference TEXT,
+      appearance_preference TEXT,
       password_hash TEXT NOT NULL,
       salt TEXT NOT NULL,
       first_login_at TIMESTAMP,
@@ -157,6 +159,8 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS last_name TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS home_address TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS preferred_airport TEXT;`);
+  await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS map_preference TEXT;`);
+  await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS appearance_preference TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS password_hash TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS salt TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS first_login_at TIMESTAMP;`);
@@ -977,6 +981,8 @@ export const getWebUserProfile = async (
   lastName: string;
   homeAddress?: string | null;
   preferredAirport?: string | null;
+  mapPreference?: 'google' | 'apple' | 'waze' | null;
+  appearancePreference?: 'light' | 'dark' | 'auto' | null;
 } | null> => {
   const p = getPool();
   const { rows } = await p.query<{
@@ -986,8 +992,10 @@ export const getWebUserProfile = async (
     last_name: string;
     home_address: string | null;
     preferred_airport: string | null;
+    map_preference: string | null;
+    appearance_preference: string | null;
   }>(
-    `SELECT id, email, first_name, last_name, home_address, preferred_airport FROM web_users WHERE id = $1 LIMIT 1`,
+    `SELECT id, email, first_name, last_name, home_address, preferred_airport, map_preference, appearance_preference FROM web_users WHERE id = $1 LIMIT 1`,
     [userId]
   );
   if (rows.length) {
@@ -999,6 +1007,8 @@ export const getWebUserProfile = async (
       lastName: row.last_name,
       homeAddress: row.home_address ?? null,
       preferredAirport: row.preferred_airport ?? null,
+      mapPreference: row.map_preference === 'google' || row.map_preference === 'apple' || row.map_preference === 'waze' ? row.map_preference : null,
+      appearancePreference: row.appearance_preference === 'light' || row.appearance_preference === 'dark' || row.appearance_preference === 'auto' ? row.appearance_preference : null,
     };
   }
 
@@ -1016,7 +1026,15 @@ export const getWebUserProfile = async (
 
 export const updateWebUserProfile = async (
   userId: string,
-  updates: { firstName?: string; lastName?: string; email?: string; homeAddress?: string; preferredAirport?: string }
+  updates: {
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    homeAddress?: string;
+    preferredAirport?: string;
+    mapPreference?: string;
+    appearancePreference?: string;
+  }
 ): Promise<{
   id: string;
   email: string;
@@ -1024,6 +1042,8 @@ export const updateWebUserProfile = async (
   lastName: string;
   homeAddress?: string | null;
   preferredAirport?: string | null;
+  mapPreference?: 'google' | 'apple' | 'waze' | null;
+  appearancePreference?: 'light' | 'dark' | 'auto' | null;
 }> => {
   const p = getPool();
   const client = await p.connect();
@@ -1041,6 +1061,15 @@ export const updateWebUserProfile = async (
       }
     }
 
+    const normalizedMapPreference =
+      updates.mapPreference === 'google' || updates.mapPreference === 'apple' || updates.mapPreference === 'waze'
+        ? updates.mapPreference
+        : null;
+    const normalizedAppearancePreference =
+      updates.appearancePreference === 'light' || updates.appearancePreference === 'dark' || updates.appearancePreference === 'auto'
+        ? updates.appearancePreference
+        : null;
+
     const { rows } = await client.query(
       `
       UPDATE web_users
@@ -1049,7 +1078,9 @@ export const updateWebUserProfile = async (
         last_name = COALESCE($3, last_name),
         email = COALESCE($4, email),
         home_address = CASE WHEN $5::text IS NULL THEN home_address ELSE NULLIF($5::text, '') END,
-        preferred_airport = CASE WHEN $6::text IS NULL THEN preferred_airport ELSE NULLIF($6::text, '') END
+        preferred_airport = CASE WHEN $6::text IS NULL THEN preferred_airport ELSE NULLIF($6::text, '') END,
+        map_preference = CASE WHEN $7::text IS NULL THEN map_preference ELSE NULLIF($7::text, '') END,
+        appearance_preference = CASE WHEN $8::text IS NULL THEN appearance_preference ELSE NULLIF($8::text, '') END
       WHERE id = $1
       RETURNING
         id,
@@ -1057,7 +1088,9 @@ export const updateWebUserProfile = async (
         first_name as "firstName",
         last_name as "lastName",
         home_address as "homeAddress",
-        preferred_airport as "preferredAirport"
+        preferred_airport as "preferredAirport",
+        map_preference as "mapPreference",
+        appearance_preference as "appearancePreference"
     `,
       [
         userId,
@@ -1066,6 +1099,8 @@ export const updateWebUserProfile = async (
         updates.email ?? null,
         typeof updates.homeAddress === 'string' ? updates.homeAddress.trim() : null,
         typeof updates.preferredAirport === 'string' ? updates.preferredAirport.trim() : null,
+        normalizedMapPreference,
+        normalizedAppearancePreference,
       ]
     );
 

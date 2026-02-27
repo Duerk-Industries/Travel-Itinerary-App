@@ -218,6 +218,26 @@ npm test
 
 The app now supports itinerary item status values:
 - `Needed`
+
+## 7. Theme + Appearance Preference Coverage
+
+Theme and design-system regression checks now include:
+- `app/tests/appearancePreference.test.ts`
+  - validates preference parsing and local storage fallback behavior
+  - validates `auto` resolution against system light/dark state
+- `app/account.test.tsx`
+  - account tab wiring includes appearance preference props
+- `server/__tests__/account.test.ts`
+  - verifies account profile persists and returns:
+    - `mapPreference` (`google|apple|waze`)
+    - `appearancePreference` (`light|dark|auto`)
+
+Manual verification checklist:
+- Set Account -> Appearance to `Light`, refresh app, confirm light theme persists.
+- Set Account -> Appearance to `Dark`, refresh app, confirm dark theme persists.
+- Set Account -> Appearance to `Auto`, change OS/browser scheme, confirm theme follows system.
+- Confirm first paint uses locally cached appearance before profile fetch.
+- Confirm map preference continues to persist and is returned by `GET /api/account`.
 - `Proposed`
 - `Booked`
 - `Cancelled`

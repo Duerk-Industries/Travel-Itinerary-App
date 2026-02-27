@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { type MapApp, isMapApp, mapAppOptions } from '../utils/mapLinks';
+import { appearanceOptions, isAppearancePreference, type AppearancePreference } from '../utils/appearancePreference';
 import { AccountProfile } from './account';
 
 type Setter<T> = React.Dispatch<React.SetStateAction<T>>;
@@ -18,6 +19,8 @@ interface AccountProfileManagementProps {
   setUserEmail: Setter<string | null>;
   mapApp: MapApp;
   onChangeMapApp: (pref: MapApp) => void;
+  appearancePreference: AppearancePreference;
+  onChangeAppearancePreference: (pref: AppearancePreference) => void;
   saveSession: (token: string, name: string, page?: string, email?: string | null) => void;
   headers: Headers;
   jsonHeaders: Headers;
@@ -38,6 +41,8 @@ const AccountProfileManagement = ({
   setUserEmail,
   mapApp,
   onChangeMapApp,
+  appearancePreference,
+  onChangeAppearancePreference,
   saveSession,
   headers,
   jsonHeaders,
@@ -99,19 +104,12 @@ const AccountProfileManagement = ({
     },
     airportSuggestionList: {
       marginTop: 4,
-      borderWidth: 1,
-      borderColor: '#d1d5db',
-      borderRadius: 6,
-      backgroundColor: '#fff',
       maxHeight: 220,
       overflow: 'hidden',
     },
     airportSuggestionOption: {
       paddingVertical: 10,
       paddingHorizontal: 12,
-      borderBottomWidth: 1,
-      borderBottomColor: '#e5e7eb',
-      backgroundColor: '#fff',
     },
   });
 
@@ -132,7 +130,11 @@ const AccountProfileManagement = ({
     const nextMapPreference = isMapApp(updatedUser.mapPreference)
       ? updatedUser.mapPreference
       : accountProfile.mapPreference ?? mapApp;
+    const nextAppearancePreference = isAppearancePreference(updatedUser.appearancePreference)
+      ? updatedUser.appearancePreference
+      : accountProfile.appearancePreference ?? appearancePreference;
     onChangeMapApp(nextMapPreference);
+    onChangeAppearancePreference(nextAppearancePreference);
     const fullName = `${updatedUser.firstName ?? ''} ${updatedUser.lastName ?? ''}`.trim() || 'Traveler';
     if (data.token) {
       setUserToken(data.token);
@@ -147,6 +149,7 @@ const AccountProfileManagement = ({
       homeAddress: updatedUser.homeAddress ?? '',
       preferredAirport: updatedUser.preferredAirport ?? '',
       mapPreference: nextMapPreference,
+      appearancePreference: nextAppearancePreference,
     });
     setAccountMessage('Profile updated');
   };
@@ -218,12 +221,13 @@ const AccountProfileManagement = ({
           onChangeText={handlePreferredAirportChange}
         />
         {showPreferredAirportSuggestions ? (
-          <View style={localStyles.airportSuggestionList}>
+          <View style={[styles.dropdownList, localStyles.airportSuggestionList]}>
             {preferredAirportSuggestions.length ? (
               preferredAirportSuggestions.map((opt, idx) => (
                 <TouchableOpacity
                   key={opt}
                   style={[
+                    styles.dropdownOption,
                     localStyles.airportSuggestionOption,
                     idx === preferredAirportSuggestions.length - 1 && { borderBottomWidth: 0 },
                   ]}
@@ -264,6 +268,28 @@ const AccountProfileManagement = ({
       </View>
       <Text style={styles.helperText}>
         Selected: {mapAppOptions.find((opt) => opt.key === mapApp)?.label ?? 'Google Maps'}
+      </Text>
+      <Text style={styles.modalLabel}>Appearance</Text>
+      <View style={[styles.row, { flexWrap: 'wrap' }]}>
+        {appearanceOptions.map((opt) => (
+          <TouchableOpacity
+            key={opt.key}
+            style={[
+              styles.mapOptionButton,
+              appearancePreference === opt.key && styles.mapOptionActive,
+              { marginRight: 8, marginTop: 4 },
+            ]}
+            onPress={() => {
+              onChangeAppearancePreference(opt.key);
+              setAccountProfile((p) => ({ ...p, appearancePreference: opt.key }));
+            }}
+          >
+            <Text style={[styles.mapOptionText, appearancePreference === opt.key && styles.mapOptionActiveText]}>{opt.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      <Text style={styles.helperText}>
+        Selected: {appearanceOptions.find((opt) => opt.key === appearancePreference)?.label ?? 'Auto'}
       </Text>
       <TouchableOpacity style={styles.button} onPress={handleProfileUpdate}>
         <Text style={styles.buttonText}>Save Profile</Text>

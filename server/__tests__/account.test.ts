@@ -125,7 +125,7 @@ describe('Password validation', () => {
     expect(resp.body).toEqual({ age: null, gender: null });
   });
 
-  it('supports optional home address and preferred airport on account profile', async () => {
+  it('supports optional home address/preferred airport and persists map/appearance preferences on account profile', async () => {
     const email = 'profile-test+optional@example.com';
     await pool.query('DELETE FROM users WHERE email = $1', [email]);
 
@@ -142,11 +142,15 @@ describe('Password validation', () => {
       .send({
         homeAddress: '123 Main St, Austin, TX',
         preferredAirport: 'AUS',
+        mapPreference: 'apple',
+        appearancePreference: 'dark',
       })
       .expect(200);
 
     expect(updateRes.body.user.homeAddress).toBe('123 Main St, Austin, TX');
     expect(updateRes.body.user.preferredAirport).toBe('AUS');
+    expect(updateRes.body.user.mapPreference).toBe('apple');
+    expect(updateRes.body.user.appearancePreference).toBe('dark');
 
     const profileRes = await request(app)
       .get('/api/account')
@@ -155,6 +159,8 @@ describe('Password validation', () => {
 
     expect(profileRes.body.homeAddress).toBe('123 Main St, Austin, TX');
     expect(profileRes.body.preferredAirport).toBe('AUS');
+    expect(profileRes.body.mapPreference).toBe('apple');
+    expect(profileRes.body.appearancePreference).toBe('dark');
 
     const clearRes = await request(app)
       .patch('/api/account/profile')
