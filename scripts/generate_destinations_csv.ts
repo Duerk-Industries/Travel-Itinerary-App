@@ -487,6 +487,86 @@ const WIKIMEDIA_HEADERS = {
   'User-Agent': 'TravelItineraryAppBot/1.0 (contact: local-dev)',
 };
 
+interface WikidataSearchResult {
+  id?: string;
+  label?: string;
+  description?: string;
+}
+
+interface WikidataEntityResponse {
+  entities?: Record<
+    string,
+    {
+      sitelinks?: {
+        enwiki?: {
+          title?: string;
+        };
+      };
+      labels?: {
+        en?: { value?: string };
+      };
+      descriptions?: {
+        en?: { value?: string };
+      };
+    }
+  >;
+}
+
+interface AdaptiveThrottleState {
+  delayMs: number;
+  successStreak: number;
+  lastRequestAtMs: number;
+}
+
+const WIKIDATA_THROTTLE_MIN_MS = 250;
+const WIKIDATA_THROTTLE_MAX_MS = 120000;
+const WIKIDATA_SUCCESS_STREAK_TO_RELAX = 10;
+const wikidataThrottleState: AdaptiveThrottleState = {
+  delayMs: 1000,
+  successStreak: 0,
+  lastRequestAtMs: 0,
+};
+
+async function sleep(ms: number): Promise<void> {
+  if (ms <= 0) return;
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitForWikidataThrottleWindow(): Promise<void> {
+  const now = Date.now();
+  const earliestNext = wikidataThrottleState.lastRequestAtMs + wikidataThrottleState.delayMs;
+  const waitMs = Math.max(0, earliestNext - now);
+  await sleep(waitMs);
+  wikidataThrottleState.lastRequestAtMs = Date.now();
+}
+
+function increaseWikidataThrottle(retryAfterMs?: number): void {
+  const doubled = Math.min(WIKIDATA_THROTTLE_MAX_MS, Math.max(wikidataThrottleState.delayMs * 2, WIKIDATA_THROTTLE_MIN_MS));
+  if (Number.isFinite(Number(retryAfterMs)) && Number(retryAfterMs) > 0) {
+    wikidataThrottleState.delayMs = Math.min(
+      WIKIDATA_THROTTLE_MAX_MS,
+      Math.max(doubled, Number(retryAfterMs))
+    );
+  } else {
+    wikidataThrottleState.delayMs = doubled;
+  }
+  wikidataThrottleState.successStreak = 0;
+}
+
+function recordSuccessfulWikidataCall(): void {
+  wikidataThrottleState.successStreak += 1;
+  if (
+    wikidataThrottleState.successStreak >= WIKIDATA_SUCCESS_STREAK_TO_RELAX &&
+    wikidataThrottleState.delayMs > WIKIDATA_THROTTLE_MIN_MS
+  ) {
+    wikidataThrottleState.delayMs = Math.max(
+      WIKIDATA_THROTTLE_MIN_MS,
+      Math.floor(wikidataThrottleState.delayMs / 2)
+    );
+    wikidataThrottleState.successStreak = 0;
+  }
+}
+
 function loadNameCanonicalizationCache(cachePath: string): NameCanonicalizationCache {
   if (!fs.existsSync(cachePath)) return {};
   try {
@@ -509,11 +589,7 @@ function shouldRefreshCanonicalization(name: string, cached: string | undefined)
 
 function shouldAttemptEnglishNameCheck(name: string): boolean {
   const trimmed = name.trim();
-  if (trimmed.length === 0) return false;
-  if (trimmed === trimmed.toUpperCase() && /[A-Z]{3,}/.test(trimmed)) return true;
-  if (/[^\x00-\x7F]/.test(trimmed)) return true;
-  if (/[()]/.test(trimmed)) return true;
-  return false;
+  return trimmed.length >= 2;
 }
 
 function stripHtml(input: string): string {
@@ -540,11 +616,121 @@ async function wikiApiGet(params: Record<string, string | number>): Promise<any 
   return null;
 }
 
+async function wikidataApiGet(params: Record<string, string | number>): Promise<any | null> {
+  const maxAttempts = 6;
+  const getRetryAfterMs = (error: any): number | null => {
+    const rawValue = error?.response?.headers?.['retry-after'];
+    if (rawValue === undefined || rawValue === null) return null;
+    const text = String(rawValue).trim();
+    if (!text) return null;
+
+    const asSeconds = Number(text);
+    if (Number.isFinite(asSeconds) && asSeconds >= 0) {
+      return Math.max(1000, Math.round(asSeconds * 1000));
+    }
+
+    const asDate = Date.parse(text);
+    if (Number.isFinite(asDate)) {
+      const delta = asDate - Date.now();
+      if (delta > 0) return Math.max(1000, delta);
+    }
+    return null;
+  };
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      await waitForWikidataThrottleWindow();
+      const response = await axios.get('https://www.wikidata.org/w/api.php', {
+        timeout: 15000,
+        headers: WIKIMEDIA_HEADERS,
+        params: {
+          format: 'json',
+          ...params,
+        },
+      });
+      recordSuccessfulWikidataCall();
+      return response.data;
+    } catch (error: any) {
+      const status = Number(error?.response?.status ?? 0);
+      if (status === 429) {
+        const retryAfterMs = getRetryAfterMs(error) ?? undefined;
+        increaseWikidataThrottle(retryAfterMs);
+      } else {
+        wikidataThrottleState.successStreak = 0;
+      }
+      const retryable = status === 403 || status === 429 || status >= 500 || status === 0;
+      if (!retryable || attempt === maxAttempts) return null;
+    }
+  }
+  return null;
+}
+
+async function resolveEnglishTitleViaWikidata(name: string, country: string): Promise<string | null> {
+  const query = `${name} ${country}`.trim();
+  const searchData = await wikidataApiGet({
+    action: 'wbsearchentities',
+    search: query,
+    language: 'en',
+    uselang: 'en',
+    type: 'item',
+    limit: 8,
+  });
+  const search = Array.isArray(searchData?.search) ? (searchData.search as WikidataSearchResult[]) : [];
+  if (search.length === 0) return null;
+
+  const candidateIds = search
+    .map((item) => String(item.id ?? '').trim())
+    .filter((id) => /^Q\d+$/.test(id))
+    .slice(0, 6);
+  if (candidateIds.length === 0) return null;
+
+  const entityData = (await wikidataApiGet({
+    action: 'wbgetentities',
+    ids: candidateIds.join('|'),
+    props: 'sitelinks|labels|descriptions',
+    languages: 'en',
+  })) as WikidataEntityResponse | null;
+  const entities = entityData?.entities ?? {};
+  const countryKey = normalizeKey(country);
+  const nameKey = normalizeKey(name);
+
+  let best: { title: string; score: number } | null = null;
+  for (const id of candidateIds) {
+    const entity = entities[id];
+    if (!entity) continue;
+    const title = entity?.sitelinks?.enwiki?.title?.trim();
+    if (!title) continue;
+
+    const label = entity?.labels?.en?.value?.trim() ?? '';
+    const desc = entity?.descriptions?.en?.value?.trim() ?? '';
+    const labelKey = normalizeKey(label);
+    const descKey = normalizeKey(desc);
+    const titleKey = normalizeKey(title.replace(/_/g, ' '));
+    let score = 0;
+    if (titleKey === nameKey || labelKey === nameKey) score += 8;
+    if (titleKey.includes(nameKey) || nameKey.includes(titleKey)) score += 4;
+    if (descKey.includes(countryKey)) score += 6;
+    if (/(city|capital|town|village|district|state|province|region|national park|mount|lake|valley|bay|island)/i.test(desc))
+      score += 4;
+    if (/(football|club|album|song|film|company|corporation|language|disambiguation)/i.test(desc)) score -= 8;
+    if (titleKey.startsWith('list of ')) score -= 10;
+
+    if (!best || score > best.score) {
+      best = { title: title.replace(/_/g, ' '), score };
+    }
+  }
+
+  return best && best.score >= 4 ? best.title : null;
+}
+
 async function resolveEnglishWikipediaTitle(name: string, country: string): Promise<string | null> {
   const trimmed = name.trim();
   if (!trimmed) return null;
 
   try {
+    const wikidataResolved = await resolveEnglishTitleViaWikidata(trimmed, country);
+    if (wikidataResolved) return wikidataResolved;
+
     const direct = await wikiApiGet({
       action: 'query',
       format: 'json',
@@ -718,7 +904,7 @@ async function canonicalizeDestinationEnglishNames(destinations: Destination[], 
     if (shouldRefreshCanonicalization(pair.name, cache[key])) return true;
     return cache[key] === undefined && shouldAttemptEnglishNameCheck(pair.name);
   });
-  const concurrency = 3;
+  const concurrency = 5;
   let index = 0;
 
   async function worker(): Promise<void> {

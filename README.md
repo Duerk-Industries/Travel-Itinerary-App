@@ -109,9 +109,11 @@ caching:
 ### Destination attraction catalog (web search + CSV + DB)
 
 - The server now maintains a destination attraction catalog used by itinerary generation.
-- For each destination, it discovers up to 20 ranked attractions from web-search sources:
-  - `SERPAPI_API_KEY` provider (if configured)
-  - Wikipedia search fallback (always available)
+- For each destination, the curated generator is source-backed using free public datasets/APIs:
+  - Wikidata SPARQL (`query.wikidata.org`) for candidate attraction entities
+  - English Wikipedia sitelinks (`en.wikipedia.org`) for canonical article-backed names
+  - Wikimedia Pageviews API (`wikimedia.org/api/rest_v1/.../pageviews/...`) for popularity ranking
+  - Country metrics for scaling: Rest Countries + World Bank tourism arrivals
 - Refresh behavior and shortlist sizing are controlled in `server/config/api-limits.yaml` under `caching.attractions.*`.
 - Each attraction is stored with:
   - inferred `activityType`
@@ -141,6 +143,19 @@ caching:
     - day bases are canonicalized to requested destinations only
     - transfer endpoints preserve hubs (`MEX`, `JFK`, airports/stations) while pruning destination drift
     - generic/duplicate day activities are replaced from destination shortlists, with top-ranked shortlist attractions force-injected when missing
+
+### Destination name quality and anti-synthetic checks
+
+- Detailed sourcing strategy: `docs/data/catalog_source_strategy.md`
+- Destination generation applies a US-English canonicalization pass:
+  - Wikidata entity search + English Wikipedia sitelink title resolution
+  - fallback to Wikipedia query/search disambiguation scoring
+- Dataset quality gates reject synthetic-looking rows and enforce fallback coverage so each country has at least one valid destination.
+- Attraction generation requires source-backed candidates and validates:
+  - non-synthetic names
+  - valid Wikidata QID format
+  - English Wikipedia article URL
+  - `source_count >= 2`
 
 ## API quick reference
 - `POST /api/auth/email { email }` → create/login a user via email, returning a JWT.

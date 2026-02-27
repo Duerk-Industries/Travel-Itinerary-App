@@ -195,10 +195,25 @@ New server-side tests cover email confirmation and pending invite acceptance/rej
     - confidence gate and minimum shortlist safety threshold apply (`caching.attractions.minDistinctSourcesPerAttraction`, `caching.attractions.minAttractionsAfterConfidenceFilter`)
     - prompt blob staleness window applies (`caching.attractions.promptBlobRefreshDays`)
     - location CSV cache and cooldown timings apply (`caching.locations.*`)
-    - image cache/signed URL TTL applies (`caching.images.*`)
+  - image cache/signed URL TTL applies (`caching.images.*`)
   - Confirmation link expiration deletes unverified users.
   - Pending trip invites list correctly and acceptance adds trip access.
   - Invite rejection removes the pending member and cleans related trip items.
+
+## 7. Curated Destination/Attraction Data Quality Tests
+
+- `server/__tests__/curatedAttractionsGenerator.test.ts`
+  - verifies synthetic-attraction detection heuristics reject placeholder/fabricated-style names
+  - verifies quality gates require source-backed, locality-plausible attraction candidates
+  - verifies attraction target scaling increases for globally popular destinations (for example Paris/London class destinations)
+  - verifies generated CSV validation fails rows with `source_count < 2`
+
+Manual verification:
+- Run `npm run destinations:generate` and spot-check US-English name normalization (for example `Vienna` instead of `Wien`).
+- Run `npm run attractions:generate` and check:
+  - attractions are ranked with globally popular destinations producing larger catalogs
+  - no synthetic names are introduced
+  - `source_count` remains `>= 2`
 
 ### Execution
 
