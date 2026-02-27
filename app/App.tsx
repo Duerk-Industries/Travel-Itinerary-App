@@ -376,6 +376,7 @@ const App: React.FC = () => {
   const [activeTripId, setActiveTripId] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [showActiveTripDropdown, setShowActiveTripDropdown] = useState(false);
+  const [openShareFromHeaderSignal, setOpenShareFromHeaderSignal] = useState(0);
   const [groupMembers, setGroupMembers] = useState<GroupMemberOption[]>([]);
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
   const [lodgings, setLodgings] = useState<Lodging[]>([]);
@@ -2115,7 +2116,19 @@ const App: React.FC = () => {
           </Text>
         </View>
         {userToken ? (
-          <View style={[styles.topRightWrapper, isNarrowLayout && styles.topRightWrapperNarrow]}>
+          <View style={styles.topRightWrapper}>
+            {activeTripId ? (
+              <TouchableOpacity
+                style={[styles.button, styles.smallButton]}
+                onPress={() => {
+                  setSelectedTripId(activeTripId);
+                  requestPageChange('trip-details');
+                  setOpenShareFromHeaderSignal((prev) => prev + 1);
+                }}
+              >
+                <Text style={styles.buttonText}>Share</Text>
+              </TouchableOpacity>
+            ) : null}
             {trips.length ? (
               <TouchableOpacity
                 activeOpacity={0.8}
@@ -2920,6 +2933,7 @@ const App: React.FC = () => {
           trip={selectedTrip}
           group={selectedTripGroup}
           styles={styles}
+          openShareSignal={openShareFromHeaderSignal}
           onSetActive={(tripId) => setActiveTripId(tripId)}
           onOpenItinerary={handleOpenTripItinerary}
           onUpdateCurrency={updateTripCurrency}

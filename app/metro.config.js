@@ -51,6 +51,9 @@ const existingEnhanceMiddleware = config.server?.enhanceMiddleware;
 config.watchFolders = Array.from(
   new Set([...(config.watchFolders || []), projectRoot, workspaceRoot]),
 );
+config.watchFolders = Array.from(
+  new Set([...(config.watchFolders || []), projectRoot, workspaceRoot]),
+);
 
 config.server = {
   ...(config.server || {}),

@@ -2,7 +2,9 @@ import { Router } from 'express';
 import bodyParser from 'body-parser';
 import { authenticate } from '../auth';
 import {
+  acceptTripShareInvite,
   addTripComment,
+  createTripShareInvite,
   createFellowTraveler,
   createTrip,
   createTripWithGroupAndMembers,
@@ -16,6 +18,8 @@ import {
   listTripComments,
   listTripActivity,
   listTrips,
+  listTripShareInvites,
+  revokeTripShareInvite,
   searchTripContacts,
   unfollowTrip,
   updateTripCovering,
@@ -48,6 +52,10 @@ const parseGroupParam = (raw: unknown): boolean => {
   if (value === 'false' || value === '0' || value === 'no') return false;
   return true;
 };
+
+const normalizeEmail = (value: unknown): string => String(value ?? '').trim().toLowerCase();
+
+const isValidEmail = (value: string): boolean => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
 // Trips API: create/list/delete trips for the authenticated user.
 const router = Router();
@@ -86,11 +94,145 @@ router.post('/follow', async (req, res) => {
   }
 });
 
+router.post('/share/invites/:token/accept', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const email = (req as any).user.email as string | undefined;
+  const token = String(req.params.token ?? '').trim();
+  if (!token) {
+    res.status(400).json({ error: 'token is required' });
+    return;
+  }
+  if (!email) {
+    res.status(400).json({ error: 'Authenticated email is required' });
+    return;
+  }
+  try {
+    const accepted = await acceptTripShareInvite(userId, email, token);
+    res.status(200).json(accepted);
+  } catch (err) {
+    const message = (err as Error).message;
+    if (/not found|expired|pending|match/i.test(message)) {
+      res.status(400).json({ error: message });
+      return;
+    }
+    res.status(500).json({ error: message || 'Unable to accept invite' });
+  }
+});
+
 router.get('/:id/follow-code', async (req, res) => {
   const userId = (req as any).user.userId as string;
   try {
     const code = await getTripFollowCode(userId, req.params.id);
     res.json({ inviteCode: code.code, tripId: code.tripId, id: code.id, status: code.status });
+  } catch (err) {
+    const message = (err as Error).message;
+    if (/not authorized/i.test(message)) {
+      res.status(403).json({ error: message });
+      return;
+    }
+    res.status(400).json({ error: message });
+  }
+});
+
+router.get('/:id/share/meta', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  try {
+    const code = await getTripFollowCode(userId, req.params.id);
+    const invites = await listTripShareInvites(userId, req.params.id);
+    res.json({
+      tripId: req.params.id,
+      followCode: code.code,
+      followCodeStatus: code.status,
+      invites,
+    });
+  } catch (err) {
+    const message = (err as Error).message;
+    if (/not authorized/i.test(message)) {
+      res.status(403).json({ error: message });
+      return;
+    }
+    res.status(400).json({ error: message });
+  }
+});
+
+router.get('/:id/share/invites', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  try {
+    const invites = await listTripShareInvites(userId, req.params.id);
+    res.json({ tripId: req.params.id, invites });
+  } catch (err) {
+    const message = (err as Error).message;
+    if (/not authorized/i.test(message)) {
+      res.status(403).json({ error: message });
+      return;
+    }
+    res.status(400).json({ error: message });
+  }
+});
+
+router.post('/:id/share/invites', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const rawInvites = Array.isArray(req.body?.invites) ? req.body.invites : [];
+  if (!rawInvites.length) {
+    res.status(400).json({ error: 'invites is required and must be a non-empty array' });
+    return;
+  }
+
+  const normalized: Array<{ email: string; role: 'member' | 'follower' | null }> = rawInvites.map((entry: any) => ({
+    email: normalizeEmail(entry?.email),
+    role: entry?.role === 'member' ? 'member' : entry?.role === 'follower' ? 'follower' : null,
+  }));
+
+  for (const invite of normalized) {
+    if (!invite.role) {
+      res.status(400).json({ error: 'Each invite role must be either member or follower' });
+      return;
+    }
+    if (!invite.email || !isValidEmail(invite.email)) {
+      res.status(400).json({ error: `Invalid email: ${invite.email || '(blank)'}` });
+      return;
+    }
+  }
+
+  const seen = new Set<string>();
+  for (const invite of normalized) {
+    const key = `${invite.email}|${invite.role}`;
+    if (seen.has(key)) {
+      res.status(400).json({ error: `Duplicate invite in payload: ${invite.email} (${invite.role})` });
+      return;
+    }
+    seen.add(key);
+  }
+
+  try {
+    const created = await Promise.all(
+      normalized.map((invite) =>
+        createTripShareInvite(userId, req.params.id, invite.email, invite.role as 'member' | 'follower')
+      )
+    );
+    res.status(201).json({
+      tripId: req.params.id,
+      invites: created.map((result) => ({
+        ...result.invite,
+        token: result.token ?? null,
+        autoApplied: result.autoApplied,
+      })),
+    });
+  } catch (err) {
+    const message = (err as Error).message;
+    if (/not authorized/i.test(message)) {
+      res.status(403).json({ error: message });
+      return;
+    }
+    res.status(400).json({ error: message });
+  }
+});
+
+router.delete('/:id/share/invites/:inviteId', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  try {
+    await revokeTripShareInvite(userId, req.params.id, req.params.inviteId);
+    res.status(204).send();
   } catch (err) {
     const message = (err as Error).message;
     if (/not authorized/i.test(message)) {
