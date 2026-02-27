@@ -2,6 +2,7 @@
   "name": "shared-trip-planner",
   "private": true,
   "version": "0.1.0",
+  "type": "module",
   "workspaces": [
     "server",
     "app"
@@ -23,7 +24,10 @@
     "images:migrate-cache": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/migrate-image-cache-to-storage.ts",
     "list-users": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/list_users.ts",
     "list-trips": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/list_trips_and_users.ts",
-    "accounts:seed": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/create-test-accounts.ts"
+    "accounts:seed": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/create-test-accounts.ts",
+    "destinations:generate": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/generate_destinations_csv.ts",
+    "attractions:generate": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" server/scripts/generate_curated_attractions.ts",
+    "catalog:generate": "npm run destinations:generate && npm run attractions:generate"
   },
   "overrides": {
     "glob": "13.0.5",
