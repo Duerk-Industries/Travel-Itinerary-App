@@ -1,8 +1,9 @@
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
-import { initDb, createWebUser, markUserEmailVerified } from '../server/src/db';
-import { isLocalEnv } from '../server/src/env';
+import * as db from '../server/src/db.ts';
+import * as env from '../server/src/env.ts';
 
 type AccountInput = {
   firstName: string;
@@ -10,6 +11,11 @@ type AccountInput = {
   email: string;
   password: string;
 };
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const dbApi = ((db as any).default ?? db) as any;
+const envApi = ((env as any).default ?? env) as any;
 
 const loadLocalEnvFlag = () => {
   const rootEnv = path.resolve(__dirname, '../.env');
@@ -38,7 +44,7 @@ const requireLocalSeedAllowed = () => {
   if (process.env.ALLOW_TEST_ACCOUNT_SEED !== '1') {
     throw new Error('ALLOW_TEST_ACCOUNT_SEED must be set to 1 in .local_env to run this script.');
   }
-  if (!isLocalEnv() || process.env.K_SERVICE || process.env.CLOUD_RUN_JOB) {
+  if (!envApi.isLocalEnv() || process.env.K_SERVICE || process.env.CLOUD_RUN_JOB) {
     throw new Error('Test account seeding is only allowed on localhost/local environment.');
   }
 };
@@ -76,7 +82,7 @@ const main = async () => {
   const accountsPath = path.resolve(__dirname, '../test_inputs/default_accounts.json');
   const accounts = loadAccounts(accountsPath);
 
-  await initDb();
+  await dbApi.initDb();
 
   const results = {
     created: 0,
@@ -86,8 +92,8 @@ const main = async () => {
 
   for (const account of accounts) {
     try {
-      const user = await createWebUser(account.firstName, account.lastName, account.email, account.password);
-      await markUserEmailVerified(user.id);
+      const user = await dbApi.createWebUser(account.firstName, account.lastName, account.email, account.password);
+      await dbApi.markUserEmailVerified(user.id);
       results.created += 1;
       console.log(`Created + confirmed: ${account.email}`);
     } catch (err: any) {
