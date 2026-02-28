@@ -5,7 +5,8 @@ import { createHash, randomBytes, randomUUID, scryptSync, timingSafeEqual } from
 import {
   Flight,
   Lodging,
-  Tour,
+  Activity,
+  CarRental,
   Trait,
   Trip,
   User,
@@ -16,12 +17,15 @@ import {
   GroupMember,
   PlaceDetailsCache,
   LocationRecord,
+  AttractionCatalogEntry,
+  AttractionShortlistBlob,
   TripActivity,
   TripActivityType,
   TripComment,
 } from './types';
 import { logError, logInfo } from './logger';
 import { getEnvValue, isLocalEnv } from './env';
+import { normalizeItineraryStatus } from './utils/itineraryStatus';
 
 let app: App | null = null;
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
@@ -132,7 +136,12 @@ export const initDb = async (): Promise<void> => {
         });
         if(saResponse.ok) {
             const serviceAccount = await saResponse.text();
-            logInfo(`Cloud Run service is using service account: ${serviceAccount}. Ensure this service account has the 'Cloud Datastore User' role on project ${getEnvValue('GCLOUD_PROJECT_ID')}.`);
+            const projectIdForLog =
+              getEnvValue('GCLOUD_PROJECT_ID') ||
+              getEnvValue('GOOGLE_CLOUD_PROJECT') ||
+              getEnvValue('FIREBASE_PROJECT_ID') ||
+              'unknown';
+            logInfo(`Cloud Run service is using service account: ${serviceAccount}. Ensure this service account has the 'Cloud Datastore User' role on project ${projectIdForLog}.`);
         } else {
             logError('Could not retrieve service account from metadata server.', await saResponse.text());
         }
@@ -402,13 +411,31 @@ export const getWebUserProfile = async (userId: string): Promise<WebUser | null>
   const doc = await db.collection('web_users').doc(userId).get();
   if (doc.exists) {
     const data = doc.data() as any;
-    return { id: userId, email: data.email, firstName: data.firstName, lastName: data.lastName };
+    return {
+      id: userId,
+      email: data.email,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      homeAddress: data.homeAddress ?? null,
+      preferredAirport: data.preferredAirport ?? null,
+      mapPreference: data.mapPreference ?? null,
+      appearancePreference: data.appearancePreference ?? null,
+    };
   }
 
   const userDoc = await db.collection('users').doc(userId).get();
   if (userDoc.exists) {
     const data = userDoc.data() as any;
-    return { id: userId, email: data.email, firstName: data.firstName, lastName: data.lastName };
+    return {
+      id: userId,
+      email: data.email,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      homeAddress: data.homeAddress ?? null,
+      preferredAirport: data.preferredAirport ?? null,
+      mapPreference: data.mapPreference ?? null,
+      appearancePreference: data.appearancePreference ?? null,
+    };
   }
 
   return null;
@@ -421,10 +448,41 @@ export const updateWebUserProfile = async (
   const db = getDb();
   const doc = await db.collection('web_users').doc(userId).get();
   if (!doc.exists) throw new Error('User not found');
-  await db.collection('web_users').doc(userId).update(payload);
+  const updates = stripUndefined({
+    ...payload,
+    homeAddress: typeof (payload as any).homeAddress === 'string' && !(payload as any).homeAddress.trim() ? null : (payload as any).homeAddress,
+    preferredAirport:
+      typeof (payload as any).preferredAirport === 'string' && !(payload as any).preferredAirport.trim()
+        ? null
+        : (payload as any).preferredAirport,
+    mapPreference:
+      (payload as any).mapPreference === 'google' || (payload as any).mapPreference === 'apple' || (payload as any).mapPreference === 'waze'
+        ? (payload as any).mapPreference
+        : typeof (payload as any).mapPreference === 'undefined'
+          ? undefined
+          : null,
+    appearancePreference:
+      (payload as any).appearancePreference === 'light' ||
+      (payload as any).appearancePreference === 'dark' ||
+      (payload as any).appearancePreference === 'auto'
+        ? (payload as any).appearancePreference
+        : typeof (payload as any).appearancePreference === 'undefined'
+          ? undefined
+          : null,
+  });
+  await db.collection('web_users').doc(userId).update(updates);
   const updated = await db.collection('web_users').doc(userId).get();
   const data = updated.data() as any;
-  return { id: userId, email: data.email, firstName: data.firstName, lastName: data.lastName };
+  return {
+    id: userId,
+    email: data.email,
+    firstName: data.firstName,
+    lastName: data.lastName,
+    homeAddress: data.homeAddress ?? null,
+    preferredAirport: data.preferredAirport ?? null,
+    mapPreference: data.mapPreference ?? null,
+    appearancePreference: data.appearancePreference ?? null,
+  };
 };
 
 export const updateWebUserPassword = async (userId: string, oldPassword: string, newPassword: string): Promise<void> => {
@@ -493,10 +551,25 @@ const ensureMembership = async (groupId: string, userId: string): Promise<boolea
 export const listGroupMembers = async (
   groupId: string,
   userId: string
-): Promise<Array<{ id: string; userId?: string; guestName?: string; email?: string; firstName?: string; lastName?: string; status?: string; removedAt?: string | null }>> => {
+): Promise<
+  Array<{
+    id: string;
+    userId?: string | null;
+    guestName?: string;
+    email?: string;
+    firstName?: string;
+    lastName?: string;
+    preferredAirport?: string | null;
+    isGroupOwner?: boolean;
+    status?: string;
+    removedAt?: string | null;
+  }>
+> => {
   const db = getDb();
   const allowed = await ensureMembership(groupId, userId);
   if (!allowed) throw new Error('Not authorized to view members');
+  const groupDoc = await db.collection('groups').doc(groupId).get();
+  const groupOwnerId = (groupDoc.data()?.ownerId as string | undefined) ?? '';
   const membersSnap = await db.collection('group_members').where('groupId', '==', groupId).where('removedAt', '==', null).get();
   const invitesSnap = await db.collection('group_invites').where('groupId', '==', groupId).where('status', '==', 'pending').get();
   const memberDocs = membersSnap.docs.map((d) => ({ id: d.id, data: d.data() as any }));
@@ -513,14 +586,16 @@ export const listGroupMembers = async (
       }
     });
   }
-  const inviteEmails = Array.from(
-    new Set(
-      memberDocs
-        .map((m) => m.data.inviteEmail)
-        .filter((email) => typeof email === 'string' && email.trim().length)
-        .map((email) => normalizeEmail(email))
-    )
-  );
+  const inviteEmails = Array.from(new Set([
+    ...memberDocs
+      .map((m) => m.data.inviteEmail)
+      .filter((email) => typeof email === 'string' && email.trim().length)
+      .map((email) => normalizeEmail(email)),
+    ...invitesSnap.docs
+      .map((d) => (d.data() as any)?.inviteeEmail)
+      .filter((email) => typeof email === 'string' && email.trim().length)
+      .map((email) => normalizeEmail(email)),
+  ]));
   const emailToUserId = new Map<string, string>();
   if (inviteEmails.length) {
     await Promise.all(
@@ -566,6 +641,8 @@ export const listGroupMembers = async (
       email,
       firstName: data.firstName ?? profile?.firstName ?? inviteProfile?.firstName ?? null,
       lastName: data.lastName ?? profile?.lastName ?? inviteProfile?.lastName ?? null,
+      preferredAirport: profile?.preferredAirport ?? inviteProfile?.preferredAirport ?? null,
+      isGroupOwner: Boolean(resolvedUserId && groupOwnerId && resolvedUserId === groupOwnerId),
       status: resolvedUserId ? 'active' : data.inviteEmail ? 'pending' : 'active',
       removedAt: data.removedAt ?? null,
     };
@@ -579,10 +656,20 @@ export const listGroupMembers = async (
   const invites = invitesSnap.docs
     .map((d) => {
       const data = d.data() as any;
+      const email = normalizeEmail(data.inviteeEmail ?? '');
+      const resolvedUserId = emailToUserId.get(email);
+      const profile = resolvedUserId
+        ? userProfiles.get(resolvedUserId)
+        : (email ? emailProfiles.get(email) : null);
       return {
         id: d.id,
         guestName: data.inviteeEmail,
         email: data.inviteeEmail,
+        userId: resolvedUserId ?? null,
+        firstName: profile?.firstName ?? null,
+        lastName: profile?.lastName ?? null,
+        preferredAirport: profile?.preferredAirport ?? null,
+        isGroupOwner: Boolean(resolvedUserId && groupOwnerId && resolvedUserId === groupOwnerId),
         status: data.status,
       };
     })
@@ -1312,7 +1399,10 @@ export const claimInvitesForUser = async (email: string, userId: string): Promis
   const db = getDb();
   const invites = await db.collection('group_invites').where('inviteeEmail', '==', normalized).where('status', '==', 'pending').get();
   for (const invite of invites.docs) {
-    await acceptGroupInvite(invite.id, userId);
+    const data = invite.data() as any;
+    if (!data.inviteeUserId) {
+      await invite.ref.update({ inviteeUserId: userId });
+    }
   }
 };
 
@@ -1670,10 +1760,10 @@ export const getTripById = async (tripId: string): Promise<Trip | null> => {
 export const insertFlight = async (flight: Omit<Flight, 'id'>): Promise<Flight> => {
   const db = getDb();
   const id = randomUUID();
-  const payload = { ...flight, id, createdAt: nowIso() };
+  const payload = { ...flight, status: normalizeItineraryStatus((flight as any).status), id, createdAt: nowIso() };
   await db.collection('flights').doc(id).set(payload);
   const saved = await db.collection('flights').doc(id).get();
-  return { ...flight, id };
+  return { ...flight, status: normalizeItineraryStatus((flight as any).status), id };
 };
 
 export const deleteFlight = async (flightId: string, userId: string): Promise<void> => {
@@ -1694,7 +1784,7 @@ export const updateFlight = async (flightId: string, userId: string, updates: Pa
   const updatePayload = stripUndefined(updates);
   await db.collection('flights').doc(flightId).update(updatePayload);
   const updated = await db.collection('flights').doc(flightId).get();
-  return updated.data() as Flight;
+  return { ...(updated.data() as Flight), status: normalizeItineraryStatus((updated.data() as any)?.status) };
 };
 
 export const getFlightForUser = async (flightId: string, userId: string): Promise<Flight | null> => {
@@ -1703,6 +1793,12 @@ export const getFlightForUser = async (flightId: string, userId: string): Promis
   const data = doc.data() as any;
   if (data.userId !== userId) return null;
   return data as Flight;
+};
+
+export const getFlightById = async (flightId: string): Promise<Flight | null> => {
+  const doc = await getDb().collection('flights').doc(flightId).get();
+  if (!doc.exists) return null;
+  return doc.data() as Flight;
 };
 
 export const listFlights = async (userId: string, tripId?: string): Promise<Flight[]> => {
@@ -1761,7 +1857,7 @@ export const listFlights = async (userId: string, tripId?: string): Promise<Flig
         ? (data as any).passenger_ids
         : [];
     const passengerInGroup = validPassengerIds ? ids.every((id: string) => validPassengerIds!.has(String(id))) : true;
-    return { ...data, passengerInGroup };
+    return { ...data, status: normalizeItineraryStatus((data as any).status), passengerInGroup };
   });
 };
 
@@ -1808,6 +1904,56 @@ const toLocationRecord = (id: string, data: any): LocationRecord => ({
   sourceRowHash: data.sourceRowHash ?? null,
   updatedAt: data.updatedAt ?? undefined,
 });
+
+const toAttractionCatalogEntry = (id: string, data: any): AttractionCatalogEntry => {
+  const payload = data.payload && typeof data.payload === 'object' ? data.payload : {};
+  const rawTags = Array.isArray(payload.interestTags) ? payload.interestTags : [];
+  const interestTags = rawTags.map((tag: unknown) => String(tag).trim()).filter(Boolean) as AttractionCatalogEntry['interestTags'];
+  return {
+    id,
+    destinationKey: String(payload.destinationKey ?? '').trim(),
+    destinationDisplayName: String(payload.destinationDisplayName ?? '').trim(),
+    name: String(data.name ?? ''),
+    rank: Number(payload.rank) || 999,
+    activityType: String(payload.activityType ?? 'Tour') as AttractionCatalogEntry['activityType'],
+    interestTags,
+    sourceUrl: typeof payload.sourceUrl === 'string' ? payload.sourceUrl : null,
+    sourceLabel: typeof payload.sourceLabel === 'string' ? payload.sourceLabel : null,
+    snippet: typeof payload.snippet === 'string' ? payload.snippet : null,
+    sourceCount: Number(payload.sourceCount) || undefined,
+    budgetTier:
+      typeof payload.budgetTier === 'string' ? (payload.budgetTier as AttractionCatalogEntry['budgetTier']) : undefined,
+    updatedAt: String(data.updatedAt ?? nowIso()),
+  };
+};
+
+const toAttractionShortlistBlob = (id: string, data: any): AttractionShortlistBlob | null => {
+  const payload = data?.payload && typeof data.payload === 'object' ? data.payload : {};
+  const destinationKey = String(payload.destinationKey ?? '').trim();
+  const dateKey = String(payload.dateKey ?? '').trim();
+  const promptBlock = String(payload.promptBlock ?? '').trim();
+  if (!destinationKey || !dateKey || !promptBlock) return null;
+  return {
+    id,
+    destinationKey,
+    destinationDisplayName: String(payload.destinationDisplayName ?? '').trim(),
+    dateKey,
+    promptBlock,
+    compact: String(payload.compact ?? ''),
+    itemCount: Number(payload.itemCount) || 0,
+    updatedAt: String(data.updatedAt ?? nowIso()),
+  };
+};
+
+const toShortlistBlobId = (destinationKey: string, dateKey: string): string => {
+  const clean = (value: string) =>
+    String(value ?? '')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  return `attr-blob:${clean(destinationKey)}:${clean(dateKey)}`.slice(0, 180);
+};
 
 export const searchLocations = async (
   _userId: string,
@@ -1893,6 +2039,120 @@ export const upsertLocation = async (data: {
   return toLocationRecord(id, saved.data());
 };
 
+export const listAttractionCatalogEntries = async (
+  _userId: string,
+  destinationKey: string,
+  limit = 20
+): Promise<AttractionCatalogEntry[]> => {
+  const key = String(destinationKey ?? '').trim().toLowerCase();
+  if (!key) return [];
+  const db = getDb();
+  const safeLimit = Math.min(Math.max(Number(limit) || 20, 1), 100);
+  const snapshot = await db.collection('locations').where('sourceType', '==', 'attraction').limit(500).get();
+  const filtered = snapshot.docs
+    .filter((doc) => {
+      const payload = ((doc.data() as any).payload ?? {}) as Record<string, unknown>;
+      return String(payload.destinationKey ?? '').trim().toLowerCase() === key;
+    })
+    .map((doc) => toAttractionCatalogEntry(doc.id, doc.data()))
+    .sort((a, b) => (a.rank !== b.rank ? a.rank - b.rank : a.name.localeCompare(b.name)))
+    .slice(0, safeLimit);
+  return filtered;
+};
+
+export const upsertAttractionCatalogEntry = async (entry: AttractionCatalogEntry): Promise<AttractionCatalogEntry> => {
+  const db = getDb();
+  const payload = {
+    destinationKey: entry.destinationKey,
+    destinationDisplayName: entry.destinationDisplayName,
+    rank: Number(entry.rank) || 999,
+    activityType: entry.activityType,
+    interestTags: Array.isArray(entry.interestTags) ? entry.interestTags : [],
+    sourceUrl: entry.sourceUrl ?? null,
+    sourceLabel: entry.sourceLabel ?? null,
+    snippet: entry.snippet ?? null,
+    sourceCount: Number(entry.sourceCount) || 1,
+    budgetTier: entry.budgetTier ?? 'paid',
+    updatedAt: entry.updatedAt,
+  };
+  const docRef = db.collection('locations').doc(entry.id);
+  await db.runTransaction(async (tx) => {
+    const doc = await tx.get(docRef);
+    const existing = doc.exists ? (doc.data() as any) : {};
+    const mergedPayload = { ...(existing.payload || {}), ...payload };
+    tx.set(
+      docRef,
+      {
+        id: entry.id,
+        sourceType: 'attraction',
+        category: 'attraction',
+        name: entry.name,
+        address: null,
+        searchName: `${entry.name} ${entry.destinationDisplayName}`.toLowerCase(),
+        payload: mergedPayload,
+        updatedAt: nowIso(),
+      },
+      { merge: true }
+    );
+  });
+  const saved = await docRef.get();
+  return toAttractionCatalogEntry(saved.id, saved.data() as any);
+};
+
+export const getAttractionShortlistBlob = async (
+  _userId: string,
+  destinationKey: string,
+  dateKey: string
+): Promise<AttractionShortlistBlob | null> => {
+  const key = String(destinationKey ?? '').trim().toLowerCase();
+  const date = String(dateKey ?? '').trim();
+  if (!key || !date) return null;
+  const id = toShortlistBlobId(key, date);
+  const db = getDb();
+  const doc = await db.collection('locations').doc(id).get();
+  if (!doc.exists) return null;
+  return toAttractionShortlistBlob(doc.id, doc.data() as any);
+};
+
+export const upsertAttractionShortlistBlob = async (entry: AttractionShortlistBlob): Promise<AttractionShortlistBlob> => {
+  const db = getDb();
+  const payload = {
+    destinationKey: entry.destinationKey,
+    destinationDisplayName: entry.destinationDisplayName,
+    dateKey: entry.dateKey,
+    promptBlock: entry.promptBlock,
+    compact: entry.compact,
+    itemCount: Number(entry.itemCount) || 0,
+    updatedAt: entry.updatedAt,
+  };
+  const docRef = db.collection('locations').doc(entry.id);
+  await db.runTransaction(async (tx) => {
+    const doc = await tx.get(docRef);
+    const existing = doc.exists ? (doc.data() as any) : {};
+    const mergedPayload = { ...(existing.payload || {}), ...payload };
+    tx.set(
+      docRef,
+      {
+        id: entry.id,
+        sourceType: 'attraction_shortlist_blob',
+        category: 'attraction_shortlist_blob',
+        name: entry.destinationDisplayName,
+        address: null,
+        searchName: `${entry.destinationDisplayName} ${entry.dateKey} attraction shortlist`.toLowerCase(),
+        payload: mergedPayload,
+        updatedAt: nowIso(),
+      },
+      { merge: true }
+    );
+  });
+  const saved = await docRef.get();
+  const parsed = toAttractionShortlistBlob(saved.id, saved.data() as any);
+  if (!parsed) {
+    throw new Error('Failed to parse attraction shortlist blob after upsert.');
+  }
+  return parsed;
+};
+
 // Lodgings
 export const listLodgings = async (userId: string, tripId?: string | null): Promise<Lodging[]> => {
   const db = getDb();
@@ -1908,7 +2168,7 @@ export const listLodgings = async (userId: string, tripId?: string | null): Prom
     const membership = await ensureUserCanReadTrip(tripId, userId);
     if (!membership) return [];
     const snapshot = await db.collection('lodgings').where('trip_id', '==', tripId).get();
-    return snapshot.docs.map((d) => d.data() as Lodging);
+    return snapshot.docs.map((d) => ({ ...(d.data() as Lodging), status: normalizeItineraryStatus((d.data() as any).status) }));
   }
 
   const memberSnap = await db
@@ -1937,7 +2197,9 @@ export const listLodgings = async (userId: string, tripId?: string | null): Prom
   const lodgings: Lodging[] = [];
   for (const tripChunk of chunk(uniqueTripIds)) {
     const lodgingsSnap = await db.collection('lodgings').where('trip_id', 'in', tripChunk).get();
-    lodgingsSnap.docs.forEach((doc) => lodgings.push(doc.data() as Lodging));
+    lodgingsSnap.docs.forEach((doc) =>
+      lodgings.push({ ...(doc.data() as Lodging), status: normalizeItineraryStatus((doc.data() as any).status) })
+    );
   }
   return lodgings;
 };
@@ -1966,6 +2228,7 @@ export const insertLodging = async (lodging: {
     id,
     user_id: lodging.userId,
     trip_id: lodging.tripId,
+    status: normalizeItineraryStatus((lodging as any).status),
     name: lodging.name,
     check_in_date: lodging.checkInDate,
     check_out_date: lodging.checkOutDate,
@@ -2007,11 +2270,17 @@ export const updateLodging = async (lodgingId: string, userId: string, updates: 
   const updatePayload = stripUndefined(updates);
   await db.collection('lodgings').doc(lodgingId).update(updatePayload);
   const updated = await db.collection('lodgings').doc(lodgingId).get();
-  return updated.data() as Lodging;
+  return { ...(updated.data() as Lodging), status: normalizeItineraryStatus((updated.data() as any)?.status) };
+};
+
+export const getLodgingById = async (lodgingId: string): Promise<Lodging | null> => {
+  const doc = await getDb().collection('lodgings').doc(lodgingId).get();
+  if (!doc.exists) return null;
+  return { ...(doc.data() as Lodging), status: normalizeItineraryStatus((doc.data() as any)?.status) };
 };
 
 // Tours
-export const listTours = async (userId: string, tripId?: string): Promise<Tour[]> => {
+export const listActivities = async (userId: string, tripId?: string): Promise<Activity[]> => {
   const db = getDb();
   const chunk = <T>(items: T[], size = 10): T[][] => {
     const chunks: T[][] = [];
@@ -2024,7 +2293,11 @@ export const listTours = async (userId: string, tripId?: string): Promise<Tour[]
     const access = await ensureUserCanReadTrip(tripId, userId);
     if (!access) return [];
     const snapshot = await db.collection('tours').where('tripId', '==', tripId).get();
-    return snapshot.docs.map((d) => d.data() as Tour);
+    return snapshot.docs.map((d) => ({
+      ...(d.data() as Activity),
+      activityType: ((d.data() as any).activityType ?? 'Tour') as Activity['activityType'],
+      status: normalizeItineraryStatus((d.data() as any).status),
+    }));
   }
   const memberSnap = await db.collection('group_members').where('userId', '==', userId).where('removedAt', '==', null).get();
   const groupIds = memberSnap.docs.map((d) => (d.data() as any).groupId).filter(Boolean);
@@ -2040,39 +2313,228 @@ export const listTours = async (userId: string, tripId?: string): Promise<Tour[]
   });
   const uniqueTripIds = Array.from(new Set(tripIds));
   if (!uniqueTripIds.length) return [];
-  const tours: Tour[] = [];
+  const activities: Activity[] = [];
   for (const ids of chunk(uniqueTripIds)) {
     const snapshot = await db.collection('tours').where('tripId', 'in', ids).get();
-    snapshot.docs.forEach((d) => tours.push(d.data() as Tour));
+    snapshot.docs.forEach((d) =>
+      activities.push({
+        ...(d.data() as Activity),
+        activityType: ((d.data() as any).activityType ?? 'Tour') as Activity['activityType'],
+        status: normalizeItineraryStatus((d.data() as any).status),
+      })
+    );
   }
-  return tours;
+  return activities;
 };
 
-export const insertTour = async (tour: Omit<Tour, 'id' | 'createdAt'>): Promise<Tour> => {
+export const insertActivity = async (activity: Omit<Activity, 'id' | 'createdAt'>): Promise<Activity> => {
   const db = getDb();
   const id = randomUUID();
-  const payload = { ...tour, id, createdAt: nowIso() };
+  const payload = {
+    ...activity,
+    activityType: (activity as any).activityType ?? 'Tour',
+    status: normalizeItineraryStatus((activity as any).status),
+    id,
+    createdAt: nowIso(),
+  };
   await db.collection('tours').doc(id).set(payload);
   return payload;
 };
 
-export const updateTour = async (id: string, userId: string, tour: Partial<Tour>): Promise<Tour | null> => {
+export const updateActivity = async (id: string, userId: string, activity: Partial<Activity>): Promise<Activity | null> => {
   const db = getDb();
   const doc = await db.collection('tours').doc(id).get();
   if (!doc.exists) return null;
   if ((doc.data() as any).userId !== userId) throw new Error('Not authorized');
-  const updatePayload = stripUndefined(tour);
+  const updatePayload = stripUndefined({
+    ...activity,
+    activityType: typeof (activity as any).activityType === 'undefined' ? undefined : (activity as any).activityType,
+  });
   await db.collection('tours').doc(id).update(updatePayload);
   const updated = await db.collection('tours').doc(id).get();
-  return updated.data() as Tour;
+  return {
+    ...(updated.data() as Activity),
+    activityType: ((updated.data() as any)?.activityType ?? 'Tour') as Activity['activityType'],
+    status: normalizeItineraryStatus((updated.data() as any)?.status),
+  };
 };
 
-export const deleteTour = async (tourId: string, userId: string): Promise<void> => {
+export const deleteActivity = async (tourId: string, userId: string): Promise<void> => {
   const db = getDb();
   const doc = await db.collection('tours').doc(tourId).get();
   if (!doc.exists) return;
   if ((doc.data() as any).userId !== userId) throw new Error('Not authorized');
   await db.collection('tours').doc(tourId).delete();
+};
+
+export const getActivityById = async (id: string): Promise<Activity | null> => {
+  const doc = await getDb().collection('tours').doc(id).get();
+  if (!doc.exists) return null;
+  return {
+    ...(doc.data() as Activity),
+    activityType: ((doc.data() as any)?.activityType ?? 'Tour') as Activity['activityType'],
+    status: normalizeItineraryStatus((doc.data() as any)?.status),
+  };
+};
+
+// Car rentals
+export const listCarRentals = async (userId: string, tripId?: string): Promise<CarRental[]> => {
+  const db = getDb();
+  const chunk = <T>(items: T[], size = 10): T[][] => {
+    const chunks: T[][] = [];
+    for (let i = 0; i < items.length; i += size) chunks.push(items.slice(i, i + size));
+    return chunks;
+  };
+
+  if (tripId) {
+    const access = await ensureUserCanReadTrip(tripId, userId);
+    if (!access) return [];
+    const snapshot = await db.collection('car_rentals').where('tripId', '==', tripId).get();
+    return snapshot.docs.map((d) => ({ ...(d.data() as CarRental), status: normalizeItineraryStatus((d.data() as any).status) }));
+  }
+
+  const memberSnap = await db.collection('group_members').where('userId', '==', userId).where('removedAt', '==', null).get();
+  const groupIds = memberSnap.docs.map((d) => (d.data() as any).groupId).filter(Boolean);
+  const tripIds: string[] = [];
+  for (const groupId of Array.from(new Set(groupIds))) {
+    const trips = await db.collection('trips').where('groupId', '==', groupId).get();
+    trips.docs.forEach((doc) => tripIds.push(doc.id));
+  }
+  const followed = await db.collection('trip_followers').where('followerUserId', '==', userId).get();
+  followed.docs.forEach((doc) => {
+    const data = doc.data() as any;
+    if (data.tripId) tripIds.push(String(data.tripId));
+  });
+  const uniqueTripIds = Array.from(new Set(tripIds));
+  if (!uniqueTripIds.length) return [];
+  const rentals: CarRental[] = [];
+  for (const ids of chunk(uniqueTripIds)) {
+    const snapshot = await db.collection('car_rentals').where('tripId', 'in', ids).get();
+    snapshot.docs.forEach((d) =>
+      rentals.push({ ...(d.data() as CarRental), status: normalizeItineraryStatus((d.data() as any).status) })
+    );
+  }
+  return rentals;
+};
+
+export const getCarRentalById = async (id: string): Promise<CarRental | null> => {
+  const doc = await getDb().collection('car_rentals').doc(id).get();
+  if (!doc.exists) return null;
+  return { ...(doc.data() as CarRental), status: normalizeItineraryStatus((doc.data() as any)?.status) };
+};
+
+export const insertCarRental = async (rental: Omit<CarRental, 'id' | 'createdAt'>): Promise<CarRental> => {
+  const db = getDb();
+  const id = randomUUID();
+  const payload: CarRental = {
+    ...rental,
+    id,
+    status: normalizeItineraryStatus((rental as any).status),
+    cost: Number((rental as any).cost) || 0,
+    createdAt: nowIso(),
+  };
+  await db.collection('car_rentals').doc(id).set(payload);
+  return payload;
+};
+
+export const updateCarRental = async (id: string, userId: string, updates: Partial<CarRental>): Promise<CarRental | null> => {
+  const db = getDb();
+  const doc = await db.collection('car_rentals').doc(id).get();
+  if (!doc.exists) return null;
+  const data = doc.data() as any;
+  const tripId = data.tripId;
+  const membership = await ensureUserInTrip(tripId, userId);
+  if (!membership) return null;
+  const payload = stripUndefined({
+    ...updates,
+    status: typeof updates.status === 'undefined' ? undefined : normalizeItineraryStatus((updates as any).status),
+    cost: typeof updates.cost === 'undefined' ? undefined : Number(updates.cost) || 0,
+  });
+  await db.collection('car_rentals').doc(id).update(payload);
+  const updated = await db.collection('car_rentals').doc(id).get();
+  return { ...(updated.data() as CarRental), status: normalizeItineraryStatus((updated.data() as any)?.status) };
+};
+
+export const deleteCarRental = async (id: string, userId: string): Promise<void> => {
+  const db = getDb();
+  const doc = await db.collection('car_rentals').doc(id).get();
+  if (!doc.exists) return;
+  const data = doc.data() as any;
+  const tripId = data.tripId;
+  const membership = await ensureUserInTrip(tripId, userId);
+  if (!membership) return;
+  await db.collection('car_rentals').doc(id).delete();
+};
+
+type VoteItemType = 'flight' | 'lodging' | 'activity' | 'car_rental';
+type ReactionKind = 'vote' | 'rating';
+const reactionItemTypeKey = (itemType: VoteItemType, kind: ReactionKind): string =>
+  kind === 'rating' ? `${itemType}:rating` : itemType;
+
+export const castItemVote = async (
+  userId: string,
+  tripId: string,
+  itemType: VoteItemType,
+  itemId: string,
+  value: 1 | -1,
+  kind: ReactionKind = 'vote'
+): Promise<void> => {
+  const db = getDb();
+  const itemTypeKey = reactionItemTypeKey(itemType, kind);
+  const existing = await db
+    .collection('item_votes')
+    .where('itemType', '==', itemTypeKey)
+    .where('itemId', '==', itemId)
+    .where('userId', '==', userId)
+    .limit(1)
+    .get();
+  const payload = { tripId, itemType: itemTypeKey, itemId, userId, value, updatedAt: nowIso() };
+  if (!existing.empty) {
+    await existing.docs[0].ref.update(payload);
+    return;
+  }
+  await db.collection('item_votes').doc(randomUUID()).set({ ...payload, createdAt: nowIso() });
+};
+
+export const getItemVoteSummaries = async (
+  userId: string,
+  tripId: string,
+  itemType: VoteItemType,
+  itemIds: string[],
+  kind: ReactionKind = 'vote'
+): Promise<Record<string, { netVotes: number; userVote: -1 | 1 | null }>> => {
+  const normalized = Array.from(new Set((itemIds ?? []).map((id) => String(id).trim()).filter(Boolean)));
+  if (!normalized.length) return {};
+  const db = getDb();
+  const itemTypeKey = reactionItemTypeKey(itemType, kind);
+  const result: Record<string, { netVotes: number; userVote: -1 | 1 | null }> = {};
+  normalized.forEach((id) => {
+    result[id] = { netVotes: 0, userVote: null };
+  });
+  const chunk = <T>(items: T[], size = 10): T[][] => {
+    const chunks: T[][] = [];
+    for (let i = 0; i < items.length; i += size) chunks.push(items.slice(i, i + size));
+    return chunks;
+  };
+  for (const ids of chunk(normalized)) {
+    const snap = await db
+      .collection('item_votes')
+      .where('tripId', '==', tripId)
+      .where('itemType', '==', itemTypeKey)
+      .where('itemId', 'in', ids)
+      .get();
+    snap.docs.forEach((doc) => {
+      const vote = doc.data() as any;
+      const itemId = String(vote.itemId ?? '');
+      if (!result[itemId]) return;
+      const value = vote.value === -1 ? -1 : 1;
+      result[itemId].netVotes += value;
+      if (String(vote.userId) === String(userId)) {
+        result[itemId].userVote = value;
+      }
+    });
+  }
+  return result;
 };
 
 // Expenses
@@ -2719,12 +3181,12 @@ export const removeTravelerFromTrip = async (userId: string, tripId: string, tra
     // 4. Process Tours
     const toursSnap = await db.collection('tours').where('tripId', '==', tripId).get();
     for (const tourDoc of toursSnap.docs) {
-      const tour = tourDoc.data() as Tour & { paidBy?: string[] };
+      const tour = tourDoc.data() as Activity & { paidBy?: string[] };
       if (tour.paidBy?.includes(userIdToRemove)) {
         if (tour.paidBy.length === 1) {
           batch.delete(tourDoc.ref);
         } else {
-          const updates: Partial<Tour> = {
+          const updates: Partial<Activity> = {
             paidBy: tour.paidBy.filter((id) => id !== userIdToRemove),
           };
           batch.update(tourDoc.ref, updates);
@@ -2821,3 +3283,4 @@ export const findOrCreateGoogleUser = async (profile: any): Promise<User> => {
 
     return { id: newUserId, email: normalizedEmail, provider: 'google' };
 };
+

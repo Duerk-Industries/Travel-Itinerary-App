@@ -155,7 +155,7 @@ describe('Cost report calculations across lodging, tours, and flights', () => {
 
   it('tours: shared, single, then payer removal matches expected splits', async () => {
     const tour3 = await request(app)
-      .post('/api/tours')
+      .post('/api/activities')
       .set('Authorization', `Bearer ${tokenA}`)
       .send({
         tripId,
@@ -172,7 +172,7 @@ describe('Cost report calculations across lodging, tours, and flights', () => {
       .expect(201);
 
     await request(app)
-      .post('/api/tours')
+      .post('/api/activities')
       .set('Authorization', `Bearer ${tokenA}`)
       .send({
         tripId,
@@ -189,7 +189,7 @@ describe('Cost report calculations across lodging, tours, and flights', () => {
       .expect(201);
 
     const tour3Res = await request(app)
-      .post('/api/tours')
+      .post('/api/activities')
       .set('Authorization', `Bearer ${tokenA}`)
       .send({
         tripId,
@@ -207,7 +207,7 @@ describe('Cost report calculations across lodging, tours, and flights', () => {
     const tour3Id = tour3Res.body.id as string;
 
     const computeTours = async () => {
-      const tours = await request(app).get(`/api/tours?tripId=${tripId}`).set('Authorization', `Bearer ${tokenA}`).expect(200);
+      const tours = await request(app).get(`/api/activities?tripId=${tripId}`).set('Authorization', `Bearer ${tokenA}`).expect(200);
       return accumulate(
         tours.body,
         (t) => Number(t.cost ?? 0),
@@ -219,12 +219,12 @@ describe('Cost report calculations across lodging, tours, and flights', () => {
     expect(totals[memberA]).toBeCloseTo(500);
     expect(totals[memberB]).toBeCloseTo(1000);
 
-    await request(app).patch(`/api/tours/${tour3Id}`).set('Authorization', `Bearer ${tokenA}`).send({ paidBy: [memberA] }).expect(200);
+    await request(app).patch(`/api/activities/${tour3Id}`).set('Authorization', `Bearer ${tokenA}`).send({ paidBy: [memberA] }).expect(200);
     totals = await computeTours();
     expect(totals[memberA]).toBeCloseTo(750);
     expect(totals[memberB]).toBeCloseTo(750);
 
-    await request(app).patch(`/api/tours/${tour3Id}`).set('Authorization', `Bearer ${tokenA}`).send({ paidBy: [] }).expect(200);
+    await request(app).patch(`/api/activities/${tour3Id}`).set('Authorization', `Bearer ${tokenA}`).send({ paidBy: [] }).expect(200);
     totals = await computeTours();
     expect(totals[memberA]).toBeCloseTo(750);
     expect(totals[memberB]).toBeCloseTo(750);
@@ -232,7 +232,7 @@ describe('Cost report calculations across lodging, tours, and flights', () => {
 
   it('flights: shared, single, then payer removal matches expected splits', async () => {
     await request(app)
-      .post('/api/flights')
+      .post('/api/transfers')
       .set('Authorization', `Bearer ${tokenA}`)
       .send({
         tripId,
@@ -252,7 +252,7 @@ describe('Cost report calculations across lodging, tours, and flights', () => {
       .expect(201);
 
     await request(app)
-      .post('/api/flights')
+      .post('/api/transfers')
       .set('Authorization', `Bearer ${tokenA}`)
       .send({
         tripId,
@@ -272,7 +272,7 @@ describe('Cost report calculations across lodging, tours, and flights', () => {
       .expect(201);
 
     const flight3 = await request(app)
-      .post('/api/flights')
+      .post('/api/transfers')
       .set('Authorization', `Bearer ${tokenA}`)
       .send({
         tripId,
@@ -293,7 +293,7 @@ describe('Cost report calculations across lodging, tours, and flights', () => {
     const flight3Id = flight3.body.id as string;
 
     const computeFlights = async () => {
-      const flights = await request(app).get(`/api/flights?tripId=${tripId}`).set('Authorization', `Bearer ${tokenA}`).expect(200);
+      const flights = await request(app).get(`/api/transfers?tripId=${tripId}`).set('Authorization', `Bearer ${tokenA}`).expect(200);
       return accumulate(
         flights.body,
         (f) => Number(f.cost ?? 0),
@@ -305,14 +305,15 @@ describe('Cost report calculations across lodging, tours, and flights', () => {
     expect(totals[memberA]).toBeCloseTo(500);
     expect(totals[memberB]).toBeCloseTo(1000);
 
-    await request(app).patch(`/api/flights/${flight3Id}`).set('Authorization', `Bearer ${tokenA}`).send({ paidBy: [memberA] }).expect(200);
+    await request(app).patch(`/api/transfers/${flight3Id}`).set('Authorization', `Bearer ${tokenA}`).send({ paidBy: [memberA] }).expect(200);
     totals = await computeFlights();
     expect(totals[memberA]).toBeCloseTo(750);
     expect(totals[memberB]).toBeCloseTo(750);
 
-    await request(app).patch(`/api/flights/${flight3Id}`).set('Authorization', `Bearer ${tokenA}`).send({ paidBy: [] }).expect(200);
+    await request(app).patch(`/api/transfers/${flight3Id}`).set('Authorization', `Bearer ${tokenA}`).send({ paidBy: [] }).expect(200);
     totals = await computeFlights();
     expect(totals[memberA]).toBeCloseTo(750);
     expect(totals[memberB]).toBeCloseTo(750);
   });
 });
+

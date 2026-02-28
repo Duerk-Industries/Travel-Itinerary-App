@@ -3,7 +3,7 @@ import type { Pool } from 'pg';
 import type {
   Flight,
   Lodging,
-  Tour,
+  Activity,
   Trait,
   Trip,
   Itinerary,
@@ -14,8 +14,11 @@ import type {
   PlaceLookupCache,
   Expense,
   LocationRecord,
+  AttractionCatalogEntry,
+  AttractionShortlistBlob,
   TripActivity,
   TripComment,
+  CarRental,
 } from './types';
 
 const adapter = () => getDbAdapter();
@@ -98,14 +101,34 @@ export const deleteLodging = async (...args: Parameters<ReturnType<typeof adapte
   adapter().deleteLodging(...args);
 export const updateLodging = async (...args: Parameters<ReturnType<typeof adapter>['updateLodging']>) =>
   adapter().updateLodging(...args);
-export const listTours = async (...args: Parameters<ReturnType<typeof adapter>['listTours']>): Promise<Tour[]> =>
-  adapter().listTours(...args);
-export const insertTour = async (...args: Parameters<ReturnType<typeof adapter>['insertTour']>) =>
-  adapter().insertTour(...args);
-export const updateTour = async (...args: Parameters<ReturnType<typeof adapter>['updateTour']>) =>
-  adapter().updateTour(...args);
-export const deleteTour = async (...args: Parameters<ReturnType<typeof adapter>['deleteTour']>) =>
-  adapter().deleteTour(...args);
+export const listActivities = async (...args: Parameters<ReturnType<typeof adapter>['listActivities']>): Promise<Activity[]> =>
+  adapter().listActivities(...args);
+export const listCarRentals = async (...args: Parameters<ReturnType<typeof adapter>['listCarRentals']>): Promise<CarRental[]> =>
+  adapter().listCarRentals(...args);
+export const insertActivity = async (...args: Parameters<ReturnType<typeof adapter>['insertActivity']>) =>
+  adapter().insertActivity(...args);
+export const insertCarRental = async (...args: Parameters<ReturnType<typeof adapter>['insertCarRental']>) =>
+  adapter().insertCarRental(...args);
+export const updateActivity = async (...args: Parameters<ReturnType<typeof adapter>['updateActivity']>) =>
+  adapter().updateActivity(...args);
+export const updateCarRental = async (...args: Parameters<ReturnType<typeof adapter>['updateCarRental']>) =>
+  adapter().updateCarRental(...args);
+export const deleteActivity = async (...args: Parameters<ReturnType<typeof adapter>['deleteActivity']>) =>
+  adapter().deleteActivity(...args);
+export const deleteCarRental = async (...args: Parameters<ReturnType<typeof adapter>['deleteCarRental']>) =>
+  adapter().deleteCarRental(...args);
+export const getCarRentalById = async (...args: Parameters<ReturnType<typeof adapter>['getCarRentalById']>) =>
+  adapter().getCarRentalById(...args);
+export const getFlightById = async (...args: Parameters<ReturnType<typeof adapter>['getFlightById']>) =>
+  adapter().getFlightById(...args);
+export const getLodgingById = async (...args: Parameters<ReturnType<typeof adapter>['getLodgingById']>) =>
+  adapter().getLodgingById(...args);
+export const getActivityById = async (...args: Parameters<ReturnType<typeof adapter>['getActivityById']>) =>
+  adapter().getActivityById(...args);
+export const castItemVote = async (...args: Parameters<ReturnType<typeof adapter>['castItemVote']>) =>
+  adapter().castItemVote(...args);
+export const getItemVoteSummaries = async (...args: Parameters<ReturnType<typeof adapter>['getItemVoteSummaries']>) =>
+  adapter().getItemVoteSummaries(...args);
 export const shareFlight = async (...args: Parameters<ReturnType<typeof adapter>['shareFlight']>) =>
   adapter().shareFlight(...args);
 export const listGroupMembers = async (...args: Parameters<ReturnType<typeof adapter>['listGroupMembers']>) =>
@@ -138,6 +161,14 @@ export const listFollowedTrips = async (...args: Parameters<ReturnType<typeof ad
   adapter().listFollowedTrips(...args);
 export const unfollowTrip = async (...args: Parameters<ReturnType<typeof adapter>['unfollowTrip']>) =>
   adapter().unfollowTrip(...args);
+export const listTripShareInvites = async (...args: Parameters<ReturnType<typeof adapter>['listTripShareInvites']>) =>
+  adapter().listTripShareInvites(...args);
+export const createTripShareInvite = async (...args: Parameters<ReturnType<typeof adapter>['createTripShareInvite']>) =>
+  adapter().createTripShareInvite(...args);
+export const acceptTripShareInvite = async (...args: Parameters<ReturnType<typeof adapter>['acceptTripShareInvite']>) =>
+  adapter().acceptTripShareInvite(...args);
+export const revokeTripShareInvite = async (...args: Parameters<ReturnType<typeof adapter>['revokeTripShareInvite']>) =>
+  adapter().revokeTripShareInvite(...args);
 export const writeActivity = async (...args: Parameters<ReturnType<typeof adapter>['writeActivity']>) =>
   adapter().writeActivity(...args);
 export const listTripActivity = async (...args: Parameters<ReturnType<typeof adapter>['listTripActivity']>) =>
@@ -167,6 +198,18 @@ export const getLocationsByIds = async (...args: Parameters<ReturnType<typeof ad
   adapter().getLocationsByIds(...args);
 export const upsertLocation = async (...args: Parameters<ReturnType<typeof adapter>['upsertLocation']>) =>
   adapter().upsertLocation(...args);
+export const listAttractionCatalogEntries = async (
+  ...args: Parameters<ReturnType<typeof adapter>['listAttractionCatalogEntries']>
+): Promise<AttractionCatalogEntry[]> => adapter().listAttractionCatalogEntries(...args);
+export const upsertAttractionCatalogEntry = async (
+  ...args: Parameters<ReturnType<typeof adapter>['upsertAttractionCatalogEntry']>
+) => adapter().upsertAttractionCatalogEntry(...args);
+export const getAttractionShortlistBlob = async (
+  ...args: Parameters<ReturnType<typeof adapter>['getAttractionShortlistBlob']>
+): Promise<AttractionShortlistBlob | null> => adapter().getAttractionShortlistBlob(...args);
+export const upsertAttractionShortlistBlob = async (
+  ...args: Parameters<ReturnType<typeof adapter>['upsertAttractionShortlistBlob']>
+) => adapter().upsertAttractionShortlistBlob(...args);
 export const listTraits = async (...args: Parameters<ReturnType<typeof adapter>['listTraits']>): Promise<Trait[]> =>
   adapter().listTraits(...args);
 export const createTrait = async (...args: Parameters<ReturnType<typeof adapter>['createTrait']>) =>
@@ -249,3 +292,4 @@ export const updateFamilyProfile = async (...args: Parameters<ReturnType<typeof 
   adapter().updateFamilyProfile(...args);
 export const poolClient = (): Pool => adapter().poolClient();
 export const getPool = (): Pool => adapter().poolClient();
+

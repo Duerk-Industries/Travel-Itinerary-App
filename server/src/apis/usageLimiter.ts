@@ -10,8 +10,20 @@ type UsageBucket = {
   windowKey: string | null;
 };
 
+type BlockLogState = {
+  nextLogAtMs: number;
+  suppressedCount: number;
+};
+
 const THRESHOLDS = [50, 75, 90, 100] as const;
 const usageBuckets = new Map<string, UsageBucket>();
+const blockedLogStates = new Map<string, BlockLogState>();
+
+const BLOCK_LOG_COOLDOWN_MS = (() => {
+  const raw = Number(process.env.API_LIMIT_BLOCK_LOG_COOLDOWN_MS ?? '120000');
+  if (!Number.isFinite(raw) || raw < 0) return 120000;
+  return Math.floor(raw);
+})();
 
 const normalizeKeyPart = (value: string): string =>
   value
@@ -81,6 +93,35 @@ const resetBucketForWindowIfNeeded = (bucket: UsageBucket, windowKey: string): v
   bucket.loggedThresholds = new Set<number>();
 };
 
+const logBlockedCallWithCooldown = (params: {
+  provider: string;
+  caller: string;
+  scope: LimitScope;
+  windowKey: string;
+  message: string;
+  atLimit: boolean;
+}): void => {
+  const key = `${params.provider}:${params.scope}:${params.caller}:${params.windowKey}`;
+  const nowMs = Date.now();
+  const current = blockedLogStates.get(key);
+  if (!current || nowMs >= current.nextLogAtMs) {
+    const suppressedSuffix =
+      current && current.suppressedCount > 0
+        ? ` (suppressed ${current.suppressedCount} similar messages in last ${Math.round(
+            BLOCK_LOG_COOLDOWN_MS / 1000
+          )}s)`
+        : '';
+    logError(
+      params.atLimit ? '[api-usage] Blocking API call at limit' : '[api-usage] Blocking API call',
+      `${params.message}${suppressedSuffix}`
+    );
+    blockedLogStates.set(key, { nextLogAtMs: nowMs + BLOCK_LOG_COOLDOWN_MS, suppressedCount: 0 });
+    return;
+  }
+  current.suppressedCount += 1;
+  blockedLogStates.set(key, current);
+};
+
 export class ApiLimitExceededError extends Error {
   public readonly provider: string;
   public readonly caller: string;
@@ -141,7 +182,14 @@ const reserveScopeUsageOrThrow = (params: {
       limit: params.limit,
       used: bucket.used,
     });
-    logError('[api-usage] Blocking API call', err.message);
+    logBlockedCallWithCooldown({
+      provider: params.provider,
+      caller: params.caller,
+      scope: params.scope,
+      windowKey: params.windowKey,
+      message: err.message,
+      atLimit: false,
+    });
     throw err;
   }
 
@@ -172,7 +220,14 @@ const reserveScopeUsageOrThrow = (params: {
       limit: params.limit,
       used: bucket.used,
     });
-    logError('[api-usage] Blocking API call at limit', err.message);
+    logBlockedCallWithCooldown({
+      provider: params.provider,
+      caller: params.caller,
+      scope: params.scope,
+      windowKey: params.windowKey,
+      message: err.message,
+      atLimit: true,
+    });
     throw err;
   }
 };

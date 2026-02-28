@@ -17,7 +17,7 @@ const allowedCategories = new Set([
   'Other',
   'Flights',
   'Lodging',
-  'Tours',
+  'Activities',
   'Car Rentals',
 ]);
 

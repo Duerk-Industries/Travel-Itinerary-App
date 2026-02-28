@@ -5,14 +5,15 @@ import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
 import authRoutes from './routes/authRoutes';
-import flightRoutes from './routes/flightRoutes';
+import transferRoutes from './routes/transferRoutes';
 import webAuthRoutes from './routes/webAuthRoutes';
 import tripRoutes from './routes/tripRoutes';
 import itineraryRoutes from './routes/itineraryRoutes';
 import itineraryDataRoutes from './routes/itineraryDataRoutes';
 import traitRoutes from './routes/traitRoutes';
 import lodgingRoutes from './routes/lodgingRoutes';
-import tourRoutes from './routes/tourRoutes';
+import activityRoutes from './routes/activityRoutes';
+import carRentalRoutes from './routes/carRentalRoutes';
 import accountRoutes, { groupsRouter } from './routes/accountRoutes';
 import placeRoutes from './routes/placeRoutes';
 import expenseRoutes from './routes/expenseRoutes';
@@ -153,12 +154,17 @@ import { logError } from './logger';
 
 initPassport();
 app.use(passport.initialize());
+const googleOAuthConfigured = Boolean(getEnvValue('GOOGLE_CLIENT_ID') && getEnvValue('GOOGLE_CLIENT_SECRET'));
 
 if (!isLocalEnv() && getEnvValue('AUTH_SECRET') === 'development-secret') {
     logError('[WARNING] AUTH_SECRET is not set or is using the default value in a non-local environment. This is a security risk and will cause authentication to fail.');
 }
 
 app.get('/api/auth/google', (req, res, next) => {
+  if (!googleOAuthConfigured) {
+    res.status(503).json({ error: 'Google OAuth is not configured on the server.' });
+    return;
+  }
   const rawRedirectUri = typeof req.query.redirect_uri === 'string' ? req.query.redirect_uri : undefined;
   const { redirectUri, error } = resolveAndValidateRedirectUri(rawRedirectUri, webUrl);
   if (error) {
@@ -172,6 +178,13 @@ app.get('/api/auth/google', (req, res, next) => {
 
 app.get(
   '/api/auth/google/callback',
+  (_req, res, next) => {
+    if (!googleOAuthConfigured) {
+      res.status(503).json({ error: 'Google OAuth is not configured on the server.' });
+      return;
+    }
+    next();
+  },
   (req, _res, next) => {
     next();
   },
@@ -208,7 +221,9 @@ app.use('/api/auth', authRoutes);
 // Alias web-auth routes under /api/auth to keep legacy tests and clients working.
 app.use('/api/auth', webAuthRoutes);
 app.use('/api/web-auth', webAuthRoutes);
-app.use('/api/flights', flightRoutes);
+app.use('/api/transfers', transferRoutes);
+// Backward-compatible alias for older clients/tests still calling flights endpoints.
+app.use('/api/flights', transferRoutes);
 app.use('/api/groups', groupsRouter);
 app.use('/api/trips', tripRoutes);
 app.use('/api/itinerary', itineraryRoutes);
@@ -216,7 +231,8 @@ app.use('/api/itineraries', itineraryDataRoutes);
 app.use('/api/traits', traitRoutes);
 app.use('/api/lodgings', lodgingRoutes);
 app.use('/api/places', placeRoutes);
-app.use('/api/tours', tourRoutes);
+app.use('/api/activities', activityRoutes);
+app.use('/api/car-rentals', carRentalRoutes);
 app.use('/api/account', accountRoutes);
 app.use('/api/expenses', expenseRoutes);
 
@@ -239,3 +255,5 @@ app.use((req, res, _next) => {
 });
 
 export default app;
+
+

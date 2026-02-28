@@ -83,7 +83,9 @@ export type OverviewRow = {
 
 const parseDate = (value?: string | null): Date | null => {
   if (!value) return null;
-  const d = new Date(value);
+  const text = String(value).trim();
+  const parts = text.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const d = parts ? new Date(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3])) : new Date(text);
   return Number.isNaN(d.valueOf()) ? null : d;
 };
 
@@ -108,8 +110,8 @@ const compareByTimeThenLabel = (a: OverviewRow, b: OverviewRow) => {
 
 export const formatFriendlyDate = (dateStr?: string | null, timeStr?: string | null): string | null => {
   if (!dateStr) return null;
-  const date = new Date(dateStr);
-  if (Number.isNaN(date.valueOf())) return dateStr;
+  const date = parseDate(dateStr);
+  if (!date || Number.isNaN(date.valueOf())) return dateStr;
   const dateText = date.toLocaleDateString(undefined, {
     weekday: 'long',
     month: 'long',
@@ -129,7 +131,8 @@ export const formatFriendlyDate = (dateStr?: string | null, timeStr?: string | n
 };
 
 export const formatFlightSummary = (flight: FlightLike): string => {
-  const carrier = flight.carrier || 'Carrier';
+  const transferType = (flight as any).transfer_type || (flight as any).transferType || 'Flight';
+  const carrier = flight.carrier || transferType;
   const number = flight.flight_number || flight.flightNumber || '';
   const depCode = flight.departure_airport_code || flight.departureAirportCode || 'DEP';
   const arrCode = flight.arrival_airport_code || flight.arrivalAirportCode || 'ARR';
@@ -141,8 +144,9 @@ export const formatFlightSummary = (flight: FlightLike): string => {
 
 export const formatFlightDetails = (flight: FlightLike): DetailItem[] => {
   const details: DetailItem[] = [];
+  details.push({ label: 'Type', value: (flight as any).transfer_type || (flight as any).transferType || 'Flight' });
   details.push({ label: 'Carrier', value: flight.carrier || 'N/A' });
-  details.push({ label: 'Flight Number', value: flight.flight_number || flight.flightNumber || 'N/A' });
+  details.push({ label: 'Transfer Number', value: flight.flight_number || flight.flightNumber || 'N/A' });
   details.push({ label: 'Departure', value: flight.departure_airport_code || flight.departureAirportCode || 'N/A' });
   details.push({ label: 'Arrival', value: flight.arrival_airport_code || flight.arrivalAirportCode || 'N/A' });
   const depDate = flight.departure_date || flight.departureDate || '';

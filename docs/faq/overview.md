@@ -8,5 +8,17 @@ It is a monorepo with:
 - `server/`: Express + TypeScript API (`server/src/app.ts`)
 - Workspace scripts at repo root (`package.json`) for app/server tests and Playwright
 
-The app supports trip planning across flights, lodging, tours, itinerary notes/details, expenses, ledger/cost reporting, groups, and account/family management.
+The app supports trip planning across transfers (flights, trains, buses, private, ferry, other), lodging, activities, itinerary notes/details, expenses, ledger/cost reporting, groups, and account/family management.
+
+Itinerary items now include a status lifecycle for transfers, lodging, activities, and rental cars:
+- `Needed`
+- `Proposed`
+- `Booked`
+- `Cancelled`
+- `Completed`
+
+Business required fields are relaxed for `Needed` and `Cancelled`, and enforced for `Proposed`, `Booked`, and `Completed`.
+
+Voting is available for proposed itinerary items (transfers, lodging, activities, and car rentals).  
+See `docs/faq/voting-on-items.md`.
 

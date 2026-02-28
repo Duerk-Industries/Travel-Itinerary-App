@@ -204,7 +204,7 @@ Navigate to your repository's `Settings > Secrets and variables > Actions` to co
     *   `Cloud Build Editor`
     *   `Service Account User` (on the runtime service account)
 
-*   **`GCLOUD_PROJECT_ID`**: The ID of your Google Cloud project (e.g., `travel-itinerary-app-483623`).
+*   **`GCLOUD_PROJECT_ID`**: The ID of your Google Cloud project (e.g., `REDACTED`).
 
 *   **`FIREBASE_SERVICE_ACCOUNT_TRAVEL_ITINERARY_APP_483623`**: A JSON service account key with permissions to deploy to Firebase Hosting. You can generate this by running `firebase login:ci` and following the prompts.
 

@@ -4,7 +4,7 @@ import { app } from '../src/app';
 import { closePool, initDb } from '../src/db';
 import { registerAndLoginWebUser } from './helpers';
 
-describe('CRUD delete endpoints for flights, lodgings, tours, and trips', () => {
+describe('CRUD delete endpoints for transfers, lodgings, activities, and trips', () => {
   jest.setTimeout(60000);
   const uniq = Date.now();
   const user = { email: `delete+${uniq}@example.com`, firstName: 'Delete', lastName: 'Tester', password: 'testtest' };
@@ -62,9 +62,9 @@ describe('CRUD delete endpoints for flights, lodgings, tours, and trips', () => 
     await closePool();
   });
 
-  it('creates and deletes a flight, lodging, and tour', async () => {
-    const flightRes = await request(app)
-      .post('/api/flights')
+  it('creates and deletes a transfer, lodging, and activity', async () => {
+    const transferRes = await request(app)
+      .post('/api/transfers')
       .set('Authorization', `Bearer ${token}`)
       .send({
         passengerIds: [memberId],
@@ -79,8 +79,8 @@ describe('CRUD delete endpoints for flights, lodgings, tours, and trips', () => 
         paidBy: [memberId],
       })
       .expect(201);
-    const flightId = flightRes.body.id as string;
-    expect(flightId).toBeTruthy();
+    const transferId = transferRes.body.id as string;
+    expect(transferId).toBeTruthy();
 
     const lodgingRes = await request(app)
       .post('/api/lodgings')
@@ -99,8 +99,8 @@ describe('CRUD delete endpoints for flights, lodgings, tours, and trips', () => 
     const lodgingId = lodgingRes.body.id as string;
     expect(lodgingId).toBeTruthy();
 
-    const tourRes = await request(app)
-      .post('/api/tours')
+    const activityRes = await request(app)
+      .post('/api/activities')
       .set('Authorization', `Bearer ${token}`)
       .send({
         tripId,
@@ -113,19 +113,19 @@ describe('CRUD delete endpoints for flights, lodgings, tours, and trips', () => 
         paidBy: [memberId],
       })
       .expect(201);
-    const tourId = tourRes.body.id as string;
-    expect(tourId).toBeTruthy();
+    const activityId = activityRes.body.id as string;
+    expect(activityId).toBeTruthy();
 
-    await request(app).delete(`/api/flights/${flightId}`).set('Authorization', `Bearer ${token}`).expect(204);
+    await request(app).delete(`/api/transfers/${transferId}`).set('Authorization', `Bearer ${token}`).expect(204);
     await request(app).delete(`/api/lodgings/${lodgingId}`).set('Authorization', `Bearer ${token}`).expect(204);
-    await request(app).delete(`/api/tours/${tourId}`).set('Authorization', `Bearer ${token}`).expect(204);
+    await request(app).delete(`/api/activities/${activityId}`).set('Authorization', `Bearer ${token}`).expect(204);
 
-    const flights = await request(app).get(`/api/flights?tripId=${tripId}`).set('Authorization', `Bearer ${token}`).expect(200);
-    expect(flights.body).toHaveLength(0);
+    const transfers = await request(app).get(`/api/transfers?tripId=${tripId}`).set('Authorization', `Bearer ${token}`).expect(200);
+    expect(transfers.body).toHaveLength(0);
     const lodgings = await request(app).get(`/api/lodgings?tripId=${tripId}`).set('Authorization', `Bearer ${token}`).expect(200);
     expect(lodgings.body).toHaveLength(0);
-    const tours = await request(app).get(`/api/tours?tripId=${tripId}`).set('Authorization', `Bearer ${token}`).expect(200);
-    expect(tours.body).toHaveLength(0);
+    const activities = await request(app).get(`/api/activities?tripId=${tripId}`).set('Authorization', `Bearer ${token}`).expect(200);
+    expect(activities.body).toHaveLength(0);
   });
 
   it('deletes a trip and removes it from the list', async () => {
@@ -166,3 +166,4 @@ describe('CRUD delete endpoints for flights, lodgings, tours, and trips', () => 
     expect((memberTripsAfter.body as any[]).some((t) => t.id === sharedTripId)).toBe(false);
   });
 });
+

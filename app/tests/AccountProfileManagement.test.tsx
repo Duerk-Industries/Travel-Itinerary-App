@@ -22,6 +22,9 @@ const styles = {
   dangerButton: {},
   modalOverlay: {},
   confirmModal: {},
+  dropdownList: {},
+  dropdownOption: {},
+  cellText: {},
 };
 
 describe('AccountProfileManagement', () => {
@@ -29,16 +32,27 @@ describe('AccountProfileManagement', () => {
     backendUrl: '',
     userToken: 'test-token',
     activePage: 'account',
-    accountProfile: { firstName: 'Test', lastName: 'User', email: 'test@test.com' },
+    accountProfile: {
+      firstName: 'Test',
+      lastName: 'User',
+      email: 'test@test.com',
+      homeAddress: '123 Main St, Austin, TX',
+      preferredAirport: 'AUS',
+      appearancePreference: 'auto' as const,
+    },
     setAccountProfile: jest.fn(),
     setUserToken: jest.fn(),
     setUserName: jest.fn(),
     setUserEmail: jest.fn(),
     mapApp: 'google' as const,
     onChangeMapApp: jest.fn(),
+    appearancePreference: 'auto' as const,
+    onChangeAppearancePreference: jest.fn(),
     saveSession: jest.fn(),
     headers: {},
     jsonHeaders: {},
+    airportOptions: [],
+    onSearchAirports: jest.fn(),
     logout: jest.fn(),
     styles: styles,
   };
@@ -47,6 +61,8 @@ describe('AccountProfileManagement', () => {
     const { getByText, getByPlaceholderText } = render(<AccountProfileManagement {...defaultProps} />);
     expect(getByText('Account')).toBeTruthy();
     expect(getByPlaceholderText('First name')).toBeTruthy();
+    expect(getByPlaceholderText('Home address (optional)')).toBeTruthy();
+    expect(getByPlaceholderText('Preferred airport (optional)')).toBeTruthy();
     expect(getByText('Save Profile')).toBeTruthy();
   });
 
@@ -60,5 +76,23 @@ describe('AccountProfileManagement', () => {
     const { getByText } = render(<AccountProfileManagement {...defaultProps} />);
     fireEvent.press(getByText('Delete Account'));
     expect(getByText('Delete account?')).toBeTruthy();
+  });
+
+  it('uses airport autocomplete suggestions for preferred airport', () => {
+    const onSearchAirports = jest.fn();
+    const setAccountProfile = jest.fn();
+    const { getByPlaceholderText, getByText } = render(
+      <AccountProfileManagement
+        {...defaultProps}
+        setAccountProfile={setAccountProfile}
+        onSearchAirports={onSearchAirports}
+        airportOptions={['Austin, TX (AUS)', 'Los Angeles, CA (LAX)']}
+      />
+    );
+
+    fireEvent.changeText(getByPlaceholderText('Preferred airport (optional)'), 'aus');
+    expect(onSearchAirports).toHaveBeenCalledWith('aus');
+    fireEvent.press(getByText('Austin, TX (AUS)'));
+    expect(setAccountProfile).toHaveBeenCalled();
   });
 });

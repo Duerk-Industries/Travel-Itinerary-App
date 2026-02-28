@@ -1,0 +1,15 @@
+# Keep Cloud Run source builds small and avoid uploading local secrets/artifacts.
+node_modules
+dist
+logs
+coverage
+
+.env
+.local_env
+.secrets
+
+public/_expo
+
+*.log
+*.tmp
+desktop.ini

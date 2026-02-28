@@ -1,6 +1,6 @@
-import { createFlightForTrip, removeFlightApi, type FlightCreateDraft } from '../tabs/flights';
+import { createFlightForTrip, removeFlightApi, type FlightCreateDraft } from '../tabs/transfers';
 import { createLodgingForTrip, removeLodgingApi, saveLodgingApi, type LodgingDraft, type Lodging } from '../tabs/lodging';
-import { createTourForTrip, removeTourApi, type TourDraft } from '../tabs/tours';
+import { createActivityForTrip, removeActivityApi, type TourDraft } from '../tabs/activities';
 import { saveWizardFlights, saveWizardLodgings } from '../utils/wizardSaves';
 
 describe('Persistence flows for flights and lodging', () => {
@@ -37,6 +37,7 @@ describe('Persistence flows for flights and lodging', () => {
         {
           id: 'flight-1',
           passenger_name: 'Traveler',
+          status: 'Booked',
           passenger_ids: ['wizard-1'],
           trip_id: 'trip-1',
           departure_date: '2026-05-01',
@@ -76,6 +77,7 @@ describe('Persistence flows for flights and lodging', () => {
       id: 'lodging-1',
       userId: 'user-1',
       tripId: 'trip-1',
+      status: 'Booked',
       name: 'Test Hotel',
       checkInDate: '2026-05-01',
       checkOutDate: '2026-05-03',
@@ -113,6 +115,8 @@ describe('Persistence flows for flights and lodging', () => {
     fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
 
     const draft: FlightCreateDraft = {
+      status: 'Booked',
+      transferType: 'Flight',
       passengerName: 'Traveler',
       passengerIds: ['member-1'],
       departureDate: '2026-06-01',
@@ -150,6 +154,7 @@ describe('Persistence flows for flights and lodging', () => {
     fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
 
     const draft: LodgingDraft = {
+      status: 'Booked',
       name: 'Test Hotel',
       checkInDate: '2026-06-01',
       checkOutDate: '2026-06-03',
@@ -194,14 +199,14 @@ describe('Persistence flows for flights and lodging', () => {
     expect(call[1].method).toBe('PUT');
   });
 
-  test('flight delete uses DELETE /api/flights/:id', async () => {
+  test('flight delete uses DELETE /api/transfers/:id', async () => {
     const fetchMock = (global as any).fetch as jest.Mock;
     fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
 
     const result = await removeFlightApi(backendUrl, headers, 'flight-1');
     expect(result.ok).toBe(true);
     const call = fetchMock.mock.calls[0];
-    expect(call[0]).toBe(`${backendUrl}/api/flights/flight-1`);
+    expect(call[0]).toBe(`${backendUrl}/api/transfers/flight-1`);
     expect(call[1].method).toBe('DELETE');
   });
 
@@ -216,11 +221,13 @@ describe('Persistence flows for flights and lodging', () => {
     expect(call[1].method).toBe('DELETE');
   });
 
-  test('tour tab createTourForTrip posts a tour', async () => {
+  test('tour tab createActivityForTrip posts a tour', async () => {
     const fetchMock = (global as any).fetch as jest.Mock;
     fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
 
     const draft: TourDraft = {
+      status: 'Booked',
+      activityType: 'Tour',
       name: 'Test Tour',
       date: '2026-06-01',
       startLocation: 'Test',
@@ -234,7 +241,7 @@ describe('Persistence flows for flights and lodging', () => {
       travelerIds: [],
     };
 
-    const result = await createTourForTrip({
+    const result = await createActivityForTrip({
       backendUrl,
       jsonHeaders: { 'Content-Type': 'application/json', ...headers },
       draft,
@@ -249,14 +256,16 @@ describe('Persistence flows for flights and lodging', () => {
     expect(payload.paidBy).toEqual(['member-1']);
   });
 
-  test('tour delete uses DELETE /api/tours/:id', async () => {
+  test('tour delete uses DELETE /api/activities/:id', async () => {
     const fetchMock = (global as any).fetch as jest.Mock;
     fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({}) });
 
-    const result = await removeTourApi(backendUrl, headers, 'tour-1');
+    const result = await removeActivityApi(backendUrl, headers, 'tour-1');
     expect(result.ok).toBe(true);
     const call = fetchMock.mock.calls[0];
-    expect(call[0]).toBe(`${backendUrl}/api/tours/tour-1`);
+    expect(call[0]).toBe(`${backendUrl}/api/activities/tour-1`);
     expect(call[1].method).toBe('DELETE');
   });
 });
+
+

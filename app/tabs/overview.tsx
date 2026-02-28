@@ -11,6 +11,7 @@ import {
   View,
   Image,
   type LayoutChangeEvent,
+  useWindowDimensions,
 } from 'react-native';
 import { computeTripDays, validateTripDates } from '../utils/createTripWizard';
 import { renderRichTextBlocks } from '../utils/richText';
@@ -36,7 +37,7 @@ import {
   type Flight,
   type FlightEditDraft,
   type GroupMemberOption,
-} from '../tabs/flights';
+} from '../tabs/transfers';
 import {
   buildLodgingPayload,
   createInitialLodgingState,
@@ -47,11 +48,11 @@ import {
   type LodgingDraft,
 } from '../tabs/lodging';
 import {
-  buildTourPayload,
-  createInitialTourState,
-  createTourForTrip,
+  buildActivityPayload,
+  createInitialActivityState,
+  createActivityForTrip,
   type TourDraft,
-} from '../tabs/tours';
+} from '../tabs/activities';
 import {
   buildCarRentalFromDraft,
   createInitialCarRentalDraft,
@@ -59,11 +60,12 @@ import {
   type CarRentalDraft,
 } from '../tabs/carRentals';
 import { buildRentalDraftFromRow, buildTourDraftFromRow, getOverviewSaveFlags } from '../utils/overviewEditing';
-import { FlightEditingForm } from '../components/FlightEditingForm';
+import { FlightEditingForm } from '../components/TransferEditingForm';
 import ConfirmDialog from '../components/ConfirmDialog';
 import LodgingDialog from '../components/LodgingDialog';
 import LodgingDetailsDialog from '../components/LodgingDetailsDialog';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from '../utils/itineraryStatus';
 
 type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
 let NativeDateTimePicker: NativeDateTimePickerType | null = null;
@@ -101,6 +103,7 @@ type GroupView = {
 
 type Lodging = {
   id: string;
+  status?: string;
   name: string;
   checkInDate: string;
   checkOutDate: string;
@@ -114,6 +117,7 @@ type Lodging = {
 
 type Tour = {
   id: string;
+  status?: string;
   date: string;
   name: string;
   startLocation: string;
@@ -156,6 +160,8 @@ type OverviewTabProps = {
   defaultPayerId: string | null;
   styles: Record<string, any>;
   mapApp: MapApp;
+  aiItineraryPending?: boolean;
+  aiItineraryFailedMessage?: string | null;
   onOpenAddress: (address: string) => void;
   onRefreshTrips: () => void;
   onRefreshGroups: () => void;
@@ -276,6 +282,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   defaultPayerId,
   styles,
   mapApp,
+  aiItineraryPending,
+  aiItineraryFailedMessage,
   onOpenAddress,
   onRefreshTrips,
   onRefreshGroups,
@@ -287,6 +295,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   openFlightInFlightsTab: _openFlightInFlightsTab,
   openLodgingDetails,
 }) => {
+  const { width: viewportWidth } = useWindowDimensions();
+  const isPhoneLayout = viewportWidth < 700;
+  const isTabletLayout = viewportWidth >= 700 && viewportWidth < 1100;
   const stripResizeMode = useCallback((style: any) => {
     const flattened = StyleSheet.flatten(style);
     if (!flattened || typeof flattened !== 'object' || !('resizeMode' in flattened)) {
@@ -297,6 +308,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   }, []);
   const dayHeroImageStyle = useMemo(() => stripResizeMode(styles.dayHeroImage), [stripResizeMode, styles.dayHeroImage]);
   const lodgingImageStyle = useMemo(() => stripResizeMode(styles.lodgingImage), [stripResizeMode, styles.lodgingImage]);
+  const responsiveCardStyle = useMemo(
+    () => ({
+      padding: isPhoneLayout ? 12 : 16,
+      borderRadius: isPhoneLayout ? 10 : 12,
+    }),
+    [isPhoneLayout]
+  );
   const [itineraryDetails, setItineraryDetails] = useState<ItineraryDetail[]>([]);
   const [itineraryLoading, setItineraryLoading] = useState(false);
   const [itineraryId, setItineraryId] = useState<string | null>(null);
@@ -350,7 +368,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const [showAddTour, setShowAddTour] = useState(false);
   const [showAddRental, setShowAddRental] = useState(false);
   const [lodgingDraft, setLodgingDraft] = useState<LodgingDraft>(createInitialLodgingState());
-  const [tourDraft, setTourDraft] = useState<TourDraft>(createInitialTourState());
+  const [tourDraft, setTourDraft] = useState<TourDraft>(createInitialActivityState());
   const [rentalDraft, setRentalDraft] = useState<CarRentalDraft>(createInitialCarRentalDraft());
   const [editingFlightId, setEditingFlightId] = useState<string | null>(null);
   const [editingFlightDraft, setEditingFlightDraft] = useState<FlightEditDraft | null>(null);
@@ -605,6 +623,37 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   const displayStartDate = effectiveRangeDates.startDate ?? trip?.startDate ?? null;
   const displayEndDate = effectiveRangeDates.endDate ?? trip?.endDate ?? null;
+  const eventDateBounds = useMemo(() => {
+    const parseDateUtc = (value?: string | null): Date | null => {
+      const text = String(value ?? '').trim();
+      if (!text) return null;
+      const iso = normalizeDateString(text);
+      if (!iso) return null;
+      const parts = iso.split('-').map((v) => Number(v));
+      if (parts.length !== 3 || parts.some((n) => !Number.isFinite(n))) return null;
+      return new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+    };
+
+    const dates = [
+      ...flights.map((f) => f.departure_date),
+      ...flights.map((f) => f.arrival_date),
+      ...lodgings.map((l) => l.checkInDate),
+      ...lodgings.map((l) => l.checkOutDate),
+      ...tours.map((t) => t.date),
+      ...carRentals.map((r) => r.pickupDate),
+      ...carRentals.map((r) => r.dropoffDate),
+    ]
+      .map((value) => parseDateUtc(value))
+      .filter(Boolean) as Date[];
+
+    if (!dates.length) return null;
+    const min = new Date(Math.min(...dates.map((d) => d.getTime()))).toISOString().slice(0, 10);
+    const max = new Date(Math.max(...dates.map((d) => d.getTime()))).toISOString().slice(0, 10);
+    return { startDate: min, endDate: max };
+  }, [flights, lodgings, tours, carRentals]);
+
+  const overviewStartDate = eventDateBounds?.startDate ?? displayStartDate;
+  const overviewEndDate = eventDateBounds?.endDate ?? displayEndDate;
   const monthLabel = useMemo(
     () => formatMonthYear(trip?.startMonth ?? null, trip?.startYear ?? null),
     [trip?.startMonth, trip?.startYear]
@@ -623,10 +672,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   const tripLength = useMemo(() => {
     if (trip?.startDate || trip?.endDate) {
-      return computeTripDays(displayStartDate ?? null, displayEndDate ?? null);
+      return computeTripDays(overviewStartDate ?? null, overviewEndDate ?? null);
     }
     return trip?.durationDays ?? null;
-  }, [trip, displayStartDate, displayEndDate]);
+  }, [trip, overviewStartDate, overviewEndDate]);
 
   const rows = useMemo<OverviewRow[]>(
     () =>
@@ -653,8 +702,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       return new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
     };
     const dates: string[] = [];
-    const start = displayStartDate || effectiveRangeDates.startDate;
-    const end = displayEndDate || effectiveRangeDates.endDate;
+    const start = overviewStartDate || effectiveRangeDates.startDate;
+    const end = overviewEndDate || effectiveRangeDates.endDate;
     if (start && end) {
       const s = parseDateUtc(start);
       const e = parseDateUtc(end);
@@ -663,11 +712,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           dates.push(d.toISOString().slice(0, 10));
         }
       }
-    } else if (flights.length || lodgings.length) {
+    } else if (flights.length || lodgings.length || tours.length || carRentals.length) {
       const all = [
         ...flights.map((f) => f.departure_date),
+        ...flights.map((f) => f.arrival_date),
         ...lodgings.map((l) => l.checkInDate),
         ...lodgings.map((l) => l.checkOutDate),
+        ...tours.map((t) => t.date),
+        ...carRentals.map((r) => r.pickupDate),
+        ...carRentals.map((r) => r.dropoffDate),
       ]
         .filter(Boolean)
         .map((d) => parseDateUtc(d as string))
@@ -685,7 +738,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       dates.push(new Date().toISOString().slice(0, 10));
     }
     return Array.from(new Set(dates));
-  }, [displayStartDate, displayEndDate, effectiveRangeDates.startDate, effectiveRangeDates.endDate, flights, lodgings]);
+  }, [overviewStartDate, overviewEndDate, effectiveRangeDates.startDate, effectiveRangeDates.endDate, flights, lodgings, tours, carRentals]);
 
   useEffect(() => {
     const buildDayCards = () => {
@@ -693,7 +746,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         const items: string[] = [];
         const flightsForDay = flights.filter((f) => f.departure_date === date || f.arrival_date === date);
         flightsForDay.forEach((f) =>
-          items.push(`Flight ${f.departure_location || f.departure_airport_code || 'DEP'} -> ${f.arrival_location || f.arrival_airport_code || 'ARR'} dep ${f.departure_time || '?'} arr ${f.arrival_time || '?'}`)
+          items.push(`Transfer ${f.departure_location || f.departure_airport_code || 'DEP'} -> ${f.arrival_location || f.arrival_airport_code || 'ARR'} dep ${f.departure_time || '?'} arr ${f.arrival_time || '?'}`)
         );
         const lodgingsForDay = lodgings.filter((l) => {
           const ci = l.checkInDate;
@@ -704,7 +757,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         });
         lodgingsForDay.forEach((l) => items.push(`Lodging at ${l.name} (${l.checkInDate} - ${l.checkOutDate})`));
         const toursForDay = tours.filter((t) => t.date === date);
-        toursForDay.forEach((t) => items.push(`Tour: ${t.name} at ${t.startTime || 'time TBD'}`));
+        toursForDay.forEach((t) => items.push(`Activity: ${t.name} at ${t.startTime || 'time TBD'}`));
         const rentalsForDay = carRentals.filter((r) => r.pickupDate === date || r.dropoffDate === date);
         rentalsForDay.forEach((r) => items.push(`Rental car (${r.vendor || 'vendor'}) ${r.pickupDate} -> ${r.dropoffDate}`));
         const label = `Day ${idx + 1}`;
@@ -734,6 +787,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         if (raw) {
           const parsed = JSON.parse(raw) as DayCard[];
           if (Array.isArray(parsed) && parsed.length) {
+            const cachedDates = parsed.map((card) => String(card?.date ?? '')).filter(Boolean);
+            const computedDates = allDates.map((date) => String(date ?? '')).filter(Boolean);
+            const cacheMatchesComputedRange =
+              cachedDates.length === computedDates.length &&
+              cachedDates.every((date, idx) => date === computedDates[idx]);
+            if (!cacheMatchesComputedRange) return;
             setDayCards(parsed);
             setSelectedDay((prev) => (prev && parsed.some((card) => card.date === prev) ? prev : null));
           }
@@ -743,15 +802,17 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       }
     };
     loadCache().catch(() => undefined);
-  }, [trip?.id, dayCards.length]);
+  }, [trip?.id, dayCards.length, allDates]);
 
   useEffect(() => {
     const fetchImages = async () => {
       if (!dayCards.length) return;
+      const missingCards = dayCards.filter((card) => !dayImages[card.date]);
+      if (!missingCards.length) return;
       const next: Record<string, string> = {};
-      for (let idx = 0; idx < dayCards.length; idx += 1) {
-        const card = dayCards[idx];
-        const dayNumber = idx + 1;
+      for (let idx = 0; idx < missingCards.length; idx += 1) {
+        const card = missingCards[idx];
+        const dayNumber = Math.max(1, dayCards.findIndex((candidate) => candidate.date === card.date) + 1);
         const activities = itineraryDetails
           .filter((detail) => detail.day === dayNumber)
           .map((detail) => detail.activity)
@@ -780,10 +841,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           // ignore
         }
       }
-      if (Object.keys(next).length) setDayImages(next);
+      if (Object.keys(next).length) {
+        setDayImages((prev) => ({ ...prev, ...next }));
+      }
     };
     fetchImages().catch(() => undefined);
-  }, [backendUrl, headers, dayCards, tripLocationLabel]);
+  }, [backendUrl, headers, dayCards, dayImages, itineraryDetails, tours, tripLocationLabel, trip?.destination]);
 
   useEffect(() => {
     if (!trip?.id || !trip.startDate) return;
@@ -1021,7 +1084,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       defaultPayerId
     );
     if (editingFlightId === 'new') {
-      const res = await fetch(`${backendUrl}/api/flights`, {
+      const res = await fetch(`${backendUrl}/api/transfers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...headers },
         body: JSON.stringify(payload),
@@ -1036,7 +1099,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       onFlightDataChanged();
       return;
     }
-    const res = await fetch(`${backendUrl}/api/flights/${editingFlightId}`, {
+    const res = await fetch(`${backendUrl}/api/transfers/${editingFlightId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', ...headers },
       body: JSON.stringify(payload),
@@ -1129,26 +1192,26 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   const saveTour = async () => {
     if (editingTourId) {
-      const { payload, error } = buildTourPayload(tourDraft, defaultPayerId);
+      const { payload, error } = buildActivityPayload(tourDraft, defaultPayerId);
       if (error || !payload) {
-        alert(error || 'Unable to save tour');
+        alert(error || 'Unable to save activity');
         return;
       }
-      const res = await fetch(`${backendUrl}/api/tours/${editingTourId}`, {
+      const res = await fetch(`${backendUrl}/api/activities/${editingTourId}`, {
         method: 'PUT',
         headers: jsonHeaders,
         body: JSON.stringify({ ...payload, tripId: trip?.id }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        alert(data.error || 'Unable to save tour');
+        alert(data.error || 'Unable to save activity');
         return;
       }
       closeTourModal();
       onTourDataChanged();
       return;
     }
-    const result = await createTourForTrip({
+    const result = await createActivityForTrip({
       backendUrl,
       jsonHeaders,
       draft: tourDraft,
@@ -1156,7 +1219,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       defaultPayerId,
     });
     if (!result.ok) {
-      alert(result.error || 'Unable to save tour');
+      alert(result.error || 'Unable to save activity');
       return;
     }
     closeTourModal();
@@ -1195,7 +1258,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const closeTourModal = () => {
     setShowAddTour(false);
     setEditingTourId(null);
-    setTourDraft(createInitialTourState());
+    setTourDraft(createInitialActivityState());
   };
 
   const closeRentalModal = () => {
@@ -1273,7 +1336,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const openAddTour = () => {
     if (!isEditing) return;
     setEditingTourId(null);
-    setTourDraft(createInitialTourState());
+    setTourDraft(createInitialActivityState());
     setShowAddTour(true);
   };
 
@@ -1313,6 +1376,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   };
 
   const formatRentalDetails = (rental: CarRental): DetailItem[] => [
+    { label: 'Status', value: normalizeItineraryStatus((rental as any).status, LEGACY_ITINERARY_STATUS) },
     { label: 'Pickup Location', value: rental.pickupLocation || 'N/A' },
     { label: 'Pickup Date', value: formatFriendlyDate(rental.pickupDate) || rental.pickupDate || 'N/A' },
     { label: 'Dropoff Location', value: rental.dropoffLocation || 'N/A' },
@@ -1387,8 +1451,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     </View>
   );
 
-  const startLabel = formatFriendlyDate(displayStartDate);
-  const endLabel = formatFriendlyDate(displayEndDate);
+  const startLabel = formatFriendlyDate(overviewStartDate);
+  const endLabel = formatFriendlyDate(overviewEndDate);
   const dateRange = startLabel || endLabel ? `${startLabel ?? 'Start'} - ${endLabel ?? 'End'}` : null;
   const dayColStyle = { minWidth: 90, width: 90 };
   const dateColStyle = { minWidth: 200, width: 200 };
@@ -1495,7 +1559,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const buildDaySummary = (info?: { flights: Flight[]; lodgings: Lodging[]; tours: Tour[]; rentals: CarRental[]; details: ItineraryDetail[] }) => {
     if (!info) return 'Free day';
     if (info.details.length) return info.details[0].activity;
-    if (info.tours.length) return info.tours[0].name || 'Tour day';
+    if (info.tours.length) return info.tours[0].name || 'Activity day';
     if (info.flights.length) return 'Travel day';
     if (info.lodgings.length) return `Stay at ${info.lodgings[0].name || 'lodging'}`;
     if (info.rentals.length) return 'Drive day';
@@ -1511,7 +1575,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       return info.flights.map((f) => {
         const dep = f.departure_location || f.departure_airport_code || 'Departure';
         const arr = f.arrival_location || f.arrival_airport_code || 'Arrival';
-        return `Flight from ${dep} to ${arr}.`;
+        return `Transfer from ${dep} to ${arr}.`;
       });
     }
     if (info.tours.length) {
@@ -1527,7 +1591,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   };
 
   const renderDayBar = (activeDate: string | null) => (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 8 }}>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 8 }} contentContainerStyle={{ paddingRight: 8 }}>
       <TouchableOpacity
         testID="overview-day-pill-overview"
         style={[styles.dayPill, !activeDate && styles.dayPillActive]}
@@ -1555,7 +1619,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const renderContent = () => {
     if (!trip) {
       return (
-        <View style={styles.card}>
+        <View style={[styles.card, responsiveCardStyle]}>
           <Text style={styles.sectionTitle}>Overview</Text>
           <Text style={styles.helperText}>Select a trip to view its overview.</Text>
         </View>
@@ -1572,7 +1636,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       const renderHeroCard = (card: DayCard, title: string, showAction: boolean, onPress?: () => void, testID?: string) => {
         const img = dayImages[card.date];
         return (
-          <TouchableOpacity testID={testID} style={styles.dayHeroCard} onPress={onPress} disabled={!onPress}>
+          <TouchableOpacity
+            testID={testID}
+            style={[
+              styles.dayHeroCard,
+              isPhoneLayout ? { height: 150 } : isTabletLayout ? { height: 170 } : null,
+            ]}
+            onPress={onPress}
+            disabled={!onPress}
+          >
             {img ? (
               <Image style={dayHeroImageStyle} source={{ uri: img }} resizeMode="cover" />
             ) : (
@@ -1583,8 +1655,19 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               <Text style={styles.dayHeroBadgeText}>{card.label.toUpperCase()}</Text>
             </View>
             <View style={styles.dayHeroTextWrap}>
-              <Text style={styles.dayHeroTitle}>{title}</Text>
-              {showAction ? <Text style={styles.dayHeroAction}>View details</Text> : null}
+              <Text
+                style={[
+                  styles.dayHeroTitle,
+                  isPhoneLayout ? { fontSize: 18 } : isTabletLayout ? { fontSize: 20 } : null,
+                ]}
+                numberOfLines={2}
+                ellipsizeMode="tail"
+              >
+                {title}
+              </Text>
+              {showAction ? (
+                <Text style={[styles.dayHeroAction, isPhoneLayout ? { fontSize: 11 } : null]}>View details</Text>
+              ) : null}
             </View>
           </TouchableOpacity>
         );
@@ -1619,14 +1702,14 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         const showLodgingNames = new Set(lodgingParticipantKeys).size > 1;
 
         return (
-          <View style={[styles.card, { position: 'relative' }]}>
+          <View style={[styles.card, responsiveCardStyle, { position: 'relative' }]}>
             <TouchableOpacity testID="day-details-back" style={styles.dayDetailsBackButton} onPress={() => setSelectedDay(null)}>
               <Text style={styles.dayDetailsBackText}>← Back</Text>
             </TouchableOpacity>
             <ScrollView
               ref={scrollRef}
               style={{ flex: 1 }}
-              contentContainerStyle={{ gap: 16, paddingTop: 56 }}
+              contentContainerStyle={{ gap: isPhoneLayout ? 12 : 16, paddingTop: isPhoneLayout ? 48 : 56 }}
               onScroll={(e: any) => setScrollY(e.nativeEvent.contentOffset.y)}
               scrollEventThrottle={16}
             >
@@ -1645,7 +1728,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
               {flightsForDay.length ? (
                 <View style={styles.dayInfoCard}>
-                  <Text style={styles.sectionTitle}>Your flight</Text>
+                  <Text style={styles.sectionTitle}>Your transfer</Text>
                   {flightsForDay.map((flight) => {
                     const dep = flight.departure_location || flight.departure_airport_code || 'DEP';
                     const arr = flight.arrival_location || flight.arrival_airport_code || 'ARR';
@@ -1675,15 +1758,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                             ? formatTravelerNames(flight.passenger_ids)
                             : flight.passenger_name || '';
                         return {
-                          title: flightsForDay.length > 1 ? `Flight ${idx + 1} · ${dep} → ${arr}` : undefined,
+                          title: flightsForDay.length > 1 ? `Transfer ${idx + 1} · ${dep} → ${arr}` : undefined,
                           subtitle: showFlightNames && passengers ? `Travelers: ${passengers}` : undefined,
                           items: formatFlightDetails(flight),
                         };
                       });
-                      setDetailModal({ title: 'Flight Details', sections });
+                      setDetailModal({ title: 'Transfer Details', sections });
                     }}
                   >
-                    <Text style={styles.dayInfoButtonText}>See flight details →</Text>
+                    <Text style={styles.dayInfoButtonText}>See transfer details →</Text>
                   </TouchableOpacity>
                 </View>
               ) : null}
@@ -1719,7 +1802,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
               {toursForDay.length ? (
                 <View style={styles.dayInfoCard}>
-                  <Text style={styles.sectionTitle}>Tours</Text>
+                  <Text style={styles.sectionTitle}>Activities</Text>
                   {toursForDay.map((tour) => {
                     const participants =
                       Array.isArray(tour.paidBy) && tour.paidBy.length
@@ -1745,12 +1828,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                             ? formatTravelerNames(tour.paidBy)
                             : formatTravelerNames(allMemberIds);
                         return {
-                          title: toursForDay.length > 1 ? `Tour ${idx + 1}` : undefined,
+                          title: toursForDay.length > 1 ? `Activity ${idx + 1}` : undefined,
                           subtitle: showTourNames && participants ? `Travelers: ${participants}` : undefined,
                           items: formatTourDetails(tour),
                         };
                       });
-                      setDetailModal({ title: 'Tour Details', sections });
+                      setDetailModal({ title: 'Activity Details', sections });
                     }}
                   >
                     <Text style={styles.dayInfoButtonText}>See tour details →</Text>
@@ -1813,15 +1896,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       return (
         <ScrollView
           ref={scrollRef}
-          style={styles.card}
-          contentContainerStyle={{ gap: 12 }}
+          style={[styles.card, responsiveCardStyle]}
+          contentContainerStyle={{ gap: isPhoneLayout ? 10 : 12 }}
           onScroll={(e: any) => setScrollY(e.nativeEvent.contentOffset.y)}
           scrollEventThrottle={16}
         >
-          <View style={styles.row}>
+          <View style={[styles.row, isPhoneLayout ? { rowGap: 8 } : null]}>
             <Text style={styles.sectionTitle}>Overview</Text>
             <TouchableOpacity
-              style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
+              style={[styles.button, styles.smallButton, { marginLeft: 'auto' }, isPhoneLayout ? { marginLeft: 0 } : null]}
               onPress={() => setIsEditing(true)}
             >
               <Text style={styles.buttonText}>Edit</Text>
@@ -1859,15 +1942,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     return (
       <ScrollView
         ref={scrollRef}
-        style={styles.card}
-        contentContainerStyle={{ gap: 12 }}
+        style={[styles.card, responsiveCardStyle]}
+        contentContainerStyle={{ gap: isPhoneLayout ? 10 : 12 }}
         onScroll={(e: any) => setScrollY(e.nativeEvent.contentOffset.y)}
         scrollEventThrottle={16}
       >
-        <View style={styles.row}>
+        <View style={[styles.row, isPhoneLayout ? { rowGap: 8 } : null]}>
           <Text style={styles.sectionTitle}>Overview</Text>
           {isEditing ? (
-            <View style={[styles.row, { marginLeft: 'auto', gap: 8 }]}>
+            <View style={[styles.row, { marginLeft: 'auto', gap: 8 }, isPhoneLayout ? { marginLeft: 0 } : null]}>
               <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={saveOverviewEdits}>
                 <Text style={styles.buttonText}>Save</Text>
               </TouchableOpacity>
@@ -2217,13 +2300,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         <View style={styles.divider} />
 
         <View style={[styles.row, { flexWrap: 'wrap' }]}>
-          <Text style={styles.headerText}>Flights</Text>
+          <Text style={styles.headerText}>Transfers</Text>
           {isEditing && (
             <TouchableOpacity
               style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
               onPress={() => openFlightAdd()}
             >
-              <Text style={styles.buttonText}>+ Add Flight</Text>
+              <Text style={styles.buttonText}>+ Add Transfer</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -2272,6 +2355,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   <Text style={styles.helperText}>
                     {formatFriendlyDate(flight.departure_date, flight.departure_time)}
                   </Text>
+                  <Text style={styles.helperText}>Status: {normalizeItineraryStatus((flight as any).status, LEGACY_ITINERARY_STATUS)}</Text>
                   <Text style={styles.helperText}>{buildPassengerName((flight as any).passenger_ids ?? [])}</Text>
                 </TouchableOpacity>
               );
@@ -2327,6 +2411,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   <Text style={styles.helperText}>
                     {formatFriendlyDate(lodging.checkInDate)} – {formatFriendlyDate(lodging.checkOutDate)}
                   </Text>
+                  <Text style={styles.helperText}>Status: {normalizeItineraryStatus(lodging.status, LEGACY_ITINERARY_STATUS)}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -2335,10 +2420,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         <View style={styles.divider} />
 
         <View style={styles.row}>
-          <Text style={styles.headerText}>Tours & Activities</Text>
+          <Text style={styles.headerText}>Activities</Text>
           {isEditing && (
             <TouchableOpacity style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]} onPress={openAddTour}>
-              <Text style={styles.buttonText}>+ Add Tour</Text>
+              <Text style={styles.buttonText}>+ Add Activity</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -2353,6 +2438,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   <Text style={styles.helperText}>
                     {formatFriendlyDate(tour.date, tour.startTime)} @ {tour.startLocation}
                   </Text>
+                  <Text style={styles.helperText}>Status: {normalizeItineraryStatus(tour.status, LEGACY_ITINERARY_STATUS)}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -2380,6 +2466,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                     {rental.pickupLocation} {formatFriendlyDate(rental.pickupDate)} – {rental.dropoffLocation}{' '}
                     {formatFriendlyDate(rental.dropoffDate)}
                   </Text>
+                  <Text style={styles.helperText}>Status: {normalizeItineraryStatus((rental as any).status, LEGACY_ITINERARY_STATUS)}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -2390,6 +2477,19 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   return (
     <View style={{ flex: 1 }}>
+      {trip && aiItineraryPending ? (
+        <View style={[styles.card, { borderColor: '#93c5fd', borderWidth: 1, marginBottom: 10 }]}>
+          <Text style={styles.sectionTitle}>AI Itinerary In Progress</Text>
+          <Text style={styles.helperText}>Your AI trip plan is being generated and will appear here automatically.</Text>
+        </View>
+      ) : null}
+      {trip && !aiItineraryPending && aiItineraryFailedMessage ? (
+        <View style={[styles.card, { borderColor: '#fecaca', borderWidth: 1, marginBottom: 10, paddingVertical: 8 }]}>
+          <Text style={[styles.helperText, { color: '#7f1d1d' }]}>
+            AI itinerary failed. You can retry from the Itinerary tab.
+          </Text>
+        </View>
+      ) : null}
       {renderContent()}
       {Platform.OS !== 'web' && timePickerTarget && NativeDateTimePicker ? (
         <NativeDateTimePicker
@@ -2471,3 +2571,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 };
 
 export default OverviewTab;
+
+
+

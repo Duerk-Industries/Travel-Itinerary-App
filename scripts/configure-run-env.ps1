@@ -7,8 +7,8 @@ $ErrorActionPreference = 'Stop'
 
 $ServiceName = if ($env:SERVICE_NAME) { $env:SERVICE_NAME } else { 'travel-itinerary-app' }
 $Region = if ($env:REGION) { $env:REGION } else { 'us-east5' }
-$IgnoreKeys = if ($env:IGNORE_KEYS) { $env:IGNORE_KEYS } else { 'PORT,FIRESTORE_EMULATOR_HOST,GCLOUD_PROJECT_ID,GCLOUD_PROJECT_NUMBER,DEPLOYER_SERVICE_ACCOUNT_EMAIL,RUNTIME_SERVICE_ACCOUNT_EMAIL,CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL,FIRESTORE_DATABASE_ID' }
-$IgnoreSecretKeys = if ($env:IGNORE_SECRET_KEYS) { $env:IGNORE_SECRET_KEYS } else { 'GCLOUD_PROJECT,GOOGLE_CLOUD_PROJECT,GCLOUD_PROJECT_ID,GCLOUD_PROJECT_NUMBER,DEPLOYER_SERVICE_ACCOUNT_EMAIL,RUNTIME_SERVICE_ACCOUNT_EMAIL,CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL' }
+$IgnoreKeys = if ($env:IGNORE_KEYS) { $env:IGNORE_KEYS } else { 'PORT,FIRESTORE_EMULATOR_HOST,GCLOUD_PROJECT_NUMBER,DEPLOYER_SERVICE_ACCOUNT_EMAIL,RUNTIME_SERVICE_ACCOUNT_EMAIL,CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL,GOOGLE_APPLICATION_CREDENTIALS' }
+$IgnoreSecretKeys = if ($env:IGNORE_SECRET_KEYS) { $env:IGNORE_SECRET_KEYS } else { 'GCLOUD_PROJECT,GOOGLE_CLOUD_PROJECT,GCLOUD_PROJECT_ID,GCLOUD_PROJECT_NUMBER,DEPLOYER_SERVICE_ACCOUNT_EMAIL,RUNTIME_SERVICE_ACCOUNT_EMAIL,CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL,GOOGLE_APPLICATION_CREDENTIALS' }
 $SecretsFile = if ($env:SECRETS_FILE) { $env:SECRETS_FILE } else { '' }
 $Secrets = if ($env:SECRETS) { $env:SECRETS } else { '' }
 $gcloudCommand = if (Get-Command gcloud.cmd -ErrorAction SilentlyContinue) { 'gcloud.cmd' } else { 'gcloud' }
@@ -145,28 +145,11 @@ if ($Secrets) {
 }
 
 if ($SecretsFile -and (Test-Path -LiteralPath $SecretsFile)) {
-  $secretsFromFile = @()
   foreach ($pair in (Parse-DotEnv $SecretsFile)) {
     if (Should-IgnoreKey $pair.Key $IgnoreSecretKeys) { continue }
     $key = $pair.Key
-    $value = $pair.Value
     if (-not $key) { continue }
-    $describeArgs = @('secrets', 'describe', $key)
-    if ($projectId) { $describeArgs += @('--project', $projectId) }
-    $prevErrorAction = $ErrorActionPreference
-    $ErrorActionPreference = 'Continue'
-    & $gcloudCommand @describeArgs 2>$null | Out-Null
-    $exitCode = $LASTEXITCODE
-    $ErrorActionPreference = $prevErrorAction
-    if ($exitCode -ne 0) {
-      $createArgs = @('secrets', 'create', $key, '--replication-policy=automatic')
-      if ($projectId) { $createArgs += @('--project', $projectId) }
-      & $gcloudCommand @createArgs
-    }
-    $value | & $gcloudCommand secrets versions add $key --data-file=-
-    $secretsFromFile += $key
-  }
-  foreach ($key in $secretsFromFile | Select-Object -Unique) {
+    # Name-only mapping: secret values are not read/uploaded by this script.
     $secretMap[$key] = ('{0}:latest' -f $key)
   }
 }
@@ -205,8 +188,14 @@ if ($hasSecretOverrides) {
 $cmd = @('run', 'services', 'update', $ServiceName, '--region', $Region, '--update-env-vars', $envArg)
 if ($projectId) { $cmd += @('--project', $projectId) }
 if ($secretsArg) { $cmd += @('--set-secrets', $secretsArg) }
-if (Should-IgnoreKey 'FIRESTORE_EMULATOR_HOST' $IgnoreKeys) { $cmd += @('--remove-env-vars', 'FIRESTORE_EMULATOR_HOST') }
 if ($secretMap.Count -gt 0) { $cmd += @('--remove-env-vars', ($secretMap.Keys -join ',')) }
+$removeEnvKeys = @()
+foreach ($candidate in @('FIRESTORE_EMULATOR_HOST', 'GOOGLE_APPLICATION_CREDENTIALS')) {
+  if (Should-IgnoreKey $candidate $IgnoreKeys) { $removeEnvKeys += $candidate }
+}
+if ($removeEnvKeys.Count -gt 0) {
+  $cmd += @('--remove-env-vars', ($removeEnvKeys -join ','))
+}
 
 Write-Host "Configuring Cloud Run service environment..."
 Write-Host "  Service: $ServiceName"

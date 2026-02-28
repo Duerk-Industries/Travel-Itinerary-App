@@ -104,4 +104,19 @@ describe('/api/places location endpoints', () => {
     expect(db.upsertLocation).not.toHaveBeenCalled();
     expect(res.body).toEqual([]);
   });
+
+  it('falls back to id labels when local id resolution has transient network failure', async () => {
+    (db.getLocationsByIds as jest.Mock).mockResolvedValue([]);
+    (locationServices.getLocationOptionsByIds as jest.Mock).mockRejectedValue(Object.assign(new Error('read ECONNRESET'), { code: 'ECONNRESET' }));
+
+    const res = await request(app).post('/api/places/batch').send({ ids: ['city:123'] }).expect(200);
+
+    expect(res.body).toEqual([
+      {
+        id: 'city:123',
+        place_id: 'city:123',
+        name: 'City 123',
+      },
+    ]);
+  });
 });

@@ -38,7 +38,7 @@ describe('CostReportTable with expense covering', () => {
       { id: 'm2', email: 'blair@example.com' },
       { id: 'm3', email: 'casey@example.com' },
     ];
-    const coveredBy = { m2: 'm1' };
+    const coveredBy: Record<string, string> = { m2: 'm1' };
     const reportableMembers = members.filter((m) => !coveredBy[m.id]);
     const memberIds = members.map((m) => m.id);
 

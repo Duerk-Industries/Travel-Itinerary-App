@@ -11,14 +11,14 @@
  * then UI sections render conditionally based on the active page.
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme, useWindowDimensions } from 'react-native';
 import Constants from 'expo-constants';
 import { formatDateLong } from './utils/formatDateLong';
 import { normalizeDateString } from './utils/normalizeDateString';
 import { sanitizeCostInput } from './utils/sanitizeCost';
 import { initializeAppCheck } from './utils/firebaseAppCheck';
-import { FlightsTab, type Flight, fetchFlightsForTrip } from './tabs/flights';
-import { type Tour, TourTab, fetchToursForTrip } from './tabs/tours';
+import { FlightsTab, type Flight, fetchFlightsForTrip } from './tabs/transfers';
+import { type Tour, ActivityTab, fetchActivitiesForTrip } from './tabs/activities';
 import { type Trait } from './tabs/traits';
 import { FollowTab, fetchFollowedTripsApi, loadFollowCodes, loadFollowPayloads, saveFollowCodes, saveFollowPayloads, type FollowedTrip } from './tabs/follow';
 import FollowingTab from './tabs/following';
@@ -32,10 +32,22 @@ import { buildAllExpenses, calculateAllTotals, type UnifiedExpense, computePayer
 import { rollUpTotals, validateCoveringRules } from './utils/coveredBy';
 import TripDetailsTab from './tabs/tripDetails';
 import AccountTab, { fetchAccountProfile, fetchFamilyRelationships, fetchFellowTravelers, type FellowTraveler } from './tabs/account';
-import { CarRental, CarRentalDraft, buildCarRentalFromDraft, createInitialCarRentalDraft } from './tabs/carRentals';
+import { CarRental, CarRentalDraft, buildCarRentalFromDraft, createInitialCarRentalDraft, fetchCarRentalsForTrip } from './tabs/carRentals';
+import {
+  DEFAULT_NEW_ITINERARY_STATUS,
+  ITINERARY_STATUSES,
+  LEGACY_ITINERARY_STATUS,
+  normalizeItineraryStatus,
+} from './utils/itineraryStatus';
 import { Lodging, fetchLodgingsApi } from './tabs/lodging';
 import { InvitePayload } from './utils/inviteCodes';
 import { type MapApp, buildMapUrl, loadStoredMapPreference, persistMapPreference } from './utils/mapLinks';
+import {
+  type AppearancePreference,
+  loadStoredAppearancePreference,
+  persistAppearancePreference,
+} from './utils/appearancePreference';
+import { getAppTheme, type AppTheme } from './theme/theme';
 import { shouldAllowPageChange, shouldDisableTab } from './utils/wizardGuard';
 import * as WebBrowser from 'expo-web-browser';
 import { Buffer } from 'buffer';
@@ -43,6 +55,7 @@ import { loadSession, saveSession, clearSession } from './utils/session';
 import LodgingDetailsDialog from './components/LodgingDetailsDialog';
 import ConfirmDialog from './components/ConfirmDialog';
 import { toWebStyle } from './utils/webStyle';
+import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from './utils/votes';
 
 import LodgingTab from './tabs/LodgingTab';
 
@@ -125,6 +138,12 @@ interface Expense {
   notes?: string | null;
   createdAt: string;
 }
+
+type AsyncItineraryTracker = {
+  jobId: string;
+  status: 'pending' | 'failed';
+  error?: string;
+};
 
 interface GroupMemberOption {
   id: string;
@@ -255,9 +274,64 @@ const extractTokenFromUrl = (rawUrl: string) => {
 };
 
 const App: React.FC = () => {
+  const { width: viewportWidth } = useWindowDimensions();
+  const systemColorScheme = useColorScheme();
+  const isNarrowLayout = viewportWidth < 980;
+  const isPhoneLayout = viewportWidth < 680;
+  const isWebIOSSafari = useMemo(() => {
+    if (Platform.OS !== 'web' || typeof navigator === 'undefined') return false;
+    const ua = navigator.userAgent || '';
+    const isIOS =
+      /iP(hone|ad|od)/i.test(ua) ||
+      ((navigator as any).platform === 'MacIntel' && Number((navigator as any).maxTouchPoints || 0) > 1);
+    const isSafari = /Safari/i.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS|YaBrowser/i.test(ua);
+    return isIOS && isSafari;
+  }, []);
+  const [webViewportHeight, setWebViewportHeight] = useState<number | null>(null);
+
   useEffect(() => {
     initializeAppCheck();
   }, []);
+
+  useEffect(() => {
+    if (!isWebIOSSafari || typeof window === 'undefined') return;
+    const updateViewport = () => {
+      const vv = window.visualViewport;
+      const next = Math.round(vv?.height ?? window.innerHeight ?? 0);
+      if (next > 0) setWebViewportHeight(next);
+    };
+    updateViewport();
+    window.addEventListener('resize', updateViewport);
+    window.visualViewport?.addEventListener('resize', updateViewport);
+    window.visualViewport?.addEventListener('scroll', updateViewport);
+    return () => {
+      window.removeEventListener('resize', updateViewport);
+      window.visualViewport?.removeEventListener('resize', updateViewport);
+      window.visualViewport?.removeEventListener('scroll', updateViewport);
+    };
+  }, [isWebIOSSafari]);
+
+  const iosSafariSafeAreaStyle = useMemo(
+    () =>
+      isWebIOSSafari
+        ? ({
+            paddingTop: 'env(safe-area-inset-top, 0px)',
+            paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+            minHeight: webViewportHeight ? `${webViewportHeight}px` : '100dvh',
+          } as any)
+        : null,
+    [isWebIOSSafari, webViewportHeight]
+  );
+
+  const iosSafariContentInsetStyle = useMemo(
+    () =>
+      isWebIOSSafari
+        ? ({
+            paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))',
+          } as any)
+        : null,
+    [isWebIOSSafari]
+  );
 
   const [userToken, setUserToken] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
@@ -302,6 +376,7 @@ const App: React.FC = () => {
   const [activeTripId, setActiveTripId] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [showActiveTripDropdown, setShowActiveTripDropdown] = useState(false);
+  const [openShareFromHeaderSignal, setOpenShareFromHeaderSignal] = useState(0);
   const [groupMembers, setGroupMembers] = useState<GroupMemberOption[]>([]);
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
   const [lodgings, setLodgings] = useState<Lodging[]>([]);
@@ -336,12 +411,25 @@ const App: React.FC = () => {
     password: '',
     passwordConfirm: '',
   });
-  const [accountProfile, setAccountProfile] = useState({ firstName: '', lastName: '', email: '' });
+  const [accountProfile, setAccountProfile] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    homeAddress: '',
+    preferredAirport: '',
+    appearancePreference: 'auto' as AppearancePreference,
+  });
   const [mapApp, setMapApp] = useState<MapApp>(() => loadStoredMapPreference('google'));
+  const [appearancePreference, setAppearancePreference] = useState<AppearancePreference>(() =>
+    loadStoredAppearancePreference('auto')
+  );
+  const theme = useMemo(() => getAppTheme(appearancePreference, systemColorScheme), [appearancePreference, systemColorScheme]);
+  const styles = useMemo(() => buildStyles(theme), [theme]);
   const [familyRelationships, setFamilyRelationships] = useState<any[]>([]);
   const [coveredBy, setCoveredBy] = useState<Record<string, string>>({});
   const [fellowTravelers, setFellowTravelers] = useState<FellowTraveler[]>([]);
   const [showRelationshipDropdown, setShowRelationshipDropdown] = useState(false);
+  const [asyncItineraryByTrip, setAsyncItineraryByTrip] = useState<Record<string, AsyncItineraryTracker>>({});
 
   const headers = useMemo<Record<string, string>>(
     () => (userToken ? { Authorization: `Bearer ${userToken}` } : ({} as Record<string, string>)),
@@ -427,6 +515,15 @@ const App: React.FC = () => {
     [setAccountProfile]
   );
 
+  const updateAppearancePreference = useCallback(
+    (pref: AppearancePreference) => {
+      setAppearancePreference(pref);
+      persistAppearancePreference(pref);
+      setAccountProfile((prev) => ({ ...prev, appearancePreference: pref }));
+    },
+    [setAccountProfile]
+  );
+
   const activeTrip = useMemo(() => trips.find((t) => t.id === activeTripId) ?? null, [trips, activeTripId]);
   const tripById = useMemo(() => new Map(trips.map((trip) => [trip.id, trip] as const)), [trips]);
   const groupById = useMemo(() => new Map(groups.map((group) => [group.id, group] as const)), [groups]);
@@ -475,7 +572,7 @@ const App: React.FC = () => {
     setCarDraft((prev) => ({ ...prev, [field === 'pickup' ? 'pickupDate' : 'dropoffDate']: value }));
   }, []);
 
-  const addCarRental = useCallback(() => {
+  const addCarRental = useCallback(async () => {
     if (!activeTripId) {
       alert('Select an active trip before adding a car rental.');
       return;
@@ -485,21 +582,126 @@ const App: React.FC = () => {
       alert(result.error || 'Unable to add car rental.');
       return;
     }
-    setCarRentals((prev) => [...prev, result.rental as CarRental]);
+    const res = await fetch(`${backendUrl}/api/car-rentals`, {
+      method: 'POST',
+      headers: jsonHeaders,
+      body: JSON.stringify({
+        ...result.rental,
+        tripId: activeTripId,
+        cost: Number(result.rental.cost) || 0,
+      }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'Unable to add car rental.');
+      return;
+    }
+    if (activeTripId && userToken) {
+      const expRes = await fetch(`${backendUrl}/api/expenses?tripId=${activeTripId}`, {
+        headers: { Authorization: `Bearer ${userToken}` },
+      });
+      if (expRes.ok) {
+        const expData = await expRes.json().catch(() => []);
+        setExpenses(Array.isArray(expData) ? expData : []);
+      }
+    }
+    if (activeTripId && userToken) {
+      const cars = await fetchCarRentalsForTrip({ backendUrl, activeTripId, token: userToken });
+      setCarRentals(cars);
+    }
     setCarDraft(createInitialCarRentalDraft());
-  }, [activeTripId, carDraft, defaultPayerId, memberIds]);
+  }, [activeTripId, carDraft, defaultPayerId, memberIds, backendUrl, jsonHeaders, userToken]);
 
-  const addCarRentalFromOverview = useCallback((rental: CarRental) => {
+  const addCarRentalFromOverview = useCallback(async (rental: CarRental) => {
     if (!activeTripId) {
       alert('Select an active trip before adding a car rental.');
       return;
     }
-    setCarRentals((prev) => [...prev, rental]);
-  }, [activeTripId]);
+    const res = await fetch(`${backendUrl}/api/car-rentals`, {
+      method: 'POST',
+      headers: jsonHeaders,
+      body: JSON.stringify({
+        ...rental,
+        tripId: activeTripId,
+        status: normalizeItineraryStatus((rental as any).status, DEFAULT_NEW_ITINERARY_STATUS),
+        cost: Number(rental.cost) || 0,
+      }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'Unable to add car rental.');
+      return;
+    }
+    if (activeTripId && userToken) {
+      const expRes = await fetch(`${backendUrl}/api/expenses?tripId=${activeTripId}`, {
+        headers: { Authorization: `Bearer ${userToken}` },
+      });
+      if (expRes.ok) {
+        const expData = await expRes.json().catch(() => []);
+        setExpenses(Array.isArray(expData) ? expData : []);
+      }
+    }
+    if (activeTripId && userToken) {
+      const cars = await fetchCarRentalsForTrip({ backendUrl, activeTripId, token: userToken });
+      setCarRentals(cars);
+    }
+  }, [activeTripId, backendUrl, jsonHeaders, userToken]);
 
-  const removeCarRental = useCallback((id: string) => {
-    setCarRentals((prev) => prev.filter((c) => c.id !== id));
-  }, []);
+  const removeCarRental = useCallback(async (id: string) => {
+    const res = await fetch(`${backendUrl}/api/car-rentals/${id}`, { method: 'DELETE', headers: jsonHeaders });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'Unable to delete car rental.');
+      return;
+    }
+    if (activeTripId && userToken) {
+      const expRes = await fetch(`${backendUrl}/api/expenses?tripId=${activeTripId}`, {
+        headers: { Authorization: `Bearer ${userToken}` },
+      });
+      if (expRes.ok) {
+        const expData = await expRes.json().catch(() => []);
+        setExpenses(Array.isArray(expData) ? expData : []);
+      }
+    }
+    if (activeTripId && userToken) {
+      const cars = await fetchCarRentalsForTrip({ backendUrl, activeTripId, token: userToken });
+      setCarRentals(cars);
+    }
+  }, [backendUrl, jsonHeaders, activeTripId, userToken]);
+
+  const voteOnCarRental = useCallback(async (id: string, value: 1 | -1) => {
+    const res = await fetch(`${backendUrl}/api/car-rentals/${id}/vote`, {
+      method: 'POST',
+      headers: jsonHeaders,
+      body: JSON.stringify({ value }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'Unable to submit vote');
+      return;
+    }
+    if (activeTripId && userToken) {
+      const cars = await fetchCarRentalsForTrip({ backendUrl, activeTripId, token: userToken });
+      setCarRentals(cars);
+    }
+  }, [backendUrl, jsonHeaders, activeTripId, userToken]);
+
+  const rateOnCarRental = useCallback(async (id: string, value: 1 | -1) => {
+    const res = await fetch(`${backendUrl}/api/car-rentals/${id}/rating`, {
+      method: 'POST',
+      headers: jsonHeaders,
+      body: JSON.stringify({ value }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'Unable to submit rating');
+      return;
+    }
+    if (activeTripId && userToken) {
+      const cars = await fetchCarRentalsForTrip({ backendUrl, activeTripId, token: userToken });
+      setCarRentals(cars);
+    }
+  }, [backendUrl, jsonHeaders, activeTripId, userToken]);
 
   const openCarDatePicker = useCallback((field: 'pickup' | 'dropoff') => {
     if (Platform.OS !== 'web' && NativeDateTimePicker) {
@@ -697,7 +899,7 @@ const App: React.FC = () => {
     setSelectedTraitNames(new Set());
     setTraitAge('');
     setTraitGender('prefer-not');
-    setAccountProfile({ firstName: '', lastName: '', email: '' });
+    setAccountProfile({ firstName: '', lastName: '', email: '', homeAddress: '', preferredAirport: '', appearancePreference: 'auto' });
     setFamilyRelationships([]);
     setFellowTravelers([]);
     setRequirePasswordSetup(false);
@@ -720,10 +922,11 @@ const App: React.FC = () => {
         logout,
         setAccountProfile,
         setMapPreference: updateMapPreference,
+        setAppearancePreference: updateAppearancePreference,
         setUserName,
         setUserEmail,
       }),
-    [backendUrl, logout, setAccountProfile, setUserEmail, setUserName, updateMapPreference, userToken]
+    [backendUrl, logout, setAccountProfile, setUserEmail, setUserName, updateAppearancePreference, updateMapPreference, userToken]
   );
 
   const loadFamilyRelationships = useCallback(
@@ -810,6 +1013,9 @@ const App: React.FC = () => {
       firstName: decoded?.firstName ?? '',
       lastName: decoded?.lastName ?? '',
       email: decoded?.email ?? '',
+      homeAddress: '',
+      preferredAirport: '',
+      appearancePreference: 'auto',
     });
     const previousSession = loadSession();
     const restoredTripId = previousSession?.tripId ?? activeTripId ?? null;
@@ -1046,8 +1252,17 @@ const App: React.FC = () => {
       setTours([]);
       return;
     }
-    const data = await fetchToursForTrip({ backendUrl, activeTripId, token: token ?? userToken });
+    const data = await fetchActivitiesForTrip({ backendUrl, activeTripId, token: token ?? userToken });
     setTours(data);
+  }, [activeTripId, backendUrl, userToken]);
+
+  const fetchCarRentals = useCallback(async (token?: string) => {
+    if (!activeTripId || !(token ?? userToken)) {
+      setCarRentals([]);
+      return;
+    }
+    const data = await fetchCarRentalsForTrip({ backendUrl, activeTripId, token: token ?? userToken });
+    setCarRentals(data);
   }, [activeTripId, backendUrl, userToken]);
 
   const fetchExpenses = useCallback(async (token?: string) => {
@@ -1213,9 +1428,14 @@ const App: React.FC = () => {
       return;
     }
     try {
-      const res = await fetch(`${backendUrl}/api/flights/locations?q=${encodeURIComponent(q.trim())}`, {
+      const res = await fetch(`${backendUrl}/api/transfers/locations?q=${encodeURIComponent(q.trim())}`, {
         headers: { Authorization: `Bearer ${userToken}` },
+        cache: 'no-store',
       });
+      if (res.status === 304) {
+        // Keep existing options when the browser serves a conditional-cache hit.
+        return;
+      }
       if (!res.ok) {
         setFlightAirportOptions([]);
         return;
@@ -1281,6 +1501,7 @@ const App: React.FC = () => {
         fetchFlights(authToken),
         fetchLodgings(authToken),
         fetchTours(authToken),
+        fetchCarRentals(authToken),
         fetchExpenses(authToken),
         fetchInvites(authToken),
         fetchGroups(),
@@ -1314,6 +1535,7 @@ const App: React.FC = () => {
     fetchFlights,
     fetchLodgings,
     fetchTours,
+    fetchCarRentals,
     fetchExpenses,
     fetchInvites,
     fetchGroups,
@@ -1332,6 +1554,69 @@ const App: React.FC = () => {
       refreshAllData();
     }
   }, [userToken]);
+
+  useEffect(() => {
+    if (!userToken) return;
+    const pendingEntries = Object.entries(asyncItineraryByTrip).filter(([, tracker]) => tracker.status === 'pending');
+    if (!pendingEntries.length) return;
+
+    let cancelled = false;
+    const poll = async () => {
+      const nextEntries = await Promise.all(
+        pendingEntries.map(async ([tripId, tracker]) => {
+          try {
+            const res = await fetch(`${backendUrl}/api/itinerary/async/${encodeURIComponent(tracker.jobId)}`, {
+              headers,
+              cache: 'no-store',
+            });
+            if (!res.ok) return [tripId, { ...tracker, status: 'failed', error: `status ${res.status}` }] as const;
+            const data = await res.json().catch(() => ({}));
+            const status = String((data as any).status ?? '').toLowerCase();
+            if (status === 'completed') return [tripId, null] as const;
+            if (status === 'failed') {
+              return [tripId, { ...tracker, status: 'failed', error: String((data as any).error ?? 'generation failed') }] as const;
+            }
+            return [tripId, tracker] as const;
+          } catch (err) {
+            return [tripId, { ...tracker, status: 'failed', error: (err as Error).message }] as const;
+          }
+        })
+      );
+      if (cancelled) return;
+
+      let changed = false;
+      let completedCount = 0;
+      const nextState = { ...asyncItineraryByTrip };
+      for (const [tripId, nextTracker] of nextEntries) {
+        if (nextTracker === null) {
+          if (nextState[tripId]) {
+            delete nextState[tripId];
+            changed = true;
+            completedCount += 1;
+          }
+          continue;
+        }
+        const prev = asyncItineraryByTrip[tripId];
+        if (!prev || prev.status !== nextTracker.status || prev.error !== nextTracker.error || prev.jobId !== nextTracker.jobId) {
+          nextState[tripId] = nextTracker;
+          changed = true;
+        }
+      }
+      if (changed) {
+        setAsyncItineraryByTrip(nextState);
+      }
+      if (completedCount > 0) {
+        await refreshAllData();
+      }
+    };
+
+    void poll();
+    const interval = setInterval(() => void poll(), 5000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [asyncItineraryByTrip, backendUrl, headers, refreshAllData, userToken]);
 
   useEffect(() => {
     if (!userToken) {
@@ -1613,6 +1898,16 @@ const App: React.FC = () => {
     setActivePage('overview');
   };
 
+  const onAiItineraryQueued = useCallback((tripId: string, jobId: string) => {
+    setAsyncItineraryByTrip((prev) => ({
+      ...prev,
+      [tripId]: {
+        jobId,
+        status: 'pending',
+      },
+    }));
+  }, []);
+
   const deleteTrip = async (tripId: string) => {
     if (!userToken) return;
     const res = await fetch(`${backendUrl}/api/trips/${tripId}`, {
@@ -1784,9 +2079,9 @@ const App: React.FC = () => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.topBar}>
-        <View style={styles.topBarLeft}>
+    <SafeAreaView style={[styles.container, iosSafariSafeAreaStyle]}>
+      <View style={[styles.topBar, isNarrowLayout && styles.topBarStacked]}>
+        <View style={[styles.topBarLeft, isNarrowLayout && styles.topBarLeftNarrow]}>
           {userToken && activePage !== 'home' ? (
             <TouchableOpacity
               style={styles.homeButton}
@@ -1816,10 +2111,24 @@ const App: React.FC = () => {
               <Text style={styles.backButtonText}>{'>'}</Text>
             </TouchableOpacity>
           ) : null}
-          <Text style={styles.title}>Shared Trip Planner</Text>
+          <Text style={[styles.title, isPhoneLayout && styles.titleNarrow]} numberOfLines={1} ellipsizeMode="tail">
+            Shared Trip Planner
+          </Text>
         </View>
         {userToken ? (
           <View style={styles.topRightWrapper}>
+            {activeTripId ? (
+              <TouchableOpacity
+                style={[styles.button, styles.smallButton]}
+                onPress={() => {
+                  setSelectedTripId(activeTripId);
+                  requestPageChange('trip-details');
+                  setOpenShareFromHeaderSignal((prev) => prev + 1);
+                }}
+              >
+                <Text style={styles.buttonText}>Share</Text>
+              </TouchableOpacity>
+            ) : null}
             {trips.length ? (
               <TouchableOpacity
                 activeOpacity={0.8}
@@ -1829,11 +2138,12 @@ const App: React.FC = () => {
                   styles.inlineInput,
                   styles.dropdown,
                   styles.activeTrip,
+                  isNarrowLayout && styles.activeTripNarrow,
                   isTripWizardOpen && styles.buttonDisabled,
                 ]}
                 onPress={() => setShowActiveTripDropdown((s) => !s)}
               >
-                <Text style={styles.cellText}>
+                <Text style={styles.cellText} numberOfLines={1} ellipsizeMode="tail">
                   Active Trip: {activeTrip?.name ?? 'Select'}
                 </Text>
                 {showActiveTripDropdown && (
@@ -1854,8 +2164,8 @@ const App: React.FC = () => {
                 )}
               </TouchableOpacity>
             ) : null}
-            <View style={styles.topRight}>
-              <Text style={styles.bodyText}>{userName ?? 'Traveler'}</Text>
+            <View style={[styles.topRight, isNarrowLayout && styles.topRightNarrow]}>
+              {!isPhoneLayout ? <Text style={styles.bodyText}>{userName ?? 'Traveler'}</Text> : null}
               <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={logout}>
                 <Text style={styles.buttonText}>Logout</Text>
               </TouchableOpacity>
@@ -1864,7 +2174,10 @@ const App: React.FC = () => {
         ) : null}
       </View>
       {userToken ? (
-        <ScrollView style={styles.contentScroll} contentContainerStyle={styles.contentScrollContent}>
+        <ScrollView
+          style={styles.contentScroll}
+          contentContainerStyle={[styles.contentScrollContent, iosSafariContentInsetStyle]}
+        >
           {activePage === 'home' ? (
             <HomeTab
               backendUrl={backendUrl}
@@ -1887,12 +2200,13 @@ const App: React.FC = () => {
               traits={traits}
               headers={headers}
               setActiveTripId={setActiveTripId}
+              onAiItineraryQueued={onAiItineraryQueued}
               styles={styles}
             />
           ) : null}
 
           {activePage === 'tours' ? (
-            <TourTab
+            <ActivityTab
               backendUrl={backendUrl}
               userToken={userToken}
               activeTripId={activeTripId}
@@ -2050,9 +2364,13 @@ const App: React.FC = () => {
               setUserEmail={setUserEmail}
               mapApp={mapApp}
               onChangeMapApp={updateMapPreference}
+              appearancePreference={appearancePreference}
+              onChangeAppearancePreference={updateAppearancePreference}
               saveSession={saveSession}
               headers={headers}
               jsonHeaders={jsonHeaders}
+              airportOptions={flightAirportOptions}
+              onSearchAirports={fetchFlightAirports}
               logout={logout}
               styles={styles}
               traits={traits}
@@ -2095,7 +2413,7 @@ const App: React.FC = () => {
           <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
             <View style={styles.table}>
               <View style={[styles.tableRow, styles.tableHeader]}>
-                {['Pick Up Location', 'Pick Up Date', 'Drop Off Location', 'Drop Off Date', 'Reference', 'Vendor', 'Prepaid?', 'Cost', 'Car Model', 'Notes', 'For', 'Paid By', 'Actions'].map((label, idx, arr) => (
+                {['Pick Up Location', 'Pick Up Date', 'Drop Off Location', 'Drop Off Date', 'Status', 'Votes', 'Rating', 'Reference', 'Vendor', 'Prepaid?', 'Cost', 'Car Model', 'Notes', 'For', 'Paid By', 'Actions'].map((label, idx, arr) => (
                   <View
                     key={label}
                     style={[styles.cell, { minWidth: 140, flex: 1 }, idx === arr.length - 1 && styles.lastCell]}
@@ -2117,6 +2435,39 @@ const App: React.FC = () => {
                   </View>
                   <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
                     <Text style={styles.cellText}>{car.dropoffDate || '-'}</Text>
+                  </View>
+                  <View style={[styles.cell, { minWidth: 130, flex: 1 }]}>
+                    <Text style={styles.cellText}>{normalizeItineraryStatus((car as any).status, LEGACY_ITINERARY_STATUS)}</Text>
+                  </View>
+                  <View style={[styles.cell, styles.actionCell, { minWidth: 130, flex: 1 }]}>
+                    {shouldShowVoteButtons((car as any).status, (car as any).userVote) ? (
+                      <>
+                        <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => voteOnCarRental(car.id, 1)}>
+                          <Text style={styles.buttonText}>👍</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => voteOnCarRental(car.id, -1)}>
+                          <Text style={styles.buttonText}>👎</Text>
+                        </TouchableOpacity>
+                      </>
+                    ) : (
+                      <Text style={styles.cellText}>{formatNetVotes((car as any).netVotes ?? 0)}</Text>
+                    )}
+                  </View>
+                  <View style={[styles.cell, styles.actionCell, { minWidth: 130, flex: 1 }]}>
+                    {shouldShowRatingButtons((car as any).status, (car as any).userRating) ? (
+                      <>
+                        <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => rateOnCarRental(car.id, 1)}>
+                          <Text style={styles.buttonText}>👍</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => rateOnCarRental(car.id, -1)}>
+                          <Text style={styles.buttonText}>👎</Text>
+                        </TouchableOpacity>
+                      </>
+                    ) : normalizeItineraryStatus((car as any).status, LEGACY_ITINERARY_STATUS) === 'Completed' ? (
+                      <Text style={styles.cellText}>{formatNetVotes((car as any).netRating ?? 0)}</Text>
+                    ) : (
+                      <Text style={styles.cellText}>-</Text>
+                    )}
                   </View>
                   <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
                     <Text style={styles.cellText}>{car.reference || '-'}</Text>
@@ -2220,6 +2571,29 @@ const App: React.FC = () => {
                 </TouchableOpacity>
               </View>
             </View>
+                <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                  {Platform.OS === 'web' ? (
+                    <select
+                      value={normalizeItineraryStatus(carDraft.status, DEFAULT_NEW_ITINERARY_STATUS)}
+                      onChange={(e) => setCarDraft((p) => ({ ...p, status: normalizeItineraryStatus(e.target.value, DEFAULT_NEW_ITINERARY_STATUS) }))}
+                      style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
+                    >
+                      {ITINERARY_STATUSES.map((opt) => (
+                        <option key={`car-status-${opt}`} value={opt}>
+                          {opt}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <Text style={styles.cellText}>{normalizeItineraryStatus(carDraft.status, DEFAULT_NEW_ITINERARY_STATUS)}</Text>
+                  )}
+                </View>
+                <View style={[styles.cell, { minWidth: 130, flex: 1 }]}>
+                  <Text style={styles.cellText}>-</Text>
+                </View>
+                <View style={[styles.cell, { minWidth: 130, flex: 1 }]}>
+                  <Text style={styles.cellText}>-</Text>
+                </View>
                 <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
                   <TextInput
                     style={styles.input}
@@ -2533,6 +2907,12 @@ const App: React.FC = () => {
               defaultPayerId={defaultPayerId}
               styles={styles}
               mapApp={mapApp}
+              aiItineraryPending={Boolean(activeTripId && asyncItineraryByTrip[activeTripId]?.status === 'pending')}
+              aiItineraryFailedMessage={
+                activeTripId && asyncItineraryByTrip[activeTripId]?.status === 'failed'
+                  ? asyncItineraryByTrip[activeTripId]?.error ?? 'generation failed'
+                  : null
+              }
               onOpenAddress={openMaps}
               onRefreshTrips={fetchTrips}
               onRefreshGroups={fetchGroups}
@@ -2553,6 +2933,7 @@ const App: React.FC = () => {
           trip={selectedTrip}
           group={selectedTripGroup}
           styles={styles}
+          openShareSignal={openShareFromHeaderSignal}
           onSetActive={(tripId) => setActiveTripId(tripId)}
           onOpenItinerary={handleOpenTripItinerary}
           onUpdateCurrency={updateTripCurrency}
@@ -2776,6 +3157,7 @@ const App: React.FC = () => {
               styles={styles}
               onCancel={closeTripWizard}
               onTripCreated={onTripCreated}
+              onAiItineraryQueued={onAiItineraryQueued}
               onUnauthorized={logout}
               onWizardCarRentals={setCarRentals}
               currentUserName={userName}
@@ -2825,10 +3207,10 @@ const App: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const buildStyles = (theme: AppTheme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: theme.colors.backgroundAlt,
     alignItems: 'center',
     justifyContent: 'flex-start',
     width: '100%',
@@ -2840,50 +3222,66 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderBottomWidth: 1,
-    borderColor: '#d1d5db',
+    borderColor: theme.colors.border,
+  },
+  topBarStacked: {
+    alignItems: 'stretch',
+    rowGap: 8,
   },
   topBarLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
   },
+  topBarLeftNarrow: {
+    flexWrap: 'wrap',
+    minWidth: 0,
+  },
   homeButton: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#000',
+    backgroundColor: theme.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   homeButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
+    color: theme.colors.onPrimary,
+    fontSize: theme.typography.body,
+    fontWeight: theme.typography.weightBold,
   },
   backButton: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#000',
+    backgroundColor: theme.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   backButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
+    color: theme.colors.onPrimary,
+    fontSize: theme.typography.body,
+    fontWeight: theme.typography.weightBold,
   },
   topRightWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
   },
+  topRightWrapperNarrow: {
+    width: '100%',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
   topRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  topRightNarrow: {
+    marginLeft: 'auto',
   },
   contentScroll: {
     flex: 1,
@@ -2897,19 +3295,19 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 1200,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: theme.colors.border,
   },
   homeScrollContent: {
     gap: 16,
   },
   homeTitle: {
-    fontSize: 28,
-    fontWeight: '600',
-    color: '#111827',
+    fontSize: theme.typography.h1,
+    fontWeight: theme.typography.weightSemibold,
+    color: theme.colors.text,
     marginBottom: 4,
   },
   homeHeroCard: {
@@ -3061,16 +3459,23 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: theme.typography.h2,
+    fontWeight: theme.typography.weightBold,
+    color: theme.colors.text,
+    flexShrink: 1,
+  },
+  titleNarrow: {
+    fontSize: 18,
   },
   auth: {
     width: '100%',
     maxWidth: 420,
     marginTop: 40,
     padding: 16,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   toggleRow: {
     flexDirection: 'row',
@@ -3080,15 +3485,15 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 10,
     borderBottomWidth: 2,
-    borderColor: '#d1d5db',
+    borderColor: theme.colors.border,
   },
   toggleActive: {
-    borderColor: '#0d6efd',
+    borderColor: theme.colors.link,
   },
   toggleText: {
     textAlign: 'center',
-    fontWeight: '600',
-    color: '#6b7280',
+    fontWeight: theme.typography.weightSemibold,
+    color: theme.colors.textMuted,
   },
   toggleGroup: {
     flexDirection: 'row',
@@ -3122,28 +3527,30 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: '#d1d5db',
+    borderColor: theme.colors.border,
     borderRadius: 6,
     padding: 10,
     marginBottom: 12,
     width: '100%',
+    color: theme.colors.text,
+    backgroundColor: theme.colors.surface,
   },
   button: {
-    backgroundColor: '#0d6efd',
+    backgroundColor: theme.colors.cta,
     padding: 10,
     borderRadius: 6,
     alignItems: 'center',
   },
   buttonText: {
-    color: '#fff',
-    fontWeight: 'bold',
+    color: '#0B1726',
+    fontWeight: theme.typography.weightBold,
   },
   smallButton: {
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
   dangerButton: {
-    backgroundColor: '#dc3545',
+    backgroundColor: theme.colors.error,
   },
   navRow: {
     flexDirection: 'row',
@@ -3155,34 +3562,37 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
-    backgroundColor: '#e9ecef',
+    backgroundColor: theme.colors.surfaceMuted,
   },
   navButtonActive: {
-    backgroundColor: '#0d6efd',
+    backgroundColor: theme.colors.primary,
   },
   navButtonText: {
-    color: '#000',
-    fontWeight: '600',
+    color: theme.colors.text,
+    fontWeight: theme.typography.weightSemibold,
   },
   navButtonActiveText: {
-    color: '#fff',
+    color: theme.colors.onPrimary,
   },
   section: {
     width: '100%',
     maxWidth: 1200,
     padding: 16,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: theme.typography.h3,
+    fontWeight: theme.typography.weightBold,
+    color: theme.colors.text,
     marginBottom: 8,
   },
   helperText: {
-    color: '#6b7280',
+    color: theme.colors.textMuted,
     marginBottom: 8,
-    fontSize: 13,
+    fontSize: theme.typography.small,
   },
   row: {
     flexDirection: 'row',
@@ -3209,7 +3619,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: theme.colors.border,
     gap: 8,
   },
   groupRowLast: {
@@ -3218,46 +3628,48 @@ const styles = StyleSheet.create({
   table: {
     width: '100%',
     borderWidth: 1,
-    borderColor: '#dee2e6',
+    borderColor: theme.colors.border,
     borderRadius: 6,
   },
   tableRow: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderColor: '#dee2e6',
+    borderColor: theme.colors.border,
   },
   tableHeaderRow: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: theme.colors.surfaceMuted,
   },
   lastRow: {
     borderBottomWidth: 0,
   },
   tableHeader: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: theme.colors.surfaceMuted,
   },
   cell: {
     padding: 8,
     borderRightWidth: 1,
-    borderColor: '#dee2e6',
+    borderColor: theme.colors.border,
   },
   tableHeaderCell: {
     padding: 8,
     borderRightWidth: 1,
-    borderColor: '#dee2e6',
+    borderColor: theme.colors.border,
   },
   tableCell: {
     padding: 8,
     borderRightWidth: 1,
-    borderColor: '#dee2e6',
+    borderColor: theme.colors.border,
   },
   lastCell: {
     borderRightWidth: 0,
   },
   headerText: {
-    fontWeight: 'bold',
+    fontWeight: theme.typography.weightBold,
+    color: theme.colors.text,
   },
   cellText: {
     flexWrap: 'wrap',
+    color: theme.colors.text,
   },
   actionCell: {
     flexDirection: 'row',
@@ -3273,10 +3685,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   tableActionButtonPrimary: {
-    backgroundColor: '#2563eb',
+    backgroundColor: theme.colors.link,
   },
   tableActionButtonDanger: {
-    backgroundColor: '#dc2626',
+    backgroundColor: theme.colors.error,
   },
   tableNameButton: {
     alignSelf: 'flex-start',
@@ -3290,7 +3702,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   bodyText: {
-    fontSize: 14,
+    fontSize: theme.typography.small,
+    color: theme.colors.text,
   },
   flightsSection: {
     gap: 12,
@@ -3300,14 +3713,15 @@ const styles = StyleSheet.create({
   },
   flightCard: {
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: theme.colors.border,
     borderRadius: 8,
     padding: 12,
     gap: 4,
   },
   flightTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: theme.typography.body,
+    fontWeight: theme.typography.weightSemibold,
+    color: theme.colors.text,
   },
   attendeeList: {
     flexDirection: 'row',
@@ -3318,7 +3732,7 @@ const styles = StyleSheet.create({
   attendeeChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#e9ecef',
+    backgroundColor: theme.colors.surfaceMuted,
     borderRadius: 16,
     paddingVertical: 4,
     paddingHorizontal: 10,
@@ -3331,7 +3745,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff3cd',
   },
   attendeeText: {
-    fontWeight: '600',
+    fontWeight: theme.typography.weightSemibold,
+    color: theme.colors.text,
   },
   attendeeRemoveButton: {
     marginLeft: 4,
@@ -3342,7 +3757,7 @@ const styles = StyleSheet.create({
   },
   addTravelerForm: {
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: theme.colors.border,
     borderRadius: 8,
     padding: 12,
     marginTop: 8,
@@ -3350,25 +3765,25 @@ const styles = StyleSheet.create({
   },
   flightEditorWrap: {
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: theme.colors.border,
     borderRadius: 8,
     padding: 12,
     marginVertical: 4,
   },
   flightRow: {
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: theme.colors.border,
     borderRadius: 8,
     padding: 12,
     gap: 4,
   },
   divider: {
     height: 1,
-    backgroundColor: '#e2e8f0',
+    backgroundColor: theme.colors.border,
     marginVertical: 12,
   },
   dayPill: {
-    backgroundColor: '#e5e7eb',
+    backgroundColor: theme.colors.surfaceMuted,
     borderRadius: 999,
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -3378,22 +3793,23 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   dayPillActive: {
-    backgroundColor: '#111827',
+    backgroundColor: theme.colors.primary,
   },
   dayPillText: {
-    fontWeight: '600',
+    fontWeight: theme.typography.weightSemibold,
+    color: theme.colors.text,
   },
   dayPillActiveText: {
     color: '#fff',
   },
   dayPillNumber: {
-    fontWeight: '800',
-    color: '#111827',
-    fontSize: 13,
+    fontWeight: theme.typography.weightBold,
+    color: theme.colors.text,
+    fontSize: theme.typography.caption,
   },
   dayPillDate: {
-    color: '#4b5563',
-    fontSize: 13,
+    color: theme.colors.textMuted,
+    fontSize: theme.typography.caption,
   },
   dayHeroCard: {
     borderRadius: 16,
@@ -3481,20 +3897,22 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   dayInfoCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: theme.colors.border,
     gap: 8,
   },
   dayInfoRow: {
     flexDirection: 'row',
     gap: 12,
     paddingVertical: 6,
+    alignItems: 'flex-start',
   },
   dayInfoText: {
     flex: 1,
+    minWidth: 0,
   },
   lodgingImage: {
     width: 80,
@@ -3511,20 +3929,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dayInfoRoute: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#0f172a',
+    fontSize: theme.typography.body,
+    fontWeight: theme.typography.weightSemibold,
+    color: theme.colors.text,
+    flexShrink: 1,
+    flexWrap: 'wrap',
   },
   dayInfoButton: {
     alignSelf: 'center',
     paddingVertical: 6,
   },
   dayInfoButtonText: {
-    color: '#111827',
-    fontWeight: '600',
+    color: theme.colors.text,
+    fontWeight: theme.typography.weightSemibold,
   },
   dayNextButton: {
-    backgroundColor: '#e5e7eb',
+    backgroundColor: theme.colors.surfaceMuted,
     borderRadius: 16,
     padding: 12,
   },
@@ -3539,11 +3959,11 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   removeText: {
-    color: '#dc2626',
-    fontWeight: '600',
+    color: theme.colors.error,
+    fontWeight: theme.typography.weightSemibold,
   },
   linkText: {
-    color: '#0d6efd',
+    color: theme.colors.link,
     textDecorationLine: 'underline',
   },
   lodgingNameCol: { minWidth: 120, maxWidth: 320, flex: 1 },
@@ -3586,11 +4006,11 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   placeholderText: {
-    color: '#9ca3af',
+    color: theme.colors.textMuted,
   },
   selectCaret: {
-    color: '#6b7280',
-    fontSize: 12,
+    color: theme.colors.textMuted,
+    fontSize: theme.typography.caption,
     marginLeft: 8,
   },
   dropdownList: {
@@ -3598,9 +4018,9 @@ const styles = StyleSheet.create({
     top: 40,
     left: 0,
     right: 0,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: '#d1d5db',
+    borderColor: theme.colors.border,
     borderRadius: 6,
     zIndex: 20000,
     elevation: 24,
@@ -3608,8 +4028,8 @@ const styles = StyleSheet.create({
   dropdownOption: {
     padding: 10,
     borderBottomWidth: 1,
-    borderColor: '#e5e7eb',
-    backgroundColor: '#fff',
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
   },
   dateInputWrap: {
     position: 'relative',
@@ -3633,9 +4053,14 @@ const styles = StyleSheet.create({
     position: 'relative',
     zIndex: 2000,
   },
+  activeTripNarrow: {
+    flex: 1,
+    minWidth: 0,
+    maxWidth: '72%',
+  },
   warningText: {
-    color: '#dc2626',
-    fontWeight: '600',
+    color: theme.colors.error,
+    fontWeight: theme.typography.weightSemibold,
   },
   passengerDropdown: {
     zIndex: 3000,
@@ -3663,15 +4088,15 @@ const styles = StyleSheet.create({
   },
   passengerOverlayList: {
     position: 'absolute',
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: '#d1d5db',
+    borderColor: theme.colors.border,
     borderRadius: 6,
     zIndex: 13000,
     elevation: 32,
   },
   modalCard: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderRadius: 8,
     padding: 12,
     marginHorizontal: 16,
@@ -3742,13 +4167,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   modalLabel: {
-    fontSize: 12,
-    color: '#6b7280',
+    fontSize: theme.typography.caption,
+    color: theme.colors.textMuted,
     marginTop: 8,
   },
   modalLabelSmall: {
-    fontSize: 12,
-    color: '#6b7280',
+    fontSize: theme.typography.caption,
+    color: theme.colors.textMuted,
     marginBottom: 4,
   },
   modalRow: {
@@ -3769,9 +4194,9 @@ const styles = StyleSheet.create({
     top: '100%',
     left: 0,
     right: 0,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: '#d1d5db',
+    borderColor: theme.colors.border,
     borderRadius: 6,
     zIndex: 14000,
     elevation: 40, // keep above other inputs on native
@@ -3831,9 +4256,9 @@ const styles = StyleSheet.create({
     top: 80,
     left: 16,
     right: 16,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: '#d1d5db',
+    borderColor: theme.colors.border,
     borderRadius: 8,
     padding: 8,
     maxHeight: 360,
@@ -3855,16 +4280,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#cbd5e1',
-    backgroundColor: '#fff',
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
   },
   traitChipSelected: {
-    backgroundColor: '#0d6efd',
-    borderColor: '#0d6efd',
+    backgroundColor: theme.colors.link,
+    borderColor: theme.colors.link,
   },
   traitChipText: {
-    color: '#0f172a',
-    fontWeight: '600',
+    color: theme.colors.text,
+    fontWeight: theme.typography.weightSemibold,
   },
   traitChipTextSelected: {
     color: '#fff',
@@ -3887,8 +4312,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#c7c7c7',
   },
   badgeText: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: theme.typography.caption,
+    fontWeight: theme.typography.weightSemibold,
     color: '#2b2b2b',
   },
   buttonDisabled: {
@@ -3923,10 +4348,10 @@ const styles = StyleSheet.create({
   },
   inviteCard: {
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: theme.colors.border,
     borderRadius: 8,
     padding: 12,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
   },
   modalOverlay: {
     position: 'absolute',
@@ -3941,12 +4366,14 @@ const styles = StyleSheet.create({
     zIndex: 20000,
   },
   confirmModal: {
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     padding: 16,
     borderRadius: 10,
     width: '100%',
     maxWidth: 420,
     boxShadow: '0 4px 10px rgba(0,0,0,0.25)',
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   payerChips: {
     flexDirection: 'row',
@@ -3957,11 +4384,31 @@ const styles = StyleSheet.create({
   payerChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#e9ecef',
+    backgroundColor: theme.colors.surfaceMuted,
     borderRadius: 16,
     paddingVertical: 2,
     paddingHorizontal: 8,
     gap: 4,
+  },
+  mapOptionButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+  },
+  mapOptionActive: {
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.primary,
+  },
+  mapOptionText: {
+    color: theme.colors.text,
+    fontSize: theme.typography.small,
+    fontWeight: theme.typography.weightSemibold,
+  },
+  mapOptionActiveText: {
+    color: theme.colors.onPrimary,
   },
   payerOptions: {
     flexDirection: 'row',
@@ -3971,3 +4418,5 @@ const styles = StyleSheet.create({
 });
 
 export default App;
+
+

@@ -4,7 +4,10 @@ $ServiceName = if ($env:SERVICE_NAME) { $env:SERVICE_NAME } else { 'travel-itine
 $Region = if ($env:REGION) { $env:REGION } else { 'us-east5' }
 $SourceDir = if ($env:SOURCE_DIR) { $env:SOURCE_DIR } else { 'server' }
 $EnvFile = if ($env:ENV_FILE) { $env:ENV_FILE } else { '' }
-$IgnoreKeys = if ($env:IGNORE_KEYS) { $env:IGNORE_KEYS } else { 'PORT,FIRESTORE_EMULATOR_HOST,GCLOUD_PROJECT_ID,GCLOUD_PROJECT_NUMBER,DEPLOYER_SERVICE_ACCOUNT_EMAIL,RUNTIME_SERVICE_ACCOUNT_EMAIL,CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL,FIRESTORE_DATABASE_ID' }
+$SecretsFile = if ($env:SECRETS_FILE) { $env:SECRETS_FILE } else { '' }
+$Secrets = if ($env:SECRETS) { $env:SECRETS } else { '' }
+$IgnoreKeys = if ($env:IGNORE_KEYS) { $env:IGNORE_KEYS } else { 'PORT,FIRESTORE_EMULATOR_HOST,GCLOUD_PROJECT_NUMBER,DEPLOYER_SERVICE_ACCOUNT_EMAIL,RUNTIME_SERVICE_ACCOUNT_EMAIL,CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL,GOOGLE_APPLICATION_CREDENTIALS' }
+$IgnoreSecretKeys = if ($env:IGNORE_SECRET_KEYS) { $env:IGNORE_SECRET_KEYS } else { 'GCLOUD_PROJECT,GOOGLE_CLOUD_PROJECT,GCLOUD_PROJECT_ID,GCLOUD_PROJECT_NUMBER,DEPLOYER_SERVICE_ACCOUNT_EMAIL,RUNTIME_SERVICE_ACCOUNT_EMAIL,CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL,GOOGLE_APPLICATION_CREDENTIALS' }
 
 function Strip-InlineComment([string]$Line) {
   $out = ''
@@ -81,8 +84,16 @@ if (-not $EnvFile) {
     $EnvFile = '.env'
   }
 }
+if (-not $SecretsFile) {
+  if (Test-Path -LiteralPath 'server/.secrets') {
+    $SecretsFile = 'server/.secrets'
+  } elseif (Test-Path -LiteralPath '.secrets') {
+    $SecretsFile = '.secrets'
+  }
+}
 
 $envPairs = @()
+$sawGoogleApplicationCredentials = $false
 if ($EnvFile) {
   if ([System.IO.Path]::GetFileName($EnvFile) -eq '.local_env') {
     Write-Error "Refusing to read .local_env for Cloud Run env vars."
@@ -93,6 +104,9 @@ if ($EnvFile) {
     exit 1
   }
   foreach ($pair in (Parse-DotEnv $EnvFile)) {
+    if ($pair.Key -eq 'GOOGLE_APPLICATION_CREDENTIALS') {
+      $sawGoogleApplicationCredentials = $true
+    }
     if (Should-IgnoreKey $pair.Key $IgnoreKeys) { continue }
     $value = $pair.Value
     if ($pair.Key -eq 'AUTH_REDIRECT_URI_ALLOWLIST') {
@@ -104,19 +118,69 @@ if ($EnvFile) {
   }
 }
 
+$secretMap = @{}
+if ($Secrets) {
+  foreach ($entry in ($Secrets -split ',')) {
+    if (-not $entry -or $entry -notmatch '=') { continue }
+    $key = ($entry -split '=', 2)[0].Trim()
+    $value = ($entry -split '=', 2)[1].Trim()
+    if (-not $key -or -not $value) { continue }
+    if ($value -notmatch ':') { $value = "${value}:latest" }
+    $secretMap[$key] = $value
+  }
+}
+if ($sawGoogleApplicationCredentials) {
+  Write-Warning "GOOGLE_APPLICATION_CREDENTIALS is present in $EnvFile. Cloud Run should use ADC via its runtime service account; this key is ignored for deploy."
+}
+if ($SecretsFile -and (Test-Path -LiteralPath $SecretsFile)) {
+  foreach ($pair in (Parse-DotEnv $SecretsFile)) {
+    if (Should-IgnoreKey $pair.Key $IgnoreSecretKeys) { continue }
+    if (-not [string]::IsNullOrWhiteSpace($pair.Key)) {
+      # Name-only mapping: Cloud Run reads latest Secret Manager version.
+      $secretMap[$pair.Key] = "$($pair.Key):latest"
+    }
+  }
+}
+if ($secretMap.Count -gt 0) {
+  $secretKeys = @($secretMap.Keys)
+  foreach ($key in $secretKeys) {
+    $pattern = ('^{0}=' -f [regex]::Escape($key))
+    $envPairs = $envPairs | Where-Object { $_ -notmatch $pattern }
+  }
+}
+
 $envArg = ''
 if ($envPairs.Count -gt 0) {
   $envArg = ($envPairs -join ',')
   Write-Host "Non-secret env vars to upload:"
-  foreach ($pair in $envPairs) {
-    Write-Host "  $pair"
+  foreach ($pair in $envPairs) { Write-Host "  $pair" }
+}
+$secretsArg = ''
+if ($secretMap.Count -gt 0) {
+  $secretPairs = @()
+  foreach ($key in @($secretMap.Keys)) {
+    $secretPairs += ('{0}={1}' -f $key, [string]$secretMap[$key])
   }
+  $secretsArg = ($secretPairs -join ',')
+  Write-Host "Secret mappings to apply (names only):"
+  foreach ($key in @($secretMap.Keys)) { Write-Host "  $key -> $($secretMap[$key])" }
 }
 
 $cmd = @('run', 'deploy', $ServiceName, '--source', $SourceDir, '--region', $Region)
 if ($envArg) { $cmd += @('--update-env-vars', $envArg) }
-if (Should-IgnoreKey 'FIRESTORE_EMULATOR_HOST' $IgnoreKeys) { $cmd += @('--remove-env-vars', 'FIRESTORE_EMULATOR_HOST') }
+if ($secretsArg) { $cmd += @('--set-secrets', $secretsArg) }
+if ($secretMap.Count -gt 0) { $cmd += @('--remove-env-vars', ($secretMap.Keys -join ',')) }
+$removeEnvKeys = @()
+foreach ($candidate in @('FIRESTORE_EMULATOR_HOST', 'GOOGLE_APPLICATION_CREDENTIALS')) {
+  if (Should-IgnoreKey $candidate $IgnoreKeys) { $removeEnvKeys += $candidate }
+}
+if ($removeEnvKeys.Count -gt 0) { $cmd += @('--remove-env-vars', ($removeEnvKeys -join ',')) }
 
 & gcloud @cmd
+
+if ($LASTEXITCODE -ne 0) {
+  Write-Error "API deployment failed with gcloud exit code $LASTEXITCODE."
+  exit $LASTEXITCODE
+}
 
 Write-Host "API deployment completed."

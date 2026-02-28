@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { TraitsTab, type Trait } from './traits';
+import { TraitsTab, type Trait } from '../tabs/traits';
 
 type Setter<T> = React.Dispatch<React.SetStateAction<T>>;
 type Styles = Record<string, any>;
@@ -18,7 +18,7 @@ interface AccountTraitsProps {
   traitAge: string;
   setTraitAge: Setter<string>;
   traitGender: 'female' | 'male' | 'nonbinary' | 'prefer-not';
-  setTraitGender: Setter<'female' | 'male' | 'nonbinary' | 'prefer-not'>>;
+  setTraitGender: Setter<'female' | 'male' | 'nonbinary' | 'prefer-not'>;
   newTraitName: string;
   setNewTraitName: Setter<string>;
   fetchTraits: () => Promise<void>;

@@ -2,6 +2,7 @@
   "name": "shared-trip-planner",
   "private": true,
   "version": "0.1.0",
+  "type": "module",
   "workspaces": [
     "server",
     "app"
@@ -17,13 +18,16 @@
     "playwright:install": "node ./node_modules/@playwright/test/cli.js install",
     "test:app": "npm --prefix app test",
     "test:server": "npm --prefix server test",
-    "locations:update": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/update-location-jsons.ts",
-    "locations:upload": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/update-location-jsons.ts",
+    "locations:update": "tsx scripts/update-location-jsons.ts",
+    "locations:upload": "tsx scripts/update-location-jsons.ts",
     "emulators:start": "node scripts/select-latest-firebase-export.js && firebase emulators:start --import=./.firebase-data --export-on-exit=./.firebase-data",
-    "images:migrate-cache": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/migrate-image-cache-to-storage.ts",
-    "list-users": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/list_users.ts",
-    "list-trips": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/list_trips_and_users.ts",
-    "accounts:seed": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\"}\" scripts/create-test-accounts.ts"
+    "images:migrate-cache": "tsx scripts/migrate-image-cache-to-storage.ts",
+    "list-users": "tsx scripts/list_users.ts",
+    "list-trips": "tsx scripts/list_trips_and_users.ts",
+    "accounts:seed": "tsx scripts/create-test-accounts.ts",
+    "destinations:generate": "tsx scripts/generate_destinations_csv.ts",
+    "attractions:generate": "tsx server/scripts/generate_curated_attractions.ts",
+    "catalog:generate": "npm run destinations:generate && npm run attractions:generate"
   },
   "overrides": {
     "glob": "13.0.5",
@@ -40,10 +44,12 @@
   "devDependencies": {
     "@playwright/test": "^1.58.1",
     "@types/react-test-renderer": "^19.1.0",
+    "jest": "^30.2.0",
     "patch-package": "^8.0.1",
     "react-native-dotenv": "^3.4.11",
     "react-refresh": "^0.18.0",
     "react-test-renderer": "19.2.4",
+    "ts-jest": "^29.4.6",
     "ts-node": "^10.9.2"
   },
   "dependencies": {

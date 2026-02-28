@@ -1,6 +1,7 @@
 import { type CarRental, type CarRentalDraft } from '../tabs/carRentals';
-import { type Flight, type FlightCreateDraft } from '../tabs/flights';
-import { type Tour, type TourDraft } from '../tabs/tours';
+import { type Flight, type FlightCreateDraft } from '../tabs/transfers';
+import { type Tour, type TourDraft } from '../tabs/activities';
+import { DEFAULT_NEW_ITINERARY_STATUS, LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from './itineraryStatus';
 
 type TripSnapshot = {
   description?: string | null;
@@ -45,6 +46,11 @@ export const getOverviewSaveFlags = (
 };
 
 export const buildFlightDraftFromRow = (flight: Flight): FlightCreateDraft & { passengerIds: string[]; paidBy?: string[] } => ({
+  status: normalizeItineraryStatus((flight as any).status, LEGACY_ITINERARY_STATUS),
+  transferType:
+    (flight as any).transferType ??
+    (flight as any).transfer_type ??
+    'Flight',
   passengerName: flight.passenger_name,
   arrivalDate: (flight as any).arrival_date || (flight as any).arrivalDate || flight.departure_date,
   passengerIds: Array.isArray(flight.passenger_ids) ? flight.passenger_ids : Array.isArray((flight as any).passengerIds) ? (flight as any).passengerIds : [],
@@ -64,6 +70,8 @@ export const buildFlightDraftFromRow = (flight: Flight): FlightCreateDraft & { p
 });
 
 export const buildTourDraftFromRow = (tour: Tour): TourDraft => ({
+  status: normalizeItineraryStatus((tour as any).status, LEGACY_ITINERARY_STATUS),
+  activityType: (tour as any).activityType ?? 'Tour',
   date: tour.date,
   name: tour.name,
   startLocation: tour.startLocation,
@@ -78,6 +86,7 @@ export const buildTourDraftFromRow = (tour: Tour): TourDraft => ({
 });
 
 export const buildRentalDraftFromRow = (rental: CarRental): CarRentalDraft => ({
+  status: normalizeItineraryStatus((rental as any).status, DEFAULT_NEW_ITINERARY_STATUS),
   pickupLocation: rental.pickupLocation,
   pickupDate: rental.pickupDate,
   dropoffLocation: rental.dropoffLocation,
@@ -91,3 +100,5 @@ export const buildRentalDraftFromRow = (rental: CarRental): CarRentalDraft => ({
   paidBy: rental.paidBy ?? [],
   travelerIds: rental.travelerIds ?? [],
 });
+
+

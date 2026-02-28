@@ -3,6 +3,7 @@ import { Platform, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import type { LodgingDraft } from '../tabs/lodging';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { toWebStyle } from '../utils/webStyle';
+import { DEFAULT_NEW_ITINERARY_STATUS, ITINERARY_STATUSES, normalizeItineraryStatus } from '../utils/itineraryStatus';
 
 type MemberOption = {
   id: string;
@@ -112,6 +113,42 @@ const LodgingForm: React.FC<LodgingFormProps> = ({
 
   return (
     <>
+      <View style={[styles.modalRow, isCompact && { flexDirection: 'column' }]}>
+        <View style={[styles.modalField, isCompact && { minWidth: '100%' }]}>
+          <Text style={styles.modalLabel}>Status</Text>
+          {Platform.OS === 'web' ? (
+            <select
+              value={normalizeItineraryStatus(draft.status, DEFAULT_NEW_ITINERARY_STATUS)}
+              onChange={(e) =>
+                setDraft((prev) => ({ ...prev, status: normalizeItineraryStatus(e.target.value, DEFAULT_NEW_ITINERARY_STATUS) }))
+              }
+              style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
+            >
+              {ITINERARY_STATUSES.map((opt) => (
+                <option key={`lodging-status-${opt}`} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <View style={styles.payerChips}>
+              {ITINERARY_STATUSES.map((opt) => {
+                const selected = normalizeItineraryStatus(draft.status, DEFAULT_NEW_ITINERARY_STATUS) === opt;
+                return (
+                  <TouchableOpacity
+                    key={`lodging-status-${opt}`}
+                    style={[toggleBaseStyle, selected && toggleSelectedStyle]}
+                    onPress={() => setDraft((prev) => ({ ...prev, status: opt }))}
+                  >
+                    <Text style={[toggleTextStyle, selected && toggleTextSelectedStyle]}>{opt}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+        </View>
+      </View>
+
       <View style={[styles.modalRow, isCompact && { flexDirection: 'column' }]}>
         <View style={[styles.modalField, isCompact && { minWidth: '100%' }]}>
           <Text style={styles.modalLabel}>Name</Text>

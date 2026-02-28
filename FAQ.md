@@ -10,7 +10,7 @@ It is a monorepo with:
 - `server/`: Express + TypeScript API (`server/src/app.ts`)
 - Workspace scripts at repo root (`package.json`) to run app/server tests and Playwright
 
-The app supports trip planning across flights, lodging, tours, itinerary notes/details, expenses, ledger/cost reporting, groups, and account/family management.
+The app supports trip planning across flights, lodging, activities, itinerary notes/details, expenses, ledger/cost reporting, groups, and account/family management.
 
 ## 2. How does authentication work?
 
@@ -48,7 +48,7 @@ The app supports trip planning across flights, lodging, tours, itinerary notes/d
 - Account and family/fellow-travelers: `accountRoutes`
 - Groups and invites: `groupsRouter` in `accountRoutes`
 - Trips (including wizard + covered-by rules): `tripRoutes`
-- Flights, lodging, tours (CRUD + expense sync): `flightRoutes`, `lodgingRoutes`, `tourRoutes`
+- Flights, lodging, activities (CRUD + expense sync): `flightRoutes`, `lodgingRoutes`, `activityRoutes`
 - Manual expenses: `expenseRoutes`
 - Itinerary generation + itinerary records/details: `itineraryRoutes`, `itineraryDataRoutes`
 - Trait profile and demographics: `traitRoutes`
@@ -64,10 +64,16 @@ The app supports trip planning across flights, lodging, tours, itinerary notes/d
 ### Q: Are there important validation/authorization behaviors?
 
 - Almost all feature endpoints require bearer auth.
-- Trip/group membership checks gate writes for flights/lodging/tours/expenses.
+- Trip/group membership checks gate writes for flights/lodging/activities/expenses.
 - Passenger/payer/traveler IDs must be group members for several write paths.
 - Covering rules reject cycles and conflict states in `PUT /api/trips/:id/covered-by`.
-- Flight/lodging/tour create/update also sync source-linked expense records.
+- Flight/lodging/activity create/update also sync source-linked expense records.
+- Activities include an `activityType` enum:
+  - `Ticketed Attraction`
+  - `Reservation`
+  - `Tour`
+  - `Open Access`
+  - `Event`
 
 ## 4. What external APIs/services are used?
 

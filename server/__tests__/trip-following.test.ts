@@ -50,7 +50,7 @@ describe('Trip following (read-only)', () => {
     expect(tripId).toBeTruthy();
 
     await request(app)
-      .post('/api/flights')
+      .post('/api/transfers')
       .set('Authorization', `Bearer ${ownerToken}`)
       .send({
         passengerIds: [ownerMemberId],
@@ -98,7 +98,7 @@ describe('Trip following (read-only)', () => {
     expect(trip.body.id).toBe(tripId);
     expect(trip.body.access).toBe('follower');
 
-    const flights = await request(app).get(`/api/flights?tripId=${tripId}`).set('Authorization', `Bearer ${followerToken}`).expect(200);
+    const flights = await request(app).get(`/api/transfers?tripId=${tripId}`).set('Authorization', `Bearer ${followerToken}`).expect(200);
     expect(Array.isArray(flights.body)).toBe(true);
     expect(flights.body.length).toBeGreaterThan(0);
 

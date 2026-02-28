@@ -1,5 +1,5 @@
 // server/src/db.ts
-import { Pool } from 'pg';
+import { Pool, PoolClient } from 'pg';
 import { createHash, randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
 import {
   Flight,
@@ -10,11 +10,14 @@ import {
   User,
   WebUser,
   Lodging,
-  Tour,
+  Activity,
+  CarRental,
   Itinerary,
   ItineraryDetail,
   PlaceDetailsCache,
   LocationRecord,
+  AttractionCatalogEntry,
+  AttractionShortlistBlob,
   TripActivity,
   TripActivityType,
   TripComment,
@@ -31,6 +34,9 @@ let pool: Pool | null = null;
 const hashToken = (token: string): string => createHash('sha256').update(token).digest('hex');
 const FOLLOW_CODE_LENGTH = 6;
 const FOLLOW_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const TRIP_SHARE_TOKEN_BYTES = 24;
+
+const normalizeEmail = (value: string): string => value.trim().toLowerCase();
 
 const generateFollowCode = (): string => {
   const bytes = randomBytes(FOLLOW_CODE_LENGTH);
@@ -40,6 +46,8 @@ const generateFollowCode = (): string => {
   }
   return out;
 };
+
+const generateTripShareToken = (): string => randomBytes(TRIP_SHARE_TOKEN_BYTES).toString('base64url');
 
 const TRIP_ACTIVITY_TYPES: TripActivityType[] = [
   'TRIP_CREATED',
@@ -137,6 +145,10 @@ export const initDb = async (): Promise<void> => {
       first_name TEXT NOT NULL,
       middle_name TEXT,
       last_name TEXT NOT NULL,
+      home_address TEXT,
+      preferred_airport TEXT,
+      map_preference TEXT,
+      appearance_preference TEXT,
       password_hash TEXT NOT NULL,
       salt TEXT NOT NULL,
       first_login_at TIMESTAMP,
@@ -150,6 +162,10 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS first_name TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS middle_name TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS last_name TEXT;`);
+  await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS home_address TEXT;`);
+  await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS preferred_airport TEXT;`);
+  await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS map_preference TEXT;`);
+  await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS appearance_preference TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS password_hash TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS salt TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS first_login_at TIMESTAMP;`);
@@ -333,6 +349,44 @@ export const initDb = async (): Promise<void> => {
   await p.query(`CREATE INDEX IF NOT EXISTS idx_trip_followers_user_id ON trip_followers(follower_user_id);`);
 
   await p.query(`
+    CREATE TABLE IF NOT EXISTS trip_share_invites (
+      id UUID PRIMARY KEY,
+      trip_id UUID NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+      group_id UUID NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+      inviter_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      invitee_user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+      invitee_email TEXT NOT NULL,
+      role TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      token_hash TEXT,
+      expires_at TIMESTAMP,
+      accepted_at TIMESTAMP,
+      revoked_at TIMESTAMP,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+  `);
+  await p.query(`ALTER TABLE trip_share_invites ADD COLUMN IF NOT EXISTS group_id UUID REFERENCES groups(id) ON DELETE CASCADE;`);
+  await p.query(`ALTER TABLE trip_share_invites ADD COLUMN IF NOT EXISTS invitee_user_id UUID REFERENCES users(id) ON DELETE CASCADE;`);
+  await p.query(`ALTER TABLE trip_share_invites ADD COLUMN IF NOT EXISTS role TEXT;`);
+  await p.query(`ALTER TABLE trip_share_invites ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending';`);
+  await p.query(`ALTER TABLE trip_share_invites ADD COLUMN IF NOT EXISTS token_hash TEXT;`);
+  await p.query(`ALTER TABLE trip_share_invites ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP;`);
+  await p.query(`ALTER TABLE trip_share_invites ADD COLUMN IF NOT EXISTS accepted_at TIMESTAMP;`);
+  await p.query(`ALTER TABLE trip_share_invites ADD COLUMN IF NOT EXISTS revoked_at TIMESTAMP;`);
+  await p.query(`ALTER TABLE trip_share_invites ADD COLUMN IF NOT EXISTS created_at TIMESTAMP NOT NULL DEFAULT NOW();`);
+  await p.query(`ALTER TABLE trip_share_invites ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP NOT NULL DEFAULT NOW();`);
+  await p.query(`UPDATE trip_share_invites SET role = COALESCE(role, 'follower') WHERE role IS NULL;`);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_trip_share_invites_trip_id ON trip_share_invites(trip_id);`);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_trip_share_invites_email ON trip_share_invites(LOWER(invitee_email));`);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_trip_share_invites_status ON trip_share_invites(status);`);
+  await p.query(
+    `CREATE UNIQUE INDEX IF NOT EXISTS idx_trip_share_invites_pending_unique
+     ON trip_share_invites(trip_id, LOWER(invitee_email), role)
+     WHERE status = 'pending' AND revoked_at IS NULL`
+  );
+
+  await p.query(`
     CREATE TABLE IF NOT EXISTS trip_activity (
       id UUID PRIMARY KEY,
       trip_id UUID NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
@@ -403,6 +457,8 @@ export const initDb = async (): Promise<void> => {
       id UUID PRIMARY KEY,
       user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       trip_id UUID REFERENCES trips(id) ON DELETE SET NULL,
+      status TEXT NOT NULL DEFAULT 'Booked',
+      transfer_type TEXT NOT NULL DEFAULT 'Flight',
       passenger_name TEXT NOT NULL,
       passenger_ids JSONB DEFAULT '[]'::jsonb,
       departure_date DATE NOT NULL,
@@ -439,6 +495,8 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE flights ADD COLUMN IF NOT EXISTS layover_location_code TEXT;`);
   await p.query(`ALTER TABLE flights ADD COLUMN IF NOT EXISTS arrival_date DATE;`);
   await p.query(`ALTER TABLE flights ADD COLUMN IF NOT EXISTS trip_id UUID REFERENCES trips(id) ON DELETE SET NULL;`);
+  await p.query(`ALTER TABLE flights ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'Booked';`);
+  await p.query(`ALTER TABLE flights ADD COLUMN IF NOT EXISTS transfer_type TEXT NOT NULL DEFAULT 'Flight';`);
   await p.query(`ALTER TABLE flights ADD COLUMN IF NOT EXISTS paid_by JSONB DEFAULT '[]'::jsonb;`);
   await p.query(`ALTER TABLE flights ADD COLUMN IF NOT EXISTS passenger_ids JSONB DEFAULT '[]'::jsonb;`);
 
@@ -447,6 +505,7 @@ export const initDb = async (): Promise<void> => {
       id UUID PRIMARY KEY,
       user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       trip_id UUID REFERENCES trips(id) ON DELETE SET NULL,
+      status TEXT NOT NULL DEFAULT 'Booked',
       name TEXT NOT NULL,
       check_in_date DATE NOT NULL,
       check_out_date DATE NOT NULL,
@@ -468,6 +527,7 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS cost_per_night NUMERIC NOT NULL DEFAULT 0;`);
   await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS address TEXT;`);
   await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS place_id TEXT;`);
+  await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'Booked';`);
   await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS paid_by JSONB DEFAULT '[]'::jsonb;`);
   await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS traveler_ids JSONB DEFAULT '[]'::jsonb;`);
   await p.query(`ALTER TABLE lodgings ADD COLUMN IF NOT EXISTS image_url TEXT;`);
@@ -477,6 +537,7 @@ export const initDb = async (): Promise<void> => {
       id UUID PRIMARY KEY,
       user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       trip_id UUID REFERENCES trips(id) ON DELETE SET NULL,
+      status TEXT NOT NULL DEFAULT 'Booked',
       date DATE NOT NULL,
       name TEXT NOT NULL,
       start_location TEXT,
@@ -487,11 +548,56 @@ export const initDb = async (): Promise<void> => {
       booked_on TEXT,
       reference TEXT,
       paid_by JSONB DEFAULT '[]'::jsonb,
+      traveler_ids JSONB DEFAULT '[]'::jsonb,
       created_at TIMESTAMP DEFAULT NOW()
     );
   `);
   await p.query(`ALTER TABLE tours ADD COLUMN IF NOT EXISTS paid_by JSONB DEFAULT '[]'::jsonb;`);
+  await p.query(`ALTER TABLE tours ADD COLUMN IF NOT EXISTS traveler_ids JSONB DEFAULT '[]'::jsonb;`);
   await p.query(`ALTER TABLE tours ADD COLUMN IF NOT EXISTS booked_on TEXT;`);
+  await p.query(`ALTER TABLE tours ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'Booked';`);
+  await p.query(`ALTER TABLE tours ADD COLUMN IF NOT EXISTS activity_type TEXT NOT NULL DEFAULT 'Tour';`);
+  await p.query(`UPDATE tours SET activity_type = 'Tour' WHERE activity_type IS NULL OR COALESCE(activity_type, '') = '';`);
+
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS car_rentals (
+      id UUID PRIMARY KEY,
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      trip_id UUID REFERENCES trips(id) ON DELETE CASCADE,
+      status TEXT NOT NULL DEFAULT 'Booked',
+      pickup_location TEXT,
+      pickup_date DATE,
+      dropoff_location TEXT,
+      dropoff_date DATE,
+      reference TEXT,
+      vendor TEXT,
+      prepaid TEXT,
+      cost NUMERIC NOT NULL DEFAULT 0,
+      model TEXT,
+      notes TEXT,
+      paid_by JSONB DEFAULT '[]'::jsonb,
+      traveler_ids JSONB DEFAULT '[]'::jsonb,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+  await p.query(`ALTER TABLE car_rentals ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'Booked';`);
+  await p.query(`ALTER TABLE car_rentals ADD COLUMN IF NOT EXISTS paid_by JSONB DEFAULT '[]'::jsonb;`);
+  await p.query(`ALTER TABLE car_rentals ADD COLUMN IF NOT EXISTS traveler_ids JSONB DEFAULT '[]'::jsonb;`);
+
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS item_votes (
+      id UUID PRIMARY KEY,
+      trip_id UUID NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+      item_type TEXT NOT NULL,
+      item_id UUID NOT NULL,
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      value SMALLINT NOT NULL CHECK (value IN (-1, 1)),
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      UNIQUE (item_type, item_id, user_id)
+    );
+  `);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_item_votes_trip_type_item ON item_votes(trip_id, item_type, item_id);`);
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS airports (
@@ -584,6 +690,8 @@ export const initDb = async (): Promise<void> => {
     await p.query(`DELETE FROM itinerary_details`);
     await p.query(`DELETE FROM itineraries`);
     await p.query(`DELETE FROM tours`);
+    await p.query(`DELETE FROM car_rentals`);
+    await p.query(`DELETE FROM item_votes`);
     await p.query(`DELETE FROM lodgings`);
     await p.query(`DELETE FROM flight_shares`);
     await p.query(`DELETE FROM flights`);
@@ -909,15 +1017,42 @@ export const deleteUserRecord = async (userId: string): Promise<void> => {
 
 export const getWebUserProfile = async (
   userId: string
-): Promise<{ id: string; email: string; firstName: string; lastName: string } | null> => {
+): Promise<{
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  homeAddress?: string | null;
+  preferredAirport?: string | null;
+  mapPreference?: 'google' | 'apple' | 'waze' | null;
+  appearancePreference?: 'light' | 'dark' | 'auto' | null;
+} | null> => {
   const p = getPool();
-  const { rows } = await p.query<{ id: string; email: string; first_name: string; last_name: string }>(
-    `SELECT id, email, first_name, last_name FROM web_users WHERE id = $1 LIMIT 1`,
+  const { rows } = await p.query<{
+    id: string;
+    email: string;
+    first_name: string;
+    last_name: string;
+    home_address: string | null;
+    preferred_airport: string | null;
+    map_preference: string | null;
+    appearance_preference: string | null;
+  }>(
+    `SELECT id, email, first_name, last_name, home_address, preferred_airport, map_preference, appearance_preference FROM web_users WHERE id = $1 LIMIT 1`,
     [userId]
   );
   if (rows.length) {
     const row = rows[0];
-    return { id: row.id, email: row.email, firstName: row.first_name, lastName: row.last_name };
+    return {
+      id: row.id,
+      email: row.email,
+      firstName: row.first_name,
+      lastName: row.last_name,
+      homeAddress: row.home_address ?? null,
+      preferredAirport: row.preferred_airport ?? null,
+      mapPreference: row.map_preference === 'google' || row.map_preference === 'apple' || row.map_preference === 'waze' ? row.map_preference : null,
+      appearancePreference: row.appearance_preference === 'light' || row.appearance_preference === 'dark' || row.appearance_preference === 'auto' ? row.appearance_preference : null,
+    };
   }
 
   const { rows: userRows } = await p.query<{ id: string; email: string; first_name: string; last_name: string }>(
@@ -934,8 +1069,25 @@ export const getWebUserProfile = async (
 
 export const updateWebUserProfile = async (
   userId: string,
-  updates: { firstName?: string; lastName?: string; email?: string }
-): Promise<{ id: string; email: string; firstName: string; lastName: string }> => {
+  updates: {
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    homeAddress?: string;
+    preferredAirport?: string;
+    mapPreference?: string;
+    appearancePreference?: string;
+  }
+): Promise<{
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  homeAddress?: string | null;
+  preferredAirport?: string | null;
+  mapPreference?: 'google' | 'apple' | 'waze' | null;
+  appearancePreference?: 'light' | 'dark' | 'auto' | null;
+}> => {
   const p = getPool();
   const client = await p.connect();
   try {
@@ -952,17 +1104,47 @@ export const updateWebUserProfile = async (
       }
     }
 
+    const normalizedMapPreference =
+      updates.mapPreference === 'google' || updates.mapPreference === 'apple' || updates.mapPreference === 'waze'
+        ? updates.mapPreference
+        : null;
+    const normalizedAppearancePreference =
+      updates.appearancePreference === 'light' || updates.appearancePreference === 'dark' || updates.appearancePreference === 'auto'
+        ? updates.appearancePreference
+        : null;
+
     const { rows } = await client.query(
       `
       UPDATE web_users
       SET
         first_name = COALESCE($2, first_name),
         last_name = COALESCE($3, last_name),
-        email = COALESCE($4, email)
+        email = COALESCE($4, email),
+        home_address = CASE WHEN $5::text IS NULL THEN home_address ELSE NULLIF($5::text, '') END,
+        preferred_airport = CASE WHEN $6::text IS NULL THEN preferred_airport ELSE NULLIF($6::text, '') END,
+        map_preference = CASE WHEN $7::text IS NULL THEN map_preference ELSE NULLIF($7::text, '') END,
+        appearance_preference = CASE WHEN $8::text IS NULL THEN appearance_preference ELSE NULLIF($8::text, '') END
       WHERE id = $1
-      RETURNING id, email, first_name as "firstName", last_name as "lastName"
+      RETURNING
+        id,
+        email,
+        first_name as "firstName",
+        last_name as "lastName",
+        home_address as "homeAddress",
+        preferred_airport as "preferredAirport",
+        map_preference as "mapPreference",
+        appearance_preference as "appearancePreference"
     `,
-      [userId, updates.firstName ?? null, updates.lastName ?? null, updates.email ?? null]
+      [
+        userId,
+        updates.firstName ?? null,
+        updates.lastName ?? null,
+        updates.email ?? null,
+        typeof updates.homeAddress === 'string' ? updates.homeAddress.trim() : null,
+        typeof updates.preferredAirport === 'string' ? updates.preferredAirport.trim() : null,
+        normalizedMapPreference,
+        normalizedAppearancePreference,
+      ]
     );
 
     if (!rows.length) {
@@ -1145,14 +1327,16 @@ export const insertFlight = async (
 
   const id = randomUUID();
   const query = `INSERT INTO flights (
-    id, user_id, trip_id, passenger_name, passenger_ids, departure_date, departure_location, departure_airport_code, departure_time,
+    id, user_id, trip_id, status, transfer_type, passenger_name, passenger_ids, departure_date, departure_location, departure_airport_code, departure_time,
     arrival_location, arrival_airport_code, layover_location, layover_location_code, layover_duration,
     arrival_date, arrival_time, cost, carrier, flight_number, booking_reference, paid_by
-  ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
+  ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
   RETURNING
     id,
     user_id as "userId",
     trip_id as "tripId",
+    status,
+    transfer_type as "transferType",
     passenger_name as "passengerName",
     passenger_ids,
     departure_date as "departureDate",
@@ -1177,6 +1361,8 @@ export const insertFlight = async (
     id,
     flight.userId,
     flight.tripId,
+    flight.status,
+    (flight as any).transferType ?? 'Flight',
     flight.passengerName,
     JSON.stringify(flight.passengerIds ?? []),
     flight.departureDate,
@@ -1269,27 +1455,31 @@ export const updateFlight = async (
     const { rows } = await p.query(
       `UPDATE flights
        SET passenger_name = COALESCE($1, passenger_name),
-           departure_date = COALESCE($2, departure_date),
-           departure_location = COALESCE($3, departure_location),
-           departure_airport_code = COALESCE($4, departure_airport_code),
-           departure_time = COALESCE($5, departure_time),
-           arrival_location = COALESCE($6, arrival_location),
-           arrival_airport_code = COALESCE($7, arrival_airport_code),
-           layover_location = COALESCE($8, layover_location),
-           layover_location_code = COALESCE($9, layover_location_code),
-           layover_duration = COALESCE($10, layover_duration),
-           arrival_date = COALESCE($11, arrival_date),
-           arrival_time = COALESCE($12, arrival_time),
-           cost = COALESCE($13, cost),
-           carrier = COALESCE($14, carrier),
-           flight_number = COALESCE($15, flight_number),
-           booking_reference = COALESCE($16, booking_reference),
-           paid_by = COALESCE($17::jsonb, paid_by),
-           passenger_ids = COALESCE($18::jsonb, passenger_ids)
-      WHERE id = $19 AND user_id = $20
+           status = COALESCE($2, status),
+           transfer_type = COALESCE($3, transfer_type),
+           departure_date = COALESCE($4, departure_date),
+           departure_location = COALESCE($5, departure_location),
+           departure_airport_code = COALESCE($6, departure_airport_code),
+           departure_time = COALESCE($7, departure_time),
+           arrival_location = COALESCE($8, arrival_location),
+           arrival_airport_code = COALESCE($9, arrival_airport_code),
+           layover_location = COALESCE($10, layover_location),
+           layover_location_code = COALESCE($11, layover_location_code),
+           layover_duration = COALESCE($12, layover_duration),
+           arrival_date = COALESCE($13, arrival_date),
+           arrival_time = COALESCE($14, arrival_time),
+           cost = COALESCE($15, cost),
+           carrier = COALESCE($16, carrier),
+           flight_number = COALESCE($17, flight_number),
+           booking_reference = COALESCE($18, booking_reference),
+           paid_by = COALESCE($19::jsonb, paid_by),
+           passenger_ids = COALESCE($20::jsonb, passenger_ids)
+      WHERE id = $21 AND user_id = $22
       RETURNING *`,
       [
         updates.passengerName ?? null,
+        updates.status ?? null,
+        (updates as any).transferType ?? null,
         updates.departureDate ?? null,
         departureCode,
         departureCode,
@@ -1328,31 +1518,35 @@ export const updateFlight = async (
   const { rows } = await p.query<Flight>(
     `UPDATE flights f
      SET passenger_name = COALESCE($1, f.passenger_name),
-         departure_date = COALESCE($2, f.departure_date),
-         departure_location = COALESCE($3, f.departure_location),
-         departure_airport_code = COALESCE($4, f.departure_airport_code),
-         departure_time = COALESCE($5, f.departure_time),
-         arrival_location = COALESCE($6, f.arrival_location),
-         arrival_airport_code = COALESCE($7, f.arrival_airport_code),
-         layover_location = COALESCE($8, f.layover_location),
-         layover_location_code = COALESCE($9, f.layover_location_code),
-         layover_duration = COALESCE($10, f.layover_duration),
-         arrival_date = COALESCE($11, f.arrival_date),
-         arrival_time = COALESCE($12, f.arrival_time),
-         cost = COALESCE($13, f.cost),
-         carrier = COALESCE($14, f.carrier),
-         flight_number = COALESCE($15, f.flight_number),
-         booking_reference = COALESCE($16, f.booking_reference),
-         paid_by = COALESCE($17::jsonb, f.paid_by),
-         passenger_ids = COALESCE($18::jsonb, f.passenger_ids)
+         status = COALESCE($2, f.status),
+         transfer_type = COALESCE($3, f.transfer_type),
+         departure_date = COALESCE($4, f.departure_date),
+         departure_location = COALESCE($5, f.departure_location),
+         departure_airport_code = COALESCE($6, f.departure_airport_code),
+         departure_time = COALESCE($7, f.departure_time),
+         arrival_location = COALESCE($8, f.arrival_location),
+         arrival_airport_code = COALESCE($9, f.arrival_airport_code),
+         layover_location = COALESCE($10, f.layover_location),
+         layover_location_code = COALESCE($11, f.layover_location_code),
+         layover_duration = COALESCE($12, f.layover_duration),
+         arrival_date = COALESCE($13, f.arrival_date),
+         arrival_time = COALESCE($14, f.arrival_time),
+         cost = COALESCE($15, f.cost),
+         carrier = COALESCE($16, f.carrier),
+         flight_number = COALESCE($17, f.flight_number),
+         booking_reference = COALESCE($18, f.booking_reference),
+         paid_by = COALESCE($19::jsonb, f.paid_by),
+         passenger_ids = COALESCE($20::jsonb, f.passenger_ids)
     FROM trips t
-    WHERE f.id = $19
+    WHERE f.id = $21
       AND t.id = f.trip_id
       -- allow edits by any member of the trip's group
-      AND t.group_id IN (SELECT group_id FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $20)
+      AND t.group_id IN (SELECT group_id FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $22)
     RETURNING f.*`,
     [
       updates.passengerName,
+      updates.status ?? null,
+      (updates as any).transferType ?? null,
       updates.departureDate,
       departureCode,
       departureCode,
@@ -1721,6 +1915,317 @@ export const unfollowTrip = async (userId: string, tripId: string): Promise<void
   }
 };
 
+const getTripOwnerContext = async (
+  client: Pool | PoolClient,
+  tripId: string,
+  userId: string
+): Promise<{ tripId: string; groupId: string } | null> => {
+  const { rows } = await client.query<{ tripId: string; groupId: string }>(
+    `SELECT t.id as "tripId", t.group_id as "groupId"
+     FROM trips t
+     JOIN groups g ON g.id = t.group_id
+     WHERE t.id = $1 AND g.owner_id = $2
+     LIMIT 1`,
+    [tripId, userId]
+  );
+  return rows[0] ?? null;
+};
+
+export const listTripShareInvites = async (
+  userId: string,
+  tripId: string
+): Promise<
+  Array<{
+    id: string;
+    tripId: string;
+    inviteeEmail: string;
+    inviteeUserId: string | null;
+    role: 'member' | 'follower';
+    status: 'pending' | 'accepted' | 'revoked' | 'expired';
+    expiresAt: string | null;
+    acceptedAt: string | null;
+    createdAt: string;
+    updatedAt: string;
+  }>
+> => {
+  const p = getPool();
+  const context = await getTripOwnerContext(p, tripId, userId);
+  if (!context) throw new Error('Not authorized to manage trip sharing');
+  const { rows } = await p.query<{
+    id: string;
+    tripId: string;
+    inviteeEmail: string;
+    inviteeUserId: string | null;
+    role: 'member' | 'follower';
+    status: 'pending' | 'accepted' | 'revoked' | 'expired';
+    expiresAt: string | null;
+    acceptedAt: string | null;
+    createdAt: string;
+    updatedAt: string;
+  }>(
+    `SELECT id,
+            trip_id as "tripId",
+            invitee_email as "inviteeEmail",
+            invitee_user_id as "inviteeUserId",
+            role,
+            status,
+            expires_at as "expiresAt",
+            accepted_at as "acceptedAt",
+            created_at as "createdAt",
+            updated_at as "updatedAt"
+     FROM trip_share_invites
+     WHERE trip_id = $1
+     ORDER BY created_at DESC`,
+    [tripId]
+  );
+  return rows;
+};
+
+export const createTripShareInvite = async (
+  inviterId: string,
+  tripId: string,
+  inviteeEmailRaw: string,
+  role: 'member' | 'follower',
+  expiresInDays = 14
+): Promise<{
+  invite: {
+    id: string;
+    tripId: string;
+    inviteeEmail: string;
+    inviteeUserId: string | null;
+    role: 'member' | 'follower';
+    status: 'pending' | 'accepted';
+    createdAt: string;
+  };
+  token?: string;
+  autoApplied: boolean;
+}> => {
+  const p = getPool();
+  const email = normalizeEmail(inviteeEmailRaw);
+  const client = await p.connect();
+  try {
+    await client.query('BEGIN');
+    const context = await getTripOwnerContext(client, tripId, inviterId);
+    if (!context) throw new Error('Not authorized to manage trip sharing');
+
+    const duplicate = await client.query<{
+      id: string;
+      tripId: string;
+      inviteeEmail: string;
+      inviteeUserId: string | null;
+      role: 'member' | 'follower';
+      status: 'pending' | 'accepted';
+      createdAt: string;
+    }>(
+      `SELECT id,
+              trip_id as "tripId",
+              invitee_email as "inviteeEmail",
+              invitee_user_id as "inviteeUserId",
+              role,
+              status,
+              created_at as "createdAt"
+       FROM trip_share_invites
+       WHERE trip_id = $1
+         AND LOWER(invitee_email) = LOWER($2)
+         AND role = $3
+         AND status = 'pending'
+         AND revoked_at IS NULL
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [tripId, email, role]
+    );
+    if (duplicate.rowCount) {
+      await client.query('COMMIT');
+      return { invite: duplicate.rows[0], autoApplied: false };
+    }
+
+    const userRow = await client.query<{ id: string }>(`SELECT id FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1`, [email]);
+    const userId = userRow.rows[0]?.id ?? null;
+
+    if (role === 'member' && userId) {
+      const activeMember = await client.query(
+        `SELECT 1
+         FROM group_members
+         WHERE group_id = $1 AND user_id = $2 AND removed_at IS NULL
+         LIMIT 1`,
+        [context.groupId, userId]
+      );
+      if (!activeMember.rowCount) {
+        await client.query(
+          `INSERT INTO group_members (id, group_id, user_id, added_by)
+           VALUES ($1, $2, $3, $4)
+           ON CONFLICT (group_id, user_id) DO UPDATE
+           SET removed_at = NULL`,
+          [randomUUID(), context.groupId, userId, inviterId]
+        );
+      }
+      await client.query(`DELETE FROM trip_followers WHERE trip_id = $1 AND follower_user_id = $2`, [tripId, userId]);
+    }
+
+    if (role === 'follower' && userId) {
+      const isMember = await client.query(
+        `SELECT 1
+         FROM group_members
+         WHERE group_id = $1 AND user_id = $2 AND removed_at IS NULL
+         LIMIT 1`,
+        [context.groupId, userId]
+      );
+      if (!isMember.rowCount) {
+        await client.query(
+          `INSERT INTO trip_followers (id, trip_id, follower_user_id, role)
+           VALUES ($1, $2, $3, 'follower')
+           ON CONFLICT (trip_id, follower_user_id) DO NOTHING`,
+          [randomUUID(), tripId, userId]
+        );
+      }
+    }
+
+    const autoApplied = Boolean(userId);
+    const token = autoApplied ? undefined : generateTripShareToken();
+    const tokenHash = token ? hashToken(token) : null;
+    const status: 'pending' | 'accepted' = autoApplied ? 'accepted' : 'pending';
+    const expiresAt = autoApplied ? null : new Date(Date.now() + Math.max(1, expiresInDays) * 24 * 60 * 60 * 1000);
+
+    const { rows } = await client.query<{
+      id: string;
+      tripId: string;
+      inviteeEmail: string;
+      inviteeUserId: string | null;
+      role: 'member' | 'follower';
+      status: 'pending' | 'accepted';
+      createdAt: string;
+    }>(
+      `INSERT INTO trip_share_invites
+       (id, trip_id, group_id, inviter_id, invitee_user_id, invitee_email, role, status, token_hash, expires_at, accepted_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CASE WHEN $8 = 'accepted' THEN NOW() ELSE NULL END, NOW())
+       RETURNING id,
+                 trip_id as "tripId",
+                 invitee_email as "inviteeEmail",
+                 invitee_user_id as "inviteeUserId",
+                 role,
+                 status,
+                 created_at as "createdAt"`,
+      [randomUUID(), tripId, context.groupId, inviterId, userId, email, role, status, tokenHash, expiresAt]
+    );
+
+    await client.query('COMMIT');
+    return { invite: rows[0], token, autoApplied };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
+export const acceptTripShareInvite = async (
+  userId: string,
+  emailRaw: string,
+  token: string
+): Promise<{ tripId: string; role: 'member' | 'follower' }> => {
+  const p = getPool();
+  const email = normalizeEmail(emailRaw);
+  const tokenHash = hashToken(token);
+  const client = await p.connect();
+  try {
+    await client.query('BEGIN');
+    const inviteRows = await client.query<{
+      id: string;
+      tripId: string;
+      groupId: string;
+      inviteeEmail: string;
+      role: 'member' | 'follower';
+      status: 'pending' | 'accepted' | 'revoked' | 'expired';
+      expiresAt: string | null;
+    }>(
+      `SELECT id,
+              trip_id as "tripId",
+              group_id as "groupId",
+              invitee_email as "inviteeEmail",
+              role,
+              status,
+              expires_at as "expiresAt"
+       FROM trip_share_invites
+       WHERE token_hash = $1
+       LIMIT 1`,
+      [tokenHash]
+    );
+    if (!inviteRows.rowCount) throw new Error('Invite not found');
+    const invite = inviteRows.rows[0];
+    if (invite.status !== 'pending') throw new Error('Invite is no longer pending');
+    if (invite.expiresAt && new Date(invite.expiresAt).getTime() <= Date.now()) {
+      await client.query(
+        `UPDATE trip_share_invites
+         SET status = 'expired', updated_at = NOW()
+         WHERE id = $1`,
+        [invite.id]
+      );
+      await client.query('COMMIT');
+      throw new Error('Invite has expired');
+    }
+    if (normalizeEmail(invite.inviteeEmail) !== email) throw new Error('Invite email does not match this account');
+
+    if (invite.role === 'member') {
+      await client.query(
+        `INSERT INTO group_members (id, group_id, user_id, added_by)
+         SELECT $1, $2, $3, inviter_id
+         FROM trip_share_invites
+         WHERE id = $4
+         ON CONFLICT (group_id, user_id) DO UPDATE
+         SET removed_at = NULL`,
+        [randomUUID(), invite.groupId, userId, invite.id]
+      );
+      await client.query(`DELETE FROM trip_followers WHERE trip_id = $1 AND follower_user_id = $2`, [invite.tripId, userId]);
+    } else {
+      const isMember = await client.query(
+        `SELECT 1
+         FROM group_members
+         WHERE group_id = $1 AND user_id = $2 AND removed_at IS NULL
+         LIMIT 1`,
+        [invite.groupId, userId]
+      );
+      if (!isMember.rowCount) {
+        await client.query(
+          `INSERT INTO trip_followers (id, trip_id, follower_user_id, role)
+           VALUES ($1, $2, $3, 'follower')
+           ON CONFLICT (trip_id, follower_user_id) DO NOTHING`,
+          [randomUUID(), invite.tripId, userId]
+        );
+      }
+    }
+
+    await client.query(
+      `UPDATE trip_share_invites
+       SET status = 'accepted',
+           invitee_user_id = $2,
+           accepted_at = NOW(),
+           updated_at = NOW()
+       WHERE id = $1`,
+      [invite.id, userId]
+    );
+
+    await client.query('COMMIT');
+    return { tripId: invite.tripId, role: invite.role };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
+export const revokeTripShareInvite = async (userId: string, tripId: string, inviteId: string): Promise<void> => {
+  const p = getPool();
+  const context = await getTripOwnerContext(p, tripId, userId);
+  if (!context) throw new Error('Not authorized to manage trip sharing');
+  await p.query(
+    `UPDATE trip_share_invites
+     SET status = 'revoked', revoked_at = NOW(), updated_at = NOW()
+     WHERE id = $1 AND trip_id = $2 AND status = 'pending'`,
+    [inviteId, tripId]
+  );
+};
+
 export const updateTripDetails = async (
   userId: string,
   tripId: string,
@@ -1822,6 +2327,8 @@ export const getFlightForUser = async (flightId: string, userId: string): Promis
       `SELECT id,
               user_id as "userId",
               trip_id as "tripId",
+              status,
+              transfer_type as "transferType",
               passenger_name as "passengerName",
               COALESCE(passenger_ids, '[]'::jsonb) as passenger_ids,
               departure_date as "departureDate",
@@ -1860,6 +2367,8 @@ export const getFlightForUser = async (flightId: string, userId: string): Promis
        f.id,
        f.user_id as "userId",
        f.trip_id as "tripId",
+       f.status,
+       f.transfer_type as "transferType",
        f.passenger_name as "passengerName",
        f.departure_date as "departureDate",
        f.departure_location as "departureLocation",
@@ -1911,6 +2420,47 @@ export const getFlightForUser = async (flightId: string, userId: string): Promis
   };
 };
 
+export const getFlightById = async (flightId: string): Promise<Flight | null> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `SELECT
+       f.id,
+       f.user_id as "userId",
+       f.trip_id as "tripId",
+       f.status,
+       f.transfer_type as "transferType",
+       f.passenger_name as "passengerName",
+       COALESCE(f.passenger_ids, '[]'::jsonb) as passenger_ids,
+       f.departure_date as "departureDate",
+       f.arrival_date as "arrivalDate",
+       f.departure_location as "departureLocation",
+       f.departure_airport_code as "departureAirportCode",
+       f.departure_time as "departureTime",
+       f.arrival_location as "arrivalLocation",
+       f.arrival_airport_code as "arrivalAirportCode",
+       f.layover_location as "layoverLocation",
+       f.layover_location_code as "layoverLocationCode",
+       f.layover_duration as "layoverDuration",
+       f.arrival_time as "arrivalTime",
+       f.cost,
+       f.carrier,
+       f.flight_number as "flightNumber",
+       f.booking_reference as "bookingReference",
+       COALESCE(f.paid_by, '[]'::jsonb) as "paidBy"
+     FROM flights f
+     WHERE f.id = $1
+     LIMIT 1`,
+    [flightId]
+  );
+  const row = rows[0] as any;
+  if (!row) return null;
+  return {
+    ...(row as Flight),
+    passengerIds: Array.isArray(row.passenger_ids) ? row.passenger_ids : [],
+    paidBy: Array.isArray(row.paidBy) ? row.paidBy : [],
+  };
+};
+
 
 export const listFlights = async (userId: string, tripId?: string): Promise<Flight[]> => {
   // Return flights for the given trip that the requesting user can see (anyone in the trip's group).
@@ -1922,6 +2472,8 @@ export const listFlights = async (userId: string, tripId?: string): Promise<Flig
       SELECT id,
              user_id as "userId",
              trip_id as "tripId",
+             status,
+             transfer_type as "transferType",
              passenger_name as "passengerName",
              COALESCE(passenger_ids, '[]'::jsonb) as passenger_ids,
              departure_date as "departureDate",
@@ -2031,6 +2583,7 @@ export const listLodgings = async (userId: string, tripId?: string | null): Prom
       SELECT l.id,
              l.user_id as "userId",
              l.trip_id as "tripId",
+             l.status,
              l.name,
              l.check_in_date as "checkInDate",
              l.check_out_date as "checkOutDate",
@@ -2072,9 +2625,50 @@ export const listLodgings = async (userId: string, tripId?: string | null): Prom
   });
 };
 
+export const getLodgingById = async (lodgingId: string): Promise<(Lodging & { tripId?: string; paidBy?: string[]; travelerIds?: string[] }) | null> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `
+      SELECT l.id,
+             l.user_id as "userId",
+             l.trip_id as "tripId",
+             l.status,
+             l.name,
+             l.check_in_date as "checkInDate",
+             l.check_out_date as "checkOutDate",
+             l.rooms,
+             l.refund_by as "refundBy",
+             l.total_cost as "totalCost",
+             l.cost_per_night as "costPerNight",
+             l.address,
+             l.place_id as "placeId",
+             COALESCE(l.paid_by, '[]'::jsonb) as "paid_by",
+             COALESCE(l.traveler_ids, '[]'::jsonb) as "traveler_ids",
+             l.image_url as "imageUrl",
+             l.created_at as "createdAt"
+      FROM lodgings l
+      WHERE l.id = $1
+      LIMIT 1
+    `,
+    [lodgingId]
+  );
+  const row = rows[0] as any;
+  if (!row) return null;
+  const paidBy = Array.isArray(row.paid_by) ? row.paid_by : [];
+  const travelerIds = Array.isArray(row.traveler_ids) ? row.traveler_ids : [];
+  return {
+    ...(row as any),
+    paid_by: paidBy,
+    paidBy,
+    traveler_ids: travelerIds,
+    travelerIds,
+  };
+};
+
 export const insertLodging = async (lodging: {
   userId: string;
   tripId: string;
+  status: string;
   name: string;
   checkInDate: string;
   checkOutDate: string;
@@ -2093,12 +2687,13 @@ export const insertLodging = async (lodging: {
   const { rows } = await p.query(
     `
       INSERT INTO lodgings (
-        id, user_id, trip_id, name, check_in_date, check_out_date, rooms, refund_by, total_cost, cost_per_night, address, place_id, paid_by, traveler_ids, image_url
+        id, user_id, trip_id, status, name, check_in_date, check_out_date, rooms, refund_by, total_cost, cost_per_night, address, place_id, paid_by, traveler_ids, image_url
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
       RETURNING id,
                 user_id as "userId",
                 trip_id as "tripId",
+                status,
                 name,
                 check_in_date as "checkInDate",
                 check_out_date as "checkOutDate",
@@ -2117,6 +2712,7 @@ export const insertLodging = async (lodging: {
       id,
       lodging.userId,
       lodging.tripId,
+      lodging.status,
       lodging.name,
       lodging.checkInDate,
       lodging.checkOutDate,
@@ -2191,6 +2787,7 @@ export const updateLodging = async (
     lodgingId,
     userId,
     updates.name ?? null,
+    updates.status ?? null,
     updates.check_in_date ?? null,
     updates.check_out_date ?? null,
     updates.rooms ?? null,
@@ -2211,23 +2808,25 @@ export const updateLodging = async (
         UPDATE lodgings
         SET
           name = COALESCE($3, name),
-          check_in_date = COALESCE($4, check_in_date),
-          check_out_date = COALESCE($5, check_out_date),
-          rooms = COALESCE($6, rooms),
-          refund_by = COALESCE($7, refund_by),
-          total_cost = COALESCE($8, total_cost),
-          cost_per_night = COALESCE($9, cost_per_night),
-          address = COALESCE($10, address),
-          place_id = COALESCE($11, place_id),
-          image_url = COALESCE($12, image_url),
-          paid_by = COALESCE($13::jsonb, paid_by),
-          traveler_ids = COALESCE($14::jsonb, traveler_ids),
-          trip_id = COALESCE($15, trip_id)
+          status = COALESCE($4, status),
+          check_in_date = COALESCE($5, check_in_date),
+          check_out_date = COALESCE($6, check_out_date),
+          rooms = COALESCE($7, rooms),
+          refund_by = COALESCE($8, refund_by),
+          total_cost = COALESCE($9, total_cost),
+          cost_per_night = COALESCE($10, cost_per_night),
+          address = COALESCE($11, address),
+          place_id = COALESCE($12, place_id),
+          image_url = COALESCE($13, image_url),
+          paid_by = COALESCE($14::jsonb, paid_by),
+          traveler_ids = COALESCE($15::jsonb, traveler_ids),
+          trip_id = COALESCE($16, trip_id)
         WHERE id = $1
         RETURNING
           id,
           user_id as "userId",
           trip_id as "tripId",
+          status,
           name,
           check_in_date as "checkInDate",
           check_out_date as "checkOutDate",
@@ -2246,27 +2845,29 @@ export const updateLodging = async (
         UPDATE lodgings l
         SET
           name = COALESCE($3, l.name),
-          check_in_date = COALESCE($4, l.check_in_date),
-          check_out_date = COALESCE($5, l.check_out_date),
-          rooms = COALESCE($6, l.rooms),
-          refund_by = COALESCE($7, l.refund_by),
-          total_cost = COALESCE($8, l.total_cost),
-          cost_per_night = COALESCE($9, l.cost_per_night),
-          address = COALESCE($10, l.address),
-          place_id = COALESCE($11, l.place_id),
-          image_url = COALESCE($12, l.image_url),
-          paid_by = COALESCE($13::jsonb, l.paid_by),
-          traveler_ids = COALESCE($14::jsonb, l.traveler_ids),
-          trip_id = COALESCE($15, l.trip_id)
+          status = COALESCE($4, l.status),
+          check_in_date = COALESCE($5, l.check_in_date),
+          check_out_date = COALESCE($6, l.check_out_date),
+          rooms = COALESCE($7, l.rooms),
+          refund_by = COALESCE($8, l.refund_by),
+          total_cost = COALESCE($9, l.total_cost),
+          cost_per_night = COALESCE($10, l.cost_per_night),
+          address = COALESCE($11, l.address),
+          place_id = COALESCE($12, l.place_id),
+          image_url = COALESCE($13, l.image_url),
+          paid_by = COALESCE($14::jsonb, l.paid_by),
+          traveler_ids = COALESCE($15::jsonb, l.traveler_ids),
+          trip_id = COALESCE($16, l.trip_id)
         FROM trips t
         WHERE l.id = $1
-          AND t.id = COALESCE($15, l.trip_id)
+          AND t.id = COALESCE($16, l.trip_id)
           -- allow edits by any member of the trip's group
           AND t.group_id IN (SELECT group_id FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $2)
         RETURNING
           l.id,
           l.user_id as "userId",
           l.trip_id as "tripId",
+          l.status,
           l.name,
           l.check_in_date as "checkInDate",
           l.check_out_date as "checkOutDate",
@@ -2295,15 +2896,17 @@ export const updateLodging = async (
     travelerIds,
   } as Lodging & { paidBy: string[]; travelerIds: string[] };
 };
-export const listTours = async (userId: string, tripId?: string): Promise<Tour[]> => {
+export const listActivities = async (userId: string, tripId?: string): Promise<Activity[]> => {
   // Return tours for the given trip that the requesting user can see (anyone in the trip's group).
   const p = getPool();
-  const { rows } = await p.query<Tour>(
+  const { rows } = await p.query<Activity>(
     `
     SELECT
       tu.id,
       tu.user_id as "userId",
       tu.trip_id as "tripId",
+      tu.status,
+      COALESCE(NULLIF(tu.activity_type, ''), 'Tour') as "activityType",
       to_char(tu.date, 'YYYY-MM-DD') as date,
       tu.name,
       tu.start_location as "startLocation",
@@ -2314,6 +2917,7 @@ export const listTours = async (userId: string, tripId?: string): Promise<Tour[]
       tu.booked_on as "bookedOn",
       tu.reference,
       COALESCE(tu.paid_by, '[]'::jsonb) as "paidBy",
+      COALESCE(tu.traveler_ids, '[]'::jsonb) as "travelerIds",
       tu.created_at as "createdAt"
     FROM tours tu
     JOIN trips t ON tu.trip_id = t.id
@@ -2330,24 +2934,68 @@ export const listTours = async (userId: string, tripId?: string): Promise<Tour[]
     `,
     [userId, tripId ?? null]
   );
-  return rows.map((r) => ({ ...r, paidBy: Array.isArray((r as any).paidBy) ? (r as any).paidBy : [] }));
+  return rows.map((r) => ({
+    ...r,
+    paidBy: Array.isArray((r as any).paidBy) ? (r as any).paidBy : [],
+    travelerIds: Array.isArray((r as any).travelerIds) ? (r as any).travelerIds : [],
+  }));
 };
 
-export const insertTour = async (tour: Omit<Tour, 'id' | 'createdAt'>): Promise<Tour> => {
+export const getActivityById = async (id: string): Promise<Activity | null> => {
+  const p = getPool();
+  const { rows } = await p.query<Activity>(
+    `
+    SELECT
+      tu.id,
+      tu.user_id as "userId",
+      tu.trip_id as "tripId",
+      tu.status,
+      COALESCE(NULLIF(tu.activity_type, ''), 'Tour') as "activityType",
+      to_char(tu.date, 'YYYY-MM-DD') as date,
+      tu.name,
+      tu.start_location as "startLocation",
+      tu.start_time as "startTime",
+      tu.duration,
+      tu.cost::numeric as cost,
+      to_char(tu.free_cancel_by, 'YYYY-MM-DD') as "freeCancelBy",
+      tu.booked_on as "bookedOn",
+      tu.reference,
+      COALESCE(tu.paid_by, '[]'::jsonb) as "paidBy",
+      COALESCE(tu.traveler_ids, '[]'::jsonb) as "travelerIds",
+      tu.created_at as "createdAt"
+    FROM tours tu
+    WHERE tu.id = $1
+    LIMIT 1
+    `,
+    [id]
+  );
+  if (!rows.length) return null;
+  const row = rows[0];
+  return {
+    ...row,
+    paidBy: Array.isArray((row as any).paidBy) ? (row as any).paidBy : [],
+    travelerIds: Array.isArray((row as any).travelerIds) ? (row as any).travelerIds : [],
+  };
+};
+
+export const insertActivity = async (activity: Omit<Activity, 'id' | 'createdAt'>): Promise<Activity> => {
   const p = getPool();
   const id = randomUUID();
-  const paidBy = JSON.stringify(tour.paidBy ?? []);
-  const { rows } = await p.query<Tour>(
+  const paidBy = JSON.stringify(activity.paidBy ?? []);
+  const travelerIds = JSON.stringify(activity.travelerIds ?? []);
+  const { rows } = await p.query<Activity>(
     `
     INSERT INTO tours (
-      id, user_id, trip_id, date, name, start_location, start_time, duration, cost, free_cancel_by, booked_on, reference, paid_by
+      id, user_id, trip_id, status, activity_type, date, name, start_location, start_time, duration, cost, free_cancel_by, booked_on, reference, paid_by, traveler_ids
     ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
     )
     RETURNING
       id,
       user_id as "userId",
       trip_id as "tripId",
+      status,
+      COALESCE(NULLIF(activity_type, ''), 'Tour') as "activityType",
       to_char(date, 'YYYY-MM-DD') as date,
       name,
       start_location as "startLocation",
@@ -2358,50 +3006,65 @@ export const insertTour = async (tour: Omit<Tour, 'id' | 'createdAt'>): Promise<
       booked_on as "bookedOn",
       reference,
       COALESCE(paid_by, '[]'::jsonb) as "paidBy",
+      COALESCE(traveler_ids, '[]'::jsonb) as "travelerIds",
       created_at as "createdAt"
     `,
     [
       id,
-      tour.userId,
-      tour.tripId,
-      tour.date,
-      tour.name,
-      tour.startLocation,
-      tour.startTime,
-      tour.duration,
-      tour.cost,
-      tour.freeCancelBy ?? null,
-      tour.bookedOn,
-      tour.reference,
+      activity.userId,
+      activity.tripId,
+      activity.status,
+      activity.activityType ?? 'Tour',
+      activity.date,
+      activity.name,
+      activity.startLocation,
+      activity.startTime,
+      activity.duration,
+      activity.cost,
+      activity.freeCancelBy ?? null,
+      activity.bookedOn,
+      activity.reference,
       paidBy,
+      travelerIds,
     ]
   );
   const row = rows[0];
-  return { ...row, paidBy: Array.isArray((row as any).paidBy) ? (row as any).paidBy : [] };
+  return {
+    ...row,
+    paidBy: Array.isArray((row as any).paidBy) ? (row as any).paidBy : [],
+    travelerIds: Array.isArray((row as any).travelerIds) ? (row as any).travelerIds : [],
+  };
 };
 
-export const updateTour = async (id: string, userId: string, tour: Partial<Tour>): Promise<Tour | null> => {
+export const updateActivity = async (id: string, userId: string, activity: Partial<Activity>): Promise<Activity | null> => {
   const p = getPool();
-  const paidBy = typeof tour.paidBy !== 'undefined' ? JSON.stringify(tour.paidBy ?? []) : undefined;
-  const { rows } = await p.query<Tour>(
+  const paidBy = typeof activity.paidBy !== 'undefined' ? JSON.stringify(activity.paidBy ?? []) : undefined;
+  const travelerIds =
+    typeof activity.travelerIds !== 'undefined' ? JSON.stringify(activity.travelerIds ?? []) : undefined;
+  const { rows } = await p.query<Activity>(
     `
     UPDATE tours
     SET
-      date = COALESCE($3, date),
-      name = COALESCE($4, name),
-      start_location = COALESCE($5, start_location),
-      start_time = COALESCE($6, start_time),
-      duration = COALESCE($7, duration),
-      cost = COALESCE($8, cost),
-      free_cancel_by = COALESCE($9, free_cancel_by),
-      booked_on = COALESCE($10, booked_on),
-      reference = COALESCE($11, reference),
-      paid_by = COALESCE($12::jsonb, paid_by)
+      status = COALESCE($3, status),
+      activity_type = COALESCE($4, activity_type),
+      date = COALESCE($5, date),
+      name = COALESCE($6, name),
+      start_location = COALESCE($7, start_location),
+      start_time = COALESCE($8, start_time),
+      duration = COALESCE($9, duration),
+      cost = COALESCE($10, cost),
+      free_cancel_by = COALESCE($11, free_cancel_by),
+      booked_on = COALESCE($12, booked_on),
+      reference = COALESCE($13, reference),
+      paid_by = COALESCE($14::jsonb, paid_by),
+      traveler_ids = COALESCE($15::jsonb, traveler_ids)
     WHERE id = $1 AND user_id = $2
     RETURNING
       id,
       user_id as "userId",
       trip_id as "tripId",
+      status,
+      COALESCE(NULLIF(activity_type, ''), 'Tour') as "activityType",
       to_char(date, 'YYYY-MM-DD') as date,
       name,
       start_location as "startLocation",
@@ -2412,31 +3075,330 @@ export const updateTour = async (id: string, userId: string, tour: Partial<Tour>
       booked_on as "bookedOn",
       reference,
       COALESCE(paid_by, '[]'::jsonb) as "paidBy",
+      COALESCE(traveler_ids, '[]'::jsonb) as "travelerIds",
       created_at as "createdAt"
     `,
     [
       id,
       userId,
-      tour.date ?? null,
-      tour.name ?? null,
-      tour.startLocation ?? null,
-      tour.startTime ?? null,
-      tour.duration ?? null,
-      tour.cost ?? null,
-      tour.freeCancelBy ?? null,
-      tour.bookedOn ?? null,
-      tour.reference ?? null,
+      activity.status ?? null,
+      activity.activityType ?? null,
+      activity.date ?? null,
+      activity.name ?? null,
+      activity.startLocation ?? null,
+      activity.startTime ?? null,
+      activity.duration ?? null,
+      activity.cost ?? null,
+      activity.freeCancelBy ?? null,
+      activity.bookedOn ?? null,
+      activity.reference ?? null,
       paidBy ?? null,
+      travelerIds ?? null,
     ]
   );
   if (!rows.length) return null;
   const row = rows[0];
-  return { ...row, paidBy: Array.isArray((row as any).paidBy) ? (row as any).paidBy : [] };
+  return {
+    ...row,
+    paidBy: Array.isArray((row as any).paidBy) ? (row as any).paidBy : [],
+    travelerIds: Array.isArray((row as any).travelerIds) ? (row as any).travelerIds : [],
+  };
 };
 
-export const deleteTour = async (tourId: string, userId: string): Promise<void> => {
+export const deleteActivity = async (tourId: string, userId: string): Promise<void> => {
   const p = getPool();
   await p.query(`DELETE FROM tours WHERE id = $1 AND user_id = $2`, [tourId, userId]);
+};
+
+export const listCarRentals = async (userId: string, tripId?: string): Promise<CarRental[]> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `
+      SELECT c.id,
+             c.user_id as "userId",
+             c.trip_id as "tripId",
+             c.status,
+             c.pickup_location as "pickupLocation",
+             to_char(c.pickup_date, 'YYYY-MM-DD') as "pickupDate",
+             c.dropoff_location as "dropoffLocation",
+             to_char(c.dropoff_date, 'YYYY-MM-DD') as "dropoffDate",
+             c.reference,
+             c.vendor,
+             c.prepaid,
+             c.cost::numeric as cost,
+             c.model,
+             c.notes,
+             COALESCE(c.paid_by, '[]'::jsonb) as "paidBy",
+             COALESCE(c.traveler_ids, '[]'::jsonb) as "travelerIds",
+             c.created_at as "createdAt"
+      FROM car_rentals c
+      JOIN trips t ON c.trip_id = t.id
+      LEFT JOIN group_members gm
+        ON gm.group_id = t.group_id
+       AND gm.user_id = $1
+       AND gm.removed_at IS NULL
+      LEFT JOIN trip_followers tf
+        ON tf.trip_id = t.id
+       AND tf.follower_user_id = $1
+      WHERE ($2::uuid IS NULL OR c.trip_id = $2)
+        AND (gm.id IS NOT NULL OR tf.id IS NOT NULL)
+      ORDER BY c.pickup_date ASC, c.created_at DESC
+    `,
+    [userId, tripId ?? null]
+  );
+  return rows.map((row: any) => ({
+    ...(row as CarRental),
+    paidBy: Array.isArray(row.paidBy) ? row.paidBy : [],
+    travelerIds: Array.isArray(row.travelerIds) ? row.travelerIds : [],
+  }));
+};
+
+export const getCarRentalById = async (id: string): Promise<CarRental | null> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `
+      SELECT c.id,
+             c.user_id as "userId",
+             c.trip_id as "tripId",
+             c.status,
+             c.pickup_location as "pickupLocation",
+             to_char(c.pickup_date, 'YYYY-MM-DD') as "pickupDate",
+             c.dropoff_location as "dropoffLocation",
+             to_char(c.dropoff_date, 'YYYY-MM-DD') as "dropoffDate",
+             c.reference,
+             c.vendor,
+             c.prepaid,
+             c.cost::numeric as cost,
+             c.model,
+             c.notes,
+             COALESCE(c.paid_by, '[]'::jsonb) as "paidBy",
+             COALESCE(c.traveler_ids, '[]'::jsonb) as "travelerIds",
+             c.created_at as "createdAt"
+      FROM car_rentals c
+      WHERE c.id = $1
+      LIMIT 1
+    `,
+    [id]
+  );
+  if (!rows.length) return null;
+  const row = rows[0] as any;
+  return {
+    ...(row as CarRental),
+    paidBy: Array.isArray(row.paidBy) ? row.paidBy : [],
+    travelerIds: Array.isArray(row.travelerIds) ? row.travelerIds : [],
+  };
+};
+
+export const insertCarRental = async (rental: Omit<CarRental, 'id' | 'createdAt'>): Promise<CarRental> => {
+  const p = getPool();
+  const id = randomUUID();
+  const { rows } = await p.query(
+    `
+      INSERT INTO car_rentals (
+        id, user_id, trip_id, status, pickup_location, pickup_date, dropoff_location, dropoff_date,
+        reference, vendor, prepaid, cost, model, notes, paid_by, traveler_ids
+      )
+      VALUES (
+        $1, $2, $3, $4, $5, NULLIF($6, '')::date, $7, NULLIF($8, '')::date, $9, $10, $11, $12, $13, $14, $15::jsonb, $16::jsonb
+      )
+      RETURNING id,
+                user_id as "userId",
+                trip_id as "tripId",
+                status,
+                pickup_location as "pickupLocation",
+                to_char(pickup_date, 'YYYY-MM-DD') as "pickupDate",
+                dropoff_location as "dropoffLocation",
+                to_char(dropoff_date, 'YYYY-MM-DD') as "dropoffDate",
+                reference,
+                vendor,
+                prepaid,
+                cost::numeric as cost,
+                model,
+                notes,
+                COALESCE(paid_by, '[]'::jsonb) as "paidBy",
+                COALESCE(traveler_ids, '[]'::jsonb) as "travelerIds",
+                created_at as "createdAt"
+    `,
+    [
+      id,
+      rental.userId,
+      rental.tripId,
+      rental.status,
+      rental.pickupLocation ?? '',
+      rental.pickupDate ?? '',
+      rental.dropoffLocation ?? '',
+      rental.dropoffDate ?? '',
+      rental.reference ?? '',
+      rental.vendor ?? '',
+      rental.prepaid ?? '',
+      Number(rental.cost) || 0,
+      rental.model ?? '',
+      rental.notes ?? '',
+      JSON.stringify(rental.paidBy ?? []),
+      JSON.stringify(rental.travelerIds ?? []),
+    ]
+  );
+  const row = rows[0] as any;
+  return {
+    ...(row as CarRental),
+    paidBy: Array.isArray(row.paidBy) ? row.paidBy : [],
+    travelerIds: Array.isArray(row.travelerIds) ? row.travelerIds : [],
+  };
+};
+
+export const updateCarRental = async (id: string, userId: string, updates: Partial<CarRental>): Promise<CarRental | null> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `
+      UPDATE car_rentals c
+      SET
+        status = COALESCE($3, c.status),
+        pickup_location = COALESCE($4, c.pickup_location),
+        pickup_date = COALESCE(NULLIF($5, '')::date, c.pickup_date),
+        dropoff_location = COALESCE($6, c.dropoff_location),
+        dropoff_date = COALESCE(NULLIF($7, '')::date, c.dropoff_date),
+        reference = COALESCE($8, c.reference),
+        vendor = COALESCE($9, c.vendor),
+        prepaid = COALESCE($10, c.prepaid),
+        cost = COALESCE($11, c.cost),
+        model = COALESCE($12, c.model),
+        notes = COALESCE($13, c.notes),
+        paid_by = COALESCE($14::jsonb, c.paid_by),
+        traveler_ids = COALESCE($15::jsonb, c.traveler_ids)
+      FROM trips t
+      WHERE c.id = $1
+        AND t.id = c.trip_id
+        AND EXISTS (
+          SELECT 1 FROM group_members gm
+          WHERE gm.group_id = t.group_id
+            AND gm.user_id = $2
+            AND gm.removed_at IS NULL
+        )
+      RETURNING c.id,
+                c.user_id as "userId",
+                c.trip_id as "tripId",
+                c.status,
+                c.pickup_location as "pickupLocation",
+                to_char(c.pickup_date, 'YYYY-MM-DD') as "pickupDate",
+                c.dropoff_location as "dropoffLocation",
+                to_char(c.dropoff_date, 'YYYY-MM-DD') as "dropoffDate",
+                c.reference,
+                c.vendor,
+                c.prepaid,
+                c.cost::numeric as cost,
+                c.model,
+                c.notes,
+                COALESCE(c.paid_by, '[]'::jsonb) as "paidBy",
+                COALESCE(c.traveler_ids, '[]'::jsonb) as "travelerIds",
+                c.created_at as "createdAt"
+    `,
+    [
+      id,
+      userId,
+      updates.status ?? null,
+      updates.pickupLocation ?? null,
+      updates.pickupDate ?? null,
+      updates.dropoffLocation ?? null,
+      updates.dropoffDate ?? null,
+      updates.reference ?? null,
+      updates.vendor ?? null,
+      updates.prepaid ?? null,
+      typeof updates.cost === 'undefined' ? null : Number(updates.cost),
+      updates.model ?? null,
+      updates.notes ?? null,
+      typeof updates.paidBy === 'undefined' ? null : JSON.stringify(updates.paidBy ?? []),
+      typeof updates.travelerIds === 'undefined' ? null : JSON.stringify(updates.travelerIds ?? []),
+    ]
+  );
+  if (!rows.length) return null;
+  const row = rows[0] as any;
+  return {
+    ...(row as CarRental),
+    paidBy: Array.isArray(row.paidBy) ? row.paidBy : [],
+    travelerIds: Array.isArray(row.travelerIds) ? row.travelerIds : [],
+  };
+};
+
+export const deleteCarRental = async (id: string, userId: string): Promise<void> => {
+  const p = getPool();
+  await p.query(
+    `
+      DELETE FROM car_rentals c
+      USING trips t
+      WHERE c.id = $1
+        AND c.trip_id = t.id
+        AND EXISTS (
+          SELECT 1 FROM group_members gm
+          WHERE gm.group_id = t.group_id
+            AND gm.user_id = $2
+            AND gm.removed_at IS NULL
+        )
+    `,
+    [id, userId]
+  );
+};
+
+type VoteItemType = 'flight' | 'lodging' | 'activity' | 'car_rental';
+type ReactionKind = 'vote' | 'rating';
+const reactionItemTypeKey = (itemType: VoteItemType, kind: ReactionKind): string =>
+  kind === 'rating' ? `${itemType}:rating` : itemType;
+
+export const castItemVote = async (
+  userId: string,
+  tripId: string,
+  itemType: VoteItemType,
+  itemId: string,
+  value: 1 | -1,
+  kind: ReactionKind = 'vote'
+): Promise<void> => {
+  const p = getPool();
+  const itemTypeKey = reactionItemTypeKey(itemType, kind);
+  await p.query(
+    `
+      INSERT INTO item_votes (id, trip_id, item_type, item_id, user_id, value, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+      ON CONFLICT (item_type, item_id, user_id)
+      DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()
+    `,
+    [randomUUID(), tripId, itemTypeKey, itemId, userId, value]
+  );
+};
+
+export const getItemVoteSummaries = async (
+  userId: string,
+  tripId: string,
+  itemType: VoteItemType,
+  itemIds: string[],
+  kind: ReactionKind = 'vote'
+): Promise<Record<string, { netVotes: number; userVote: -1 | 1 | null }>> => {
+  const normalizedIds = Array.from(new Set((itemIds ?? []).map((id) => String(id).trim()).filter(Boolean)));
+  if (!normalizedIds.length) return {};
+  const p = getPool();
+  const itemTypeKey = reactionItemTypeKey(itemType, kind);
+  const { rows } = await p.query(
+    `
+      SELECT item_id::text as "itemId",
+             COALESCE(SUM(value), 0)::int as "netVotes",
+             MAX(CASE WHEN user_id = $1 THEN value ELSE NULL END)::int as "userVote"
+      FROM item_votes
+      WHERE trip_id = $2
+        AND item_type = $3
+        AND item_id = ANY($4::uuid[])
+      GROUP BY item_id
+    `,
+    [userId, tripId, itemTypeKey, normalizedIds]
+  );
+  const result: Record<string, { netVotes: number; userVote: -1 | 1 | null }> = {};
+  normalizedIds.forEach((id) => {
+    result[id] = { netVotes: 0, userVote: null };
+  });
+  rows.forEach((row: any) => {
+    result[row.itemId] = {
+      netVotes: Number(row.netVotes) || 0,
+      userVote: row.userVote === 1 || row.userVote === -1 ? row.userVote : null,
+    };
+  });
+  return result;
 };
 
 const resolveTripCurrency = async (tripId: string): Promise<string> => {
@@ -2749,7 +3711,20 @@ export const shareFlight = async (
 export const listGroupMembers = async (
   groupId: string,
   userId: string
-): Promise<Array<{ id: string; guestName?: string; email?: string; firstName?: string; lastName?: string; status?: string; removedAt?: string | null }>> => {
+): Promise<
+  Array<{
+    id: string;
+    userId?: string | null;
+    guestName?: string;
+    email?: string;
+    firstName?: string;
+    lastName?: string;
+    preferredAirport?: string | null;
+    isGroupOwner?: boolean;
+    status?: string;
+    removedAt?: string | null;
+  }>
+> => {
   const p = getPool();
   const membership = await p.query(
     `SELECT 1 FROM group_members WHERE group_id = $1 AND user_id = $2 AND removed_at IS NULL`,
@@ -2759,10 +3734,13 @@ export const listGroupMembers = async (
 
   const { rows } = await p.query(
     `SELECT gm.id,
+            gm.user_id as "userId",
             gm.guest_name as "guestName",
             COALESCE(u.email, gm.invite_email) as "email",
             COALESCE(gm.first_name, wu.first_name, wu_pending.first_name) as "firstName",
             COALESCE(gm.last_name, wu.last_name, wu_pending.last_name) as "lastName",
+            COALESCE(wu.preferred_airport, wu_pending.preferred_airport) as "preferredAirport",
+            CASE WHEN gm.user_id = g.owner_id THEN true ELSE false END as "isGroupOwner",
             gm.removed_at as "removedAt",
             CASE
               WHEN gm.removed_at IS NOT NULL THEN 'removed'
@@ -2771,6 +3749,7 @@ export const listGroupMembers = async (
               ELSE 'active'
             END as status
      FROM group_members gm
+     JOIN groups g ON g.id = gm.group_id
      LEFT JOIN users u ON gm.user_id = u.id
      LEFT JOIN web_users wu ON gm.user_id = wu.id
      LEFT JOIN users u_pending ON gm.user_id IS NULL AND LOWER(u_pending.email) = LOWER(gm.invite_email)
@@ -2781,12 +3760,16 @@ export const listGroupMembers = async (
   );
   const { rows: inviteRows } = await p.query(
     `SELECT gi.id,
+            u.id as "userId",
             gi.invitee_email as "guestName",
             gi.invitee_email as "email",
             wu.first_name as "firstName",
             wu.last_name as "lastName",
+            wu.preferred_airport as "preferredAirport",
+            CASE WHEN u.id = g.owner_id THEN true ELSE false END as "isGroupOwner",
             gi.status
      FROM group_invites gi
+     JOIN groups g ON g.id = gi.group_id
      LEFT JOIN users u ON LOWER(u.email) = LOWER(gi.invitee_email)
      LEFT JOIN web_users wu ON u.id = wu.id
      WHERE gi.group_id = $1 AND gi.status = 'pending'
@@ -4141,17 +5124,22 @@ export const acceptGroupInvite = async (inviteId: string, userId: string, email?
 
 export const claimInvitesForUser = async (email: string, userId: string): Promise<void> => {
   const p = getPool();
+  const normalizedEmail = normalizeEmail(email);
   await p.query(
     `UPDATE group_invites
      SET invitee_user_id = $1
      WHERE invitee_user_id IS NULL AND LOWER(invitee_email) = LOWER($2)`,
-    [userId, email]
+    [userId, normalizedEmail]
   );
   await p.query(
-    `UPDATE group_members
-     SET user_id = $1, invite_email = NULL, claimed_at = NOW(), removed_at = NULL
-     WHERE invite_email IS NOT NULL AND LOWER(invite_email) = LOWER($2) AND user_id IS NULL`,
-    [userId, email]
+    `UPDATE trip_share_invites
+     SET invitee_user_id = $1,
+         updated_at = NOW()
+     WHERE invitee_user_id IS NULL
+       AND status = 'pending'
+       AND LOWER(invitee_email) = LOWER($2)
+       AND (expires_at IS NULL OR expires_at > NOW()::timestamp)`,
+    [userId, normalizedEmail]
   );
 };
 
@@ -4200,6 +5188,56 @@ const toLocationRecord = (row: any): LocationRecord => {
     sourceRowHash: row.sourceRowHash ?? null,
     updatedAt: row.updatedAt ? new Date(row.updatedAt).toISOString() : undefined,
   };
+};
+
+const toAttractionCatalogEntry = (row: any): AttractionCatalogEntry => {
+  const payload = row.payload && typeof row.payload === 'object' ? row.payload : {};
+  const rawTags = Array.isArray(payload.interestTags) ? payload.interestTags : [];
+  const tags = rawTags.map((tag: unknown) => String(tag).trim()).filter(Boolean) as AttractionCatalogEntry['interestTags'];
+  return {
+    id: row.id,
+    destinationKey: String(payload.destinationKey ?? '').trim(),
+    destinationDisplayName: String(payload.destinationDisplayName ?? '').trim(),
+    name: row.name,
+    rank: Number(payload.rank) || 999,
+    activityType: String(payload.activityType ?? 'Tour') as AttractionCatalogEntry['activityType'],
+    interestTags: tags,
+    sourceUrl: typeof payload.sourceUrl === 'string' ? payload.sourceUrl : null,
+    sourceLabel: typeof payload.sourceLabel === 'string' ? payload.sourceLabel : null,
+    snippet: typeof payload.snippet === 'string' ? payload.snippet : null,
+    sourceCount: Number(payload.sourceCount) || undefined,
+    budgetTier:
+      typeof payload.budgetTier === 'string' ? (payload.budgetTier as AttractionCatalogEntry['budgetTier']) : undefined,
+    updatedAt: row.updatedAt ? new Date(row.updatedAt).toISOString() : new Date().toISOString(),
+  };
+};
+
+const toAttractionShortlistBlob = (row: any): AttractionShortlistBlob | null => {
+  const payload = row?.payload && typeof row.payload === 'object' ? row.payload : {};
+  const destinationKey = String(payload.destinationKey ?? '').trim();
+  const dateKey = String(payload.dateKey ?? '').trim();
+  const promptBlock = String(payload.promptBlock ?? '').trim();
+  if (!destinationKey || !dateKey || !promptBlock) return null;
+  return {
+    id: row.id,
+    destinationKey,
+    destinationDisplayName: String(payload.destinationDisplayName ?? '').trim(),
+    dateKey,
+    promptBlock,
+    compact: String(payload.compact ?? ''),
+    itemCount: Number(payload.itemCount) || 0,
+    updatedAt: row.updatedAt ? new Date(row.updatedAt).toISOString() : new Date().toISOString(),
+  };
+};
+
+const toShortlistBlobId = (destinationKey: string, dateKey: string): string => {
+  const clean = (value: string) =>
+    String(value ?? '')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  return `attr-blob:${clean(destinationKey)}:${clean(dateKey)}`.slice(0, 180);
 };
 
 export const searchLocations = async (
@@ -4305,6 +5343,115 @@ export const upsertLocation = async (data: {
   const query = `INSERT INTO locations (id, source_type, name, address, search_name, payload, updated_at) VALUES ($1, $2, $3, $4, $5, $6, NOW()) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, address = EXCLUDED.address, search_name = EXCLUDED.search_name, payload = locations.payload || EXCLUDED.payload, updated_at = NOW() RETURNING *`;
   const { rows } = await p.query(query, [id, sourceType, name, address, searchName, JSON.stringify(payload)]);
   return toLocationRecord(rows[0]);
+};
+
+export const listAttractionCatalogEntries = async (
+  _userId: string,
+  destinationKey: string,
+  limit = 20
+): Promise<AttractionCatalogEntry[]> => {
+  const key = String(destinationKey ?? '').trim().toLowerCase();
+  if (!key) return [];
+  const p = getPool();
+  const safeLimit = Math.min(Math.max(Number(limit) || 20, 1), 100);
+  const { rows } = await p.query(
+    `SELECT id, name, payload, updated_at as "updatedAt"
+       FROM locations
+      WHERE source_type = 'attraction'
+        AND LOWER(COALESCE(payload->>'destinationKey', '')) = $1
+      ORDER BY
+        COALESCE((payload->>'rank')::int, 999) ASC,
+        name ASC
+      LIMIT $2`,
+    [key, safeLimit]
+  );
+  return rows.map(toAttractionCatalogEntry);
+};
+
+export const upsertAttractionCatalogEntry = async (entry: AttractionCatalogEntry): Promise<AttractionCatalogEntry> => {
+  const p = getPool();
+  const payload = {
+    destinationKey: entry.destinationKey,
+    destinationDisplayName: entry.destinationDisplayName,
+    rank: Number(entry.rank) || 999,
+    activityType: entry.activityType,
+    interestTags: Array.isArray(entry.interestTags) ? entry.interestTags : [],
+    sourceUrl: entry.sourceUrl ?? null,
+    sourceLabel: entry.sourceLabel ?? null,
+    snippet: entry.snippet ?? null,
+    sourceCount: Number(entry.sourceCount) || 1,
+    budgetTier: entry.budgetTier ?? 'paid',
+    updatedAt: entry.updatedAt,
+  };
+  const searchName = `${entry.name} ${entry.destinationDisplayName}`.toLowerCase();
+  const { rows } = await p.query(
+    `INSERT INTO locations (id, source_type, category, name, address, search_name, payload, updated_at)
+     VALUES ($1, 'attraction', 'attraction', $2, NULL, $3, $4::jsonb, NOW())
+     ON CONFLICT (id) DO UPDATE SET
+       source_type = 'attraction',
+       category = 'attraction',
+       name = EXCLUDED.name,
+       search_name = EXCLUDED.search_name,
+       payload = locations.payload || EXCLUDED.payload,
+       updated_at = NOW()
+     RETURNING id, name, payload, updated_at as "updatedAt"`,
+    [entry.id, entry.name, searchName, JSON.stringify(payload)]
+  );
+  return toAttractionCatalogEntry(rows[0]);
+};
+
+export const getAttractionShortlistBlob = async (
+  _userId: string,
+  destinationKey: string,
+  dateKey: string
+): Promise<AttractionShortlistBlob | null> => {
+  const key = String(destinationKey ?? '').trim().toLowerCase();
+  const date = String(dateKey ?? '').trim();
+  if (!key || !date) return null;
+  const id = toShortlistBlobId(key, date);
+  const p = getPool();
+  const { rows } = await p.query(
+    `SELECT id, payload, updated_at as "updatedAt"
+       FROM locations
+      WHERE id = $1
+        AND source_type = 'attraction_shortlist_blob'
+      LIMIT 1`,
+    [id]
+  );
+  if (!rows.length) return null;
+  return toAttractionShortlistBlob(rows[0]);
+};
+
+export const upsertAttractionShortlistBlob = async (entry: AttractionShortlistBlob): Promise<AttractionShortlistBlob> => {
+  const p = getPool();
+  const payload = {
+    destinationKey: entry.destinationKey,
+    destinationDisplayName: entry.destinationDisplayName,
+    dateKey: entry.dateKey,
+    promptBlock: entry.promptBlock,
+    compact: entry.compact,
+    itemCount: Number(entry.itemCount) || 0,
+    updatedAt: entry.updatedAt,
+  };
+  const searchName = `${entry.destinationDisplayName} ${entry.dateKey} attraction shortlist`.toLowerCase();
+  const { rows } = await p.query(
+    `INSERT INTO locations (id, source_type, category, name, address, search_name, payload, updated_at)
+     VALUES ($1, 'attraction_shortlist_blob', 'attraction_shortlist_blob', $2, NULL, $3, $4::jsonb, NOW())
+     ON CONFLICT (id) DO UPDATE SET
+       source_type = 'attraction_shortlist_blob',
+       category = 'attraction_shortlist_blob',
+       name = EXCLUDED.name,
+       search_name = EXCLUDED.search_name,
+       payload = locations.payload || EXCLUDED.payload,
+       updated_at = NOW()
+     RETURNING id, payload, updated_at as "updatedAt"`,
+    [entry.id, entry.destinationDisplayName, searchName, JSON.stringify(payload)]
+  );
+  const parsed = toAttractionShortlistBlob(rows[0]);
+  if (!parsed) {
+    throw new Error('Failed to parse attraction shortlist blob after upsert.');
+  }
+  return parsed;
 };
 
 const clampTraitLevel = (level?: number | null): number => {
@@ -5294,3 +6441,4 @@ export const deleteAllUsers = async (userIds: string[]): Promise<void> => {
   const p = getPool();
   await p.query(`DELETE FROM users WHERE id = ANY($1::uuid[])`, [userIds]);
 };
+

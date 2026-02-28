@@ -1,3 +1,22 @@
+export type ItineraryStatus = 'Needed' | 'Proposed' | 'Booked' | 'Cancelled' | 'Completed';
+export type ActivityType =
+  | 'Class'
+  | 'Concert/Show'
+  | 'Day Trip'
+  | 'Event'
+  | 'Food & Drink'
+  | 'Fun & Games'
+  | 'Hike'
+  | 'Nightlife'
+  | 'Open Access'
+  | 'Outdoor Activity'
+  | 'Reservation'
+  | 'Shopping'
+  | 'Sights & Landmarks'
+  | 'Spa/Wellness'
+  | 'Ticketed Attraction'
+  | 'Tour';
+
 export interface User {
   id: string;
   email: string;
@@ -15,6 +34,10 @@ export interface WebUser {
   email: string;
   firstName: string;
   lastName: string;
+  homeAddress?: string | null;
+  preferredAirport?: string | null;
+  mapPreference?: 'google' | 'apple' | 'waze' | null;
+  appearancePreference?: 'light' | 'dark' | 'auto' | null;
   emailVerified?: boolean;
   firstLoginAt?: string | null;
   lastLoginAt?: string | null;
@@ -23,6 +46,12 @@ export interface WebUser {
 export interface Flight {
   id: string;
   userId: string;
+  status: ItineraryStatus;
+  transferType?: 'Flight' | 'Train' | 'Bus' | 'Private' | 'Ferry' | 'Other';
+  netVotes?: number;
+  userVote?: -1 | 1 | null;
+  netRating?: number;
+  userRating?: -1 | 1 | null;
   passengerName: string;
   passengerIds?: string[];
   departureDate: string;
@@ -116,6 +145,46 @@ export interface LocationRecord {
   updatedAt?: string;
 }
 
+export type InterestTag =
+  | 'outdoors'
+  | 'culture'
+  | 'food'
+  | 'nightlife'
+  | 'relax'
+  | 'shopping'
+  | 'day trips'
+  | 'events'
+  | 'classes';
+
+export type AttractionBudgetTier = 'free' | 'paid' | 'premium';
+
+export interface AttractionCatalogEntry {
+  id: string;
+  destinationKey: string;
+  destinationDisplayName: string;
+  name: string;
+  rank: number;
+  activityType: ActivityType;
+  interestTags: InterestTag[];
+  sourceUrl?: string | null;
+  sourceLabel?: string | null;
+  snippet?: string | null;
+  sourceCount?: number;
+  budgetTier?: AttractionBudgetTier;
+  updatedAt: string;
+}
+
+export interface AttractionShortlistBlob {
+  id: string;
+  destinationKey: string;
+  destinationDisplayName: string;
+  dateKey: string;
+  promptBlock: string;
+  compact: string;
+  itemCount: number;
+  updatedAt: string;
+}
+
 export interface Trait {
   id: string;
   userId: string;
@@ -129,6 +198,11 @@ export interface Lodging {
   id: string;
   user_id: string;
   trip_id: string;
+  status: ItineraryStatus;
+  netVotes?: number;
+  userVote?: -1 | 1 | null;
+  netRating?: number;
+  userRating?: -1 | 1 | null;
   name: string;
   check_in_date: string;
   check_out_date: string;
@@ -144,10 +218,16 @@ export interface Lodging {
   placeId?: string;
 }
 
-export interface Tour {
+export interface Activity {
   id: string;
   userId: string;
   tripId: string;
+  status: ItineraryStatus;
+  activityType: ActivityType;
+  netVotes?: number;
+  userVote?: -1 | 1 | null;
+  netRating?: number;
+  userRating?: -1 | 1 | null;
   date: string;
   name: string;
   startLocation: string;
@@ -158,6 +238,34 @@ export interface Tour {
   bookedOn: string;
   reference: string;
   paidBy: string[];
+  travelerIds?: string[];
+  createdAt: string;
+}
+
+// Temporary compatibility alias while call sites transition to Activity naming.
+export type Tour = Activity;
+
+export interface CarRental {
+  id: string;
+  userId: string;
+  tripId: string;
+  status: ItineraryStatus;
+  netVotes?: number;
+  userVote?: -1 | 1 | null;
+  netRating?: number;
+  userRating?: -1 | 1 | null;
+  pickupLocation: string;
+  pickupDate: string;
+  dropoffLocation: string;
+  dropoffDate: string;
+  reference: string;
+  vendor: string;
+  prepaid: string;
+  cost: number;
+  model: string;
+  notes: string;
+  paidBy: string[];
+  travelerIds: string[];
   createdAt: string;
 }
 
@@ -178,6 +286,100 @@ export interface ItineraryDetail {
   time?: string | null;
   activity: string;
   cost?: number | null;
+}
+
+export type ItineraryPromptPace = 'Relaxed' | 'Balanced' | 'Fast';
+export type ItineraryPromptComfort = 'Budget' | 'Midrange' | 'Luxury';
+export type ItineraryPromptMobility = 'Low' | 'Medium' | 'High';
+export type ItineraryPromptCarPreference = 'PublicTransitOnly' | 'DayTripsOnly' | 'FullTripRental';
+export type ItineraryPromptInteractionStyle = 'Self-Guided' | 'Mixed' | 'Guided';
+export type TransferMode = 'Flight' | 'Train' | 'Bus' | 'Private' | 'Ferry' | 'Other';
+
+export interface ItineraryPromptProfile {
+  pace: ItineraryPromptPace;
+  comfort: ItineraryPromptComfort;
+  mobility: ItineraryPromptMobility;
+  carPreference: ItineraryPromptCarPreference;
+  interactionStyle: ItineraryPromptInteractionStyle;
+  weights: {
+    outdoors: number;
+    adventure: number;
+    culture: number;
+    food: number;
+    nightlife: number;
+    relax: number;
+    photography: number;
+    authentic_local: number;
+    iconic_landmarks: number;
+  };
+}
+
+export interface ItineraryGeneratedTransfer {
+  status: 'Needed';
+  transferType: TransferMode;
+  departureDate: string;
+  arrivalDate: string;
+  departureLocation: string;
+  arrivalLocation: string;
+  departureTime: string;
+  arrivalTime: string;
+  carrier: string;
+  flightNumber: string;
+  bookingReference: string;
+  note?: string;
+}
+
+export interface ItineraryGeneratedLodging {
+  status: 'Needed';
+  name: string;
+  checkInDate: string;
+  checkOutDate: string;
+  rooms: string;
+  totalCost: string;
+  costPerNight: string;
+  address: string;
+}
+
+export interface ItineraryGeneratedActivity {
+  status: 'Proposed';
+  activityType: ActivityType;
+  date: string;
+  name: string;
+  startLocation: string;
+  startTime: string;
+  duration: string;
+  cost: string;
+  freeCancelBy: string;
+  bookedOn: string;
+  reference: string;
+}
+
+export interface ItineraryGeneratedCarRental {
+  status: 'Needed';
+  pickupLocation: string;
+  pickupDate: string;
+  dropoffLocation: string;
+  dropoffDate: string;
+  reference: string;
+  vendor: string;
+  prepaid: string;
+  cost: string;
+  model: string;
+  notes: string;
+}
+
+export interface ItineraryGeneratedItems {
+  transfers: ItineraryGeneratedTransfer[];
+  lodgings: ItineraryGeneratedLodging[];
+  activities: ItineraryGeneratedActivity[];
+  carRentals: ItineraryGeneratedCarRental[];
+}
+
+export interface ItineraryGeneratedDetail {
+  day: number;
+  time: string | null;
+  activity: string;
+  cost: number | null;
 }
 
 export interface PlaceDetailsCache {
@@ -267,4 +469,20 @@ export interface TripComment {
   createdAt: string;
   authorName?: string | null;
   authorEmail?: string | null;
+}
+
+export interface TripShareInvite {
+  id: string;
+  tripId: string;
+  groupId: string;
+  inviterId: string;
+  inviteeUserId?: string | null;
+  inviteeEmail: string;
+  role: 'member' | 'follower';
+  status: 'pending' | 'accepted' | 'revoked' | 'expired';
+  expiresAt?: string | null;
+  acceptedAt?: string | null;
+  revokedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
 }

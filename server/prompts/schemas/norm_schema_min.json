@@ -1,0 +1,1 @@
+{"$":"norm1","sd":"YYYY-MM-DD","ed":"YYYY-MM-DD","p":"pace enum R/B/F","c":"comfort enum B/M/L","mob":"mobility enum L/M/H","car":"car enum P/D/R","w":"{outdoors,adventure,culture,food,nightlife,relax,photography,authentic_local,iconic_landmarks} ints sum=100 (normalized)","a":"[str] assumptions/notes","is":"('self_guided'|'mixed'|'guided') interaction_style"}

@@ -46,6 +46,9 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
   const countryStateCacheRef = useRef<Map<string, { ts: number; results: LocationOption[] }>>(new Map());
   const cityCacheRef = useRef<Map<string, { ts: number; results: LocationOption[] }>>(new Map());
   const cacheTtlMs = 5 * 60 * 1000;
+  const countryStateMinChars = 2;
+  const cityMinChars = 2;
+  const debounceMs = 220;
 
   const selectedIds = useMemo(() => new Set(selectedLocations.map((item) => item.id)), [selectedLocations]);
   const selectedCountryIds = useMemo(
@@ -64,7 +67,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
 
   useEffect(() => {
     const q = countryStateQuery.trim();
-    if (!q || q.length < 1) {
+    if (!q || q.length < countryStateMinChars) {
       setCountryStateSuggestions([]);
       setCountryStateLoading(false);
       return;
@@ -98,16 +101,16 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
       } finally {
         if (active) setCountryStateLoading(false);
       }
-    }, 150);
+    }, debounceMs);
     return () => {
       active = false;
       clearTimeout(handle);
     };
-  }, [countryStateQuery, backendUrl, JSON.stringify(headers), selectedIds]);
+  }, [countryStateQuery, backendUrl, JSON.stringify(headers), selectedIds, countryStateMinChars, debounceMs]);
 
   useEffect(() => {
     const q = cityQuery.trim();
-    if (!q || q.length < 2 || !canSearchCities) {
+    if (!q || q.length < cityMinChars || !canSearchCities) {
       setCitySuggestions([]);
       setCityLoading(false);
       return;
@@ -143,12 +146,12 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
       } finally {
         if (active) setCityLoading(false);
       }
-    }, 150);
+    }, debounceMs);
     return () => {
       active = false;
       clearTimeout(handle);
     };
-  }, [cityQuery, backendUrl, JSON.stringify(headers), selectedIds, selectedCountryIds.join('|'), selectedStateIds.join('|'), canSearchCities]);
+  }, [cityQuery, backendUrl, JSON.stringify(headers), selectedIds, selectedCountryIds.join('|'), selectedStateIds.join('|'), canSearchCities, cityMinChars, debounceMs]);
 
   const addLocations = (items: LocationOption[]) => {
     const seen = new Set(addGuardRef.current);
@@ -196,38 +199,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
   };
 
   const handleAddCity = (loc: LocationOption) => {
-    const cityName = normalizeName(loc.name);
-    const stateName = normalizeName(loc.stateName);
-    const countryName = normalizeName(loc.countryName);
-    if (cityName && stateName && cityName === stateName) {
-      const countryOption = buildCountryOption(loc.countryId, loc.countryName);
-      const stateOption = buildStateOption(loc.stateId, loc.stateName, loc.countryId, loc.countryName);
-      const toAdd: LocationOption[] = [];
-      if (countryOption) toAdd.push(countryOption);
-      if (stateOption) toAdd.push(stateOption);
-      addLocations(toAdd);
-      setCityQuery('');
-      setCitySuggestions([]);
-      cityInputRef.current?.focus();
-      return;
-    }
-    if (cityName && countryName && cityName === countryName) {
-      const countryOption = buildCountryOption(loc.countryId, loc.countryName);
-      const toAdd: LocationOption[] = [];
-      if (countryOption) toAdd.push(countryOption);
-      addLocations(toAdd);
-      setCityQuery('');
-      setCitySuggestions([]);
-      cityInputRef.current?.focus();
-      return;
-    }
-    const toAdd: LocationOption[] = [];
-    const countryOption = buildCountryOption(loc.countryId, loc.countryName);
-    const stateOption = buildStateOption(loc.stateId, loc.stateName, loc.countryId, loc.countryName);
-    if (countryOption) toAdd.push(countryOption);
-    if (stateOption) toAdd.push(stateOption);
-    toAdd.push(loc);
-    addLocations(toAdd);
+    addLocations([loc]);
     setCityQuery('');
     setCitySuggestions([]);
     cityInputRef.current?.focus();
@@ -247,35 +219,6 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
   const handleCityManualAdd = () => {
     const trimmed = cityQuery.trim();
     if (!trimmed) return;
-    const normalized = normalizeName(trimmed);
-    const matchingState = selectedLocations.find(
-      (item) => item.sourceType === 'state' && normalizeName(item.name) === normalized
-    );
-    if (matchingState) {
-      handleAddCity({
-        id: matchingState.id,
-        name: matchingState.name,
-        sourceType: 'city',
-        countryId: matchingState.countryId,
-        countryName: matchingState.countryName,
-        stateId: matchingState.id,
-        stateName: matchingState.name,
-      });
-      return;
-    }
-    const matchingCountry = selectedLocations.find(
-      (item) => item.sourceType === 'country' && normalizeName(item.name) === normalized
-    );
-    if (matchingCountry) {
-      handleAddCity({
-        id: matchingCountry.id,
-        name: matchingCountry.name,
-        sourceType: 'city',
-        countryId: matchingCountry.id,
-        countryName: matchingCountry.name,
-      });
-      return;
-    }
     const manualLocation: LocationOption = {
       id: `manual-city-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       sourceType: 'city',

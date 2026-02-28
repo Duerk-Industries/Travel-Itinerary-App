@@ -2,10 +2,13 @@ import https from 'https';
 import path from 'path';
 import fs from 'fs';
 import zlib from 'zlib';
+import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { initializeApp, getApps } from 'firebase-admin/app';
 import { getStorage } from 'firebase-admin/storage';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
 const serverDir = path.join(rootDir, 'server');
 

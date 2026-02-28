@@ -41,7 +41,7 @@ describe('CostReportTable', () => {
     const expenses: Expense[] = [
       { amount: 100, category: 'Flights', payerIds: ['m1'], forIds: ['m1'] },
       { amount: 70, category: 'Lodging', payerIds: ['m2'], forIds: ['m2'] },
-      { amount: 40, category: 'Tours', payerIds: ['m1'], forIds: ['m1'] },
+      { amount: 40, category: 'Activities', payerIds: ['m1'], forIds: ['m1'] },
     ];
 
     const ledgerTotals = computePayerTotals(
@@ -54,7 +54,7 @@ describe('CostReportTable', () => {
     const rows = [
       { label: 'Flights', total: 100, shares: { m1: 100, m2: 0 } },
       { label: 'Lodging', total: 70, shares: { m1: 0, m2: 70 } },
-      { label: 'Tours', total: 40, shares: { m1: 40, m2: 0 } },
+      { label: 'Activities', total: 40, shares: { m1: 40, m2: 0 } },
     ];
     const overallShares = {
       m1: ledgerTotals.m1 ?? 0,

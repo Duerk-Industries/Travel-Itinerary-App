@@ -145,9 +145,9 @@ const FollowingTab: React.FC<FollowingTabProps> = ({
       try {
         const [tripRes, flightsRes, lodgingsRes, toursRes, activityRes, commentsRes] = await Promise.all([
           fetch(`${backendUrl}/api/trips/${selectedTripId}`, { headers }),
-          fetch(`${backendUrl}/api/flights?tripId=${encodeURIComponent(selectedTripId)}`, { headers }),
+          fetch(`${backendUrl}/api/transfers?tripId=${encodeURIComponent(selectedTripId)}`, { headers }),
           fetch(`${backendUrl}/api/lodgings?tripId=${encodeURIComponent(selectedTripId)}`, { headers }),
-          fetch(`${backendUrl}/api/tours?tripId=${encodeURIComponent(selectedTripId)}`, { headers }),
+          fetch(`${backendUrl}/api/activities?tripId=${encodeURIComponent(selectedTripId)}`, { headers }),
           fetch(`${backendUrl}/api/trips/${selectedTripId}/activity?limit=30&group=true`, { headers }),
           fetch(`${backendUrl}/api/trips/${selectedTripId}/comments`, { headers }),
         ]);
@@ -398,13 +398,13 @@ const FollowingTab: React.FC<FollowingTabProps> = ({
               ))}
               {detail?.lodgings?.length ? null : <Text style={styles.helperText}>No lodging shared yet.</Text>}
               <View style={styles.divider} />
-              <Text style={styles.headerText}>Tours ({detail?.tours.length ?? 0})</Text>
+              <Text style={styles.headerText}>Activities ({detail?.tours.length ?? 0})</Text>
               {(detail?.tours ?? []).slice(0, 8).map((t: any) => (
                 <Text key={t.id ?? `${t.date}-${t.name}`} style={styles.bodyText}>
-                  {`${t.date ?? ''}  ${t.name ?? 'Tour'}${t.startTime ? ` at ${t.startTime}` : ''}`}
+                  {`${t.date ?? ''}  ${t.name ?? 'Activity'}${t.startTime ? ` at ${t.startTime}` : ''}`}
                 </Text>
               ))}
-              {detail?.tours?.length ? null : <Text style={styles.helperText}>No tours shared yet.</Text>}
+              {detail?.tours?.length ? null : <Text style={styles.helperText}>No activities shared yet.</Text>}
               <View style={styles.divider} />
               <Text style={styles.headerText}>Itinerary ({detail?.itineraries.length ?? 0})</Text>
               {(detail?.itineraries ?? []).length ? (
@@ -450,3 +450,4 @@ const FollowingTab: React.FC<FollowingTabProps> = ({
 };
 
 export default FollowingTab;
+

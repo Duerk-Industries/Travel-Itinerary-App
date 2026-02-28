@@ -33,7 +33,7 @@ describe('LedgerTab with expense covering', () => {
     { id: 'm2', firstName: 'Blair', lastName: 'Lee', status: 'active' as const },
     { id: 'm3', firstName: 'Casey', lastName: 'Morgan', status: 'active' as const },
   ];
-  const coveredBy = { m2: 'm1' };
+  const coveredBy: Record<string, string> = { m2: 'm1' };
   const reportableMembers = groupMembers.filter((m) => !coveredBy[m.id]);
 
   const expenses = [

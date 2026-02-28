@@ -1,0 +1,23 @@
+{
+  "user_traits": {
+    "preferences": {
+      "pace_override": ["Relaxed", "Balanced", "Fast"],
+      "mobility": ["Low", "Medium", "High"],
+      "interests": [
+        "Outdoors",
+        "Adventure",
+        "Culture",
+        "Food",
+        "Nightlife",
+        "Relax",
+        "Photography",
+        "AuthenticLocal",
+        "IconicLandmarks"
+      ]
+    },
+    "scheduling": {
+      "early_bird": "boolean",
+      "night_owl": "boolean"
+    }
+  }
+}

@@ -7,6 +7,8 @@ import { formatUserDisplayName } from './overview';
 import LodgingDialog from '../components/LodgingDialog';
 import LodgingDetailsDialog from '../components/LodgingDetailsDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
+import { LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from '../utils/itineraryStatus';
+import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from '../utils/votes';
 
 type LodgingTabProps = {
   backendUrl: string;
@@ -133,9 +135,47 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
       alert(result.error || 'Failed to delete lodging.');
     }
   };
+
+  const voteOnLodging = async (lodgingId: string, value: 1 | -1) => {
+    const res = await fetch(`${backendUrl}/api/lodgings/${lodgingId}/vote`, {
+      method: 'POST',
+      headers: jsonHeaders,
+      body: JSON.stringify({ value }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'Unable to submit vote');
+      return;
+    }
+    onRefreshLodgings?.();
+  };
+
+  const rateOnLodging = async (lodgingId: string, value: 1 | -1) => {
+    const res = await fetch(`${backendUrl}/api/lodgings/${lodgingId}/rating`, {
+      method: 'POST',
+      headers: jsonHeaders,
+      body: JSON.stringify({ value }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'Unable to submit rating');
+      return;
+    }
+    onRefreshLodgings?.();
+  };
   
   const sortedLodgings = useMemo(() => {
-    return [...lodgings].sort((a, b) => new Date(a.checkInDate).getTime() - new Date(b.checkInDate).getTime());
+    const safeDate = (value?: string | null) => {
+      const text = String(value ?? '').trim();
+      return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : '9999-12-31';
+    };
+    return [...lodgings].sort((a, b) => {
+      const byCheckIn = safeDate(a.checkInDate).localeCompare(safeDate(b.checkInDate));
+      if (byCheckIn !== 0) return byCheckIn;
+      const byCheckOut = safeDate(a.checkOutDate).localeCompare(safeDate(b.checkOutDate));
+      if (byCheckOut !== 0) return byCheckOut;
+      return String(a.name ?? '').localeCompare(String(b.name ?? ''), undefined, { sensitivity: 'base' });
+    });
   }, [lodgings]);
 
   const travelerNames = useMemo(() => {
@@ -170,6 +210,15 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
             <View style={[styles.tableHeaderCell, styles.lodgingTabDateCol]}>
               <Text style={styles.headerText}>Check-Out</Text>
             </View>
+            <View style={[styles.tableHeaderCell, styles.lodgingTabDateCol]}>
+              <Text style={styles.headerText}>Status</Text>
+            </View>
+            <View style={[styles.tableHeaderCell, styles.lodgingTabDateCol]}>
+              <Text style={styles.headerText}>Votes</Text>
+            </View>
+            <View style={[styles.tableHeaderCell, styles.lodgingTabDateCol]}>
+              <Text style={styles.headerText}>Rating</Text>
+            </View>
             <View style={[styles.tableHeaderCell, styles.lodgingTabActionsCol, styles.lastCell]}>
               <Text style={styles.headerText}>Actions</Text>
             </View>
@@ -189,6 +238,39 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
               </View>
               <View style={[styles.tableCell, styles.lodgingTabDateCol]}>
                 <Text style={styles.cellText}>{formatShortDate(lodging.checkOutDate)}</Text>
+              </View>
+              <View style={[styles.tableCell, styles.lodgingTabDateCol]}>
+                <Text style={styles.cellText}>{normalizeItineraryStatus(lodging.status, LEGACY_ITINERARY_STATUS)}</Text>
+              </View>
+              <View style={[styles.tableCell, styles.lodgingTabDateCol]}>
+                {shouldShowVoteButtons(lodging.status, (lodging as any).userVote) ? (
+                  <View style={styles.actionCell}>
+                    <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => voteOnLodging(lodging.id, 1)}>
+                      <Text style={styles.buttonText}>👍</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => voteOnLodging(lodging.id, -1)}>
+                      <Text style={styles.buttonText}>👎</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <Text style={styles.cellText}>{formatNetVotes((lodging as any).netVotes ?? 0)}</Text>
+                )}
+              </View>
+              <View style={[styles.tableCell, styles.lodgingTabDateCol]}>
+                {shouldShowRatingButtons(lodging.status, (lodging as any).userRating) ? (
+                  <View style={styles.actionCell}>
+                    <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => rateOnLodging(lodging.id, 1)}>
+                      <Text style={styles.buttonText}>👍</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => rateOnLodging(lodging.id, -1)}>
+                      <Text style={styles.buttonText}>👎</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : normalizeItineraryStatus(lodging.status, LEGACY_ITINERARY_STATUS) === 'Completed' ? (
+                  <Text style={styles.cellText}>{formatNetVotes((lodging as any).netRating ?? 0)}</Text>
+                ) : (
+                  <Text style={styles.cellText}>-</Text>
+                )}
               </View>
               <View style={[styles.tableCell, styles.lodgingTabActionsCol, styles.lastCell]}>
                 <View style={[styles.actionCell, { flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'flex-start' }]}>

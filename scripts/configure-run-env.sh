@@ -5,8 +5,8 @@ ENV_FILE=""
 SECRETS_FILE="${SECRETS_FILE:-}"
 SERVICE_NAME="${SERVICE_NAME:-travel-itinerary-app}"
 REGION="${REGION:-us-east5}"
-IGNORE_KEYS="${IGNORE_KEYS:-PORT,FIRESTORE_EMULATOR_HOST,GCLOUD_PROJECT_ID,GCLOUD_PROJECT_NUMBER,DEPLOYER_SERVICE_ACCOUNT_EMAIL,RUNTIME_SERVICE_ACCOUNT_EMAIL,CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL,FIRESTORE_DATABASE_ID}"
-IGNORE_SECRET_KEYS="${IGNORE_SECRET_KEYS:-GCLOUD_PROJECT,GOOGLE_CLOUD_PROJECT,GCLOUD_PROJECT_ID,GCLOUD_PROJECT_NUMBER,DEPLOYER_SERVICE_ACCOUNT_EMAIL,RUNTIME_SERVICE_ACCOUNT_EMAIL,CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL}"
+IGNORE_KEYS="${IGNORE_KEYS:-PORT,FIRESTORE_EMULATOR_HOST,GCLOUD_PROJECT_NUMBER,DEPLOYER_SERVICE_ACCOUNT_EMAIL,RUNTIME_SERVICE_ACCOUNT_EMAIL,CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL,GOOGLE_APPLICATION_CREDENTIALS}"
+IGNORE_SECRET_KEYS="${IGNORE_SECRET_KEYS:-GCLOUD_PROJECT,GOOGLE_CLOUD_PROJECT,GCLOUD_PROJECT_ID,GCLOUD_PROJECT_NUMBER,DEPLOYER_SERVICE_ACCOUNT_EMAIL,RUNTIME_SERVICE_ACCOUNT_EMAIL,CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL,GOOGLE_APPLICATION_CREDENTIALS}"
 SECRETS="${SECRETS:-}"
 
 usage() {
@@ -203,18 +203,11 @@ if [[ -n "${SECRETS_FILE}" && -f "${SECRETS_FILE}" ]]; then
     line="$(trim "$line")"
     [[ "$line" != *"="* ]] && continue
     key="$(trim "${line%%=*} ")"
-    value="$(trim "${line#*=}")"
-    if [[ "$value" =~ ^".*"$ || "$value" =~ ^'.*'$ ]]; then
-      value="${value:1:${#value}-2}"
-    fi
     [[ -z "$key" ]] && continue
     if should_ignore_secret_key "$key"; then
       continue
     fi
-    if ! gcloud secrets describe "$key" ${project_id:+"--project" "$project_id"} >/dev/null 2>&1; then
-      gcloud secrets create "$key" --replication-policy=automatic ${project_id:+"--project" "$project_id"}
-    fi
-    printf '%s' "$value" | gcloud secrets versions add "$key" --data-file=-
+    # Name-only mapping: secret values are not read/uploaded by this script.
     if [[ -z "${secret_map[$key]:-}" ]]; then
       secret_map["$key"]="$key:latest"
     fi
@@ -241,6 +234,16 @@ else
   # To avoid accidental removal, this script will not clear secrets.
   # Use `gcloud run services update ... --clear-secrets` manually if needed.
   :
+fi
+remove_env_keys=()
+for key in FIRESTORE_EMULATOR_HOST GOOGLE_APPLICATION_CREDENTIALS; do
+  if should_ignore_key "$key"; then
+    remove_env_keys+=("$key")
+  fi
+done
+if [[ "${#remove_env_keys[@]}" -gt 0 ]]; then
+  remove_env_arg="$(IFS=,; echo "${remove_env_keys[*]}")"
+  cmd+=(--remove-env-vars "$remove_env_arg")
 fi
 
 echo "Configuring Cloud Run service environment..."

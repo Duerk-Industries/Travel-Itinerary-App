@@ -1,0 +1,281 @@
+// Auto-generated from tokens.json (Explorer Travel Design System)
+// Do not edit by hand; treat as single source of truth.
+//
+// Usage guidance:
+// - App components should depend on semantic aliases (theme.colors.*) rather than raw brand hex.
+// - Charts/maps should use dedicated palettes to avoid accessibility issues.
+
+export type Hex = `#${string}`;
+
+export const raw = {
+  "color": {
+    "brand": {
+      "deepBlue": {
+        "value": "#152944"
+      },
+      "pacificBlue": {
+        "value": "#45B7C6"
+      },
+      "oliveLeaf": {
+        "value": "#5E6B3F"
+      },
+      "sunset": {
+        "value": "#F59E0B"
+      },
+      "coral": {
+        "value": "#E76F51"
+      },
+      "burntGold": {
+        "value": "#D97706"
+      }
+    },
+    "neutral": {
+      "snowWhite": {
+        "value": "#FAFCFD"
+      },
+      "softFog": {
+        "value": "#F2F5F7"
+      },
+      "mistGray": {
+        "value": "#E6ECEF"
+      },
+      "textPrimary": {
+        "value": "#111827"
+      },
+      "textSecondary": {
+        "value": "#6B7280"
+      }
+    },
+    "semantic": {
+      "success": {
+        "value": "#2E7D32"
+      },
+      "warning": {
+        "value": "#ED6C02"
+      },
+      "error": {
+        "value": "#C62828"
+      },
+      "info": {
+        "value": "#0288D1"
+      }
+    },
+    "dark": {
+      "bg": {
+        "value": "#0B1726"
+      },
+      "surface": {
+        "value": "#1C2B3A"
+      },
+      "card": {
+        "value": "#243647"
+      },
+      "text": {
+        "value": "#E6ECEF"
+      },
+      "pacificBlueBright": {
+        "value": "#5FD2E0"
+      },
+      "oliveLeafBright": {
+        "value": "#7E8D5A"
+      }
+    }
+  },
+  "typography": {
+    "font": {
+      "heading": {
+        "value": "Inter"
+      },
+      "body": {
+        "value": "Inter"
+      },
+      "mono": {
+        "value": "JetBrains Mono"
+      }
+    },
+    "size": {
+      "display": {
+        "value": 44
+      },
+      "h1": {
+        "value": 32
+      },
+      "h2": {
+        "value": 24
+      },
+      "h3": {
+        "value": 20
+      },
+      "body": {
+        "value": 16
+      },
+      "small": {
+        "value": 14
+      },
+      "caption": {
+        "value": 12
+      }
+    },
+    "lineHeight": {
+      "tight": {
+        "value": 1.15
+      },
+      "normal": {
+        "value": 1.4
+      },
+      "relaxed": {
+        "value": 1.6
+      }
+    },
+    "weight": {
+      "regular": {
+        "value": 400
+      },
+      "medium": {
+        "value": 500
+      },
+      "semibold": {
+        "value": 600
+      },
+      "bold": {
+        "value": 700
+      }
+    }
+  },
+  "spacing": {
+    "0": {
+      "value": 0
+    },
+    "1": {
+      "value": 4
+    },
+    "2": {
+      "value": 8
+    },
+    "3": {
+      "value": 12
+    },
+    "4": {
+      "value": 16
+    },
+    "5": {
+      "value": 20
+    },
+    "6": {
+      "value": 24
+    },
+    "8": {
+      "value": 32
+    },
+    "10": {
+      "value": 40
+    },
+    "12": {
+      "value": 48
+    },
+    "16": {
+      "value": 64
+    }
+  },
+  "radius": {
+    "sm": {
+      "value": 8
+    },
+    "md": {
+      "value": 12
+    },
+    "lg": {
+      "value": 16
+    },
+    "xl": {
+      "value": 20
+    },
+    "2xl": {
+      "value": 24
+    }
+  },
+  "elevation": {
+    "0": {
+      "value": "none"
+    },
+    "1": {
+      "value": "0 1px 2px rgba(0,0,0,0.08)"
+    },
+    "2": {
+      "value": "0 4px 12px rgba(0,0,0,0.10)"
+    },
+    "3": {
+      "value": "0 10px 24px rgba(0,0,0,0.12)"
+    }
+  },
+  "motion": {
+    "duration": {
+      "fast": {
+        "value": "150ms"
+      },
+      "base": {
+        "value": "200ms"
+      },
+      "slow": {
+        "value": "250ms"
+      }
+    },
+    "easing": {
+      "standard": {
+        "value": "cubic-bezier(0.2, 0.0, 0.0, 1.0)"
+      },
+      "emphasized": {
+        "value": "cubic-bezier(0.2, 0.0, 0.0, 1.2)"
+      }
+    }
+  }
+} as const;
+
+export const themeLight = {
+  colors: {
+    bg: raw.color.neutral.snowWhite.value as Hex,
+    bgAlt: raw.color.neutral.softFog.value as Hex,
+    surface: raw.color.neutral.mistGray.value as Hex,
+    text: raw.color.neutral.textPrimary.value as Hex,
+    textMuted: raw.color.neutral.textSecondary.value as Hex,
+
+    primary: raw.color.brand.deepBlue.value as Hex,
+    link: raw.color.brand.pacificBlue.value as Hex,
+    nature: raw.color.brand.oliveLeaf.value as Hex,
+
+    cta: raw.color.brand.sunset.value as Hex,
+    alert: raw.color.brand.coral.value as Hex,
+    premium: raw.color.brand.burntGold.value as Hex,
+
+    success: raw.color.semantic.success.value as Hex,
+    warning: raw.color.semantic.warning.value as Hex,
+    error: raw.color.semantic.error.value as Hex,
+    info: raw.color.semantic.info.value as Hex,
+  }
+} as const;
+
+export const themeDark = {
+  colors: {
+    bg: raw.color.dark.bg.value as Hex,
+    bgAlt: raw.color.dark.surface.value as Hex,
+    surface: raw.color.dark.surface.value as Hex,
+    card: raw.color.dark.card.value as Hex,
+    text: raw.color.dark.text.value as Hex,
+    textMuted: raw.color.neutral.mistGray.value as Hex,
+
+    primary: raw.color.brand.deepBlue.value as Hex,
+    link: raw.color.dark.pacificBlueBright.value as Hex,
+    nature: raw.color.dark.oliveLeafBright.value as Hex,
+
+    cta: raw.color.brand.sunset.value as Hex,
+    alert: raw.color.brand.coral.value as Hex,
+    premium: raw.color.brand.burntGold.value as Hex,
+
+    success: raw.color.semantic.success.value as Hex,
+    warning: raw.color.semantic.warning.value as Hex,
+    error: raw.color.semantic.error.value as Hex,
+    info: raw.color.semantic.info.value as Hex,
+  }
+} as const;
+
+export type Theme = typeof themeLight;

@@ -1,6 +1,7 @@
 import { getApps, initializeApp } from 'firebase-admin/app';
 import { getStorage } from 'firebase-admin/storage';
 import { getEnvValue } from '../env';
+import { getApiCacheSetting } from '../config/apiLimits';
 
 export type LocationOption = {
   id: string;
@@ -61,6 +62,9 @@ type LocationDataset = {
   countries: SearchableOption[];
   states: SearchableOption[];
   cities: SearchableOption[];
+  countryState: SearchableOption[];
+  citiesByCountryId: Map<string, SearchableOption[]>;
+  citiesByStateId: Map<string, SearchableOption[]>;
   countryById: Map<number, CountryRow>;
   stateById: Map<number, StateRow>;
   regionById: Map<number, RegionRow>;
@@ -68,6 +72,11 @@ type LocationDataset = {
 };
 
 let cache: LocationDataset | null = null;
+let cacheLoadPromise: Promise<LocationDataset> | null = null;
+let refreshCooldownUntil = 0;
+let consecutiveRefreshFailures = 0;
+const countryStateQueryCache = new Map<string, { ts: number; results: LocationOption[] }>();
+const cityQueryCache = new Map<string, { ts: number; results: LocationOption[] }>();
 
 const normalizeBucketName = (value?: string): string | undefined => {
   if (!value) return undefined;
@@ -105,9 +114,18 @@ const resolveStorageConfig = (): { bucketName: string; prefix: string } => {
 };
 
 const cacheTtlMs = (): number => {
-  const minutes = Number(getEnvValue('LOCATION_CSV_CACHE_TTL_MINUTES', { defaultValue: '60' }));
+  const minutes =
+    Number(getApiCacheSetting('locations', 'csvCacheTtlMinutes')) ||
+    Number(getEnvValue('LOCATION_CSV_CACHE_TTL_MINUTES', { defaultValue: '60' }));
   if (!Number.isFinite(minutes) || minutes <= 0) return 60 * 60 * 1000;
   return minutes * 60 * 1000;
+};
+const refreshCooldownMs = (): number => {
+  const seconds =
+    Number(getApiCacheSetting('locations', 'refreshCooldownSeconds')) ||
+    Number(getEnvValue('LOCATION_CSV_REFRESH_COOLDOWN_SECONDS', { defaultValue: '15' }));
+  if (!Number.isFinite(seconds) || seconds <= 0) return 15_000;
+  return Math.min(Math.floor(seconds * 1000), 120_000);
 };
 
 const ensureFirebaseApp = (bucketName: string) => {
@@ -118,6 +136,12 @@ const ensureFirebaseApp = (bucketName: string) => {
 };
 
 const safeLower = (value: string) => value.toLowerCase();
+const normalizeQuery = (value: string) => value.trim().toLowerCase().replace(/\s+/g, ' ');
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const isTransientNetworkError = (err: unknown): boolean => {
+  const code = String((err as any)?.code ?? '').toUpperCase();
+  return code === 'ECONNRESET' || code === 'ETIMEDOUT' || code === 'ECONNABORTED' || code === 'EAI_AGAIN';
+};
 
 const normalizeId = (prefix: string, id: number | string) => `${prefix}:${id}`;
 
@@ -138,17 +162,70 @@ const parseJson = <T>(raw: string, label: string): T[] => {
   }
 };
 
+const applyLimit = (items: SearchableOption[], limit?: number) => {
+  const max = Number.isFinite(limit) && (limit as number) > 0 ? Math.min(limit as number, 50) : 10;
+  return items.slice(0, max).map(({ searchName, ...rest }) => rest);
+};
+
+const purgeExpired = <T>(store: Map<string, { ts: number; results: T[] }>, ttlMs: number) => {
+  const now = Date.now();
+  for (const [key, value] of store.entries()) {
+    if (now - value.ts >= ttlMs) {
+      store.delete(key);
+    }
+  }
+};
+
+const scoreOption = (item: SearchableOption, q: string): number => {
+  const nameLower = item.name.toLowerCase();
+  if (nameLower === q) return 0;
+  if (nameLower.startsWith(q)) return 1;
+  if (item.searchName.split(' ').some((token) => token.startsWith(q))) return 2;
+  return 3;
+};
+
+const compareCountryState = (a: SearchableOption, b: SearchableOption, q: string): number => {
+  const scoreA = scoreOption(a, q);
+  const scoreB = scoreOption(b, q);
+  if (scoreA !== scoreB) return scoreA - scoreB;
+  if (a.sourceType !== b.sourceType) {
+    return a.sourceType === 'country' ? -1 : 1;
+  }
+  return a.name.localeCompare(b.name);
+};
+
+const compareCity = (a: SearchableOption, b: SearchableOption, q: string): number => {
+  const scoreA = scoreOption(a, q);
+  const scoreB = scoreOption(b, q);
+  if (scoreA !== scoreB) return scoreA - scoreB;
+  const popA = a.population ?? 0;
+  const popB = b.population ?? 0;
+  if (popA !== popB) return popB - popA;
+  return a.name.localeCompare(b.name);
+};
+
 const loadDatasetFromStorage = async (): Promise<LocationDataset> => {
   const { bucketName, prefix } = resolveStorageConfig();
   ensureFirebaseApp(bucketName);
   const bucket = getStorage().bucket(bucketName);
   const files = ['countries.json', 'states.json', 'cities.json', 'regions.json', 'subregions.json'];
-  const buffers = await Promise.all(
-    files.map(async (fileName) => {
-      const [buffer] = await bucket.file(`${prefix}${fileName}`).download();
-      return buffer.toString('utf8');
-    })
-  );
+  const downloadWithRetry = async (fileName: string): Promise<string> => {
+    const filePath = `${prefix}${fileName}`;
+    const attempts = 3;
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      try {
+        const [buffer] = await bucket.file(filePath).download();
+        return buffer.toString('utf8');
+      } catch (err) {
+        if (!isTransientNetworkError(err) || attempt === attempts) {
+          throw err;
+        }
+        await sleep(150 * attempt);
+      }
+    }
+    throw new Error(`Unable to download ${filePath}`);
+  };
+  const buffers = await Promise.all(files.map((fileName) => downloadWithRetry(fileName)));
 
   const countries = parseJson<CountryRow>(buffers[0], 'countries.json');
   const states = parseJson<StateRow>(buffers[1], 'states.json');
@@ -228,11 +305,29 @@ const loadDatasetFromStorage = async (): Promise<LocationDataset> => {
     };
   });
 
+  const citiesByCountryId = new Map<string, SearchableOption[]>();
+  const citiesByStateId = new Map<string, SearchableOption[]>();
+  cityOptions.forEach((city) => {
+    if (city.countryId) {
+      const next = citiesByCountryId.get(city.countryId) ?? [];
+      next.push(city);
+      citiesByCountryId.set(city.countryId, next);
+    }
+    if (city.stateId) {
+      const next = citiesByStateId.get(city.stateId) ?? [];
+      next.push(city);
+      citiesByStateId.set(city.stateId, next);
+    }
+  });
+
   return {
     loadedAt: Date.now(),
     countries: countryOptions,
     states: stateOptions,
     cities: cityOptions,
+    countryState: [...countryOptions, ...stateOptions],
+    citiesByCountryId,
+    citiesByStateId,
     countryById,
     stateById,
     regionById,
@@ -245,58 +340,113 @@ const getCachedDataset = async (): Promise<LocationDataset> => {
   if (cache && now - cache.loadedAt < cacheTtlMs()) {
     return cache;
   }
-  const dataset = await loadDatasetFromStorage();
-  cache = dataset;
-  return dataset;
-};
-
-const applyLimit = (items: SearchableOption[], limit?: number) => {
-  const max = Number.isFinite(limit) && (limit as number) > 0 ? Math.min(limit as number, 50) : 10;
-  return items.slice(0, max).map(({ searchName, ...rest }) => rest);
+  if (now < refreshCooldownUntil) {
+    if (cache) return cache;
+    throw new Error('Location dataset refresh is temporarily in cooldown after repeated failures.');
+  }
+  if (cacheLoadPromise) {
+    return cacheLoadPromise;
+  }
+  cacheLoadPromise = (async () => {
+    try {
+      const dataset = await loadDatasetFromStorage();
+      cache = dataset;
+      consecutiveRefreshFailures = 0;
+      refreshCooldownUntil = 0;
+      return dataset;
+    } catch (err) {
+      consecutiveRefreshFailures += 1;
+      if (consecutiveRefreshFailures >= 2 && isTransientNetworkError(err)) {
+        refreshCooldownUntil = Date.now() + refreshCooldownMs();
+      }
+      // If refresh fails (for example transient network reset), keep serving stale cache.
+      if (cache) {
+        return cache;
+      }
+      throw err;
+    }
+  })();
+  try {
+    return await cacheLoadPromise;
+  } finally {
+    cacheLoadPromise = null;
+  }
 };
 
 export const searchCountryStateOptions = async (query: string, limit = 10): Promise<LocationOption[]> => {
-  const q = query.trim().toLowerCase();
+  const q = normalizeQuery(query);
   if (!q) return [];
+  const max = Number.isFinite(limit) ? Math.min(Math.max(Number(limit), 1), 50) : 10;
+  const ttlMs = cacheTtlMs();
+  purgeExpired(countryStateQueryCache, ttlMs);
+  const cacheKey = `${q}|${max}`;
+  const cached = countryStateQueryCache.get(cacheKey);
+  if (cached && Date.now() - cached.ts < ttlMs) {
+    return cached.results;
+  }
+
   const dataset = await getCachedDataset();
-  const combined = [...dataset.countries, ...dataset.states];
-  const filtered = combined.filter((item) => item.searchName.includes(q));
-  return applyLimit(filtered, limit);
+  const filtered = dataset.countryState.filter((item) => item.searchName.includes(q));
+  filtered.sort((a, b) => compareCountryState(a, b, q));
+  const results = applyLimit(filtered, max);
+  countryStateQueryCache.set(cacheKey, { ts: Date.now(), results });
+  return results;
 };
 
 export const searchCityOptions = async (
   query: string,
   filters: { countryIds?: string[]; stateIds?: string[]; limit?: number }
 ): Promise<LocationOption[]> => {
-  const q = query.trim().toLowerCase();
+  const q = normalizeQuery(query);
   if (!q) return [];
-  const dataset = await getCachedDataset();
   const allowedCountries = new Set((filters.countryIds ?? []).map((id) => id.trim()).filter(Boolean));
   const allowedStates = new Set((filters.stateIds ?? []).map((id) => id.trim()).filter(Boolean));
   if (allowedCountries.size === 0 && allowedStates.size === 0) {
     return [];
   }
-  const filtered = dataset.cities.filter((city) => {
-    if (!city.searchName.includes(q)) return false;
-    if (allowedStates.size > 0 && city.stateId) {
-      if (allowedStates.has(city.stateId)) return true;
-    }
-    if (allowedCountries.size > 0 && city.countryId) {
-      if (allowedCountries.has(city.countryId)) return true;
-    }
-    return false;
-  });
-  filtered.sort((a, b) => {
-    const popA = a.population ?? 0;
-    const popB = b.population ?? 0;
-    if (popA !== popB) return popB - popA;
-    return a.name.localeCompare(b.name);
-  });
-  return applyLimit(filtered, filters.limit);
+  const max = Number.isFinite(filters.limit) ? Math.min(Math.max(Number(filters.limit), 1), 50) : 10;
+  const ttlMs = cacheTtlMs();
+  purgeExpired(cityQueryCache, ttlMs);
+  const cacheKey = `${q}|${[...allowedCountries].sort().join(',')}|${[...allowedStates].sort().join(',')}|${max}`;
+  const cached = cityQueryCache.get(cacheKey);
+  if (cached && Date.now() - cached.ts < ttlMs) {
+    return cached.results;
+  }
+
+  const dataset = await getCachedDataset();
+  const candidates: SearchableOption[] = [];
+  const seen = new Set<string>();
+  for (const stateId of allowedStates) {
+    const stateCities = dataset.citiesByStateId.get(stateId) ?? [];
+    stateCities.forEach((city) => {
+      if (!seen.has(city.id)) {
+        candidates.push(city);
+        seen.add(city.id);
+      }
+    });
+  }
+  for (const countryId of allowedCountries) {
+    const countryCities = dataset.citiesByCountryId.get(countryId) ?? [];
+    countryCities.forEach((city) => {
+      if (!seen.has(city.id)) {
+        candidates.push(city);
+        seen.add(city.id);
+      }
+    });
+  }
+
+  const filtered = candidates.filter((city) => city.searchName.includes(q));
+  filtered.sort((a, b) => compareCity(a, b, q));
+  const results = applyLimit(filtered, max);
+  cityQueryCache.set(cacheKey, { ts: Date.now(), results });
+  return results;
 };
 
 export const clearLocationCache = () => {
   cache = null;
+  cacheLoadPromise = null;
+  countryStateQueryCache.clear();
+  cityQueryCache.clear();
 };
 
 export const getLocationOptionsByIds = async (ids: string[]): Promise<LocationOption[]> => {

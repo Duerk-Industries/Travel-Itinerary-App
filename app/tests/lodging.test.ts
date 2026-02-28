@@ -7,7 +7,7 @@ describe('Lodging helpers', () => {
   });
 
   test('buildLodgingPayload validates name and dates', () => {
-    const draft = createInitialLodgingState();
+    const draft = createInitialLodgingState({ status: 'Booked' });
     const missingName = buildLodgingPayload(draft, 'trip-1', null);
     expect(missingName.error).toBe('Please enter a lodging name and select an active trip.');
 
@@ -31,6 +31,7 @@ describe('Lodging helpers', () => {
     const result = buildLodgingPayload(draft, 'trip-1', 'payer-1');
     expect(result.payload?.costPerNight).toBe('50.00');
     expect(result.payload?.paidBy).toEqual(['payer-1']);
+    expect(result.payload?.status).toBe('Needed');
   });
 
   test('createLodgingDraftForTrip defaults check-in to trip start and travelers to provided list', () => {
@@ -53,5 +54,17 @@ describe('Lodging helpers', () => {
     });
     expect(draft.checkInDate).toBe('2025-05-05');
     expect(draft.checkOutDate).toBe('2025-05-06');
+  });
+
+  test('buildLodgingPayload allows missing business fields when status is Needed', () => {
+    const draft = createInitialLodgingState({
+      status: 'Needed',
+      name: '',
+      checkInDate: '',
+      checkOutDate: '',
+    });
+    const result = buildLodgingPayload(draft, 'trip-1', null);
+    expect(result.error).toBeUndefined();
+    expect(result.payload?.status).toBe('Needed');
   });
 });

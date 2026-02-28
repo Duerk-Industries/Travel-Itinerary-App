@@ -1,6 +1,21 @@
-import React from 'react';
-import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { traitOptions, toggleTraitState, type TraitRecord } from './traitsLogic';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Text, TextInput, TouchableOpacity, View } from 'react-native';
+import type { TraitRecord } from './traitsLogic';
+import {
+  PROMPT_CAR_OPTIONS,
+  PROMPT_COMFORT_OPTIONS,
+  PROMPT_INTERACTION_STYLE_OPTIONS,
+  PROMPT_INTEREST_OPTIONS,
+  PROMPT_MOBILITY_OPTIONS,
+  PROMPT_PACE_OPTIONS,
+  PROMPT_PROFILE_TRAIT_NAME,
+  extractPromptTraitsFromTraits,
+  normalizePromptTraits,
+  serializePromptTraits,
+  type PromptInterestWeights,
+  type PromptPaceCode,
+  type PromptMobilityCode,
+} from '../utils/promptTraits';
 
 export type Trait = TraitRecord;
 
@@ -28,70 +43,61 @@ export function TraitsTab<T extends TraitRecord>({
   backendUrl,
   userToken,
   traits,
-  setTraits,
-  selectedTraitNames,
-  setSelectedTraitNames,
+  setTraits: _setTraits,
+  selectedTraitNames: _selectedTraitNames,
+  setSelectedTraitNames: _setSelectedTraitNames,
   traitAge,
   setTraitAge,
   traitGender,
   setTraitGender,
-  newTraitName,
-  setNewTraitName,
+  newTraitName: _newTraitName,
+  setNewTraitName: _setNewTraitName,
   headers,
   jsonHeaders,
   fetchTraits,
   fetchTraitProfile,
   styles,
 }: TraitsTabProps<T>) {
-  const createTrait = async () => {
-    if (!newTraitName.trim()) {
-      alert('Enter a trait name');
-      return;
-    }
-    try {
-      const res = await fetch(`${backendUrl}/api/traits`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...headers },
-        body: JSON.stringify({ name: newTraitName.trim(), level: 3 }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        alert(data.error || 'Unable to save trait');
-        return;
-      }
-      setTraits((prev) => [...prev, { id: data.id ?? newTraitName.trim(), name: newTraitName.trim() } as T]);
-      setSelectedTraitNames((prev) => {
-        const next = new Set(prev);
-        next.add(newTraitName.trim());
-        return next;
-      });
-      setNewTraitName('');
-    } catch (err: any) {
-      alert(err.message || 'Unable to save trait');
-    }
+  const storedPromptProfile = useMemo(() => extractPromptTraitsFromTraits(traits), [traits]);
+  const [promptTraits, setPromptTraits] = useState(() => normalizePromptTraits(storedPromptProfile.profile));
+  const [customInterest, setCustomInterest] = useState('');
+
+  const promptTraitsDigest = useMemo(() => serializePromptTraits(storedPromptProfile.profile), [storedPromptProfile.profile]);
+  useEffect(() => {
+    setPromptTraits(normalizePromptTraits(storedPromptProfile.profile));
+  }, [promptTraitsDigest]);
+
+  const setTripWeight = (key: keyof PromptInterestWeights, raw: string) => {
+    const value = raw.replace(/[^0-9]/g, '');
+    setPromptTraits((prev) => ({
+      ...prev,
+      tt: {
+        ...prev.tt,
+        w: {
+          ...prev.tt.w,
+          [key]: value.length ? Number(value) : 0,
+        },
+      },
+    }));
   };
 
-  const deleteTrait = async (traitId: string) => {
-    const res = await fetch(`${backendUrl}/api/traits/${traitId}`, { method: 'DELETE', headers });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      alert(data.error || 'Unable to delete trait');
-      return false;
-    }
-    return true;
+  const toggleInterest = (interest: string) => {
+    setPromptTraits((prev) => {
+      const current = new Set(prev.ut.i);
+      if (current.has(interest)) current.delete(interest);
+      else current.add(interest);
+      return { ...prev, ut: { ...prev.ut, i: Array.from(current) } };
+    });
   };
 
-  const toggleTrait = async (name: string) => {
-    const { nextSelected, nextTraits, removedTrait } = toggleTraitState(
-      { traits, selected: selectedTraitNames },
-      name,
-      traitOptions
-    );
-    setSelectedTraitNames(nextSelected);
-    setTraits(nextTraits as T[]);
-    if (removedTrait?.id) {
-      await deleteTrait(removedTrait.id);
-    }
+  const addCustomInterest = () => {
+    const normalized = customInterest.trim();
+    if (!normalized) return;
+    setPromptTraits((prev) => ({
+      ...prev,
+      ut: { ...prev.ut, i: Array.from(new Set([...prev.ut.i, normalized])) },
+    }));
+    setCustomInterest('');
   };
 
   const saveTraitSelections = async () => {
@@ -104,29 +110,31 @@ export function TraitsTab<T extends TraitRecord>({
       alert('Select a gender option.');
       return;
     }
-    if (selectedTraitNames.size < 3) {
-      alert('Please select at least 3 traits.');
+    const normalizedPromptTraits = normalizePromptTraits(promptTraits);
+    const promptProfileBody = {
+      name: PROMPT_PROFILE_TRAIT_NAME,
+      level: 5,
+      notes: serializePromptTraits(normalizedPromptTraits),
+    };
+
+    const profileUrl = storedPromptProfile.traitId
+      ? `${backendUrl}/api/traits/${storedPromptProfile.traitId}`
+      : `${backendUrl}/api/traits`;
+    const profileMethod = storedPromptProfile.traitId ? 'PATCH' : 'POST';
+    const profileRes = await fetch(profileUrl, {
+      method: profileMethod,
+      headers: jsonHeaders,
+      body: JSON.stringify(promptProfileBody),
+    }).catch(() => null);
+    if (!profileRes || !profileRes.ok) {
+      const data = await profileRes?.json().catch(() => ({}));
+      alert(data?.error || 'Unable to save itinerary preference profile');
       return;
     }
-    const selected = new Set(selectedTraitNames);
-    const existingByName = new Map(traits.map((t) => [t.name, t]));
-    for (const t of traits) {
-      if (!selected.has(t.name) && t.id) {
-        await deleteTrait(t.id);
-      }
-    }
-    for (const name of selected) {
-      if (!existingByName.has(name)) {
-        await fetch(`${backendUrl}/api/traits`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...headers },
-          body: JSON.stringify({ name, level: 3 }),
-        }).catch(() => undefined);
-      }
-    }
+
     await fetch(`${backendUrl}/api/traits/profile/demographics`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...headers },
+      headers: jsonHeaders,
       body: JSON.stringify({
         age: traitAge ? Number(traitAge) : null,
         gender: traitGender,
@@ -140,19 +148,8 @@ export function TraitsTab<T extends TraitRecord>({
   return (
     <>
       <View style={[styles.card, styles.traitsSection]}>
-        <Text style={styles.sectionTitle}>Traits</Text>
-        <Text style={styles.helperText}>
-          Capture travel personality markers to tailor itinerary ideas (e.g., Adventurous, Coffee Lover, Beach Bum).
-        </Text>
-        <TextInput style={styles.input} placeholder="Trait name" value={newTraitName} onChangeText={setNewTraitName} />
-        <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={createTrait}>
-          <Text style={styles.buttonText}>Save Trait</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={[styles.card, styles.traitsSection]}>
-        <Text style={styles.sectionTitle}>Select as many user traits that fit your travel style</Text>
-        <Text style={styles.helperText}>These help personalize suggestions and itineraries.</Text>
+        <Text style={styles.sectionTitle}>Traveler Profile</Text>
+        <Text style={styles.helperText}>These demographics are optional context for shared planning features.</Text>
         <TextInput
           style={styles.input}
           placeholder="Age"
@@ -179,26 +176,263 @@ export function TraitsTab<T extends TraitRecord>({
             );
           })}
         </View>
+      </View>
+
+      <View style={[styles.card, styles.traitsSection]}>
+        <Text style={styles.sectionTitle}>Itinerary Preferences</Text>
+        <Text style={styles.helperText}>These map directly to prompt-plan `tt/ut` fields used by itinerary generation.</Text>
+
+        <Text style={styles.modalLabel}>Pace</Text>
         <View style={styles.traitGrid}>
-          {[...traitOptions, ...traits.filter((t) => !traitOptions.includes(t.name)).map((t) => t.name)].map((name) => {
-            const selected = selectedTraitNames.has(name);
-            const isCustom = !traitOptions.includes(name);
+          {PROMPT_PACE_OPTIONS.map((opt) => {
+            const selected = promptTraits.tt.p === opt.value;
             return (
               <TouchableOpacity
-                key={name}
+                key={opt.value}
                 style={[styles.traitChip, selected && styles.traitChipSelected]}
-                onPress={() => toggleTrait(name)}
+                onPress={() => setPromptTraits((prev) => ({ ...prev, tt: { ...prev.tt, p: opt.value } }))}
               >
-                <Text style={[styles.traitChipText, selected && styles.traitChipTextSelected]}>
-                  {isCustom ? `${name} (custom*)` : name}
-                </Text>
+                <Text style={[styles.traitChipText, selected && styles.traitChipTextSelected]}>{opt.label}</Text>
               </TouchableOpacity>
             );
           })}
         </View>
-        <TouchableOpacity style={styles.button} onPress={saveTraitSelections}>
-          <Text style={styles.buttonText}>Save Traits</Text>
-        </TouchableOpacity>
+
+        <Text style={styles.modalLabel}>Comfort</Text>
+        <View style={styles.traitGrid}>
+          {PROMPT_COMFORT_OPTIONS.map((opt) => {
+            const selected = promptTraits.tt.c === opt.value;
+            return (
+              <TouchableOpacity
+                key={opt.value}
+                style={[styles.traitChip, selected && styles.traitChipSelected]}
+                onPress={() => setPromptTraits((prev) => ({ ...prev, tt: { ...prev.tt, c: opt.value } }))}
+              >
+                <Text style={[styles.traitChipText, selected && styles.traitChipTextSelected]}>{opt.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        <Text style={styles.modalLabel}>Mobility</Text>
+        <View style={styles.traitGrid}>
+          {PROMPT_MOBILITY_OPTIONS.map((opt) => {
+            const selected = promptTraits.tt.mob === opt.value;
+            return (
+              <TouchableOpacity
+                key={opt.value}
+                style={[styles.traitChip, selected && styles.traitChipSelected]}
+                onPress={() => setPromptTraits((prev) => ({ ...prev, tt: { ...prev.tt, mob: opt.value } }))}
+              >
+                <Text style={[styles.traitChipText, selected && styles.traitChipTextSelected]}>{opt.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        <Text style={styles.modalLabel}>Car Preference</Text>
+        <View style={styles.traitGrid}>
+          {PROMPT_CAR_OPTIONS.map((opt) => {
+            const selected = promptTraits.tt.car === opt.value;
+            return (
+              <TouchableOpacity
+                key={opt.value}
+                style={[styles.traitChip, selected && styles.traitChipSelected]}
+                onPress={() => setPromptTraits((prev) => ({ ...prev, tt: { ...prev.tt, car: opt.value } }))}
+              >
+                <Text style={[styles.traitChipText, selected && styles.traitChipTextSelected]}>{opt.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        <Text style={styles.modalLabel}>Interaction Style</Text>
+        <View style={styles.traitGrid}>
+          {PROMPT_INTERACTION_STYLE_OPTIONS.map((opt) => {
+            const selected = promptTraits.tt.is === opt.value;
+            return (
+              <TouchableOpacity
+                key={opt.value}
+                style={[styles.traitChip, selected && styles.traitChipSelected]}
+                onPress={() => setPromptTraits((prev) => ({ ...prev, tt: { ...prev.tt, is: opt.value } }))}
+              >
+                <Text style={[styles.traitChipText, selected && styles.traitChipTextSelected]}>{opt.label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        <Text style={styles.modalLabel}>Interest Weights (%)</Text>
+        <View style={styles.row}>
+          <TextInput
+            style={[styles.input, { minWidth: 120 }]}
+            placeholder="Outdoors"
+            keyboardType="numeric"
+            value={String(promptTraits.tt.w.outdoors)}
+            onChangeText={(text: string) => setTripWeight('outdoors', text)}
+          />
+          <TextInput
+            style={[styles.input, { minWidth: 120 }]}
+            placeholder="Adventure"
+            keyboardType="numeric"
+            value={String(promptTraits.tt.w.adventure)}
+            onChangeText={(text: string) => setTripWeight('adventure', text)}
+          />
+          <TextInput
+            style={[styles.input, { minWidth: 120 }]}
+            placeholder="Culture"
+            keyboardType="numeric"
+            value={String(promptTraits.tt.w.culture)}
+            onChangeText={(text: string) => setTripWeight('culture', text)}
+          />
+          <TextInput
+            style={[styles.input, { minWidth: 120 }]}
+            placeholder="Food"
+            keyboardType="numeric"
+            value={String(promptTraits.tt.w.food)}
+            onChangeText={(text: string) => setTripWeight('food', text)}
+          />
+          <TextInput
+            style={[styles.input, { minWidth: 120 }]}
+            placeholder="Nightlife"
+            keyboardType="numeric"
+            value={String(promptTraits.tt.w.nightlife)}
+            onChangeText={(text: string) => setTripWeight('nightlife', text)}
+          />
+          <TextInput
+            style={[styles.input, { minWidth: 120 }]}
+            placeholder="Relax"
+            keyboardType="numeric"
+            value={String(promptTraits.tt.w.relax)}
+            onChangeText={(text: string) => setTripWeight('relax', text)}
+          />
+          <TextInput
+            style={[styles.input, { minWidth: 120 }]}
+            placeholder="Photography"
+            keyboardType="numeric"
+            value={String(promptTraits.tt.w.photography)}
+            onChangeText={(text: string) => setTripWeight('photography', text)}
+          />
+          <TextInput
+            style={[styles.input, { minWidth: 120 }]}
+            placeholder="Authentic/Local"
+            keyboardType="numeric"
+            value={String(promptTraits.tt.w.authentic_local)}
+            onChangeText={(text: string) => setTripWeight('authentic_local', text)}
+          />
+          <TextInput
+            style={[styles.input, { minWidth: 120 }]}
+            placeholder="Iconic Landmarks"
+            keyboardType="numeric"
+            value={String(promptTraits.tt.w.iconic_landmarks)}
+            onChangeText={(text: string) => setTripWeight('iconic_landmarks', text)}
+          />
+        </View>
+
+        <Text style={styles.modalLabel}>Interests (`ut.i`)</Text>
+        <View style={styles.traitGrid}>
+          {PROMPT_INTEREST_OPTIONS.map((interest) => {
+            const selected = promptTraits.ut.i.includes(interest);
+            return (
+              <TouchableOpacity
+                key={interest}
+                style={[styles.traitChip, selected && styles.traitChipSelected]}
+                onPress={() => toggleInterest(interest)}
+              >
+                <Text style={[styles.traitChipText, selected && styles.traitChipTextSelected]}>{interest}</Text>
+              </TouchableOpacity>
+            );
+          })}
+          {promptTraits.ut.i
+            .filter((interest) => !PROMPT_INTEREST_OPTIONS.includes(interest))
+            .map((interest) => (
+              <TouchableOpacity
+                key={interest}
+                style={[styles.traitChip, styles.traitChipSelected]}
+                onPress={() => toggleInterest(interest)}
+              >
+                <Text style={[styles.traitChipText, styles.traitChipTextSelected]}>{interest}</Text>
+              </TouchableOpacity>
+            ))}
+        </View>
+        <View style={styles.row}>
+          <TextInput
+            style={[styles.input, { flex: 1 }]}
+            placeholder="Custom interest"
+            value={customInterest}
+            onChangeText={setCustomInterest}
+          />
+          <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={addCustomInterest}>
+            <Text style={styles.buttonText}>Add</Text>
+          </TouchableOpacity>
+        </View>
+
+        <Text style={styles.modalLabel}>User Overrides (`ut`)</Text>
+        <Text style={styles.helperText}>Optional overrides for pace/mobility, plus early-bird and night-owl flags.</Text>
+        <View style={styles.traitGrid}>
+          <TouchableOpacity
+            style={[styles.traitChip, !promptTraits.ut.po && styles.traitChipSelected]}
+            onPress={() => setPromptTraits((prev) => ({ ...prev, ut: { ...prev.ut, po: undefined } }))}
+          >
+            <Text style={[styles.traitChipText, !promptTraits.ut.po && styles.traitChipTextSelected]}>Use Trip Pace</Text>
+          </TouchableOpacity>
+          {PROMPT_PACE_OPTIONS.map((opt) => {
+            const selected = promptTraits.ut.po === opt.value;
+            return (
+              <TouchableOpacity
+                key={`ut-po-${opt.value}`}
+                style={[styles.traitChip, selected && styles.traitChipSelected]}
+                onPress={() => setPromptTraits((prev) => ({ ...prev, ut: { ...prev.ut, po: opt.value as PromptPaceCode } }))}
+              >
+                <Text style={[styles.traitChipText, selected && styles.traitChipTextSelected]}>{opt.label} Override</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        <View style={styles.traitGrid}>
+          <TouchableOpacity
+            style={[styles.traitChip, !promptTraits.ut.mob && styles.traitChipSelected]}
+            onPress={() => setPromptTraits((prev) => ({ ...prev, ut: { ...prev.ut, mob: undefined } }))}
+          >
+            <Text style={[styles.traitChipText, !promptTraits.ut.mob && styles.traitChipTextSelected]}>
+              Use Trip Mobility
+            </Text>
+          </TouchableOpacity>
+          {PROMPT_MOBILITY_OPTIONS.map((opt) => {
+            const selected = promptTraits.ut.mob === opt.value;
+            return (
+              <TouchableOpacity
+                key={`ut-mob-${opt.value}`}
+                style={[styles.traitChip, selected && styles.traitChipSelected]}
+                onPress={() =>
+                  setPromptTraits((prev) => ({ ...prev, ut: { ...prev.ut, mob: opt.value as PromptMobilityCode } }))
+                }
+              >
+                <Text style={[styles.traitChipText, selected && styles.traitChipTextSelected]}>{opt.label} Override</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        <View style={styles.traitGrid}>
+          <TouchableOpacity
+            style={[styles.traitChip, promptTraits.ut.eb && styles.traitChipSelected]}
+            onPress={() => setPromptTraits((prev) => ({ ...prev, ut: { ...prev.ut, eb: !prev.ut.eb } }))}
+          >
+            <Text style={[styles.traitChipText, promptTraits.ut.eb && styles.traitChipTextSelected]}>Early Bird</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.traitChip, promptTraits.ut.no && styles.traitChipSelected]}
+            onPress={() => setPromptTraits((prev) => ({ ...prev, ut: { ...prev.ut, no: !prev.ut.no } }))}
+          >
+            <Text style={[styles.traitChipText, promptTraits.ut.no && styles.traitChipTextSelected]}>Night Owl</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.traitGrid}>
+          <TouchableOpacity style={styles.button} onPress={saveTraitSelections}>
+            <Text style={styles.buttonText}>Save Preferences</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </>
   );

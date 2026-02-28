@@ -1,4 +1,5 @@
 import { getPlaceDetailsCache } from './db';
+import { getApiCacheSetting } from './config/apiLimits';
 
 const readTimeoutMinutes = (rawValue: string | undefined, fallbackMinutes: number): number => {
   const raw = Number(rawValue);
@@ -9,7 +10,15 @@ const readTimeoutMinutes = (rawValue: string | undefined, fallbackMinutes: numbe
 };
 
 const PLACE_DETAILS_CACHE_TIMEOUT_MS =
-  readTimeoutMinutes(process.env.GOOGLE_PLACES_DETAILS_CACHE_TIMEOUT_MINUTES, 24 * 60) * 60 * 1000;
+  readTimeoutMinutes(
+    String(
+      getApiCacheSetting('googlePlaces', 'detailsCacheTimeoutMinutes') ??
+        process.env.GOOGLE_PLACES_DETAILS_CACHE_TIMEOUT_MINUTES
+    ),
+    24 * 60
+  ) *
+  60 *
+  1000;
 
 const DEFAULT_PLACE_DETAILS_FIELDS = [
   'id',

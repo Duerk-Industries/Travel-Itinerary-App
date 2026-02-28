@@ -1,0 +1,8 @@
+{
+  "$": "ut1",
+  "po": "enum R/B/F? pace_override",
+  "mob": "enum L/M/H? mobility_override",
+  "i": "[str]? interests from list",
+  "eb": "bool? early_bird",
+  "no": "bool? night_owl"
+}

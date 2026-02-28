@@ -3,7 +3,12 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { formatDateLong } from '../utils/formatDateLong';
 import { renderRichTextBlocks } from '../utils/richText';
-import { parsePlanToDetails } from '../utils/itineraryParser';
+import {
+  addGeneratedItemsToTrip,
+  getGeneratedItineraryDetails,
+  type ItineraryGenerationResponse,
+} from '../utils/itineraryGeneration';
+import { extractPromptTraitsFromTraits } from '../utils/promptTraits';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import type { Trait } from './traits';
 
@@ -43,6 +48,7 @@ interface ItinerariesTabProps {
   traits: Trait[];
   headers: Record<string, string>;
   setActiveTripId: Setter<string | null>;
+  onAiItineraryQueued?: (tripId: string, jobId: string) => void;
   styles: Styles;
 }
 const countryOptions = [
@@ -352,6 +358,7 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
   traits,
   headers,
   setActiveTripId,
+  onAiItineraryQueued,
   styles,
 }) => {
   const [itineraryCountry, setItineraryCountry] = useState('');
@@ -361,14 +368,10 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
   const [showItineraryCountryDropdown, setShowItineraryCountryDropdown] = useState(false);
   const [showItineraryRegionDropdown, setShowItineraryRegionDropdown] = useState(false);
   const [itineraryDays, setItineraryDays] = useState('5');
-  const [budgetMin, setBudgetMin] = useState(500);
-  const [budgetMax, setBudgetMax] = useState(2500);
-  const [budgetLevel, setBudgetLevel] = useState<'cheap' | 'middle' | 'expensive'>('middle');
   const [itineraryAirport, setItineraryAirport] = useState('');
   const [itineraryAirportOptions, setItineraryAirportOptions] = useState<string[]>([]);
   const [showItineraryAirportDropdown, setShowItineraryAirportDropdown] = useState(false);
   const [itineraryPlan, setItineraryPlan] = useState('');
-  const [itineraryTripStyle, setItineraryTripStyle] = useState('');
   const [itineraryLoading, setItineraryLoading] = useState(false);
   const [itineraryError, setItineraryError] = useState('');
   const [itineraryRecords, setItineraryRecords] = useState<ItineraryRecord[]>([]);
@@ -377,6 +380,12 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
   const [editingItineraryId, setEditingItineraryId] = useState<string | null>(null);
   const [editingDetailId, setEditingDetailId] = useState<string | null>(null);
   const [detailDraft, setDetailDraft] = useState({ day: '1', time: '', activity: '', cost: '' });
+  const promptTraits = useMemo(() => extractPromptTraitsFromTraits(traits).profile, [traits]);
+  const budgetRange = useMemo(() => {
+    if (promptTraits.tt.c === 'B') return { min: 500, max: 1500 };
+    if (promptTraits.tt.c === 'L') return { min: 4000, max: 8000 };
+    return { min: 1500, max: 4000 };
+  }, [promptTraits.tt.c]);
 
   const filteredCountries = useMemo(() => {
     const query = (showItineraryCountryDropdown ? countrySearch : itineraryCountry).trim().toLowerCase();
@@ -434,7 +443,6 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
     setActiveTripId(it.tripId);
     setItineraryCountry(it.destination);
     setItineraryDays(String(it.days));
-    if (it.budget != null) setBudgetMax(Number(it.budget));
     fetchItineraryDetails(it.id);
   };
 
@@ -464,7 +472,7 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
       setItineraryAirportOptions([]);
       return;
     }
-    const res = await fetch(`${backendUrl}/api/flights/locations?q=${encodeURIComponent(q.trim())}`, {
+    const res = await fetch(`${backendUrl}/api/transfers/locations?q=${encodeURIComponent(q.trim())}`, {
       headers: { Authorization: `Bearer ${userToken}` },
     });
     if (!res.ok) {
@@ -475,14 +483,14 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
     setItineraryAirportOptions(data);
     setShowItineraryAirportDropdown(true);
   };
-  const saveGeneratedItinerary = async (plan: string) => {
+  const saveGeneratedItinerary = async (generated: ItineraryGenerationResponse) => {
     if (!activeTripId) {
       setItineraryError('Select an active trip before saving the itinerary.');
       return;
     }
     const destination = itineraryCountry.trim() || 'Unknown';
     const daysNum = Number(itineraryDays || '1');
-    const existing = findExistingItinerary(activeTripId, destination, daysNum, null, budgetMax);
+    const existing = findExistingItinerary(activeTripId, destination, daysNum, null, budgetRange.max);
     let itineraryId = existing?.id;
     if (!itineraryId) {
       const createRes = await fetch(`${backendUrl}/api/itineraries`, {
@@ -492,7 +500,7 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
           tripId: activeTripId,
           destination,
           days: daysNum,
-          budget: budgetMax,
+          budget: budgetRange.max,
         }),
       });
       const created = await createRes.json().catch(() => ({}));
@@ -516,7 +524,7 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
       setSelectedItineraryId(itineraryId);
     }
 
-    const parsedDetails = parsePlanToDetails(plan);
+    const parsedDetails = getGeneratedItineraryDetails(generated);
     if (parsedDetails.length) {
       const uniqueKeys = new Set<string>();
       for (const d of parsedDetails) {
@@ -551,18 +559,18 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
     setItineraryError('');
     setItineraryPlan('');
     try {
-      const res = await fetch(`${backendUrl}/api/itinerary`, {
+      const res = await fetch(`${backendUrl}/api/itinerary/async`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...headers },
         body: JSON.stringify({
           country,
           days: Number(days),
-          budgetMin,
-          budgetMax,
+          budgetMin: budgetRange.min,
+          budgetMax: budgetRange.max,
           departureAirport: itineraryAirport.trim() || undefined,
-          tripStyle: itineraryTripStyle.trim() || undefined,
           tripId: activeTripId,
-          traits: traits.map((t) => ({ name: t.name })),
+          tt: promptTraits.tt,
+          ut: promptTraits.ut,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -571,8 +579,12 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
         setItineraryError((data.error || 'Failed to generate itinerary') + detail);
         return;
       }
-      setItineraryPlan(data.plan || '');
-      await saveGeneratedItinerary(data.plan || '');
+      if (data.jobId) {
+        onAiItineraryQueued?.(activeTripId, String(data.jobId));
+        setItineraryPlan('AI itinerary generation started. It will be added to your trip automatically.');
+      } else {
+        setItineraryError('AI itinerary generation did not return a job id.');
+      }
     } catch (err) {
       setItineraryError((err as Error).message);
     } finally {
@@ -592,7 +604,7 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
     }
     const destination = itineraryCountry.trim();
     const daysNum = Number(itineraryDays);
-    const existing = findExistingItinerary(activeTripId, destination, daysNum, editingItineraryId, budgetMax);
+    const existing = findExistingItinerary(activeTripId, destination, daysNum, editingItineraryId, budgetRange.max);
     if (existing) {
       alert('Itinerary already exists for this trip');
       return;
@@ -606,7 +618,7 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
         tripId: activeTripId,
         destination,
         days: daysNum,
-        budget: budgetMax,
+        budget: budgetRange.max,
       }),
     });
     const data = await res.json().catch(() => ({}));
@@ -682,17 +694,6 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
     if (!userToken) return;
     fetchItineraries();
   }, [userToken]);
-
-  useEffect(() => {
-    const presets: Record<typeof budgetLevel, { min: number; max: number }> = {
-      cheap: { min: 500, max: 1500 },
-      middle: { min: 1500, max: 4000 },
-      expensive: { min: 4000, max: 8000 },
-    };
-    const preset = presets[budgetLevel];
-    setBudgetMin(preset.min);
-    setBudgetMax(preset.max);
-  }, [budgetLevel]);
 
   useEffect(() => {
     setItineraryRegion('');
@@ -777,7 +778,7 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
             placeholder="Departure airport (e.g., JFK, LAX, CDG)"
             value={itineraryAirport}
             onFocus={() => fetchItineraryAirports(itineraryAirport)}
-            onChangeText={(text) => {
+            onChangeText={(text: string) => {
               setItineraryAirport(text);
               fetchItineraryAirports(text);
             }}
@@ -805,40 +806,8 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
           placeholder="How many days will your vacation be?"
           keyboardType="numeric"
           value={itineraryDays}
-          onChangeText={(text) => setItineraryDays(text.replace(/[^0-9]/g, ''))}
+          onChangeText={(text: string) => setItineraryDays(text.replace(/[^0-9]/g, ''))}
         />
-        <TextInput
-          style={styles.input}
-          placeholder="What kind of trip do you want? (e.g., foodie weekend, outdoor adventure, museum crawl)"
-          value={itineraryTripStyle}
-          onChangeText={setItineraryTripStyle}
-          multiline
-        />
-
-        <Text style={styles.modalLabel}>Budget</Text>
-        <View style={styles.addRow}>
-          {(['cheap', 'middle', 'expensive'] as const).map((level) => (
-            <TouchableOpacity
-              key={level}
-              style={[
-                styles.button,
-                styles.smallButton,
-                budgetLevel === level && styles.toggleActive,
-                { flex: 1 },
-              ]}
-              onPress={() => setBudgetLevel(level)}
-            >
-              <View style={styles.budgetRow}>
-                <Text style={styles.buttonText}>
-                  {level === 'cheap' ? 'Cheap' : level === 'middle' ? 'Middle' : 'Expensive'}
-                </Text>
-                <View style={[styles.budgetIndicator, budgetLevel === level && styles.budgetIndicatorActive]} />
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
-        <Text style={styles.helperText}>Cheap ~$500-$1,500 | Middle ~$1,500-$4,000 | Expensive ~$4,000-$8,000</Text>
-
         <TouchableOpacity style={styles.button} onPress={generateItinerary} disabled={itineraryLoading}>
           <Text style={styles.buttonText}>{itineraryLoading ? 'Generating...' : 'Generate Itinerary'}</Text>
         </TouchableOpacity>
@@ -963,7 +932,7 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
                   placeholder="Day"
                   keyboardType="numeric"
                   value={detailDraft.day}
-                  onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, day: text }))}
+                  onChangeText={(text: string) => setDetailDraft((prev) => ({ ...prev, day: text }))}
                 />
               </View>
               <View style={[styles.cell, { flex: 1 }]}>
@@ -971,7 +940,7 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
                   style={styles.input}
                   placeholder="Time"
                   value={detailDraft.time}
-                  onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, time: text }))}
+                  onChangeText={(text: string) => setDetailDraft((prev) => ({ ...prev, time: text }))}
                 />
               </View>
               <View style={[styles.cell, { flex: 2 }]}>
@@ -979,7 +948,7 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
                   style={styles.input}
                   placeholder="Activity"
                   value={detailDraft.activity}
-                  onChangeText={(text) => setDetailDraft((prev) => ({ ...prev, activity: text }))}
+                  onChangeText={(text: string) => setDetailDraft((prev) => ({ ...prev, activity: text }))}
                 />
               </View>
               <View style={[styles.cell, { flex: 1 }]}>
@@ -988,7 +957,7 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
                   placeholder="Cost"
                   keyboardType="numeric"
                   value={detailDraft.cost}
-                  onChangeText={(text) =>
+                  onChangeText={(text: string) =>
                     setDetailDraft((prev) => ({ ...prev, cost: sanitizeCostInput(text) }))
                   }
                 />
@@ -1014,7 +983,7 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
               style={[styles.input, styles.inlineInput]}
               placeholder="Search countries"
               value={countrySearch}
-              onChangeText={setCountrySearch}
+              onChangeText={(text: string) => setCountrySearch(text)}
               autoFocus
             />
             <ScrollView style={styles.dropdownScroll}>
@@ -1049,7 +1018,7 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
               style={[styles.input, styles.inlineInput]}
               placeholder="Search regions / states"
               value={regionSearch}
-              onChangeText={setRegionSearch}
+              onChangeText={(text: string) => setRegionSearch(text)}
               autoFocus
             />
             <ScrollView style={styles.dropdownScroll}>
