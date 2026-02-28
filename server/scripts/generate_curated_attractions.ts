@@ -119,6 +119,27 @@ const WEB_HEADERS = {
   'User-Agent': 'TravelItineraryAppBot/1.0 (contact: local-dev)',
 };
 
+const WIKIDATA_MIN_INTERVAL_MS = 5000;
+let lastWikidataRequestAtMs = 0;
+
+async function sleep(ms: number): Promise<void> {
+  if (ms <= 0) return;
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function shouldThrottleWikidataRequest(url: string | undefined): boolean {
+  if (!url) return false;
+  return /(^https?:\/\/)?([^.]+\.)?wikidata\.org(\/|$)/i.test(url);
+}
+
+async function waitForWikidataInterval(): Promise<void> {
+  const now = Date.now();
+  const earliestNext = lastWikidataRequestAtMs + WIKIDATA_MIN_INTERVAL_MS;
+  const waitMs = Math.max(0, earliestNext - now);
+  await sleep(waitMs);
+  lastWikidataRequestAtMs = Date.now();
+}
+
 async function wikidataApiRequest<T>(config: AxiosRequestConfig): Promise<T | null> {
   const maxAttempts = 6;
 
@@ -156,6 +177,9 @@ async function wikidataApiRequest<T>(config: AxiosRequestConfig): Promise<T | nu
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
+      if (shouldThrottleWikidataRequest(config.url)) {
+        await waitForWikidataInterval();
+      }
       const response = await axios<T>(config);
       return response.data;
     } catch (error: any) {

@@ -518,11 +518,11 @@ interface AdaptiveThrottleState {
   lastRequestAtMs: number;
 }
 
-const WIKIDATA_THROTTLE_MIN_MS = 250;
+const WIKIDATA_THROTTLE_MIN_MS = 5000;
 const WIKIDATA_THROTTLE_MAX_MS = 120000;
 const WIKIDATA_SUCCESS_STREAK_TO_RELAX = 10;
 const wikidataThrottleState: AdaptiveThrottleState = {
-  delayMs: 1000,
+  delayMs: 5000,
   successStreak: 0,
   lastRequestAtMs: 0,
 };
