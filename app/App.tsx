@@ -2119,7 +2119,7 @@ const App: React.FC = () => {
           <View style={styles.topRightWrapper}>
             {activeTripId ? (
               <TouchableOpacity
-                style={[styles.button, styles.smallButton]}
+                style={[styles.button, styles.smallButton, styles.topBarActionButton]}
                 onPress={() => {
                   setSelectedTripId(activeTripId);
                   requestPageChange('trip-details');
@@ -2138,6 +2138,7 @@ const App: React.FC = () => {
                   styles.inlineInput,
                   styles.dropdown,
                   styles.activeTrip,
+                  styles.topBarTripControl,
                   isNarrowLayout && styles.activeTripNarrow,
                   isTripWizardOpen && styles.buttonDisabled,
                 ]}
@@ -2167,13 +2168,13 @@ const App: React.FC = () => {
             <View style={[styles.topRight, isNarrowLayout && styles.topRightNarrow]}>
               {!isPhoneLayout ? (
                 <TouchableOpacity
-                  style={[styles.userNameButton, styles.smallButton]}
+                  style={[styles.userNameButton, styles.smallButton, styles.topBarActionButton]}
                   onPress={() => requestPageChange('account')}
                 >
                   <Text style={styles.userNameButtonText}>{userName ?? 'Traveler'}</Text>
                 </TouchableOpacity>
               ) : null}
-              <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={logout}>
+              <TouchableOpacity style={[styles.button, styles.smallButton, styles.topBarActionButton]} onPress={logout}>
                 <Text style={styles.buttonText}>Logout</Text>
               </TouchableOpacity>
             </View>
@@ -3565,6 +3566,17 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     color: '#0B1726',
     fontWeight: theme.typography.weightBold,
   },
+  topBarActionButton: {
+    minHeight: 38,
+    justifyContent: 'center',
+    marginBottom: 0,
+  },
+  topBarTripControl: {
+    minHeight: 38,
+    marginBottom: 0,
+    justifyContent: 'center',
+    paddingVertical: 0,
+  },
   userNameButton: {
     backgroundColor: theme.colors.surfaceMuted,
     borderWidth: 1,
@@ -4447,4 +4459,3 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
 });
 
 export default App;
-
