@@ -5132,65 +5132,15 @@ export const claimInvitesForUser = async (email: string, userId: string): Promis
     [userId, normalizedEmail]
   );
   await p.query(
-    `UPDATE group_members
-     SET user_id = $1, invite_email = NULL, claimed_at = NOW(), removed_at = NULL
-     WHERE invite_email IS NOT NULL AND LOWER(invite_email) = LOWER($2) AND user_id IS NULL`,
+    `UPDATE trip_share_invites
+     SET invitee_user_id = $1,
+         updated_at = NOW()
+     WHERE invitee_user_id IS NULL
+       AND status = 'pending'
+       AND LOWER(invitee_email) = LOWER($2)
+       AND (expires_at IS NULL OR expires_at > NOW()::timestamp)`,
     [userId, normalizedEmail]
   );
-
-  const pendingShareInvites = await p.query<{
-    id: string;
-    tripId: string;
-    groupId: string;
-    role: 'member' | 'follower';
-  }>(
-    `SELECT id,
-            trip_id as "tripId",
-            group_id as "groupId",
-            role
-     FROM trip_share_invites
-     WHERE status = 'pending'
-       AND LOWER(invitee_email) = LOWER($1)
-       AND (expires_at IS NULL OR expires_at > NOW())`,
-    [normalizedEmail]
-  );
-
-  for (const invite of pendingShareInvites.rows) {
-    if (invite.role === 'member') {
-      await p.query(
-        `INSERT INTO group_members (id, group_id, user_id, added_by)
-         SELECT $1, $2, $3, inviter_id
-         FROM trip_share_invites
-         WHERE id = $4
-         ON CONFLICT (group_id, user_id) DO UPDATE
-         SET removed_at = NULL`,
-        [randomUUID(), invite.groupId, userId, invite.id]
-      );
-      await p.query(`DELETE FROM trip_followers WHERE trip_id = $1 AND follower_user_id = $2`, [invite.tripId, userId]);
-    } else {
-      const member = await p.query(
-        `SELECT 1 FROM group_members WHERE group_id = $1 AND user_id = $2 AND removed_at IS NULL LIMIT 1`,
-        [invite.groupId, userId]
-      );
-      if (!member.rowCount) {
-        await p.query(
-          `INSERT INTO trip_followers (id, trip_id, follower_user_id, role)
-           VALUES ($1, $2, $3, 'follower')
-           ON CONFLICT (trip_id, follower_user_id) DO NOTHING`,
-          [randomUUID(), invite.tripId, userId]
-        );
-      }
-    }
-    await p.query(
-      `UPDATE trip_share_invites
-       SET status = 'accepted',
-           invitee_user_id = $2,
-           accepted_at = NOW(),
-           updated_at = NOW()
-       WHERE id = $1`,
-      [invite.id, userId]
-    );
-  }
 };
 
 export const searchFlightLocations = async (userId: string, query: string): Promise<string[]> => {

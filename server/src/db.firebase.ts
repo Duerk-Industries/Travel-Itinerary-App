@@ -1399,7 +1399,10 @@ export const claimInvitesForUser = async (email: string, userId: string): Promis
   const db = getDb();
   const invites = await db.collection('group_invites').where('inviteeEmail', '==', normalized).where('status', '==', 'pending').get();
   for (const invite of invites.docs) {
-    await acceptGroupInvite(invite.id, userId);
+    const data = invite.data() as any;
+    if (!data.inviteeUserId) {
+      await invite.ref.update({ inviteeUserId: userId });
+    }
   }
 };
 
