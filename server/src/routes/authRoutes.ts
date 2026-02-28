@@ -7,7 +7,7 @@ import {
   createWebUser,
   deleteUserRecord,
   ensureDefaultGroupForUser,
-  findUserByEmail,
+  findUserByIdentifier,
   getPendingEmailVerification,
   markEmailVerificationUsed,
   markUserEmailVerified,
@@ -16,6 +16,7 @@ import {
   consumeEmailVerificationToken,
 } from '../db';
 import { sendVerificationEmailBestEffort } from '../mailer';
+import { getAuthFlag } from '../config/authFlags';
 
 // Auth routes for device-based auth tokens (non-web).
 const router = Router();
@@ -66,13 +67,13 @@ router.post('/register', async (req, res) => {
 });
 
 router.post('/resend-confirmation', async (req, res) => {
-  const email = String(req.body?.email ?? '').trim().toLowerCase();
-  if (!email) {
-    res.status(400).json({ error: 'email is required' });
+  const identifier = String(req.body?.identifier ?? req.body?.email ?? '').trim().toLowerCase();
+  if (!identifier) {
+    res.status(400).json({ error: 'identifier is required' });
     return;
   }
   try {
-    const user = await findUserByEmail(email);
+    const user = await findUserByIdentifier(identifier);
     if (user && user.emailVerified) {
       res.json({ message: 'This account is already confirmed.' });
       return;
@@ -108,15 +109,20 @@ router.post('/oauth', async (req, res) => {
 });
 
 router.post('/login', async (req, res) => {
-  const { email, password } = req.body ?? {};
-  if (!email || !password) {
-    res.status(400).json({ error: 'email and password are required' });
+  const { identifier, email, password } = req.body ?? {};
+  const loginIdentifier = String(identifier ?? email ?? '').trim().toLowerCase();
+  if (!loginIdentifier || !password) {
+    res.status(400).json({ error: 'identifier and password are required' });
+    return;
+  }
+  if (!getAuthFlag('usernameLoginEnabled') && !loginIdentifier.includes('@')) {
+    res.status(401).json({ error: 'Invalid email/username or password' });
     return;
   }
   try {
-    const user = await verifyWebUserCredentials(email.trim().toLowerCase(), password.trim());
+    const user = await verifyWebUserCredentials(loginIdentifier, password.trim());
     if (!user) {
-      res.status(401).json({ error: 'Invalid email or password' });
+      res.status(401).json({ error: 'Invalid email/username or password' });
       return;
     }
     if (!user.emailVerified) {

@@ -258,21 +258,22 @@ const extractTokenFromUrl = (rawUrl: string) => {
     const token = url.searchParams.get('token');
     const requirePasswordSetup = url.searchParams.get('require_password_setup') === '1';
     const isConfirm = url.pathname.endsWith('/confirm');
+    const isSecondaryConfirm = url.pathname.endsWith('/confirm-email');
     if (token) {
-      return { token, url, source: 'query' as const, isConfirm, requirePasswordSetup };
+      return { token, url, source: 'query' as const, isConfirm, isSecondaryConfirm, requirePasswordSetup };
     }
     const hash = url.hash.startsWith('#') ? url.hash.slice(1) : url.hash;
     if (hash) {
       const hashParams = new URLSearchParams(hash);
       const hashToken = hashParams.get('token');
       if (hashToken) {
-        return { token: hashToken, url, source: 'hash' as const, isConfirm, requirePasswordSetup };
+        return { token: hashToken, url, source: 'hash' as const, isConfirm, isSecondaryConfirm, requirePasswordSetup };
       }
     }
   } catch (e) {
     // ignore invalid URLs
   }
-  return { token: null, url: null, source: null, isConfirm: false, requirePasswordSetup: false } as const;
+  return { token: null, url: null, source: null, isConfirm: false, isSecondaryConfirm: false, requirePasswordSetup: false } as const;
 };
 
 const App: React.FC = () => {
@@ -1044,9 +1045,13 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const handleDeepLink = (event: { url: string }) => {
-      const { token, isConfirm, requirePasswordSetup } = extractTokenFromUrl(event.url);
+      const { token, isConfirm, isSecondaryConfirm, requirePasswordSetup } = extractTokenFromUrl(event.url);
       if (token && isConfirm) {
         confirmEmailToken(token, event.url);
+        return;
+      }
+      if (token && isSecondaryConfirm) {
+        confirmSecondaryEmailToken(token, event.url);
         return;
       }
       if (token) {
@@ -1072,11 +1077,31 @@ const App: React.FC = () => {
       }
     };
 
+    const confirmSecondaryEmailToken = async (token: string, rawUrl: string) => {
+      try {
+        const res = await fetch(`${backendUrl}/api/web-auth/confirm-email?token=${encodeURIComponent(token)}`);
+        const data = await res.json().catch(() => ({}));
+        const message = res.ok ? (data.message ?? 'Email confirmed.') : (data.error ?? 'Email confirmation failed.');
+        setEmailConfirmationMessage(message);
+        alert(message);
+      } catch {
+        alert('Email confirmation failed.');
+      } finally {
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+          const url = new URL(rawUrl);
+          url.searchParams.delete('token');
+          window.history.replaceState({}, '', url.toString());
+        }
+      }
+    };
+
     const subscription = Linking.addEventListener('url', handleDeepLink);
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      const { token, url, isConfirm, requirePasswordSetup } = extractTokenFromUrl(window.location.href);
+      const { token, url, isConfirm, isSecondaryConfirm, requirePasswordSetup } = extractTokenFromUrl(window.location.href);
       if (token && isConfirm) {
         confirmEmailToken(token, window.location.href);
+      } else if (token && isSecondaryConfirm) {
+        confirmSecondaryEmailToken(token, window.location.href);
       } else if (token) {
         handleAuthSuccess(token, undefined, { requirePasswordSetup });
         url.searchParams.delete('token');
@@ -1135,7 +1160,7 @@ const App: React.FC = () => {
       const res = await fetch(`${backendUrl}/api/web-auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: authForm.email.trim(), password: authForm.password }),
+        body: JSON.stringify({ identifier: authForm.email.trim(), password: authForm.password }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -1160,7 +1185,7 @@ const App: React.FC = () => {
   const resendConfirmationEmail = async () => {
     const email = authForm.email.trim();
     if (!email) {
-      alert('Enter your email first.');
+      alert('Enter your email or username first.');
       return;
     }
     try {
@@ -1168,7 +1193,7 @@ const App: React.FC = () => {
       const res = await fetch(`${backendUrl}/api/web-auth/resend-confirmation`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ identifier: email }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -3023,7 +3048,7 @@ const App: React.FC = () => {
 
           <TextInput
             style={styles.input}
-            placeholder="Email"
+            placeholder="Email or Username"
             autoCapitalize="none"
             value={authForm.email}
             onChangeText={(text: string) => setAuthForm((p) => ({ ...p, email: text }))}

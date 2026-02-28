@@ -108,7 +108,18 @@ Phase 1 introduces persisted config + data model groundwork for:
 - multi-email account mapping (`user_emails`)
 - reserved username validation
 
-Default phase-1 flags ship disabled for behavior changes so local development and existing login paths remain stable.
+Phase 2 introduces:
+
+- login using `identifier` (`email` or `username`) with one password per account
+- secondary email verification callback flow (`/confirm-email`)
+- authenticated account email management endpoints (`/api/account/emails*`) when `multiEmailEnabled` is `true`
+- app-side account email manager UI with safe fallback when disabled
+
+Details:
+
+- `docs/auth/phase2-identifier-login-multi-email.md`
+
+Default rollout flags still ship disabled for behavior-changing auth paths so local development and existing login paths remain stable until you enable them in `server/config/auth-flags.yaml`.
 
 ### Behavior
 

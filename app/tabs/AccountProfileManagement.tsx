@@ -61,6 +61,11 @@ const AccountProfileManagement = ({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [preferredAirportSuggestions, setPreferredAirportSuggestions] = useState<string[]>([]);
   const [showPreferredAirportSuggestions, setShowPreferredAirportSuggestions] = useState(false);
+  const [multiEmailEnabled, setMultiEmailEnabled] = useState(false);
+  const [emailManagerLoaded, setEmailManagerLoaded] = useState(false);
+  const [accountEmails, setAccountEmails] = useState<Array<{ email: string; isPrimary: boolean; isVerified: boolean }>>([]);
+  const [newEmail, setNewEmail] = useState('');
+  const [emailActionBusy, setEmailActionBusy] = useState(false);
 
   const parsePreferredAirportCode = (value: string): string => {
     const input = String(value ?? '').trim();
@@ -96,6 +101,36 @@ const AccountProfileManagement = ({
     if (!showPreferredAirportSuggestions) return;
     setPreferredAirportSuggestions(buildAirportSuggestions(accountProfile.preferredAirport ?? ''));
   }, [airportOptions, accountProfile.preferredAirport, showPreferredAirportSuggestions]);
+
+  useEffect(() => {
+    if (!userToken) return;
+    let cancelled = false;
+    const loadEmails = async () => {
+      try {
+        const res = await fetch(`${backendUrl}/api/account/emails`, { headers });
+        if (cancelled) return;
+        if (res.status === 404) {
+          setMultiEmailEnabled(false);
+          setEmailManagerLoaded(true);
+          return;
+        }
+        if (!res.ok) {
+          setEmailManagerLoaded(true);
+          return;
+        }
+        const data = await res.json().catch(() => ({}));
+        setAccountEmails(Array.isArray(data.emails) ? data.emails : []);
+        setMultiEmailEnabled(true);
+        setEmailManagerLoaded(true);
+      } catch {
+        if (!cancelled) setEmailManagerLoaded(true);
+      }
+    };
+    loadEmails();
+    return () => {
+      cancelled = true;
+    };
+  }, [backendUrl, headers, userToken]);
 
   const localStyles = StyleSheet.create({
     airportFieldWrap: {
@@ -186,6 +221,118 @@ const AccountProfileManagement = ({
     }
     setShowDeleteConfirm(false);
     logout();
+  };
+
+  const refreshAccountEmails = async () => {
+    if (!userToken) return;
+    const res = await fetch(`${backendUrl}/api/account/emails`, { headers });
+    if (!res.ok) return;
+    const data = await res.json().catch(() => ({}));
+    setAccountEmails(Array.isArray(data.emails) ? data.emails : []);
+  };
+
+  const handleAddEmail = async () => {
+    const candidate = newEmail.trim().toLowerCase();
+    if (!candidate) {
+      alert('Enter an email address.');
+      return;
+    }
+    try {
+      setEmailActionBusy(true);
+      const res = await fetch(`${backendUrl}/api/account/emails`, {
+        method: 'POST',
+        headers: jsonHeaders,
+        body: JSON.stringify({ email: candidate }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data.error || 'Unable to add email.');
+        return;
+      }
+      setNewEmail('');
+      await refreshAccountEmails();
+      alert('Email added. Check your inbox for the verification link.');
+    } catch (err) {
+      alert((err as Error).message || 'Unable to add email.');
+    } finally {
+      setEmailActionBusy(false);
+    }
+  };
+
+  const handleResendEmailVerification = async (email: string) => {
+    try {
+      setEmailActionBusy(true);
+      const res = await fetch(`${backendUrl}/api/account/emails/${encodeURIComponent(email)}/resend-verification`, {
+        method: 'POST',
+        headers,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data.error || 'Unable to resend verification.');
+        return;
+      }
+      alert('Verification email sent.');
+    } catch (err) {
+      alert((err as Error).message || 'Unable to resend verification.');
+    } finally {
+      setEmailActionBusy(false);
+    }
+  };
+
+  const handleSetPrimaryEmail = async (email: string) => {
+    try {
+      setEmailActionBusy(true);
+      const res = await fetch(`${backendUrl}/api/account/emails/primary`, {
+        method: 'PATCH',
+        headers: jsonHeaders,
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data.error || 'Unable to set primary email.');
+        return;
+      }
+      if (typeof data.token === 'string') {
+        const fullName = `${accountProfile.firstName ?? ''} ${accountProfile.lastName ?? ''}`.trim() || 'Traveler';
+        setUserToken(data.token);
+        saveSession(data.token, fullName, activePage, email);
+      }
+      setAccountProfile((prev) => ({ ...prev, email }));
+      setUserEmail(email);
+      if (Array.isArray(data.emails)) {
+        setAccountEmails(data.emails);
+      } else {
+        await refreshAccountEmails();
+      }
+    } catch (err) {
+      alert((err as Error).message || 'Unable to set primary email.');
+    } finally {
+      setEmailActionBusy(false);
+    }
+  };
+
+  const handleDeleteSecondaryEmail = async (email: string) => {
+    try {
+      setEmailActionBusy(true);
+      const res = await fetch(`${backendUrl}/api/account/emails/${encodeURIComponent(email)}`, {
+        method: 'DELETE',
+        headers,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data.error || 'Unable to delete email.');
+        return;
+      }
+      if (Array.isArray(data.emails)) {
+        setAccountEmails(data.emails);
+      } else {
+        await refreshAccountEmails();
+      }
+    } catch (err) {
+      alert((err as Error).message || 'Unable to delete email.');
+    } finally {
+      setEmailActionBusy(false);
+    }
   };
 
   return (
@@ -294,6 +441,55 @@ const AccountProfileManagement = ({
       <TouchableOpacity style={styles.button} onPress={handleProfileUpdate}>
         <Text style={styles.buttonText}>Save Profile</Text>
       </TouchableOpacity>
+      {emailManagerLoaded && multiEmailEnabled ? (
+        <>
+          <View style={styles.divider} />
+          <Text style={styles.modalLabel}>Account emails</Text>
+          <Text style={styles.helperText}>Add verified emails, choose your primary sign-in email, and remove non-primary emails.</Text>
+          {accountEmails.map((entry) => (
+            <View key={entry.email} style={[styles.row, { alignItems: 'center', justifyContent: 'space-between' }]}>
+              <View style={{ flex: 1, marginRight: 8 }}>
+                <Text style={styles.cellText}>{entry.email}</Text>
+                <Text style={styles.helperText}>
+                  {entry.isPrimary ? 'Primary' : 'Secondary'} | {entry.isVerified ? 'Verified' : 'Pending verification'}
+                </Text>
+              </View>
+              {!entry.isPrimary && entry.isVerified ? (
+                <TouchableOpacity style={[styles.button, styles.smallButton]} disabled={emailActionBusy} onPress={() => handleSetPrimaryEmail(entry.email)}>
+                  <Text style={styles.buttonText}>Make Primary</Text>
+                </TouchableOpacity>
+              ) : null}
+              {!entry.isPrimary ? (
+                <TouchableOpacity
+                  style={[styles.button, styles.smallButton, styles.dangerButton]}
+                  disabled={emailActionBusy}
+                  onPress={() => handleDeleteSecondaryEmail(entry.email)}
+                >
+                  <Text style={styles.buttonText}>Delete</Text>
+                </TouchableOpacity>
+              ) : null}
+              {!entry.isVerified ? (
+                <TouchableOpacity style={[styles.button, styles.smallButton]} disabled={emailActionBusy} onPress={() => handleResendEmailVerification(entry.email)}>
+                  <Text style={styles.buttonText}>Resend Verify</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          ))}
+          <View style={styles.row}>
+            <TextInput
+              style={[styles.input, { flex: 1 }]}
+              placeholder="Add email"
+              autoCapitalize="none"
+              keyboardType="email-address"
+              value={newEmail}
+              onChangeText={setNewEmail}
+            />
+            <TouchableOpacity style={[styles.button, emailActionBusy && styles.buttonDisabled]} disabled={emailActionBusy} onPress={handleAddEmail}>
+              <Text style={styles.buttonText}>Add</Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      ) : null}
 
       <View style={styles.divider} />
       {!showPasswordEditor ? (

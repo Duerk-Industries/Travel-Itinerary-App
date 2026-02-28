@@ -205,6 +205,18 @@ export const findUserByEmail = async (email: string): Promise<User | null> => {
   return { id: doc.id, email: data.email, provider: data.provider };
 };
 
+export const findUserByIdentifier = async (identifier: string): Promise<User | null> => {
+  const normalized = normalizeEmail(identifier);
+  if (!normalized.includes('@')) {
+    const usersByUsername = await getDb().collection('users').where('username', '==', normalized).limit(1).get();
+    if (usersByUsername.empty) return null;
+    const doc = usersByUsername.docs[0];
+    const data = doc.data() as User;
+    return { id: doc.id, email: data.email, provider: data.provider };
+  }
+  return findUserByEmail(normalized);
+};
+
 export const createWebUser = async (
   firstName: string,
   lastName: string,
@@ -296,12 +308,18 @@ export const ensureWebPasswordAccountForOAuth = async (
 };
 
 export const verifyWebUserCredentials = async (
-  email: string,
+  identifier: string,
   password: string
 ): Promise<{ id: string; email: string; firstName: string; lastName: string; emailVerified?: boolean } | null> => {
   const db = getDb();
-  const normalized = normalizeEmail(email);
-  const snapshot = await db.collection('web_users').where('email', '==', normalized).limit(1).get();
+  const normalized = normalizeEmail(identifier);
+  let snapshot = await db.collection('web_users').where('email', '==', normalized).limit(1).get();
+  if (!normalized.includes('@')) {
+    const userSnap = await db.collection('users').where('username', '==', normalized).limit(1).get();
+    if (!userSnap.empty) {
+      snapshot = await db.collection('web_users').where(FieldPath.documentId(), '==', userSnap.docs[0].id).limit(1).get();
+    }
+  }
   if (snapshot.empty) return null;
   const doc = snapshot.docs[0];
   const data = doc.data() as any;
@@ -398,6 +416,83 @@ export const markEmailVerificationUsed = async (verificationId: string): Promise
 export const markUserEmailVerified = async (userId: string): Promise<void> => {
   const db = getDb();
   await db.collection('users').doc(userId).update({ emailVerified: true, emailVerifiedAt: nowIso() });
+};
+
+export const listUserEmails = async (userId: string): Promise<Array<{ email: string; isPrimary: boolean; isVerified: boolean }>> => {
+  const db = getDb();
+  const userDoc = await db.collection('users').doc(userId).get();
+  if (!userDoc.exists) return [];
+  const email = String((userDoc.data() as any).email ?? '').trim().toLowerCase();
+  if (!email) return [];
+  return [{ email, isPrimary: true, isVerified: Boolean((userDoc.data() as any).emailVerified ?? true) }];
+};
+
+export const addUserEmail = async (_userId: string, _email: string): Promise<{ email: string; isPrimary: boolean; isVerified: boolean }> => {
+  const err: any = new Error('Multi-email account management is not implemented for Firebase provider');
+  err.code = 'NOT_IMPLEMENTED';
+  throw err;
+};
+
+export const createUserEmailVerification = async (
+  userId: string,
+  email: string,
+  ttlHours = 24
+): Promise<{ token: string; expiresAt: string }> => {
+  const db = getDb();
+  const token = randomBytes(32).toString('base64url');
+  const tokenHash = hashToken(token);
+  const expiresAt = new Date(Date.now() + ttlHours * 60 * 60 * 1000).toISOString();
+  await db.collection('user_email_verifications').doc(randomUUID()).set({
+    userId,
+    email: normalizeEmail(email),
+    tokenHash,
+    expiresAt,
+    createdAt: nowIso(),
+    usedAt: null,
+  });
+  return { token, expiresAt };
+};
+
+export const consumeUserEmailVerificationToken = async (
+  token: string
+): Promise<{ id: string; userId: string; email: string; expiresAt: string } | null> => {
+  const db = getDb();
+  const tokenHash = hashToken(token);
+  const snapshot = await db
+    .collection('user_email_verifications')
+    .where('tokenHash', '==', tokenHash)
+    .where('usedAt', '==', null)
+    .limit(1)
+    .get();
+  if (snapshot.empty) return null;
+  const doc = snapshot.docs[0];
+  const data = doc.data() as any;
+  return {
+    id: doc.id,
+    userId: String(data.userId ?? ''),
+    email: String(data.email ?? ''),
+    expiresAt: String(data.expiresAt ?? ''),
+  };
+};
+
+export const markUserEmailVerificationUsed = async (verificationId: string): Promise<void> => {
+  await getDb().collection('user_email_verifications').doc(verificationId).update({ usedAt: nowIso() });
+};
+
+export const markAccountEmailVerified = async (userId: string, _email: string): Promise<void> => {
+  await markUserEmailVerified(userId);
+};
+
+export const setPrimaryUserEmail = async (_userId: string, _email: string): Promise<Array<{ email: string; isPrimary: boolean; isVerified: boolean }>> => {
+  const err: any = new Error('Multi-email account management is not implemented for Firebase provider');
+  err.code = 'NOT_IMPLEMENTED';
+  throw err;
+};
+
+export const removeUserEmail = async (_userId: string, _email: string): Promise<Array<{ email: string; isPrimary: boolean; isVerified: boolean }>> => {
+  const err: any = new Error('Multi-email account management is not implemented for Firebase provider');
+  err.code = 'NOT_IMPLEMENTED';
+  throw err;
 };
 
 export const deleteUserRecord = async (userId: string): Promise<void> => {

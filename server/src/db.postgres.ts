@@ -39,6 +39,8 @@ const FOLLOW_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const TRIP_SHARE_TOKEN_BYTES = 24;
 
 const normalizeEmail = (value: string): string => value.trim().toLowerCase();
+const normalizeLoginIdentifier = (value: string): string => value.trim().toLowerCase();
+const isEmailLikeIdentifier = (value: string): boolean => value.includes('@');
 const USERNAME_MAX_LEN = 30;
 const USERNAME_ALLOWED_REGEX = /^[a-z0-9_-]{1,30}$/;
 
@@ -281,6 +283,20 @@ export const initDb = async (): Promise<void> => {
       UNIQUE (user_id, email_normalized)
     );
   `);
+
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS user_email_verifications (
+      id UUID PRIMARY KEY,
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      email_normalized TEXT NOT NULL,
+      token_hash TEXT NOT NULL,
+      expires_at TIMESTAMP NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW(),
+      used_at TIMESTAMP
+    );
+  `);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_user_email_verifications_user ON user_email_verifications(user_id);`);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_user_email_verifications_email ON user_email_verifications(email_normalized);`);
   await p.query(`ALTER TABLE user_emails ADD COLUMN IF NOT EXISTS is_primary BOOLEAN NOT NULL DEFAULT FALSE;`);
   await p.query(`ALTER TABLE user_emails ADD COLUMN IF NOT EXISTS is_verified BOOLEAN NOT NULL DEFAULT FALSE;`);
   await p.query(`ALTER TABLE user_emails ADD COLUMN IF NOT EXISTS verified_at TIMESTAMP;`);
@@ -857,6 +873,7 @@ export const initDb = async (): Promise<void> => {
     await p.query(`DELETE FROM traits`);
     await p.query(`DELETE FROM family_relationships`);
     await p.query(`DELETE FROM fellow_travelers`);
+    await p.query(`DELETE FROM user_email_verifications`);
     await p.query(`DELETE FROM user_emails`);
     await p.query(`DELETE FROM web_users`);
     await p.query(`DELETE FROM users`);
@@ -991,6 +1008,33 @@ export const findUserByEmail = async (email: string): Promise<User | null> => {
   return { ...row, passengerIds: Array.isArray(row.passenger_ids) ? row.passenger_ids : [] };
 };
 
+export const findUserByIdentifier = async (identifier: string): Promise<User | null> => {
+  const p = getPool();
+  const normalized = normalizeLoginIdentifier(identifier);
+  if (!normalized) return null;
+  const usingEmail = isEmailLikeIdentifier(normalized);
+  const { rows } = await p.query<User>(
+    `SELECT u.*
+     FROM users u
+     LEFT JOIN user_emails ue ON ue.user_id = u.id AND ue.email_normalized = $1
+     WHERE ($2::boolean = true AND ue.email_normalized IS NOT NULL)
+        OR ($2::boolean = false AND u.username_normalized = $1)
+     LIMIT 1`,
+    [normalized, usingEmail]
+  );
+  const row = rows[0] as any;
+  if (!row) return null;
+  return { ...row, passengerIds: Array.isArray(row.passenger_ids) ? row.passenger_ids : [] };
+};
+
+export type AccountEmail = {
+  email: string;
+  isPrimary: boolean;
+  isVerified: boolean;
+  verifiedAt: string | null;
+  createdAt: string | null;
+};
+
 
 const hashPassword = (password: string, salt: string): string => {
   return scryptSync(password, salt, 64).toString('hex');
@@ -1102,10 +1146,13 @@ export const ensureWebPasswordAccountForOAuth = async (
 
 
 export const verifyWebUserCredentials = async (
-  email: string,
+  identifier: string,
   password: string
 ): Promise<WebUser | null> => {
   const p = getPool();
+  const normalizedIdentifier = normalizeLoginIdentifier(identifier);
+  if (!normalizedIdentifier) return null;
+  const loginWithEmail = isEmailLikeIdentifier(normalizedIdentifier);
 
 
   const { rows } = await p.query<{
@@ -1126,15 +1173,20 @@ export const verifyWebUserCredentials = async (
             COALESCE(u.email_verified, TRUE) as "emailVerified"
      FROM web_users wu
      JOIN users u ON u.id = wu.id
-     WHERE wu.email = $1`,
-    [email]
+     LEFT JOIN user_emails ue
+       ON ue.user_id = u.id
+      AND ue.email_normalized = $1
+     WHERE ($2::boolean = true AND ue.email_normalized IS NOT NULL)
+        OR ($2::boolean = false AND u.username_normalized = $1)
+     LIMIT 1`,
+    [normalizedIdentifier, loginWithEmail]
   );
 
 
   if (!rows.length) return null;
 
 
-  const [{ id, first_name, last_name, passwordHash, salt, emailVerified }] = rows;
+  const [{ id, email, first_name, last_name, passwordHash, salt, emailVerified }] = rows;
   const providedHash = hashPassword(password, salt);
 
 
@@ -1248,6 +1300,194 @@ export const markUserEmailVerified = async (userId: string): Promise<void> => {
   );
 };
 
+export const listUserEmails = async (userId: string): Promise<AccountEmail[]> => {
+  const p = getPool();
+  const { rows } = await p.query<{
+    email: string;
+    isPrimary: boolean;
+    isVerified: boolean;
+    verifiedAt: string | null;
+    createdAt: string | null;
+  }>(
+    `SELECT email,
+            is_primary as "isPrimary",
+            is_verified as "isVerified",
+            verified_at as "verifiedAt",
+            created_at as "createdAt"
+     FROM user_emails
+     WHERE user_id = $1
+     ORDER BY is_primary DESC, created_at ASC, email ASC`,
+    [userId]
+  );
+  return rows;
+};
+
+export const addUserEmail = async (userId: string, email: string): Promise<AccountEmail> => {
+  const p = getPool();
+  const normalizedEmail = normalizeEmail(email);
+  const existing = await p.query<{ userId: string }>(
+    `SELECT user_id as "userId"
+     FROM user_emails
+     WHERE email_normalized = $1
+     LIMIT 1`,
+    [normalizedEmail]
+  );
+  if (existing.rowCount && existing.rows[0].userId !== userId) {
+    const err = new Error('Email is already associated with another account');
+    (err as any).code = 'EMAIL_TAKEN';
+    throw err;
+  }
+
+  await upsertUserEmail(p, userId, normalizedEmail, { isPrimary: false, isVerified: false, verifiedAt: null });
+  const { rows } = await p.query<{
+    email: string;
+    isPrimary: boolean;
+    isVerified: boolean;
+    verifiedAt: string | null;
+    createdAt: string | null;
+  }>(
+    `SELECT email,
+            is_primary as "isPrimary",
+            is_verified as "isVerified",
+            verified_at as "verifiedAt",
+            created_at as "createdAt"
+     FROM user_emails
+     WHERE user_id = $1 AND email_normalized = $2
+     LIMIT 1`,
+    [userId, normalizedEmail]
+  );
+  return rows[0];
+};
+
+export const createUserEmailVerification = async (
+  userId: string,
+  email: string,
+  ttlHours = 24
+): Promise<{ token: string; expiresAt: string }> => {
+  const p = getPool();
+  const normalizedEmail = normalizeEmail(email);
+  const owned = await p.query(
+    `SELECT 1
+     FROM user_emails
+     WHERE user_id = $1 AND email_normalized = $2
+     LIMIT 1`,
+    [userId, normalizedEmail]
+  );
+  if (!owned.rowCount) {
+    const err = new Error('Email is not associated with this account');
+    (err as any).code = 'EMAIL_NOT_FOUND';
+    throw err;
+  }
+  const token = randomBytes(32).toString('base64url');
+  const tokenHash = hashToken(token);
+  const expiresAt = new Date(Date.now() + ttlHours * 60 * 60 * 1000);
+  await p.query(
+    `INSERT INTO user_email_verifications (id, user_id, email_normalized, token_hash, expires_at)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [randomUUID(), userId, normalizedEmail, tokenHash, expiresAt]
+  );
+  return { token, expiresAt: expiresAt.toISOString() };
+};
+
+export const consumeUserEmailVerificationToken = async (
+  token: string
+): Promise<{ id: string; userId: string; email: string; expiresAt: string } | null> => {
+  const p = getPool();
+  const tokenHash = hashToken(token);
+  const { rows } = await p.query<{ id: string; userId: string; email: string; expiresAt: string }>(
+    `SELECT uv.id,
+            uv.user_id as "userId",
+            ue.email as "email",
+            uv.expires_at as "expiresAt"
+     FROM user_email_verifications uv
+     JOIN user_emails ue
+       ON ue.user_id = uv.user_id
+      AND ue.email_normalized = uv.email_normalized
+     WHERE uv.token_hash = $1
+       AND uv.used_at IS NULL
+     LIMIT 1`,
+    [tokenHash]
+  );
+  return rows[0] ?? null;
+};
+
+export const markUserEmailVerificationUsed = async (verificationId: string): Promise<void> => {
+  const p = getPool();
+  await p.query(`UPDATE user_email_verifications SET used_at = NOW() WHERE id = $1`, [verificationId]);
+};
+
+export const markAccountEmailVerified = async (userId: string, email: string): Promise<void> => {
+  const p = getPool();
+  const normalizedEmail = normalizeEmail(email);
+  await p.query(
+    `UPDATE user_emails
+     SET is_verified = TRUE,
+         verified_at = COALESCE(verified_at, NOW())
+     WHERE user_id = $1 AND email_normalized = $2`,
+    [userId, normalizedEmail]
+  );
+};
+
+export const setPrimaryUserEmail = async (userId: string, email: string): Promise<AccountEmail[]> => {
+  const p = getPool();
+  const normalizedEmail = normalizeEmail(email);
+  const { rows } = await p.query<{ isVerified: boolean }>(
+    `SELECT is_verified as "isVerified"
+     FROM user_emails
+     WHERE user_id = $1 AND email_normalized = $2
+     LIMIT 1`,
+    [userId, normalizedEmail]
+  );
+  if (!rows.length || !rows[0].isVerified) {
+    const err = new Error('Email must be linked and verified before it can be set as primary');
+    (err as any).code = 'EMAIL_NOT_VERIFIED';
+    throw err;
+  }
+  await p.query(`UPDATE user_emails SET is_primary = (email_normalized = $2) WHERE user_id = $1`, [userId, normalizedEmail]);
+  await p.query(`UPDATE users SET email = $2, email_verified = TRUE, email_verified_at = COALESCE(email_verified_at, NOW()) WHERE id = $1`, [
+    userId,
+    normalizedEmail,
+  ]);
+  await p.query(`UPDATE web_users SET email = $2 WHERE id = $1`, [userId, normalizedEmail]);
+  return listUserEmails(userId);
+};
+
+export const removeUserEmail = async (userId: string, email: string): Promise<AccountEmail[]> => {
+  const p = getPool();
+  const normalizedEmail = normalizeEmail(email);
+  const { rows } = await p.query<{ isPrimary: boolean }>(
+    `SELECT is_primary as "isPrimary"
+     FROM user_emails
+     WHERE user_id = $1 AND email_normalized = $2
+     LIMIT 1`,
+    [userId, normalizedEmail]
+  );
+  if (!rows.length) {
+    const err = new Error('Email not found on this account');
+    (err as any).code = 'EMAIL_NOT_FOUND';
+    throw err;
+  }
+  if (rows[0].isPrimary) {
+    const err = new Error('Primary email cannot be deleted');
+    (err as any).code = 'PRIMARY_EMAIL_IMMUTABLE';
+    throw err;
+  }
+  const verifiedRemaining = await p.query<{ count: string }>(
+    `SELECT COUNT(*)::text as count
+     FROM user_emails
+     WHERE user_id = $1 AND is_verified = TRUE AND email_normalized <> $2`,
+    [userId, normalizedEmail]
+  );
+  if (Number(verifiedRemaining.rows[0]?.count ?? 0) < 1) {
+    const err = new Error('At least one verified email must remain on the account');
+    (err as any).code = 'LAST_VERIFIED_EMAIL_REQUIRED';
+    throw err;
+  }
+  await p.query(`DELETE FROM user_email_verifications WHERE user_id = $1 AND email_normalized = $2 AND used_at IS NULL`, [userId, normalizedEmail]);
+  await p.query(`DELETE FROM user_emails WHERE user_id = $1 AND email_normalized = $2`, [userId, normalizedEmail]);
+  return listUserEmails(userId);
+};
+
 export const deleteUserRecord = async (userId: string): Promise<void> => {
   const p = getPool();
   await p.query(`DELETE FROM web_users WHERE id = $1`, [userId]);
@@ -1329,16 +1569,32 @@ export const updateWebUserProfile = async (
 }> => {
   const p = getPool();
   const client = await p.connect();
+  const normalizedEmailUpdate = updates.email ? normalizeEmail(updates.email) : null;
   try {
     await client.query('BEGIN');
-    if (updates.email) {
-      const emailInUse = await client.query(`SELECT 1 FROM web_users WHERE email = $1 AND id <> $2`, [
-        updates.email,
-        userId,
-      ]);
-      if (emailInUse.rowCount) {
+    if (normalizedEmailUpdate) {
+      const emailInUse = await client.query<{ userId: string }>(
+        `SELECT user_id as "userId"
+         FROM user_emails
+         WHERE email_normalized = $1
+         LIMIT 1`,
+        [normalizedEmailUpdate]
+      );
+      if (emailInUse.rowCount && emailInUse.rows[0].userId !== userId) {
         const err = new Error('Email already in use');
         (err as any).code = 'EMAIL_TAKEN';
+        throw err;
+      }
+      const linked = await client.query<{ isVerified: boolean }>(
+        `SELECT is_verified as "isVerified"
+         FROM user_emails
+         WHERE user_id = $1 AND email_normalized = $2
+         LIMIT 1`,
+        [userId, normalizedEmailUpdate]
+      );
+      if (!linked.rowCount || !linked.rows[0].isVerified) {
+        const err = new Error('Email must be linked and verified before setting it as primary');
+        (err as any).code = 'EMAIL_NOT_VERIFIED';
         throw err;
       }
     }
@@ -1358,11 +1614,10 @@ export const updateWebUserProfile = async (
       SET
         first_name = COALESCE($2, first_name),
         last_name = COALESCE($3, last_name),
-        email = COALESCE($4, email),
-        home_address = CASE WHEN $5::text IS NULL THEN home_address ELSE NULLIF($5::text, '') END,
-        preferred_airport = CASE WHEN $6::text IS NULL THEN preferred_airport ELSE NULLIF($6::text, '') END,
-        map_preference = CASE WHEN $7::text IS NULL THEN map_preference ELSE NULLIF($7::text, '') END,
-        appearance_preference = CASE WHEN $8::text IS NULL THEN appearance_preference ELSE NULLIF($8::text, '') END
+        home_address = CASE WHEN $4::text IS NULL THEN home_address ELSE NULLIF($4::text, '') END,
+        preferred_airport = CASE WHEN $5::text IS NULL THEN preferred_airport ELSE NULLIF($5::text, '') END,
+        map_preference = CASE WHEN $6::text IS NULL THEN map_preference ELSE NULLIF($6::text, '') END,
+        appearance_preference = CASE WHEN $7::text IS NULL THEN appearance_preference ELSE NULLIF($7::text, '') END
       WHERE id = $1
       RETURNING
         id,
@@ -1378,7 +1633,6 @@ export const updateWebUserProfile = async (
         userId,
         updates.firstName ?? null,
         updates.lastName ?? null,
-        updates.email ?? null,
         typeof updates.homeAddress === 'string' ? updates.homeAddress.trim() : null,
         typeof updates.preferredAirport === 'string' ? updates.preferredAirport.trim() : null,
         normalizedMapPreference,
@@ -1390,8 +1644,14 @@ export const updateWebUserProfile = async (
       throw new Error('User not found');
     }
 
-    if (updates.email) {
-      await client.query(`UPDATE users SET email = $2 WHERE id = $1`, [userId, updates.email]);
+    if (normalizedEmailUpdate) {
+      await client.query(`UPDATE user_emails SET is_primary = (email_normalized = $2) WHERE user_id = $1`, [userId, normalizedEmailUpdate]);
+      await client.query(`UPDATE users SET email = $2, email_verified = TRUE, email_verified_at = COALESCE(email_verified_at, NOW()) WHERE id = $1`, [
+        userId,
+        normalizedEmailUpdate,
+      ]);
+      await client.query(`UPDATE web_users SET email = $2 WHERE id = $1`, [userId, normalizedEmailUpdate]);
+      rows[0].email = normalizedEmailUpdate;
     }
 
     await client.query('COMMIT');
@@ -4864,8 +5124,7 @@ export const createTripWithGroupAndMembers = async (payload: {
       const hasEmail = member.email && member.email.trim().length > 0;
       if (hasEmail) {
         const email = member.email!.trim().toLowerCase();
-        const userRes = await client.query<User>('SELECT id, email FROM users WHERE email = $1', [email]);
-        const user = userRes.rows[0] ?? null;
+        const user = await findUserByEmail(email);
         const inviteId = randomUUID();
         await client.query(
           `INSERT INTO group_invites (id, group_id, inviter_id, invitee_user_id, invitee_email, status)

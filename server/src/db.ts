@@ -34,6 +34,7 @@ export const findOrCreateGoogleUser = async (...args: Parameters<ReturnType<type
 export const ensureDefaultGroupForUser = async (...args: Parameters<ReturnType<typeof adapter>['ensureDefaultGroupForUser']>) =>
   adapter().ensureDefaultGroupForUser(...args);
 export const findUserByEmail = async (email: string): Promise<User | null> => adapter().findUserByEmail(email);
+export const findUserByIdentifier = async (identifier: string): Promise<User | null> => adapter().findUserByIdentifier(identifier);
 export const getUserById = async (...args: Parameters<ReturnType<typeof adapter>['getUserById']>) =>
   adapter().getUserById(...args);
 export const createWebUser = async (...args: Parameters<ReturnType<typeof adapter>['createWebUser']>) =>
@@ -47,14 +48,34 @@ export const recordWebUserLogin = async (...args: Parameters<ReturnType<typeof a
   adapter().recordWebUserLogin(...args);
 export const createEmailVerification = async (...args: Parameters<ReturnType<typeof adapter>['createEmailVerification']>) =>
   adapter().createEmailVerification(...args);
+export const createUserEmailVerification = async (
+  ...args: Parameters<ReturnType<typeof adapter>['createUserEmailVerification']>
+) => adapter().createUserEmailVerification(...args);
 export const getPendingEmailVerification = async (...args: Parameters<ReturnType<typeof adapter>['getPendingEmailVerification']>) =>
   adapter().getPendingEmailVerification(...args);
 export const consumeEmailVerificationToken = async (...args: Parameters<ReturnType<typeof adapter>['consumeEmailVerificationToken']>) =>
   adapter().consumeEmailVerificationToken(...args);
+export const consumeUserEmailVerificationToken = async (
+  ...args: Parameters<ReturnType<typeof adapter>['consumeUserEmailVerificationToken']>
+) => adapter().consumeUserEmailVerificationToken(...args);
 export const markEmailVerificationUsed = async (...args: Parameters<ReturnType<typeof adapter>['markEmailVerificationUsed']>) =>
   adapter().markEmailVerificationUsed(...args);
+export const markUserEmailVerificationUsed = async (
+  ...args: Parameters<ReturnType<typeof adapter>['markUserEmailVerificationUsed']>
+) => adapter().markUserEmailVerificationUsed(...args);
 export const markUserEmailVerified = async (...args: Parameters<ReturnType<typeof adapter>['markUserEmailVerified']>) =>
   adapter().markUserEmailVerified(...args);
+export const markAccountEmailVerified = async (
+  ...args: Parameters<ReturnType<typeof adapter>['markAccountEmailVerified']>
+) => adapter().markAccountEmailVerified(...args);
+export const listUserEmails = async (...args: Parameters<ReturnType<typeof adapter>['listUserEmails']>) =>
+  adapter().listUserEmails(...args);
+export const addUserEmail = async (...args: Parameters<ReturnType<typeof adapter>['addUserEmail']>) =>
+  adapter().addUserEmail(...args);
+export const setPrimaryUserEmail = async (...args: Parameters<ReturnType<typeof adapter>['setPrimaryUserEmail']>) =>
+  adapter().setPrimaryUserEmail(...args);
+export const removeUserEmail = async (...args: Parameters<ReturnType<typeof adapter>['removeUserEmail']>) =>
+  adapter().removeUserEmail(...args);
 export const deleteUserRecord = async (...args: Parameters<ReturnType<typeof adapter>['deleteUserRecord']>) =>
   adapter().deleteUserRecord(...args);
 export const getWebUserProfile = async (...args: Parameters<ReturnType<typeof adapter>['getWebUserProfile']>) =>

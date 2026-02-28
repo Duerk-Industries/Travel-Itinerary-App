@@ -408,3 +408,41 @@ Execution:
 ```bash
 npm --prefix server test -- --runInBand __tests__/auth-flags-config.test.ts __tests__/phase1-user-identity.test.ts __tests__/env.test.ts
 ```
+
+## 11. Auth Phase 2 (Identifier Login + Multi-Email Account Management)
+
+Automated coverage:
+
+- `server/__tests__/phase2-auth-identifier-multi-email.test.ts`
+  - verifies login with username identifier when `usernameLoginEnabled` is on
+  - verifies add secondary email flow
+  - verifies secondary-email callback confirmation via `/api/web-auth/confirm-email`
+  - verifies primary email switching and login with secondary email
+  - verifies secondary email deletion after switching primary back
+
+Regression coverage to run together:
+
+- `server/__tests__/account.test.ts`
+- `server/__tests__/phase1-user-identity.test.ts`
+- `server/__tests__/auth-flags-config.test.ts`
+- `server/__tests__/env.test.ts`
+
+Manual verification:
+
+- In `server/config/auth-flags.yaml`, set:
+  - `usernameLoginEnabled: true`
+  - `multiEmailEnabled: true`
+- Confirm web/native login field shows `Email or Username`.
+- Confirm a user can:
+  - log in with username + password
+  - add a secondary email
+  - verify via callback link
+  - set verified secondary email as primary
+  - log in with either linked email (same password)
+  - delete only non-primary emails
+
+Execution:
+
+```bash
+npm --prefix server test -- --runInBand __tests__/phase2-auth-identifier-multi-email.test.ts __tests__/account.test.ts __tests__/phase1-user-identity.test.ts __tests__/auth-flags-config.test.ts __tests__/env.test.ts
+```

@@ -31,9 +31,15 @@ import {
   acceptGroupInvite,
   rejectGroupInvite,
   getTripById,
+  listUserEmails,
+  addUserEmail,
+  createUserEmailVerification,
+  setPrimaryUserEmail,
+  removeUserEmail,
 } from '../db';
-import { sendShareEmailBestEffort, sendTripInviteEmailBestEffort } from '../mailer';
+import { sendShareEmailBestEffort, sendTripInviteEmailBestEffort, sendVerificationEmailBestEffort } from '../mailer';
 import { logError } from '../logger';
+import { getAuthFlag } from '../config/authFlags';
 
 // Account management (profile, password, deletion) for authenticated web users.
 const router = Router();
@@ -76,6 +82,133 @@ router.patch('/profile', async (req, res) => {
   } catch (err: any) {
     if (err?.code === 'EMAIL_TAKEN') {
       res.status(409).json({ error: 'Email already in use' });
+      return;
+    }
+    if (err?.code === 'EMAIL_NOT_VERIFIED') {
+      res.status(400).json({ error: 'Email must be linked and verified before setting it as primary.' });
+      return;
+    }
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.get('/emails', async (req, res) => {
+  if (!getAuthFlag('multiEmailEnabled')) {
+    res.status(404).json({ error: 'Not found' });
+    return;
+  }
+  const userId = (req as any).user.userId as string;
+  const emails = await listUserEmails(userId);
+  res.json({ emails });
+});
+
+router.post('/emails', async (req, res) => {
+  if (!getAuthFlag('multiEmailEnabled')) {
+    res.status(404).json({ error: 'Not found' });
+    return;
+  }
+  const userId = (req as any).user.userId as string;
+  const email = String(req.body?.email ?? '').trim().toLowerCase();
+  if (!email) {
+    res.status(400).json({ error: 'email is required' });
+    return;
+  }
+  try {
+    const added = await addUserEmail(userId, email);
+    const verification = await createUserEmailVerification(userId, email);
+    await sendVerificationEmailBestEffort(added.email, verification.token, {
+      path: '/confirm-email',
+      subject: 'Confirm your added WanderBunnies email',
+      intro: 'Please confirm this email address to use it for sign-in on your WanderBunnies account.',
+    });
+    res.status(201).json({ email: added, verificationRequired: true, verificationToken: process.env.NODE_ENV === 'test' ? verification.token : undefined });
+  } catch (err: any) {
+    if (err?.code === 'EMAIL_TAKEN') {
+      res.status(409).json({ error: 'Email already in use' });
+      return;
+    }
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.post('/emails/:email/resend-verification', async (req, res) => {
+  if (!getAuthFlag('multiEmailEnabled')) {
+    res.status(404).json({ error: 'Not found' });
+    return;
+  }
+  const userId = (req as any).user.userId as string;
+  const email = String(req.params.email ?? '').trim().toLowerCase();
+  if (!email) {
+    res.status(400).json({ error: 'email is required' });
+    return;
+  }
+  try {
+    const verification = await createUserEmailVerification(userId, email);
+    await sendVerificationEmailBestEffort(email, verification.token, {
+      path: '/confirm-email',
+      subject: 'Confirm your added WanderBunnies email',
+      intro: 'Please confirm this email address to use it for sign-in on your WanderBunnies account.',
+    });
+    res.json({ message: 'Verification sent', verificationToken: process.env.NODE_ENV === 'test' ? verification.token : undefined });
+  } catch (err: any) {
+    if (err?.code === 'EMAIL_NOT_FOUND') {
+      res.status(404).json({ error: 'Email not found' });
+      return;
+    }
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.patch('/emails/primary', async (req, res) => {
+  if (!getAuthFlag('multiEmailEnabled')) {
+    res.status(404).json({ error: 'Not found' });
+    return;
+  }
+  const userId = (req as any).user.userId as string;
+  const email = String(req.body?.email ?? '').trim().toLowerCase();
+  if (!email) {
+    res.status(400).json({ error: 'email is required' });
+    return;
+  }
+  try {
+    const emails = await setPrimaryUserEmail(userId, email);
+    const profile = await getWebUserProfile(userId);
+    const token = profile ? createToken({ userId: profile.id, email: profile.email, provider: 'email' }) : null;
+    res.json({ emails, token });
+  } catch (err: any) {
+    if (err?.code === 'EMAIL_NOT_VERIFIED') {
+      res.status(400).json({ error: 'Email must be verified before it can become primary.' });
+      return;
+    }
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.delete('/emails/:email', async (req, res) => {
+  if (!getAuthFlag('multiEmailEnabled')) {
+    res.status(404).json({ error: 'Not found' });
+    return;
+  }
+  const userId = (req as any).user.userId as string;
+  const email = String(req.params.email ?? '').trim().toLowerCase();
+  if (!email) {
+    res.status(400).json({ error: 'email is required' });
+    return;
+  }
+  try {
+    const emails = await removeUserEmail(userId, email);
+    res.json({ emails });
+  } catch (err: any) {
+    if (err?.code === 'PRIMARY_EMAIL_IMMUTABLE') {
+      res.status(400).json({ error: 'Primary email cannot be deleted.' });
+      return;
+    }
+    if (err?.code === 'LAST_VERIFIED_EMAIL_REQUIRED') {
+      res.status(400).json({ error: 'At least one verified email must remain on this account.' });
+      return;
+    }
+    if (err?.code === 'EMAIL_NOT_FOUND') {
+      res.status(404).json({ error: 'Email not found' });
       return;
     }
     res.status(400).json({ error: (err as Error).message });
