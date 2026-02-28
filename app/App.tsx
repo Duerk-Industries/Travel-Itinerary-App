@@ -2165,7 +2165,14 @@ const App: React.FC = () => {
               </TouchableOpacity>
             ) : null}
             <View style={[styles.topRight, isNarrowLayout && styles.topRightNarrow]}>
-              {!isPhoneLayout ? <Text style={styles.bodyText}>{userName ?? 'Traveler'}</Text> : null}
+              {!isPhoneLayout ? (
+                <TouchableOpacity
+                  style={[styles.userNameButton, styles.smallButton]}
+                  onPress={() => requestPageChange('account')}
+                >
+                  <Text style={styles.userNameButtonText}>{userName ?? 'Traveler'}</Text>
+                </TouchableOpacity>
+              ) : null}
               <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={logout}>
                 <Text style={styles.buttonText}>Logout</Text>
               </TouchableOpacity>
@@ -3558,6 +3565,15 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     color: '#0B1726',
     fontWeight: theme.typography.weightBold,
   },
+  userNameButton: {
+    backgroundColor: theme.colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  userNameButtonText: {
+    color: theme.colors.text,
+    fontWeight: theme.typography.weightSemibold,
+  },
   smallButton: {
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -4431,5 +4447,4 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
 });
 
 export default App;
-
 
