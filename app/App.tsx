@@ -11,7 +11,7 @@
  * then UI sections render conditionally based on the active page.
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme, useWindowDimensions } from 'react-native';
+import { Image, Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme, useWindowDimensions } from 'react-native';
 import Constants from 'expo-constants';
 import { formatDateLong } from './utils/formatDateLong';
 import { normalizeDateString } from './utils/normalizeDateString';
@@ -58,6 +58,8 @@ import { toWebStyle } from './utils/webStyle';
 import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from './utils/votes';
 
 import LodgingTab from './tabs/LodgingTab';
+
+const TOP_BANNER_ICON = require('./assets/wanderbunnies-reference.png');
 
 type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
 let NativeDateTimePicker: NativeDateTimePickerType | null = null;
@@ -2111,8 +2113,9 @@ const App: React.FC = () => {
               <Text style={styles.backButtonText}>{'>'}</Text>
             </TouchableOpacity>
           ) : null}
+          <Image source={TOP_BANNER_ICON} style={styles.brandIcon} accessibilityLabel="WanderBunnies logo" />
           <Text style={[styles.title, isPhoneLayout && styles.titleNarrow]} numberOfLines={1} ellipsizeMode="tail">
-            Shared Trip Planner
+            WanderBunnies
           </Text>
         </View>
         {userToken ? (
@@ -3238,6 +3241,11 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
   topBarLeftNarrow: {
     flexWrap: 'wrap',
     minWidth: 0,
+  },
+  brandIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
   },
   homeButton: {
     width: 32,

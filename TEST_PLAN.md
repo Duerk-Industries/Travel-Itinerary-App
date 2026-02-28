@@ -353,3 +353,32 @@ Run targeted app coverage for itinerary generation helpers:
 ```bash
 npm --prefix app test -- --runInBand --coverage --coverageProvider=v8 --collectCoverageFrom=utils/itineraryGeneration.ts --collectCoverageFrom=utils/itineraryParser.ts tests/itineraryGeneration.test.ts tests/itineraryParser.test.ts
 ```
+
+## 9. WanderBunnies Branding + Asset Coverage
+
+Automated coverage:
+
+- `app/tests/brandingConfig.test.ts`
+  - verifies Expo `name` uses `WanderBunnies`
+  - verifies Expo icon and splash asset paths
+  - verifies Expo web favicon path
+- `server/__tests__/brandingAssets.test.ts`
+  - verifies `server/public/index.html` title + favicon tags
+  - verifies favicon assets exist in `server/public`
+
+Manual verification:
+
+- Web:
+  - load app and confirm browser tab title is `WanderBunnies`
+  - confirm favicon appears in browser tab
+  - confirm top banner shows a small square logo at the left of `WanderBunnies`
+- Native (Expo iOS/Android):
+  - confirm launcher icon uses WanderBunnies app icon
+  - confirm splash screen uses WanderBunnies splash image
+
+Execution:
+
+```bash
+npm --prefix app test -- --runInBand tests/brandingConfig.test.ts
+npm --prefix server test -- --runInBand __tests__/brandingAssets.test.ts
+```

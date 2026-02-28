@@ -1,13 +1,20 @@
 import { ExpoConfig } from 'expo/config';
 
 const config: ExpoConfig = {
-  name: 'Travel Itinerary Planner',
+  name: 'WanderBunnies',
   slug: 'travel-itinerary-planner',
   scheme: 'travelitineraryplanner',
   owner: 'duerk-industries',
+  icon: './assets/wanderbunnies-app-icon.png',
   platforms: ['ios', 'android', 'web'],
   web: {
-    bundler: 'metro'
+    bundler: 'metro',
+    favicon: './assets/wanderbunnies-app-icon.png',
+  },
+  splash: {
+    image: './assets/wanderbunnies-splash-screen.png',
+    resizeMode: 'contain',
+    backgroundColor: '#0b3c79',
   },
   ios: {
     supportsTablet: true,

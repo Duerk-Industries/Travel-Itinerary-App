@@ -6,6 +6,19 @@ A starter shared trip planner stack with a TypeScript/Node.js API backed by Post
 - **server**: Express API with JWT auth, PostgreSQL schema for transfers, and endpoints to add/remove/share transfers.
 - **app**: Expo application with Apple/Google/email login flows and a simple UI to list and manage transfers across web, Android, and iOS.
 
+## Branding assets (WanderBunnies)
+
+The app now uses WanderBunnies user-visible branding while keeping existing development identifiers.
+
+- Source design assets: `docs/design/Assets/`
+- Expo icon + web favicon source: `app/assets/wanderbunnies-app-icon.png`
+- Expo splash source: `app/assets/wanderbunnies-splash-screen.png`
+- Top banner icon source: `app/assets/wanderbunnies-reference.png`
+- Web static favicon files:
+  - `server/public/favicon.png`
+  - `server/public/apple-touch-icon.png`
+  - `server/public/assets/wanderbunnies-app-icon.png`
+
 ## Getting started
 1. Install dependencies (workspace aware):
    ```bash

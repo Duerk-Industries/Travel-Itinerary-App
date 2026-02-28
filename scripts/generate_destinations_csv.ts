@@ -43,7 +43,7 @@ interface CountryNowPopulationCount {
   year?: string;
   value?: string;
   sex?: string;
-  reliabilty?: string;
+  reliability?: string;
 }
 
 interface CountryNowCityRecord {
