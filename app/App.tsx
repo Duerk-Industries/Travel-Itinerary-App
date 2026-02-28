@@ -3317,6 +3317,10 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     height: 180,
     backgroundColor: '#e5e7eb',
   },
+  homeHeroCardPressed: {
+    opacity: 0.92,
+    transform: [{ scale: 0.995 }],
+  },
   homeHeroImage: {
     position: 'absolute',
     width: '100%',
@@ -3366,6 +3370,9 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: '#e5e7eb',
     backgroundColor: '#fff',
+  },
+  homeNavButtonPressed: {
+    backgroundColor: '#f3f4f6',
   },
   homeNavButtonDisabled: {
     opacity: 0.5,
@@ -3422,6 +3429,9 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  homeModalClosePressed: {
+    backgroundColor: '#d1d5db',
+  },
   homeModalCloseText: {
     fontSize: 16,
     fontWeight: '700',
@@ -3437,6 +3447,9 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderColor: '#e5e7eb',
+  },
+  homeModalRowPressed: {
+    backgroundColor: '#f8fafc',
   },
   homeModalRowActive: {
     backgroundColor: '#f1f5f9',
