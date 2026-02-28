@@ -6,12 +6,14 @@ type EnvOptions = {
   required?: boolean;
 };
 
+const trimTrailingLineBreaks = (value: string): string => value.replace(/[\r\n]+$/, '');
+
 export const getEnvValue = (key: string, options: EnvOptions = {}): string | undefined => {
   const fileKey = `${key}_FILE`;
   const filePath = process.env[fileKey];
   if (filePath && filePath.length > 0 && fs.existsSync(filePath)) {
     const raw = fs.readFileSync(filePath, 'utf8');
-    const trimmed = raw.replace(/[\r\n]+$/, '');
+    const trimmed = trimTrailingLineBreaks(raw);
     if (trimmed.length > 0) {
       return trimmed;
     }
@@ -19,7 +21,7 @@ export const getEnvValue = (key: string, options: EnvOptions = {}): string | und
 
   const direct = process.env[key];
   if (direct && direct.length > 0) {
-    return direct;
+    return trimTrailingLineBreaks(direct);
   }
 
   if (options.defaultValue !== undefined) {
