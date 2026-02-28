@@ -382,3 +382,29 @@ Execution:
 npm --prefix app test -- --runInBand tests/brandingConfig.test.ts
 npm --prefix server test -- --runInBand __tests__/brandingAssets.test.ts
 ```
+
+## 10. Auth Phase 1 (Usernames + Multi-Email Foundation)
+
+Automated coverage:
+
+- `server/__tests__/auth-flags-config.test.ts`
+  - verifies `server/config/auth-flags.yaml` parsing and normalization
+- `server/__tests__/phase1-user-identity.test.ts`
+  - verifies username generation on web user creation
+  - verifies username collision handling with numeric suffix
+  - verifies `findUserByEmail` resolves through `user_emails`
+- `server/__tests__/env.test.ts`
+  - verifies env value trimming removes trailing CR/LF from secrets/env vars
+
+Manual verification:
+
+- Run `npm run accounts:seed` with `ALLOW_TEST_ACCOUNT_SEED=1` and confirm usernames from `test_inputs/default_accounts.json` are created.
+- Query `users` and `user_emails` to confirm:
+  - `username_normalized` unique values are populated
+  - primary email rows exist in `user_emails`
+
+Execution:
+
+```bash
+npm --prefix server test -- --runInBand __tests__/auth-flags-config.test.ts __tests__/phase1-user-identity.test.ts __tests__/env.test.ts
+```

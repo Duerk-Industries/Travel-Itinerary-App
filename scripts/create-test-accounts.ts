@@ -8,6 +8,7 @@ import * as env from '../server/src/env.ts';
 type AccountInput = {
   firstName: string;
   lastName: string;
+  username: string;
   email: string;
   password: string;
 };
@@ -65,12 +66,13 @@ const loadAccounts = (filePath: string): AccountInput[] => {
   }
   return data.map((entry, idx) => {
     const row = entry as Partial<AccountInput>;
-    if (!row.firstName || !row.lastName || !row.email || !row.password) {
+    if (!row.firstName || !row.lastName || !row.username || !row.email || !row.password) {
       throw new Error(`Account at index ${idx} is missing required fields.`);
     }
     return {
       firstName: String(row.firstName).trim(),
       lastName: String(row.lastName).trim(),
+      username: String(row.username).trim().toLowerCase(),
       email: String(row.email).trim().toLowerCase(),
       password: String(row.password),
     };
@@ -92,10 +94,16 @@ const main = async () => {
 
   for (const account of accounts) {
     try {
-      const user = await dbApi.createWebUser(account.firstName, account.lastName, account.email, account.password);
+      const user = await dbApi.createWebUser(
+        account.firstName,
+        account.lastName,
+        account.email,
+        account.password,
+        account.username
+      );
       await dbApi.markUserEmailVerified(user.id);
       results.created += 1;
-      console.log(`Created + confirmed: ${account.email}`);
+      console.log(`Created + confirmed: ${account.email} (${account.username})`);
     } catch (err: any) {
       if (err?.code === 'USER_EXISTS') {
         results.skipped += 1;

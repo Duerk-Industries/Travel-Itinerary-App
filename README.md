@@ -92,6 +92,24 @@ caching:
     dnsLogTtlMs: 300000
 ```
 
+## Auth feature flags (phase rollout)
+
+Authentication rollout flags are configured in:
+
+- `server/config/auth-flags.yaml`
+
+Optional override path:
+
+- `AUTH_FLAGS_CONFIG_PATH`
+
+Phase 1 introduces persisted config + data model groundwork for:
+
+- unique usernames (case-insensitive)
+- multi-email account mapping (`user_emails`)
+- reserved username validation
+
+Default phase-1 flags ship disabled for behavior changes so local development and existing login paths remain stable.
+
 ### Behavior
 
 - Limits reset by provider time window (UTC-based):

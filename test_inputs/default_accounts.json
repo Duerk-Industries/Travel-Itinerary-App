@@ -2,24 +2,28 @@
     {
         "firstName": "Bryan",
         "lastName":"Duerk",
+        "username":"bryanduerk",
         "email":"bryan.duerk@gmail.com",
         "password":"testtest"
     },
     {
         "firstName": "Vicky",
         "lastName":"Duerk",
+        "username":"vickyduerk",
         "email":"vduerk@gmail.com",
         "password":"testtest"
     },
     {
         "firstName": "Bob",
         "lastName":"Bobson",
+        "username":"bobbobson",
         "email":"jobs.duerk@gmail.com",
         "password":"testtest"
     },
     {
         "firstName": "Tristan",
         "lastName":"Duerk",
+        "username":"tristanduerk",
         "email":"tristan.duerk@gmail.com",
         "password":"testtest"
     }

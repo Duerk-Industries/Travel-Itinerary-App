@@ -20,6 +20,7 @@ export type ActivityType =
 export interface User {
   id: string;
   email: string;
+  username?: string;
   provider: 'google' | 'apple' | 'email' | 'family';
   google_id?: string;
   picture?: string;
@@ -32,6 +33,7 @@ export interface User {
 export interface WebUser {
   id: string;
   email: string;
+  username?: string;
   firstName: string;
   lastName: string;
   homeAddress?: string | null;

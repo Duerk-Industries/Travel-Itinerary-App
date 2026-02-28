@@ -25,11 +25,13 @@ import {
 import { logError } from './logger';
 import { getEnvValue } from './env';
 import { downloadAirportDatasetForDailyRefresh } from './apis/airportDatasetCallers';
+import { getReservedUsernames } from './config/authFlags';
 
 
 type PoolCtor = typeof Pool;
 let PoolFactory: PoolCtor = Pool;
 let pool: Pool | null = null;
+type QueryRunner = Pick<Pool, 'query'>;
 
 const hashToken = (token: string): string => createHash('sha256').update(token).digest('hex');
 const FOLLOW_CODE_LENGTH = 6;
@@ -37,6 +39,81 @@ const FOLLOW_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const TRIP_SHARE_TOKEN_BYTES = 24;
 
 const normalizeEmail = (value: string): string => value.trim().toLowerCase();
+const USERNAME_MAX_LEN = 30;
+const USERNAME_ALLOWED_REGEX = /^[a-z0-9_-]{1,30}$/;
+
+const normalizeUsername = (value: string): string =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '')
+    .slice(0, USERNAME_MAX_LEN);
+
+const extractEmailLocalPart = (email: string): string => {
+  const normalized = normalizeEmail(email);
+  const local = normalized.split('@')[0] ?? normalized;
+  return normalizeUsername(local);
+};
+
+const buildUsernameBase = (firstName: string, lastName: string, email: string): string => {
+  const combined = normalizeUsername(`${firstName}${lastName}`);
+  if (combined.length > 0) return combined;
+  const local = extractEmailLocalPart(email);
+  if (local.length > 0) return local;
+  return 'user';
+};
+
+const appendUsernameSuffix = (base: string, suffix: number): string => {
+  const suffixText = String(suffix);
+  const maxBaseLength = USERNAME_MAX_LEN - suffixText.length;
+  const truncatedBase = base.slice(0, Math.max(1, maxBaseLength));
+  return `${truncatedBase}${suffixText}`;
+};
+
+const isReservedUsername = (value: string): boolean => {
+  const reserved = getReservedUsernames();
+  return reserved.includes(value.toLowerCase());
+};
+
+const isUsernameAvailable = async (p: QueryRunner, normalizedUsername: string, excludeUserId?: string): Promise<boolean> => {
+  const { rows } = await p.query<{ id: string }>(
+    `SELECT id
+     FROM users
+     WHERE username_normalized = $1
+       AND ($2::uuid IS NULL OR id <> $2)
+     LIMIT 1`,
+    [normalizedUsername, excludeUserId ?? null]
+  );
+  return rows.length === 0;
+};
+
+const generateUniqueUsername = async (
+  p: QueryRunner,
+  firstName: string,
+  lastName: string,
+  email: string,
+  preferredUsername?: string,
+  excludeUserId?: string
+): Promise<string> => {
+  const normalizedPreferred = preferredUsername ? normalizeUsername(preferredUsername) : '';
+  let base = normalizedPreferred || buildUsernameBase(firstName, lastName, email);
+  if (!base) base = 'user';
+
+  let candidate = base.slice(0, USERNAME_MAX_LEN);
+  let counter = 2;
+  while (
+    !USERNAME_ALLOWED_REGEX.test(candidate) ||
+    isReservedUsername(candidate) ||
+    !(await isUsernameAvailable(p, candidate, excludeUserId))
+  ) {
+    candidate = appendUsernameSuffix(base, counter);
+    counter += 1;
+    if (counter > 100000) {
+      throw new Error('Unable to generate a unique username');
+    }
+  }
+  return candidate;
+};
 
 const generateFollowCode = (): string => {
   const bytes = randomBytes(FOLLOW_CODE_LENGTH);
@@ -120,6 +197,8 @@ export const initDb = async (): Promise<void> => {
     CREATE TABLE IF NOT EXISTS users (
       id UUID PRIMARY KEY,
       email TEXT UNIQUE NOT NULL,
+      username TEXT,
+      username_normalized TEXT,
       provider TEXT NOT NULL,
       google_id TEXT,
       picture TEXT,
@@ -132,10 +211,13 @@ export const initDb = async (): Promise<void> => {
   `);
   await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id TEXT;`);
   await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS picture TEXT;`);
+  await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT;`);
+  await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS username_normalized TEXT;`);
   await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name TEXT;`);
   await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name TEXT;`);
   await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT TRUE;`);
   await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at TIMESTAMP;`);
+  await p.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username_normalized ON users(username_normalized);`);
 
 
   await p.query(`
@@ -185,6 +267,26 @@ export const initDb = async (): Promise<void> => {
       used_at TIMESTAMP
     );
   `);
+
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS user_emails (
+      id UUID PRIMARY KEY,
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      email TEXT NOT NULL,
+      email_normalized TEXT NOT NULL UNIQUE,
+      is_primary BOOLEAN NOT NULL DEFAULT FALSE,
+      is_verified BOOLEAN NOT NULL DEFAULT FALSE,
+      verified_at TIMESTAMP,
+      created_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE (user_id, email_normalized)
+    );
+  `);
+  await p.query(`ALTER TABLE user_emails ADD COLUMN IF NOT EXISTS is_primary BOOLEAN NOT NULL DEFAULT FALSE;`);
+  await p.query(`ALTER TABLE user_emails ADD COLUMN IF NOT EXISTS is_verified BOOLEAN NOT NULL DEFAULT FALSE;`);
+  await p.query(`ALTER TABLE user_emails ADD COLUMN IF NOT EXISTS verified_at TIMESTAMP;`);
+  await p.query(`ALTER TABLE user_emails ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();`);
+  await p.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_user_emails_normalized ON user_emails(email_normalized);`);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_user_emails_user ON user_emails(user_id);`);
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS traits (
@@ -683,6 +785,56 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE expenses ADD COLUMN IF NOT EXISTS exchange_rate_to_trip_currency NUMERIC;`);
   await p.query(`ALTER TABLE expenses ADD COLUMN IF NOT EXISTS exchange_rate_date DATE;`);
 
+  // Backfill usernames for existing rows and ensure user_emails has a canonical primary email for each user.
+  const usersWithoutUsername = await p.query<{
+    id: string;
+    email: string;
+    firstName: string | null;
+    lastName: string | null;
+  }>(
+    `SELECT id,
+            email,
+            first_name as "firstName",
+            last_name as "lastName"
+     FROM users
+     WHERE username_normalized IS NULL OR username_normalized = ''`
+  );
+  for (const user of usersWithoutUsername.rows) {
+    const username = await generateUniqueUsername(
+      p,
+      user.firstName ?? '',
+      user.lastName ?? '',
+      user.email
+    );
+    await p.query(
+      `UPDATE users
+       SET username = $1,
+           username_normalized = $2
+       WHERE id = $3`,
+      [username, username, user.id]
+    );
+  }
+
+  const existingUserEmails = await p.query<{
+    id: string;
+    email: string;
+    emailVerified: boolean | null;
+    emailVerifiedAt: string | null;
+  }>(
+    `SELECT id,
+            email,
+            email_verified as "emailVerified",
+            email_verified_at as "emailVerifiedAt"
+     FROM users`
+  );
+  for (const user of existingUserEmails.rows) {
+    await upsertUserEmail(p, user.id, user.email, {
+      isPrimary: true,
+      isVerified: Boolean(user.emailVerified ?? true),
+      verifiedAt: user.emailVerifiedAt ? new Date(user.emailVerifiedAt) : null,
+    });
+  }
+
   if (process.env.USE_IN_MEMORY_DB === '1') {
     // Clear data between test runs while keeping schema intact.
     await p.query(`DELETE FROM trip_comments`);
@@ -705,6 +857,7 @@ export const initDb = async (): Promise<void> => {
     await p.query(`DELETE FROM traits`);
     await p.query(`DELETE FROM family_relationships`);
     await p.query(`DELETE FROM fellow_travelers`);
+    await p.query(`DELETE FROM user_emails`);
     await p.query(`DELETE FROM web_users`);
     await p.query(`DELETE FROM users`);
   }
@@ -716,18 +869,58 @@ export const findOrCreateUser = async (
   provider: User['provider']
 ): Promise<User> => {
   const p = getPool();
-
-
-  const existing = await p.query<User>(`SELECT * FROM users WHERE email = $1`, [email]);
+  const normalizedEmail = normalizeEmail(email);
+  const existing = await p.query<User>(
+    `SELECT u.*
+     FROM users u
+     JOIN user_emails ue ON ue.user_id = u.id
+     WHERE ue.email_normalized = $1
+     LIMIT 1`,
+    [normalizedEmail]
+  );
   if (existing.rows.length) return existing.rows[0];
-
-
   const id = randomUUID();
-  await p.query(`INSERT INTO users (id, email, provider, email_verified) VALUES ($1, $2, $3, true)`, [id, email, provider]);
-  return { id, email, provider };
+  const username = await generateUniqueUsername(p, '', '', normalizedEmail);
+  await p.query(
+    `INSERT INTO users (id, email, username, username_normalized, provider, email_verified)
+     VALUES ($1, $2, $3, $4, $5, true)`,
+    [id, normalizedEmail, username, username, provider]
+  );
+  await upsertUserEmail(p, id, normalizedEmail, { isPrimary: true, isVerified: true, verifiedAt: new Date() });
+  return { id, email: normalizedEmail, provider, emailVerified: true };
 };
 
 type Queryable = Pick<Pool, 'query'>;
+
+const upsertUserEmail = async (
+  db: Queryable,
+  userId: string,
+  email: string,
+  options: { isPrimary?: boolean; isVerified?: boolean; verifiedAt?: Date | null } = {}
+): Promise<void> => {
+  const normalizedEmail = normalizeEmail(email);
+  const isPrimary = options.isPrimary ?? false;
+  const isVerified = options.isVerified ?? false;
+  const verifiedAt = options.verifiedAt ?? (isVerified ? new Date() : null);
+
+  await db.query(
+    `INSERT INTO user_emails (id, user_id, email, email_normalized, is_primary, is_verified, verified_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     ON CONFLICT (email_normalized) DO UPDATE
+     SET user_id = EXCLUDED.user_id,
+         email = EXCLUDED.email,
+         is_verified = CASE WHEN EXCLUDED.is_verified THEN TRUE ELSE user_emails.is_verified END,
+         verified_at = CASE
+           WHEN EXCLUDED.is_verified THEN COALESCE(EXCLUDED.verified_at, user_emails.verified_at, NOW())
+           ELSE user_emails.verified_at
+         END`,
+    [randomUUID(), userId, email, normalizedEmail, isPrimary, isVerified, verifiedAt]
+  );
+
+  if (isPrimary) {
+    await db.query(`UPDATE user_emails SET is_primary = (email_normalized = $2) WHERE user_id = $1`, [userId, normalizedEmail]);
+  }
+};
 
 const ensureOwnerUserRow = async (db: Queryable, ownerId: string): Promise<void> => {
   const existing = await db.query(`SELECT id FROM users WHERE id = $1`, [ownerId]);
@@ -737,7 +930,13 @@ const ensureOwnerUserRow = async (db: Queryable, ownerId: string): Promise<void>
   if (!email) {
     throw new Error('User not found. Please log in again.');
   }
-  await db.query(`INSERT INTO users (id, email, provider, email_verified) VALUES ($1, $2, $3, true)`, [ownerId, email, 'email']);
+  const username = await generateUniqueUsername(db, '', '', email);
+  await db.query(
+    `INSERT INTO users (id, email, username, username_normalized, provider, email_verified)
+     VALUES ($1, $2, $3, $4, $5, true)`,
+    [ownerId, email, username, username, 'email']
+  );
+  await upsertUserEmail(db, ownerId, email, { isPrimary: true, isVerified: true, verifiedAt: new Date() });
 };
 
 export const ensureDefaultGroupForUser = async (userId: string, email: string): Promise<void> => {
@@ -778,7 +977,15 @@ export const ensureDefaultGroupForUser = async (userId: string, email: string): 
 
 export const findUserByEmail = async (email: string): Promise<User | null> => {
   const p = getPool();
-  const { rows } = await p.query<User>(`SELECT * FROM users WHERE email = $1 LIMIT 1`, [email]);
+  const normalizedEmail = normalizeEmail(email);
+  const { rows } = await p.query<User>(
+    `SELECT u.*
+     FROM users u
+     JOIN user_emails ue ON ue.user_id = u.id
+     WHERE ue.email_normalized = $1
+     LIMIT 1`,
+    [normalizedEmail]
+  );
   const row = rows[0] as any;
   if (!row) return null;
   return { ...row, passengerIds: Array.isArray(row.passenger_ids) ? row.passenger_ids : [] };
@@ -794,13 +1001,19 @@ export const createWebUser = async (
   firstName: string,
   lastName: string,
   email: string,
-  password: string
+  password: string,
+  usernameInput?: string
 ): Promise<WebUser> => {
   const p = getPool();
+  const normalizedEmail = normalizeEmail(email);
 
   const existingUser = await p.query<{ id: string; emailVerified: boolean }>(
-    `SELECT id, COALESCE(email_verified, TRUE) as "emailVerified" FROM users WHERE email = $1 LIMIT 1`,
-    [email]
+    `SELECT u.id, COALESCE(u.email_verified, TRUE) as "emailVerified"
+     FROM users u
+     JOIN user_emails ue ON ue.user_id = u.id
+     WHERE ue.email_normalized = $1
+     LIMIT 1`,
+    [normalizedEmail]
   );
   if (existingUser.rows.length) {
     const user = existingUser.rows[0];
@@ -815,32 +1028,47 @@ export const createWebUser = async (
     await p.query(
       `INSERT INTO web_users (id, email, first_name, last_name, password_hash, salt, password_setup_required)
        VALUES ($1, $2, $3, $4, $5, $6, FALSE)`,
-      [user.id, email, firstName, lastName, passwordHash, salt]
+      [user.id, normalizedEmail, firstName, lastName, passwordHash, salt]
     );
+    const username = await generateUniqueUsername(p, firstName, lastName, normalizedEmail, usernameInput, user.id);
     await p.query(
       `UPDATE users
-       SET first_name = COALESCE($1, first_name),
-           last_name = COALESCE($2, last_name),
+       SET username = COALESCE(username, $1),
+           username_normalized = COALESCE(username_normalized, $2),
+           first_name = COALESCE($3, first_name),
+           last_name = COALESCE($4, last_name),
+           email = COALESCE($5, email),
            email_verified = COALESCE(email_verified, TRUE),
            email_verified_at = CASE WHEN COALESCE(email_verified, TRUE) THEN COALESCE(email_verified_at, NOW()) ELSE email_verified_at END
-       WHERE id = $3`,
-      [firstName, lastName, user.id]
+       WHERE id = $6`,
+      [username, username, firstName, lastName, normalizedEmail, user.id]
     );
-    return { id: user.id, email, firstName, lastName, emailVerified: user.emailVerified };
+    await upsertUserEmail(p, user.id, normalizedEmail, {
+      isPrimary: true,
+      isVerified: Boolean(user.emailVerified),
+      verifiedAt: user.emailVerified ? new Date() : null,
+    });
+    return { id: user.id, email: normalizedEmail, firstName, lastName, emailVerified: user.emailVerified };
   }
 
   const id = randomUUID();
-  await p.query(`INSERT INTO users (id, email, provider, email_verified) VALUES ($1, $2, 'email', false)`, [id, email]);
+  const username = await generateUniqueUsername(p, firstName, lastName, normalizedEmail, usernameInput);
+  await p.query(
+    `INSERT INTO users (id, email, username, username_normalized, provider, email_verified)
+     VALUES ($1, $2, $3, $4, 'email', false)`,
+    [id, normalizedEmail, username, username]
+  );
 
   const salt = randomBytes(16).toString('hex');
   const passwordHash = hashPassword(password, salt);
   await p.query(
     `INSERT INTO web_users (id, email, first_name, last_name, password_hash, salt, password_setup_required)
      VALUES ($1, $2, $3, $4, $5, $6, FALSE)`,
-    [id, email, firstName, lastName, passwordHash, salt]
+    [id, normalizedEmail, firstName, lastName, passwordHash, salt]
   );
+  await upsertUserEmail(p, id, normalizedEmail, { isPrimary: true, isVerified: false });
 
-  return { id, email, firstName, lastName, emailVerified: false };
+  return { id, email: normalizedEmail, firstName, lastName, emailVerified: false };
 };
 
 export const ensureWebPasswordAccountForOAuth = async (
@@ -850,11 +1078,13 @@ export const ensureWebPasswordAccountForOAuth = async (
   lastName?: string
 ): Promise<{ requiresPasswordSetup: boolean }> => {
   const p = getPool();
+  const normalizedEmail = normalizeEmail(email);
   const existing = await p.query<{ passwordSetupRequired: boolean }>(
     `SELECT password_setup_required as "passwordSetupRequired" FROM web_users WHERE id = $1 LIMIT 1`,
     [userId]
   );
   if (existing.rows.length) {
+    await upsertUserEmail(p, userId, normalizedEmail, { isPrimary: true, isVerified: true, verifiedAt: new Date() });
     return { requiresPasswordSetup: Boolean(existing.rows[0].passwordSetupRequired) };
   }
 
@@ -864,8 +1094,9 @@ export const ensureWebPasswordAccountForOAuth = async (
   await p.query(
     `INSERT INTO web_users (id, email, first_name, last_name, password_hash, salt, password_setup_required)
      VALUES ($1, $2, COALESCE($3, ''), COALESCE($4, ''), $5, $6, TRUE)`,
-    [userId, email, firstName ?? '', lastName ?? '', passwordHash, salt]
+    [userId, normalizedEmail, firstName ?? '', lastName ?? '', passwordHash, salt]
   );
+  await upsertUserEmail(p, userId, normalizedEmail, { isPrimary: true, isVerified: true, verifiedAt: new Date() });
   return { requiresPasswordSetup: true };
 };
 
@@ -1007,6 +1238,14 @@ export const markEmailVerificationUsed = async (verificationId: string): Promise
 export const markUserEmailVerified = async (userId: string): Promise<void> => {
   const p = getPool();
   await p.query(`UPDATE users SET email_verified = true, email_verified_at = NOW() WHERE id = $1`, [userId]);
+  await p.query(
+    `UPDATE user_emails
+     SET is_verified = TRUE,
+         verified_at = COALESCE(verified_at, NOW())
+     WHERE user_id = $1
+       AND (is_primary = TRUE OR email_normalized = (SELECT LOWER(email) FROM users WHERE id = $1))`,
+    [userId]
+  );
 };
 
 export const deleteUserRecord = async (userId: string): Promise<void> => {
@@ -6402,7 +6641,7 @@ export const findOrCreateGoogleUser = async (profile: any): Promise<User> => {
     const p = getPool();
     const { id, displayName, emails, photos, name } = profile;
 
-    const email = String(emails?.[0]?.value ?? '').trim().toLowerCase();
+    const email = normalizeEmail(String(emails?.[0]?.value ?? ''));
     if (!email) {
         throw new Error('Google profile did not return an email');
     }
@@ -6414,27 +6653,38 @@ export const findOrCreateGoogleUser = async (profile: any): Promise<User> => {
             `UPDATE users SET email = $1, picture = $2, first_name = $3, last_name = $4, email_verified = true, email_verified_at = NOW() WHERE id = $5`,
             [email, photos?.[0]?.value, name?.givenName, name?.familyName, user.id]
         );
+        await upsertUserEmail(p, user.id, email, { isPrimary: true, isVerified: true, verifiedAt: new Date() });
         return user;
     }
 
-    const existingByEmail = await p.query<User>(`SELECT * FROM users WHERE email = $1`, [email]);
+    const existingByEmail = await p.query<User>(
+      `SELECT u.*
+       FROM users u
+       JOIN user_emails ue ON ue.user_id = u.id
+       WHERE ue.email_normalized = $1
+       LIMIT 1`,
+      [email]
+    );
     if (existingByEmail.rows.length) {
         const user = existingByEmail.rows[0];
         await p.query(
             `UPDATE users SET google_id = $1, picture = $2, first_name = $3, last_name = $4, email_verified = true, email_verified_at = NOW() WHERE id = $5`,
             [id, photos?.[0]?.value, name?.givenName, name?.familyName, user.id]
         );
+        await upsertUserEmail(p, user.id, email, { isPrimary: true, isVerified: true, verifiedAt: new Date() });
         return user;
     }
 
     const newUserId = randomUUID();
+    const username = await generateUniqueUsername(p, name?.givenName ?? '', name?.familyName ?? '', email);
     await p.query(
-        `INSERT INTO users (id, email, provider, google_id, picture, first_name, last_name, email_verified, email_verified_at)
-         VALUES ($1, $2, 'google', $3, $4, $5, $6, true, NOW())`,
-        [newUserId, email, id, photos?.[0]?.value, name?.givenName, name?.familyName]
+        `INSERT INTO users (id, email, username, username_normalized, provider, google_id, picture, first_name, last_name, email_verified, email_verified_at)
+         VALUES ($1, $2, $3, $4, 'google', $5, $6, $7, $8, true, NOW())`,
+        [newUserId, email, username, username, id, photos?.[0]?.value, name?.givenName, name?.familyName]
     );
+    await upsertUserEmail(p, newUserId, email, { isPrimary: true, isVerified: true, verifiedAt: new Date() });
 
-    return { id: newUserId, email, provider: 'google' };
+    return { id: newUserId, email, provider: 'google', emailVerified: true };
 };
 
 export const deleteAllUsers = async (userIds: string[]): Promise<void> => {
