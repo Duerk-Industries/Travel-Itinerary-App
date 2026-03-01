@@ -207,6 +207,10 @@ New server-side tests cover email confirmation and pending invite acceptance/rej
   - verifies quality gates require source-backed, locality-plausible attraction candidates
   - verifies attraction target scaling increases for globally popular destinations (for example Paris/London class destinations)
   - verifies generated CSV validation fails rows with `source_count < 2`
+- `server/__tests__/destinations-attractions-updated.test.ts`
+  - verifies destinations CSV backfills `Attractions Updated` (`YYYY-MM-DD`)
+  - verifies 45-day refresh gate (`>= 45` days refreshes; newer rows are skipped)
+  - verifies targeted destination date line updates apply without full file regeneration flow
 
 Manual verification:
 - Run `npm run destinations:generate` and spot-check US-English name normalization (for example `Vienna` instead of `Wien`).
@@ -214,6 +218,8 @@ Manual verification:
   - attractions are ranked with globally popular destinations producing larger catalogs
   - no synthetic names are introduced
   - `source_count` remains `>= 2`
+  - destinations with recent `Attractions Updated` dates are skipped
+  - destinations refreshed this run get today’s `Attractions Updated` date
 
 ### Execution
 

@@ -15,6 +15,14 @@ interface Destination {
   'State/Provence': string;
   'Nearest City': string;
   'Destination Official Name': string;
+  'Attractions Updated'?: string;
+}
+
+interface ParsedDestinationsCsv {
+  headers: string[];
+  rows: Array<{ data: Destination; lineIndex: number }>;
+  lines: string[];
+  eol: '\n' | '\r\n';
 }
 
 interface DestinationSource {
@@ -485,26 +493,174 @@ function parseCsvLine(line: string): string[] {
   return values;
 }
 
-function parseCSV(filePath: string): Destination[] {
+export const DESTINATIONS_ATTRACTIONS_UPDATED_HEADER = 'Attractions Updated';
+
+export function parseDestinationsCsv(filePath: string): ParsedDestinationsCsv {
   const csvData = fs.readFileSync(filePath, 'utf8');
-  const lines = csvData.split(/\r?\n/).filter((line) => line.trim().length > 0);
-  if (lines.length === 0) return [];
+  const eol: '\n' | '\r\n' = csvData.includes('\r\n') ? '\r\n' : '\n';
+  const rawLines = csvData.split(/\r?\n/);
+  const lines = rawLines.filter((line) => line.trim().length > 0);
+  if (lines.length === 0) {
+    return { headers: [], rows: [], lines: [], eol };
+  }
 
   const headers = parseCsvLine(lines[0]);
-  const destinations: Destination[] = [];
+  const rows: Array<{ data: Destination; lineIndex: number }> = [];
 
   for (let i = 1; i < lines.length; i += 1) {
     const values = parseCsvLine(lines[i]);
     if (values.length !== headers.length) continue;
-
     const destination = {} as Destination;
     headers.forEach((header, index) => {
       destination[header as keyof Destination] = values[index];
     });
-    destinations.push(destination);
+    rows.push({ data: destination, lineIndex: i });
   }
 
-  return destinations;
+  return { headers, rows, lines, eol };
+}
+
+function destinationRowToCsv(headers: string[], destination: Destination): string {
+  return headers.map((header) => escapeCsv(String(destination[header as keyof Destination] ?? ''))).join(',');
+}
+
+export function serializeDestinationsCsv(doc: ParsedDestinationsCsv): string {
+  const out: string[] = [];
+  out.push(doc.headers.map((h) => escapeCsv(h)).join(','));
+  for (const row of doc.rows) {
+    out.push(destinationRowToCsv(doc.headers, row.data));
+  }
+  return `${out.join(doc.eol)}${doc.eol}`;
+}
+
+function toYmd(date: Date): string {
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
+}
+
+function parseYmdUtc(value: string | undefined): Date | null {
+  const text = String(value ?? '').trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return null;
+  const ms = Date.parse(`${text}T00:00:00.000Z`);
+  if (!Number.isFinite(ms)) return null;
+  return new Date(ms);
+}
+
+export function shouldRefreshDestinationAttractions(
+  lastUpdatedYmd: string | undefined,
+  todayYmd: string,
+  minDaysBetweenRefreshes = 45
+): boolean {
+  const today = parseYmdUtc(todayYmd);
+  if (!today) return true;
+  const lastUpdated = parseYmdUtc(lastUpdatedYmd);
+  if (!lastUpdated) return true;
+  const ageDays = Math.floor((today.getTime() - lastUpdated.getTime()) / (24 * 60 * 60 * 1000));
+  return ageDays >= minDaysBetweenRefreshes;
+}
+
+export function ensureAttractionsUpdatedColumnAndBackfill(doc: ParsedDestinationsCsv, todayYmd: string): boolean {
+  let changed = false;
+  if (!doc.headers.includes(DESTINATIONS_ATTRACTIONS_UPDATED_HEADER)) {
+    doc.headers.push(DESTINATIONS_ATTRACTIONS_UPDATED_HEADER);
+    changed = true;
+  }
+
+  for (const row of doc.rows) {
+    const current = String(row.data[DESTINATIONS_ATTRACTIONS_UPDATED_HEADER as keyof Destination] ?? '').trim();
+    if (!current) {
+      row.data[DESTINATIONS_ATTRACTIONS_UPDATED_HEADER as keyof Destination] = todayYmd;
+      changed = true;
+    }
+    doc.lines[row.lineIndex] = destinationRowToCsv(doc.headers, row.data);
+  }
+  doc.lines[0] = doc.headers.map((h) => escapeCsv(h)).join(',');
+  return changed;
+}
+
+export function writeDestinationsCsvLineUpdates(
+  filePath: string,
+  originalRaw: string,
+  eol: '\n' | '\r\n',
+  doc: ParsedDestinationsCsv,
+  lineIndexes: Set<number>
+): void {
+  if (lineIndexes.size === 0) return;
+  const segments = originalRaw.match(/.*(?:\r\n|\n|$)/g)?.filter((s) => s.length > 0) ?? [];
+  if (segments.length === 0) {
+    fs.writeFileSync(filePath, serializeDestinationsCsv(doc), 'utf8');
+    return;
+  }
+  const normalizedSegments = segments.map((segment) => {
+    if (segment.endsWith('\r\n')) return { body: segment.slice(0, -2), nl: '\r\n' };
+    if (segment.endsWith('\n')) return { body: segment.slice(0, -1), nl: '\n' };
+    return { body: segment, nl: '' };
+  });
+
+  const ordered = Array.from(lineIndexes).sort((a, b) => a - b);
+  const sameLength = ordered.every((idx) => {
+    if (idx < 0 || idx >= normalizedSegments.length || idx >= doc.lines.length) return false;
+    return Buffer.byteLength(normalizedSegments[idx].body, 'utf8') === Buffer.byteLength(doc.lines[idx], 'utf8');
+  });
+
+  if (!sameLength) {
+    fs.writeFileSync(filePath, serializeDestinationsCsv(doc), 'utf8');
+    return;
+  }
+
+  const fd = fs.openSync(filePath, 'r+');
+  try {
+    let offset = 0;
+    let pointer = 0;
+    for (const idx of ordered) {
+      while (pointer < idx) {
+        const seg = normalizedSegments[pointer];
+        offset += Buffer.byteLength(seg.body, 'utf8') + Buffer.byteLength(seg.nl, 'utf8');
+        pointer += 1;
+      }
+      const next = Buffer.from(doc.lines[idx], 'utf8');
+      fs.writeSync(fd, next, 0, next.length, offset);
+    }
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+
+export function loadExistingAttractionsRowsByDestination(filePath: string): {
+  header: string;
+  rowsByDestination: Map<string, string[]>;
+} {
+  if (!fs.existsSync(filePath)) {
+    return {
+      header:
+        'id,destination_key,destination_display_name,name,rank,activity_type,interest_tags,source_url,source_label,snippet,source_count,budget_tier,updated_at,sitelinks,qid,lat,lon',
+      rowsByDestination: new Map(),
+    };
+  }
+  const raw = fs.readFileSync(filePath, 'utf8');
+  const lines = raw.split(/\r?\n/).filter((line) => line.trim().length > 0);
+  if (!lines.length) {
+    return {
+      header:
+        'id,destination_key,destination_display_name,name,rank,activity_type,interest_tags,source_url,source_label,snippet,source_count,budget_tier,updated_at,sitelinks,qid,lat,lon',
+      rowsByDestination: new Map(),
+    };
+  }
+  const header = lines[0];
+  const headers = parseCsvLine(header);
+  const destinationIndex = headers.indexOf('destination_display_name');
+  const rowsByDestination = new Map<string, string[]>();
+  if (destinationIndex === -1) {
+    return { header, rowsByDestination };
+  }
+  for (let i = 1; i < lines.length; i += 1) {
+    const values = parseCsvLine(lines[i]);
+    if (values.length !== headers.length) continue;
+    const destination = values[destinationIndex];
+    const existing = rowsByDestination.get(destination) ?? [];
+    existing.push(lines[i]);
+    rowsByDestination.set(destination, existing);
+  }
+  return { header, rowsByDestination };
 }
 
 function inferActivityType(name: string, snippet: string): string {
@@ -669,14 +825,26 @@ function verifyAttractions(filePath: string): void {
 
 async function main() {
     const now = new Date().toISOString();
+    const todayYmd = toYmd(new Date());
+    const refreshMinDays = 45;
     const destinationsFile = resolveDestinationsFile();
     const sourcesFile = path.resolve(__dirname, '../../scripts/destination_sources.json');
     const outputFile = path.resolve(__dirname, '../data/attractions_catalog.csv');
     const qidCacheFile = path.resolve(__dirname, '../../scripts/destination_qid_cache.json');
     const pageviewCacheFile = path.resolve(__dirname, '../../scripts/wikipedia_pageviews_cache.json');
 
+    const destinationsRawBefore = fs.readFileSync(destinationsFile, 'utf8');
     const sourceMap = loadDestinationSources(sourcesFile);
-    const destinations = parseCSV(destinationsFile);
+    const destinationsDoc = parseDestinationsCsv(destinationsFile);
+    if (!destinationsDoc.headers.length) {
+      throw new Error(`Destinations CSV is empty: ${destinationsFile}`);
+    }
+    const destinationsChangedByBackfill = ensureAttractionsUpdatedColumnAndBackfill(destinationsDoc, todayYmd);
+    if (destinationsChangedByBackfill) {
+      fs.writeFileSync(destinationsFile, serializeDestinationsCsv(destinationsDoc), 'utf8');
+      console.log(`Backfilled "${DESTINATIONS_ATTRACTIONS_UPDATED_HEADER}" for destinations.csv with ${todayYmd}`);
+    }
+    const destinations = destinationsDoc.rows;
     const context = await buildGenerationContext();
     const qidCache = loadQidCache(qidCacheFile);
     const pageviewCache = loadPageviewCache(pageviewCacheFile);
@@ -684,13 +852,19 @@ async function main() {
     const activeDestinations =
         Number.isFinite(maxDestinations) && maxDestinations > 0 ? destinations.slice(0, maxDestinations) : destinations;
 
-    const lines: string[] = [
-        'id,destination_key,destination_display_name,name,rank,activity_type,interest_tags,source_url,source_label,snippet,source_count,budget_tier,updated_at,sitelinks,qid,lat,lon',
-    ];
+    const existingAttractions = loadExistingAttractionsRowsByDestination(outputFile);
+    const generatedByDestination = new Map<string, string[]>();
+    const touchedDestinationDates = new Set<number>();
 
-    for (const destination of activeDestinations) {
+    for (const destinationRow of activeDestinations) {
+        const destination = destinationRow.data;
         const destinationName = destination['Destination English Name'];
         const destinationKey = slugify(destinationName);
+        const lastUpdated = String(destination[DESTINATIONS_ATTRACTIONS_UPDATED_HEADER as keyof Destination] ?? '').trim();
+        if (!shouldRefreshDestinationAttractions(lastUpdated, todayYmd, refreshMinDays)) {
+            console.log(`Skipping destination (updated ${lastUpdated}): ${destinationName}`);
+            continue;
+        }
         console.log(`Processing destination: ${destinationName}`);
 
         const destinationQid = await getDestinationQid(destinationName, destination.Country, qidCache);
@@ -749,6 +923,7 @@ async function main() {
             .sort((a, b) => (b.score !== a.score ? b.score - a.score : b.sitelinks - a.sitelinks))
             .slice(0, targetCount);
 
+        const generatedRows: string[] = [];
         selected.forEach((candidate, index) => {
             const rank = index + 1;
             const activityType = inferActivityType(candidate.name, candidate.snippet);
@@ -776,9 +951,47 @@ async function main() {
                 candidate.coordinates?.lat ?? '',
                 candidate.coordinates?.lon ?? '',
             ].join(',');
-            lines.push(row);
+            generatedRows.push(row);
         });
+
+        if (generatedRows.length > 0) {
+          generatedByDestination.set(destinationName, generatedRows);
+          destination[DESTINATIONS_ATTRACTIONS_UPDATED_HEADER as keyof Destination] = todayYmd;
+          destinationsDoc.lines[destinationRow.lineIndex] = destinationRowToCsv(destinationsDoc.headers, destination);
+          touchedDestinationDates.add(destinationRow.lineIndex);
+        }
     }
+
+    // Merge generated rows with existing rows so destinations skipped by freshness keep their prior attractions.
+    const lines: string[] = [existingAttractions.header];
+    const seenDestinations = new Set<string>();
+    for (const destinationRow of destinationsDoc.rows) {
+      const name = destinationRow.data['Destination English Name'];
+      seenDestinations.add(name);
+      const generated = generatedByDestination.get(name);
+      if (generated && generated.length) {
+        lines.push(...generated);
+        continue;
+      }
+      const existing = existingAttractions.rowsByDestination.get(name);
+      if (existing && existing.length) {
+        lines.push(...existing);
+      }
+    }
+    for (const [name, existingRows] of existingAttractions.rowsByDestination.entries()) {
+      if (!seenDestinations.has(name)) {
+        lines.push(...existingRows);
+      }
+    }
+
+    // Write only changed destination lines in-place when possible.
+    writeDestinationsCsvLineUpdates(
+      destinationsFile,
+      destinationsRawBefore,
+      destinationsDoc.eol,
+      destinationsDoc,
+      touchedDestinationDates
+    );
 
     fs.writeFileSync(qidCacheFile, JSON.stringify(qidCache, null, 2), 'utf8');
     fs.writeFileSync(pageviewCacheFile, JSON.stringify(pageviewCache, null, 2), 'utf8');

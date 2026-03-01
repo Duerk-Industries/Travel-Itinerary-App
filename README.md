@@ -159,6 +159,11 @@ Default rollout flags still ship disabled for behavior-changing auth paths so lo
   - Wikimedia Pageviews API (`wikimedia.org/api/rest_v1/.../pageviews/...`) for popularity ranking
   - Country metrics for scaling: Rest Countries + World Bank tourism arrivals
 - Refresh behavior and shortlist sizing are controlled in `server/config/api-limits.yaml` under `caching.attractions.*`.
+- Destination refresh tracking is stored in `server/data/destinations.csv`:
+  - new column: `Attractions Updated` (`YYYY-MM-DD`)
+  - generator skips destinations updated in the last 45 days
+  - destinations become eligible again at `>= 45` days
+  - when a destination is regenerated, its `Attractions Updated` value is set to the current date
 - Each attraction is stored with:
   - inferred `activityType`
   - inferred interest tags from:
