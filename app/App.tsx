@@ -2593,14 +2593,21 @@ const App: React.FC = () => {
               />
               <View style={[styles.dropdown, styles.carFormField]}>
                 <TouchableOpacity
-                  style={[styles.input, styles.selectButtonRow, { marginBottom: 0 }]}
+                  style={[
+                    styles.input,
+                    styles.selectButtonRow,
+                    styles.prepaidSelectorButton,
+                    carDraft.prepaid ? styles.prepaidSelectorButtonSelected : null,
+                  ]}
                   onPress={() => setCarPrepaidOpen((s) => !s)}
                 >
-                  <Text style={styles.cellText}>{carDraft.prepaid || 'Select Yes/No'}</Text>
+                  <Text style={[styles.cellText, styles.prepaidSelectorText]}>
+                    {carDraft.prepaid ? `Prepaid: ${carDraft.prepaid}` : 'Prepaid? Select Yes or No'}
+                  </Text>
                   <Text style={styles.selectCaret}>▾</Text>
                 </TouchableOpacity>
                 {carPrepaidOpen ? (
-                  <View style={[styles.dropdownList, { position: 'relative', top: 0 }]}>
+                  <View style={[styles.dropdownList, styles.prepaidDropdownList]}>
                     {['Yes', 'No'].map((opt) => (
                       <TouchableOpacity
                         key={opt}
@@ -4068,6 +4075,24 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: theme.colors.border,
     backgroundColor: theme.colors.surface,
+  },
+  prepaidSelectorButton: {
+    marginBottom: 0,
+    minHeight: 42,
+    borderColor: theme.colors.cta,
+    backgroundColor: theme.colors.surfaceMuted,
+  },
+  prepaidSelectorButtonSelected: {
+    backgroundColor: theme.colors.surface,
+  },
+  prepaidSelectorText: {
+    fontWeight: theme.typography.weightSemibold,
+  },
+  prepaidDropdownList: {
+    top: '100%',
+    marginTop: 6,
+    zIndex: 24000,
+    elevation: 28,
   },
   dateInputWrap: {
     position: 'relative',
