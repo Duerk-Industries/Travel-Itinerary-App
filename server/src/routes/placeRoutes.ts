@@ -3,6 +3,13 @@ import { authenticate } from '../auth';
 import { getLocationsByIds, searchLocations } from '../db';
 import { autocompletePlaces } from '../services/placeService';
 import { getLocationOptionsByIds, searchCityOptions, searchCountryStateOptions } from '../services/locationServices';
+import {
+  getDestinationLocationOptionsByIds,
+  searchAttractionOptionsForSelectedLocations,
+  searchDestinationLocationOptions,
+  splitSelectedLocationIds,
+  splitSelectedLocationNames,
+} from '../services/destinationAttractionAutocompleteService';
 
 interface LocationResult {
   id: string;
@@ -23,7 +30,17 @@ const isTransientNetworkError = (err: unknown): boolean => {
 const fallbackLocationNameFromId = (id: string): string => {
   const [kind, raw] = String(id).split(':', 2);
   const normalizedKind =
-    kind === 'country' ? 'Country' : kind === 'state' ? 'State' : kind === 'city' ? 'City' : 'Location';
+    kind === 'country'
+      ? 'Country'
+      : kind === 'state'
+        ? 'State'
+        : kind === 'city'
+          ? 'City'
+          : kind === 'destination'
+            ? 'Destination'
+            : kind === 'attraction'
+              ? 'Attraction'
+              : 'Location';
   return raw ? `${normalizedKind} ${raw}` : normalizedKind;
 };
 
@@ -79,6 +96,41 @@ router.get('/location-options', async (req, res) => {
       res.json(results);
       return;
     }
+    if (kind === 'destination') {
+      const destinationResults = await searchDestinationLocationOptions(q, Number.isFinite(limit) ? limit : 10);
+      res.json(destinationResults);
+      return;
+    }
+    if (kind === 'country_destination') {
+      const max = Number.isFinite(limit) ? Number(limit) : 10;
+      const [destinationResults, countryStateResults] = await Promise.all([
+        searchDestinationLocationOptions(q, Math.max(max, 10)),
+        searchCountryStateOptions(q, Math.max(max * 2, 12)),
+      ]);
+      const countryResults = countryStateResults.filter((item) => item.sourceType === 'country');
+      const merged = [...destinationResults, ...countryResults];
+      const seen = new Set<string>();
+      const deduped = merged.filter((item) => {
+        const key = `${item.sourceType}:${String(item.name ?? '').trim().toLowerCase()}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      res.json(deduped.slice(0, Math.min(Math.max(max, 1), 50)));
+      return;
+    }
+    if (kind === 'attraction') {
+      const selectedLocationIds = splitSelectedLocationIds(req.query.selectedIds);
+      const selectedLocationNames = splitSelectedLocationNames(req.query.selectedNames);
+      const results = await searchAttractionOptionsForSelectedLocations({
+        query: q,
+        selectedLocationIds,
+        selectedLocationNames,
+        limit: Number.isFinite(limit) ? limit : 12,
+      });
+      res.json(results);
+      return;
+    }
     const results = await searchCountryStateOptions(q, Number.isFinite(limit) ? limit : 10);
     res.json(results);
   } catch (err) {
@@ -100,11 +152,25 @@ router.post('/batch', async (req, res) => {
   const missingIds = ids.filter((id) => !foundIds.has(id));
 
   if (missingIds.length > 0) {
-    const localIds = missingIds.filter((id) => id.startsWith('country:') || id.startsWith('state:') || id.startsWith('city:'));
+    const localIds = missingIds.filter(
+      (id) =>
+        id.startsWith('country:') ||
+        id.startsWith('state:') ||
+        id.startsWith('city:') ||
+        id.startsWith('destination:')
+    );
     if (localIds.length) {
       try {
-        const localOptions = await getLocationOptionsByIds(localIds);
-        for (const option of localOptions) {
+        const locationOptionIds = localIds.filter(
+          (id) => id.startsWith('country:') || id.startsWith('state:') || id.startsWith('city:')
+        );
+        const destinationOptionIds = localIds.filter((id) => id.startsWith('destination:'));
+        const [localOptions, destinationOptions] = await Promise.all([
+          locationOptionIds.length ? getLocationOptionsByIds(locationOptionIds) : Promise.resolve([]),
+          destinationOptionIds.length ? getDestinationLocationOptionsByIds(destinationOptionIds) : Promise.resolve([]),
+        ]);
+        const mergedOptions = [...localOptions, ...destinationOptions];
+        for (const option of mergedOptions) {
           results.push({
             id: option.id,
             place_id: option.id,

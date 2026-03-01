@@ -904,8 +904,135 @@ describe('itinerary prompt plan service', () => {
       tripIdSeed: 'trip-seed-single-destination-fallback',
     });
 
-    const itineraryActivities = result.itinerary.dy.flatMap((day) => day.it.map((item) => item[2]));
-    expect(itineraryActivities.some((name) => /acapulco/i.test(name))).toBe(false);
-    expect(itineraryActivities.some((name) => /museo nacional de antropolog/i.test(name))).toBe(true);
+  const itineraryActivities = result.itinerary.dy.flatMap((day) => day.it.map((item) => item[2]));
+  expect(itineraryActivities.some((name) => /acapulco/i.test(name))).toBe(false);
+  expect(itineraryActivities.some((name) => /museo nacional de antropolog/i.test(name))).toBe(true);
+  });
+
+  it('forces must-see attractions into the final itinerary when provided', async () => {
+    mockedAxios.post
+      .mockResolvedValueOnce({
+        data: {
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  $: 'norm1',
+                  sd: '2026-07-01',
+                  ed: '2026-07-03',
+                  p: 'B',
+                  c: 'M',
+                  mob: 'M',
+                  car: 'P',
+                  is: 'mixed',
+                  w: {
+                    outdoors: 15,
+                    adventure: 10,
+                    culture: 20,
+                    food: 15,
+                    nightlife: 10,
+                    relax: 10,
+                    photography: 10,
+                    authentic_local: 5,
+                    iconic_landmarks: 5,
+                  },
+                  a: [],
+                }),
+              },
+            },
+          ],
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  $: 'r1',
+                  eh: 'CDG',
+                  xh: 'CDG',
+                  b: [{ l: 'Paris', ci: '2026-07-01', co: '2026-07-04', dn: [] }],
+                  x: [],
+                  rc: null,
+                  w: { o: 25, c: 25, f: 20, n: 10, r: 20 },
+                  a: [],
+                }),
+              },
+            },
+          ],
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  $: 'it1',
+                  eh: 'CDG',
+                  xh: 'CDG',
+                  b: [{ l: 'Paris', ci: '2026-07-01', co: '2026-07-04', dn: [] }],
+                  x: [],
+                  rc: null,
+                  dy: [
+                    { d: 1, dt: '2026-07-01', b: 'Paris', it: [['D', 'O', 'Neighborhood walk']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'Paris'", ln: [], cf: 'M' },
+                    { d: 2, dt: '2026-07-02', b: 'Paris', it: [['D', 'O', 'Flexible activity block']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'Paris'", ln: [], cf: 'M' },
+                    { d: 3, dt: '2026-07-03', b: 'Paris', it: [['E', 'O', 'Local evening stroll']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'Paris'", ln: [], cf: 'M' },
+                  ],
+                  a: [],
+                  cf: 'M',
+                }),
+              },
+            },
+          ],
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  $: 'it1',
+                  eh: 'CDG',
+                  xh: 'CDG',
+                  b: [{ l: 'Paris', ci: '2026-07-01', co: '2026-07-04', dn: [] }],
+                  x: [],
+                  rc: null,
+                  dy: [
+                    { d: 1, dt: '2026-07-01', b: 'Paris', it: [['D', 'O', 'Neighborhood walk']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'Paris'", ln: [], cf: 'M' },
+                    { d: 2, dt: '2026-07-02', b: 'Paris', it: [['D', 'O', 'Flexible activity block']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'Paris'", ln: [], cf: 'M' },
+                    { d: 3, dt: '2026-07-03', b: 'Paris', it: [['E', 'O', 'Local evening stroll']], me: ['BQ', 'LC', 'DL'], sl: "Lodging at 'Paris'", ln: [], cf: 'M' },
+                  ],
+                  a: [],
+                  cf: 'M',
+                }),
+              },
+            },
+          ],
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          choices: [{ message: { content: '## Rendered itinerary' } }],
+        },
+      });
+
+    const result = await generateItineraryViaPromptPlan({
+      apiKey: 'test-key',
+      userId: 'user-1',
+      destinations: ['Paris'],
+      mustSeeAttractions: ['Eiffel Tower', 'Louvre Museum'],
+      days: 3,
+      budgetMin: 1200,
+      budgetMax: 3000,
+      groupTraits: [],
+      tripIdSeed: 'trip-seed-must-see',
+    });
+
+    const itineraryActivities = result.itinerary.dy.flatMap((day) => day.it.map((item) => item[2].toLowerCase()));
+    expect(itineraryActivities).toContain('eiffel tower');
+    expect(itineraryActivities).toContain('louvre museum');
   });
 });

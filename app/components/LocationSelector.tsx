@@ -3,7 +3,7 @@ import { View, TextInput, Text, TouchableOpacity, Platform, ActivityIndicator } 
 
 export type LocationOption = {
   id: string;
-  sourceType: 'country' | 'state' | 'city';
+  sourceType: 'country' | 'state' | 'city' | 'destination';
   name: string;
   countryId?: string;
   countryName?: string;
@@ -21,6 +21,8 @@ type LocationSelectorProps = {
   styles: Record<string, any>;
   placeholder?: string;
   title?: string;
+  locationSearchKind?: 'country_state' | 'country_destination' | 'destination';
+  showCitySearch?: boolean;
 };
 
 export const LocationSelector: React.FC<LocationSelectorProps> = ({
@@ -33,6 +35,8 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
   styles,
   placeholder = "Search countries or states",
   title = "Search countries or states",
+  locationSearchKind = 'country_state',
+  showCitySearch = true,
 }) => {
   const [countryStateQuery, setCountryStateQuery] = useState('');
   const [countryStateSuggestions, setCountryStateSuggestions] = useState<LocationOption[]>([]);
@@ -59,7 +63,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
     () => selectedLocations.filter((item) => item.sourceType === 'state').map((item) => item.id),
     [selectedLocations]
   );
-  const canSearchCities = selectedCountryIds.length > 0 || selectedStateIds.length > 0;
+  const canSearchCities = showCitySearch && (selectedCountryIds.length > 0 || selectedStateIds.length > 0);
 
   useEffect(() => {
     addGuardRef.current = new Set(selectedLocations.map((item) => item.id));
@@ -84,7 +88,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
     const handle = setTimeout(async () => {
       try {
         const res = await fetch(
-          `${backendUrl}/api/places/location-options?kind=country_state&q=${encodeURIComponent(q)}&limit=20`,
+          `${backendUrl}/api/places/location-options?kind=${encodeURIComponent(locationSearchKind)}&q=${encodeURIComponent(q)}&limit=20`,
           { headers }
         );
         if (!res.ok) {
@@ -106,9 +110,14 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
       active = false;
       clearTimeout(handle);
     };
-  }, [countryStateQuery, backendUrl, JSON.stringify(headers), selectedIds, countryStateMinChars, debounceMs]);
+  }, [countryStateQuery, backendUrl, JSON.stringify(headers), selectedIds, countryStateMinChars, debounceMs, locationSearchKind]);
 
   useEffect(() => {
+    if (!showCitySearch) {
+      setCitySuggestions([]);
+      setCityLoading(false);
+      return;
+    }
     const q = cityQuery.trim();
     if (!q || q.length < cityMinChars || !canSearchCities) {
       setCitySuggestions([]);
@@ -151,7 +160,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
       active = false;
       clearTimeout(handle);
     };
-  }, [cityQuery, backendUrl, JSON.stringify(headers), selectedIds, selectedCountryIds.join('|'), selectedStateIds.join('|'), canSearchCities, cityMinChars, debounceMs]);
+  }, [cityQuery, backendUrl, JSON.stringify(headers), selectedIds, selectedCountryIds.join('|'), selectedStateIds.join('|'), canSearchCities, cityMinChars, debounceMs, showCitySearch]);
 
   const addLocations = (items: LocationOption[]) => {
     const seen = new Set(addGuardRef.current);
@@ -240,6 +249,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
   };
 
   const handleCitySubmit = () => {
+    if (!showCitySearch) return;
     if (!canSearchCities) return;
     if (cityQuery.trim()) {
       if (citySuggestions.length > 0) {
@@ -271,6 +281,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
   const labelForType = (sourceType: LocationOption['sourceType']) => {
     if (sourceType === 'city') return 'City';
     if (sourceType === 'state') return 'State';
+    if (sourceType === 'destination') return 'Destination';
     return 'Country';
   };
 
@@ -326,60 +337,64 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
         </View>
       )}
 
-      <View style={[styles.row, { alignItems: 'center', marginTop: 12 }]}>
-        <TextInput
-          ref={cityInputRef}
-          style={[styles.input, { flex: 1 }]}
-          placeholder="Search cities"
-          value={cityQuery}
-          onChangeText={setCityQuery}
-          onKeyPress={handleCityKeyPress}
-          onSubmitEditing={handleCitySubmit}
-          accessibilityLabel="Search cities"
-          editable={canSearchCities}
-        />
-        {cityLoading && (
-          <ActivityIndicator size="small" color="#0d6efd" style={{ marginLeft: 8 }} testID="city-loading" />
-        )}
-        <TouchableOpacity 
-            style={[styles.button, styles.smallButton, { marginLeft: 8 }]} 
-            onPress={handleCitySubmit}
-            testID="add-city-button"
-            disabled={!canSearchCities}
-        >
-            <Text style={styles.buttonText}>Add</Text>
-        </TouchableOpacity>
-      </View>
+      {showCitySearch && (
+        <>
+          <View style={[styles.row, { alignItems: 'center', marginTop: 12 }]}>
+            <TextInput
+              ref={cityInputRef}
+              style={[styles.input, { flex: 1 }]}
+              placeholder="Search cities"
+              value={cityQuery}
+              onChangeText={setCityQuery}
+              onKeyPress={handleCityKeyPress}
+              onSubmitEditing={handleCitySubmit}
+              accessibilityLabel="Search cities"
+              editable={canSearchCities}
+            />
+            {cityLoading && (
+              <ActivityIndicator size="small" color="#0d6efd" style={{ marginLeft: 8 }} testID="city-loading" />
+            )}
+            <TouchableOpacity
+              style={[styles.button, styles.smallButton, { marginLeft: 8 }]}
+              onPress={handleCitySubmit}
+              testID="add-city-button"
+              disabled={!canSearchCities}
+            >
+              <Text style={styles.buttonText}>Add</Text>
+            </TouchableOpacity>
+          </View>
 
-      {!canSearchCities && (
-        <Text style={[styles.helperText, { marginTop: 4 }]}>Select at least one country or state to add cities.</Text>
-      )}
-      
-      {(citySuggestions.length > 0 || (cityQuery.trim().length > 0 && citySuggestions.length === 0 && canSearchCities)) && (
-        <View style={[styles.card, { marginTop: 6 }]}>
-           {citySuggestions.map((location) => (
-              <TouchableOpacity
-                key={`city-suggestion-${location.id}`}
-                style={[styles.row, { justifyContent: 'space-between', paddingVertical: 6 }]}
-                onPress={() => handleAddCity(location)}
-                testID={`city-suggestion-${location.id}`}
-              >
-                <Text style={styles.bodyText}>{location.name}</Text>
-                <Text style={styles.helperText}>City</Text>
-              </TouchableOpacity>
-            ))}
-           {citySuggestions.length === 0 && cityQuery.trim().length > 0 && canSearchCities && (
-             <TouchableOpacity
-               key="manual-city-option"
-               style={[styles.row, { justifyContent: 'space-between', paddingVertical: 6 }]}
-               onPress={handleCityManualAdd}
-               testID="manual-city-option"
-             >
-               <Text style={styles.bodyText}>Add "{cityQuery.trim()}"</Text>
-               <Text style={styles.helperText}>Manual City</Text>
-             </TouchableOpacity>
-           )}
-        </View>
+          {!canSearchCities && (
+            <Text style={[styles.helperText, { marginTop: 4 }]}>Select at least one country or state to add cities.</Text>
+          )}
+
+          {(citySuggestions.length > 0 || (cityQuery.trim().length > 0 && citySuggestions.length === 0 && canSearchCities)) && (
+            <View style={[styles.card, { marginTop: 6 }]}>
+              {citySuggestions.map((location) => (
+                <TouchableOpacity
+                  key={`city-suggestion-${location.id}`}
+                  style={[styles.row, { justifyContent: 'space-between', paddingVertical: 6 }]}
+                  onPress={() => handleAddCity(location)}
+                  testID={`city-suggestion-${location.id}`}
+                >
+                  <Text style={styles.bodyText}>{location.name}</Text>
+                  <Text style={styles.helperText}>City</Text>
+                </TouchableOpacity>
+              ))}
+              {citySuggestions.length === 0 && cityQuery.trim().length > 0 && canSearchCities && (
+                <TouchableOpacity
+                  key="manual-city-option"
+                  style={[styles.row, { justifyContent: 'space-between', paddingVertical: 6 }]}
+                  onPress={handleCityManualAdd}
+                  testID="manual-city-option"
+                >
+                  <Text style={styles.bodyText}>Add "{cityQuery.trim()}"</Text>
+                  <Text style={styles.helperText}>Manual City</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+        </>
       )}
 
       {selectedLocations.length > 0 && (

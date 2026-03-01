@@ -754,6 +754,7 @@ const ensureDestinationCatalog = async (params: {
   refreshDays: number;
   minDistinctSourcesPerAttraction: number;
   minAttractionsAfterConfidenceFilter: number;
+  allowDiscovery?: boolean;
 }): Promise<AttractionCatalogEntry[]> => {
   const destinationDisplayName = normalizeWhitespace(params.destination);
   const destinationKey = normalizeDestinationKey(destinationDisplayName);
@@ -764,12 +765,28 @@ const ensureDestinationCatalog = async (params: {
     await persistCatalogRowsToCsv(existing.slice(0, params.limit));
     return existing.slice(0, params.limit);
   }
+  if (!params.allowDiscovery) {
+    if (existing.length) {
+      await persistCatalogRowsToCsv(existing.slice(0, params.limit));
+      return existing.slice(0, params.limit);
+    }
+    logInfo(`[attractions] discovery disabled for destination="${destinationDisplayName}"`);
+    return [];
+  }
 
   return withDestinationRefreshLock(destinationKey, async () => {
     const current = await listAttractionCatalogEntries(params.userId, destinationKey, params.limit);
     if (current.length >= params.limit && !isStale(current, params.refreshDays)) {
       await persistCatalogRowsToCsv(current.slice(0, params.limit));
       return current.slice(0, params.limit);
+    }
+    if (!params.allowDiscovery) {
+      if (current.length) {
+        await persistCatalogRowsToCsv(current.slice(0, params.limit));
+        return current.slice(0, params.limit);
+      }
+      logInfo(`[attractions] discovery disabled for destination="${destinationDisplayName}"`);
+      return [];
     }
 
     const discovered = await discoverTopAttractions(
@@ -823,6 +840,7 @@ export const getAttractionShortlistForDestinations = async (params: {
   destinations: string[];
   limitPerDestination?: number;
   refreshDays?: number;
+  allowDiscovery?: boolean;
 }): Promise<Record<string, AttractionCatalogEntry[]>> => {
   const configuredLimit =
     Number(getApiCacheSetting('attractions', 'limitPerDestination')) ||
@@ -849,6 +867,7 @@ export const getAttractionShortlistForDestinations = async (params: {
         refreshDays,
         minDistinctSourcesPerAttraction,
         minAttractionsAfterConfidenceFilter,
+        allowDiscovery: params.allowDiscovery,
       });
     } catch (err) {
       logError(`[attractions] failed destination="${destination}"`, err);
@@ -887,6 +906,7 @@ export const getAttractionPromptBlockForDestinations = async (params: {
   limitPerDestination?: number;
   promptItemsPerDestination?: number;
   refreshDays?: number;
+  allowDiscovery?: boolean;
 }): Promise<{ shortlistByDestination: Record<string, AttractionCatalogEntry[]>; promptBlock: string }> => {
   const shortlistPromptItemsPerDestination =
     Math.min(
@@ -918,6 +938,7 @@ export const getAttractionPromptBlockForDestinations = async (params: {
     destinations,
     limitPerDestination: params.limitPerDestination,
     refreshDays: params.refreshDays,
+    allowDiscovery: params.allowDiscovery,
   });
   const budgetProfile = chooseBudgetProfile(params.budgetMin, params.budgetMax);
 

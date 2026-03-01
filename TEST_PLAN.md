@@ -173,6 +173,23 @@ Or from repo root:
 npm test
 ```
 
+## 4a. Destination + Must-See Wizard Tests
+
+The create-trip wizard destination-first flow now includes destination and attraction autocomplete coverage:
+
+- `app/tests/LocationSelector.test.tsx`
+  - verifies destination mode (`country_destination`) and no-city-field behavior in wizard mode.
+  - verifies request kind switching for destination/country autocomplete.
+- `app/tests/MustSeeAttractionSelector.test.tsx`
+  - verifies attraction autocomplete uses selected destinations/countries as filters.
+  - verifies manual must-see fallback entry behavior.
+- `server/__tests__/locationRoutes.test.ts`
+  - verifies `GET /api/places/location-options?kind=country_destination`.
+  - verifies `GET /api/places/location-options?kind=attraction` with selected location filters.
+  - verifies destination IDs are resolved by `POST /api/places/batch`.
+- `server/__tests__/itinerary-prompt-plan.test.ts`
+  - verifies `mustSeeAttractions` are forced into final itinerary outputs.
+
 ## 5. Email Verification + Invite Onboarding Tests
 
 New server-side tests cover email confirmation and pending invite acceptance/rejection:

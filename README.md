@@ -149,6 +149,28 @@ Default rollout flags still ship disabled for behavior-changing auth paths so lo
   - `details` (structured itinerary detail rows)
   - `generatedItems` (`transfers`, `lodgings`, `activities`, `carRentals`)
 - Generated trip items are emitted in app-ready shape and should be inserted with `status: "Needed"`.
+- Prompt inputs now support traveler-selected `mustSeeAttractions` and enforce them into the final itinerary output.
+- Group traits (`listTraitsForGroupTrip`) and wizard prompt traits (`tt/ut`) continue to be included in prompt planning.
+- To reduce API spend and external lookup calls, attraction discovery during itinerary generation can be disabled:
+  - `ITINERARY_ATTRACTIONS_DISCOVERY_ENABLED=false` (recommended default)
+  - When disabled, generation uses existing `attractions_catalog` data and cached shortlist blobs.
+
+### Create Trip Wizard destination + must-see flow
+
+- Step 1 of the wizard now supports destination-first planning:
+  - Field 1: `Search destinations or countries` (countries + `server/data/destinations.csv` locations)
+  - Field 2: `Must See Attractions` (filtered by the selected destinations/countries and sourced from `attractions_catalog`)
+- City search is removed when this mode is enabled.
+- Wizard preference fields are pre-populated from the current user profile traits when available.
+- Both location selections and must-see attractions are passed into async AI itinerary generation.
+
+Feature flags:
+- App: `EXPO_PUBLIC_WIZARD_DESTINATION_ATTRACTIONS_ENABLED=true|false`
+  - `true` (default): destination + must-see UX
+  - `false`: fallback to legacy country/state + city flow
+- Server: `ITINERARY_ATTRACTIONS_DISCOVERY_ENABLED=true|false`
+  - `false` (default recommended): use local catalog/cache only during itinerary generation
+  - `true`: allow live attraction discovery refresh when catalog data is stale/missing
 
 ### Destination attraction catalog (web search + CSV + DB)
 
@@ -196,6 +218,7 @@ Default rollout flags still ship disabled for behavior-changing auth paths so lo
 ### Destination name quality and anti-synthetic checks
 
 - Detailed sourcing strategy: `docs/data/catalog_source_strategy.md`
+- Future-source backlog (documented only, not yet integrated): `docs/data/future-attraction-data-sources.md`
 - Destination generation applies a US-English canonicalization pass:
   - Wikidata entity search + English Wikipedia sitelink title resolution
   - fallback to Wikipedia query/search disambiguation scoring

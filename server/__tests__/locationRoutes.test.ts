@@ -4,6 +4,7 @@ import * as auth from '../src/auth';
 import * as db from '../src/db';
 import * as placeService from '../src/services/placeService';
 import * as locationServices from '../src/services/locationServices';
+import * as destinationAttractionAutocompleteService from '../src/services/destinationAttractionAutocompleteService';
 
 jest.mock('../src/auth');
 jest.mock('../src/db');
@@ -15,6 +16,23 @@ jest.mock('../src/services/locationServices', () => ({
   searchCountryStateOptions: jest.fn(),
   searchCityOptions: jest.fn(),
   getLocationOptionsByIds: jest.fn(),
+}));
+jest.mock('../src/services/destinationAttractionAutocompleteService', () => ({
+  searchDestinationLocationOptions: jest.fn(),
+  searchAttractionOptionsForSelectedLocations: jest.fn(),
+  getDestinationLocationOptionsByIds: jest.fn(),
+  splitSelectedLocationIds: jest.fn((raw: unknown) =>
+    String(raw ?? '')
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean)
+  ),
+  splitSelectedLocationNames: jest.fn((raw: unknown) =>
+    String(raw ?? '')
+      .split('|')
+      .map((value) => value.trim())
+      .filter(Boolean)
+  ),
 }));
 
 describe('/api/places location endpoints', () => {
@@ -82,6 +100,55 @@ describe('/api/places location endpoints', () => {
     });
   });
 
+  it('returns combined country + destination options', async () => {
+    (destinationAttractionAutocompleteService.searchDestinationLocationOptions as jest.Mock).mockResolvedValue([
+      { id: 'destination:paris-france', sourceType: 'destination', name: 'Paris', countryName: 'France' },
+    ]);
+    (locationServices.searchCountryStateOptions as jest.Mock).mockResolvedValue([
+      { id: 'country:33', sourceType: 'country', name: 'France' },
+      { id: 'state:10', sourceType: 'state', name: 'Ile-de-France' },
+    ]);
+
+    const res = await request(app)
+      .get('/api/places/location-options?kind=country_destination&q=fra&limit=5')
+      .expect(200);
+
+    expect(res.body).toEqual([
+      { id: 'destination:paris-france', sourceType: 'destination', name: 'Paris', countryName: 'France' },
+      { id: 'country:33', sourceType: 'country', name: 'France' },
+    ]);
+  });
+
+  it('returns attraction options filtered by selected locations', async () => {
+    (destinationAttractionAutocompleteService.searchAttractionOptionsForSelectedLocations as jest.Mock).mockResolvedValue([
+      {
+        id: 'attr:paris:eiffel-tower',
+        sourceType: 'attraction',
+        name: 'Eiffel Tower',
+        destinationName: 'Paris',
+      },
+    ]);
+
+    const res = await request(app)
+      .get('/api/places/location-options?kind=attraction&q=eif&selectedIds=destination:paris-france&selectedNames=Paris|France&limit=5')
+      .expect(200);
+
+    expect(res.body).toEqual([
+      {
+        id: 'attr:paris:eiffel-tower',
+        sourceType: 'attraction',
+        name: 'Eiffel Tower',
+        destinationName: 'Paris',
+      },
+    ]);
+    expect(destinationAttractionAutocompleteService.searchAttractionOptionsForSelectedLocations).toHaveBeenCalledWith({
+      query: 'eif',
+      selectedLocationIds: ['destination:paris-france'],
+      selectedLocationNames: ['Paris', 'France'],
+      limit: 5,
+    });
+  });
+
   it('returns batched locations by ids', async () => {
     (db.getLocationsByIds as jest.Mock).mockResolvedValue([
       { id: 'rome-1', sourceType: 'city', name: 'Rome', address: 'Italy' },
@@ -116,6 +183,31 @@ describe('/api/places location endpoints', () => {
         id: 'city:123',
         place_id: 'city:123',
         name: 'City 123',
+      },
+    ]);
+  });
+
+  it('resolves destination ids in batch requests', async () => {
+    (db.getLocationsByIds as jest.Mock).mockResolvedValue([]);
+    (destinationAttractionAutocompleteService.getDestinationLocationOptionsByIds as jest.Mock).mockResolvedValue([
+      {
+        id: 'destination:paris-france',
+        sourceType: 'destination',
+        name: 'Paris',
+        countryName: 'France',
+      },
+    ]);
+
+    const res = await request(app)
+      .post('/api/places/batch')
+      .send({ ids: ['destination:paris-france'] })
+      .expect(200);
+
+    expect(res.body).toEqual([
+      {
+        id: 'destination:paris-france',
+        place_id: 'destination:paris-france',
+        name: 'Paris',
       },
     ]);
   });

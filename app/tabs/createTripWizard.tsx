@@ -59,6 +59,7 @@ import {
 } from '../utils/promptTraits';
 import LodgingDialog from '../components/LodgingDialog';
 import { LocationSelector, type LocationOption } from '../components/LocationSelector';
+import { MustSeeAttractionSelector, type AttractionOption } from '../components/MustSeeAttractionSelector';
   
 type Suggestion = {
   id: string;
@@ -212,6 +213,11 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   currentUserName,
   currentUserEmail,
 }) => {
+  const destinationAttractionWizardEnabled = !['0', 'false', 'off', 'no'].includes(
+    String(process.env.EXPO_PUBLIC_WIZARD_DESTINATION_ATTRACTIONS_ENABLED ?? 'true')
+      .trim()
+      .toLowerCase()
+  );
   const { width: viewportWidth } = useWindowDimensions();
   const handleTripCreated = useCallback(
     (tripId: string) => {
@@ -225,6 +231,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   const [stepIndex, setStepIndex] = useState(0);
   const [details, setDetails] = useState<TripDetails>({ name: '', description: '' });
   const [selectedLocations, setSelectedLocations] = useState<LocationOption[]>([]);
+  const [selectedMustSeeAttractions, setSelectedMustSeeAttractions] = useState<AttractionOption[]>([]);
   const [dates, setDates] = useState<TripDates>({
     startDate: '',
     endDate: '',
@@ -655,6 +662,16 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
 
   const removeLocation = (locationId: string) => {
     setSelectedLocations((prev) => prev.filter((location) => location.id !== locationId));
+  };
+
+  const addMustSeeAttraction = (attraction: AttractionOption) => {
+    if (!attraction?.id || !attraction?.name) return;
+    if (selectedMustSeeAttractions.some((entry) => entry.id === attraction.id)) return;
+    setSelectedMustSeeAttractions((prev) => [...prev, attraction]);
+  };
+
+  const removeMustSeeAttraction = (attractionId: string) => {
+    setSelectedMustSeeAttractions((prev) => prev.filter((item) => item.id !== attractionId));
   };
 
   const addItineraryItem = () => {
@@ -1208,6 +1225,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                   body: JSON.stringify({
                     country: destination,
                     locations: locationNames,
+                    mustSeeAttractions: selectedMustSeeAttractions.map((item) => item.name).filter(Boolean),
                     days,
                     budgetMin: budgetRange.min,
                     budgetMax: budgetRange.max,
@@ -1279,10 +1297,27 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               onRemoveLocation={removeLocation}
               onNext={() => descriptionRef.current?.focus()}
               styles={styles}
-              placeholder="Search locations (countries/regions/cities)"
+              placeholder={
+                destinationAttractionWizardEnabled
+                  ? 'Search destinations or countries'
+                  : 'Search locations (countries/regions/cities)'
+              }
+              locationSearchKind={destinationAttractionWizardEnabled ? 'country_destination' : 'country_state'}
+              showCitySearch={!destinationAttractionWizardEnabled}
             />
             {selectedLocations.length === 0 ? (
-              <Text style={styles.helperText}>Select one or more locations for this trip.</Text>
+              <Text style={styles.helperText}>Select one or more destinations or countries for this trip.</Text>
+            ) : null}
+            {destinationAttractionWizardEnabled ? (
+              <MustSeeAttractionSelector
+                backendUrl={backendUrl}
+                headers={stableHeaders}
+                selectedLocations={selectedLocations}
+                selectedAttractions={selectedMustSeeAttractions}
+                onAddAttraction={addMustSeeAttraction}
+                onRemoveAttraction={removeMustSeeAttraction}
+                styles={styles}
+              />
             ) : null}
             <TextInput
               ref={descriptionRef}
@@ -1691,6 +1726,9 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                 <Text style={styles.helperText}>We'll generate a starter plan you can edit later.</Text>
                 <Text style={styles.helperText}>
                   The AI itinerary will be generated after you complete all steps of the trip wizard.
+                </Text>
+                <Text style={styles.helperText}>
+                  Planning preferences are pre-populated from your profile when available.
                 </Text>
                 <TextInput
                     style={[
@@ -2464,6 +2502,11 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             <Text style={styles.bodyText}>Name: {details.name || 'Untitled trip'}</Text>
             {selectedLocations.length ? (
               <Text style={styles.bodyText}>Locations: {selectedLocations.map((loc) => loc.name).join(', ')}</Text>
+            ) : null}
+            {selectedMustSeeAttractions.length ? (
+              <Text style={styles.bodyText}>
+                Must See Attractions: {selectedMustSeeAttractions.map((attraction) => attraction.name).join(', ')}
+              </Text>
             ) : null}
             {dates.mode === 'range' && (dates.startDate || dates.endDate) ? (
               <Text style={styles.bodyText}>Dates: {dates.startDate || 'TBD'} - {dates.endDate || 'TBD'}</Text>
