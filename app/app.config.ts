@@ -40,6 +40,10 @@ const config: ExpoConfig = {
   extra: {
     backendUrl:
       process.env.EXPO_PUBLIC_BACKEND_URL ??
+      process.env.API_BASE_URL ??
+      process.env.REACT_APP_BACKEND_URL ??
+      process.env.REACT_NATIVE_APP_BACKEND_URL ??
+      process.env.BACKEND_URL ??
       (process.env.NODE_ENV === 'development' ? 'http://localhost:4000' : 'https://duerk.org'),
     refreshIntervalMs: Number(process.env.REFRESH_INTERVAL_MS) || 60000,
     sessionCacheTimeoutMinutes: Number(process.env.SESSION_CACHE_TIMEOUT_MINUTES) || 720,

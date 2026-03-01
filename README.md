@@ -36,7 +36,9 @@ The app now uses WanderBunnies user-visible branding while keeping existing deve
    The server will create the required tables on startup.
    - To enable sharing emails, set these in `server/.env`: `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`, and optionally `SMTP_USER`/`SMTP_PASS` if your SMTP server requires auth.
 4. Configure the Expo app:
-   - Set `BACKEND_URL` in your shell when running the client (defaults to `http://localhost:4000`).
+   - Set `EXPO_PUBLIC_BACKEND_URL` (recommended) in your shell or `.env` when running the client.
+   - Compatibility aliases also work: `API_BASE_URL`, `REACT_APP_BACKEND_URL`, `REACT_NATIVE_APP_BACKEND_URL`, or `BACKEND_URL`.
+   - If none are set, the client defaults to `http://localhost:4000` in development.
    - Replace the placeholder Google client IDs in `app/App.tsx` and update bundle identifiers in `app/app.config.ts` for production.
    - Enable Apple sign-in in your Apple developer settings if targeting iOS hardware.
 5. Start the client (from repo root):

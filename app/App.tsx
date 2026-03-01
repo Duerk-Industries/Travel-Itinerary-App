@@ -201,6 +201,8 @@ const resolveBackendUrl = (): string => {
   const envConfigured =
     (typeof process !== 'undefined' &&
       (process.env.EXPO_PUBLIC_BACKEND_URL ??
+        process.env.API_BASE_URL ??
+        process.env.REACT_APP_BACKEND_URL ??
         process.env.REACT_NATIVE_APP_BACKEND_URL ??
         process.env.BACKEND_URL)) ||
     '';
@@ -1178,7 +1180,8 @@ const App: React.FC = () => {
       }
       handleAuthSuccess(data.token, Boolean(data.firstLogin));
     } catch (err) {
-      alert((err as Error).message || 'Login failed');
+      const message = (err as Error).message || 'Login failed';
+      alert(`${message} (backend: ${backendUrl})`);
     }
   };
 

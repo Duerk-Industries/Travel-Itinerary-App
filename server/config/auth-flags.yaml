@@ -1,6 +1,6 @@
 flags:
-  usernameLoginEnabled: false
-  multiEmailEnabled: false
+  usernameLoginEnabled: true
+  multiEmailEnabled: true
   appleOAuthEnabled: false
   googleAutoLinkEnabled: true
   enforceVerifiedEmailInvariant: true
