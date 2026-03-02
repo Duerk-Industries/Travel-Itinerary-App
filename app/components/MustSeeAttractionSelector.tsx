@@ -9,6 +9,7 @@ export type AttractionOption = {
   destinationId?: string;
   destinationName?: string;
   countryName?: string;
+  stateName?: string;
   activityType?: string;
   budgetTier?: string;
 };
@@ -203,7 +204,7 @@ export const MustSeeAttractionSelector: React.FC<MustSeeAttractionSelectorProps>
 
       {!canSearch && (
         <Text style={[styles.helperText, { marginTop: 4 }]}>
-          Select at least one destination or country to load attractions.
+          Select at least one destination, country, or state to load attractions.
         </Text>
       )}
 

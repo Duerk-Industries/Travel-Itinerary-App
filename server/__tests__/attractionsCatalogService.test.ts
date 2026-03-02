@@ -32,6 +32,8 @@ describe('attractions catalog helpers', () => {
         id: 'attr:mexico-city:museo-nacional',
         destinationKey: 'mexico city',
         destinationDisplayName: 'Mexico City',
+        country: 'Mexico',
+        stateProvince: 'Ciudad de Mexico',
         name: 'Museo Nacional de Antropologia',
         rank: 1,
         activityType: 'Ticketed Attraction' as const,
@@ -41,6 +43,10 @@ describe('attractions catalog helpers', () => {
         snippet: 'Top museum',
         sourceCount: 2,
         budgetTier: 'paid' as const,
+        sitelinks: 22,
+        qid: 'Q750403',
+        lat: 19.426,
+        lon: -99.186,
         updatedAt: '2026-01-01T00:00:00.000Z',
       },
     ];
@@ -52,6 +58,9 @@ describe('attractions catalog helpers', () => {
     expect(parsed[0].interestTags).toEqual(['culture']);
     expect(parsed[0].sourceCount).toBe(2);
     expect(parsed[0].budgetTier).toBe('paid');
+    expect(parsed[0].country).toBe('Mexico');
+    expect(parsed[0].stateProvince).toBe('Ciudad de Mexico');
+    expect(parsed[0].qid).toBe('Q750403');
   });
 
   it('builds compact prompt block from shortlisted attractions', () => {

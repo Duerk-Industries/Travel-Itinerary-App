@@ -181,12 +181,15 @@ The create-trip wizard destination-first flow now includes destination and attra
   - verifies destination mode (`country_destination`) and no-city-field behavior in wizard mode.
   - verifies request kind switching for destination/country autocomplete.
 - `app/tests/MustSeeAttractionSelector.test.tsx`
-  - verifies attraction autocomplete uses selected destinations/countries as filters.
+  - verifies attraction autocomplete uses selected destinations/countries/states as filters.
   - verifies manual must-see fallback entry behavior.
 - `server/__tests__/locationRoutes.test.ts`
   - verifies `GET /api/places/location-options?kind=country_destination`.
   - verifies `GET /api/places/location-options?kind=attraction` with selected location filters.
   - verifies destination IDs are resolved by `POST /api/places/batch`.
+- `server/__tests__/destinationAttractionAutocompleteService.test.ts`
+  - verifies country selection returns attractions across all mapped destinations in that country.
+  - verifies state/province selection restricts attractions to mapped destinations in that state/province.
 - `server/__tests__/itinerary-prompt-plan.test.ts`
   - verifies `mustSeeAttractions` are forced into final itinerary outputs.
 
@@ -200,6 +203,7 @@ New server-side tests cover email confirmation and pending invite acceptance/rej
 
 - `server/__tests__/attractionsCatalogService.test.ts`
   - Verifies destination discovery falls back safely and CSV parsing/serialization stays stable.
+  - Verifies attraction CSV round-trip keeps `country` and `state_province` fields.
   - Verifies inferred activity type and interest-tag mapping for catalog entries.
 - `server/__tests__/itinerary-prompt-plan.test.ts`
   - Verifies prompt-plan generation accepts attraction shortlist context and returns structured results.
@@ -224,10 +228,14 @@ New server-side tests cover email confirmation and pending invite acceptance/rej
   - verifies quality gates require source-backed, locality-plausible attraction candidates
   - verifies attraction target scaling increases for globally popular destinations (for example Paris/London class destinations)
   - verifies generated CSV validation fails rows with `source_count < 2`
+- `server/__tests__/attractions-common-landmarks.test.ts`
+  - verifies common landmarks are present for key destinations (for example Rome/Paris/New York City).
 - `server/__tests__/destinations-attractions-updated.test.ts`
   - verifies destinations CSV backfills `Attractions Updated` (`YYYY-MM-DD`)
   - verifies 45-day refresh gate (`>= 45` days refreshes; newer rows are skipped)
   - verifies targeted destination date line updates apply without full file regeneration flow
+- `server/__tests__/destinations-us-national-parks.test.ts`
+  - verifies all 63 U.S. National Parks exist in `server/data/destinations.csv`.
 
 Manual verification:
 - Run `npm run destinations:generate` and spot-check US-English name normalization (for example `Vienna` instead of `Wien`).

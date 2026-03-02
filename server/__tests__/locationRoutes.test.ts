@@ -116,6 +116,7 @@ describe('/api/places location endpoints', () => {
     expect(res.body).toEqual([
       { id: 'destination:paris-france', sourceType: 'destination', name: 'Paris', countryName: 'France' },
       { id: 'country:33', sourceType: 'country', name: 'France' },
+      { id: 'state:10', sourceType: 'state', name: 'Ile-de-France' },
     ]);
   });
 

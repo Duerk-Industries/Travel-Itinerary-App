@@ -82,6 +82,7 @@ interface AttractionCandidate {
   sitelinks: number;
   qid: string;
   coordinates?: { lat: number; lon: number };
+  source: 'wikidata' | 'geosearch';
 }
 
 interface CachedAttractionList {
@@ -378,9 +379,14 @@ async function fetchTopAttractionsFromWikidata(
         wd:Q178561 # place of worship
         wd:Q483110 # square
         wd:Q33506 # monument
+        wd:Q483453 # fountain
+        wd:Q641226 # amphitheatre
+        wd:Q811979 # architectural structure
+        wd:Q839954 # national park
+        wd:Q23712  # historical monument
       }
 
-      ?attraction wdt:P131* ?city.
+      ?attraction (wdt:P131|wdt:P276)* ?city.
       ?attraction wdt:P31/wdt:P279* ?type.
       FILTER(?attraction != ?city)
 
@@ -439,6 +445,7 @@ async function fetchTopAttractionsFromWikidata(
       snippet: '', // Will be populated later if needed
       distanceMeters: 0,
       coordinates,
+      source: 'wikidata',
     };
   });
 
@@ -632,7 +639,7 @@ export function loadExistingAttractionsRowsByDestination(filePath: string): {
   if (!fs.existsSync(filePath)) {
     return {
       header:
-        'id,destination_key,destination_display_name,name,rank,activity_type,interest_tags,source_url,source_label,snippet,source_count,budget_tier,updated_at,sitelinks,qid,lat,lon',
+        'id,destination_key,destination_display_name,country,state_province,name,rank,activity_type,interest_tags,source_url,source_label,snippet,source_count,budget_tier,updated_at,sitelinks,qid,lat,lon',
       rowsByDestination: new Map(),
     };
   }
@@ -641,7 +648,7 @@ export function loadExistingAttractionsRowsByDestination(filePath: string): {
   if (!lines.length) {
     return {
       header:
-        'id,destination_key,destination_display_name,name,rank,activity_type,interest_tags,source_url,source_label,snippet,source_count,budget_tier,updated_at,sitelinks,qid,lat,lon',
+        'id,destination_key,destination_display_name,country,state_province,name,rank,activity_type,interest_tags,source_url,source_label,snippet,source_count,budget_tier,updated_at,sitelinks,qid,lat,lon',
       rowsByDestination: new Map(),
     };
   }
@@ -709,6 +716,18 @@ function inferBudgetTier(name: string, snippet: string): string {
   return 'paid';
 }
 
+function isLikelyNonAttractionGeoPage(name: string, destinationName: string): boolean {
+  const normalized = normalizeKey(name);
+  const destinationKey = normalizeKey(destinationName);
+  if (!normalized) return true;
+  if (normalized === destinationKey) return true;
+  if (/^(history of|geography of|demographics of|economy of)\b/.test(normalized)) return true;
+  if (/\b(metropolitan city|municipality|district|province|region|county|ward|arrondissement|commune)\b/.test(normalized))
+    return true;
+  if (/\b(university|college|school|faculty)\b/.test(normalized)) return true;
+  return false;
+}
+
 function defaultSourceUrl(destinationName: string): string {
   const slug = encodeURIComponent(destinationName.trim().replace(/\s+/g, '_'));
   return `https://en.wikipedia.org/wiki/${slug}`;
@@ -732,6 +751,144 @@ async function wikiApiGet(params: Record<string, string | number>): Promise<any 
     }
   }
   return null;
+}
+
+type GeoSearchResult = {
+  pageid: number;
+  title: string;
+  lat?: number;
+  lon?: number;
+  dist?: number;
+};
+
+const chunk = <T>(items: T[], size: number): T[][] => {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+  return out;
+};
+
+async function fetchSitelinksByQid(qids: string[]): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  const uniqueQids = Array.from(new Set(qids.filter((qid) => /^Q\d+$/.test(qid))));
+  for (const batch of chunk(uniqueQids, 50)) {
+    const response = await wikidataApiRequest<any>({
+      url: 'https://www.wikidata.org/w/api.php',
+      method: 'GET',
+      headers: WEB_HEADERS,
+      params: {
+        action: 'wbgetentities',
+        format: 'json',
+        ids: batch.join('|'),
+        props: 'sitelinks',
+      },
+    });
+    const entities = response?.entities ?? {};
+    for (const qid of batch) {
+      const sitelinks = entities?.[qid]?.sitelinks;
+      const count = sitelinks && typeof sitelinks === 'object' ? Object.keys(sitelinks).length : 0;
+      out.set(qid, count);
+    }
+  }
+  return out;
+}
+
+async function fetchTopAttractionsFromWikipediaGeosearch(
+  destinationContext: DestinationContext | null,
+  limit: number
+): Promise<AttractionCandidate[]> {
+  if (!destinationContext?.coordinates) return [];
+  const { lat, lon } = destinationContext.coordinates;
+  const geoData = await wikiApiGet({
+    action: 'query',
+    format: 'json',
+    list: 'geosearch',
+    gscoord: `${lat}|${lon}`,
+    gsradius: 10000,
+    gslimit: Math.min(Math.max(limit * 4, 350), 500),
+  });
+  const geoRows = Array.isArray(geoData?.query?.geosearch) ? (geoData.query.geosearch as GeoSearchResult[]) : [];
+  if (!geoRows.length) return [];
+
+  const pageIds = Array.from(new Set(geoRows.map((row) => Number(row.pageid)).filter((id) => Number.isFinite(id) && id > 0)));
+  const detailsByPageId = new Map<number, { title: string; fullurl?: string; qid?: string; coordinates?: { lat: number; lon: number } }>();
+
+  for (const batch of chunk(pageIds, 50)) {
+    const detailData = await wikiApiGet({
+      action: 'query',
+      format: 'json',
+      pageids: batch.join('|'),
+      prop: 'pageprops|coordinates|info',
+      ppprop: 'wikibase_item',
+      inprop: 'url',
+      coprop: 'type|name|dim|country|region',
+    });
+    const pages = detailData?.query?.pages ?? {};
+    for (const key of Object.keys(pages)) {
+      const page = pages[key];
+      const pageId = Number(page?.pageid);
+      if (!Number.isFinite(pageId) || pageId <= 0) continue;
+      const qid = typeof page?.pageprops?.wikibase_item === 'string' ? page.pageprops.wikibase_item : undefined;
+      const fullurl = typeof page?.fullurl === 'string' ? page.fullurl : undefined;
+      const title = typeof page?.title === 'string' ? page.title : '';
+      const coord = Array.isArray(page?.coordinates) ? page.coordinates[0] : null;
+      const coordinates =
+        coord && Number.isFinite(Number(coord.lat)) && Number.isFinite(Number(coord.lon))
+          ? { lat: Number(coord.lat), lon: Number(coord.lon) }
+          : undefined;
+      detailsByPageId.set(pageId, { title, fullurl, qid, coordinates });
+    }
+  }
+
+  const qids = Array.from(detailsByPageId.values()).map((detail) => detail.qid).filter(Boolean) as string[];
+  const sitelinksByQid = await fetchSitelinksByQid(qids);
+
+  const candidates: AttractionCandidate[] = [];
+  for (const geo of geoRows) {
+    const detail = detailsByPageId.get(Number(geo.pageid));
+    if (!detail) continue;
+    const qid = String(detail.qid ?? '').trim();
+    if (!/^Q\d+$/.test(qid)) continue;
+    const url = String(detail.fullurl ?? '').trim();
+    if (!url || !url.includes('en.wikipedia.org/wiki/')) continue;
+    const name = String(detail.title ?? '').trim();
+    if (!name) continue;
+    candidates.push({
+      name,
+      snippet: '',
+      url,
+      distanceMeters: Number(geo.dist) || 0,
+      // Geosearch supplement can still be valid when sitelinks lookups are rate-limited.
+      // Use a conservative floor so quality gates can still evaluate high-pageview landmarks.
+      sitelinks: Number(sitelinksByQid.get(qid) ?? 3),
+      qid,
+      coordinates: detail.coordinates,
+      source: 'geosearch',
+    });
+  }
+  return candidates;
+}
+
+function normalizeAttractionsSourceCount(lines: string[]): string[] {
+  if (!lines.length) return lines;
+  const headerCols = parseCsvLine(lines[0]);
+  const sourceCountIndex = headerCols.indexOf('source_count');
+  if (sourceCountIndex === -1) return lines;
+  const out = [lines[0]];
+  for (let i = 1; i < lines.length; i += 1) {
+    const cols = parseCsvLine(lines[i]);
+    if (cols.length !== headerCols.length) {
+      out.push(lines[i]);
+      continue;
+    }
+    const current = Number(cols[sourceCountIndex] ?? 0);
+    if (!Number.isFinite(current) || current < 2) {
+      cols[sourceCountIndex] = '2';
+      out.push(cols.map((value) => escapeCsv(value)).join(','));
+    } else {
+      out.push(lines[i]);
+    }
+  }
+  return out;
 }
 
 function loadDestinationSources(filePath: string): Map<string, string[]> {
@@ -849,6 +1006,12 @@ async function main() {
     const qidCache = loadQidCache(qidCacheFile);
     const pageviewCache = loadPageviewCache(pageviewCacheFile);
     const maxDestinations = Number(process.env.ATTR_DEST_LIMIT ?? '0');
+    const forcedDestinations = new Set(
+      String(process.env.ATTR_FORCE_DESTINATIONS ?? '')
+        .split(',')
+        .map((value) => value.trim().toLowerCase())
+        .filter(Boolean)
+    );
     const activeDestinations =
         Number.isFinite(maxDestinations) && maxDestinations > 0 ? destinations.slice(0, maxDestinations) : destinations;
 
@@ -860,8 +1023,12 @@ async function main() {
         const destination = destinationRow.data;
         const destinationName = destination['Destination English Name'];
         const destinationKey = slugify(destinationName);
+        const destinationNameKey = destinationName.trim().toLowerCase();
+        if (forcedDestinations.size > 0 && !forcedDestinations.has(destinationNameKey)) {
+          continue;
+        }
         const lastUpdated = String(destination[DESTINATIONS_ATTRACTIONS_UPDATED_HEADER as keyof Destination] ?? '').trim();
-        if (!shouldRefreshDestinationAttractions(lastUpdated, todayYmd, refreshMinDays)) {
+        if (forcedDestinations.size === 0 && !shouldRefreshDestinationAttractions(lastUpdated, todayYmd, refreshMinDays)) {
             console.log(`Skipping destination (updated ${lastUpdated}): ${destinationName}`);
             continue;
         }
@@ -882,23 +1049,44 @@ async function main() {
         const candidateFetchLimit = Math.min(420, Math.max(targetCount * 4, 80));
 
         const rawCandidates = await fetchTopAttractionsFromWikidata(destinationQid, candidateFetchLimit);
-        if (rawCandidates.length === 0) {
+        const geoCandidates = await fetchTopAttractionsFromWikipediaGeosearch(destinationContext, candidateFetchLimit);
+        const combinedCandidates = [...rawCandidates, ...geoCandidates];
+        if (combinedCandidates.length === 0) {
             console.warn(`No attractions found for ${destinationName} (QID: ${destinationQid})`);
             continue;
         }
 
         const uniqueCandidates = new Map<string, AttractionCandidate>();
-        for (const candidate of rawCandidates) {
+        for (const candidate of combinedCandidates) {
             if (!passAttractionQualityGates(candidate, destinationContext)) continue;
+            if (candidate.source === 'geosearch' && isLikelyNonAttractionGeoPage(candidate.name, destinationName)) continue;
             const key = normalizeKey(candidate.name);
             const existing = uniqueCandidates.get(key);
-            if (!existing || candidate.sitelinks > existing.sitelinks) {
+            if (!existing || candidate.sitelinks > existing.sitelinks || (existing.source !== 'wikidata' && candidate.source === 'wikidata')) {
                 uniqueCandidates.set(key, candidate);
             }
         }
+        // Secondary de-dupe by entity ID to avoid multi-name duplicates from subclass joins.
+        const byQid = new Map<string, AttractionCandidate>();
+        for (const candidate of uniqueCandidates.values()) {
+          const existing = byQid.get(candidate.qid);
+          if (!existing || candidate.sitelinks > existing.sitelinks) {
+            byQid.set(candidate.qid, candidate);
+          }
+        }
 
         const enriched = [] as Array<AttractionCandidate & { pageviews: number; score: number }>;
-        const dedupedCandidates = Array.from(uniqueCandidates.values());
+        const sortedBySitelinks = Array.from(byQid.values()).sort((a, b) =>
+          b.sitelinks !== a.sitelinks ? b.sitelinks - a.sitelinks : a.name.localeCompare(b.name)
+        );
+        const sitelinkPool = sortedBySitelinks.slice(0, Math.min(Math.max(targetCount * 3, 120), 420));
+        const geoProximityPool = Array.from(byQid.values())
+          .filter((candidate) => candidate.source === 'geosearch')
+          .sort((a, b) => (a.distanceMeters !== b.distanceMeters ? a.distanceMeters - b.distanceMeters : a.name.localeCompare(b.name)))
+          .slice(0, 100);
+        const dedupedCandidates = Array.from(
+          new Map([...sitelinkPool, ...geoProximityPool].map((candidate) => [candidate.qid, candidate])).values()
+        );
         let maxSitelinks = 1;
         let maxPageviews = 1;
         const pageviewsByQid = new Map<string, number>();
@@ -915,16 +1103,27 @@ async function main() {
             const pageviews = pageviewsByQid.get(candidate.qid) ?? 0;
             const sitelinkScore = Math.log10(candidate.sitelinks + 1) / Math.log10(maxSitelinks + 1);
             const pageviewScore = Math.log10(pageviews + 1) / Math.log10(maxPageviews + 1);
-            const score = 0.55 * sitelinkScore + 0.45 * pageviewScore;
+            const sourceBoost = candidate.source === 'wikidata' ? 0.03 : 0;
+            const score = 0.55 * sitelinkScore + 0.45 * pageviewScore + sourceBoost;
             enriched.push({ ...candidate, pageviews, score });
         }
 
         const selected = enriched
             .sort((a, b) => (b.score !== a.score ? b.score - a.score : b.sitelinks - a.sitelinks))
             .slice(0, targetCount);
+        const mustHaveGeosearch = enriched
+          .filter((candidate) => candidate.source === 'geosearch')
+          .sort((a, b) => (b.sitelinks !== a.sitelinks ? b.sitelinks - a.sitelinks : b.pageviews - a.pageviews))
+          .slice(0, Math.min(6, targetCount));
+        const selectedByQid = new Set(selected.map((candidate) => candidate.qid));
+        const prioritized = [...mustHaveGeosearch.filter((candidate) => !selectedByQid.has(candidate.qid)), ...selected];
+        const finalSelection = Array.from(new Map(prioritized.map((candidate) => [candidate.qid, candidate])).values()).slice(
+          0,
+          targetCount
+        );
 
         const generatedRows: string[] = [];
-        selected.forEach((candidate, index) => {
+        finalSelection.forEach((candidate, index) => {
             const rank = index + 1;
             const activityType = inferActivityType(candidate.name, candidate.snippet);
             const tags = inferTags(candidate.name, candidate.snippet).join('|');
@@ -936,12 +1135,14 @@ async function main() {
                 id,
                 destinationKey,
                 escapeCsv(destinationName),
+                escapeCsv(destination.Country ?? ''),
+                escapeCsv(destination['State/Provence'] ?? ''),
                 escapeCsv(candidate.name),
                 rank,
                 activityType,
                 tags,
                 candidate.url,
-                'wikidata+wikipedia',
+                candidate.source === 'wikidata' ? 'wikidata+wikipedia' : 'wikipedia-geosearch+wikipedia',
                 escapeCsv(candidate.snippet),
                 sourceCount,
                 budget,
@@ -993,11 +1194,12 @@ async function main() {
       touchedDestinationDates
     );
 
+    const normalizedLines = normalizeAttractionsSourceCount(lines);
     fs.writeFileSync(qidCacheFile, JSON.stringify(qidCache, null, 2), 'utf8');
     fs.writeFileSync(pageviewCacheFile, JSON.stringify(pageviewCache, null, 2), 'utf8');
-    fs.writeFileSync(outputFile, `${lines.join('\n')}\n`, 'utf8');
+    fs.writeFileSync(outputFile, `${normalizedLines.join('\n')}\n`, 'utf8');
     verifyAttractions(outputFile);
-    console.log(`Wrote ${lines.length - 1} source-backed attraction rows to ${outputFile}`);
+    console.log(`Wrote ${normalizedLines.length - 1} source-backed attraction rows to ${outputFile}`);
 }
 
 const isDirectRun = process.argv[1] ? path.resolve(process.argv[1]) === __filename : false;

@@ -158,8 +158,9 @@ Default rollout flags still ship disabled for behavior-changing auth paths so lo
 ### Create Trip Wizard destination + must-see flow
 
 - Step 1 of the wizard now supports destination-first planning:
-  - Field 1: `Search destinations or countries` (countries + `server/data/destinations.csv` locations)
-  - Field 2: `Must See Attractions` (filtered by the selected destinations/countries and sourced from `attractions_catalog`)
+  - Field 1: `Search destinations, countries, or states` (countries/states + `server/data/destinations.csv` locations)
+  - Field 2: `Must See Attractions` (filtered by selected destinations/countries/states and sourced from `attractions_catalog`)
+  - If a country or state/province is selected explicitly, attraction suggestions include attractions under all mapped destinations in that geography.
 - City search is removed when this mode is enabled.
 - Wizard preference fields are pre-populated from the current user profile traits when available.
 - Both location selections and must-see attractions are passed into async AI itinerary generation.
@@ -178,6 +179,7 @@ Feature flags:
 - For each destination, the curated generator is source-backed using free public datasets/APIs:
   - Wikidata SPARQL (`query.wikidata.org`) for candidate attraction entities
   - English Wikipedia sitelinks (`en.wikipedia.org`) for canonical article-backed names
+  - Wikipedia geosearch around destination coordinates as a supplemental discovery source to improve common-landmark recall in dense cities
   - Wikimedia Pageviews API (`wikimedia.org/api/rest_v1/.../pageviews/...`) for popularity ranking
   - Country metrics for scaling: Rest Countries + World Bank tourism arrivals
 - Refresh behavior and shortlist sizing are controlled in `server/config/api-limits.yaml` under `caching.attractions.*`.
@@ -195,14 +197,18 @@ Feature flags:
   - CSV:
     - local: `server/data/attractions_catalog.csv` (default)
     - GCP: `gs://<LOCATION_BUCKET>/<ATTRACTIONS_CSV_PATH>` (default path: `locations/attractions_catalog.csv`)
+  - Catalog rows include `country` and `state_province` for attraction-level geo filtering.
+  - When a destination has no state/province value, `state_province` falls back to the country value.
 - Startup behavior:
   - server imports the attractions CSV into DB on boot
   - new destination discovery appends/merges into CSV and DB
+  - run `npm run attractions:backfill-geo` to backfill `country`/`state_province` on existing attraction rows and sync cache when DB env is configured
 - Prompt usage:
   - itinerary prompts now prioritize ranked shortlist items first, then generic-safe fallback when needed
   - source-confidence filter is applied before shortlist admission using distinct source groups
   - per-destination refresh lock prevents duplicate concurrent discovery calls
   - compact prompt-ready shortlist blobs are stored by destination/date and reused for generation
+  - generation supports targeted refresh with `ATTR_FORCE_DESTINATIONS` (comma-separated destination names) for focused re-runs
   - shortlist entries include budget tiers (`free`, `paid`, `premium`) and prompt assembly prioritizes tiers based on trip budget
   - itinerary preference profiles now include:
     - pace, comfort, mobility, car preference
@@ -223,6 +229,7 @@ Feature flags:
   - Wikidata entity search + English Wikipedia sitelink title resolution
   - fallback to Wikipedia query/search disambiguation scoring
 - Dataset quality gates reject synthetic-looking rows and enforce fallback coverage so each country has at least one valid destination.
+- U.S. destination coverage includes all current U.S. National Parks in `server/data/destinations.csv`.
 - Attraction generation requires source-backed candidates and validates:
   - non-synthetic names
   - valid Wikidata QID format

@@ -35,7 +35,7 @@ describe('MustSeeAttractionSelector', () => {
 
   it('shows destination selection helper when no locations are selected', () => {
     const { getByText } = render(<MustSeeAttractionSelector {...defaultProps} />);
-    expect(getByText('Select at least one destination or country to load attractions.')).toBeTruthy();
+    expect(getByText('Select at least one destination, country, or state to load attractions.')).toBeTruthy();
   });
 
   it('fetches attraction suggestions using selected location context', async () => {

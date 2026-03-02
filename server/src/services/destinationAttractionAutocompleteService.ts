@@ -20,6 +20,7 @@ export type AttractionAutocompleteOption = {
   destinationId?: string;
   destinationName?: string;
   countryName?: string;
+  stateName?: string;
   activityType?: string;
   budgetTier?: string;
 };
@@ -42,6 +43,7 @@ type AutocompleteDataset = {
   destinations: DestinationRecord[];
   destinationsById: Map<string, DestinationRecord>;
   destinationsByCountry: Map<string, DestinationRecord[]>;
+  destinationsByState: Map<string, DestinationRecord[]>;
   attractions: AttractionRecord[];
 };
 
@@ -173,8 +175,9 @@ const parseAttractions = (
     const rank = Number(row.rank);
     const destinationCandidates = destinationsByKey.get(destinationKey) ?? [];
     const destinationId = destinationCandidates[0]?.id;
-    const countryName = destinationCandidates[0]?.countryName;
-    const searchText = normalizeKey([name, destinationName, countryName].filter(Boolean).join(' '));
+    const countryName = normalizeText(row.country) || destinationCandidates[0]?.countryName;
+    const stateName = normalizeText(row.state_province) || destinationCandidates[0]?.stateName;
+    const searchText = normalizeKey([name, destinationName, countryName, stateName].filter(Boolean).join(' '));
     records.push({
       id,
       sourceType: 'attraction',
@@ -182,6 +185,7 @@ const parseAttractions = (
       destinationId,
       destinationName: destinationName || destinationCandidates[0]?.name,
       countryName,
+      stateName,
       activityType: normalizeText(row.activity_type) || undefined,
       budgetTier: normalizeText(row.budget_tier) || undefined,
       destinationKey,
@@ -200,6 +204,7 @@ const buildDataset = (): AutocompleteDataset => {
   const destinations = parseDestinations(destinationsRaw);
   const destinationsById = new Map<string, DestinationRecord>();
   const destinationsByCountry = new Map<string, DestinationRecord[]>();
+  const destinationsByState = new Map<string, DestinationRecord[]>();
   const destinationsByKey = new Map<string, DestinationRecord[]>();
   destinations.forEach((record) => {
     destinationsById.set(record.id, record);
@@ -208,6 +213,12 @@ const buildDataset = (): AutocompleteDataset => {
       const list = destinationsByCountry.get(key) ?? [];
       list.push(record);
       destinationsByCountry.set(key, list);
+    }
+    if (record.stateName) {
+      const key = normalizeKey(record.stateName);
+      const list = destinationsByState.get(key) ?? [];
+      list.push(record);
+      destinationsByState.set(key, list);
     }
     const list = destinationsByKey.get(record.destinationKey) ?? [];
     list.push(record);
@@ -223,6 +234,7 @@ const buildDataset = (): AutocompleteDataset => {
     destinations,
     destinationsById,
     destinationsByCountry,
+    destinationsByState,
     attractions,
   };
 };
@@ -280,15 +292,21 @@ const resolveDestinationKeysForFilters = (
   const normalizedNames = new Set(selectedLocationNames.map((name) => normalizeKey(name)).filter(Boolean));
 
   for (const id of selectedLocationIds) {
-    if (!id.startsWith('destination:')) continue;
-    const found = dataset.destinationsById.get(id);
-    if (found) keys.add(found.destinationKey);
+    if (id.startsWith('destination:')) {
+      const found = dataset.destinationsById.get(id);
+      if (found) keys.add(found.destinationKey);
+    }
   }
 
   for (const destination of dataset.destinations) {
     const destinationName = normalizeKey(destination.name);
     const countryName = normalizeKey(destination.countryName);
+    const stateName = normalizeKey(destination.stateName);
     if (destinationName && normalizedNames.has(destinationName)) {
+      keys.add(destination.destinationKey);
+      continue;
+    }
+    if (stateName && normalizedNames.has(stateName)) {
       keys.add(destination.destinationKey);
       continue;
     }

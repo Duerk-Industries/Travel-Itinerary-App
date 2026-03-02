@@ -5692,10 +5692,14 @@ const toAttractionCatalogEntry = (row: any): AttractionCatalogEntry => {
   const payload = row.payload && typeof row.payload === 'object' ? row.payload : {};
   const rawTags = Array.isArray(payload.interestTags) ? payload.interestTags : [];
   const tags = rawTags.map((tag: unknown) => String(tag).trim()).filter(Boolean) as AttractionCatalogEntry['interestTags'];
+  const lat = Number(payload.lat);
+  const lon = Number(payload.lon);
   return {
     id: row.id,
     destinationKey: String(payload.destinationKey ?? '').trim(),
     destinationDisplayName: String(payload.destinationDisplayName ?? '').trim(),
+    country: typeof payload.country === 'string' ? payload.country : null,
+    stateProvince: typeof payload.stateProvince === 'string' ? payload.stateProvince : null,
     name: row.name,
     rank: Number(payload.rank) || 999,
     activityType: String(payload.activityType ?? 'Tour') as AttractionCatalogEntry['activityType'],
@@ -5706,6 +5710,10 @@ const toAttractionCatalogEntry = (row: any): AttractionCatalogEntry => {
     sourceCount: Number(payload.sourceCount) || undefined,
     budgetTier:
       typeof payload.budgetTier === 'string' ? (payload.budgetTier as AttractionCatalogEntry['budgetTier']) : undefined,
+    sitelinks: Number(payload.sitelinks) || null,
+    qid: typeof payload.qid === 'string' ? payload.qid : null,
+    lat: Number.isFinite(lat) ? lat : null,
+    lon: Number.isFinite(lon) ? lon : null,
     updatedAt: row.updatedAt ? new Date(row.updatedAt).toISOString() : new Date().toISOString(),
   };
 };
@@ -5871,6 +5879,8 @@ export const upsertAttractionCatalogEntry = async (entry: AttractionCatalogEntry
   const payload = {
     destinationKey: entry.destinationKey,
     destinationDisplayName: entry.destinationDisplayName,
+    country: entry.country ?? null,
+    stateProvince: entry.stateProvince ?? null,
     rank: Number(entry.rank) || 999,
     activityType: entry.activityType,
     interestTags: Array.isArray(entry.interestTags) ? entry.interestTags : [],
@@ -5879,9 +5889,13 @@ export const upsertAttractionCatalogEntry = async (entry: AttractionCatalogEntry
     snippet: entry.snippet ?? null,
     sourceCount: Number(entry.sourceCount) || 1,
     budgetTier: entry.budgetTier ?? 'paid',
+    sitelinks: Number(entry.sitelinks) || null,
+    qid: entry.qid ?? null,
+    lat: Number.isFinite(Number(entry.lat)) ? Number(entry.lat) : null,
+    lon: Number.isFinite(Number(entry.lon)) ? Number(entry.lon) : null,
     updatedAt: entry.updatedAt,
   };
-  const searchName = `${entry.name} ${entry.destinationDisplayName}`.toLowerCase();
+  const searchName = `${entry.name} ${entry.destinationDisplayName} ${entry.country ?? ''} ${entry.stateProvince ?? ''}`.toLowerCase();
   const { rows } = await p.query(
     `INSERT INTO locations (id, source_type, category, name, address, search_name, payload, updated_at)
      VALUES ($1, 'attraction', 'attraction', $2, NULL, $3, $4::jsonb, NOW())

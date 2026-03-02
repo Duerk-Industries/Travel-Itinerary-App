@@ -164,6 +164,8 @@ export interface AttractionCatalogEntry {
   id: string;
   destinationKey: string;
   destinationDisplayName: string;
+  country?: string | null;
+  stateProvince?: string | null;
   name: string;
   rank: number;
   activityType: ActivityType;
@@ -173,6 +175,10 @@ export interface AttractionCatalogEntry {
   snippet?: string | null;
   sourceCount?: number;
   budgetTier?: AttractionBudgetTier;
+  sitelinks?: number | null;
+  qid?: string | null;
+  lat?: number | null;
+  lon?: number | null;
   updatedAt: string;
 }
 

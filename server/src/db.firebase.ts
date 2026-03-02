@@ -2004,10 +2004,14 @@ const toAttractionCatalogEntry = (id: string, data: any): AttractionCatalogEntry
   const payload = data.payload && typeof data.payload === 'object' ? data.payload : {};
   const rawTags = Array.isArray(payload.interestTags) ? payload.interestTags : [];
   const interestTags = rawTags.map((tag: unknown) => String(tag).trim()).filter(Boolean) as AttractionCatalogEntry['interestTags'];
+  const lat = Number(payload.lat);
+  const lon = Number(payload.lon);
   return {
     id,
     destinationKey: String(payload.destinationKey ?? '').trim(),
     destinationDisplayName: String(payload.destinationDisplayName ?? '').trim(),
+    country: typeof payload.country === 'string' ? payload.country : null,
+    stateProvince: typeof payload.stateProvince === 'string' ? payload.stateProvince : null,
     name: String(data.name ?? ''),
     rank: Number(payload.rank) || 999,
     activityType: String(payload.activityType ?? 'Tour') as AttractionCatalogEntry['activityType'],
@@ -2018,6 +2022,10 @@ const toAttractionCatalogEntry = (id: string, data: any): AttractionCatalogEntry
     sourceCount: Number(payload.sourceCount) || undefined,
     budgetTier:
       typeof payload.budgetTier === 'string' ? (payload.budgetTier as AttractionCatalogEntry['budgetTier']) : undefined,
+    sitelinks: Number(payload.sitelinks) || null,
+    qid: typeof payload.qid === 'string' ? payload.qid : null,
+    lat: Number.isFinite(lat) ? lat : null,
+    lon: Number.isFinite(lon) ? lon : null,
     updatedAt: String(data.updatedAt ?? nowIso()),
   };
 };
@@ -2160,6 +2168,8 @@ export const upsertAttractionCatalogEntry = async (entry: AttractionCatalogEntry
   const payload = {
     destinationKey: entry.destinationKey,
     destinationDisplayName: entry.destinationDisplayName,
+    country: entry.country ?? null,
+    stateProvince: entry.stateProvince ?? null,
     rank: Number(entry.rank) || 999,
     activityType: entry.activityType,
     interestTags: Array.isArray(entry.interestTags) ? entry.interestTags : [],
@@ -2168,6 +2178,10 @@ export const upsertAttractionCatalogEntry = async (entry: AttractionCatalogEntry
     snippet: entry.snippet ?? null,
     sourceCount: Number(entry.sourceCount) || 1,
     budgetTier: entry.budgetTier ?? 'paid',
+    sitelinks: Number(entry.sitelinks) || null,
+    qid: entry.qid ?? null,
+    lat: Number.isFinite(Number(entry.lat)) ? Number(entry.lat) : null,
+    lon: Number.isFinite(Number(entry.lon)) ? Number(entry.lon) : null,
     updatedAt: entry.updatedAt,
   };
   const docRef = db.collection('locations').doc(entry.id);
@@ -2183,7 +2197,7 @@ export const upsertAttractionCatalogEntry = async (entry: AttractionCatalogEntry
         category: 'attraction',
         name: entry.name,
         address: null,
-        searchName: `${entry.name} ${entry.destinationDisplayName}`.toLowerCase(),
+        searchName: `${entry.name} ${entry.destinationDisplayName} ${entry.country ?? ''} ${entry.stateProvince ?? ''}`.toLowerCase(),
         payload: mergedPayload,
         updatedAt: nowIso(),
       },

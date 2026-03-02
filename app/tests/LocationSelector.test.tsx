@@ -44,12 +44,12 @@ describe('LocationSelector', () => {
     const { getByPlaceholderText, queryByPlaceholderText, getAllByText } = render(
       <LocationSelector
         {...defaultProps}
-        placeholder="Search destinations or countries"
+        placeholder="Search destinations, countries, or states"
         locationSearchKind="country_destination"
         showCitySearch={false}
       />
     );
-    expect(getByPlaceholderText('Search destinations or countries')).toBeTruthy();
+    expect(getByPlaceholderText('Search destinations, countries, or states')).toBeTruthy();
     expect(queryByPlaceholderText('Search cities')).toBeNull();
     expect(getAllByText('Add').length).toBe(1);
   });
@@ -83,12 +83,12 @@ describe('LocationSelector', () => {
     const { getByPlaceholderText, getByText } = render(
       <LocationSelector
         {...defaultProps}
-        placeholder="Search destinations or countries"
+        placeholder="Search destinations, countries, or states"
         locationSearchKind="country_destination"
         showCitySearch={false}
       />
     );
-    const input = getByPlaceholderText('Search destinations or countries');
+    const input = getByPlaceholderText('Search destinations, countries, or states');
     fireEvent.changeText(input, 'Par');
 
     await waitFor(() => {

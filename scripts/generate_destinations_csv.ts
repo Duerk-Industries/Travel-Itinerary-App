@@ -336,6 +336,72 @@ const DESTINATIONS_BY_COUNTRY: Record<string, DestinationSeed[]> = {
   ],
 };
 
+const US_NATIONAL_PARK_SEEDS: DestinationSeed[] = [
+  { name: 'Acadia National Park', state: 'Maine', city: 'Bar Harbor' },
+  { name: 'American Samoa National Park', state: 'American Samoa', city: 'Pago Pago', officialName: 'National Park of American Samoa' },
+  { name: 'Arches National Park', state: 'Utah', city: 'Moab' },
+  { name: 'Badlands National Park', state: 'South Dakota', city: 'Wall' },
+  { name: 'Big Bend National Park', state: 'Texas', city: 'Terlingua' },
+  { name: 'Biscayne National Park', state: 'Florida', city: 'Homestead' },
+  { name: 'Black Canyon of the Gunnison National Park', state: 'Colorado', city: 'Montrose' },
+  { name: 'Bryce Canyon National Park', state: 'Utah', city: 'Bryce' },
+  { name: 'Canyonlands National Park', state: 'Utah', city: 'Moab' },
+  { name: 'Capitol Reef National Park', state: 'Utah', city: 'Torrey' },
+  { name: 'Carlsbad Caverns National Park', state: 'New Mexico', city: 'Carlsbad' },
+  { name: 'Channel Islands National Park', state: 'California', city: 'Ventura' },
+  { name: 'Congaree National Park', state: 'South Carolina', city: 'Columbia' },
+  { name: 'Crater Lake National Park', state: 'Oregon', city: 'Klamath Falls' },
+  { name: 'Cuyahoga Valley National Park', state: 'Ohio', city: 'Cleveland' },
+  { name: 'Death Valley National Park', state: 'California', city: 'Furnace Creek' },
+  { name: 'Denali National Park', state: 'Alaska', city: 'Denali Park' },
+  { name: 'Dry Tortugas National Park', state: 'Florida', city: 'Key West' },
+  { name: 'Everglades National Park', state: 'Florida', city: 'Homestead' },
+  { name: 'Gates of the Arctic National Park', state: 'Alaska', city: 'Fairbanks' },
+  { name: 'Gateway Arch National Park', state: 'Missouri', city: 'St. Louis' },
+  { name: 'Glacier National Park', state: 'Montana', city: 'Kalispell' },
+  { name: 'Glacier Bay National Park', state: 'Alaska', city: 'Gustavus' },
+  { name: 'Grand Canyon National Park', state: 'Arizona', city: 'Flagstaff' },
+  { name: 'Grand Teton National Park', state: 'Wyoming', city: 'Jackson' },
+  { name: 'Great Basin National Park', state: 'Nevada', city: 'Ely' },
+  { name: 'Great Sand Dunes National Park', state: 'Colorado', city: 'Alamosa' },
+  { name: 'Great Smoky Mountains National Park', state: 'Tennessee', city: 'Gatlinburg' },
+  { name: 'Guadalupe Mountains National Park', state: 'Texas', city: 'Carlsbad' },
+  { name: 'Haleakala National Park', state: 'Hawaii', city: 'Kahului' },
+  { name: 'Hawaii Volcanoes National Park', state: 'Hawaii', city: 'Hilo' },
+  { name: 'Hot Springs National Park', state: 'Arkansas', city: 'Hot Springs' },
+  { name: 'Indiana Dunes National Park', state: 'Indiana', city: 'Gary' },
+  { name: 'Isle Royale National Park', state: 'Michigan', city: 'Houghton' },
+  { name: 'Joshua Tree National Park', state: 'California', city: 'Twentynine Palms' },
+  { name: 'Katmai National Park', state: 'Alaska', city: 'King Salmon' },
+  { name: 'Kenai Fjords National Park', state: 'Alaska', city: 'Seward' },
+  { name: 'Kings Canyon National Park', state: 'California', city: 'Fresno' },
+  { name: 'Kobuk Valley National Park', state: 'Alaska', city: 'Kotzebue' },
+  { name: 'Lake Clark National Park', state: 'Alaska', city: 'Port Alsworth' },
+  { name: 'Lassen Volcanic National Park', state: 'California', city: 'Redding' },
+  { name: 'Mammoth Cave National Park', state: 'Kentucky', city: 'Mammoth Cave' },
+  { name: 'Mesa Verde National Park', state: 'Colorado', city: 'Cortez' },
+  { name: 'Mount Rainier National Park', state: 'Washington', city: 'Ashford' },
+  { name: 'New River Gorge National Park', state: 'West Virginia', city: 'Fayetteville' },
+  { name: 'North Cascades National Park', state: 'Washington', city: 'Marblemount' },
+  { name: 'Olympic National Park', state: 'Washington', city: 'Port Angeles' },
+  { name: 'Petrified Forest National Park', state: 'Arizona', city: 'Holbrook' },
+  { name: 'Pinnacles National Park', state: 'California', city: 'Soledad' },
+  { name: 'Redwood National Park', state: 'California', city: 'Crescent City' },
+  { name: 'Rocky Mountain National Park', state: 'Colorado', city: 'Estes Park' },
+  { name: 'Saguaro National Park', state: 'Arizona', city: 'Tucson' },
+  { name: 'Sequoia National Park', state: 'California', city: 'Visalia' },
+  { name: 'Shenandoah National Park', state: 'Virginia', city: 'Luray' },
+  { name: 'Theodore Roosevelt National Park', state: 'North Dakota', city: 'Medora' },
+  { name: 'Virgin Islands National Park', state: 'U.S. Virgin Islands', city: 'Cruz Bay' },
+  { name: 'Voyageurs National Park', state: 'Minnesota', city: 'International Falls' },
+  { name: 'White Sands National Park', state: 'New Mexico', city: 'Alamogordo' },
+  { name: 'Wind Cave National Park', state: 'South Dakota', city: 'Hot Springs' },
+  { name: 'Wrangell-St. Elias National Park', state: 'Alaska', city: 'McCarthy' },
+  { name: 'Yellowstone National Park', state: 'Wyoming', city: 'West Yellowstone' },
+  { name: 'Yosemite National Park', state: 'California', city: 'Yosemite Valley' },
+  { name: 'Zion National Park', state: 'Utah', city: 'Springdale' },
+];
+
 const NATURE_DESTINATIONS_BY_COUNTRY: Record<string, DestinationSeed[]> = {
   'united states': [
     { name: 'Arches National Park', state: 'Utah', city: 'Moab' },
@@ -1066,11 +1132,14 @@ function getCountryCatalog(country: Country): DestinationSeed[] {
     .map((value) => normalizeKey(value))
     .map((key) => COUNTRY_ALIASES[key] ?? key);
 
+  const includeUsNationalParks = candidates.includes('united states');
   for (const key of candidates) {
     if (DESTINATIONS_BY_COUNTRY[key]) {
-      return DESTINATIONS_BY_COUNTRY[key];
+      if (!includeUsNationalParks) return DESTINATIONS_BY_COUNTRY[key];
+      return uniqueSeeds([...DESTINATIONS_BY_COUNTRY[key], ...US_NATIONAL_PARK_SEEDS]);
     }
   }
+  if (includeUsNationalParks) return uniqueSeeds([...US_NATIONAL_PARK_SEEDS]);
   return [];
 }
 

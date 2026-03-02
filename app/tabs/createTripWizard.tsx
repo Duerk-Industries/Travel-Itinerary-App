@@ -1299,14 +1299,14 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               styles={styles}
               placeholder={
                 destinationAttractionWizardEnabled
-                  ? 'Search destinations or countries'
+                  ? 'Search destinations, countries, or states'
                   : 'Search locations (countries/regions/cities)'
               }
               locationSearchKind={destinationAttractionWizardEnabled ? 'country_destination' : 'country_state'}
               showCitySearch={!destinationAttractionWizardEnabled}
             />
             {selectedLocations.length === 0 ? (
-              <Text style={styles.helperText}>Select one or more destinations or countries for this trip.</Text>
+              <Text style={styles.helperText}>Select one or more destinations, countries, or states for this trip.</Text>
             ) : null}
             {destinationAttractionWizardEnabled ? (
               <MustSeeAttractionSelector

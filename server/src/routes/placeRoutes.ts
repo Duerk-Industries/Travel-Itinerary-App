@@ -107,11 +107,10 @@ router.get('/location-options', async (req, res) => {
         searchDestinationLocationOptions(q, Math.max(max, 10)),
         searchCountryStateOptions(q, Math.max(max * 2, 12)),
       ]);
-      const countryResults = countryStateResults.filter((item) => item.sourceType === 'country');
-      const merged = [...destinationResults, ...countryResults];
+      const merged = [...destinationResults, ...countryStateResults];
       const seen = new Set<string>();
       const deduped = merged.filter((item) => {
-        const key = `${item.sourceType}:${String(item.name ?? '').trim().toLowerCase()}`;
+        const key = String((item as any).id ?? `${item.sourceType}:${String(item.name ?? '').trim().toLowerCase()}`);
         if (seen.has(key)) return false;
         seen.add(key);
         return true;
