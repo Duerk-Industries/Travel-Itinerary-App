@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Image, Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { computeTripDays } from '../utils/createTripWizard';
 import { formatDateLong } from '../utils/formatDateLong';
 
@@ -119,11 +119,10 @@ const HomeTab: React.FC<HomeTabProps> = ({
     <View style={styles.card}>
       <ScrollView contentContainerStyle={styles.homeScrollContent} showsVerticalScrollIndicator={false}>
         <Text style={styles.homeTitle}>Your trip</Text>
-        <TouchableOpacity
+        <Pressable
           testID="home-hero-card"
-          style={styles.homeHeroCard}
+          style={({ pressed }) => [styles.homeHeroCard, pressed && styles.homeHeroCardPressed]}
           onPress={() => setShowTripPicker(true)}
-          activeOpacity={0.85}
         >
           {heroImage ? (
             <Image style={styles.homeHeroImage} source={{ uri: heroImage }} resizeMode="cover" />
@@ -135,25 +134,25 @@ const HomeTab: React.FC<HomeTabProps> = ({
             {heroSubtitle ? <Text style={styles.homeHeroSubtitle}>{heroSubtitle}</Text> : null}
             <Text style={styles.homeHeroTitle}>{heroTitle}</Text>
           </View>
-        </TouchableOpacity>
+        </Pressable>
 
         <View style={styles.homeNavList}>
           {navItems.map((item) => (
-            <TouchableOpacity
+            <Pressable
               key={item.key}
               testID={`home-nav-${item.key}`}
-              style={[
+              style={({ pressed }) => [
                 styles.homeNavButton,
                 disabledPages?.has(item.key) && styles.homeNavButtonDisabled,
+                pressed && !disabledPages?.has(item.key) && styles.homeNavButtonPressed,
               ]}
               onPress={() => onNavigate(item.key)}
               disabled={disabledPages?.has(item.key)}
-              activeOpacity={0.85}
             >
               <Text style={styles.homeNavIcon}>{item.icon}</Text>
               <Text style={styles.homeNavLabel}>{item.label}</Text>
               <Text style={styles.homeNavArrow}>{'>'}</Text>
-            </TouchableOpacity>
+            </Pressable>
           ))}
         </View>
       </ScrollView>
@@ -164,18 +163,22 @@ const HomeTab: React.FC<HomeTabProps> = ({
             <View style={styles.homeModalCard}>
               <View style={styles.homeModalHeader}>
                 <Text style={styles.homeModalTitle}>Select a trip</Text>
-                <TouchableOpacity onPress={() => setShowTripPicker(false)} style={styles.homeModalClose}>
+                <Pressable
+                  onPress={() => setShowTripPicker(false)}
+                  style={({ pressed }) => [styles.homeModalClose, pressed && styles.homeModalClosePressed]}
+                >
                   <Text style={styles.homeModalCloseText}>✕</Text>
-                </TouchableOpacity>
+                </Pressable>
               </View>
               <ScrollView style={styles.homeModalList}>
                 {sortedTrips.map((trip, idx) => (
-                  <TouchableOpacity
+                  <Pressable
                     key={trip.id}
                     testID={`home-trip-row-${trip.id}`}
-                    style={[
+                    style={({ pressed }) => [
                       styles.homeModalRow,
                       idx === 0 && trip.id === activeTripId && styles.homeModalRowActive,
+                      pressed && styles.homeModalRowPressed,
                     ]}
                     onPress={() => {
                       onSelectTrip(trip.id);
@@ -191,7 +194,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
                       )}
                     </View>
                     {trip.id === activeTripId ? <Text style={styles.homeModalActiveBadge}>Active</Text> : null}
-                  </TouchableOpacity>
+                  </Pressable>
                 ))}
               </ScrollView>
             </View>

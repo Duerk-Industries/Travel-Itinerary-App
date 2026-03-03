@@ -8,6 +8,7 @@ import {
   OPENAI_CALLER_ITINERARY_PLAN_P4_RENDER,
   runItineraryPromptStageViaOpenAi,
 } from '../apis/openaiCallers';
+import { getEnvFlag } from '../env';
 import { logError, logInfo } from '../logger';
 import type { ActivityType, AttractionCatalogEntry } from '../types';
 import { getApiCacheSetting } from '../config/apiLimits';
@@ -57,6 +58,7 @@ type PromptReq = {
   budgetMin?: number;
   budgetMax?: number;
   tripStyle?: string;
+  ms?: string[];
 };
 
 type PromptNorm = {
@@ -217,6 +219,7 @@ type ServiceInput = {
   days: number;
   budgetMin: number;
   budgetMax: number;
+  mustSeeAttractions?: string[];
   departureAirport?: string;
   tripStyle?: string;
   promptTraits?: {
@@ -723,8 +726,33 @@ const normalizeDestinations = (destinations: string[]): string[] => {
   return pruneDestinationHierarchy(cleaned);
 };
 
+const normalizeMustSeeAttractions = (items: string[] | undefined): string[] => {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of items ?? []) {
+    const value = normalizeText(raw);
+    if (!value) continue;
+    const key = value.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(value);
+    if (out.length >= 20) break;
+  }
+  return out;
+};
+
+const buildMustSeePromptBlock = (mustSeeAttractions: string[]): string => {
+  if (!mustSeeAttractions.length) return '';
+  const lines = ['Must-see attractions selected by travelers (prioritize these):'];
+  mustSeeAttractions.forEach((name, idx) => {
+    lines.push(`${idx + 1}. ${name}`);
+  });
+  return lines.join('\n');
+};
+
 const buildPromptRequest = (input: ServiceInput): PromptReq => {
   const destinations = normalizeDestinations(input.destinations);
+  const mustSeeAttractions = normalizeMustSeeAttractions(input.mustSeeAttractions);
   const seed = String(input.tripIdSeed ?? destinations.join('|'));
   const seedNum = seed.split('').reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
   const normalizedPromptTraits = normalizePromptTraitInput(input.promptTraits);
@@ -742,6 +770,7 @@ const buildPromptRequest = (input: ServiceInput): PromptReq => {
     budgetMin: Math.max(0, Math.round(input.budgetMin)),
     budgetMax: Math.max(Math.round(input.budgetMin), Math.round(input.budgetMax)),
     tripStyle: String(input.tripStyle ?? '').trim() || undefined,
+    ms: mustSeeAttractions,
   };
 
   if (isIsoDate(input.tripStartDate) && isIsoDate(input.tripEndDate)) {
@@ -1146,6 +1175,60 @@ const enforceShortlistGrounding = (
   return itinerary;
 };
 
+const enforceMustSeeAttractions = (
+  itinerary: PromptItinerary,
+  mustSeeAttractions: string[]
+): PromptItinerary => {
+  const required = normalizeMustSeeAttractions(mustSeeAttractions);
+  if (!required.length) return itinerary;
+  const normalizedRequired = required.map((item) => normalizeText(item));
+  const present = new Set<string>();
+  itinerary.dy.forEach((day) => {
+    day.it.forEach((item) => {
+      const key = normalizeText(item[2]).toLowerCase();
+      if (key) present.add(key);
+    });
+  });
+
+  const candidateDays = itinerary.dy.filter((day) => {
+    const noteText = Array.isArray(day.ln) ? day.ln.join(' ') : '';
+    return !/travel day:\s*no activities scheduled/i.test(noteText);
+  });
+  const targetDays = candidateDays.length ? candidateDays : itinerary.dy;
+  if (!targetDays.length) return itinerary;
+
+  let targetCursor = 0;
+  for (const mustSee of normalizedRequired) {
+    const key = mustSee.toLowerCase();
+    if (!key || present.has(key)) continue;
+    const day = targetDays[targetCursor % targetDays.length];
+    targetCursor += 1;
+    const genericIndex = day.it.findIndex((item) => {
+      const text = normalizeText(item[2]);
+      return (
+        GENERIC_ACTIVITY_PATTERNS.some((pattern) => pattern.test(text)) ||
+        EXTRA_GENERIC_ACTIVITY_PATTERNS.some((pattern) => pattern.test(text))
+      );
+    });
+    if (genericIndex >= 0) {
+      const current = day.it[genericIndex];
+      day.it[genericIndex] = [current[0], current[1], mustSee];
+      present.add(key);
+      continue;
+    }
+    if (day.it.length < 5) {
+      day.it.push(['D', 'A', mustSee]);
+      present.add(key);
+      continue;
+    }
+    const current = day.it[0];
+    day.it[0] = [current[0], current[1], mustSee];
+    present.add(key);
+  }
+
+  return itinerary;
+};
+
 const mapProfile = (norm: PromptNorm): ItineraryPromptProfile => ({
   pace: norm.p === 'R' ? 'Relaxed' : norm.p === 'F' ? 'Fast' : 'Balanced',
   comfort: norm.c === 'B' ? 'Budget' : norm.c === 'L' ? 'Luxury' : 'Midrange',
@@ -1393,8 +1476,10 @@ const runRenderStage = async (params: {
 export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promise<ItineraryPromptPlanResult> => {
   const bundle = getPromptBundle();
   const promptRequest = buildPromptRequest(input);
+  const mustSeePromptBlock = buildMustSeePromptBlock(promptRequest.ms ?? []);
+  const allowAttractionDiscovery = getEnvFlag('ITINERARY_ATTRACTIONS_DISCOVERY_ENABLED', { defaultValue: false });
   logInfo(
-    `[itinerary] prompt-plan start destinations=${promptRequest.d.length} days=${promptRequest.dur ?? input.days} budget=${input.budgetMin}-${input.budgetMax}`
+    `[itinerary] prompt-plan start destinations=${promptRequest.d.length} mustSee=${promptRequest.ms?.length ?? 0} days=${promptRequest.dur ?? input.days} budget=${input.budgetMin}-${input.budgetMax}`
   );
 
   const normRaw = await runJsonStage<unknown>({
@@ -1428,6 +1513,7 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
         budgetMax: input.budgetMax,
         limitPerDestination,
         promptItemsPerDestination: shortlistPromptItemsPerDestination,
+        allowDiscovery: allowAttractionDiscovery,
       });
       attractionShortlistBlock = shortlist.promptBlock;
       shortlistByDestination = shortlist.shortlistByDestination ?? {};
@@ -1441,6 +1527,10 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
       shortlistByDestination = {};
     }
   }
+  const mergedAttractionBlocks = [mustSeePromptBlock, attractionShortlistBlock]
+    .map((block) => normalizeText(block))
+    .filter((block) => block && block !== 'none');
+  const attractionContextBlock = mergedAttractionBlocks.length ? mergedAttractionBlocks.join('\n') : 'none';
 
   const routeRaw = await runJsonStage<unknown>({
     apiKey: input.apiKey,
@@ -1450,7 +1540,7 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
       REQ_JSON: JSON.stringify(promptRequest),
       NORM_JSON: JSON.stringify(normalized),
       STEP1_SCHEMA_MIN: bundle.step1Schema,
-      ATTRACTION_SHORTLIST: attractionShortlistBlock,
+      ATTRACTION_SHORTLIST: attractionContextBlock,
     },
     maxTokens: 1200,
     fallbackValue: {},
@@ -1468,7 +1558,7 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
       NORM_JSON: JSON.stringify(normalized),
       STEP1_JSON: JSON.stringify(route),
       STEP2_SCHEMA_MIN: bundle.step2Schema,
-      ATTRACTION_SHORTLIST: attractionShortlistBlock,
+      ATTRACTION_SHORTLIST: attractionContextBlock,
     },
     maxTokens: Math.max(1100, Math.min(3500, Math.round(promptRequest.dur ?? 1) * 280)),
     fallbackValue: {},
@@ -1511,21 +1601,22 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
     `[itinerary] stage done caller=${OPENAI_CALLER_ITINERARY_PLAN_P3_VALIDATE} days=${filteredItinerary.dy.length} transfers=${filteredItinerary.x.length} activityBlockedDays=${blockedActivityDates.size}`
   );
   const profile = mapProfile(normalized);
+  const itineraryWithMustSee = enforceMustSeeAttractions(filteredItinerary, promptRequest.ms ?? []);
 
   const render = await runRenderStage({
     apiKey: input.apiKey,
     template: bundle.p4,
     replacements: {
-      FINAL_JSON: JSON.stringify(filteredItinerary),
+      FINAL_JSON: JSON.stringify(itineraryWithMustSee),
     },
   });
   const renderedMarkdown = String(render ?? '')
     .replace(/[\u200B-\u200D\uFEFF]/g, '')
     .trim();
   logInfo(`[itinerary] stage response caller=${OPENAI_CALLER_ITINERARY_PLAN_P4_RENDER} chars=${renderedMarkdown.length}`);
-  const fallbackMarkdown = renderMarkdownFallback(filteredItinerary, profile);
+  const fallbackMarkdown = renderMarkdownFallback(itineraryWithMustSee, profile);
   const planMarkdown = hasVisibleText(renderedMarkdown) ? renderedMarkdown : fallbackMarkdown;
-  const details = buildDetails(filteredItinerary);
+  const details = buildDetails(itineraryWithMustSee);
   const safeDetails = details.length
     ? details
     : [
@@ -1536,7 +1627,7 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
           cost: null,
         },
       ];
-  const items = mapItems(filteredItinerary, profile.weights);
+  const items = mapItems(itineraryWithMustSee, profile.weights);
   logInfo(
     `[itinerary] prompt-plan done details=${safeDetails.length} transfers=${items.transfers.length} lodgings=${items.lodgings.length} activities=${items.activities.length} carRentals=${items.carRentals.length} usedRenderFallback=${planMarkdown === fallbackMarkdown ? 'yes' : 'no'}`
   );
@@ -1545,7 +1636,7 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
     promptRequest,
     normalized,
     route,
-    itinerary: filteredItinerary,
+    itinerary: itineraryWithMustSee,
     planMarkdown,
     details: safeDetails,
     generatedItems: items,

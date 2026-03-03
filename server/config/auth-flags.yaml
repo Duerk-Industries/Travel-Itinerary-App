@@ -1,0 +1,31 @@
+flags:
+  usernameLoginEnabled: true
+  multiEmailEnabled: true
+  appleOAuthEnabled: false
+  googleAutoLinkEnabled: true
+  enforceVerifiedEmailInvariant: true
+  uiProviderButtonsEnabled: true
+reservedUsernames:
+  - admin
+  - support
+  - api
+  - login
+  - logout
+  - root
+  - system
+  - me
+  - settings
+  - account
+  - accounts
+  - auth
+  - oauth
+  - signup
+  - register
+  - user
+  - users
+  - www
+  - mail
+  - help
+  - status
+  - null
+  - undefined

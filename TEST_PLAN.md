@@ -173,6 +173,26 @@ Or from repo root:
 npm test
 ```
 
+## 4a. Destination + Must-See Wizard Tests
+
+The create-trip wizard destination-first flow now includes destination and attraction autocomplete coverage:
+
+- `app/tests/LocationSelector.test.tsx`
+  - verifies destination mode (`country_destination`) and no-city-field behavior in wizard mode.
+  - verifies request kind switching for destination/country autocomplete.
+- `app/tests/MustSeeAttractionSelector.test.tsx`
+  - verifies attraction autocomplete uses selected destinations/countries/states as filters.
+  - verifies manual must-see fallback entry behavior.
+- `server/__tests__/locationRoutes.test.ts`
+  - verifies `GET /api/places/location-options?kind=country_destination`.
+  - verifies `GET /api/places/location-options?kind=attraction` with selected location filters.
+  - verifies destination IDs are resolved by `POST /api/places/batch`.
+- `server/__tests__/destinationAttractionAutocompleteService.test.ts`
+  - verifies country selection returns attractions across all mapped destinations in that country.
+  - verifies state/province selection restricts attractions to mapped destinations in that state/province.
+- `server/__tests__/itinerary-prompt-plan.test.ts`
+  - verifies `mustSeeAttractions` are forced into final itinerary outputs.
+
 ## 5. Email Verification + Invite Onboarding Tests
 
 New server-side tests cover email confirmation and pending invite acceptance/rejection:
@@ -183,6 +203,7 @@ New server-side tests cover email confirmation and pending invite acceptance/rej
 
 - `server/__tests__/attractionsCatalogService.test.ts`
   - Verifies destination discovery falls back safely and CSV parsing/serialization stays stable.
+  - Verifies attraction CSV round-trip keeps `country` and `state_province` fields.
   - Verifies inferred activity type and interest-tag mapping for catalog entries.
 - `server/__tests__/itinerary-prompt-plan.test.ts`
   - Verifies prompt-plan generation accepts attraction shortlist context and returns structured results.
@@ -207,6 +228,14 @@ New server-side tests cover email confirmation and pending invite acceptance/rej
   - verifies quality gates require source-backed, locality-plausible attraction candidates
   - verifies attraction target scaling increases for globally popular destinations (for example Paris/London class destinations)
   - verifies generated CSV validation fails rows with `source_count < 2`
+- `server/__tests__/attractions-common-landmarks.test.ts`
+  - verifies common landmarks are present for key destinations (for example Rome/Paris/New York City).
+- `server/__tests__/destinations-attractions-updated.test.ts`
+  - verifies destinations CSV backfills `Attractions Updated` (`YYYY-MM-DD`)
+  - verifies 45-day refresh gate (`>= 45` days refreshes; newer rows are skipped)
+  - verifies targeted destination date line updates apply without full file regeneration flow
+- `server/__tests__/destinations-us-national-parks.test.ts`
+  - verifies all 63 U.S. National Parks exist in `server/data/destinations.csv`.
 
 Manual verification:
 - Run `npm run destinations:generate` and spot-check US-English name normalization (for example `Vienna` instead of `Wien`).
@@ -214,6 +243,8 @@ Manual verification:
   - attractions are ranked with globally popular destinations producing larger catalogs
   - no synthetic names are introduced
   - `source_count` remains `>= 2`
+  - destinations with recent `Attractions Updated` dates are skipped
+  - destinations refreshed this run get today’s `Attractions Updated` date
 
 ### Execution
 
@@ -352,4 +383,97 @@ Run targeted app coverage for itinerary generation helpers:
 
 ```bash
 npm --prefix app test -- --runInBand --coverage --coverageProvider=v8 --collectCoverageFrom=utils/itineraryGeneration.ts --collectCoverageFrom=utils/itineraryParser.ts tests/itineraryGeneration.test.ts tests/itineraryParser.test.ts
+```
+
+## 9. WanderBunnies Branding + Asset Coverage
+
+Automated coverage:
+
+- `app/tests/brandingConfig.test.ts`
+  - verifies Expo `name` uses `WanderBunnies`
+  - verifies Expo icon and splash asset paths
+  - verifies Expo web favicon path
+- `server/__tests__/brandingAssets.test.ts`
+  - verifies `server/public/index.html` title + favicon tags
+  - verifies favicon assets exist in `server/public`
+
+Manual verification:
+
+- Web:
+  - load app and confirm browser tab title is `WanderBunnies`
+  - confirm favicon appears in browser tab
+  - confirm top banner shows a small square logo at the left of `WanderBunnies`
+- Native (Expo iOS/Android):
+  - confirm launcher icon uses WanderBunnies app icon
+  - confirm splash screen uses WanderBunnies splash image
+
+Execution:
+
+```bash
+npm --prefix app test -- --runInBand tests/brandingConfig.test.ts
+npm --prefix server test -- --runInBand __tests__/brandingAssets.test.ts
+```
+
+## 10. Auth Phase 1 (Usernames + Multi-Email Foundation)
+
+Automated coverage:
+
+- `server/__tests__/auth-flags-config.test.ts`
+  - verifies `server/config/auth-flags.yaml` parsing and normalization
+- `server/__tests__/phase1-user-identity.test.ts`
+  - verifies username generation on web user creation
+  - verifies username collision handling with numeric suffix
+  - verifies `findUserByEmail` resolves through `user_emails`
+- `server/__tests__/env.test.ts`
+  - verifies env value trimming removes trailing CR/LF from secrets/env vars
+
+Manual verification:
+
+- Run `npm run accounts:seed` with `ALLOW_TEST_ACCOUNT_SEED=1` and confirm usernames from `test_inputs/default_accounts.json` are created.
+- Query `users` and `user_emails` to confirm:
+  - `username_normalized` unique values are populated
+  - primary email rows exist in `user_emails`
+
+Execution:
+
+```bash
+npm --prefix server test -- --runInBand __tests__/auth-flags-config.test.ts __tests__/phase1-user-identity.test.ts __tests__/env.test.ts
+```
+
+## 11. Auth Phase 2 (Identifier Login + Multi-Email Account Management)
+
+Automated coverage:
+
+- `server/__tests__/phase2-auth-identifier-multi-email.test.ts`
+  - verifies login with username identifier when `usernameLoginEnabled` is on
+  - verifies add secondary email flow
+  - verifies secondary-email callback confirmation via `/api/web-auth/confirm-email`
+  - verifies primary email switching and login with secondary email
+  - verifies secondary email deletion after switching primary back
+
+Regression coverage to run together:
+
+- `server/__tests__/account.test.ts`
+- `server/__tests__/phase1-user-identity.test.ts`
+- `server/__tests__/auth-flags-config.test.ts`
+- `server/__tests__/env.test.ts`
+
+Manual verification:
+
+- In `server/config/auth-flags.yaml`, set:
+  - `usernameLoginEnabled: true`
+  - `multiEmailEnabled: true`
+- Confirm web/native login field shows `Email or Username`.
+- Confirm a user can:
+  - log in with username + password
+  - add a secondary email
+  - verify via callback link
+  - set verified secondary email as primary
+  - log in with either linked email (same password)
+  - delete only non-primary emails
+
+Execution:
+
+```bash
+npm --prefix server test -- --runInBand __tests__/phase2-auth-identifier-multi-email.test.ts __tests__/account.test.ts __tests__/phase1-user-identity.test.ts __tests__/auth-flags-config.test.ts __tests__/env.test.ts
 ```

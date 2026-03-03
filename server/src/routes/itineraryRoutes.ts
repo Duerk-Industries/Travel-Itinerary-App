@@ -57,10 +57,13 @@ router.post('/', async (req, res) => {
     return;
   }
 
-  const { country, locations, days, budgetMin, budgetMax, departureAirport, tripId, tripStyle, tt, ut } = req.body ?? {};
+  const { country, locations, mustSeeAttractions, days, budgetMin, budgetMax, departureAirport, tripId, tripStyle, tt, ut } = req.body ?? {};
   const userId = (req as any).user.userId as string;
   const selectedLocations = Array.isArray(locations)
     ? locations.map((value) => String(value ?? '').trim()).filter(Boolean)
+    : [];
+  const selectedMustSeeAttractions = Array.isArray(mustSeeAttractions)
+    ? mustSeeAttractions.map((value) => String(value ?? '').trim()).filter(Boolean)
     : [];
   const destinationSummary = selectedLocations.length
     ? selectedLocations.join(', ')
@@ -147,6 +150,7 @@ router.post('/', async (req, res) => {
       apiKey,
       userId,
       destinations: selectedLocations.length ? selectedLocations : [destinationSummary],
+      mustSeeAttractions: selectedMustSeeAttractions,
       days: daysNum,
       budgetMin: min,
       budgetMax: max,
@@ -209,10 +213,13 @@ router.post('/async', async (req, res) => {
     return;
   }
 
-  const { country, locations, days, budgetMin, budgetMax, departureAirport, tripId, tripStyle, tt, ut, itineraryId } = req.body ?? {};
+  const { country, locations, mustSeeAttractions, days, budgetMin, budgetMax, departureAirport, tripId, tripStyle, tt, ut, itineraryId } = req.body ?? {};
   const userId = (req as any).user.userId as string;
   const selectedLocations = Array.isArray(locations)
     ? locations.map((value) => String(value ?? '').trim()).filter(Boolean)
+    : [];
+  const selectedMustSeeAttractions = Array.isArray(mustSeeAttractions)
+    ? mustSeeAttractions.map((value) => String(value ?? '').trim()).filter(Boolean)
     : [];
   const destinationSummary = selectedLocations.length
     ? selectedLocations.join(', ')
@@ -289,6 +296,7 @@ router.post('/async', async (req, res) => {
     itineraryId: typeof itineraryId === 'string' ? itineraryId : undefined,
     destinationSummary,
     locations: selectedLocations,
+    mustSeeAttractions: selectedMustSeeAttractions,
     days: daysNum,
     budgetMin: min,
     budgetMax: max,

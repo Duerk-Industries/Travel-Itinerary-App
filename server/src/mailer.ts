@@ -116,7 +116,9 @@ export const sendVerificationEmail = async (to: string, token: string): Promise<
   if (!transporter) {
     throw new Error('Email is not configured; set SMTP_HOST, SMTP_PORT, and SMTP_FROM');
   }
-  const link = `https://duerk.org/confirm?token=${encodeURIComponent(token)}`;
+  const rawWebUrl = String(getEnvValue('WEB_URL', { defaultValue: 'https://duerk.org' }) ?? 'https://duerk.org').trim();
+  const webUrl = rawWebUrl.endsWith('/') ? rawWebUrl.slice(0, -1) : rawWebUrl;
+  const link = `${webUrl}/confirm?token=${encodeURIComponent(token)}`;
   const subject = 'Confirm your Shared Trip Planner account';
   const body = [
     `Hi,`,
@@ -136,9 +138,37 @@ export const sendVerificationEmail = async (to: string, token: string): Promise<
   });
 };
 
-export const sendVerificationEmailBestEffort = async (to: string, token: string): Promise<{ sent: boolean; attempts: number }> => {
-  return sendWithRetry(() => sendVerificationEmail(to, token), to);
+export const sendVerificationEmailBestEffort = async (
+  to: string,
+  token: string,
+  options: { path?: string; subject?: string; intro?: string } = {}
+): Promise<{ sent: boolean; attempts: number }> => {
+  if (!options.path && !options.subject && !options.intro) {
+    return sendWithRetry(() => sendVerificationEmail(to, token), to);
+  }
+  const sender = async () => {
+    const { transporter, from } = buildTransporter();
+    if (!transporter) {
+      throw new Error('Email is not configured; set SMTP_HOST, SMTP_PORT, and SMTP_FROM');
+    }
+    const rawWebUrl = String(getEnvValue('WEB_URL', { defaultValue: 'https://duerk.org' }) ?? 'https://duerk.org').trim();
+    const webUrl = rawWebUrl.endsWith('/') ? rawWebUrl.slice(0, -1) : rawWebUrl;
+    const path = options.path ?? '/confirm';
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+    const link = `${webUrl}${normalizedPath}?token=${encodeURIComponent(token)}`;
+    const subject = options.subject ?? 'Confirm your Shared Trip Planner account';
+    const intro = options.intro ?? 'Please confirm your email address.';
+    const body = ['Hi,', '', intro, 'This link expires in 24 hours.', '', link, '', 'If you did not request this, you can ignore this email.'].join('\n');
+    await sendVerificationEmailViaSmtpApi(transporter, {
+      from,
+      to,
+      subject,
+      text: body,
+    });
+  };
+  return sendWithRetry(sender, to);
 };
+
 
 export const sendTripInviteEmail = async (to: string, tripName: string, inviterEmail?: string | null): Promise<void> => {
   const { transporter, from } = buildTransporter();

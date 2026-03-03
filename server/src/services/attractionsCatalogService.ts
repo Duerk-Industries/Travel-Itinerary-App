@@ -5,6 +5,7 @@ import { getApps, initializeApp } from 'firebase-admin/app';
 import { getStorage } from 'firebase-admin/storage';
 import { getEnvValue, isLocalEnv } from '../env';
 import { getApiCacheSetting } from '../config/apiLimits';
+import { parseDestinationsCsv } from './destinationsAttractionsCsv';
 import {
   getAttractionShortlistBlob,
   listAttractionCatalogEntries,
@@ -34,10 +35,17 @@ type DestinationSignals = {
   tokenSets: string[][];
 };
 
+type DestinationGeo = {
+  country: string | null;
+  stateProvince: string | null;
+};
+
 const CSV_HEADER = [
   'id',
   'destination_key',
   'destination_display_name',
+  'country',
+  'state_province',
   'name',
   'rank',
   'activity_type',
@@ -48,9 +56,20 @@ const CSV_HEADER = [
   'source_count',
   'budget_tier',
   'updated_at',
+  'sitelinks',
+  'qid',
+  'lat',
+  'lon',
 ] as const;
 
 const destinationRefreshLocks = new Map<string, Promise<AttractionCatalogEntry[]>>();
+let destinationGeoCache:
+  | {
+      filePath: string;
+      mtimeMs: number;
+      geoByDestinationKey: Map<string, DestinationGeo>;
+    }
+  | null = null;
 
 const normalizeWhitespace = (value: string): string => value.replace(/\s+/g, ' ').trim();
 const normalizeTextKey = (value: string): string =>
@@ -374,6 +393,94 @@ const resolveCsvFilePath = (): string => {
   return path.resolve(__dirname, '../../data/attractions_catalog.csv');
 };
 
+const resolveDestinationsCsvPath = (): string => {
+  const configured = getEnvValue('DESTINATIONS_CSV_LOCAL_PATH');
+  if (configured) return path.resolve(configured);
+  return path.resolve(__dirname, '../../data/destinations.csv');
+};
+
+const loadDestinationGeoMap = (): Map<string, DestinationGeo> => {
+  const filePath = resolveDestinationsCsvPath();
+  if (!fs.existsSync(filePath)) return new Map<string, DestinationGeo>();
+  const mtimeMs = fs.statSync(filePath).mtimeMs;
+  if (
+    destinationGeoCache &&
+    destinationGeoCache.filePath === filePath &&
+    destinationGeoCache.mtimeMs === mtimeMs
+  ) {
+    return destinationGeoCache.geoByDestinationKey;
+  }
+  const parsed = parseDestinationsCsv(filePath);
+  const geoByDestinationKey = new Map<string, DestinationGeo>();
+  for (const row of parsed.rows) {
+    const destinationName = normalizeWhitespace(String(row.data['Destination English Name'] ?? ''));
+    const officialName = normalizeWhitespace(String(row.data['Destination Official Name'] ?? ''));
+    const country = normalizeWhitespace(String(row.data.Country ?? '')) || null;
+    const stateProvince = normalizeWhitespace(String(row.data['State/Provence'] ?? '')) || null;
+    const geo: DestinationGeo = { country, stateProvince };
+    const destinationKey = normalizeDestinationKey(destinationName);
+    if (destinationKey) geoByDestinationKey.set(destinationKey, geo);
+    const officialKey = normalizeDestinationKey(officialName);
+    if (officialKey) geoByDestinationKey.set(officialKey, geo);
+  }
+  destinationGeoCache = {
+    filePath,
+    mtimeMs,
+    geoByDestinationKey,
+  };
+  return geoByDestinationKey;
+};
+
+const resolveDestinationGeo = (destinationKey: string, destinationDisplayName: string): DestinationGeo | null => {
+  const geoByDestinationKey = loadDestinationGeoMap();
+  if (!geoByDestinationKey.size) return null;
+  const byKey = geoByDestinationKey.get(normalizeDestinationKey(destinationKey));
+  if (byKey) return byKey;
+  const byDisplay = geoByDestinationKey.get(normalizeDestinationKey(destinationDisplayName));
+  if (byDisplay) return byDisplay;
+  return null;
+};
+
+const fillEntryGeo = (
+  row: AttractionCatalogEntry,
+  destinationGeo: DestinationGeo | null
+): AttractionCatalogEntry => {
+  if (!destinationGeo) return row;
+  const country = normalizeWhitespace(String(row.country ?? '')) || destinationGeo.country;
+  const stateProvince =
+    normalizeWhitespace(String(row.stateProvince ?? '')) ||
+    destinationGeo.stateProvince ||
+    country;
+  return {
+    ...row,
+    country: country || null,
+    stateProvince: stateProvince || null,
+  };
+};
+
+const fillRowsGeo = (
+  rows: AttractionCatalogEntry[],
+  destinationGeo: DestinationGeo | null
+): AttractionCatalogEntry[] => rows.map((row) => fillEntryGeo(row, destinationGeo));
+
+const upsertGeoBackfilledRows = async (
+  before: AttractionCatalogEntry[],
+  after: AttractionCatalogEntry[]
+): Promise<void> => {
+  const beforeById = new Map(before.map((row) => [row.id, row]));
+  const changed = after.filter((row) => {
+    const existing = beforeById.get(row.id);
+    if (!existing) return false;
+    return (
+      String(existing.country ?? '') !== String(row.country ?? '') ||
+      String(existing.stateProvince ?? '') !== String(row.stateProvince ?? '')
+    );
+  });
+  for (const row of changed) {
+    await upsertAttractionCatalogEntry(row);
+  }
+};
+
 const resolveCsvBucketPath = (): string => {
   return String(getEnvValue('ATTRACTIONS_CSV_PATH', { defaultValue: 'locations/attractions_catalog.csv' }) || 'locations/attractions_catalog.csv')
     .replace(/^\/+/, '');
@@ -419,6 +526,8 @@ export const stringifyAttractionCatalogCsv = (rows: AttractionCatalogEntry[]): s
         row.id,
         row.destinationKey,
         row.destinationDisplayName,
+        row.country ?? '',
+        row.stateProvince ?? '',
         row.name,
         String(row.rank),
         row.activityType,
@@ -429,6 +538,10 @@ export const stringifyAttractionCatalogCsv = (rows: AttractionCatalogEntry[]): s
         String(Number(row.sourceCount) || 1),
         row.budgetTier ?? 'paid',
         row.updatedAt,
+        row.sitelinks == null ? '' : String(Number(row.sitelinks) || ''),
+        row.qid ?? '',
+        row.lat == null ? '' : String(row.lat),
+        row.lon == null ? '' : String(row.lon),
       ]
         .map(csvEscape)
         .join(',')
@@ -476,29 +589,63 @@ export const parseAttractionCatalogCsv = (raw: string): AttractionCatalogEntry[]
   if (!text) return [];
   const lines = text.split(/\r?\n/).filter(Boolean);
   if (lines.length <= 1) return [];
+  const headers = splitCsvLine(lines[0]).map((header) => String(header ?? '').trim().toLowerCase());
+  const indexOf = (name: string): number => headers.indexOf(name.toLowerCase());
+  const iId = indexOf('id');
+  const iDestinationKey = indexOf('destination_key');
+  const iDestinationDisplay = indexOf('destination_display_name');
+  const iCountry = indexOf('country');
+  const iStateProvince = indexOf('state_province');
+  const iName = indexOf('name');
+  const iRank = indexOf('rank');
+  const iActivityType = indexOf('activity_type');
+  const iInterestTags = indexOf('interest_tags');
+  const iSourceUrl = indexOf('source_url');
+  const iSourceLabel = indexOf('source_label');
+  const iSnippet = indexOf('snippet');
+  const iSourceCount = indexOf('source_count');
+  const iBudgetTier = indexOf('budget_tier');
+  const iUpdatedAt = indexOf('updated_at');
+  const iSitelinks = indexOf('sitelinks');
+  const iQid = indexOf('qid');
+  const iLat = indexOf('lat');
+  const iLon = indexOf('lon');
+
+  const read = (cols: string[], idx: number): string => (idx >= 0 && idx < cols.length ? String(cols[idx] ?? '') : '');
+  const toNumberOrNull = (value: string): number | null => {
+    const parsed = Number(String(value ?? '').trim());
+    return Number.isFinite(parsed) ? parsed : null;
+  };
   const rows: AttractionCatalogEntry[] = [];
   for (let i = 1; i < lines.length; i += 1) {
     const cols = splitCsvLine(lines[i]);
     if (cols.length < 11) continue;
-    const tags = String(cols[6] ?? '')
+    const tags = String(read(cols, iInterestTags >= 0 ? iInterestTags : 6) ?? '')
       .split('|')
       .map((tag) => tag.trim())
       .filter(Boolean) as InterestTag[];
-    const hasV2Cols = cols.length >= CSV_HEADER.length;
+    const legacyHasBudget = iBudgetTier >= 0;
+    const legacyHasUpdated = iUpdatedAt >= 0;
     rows.push({
-      id: cols[0],
-      destinationKey: cols[1],
-      destinationDisplayName: cols[2],
-      name: cols[3],
-      rank: Number(cols[4]) || 999,
-      activityType: (cols[5] as ActivityType) || 'Tour',
+      id: read(cols, iId >= 0 ? iId : 0),
+      destinationKey: read(cols, iDestinationKey >= 0 ? iDestinationKey : 1),
+      destinationDisplayName: read(cols, iDestinationDisplay >= 0 ? iDestinationDisplay : 2),
+      country: read(cols, iCountry) || null,
+      stateProvince: read(cols, iStateProvince) || null,
+      name: read(cols, iName >= 0 ? iName : 3),
+      rank: Number(read(cols, iRank >= 0 ? iRank : 4)) || 999,
+      activityType: (read(cols, iActivityType >= 0 ? iActivityType : 5) as ActivityType) || 'Tour',
       interestTags: tags,
-      sourceUrl: cols[7] || null,
-      sourceLabel: cols[8] || null,
-      snippet: cols[9] || null,
-      sourceCount: hasV2Cols ? Number(cols[10]) || 1 : 1,
-      budgetTier: hasV2Cols ? toBudgetTier(cols[11]) : 'paid',
-      updatedAt: hasV2Cols ? cols[12] || new Date().toISOString() : cols[10] || new Date().toISOString(),
+      sourceUrl: read(cols, iSourceUrl >= 0 ? iSourceUrl : 7) || null,
+      sourceLabel: read(cols, iSourceLabel >= 0 ? iSourceLabel : 8) || null,
+      snippet: read(cols, iSnippet >= 0 ? iSnippet : 9) || null,
+      sourceCount: Number(read(cols, iSourceCount >= 0 ? iSourceCount : 10)) || 1,
+      budgetTier: legacyHasBudget ? toBudgetTier(read(cols, iBudgetTier)) : 'paid',
+      updatedAt: legacyHasUpdated ? read(cols, iUpdatedAt) || new Date().toISOString() : new Date().toISOString(),
+      sitelinks: toNumberOrNull(read(cols, iSitelinks)),
+      qid: read(cols, iQid) || null,
+      lat: toNumberOrNull(read(cols, iLat)),
+      lon: toNumberOrNull(read(cols, iLon)),
     });
   }
   return rows;
@@ -604,6 +751,8 @@ const catalogRowsEquivalent = (left: AttractionCatalogEntry[], right: Attraction
           id: row.id,
           destinationKey: row.destinationKey,
           destinationDisplayName: row.destinationDisplayName,
+          country: row.country ?? null,
+          stateProvince: row.stateProvince ?? null,
           name: row.name,
           rank: row.rank,
           activityType: row.activityType,
@@ -613,6 +762,10 @@ const catalogRowsEquivalent = (left: AttractionCatalogEntry[], right: Attraction
           snippet: row.snippet ?? null,
           sourceCount: Number(row.sourceCount) || 1,
           budgetTier: row.budgetTier ?? 'paid',
+          sitelinks: row.sitelinks ?? null,
+          qid: row.qid ?? null,
+          lat: row.lat ?? null,
+          lon: row.lon ?? null,
           updatedAt: row.updatedAt,
         }),
       ])
@@ -754,22 +907,46 @@ const ensureDestinationCatalog = async (params: {
   refreshDays: number;
   minDistinctSourcesPerAttraction: number;
   minAttractionsAfterConfidenceFilter: number;
+  allowDiscovery?: boolean;
 }): Promise<AttractionCatalogEntry[]> => {
   const destinationDisplayName = normalizeWhitespace(params.destination);
   const destinationKey = normalizeDestinationKey(destinationDisplayName);
   if (!destinationKey) return [];
+  const destinationGeo = resolveDestinationGeo(destinationKey, destinationDisplayName);
 
-  const existing = await listAttractionCatalogEntries(params.userId, destinationKey, params.limit);
+  const existingBase = await listAttractionCatalogEntries(params.userId, destinationKey, params.limit);
+  const existing = fillRowsGeo(existingBase, destinationGeo);
   if (existing.length >= params.limit && !isStale(existing, params.refreshDays)) {
+    await upsertGeoBackfilledRows(existingBase, existing);
     await persistCatalogRowsToCsv(existing.slice(0, params.limit));
     return existing.slice(0, params.limit);
   }
+  if (params.allowDiscovery === false) {
+    if (existing.length) {
+      await upsertGeoBackfilledRows(existingBase, existing);
+      await persistCatalogRowsToCsv(existing.slice(0, params.limit));
+      return existing.slice(0, params.limit);
+    }
+    logInfo(`[attractions] discovery disabled for destination="${destinationDisplayName}"`);
+    return [];
+  }
 
   return withDestinationRefreshLock(destinationKey, async () => {
-    const current = await listAttractionCatalogEntries(params.userId, destinationKey, params.limit);
+    const currentBase = await listAttractionCatalogEntries(params.userId, destinationKey, params.limit);
+    const current = fillRowsGeo(currentBase, destinationGeo);
     if (current.length >= params.limit && !isStale(current, params.refreshDays)) {
+      await upsertGeoBackfilledRows(currentBase, current);
       await persistCatalogRowsToCsv(current.slice(0, params.limit));
       return current.slice(0, params.limit);
+    }
+    if (params.allowDiscovery === false) {
+      if (current.length) {
+        await upsertGeoBackfilledRows(currentBase, current);
+        await persistCatalogRowsToCsv(current.slice(0, params.limit));
+        return current.slice(0, params.limit);
+      }
+      logInfo(`[attractions] discovery disabled for destination="${destinationDisplayName}"`);
+      return [];
     }
 
     const discovered = await discoverTopAttractions(
@@ -785,6 +962,8 @@ const ensureDestinationCatalog = async (params: {
         id: buildCatalogEntryId(destinationKey, item.name),
         destinationKey,
         destinationDisplayName,
+        country: destinationGeo?.country ?? null,
+        stateProvince: destinationGeo?.stateProvince ?? null,
         name: item.name,
         rank: idx + 1,
         activityType,
@@ -798,13 +977,16 @@ const ensureDestinationCatalog = async (params: {
       };
     });
 
-    const finalEntries = mergeCuratedWithDiscovered(
-      current,
-      entries,
-      params.limit,
-      destinationKey,
-      destinationDisplayName,
-      timestamp
+    const finalEntries = fillRowsGeo(
+      mergeCuratedWithDiscovered(
+        current,
+        entries,
+        params.limit,
+        destinationKey,
+        destinationDisplayName,
+        timestamp
+      ),
+      destinationGeo
     );
     if (!finalEntries.length) return current.slice(0, params.limit);
     for (const entry of finalEntries) {
@@ -823,6 +1005,7 @@ export const getAttractionShortlistForDestinations = async (params: {
   destinations: string[];
   limitPerDestination?: number;
   refreshDays?: number;
+  allowDiscovery?: boolean;
 }): Promise<Record<string, AttractionCatalogEntry[]>> => {
   const configuredLimit =
     Number(getApiCacheSetting('attractions', 'limitPerDestination')) ||
@@ -849,6 +1032,7 @@ export const getAttractionShortlistForDestinations = async (params: {
         refreshDays,
         minDistinctSourcesPerAttraction,
         minAttractionsAfterConfidenceFilter,
+        allowDiscovery: params.allowDiscovery,
       });
     } catch (err) {
       logError(`[attractions] failed destination="${destination}"`, err);
@@ -887,6 +1071,7 @@ export const getAttractionPromptBlockForDestinations = async (params: {
   limitPerDestination?: number;
   promptItemsPerDestination?: number;
   refreshDays?: number;
+  allowDiscovery?: boolean;
 }): Promise<{ shortlistByDestination: Record<string, AttractionCatalogEntry[]>; promptBlock: string }> => {
   const shortlistPromptItemsPerDestination =
     Math.min(
@@ -918,6 +1103,7 @@ export const getAttractionPromptBlockForDestinations = async (params: {
     destinations,
     limitPerDestination: params.limitPerDestination,
     refreshDays: params.refreshDays,
+    allowDiscovery: params.allowDiscovery,
   });
   const budgetProfile = chooseBudgetProfile(params.budgetMin, params.budgetMax);
 

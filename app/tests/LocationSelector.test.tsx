@@ -40,6 +40,20 @@ describe('LocationSelector', () => {
     expect(getAllByText('Add').length).toBe(2);
   });
 
+  it('supports destination mode without city search', () => {
+    const { getByPlaceholderText, queryByPlaceholderText, getAllByText } = render(
+      <LocationSelector
+        {...defaultProps}
+        placeholder="Search destinations, countries, or states"
+        locationSearchKind="country_destination"
+        showCitySearch={false}
+      />
+    );
+    expect(getByPlaceholderText('Search destinations, countries, or states')).toBeTruthy();
+    expect(queryByPlaceholderText('Search cities')).toBeNull();
+    expect(getAllByText('Add').length).toBe(1);
+  });
+
   it('fetches country/state suggestions on input', async () => {
     (global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
@@ -57,6 +71,32 @@ describe('LocationSelector', () => {
         expect.anything()
       );
       expect(getByText('California')).toBeTruthy();
+    });
+  });
+
+  it('uses requested location kind when fetching options', async () => {
+    (global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => [{ id: 'destination:paris-france', name: 'Paris', sourceType: 'destination' }],
+    });
+
+    const { getByPlaceholderText, getByText } = render(
+      <LocationSelector
+        {...defaultProps}
+        placeholder="Search destinations, countries, or states"
+        locationSearchKind="country_destination"
+        showCitySearch={false}
+      />
+    );
+    const input = getByPlaceholderText('Search destinations, countries, or states');
+    fireEvent.changeText(input, 'Par');
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/places/location-options?kind=country_destination&q=Par'),
+        expect.anything()
+      );
+      expect(getByText('Paris')).toBeTruthy();
     });
   });
 

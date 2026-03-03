@@ -6,6 +6,19 @@ A starter shared trip planner stack with a TypeScript/Node.js API backed by Post
 - **server**: Express API with JWT auth, PostgreSQL schema for transfers, and endpoints to add/remove/share transfers.
 - **app**: Expo application with Apple/Google/email login flows and a simple UI to list and manage transfers across web, Android, and iOS.
 
+## Branding assets (WanderBunnies)
+
+The app now uses WanderBunnies user-visible branding while keeping existing development identifiers.
+
+- Source design assets: `docs/design/Assets/`
+- Expo icon + web favicon source: `app/assets/wanderbunnies-app-icon.png`
+- Expo splash source: `app/assets/wanderbunnies-splash-screen.png`
+- Top banner icon source: `app/assets/wanderbunnies-reference.png`
+- Web static favicon files:
+  - `server/public/favicon.png`
+  - `server/public/apple-touch-icon.png`
+  - `server/public/assets/wanderbunnies-app-icon.png`
+
 ## Getting started
 1. Install dependencies (workspace aware):
    ```bash
@@ -23,7 +36,9 @@ A starter shared trip planner stack with a TypeScript/Node.js API backed by Post
    The server will create the required tables on startup.
    - To enable sharing emails, set these in `server/.env`: `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`, and optionally `SMTP_USER`/`SMTP_PASS` if your SMTP server requires auth.
 4. Configure the Expo app:
-   - Set `BACKEND_URL` in your shell when running the client (defaults to `http://localhost:4000`).
+   - Set `EXPO_PUBLIC_BACKEND_URL` (recommended) in your shell or `.env` when running the client.
+   - Compatibility aliases also work: `API_BASE_URL`, `REACT_APP_BACKEND_URL`, `REACT_NATIVE_APP_BACKEND_URL`, or `BACKEND_URL`.
+   - If none are set, the client defaults to `http://localhost:4000` in development.
    - Replace the placeholder Google client IDs in `app/App.tsx` and update bundle identifiers in `app/app.config.ts` for production.
    - Enable Apple sign-in in your Apple developer settings if targeting iOS hardware.
 5. Start the client (from repo root):
@@ -79,6 +94,35 @@ caching:
     dnsLogTtlMs: 300000
 ```
 
+## Auth feature flags (phase rollout)
+
+Authentication rollout flags are configured in:
+
+- `server/config/auth-flags.yaml`
+
+Optional override path:
+
+- `AUTH_FLAGS_CONFIG_PATH`
+
+Phase 1 introduces persisted config + data model groundwork for:
+
+- unique usernames (case-insensitive)
+- multi-email account mapping (`user_emails`)
+- reserved username validation
+
+Phase 2 introduces:
+
+- login using `identifier` (`email` or `username`) with one password per account
+- secondary email verification callback flow (`/confirm-email`)
+- authenticated account email management endpoints (`/api/account/emails*`) when `multiEmailEnabled` is `true`
+- app-side account email manager UI with safe fallback when disabled
+
+Details:
+
+- `docs/auth/phase2-identifier-login-multi-email.md`
+
+Default rollout flags still ship disabled for behavior-changing auth paths so local development and existing login paths remain stable until you enable them in `server/config/auth-flags.yaml`.
+
 ### Behavior
 
 - Limits reset by provider time window (UTC-based):
@@ -105,6 +149,29 @@ caching:
   - `details` (structured itinerary detail rows)
   - `generatedItems` (`transfers`, `lodgings`, `activities`, `carRentals`)
 - Generated trip items are emitted in app-ready shape and should be inserted with `status: "Needed"`.
+- Prompt inputs now support traveler-selected `mustSeeAttractions` and enforce them into the final itinerary output.
+- Group traits (`listTraitsForGroupTrip`) and wizard prompt traits (`tt/ut`) continue to be included in prompt planning.
+- To reduce API spend and external lookup calls, attraction discovery during itinerary generation can be disabled:
+  - `ITINERARY_ATTRACTIONS_DISCOVERY_ENABLED=false` (recommended default)
+  - When disabled, generation uses existing `attractions_catalog` data and cached shortlist blobs.
+
+### Create Trip Wizard destination + must-see flow
+
+- Step 1 of the wizard now supports destination-first planning:
+  - Field 1: `Search destinations, countries, or states` (countries/states + `server/data/destinations.csv` locations)
+  - Field 2: `Must See Attractions` (filtered by selected destinations/countries/states and sourced from `attractions_catalog`)
+  - If a country or state/province is selected explicitly, attraction suggestions include attractions under all mapped destinations in that geography.
+- City search is removed when this mode is enabled.
+- Wizard preference fields are pre-populated from the current user profile traits when available.
+- Both location selections and must-see attractions are passed into async AI itinerary generation.
+
+Feature flags:
+- App: `EXPO_PUBLIC_WIZARD_DESTINATION_ATTRACTIONS_ENABLED=true|false`
+  - `true` (default): destination + must-see UX
+  - `false`: fallback to legacy country/state + city flow
+- Server: `ITINERARY_ATTRACTIONS_DISCOVERY_ENABLED=true|false`
+  - `false` (default recommended): use local catalog/cache only during itinerary generation
+  - `true`: allow live attraction discovery refresh when catalog data is stale/missing
 
 ### Destination attraction catalog (web search + CSV + DB)
 
@@ -112,9 +179,15 @@ caching:
 - For each destination, the curated generator is source-backed using free public datasets/APIs:
   - Wikidata SPARQL (`query.wikidata.org`) for candidate attraction entities
   - English Wikipedia sitelinks (`en.wikipedia.org`) for canonical article-backed names
+  - Wikipedia geosearch around destination coordinates as a supplemental discovery source to improve common-landmark recall in dense cities
   - Wikimedia Pageviews API (`wikimedia.org/api/rest_v1/.../pageviews/...`) for popularity ranking
   - Country metrics for scaling: Rest Countries + World Bank tourism arrivals
 - Refresh behavior and shortlist sizing are controlled in `server/config/api-limits.yaml` under `caching.attractions.*`.
+- Destination refresh tracking is stored in `server/data/destinations.csv`:
+  - new column: `Attractions Updated` (`YYYY-MM-DD`)
+  - generator skips destinations updated in the last 45 days
+  - destinations become eligible again at `>= 45` days
+  - when a destination is regenerated, its `Attractions Updated` value is set to the current date
 - Each attraction is stored with:
   - inferred `activityType`
   - inferred interest tags from:
@@ -124,14 +197,18 @@ caching:
   - CSV:
     - local: `server/data/attractions_catalog.csv` (default)
     - GCP: `gs://<LOCATION_BUCKET>/<ATTRACTIONS_CSV_PATH>` (default path: `locations/attractions_catalog.csv`)
+  - Catalog rows include `country` and `state_province` for attraction-level geo filtering.
+  - When a destination has no state/province value, `state_province` falls back to the country value.
 - Startup behavior:
   - server imports the attractions CSV into DB on boot
   - new destination discovery appends/merges into CSV and DB
+  - run `npm run attractions:backfill-geo` to backfill `country`/`state_province` on existing attraction rows and sync cache when DB env is configured
 - Prompt usage:
   - itinerary prompts now prioritize ranked shortlist items first, then generic-safe fallback when needed
   - source-confidence filter is applied before shortlist admission using distinct source groups
   - per-destination refresh lock prevents duplicate concurrent discovery calls
   - compact prompt-ready shortlist blobs are stored by destination/date and reused for generation
+  - generation supports targeted refresh with `ATTR_FORCE_DESTINATIONS` (comma-separated destination names) for focused re-runs
   - shortlist entries include budget tiers (`free`, `paid`, `premium`) and prompt assembly prioritizes tiers based on trip budget
   - itinerary preference profiles now include:
     - pace, comfort, mobility, car preference
@@ -147,10 +224,12 @@ caching:
 ### Destination name quality and anti-synthetic checks
 
 - Detailed sourcing strategy: `docs/data/catalog_source_strategy.md`
+- Future-source backlog (documented only, not yet integrated): `docs/data/future-attraction-data-sources.md`
 - Destination generation applies a US-English canonicalization pass:
   - Wikidata entity search + English Wikipedia sitelink title resolution
   - fallback to Wikipedia query/search disambiguation scoring
 - Dataset quality gates reject synthetic-looking rows and enforce fallback coverage so each country has at least one valid destination.
+- U.S. destination coverage includes all current U.S. National Parks in `server/data/destinations.csv`.
 - Attraction generation requires source-backed candidates and validates:
   - non-synthetic names
   - valid Wikidata QID format

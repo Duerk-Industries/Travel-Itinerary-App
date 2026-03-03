@@ -20,6 +20,7 @@ export type ActivityType =
 export interface User {
   id: string;
   email: string;
+  username?: string;
   provider: 'google' | 'apple' | 'email' | 'family';
   google_id?: string;
   picture?: string;
@@ -32,6 +33,7 @@ export interface User {
 export interface WebUser {
   id: string;
   email: string;
+  username?: string;
   firstName: string;
   lastName: string;
   homeAddress?: string | null;
@@ -162,6 +164,8 @@ export interface AttractionCatalogEntry {
   id: string;
   destinationKey: string;
   destinationDisplayName: string;
+  country?: string | null;
+  stateProvince?: string | null;
   name: string;
   rank: number;
   activityType: ActivityType;
@@ -171,6 +175,10 @@ export interface AttractionCatalogEntry {
   snippet?: string | null;
   sourceCount?: number;
   budgetTier?: AttractionBudgetTier;
+  sitelinks?: number | null;
+  qid?: string | null;
+  lat?: number | null;
+  lon?: number | null;
   updatedAt: string;
 }
 

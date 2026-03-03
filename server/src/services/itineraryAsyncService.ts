@@ -50,6 +50,7 @@ type QueueInput = {
   itineraryId?: string;
   destinationSummary: string;
   locations: string[];
+  mustSeeAttractions?: string[];
   days: number;
   budgetMin: number;
   budgetMax: number;
@@ -592,6 +593,9 @@ const runJob = async (jobId: string, input: QueueInput): Promise<void> => {
       apiKey: input.apiKey,
       userId: input.userId,
       destinations: input.locations.length ? input.locations : [input.destinationSummary],
+      mustSeeAttractions: Array.isArray(input.mustSeeAttractions)
+        ? input.mustSeeAttractions.map((item) => safeString(item)).filter(Boolean)
+        : [],
       days: input.days,
       budgetMin: input.budgetMin,
       budgetMax: input.budgetMax,

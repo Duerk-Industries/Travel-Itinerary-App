@@ -2,14 +2,17 @@ import { Router } from 'express';
 import bodyParser from 'body-parser';
 import {
   claimInvitesForUser,
+  consumeUserEmailVerificationToken,
   consumeEmailVerificationToken,
   createEmailVerification,
   createWebUser,
   deleteUserRecord,
   ensureDefaultGroupForUser,
-  findUserByEmail,
+  findUserByIdentifier,
   getPendingEmailVerification,
   markEmailVerificationUsed,
+  markAccountEmailVerified,
+  markUserEmailVerificationUsed,
   markUserEmailVerified,
   recordWebUserLogin,
   verifyWebUserCredentials,
@@ -17,6 +20,7 @@ import {
 import { createToken } from '../auth';
 import { logError, logInfo } from '../logger';
 import { sendVerificationEmailBestEffort } from '../mailer';
+import { getAuthFlag } from '../config/authFlags';
 
 // Web auth routes for email/password login/registration.
 const router = Router();
@@ -84,13 +88,13 @@ router.post('/register', async (req, res) => {
 });
 
 router.post('/resend-confirmation', async (req, res) => {
-  const email = String(req.body?.email ?? '').trim().toLowerCase();
-  if (!email) {
-    res.status(400).json({ error: 'email is required' });
+  const identifier = String(req.body?.identifier ?? req.body?.email ?? '').trim().toLowerCase();
+  if (!identifier) {
+    res.status(400).json({ error: 'identifier is required' });
     return;
   }
   try {
-    const user = await findUserByEmail(email);
+    const user = await findUserByIdentifier(identifier);
     if (user && user.emailVerified) {
       res.json({ message: 'This account is already confirmed.' });
       return;
@@ -106,23 +110,29 @@ router.post('/resend-confirmation', async (req, res) => {
 });
 
 router.post('/login', async (req, res) => {
-  const { email, password } = req.body ?? {};
+  const { identifier, email, password } = req.body ?? {};
+  const loginIdentifier = String(identifier ?? email ?? '').trim().toLowerCase();
+  const usernameEnabled = getAuthFlag('usernameLoginEnabled');
 
   // TEMPORARY: auth logging (remove later)
-  logInfo(`[web-auth] login attempt for ${String(email ?? '').trim().toLowerCase() || 'unknown'}`);
-  if (isInvalid(email, 5) || isInvalid(password, 6)) {
+  logInfo(`[web-auth] login attempt for ${loginIdentifier || 'unknown'}`);
+  if (isInvalid(loginIdentifier, 2) || isInvalid(password, 6)) {
     // TEMPORARY: auth logging (remove later)
     logInfo('[web-auth] login rejected: invalid payload');
-    res.status(400).json({ error: 'email and password (min 6 chars) are required' });
+    res.status(400).json({ error: 'identifier and password (min 6 chars) are required' });
+    return;
+  }
+  if (!usernameEnabled && !loginIdentifier.includes('@')) {
+    res.status(401).json({ error: 'Invalid email/username or password' });
     return;
   }
 
   try {
-    const user = await verifyWebUserCredentials(email.trim().toLowerCase(), password.trim());
+    const user = await verifyWebUserCredentials(loginIdentifier, password.trim());
     if (!user) {
       // TEMPORARY: auth logging (remove later)
       logInfo('[web-auth] login failed: invalid credentials');
-      res.status(401).json({ error: 'Invalid email or password' });
+      res.status(401).json({ error: 'Invalid email/username or password' });
       return;
     }
     if (!user.emailVerified) {
@@ -189,6 +199,46 @@ router.get('/confirm', async (req, res) => {
     logError('Failed to confirm email', err);
     res.status(500).json({ error: 'Failed to confirm email' });
   }
+});
+
+router.get('/confirm-email', async (req, res) => {
+  const token = String(req.query.token ?? '').trim();
+  if (!token) {
+    res.status(400).json({ error: 'token is required' });
+    return;
+  }
+  if (!getAuthFlag('multiEmailEnabled')) {
+    res.status(404).json({ error: 'Not found' });
+    return;
+  }
+  try {
+    const verification = await consumeUserEmailVerificationToken(token);
+    if (!verification) {
+      res.status(400).json({ error: 'Invalid or expired confirmation link.' });
+      return;
+    }
+    const expiresAt = new Date(verification.expiresAt).getTime();
+    if (expiresAt < Date.now()) {
+      await markUserEmailVerificationUsed(verification.id);
+      res.status(410).json({ error: 'Confirmation link expired.' });
+      return;
+    }
+    await markAccountEmailVerified(verification.userId, verification.email);
+    await markUserEmailVerificationUsed(verification.id);
+    res.json({ message: 'Email confirmed.' });
+  } catch (err) {
+    logError('Failed to confirm secondary email', err);
+    res.status(500).json({ error: 'Failed to confirm email' });
+  }
+});
+
+router.get('/features', (_req, res) => {
+  res.json({
+    usernameLoginEnabled: getAuthFlag('usernameLoginEnabled'),
+    multiEmailEnabled: getAuthFlag('multiEmailEnabled'),
+    appleOAuthEnabled: getAuthFlag('appleOAuthEnabled'),
+    uiProviderButtonsEnabled: getAuthFlag('uiProviderButtonsEnabled'),
+  });
 });
 
 export default router;

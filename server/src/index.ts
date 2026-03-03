@@ -1,9 +1,10 @@
 import { Server } from 'http';
 import { app, envLoadedFrom } from './app';
 import { initDb, refreshAirportsDaily } from './db';
-import { getEnvValue } from './env';
+import { getEnvFlag, getEnvValue } from './env';
 import { logError, logInfo } from './logger';
 import { doesApiLimitsConfigExist, getResolvedApiLimitsConfigPath } from './config/apiLimits';
+import { doesAuthFlagsConfigExist, getResolvedAuthFlagsConfigPath } from './config/authFlags';
 import { syncAttractionsCatalogFromCsvToDbOnStartup } from './services/attractionsCatalogService';
 
 const defaultPort = Number(process.env.PORT) || 4000;
@@ -38,18 +39,32 @@ export const startServer = async (portOverride?: number): Promise<Server> => {
   const bucketSource = explicitBucket ? 'LOCATION_BUCKET/FIREBASE_STORAGE_BUCKET' : 'GCLOUD_PROJECT_ID/GOOGLE_CLOUD_PROJECT fallback';
   const apiLimitsConfigPath = getResolvedApiLimitsConfigPath();
   const apiLimitsConfigExists = doesApiLimitsConfigExist();
+  const authFlagsConfigPath = getResolvedAuthFlagsConfigPath();
+  const authFlagsConfigExists = doesAuthFlagsConfigExist();
   logInfo(`[startup] resolved storage bucket: ${resolvedStorageBucket || '(not set)'} (source: ${bucketSource})`);
   logInfo(`[startup] API limits config path: ${apiLimitsConfigPath} (exists: ${apiLimitsConfigExists})`);
+  logInfo(`[startup] auth flags config path: ${authFlagsConfigPath} (exists: ${authFlagsConfigExists})`);
   if (envLoadedFrom) {
     logInfo(`[startup] env loaded from: ${envLoadedFrom}`);
   }
   await initDb();
-  await syncAttractionsCatalogFromCsvToDbOnStartup();
+  const portToUse = portOverride ?? defaultPort;
+  const server = app.listen(portToUse, '0.0.0.0', () => console.log(`API server running on port ${portToUse}`));
+
+  const runAttractionsStartupSync = getEnvFlag('ATTRACTIONS_STARTUP_SYNC', { defaultValue: true });
+  if (runAttractionsStartupSync) {
+    syncAttractionsCatalogFromCsvToDbOnStartup().catch((err: any) =>
+      logError('[attractions] startup CSV import failed (background)', err)
+    );
+  } else {
+    logInfo('[attractions] startup CSV import disabled via ATTRACTIONS_STARTUP_SYNC=0');
+  }
+
   if (process.env.NODE_ENV !== 'test') {
     refreshAirportsDaily().catch((err: any) => logError('Airport refresh failed', err));
   }
-  const portToUse = portOverride ?? defaultPort;
-  return app.listen(portToUse, '0.0.0.0', () => console.log(`API server running on port ${portToUse}`));
+
+  return server;
 };
 
 if (process.env.NODE_ENV !== 'test') {

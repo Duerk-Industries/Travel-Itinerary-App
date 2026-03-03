@@ -11,7 +11,7 @@
  * then UI sections render conditionally based on the active page.
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme, useWindowDimensions } from 'react-native';
+import { Image, Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme, useWindowDimensions } from 'react-native';
 import Constants from 'expo-constants';
 import { formatDateLong } from './utils/formatDateLong';
 import { normalizeDateString } from './utils/normalizeDateString';
@@ -58,6 +58,8 @@ import { toWebStyle } from './utils/webStyle';
 import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from './utils/votes';
 
 import LodgingTab from './tabs/LodgingTab';
+
+const TOP_BANNER_ICON = require('./assets/wanderbunnies-reference.png');
 
 type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
 let NativeDateTimePicker: NativeDateTimePickerType | null = null;
@@ -199,6 +201,8 @@ const resolveBackendUrl = (): string => {
   const envConfigured =
     (typeof process !== 'undefined' &&
       (process.env.EXPO_PUBLIC_BACKEND_URL ??
+        process.env.API_BASE_URL ??
+        process.env.REACT_APP_BACKEND_URL ??
         process.env.REACT_NATIVE_APP_BACKEND_URL ??
         process.env.BACKEND_URL)) ||
     '';
@@ -256,21 +260,22 @@ const extractTokenFromUrl = (rawUrl: string) => {
     const token = url.searchParams.get('token');
     const requirePasswordSetup = url.searchParams.get('require_password_setup') === '1';
     const isConfirm = url.pathname.endsWith('/confirm');
+    const isSecondaryConfirm = url.pathname.endsWith('/confirm-email');
     if (token) {
-      return { token, url, source: 'query' as const, isConfirm, requirePasswordSetup };
+      return { token, url, source: 'query' as const, isConfirm, isSecondaryConfirm, requirePasswordSetup };
     }
     const hash = url.hash.startsWith('#') ? url.hash.slice(1) : url.hash;
     if (hash) {
       const hashParams = new URLSearchParams(hash);
       const hashToken = hashParams.get('token');
       if (hashToken) {
-        return { token: hashToken, url, source: 'hash' as const, isConfirm, requirePasswordSetup };
+        return { token: hashToken, url, source: 'hash' as const, isConfirm, isSecondaryConfirm, requirePasswordSetup };
       }
     }
   } catch (e) {
     // ignore invalid URLs
   }
-  return { token: null, url: null, source: null, isConfirm: false, requirePasswordSetup: false } as const;
+  return { token: null, url: null, source: null, isConfirm: false, isSecondaryConfirm: false, requirePasswordSetup: false } as const;
 };
 
 const App: React.FC = () => {
@@ -1042,9 +1047,13 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const handleDeepLink = (event: { url: string }) => {
-      const { token, isConfirm, requirePasswordSetup } = extractTokenFromUrl(event.url);
+      const { token, isConfirm, isSecondaryConfirm, requirePasswordSetup } = extractTokenFromUrl(event.url);
       if (token && isConfirm) {
         confirmEmailToken(token, event.url);
+        return;
+      }
+      if (token && isSecondaryConfirm) {
+        confirmSecondaryEmailToken(token, event.url);
         return;
       }
       if (token) {
@@ -1070,11 +1079,31 @@ const App: React.FC = () => {
       }
     };
 
+    const confirmSecondaryEmailToken = async (token: string, rawUrl: string) => {
+      try {
+        const res = await fetch(`${backendUrl}/api/web-auth/confirm-email?token=${encodeURIComponent(token)}`);
+        const data = await res.json().catch(() => ({}));
+        const message = res.ok ? (data.message ?? 'Email confirmed.') : (data.error ?? 'Email confirmation failed.');
+        setEmailConfirmationMessage(message);
+        alert(message);
+      } catch {
+        alert('Email confirmation failed.');
+      } finally {
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+          const url = new URL(rawUrl);
+          url.searchParams.delete('token');
+          window.history.replaceState({}, '', url.toString());
+        }
+      }
+    };
+
     const subscription = Linking.addEventListener('url', handleDeepLink);
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      const { token, url, isConfirm, requirePasswordSetup } = extractTokenFromUrl(window.location.href);
+      const { token, url, isConfirm, isSecondaryConfirm, requirePasswordSetup } = extractTokenFromUrl(window.location.href);
       if (token && isConfirm) {
         confirmEmailToken(token, window.location.href);
+      } else if (token && isSecondaryConfirm) {
+        confirmSecondaryEmailToken(token, window.location.href);
       } else if (token) {
         handleAuthSuccess(token, undefined, { requirePasswordSetup });
         url.searchParams.delete('token');
@@ -1133,7 +1162,7 @@ const App: React.FC = () => {
       const res = await fetch(`${backendUrl}/api/web-auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: authForm.email.trim(), password: authForm.password }),
+        body: JSON.stringify({ identifier: authForm.email.trim(), password: authForm.password }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -1151,14 +1180,15 @@ const App: React.FC = () => {
       }
       handleAuthSuccess(data.token, Boolean(data.firstLogin));
     } catch (err) {
-      alert((err as Error).message || 'Login failed');
+      const message = (err as Error).message || 'Login failed';
+      alert(`${message} (backend: ${backendUrl})`);
     }
   };
 
   const resendConfirmationEmail = async () => {
     const email = authForm.email.trim();
     if (!email) {
-      alert('Enter your email first.');
+      alert('Enter your email or username first.');
       return;
     }
     try {
@@ -1166,7 +1196,7 @@ const App: React.FC = () => {
       const res = await fetch(`${backendUrl}/api/web-auth/resend-confirmation`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ identifier: email }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -2111,15 +2141,16 @@ const App: React.FC = () => {
               <Text style={styles.backButtonText}>{'>'}</Text>
             </TouchableOpacity>
           ) : null}
+          <Image source={TOP_BANNER_ICON} style={styles.brandIcon} accessibilityLabel="WanderBunnies logo" />
           <Text style={[styles.title, isPhoneLayout && styles.titleNarrow]} numberOfLines={1} ellipsizeMode="tail">
-            Shared Trip Planner
+            WanderBunnies
           </Text>
         </View>
         {userToken ? (
           <View style={styles.topRightWrapper}>
             {activeTripId ? (
               <TouchableOpacity
-                style={[styles.button, styles.smallButton]}
+                style={[styles.button, styles.smallButton, styles.topBarActionButton]}
                 onPress={() => {
                   setSelectedTripId(activeTripId);
                   requestPageChange('trip-details');
@@ -2138,6 +2169,7 @@ const App: React.FC = () => {
                   styles.inlineInput,
                   styles.dropdown,
                   styles.activeTrip,
+                  styles.topBarTripControl,
                   isNarrowLayout && styles.activeTripNarrow,
                   isTripWizardOpen && styles.buttonDisabled,
                 ]}
@@ -2165,8 +2197,15 @@ const App: React.FC = () => {
               </TouchableOpacity>
             ) : null}
             <View style={[styles.topRight, isNarrowLayout && styles.topRightNarrow]}>
-              {!isPhoneLayout ? <Text style={styles.bodyText}>{userName ?? 'Traveler'}</Text> : null}
-              <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={logout}>
+              {!isPhoneLayout ? (
+                <TouchableOpacity
+                  style={[styles.userNameButton, styles.smallButton, styles.topBarActionButton]}
+                  onPress={() => requestPageChange('account')}
+                >
+                  <Text style={styles.userNameButtonText}>{userName ?? 'Traveler'}</Text>
+                </TouchableOpacity>
+              ) : null}
+              <TouchableOpacity style={[styles.button, styles.smallButton, styles.topBarActionButton]} onPress={logout}>
                 <Text style={styles.buttonText}>Logout</Text>
               </TouchableOpacity>
             </View>
@@ -2410,36 +2449,66 @@ const App: React.FC = () => {
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionTitle}>Car Rentals</Text>
           </View>
-          <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
-            <View style={styles.table}>
-              <View style={[styles.tableRow, styles.tableHeader]}>
-                {['Pick Up Location', 'Pick Up Date', 'Drop Off Location', 'Drop Off Date', 'Status', 'Votes', 'Rating', 'Reference', 'Vendor', 'Prepaid?', 'Cost', 'Car Model', 'Notes', 'For', 'Paid By', 'Actions'].map((label, idx, arr) => (
-                  <View
-                    key={label}
-                    style={[styles.cell, { minWidth: 140, flex: 1 }, idx === arr.length - 1 && styles.lastCell]}
-                  >
-                    <Text style={styles.headerText}>{label}</Text>
-                  </View>
-                ))}
+          <View style={styles.table}>
+            <View style={[styles.tableRow, styles.tableHeaderRow]}>
+              <View style={[styles.tableHeaderCell, { flex: 2, minWidth: 240 }]}>
+                <Text style={styles.headerText}>Route</Text>
               </View>
-              {carRentals.map((car) => (
-                <View key={car.id} style={styles.tableRow}>
-                  <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                    <Text style={[styles.cellText, styles.cellTextWrap]}>{car.pickupLocation || '-'}</Text>
-                  </View>
-                  <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                    <Text style={styles.cellText}>{car.pickupDate || '-'}</Text>
-                  </View>
-                  <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                    <Text style={[styles.cellText, styles.cellTextWrap]}>{car.dropoffLocation || '-'}</Text>
-                  </View>
-                  <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                    <Text style={styles.cellText}>{car.dropoffDate || '-'}</Text>
-                  </View>
-                  <View style={[styles.cell, { minWidth: 130, flex: 1 }]}>
-                    <Text style={styles.cellText}>{normalizeItineraryStatus((car as any).status, LEGACY_ITINERARY_STATUS)}</Text>
-                  </View>
-                  <View style={[styles.cell, styles.actionCell, { minWidth: 130, flex: 1 }]}>
+              <View style={[styles.tableHeaderCell, { minWidth: 120 }]}>
+                <Text style={styles.headerText}>Pick-up</Text>
+              </View>
+              <View style={[styles.tableHeaderCell, { minWidth: 120 }]}>
+                <Text style={styles.headerText}>Drop-off</Text>
+              </View>
+              <View style={[styles.tableHeaderCell, { minWidth: 110 }]}>
+                <Text style={styles.headerText}>Status</Text>
+              </View>
+              <View style={[styles.tableHeaderCell, { minWidth: 110 }]}>
+                <Text style={styles.headerText}>Votes</Text>
+              </View>
+              <View style={[styles.tableHeaderCell, { minWidth: 110 }]}>
+                <Text style={styles.headerText}>Rating</Text>
+              </View>
+              <View style={[styles.tableHeaderCell, { minWidth: 180 }, styles.lastCell]}>
+                <Text style={styles.headerText}>Actions</Text>
+              </View>
+            </View>
+
+            {carRentals.map((car, idx, arr) => (
+              <View key={car.id} style={[styles.tableRow, idx === arr.length - 1 && styles.lastRow]}>
+                <View style={[styles.tableCell, { flex: 2, minWidth: 240 }]}>
+                  <Text style={styles.cellText}>
+                    {`${car.pickupLocation || 'Pickup'} → ${car.dropoffLocation || 'Drop-off'}`}
+                  </Text>
+                  {(car.vendor || car.model || car.reference) ? (
+                    <Text style={styles.helperText}>
+                      {[car.vendor, car.model, car.reference].filter(Boolean).join(' • ')}
+                    </Text>
+                  ) : null}
+                </View>
+                <View style={[styles.tableCell, { minWidth: 120 }]}>
+                  <Text style={styles.cellText}>{car.pickupDate || '-'}</Text>
+                </View>
+                <View style={[styles.tableCell, { minWidth: 120 }]}>
+                  <Text style={styles.cellText}>{car.dropoffDate || '-'}</Text>
+                </View>
+                <View style={[styles.tableCell, { minWidth: 110 }]}>
+                  <Text style={styles.cellText}>
+                    {normalizeItineraryStatus((car as any).status, LEGACY_ITINERARY_STATUS)}
+                  </Text>
+                </View>
+                <View style={[styles.tableCell, { minWidth: 110 }]}>
+                  <Text style={styles.cellText}>{formatNetVotes((car as any).netVotes ?? 0)}</Text>
+                </View>
+                <View style={[styles.tableCell, { minWidth: 110 }]}>
+                  {normalizeItineraryStatus((car as any).status, LEGACY_ITINERARY_STATUS) === 'Completed' ? (
+                    <Text style={styles.cellText}>{formatNetVotes((car as any).netRating ?? 0)}</Text>
+                  ) : (
+                    <Text style={styles.cellText}>-</Text>
+                  )}
+                </View>
+                <View style={[styles.tableCell, { minWidth: 180 }, styles.lastCell]}>
+                  <View style={styles.actionCell}>
                     {shouldShowVoteButtons((car as any).status, (car as any).userVote) ? (
                       <>
                         <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => voteOnCarRental(car.id, 1)}>
@@ -2449,290 +2518,226 @@ const App: React.FC = () => {
                           <Text style={styles.buttonText}>👎</Text>
                         </TouchableOpacity>
                       </>
-                    ) : (
-                      <Text style={styles.cellText}>{formatNetVotes((car as any).netVotes ?? 0)}</Text>
-                    )}
-                  </View>
-                  <View style={[styles.cell, styles.actionCell, { minWidth: 130, flex: 1 }]}>
+                    ) : null}
                     {shouldShowRatingButtons((car as any).status, (car as any).userRating) ? (
                       <>
                         <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => rateOnCarRental(car.id, 1)}>
-                          <Text style={styles.buttonText}>👍</Text>
+                          <Text style={styles.buttonText}>⭐</Text>
                         </TouchableOpacity>
                         <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => rateOnCarRental(car.id, -1)}>
-                          <Text style={styles.buttonText}>👎</Text>
+                          <Text style={styles.buttonText}>✖</Text>
                         </TouchableOpacity>
                       </>
-                    ) : normalizeItineraryStatus((car as any).status, LEGACY_ITINERARY_STATUS) === 'Completed' ? (
-                      <Text style={styles.cellText}>{formatNetVotes((car as any).netRating ?? 0)}</Text>
-                    ) : (
-                      <Text style={styles.cellText}>-</Text>
-                    )}
-                  </View>
-                  <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                    <Text style={styles.cellText}>{car.reference || '-'}</Text>
-                  </View>
-                  <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                    <Text style={styles.cellText}>{car.vendor || '-'}</Text>
-                  </View>
-                  <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                    <Text style={styles.cellText}>{car.prepaid || '-'}</Text>
-                  </View>
-                  <View style={[styles.cell, { minWidth: 120, flex: 1 }]}>
-                    <Text style={styles.cellText}>{car.cost ? `$${car.cost}` : '-'}</Text>
-                  </View>
-                  <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
-                    <Text style={styles.cellText}>{car.model || '-'}</Text>
-                  </View>
-                  <View style={[styles.cell, { minWidth: 220, flex: 1 }]}>
-                    <Text style={[styles.cellText, styles.cellTextWrap]}>{car.notes || '-'}</Text>
-                  </View>
-                  <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
-                    <Text style={styles.cellText}>
-                      {(car.travelerIds ?? []).length ? (car.travelerIds ?? []).map(payerName).join(', ') : '-'}
-                    </Text>
-                  </View>
-                  <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
-                    <Text style={styles.cellText}>{car.paidBy.length ? car.paidBy.map(payerName).join(', ') : '-'}</Text>
-                  </View>
-                  <View style={[styles.cell, styles.actionCell, { minWidth: 160, flex: 1 }, styles.lastCell]}>
-                    <TouchableOpacity style={[styles.smallButton, styles.dangerButton]} onPress={() => removeCarRental(car.id)}>
+                    ) : null}
+                    <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => removeCarRental(car.id)}>
                       <Text style={styles.buttonText}>Delete</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
-              ))}
-              <View style={[styles.tableRow, styles.inputRow, styles.lastRow]}>
-                <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Pick up location"
-                    value={carDraft.pickupLocation}
-                    onChangeText={(text: string) => setCarDraft((p) => ({ ...p, pickupLocation: text }))}
+              </View>
+            ))}
+          </View>
+
+          <View style={styles.carFormSection}>
+            <Text style={styles.helperText}>Add Car Rental</Text>
+            <View style={styles.carFormGrid}>
+              <TextInput
+                style={[styles.input, styles.carFormField]}
+                placeholder="Pick up location"
+                value={carDraft.pickupLocation}
+                onChangeText={(text: string) => setCarDraft((p) => ({ ...p, pickupLocation: text }))}
+              />
+              <View style={[styles.dateInputWrap, styles.carFormField]}>
+                {Platform.OS === 'web' ? (
+                  <input
+                    ref={carPickupDateRef as any}
+                    type="date"
+                    value={carDraft.pickupDate}
+                    onChange={(e) => setCarDraft((p) => ({ ...p, pickupDate: e.target.value }))}
+                    style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box', marginBottom: 0 })}
                   />
-                </View>
-                <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                  <View style={styles.dateInputWrap}>
-                    {Platform.OS === 'web' ? (
-                      <input
-                        ref={carPickupDateRef as any}
-                        type="date"
-                        value={carDraft.pickupDate}
-                        onChange={(e) => setCarDraft((p) => ({ ...p, pickupDate: e.target.value }))}
-                        style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
-                      />
-                    ) : (
-                      <TouchableOpacity
-                        style={[styles.input, styles.dateTouchable]}
-                        onPress={() => openCarDatePicker('pickup')}
-                      >
-                        <Text style={styles.cellText}>{carDraft.pickupDate || 'YYYY-MM-DD'}</Text>
-                      </TouchableOpacity>
-                    )}
-                    <TouchableOpacity
-                      style={styles.dateIcon}
-                      onPress={() => openCarDatePicker('pickup')}
-                    >
-                      <Text style={styles.selectCaret}>📅</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-                <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Drop off location"
-                    value={carDraft.dropoffLocation}
-                    onChangeText={(text: string) => setCarDraft((p) => ({ ...p, dropoffLocation: text }))}
+                ) : (
+                  <TouchableOpacity
+                    style={[styles.input, styles.dateTouchable, { marginBottom: 0 }]}
+                    onPress={() => openCarDatePicker('pickup')}
+                  >
+                    <Text style={styles.cellText}>{carDraft.pickupDate || 'YYYY-MM-DD'}</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity style={styles.dateIcon} onPress={() => openCarDatePicker('pickup')}>
+                  <Text style={styles.selectCaret}>📅</Text>
+                </TouchableOpacity>
+              </View>
+              <TextInput
+                style={[styles.input, styles.carFormField]}
+                placeholder="Drop off location"
+                value={carDraft.dropoffLocation}
+                onChangeText={(text: string) => setCarDraft((p) => ({ ...p, dropoffLocation: text }))}
+              />
+              <View style={[styles.dateInputWrap, styles.carFormField]}>
+                {Platform.OS === 'web' ? (
+                  <input
+                    ref={carDropoffDateRef as any}
+                    type="date"
+                    value={carDraft.dropoffDate}
+                    onChange={(e) => setCarDraft((p) => ({ ...p, dropoffDate: e.target.value }))}
+                    style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box', marginBottom: 0 })}
                   />
-                </View>
-                <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                  <View style={styles.dateInputWrap}>
-                    {Platform.OS === 'web' ? (
-                      <input
-                        ref={carDropoffDateRef as any}
-                        type="date"
-                        value={carDraft.dropoffDate}
-                        onChange={(e) => setCarDraft((p) => ({ ...p, dropoffDate: e.target.value }))}
-                        style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
-                      />
-                    ) : (
-                      <TouchableOpacity
-                    style={[styles.input, styles.dateTouchable]}
+                ) : (
+                  <TouchableOpacity
+                    style={[styles.input, styles.dateTouchable, { marginBottom: 0 }]}
                     onPress={() => openCarDatePicker('dropoff')}
                   >
                     <Text style={styles.cellText}>{carDraft.dropoffDate || 'YYYY-MM-DD'}</Text>
                   </TouchableOpacity>
                 )}
-                <TouchableOpacity
-                  style={styles.dateIcon}
-                  onPress={() => openCarDatePicker('dropoff')}
-                >
+                <TouchableOpacity style={styles.dateIcon} onPress={() => openCarDatePicker('dropoff')}>
                   <Text style={styles.selectCaret}>📅</Text>
                 </TouchableOpacity>
               </View>
+              {Platform.OS === 'web' ? (
+                <select
+                  value={normalizeItineraryStatus(carDraft.status, DEFAULT_NEW_ITINERARY_STATUS)}
+                  onChange={(e) => setCarDraft((p) => ({ ...p, status: normalizeItineraryStatus(e.target.value, DEFAULT_NEW_ITINERARY_STATUS) }))}
+                  style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box', marginBottom: 0 })}
+                >
+                  {ITINERARY_STATUSES.map((opt) => (
+                    <option key={`car-status-${opt}`} value={opt}>
+                      {opt}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <Text style={styles.cellText}>{normalizeItineraryStatus(carDraft.status, DEFAULT_NEW_ITINERARY_STATUS)}</Text>
+              )}
+              <TextInput
+                style={[styles.input, styles.carFormField]}
+                placeholder="Reference"
+                value={carDraft.reference}
+                onChangeText={(text: string) => setCarDraft((p) => ({ ...p, reference: text }))}
+              />
+              <TextInput
+                style={[styles.input, styles.carFormField]}
+                placeholder="Vendor"
+                value={carDraft.vendor}
+                onChangeText={(text: string) => setCarDraft((p) => ({ ...p, vendor: text }))}
+              />
+              <View style={[styles.dropdown, styles.carFormField]}>
+                <TouchableOpacity
+                  style={[
+                    styles.input,
+                    styles.selectButtonRow,
+                    styles.prepaidSelectorButton,
+                    carDraft.prepaid ? styles.prepaidSelectorButtonSelected : null,
+                  ]}
+                  onPress={() => setCarPrepaidOpen((s) => !s)}
+                >
+                  <Text style={[styles.cellText, styles.prepaidSelectorText]}>
+                    {carDraft.prepaid ? `Prepaid: ${carDraft.prepaid}` : 'Prepaid? Select Yes or No'}
+                  </Text>
+                  <Text style={styles.selectCaret}>▾</Text>
+                </TouchableOpacity>
+                {carPrepaidOpen ? (
+                  <View style={[styles.dropdownList, styles.prepaidDropdownList]}>
+                    {['Yes', 'No'].map((opt) => (
+                      <TouchableOpacity
+                        key={opt}
+                        style={styles.dropdownOption}
+                        onPress={() => {
+                          setCarDraft((p) => ({ ...p, prepaid: opt }));
+                          setCarPrepaidOpen(false);
+                        }}
+                      >
+                        <Text style={styles.cellText}>{opt}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                ) : null}
+              </View>
+              <TextInput
+                style={[styles.input, styles.carFormField]}
+                placeholder="Cost"
+                keyboardType="numeric"
+                value={carDraft.cost}
+                onChangeText={(text: string) => setCarDraft((p) => ({ ...p, cost: sanitizeCostInput(text) }))}
+              />
+              <TextInput
+                style={[styles.input, styles.carFormField]}
+                placeholder="Car model"
+                value={carDraft.model}
+                onChangeText={(text: string) => setCarDraft((p) => ({ ...p, model: text }))}
+              />
+              <TextInput
+                style={[styles.input, styles.carFormWideField, styles.cellTextWrap]}
+                placeholder="Notes"
+                value={carDraft.notes}
+                onChangeText={(text: string) => setCarDraft((p) => ({ ...p, notes: text }))}
+                multiline
+              />
             </View>
-                <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                  {Platform.OS === 'web' ? (
-                    <select
-                      value={normalizeItineraryStatus(carDraft.status, DEFAULT_NEW_ITINERARY_STATUS)}
-                      onChange={(e) => setCarDraft((p) => ({ ...p, status: normalizeItineraryStatus(e.target.value, DEFAULT_NEW_ITINERARY_STATUS) }))}
-                      style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
-                    >
-                      {ITINERARY_STATUSES.map((opt) => (
-                        <option key={`car-status-${opt}`} value={opt}>
-                          {opt}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <Text style={styles.cellText}>{normalizeItineraryStatus(carDraft.status, DEFAULT_NEW_ITINERARY_STATUS)}</Text>
-                  )}
+            <View style={styles.carMemberRow}>
+              <View style={[styles.carMemberField, { flex: 1 }]}>
+                <Text style={styles.modalLabelSmall}>For</Text>
+                <View style={styles.payerChips}>
+                  {carDraft.travelerIds.map((id) => (
+                    <View key={`car-traveler-${id}`} style={styles.payerChip}>
+                      <Text style={styles.cellText}>{payerName(id)}</Text>
+                      <TouchableOpacity onPress={() => setCarDraft((prev) => ({ ...prev, travelerIds: prev.travelerIds.filter((x) => x !== id) }))}>
+                        <Text style={styles.removeText}>x</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
                 </View>
-                <View style={[styles.cell, { minWidth: 130, flex: 1 }]}>
-                  <Text style={styles.cellText}>-</Text>
-                </View>
-                <View style={[styles.cell, { minWidth: 130, flex: 1 }]}>
-                  <Text style={styles.cellText}>-</Text>
-                </View>
-                <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Reference"
-                    value={carDraft.reference}
-                    onChangeText={(text: string) => setCarDraft((p) => ({ ...p, reference: text }))}
-                  />
-                </View>
-                <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Vendor"
-                    value={carDraft.vendor}
-                    onChangeText={(text: string) => setCarDraft((p) => ({ ...p, vendor: text }))}
-                  />
-                </View>
-                <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                  <View style={[styles.dropdown, { width: '100%' }]}>
-                    <TouchableOpacity
-                      style={[styles.input, styles.selectButtonRow]}
-                      onPress={() => setCarPrepaidOpen((s) => !s)}
-                    >
-                      <Text style={styles.cellText}>{carDraft.prepaid || 'Select Yes/No'}</Text>
-                      <Text style={styles.selectCaret}>▾</Text>
-                    </TouchableOpacity>
-                    {carPrepaidOpen ? (
-                      <View style={[styles.dropdownList, { position: 'relative', top: 0 }]}>
-                        {['Yes', 'No'].map((opt) => (
-                          <TouchableOpacity
-                            key={opt}
-                            style={styles.dropdownOption}
-                            onPress={() => {
-                              setCarDraft((p) => ({ ...p, prepaid: opt }));
-                              setCarPrepaidOpen(false);
-                            }}
-                          >
-                            <Text style={styles.cellText}>{opt}</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    ) : null}
-                  </View>
-                </View>
-                <View style={[styles.cell, { minWidth: 120, flex: 1 }]}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Cost"
-                    keyboardType="numeric"
-                    value={carDraft.cost}
-                    onChangeText={(text: string) => setCarDraft((p) => ({ ...p, cost: sanitizeCostInput(text) }))}
-                  />
-                </View>
-                <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Car model"
-                    value={carDraft.model}
-                    onChangeText={(text: string) => setCarDraft((p) => ({ ...p, model: text }))}
-                  />
-                </View>
-                <View style={[styles.cell, { minWidth: 220, flex: 1 }]}>
-                  <TextInput
-                    style={[styles.input, styles.cellTextWrap]}
-                    placeholder="Notes"
-                    value={carDraft.notes}
-                    onChangeText={(text: string) => setCarDraft((p) => ({ ...p, notes: text }))}
-                    multiline
-                  />
-                </View>
-                <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
-                  <View style={styles.payerChips}>
-                    {carDraft.travelerIds.map((id) => (
-                      <View key={`car-traveler-${id}`} style={styles.payerChip}>
-                        <Text style={styles.cellText}>{payerName(id)}</Text>
-                        <TouchableOpacity
-                          onPress={() =>
-                            setCarDraft((prev) => ({
-                              ...prev,
-                              travelerIds: prev.travelerIds.filter((x) => x !== id),
-                            }))
-                          }
-                        >
-                          <Text style={styles.removeText}>x</Text>
-                        </TouchableOpacity>
-                      </View>
+                <View style={styles.payerOptions}>
+                  {userMembers
+                    .filter((m) => !carDraft.travelerIds.includes(m.id))
+                    .map((m) => (
+                      <TouchableOpacity
+                        key={`car-traveler-add-${m.id}`}
+                        style={styles.smallButton}
+                        onPress={() =>
+                          setCarDraft((prev) => ({
+                            ...prev,
+                            travelerIds: [...prev.travelerIds, m.id],
+                          }))
+                        }
+                      >
+                        <Text style={styles.buttonText}>Add {formatMemberName(m)}</Text>
+                      </TouchableOpacity>
                     ))}
-                  </View>
-                  <View style={styles.payerOptions}>
-                    {userMembers
-                      .filter((m) => !carDraft.travelerIds.includes(m.id))
-                      .map((m) => (
-                        <TouchableOpacity
-                          key={`car-traveler-add-${m.id}`}
-                          style={styles.smallButton}
-                          onPress={() =>
-                            setCarDraft((prev) => ({
-                              ...prev,
-                              travelerIds: [...prev.travelerIds, m.id],
-                            }))
-                          }
-                        >
-                          <Text style={styles.buttonText}>Add {formatMemberName(m)}</Text>
-                        </TouchableOpacity>
-                      ))}
-                  </View>
-                </View>
-                <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
-                  <View style={styles.payerChips}>
-                    {carDraft.paidBy.map((id) => (
-                      <View key={id} style={styles.payerChip}>
-                        <Text style={styles.cellText}>{payerName(id)}</Text>
-                        <TouchableOpacity onPress={() => setCarDraft((prev) => ({ ...prev, paidBy: prev.paidBy.filter((x) => x !== id) }))}>
-                          <Text style={styles.removeText}>x</Text>
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                  </View>
-                  <View style={styles.payerOptions}>
-                    {userMembers
-                      .filter((m) => !carDraft.paidBy.includes(m.id))
-                      .map((m) => (
-                        <TouchableOpacity
-                          key={m.id}
-                          style={styles.smallButton}
-                          onPress={() => setCarDraft((prev) => ({ ...prev, paidBy: [...prev.paidBy, m.id] }))}
-                        >
-                          <Text style={styles.buttonText}>Add {formatMemberName(m)}</Text>
-                        </TouchableOpacity>
-                      ))}
-                  </View>
-                </View>
-                <View style={[styles.cell, styles.actionCell, { minWidth: 160, flex: 1 }, styles.lastCell]}>
-                  <TouchableOpacity style={styles.button} onPress={addCarRental}>
-                    <Text style={styles.buttonText}>Add</Text>
-                  </TouchableOpacity>
                 </View>
               </View>
+              <View style={[styles.carMemberField, { flex: 1 }]}>
+                <Text style={styles.modalLabelSmall}>Paid By</Text>
+                <View style={styles.payerChips}>
+                  {carDraft.paidBy.map((id) => (
+                    <View key={id} style={styles.payerChip}>
+                      <Text style={styles.cellText}>{payerName(id)}</Text>
+                      <TouchableOpacity onPress={() => setCarDraft((prev) => ({ ...prev, paidBy: prev.paidBy.filter((x) => x !== id) }))}>
+                        <Text style={styles.removeText}>x</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+                <View style={styles.payerOptions}>
+                  {userMembers
+                    .filter((m) => !carDraft.paidBy.includes(m.id))
+                    .map((m) => (
+                      <TouchableOpacity
+                        key={m.id}
+                        style={styles.smallButton}
+                        onPress={() => setCarDraft((prev) => ({ ...prev, paidBy: [...prev.paidBy, m.id] }))}
+                      >
+                        <Text style={styles.buttonText}>Add {formatMemberName(m)}</Text>
+                      </TouchableOpacity>
+                    ))}
+                </View>
+              </View>
+              <TouchableOpacity style={[styles.button, styles.carAddButton]} onPress={addCarRental}>
+                <Text style={styles.buttonText}>Add</Text>
+              </TouchableOpacity>
             </View>
-          </ScrollView>
+          </View>
         </View>
       ) : null}
 
@@ -3020,7 +3025,7 @@ const App: React.FC = () => {
 
           <TextInput
             style={styles.input}
-            placeholder="Email"
+            placeholder="Email or Username"
             autoCapitalize="none"
             value={authForm.email}
             onChangeText={(text: string) => setAuthForm((p) => ({ ...p, email: text }))}
@@ -3239,6 +3244,11 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     flexWrap: 'wrap',
     minWidth: 0,
   },
+  brandIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+  },
   homeButton: {
     width: 32,
     height: 32,
@@ -3317,6 +3327,10 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     height: 180,
     backgroundColor: '#e5e7eb',
   },
+  homeHeroCardPressed: {
+    opacity: 0.92,
+    transform: [{ scale: 0.995 }],
+  },
   homeHeroImage: {
     position: 'absolute',
     width: '100%',
@@ -3366,6 +3380,9 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: '#e5e7eb',
     backgroundColor: '#fff',
+  },
+  homeNavButtonPressed: {
+    backgroundColor: '#f3f4f6',
   },
   homeNavButtonDisabled: {
     opacity: 0.5,
@@ -3422,6 +3439,9 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  homeModalClosePressed: {
+    backgroundColor: '#d1d5db',
+  },
   homeModalCloseText: {
     fontSize: 16,
     fontWeight: '700',
@@ -3437,6 +3457,9 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderColor: '#e5e7eb',
+  },
+  homeModalRowPressed: {
+    backgroundColor: '#f8fafc',
   },
   homeModalRowActive: {
     backgroundColor: '#f1f5f9',
@@ -3544,6 +3567,26 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
   buttonText: {
     color: '#0B1726',
     fontWeight: theme.typography.weightBold,
+  },
+  topBarActionButton: {
+    minHeight: 38,
+    justifyContent: 'center',
+    marginBottom: 0,
+  },
+  topBarTripControl: {
+    minHeight: 38,
+    marginBottom: 0,
+    justifyContent: 'center',
+    paddingVertical: 0,
+  },
+  userNameButton: {
+    backgroundColor: theme.colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  userNameButtonText: {
+    color: theme.colors.text,
+    fontWeight: theme.typography.weightSemibold,
   },
   smallButton: {
     paddingHorizontal: 10,
@@ -3986,6 +4029,44 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
+  carFormSection: {
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 8,
+    padding: 12,
+    gap: 10,
+  },
+  carFormGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    alignItems: 'flex-start',
+  },
+  carFormField: {
+    flex: 1,
+    minWidth: 210,
+    marginBottom: 0,
+  },
+  carFormWideField: {
+    flexBasis: '100%',
+    minWidth: 210,
+    marginBottom: 0,
+  },
+  carMemberRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    alignItems: 'flex-start',
+  },
+  carMemberField: {
+    minWidth: 260,
+  },
+  carAddButton: {
+    minHeight: 38,
+    alignSelf: 'flex-end',
+    marginLeft: 'auto',
+  },
   inlineInput: {
     flex: 1,
     marginVertical: 0,
@@ -4030,6 +4111,24 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: theme.colors.border,
     backgroundColor: theme.colors.surface,
+  },
+  prepaidSelectorButton: {
+    marginBottom: 0,
+    minHeight: 42,
+    borderColor: theme.colors.cta,
+    backgroundColor: theme.colors.surfaceMuted,
+  },
+  prepaidSelectorButtonSelected: {
+    backgroundColor: theme.colors.surface,
+  },
+  prepaidSelectorText: {
+    fontWeight: theme.typography.weightSemibold,
+  },
+  prepaidDropdownList: {
+    top: '100%',
+    marginTop: 6,
+    zIndex: 24000,
+    elevation: 28,
   },
   dateInputWrap: {
     position: 'relative',
@@ -4418,5 +4517,3 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
 });
 
 export default App;
-
-
