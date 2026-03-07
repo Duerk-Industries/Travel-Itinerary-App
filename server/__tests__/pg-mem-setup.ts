@@ -1,4 +1,5 @@
 import { newDb, DataType } from 'pg-mem';
+import { randomUUID } from 'crypto';
 
 // Create a shared in-memory database for all test suites.
 const db = newDb({ autoCreateForeignKeyIndices: true, noAstCoverageCheck: true });
@@ -33,6 +34,8 @@ db.public.registerFunction({
     return value.split(find).join(replaceWith);
   },
 });
+
+db.public.registerFunction({ name: 'uuid_generate_v4', args: [], returns: DataType.uuid, implementation: () => randomUUID() });
 
 // Allow longer async flows in integration tests.
 jest.setTimeout(30000);

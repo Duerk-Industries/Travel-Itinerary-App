@@ -314,3 +314,55 @@ export const updateFamilyProfile = async (...args: Parameters<ReturnType<typeof 
 export const poolClient = (): Pool => adapter().poolClient();
 export const getPool = (): Pool => adapter().poolClient();
 
+// ---- Entitlement system facade exports ----
+export const getUserRole = async (...args: Parameters<ReturnType<typeof adapter>['getUserRole']>) =>
+  adapter().getUserRole(...args);
+export const setUserRole = async (...args: Parameters<ReturnType<typeof adapter>['setUserRole']>) =>
+  adapter().setUserRole(...args);
+export const listTiers = async (...args: Parameters<ReturnType<typeof adapter>['listTiers']>) =>
+  adapter().listTiers(...args);
+export const getTierByKey = async (...args: Parameters<ReturnType<typeof adapter>['getTierByKey']>) =>
+  adapter().getTierByKey(...args);
+export const listFeatures = async (...args: Parameters<ReturnType<typeof adapter>['listFeatures']>) =>
+  adapter().listFeatures(...args);
+export const listTierLimits = async (...args: Parameters<ReturnType<typeof adapter>['listTierLimits']>) =>
+  adapter().listTierLimits(...args);
+export const upsertTierLimit = async (...args: Parameters<ReturnType<typeof adapter>['upsertTierLimit']>) =>
+  adapter().upsertTierLimit(...args);
+export const getTierLimitValue = async (...args: Parameters<ReturnType<typeof adapter>['getTierLimitValue']>) =>
+  adapter().getTierLimitValue(...args);
+export const listTierEntitlements = async (...args: Parameters<ReturnType<typeof adapter>['listTierEntitlements']>) =>
+  adapter().listTierEntitlements(...args);
+export const upsertTierEntitlement = async (...args: Parameters<ReturnType<typeof adapter>['upsertTierEntitlement']>) =>
+  adapter().upsertTierEntitlement(...args);
+export const getCurrentUserTier = async (...args: Parameters<ReturnType<typeof adapter>['getCurrentUserTier']>) =>
+  adapter().getCurrentUserTier(...args);
+export const setUserTier = async (...args: Parameters<ReturnType<typeof adapter>['setUserTier']>) =>
+  adapter().setUserTier(...args);
+export const getFeatureFlag = async (...args: Parameters<ReturnType<typeof adapter>['getFeatureFlag']>) =>
+  adapter().getFeatureFlag(...args);
+export const listFeatureFlags = async (...args: Parameters<ReturnType<typeof adapter>['listFeatureFlags']>) =>
+  adapter().listFeatureFlags(...args);
+export const setFeatureFlag = async (...args: Parameters<ReturnType<typeof adapter>['setFeatureFlag']>) =>
+  adapter().setFeatureFlag(...args);
+export const getUsageCounter = async (...args: Parameters<ReturnType<typeof adapter>['getUsageCounter']>) =>
+  adapter().getUsageCounter(...args);
+export const incrementUsageCounter = async (...args: Parameters<ReturnType<typeof adapter>['incrementUsageCounter']>) =>
+  adapter().incrementUsageCounter(...args);
+export const atomicIncrementIfUnderLimit = async (...args: Parameters<ReturnType<typeof adapter>['atomicIncrementIfUnderLimit']>) =>
+  adapter().atomicIncrementIfUnderLimit(...args);
+export const writeAuditLog = async (...args: Parameters<ReturnType<typeof adapter>['writeAuditLog']>) =>
+  adapter().writeAuditLog(...args);
+export const listAuditLog = async (...args: Parameters<ReturnType<typeof adapter>['listAuditLog']>) =>
+  adapter().listAuditLog(...args);
+export const countActiveTripsForUser = async (...args: Parameters<ReturnType<typeof adapter>['countActiveTripsForUser']>) =>
+  adapter().countActiveTripsForUser(...args);
+export const countGroupMembers = async (...args: Parameters<ReturnType<typeof adapter>['countGroupMembers']>) =>
+  adapter().countGroupMembers(...args);
+export const adminSearchUsers = async (...args: Parameters<ReturnType<typeof adapter>['adminSearchUsers']>) =>
+  adapter().adminSearchUsers(...args);
+export const adminGetUser = async (...args: Parameters<ReturnType<typeof adapter>['adminGetUser']>) =>
+  adapter().adminGetUser(...args);
+export const adminGetUserData = async (...args: Parameters<ReturnType<typeof adapter>['adminGetUserData']>) =>
+  adapter().adminGetUserData(...args);
+

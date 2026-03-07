@@ -7,6 +7,12 @@ export const OPENAI_CALLER_ITINERARY_PLAN_P2_DAYS = 'ITINERARY_PLAN_P2_DAYS';
 export const OPENAI_CALLER_ITINERARY_PLAN_P3_VALIDATE = 'ITINERARY_PLAN_P3_VALIDATE';
 export const OPENAI_CALLER_ITINERARY_PLAN_P4_RENDER = 'ITINERARY_PLAN_P4_RENDER';
 
+type TextCompletionResult = {
+  text: string | null;
+  promptTokens: number;
+  completionTokens: number;
+};
+
 const runOpenAiTextCompletion = async (params: {
   apiKey: string;
   caller: string;
@@ -14,7 +20,7 @@ const runOpenAiTextCompletion = async (params: {
   userPrompt: string;
   temperature?: number;
   maxTokens?: number;
-}): Promise<string | null> => {
+}): Promise<TextCompletionResult> => {
   const data = await postOpenAiChatCompletion({
     caller: params.caller,
     apiKey: params.apiKey,
@@ -29,14 +35,18 @@ const runOpenAiTextCompletion = async (params: {
     },
   });
 
-  return data?.choices?.[0]?.message?.content ?? null;
+  return {
+    text: data?.choices?.[0]?.message?.content ?? null,
+    promptTokens: data?.usage?.prompt_tokens ?? 0,
+    completionTokens: data?.usage?.completion_tokens ?? 0,
+  };
 };
 
 export const generateItineraryPlanViaOpenAi = async (params: {
   apiKey: string;
   prompt: string;
 }): Promise<string | null> => {
-  return runOpenAiTextCompletion({
+  const result = await runOpenAiTextCompletion({
     apiKey: params.apiKey,
     caller: OPENAI_CALLER_ITINERARY_GENERATE,
     systemPrompt: 'You write concise, actionable travel itineraries.',
@@ -44,6 +54,7 @@ export const generateItineraryPlanViaOpenAi = async (params: {
     temperature: 0.7,
     maxTokens: 500,
   });
+  return result.text;
 };
 
 export const runItineraryPromptStageViaOpenAi = async (params: {
@@ -57,7 +68,7 @@ export const runItineraryPromptStageViaOpenAi = async (params: {
   systemPrompt: string;
   userPrompt: string;
   maxTokens?: number;
-}): Promise<string | null> => {
+}): Promise<TextCompletionResult> => {
   return runOpenAiTextCompletion({
     apiKey: params.apiKey,
     caller: params.caller,

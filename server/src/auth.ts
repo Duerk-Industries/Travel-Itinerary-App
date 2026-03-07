@@ -1,8 +1,8 @@
 import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
-import { findOrCreateUser, findOrCreateGoogleUser } from './db';
+import { findOrCreateUser, findOrCreateGoogleUser, getUserRole } from './db';
 import { isPasswordSetupRequired } from './db';
-import { User } from './types';
+import { User, UserRole } from './types';
 import { getEnvValue } from './env';
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
@@ -36,10 +36,11 @@ export const initPassport = () => {
     });
 };
 
-interface TokenPayload {
+export interface TokenPayload {
   userId: string;
   email: string;
   provider: User['provider'];
+  role: UserRole;
 }
 
 export const createToken = (payload: TokenPayload): string => {
@@ -112,6 +113,7 @@ export const handleLogin = async (
   provider: User['provider']
 ): Promise<{ token: string; user: User }> => {
   const user = await findOrCreateUser(email, provider);
-  const token = createToken({ userId: user.id, email: user.email, provider: user.provider });
+  const role = await getUserRole(user.id);
+  const token = createToken({ userId: user.id, email: user.email, provider: user.provider, role });
   return { token, user };
 };

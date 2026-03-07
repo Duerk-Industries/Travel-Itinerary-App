@@ -29,6 +29,9 @@ import {
 import { detectCoveringConflict, detectCycle } from '../utils/coveredBy';
 import { sendTripInviteEmailBestEffort } from '../mailer';
 import { aggregateTripActivity } from '../services/activityFeed';
+import { assertUnderActiveTripLimit } from '../services/entitlementService';
+import { EntitlementError } from '../errors';
+import { TokenPayload } from '../auth';
 
 const normalizeLocationIds = (value: unknown): string[] => {
   if (!Array.isArray(value)) return [];
@@ -375,12 +378,14 @@ router.put('/:id/covered-by', async (req, res) => {
 
 router.post('/', async (req, res) => {
   const userId = (req as any).user.userId as string;
+  const role = ((req as any).user as TokenPayload).role;
   const { name, groupId, description, locationIds, startDate, endDate, startMonth, startYear, durationDays, currency } = req.body ?? {};
   if (!name || !groupId) {
     res.status(400).json({ error: 'name and groupId are required' });
     return;
   }
   try {
+    await assertUnderActiveTripLimit(userId, role);
     const trip = await createTrip(userId, groupId, name.trim(), {
       description: typeof description === 'string' ? description.trim() || null : null,
       destination: null,
@@ -394,6 +399,10 @@ router.post('/', async (req, res) => {
     });
     res.status(201).json(trip);
   } catch (err) {
+    if (err instanceof EntitlementError) {
+      res.status(402).json({ error: err.message, code: err.code });
+      return;
+    }
     const message = (err as Error).message;
     if (/log in again/i.test(message) || /user not found/i.test(message)) {
       res.status(401).json({ error: message });
@@ -405,6 +414,7 @@ router.post('/', async (req, res) => {
 
 router.post('/wizard', async (req, res) => {
   const userId = (req as any).user.userId as string;
+  const role = ((req as any).user as TokenPayload).role;
   const { name, description, locationIds, startDate, endDate, startMonth, startYear, durationDays, participants, currency } = req.body ?? {};
   if (!name || !String(name).trim()) {
     res.status(400).json({ error: 'Trip name is required' });
@@ -433,6 +443,7 @@ router.post('/wizard', async (req, res) => {
   });
 
   try {
+    await assertUnderActiveTripLimit(userId, role);
     const result = await createTripWithGroupAndMembers({
       ownerId: userId,
       tripName: String(name).trim(),
@@ -471,6 +482,10 @@ router.post('/wizard', async (req, res) => {
 
     res.status(201).json({ trip: result.trip, groupId: result.groupId, invites: result.invites });
   } catch (err) {
+    if (err instanceof EntitlementError) {
+      res.status(402).json({ error: err.message, code: err.code });
+      return;
+    }
     res.status(400).json({ error: (err as Error).message });
   }
 });

@@ -10,6 +10,7 @@ import {
   Trait,
   Trip,
   User,
+  UserRole,
   WebUser,
   Itinerary,
   ItineraryDetail,
@@ -22,6 +23,15 @@ import {
   TripActivity,
   TripActivityType,
   TripComment,
+  Tier,
+  Feature,
+  TierEntitlement,
+  TierLimit,
+  UserTier,
+  FeatureFlag,
+  UsageCounter,
+  AuditLogEntry,
+  AuditAction,
 } from './types';
 import { logError, logInfo } from './logger';
 import { getEnvValue, isLocalEnv } from './env';
@@ -173,11 +183,11 @@ export const findOrCreateUser = async (email: string, provider: User['provider']
   if (!existing.empty) {
     const doc = existing.docs[0];
     const data = doc.data() as User;
-    return { id: doc.id, email: data.email, provider: data.provider };
+    return { id: doc.id, email: data.email, provider: data.provider, role: (data.role ?? 'user') as UserRole };
   }
   const id = randomUUID();
-  await db.collection('users').doc(id).set({ email: normalized, provider, createdAt: nowIso(), emailVerified: true });
-  return { id, email: normalized, provider };
+  await db.collection('users').doc(id).set({ email: normalized, provider, role: 'user', createdAt: nowIso(), emailVerified: true });
+  return { id, email: normalized, provider, role: 'user' };
 };
 
 export const ensureDefaultGroupForUser = async (userId: string, email: string): Promise<void> => {
@@ -202,7 +212,7 @@ export const findUserByEmail = async (email: string): Promise<User | null> => {
   if (snapshot.empty) return null;
   const doc = snapshot.docs[0];
   const data = doc.data() as User;
-  return { id: doc.id, email: data.email, provider: data.provider };
+  return { id: doc.id, email: data.email, provider: data.provider, role: (data.role ?? 'user') as UserRole };
 };
 
 export const findUserByIdentifier = async (identifier: string): Promise<User | null> => {
@@ -212,7 +222,7 @@ export const findUserByIdentifier = async (identifier: string): Promise<User | n
     if (usersByUsername.empty) return null;
     const doc = usersByUsername.docs[0];
     const data = doc.data() as User;
-    return { id: doc.id, email: data.email, provider: data.provider };
+    return { id: doc.id, email: data.email, provider: data.provider, role: (data.role ?? 'user') as UserRole };
   }
   return findUserByEmail(normalized);
 };
@@ -3357,7 +3367,7 @@ export const findOrCreateGoogleUser = async (profile: any): Promise<User> => {
         await doc.ref.update(updateData);
         const updatedDoc = await doc.ref.get();
         const data = updatedDoc.data() as User;
-        return { id: doc.id, email: data.email, provider: data.provider };
+        return { id: doc.id, email: data.email, provider: data.provider, role: (data.role ?? 'user') as UserRole };
     }
 
     const existingByEmail = await db.collection('users').where('email', '==', normalizedEmail).limit(1).get();
@@ -3374,7 +3384,7 @@ export const findOrCreateGoogleUser = async (profile: any): Promise<User> => {
         await doc.ref.update(updateData);
         const updatedDoc = await doc.ref.get();
         const data = updatedDoc.data() as User;
-        return { id: doc.id, email: data.email, provider: data.provider };
+        return { id: doc.id, email: data.email, provider: data.provider, role: (data.role ?? 'user') as UserRole };
     }
 
     const newUserId = randomUUID();
@@ -3390,6 +3400,326 @@ export const findOrCreateGoogleUser = async (profile: any): Promise<User> => {
         createdAt: nowIso(),
     });
 
-    return { id: newUserId, email: normalizedEmail, provider: 'google' };
+    return { id: newUserId, email: normalizedEmail, provider: 'google', role: 'user' };
+};
+
+// ---- Entitlement system functions ----
+
+export const getUserRole = async (userId: string): Promise<UserRole> => {
+  const db = getDb();
+  const doc = await db.collection('users').doc(userId).get();
+  return ((doc.data()?.role as string) ?? 'user') as UserRole;
+};
+
+export const setUserRole = async (userId: string, role: UserRole): Promise<void> => {
+  const db = getDb();
+  await db.collection('users').doc(userId).update({ role });
+};
+
+export const listTiers = async (): Promise<Tier[]> => {
+  const db = getDb();
+  const snap = await db.collection('tiers').orderBy('rank').get();
+  return snap.docs.map(d => {
+    const data = d.data();
+    return {
+      id: data.id ?? d.id,
+      key: d.id,
+      displayName: data.displayName,
+      rank: data.rank,
+      isActive: data.isActive ?? true,
+      createdAt: data.createdAt ?? nowIso(),
+    };
+  });
+};
+
+export const getTierByKey = async (key: string): Promise<Tier | null> => {
+  const db = getDb();
+  const doc = await db.collection('tiers').doc(key).get();
+  if (!doc.exists) return null;
+  const data = doc.data()!;
+  return { id: data.id ?? doc.id, key: doc.id, displayName: data.displayName, rank: data.rank, isActive: data.isActive ?? true, createdAt: data.createdAt ?? nowIso() };
+};
+
+export const listFeatures = async (): Promise<Feature[]> => {
+  const db = getDb();
+  const snap = await db.collection('features').orderBy('key').get();
+  return snap.docs.map(d => {
+    const data = d.data();
+    return { id: data.id ?? d.id, key: d.id, description: data.description ?? '', defaultEnabled: data.defaultEnabled ?? false, createdAt: data.createdAt ?? nowIso() };
+  });
+};
+
+export const listTierLimits = async (tierId: string): Promise<TierLimit[]> => {
+  const db = getDb();
+  const snap = await db.collection('tier_limits').where('tierId', '==', tierId).get();
+  return snap.docs.map(d => {
+    const data = d.data();
+    return { id: d.id, tierId: data.tierId, limitKey: data.limitKey, limitValue: data.limitValue, createdAt: data.createdAt ?? nowIso() };
+  });
+};
+
+export const upsertTierLimit = async (tierId: string, limitKey: string, limitValue: number): Promise<void> => {
+  const db = getDb();
+  const docId = `${tierId}_${limitKey}`;
+  await db.collection('tier_limits').doc(docId).set({ tierId, limitKey, limitValue, updatedAt: nowIso() }, { merge: true });
+};
+
+export const getTierLimitValue = async (tierId: string, limitKey: string): Promise<number | null> => {
+  const db = getDb();
+  const docId = `${tierId}_${limitKey}`;
+  const doc = await db.collection('tier_limits').doc(docId).get();
+  if (!doc.exists) return null;
+  return doc.data()!.limitValue ?? null;
+};
+
+export const listTierEntitlements = async (tierId: string): Promise<TierEntitlement[]> => {
+  const db = getDb();
+  const snap = await db.collection('tier_entitlements').where('tierId', '==', tierId).get();
+  return snap.docs.map(d => {
+    const data = d.data();
+    return { id: d.id, tierId: data.tierId, featureId: data.featureId, isAllowed: data.isAllowed, createdAt: data.createdAt ?? nowIso() };
+  });
+};
+
+export const upsertTierEntitlement = async (tierId: string, featureId: string, isAllowed: boolean): Promise<void> => {
+  const db = getDb();
+  const docId = `${tierId}_${featureId}`;
+  await db.collection('tier_entitlements').doc(docId).set({ tierId, featureId, isAllowed, updatedAt: nowIso() }, { merge: true });
+};
+
+export const getCurrentUserTier = async (userId: string): Promise<(UserTier & { tierKey: string }) | null> => {
+  const db = getDb();
+  const snap = await db.collection('user_tiers')
+    .where('userId', '==', userId)
+    .where('effectiveTo', '==', null)
+    .orderBy('effectiveFrom', 'desc')
+    .limit(1)
+    .get();
+  if (snap.empty) return null;
+  const doc = snap.docs[0];
+  const data = doc.data();
+  const tier = await getTierByKey(data.tierKey);
+  return {
+    id: doc.id,
+    userId: data.userId,
+    tierId: data.tierId,
+    source: data.source,
+    reason: data.reason ?? null,
+    assignedBy: data.assignedBy ?? null,
+    effectiveFrom: data.effectiveFrom,
+    effectiveTo: data.effectiveTo ?? null,
+    createdAt: data.createdAt ?? nowIso(),
+    tierKey: tier?.key ?? data.tierKey ?? 'free',
+  };
+};
+
+export const setUserTier = async (
+  userId: string,
+  tierKey: string,
+  source: 'system' | 'admin',
+  assignedBy: string | null,
+  reason?: string
+): Promise<void> => {
+  const db = getDb();
+  const tier = await getTierByKey(tierKey);
+  if (!tier) throw new Error(`Tier not found: ${tierKey}`);
+  const existing = await db.collection('user_tiers')
+    .where('userId', '==', userId)
+    .where('effectiveTo', '==', null)
+    .get();
+  const batch = db.batch();
+  const now = nowIso();
+  for (const doc of existing.docs) {
+    batch.update(doc.ref, { effectiveTo: now });
+  }
+  const newRef = db.collection('user_tiers').doc(randomUUID());
+  batch.set(newRef, { userId, tierId: tier.id, tierKey, source, reason: reason ?? null, assignedBy, effectiveFrom: now, effectiveTo: null, createdAt: now });
+  await batch.commit();
+};
+
+export const getFeatureFlag = async (key: string): Promise<FeatureFlag | null> => {
+  const db = getDb();
+  const doc = await db.collection('feature_flags').doc(key).get();
+  if (!doc.exists) return null;
+  const data = doc.data()!;
+  return { id: doc.id, key: doc.id, enabled: data.enabled, scope: 'global', updatedBy: data.updatedBy ?? null, updatedAt: data.updatedAt ?? nowIso(), createdAt: data.createdAt ?? nowIso() };
+};
+
+export const listFeatureFlags = async (): Promise<FeatureFlag[]> => {
+  const db = getDb();
+  const snap = await db.collection('feature_flags').orderBy('key').get();
+  return snap.docs.map(d => {
+    const data = d.data();
+    return { id: d.id, key: d.id, enabled: data.enabled, scope: 'global' as const, updatedBy: data.updatedBy ?? null, updatedAt: data.updatedAt ?? nowIso(), createdAt: data.createdAt ?? nowIso() };
+  });
+};
+
+export const setFeatureFlag = async (key: string, enabled: boolean, updatedBy: string | null): Promise<void> => {
+  const db = getDb();
+  await db.collection('feature_flags').doc(key).set({ enabled, updatedBy, updatedAt: nowIso() }, { merge: true });
+};
+
+export const getUsageCounter = async (userId: string, metricKey: string, windowKey: string): Promise<number> => {
+  const db = getDb();
+  const docId = `${userId}_${metricKey}_${windowKey}`;
+  const doc = await db.collection('usage_counters').doc(docId).get();
+  return doc.exists ? (doc.data()!.count ?? 0) : 0;
+};
+
+export const incrementUsageCounter = async (
+  userId: string,
+  metricKey: string,
+  windowKey: string,
+  amount = 1
+): Promise<number> => {
+  const db = getDb();
+  const docId = `${userId}_${metricKey}_${windowKey}`;
+  const ref = db.collection('usage_counters').doc(docId);
+  const { FieldValue } = await import('firebase-admin/firestore');
+  await ref.set({ userId, metricKey, windowKey, count: FieldValue.increment(amount), updatedAt: nowIso() }, { merge: true });
+  const updated = await ref.get();
+  return updated.data()!.count ?? amount;
+};
+
+export const atomicIncrementIfUnderLimit = async (
+  userId: string,
+  metricKey: string,
+  windowKey: string,
+  limit: number
+): Promise<{ allowed: boolean; newCount: number }> => {
+  const db = getDb();
+  const docId = `${userId}_${metricKey}_${windowKey}`;
+  const ref = db.collection('usage_counters').doc(docId);
+  const { FieldValue } = await import('firebase-admin/firestore');
+  return db.runTransaction(async tx => {
+    const doc = await tx.get(ref);
+    const current = doc.exists ? (doc.data()!.count ?? 0) : 0;
+    if (current >= limit) {
+      return { allowed: false, newCount: current };
+    }
+    if (doc.exists) {
+      tx.update(ref, { count: FieldValue.increment(1), updatedAt: nowIso() });
+    } else {
+      tx.set(ref, { userId, metricKey, windowKey, count: 1, updatedAt: nowIso() });
+    }
+    return { allowed: true, newCount: current + 1 };
+  });
+};
+
+export const writeAuditLog = async (entry: {
+  actorUserId?: string | null;
+  targetUserId?: string | null;
+  action: AuditAction;
+  beforeState?: Record<string, unknown> | null;
+  afterState?: Record<string, unknown> | null;
+  reason?: string | null;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+}): Promise<AuditLogEntry> => {
+  const db = getDb();
+  const id = randomUUID();
+  const createdAt = nowIso();
+  await db.collection('audit_log').doc(id).set({
+    actorUserId: entry.actorUserId ?? null,
+    targetUserId: entry.targetUserId ?? null,
+    action: entry.action,
+    beforeState: entry.beforeState ?? null,
+    afterState: entry.afterState ?? null,
+    reason: entry.reason ?? null,
+    ipAddress: entry.ipAddress ?? null,
+    userAgent: entry.userAgent ?? null,
+    createdAt,
+  });
+  return { id, ...entry, actorUserId: entry.actorUserId ?? null, targetUserId: entry.targetUserId ?? null, beforeState: entry.beforeState ?? null, afterState: entry.afterState ?? null, reason: entry.reason ?? null, ipAddress: entry.ipAddress ?? null, userAgent: entry.userAgent ?? null, createdAt };
+};
+
+export const listAuditLog = async (opts: {
+  actorUserId?: string;
+  targetUserId?: string;
+  action?: string;
+  page?: number;
+  limit?: number;
+}): Promise<{ entries: AuditLogEntry[]; total: number }> => {
+  const db = getDb();
+  let query: FirebaseFirestore.Query = db.collection('audit_log').orderBy('createdAt', 'desc');
+  if (opts.actorUserId) query = query.where('actorUserId', '==', opts.actorUserId);
+  if (opts.targetUserId) query = query.where('targetUserId', '==', opts.targetUserId);
+  if (opts.action) query = query.where('action', '==', opts.action);
+  const page = Math.max(1, opts.page ?? 1);
+  const limit = Math.min(100, Math.max(1, opts.limit ?? 50));
+  const offset = (page - 1) * limit;
+  const allSnap = await query.get();
+  const total = allSnap.size;
+  const entries = allSnap.docs.slice(offset, offset + limit).map(d => {
+    const data = d.data();
+    return {
+      id: d.id,
+      actorUserId: data.actorUserId ?? null,
+      targetUserId: data.targetUserId ?? null,
+      action: data.action as AuditAction,
+      beforeState: data.beforeState ?? null,
+      afterState: data.afterState ?? null,
+      reason: data.reason ?? null,
+      ipAddress: data.ipAddress ?? null,
+      userAgent: data.userAgent ?? null,
+      createdAt: data.createdAt,
+    };
+  });
+  return { entries, total };
+};
+
+export const countGroupMembers = async (groupId: string): Promise<number> => {
+  const db = getDb();
+  const snap = await db.collection('group_members')
+    .where('groupId', '==', groupId)
+    .where('removedAt', '==', null)
+    .get();
+  return snap.size;
+};
+
+import type { AdminUserRow } from './db.postgres';
+export { AdminUserRow };
+
+export const adminSearchUsers = async (_opts: {
+  search?: string; page?: number; limit?: number;
+}): Promise<{ users: AdminUserRow[]; total: number }> => ({ users: [], total: 0 });
+
+export const adminGetUser = async (_userId: string): Promise<{
+  id: string; email: string; firstName: string | null; lastName: string | null;
+  role: string; tierKey: string | null; tierDisplayName: string | null;
+  tierSince: string | null; tierSource: string | null; createdAt: string;
+  usage: { metricKey: string; windowKey: string; count: number }[];
+} | null> => null;
+
+export const adminGetUserData = async (_opts: {
+  window?: '7d' | '30d' | 'all-time'; page?: number; limit?: number;
+}): Promise<{
+  summary: { totalUsers: number; byTier: Record<string, number> };
+  users: Array<{ id: string; email: string; role: string; tierKey: string | null; aiGenerations: number; tokens: number; createdAt: string }>;
+  total: number;
+}> => ({ summary: { totalUsers: 0, byTier: {} }, users: [], total: 0 });
+
+export const countActiveTripsForUser = async (userId: string): Promise<number> => {
+  const db = getDb();
+  const today = new Date().toISOString().slice(0, 10);
+  const groupsSnap = await db.collection('groups').where('ownerId', '==', userId).get();
+  const memberSnap = await db.collection('group_members')
+    .where('userId', '==', userId)
+    .where('removedAt', '==', null)
+    .get();
+  const groupIds = new Set<string>([
+    ...groupsSnap.docs.map(d => d.id),
+    ...memberSnap.docs.map(d => d.data().groupId as string),
+  ]);
+  if (groupIds.size === 0) return 0;
+  let count = 0;
+  for (const groupId of groupIds) {
+    const tripsSnap = await db.collection('trips').where('groupId', '==', groupId).get();
+    for (const tripDoc of tripsSnap.docs) {
+      const endDate = tripDoc.data().endDate;
+      if (!endDate || endDate >= today) count++;
+    }
+  }
+  return count;
 };
 

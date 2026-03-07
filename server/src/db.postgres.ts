@@ -8,6 +8,7 @@ import {
   Trait,
   Trip,
   User,
+  UserRole,
   WebUser,
   Lodging,
   Activity,
@@ -21,6 +22,15 @@ import {
   TripActivity,
   TripActivityType,
   TripComment,
+  Tier,
+  Feature,
+  TierEntitlement,
+  TierLimit,
+  UserTier,
+  FeatureFlag,
+  UsageCounter,
+  AuditLogEntry,
+  AuditAction,
 } from './types';
 import { logError } from './logger';
 import { getEnvValue } from './env';
@@ -801,6 +811,219 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE expenses ADD COLUMN IF NOT EXISTS exchange_rate_to_trip_currency NUMERIC;`);
   await p.query(`ALTER TABLE expenses ADD COLUMN IF NOT EXISTS exchange_rate_date DATE;`);
 
+  // ---- Entitlement system tables ----
+
+  await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user';`);
+  try {
+    await p.query(`CREATE INDEX IF NOT EXISTS idx_users_role ON users(role) WHERE role <> 'user';`);
+  } catch {
+    // pg-mem doesn't support partial indexes; safe to skip in tests.
+  }
+
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS tiers (
+      id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      key          TEXT NOT NULL UNIQUE,
+      display_name TEXT NOT NULL,
+      rank         INTEGER NOT NULL UNIQUE,
+      is_active    BOOLEAN NOT NULL DEFAULT TRUE,
+      created_at   TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS features (
+      id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      key             TEXT NOT NULL UNIQUE,
+      description     TEXT NOT NULL DEFAULT '',
+      default_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at      TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS tier_entitlements (
+      id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      tier_id    UUID NOT NULL REFERENCES tiers(id) ON DELETE CASCADE,
+      feature_id UUID NOT NULL REFERENCES features(id) ON DELETE CASCADE,
+      is_allowed BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      UNIQUE (tier_id, feature_id)
+    );
+  `);
+
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS tier_limits (
+      id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      tier_id     UUID NOT NULL REFERENCES tiers(id) ON DELETE CASCADE,
+      limit_key   TEXT NOT NULL,
+      limit_value INTEGER NOT NULL,
+      created_at  TIMESTAMP NOT NULL DEFAULT NOW(),
+      UNIQUE (tier_id, limit_key)
+    );
+  `);
+
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS user_tiers (
+      id             UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      user_id        UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      tier_id        UUID NOT NULL REFERENCES tiers(id),
+      source         TEXT NOT NULL DEFAULT 'system',
+      reason         TEXT,
+      assigned_by    UUID REFERENCES users(id) ON DELETE SET NULL,
+      effective_from TIMESTAMP NOT NULL DEFAULT NOW(),
+      effective_to   TIMESTAMP,
+      created_at     TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+  `);
+  try {
+    await p.query(`
+      CREATE INDEX IF NOT EXISTS idx_user_tiers_current
+        ON user_tiers(user_id, effective_from DESC)
+        WHERE effective_to IS NULL;
+    `);
+  } catch {
+    // pg-mem doesn't support partial indexes; safe to skip in tests.
+  }
+
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS feature_flags (
+      id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      key        TEXT NOT NULL UNIQUE,
+      enabled    BOOLEAN NOT NULL DEFAULT FALSE,
+      scope      TEXT NOT NULL DEFAULT 'global',
+      updated_by UUID REFERENCES users(id) ON DELETE SET NULL,
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+  `);
+
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS usage_counters (
+      id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      metric_key TEXT NOT NULL,
+      window_key TEXT NOT NULL,
+      count      BIGINT NOT NULL DEFAULT 0,
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      UNIQUE (user_id, metric_key, window_key)
+    );
+  `);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_usage_counters_user_metric ON usage_counters(user_id, metric_key, window_key);`);
+
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS generation_idempotency (
+      key        TEXT PRIMARY KEY,
+      user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      trip_id    TEXT NOT NULL,
+      status     TEXT NOT NULL DEFAULT 'pending',
+      result_ref TEXT,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      expires_at TIMESTAMP NOT NULL
+    );
+  `);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_gen_idempotency_user ON generation_idempotency(user_id, created_at DESC);`);
+
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS audit_log (
+      id             UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      actor_user_id  UUID REFERENCES users(id) ON DELETE SET NULL,
+      target_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+      action         TEXT NOT NULL,
+      before_state   JSONB,
+      after_state    JSONB,
+      reason         TEXT,
+      ip_address     TEXT,
+      user_agent     TEXT,
+      created_at     TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+  `);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_audit_log_actor   ON audit_log(actor_user_id, created_at DESC);`);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_audit_log_target  ON audit_log(target_user_id, created_at DESC);`);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_audit_log_action  ON audit_log(action, created_at DESC);`);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_audit_log_created ON audit_log(created_at DESC);`);
+
+  // Seed tiers (individual parameterized inserts to avoid pg-mem uuid evaluation issues)
+  for (const [key, displayName, rank] of [['free', 'Free', 1], ['premium', 'Premium', 2], ['pro', 'Pro', 3]] as const) {
+    await p.query(
+      `INSERT INTO tiers (id, key, display_name, rank) VALUES ($1, $2, $3, $4) ON CONFLICT (key) DO NOTHING`,
+      [randomUUID(), key, displayName, rank]
+    );
+  }
+
+  // Seed features
+  const featureSeedRows: Array<[string, string, boolean]> = [
+    ['ai_itinerary_generation', 'AI-powered itinerary generation',   true],
+    ['csv_export',              'Export cost reports as CSV',         true],
+    ['car_rentals',             'Car rental tracking',                true],
+    ['trip_sharing',            'Share trips with other users',       true],
+    ['trip_following',          'Follow trips as read-only observer', true],
+    ['cost_tracking',           'Expense and cost tracking',          true],
+    ['multiple_groups',         'Create more than one group',         true],
+    ['trip_creation',           'Create new trips',                   true],
+  ];
+  for (const [key, description, defaultEnabled] of featureSeedRows) {
+    await p.query(
+      `INSERT INTO features (id, key, description, default_enabled) VALUES ($1, $2, $3, $4) ON CONFLICT (key) DO NOTHING`,
+      [randomUUID(), key, description, defaultEnabled]
+    );
+  }
+
+  // Seed tier limits — fetch tier IDs then insert directly (pg-mem compatible)
+  const tierLimitSeeds: Array<[string, string, number]> = [
+    ['free',    'max_active_trips',                    3],
+    ['free',    'max_travelers_per_trip',              6],
+    ['free',    'ai_itinerary_generations_per_month',  5],
+    ['premium', 'max_active_trips',                    250],
+    ['premium', 'max_travelers_per_trip',              200],
+    ['premium', 'ai_itinerary_generations_per_month', -1],
+    ['pro',     'max_active_trips',                    250],
+    ['pro',     'max_travelers_per_trip',              200],
+    ['pro',     'ai_itinerary_generations_per_month', -1],
+  ];
+  const tierIdCache: Record<string, string> = {};
+  for (const [tierKey, limitKey, limitValue] of tierLimitSeeds) {
+    if (!tierIdCache[tierKey]) {
+      const { rows } = await p.query<{ id: string }>(`SELECT id FROM tiers WHERE key = $1`, [tierKey]);
+      if (!rows.length) continue;
+      tierIdCache[tierKey] = rows[0].id;
+    }
+    await p.query(
+      `INSERT INTO tier_limits (id, tier_id, limit_key, limit_value) VALUES ($1, $2, $3, $4)
+       ON CONFLICT (tier_id, limit_key) DO NOTHING`,
+      [randomUUID(), tierIdCache[tierKey], limitKey, limitValue]
+    );
+  }
+
+  // Seed feature flags
+  for (const key of ['ai_itinerary_generation', 'csv_export', 'car_rentals', 'trip_sharing', 'trip_following', 'cost_tracking', 'multiple_groups', 'trip_creation']) {
+    await p.query(
+      `INSERT INTO feature_flags (id, key, enabled) VALUES ($1, $2, true) ON CONFLICT (key) DO NOTHING`,
+      [randomUUID(), key]
+    );
+  }
+
+  // Assign free tier to all existing users without an active user_tiers row
+  {
+    const { rows: usersNeedingTier } = await p.query<{ id: string }>(
+      `SELECT u.id
+       FROM users u
+       LEFT JOIN user_tiers ut ON ut.user_id = u.id AND ut.effective_to IS NULL
+       WHERE ut.id IS NULL`
+    );
+    const { rows: freeTierRows } = await p.query<{ id: string }>(`SELECT id FROM tiers WHERE key = 'free'`);
+    const freeTierId = freeTierRows[0]?.id;
+    if (freeTierId) {
+      for (const user of usersNeedingTier) {
+        await p.query(
+          `INSERT INTO user_tiers (id, user_id, tier_id, source) VALUES ($1, $2, $3, 'system')
+           ON CONFLICT DO NOTHING`,
+          [randomUUID(), user.id, freeTierId]
+        );
+      }
+    }
+  }
+
   // Backfill usernames for existing rows and ensure user_emails has a canonical primary email for each user.
   const usersWithoutUsername = await p.query<{
     id: string;
@@ -853,6 +1076,15 @@ export const initDb = async (): Promise<void> => {
 
   if (process.env.USE_IN_MEMORY_DB === '1') {
     // Clear data between test runs while keeping schema intact.
+    await p.query(`DELETE FROM audit_log`);
+    await p.query(`DELETE FROM generation_idempotency`);
+    await p.query(`DELETE FROM usage_counters`);
+    await p.query(`DELETE FROM user_tiers`);
+    await p.query(`DELETE FROM tier_entitlements`);
+    await p.query(`DELETE FROM tier_limits`);
+    await p.query(`DELETE FROM feature_flags`);
+    await p.query(`DELETE FROM tiers`);
+    await p.query(`DELETE FROM features`);
     await p.query(`DELETE FROM trip_comments`);
     await p.query(`DELETE FROM trip_activity`);
     await p.query(`DELETE FROM itinerary_details`);
@@ -904,7 +1136,7 @@ export const findOrCreateUser = async (
     [id, normalizedEmail, username, username, provider]
   );
   await upsertUserEmail(p, id, normalizedEmail, { isPrimary: true, isVerified: true, verifiedAt: new Date() });
-  return { id, email: normalizedEmail, provider, emailVerified: true };
+  return { id, email: normalizedEmail, provider, emailVerified: true, role: 'user' };
 };
 
 type Queryable = Pick<Pool, 'query'>;
@@ -6957,11 +7189,615 @@ export const findOrCreateGoogleUser = async (profile: any): Promise<User> => {
     );
     await upsertUserEmail(p, newUserId, email, { isPrimary: true, isVerified: true, verifiedAt: new Date() });
 
-    return { id: newUserId, email, provider: 'google', emailVerified: true };
+    return { id: newUserId, email, provider: 'google', emailVerified: true, role: 'user' };
 };
 
 export const deleteAllUsers = async (userIds: string[]): Promise<void> => {
   const p = getPool();
   await p.query(`DELETE FROM users WHERE id = ANY($1::uuid[])`, [userIds]);
+};
+
+// ---- Entitlement system functions ----
+
+export const getUserRole = async (userId: string): Promise<UserRole> => {
+  const p = getPool();
+  const { rows } = await p.query<{ role: string }>(`SELECT role FROM users WHERE id = $1`, [userId]);
+  return (rows[0]?.role ?? 'user') as UserRole;
+};
+
+export const setUserRole = async (userId: string, role: UserRole): Promise<void> => {
+  const p = getPool();
+  await p.query(`UPDATE users SET role = $1 WHERE id = $2`, [role, userId]);
+};
+
+export const listTiers = async (): Promise<Tier[]> => {
+  const p = getPool();
+  const { rows } = await p.query<{
+    id: string; key: string; display_name: string; rank: number; is_active: boolean; created_at: string;
+  }>(`SELECT id, key, display_name, rank, is_active, created_at FROM tiers ORDER BY rank`);
+  return rows.map(r => ({
+    id: r.id,
+    key: r.key,
+    displayName: r.display_name,
+    rank: r.rank,
+    isActive: r.is_active,
+    createdAt: r.created_at,
+  }));
+};
+
+export const getTierByKey = async (key: string): Promise<Tier | null> => {
+  const p = getPool();
+  const { rows } = await p.query<{
+    id: string; key: string; display_name: string; rank: number; is_active: boolean; created_at: string;
+  }>(`SELECT id, key, display_name, rank, is_active, created_at FROM tiers WHERE key = $1`, [key]);
+  if (!rows.length) return null;
+  const r = rows[0];
+  return { id: r.id, key: r.key, displayName: r.display_name, rank: r.rank, isActive: r.is_active, createdAt: r.created_at };
+};
+
+export const listFeatures = async (): Promise<Feature[]> => {
+  const p = getPool();
+  const { rows } = await p.query<{
+    id: string; key: string; description: string; default_enabled: boolean; created_at: string;
+  }>(`SELECT id, key, description, default_enabled, created_at FROM features ORDER BY key`);
+  return rows.map(r => ({
+    id: r.id,
+    key: r.key,
+    description: r.description,
+    defaultEnabled: r.default_enabled,
+    createdAt: r.created_at,
+  }));
+};
+
+export const listTierLimits = async (tierId: string): Promise<TierLimit[]> => {
+  const p = getPool();
+  const { rows } = await p.query<{
+    id: string; tier_id: string; limit_key: string; limit_value: number; created_at: string;
+  }>(`SELECT id, tier_id, limit_key, limit_value, created_at FROM tier_limits WHERE tier_id = $1`, [tierId]);
+  return rows.map(r => ({
+    id: r.id,
+    tierId: r.tier_id,
+    limitKey: r.limit_key,
+    limitValue: r.limit_value,
+    createdAt: r.created_at,
+  }));
+};
+
+export const upsertTierLimit = async (tierId: string, limitKey: string, limitValue: number): Promise<void> => {
+  const p = getPool();
+  await p.query(
+    `INSERT INTO tier_limits (id, tier_id, limit_key, limit_value)
+     VALUES (uuid_generate_v4(), $1, $2, $3)
+     ON CONFLICT (tier_id, limit_key) DO UPDATE SET limit_value = EXCLUDED.limit_value`,
+    [tierId, limitKey, limitValue]
+  );
+};
+
+export const getTierLimitValue = async (tierId: string, limitKey: string): Promise<number | null> => {
+  const p = getPool();
+  const { rows } = await p.query<{ limit_value: number }>(
+    `SELECT limit_value FROM tier_limits WHERE tier_id = $1 AND limit_key = $2`,
+    [tierId, limitKey]
+  );
+  return rows[0]?.limit_value ?? null;
+};
+
+export const listTierEntitlements = async (tierId: string): Promise<TierEntitlement[]> => {
+  const p = getPool();
+  const { rows } = await p.query<{
+    id: string; tier_id: string; feature_id: string; is_allowed: boolean; created_at: string;
+  }>(`SELECT id, tier_id, feature_id, is_allowed, created_at FROM tier_entitlements WHERE tier_id = $1`, [tierId]);
+  return rows.map(r => ({
+    id: r.id,
+    tierId: r.tier_id,
+    featureId: r.feature_id,
+    isAllowed: r.is_allowed,
+    createdAt: r.created_at,
+  }));
+};
+
+export const upsertTierEntitlement = async (tierId: string, featureId: string, isAllowed: boolean): Promise<void> => {
+  const p = getPool();
+  await p.query(
+    `INSERT INTO tier_entitlements (id, tier_id, feature_id, is_allowed)
+     VALUES (uuid_generate_v4(), $1, $2, $3)
+     ON CONFLICT (tier_id, feature_id) DO UPDATE SET is_allowed = EXCLUDED.is_allowed`,
+    [tierId, featureId, isAllowed]
+  );
+};
+
+export const getCurrentUserTier = async (userId: string): Promise<(UserTier & { tierKey: string }) | null> => {
+  const p = getPool();
+  const { rows } = await p.query<{
+    id: string; user_id: string; tier_id: string; source: string; reason: string | null;
+    assigned_by: string | null; effective_from: string; effective_to: string | null; created_at: string;
+    tier_key: string;
+  }>(
+    `SELECT ut.id, ut.user_id, ut.tier_id, ut.source, ut.reason, ut.assigned_by,
+            ut.effective_from, ut.effective_to, ut.created_at, t.key AS tier_key
+     FROM user_tiers ut
+     JOIN tiers t ON t.id = ut.tier_id
+     WHERE ut.user_id = $1 AND ut.effective_to IS NULL
+     ORDER BY ut.effective_from DESC
+     LIMIT 1`,
+    [userId]
+  );
+  if (!rows.length) return null;
+  const r = rows[0];
+  return {
+    id: r.id,
+    userId: r.user_id,
+    tierId: r.tier_id,
+    source: r.source as 'system' | 'admin',
+    reason: r.reason,
+    assignedBy: r.assigned_by,
+    effectiveFrom: r.effective_from,
+    effectiveTo: r.effective_to,
+    createdAt: r.created_at,
+    tierKey: r.tier_key,
+  };
+};
+
+export const setUserTier = async (
+  userId: string,
+  tierKey: string,
+  source: 'system' | 'admin',
+  assignedBy: string | null,
+  reason?: string
+): Promise<void> => {
+  const p = getPool();
+  const tier = await getTierByKey(tierKey);
+  if (!tier) throw new Error(`Tier not found: ${tierKey}`);
+  await p.query(
+    `UPDATE user_tiers SET effective_to = NOW() WHERE user_id = $1 AND effective_to IS NULL`,
+    [userId]
+  );
+  await p.query(
+    `INSERT INTO user_tiers (id, user_id, tier_id, source, reason, assigned_by)
+     VALUES (uuid_generate_v4(), $1, $2, $3, $4, $5)`,
+    [userId, tier.id, source, reason ?? null, assignedBy]
+  );
+};
+
+export const getFeatureFlag = async (key: string): Promise<FeatureFlag | null> => {
+  const p = getPool();
+  const { rows } = await p.query<{
+    id: string; key: string; enabled: boolean; scope: string;
+    updated_by: string | null; updated_at: string; created_at: string;
+  }>(`SELECT id, key, enabled, scope, updated_by, updated_at, created_at FROM feature_flags WHERE key = $1`, [key]);
+  if (!rows.length) return null;
+  const r = rows[0];
+  return {
+    id: r.id,
+    key: r.key,
+    enabled: r.enabled,
+    scope: r.scope as 'global',
+    updatedBy: r.updated_by,
+    updatedAt: r.updated_at,
+    createdAt: r.created_at,
+  };
+};
+
+export const listFeatureFlags = async (): Promise<FeatureFlag[]> => {
+  const p = getPool();
+  const { rows } = await p.query<{
+    id: string; key: string; enabled: boolean; scope: string;
+    updated_by: string | null; updated_at: string; created_at: string;
+  }>(`SELECT id, key, enabled, scope, updated_by, updated_at, created_at FROM feature_flags ORDER BY key`);
+  return rows.map(r => ({
+    id: r.id,
+    key: r.key,
+    enabled: r.enabled,
+    scope: r.scope as 'global',
+    updatedBy: r.updated_by,
+    updatedAt: r.updated_at,
+    createdAt: r.created_at,
+  }));
+};
+
+export const setFeatureFlag = async (key: string, enabled: boolean, updatedBy: string | null): Promise<void> => {
+  const p = getPool();
+  await p.query(
+    `INSERT INTO feature_flags (id, key, enabled, updated_by, updated_at)
+     VALUES (uuid_generate_v4(), $1, $2, $3, NOW())
+     ON CONFLICT (key) DO UPDATE SET enabled = EXCLUDED.enabled, updated_by = EXCLUDED.updated_by, updated_at = NOW()`,
+    [key, enabled, updatedBy]
+  );
+};
+
+export const getUsageCounter = async (userId: string, metricKey: string, windowKey: string): Promise<number> => {
+  const p = getPool();
+  const { rows } = await p.query<{ count: string }>(
+    `SELECT count FROM usage_counters WHERE user_id = $1 AND metric_key = $2 AND window_key = $3`,
+    [userId, metricKey, windowKey]
+  );
+  return rows.length ? parseInt(rows[0].count, 10) : 0;
+};
+
+export const incrementUsageCounter = async (
+  userId: string,
+  metricKey: string,
+  windowKey: string,
+  amount = 1
+): Promise<number> => {
+  const p = getPool();
+  const { rows } = await p.query<{ count: string }>(
+    `INSERT INTO usage_counters (id, user_id, metric_key, window_key, count, updated_at)
+     VALUES (uuid_generate_v4(), $1, $2, $3, $4, NOW())
+     ON CONFLICT (user_id, metric_key, window_key)
+     DO UPDATE SET count = usage_counters.count + $4, updated_at = NOW()
+     RETURNING count`,
+    [userId, metricKey, windowKey, amount]
+  );
+  return parseInt(rows[0].count, 10);
+};
+
+export const atomicIncrementIfUnderLimit = async (
+  userId: string,
+  metricKey: string,
+  windowKey: string,
+  limit: number
+): Promise<{ allowed: boolean; newCount: number }> => {
+  const p = getPool();
+  // Ensure the row exists first (upsert with 0 if missing)
+  await p.query(
+    `INSERT INTO usage_counters (id, user_id, metric_key, window_key, count, updated_at)
+     VALUES (uuid_generate_v4(), $1, $2, $3, 0, NOW())
+     ON CONFLICT (user_id, metric_key, window_key) DO NOTHING`,
+    [userId, metricKey, windowKey]
+  );
+  const { rows } = await p.query<{ count: string }>(
+    `UPDATE usage_counters
+     SET count = count + 1, updated_at = NOW()
+     WHERE user_id = $1 AND metric_key = $2 AND window_key = $3 AND count < $4
+     RETURNING count`,
+    [userId, metricKey, windowKey, limit]
+  );
+  if (rows.length) {
+    return { allowed: true, newCount: parseInt(rows[0].count, 10) };
+  }
+  const current = await getUsageCounter(userId, metricKey, windowKey);
+  return { allowed: false, newCount: current };
+};
+
+export const writeAuditLog = async (entry: {
+  actorUserId?: string | null;
+  targetUserId?: string | null;
+  action: AuditAction;
+  beforeState?: Record<string, unknown> | null;
+  afterState?: Record<string, unknown> | null;
+  reason?: string | null;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+}): Promise<AuditLogEntry> => {
+  const p = getPool();
+  const id = randomUUID();
+  await p.query(
+    `INSERT INTO audit_log
+       (id, actor_user_id, target_user_id, action, before_state, after_state, reason, ip_address, user_agent)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+    [
+      id,
+      entry.actorUserId ?? null,
+      entry.targetUserId ?? null,
+      entry.action,
+      entry.beforeState ? JSON.stringify(entry.beforeState) : null,
+      entry.afterState ? JSON.stringify(entry.afterState) : null,
+      entry.reason ?? null,
+      entry.ipAddress ?? null,
+      entry.userAgent ?? null,
+    ]
+  );
+  return {
+    id,
+    actorUserId: entry.actorUserId ?? null,
+    targetUserId: entry.targetUserId ?? null,
+    action: entry.action,
+    beforeState: entry.beforeState ?? null,
+    afterState: entry.afterState ?? null,
+    reason: entry.reason ?? null,
+    ipAddress: entry.ipAddress ?? null,
+    userAgent: entry.userAgent ?? null,
+    createdAt: new Date().toISOString(),
+  };
+};
+
+export const listAuditLog = async (opts: {
+  actorUserId?: string;
+  targetUserId?: string;
+  action?: string;
+  page?: number;
+  limit?: number;
+}): Promise<{ entries: AuditLogEntry[]; total: number }> => {
+  const p = getPool();
+  const page = Math.max(1, opts.page ?? 1);
+  const limit = Math.min(100, Math.max(1, opts.limit ?? 50));
+  const offset = (page - 1) * limit;
+  const conditions: string[] = [];
+  const params: unknown[] = [];
+  let idx = 1;
+  if (opts.actorUserId) { conditions.push(`actor_user_id = $${idx++}`); params.push(opts.actorUserId); }
+  if (opts.targetUserId) { conditions.push(`target_user_id = $${idx++}`); params.push(opts.targetUserId); }
+  if (opts.action) { conditions.push(`action = $${idx++}`); params.push(opts.action); }
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+  const countResult = await p.query<{ count: string }>(`SELECT COUNT(*) as count FROM audit_log ${where}`, params);
+  const total = parseInt(countResult.rows[0].count, 10);
+  params.push(limit, offset);
+  const { rows } = await p.query<{
+    id: string; actor_user_id: string | null; target_user_id: string | null; action: string;
+    before_state: Record<string, unknown> | null; after_state: Record<string, unknown> | null;
+    reason: string | null; ip_address: string | null; user_agent: string | null; created_at: string;
+  }>(`SELECT * FROM audit_log ${where} ORDER BY created_at DESC LIMIT $${idx++} OFFSET $${idx}`, params);
+  return {
+    total,
+    entries: rows.map(r => ({
+      id: r.id,
+      actorUserId: r.actor_user_id,
+      targetUserId: r.target_user_id,
+      action: r.action as AuditAction,
+      beforeState: r.before_state,
+      afterState: r.after_state,
+      reason: r.reason,
+      ipAddress: r.ip_address,
+      userAgent: r.user_agent,
+      createdAt: r.created_at,
+    })),
+  };
+};
+
+export const countActiveTripsForUser = async (userId: string): Promise<number> => {
+  const p = getPool();
+  const { rows } = await p.query<{ count: string }>(
+    `SELECT COUNT(DISTINCT t.id) AS count
+     FROM trips t
+     JOIN groups g ON g.id = t.group_id
+     LEFT JOIN group_members gm ON gm.group_id = g.id AND gm.user_id = $1 AND gm.removed_at IS NULL
+     WHERE (g.owner_id = $1 OR gm.user_id IS NOT NULL)
+       AND (t.end_date IS NULL OR t.end_date >= CURRENT_DATE)`,
+    [userId]
+  );
+  return parseInt(rows[0].count, 10);
+};
+
+export const countGroupMembers = async (groupId: string): Promise<number> => {
+  const p = getPool();
+  const { rows } = await p.query<{ count: string }>(
+    `SELECT COUNT(*) AS count FROM group_members WHERE group_id = $1 AND removed_at IS NULL`,
+    [groupId]
+  );
+  return parseInt(rows[0].count, 10);
+};
+
+export type AdminUserRow = {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  role: string;
+  tierKey: string | null;
+  tierDisplayName: string | null;
+  tierSince: string | null;
+  createdAt: string;
+};
+
+export const adminSearchUsers = async (opts: {
+  search?: string;
+  page?: number;
+  limit?: number;
+}): Promise<{ users: AdminUserRow[]; total: number }> => {
+  const p = getPool();
+  const page = Math.max(1, opts.page ?? 1);
+  const limit = Math.min(100, Math.max(1, opts.limit ?? 20));
+  const offset = (page - 1) * limit;
+  const search = opts.search?.trim() || null;
+
+  const conditions: string[] = [];
+  const params: unknown[] = [];
+  let idx = 1;
+  if (search) {
+    conditions.push(
+      `(u.email ILIKE $${idx} OR wu.first_name ILIKE $${idx} OR wu.last_name ILIKE $${idx})`
+    );
+    params.push(`%${search}%`);
+    idx++;
+  }
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+  const countResult = await p.query<{ count: string }>(
+    `SELECT COUNT(DISTINCT u.id) as count
+     FROM users u
+     LEFT JOIN web_users wu ON wu.id = u.id
+     ${where}`,
+    params
+  );
+  const total = parseInt(countResult.rows[0].count, 10);
+
+  const dataParams = [...params, limit, offset];
+  const { rows } = await p.query<{
+    id: string; email: string; first_name: string | null; last_name: string | null;
+    role: string | null; tier_key: string | null; tier_display_name: string | null;
+    tier_since: string | null; created_at: string;
+  }>(
+    `SELECT u.id, u.email,
+            COALESCE(wu.first_name, u.first_name) as first_name,
+            COALESCE(wu.last_name, u.last_name) as last_name,
+            COALESCE(u.role, 'user') as role,
+            t.key as tier_key, t.display_name as tier_display_name,
+            ut.effective_from as tier_since, u.created_at
+     FROM users u
+     LEFT JOIN web_users wu ON wu.id = u.id
+     LEFT JOIN user_tiers ut ON ut.user_id = u.id AND ut.effective_to IS NULL
+     LEFT JOIN tiers t ON t.id = ut.tier_id
+     ${where}
+     ORDER BY u.created_at DESC
+     LIMIT $${idx} OFFSET $${idx + 1}`,
+    dataParams
+  );
+
+  return {
+    total,
+    users: rows.map(r => ({
+      id: r.id,
+      email: r.email,
+      firstName: r.first_name,
+      lastName: r.last_name,
+      role: r.role ?? 'user',
+      tierKey: r.tier_key,
+      tierDisplayName: r.tier_display_name,
+      tierSince: r.tier_since,
+      createdAt: r.created_at,
+    })),
+  };
+};
+
+export const adminGetUser = async (userId: string): Promise<{
+  id: string; email: string; firstName: string | null; lastName: string | null;
+  role: string; tierKey: string | null; tierDisplayName: string | null;
+  tierSince: string | null; tierSource: string | null; createdAt: string;
+  usage: { metricKey: string; windowKey: string; count: number }[];
+} | null> => {
+  const p = getPool();
+  const { rows } = await p.query<{
+    id: string; email: string; first_name: string | null; last_name: string | null;
+    role: string | null; tier_key: string | null; tier_display_name: string | null;
+    tier_since: string | null; tier_source: string | null; created_at: string;
+  }>(
+    `SELECT u.id, u.email,
+            COALESCE(wu.first_name, u.first_name) as first_name,
+            COALESCE(wu.last_name, u.last_name) as last_name,
+            COALESCE(u.role, 'user') as role,
+            t.key as tier_key, t.display_name as tier_display_name,
+            ut.effective_from as tier_since, ut.source as tier_source, u.created_at
+     FROM users u
+     LEFT JOIN web_users wu ON wu.id = u.id
+     LEFT JOIN user_tiers ut ON ut.user_id = u.id AND ut.effective_to IS NULL
+     LEFT JOIN tiers t ON t.id = ut.tier_id
+     WHERE u.id = $1`,
+    [userId]
+  );
+  if (!rows.length) return null;
+  const r = rows[0];
+
+  const { rows: usageRows } = await p.query<{
+    metric_key: string; window_key: string; count: string;
+  }>(
+    `SELECT metric_key, window_key, count
+     FROM usage_counters
+     WHERE user_id = $1
+     ORDER BY window_key DESC, metric_key ASC`,
+    [userId]
+  );
+
+  return {
+    id: r.id,
+    email: r.email,
+    firstName: r.first_name,
+    lastName: r.last_name,
+    role: r.role ?? 'user',
+    tierKey: r.tier_key,
+    tierDisplayName: r.tier_display_name,
+    tierSince: r.tier_since,
+    tierSource: r.tier_source,
+    createdAt: r.created_at,
+    usage: usageRows.map(u => ({
+      metricKey: u.metric_key,
+      windowKey: u.window_key,
+      count: parseInt(u.count, 10),
+    })),
+  };
+};
+
+export const adminGetUserData = async (opts: {
+  window?: '7d' | '30d' | 'all-time';
+  page?: number;
+  limit?: number;
+}): Promise<{
+  summary: { totalUsers: number; byTier: Record<string, number> };
+  users: Array<{
+    id: string; email: string; role: string; tierKey: string | null;
+    aiGenerations: number; tokens: number; createdAt: string;
+  }>;
+  total: number;
+}> => {
+  const p = getPool();
+  const page = Math.max(1, opts.page ?? 1);
+  const limit = Math.min(100, Math.max(1, opts.limit ?? 20));
+  const offset = (page - 1) * limit;
+
+  // Determine window key filter
+  const now = new Date();
+  const currentWindow = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+  const prevDate = new Date(now);
+  prevDate.setUTCMonth(prevDate.getUTCMonth() - 1);
+  const prevWindow = `${prevDate.getUTCFullYear()}-${String(prevDate.getUTCMonth() + 1).padStart(2, '0')}`;
+
+  let windowFilter = '';
+  const windowParams: unknown[] = [];
+  if (opts.window === '7d' || opts.window === '30d') {
+    windowFilter = `AND uc.window_key = $1`;
+    windowParams.push(currentWindow);
+  } else if (opts.window === 'all-time') {
+    // No window filter — aggregate all
+  } else {
+    // Default: current + previous month
+    windowFilter = `AND uc.window_key IN ($1, $2)`;
+    windowParams.push(currentWindow, prevWindow);
+  }
+
+  // Summary
+  const { rows: summaryRows } = await p.query<{ tier_key: string | null; count: string }>(
+    `SELECT t.key as tier_key, COUNT(u.id) as count
+     FROM users u
+     LEFT JOIN user_tiers ut ON ut.user_id = u.id AND ut.effective_to IS NULL
+     LEFT JOIN tiers t ON t.id = ut.tier_id
+     GROUP BY t.key`
+  );
+  const totalUsers = summaryRows.reduce((acc, r) => acc + parseInt(r.count, 10), 0);
+  const byTier: Record<string, number> = {};
+  for (const r of summaryRows) {
+    byTier[r.tier_key ?? 'none'] = parseInt(r.count, 10);
+  }
+
+  // Total count
+  const countResult = await p.query<{ count: string }>(`SELECT COUNT(*) as count FROM users`);
+  const total = parseInt(countResult.rows[0].count, 10);
+
+  // Per-user usage
+  const usageParams: unknown[] = [...windowParams, limit, offset];
+  const wfPlaceholder = windowFilter.replace('$1', `$1`); // already correct
+  const limitIdx = windowParams.length + 1;
+  const offsetIdx = windowParams.length + 2;
+
+  const { rows } = await p.query<{
+    id: string; email: string; role: string | null; tier_key: string | null;
+    ai_generations: string; tokens: string; created_at: string;
+  }>(
+    `SELECT u.id, u.email, COALESCE(u.role, 'user') as role, t.key as tier_key,
+            COALESCE(SUM(CASE WHEN uc.metric_key = 'ai_itinerary_generations' THEN uc.count ELSE 0 END), 0) as ai_generations,
+            COALESCE(SUM(CASE WHEN uc.metric_key = 'openai_tokens' THEN uc.count ELSE 0 END), 0) as tokens,
+            u.created_at
+     FROM users u
+     LEFT JOIN user_tiers ut ON ut.user_id = u.id AND ut.effective_to IS NULL
+     LEFT JOIN tiers t ON t.id = ut.tier_id
+     LEFT JOIN usage_counters uc ON uc.user_id = u.id ${windowFilter}
+     GROUP BY u.id, u.email, u.role, t.key, u.created_at
+     ORDER BY ai_generations DESC, u.created_at DESC
+     LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
+    usageParams
+  );
+
+  return {
+    summary: { totalUsers, byTier },
+    total,
+    users: rows.map(r => ({
+      id: r.id,
+      email: r.email,
+      role: r.role ?? 'user',
+      tierKey: r.tier_key,
+      aiGenerations: parseInt(r.ai_generations, 10),
+      tokens: parseInt(r.tokens, 10),
+      createdAt: r.created_at,
+    })),
+  };
 };
 

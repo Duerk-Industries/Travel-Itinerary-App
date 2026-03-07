@@ -14,7 +14,8 @@ export type PageKey =
   | 'itinerary'
   | 'account'
   | 'follow'
-  | 'following';
+  | 'following'
+  | 'admin';
 
 export const shouldAllowPageChange = (currentPage: PageKey, nextPage: PageKey): boolean => {
   if (currentPage === 'create-trip' && nextPage !== 'create-trip') {

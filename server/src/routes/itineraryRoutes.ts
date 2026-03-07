@@ -1,13 +1,24 @@
 import { Router } from 'express';
 import bodyParser from 'body-parser';
 import { authenticate } from '../auth';
-import { getTripById, getWebUserProfile, listTraitsForGroupTrip } from '../db';
+import { getTripById, getWebUserProfile, listTraitsForGroupTrip, incrementUsageCounter } from '../db';
 import { logError, logInfo } from '../logger';
 import { getEnvValue } from '../env';
 import { getItineraryImage } from '../image-service';
 import { generateItineraryViaPromptPlan } from '../services/itineraryPromptPlanService';
 import { enqueueAsyncItineraryJob, getAsyncItineraryJob } from '../services/itineraryAsyncService';
 import { ApiLimitExceededError } from '../apis/usageLimiter';
+import { assertCanUseFeature, assertAndIncrementGenerationCount } from '../services/entitlementService';
+import { EntitlementError } from '../errors';
+import { TokenPayload } from '../auth';
+
+// Returns a UTC monthly window key, e.g. "2026-03"
+const getMonthWindowKey = (): string => {
+  const now = new Date();
+  const y = now.getUTCFullYear();
+  const m = String(now.getUTCMonth() + 1).padStart(2, '0');
+  return `${y}-${m}`;
+};
 
 const PLACEHOLDER_IMAGE =
   'https://images.unsplash.com/photo-1502920917128-1aa500764b0e?auto=format&fit=crop&w=1200&q=80';
@@ -59,6 +70,7 @@ router.post('/', async (req, res) => {
 
   const { country, locations, mustSeeAttractions, days, budgetMin, budgetMax, departureAirport, tripId, tripStyle, tt, ut } = req.body ?? {};
   const userId = (req as any).user.userId as string;
+  const role = ((req as any).user as TokenPayload).role;
   const selectedLocations = Array.isArray(locations)
     ? locations.map((value) => String(value ?? '').trim()).filter(Boolean)
     : [];
@@ -146,6 +158,9 @@ router.post('/', async (req, res) => {
   }
 
   try {
+    await assertCanUseFeature(userId, 'ai_itinerary_generation', role);
+    await assertAndIncrementGenerationCount(userId, getMonthWindowKey(), role);
+
     const result = await generateItineraryViaPromptPlan({
       apiKey,
       userId,
@@ -176,8 +191,15 @@ router.post('/', async (req, res) => {
     }
 
     logInfo(
-      `[itinerary] generated trip=${tripId} details=${result.details.length} transfers=${result.generatedItems.transfers.length} lodgings=${result.generatedItems.lodgings.length} activities=${result.generatedItems.activities.length} carRentals=${result.generatedItems.carRentals.length} elapsedMs=${Date.now() - requestStartedAt}`
+      `[itinerary] generated trip=${tripId} details=${result.details.length} transfers=${result.generatedItems.transfers.length} lodgings=${result.generatedItems.lodgings.length} activities=${result.generatedItems.activities.length} carRentals=${result.generatedItems.carRentals.length} tokens=${result.tokenUsage.totalTokens} elapsedMs=${Date.now() - requestStartedAt}`
     );
+
+    // Track token usage fire-and-forget — never block the response.
+    if (result.tokenUsage.totalTokens > 0) {
+      const windowKey = getMonthWindowKey();
+      incrementUsageCounter(userId, 'openai_tokens', windowKey, result.tokenUsage.totalTokens)
+        .catch((err: unknown) => logError('[itinerary] failed to record token usage', err));
+    }
 
     res.json({
       plan: normalizedPlan,
@@ -191,6 +213,11 @@ router.post('/', async (req, res) => {
       },
     });
   } catch (err: any) {
+    if (err instanceof EntitlementError) {
+      logInfo(`[itinerary] entitlement denied code=${err.code}`);
+      res.status(402).json({ error: err.message, code: err.code });
+      return;
+    }
     if (err instanceof ApiLimitExceededError) {
       res.status(429).json({ error: err.message });
       return;
@@ -215,6 +242,7 @@ router.post('/async', async (req, res) => {
 
   const { country, locations, mustSeeAttractions, days, budgetMin, budgetMax, departureAirport, tripId, tripStyle, tt, ut, itineraryId } = req.body ?? {};
   const userId = (req as any).user.userId as string;
+  const role = ((req as any).user as TokenPayload).role;
   const selectedLocations = Array.isArray(locations)
     ? locations.map((value) => String(value ?? '').trim()).filter(Boolean)
     : [];
@@ -281,6 +309,18 @@ router.post('/async', async (req, res) => {
     }
   } catch {
     // best effort
+  }
+
+  // Entitlement checks — run before enqueuing so the user gets immediate feedback.
+  try {
+    await assertCanUseFeature(userId, 'ai_itinerary_generation', role);
+    await assertAndIncrementGenerationCount(userId, getMonthWindowKey(), role);
+  } catch (err) {
+    if (err instanceof EntitlementError) {
+      res.status(402).json({ error: err.message, code: err.code });
+      return;
+    }
+    throw err;
   }
 
   let preferredAirportFallback = '';

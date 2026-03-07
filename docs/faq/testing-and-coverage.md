@@ -15,10 +15,10 @@
 ## What is currently covered?
 
 - App test files: 45 (`app/tests`)
-- Server test files: 30 (`server/__tests__`)
+- Server test files: 52 (`server/__tests__`)
 - E2E test specs: 1 (`app/e2e/create-trip.test.ts`)
 
-Coverage includes auth/account lifecycle, invites and membership effects, trip wizard/location flows, transfers-lodging-activities + expense sync, ledger/cost-report consistency, and core UI helpers/components.
+Coverage includes auth/account lifecycle, invites and membership effects, trip wizard/location flows, transfers-lodging-activities + expense sync, ledger/cost-report consistency, core UI helpers/components, and the entitlement/tier/admin system.
 
 Recent coverage additions include itinerary status behavior for transfers-lodging-activities-car rentals:
 - Status defaulting for new vs legacy items.
@@ -44,6 +44,20 @@ Recent coverage additions include itinerary status behavior for transfers-lodgin
 ## Is there a global coverage gate?
 
 - No explicit `collectCoverage`/coverage threshold enforcement in current Jest configs/scripts.
+
+## Entitlement and admin test files
+
+| File | Type | What it covers |
+|---|---|---|
+| `admin-bootstrap.test.ts` | Integration | Admin bootstrap grant, idempotency, case-insensitive match, JWT role |
+| `admin-routes.test.ts` | Integration | All `/api/admin/*` endpoints: auth guards, CRUD, audit log |
+| `tiers-limits.test.ts` | Integration | Trip/traveler limit enforcement (allow + block via `jest.spyOn`) |
+| `itinerary-limits.test.ts` | Integration | AI generation limit, feature-disabled, entitlement-denied via `jest.spyOn` |
+| `usage-tracking.test.ts` | Integration | `incrementUsageCounter`, `atomicIncrementIfUnderLimit`, window isolation |
+
+### pg-mem note for entitlement tests
+
+Seed data inserted in `initDb()` is not reliably visible to route handlers in pg-mem tests (likely a connection-pool isolation quirk). All entitlement checks are designed **fail-open** — a missing DB row means allowed, not denied. Tests that verify blocking behavior use `jest.spyOn` on `entitlementService` functions to inject `EntitlementError` without depending on seeded tier data.
 
 ## Known gaps?
 

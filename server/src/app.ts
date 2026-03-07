@@ -17,6 +17,7 @@ import carRentalRoutes from './routes/carRentalRoutes';
 import accountRoutes, { groupsRouter } from './routes/accountRoutes';
 import placeRoutes from './routes/placeRoutes';
 import expenseRoutes from './routes/expenseRoutes';
+import adminRoutes from './routes/adminRoutes';
 
 import { loadEnv } from './env_loader';
 import { getEnvValue, hasRunLocalFlag, isLocalEnv } from './env';
@@ -86,7 +87,7 @@ app.use(cors({
     const msg = `The CORS policy for this site does not allow access from the specified Origin: ${origin}`;
     return callback(new Error(msg));
   },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 app.use(express.json());
@@ -147,8 +148,10 @@ if (!hasWebApp) {
 app.use(express.static(publicDir));
 
 import passport from 'passport';
-import { initPassport, createToken, createOAuthState, decodeOAuthState } from './auth';
-import { ensureDefaultGroupForUser, ensureWebPasswordAccountForOAuth } from './db';
+import { initPassport, createToken, createOAuthState, decodeOAuthState, authenticate } from './auth';
+import { ensureDefaultGroupForUser, ensureWebPasswordAccountForOAuth, getUserRole } from './db';
+import { ensureAdminBootstrap } from './services/entitlementService';
+import { requireAdmin } from './middleware/requireAdmin';
 import { appendTokenToRedirect, isRedirectUriAllowed, resolveAndValidateRedirectUri } from './redirects';
 import { logError } from './logger';
 
@@ -198,7 +201,9 @@ app.get(
       user.firstName,
       user.lastName
     );
-    const token = createToken({ userId: user.id, email: user.email, provider: user.provider });
+    await ensureAdminBootstrap(user.id, user.email);
+    const role = await getUserRole(user.id);
+    const token = createToken({ userId: user.id, email: user.email, provider: user.provider, role });
     const state = typeof req.query.state === 'string' ? decodeOAuthState(req.query.state) : null;
     let redirectUri = state?.redirectUri;
     if (redirectUri && !isRedirectUriAllowed(redirectUri, webUrl)) {
@@ -235,6 +240,7 @@ app.use('/api/activities', activityRoutes);
 app.use('/api/car-rentals', carRentalRoutes);
 app.use('/api/account', accountRoutes);
 app.use('/api/expenses', expenseRoutes);
+app.use('/api/admin', authenticate, requireAdmin, adminRoutes);
 
 if (hasWebApp) {
   app.get(['/app', '/app/*', '/'], (_req, res) => {

@@ -5,6 +5,8 @@ import { getEnvFlag, getEnvValue } from './env';
 import { logError, logInfo } from './logger';
 import { doesApiLimitsConfigExist, getResolvedApiLimitsConfigPath } from './config/apiLimits';
 import { doesAuthFlagsConfigExist, getResolvedAuthFlagsConfigPath } from './config/authFlags';
+import { doesFeatureFlagsConfigExist, getResolvedFeatureFlagsConfigPath } from './config/featureFlags';
+import { seedEntitlementDefaults } from './services/entitlementService';
 import { syncAttractionsCatalogFromCsvToDbOnStartup } from './services/attractionsCatalogService';
 
 const defaultPort = Number(process.env.PORT) || 4000;
@@ -41,13 +43,17 @@ export const startServer = async (portOverride?: number): Promise<Server> => {
   const apiLimitsConfigExists = doesApiLimitsConfigExist();
   const authFlagsConfigPath = getResolvedAuthFlagsConfigPath();
   const authFlagsConfigExists = doesAuthFlagsConfigExist();
+  const featureFlagsConfigPath = getResolvedFeatureFlagsConfigPath();
+  const featureFlagsConfigExists = doesFeatureFlagsConfigExist();
   logInfo(`[startup] resolved storage bucket: ${resolvedStorageBucket || '(not set)'} (source: ${bucketSource})`);
   logInfo(`[startup] API limits config path: ${apiLimitsConfigPath} (exists: ${apiLimitsConfigExists})`);
   logInfo(`[startup] auth flags config path: ${authFlagsConfigPath} (exists: ${authFlagsConfigExists})`);
+  logInfo(`[startup] feature flags config path: ${featureFlagsConfigPath} (exists: ${featureFlagsConfigExists})`);
   if (envLoadedFrom) {
     logInfo(`[startup] env loaded from: ${envLoadedFrom}`);
   }
   await initDb();
+  await seedEntitlementDefaults();
   const portToUse = portOverride ?? defaultPort;
   const server = app.listen(portToUse, '0.0.0.0', () => console.log(`API server running on port ${portToUse}`));
 

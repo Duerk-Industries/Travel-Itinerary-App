@@ -17,6 +17,9 @@ export type ActivityType =
   | 'Ticketed Attraction'
   | 'Tour';
 
+export type UserRole = 'user' | 'admin';
+export type TierKey = 'free' | 'premium' | 'pro' | string;
+
 export interface User {
   id: string;
   email: string;
@@ -28,6 +31,93 @@ export interface User {
   lastName?: string;
   emailVerified?: boolean;
   emailVerifiedAt?: string | null;
+  role: UserRole;
+}
+
+export interface Tier {
+  id: string;
+  key: TierKey;
+  displayName: string;
+  rank: number;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface Feature {
+  id: string;
+  key: string;
+  description: string;
+  defaultEnabled: boolean;
+  createdAt: string;
+}
+
+export interface TierEntitlement {
+  id: string;
+  tierId: string;
+  featureId: string;
+  isAllowed: boolean;
+  createdAt: string;
+}
+
+export interface TierLimit {
+  id: string;
+  tierId: string;
+  limitKey: string;
+  limitValue: number;
+  createdAt: string;
+}
+
+export interface UserTier {
+  id: string;
+  userId: string;
+  tierId: string;
+  source: 'system' | 'admin';
+  reason?: string | null;
+  assignedBy?: string | null;
+  effectiveFrom: string;
+  effectiveTo?: string | null;
+  createdAt: string;
+}
+
+export interface FeatureFlag {
+  id: string;
+  key: string;
+  enabled: boolean;
+  scope: 'global';
+  updatedBy?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+
+export interface UsageCounter {
+  id: string;
+  userId: string;
+  metricKey: string;
+  windowKey: string;
+  count: number;
+  updatedAt: string;
+}
+
+export type AuditAction =
+  | 'ADMIN_BOOTSTRAP_GRANTED'
+  | 'USER_ROLE_GRANTED'
+  | 'USER_ROLE_REVOKED'
+  | 'USER_TIER_CHANGED'
+  | 'TIER_LIMIT_UPDATED'
+  | 'TIER_ENTITLEMENT_UPDATED'
+  | 'FEATURE_FLAG_UPDATED';
+
+export interface AuditLogEntry {
+  id: string;
+  actorUserId?: string | null;
+  targetUserId?: string | null;
+  action: AuditAction;
+  beforeState?: Record<string, unknown> | null;
+  afterState?: Record<string, unknown> | null;
+  reason?: string | null;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+  createdAt: string;
 }
 
 export interface WebUser {

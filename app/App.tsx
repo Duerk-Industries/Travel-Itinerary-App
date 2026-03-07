@@ -58,6 +58,7 @@ import { toWebStyle } from './utils/webStyle';
 import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from './utils/votes';
 
 import LodgingTab from './tabs/LodgingTab';
+import AdminTab from './tabs/AdminTab';
 
 const TOP_BANNER_ICON = require('./assets/wanderbunnies-reference.png');
 
@@ -194,7 +195,8 @@ type Page =
   | 'cost'
   | 'account'
   | 'follow'
-  | 'following';
+  | 'following'
+  | 'admin';
 
 // Resolve backend URL; keep Expo web on localhost hitting the local API over HTTP to avoid HTTPS upgrades/CORS issues.
 const resolveBackendUrl = (): string => {
@@ -380,6 +382,7 @@ const App: React.FC = () => {
   const [tripDropdownOpenId, setTripDropdownOpenId] = useState<string | null>(null);
   const [activeTripId, setActiveTripId] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<'user' | 'admin'>('user');
   const [showActiveTripDropdown, setShowActiveTripDropdown] = useState(false);
   const [openShareFromHeaderSignal, setOpenShareFromHeaderSignal] = useState(0);
   const [groupMembers, setGroupMembers] = useState<GroupMemberOption[]>([]);
@@ -885,6 +888,7 @@ const App: React.FC = () => {
     setUserToken(null);
     setUserName(null);
     setUserEmail(null);
+    setUserRole('user');
     setTrips([]);
     setActiveTripId(null);
     setFlights([]);
@@ -995,7 +999,7 @@ const App: React.FC = () => {
 
   const handleAuthSuccess = useCallback(
     (token: string, firstLoginOverride?: boolean, options?: { requirePasswordSetup?: boolean }) => {
-    let decoded: { firstName?: string; lastName?: string; email?: string; provider?: string } | null = null;
+    let decoded: { firstName?: string; lastName?: string; email?: string; provider?: string; role?: string } | null = null;
     try {
       const payload = token.split('.')[1];
       if (payload) {
@@ -1008,8 +1012,10 @@ const App: React.FC = () => {
     }
     const name =
       `${decoded?.firstName ?? ''} ${decoded?.lastName ?? ''}`.trim() || decoded?.email || 'Traveler';
+    const decodedRole: 'user' | 'admin' = decoded?.role === 'admin' ? 'admin' : 'user';
     setUserToken(token);
     setUserName(name);
+    setUserRole(decodedRole);
     setInvitesLoaded(false);
     if (decoded?.email) {
       setUserEmail(decoded.email);
@@ -1040,7 +1046,7 @@ const App: React.FC = () => {
     }
     setPageForwardHistory([]);
     setPageHistory([]);
-    saveSession(token, name, firstLogin ? 'home' : 'overview', decoded?.email, restoredTripId, []);
+    saveSession(token, name, firstLogin ? 'home' : 'overview', decoded?.email, restoredTripId, [], decodedRole);
     },
     [activeTripId]
   );
@@ -1691,6 +1697,7 @@ const App: React.FC = () => {
       setUserToken(session.token);
       setUserName(session.name);
       setUserEmail(session.email ?? null);
+      setUserRole(session.role === 'admin' ? 'admin' : 'user');
       const sessionHistory = Array.isArray(session.pageHistory)
         ? session.pageHistory.filter((p) => typeof p === 'string') as Page[]
         : [];
@@ -2203,6 +2210,14 @@ const App: React.FC = () => {
                   onPress={() => requestPageChange('account')}
                 >
                   <Text style={styles.userNameButtonText}>{userName ?? 'Traveler'}</Text>
+                </TouchableOpacity>
+              ) : null}
+              {userRole === 'admin' ? (
+                <TouchableOpacity
+                  style={[styles.button, styles.smallButton, styles.topBarActionButton]}
+                  onPress={() => requestPageChange('admin')}
+                >
+                  <Text style={styles.buttonText}>Admin</Text>
                 </TouchableOpacity>
               ) : null}
               <TouchableOpacity style={[styles.button, styles.smallButton, styles.topBarActionButton]} onPress={logout}>
@@ -2986,6 +3001,13 @@ const App: React.FC = () => {
               selectedTripId={selectedFollowedTripId}
               onSelectTrip={setSelectedFollowedTripId}
               onUnfollowTrip={handleUnfollowTrip}
+            />
+          ) : null}
+
+          {activePage === 'admin' && userRole === 'admin' ? (
+            <AdminTab
+              backendUrl={backendUrl}
+              headers={headers}
             />
           ) : null}
         </ScrollView>

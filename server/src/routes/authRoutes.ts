@@ -9,6 +9,7 @@ import {
   ensureDefaultGroupForUser,
   findUserByIdentifier,
   getPendingEmailVerification,
+  getUserRole,
   markEmailVerificationUsed,
   markUserEmailVerified,
   recordWebUserLogin,
@@ -17,6 +18,7 @@ import {
 } from '../db';
 import { sendVerificationEmailBestEffort } from '../mailer';
 import { getAuthFlag } from '../config/authFlags';
+import { ensureAdminBootstrap } from '../services/entitlementService';
 
 // Auth routes for device-based auth tokens (non-web).
 const router = Router();
@@ -46,7 +48,9 @@ router.post('/register', async (req, res) => {
       await ensureDefaultGroupForUser(user.id, user.email);
       await claimInvitesForUser(user.email, user.id);
       const { firstLogin } = await recordWebUserLogin(user.id);
-      const token = createToken({ userId: user.id, email: user.email, provider: 'email' });
+      await ensureAdminBootstrap(user.id, user.email);
+      const role = await getUserRole(user.id);
+      const token = createToken({ userId: user.id, email: user.email, provider: 'email', role });
       res.status(201).json({ message: 'Account created', token, user, firstLogin });
       return;
     }
@@ -138,7 +142,9 @@ router.post('/login', async (req, res) => {
     await ensureDefaultGroupForUser(user.id, user.email);
     await claimInvitesForUser(user.email, user.id);
     const { firstLogin } = await recordWebUserLogin(user.id);
-    const token = createToken({ userId: user.id, email: user.email, provider: 'email' });
+    await ensureAdminBootstrap(user.id, user.email);
+    const role = await getUserRole(user.id);
+    const token = createToken({ userId: user.id, email: user.email, provider: 'email', role });
     res.json({ message: 'Login successful', token, user, firstLogin });
   } catch {
     res.status(500).json({ error: 'Failed to login' });
@@ -168,6 +174,7 @@ router.get('/confirm', async (req, res) => {
     await markEmailVerificationUsed(verification.id);
     await ensureDefaultGroupForUser(verification.userId, verification.email);
     await claimInvitesForUser(verification.email, verification.userId);
+    await ensureAdminBootstrap(verification.userId, verification.email);
     res.json({ message: 'Email confirmed. You can now log in.' });
   } catch {
     res.status(500).json({ error: 'Failed to confirm email' });
