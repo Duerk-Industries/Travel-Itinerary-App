@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -13,7 +13,7 @@ type TierLimit = { limitKey: string; limitValue: number };
 type TierEntitlement = { featureId: string; featureKey: string | null; isAllowed: boolean };
 type Tier = {
   id: string;
-  tierKey: string;
+  key: string;
   displayName: string;
   rank: number;
   limits: TierLimit[];
@@ -176,7 +176,7 @@ const FeaturesSection: React.FC<{ backendUrl: string; headers: Record<string, st
                 style={localStyles.smallInput}
                 placeholder="Reason (required)"
                 value={reasonInputs[flag.key] ?? ''}
-                onChangeText={(t) => setReasonInputs((r) => ({ ...r, [flag.key]: t }))}
+                onChangeText={(t: string) => setReasonInputs((r) => ({ ...r, [flag.key]: t }))}
               />
               <TouchableOpacity
                 style={[localStyles.smallButton, pendingKey === flag.key && localStyles.buttonDisabled]}
@@ -234,7 +234,7 @@ const UsersSection: React.FC<{
         style={localStyles.input}
         placeholder="Search by email or name..."
         value={search}
-        onChangeText={(t) => { setSearch(t); setPage(1); }}
+        onChangeText={(t: string) => { setSearch(t); setPage(1); }}
       />
       {error ? <Text style={localStyles.errorText}>{error}</Text> : null}
       {loading ? <Text style={localStyles.loading}>Loading...</Text> : null}
@@ -373,11 +373,11 @@ const UserDetailSection: React.FC<{
         <View style={localStyles.tierButtons}>
           {tiers.map((t) => (
             <TouchableOpacity
-              key={t.tierKey}
-              style={[localStyles.tierButton, tierKey === t.tierKey && localStyles.tierButtonActive]}
-              onPress={() => setTierKey(t.tierKey)}
+              key={t.key}
+              style={[localStyles.tierButton, tierKey === t.key && localStyles.tierButtonActive]}
+              onPress={() => setTierKey(t.key)}
             >
-              <Text style={[localStyles.tierButtonText, tierKey === t.tierKey && localStyles.tierButtonTextActive]}>
+              <Text style={[localStyles.tierButtonText, tierKey === t.key && localStyles.tierButtonTextActive]}>
                 {t.displayName}
               </Text>
             </TouchableOpacity>
@@ -466,6 +466,7 @@ const TiersSection: React.FC<{
     setError(null);
     try {
       const data = await apiFetch(backendUrl, headers, '/tiers');
+      console.log('[AdminTab] /tiers response:', JSON.stringify(data));
       setTiers(data.tiers ?? []);
       onTiersLoaded(data.tiers ?? []);
     } catch (e: any) {
@@ -527,16 +528,17 @@ const TiersSection: React.FC<{
     <View style={localStyles.section}>
       <Text style={localStyles.sectionTitle}>Tiers</Text>
       {saveMsg ? <Text style={localStyles.saveMsg}>{saveMsg}</Text> : null}
+      {tiers.length === 0 ? <Text style={localStyles.emptyText}>No tiers found.</Text> : null}
       {tiers.map((tier) => (
-        <View key={tier.tierKey} style={localStyles.card}>
+        <View key={tier.key} style={localStyles.card}>
           <Text style={localStyles.cardTitle}>{tier.displayName}</Text>
-          <Text style={localStyles.cardSub}>Key: {tier.tierKey} | Rank: {tier.rank}</Text>
+          <Text style={localStyles.cardSub}>Key: {tier.key} | Rank: {tier.rank}</Text>
 
           {tier.limits.length > 0 ? (
             <>
               <Text style={localStyles.fieldLabel}>Limits</Text>
               {tier.limits.map((limit) => {
-                const isEditing = editingLimit?.tierKey === tier.tierKey && editingLimit?.limitKey === limit.limitKey;
+                const isEditing = editingLimit?.tierKey === tier.key && editingLimit?.limitKey === limit.limitKey;
                 return (
                   <View key={limit.limitKey} style={localStyles.limitRow}>
                     <View style={localStyles.flex}>
@@ -545,7 +547,7 @@ const TiersSection: React.FC<{
                     <TouchableOpacity
                       style={localStyles.editButton}
                       onPress={() => {
-                        setEditingLimit(isEditing ? null : { tierKey: tier.tierKey, limitKey: limit.limitKey });
+                        setEditingLimit(isEditing ? null : { tierKey: tier.key, limitKey: limit.limitKey });
                         setLimitValue(String(limit.limitValue));
                         setLimitReason('');
                         setSaveMsg(null);
@@ -571,7 +573,7 @@ const TiersSection: React.FC<{
                         <TouchableOpacity
                           style={[localStyles.smallButton, saving && localStyles.buttonDisabled]}
                           disabled={saving}
-                          onPress={() => saveLimit(tier.tierKey, limit.limitKey)}
+                          onPress={() => saveLimit(tier.key, limit.limitKey)}
                         >
                           <Text style={localStyles.smallButtonText}>Save</Text>
                         </TouchableOpacity>
@@ -588,7 +590,7 @@ const TiersSection: React.FC<{
               <Text style={localStyles.fieldLabel}>Features</Text>
               {tier.entitlements.filter((e) => e.featureKey).map((ent) => {
                 const isEditing =
-                  editingEntitlement?.tierKey === tier.tierKey && editingEntitlement?.featureKey === ent.featureKey;
+                  editingEntitlement?.tierKey === tier.key && editingEntitlement?.featureKey === ent.featureKey;
                 return (
                   <View key={ent.featureKey} style={localStyles.limitRow}>
                     <View style={localStyles.flex}>
@@ -601,7 +603,7 @@ const TiersSection: React.FC<{
                       style={localStyles.editButton}
                       onPress={() => {
                         setEditingEntitlement(
-                          isEditing ? null : { tierKey: tier.tierKey, featureKey: ent.featureKey! }
+                          isEditing ? null : { tierKey: tier.key, featureKey: ent.featureKey! }
                         );
                         setEntitlementReason('');
                         setSaveMsg(null);
@@ -620,7 +622,7 @@ const TiersSection: React.FC<{
                         <TouchableOpacity
                           style={[localStyles.smallButton, saving && localStyles.buttonDisabled]}
                           disabled={saving}
-                          onPress={() => saveEntitlement(tier.tierKey, ent.featureKey!, !ent.isAllowed)}
+                          onPress={() => saveEntitlement(tier.key, ent.featureKey!, !ent.isAllowed)}
                         >
                           <Text style={localStyles.smallButtonText}>Set {ent.isAllowed ? 'Disabled' : 'Enabled'}</Text>
                         </TouchableOpacity>
@@ -848,7 +850,7 @@ const AdminTab: React.FC<AdminTabProps> = ({ backendUrl, headers }) => {
   };
 
   return (
-    <ScrollView style={localStyles.container} contentContainerStyle={localStyles.content}>
+    <View style={localStyles.content}>
       {section !== 'overview' ? (
         <View style={localStyles.breadcrumb}>
           <TouchableOpacity onPress={() => goTo('overview')}>
@@ -859,7 +861,7 @@ const AdminTab: React.FC<AdminTabProps> = ({ backendUrl, headers }) => {
         </View>
       ) : null}
       {renderSection()}
-    </ScrollView>
+    </View>
   );
 };
 
@@ -870,8 +872,7 @@ export default AdminTab;
 // ---------------------------------------------------------------------------
 
 const localStyles = StyleSheet.create({
-  container: { flex: 1 },
-  content: { padding: 16, paddingBottom: 40 },
+  content: { padding: 16, paddingBottom: 40, width: '100%' },
   section: { marginBottom: 24 },
   sectionTitle: { fontSize: 22, fontWeight: '700', marginBottom: 16, color: '#1a1a2e' },
   loading: { color: '#888', marginVertical: 8 },

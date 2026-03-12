@@ -12,14 +12,21 @@ type RawFeatureFlagsConfig = {
   flags?: Record<string, unknown>;
 };
 
-const DEFAULT_CONFIG_RELATIVE_PATH = '../../config/feature-flags.yaml';
+const CONFIG_FILENAME = 'feature-flags.yaml';
 
 const resolveConfigPath = (): string => {
   const override = String(process.env.FEATURE_FLAGS_CONFIG_PATH ?? '').trim();
   if (override) {
     return path.isAbsolute(override) ? override : path.resolve(process.cwd(), override);
   }
-  return path.resolve(__dirname, DEFAULT_CONFIG_RELATIVE_PATH);
+  // Try multiple candidate locations to work regardless of cwd or compiled vs source.
+  const candidates = [
+    path.resolve(process.cwd(), 'config', CONFIG_FILENAME),            // cwd = server/
+    path.resolve(process.cwd(), 'server', 'config', CONFIG_FILENAME),  // cwd = repo root
+    path.resolve(__dirname, '../../config', CONFIG_FILENAME),           // tsx: src/config/
+    path.resolve(__dirname, '../../../config', CONFIG_FILENAME),        // dist: dist/src/config/
+  ];
+  return candidates.find(p => fs.existsSync(p)) ?? candidates[0];
 };
 
 export const getResolvedFeatureFlagsConfigPath = (): string => resolveConfigPath();

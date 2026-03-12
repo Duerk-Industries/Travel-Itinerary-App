@@ -161,6 +161,63 @@ export const initDb = async (): Promise<void> => {
     }
     throw error;
   }
+
+  // Seed tiers (skip if already present)
+  const tierSeeds: Array<{ key: string; displayName: string; rank: number }> = [
+    { key: 'free',    displayName: 'Free',    rank: 1 },
+    { key: 'premium', displayName: 'Premium', rank: 2 },
+    { key: 'pro',     displayName: 'Pro',     rank: 3 },
+  ];
+  for (const tier of tierSeeds) {
+    const ref = db.collection('tiers').doc(tier.key);
+    const doc = await ref.get();
+    if (!doc.exists) {
+      await ref.set({ key: tier.key, displayName: tier.displayName, rank: tier.rank, isActive: true, createdAt: nowIso() });
+      logInfo(`[db.firebase] Seeded tier: ${tier.key}`);
+    }
+  }
+
+  // Seed features (skip if already present)
+  const featureSeeds: Array<{ key: string; description: string }> = [
+    { key: 'ai_itinerary_generation', description: 'AI-powered itinerary generation' },
+    { key: 'csv_export',              description: 'Export cost reports as CSV' },
+    { key: 'car_rentals',             description: 'Car rental tracking' },
+    { key: 'trip_sharing',            description: 'Share trips with other users' },
+    { key: 'trip_following',          description: 'Follow trips as read-only observer' },
+    { key: 'cost_tracking',           description: 'Expense and cost tracking' },
+    { key: 'multiple_groups',         description: 'Create more than one group' },
+    { key: 'trip_creation',           description: 'Create new trips' },
+  ];
+  for (const feature of featureSeeds) {
+    const ref = db.collection('features').doc(feature.key);
+    const doc = await ref.get();
+    if (!doc.exists) {
+      await ref.set({ key: feature.key, description: feature.description, defaultEnabled: true, createdAt: nowIso() });
+      logInfo(`[db.firebase] Seeded feature: ${feature.key}`);
+    }
+  }
+
+  // Seed tier limits (skip if already present)
+  const tierLimitSeeds: Array<{ tierKey: string; limitKey: string; limitValue: number }> = [
+    { tierKey: 'free',    limitKey: 'max_active_trips',                   limitValue: 3 },
+    { tierKey: 'free',    limitKey: 'max_travelers_per_trip',             limitValue: 6 },
+    { tierKey: 'free',    limitKey: 'ai_itinerary_generations_per_month', limitValue: 5 },
+    { tierKey: 'premium', limitKey: 'max_active_trips',                   limitValue: 250 },
+    { tierKey: 'premium', limitKey: 'max_travelers_per_trip',             limitValue: 200 },
+    { tierKey: 'premium', limitKey: 'ai_itinerary_generations_per_month', limitValue: -1 },
+    { tierKey: 'pro',     limitKey: 'max_active_trips',                   limitValue: 250 },
+    { tierKey: 'pro',     limitKey: 'max_travelers_per_trip',             limitValue: 200 },
+    { tierKey: 'pro',     limitKey: 'ai_itinerary_generations_per_month', limitValue: -1 },
+  ];
+  for (const { tierKey, limitKey, limitValue } of tierLimitSeeds) {
+    const docId = `${tierKey}_${limitKey}`;
+    const ref = db.collection('tier_limits').doc(docId);
+    const doc = await ref.get();
+    if (!doc.exists) {
+      await ref.set({ tierId: tierKey, limitKey, limitValue, createdAt: nowIso() });
+      logInfo(`[db.firebase] Seeded tier limit: ${tierKey}/${limitKey}`);
+    }
+  }
 };
 
 export const closePool = async (): Promise<void> => {
