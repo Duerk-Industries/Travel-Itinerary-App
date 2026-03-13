@@ -9,7 +9,7 @@
   },
   "overrides": {
     "glob": "13.0.5",
-    "minimatch": "10.2.1"
+    "minimatch": "10.2.4"
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",
