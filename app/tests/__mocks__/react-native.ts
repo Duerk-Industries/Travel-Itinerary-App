@@ -28,6 +28,7 @@ export const useWindowDimensions = () => ({
   width: 800,
   height: 600,
 });
+export const useColorScheme = () => 'light';
 
 export default {
   Platform,
@@ -50,4 +51,5 @@ export default {
   AsyncStorage,
   StyleSheet,
   useWindowDimensions,
+  useColorScheme,
 };

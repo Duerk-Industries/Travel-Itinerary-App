@@ -316,6 +316,31 @@ describe('Admin routes', () => {
     });
   });
 
+  describe('PATCH /api/admin/tiers/:tierKey/features/:featureKey', () => {
+    it('rejects toggling an inherited feature on a higher tier', async () => {
+      const res = await request(app)
+        .patch('/api/admin/tiers/premium/features/csv_export')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ isAllowed: false, reason: 'Trying to override inherited csv export' })
+        .expect(409);
+
+      expect(res.body.error).toMatch(/inherited/i);
+      expect(res.body.inheritedFromTierKey).toBe('free');
+    });
+
+    it('updates an explicitly configured feature entitlement', async () => {
+      const res = await request(app)
+        .patch('/api/admin/tiers/free/features/cost_tracking')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ isAllowed: true, reason: 'Temporarily enabling free cost tracking' })
+        .expect(200);
+
+      expect(res.body.tierKey).toBe('free');
+      expect(res.body.featureKey).toBe('cost_tracking');
+      expect(res.body.isAllowed).toBe(true);
+    });
+  });
+
   // ---------------------------------------------------------------------------
   // PATCH /api/admin/tiers/:tierKey/limits/:limitKey
   // ---------------------------------------------------------------------------

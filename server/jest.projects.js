@@ -30,7 +30,7 @@ const firebaseIgnorePatterns = legacyMemoryTestFiles.map((file) =>
   file.replace('<rootDir>', '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$'
 );
 
-module.exports = {
+const commonProjectConfig = {
   preset: 'ts-jest',
   testEnvironment: 'node',
   rootDir: __dirname,
@@ -40,7 +40,22 @@ module.exports = {
   transform: {
     '^.+\\.(ts|tsx)$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.jest.json' }],
   },
-  testMatch: ['**/__tests__/**/*.test.ts'],
-  testPathIgnorePatterns: firebaseIgnorePatterns,
-  setupFiles: ['<rootDir>/__tests__/firebase-default-setup.ts'],
+};
+
+module.exports = {
+  projects: [
+    {
+      ...commonProjectConfig,
+      displayName: 'firebase',
+      testMatch: ['**/__tests__/**/*.test.ts'],
+      testPathIgnorePatterns: firebaseIgnorePatterns,
+      setupFiles: ['<rootDir>/__tests__/firebase-default-setup.ts'],
+    },
+    {
+      ...commonProjectConfig,
+      displayName: 'memory',
+      testMatch: legacyMemoryTestFiles,
+      setupFiles: ['<rootDir>/__tests__/pg-mem-setup.ts'],
+    },
+  ],
 };

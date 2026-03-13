@@ -251,6 +251,7 @@ router.patch('/tiers/:tierKey/features/:featureKey', async (req, res) => {
   }
   try {
     const actorId = getActorId(req);
+    const tiers = await listTiers();
     const tier = await getTierByKey(tierKey);
     if (!tier) {
       res.status(404).json({ error: `Tier not found: ${tierKey}` });
@@ -264,6 +265,23 @@ router.patch('/tiers/:tierKey/features/:featureKey', async (req, res) => {
     }
     const entitlements = await listTierEntitlements(tier.id);
     const before = entitlements.find(e => e.featureId === feature.id)?.isAllowed ?? null;
+    if (before === null) {
+      const inheritedSourceTiers = tiers
+        .filter((candidate) => candidate.rank < tier.rank)
+        .sort((a, b) => b.rank - a.rank);
+      for (const sourceTier of inheritedSourceTiers) {
+        const sourceEntitlements = await listTierEntitlements(sourceTier.id);
+        const sourceMatch = sourceEntitlements.find((entry) => entry.featureId === feature.id);
+        if (sourceMatch) {
+          res.status(409).json({
+            error: `Feature '${featureKey}' is inherited from '${sourceTier.key}'. Update the lower tier first.`,
+            inheritedFromTierKey: sourceTier.key,
+            inheritedValue: sourceMatch.isAllowed,
+          });
+          return;
+        }
+      }
+    }
     await upsertTierEntitlement(tier.id, feature.id, isAllowed);
     await writeAuditLog({
       actorUserId: actorId,

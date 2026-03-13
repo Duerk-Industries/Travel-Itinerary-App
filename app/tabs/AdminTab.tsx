@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme } from 'react-native';
+import { getAppTheme } from '../theme/theme';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -20,6 +21,18 @@ type Tier = {
   entitlements: TierEntitlement[];
 };
 
+type LimitTableCell = {
+  explicitValue: number | null;
+};
+
+type FeatureTableCell = {
+  explicitValue: boolean | null;
+  effectiveValue: boolean | null;
+  isInherited: boolean;
+  inheritedFromTierKey: string | null;
+  inheritedFromTierDisplayName: string | null;
+};
+
 type AdminUser = {
   id: string;
   email: string | null;
@@ -29,6 +42,20 @@ type AdminUser = {
   tierKey: string | null;
   createdAt?: string | null;
 };
+
+type TierTableRow =
+  | {
+      kind: 'limit';
+      key: string;
+      label: string;
+      values: Record<string, LimitTableCell>;
+    }
+  | {
+      kind: 'feature';
+      key: string;
+      label: string;
+      values: Record<string, FeatureTableCell>;
+    };
 
 type AdminUserDetail = AdminUser & {
   usage?: Array<{ metricKey: string; windowKey: string; count: number }>;
@@ -455,6 +482,8 @@ const TiersSection: React.FC<{
   headers: Record<string, string>;
   onTiersLoaded: (tiers: Tier[]) => void;
 }> = ({ backendUrl, headers, onTiersLoaded }) => {
+  const colorScheme = useColorScheme();
+  const theme = getAppTheme('auto', colorScheme);
   const [tiers, setTiers] = useState<Tier[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -465,13 +494,15 @@ const TiersSection: React.FC<{
   const [entitlementReason, setEntitlementReason] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
+  const tierColumns = [...tiers].sort((a, b) => a.rank - b.rank);
+  const nameColumnWidth = 220;
+  const tierColumnWidth = 132;
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const data = await apiFetch(backendUrl, headers, '/tiers');
-      console.log('[AdminTab] /tiers response:', JSON.stringify(data));
       setTiers(data.tiers ?? []);
       onTiersLoaded(data.tiers ?? []);
     } catch (e: any) {
@@ -483,7 +514,109 @@ const TiersSection: React.FC<{
 
   useEffect(() => { load(); }, [load]);
 
-  const saveLimit = async (tierKey: string, limitKey: string, isAllowed?: boolean) => {
+  const limitRows: TierTableRow[] = React.useMemo(() => {
+    const allLimitKeys = Array.from(new Set(tiers.flatMap((tier) => tier.limits.map((limit) => limit.limitKey))));
+    return allLimitKeys.map((limitKey) => ({
+      kind: 'limit',
+      key: limitKey,
+      label: limitKey,
+      values: Object.fromEntries(
+        tierColumns.map((tier) => [
+          tier.key,
+          {
+            explicitValue: tier.limits.find((limit) => limit.limitKey === limitKey)?.limitValue ?? null,
+          },
+        ])
+      ),
+    }));
+  }, [tierColumns, tiers]);
+
+  const featureRows: TierTableRow[] = React.useMemo(() => {
+    const allFeatureKeys = Array.from(
+      new Set(
+        tiers.flatMap((tier) =>
+          tier.entitlements
+            .filter((entitlement) => Boolean(entitlement.featureKey))
+            .map((entitlement) => entitlement.featureKey as string)
+        )
+      )
+    );
+
+    return allFeatureKeys.map((featureKey) => ({
+      kind: 'feature',
+      key: featureKey,
+      label: featureKey,
+      values: Object.fromEntries((() => {
+        let inheritedSource: { tierKey: string; displayName: string; value: boolean } | null = null;
+        return tierColumns.map((tier) => {
+          const explicitValue =
+            tier.entitlements.find((entitlement) => entitlement.featureKey === featureKey)?.isAllowed ?? null;
+          if (explicitValue !== null) {
+            inheritedSource = {
+              tierKey: tier.key,
+              displayName: tier.displayName,
+              value: explicitValue,
+            };
+            return [
+              tier.key,
+              {
+                explicitValue,
+                effectiveValue: explicitValue,
+                isInherited: false,
+                inheritedFromTierKey: null,
+                inheritedFromTierDisplayName: null,
+              },
+            ];
+          }
+
+          if (inheritedSource) {
+            return [
+              tier.key,
+              {
+                explicitValue: null,
+                effectiveValue: inheritedSource.value,
+                isInherited: true,
+                inheritedFromTierKey: inheritedSource.tierKey,
+                inheritedFromTierDisplayName: inheritedSource.displayName,
+              },
+            ];
+          }
+
+          return [
+            tier.key,
+            {
+              explicitValue: null,
+              effectiveValue: null,
+              isInherited: false,
+              inheritedFromTierKey: null,
+              inheritedFromTierDisplayName: null,
+            },
+          ];
+        });
+      })()),
+    }));
+  }, [tierColumns, tiers]);
+
+  const tableRows = [...limitRows, ...featureRows];
+  const currentEditingLimitValue =
+    editingLimit === null
+      ? null
+      : tiers
+          .find((tier) => tier.key === editingLimit.tierKey)
+          ?.limits.find((limit) => limit.limitKey === editingLimit.limitKey)?.limitValue ?? null;
+
+  const resetLimitDialog = () => {
+    setEditingLimit(null);
+    setLimitValue('');
+    setLimitReason('');
+  };
+
+  const resetEntitlementDialog = () => {
+    setEditingEntitlement(null);
+    setEntitlementReason('');
+  };
+
+  const saveLimit = async (tierKey: string, limitKey: string) => {
     if (limitReason.trim().length < 3) return;
     setSaving(true);
     setSaveMsg(null);
@@ -494,9 +627,7 @@ const TiersSection: React.FC<{
         body: JSON.stringify({ limitValue: Number(limitValue), reason: limitReason.trim() }),
       });
       setSaveMsg('Limit updated.');
-      setEditingLimit(null);
-      setLimitValue('');
-      setLimitReason('');
+      resetLimitDialog();
       await load();
     } catch (e: any) {
       setSaveMsg(`Error: ${e.message}`);
@@ -516,8 +647,7 @@ const TiersSection: React.FC<{
         body: JSON.stringify({ isAllowed, reason: entitlementReason.trim() }),
       });
       setSaveMsg('Entitlement updated.');
-      setEditingEntitlement(null);
-      setEntitlementReason('');
+      resetEntitlementDialog();
       await load();
     } catch (e: any) {
       setSaveMsg(`Error: ${e.message}`);
@@ -531,115 +661,345 @@ const TiersSection: React.FC<{
 
   return (
     <View style={localStyles.section}>
-      <Text style={localStyles.sectionTitle}>Tiers</Text>
-      {saveMsg ? <Text style={localStyles.saveMsg}>{saveMsg}</Text> : null}
+      <Text style={[localStyles.sectionTitle, { color: theme.colors.text }]}>Tiers</Text>
+      {saveMsg ? <Text style={[localStyles.saveMsg, { color: theme.colors.success }]}>{saveMsg}</Text> : null}
       {tiers.length === 0 ? <Text style={localStyles.emptyText}>No tiers found.</Text> : null}
-      {tiers.map((tier) => (
-        <View key={tier.key} style={localStyles.card}>
-          <Text style={localStyles.cardTitle}>{tier.displayName}</Text>
-          <Text style={localStyles.cardSub}>Key: {tier.key} | Rank: {tier.rank}</Text>
-
-          {tier.limits.length > 0 ? (
-            <>
-              <Text style={localStyles.fieldLabel}>Limits</Text>
-              {tier.limits.map((limit) => {
-                const isEditing = editingLimit?.tierKey === tier.key && editingLimit?.limitKey === limit.limitKey;
-                return (
-                  <View key={limit.limitKey} style={localStyles.limitRow}>
-                    <View style={localStyles.flex}>
-                      <Text style={localStyles.cardSub}>{limit.limitKey}: {limit.limitValue === -1 ? 'unlimited' : limit.limitValue}</Text>
-                    </View>
-                    <TouchableOpacity
-                      style={localStyles.editButton}
-                      onPress={() => {
-                        setEditingLimit(isEditing ? null : { tierKey: tier.key, limitKey: limit.limitKey });
-                        setLimitValue(String(limit.limitValue));
-                        setLimitReason('');
-                        setSaveMsg(null);
-                      }}
-                    >
-                      <Text style={localStyles.editButtonText}>{isEditing ? 'Cancel' : 'Edit'}</Text>
-                    </TouchableOpacity>
-                    {isEditing ? (
-                      <View style={localStyles.inlineForm}>
-                        <TextInput
-                          style={localStyles.smallInput}
-                          placeholder="Value (-1 = unlimited)"
-                          keyboardType="numeric"
-                          value={limitValue}
-                          onChangeText={setLimitValue}
-                        />
-                        <TextInput
-                          style={localStyles.smallInput}
-                          placeholder="Reason (required)"
-                          value={limitReason}
-                          onChangeText={setLimitReason}
-                        />
-                        <TouchableOpacity
-                          style={[localStyles.smallButton, saving && localStyles.buttonDisabled]}
-                          disabled={saving}
-                          onPress={() => saveLimit(tier.key, limit.limitKey)}
-                        >
-                          <Text style={localStyles.smallButtonText}>Save</Text>
-                        </TouchableOpacity>
-                      </View>
-                    ) : null}
+      {tiers.length > 0 ? (
+        <View
+          style={[
+            localStyles.tableShell,
+            {
+              backgroundColor: theme.colors.surface,
+              borderColor: theme.colors.border,
+              shadowColor: theme.mode === 'dark' ? '#000000' : theme.colors.primary,
+            },
+          ]}
+        >
+          <ScrollView horizontal showsHorizontalScrollIndicator>
+            <View>
+              <View
+                style={[
+                  localStyles.tableHeaderRow,
+                  { backgroundColor: theme.colors.primary, borderBottomColor: theme.colors.border },
+                ]}
+              >
+                <View
+                  style={[
+                    localStyles.tableNameCell,
+                    localStyles.tableHeaderCell,
+                    { width: nameColumnWidth, borderRightColor: theme.colors.border },
+                  ]}
+                >
+                  <Text style={[localStyles.tableHeaderText, { color: theme.colors.onPrimary }]}>Name</Text>
+                </View>
+                {tierColumns.map((tier) => (
+                  <View
+                    key={tier.key}
+                    style={[
+                      localStyles.tableTierCell,
+                      localStyles.tableHeaderCell,
+                      { width: tierColumnWidth, borderRightColor: theme.colors.border },
+                    ]}
+                  >
+                    <Text style={[localStyles.tableHeaderText, { color: theme.colors.onPrimary }]}>
+                      {tier.displayName}
+                    </Text>
                   </View>
-                );
-              })}
-            </>
-          ) : null}
+                ))}
+              </View>
 
-          {tier.entitlements.length > 0 ? (
-            <>
-              <Text style={localStyles.fieldLabel}>Features</Text>
-              {tier.entitlements.filter((e) => e.featureKey).map((ent) => {
-                const isEditing =
-                  editingEntitlement?.tierKey === tier.key && editingEntitlement?.featureKey === ent.featureKey;
-                return (
-                  <View key={ent.featureKey} style={localStyles.limitRow}>
-                    <View style={localStyles.flex}>
-                      <Text style={localStyles.cardSub}>{ent.featureKey}</Text>
+              <ScrollView style={localStyles.tableBodyScroll} nestedScrollEnabled>
+                {tableRows.map((row, index) => (
+                  <View
+                    key={row.key}
+                    style={[
+                      localStyles.tableDataRow,
+                      {
+                        backgroundColor: index % 2 === 0 ? theme.colors.surface : theme.colors.surfaceMuted,
+                        borderBottomColor: theme.colors.border,
+                      },
+                    ]}
+                  >
+                    <View
+                      style={[
+                        localStyles.tableNameCell,
+                        { width: nameColumnWidth, borderRightColor: theme.colors.border },
+                      ]}
+                    >
+                      <Text style={[localStyles.tableNameText, { color: theme.colors.text }]}>{row.label}</Text>
+                      <Text style={[localStyles.tableMetaText, { color: theme.colors.textMuted }]}>
+                        {row.kind === 'limit' ? 'Limit' : 'Toggle'}
+                      </Text>
                     </View>
-                    <View style={[localStyles.badge, ent.isAllowed ? localStyles.badgeOn : localStyles.badgeOff]}>
-                      <Text style={localStyles.badgeText}>{ent.isAllowed ? 'yes' : 'no'}</Text>
-                    </View>
-                    <TouchableOpacity
-                      style={localStyles.editButton}
-                      onPress={() => {
-                        setEditingEntitlement(
-                          isEditing ? null : { tierKey: tier.key, featureKey: ent.featureKey! }
+
+                    {tierColumns.map((tier) => {
+                      const cellValue = row.values[tier.key];
+
+                      if (row.kind === 'limit') {
+                        return (
+                          <View
+                            key={`${row.key}-${tier.key}`}
+                            style={[
+                              localStyles.tableTierCell,
+                              { width: tierColumnWidth, borderRightColor: theme.colors.border },
+                            ]}
+                          >
+                            <TouchableOpacity
+                              accessibilityRole="button"
+                              testID={`tier-limit-cell-${row.key}-${tier.key}`}
+                              style={localStyles.tableLinkButton}
+                              onPress={() => {
+                                setEditingLimit({ tierKey: tier.key, limitKey: row.key });
+                                setLimitValue(cellValue.explicitValue === null ? '' : String(cellValue.explicitValue));
+                                setLimitReason('');
+                                setSaveMsg(null);
+                              }}
+                            >
+                              <Text style={[localStyles.tableLinkText, { color: theme.colors.link }]}>
+                                {cellValue.explicitValue === null
+                                  ? 'Not set'
+                                  : cellValue.explicitValue === -1
+                                    ? 'Unlimited'
+                                    : String(cellValue.explicitValue)}
+                              </Text>
+                            </TouchableOpacity>
+                          </View>
                         );
-                        setEntitlementReason('');
-                        setSaveMsg(null);
-                      }}
-                    >
-                      <Text style={localStyles.editButtonText}>{isEditing ? 'Cancel' : 'Toggle'}</Text>
-                    </TouchableOpacity>
-                    {isEditing ? (
-                      <View style={localStyles.inlineForm}>
-                        <TextInput
-                          style={localStyles.smallInput}
-                          placeholder="Reason (required)"
-                          value={entitlementReason}
-                          onChangeText={setEntitlementReason}
-                        />
-                        <TouchableOpacity
-                          style={[localStyles.smallButton, saving && localStyles.buttonDisabled]}
-                          disabled={saving}
-                          onPress={() => saveEntitlement(tier.key, ent.featureKey!, !ent.isAllowed)}
+                      }
+
+                      const featureCell = cellValue as FeatureTableCell;
+                      const isInherited = featureCell.isInherited;
+                      const displayValue = featureCell.effectiveValue;
+                      const isAllowed = displayValue === true;
+                      const buttonBackgroundColor = isInherited
+                        ? theme.colors.surfaceMuted
+                        : isAllowed
+                          ? theme.colors.success
+                          : displayValue === false
+                            ? theme.colors.alert
+                            : theme.colors.backgroundAlt;
+                      const buttonBorderColor = isInherited ? theme.colors.border : 'transparent';
+                      const primaryTextColor = isInherited
+                        ? theme.colors.text
+                        : displayValue === null
+                          ? theme.colors.text
+                          : '#FFFFFF';
+                      const secondaryTextColor = isInherited ? theme.colors.textMuted : primaryTextColor;
+                      const buttonLabel = isInherited
+                        ? 'Inherited'
+                        : displayValue === null
+                          ? 'Not set'
+                          : isAllowed
+                            ? 'Enabled'
+                            : 'Disabled';
+                      const secondaryLabel = isInherited
+                        ? `From ${featureCell.inheritedFromTierDisplayName ?? featureCell.inheritedFromTierKey ?? 'lower tier'}`
+                        : null;
+
+                      return (
+                        <View
+                          key={`${row.key}-${tier.key}`}
+                          style={[
+                            localStyles.tableTierCell,
+                            { width: tierColumnWidth, borderRightColor: theme.colors.border },
+                          ]}
                         >
-                          <Text style={localStyles.smallButtonText}>Set {ent.isAllowed ? 'Disabled' : 'Enabled'}</Text>
-                        </TouchableOpacity>
-                      </View>
-                    ) : null}
+                          <TouchableOpacity
+                            accessibilityRole="button"
+                            testID={`tier-feature-cell-${row.key}-${tier.key}`}
+                            style={[
+                              localStyles.toggleCellButton,
+                              {
+                                backgroundColor: buttonBackgroundColor,
+                                borderColor: buttonBorderColor,
+                                borderWidth: isInherited ? 1 : 0,
+                              },
+                            ]}
+                            disabled={isInherited}
+                            onPress={isInherited ? undefined : () => {
+                              setEditingEntitlement({ tierKey: tier.key, featureKey: row.key });
+                              setEntitlementReason('');
+                              setSaveMsg(null);
+                            }}
+                          >
+                            <Text style={[localStyles.toggleCellText, { color: primaryTextColor }]}>
+                              {buttonLabel}
+                            </Text>
+                            {secondaryLabel ? (
+                              <Text style={[localStyles.toggleCellSubtext, { color: secondaryTextColor }]}>
+                                {secondaryLabel}
+                              </Text>
+                            ) : null}
+                          </TouchableOpacity>
+                        </View>
+                      );
+                    })}
                   </View>
-                );
-              })}
-            </>
-          ) : null}
+                ))}
+              </ScrollView>
+            </View>
+          </ScrollView>
         </View>
-      ))}
+      ) : null}
+
+      <Modal
+        transparent
+        animationType="fade"
+        visible={Boolean(editingLimit)}
+        onRequestClose={resetLimitDialog}
+      >
+        {editingLimit ? (
+          <View style={[localStyles.modalBackdrop, { backgroundColor: 'rgba(0, 0, 0, 0.45)' }]}>
+            <View
+              style={[
+                localStyles.modalCard,
+                { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+              ]}
+            >
+              <Text style={[localStyles.modalTitle, { color: theme.colors.text }]}>Update limit</Text>
+              <Text style={[localStyles.modalBodyText, { color: theme.colors.textMuted }]}>
+                {editingLimit.limitKey} for {editingLimit.tierKey}
+              </Text>
+              <Text style={[localStyles.modalBodyText, { color: theme.colors.textMuted }]}>
+                Current value:{' '}
+                {currentEditingLimitValue === null
+                  ? 'Not set'
+                  : currentEditingLimitValue === -1
+                    ? 'Unlimited'
+                    : String(currentEditingLimitValue)}
+              </Text>
+              <TextInput
+                testID="tier-limit-value-input"
+                style={[
+                  localStyles.modalInput,
+                  {
+                    backgroundColor: theme.colors.backgroundAlt,
+                    borderColor: theme.colors.border,
+                    color: theme.colors.text,
+                  },
+                ]}
+                placeholder="New number (-1 = unlimited)"
+                placeholderTextColor={theme.colors.textMuted}
+                keyboardType="numeric"
+                value={limitValue}
+                onChangeText={setLimitValue}
+              />
+              <TextInput
+                testID="tier-limit-reason-input"
+                style={[
+                  localStyles.modalInput,
+                  localStyles.modalTextArea,
+                  {
+                    backgroundColor: theme.colors.backgroundAlt,
+                    borderColor: theme.colors.border,
+                    color: theme.colors.text,
+                  },
+                ]}
+                placeholder="Reason (required)"
+                placeholderTextColor={theme.colors.textMuted}
+                value={limitReason}
+                onChangeText={setLimitReason}
+                multiline
+              />
+              <View style={localStyles.modalActions}>
+                <TouchableOpacity
+                  testID="tier-limit-cancel-button"
+                  style={[
+                    localStyles.modalSecondaryButton,
+                    { borderColor: theme.colors.border, backgroundColor: theme.colors.surfaceMuted },
+                  ]}
+                  onPress={resetLimitDialog}
+                >
+                  <Text style={[localStyles.modalSecondaryButtonText, { color: theme.colors.text }]}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  testID="tier-limit-save-button"
+                  style={[
+                    localStyles.modalPrimaryButton,
+                    { backgroundColor: theme.colors.cta },
+                    saving && localStyles.buttonDisabled,
+                  ]}
+                  disabled={saving}
+                  onPress={() => saveLimit(editingLimit.tierKey, editingLimit.limitKey)}
+                >
+                  <Text style={[localStyles.modalPrimaryButtonText, { color: '#FFFFFF' }]}>Save</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        ) : null}
+      </Modal>
+
+      <Modal
+        transparent
+        animationType="fade"
+        visible={Boolean(editingEntitlement)}
+        onRequestClose={resetEntitlementDialog}
+      >
+        {editingEntitlement ? (
+          <View style={[localStyles.modalBackdrop, { backgroundColor: 'rgba(0, 0, 0, 0.45)' }]}>
+            <View
+              style={[
+                localStyles.modalCard,
+                { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+              ]}
+            >
+              <Text style={[localStyles.modalTitle, { color: theme.colors.text }]}>Change feature access</Text>
+              <Text style={[localStyles.modalBodyText, { color: theme.colors.textMuted }]}>
+                {editingEntitlement.featureKey} for {editingEntitlement.tierKey}
+              </Text>
+              <TextInput
+                testID="tier-feature-reason-input"
+                style={[
+                  localStyles.modalInput,
+                  localStyles.modalTextArea,
+                  {
+                    backgroundColor: theme.colors.backgroundAlt,
+                    borderColor: theme.colors.border,
+                    color: theme.colors.text,
+                  },
+                ]}
+                placeholder="Reason (required)"
+                placeholderTextColor={theme.colors.textMuted}
+                value={entitlementReason}
+                onChangeText={setEntitlementReason}
+                multiline
+              />
+              <View style={localStyles.modalActions}>
+                <TouchableOpacity
+                  testID="tier-feature-cancel-button"
+                  style={[
+                    localStyles.modalSecondaryButton,
+                    { borderColor: theme.colors.border, backgroundColor: theme.colors.surfaceMuted },
+                  ]}
+                  onPress={resetEntitlementDialog}
+                >
+                  <Text style={[localStyles.modalSecondaryButtonText, { color: theme.colors.text }]}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  testID="tier-feature-save-button"
+                  style={[
+                    localStyles.modalPrimaryButton,
+                    { backgroundColor: theme.colors.cta },
+                    saving && localStyles.buttonDisabled,
+                  ]}
+                  disabled={saving}
+                  onPress={() => {
+                    const currentValue =
+                      tiers
+                        .find((tier) => tier.key === editingEntitlement.tierKey)
+                        ?.entitlements.find((entitlement) => entitlement.featureKey === editingEntitlement.featureKey)
+                        ?.isAllowed ?? false;
+                    saveEntitlement(editingEntitlement.tierKey, editingEntitlement.featureKey, !currentValue);
+                  }}
+                >
+                  <Text style={[localStyles.modalPrimaryButtonText, { color: '#FFFFFF' }]}>Save</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        ) : null}
+      </Modal>
     </View>
   );
 };
@@ -811,6 +1171,8 @@ const AuditLogSection: React.FC<{ backendUrl: string; headers: Record<string, st
 // ---------------------------------------------------------------------------
 
 const AdminTab: React.FC<AdminTabProps> = ({ backendUrl, headers, initialSection = 'overview', onSectionChange }) => {
+  const colorScheme = useColorScheme();
+  const theme = getAppTheme('auto', colorScheme);
   const [section, setSection] = useState<AdminSection>(initialSection);
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [loadedTiers, setLoadedTiers] = useState<Tier[]>([]);
@@ -869,14 +1231,14 @@ const AdminTab: React.FC<AdminTabProps> = ({ backendUrl, headers, initialSection
   };
 
   return (
-    <View style={localStyles.content}>
+    <View style={[localStyles.content, { backgroundColor: theme.colors.background }]}>
       {section !== 'overview' ? (
         <View style={localStyles.breadcrumb}>
           <TouchableOpacity onPress={() => goTo('overview')}>
-            <Text style={localStyles.breadcrumbLink}>Admin</Text>
+            <Text style={[localStyles.breadcrumbLink, { color: theme.colors.link }]}>Admin</Text>
           </TouchableOpacity>
-          <Text style={localStyles.breadcrumbSep}> / </Text>
-          <Text style={localStyles.breadcrumbCurrent}>{sectionLabel[section]}</Text>
+          <Text style={[localStyles.breadcrumbSep, { color: theme.colors.textMuted }]}> / </Text>
+          <Text style={[localStyles.breadcrumbCurrent, { color: theme.colors.text }]}>{sectionLabel[section]}</Text>
         </View>
       ) : null}
       {renderSection()}
@@ -993,6 +1355,91 @@ const localStyles = StyleSheet.create({
     marginLeft: 8,
   },
   editButtonText: { fontSize: 12, color: '#333' },
+  tableShell: {
+    borderWidth: 1,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
+  },
+  tableHeaderRow: { flexDirection: 'row', minHeight: 64, borderBottomWidth: 1 },
+  tableHeaderCell: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 14,
+    borderRightWidth: 1,
+  },
+  tableBodyScroll: { maxHeight: 560 },
+  tableDataRow: { flexDirection: 'row', minHeight: 76, borderBottomWidth: 1 },
+  tableNameCell: {
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRightWidth: 1,
+  },
+  tableTierCell: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 14,
+    borderRightWidth: 1,
+  },
+  tableHeaderText: { fontSize: 14, fontWeight: '700', textAlign: 'center' },
+  tableNameText: { fontSize: 14, fontWeight: '600' },
+  tableMetaText: { fontSize: 11, marginTop: 4, textTransform: 'uppercase', letterSpacing: 0.6 },
+  tableLinkButton: { paddingVertical: 8, paddingHorizontal: 12 },
+  tableLinkText: { fontSize: 14, fontWeight: '600', textDecorationLine: 'underline' },
+  toggleCellButton: {
+    minWidth: 104,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  toggleCellText: { fontSize: 13, fontWeight: '700' },
+  toggleCellSubtext: { fontSize: 11, marginTop: 4, textAlign: 'center' },
+  modalBackdrop: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 440,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 20,
+  },
+  modalTitle: { fontSize: 20, fontWeight: '700', marginBottom: 8 },
+  modalBodyText: { fontSize: 14, marginBottom: 6 },
+  modalInput: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    marginTop: 12,
+  },
+  modalTextArea: { minHeight: 96, textAlignVertical: 'top' },
+  modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 12, marginTop: 20 },
+  modalSecondaryButton: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  modalSecondaryButtonText: { fontSize: 14, fontWeight: '600' },
+  modalPrimaryButton: {
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 18,
+  },
+  modalPrimaryButtonText: { fontSize: 14, fontWeight: '700' },
   // Pagination
   pagination: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 12, gap: 12 },
   pageButton: {

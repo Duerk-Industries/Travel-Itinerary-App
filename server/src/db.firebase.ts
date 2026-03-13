@@ -1,6 +1,6 @@
 // Firebase adapter (Firestore-backed)
 import { initializeApp, cert, deleteApp, getApps, App } from 'firebase-admin/app';
-import { getFirestore, Firestore, FieldPath } from 'firebase-admin/firestore';
+import { getFirestore, Firestore, FieldPath, FieldValue } from 'firebase-admin/firestore';
 import { createHash, randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
 import {
   Flight,
@@ -36,6 +36,7 @@ import {
 import { logError, logInfo } from './logger';
 import { getEnvValue, isLocalEnv } from './env';
 import { normalizeItineraryStatus } from './utils/itineraryStatus';
+import { getApiLimitsConfig } from './config/apiLimits';
 
 let app: App | null = null;
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
@@ -46,6 +47,151 @@ const stripUndefined = <T extends Record<string, any>>(updates: T): Partial<T> =
 const hashToken = (token: string): string => createHash('sha256').update(token).digest('hex');
 const FOLLOW_CODE_LENGTH = 6;
 const FOLLOW_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const ADMIN_ANALYTICS_VERSION = 1;
+
+const getDayKey = (iso: string): string => String(iso ?? '').slice(0, 10);
+const getAdminAnalyticsDailyDocId = (userId: string, dayKey: string): string => `${userId}_${dayKey}`;
+
+const incrementAdminUserAnalyticsMetric = async (
+  userId: string,
+  metricKey: string,
+  amount: number,
+  createdAt = nowIso()
+): Promise<void> => {
+  const db = getDb();
+  const dayKey = getDayKey(createdAt);
+  await Promise.all([
+    db.collection('admin_user_analytics').doc(userId).set({
+      userId,
+      analyticsVersion: ADMIN_ANALYTICS_VERSION,
+      metrics: { [metricKey]: FieldValue.increment(amount) },
+      updatedAt: createdAt,
+    }, { merge: true }),
+    db.collection('admin_user_analytics_daily').doc(getAdminAnalyticsDailyDocId(userId, dayKey)).set({
+      userId,
+      dayKey,
+      analyticsVersion: ADMIN_ANALYTICS_VERSION,
+      metrics: { [metricKey]: FieldValue.increment(amount) },
+      updatedAt: createdAt,
+    }, { merge: true }),
+  ]);
+};
+
+const incrementAdminUserTripCount = async (userId: string, amount: number, updatedAt = nowIso()): Promise<void> => {
+  const db = getDb();
+  await db.collection('admin_user_analytics').doc(userId).set({
+    userId,
+    analyticsVersion: ADMIN_ANALYTICS_VERSION,
+    tripCount: FieldValue.increment(amount),
+    updatedAt,
+  }, { merge: true });
+};
+
+const listActiveGroupUserIds = async (groupId: string): Promise<string[]> => {
+  const db = getDb();
+  const membersSnap = await db.collection('group_members')
+    .where('groupId', '==', groupId)
+    .where('removedAt', '==', null)
+    .get();
+  return Array.from(
+    new Set(
+      membersSnap.docs
+        .map((doc) => String((doc.data() as any)?.userId ?? '').trim())
+        .filter((userId) => userId.length > 0)
+    )
+  );
+};
+
+const countVisibleTripsForUserInGroup = async (userId: string, groupId: string): Promise<number> => {
+  const db = getDb();
+  const [tripsSnap, removalsSnap] = await Promise.all([
+    db.collection('trips').where('groupId', '==', groupId).get(),
+    db.collection('trip_removals').where('userId', '==', userId).get(),
+  ]);
+  const removedTripIds = new Set(
+    removalsSnap.docs
+      .map((doc) => String((doc.data() as any)?.tripId ?? '').trim())
+      .filter((tripId) => tripId.length > 0)
+  );
+  return tripsSnap.docs.filter((doc) => !removedTripIds.has(doc.id)).length;
+};
+
+const writeAdminUserAnalyticsBackfill = async (params: {
+  userId: string;
+  tripCount: number;
+  totalMetrics: Record<string, number>;
+  dailyMetrics: Record<string, Record<string, number>>;
+}): Promise<void> => {
+  const db = getDb();
+  const updatedAt = nowIso();
+  await db.collection('admin_user_analytics').doc(params.userId).set({
+    userId: params.userId,
+    analyticsVersion: ADMIN_ANALYTICS_VERSION,
+    backfilledAt: updatedAt,
+    tripCount: params.tripCount,
+    metrics: params.totalMetrics,
+    updatedAt,
+  }, { merge: true });
+
+  const entries = Object.entries(params.dailyMetrics);
+  for (let i = 0; i < entries.length; i += 400) {
+    const batch = db.batch();
+    for (const [dayKey, metrics] of entries.slice(i, i + 400)) {
+      batch.set(
+        db.collection('admin_user_analytics_daily').doc(getAdminAnalyticsDailyDocId(params.userId, dayKey)),
+        {
+          userId: params.userId,
+          dayKey,
+          analyticsVersion: ADMIN_ANALYTICS_VERSION,
+          metrics,
+          updatedAt,
+        },
+        { merge: true }
+      );
+    }
+    await batch.commit();
+  }
+};
+
+const backfillAdminAnalyticsForUser = async (userId: string): Promise<void> => {
+  const db = getDb();
+  const [usageEventsSnap, groupsSnap, membershipsSnap] = await Promise.all([
+    db.collection('usage_events').where('userId', '==', userId).get(),
+    db.collection('groups').where('ownerId', '==', userId).get(),
+    db.collection('group_members').where('userId', '==', userId).where('removedAt', '==', null).get(),
+  ]);
+
+  const totalMetrics: Record<string, number> = {};
+  const dailyMetrics: Record<string, Record<string, number>> = {};
+  for (const doc of usageEventsSnap.docs) {
+    const data = doc.data() as any;
+    const metricKey = String(data.metricKey ?? '').trim();
+    if (!metricKey) continue;
+    const amount = Number(data.amount ?? 0);
+    const createdAt = String(data.createdAt ?? nowIso());
+    const dayKey = getDayKey(createdAt);
+    totalMetrics[metricKey] = (totalMetrics[metricKey] ?? 0) + amount;
+    dailyMetrics[dayKey] = dailyMetrics[dayKey] ?? {};
+    dailyMetrics[dayKey][metricKey] = (dailyMetrics[dayKey][metricKey] ?? 0) + amount;
+  }
+
+  const groupIds = Array.from(new Set([
+    ...groupsSnap.docs.map((doc) => doc.id),
+    ...membershipsSnap.docs.map((doc) => String((doc.data() as any)?.groupId ?? '').trim()).filter(Boolean),
+  ]));
+  const tripIds = new Set<string>();
+  for (const groupId of groupIds) {
+    const tripsSnap = await db.collection('trips').where('groupId', '==', groupId).get();
+    tripsSnap.docs.forEach((doc) => tripIds.add(doc.id));
+  }
+
+  await writeAdminUserAnalyticsBackfill({
+    userId,
+    tripCount: tripIds.size,
+    totalMetrics,
+    dailyMetrics,
+  });
+};
 
 const generateFollowCode = (): string => {
   const bytes = randomBytes(FOLLOW_CODE_LENGTH);
@@ -978,7 +1124,14 @@ export const removeGroupMember = async (requesterId: string, groupId: string, me
   if (!authorized) throw new Error('Not authorized to remove members');
   const memberDoc = await db.collection('group_members').doc(memberId).get();
   if (!memberDoc.exists) throw new Error('Member not found');
+  const removedMemberUserId = String((memberDoc.data() as any)?.userId ?? '').trim();
   await db.collection('group_members').doc(memberId).set({ removedAt: nowIso() }, { merge: true });
+  if (removedMemberUserId) {
+    const visibleTrips = await countVisibleTripsForUserInGroup(removedMemberUserId, groupId);
+    if (visibleTrips > 0) {
+      await incrementAdminUserTripCount(removedMemberUserId, -visibleTrips);
+    }
+  }
   const requesterSnap = await db
     .collection('group_members')
     .where('groupId', '==', groupId)
@@ -1052,6 +1205,13 @@ export const deleteGroup = async (ownerId: string, groupId: string): Promise<voi
   const db = getDb();
   const group = await db.collection('groups').doc(groupId).get();
   if (!group.exists || group.data()?.ownerId !== ownerId) throw new Error('Group not found or not owner');
+  const activeUserIds = await listActiveGroupUserIds(groupId);
+  const visibleTripCounts = new Map<string, number>();
+  await Promise.all(
+    activeUserIds.map(async (userId) => {
+      visibleTripCounts.set(userId, await countVisibleTripsForUserInGroup(userId, groupId));
+    })
+  );
   const batch = db.batch();
   batch.delete(group.ref);
   const members = await db.collection('group_members').where('groupId', '==', groupId).get();
@@ -1061,6 +1221,11 @@ export const deleteGroup = async (ownerId: string, groupId: string): Promise<voi
   const trips = await db.collection('trips').where('groupId', '==', groupId).get();
   trips.forEach((t) => batch.delete(t.ref));
   await batch.commit();
+  await Promise.all(
+    Array.from(visibleTripCounts.entries())
+      .filter(([, tripCount]) => tripCount > 0)
+      .map(([userId, tripCount]) => incrementAdminUserTripCount(userId, -tripCount))
+  );
 };
 
 export const listTrips = async (userId: string): Promise<Array<Trip & { groupName: string }>> => {
@@ -1137,6 +1302,8 @@ export const createTrip = async (
     createdAt: nowIso(),
   };
   await db.collection('trips').doc(id).set(payload);
+  const activeUserIds = await listActiveGroupUserIds(groupId);
+  await Promise.all(activeUserIds.map((memberUserId) => incrementAdminUserTripCount(memberUserId, 1, payload.createdAt)));
   return { id, ...payload } as any;
 };
 
@@ -1228,6 +1395,7 @@ export const deleteTrip = async (userId: string, tripId: string): Promise<void> 
     expenses.forEach((doc) => batch.delete(doc.ref));
     batch.delete(trip.ref);
     await batch.commit();
+    await incrementAdminUserTripCount(userId, -1);
     return;
   }
 
@@ -1238,6 +1406,7 @@ export const deleteTrip = async (userId: string, tripId: string): Promise<void> 
       memberId: memberDoc.id,
       createdAt: nowIso(),
     });
+    await incrementAdminUserTripCount(userId, -1);
   }
 
   await removeMemberFromTripData(tripId, memberDoc.id);
@@ -1256,7 +1425,21 @@ export const updateTripGroup = async (
   if (!allowed) throw new Error('Not authorized to move trip');
   const newMembership = await ensureMembership(newGroupId, userId);
   if (!newMembership) throw new Error('Not authorized for destination group');
+  const [oldActiveUserIds, newActiveUserIds] = await Promise.all([
+    listActiveGroupUserIds(data.groupId),
+    listActiveGroupUserIds(newGroupId),
+  ]);
   await db.collection('trips').doc(tripId).update({ groupId: newGroupId });
+  const oldSet = new Set(oldActiveUserIds);
+  const newSet = new Set(newActiveUserIds);
+  await Promise.all([
+    ...oldActiveUserIds
+      .filter((memberUserId) => !newSet.has(memberUserId))
+      .map((memberUserId) => incrementAdminUserTripCount(memberUserId, -1)),
+    ...newActiveUserIds
+      .filter((memberUserId) => !oldSet.has(memberUserId))
+      .map((memberUserId) => incrementAdminUserTripCount(memberUserId, 1)),
+  ]);
   const newGroup = await db.collection('groups').doc(newGroupId).get();
   return { ...(data as any), id: tripId, groupId: newGroupId, groupName: (newGroup.data() as any)?.name ?? '' };
 };
@@ -1521,6 +1704,10 @@ export const acceptGroupInvite = async (inviteId: string, userId: string, email?
     });
   }
   await db.collection('group_invites').doc(inviteId).update({ status: 'accepted', inviteeUserId: userId });
+  const tripCount = await countVisibleTripsForUserInGroup(userId, data.groupId);
+  if (tripCount > 0) {
+    await incrementAdminUserTripCount(userId, tripCount);
+  }
 };
 
 export const rejectGroupInvite = async (inviteId: string, userId: string, email?: string): Promise<void> => {
@@ -1573,6 +1760,14 @@ export const rejectGroupInvite = async (inviteId: string, userId: string, email?
     await db.collection('group_members').doc(memberId).update({ removedAt: nowIso() });
   } else if (memberId) {
     await db.collection('group_members').doc(memberId).update({ removedAt: nowIso() });
+  }
+
+  const resolvedMemberUserId = String((memberDoc?.data() as any)?.userId ?? '').trim();
+  if (resolvedMemberUserId) {
+    const visibleTrips = await countVisibleTripsForUserInGroup(resolvedMemberUserId, groupId);
+    if (visibleTrips > 0) {
+      await incrementAdminUserTripCount(resolvedMemberUserId, -visibleTrips);
+    }
   }
 
   await db.collection('group_invites').doc(inviteId).delete();
@@ -3673,13 +3868,15 @@ export const appendUsageEvent = async (
   metadata?: Record<string, unknown> | null
 ): Promise<void> => {
   const db = getDb();
+  const createdAt = nowIso();
   await db.collection('usage_events').doc(randomUUID()).set({
     userId,
     metricKey,
     amount,
     metadata: metadata ?? null,
-    createdAt: nowIso(),
+    createdAt,
   });
+  await incrementAdminUserAnalyticsMetric(userId, metricKey, amount, createdAt);
 };
 
 export const atomicIncrementIfUnderLimit = async (
@@ -3867,24 +4064,246 @@ export const countGroupMembers = async (groupId: string): Promise<number> => {
 import type { AdminUserRow } from './db.postgres';
 export { AdminUserRow };
 
-export const adminSearchUsers = async (_opts: {
+export const adminSearchUsers = async (opts: {
   search?: string; page?: number; limit?: number;
-}): Promise<{ users: AdminUserRow[]; total: number }> => ({ users: [], total: 0 });
+}): Promise<{ users: AdminUserRow[]; total: number }> => {
+  const db = getDb();
+  const page = Math.max(1, opts.page ?? 1);
+  const limit = Math.min(100, Math.max(1, opts.limit ?? 20));
+  const offset = (page - 1) * limit;
+  const search = opts.search?.trim().toLowerCase() ?? '';
 
-export const adminGetUser = async (_userId: string): Promise<{
+  const [userSnap, webUserSnap, tierSnap, userTierSnap] = await Promise.all([
+    db.collection('users').get(),
+    db.collection('web_users').get(),
+    db.collection('tiers').get(),
+    db.collection('user_tiers').where('effectiveTo', '==', null).get(),
+  ]);
+
+  const webUsersById = new Map(
+    webUserSnap.docs.map((doc) => [doc.id, doc.data()] as const)
+  );
+  const tiersById = new Map<string, Record<string, unknown>>(
+    tierSnap.docs.map((doc) => [doc.id, { id: doc.id, ...doc.data() }])
+  );
+  const activeTierByUserId = new Map(
+    userTierSnap.docs.map((doc) => [String(doc.data().userId), doc.data()] as const)
+  );
+
+  const allUsers: AdminUserRow[] = userSnap.docs.map((doc) => {
+    const user = doc.data();
+    const webUser = webUsersById.get(doc.id) ?? {};
+    const activeTier = activeTierByUserId.get(doc.id) ?? null;
+    const tier = activeTier ? tiersById.get(String(activeTier.tierId ?? activeTier.tierKey ?? '')) : null;
+
+    return {
+      id: doc.id,
+      email: (user.email as string | null) ?? '',
+      firstName: (webUser.firstName as string | null) ?? (user.firstName as string | null) ?? null,
+      lastName: (webUser.lastName as string | null) ?? (user.lastName as string | null) ?? null,
+      role: ((user.role as string | null) ?? 'user'),
+      tierKey: (activeTier?.tierKey as string | null) ?? (tier ? (tier.id as string) : null),
+      tierDisplayName: tier ? ((tier.displayName as string | null) ?? null) : null,
+      tierSince: (activeTier?.effectiveFrom as string | null) ?? null,
+      createdAt: (user.createdAt as string | null) ?? nowIso(),
+    };
+  });
+
+  const filtered = search
+    ? allUsers.filter((user) => {
+        const haystack = [
+          user.email ?? '',
+          user.firstName ?? '',
+          user.lastName ?? '',
+          user.id,
+        ]
+          .join(' ')
+          .toLowerCase();
+        return haystack.includes(search);
+      })
+    : allUsers;
+
+  filtered.sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')));
+
+  return {
+    users: filtered.slice(offset, offset + limit),
+    total: filtered.length,
+  };
+};
+
+export const adminGetUser = async (userId: string): Promise<{
   id: string; email: string; firstName: string | null; lastName: string | null;
   role: string; tierKey: string | null; tierDisplayName: string | null;
   tierSince: string | null; tierSource: string | null; createdAt: string;
   usage: { metricKey: string; windowKey: string; count: number }[];
-} | null> => null;
+} | null> => {
+  const db = getDb();
+  const [userDoc, webUserDoc, activeTierSnap, tierSnap, usageSnap] = await Promise.all([
+    db.collection('users').doc(userId).get(),
+    db.collection('web_users').doc(userId).get(),
+    db.collection('user_tiers')
+      .where('userId', '==', userId)
+      .where('effectiveTo', '==', null)
+      .orderBy('effectiveFrom', 'desc')
+      .limit(1)
+      .get(),
+    db.collection('tiers').get(),
+    db.collection('usage_counters').where('userId', '==', userId).get(),
+  ]);
 
-export const adminGetUserData = async (_opts: {
+  if (!userDoc.exists) return null;
+
+  const user = userDoc.data() ?? {};
+  const webUser = webUserDoc.exists ? webUserDoc.data() ?? {} : {};
+  const activeTier = activeTierSnap.empty ? null : activeTierSnap.docs[0].data();
+  const tiersById = new Map<string, Record<string, unknown>>(
+    tierSnap.docs.map((doc) => [doc.id, { id: doc.id, ...doc.data() }])
+  );
+  const tier = activeTier ? tiersById.get(String(activeTier.tierId ?? activeTier.tierKey ?? '')) : null;
+
+  return {
+    id: userId,
+    email: (user.email as string | null) ?? '',
+    firstName: (webUser.firstName as string | null) ?? (user.firstName as string | null) ?? null,
+    lastName: (webUser.lastName as string | null) ?? (user.lastName as string | null) ?? null,
+    role: ((user.role as string | null) ?? 'user'),
+    tierKey: (activeTier?.tierKey as string | null) ?? (tier ? (tier.id as string) : null),
+    tierDisplayName: tier ? ((tier.displayName as string | null) ?? null) : null,
+    tierSince: (activeTier?.effectiveFrom as string | null) ?? null,
+    tierSource: (activeTier?.source as string | null) ?? null,
+    createdAt: (user.createdAt as string | null) ?? nowIso(),
+    usage: usageSnap.docs
+      .map((doc) => doc.data())
+      .map((data) => ({
+        metricKey: String(data.metricKey ?? ''),
+        windowKey: String(data.windowKey ?? ''),
+        count: Number(data.count ?? 0),
+      }))
+      .sort((a, b) => `${b.windowKey}:${a.metricKey}`.localeCompare(`${a.windowKey}:${b.metricKey}`)),
+  };
+};
+
+export const adminGetUserData = async (opts: {
   window?: '7d' | '30d' | 'all-time'; page?: number; limit?: number;
 }): Promise<{
   summary: { totalUsers: number; byTier: Record<string, number> };
   users: Array<{ id: string; email: string; role: string; tierKey: string | null; tripCount: number; tripCreations: number; aiGenerations: number; tokens: number; apiCalls: Record<string, number>; createdAt: string }>;
   total: number;
-}> => ({ summary: { totalUsers: 0, byTier: {} }, users: [], total: 0 });
+}> => {
+  const db = getDb();
+  const page = Math.max(1, opts.page ?? 1);
+  const limit = Math.min(100, Math.max(1, opts.limit ?? 20));
+  const offset = (page - 1) * limit;
+  const providerKeys = Object.keys(getApiLimitsConfig().providers ?? {});
+  const windowDays = opts.window === '7d' ? 7 : opts.window === '30d' ? 30 : null;
+  const windowStartDayKey = windowDays
+    ? getDayKey(new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000).toISOString())
+    : null;
+
+  const [userSnap, tierSnap, userTierSnap] = await Promise.all([
+    db.collection('users').get(),
+    db.collection('tiers').get(),
+    db.collection('user_tiers').where('effectiveTo', '==', null).get(),
+  ]);
+
+  const tiersById = new Map<string, Record<string, unknown>>(
+    tierSnap.docs.map((doc) => [doc.id, { id: doc.id, ...doc.data() }])
+  );
+  const activeTierByUserId = new Map<string, Record<string, unknown>>(
+    userTierSnap.docs.map((doc) => [String(doc.data().userId), doc.data()])
+  );
+
+  const allUsers = userSnap.docs.map((doc) => {
+    const data = doc.data();
+    const activeTier = activeTierByUserId.get(doc.id) ?? null;
+    const tier = activeTier ? tiersById.get(String(activeTier.tierId ?? activeTier.tierKey ?? '')) : null;
+    return {
+      id: doc.id,
+      email: (data.email as string | null) ?? '',
+      role: ((data.role as string | null) ?? 'user'),
+      tierKey: (activeTier?.tierKey as string | null) ?? (tier ? (tier.id as string) : null),
+      createdAt: (data.createdAt as string | null) ?? nowIso(),
+    };
+  });
+
+  allUsers.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+
+  const byTier: Record<string, number> = {};
+  for (const user of allUsers) {
+    const key = user.tierKey ?? 'none';
+    byTier[key] = (byTier[key] ?? 0) + 1;
+  }
+
+  const pagedUsers = allUsers.slice(offset, offset + limit);
+  const analyticsRefs = pagedUsers.map((user) => db.collection('admin_user_analytics').doc(user.id));
+  let analyticsDocs = analyticsRefs.length ? await db.getAll(...analyticsRefs) : [];
+
+  const usersNeedingBackfill = analyticsDocs
+    .filter((doc) => {
+      const data = doc.exists ? doc.data() as any : null;
+      return !doc.exists || !data?.backfilledAt;
+    })
+    .map((doc) => doc.id);
+
+  if (usersNeedingBackfill.length) {
+    await Promise.all(usersNeedingBackfill.map((userId) => backfillAdminAnalyticsForUser(userId)));
+    analyticsDocs = analyticsRefs.length ? await db.getAll(...analyticsRefs) : [];
+  }
+
+  const analyticsByUserId = new Map(
+    analyticsDocs.map((doc) => [doc.id, (doc.exists ? doc.data() : null) as any])
+  );
+
+  const dailyMetricsByUser = new Map<string, Record<string, number>>();
+  if (windowStartDayKey) {
+    const userIds = pagedUsers.map((user) => user.id);
+    for (let i = 0; i < userIds.length; i += 10) {
+      const chunk = userIds.slice(i, i + 10);
+      const dailySnap = await db.collection('admin_user_analytics_daily').where('userId', 'in', chunk).get();
+      for (const doc of dailySnap.docs) {
+        const data = doc.data() as any;
+        const dayKey = String(data.dayKey ?? '');
+        if (!dayKey || dayKey < windowStartDayKey) continue;
+        const userId = String(data.userId ?? '');
+        const sourceMetrics = (data.metrics ?? {}) as Record<string, number>;
+        const bucket = dailyMetricsByUser.get(userId) ?? {};
+        for (const [metricKey, rawValue] of Object.entries(sourceMetrics)) {
+          bucket[metricKey] = (bucket[metricKey] ?? 0) + Number(rawValue ?? 0);
+        }
+        dailyMetricsByUser.set(userId, bucket);
+      }
+    }
+  }
+
+  return {
+    summary: { totalUsers: allUsers.length, byTier },
+    total: allUsers.length,
+    users: pagedUsers.map((user) => {
+      const aggregate = analyticsByUserId.get(user.id) ?? {};
+      const metrics = windowStartDayKey
+        ? (dailyMetricsByUser.get(user.id) ?? {})
+        : ((aggregate.metrics ?? {}) as Record<string, number>);
+      return {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        tierKey: user.tierKey,
+        tripCount: Number(aggregate.tripCount ?? 0),
+        tripCreations: metrics.trip_creations ?? 0,
+        aiGenerations: metrics.ai_itinerary_generations ?? 0,
+        tokens: metrics.openai_tokens ?? 0,
+        apiCalls: providerKeys.reduce<Record<string, number>>((acc, providerKey) => {
+          const metricKey = `api_calls_${providerKey.toLowerCase()}`;
+          acc[providerKey] =
+            metrics[metricKey] ??
+            (providerKey === 'OPENAI' ? metrics.ai_itinerary_generations ?? 0 : 0);
+          return acc;
+        }, {}),
+        createdAt: user.createdAt,
+      };
+    }),
+  };
+};
 
 export const countActiveTripsForUser = async (userId: string): Promise<number> => {
   const db = getDb();

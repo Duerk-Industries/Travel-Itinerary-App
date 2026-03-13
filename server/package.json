@@ -8,7 +8,7 @@
     "build": "tsc -p .",
     "start": "NODE_ENV=production node dist/index.js",
     "dev": "tsx watch src/index.ts",
-    "test": "jest"
+    "test": "jest --config jest.projects.js"
   },
   "dependencies": {
     "@google-cloud/secret-manager": "^6.1.1",

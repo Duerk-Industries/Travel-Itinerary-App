@@ -2,6 +2,7 @@ import request from 'supertest';
 import { Pool } from 'pg';
 import { app } from '../src/app';
 import { closePool, initDb } from '../src/db';
+import { canUseFeature } from '../src/services/entitlementService';
 import { makeAdminUser, registerAndLoginWebUser, seedTiersForTest, setUserTierInDb, type TestUser } from './helpers';
 
 const TS = Date.now();
@@ -159,5 +160,27 @@ describe('tier and trip enforcement', () => {
       .get(`/api/expenses?tripId=${tripId}`)
       .set('Authorization', `Bearer ${freeUser.token}`)
       .expect(200);
+  });
+
+  it('inherits lower-tier feature entitlements for higher tiers', async () => {
+    const premiumUser = await registerAndLoginWebUser(pool, {
+      firstName: 'Premium',
+      lastName: 'Inherited',
+      email: `tier-enforcement-test+inherited-premium-${TS}@example.com`,
+      password: 'TestPass1!',
+    });
+    await setUserTierInDb(pool, premiumUser.userId, 'premium');
+
+    const proUser = await registerAndLoginWebUser(pool, {
+      firstName: 'Pro',
+      lastName: 'Inherited',
+      email: `tier-enforcement-test+inherited-pro-${TS}@example.com`,
+      password: 'TestPass1!',
+    });
+    await setUserTierInDb(pool, proUser.userId, 'pro');
+
+    await expect(canUseFeature(premiumUser.userId, 'csv_export', 'user')).resolves.toBe(true);
+    await expect(canUseFeature(proUser.userId, 'csv_export', 'user')).resolves.toBe(true);
+    await expect(canUseFeature(premiumUser.userId, 'trip_sharing', 'user')).resolves.toBe(true);
   });
 });

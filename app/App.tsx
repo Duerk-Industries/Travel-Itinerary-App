@@ -333,6 +333,20 @@ const extractTokenFromUrl = (rawUrl: string) => {
   return { token: null, url: null, source: null, isConfirm: false, isSecondaryConfirm: false, requirePasswordSetup: false } as const;
 };
 
+const decodeTokenClaims = (
+  token: string
+): { firstName?: string; lastName?: string; email?: string; provider?: string; role?: string } | null => {
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return null;
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+    return JSON.parse(Buffer.from(padded, 'base64').toString());
+  } catch {
+    return null;
+  }
+};
+
 type AppShellProps = {
   initialAdminSection?: AdminSectionRoute;
   onOpenAdminSection?: (section: AdminSectionRoute) => void;
@@ -1070,17 +1084,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
   const handleAuthSuccess = useCallback(
     (token: string, firstLoginOverride?: boolean, options?: { requirePasswordSetup?: boolean }) => {
-    let decoded: { firstName?: string; lastName?: string; email?: string; provider?: string; role?: string } | null = null;
-    try {
-      const payload = token.split('.')[1];
-      if (payload) {
-        const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
-        const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
-        decoded = JSON.parse(Buffer.from(padded, 'base64').toString());
-      }
-    } catch {
-      decoded = null;
-    }
+    const decoded = decodeTokenClaims(token);
     const name =
       `${decoded?.firstName ?? ''} ${decoded?.lastName ?? ''}`.trim() || decoded?.email || 'Traveler';
     const decodedRole: 'user' | 'admin' = decoded?.role === 'admin' ? 'admin' : 'user';
@@ -1740,7 +1744,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     if (pendingInviteModalOpen || invites.length) return;
     setDeferFirstLoginRedirect(false);
     setActivePage('account');
-    saveSession(userToken, userName ?? 'Traveler', 'account', userEmail ?? undefined, activeTripId ?? null, pageHistory);
+    saveSession(userToken, userName ?? 'Traveler', 'account', userEmail ?? undefined, activeTripId ?? null, pageHistory, userRole);
   }, [
     activeTripId,
     deferFirstLoginRedirect,
@@ -1750,6 +1754,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     pendingInviteModalOpen,
     userEmail,
     userName,
+    userRole,
     userToken,
   ]);
 
@@ -1765,10 +1770,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     if (userToken) return;
     const session = loadSession();
     if (session) {
+      const decoded = decodeTokenClaims(session.token);
+      const restoredRole: 'user' | 'admin' =
+        session.role === 'admin' || decoded?.role === 'admin' ? 'admin' : 'user';
       setUserToken(session.token);
       setUserName(session.name);
       setUserEmail(session.email ?? null);
-      setUserRole(session.role === 'admin' ? 'admin' : 'user');
+      setUserRole(restoredRole);
       const sessionHistory = Array.isArray(session.pageHistory)
         ? session.pageHistory.filter((p) => typeof p === 'string') as Page[]
         : [];
@@ -2120,8 +2128,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
   useEffect(() => {
     if (!userToken) return;
-    saveSession(userToken, userName ?? 'Traveler', activePage, userEmail, activeTripId, pageHistory);
-  }, [userToken, userName, userEmail, activePage, activeTripId, pageHistory]);
+    saveSession(userToken, userName ?? 'Traveler', activePage, userEmail, activeTripId, pageHistory, userRole);
+  }, [userToken, userName, userEmail, activePage, activeTripId, pageHistory, userRole]);
 
   const disabledPages = useMemo(() => {
     const pages: Page[] = [
