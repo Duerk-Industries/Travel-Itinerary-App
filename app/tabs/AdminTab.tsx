@@ -39,8 +39,11 @@ type UserDataRow = {
   email: string | null;
   role: string;
   tierKey: string | null;
+  tripCount: number;
+  tripCreations: number;
   aiGenerations: number;
   tokens: number;
+  apiCalls?: Record<string, number>;
   createdAt: string;
 };
 
@@ -62,6 +65,8 @@ type AuditEntry = {
 type AdminTabProps = {
   backendUrl: string;
   headers: Record<string, string>;
+  initialSection?: AdminSection;
+  onSectionChange?: (section: AdminSection) => void;
 };
 
 // ---------------------------------------------------------------------------
@@ -232,7 +237,7 @@ const UsersSection: React.FC<{
       <Text style={localStyles.sectionTitle}>Users</Text>
       <TextInput
         style={localStyles.input}
-        placeholder="Search by email or name..."
+        placeholder="Search by email, name, or user ID..."
         value={search}
         onChangeText={(t: string) => { setSearch(t); setPage(1); }}
       />
@@ -695,8 +700,15 @@ const UserDataSection: React.FC<{ backendUrl: string; headers: Record<string, st
             {row.role === 'admin' ? <View style={localStyles.tagAdmin}><Text style={localStyles.tagText}>admin</Text></View> : null}
             {row.tierKey ? <View style={localStyles.tagTier}><Text style={localStyles.tagText}>{row.tierKey}</Text></View> : null}
           </View>
+          <Text style={localStyles.cardSub}>Trips: {row.tripCount}</Text>
+          <Text style={localStyles.cardSub}>Trip creations: {row.tripCreations}</Text>
           <Text style={localStyles.cardSub}>AI generations: {row.aiGenerations}</Text>
           <Text style={localStyles.cardSub}>Tokens: {row.tokens}</Text>
+          {row.apiCalls ? (
+            <Text style={localStyles.cardSub}>
+              API calls: {Object.entries(row.apiCalls).map(([key, value]) => `${key} ${value}`).join(' | ')}
+            </Text>
+          ) : null}
         </View>
       ))}
       {totalPages > 1 ? (
@@ -798,16 +810,23 @@ const AuditLogSection: React.FC<{ backendUrl: string; headers: Record<string, st
 // Main AdminTab
 // ---------------------------------------------------------------------------
 
-const AdminTab: React.FC<AdminTabProps> = ({ backendUrl, headers }) => {
-  const [section, setSection] = useState<AdminSection>('overview');
+const AdminTab: React.FC<AdminTabProps> = ({ backendUrl, headers, initialSection = 'overview', onSectionChange }) => {
+  const [section, setSection] = useState<AdminSection>(initialSection);
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [loadedTiers, setLoadedTiers] = useState<Tier[]>([]);
 
-  const goTo = (s: AdminSection) => setSection(s);
+  useEffect(() => {
+    setSection(initialSection);
+  }, [initialSection]);
+
+  const goTo = (s: AdminSection) => {
+    setSection(s);
+    onSectionChange?.(s);
+  };
 
   const handleViewUser = (user: AdminUser) => {
     setSelectedUser(user);
-    setSection('user-detail');
+    goTo('user-detail');
   };
 
   const renderSection = () => {
@@ -825,7 +844,7 @@ const AdminTab: React.FC<AdminTabProps> = ({ backendUrl, headers }) => {
             headers={headers}
             userId={selectedUser.id}
             tiers={loadedTiers}
-            onBack={() => setSection('users')}
+            onBack={() => goTo('users')}
           />
         ) : null;
       case 'tiers':

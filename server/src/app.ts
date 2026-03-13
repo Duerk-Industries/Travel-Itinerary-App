@@ -149,7 +149,7 @@ app.use(express.static(publicDir));
 
 import passport from 'passport';
 import { initPassport, createToken, createOAuthState, decodeOAuthState, authenticate } from './auth';
-import { ensureDefaultGroupForUser, ensureWebPasswordAccountForOAuth, getUserRole } from './db';
+import { ensureCurrentUserTier, ensureDefaultGroupForUser, ensureWebPasswordAccountForOAuth, getUserRole } from './db';
 import { ensureAdminBootstrap } from './services/entitlementService';
 import { requireAdmin } from './middleware/requireAdmin';
 import { appendTokenToRedirect, isRedirectUriAllowed, resolveAndValidateRedirectUri } from './redirects';
@@ -195,6 +195,7 @@ app.get(
   async (req, res) => {
     const user = req.user as any;
     await ensureDefaultGroupForUser(user.id, user.email);
+    await ensureCurrentUserTier(user.id, 'free');
     const { requiresPasswordSetup } = await ensureWebPasswordAccountForOAuth(
       user.id,
       user.email,

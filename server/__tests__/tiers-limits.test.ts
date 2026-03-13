@@ -1,229 +1,163 @@
-/**
- * Tests for tier-based limit enforcement at the route level.
- *
- * Uses jest.spyOn to mock entitlementService checks so tests are independent of pg-mem
- * seed data visibility. This verifies that routes correctly handle EntitlementError
- * and return appropriate HTTP status codes.
- */
 import request from 'supertest';
 import { Pool } from 'pg';
 import { app } from '../src/app';
-import { initDb, closePool } from '../src/db';
-import { registerAndLoginWebUser, seedTiersForTest, setUserTierInDb } from './helpers';
-import * as entitlementService from '../src/services/entitlementService';
-import { EntitlementError } from '../src/errors';
+import { closePool, initDb } from '../src/db';
+import { makeAdminUser, registerAndLoginWebUser, seedTiersForTest, setUserTierInDb, type TestUser } from './helpers';
 
 const TS = Date.now();
 
-describe('Trip creation — active trip limit enforcement', () => {
+const createGroup = async (token: string, name: string) => {
+  const response = await request(app)
+    .post('/api/groups')
+    .set('Authorization', `Bearer ${token}`)
+    .send({ name })
+    .expect(201);
+  return response.body.id ?? response.body.group?.id;
+};
+
+describe('tier and trip enforcement', () => {
   let pool: Pool;
-  let token: string;
-  let groupId: string;
 
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
     await initDb();
     pool = new Pool({ connectionString: process.env.DATABASE_URL });
     await seedTiersForTest(pool);
-
-    const email = `tier-trip-test+free${TS}@example.com`;
-    const result = await registerAndLoginWebUser(pool, {
-      firstName: 'Trip',
-      lastName: 'Limiter',
-      email,
-      password: 'TestPass1!',
-    });
-    token = result.token;
-
-    // Create a group so we can create trips
-    const groupRes = await request(app)
-      .post('/api/groups')
-      .set('Authorization', `Bearer ${token}`)
-      .send({ name: `Test Group ${TS}` })
-      .expect(201);
-    groupId = groupRes.body.id ?? groupRes.body.group?.id;
   });
 
   afterAll(async () => {
-    await pool.query('DELETE FROM users WHERE email LIKE $1', ['tier-trip-test+%']);
+    await pool.query(`DELETE FROM users WHERE email LIKE 'tier-enforcement-test+%'`);
     await pool.end();
     await closePool();
   });
 
-  afterEach(() => {
-    jest.restoreAllMocks();
-  });
-
-  it('allows trip creation when under the limit', async () => {
-    jest.spyOn(entitlementService, 'assertUnderActiveTripLimit').mockResolvedValue(undefined);
-
-    const res = await request(app)
-      .post('/api/trips')
-      .set('Authorization', `Bearer ${token}`)
-      .send({ name: 'Test Trip', groupId })
-      .expect(201);
-
-    expect(res.body.id ?? res.body.trip?.id).toBeTruthy();
-  });
-
-  it('returns 402 when the active trip limit is reached', async () => {
-    jest.spyOn(entitlementService, 'assertUnderActiveTripLimit').mockRejectedValue(
-      new EntitlementError('TIER_LIMIT_REACHED', 'You have reached the active trip limit of 3', {
-        limitKey: 'max_active_trips',
-      }),
-    );
-
-    const res = await request(app)
-      .post('/api/trips')
-      .set('Authorization', `Bearer ${token}`)
-      .send({ name: 'Blocked Trip', groupId })
-      .expect(402);
-
-    expect(res.body.code).toBe('TIER_LIMIT_REACHED');
-  });
-
-  it('passes the EntitlementError detail through in the response body', async () => {
-    jest.spyOn(entitlementService, 'assertUnderActiveTripLimit').mockRejectedValue(
-      new EntitlementError('TIER_LIMIT_REACHED', 'Active trip limit reached', {
-        limitKey: 'max_active_trips',
-      }),
-    );
-
-    const res = await request(app)
-      .post('/api/trips')
-      .set('Authorization', `Bearer ${token}`)
-      .send({ name: 'Blocked Trip 2', groupId })
-      .expect(402);
-
-    expect(res.body.error).toBeTruthy();
-  });
-});
-
-describe('Traveler limit enforcement', () => {
-  let pool: Pool;
-  let ownerToken: string;
-  let groupId: string;
-
-  beforeAll(async () => {
-    process.env.NODE_ENV = 'test';
-    await initDb();
-    pool = new Pool({ connectionString: process.env.DATABASE_URL });
-    await seedTiersForTest(pool);
-
-    const email = `tier-traveler-test+owner${TS}@example.com`;
-    const result = await registerAndLoginWebUser(pool, {
-      firstName: 'Owner',
-      lastName: 'Traveler',
-      email,
+  it('defaults new users to the free tier', async () => {
+    const user = await registerAndLoginWebUser(pool, {
+      firstName: 'Default',
+      lastName: 'Tier',
+      email: `tier-enforcement-test+default-${TS}@example.com`,
       password: 'TestPass1!',
     });
-    ownerToken = result.token;
-
-    const groupRes = await request(app)
-      .post('/api/groups')
-      .set('Authorization', `Bearer ${ownerToken}`)
-      .send({ name: `Traveler Test Group ${TS}` })
-      .expect(201);
-    groupId = groupRes.body.id ?? groupRes.body.group?.id;
-  });
-
-  afterAll(async () => {
-    await pool.query('DELETE FROM users WHERE email LIKE $1', ['tier-traveler-test+%']);
-    await pool.end();
-    await closePool();
-  });
-
-  afterEach(() => {
-    jest.restoreAllMocks();
-  });
-
-  it('allows adding a member when under the traveler limit', async () => {
-    jest.spyOn(entitlementService, 'assertUnderTravelerLimit').mockResolvedValue(undefined);
-
-    const newEmail = `tier-traveler-test+member${TS}@example.com`;
-    await request(app)
-      .post(`/api/groups/${groupId}/members`)
-      .set('Authorization', `Bearer ${ownerToken}`)
-      .send({ email: newEmail })
-      .expect((res) => {
-        // 201 created or 200; either is success
-        expect([200, 201]).toContain(res.status);
-      });
-  });
-
-  it('returns 402 when the traveler limit is reached', async () => {
-    jest.spyOn(entitlementService, 'assertUnderTravelerLimit').mockRejectedValue(
-      new EntitlementError('TIER_LIMIT_REACHED', 'Traveler limit reached', {
-        limitKey: 'max_travelers_per_trip',
-      }),
+    const { rows } = await pool.query(
+      `SELECT t.key
+       FROM user_tiers ut
+       JOIN tiers t ON t.id = ut.tier_id
+       WHERE ut.user_id = $1 AND ut.effective_to IS NULL`,
+      [user.userId]
     );
-
-    const newEmail = `tier-traveler-test+blocked${TS}@example.com`;
-    const res = await request(app)
-      .post(`/api/groups/${groupId}/members`)
-      .set('Authorization', `Bearer ${ownerToken}`)
-      .send({ email: newEmail })
-      .expect(402);
-
-    expect(res.body.code).toBe('TIER_LIMIT_REACHED');
+    expect(rows[0]?.key).toBe('free');
   });
-});
 
-describe('Effective limit resolution (service layer)', () => {
-  let pool: Pool;
-  let freeUserId: string;
-  let premiumUserId: string;
-
-  beforeAll(async () => {
-    process.env.NODE_ENV = 'test';
-    await initDb();
-    pool = new Pool({ connectionString: process.env.DATABASE_URL });
-    await seedTiersForTest(pool);
-
-    const freeResult = await registerAndLoginWebUser(pool, {
+  it('blocks a free user from creating a fourth active trip and allows premium to exceed it', async () => {
+    const freeUser = await registerAndLoginWebUser(pool, {
       firstName: 'Free',
-      lastName: 'Limit',
-      email: `tier-limit-unit+free${TS}@example.com`,
+      lastName: 'Trips',
+      email: `tier-enforcement-test+free-${TS}@example.com`,
       password: 'TestPass1!',
     });
-    freeUserId = freeResult.userId;
-    await setUserTierInDb(pool, freeUserId, 'free');
+    const groupId = await createGroup(freeUser.token, `Free Trips ${TS}`);
 
-    const premiumResult = await registerAndLoginWebUser(pool, {
-      firstName: 'Premium',
-      lastName: 'Limit',
-      email: `tier-limit-unit+premium${TS}@example.com`,
+    for (let i = 0; i < 3; i += 1) {
+      await request(app)
+        .post('/api/trips')
+        .set('Authorization', `Bearer ${freeUser.token}`)
+        .send({
+          name: `Allowed Trip ${i + 1}`,
+          groupId,
+          endDate: '2099-12-31',
+        })
+        .expect(201);
+    }
+
+    const blocked = await request(app)
+      .post('/api/trips')
+      .set('Authorization', `Bearer ${freeUser.token}`)
+      .send({
+        name: 'Blocked Trip',
+        groupId,
+        endDate: '2099-12-31',
+      })
+      .expect(402);
+
+    expect(blocked.body.code).toBe('TIER_LIMIT_REACHED');
+
+    await setUserTierInDb(pool, freeUser.userId, 'premium');
+
+    await request(app)
+      .post('/api/trips')
+      .set('Authorization', `Bearer ${freeUser.token}`)
+      .send({
+        name: 'Premium Trip',
+        groupId,
+        endDate: '2099-12-31',
+      })
+      .expect(201);
+  });
+
+  it('blocks non-admin past trips and allows admins to create them', async () => {
+    const user: TestUser = {
+      firstName: 'Past',
+      lastName: 'Trip',
+      email: `tier-enforcement-test+past-user-${TS}@example.com`,
+      password: 'TestPass1!',
+    };
+    const regular = await registerAndLoginWebUser(pool, user);
+    const regularGroupId = await createGroup(regular.token, `Past Group ${TS}`);
+
+    await request(app)
+      .post('/api/trips')
+      .set('Authorization', `Bearer ${regular.token}`)
+      .send({
+        name: 'Past Trip',
+        groupId: regularGroupId,
+        endDate: '2020-01-01',
+      })
+      .expect(403);
+
+    const admin = await makeAdminUser(pool, {
+      firstName: 'Admin',
+      lastName: 'Past',
+      email: `tier-enforcement-test+past-admin-${TS}@example.com`,
       password: 'TestPass1!',
     });
-    premiumUserId = premiumResult.userId;
-    await setUserTierInDb(pool, premiumUserId, 'premium');
+    const adminGroupId = await createGroup(admin.token, `Admin Past Group ${TS}`);
+
+    await request(app)
+      .post('/api/trips')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({
+        name: 'Allowed Past Trip',
+        groupId: adminGroupId,
+        endDate: '2020-01-01',
+      })
+      .expect(201);
   });
 
-  afterAll(async () => {
-    await pool.query('DELETE FROM users WHERE email LIKE $1', ['tier-limit-unit+%']);
-    await pool.end();
-    await closePool();
-  });
+  it('enforces premium-only cost tracking server-side', async () => {
+    const freeUser = await registerAndLoginWebUser(pool, {
+      firstName: 'Free',
+      lastName: 'Expense',
+      email: `tier-enforcement-test+expense-free-${TS}@example.com`,
+      password: 'TestPass1!',
+    });
+    const groupId = await createGroup(freeUser.token, `Expense Group ${TS}`);
+    const tripResponse = await request(app)
+      .post('/api/trips')
+      .set('Authorization', `Bearer ${freeUser.token}`)
+      .send({ name: 'Expense Trip', groupId, endDate: '2099-12-31' })
+      .expect(201);
+    const tripId = tripResponse.body.id ?? tripResponse.body.trip?.id;
 
-  it('returns 3 for max_active_trips on a free user', async () => {
-    const { getEffectiveLimit } = require('../src/services/entitlementService');
-    // Clear module-level caches so fresh DB data is used
-    const svc = require('../src/services/entitlementService');
-    (svc as any).tiersCache = null;
+    await request(app)
+      .get(`/api/expenses?tripId=${tripId}`)
+      .set('Authorization', `Bearer ${freeUser.token}`)
+      .expect(402);
 
-    const limit = await getEffectiveLimit(freeUserId, 'max_active_trips');
-    // With pg-mem data visibility, this may return null (fail-open) or 3
-    // We accept both since pg-mem seeding is not guaranteed to be visible
-    expect(limit === null || limit === 3).toBe(true);
-  });
+    await setUserTierInDb(pool, freeUser.userId, 'premium');
 
-  it('returns -1 (unlimited) for ai_itinerary_generations_per_month on premium', async () => {
-    const { getEffectiveLimit } = require('../src/services/entitlementService');
-    const svc = require('../src/services/entitlementService');
-    (svc as any).tiersCache = null;
-
-    const limit = await getEffectiveLimit(premiumUserId, 'ai_itinerary_generations_per_month');
-    // Accept null (fail-open) or -1 (unlimited) since pg-mem seeding may not be visible
-    expect(limit === null || limit === -1).toBe(true);
+    await request(app)
+      .get(`/api/expenses?tripId=${tripId}`)
+      .set('Authorization', `Bearer ${freeUser.token}`)
+      .expect(200);
   });
 });

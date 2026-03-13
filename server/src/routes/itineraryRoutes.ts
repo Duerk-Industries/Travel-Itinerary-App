@@ -1,14 +1,19 @@
 import { Router } from 'express';
 import bodyParser from 'body-parser';
 import { authenticate } from '../auth';
-import { getTripById, getWebUserProfile, listTraitsForGroupTrip, incrementUsageCounter } from '../db';
+import { getTripById, getWebUserProfile, listTraitsForGroupTrip } from '../db';
 import { logError, logInfo } from '../logger';
 import { getEnvValue } from '../env';
 import { getItineraryImage } from '../image-service';
 import { generateItineraryViaPromptPlan } from '../services/itineraryPromptPlanService';
 import { enqueueAsyncItineraryJob, getAsyncItineraryJob } from '../services/itineraryAsyncService';
 import { ApiLimitExceededError } from '../apis/usageLimiter';
-import { assertCanUseFeature, assertAndIncrementGenerationCount } from '../services/entitlementService';
+import {
+  assertCanUseFeature,
+  reserveGenerationUsage,
+  finalizeGenerationUsage,
+  failGenerationUsage,
+} from '../services/entitlementService';
 import { EntitlementError } from '../errors';
 import { TokenPayload } from '../auth';
 
@@ -22,6 +27,40 @@ const getMonthWindowKey = (): string => {
 
 const PLACEHOLDER_IMAGE =
   'https://images.unsplash.com/photo-1502920917128-1aa500764b0e?auto=format&fit=crop&w=1200&q=80';
+
+const generationRateLimitState = new Map<string, { count: number; startedAt: number }>();
+const RATE_LIMIT_WINDOW_MS = Number(process.env.ITINERARY_RATE_LIMIT_WINDOW_MS ?? 10 * 60 * 1000);
+const RATE_LIMIT_MAX = Number(process.env.ITINERARY_RATE_LIMIT_MAX ?? 10);
+
+const reserveGenerationRequestRateLimit = (userId: string, ip: string | null): void => {
+  const now = Date.now();
+  for (const key of [`user:${userId}`, ip ? `ip:${ip}` : null].filter(Boolean) as string[]) {
+    const current = generationRateLimitState.get(key);
+    if (!current || now - current.startedAt >= RATE_LIMIT_WINDOW_MS) {
+      generationRateLimitState.set(key, { count: 1, startedAt: now });
+      continue;
+    }
+    if (current.count >= RATE_LIMIT_MAX) {
+      throw new ApiLimitExceededError({
+        provider: 'ITINERARY',
+        caller: key,
+        scope: 'caller',
+        limit: RATE_LIMIT_MAX,
+        used: current.count,
+      });
+    }
+    current.count += 1;
+    generationRateLimitState.set(key, current);
+  }
+};
+
+const resolveIdempotencyKey = (req: any, tripId: string): string => {
+  const fromHeader = String(req.headers['idempotency-key'] ?? '').trim();
+  const fromBody = String(req.body?.idempotencyKey ?? '').trim();
+  const supplied = fromHeader || fromBody;
+  if (supplied) return supplied.slice(0, 200);
+  return `${(req as any).user.userId}:${tripId}:${Date.now()}:${Math.random().toString(36).slice(2)}`;
+};
 
 // Itineraries API: manage itineraries, details, and sharing helpers.
 const router = Router();
@@ -157,9 +196,25 @@ router.post('/', async (req, res) => {
     logInfo(`[itinerary] trip context unavailable trip=${tripId}; proceeding without stored trip dates`);
   }
 
+  const idempotencyKey = resolveIdempotencyKey(req, tripId);
   try {
     await assertCanUseFeature(userId, 'ai_itinerary_generation', role);
-    await assertAndIncrementGenerationCount(userId, getMonthWindowKey(), role);
+    reserveGenerationRequestRateLimit(userId, req.ip ?? null);
+    const reservation = await reserveGenerationUsage({
+      userId,
+      tripId,
+      role,
+      windowKey: getMonthWindowKey(),
+      idempotencyKey,
+    });
+    if (reservation.status === 'completed') {
+      res.json(reservation.responseBody ?? {});
+      return;
+    }
+    if (reservation.status === 'pending') {
+      res.status(202).json({ status: 'pending', message: 'An itinerary generation request with this key is already in progress.' });
+      return;
+    }
 
     const result = await generateItineraryViaPromptPlan({
       apiKey,
@@ -186,6 +241,7 @@ router.post('/', async (req, res) => {
       .replace(/[\u200B-\u200D\uFEFF]/g, '')
       .trim();
     if (!normalizedPlan) {
+      await failGenerationUsage(idempotencyKey, 'No itinerary returned');
       res.status(500).json({ error: 'No itinerary returned' });
       return;
     }
@@ -194,14 +250,7 @@ router.post('/', async (req, res) => {
       `[itinerary] generated trip=${tripId} details=${result.details.length} transfers=${result.generatedItems.transfers.length} lodgings=${result.generatedItems.lodgings.length} activities=${result.generatedItems.activities.length} carRentals=${result.generatedItems.carRentals.length} tokens=${result.tokenUsage.totalTokens} elapsedMs=${Date.now() - requestStartedAt}`
     );
 
-    // Track token usage fire-and-forget — never block the response.
-    if (result.tokenUsage.totalTokens > 0) {
-      const windowKey = getMonthWindowKey();
-      incrementUsageCounter(userId, 'openai_tokens', windowKey, result.tokenUsage.totalTokens)
-        .catch((err: unknown) => logError('[itinerary] failed to record token usage', err));
-    }
-
-    res.json({
+    const responseBody = {
       plan: normalizedPlan,
       details: result.details,
       generatedItems: result.generatedItems,
@@ -211,7 +260,15 @@ router.post('/', async (req, res) => {
         route: result.route,
         itinerary: result.itinerary,
       },
+    };
+    await finalizeGenerationUsage({
+      userId,
+      windowKey: getMonthWindowKey(),
+      idempotencyKey,
+      responseBody,
+      tokensUsed: result.tokenUsage.totalTokens,
     });
+    res.json(responseBody);
   } catch (err: any) {
     if (err instanceof EntitlementError) {
       logInfo(`[itinerary] entitlement denied code=${err.code}`);
@@ -223,6 +280,7 @@ router.post('/', async (req, res) => {
       return;
     }
     const detail = err.response?.data || err.message || String(err);
+    await failGenerationUsage(idempotencyKey, typeof detail === 'string' ? detail : JSON.stringify(detail));
     logError(`[itinerary] OpenAI API error`, detail);
     logInfo(`[itinerary] request failed trip=${tripId} elapsedMs=${Date.now() - requestStartedAt}`);
     res.status(500).json({ error: 'Failed to generate itinerary', detail });
@@ -312,12 +370,32 @@ router.post('/async', async (req, res) => {
   }
 
   // Entitlement checks — run before enqueuing so the user gets immediate feedback.
+  const idempotencyKey = resolveIdempotencyKey(req, tripId);
   try {
     await assertCanUseFeature(userId, 'ai_itinerary_generation', role);
-    await assertAndIncrementGenerationCount(userId, getMonthWindowKey(), role);
+    reserveGenerationRequestRateLimit(userId, req.ip ?? null);
+    const reservation = await reserveGenerationUsage({
+      userId,
+      tripId,
+      role,
+      windowKey: getMonthWindowKey(),
+      idempotencyKey,
+    });
+    if (reservation.status === 'completed') {
+      res.status(200).json(reservation.responseBody ?? {});
+      return;
+    }
+    if (reservation.status === 'pending') {
+      res.status(202).json({ status: 'pending', message: 'An itinerary generation request with this key is already in progress.' });
+      return;
+    }
   } catch (err) {
     if (err instanceof EntitlementError) {
       res.status(402).json({ error: err.message, code: err.code });
+      return;
+    }
+    if (err instanceof ApiLimitExceededError) {
+      res.status(429).json({ error: err.message });
       return;
     }
     throw err;
@@ -349,6 +427,8 @@ router.post('/async', async (req, res) => {
     tripEndDate,
     tripStartMonth,
     tripStartYear,
+    idempotencyKey,
+    usageWindowKey: getMonthWindowKey(),
   });
   res.status(202).json({
     jobId: job.id,

@@ -99,6 +99,15 @@ describe('Admin routes', () => {
 
       expect(res.body.users.length).toBe(0);
     });
+
+    it('finds users by user id fragments', async () => {
+      const res = await request(app)
+        .get(`/api/admin/users?search=${encodeURIComponent(userId.slice(0, 8))}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(res.body.users.some((u: any) => u.id === userId)).toBe(true);
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -368,6 +377,11 @@ describe('Admin routes', () => {
       expect(res.body).toHaveProperty('users');
       expect(res.body).toHaveProperty('total');
       expect(Array.isArray(res.body.users)).toBe(true);
+      if (res.body.users.length > 0) {
+        expect(res.body.users[0]).toHaveProperty('tripCount');
+        expect(res.body.users[0]).toHaveProperty('tripCreations');
+        expect(res.body.users[0]).toHaveProperty('apiCalls');
+      }
     });
 
     it('returns user data for all-time window', async () => {

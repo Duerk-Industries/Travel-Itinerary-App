@@ -36,6 +36,7 @@ import { logError } from './logger';
 import { getEnvValue } from './env';
 import { downloadAirportDatasetForDailyRefresh } from './apis/airportDatasetCallers';
 import { getReservedUsernames } from './config/authFlags';
+import { getApiLimitsConfig } from './config/apiLimits';
 
 
 type PoolCtor = typeof Pool;
@@ -910,19 +911,39 @@ export const initDb = async (): Promise<void> => {
     );
   `);
   await p.query(`CREATE INDEX IF NOT EXISTS idx_usage_counters_user_metric ON usage_counters(user_id, metric_key, window_key);`);
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS usage_events (
+      id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      user_id    UUID REFERENCES users(id) ON DELETE CASCADE,
+      metric_key TEXT NOT NULL,
+      amount     INTEGER NOT NULL DEFAULT 1,
+      metadata   JSONB,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+  `);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_usage_events_user_metric_created ON usage_events(user_id, metric_key, created_at DESC);`);
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS generation_idempotency (
       key        TEXT PRIMARY KEY,
       user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       trip_id    TEXT NOT NULL,
+      usage_key  TEXT,
+      window_key TEXT,
       status     TEXT NOT NULL DEFAULT 'pending',
       result_ref TEXT,
+      response_body JSONB,
+      error_message TEXT,
       created_at TIMESTAMP NOT NULL DEFAULT NOW(),
       expires_at TIMESTAMP NOT NULL
     );
   `);
+  await p.query(`ALTER TABLE generation_idempotency ADD COLUMN IF NOT EXISTS usage_key TEXT;`);
+  await p.query(`ALTER TABLE generation_idempotency ADD COLUMN IF NOT EXISTS window_key TEXT;`);
+  await p.query(`ALTER TABLE generation_idempotency ADD COLUMN IF NOT EXISTS response_body JSONB;`);
+  await p.query(`ALTER TABLE generation_idempotency ADD COLUMN IF NOT EXISTS error_message TEXT;`);
   await p.query(`CREATE INDEX IF NOT EXISTS idx_gen_idempotency_user ON generation_idempotency(user_id, created_at DESC);`);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_gen_idempotency_usage ON generation_idempotency(user_id, usage_key, window_key, status);`);
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS audit_log (
@@ -942,6 +963,44 @@ export const initDb = async (): Promise<void> => {
   await p.query(`CREATE INDEX IF NOT EXISTS idx_audit_log_target  ON audit_log(target_user_id, created_at DESC);`);
   await p.query(`CREATE INDEX IF NOT EXISTS idx_audit_log_action  ON audit_log(action, created_at DESC);`);
   await p.query(`CREATE INDEX IF NOT EXISTS idx_audit_log_created ON audit_log(created_at DESC);`);
+
+  if (process.env.USE_IN_MEMORY_DB === '1') {
+    // Clear data between test runs while keeping schema intact.
+    await p.query(`DELETE FROM audit_log`);
+    await p.query(`DELETE FROM generation_idempotency`);
+    await p.query(`DELETE FROM usage_events`);
+    await p.query(`DELETE FROM usage_counters`);
+    await p.query(`DELETE FROM user_tiers`);
+    await p.query(`DELETE FROM tier_entitlements`);
+    await p.query(`DELETE FROM tier_limits`);
+    await p.query(`DELETE FROM feature_flags`);
+    await p.query(`DELETE FROM tiers`);
+    await p.query(`DELETE FROM features`);
+    await p.query(`DELETE FROM trip_comments`);
+    await p.query(`DELETE FROM trip_activity`);
+    await p.query(`DELETE FROM itinerary_details`);
+    await p.query(`DELETE FROM itineraries`);
+    await p.query(`DELETE FROM tours`);
+    await p.query(`DELETE FROM car_rentals`);
+    await p.query(`DELETE FROM item_votes`);
+    await p.query(`DELETE FROM lodgings`);
+    await p.query(`DELETE FROM flight_shares`);
+    await p.query(`DELETE FROM flights`);
+    await p.query(`DELETE FROM expenses`);
+    await p.query(`DELETE FROM trips`);
+    await p.query(`DELETE FROM place_details_cache`);
+    await p.query(`DELETE FROM place_lookup_cache`);
+    await p.query(`DELETE FROM group_invites`);
+    await p.query(`DELETE FROM group_members`);
+    await p.query(`DELETE FROM groups`);
+    await p.query(`DELETE FROM traits`);
+    await p.query(`DELETE FROM family_relationships`);
+    await p.query(`DELETE FROM fellow_travelers`);
+    await p.query(`DELETE FROM user_email_verifications`);
+    await p.query(`DELETE FROM user_emails`);
+    await p.query(`DELETE FROM web_users`);
+    await p.query(`DELETE FROM users`);
+  }
 
   // Seed tiers (individual parameterized inserts to avoid pg-mem uuid evaluation issues)
   for (const [key, displayName, rank] of [['free', 'Free', 1], ['premium', 'Premium', 2], ['pro', 'Pro', 3]] as const) {
@@ -969,6 +1028,43 @@ export const initDb = async (): Promise<void> => {
     );
   }
 
+  const featureIdCache: Record<string, string> = {};
+  const tierIdCache: Record<string, string> = {};
+  for (const [key] of featureSeedRows) {
+    const { rows } = await p.query<{ id: string }>(`SELECT id FROM features WHERE key = $1`, [key]);
+    if (rows[0]?.id) {
+      featureIdCache[key] = rows[0].id;
+    }
+  }
+
+  const tierEntitlementSeeds: Array<[string, string, boolean]> = [
+    ['free', 'ai_itinerary_generation', true],
+    ['free', 'csv_export', true],
+    ['free', 'car_rentals', true],
+    ['free', 'trip_sharing', true],
+    ['free', 'trip_following', true],
+    ['free', 'cost_tracking', false],
+    ['free', 'multiple_groups', true],
+    ['free', 'trip_creation', true],
+    ['premium', 'cost_tracking', true],
+    ['pro', 'cost_tracking', true],
+  ];
+  for (const [tierKey, featureKey, isAllowed] of tierEntitlementSeeds) {
+    if (!tierIdCache[tierKey]) {
+      const { rows } = await p.query<{ id: string }>(`SELECT id FROM tiers WHERE key = $1`, [tierKey]);
+      if (!rows.length) continue;
+      tierIdCache[tierKey] = rows[0].id;
+    }
+    const featureId = featureIdCache[featureKey];
+    if (!featureId) continue;
+    await p.query(
+      `INSERT INTO tier_entitlements (id, tier_id, feature_id, is_allowed)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (tier_id, feature_id) DO NOTHING`,
+      [randomUUID(), tierIdCache[tierKey], featureId, isAllowed]
+    );
+  }
+
   // Seed tier limits — fetch tier IDs then insert directly (pg-mem compatible)
   const tierLimitSeeds: Array<[string, string, number]> = [
     ['free',    'max_active_trips',                    3],
@@ -981,7 +1077,6 @@ export const initDb = async (): Promise<void> => {
     ['pro',     'max_travelers_per_trip',              200],
     ['pro',     'ai_itinerary_generations_per_month', -1],
   ];
-  const tierIdCache: Record<string, string> = {};
   for (const [tierKey, limitKey, limitValue] of tierLimitSeeds) {
     if (!tierIdCache[tierKey]) {
       const { rows } = await p.query<{ id: string }>(`SELECT id FROM tiers WHERE key = $1`, [tierKey]);
@@ -1072,43 +1167,6 @@ export const initDb = async (): Promise<void> => {
       isVerified: Boolean(user.emailVerified ?? true),
       verifiedAt: user.emailVerifiedAt ? new Date(user.emailVerifiedAt) : null,
     });
-  }
-
-  if (process.env.USE_IN_MEMORY_DB === '1') {
-    // Clear data between test runs while keeping schema intact.
-    await p.query(`DELETE FROM audit_log`);
-    await p.query(`DELETE FROM generation_idempotency`);
-    await p.query(`DELETE FROM usage_counters`);
-    await p.query(`DELETE FROM user_tiers`);
-    await p.query(`DELETE FROM tier_entitlements`);
-    await p.query(`DELETE FROM tier_limits`);
-    await p.query(`DELETE FROM feature_flags`);
-    await p.query(`DELETE FROM tiers`);
-    await p.query(`DELETE FROM features`);
-    await p.query(`DELETE FROM trip_comments`);
-    await p.query(`DELETE FROM trip_activity`);
-    await p.query(`DELETE FROM itinerary_details`);
-    await p.query(`DELETE FROM itineraries`);
-    await p.query(`DELETE FROM tours`);
-    await p.query(`DELETE FROM car_rentals`);
-    await p.query(`DELETE FROM item_votes`);
-    await p.query(`DELETE FROM lodgings`);
-    await p.query(`DELETE FROM flight_shares`);
-    await p.query(`DELETE FROM flights`);
-    await p.query(`DELETE FROM expenses`);
-    await p.query(`DELETE FROM trips`);
-    await p.query(`DELETE FROM place_details_cache`);
-    await p.query(`DELETE FROM place_lookup_cache`);
-    await p.query(`DELETE FROM group_invites`);
-    await p.query(`DELETE FROM group_members`);
-    await p.query(`DELETE FROM groups`);
-    await p.query(`DELETE FROM traits`);
-    await p.query(`DELETE FROM family_relationships`);
-    await p.query(`DELETE FROM fellow_travelers`);
-    await p.query(`DELETE FROM user_email_verifications`);
-    await p.query(`DELETE FROM user_emails`);
-    await p.query(`DELETE FROM web_users`);
-    await p.query(`DELETE FROM users`);
   }
 };
 
@@ -7341,7 +7399,7 @@ export const getCurrentUserTier = async (userId: string): Promise<(UserTier & { 
 export const setUserTier = async (
   userId: string,
   tierKey: string,
-  source: 'system' | 'admin',
+  source: 'system' | 'billing' | 'admin_override' | 'admin',
   assignedBy: string | null,
   reason?: string
 ): Promise<void> => {
@@ -7357,6 +7415,19 @@ export const setUserTier = async (
      VALUES (uuid_generate_v4(), $1, $2, $3, $4, $5)`,
     [userId, tier.id, source, reason ?? null, assignedBy]
   );
+};
+
+export const ensureCurrentUserTier = async (userId: string, tierKey = 'free'): Promise<void> => {
+  const p = getPool();
+  const { rows } = await p.query<{ id: string }>(
+    `SELECT id
+     FROM user_tiers
+     WHERE user_id = $1 AND effective_to IS NULL
+     LIMIT 1`,
+    [userId]
+  );
+  if (rows.length) return;
+  await setUserTier(userId, tierKey, 'system', null, 'Automatic default tier assignment');
 };
 
 export const getFeatureFlag = async (key: string): Promise<FeatureFlag | null> => {
@@ -7432,6 +7503,20 @@ export const incrementUsageCounter = async (
   return parseInt(rows[0].count, 10);
 };
 
+export const appendUsageEvent = async (
+  userId: string,
+  metricKey: string,
+  amount = 1,
+  metadata?: Record<string, unknown> | null
+): Promise<void> => {
+  const p = getPool();
+  await p.query(
+    `INSERT INTO usage_events (id, user_id, metric_key, amount, metadata)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [randomUUID(), userId, metricKey, amount, metadata ? JSON.stringify(metadata) : null]
+  );
+};
+
 export const atomicIncrementIfUnderLimit = async (
   userId: string,
   metricKey: string,
@@ -7458,6 +7543,103 @@ export const atomicIncrementIfUnderLimit = async (
   }
   const current = await getUsageCounter(userId, metricKey, windowKey);
   return { allowed: false, newCount: current };
+};
+
+export const getGenerationIdempotency = async (key: string) => {
+  const p = getPool();
+  const { rows } = await p.query<{
+    key: string;
+    user_id: string;
+    trip_id: string;
+    usage_key: string | null;
+    window_key: string | null;
+    status: 'pending' | 'completed' | 'failed';
+    result_ref: string | null;
+    response_body: Record<string, unknown> | null;
+    error_message: string | null;
+    created_at: string;
+    expires_at: string;
+  }>(
+    `SELECT key, user_id, trip_id, usage_key, window_key, status, result_ref, response_body, error_message, created_at, expires_at
+     FROM generation_idempotency
+     WHERE key = $1`,
+    [key]
+  );
+  if (!rows.length) return null;
+  const row = rows[0];
+  return {
+    key: row.key,
+    userId: row.user_id,
+    tripId: row.trip_id,
+    usageKey: row.usage_key,
+    windowKey: row.window_key,
+    status: row.status,
+    resultRef: row.result_ref,
+    responseBody: row.response_body,
+    errorMessage: row.error_message,
+    createdAt: row.created_at,
+    expiresAt: row.expires_at,
+  };
+};
+
+export const reserveGenerationIdempotency = async (params: {
+  key: string;
+  userId: string;
+  tripId: string;
+  usageKey: string;
+  windowKey: string;
+  ttlSeconds?: number;
+}): Promise<{ created: boolean; record: Awaited<ReturnType<typeof getGenerationIdempotency>> }> => {
+  const p = getPool();
+  const ttlSeconds = Math.max(60, params.ttlSeconds ?? 3600);
+  await p.query(
+    `INSERT INTO generation_idempotency
+       (key, user_id, trip_id, usage_key, window_key, status, expires_at)
+     VALUES ($1, $2, $3, $4, $5, 'pending', NOW() + ($6 || ' seconds')::interval)
+     ON CONFLICT (key) DO NOTHING`,
+    [params.key, params.userId, params.tripId, params.usageKey, params.windowKey, String(ttlSeconds)]
+  );
+  const record = await getGenerationIdempotency(params.key);
+  return { created: Boolean(record && record.userId === params.userId && record.status === 'pending' && record.tripId === params.tripId), record };
+};
+
+export const completeGenerationIdempotency = async (key: string, responseBody: Record<string, unknown>, resultRef?: string | null): Promise<void> => {
+  const p = getPool();
+  await p.query(
+    `UPDATE generation_idempotency
+     SET status = 'completed',
+         result_ref = $2,
+         response_body = $3::jsonb,
+         error_message = NULL
+     WHERE key = $1`,
+    [key, resultRef ?? null, JSON.stringify(responseBody)]
+  );
+};
+
+export const failGenerationIdempotency = async (key: string, errorMessage: string): Promise<void> => {
+  const p = getPool();
+  await p.query(
+    `UPDATE generation_idempotency
+     SET status = 'failed',
+         error_message = $2
+     WHERE key = $1`,
+    [key, errorMessage]
+  );
+};
+
+export const countReservedOrCompletedUsage = async (userId: string, usageKey: string, windowKey: string): Promise<number> => {
+  const p = getPool();
+  const { rows } = await p.query<{ count: string }>(
+    `SELECT COUNT(*) AS count
+     FROM generation_idempotency
+     WHERE user_id = $1
+       AND usage_key = $2
+       AND window_key = $3
+       AND status IN ('pending', 'completed')
+       AND expires_at > LOCALTIMESTAMP`,
+    [userId, usageKey, windowKey]
+  );
+  return parseInt(rows[0]?.count ?? '0', 10);
 };
 
 export const writeAuditLog = async (entry: {
@@ -7596,7 +7778,7 @@ export const adminSearchUsers = async (opts: {
   let idx = 1;
   if (search) {
     conditions.push(
-      `(u.email ILIKE $${idx} OR wu.first_name ILIKE $${idx} OR wu.last_name ILIKE $${idx})`
+      `(u.email ILIKE $${idx} OR wu.first_name ILIKE $${idx} OR wu.last_name ILIKE $${idx} OR u.id::text ILIKE $${idx})`
     );
     params.push(`%${search}%`);
     idx++;
@@ -7715,7 +7897,7 @@ export const adminGetUserData = async (opts: {
   summary: { totalUsers: number; byTier: Record<string, number> };
   users: Array<{
     id: string; email: string; role: string; tierKey: string | null;
-    aiGenerations: number; tokens: number; createdAt: string;
+    tripCount: number; tripCreations: number; aiGenerations: number; tokens: number; apiCalls: Record<string, number>; createdAt: string;
   }>;
   total: number;
 }> => {
@@ -7723,26 +7905,11 @@ export const adminGetUserData = async (opts: {
   const page = Math.max(1, opts.page ?? 1);
   const limit = Math.min(100, Math.max(1, opts.limit ?? 20));
   const offset = (page - 1) * limit;
-
-  // Determine window key filter
-  const now = new Date();
-  const currentWindow = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
-  const prevDate = new Date(now);
-  prevDate.setUTCMonth(prevDate.getUTCMonth() - 1);
-  const prevWindow = `${prevDate.getUTCFullYear()}-${String(prevDate.getUTCMonth() + 1).padStart(2, '0')}`;
-
-  let windowFilter = '';
-  const windowParams: unknown[] = [];
-  if (opts.window === '7d' || opts.window === '30d') {
-    windowFilter = `AND uc.window_key = $1`;
-    windowParams.push(currentWindow);
-  } else if (opts.window === 'all-time') {
-    // No window filter — aggregate all
-  } else {
-    // Default: current + previous month
-    windowFilter = `AND uc.window_key IN ($1, $2)`;
-    windowParams.push(currentWindow, prevWindow);
-  }
+  const providerKeys = Object.keys(getApiLimitsConfig().providers ?? {});
+  const windowDays = opts.window === '7d' ? 7 : opts.window === '30d' ? 30 : null;
+  const windowStart = windowDays
+    ? new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000).toISOString()
+    : null;
 
   // Summary
   const { rows: summaryRows } = await p.query<{ tier_key: string | null; count: string }>(
@@ -7762,29 +7929,65 @@ export const adminGetUserData = async (opts: {
   const countResult = await p.query<{ count: string }>(`SELECT COUNT(*) as count FROM users`);
   const total = parseInt(countResult.rows[0].count, 10);
 
-  // Per-user usage
-  const usageParams: unknown[] = [...windowParams, limit, offset];
-  const wfPlaceholder = windowFilter.replace('$1', `$1`); // already correct
-  const limitIdx = windowParams.length + 1;
-  const offsetIdx = windowParams.length + 2;
-
   const { rows } = await p.query<{
-    id: string; email: string; role: string | null; tier_key: string | null;
-    ai_generations: string; tokens: string; created_at: string;
+    id: string; email: string; role: string | null; tier_key: string | null; created_at: string;
   }>(
     `SELECT u.id, u.email, COALESCE(u.role, 'user') as role, t.key as tier_key,
-            COALESCE(SUM(CASE WHEN uc.metric_key = 'ai_itinerary_generations' THEN uc.count ELSE 0 END), 0) as ai_generations,
-            COALESCE(SUM(CASE WHEN uc.metric_key = 'openai_tokens' THEN uc.count ELSE 0 END), 0) as tokens,
             u.created_at
      FROM users u
      LEFT JOIN user_tiers ut ON ut.user_id = u.id AND ut.effective_to IS NULL
      LEFT JOIN tiers t ON t.id = ut.tier_id
-     LEFT JOIN usage_counters uc ON uc.user_id = u.id ${windowFilter}
-     GROUP BY u.id, u.email, u.role, t.key, u.created_at
-     ORDER BY ai_generations DESC, u.created_at DESC
-     LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
-    usageParams
+     ORDER BY u.created_at DESC
+     LIMIT $1 OFFSET $2`,
+    [limit, offset]
   );
+
+  const userIds = rows.map((row) => row.id);
+  const metricsByUser = new Map<string, Record<string, number>>();
+  const tripCountsByUser = new Map<string, number>();
+  const apiCallsByUser = new Map<string, Record<string, number>>();
+  if (userIds.length) {
+    const { rows: metricRows } = await p.query<{ user_id: string; metric_key: string; total: string }>(
+      `SELECT ue.user_id, ue.metric_key, SUM(ue.amount) AS total
+       FROM usage_events ue
+       WHERE ue.user_id = ANY($1::uuid[])
+         AND ($2::timestamp IS NULL OR ue.created_at >= $2::timestamp)
+       GROUP BY ue.user_id, ue.metric_key`,
+      [userIds, windowStart]
+    );
+    for (const row of metricRows) {
+      const bucket = metricsByUser.get(row.user_id) ?? {};
+      bucket[row.metric_key] = parseInt(row.total, 10);
+      metricsByUser.set(row.user_id, bucket);
+    }
+    const { rows: tripRows } = await p.query<{ user_id: string; total: string }>(
+      `SELECT u.id AS user_id, COUNT(DISTINCT t.id) AS total
+       FROM users u
+       LEFT JOIN groups g ON g.owner_id = u.id
+       LEFT JOIN group_members gm ON gm.user_id = u.id AND gm.removed_at IS NULL
+       LEFT JOIN trips t ON t.group_id = g.id OR t.group_id = gm.group_id
+       WHERE u.id = ANY($1::uuid[])
+       GROUP BY u.id`,
+      [userIds]
+    );
+    for (const row of tripRows) {
+      tripCountsByUser.set(row.user_id, parseInt(row.total, 10));
+    }
+    const { rows: apiRows } = await p.query<{ user_id: string; metric_key: string; total: string }>(
+      `SELECT ue.user_id, ue.metric_key, SUM(ue.amount) AS total
+       FROM usage_events ue
+       WHERE ue.user_id = ANY($1::uuid[])
+         AND ue.metric_key LIKE 'api_calls_%'
+         AND ($2::timestamp IS NULL OR ue.created_at >= $2::timestamp)
+       GROUP BY ue.user_id, ue.metric_key`,
+      [userIds, windowStart]
+    );
+    for (const row of apiRows) {
+      const bucket = apiCallsByUser.get(row.user_id) ?? {};
+      bucket[row.metric_key] = parseInt(row.total, 10);
+      apiCallsByUser.set(row.user_id, bucket);
+    }
+  }
 
   return {
     summary: { totalUsers, byTier },
@@ -7794,8 +7997,17 @@ export const adminGetUserData = async (opts: {
       email: r.email,
       role: r.role ?? 'user',
       tierKey: r.tier_key,
-      aiGenerations: parseInt(r.ai_generations, 10),
-      tokens: parseInt(r.tokens, 10),
+      tripCount: tripCountsByUser.get(r.id) ?? 0,
+      tripCreations: metricsByUser.get(r.id)?.trip_creations ?? 0,
+      aiGenerations: metricsByUser.get(r.id)?.ai_itinerary_generations ?? 0,
+      tokens: metricsByUser.get(r.id)?.openai_tokens ?? 0,
+      apiCalls: providerKeys.reduce<Record<string, number>>((acc, providerKey) => {
+        const metricKey = `api_calls_${providerKey.toLowerCase()}`;
+        acc[providerKey] =
+          apiCallsByUser.get(r.id)?.[metricKey] ??
+          (providerKey === 'OPENAI' ? metricsByUser.get(r.id)?.ai_itinerary_generations ?? 0 : 0);
+        return acc;
+      }, {}),
       createdAt: r.created_at,
     })),
   };

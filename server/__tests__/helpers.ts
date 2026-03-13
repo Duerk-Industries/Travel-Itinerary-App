@@ -140,4 +140,47 @@ export const seedTiersForTest = async (pool: Pool): Promise<void> => {
       [tierKey, limitKey, limitValue],
     );
   }
+  const features: Array<[string, string, boolean]> = [
+    ['ai_itinerary_generation', 'AI-powered itinerary generation', true],
+    ['csv_export', 'Export cost reports as CSV', true],
+    ['car_rentals', 'Car rental tracking', true],
+    ['trip_sharing', 'Share trips with other users', true],
+    ['trip_following', 'Follow trips as read-only observer', true],
+    ['cost_tracking', 'Expense and cost tracking', true],
+    ['multiple_groups', 'Create more than one group', true],
+    ['trip_creation', 'Create new trips', true],
+  ];
+  for (const [key, description, defaultEnabled] of features) {
+    await pool.query(
+      `INSERT INTO features (id, key, description, default_enabled)
+       VALUES (uuid_generate_v4(), $1, $2, $3)
+       ON CONFLICT (key) DO NOTHING`,
+      [key, description, defaultEnabled],
+    );
+  }
+  const entitlements: Array<[string, string, boolean]> = [
+    ['free', 'ai_itinerary_generation', true],
+    ['free', 'csv_export', true],
+    ['free', 'car_rentals', true],
+    ['free', 'trip_sharing', true],
+    ['free', 'trip_following', true],
+    ['free', 'cost_tracking', false],
+    ['free', 'multiple_groups', true],
+    ['free', 'trip_creation', true],
+    ['premium', 'cost_tracking', true],
+    ['pro', 'cost_tracking', true],
+  ];
+  for (const [tierKey, featureKey, isAllowed] of entitlements) {
+    const tierResult = await pool.query(`SELECT id FROM tiers WHERE key = $1 LIMIT 1`, [tierKey]);
+    const featureResult = await pool.query(`SELECT id FROM features WHERE key = $1 LIMIT 1`, [featureKey]);
+    const tierId = tierResult.rows[0]?.id;
+    const featureId = featureResult.rows[0]?.id;
+    if (!tierId || !featureId) continue;
+    await pool.query(
+      `INSERT INTO tier_entitlements (id, tier_id, feature_id, is_allowed)
+       VALUES (uuid_generate_v4(), $1, $2, $3)
+       ON CONFLICT (tier_id, feature_id) DO UPDATE SET is_allowed = $3`,
+      [tierId, featureId, isAllowed],
+    );
+  }
 };

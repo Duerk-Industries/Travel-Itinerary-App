@@ -12,6 +12,8 @@
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Image, Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme, useWindowDimensions } from 'react-native';
+import { NavigationContainer, createNavigationContainerRef, type LinkingOptions } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Constants from 'expo-constants';
 import { formatDateLong } from './utils/formatDateLong';
 import { normalizeDateString } from './utils/normalizeDateString';
@@ -198,6 +200,57 @@ type Page =
   | 'following'
   | 'admin';
 
+type AdminSectionRoute = 'overview' | 'users' | 'tiers' | 'features' | 'user-data' | 'audit-log';
+
+type RootStackParamList = {
+  Main: undefined;
+  AdminOverview: undefined;
+  AdminUsers: undefined;
+  AdminTiers: undefined;
+  AdminFeatures: undefined;
+  AdminUserData: undefined;
+  AdminAuditLog: undefined;
+};
+
+const RootStack = createNativeStackNavigator<RootStackParamList>();
+const navigationRef = createNavigationContainerRef<RootStackParamList>();
+
+const adminScreenBySection: Record<AdminSectionRoute, keyof RootStackParamList> = {
+  overview: 'AdminOverview',
+  users: 'AdminUsers',
+  tiers: 'AdminTiers',
+  features: 'AdminFeatures',
+  'user-data': 'AdminUserData',
+  'audit-log': 'AdminAuditLog',
+};
+
+const adminSectionByScreen: Record<Exclude<keyof RootStackParamList, 'Main'>, AdminSectionRoute> = {
+  AdminOverview: 'overview',
+  AdminUsers: 'users',
+  AdminTiers: 'tiers',
+  AdminFeatures: 'features',
+  AdminUserData: 'user-data',
+  AdminAuditLog: 'audit-log',
+};
+
+const linking: LinkingOptions<RootStackParamList> = {
+  prefixes: [
+    'wanderbunnies://',
+    ...(Platform.OS === 'web' && typeof window !== 'undefined' ? [window.location.origin] : []),
+  ],
+  config: {
+    screens: {
+      Main: '',
+      AdminOverview: 'admin',
+      AdminUsers: 'admin/users',
+      AdminTiers: 'admin/tiers',
+      AdminFeatures: 'admin/features',
+      AdminUserData: 'admin/user-data',
+      AdminAuditLog: 'admin/audit-log',
+    },
+  },
+};
+
 // Resolve backend URL; keep Expo web on localhost hitting the local API over HTTP to avoid HTTPS upgrades/CORS issues.
 const resolveBackendUrl = (): string => {
   const envConfigured =
@@ -280,7 +333,12 @@ const extractTokenFromUrl = (rawUrl: string) => {
   return { token: null, url: null, source: null, isConfirm: false, isSecondaryConfirm: false, requirePasswordSetup: false } as const;
 };
 
-const App: React.FC = () => {
+type AppShellProps = {
+  initialAdminSection?: AdminSectionRoute;
+  onOpenAdminSection?: (section: AdminSectionRoute) => void;
+};
+
+const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', onOpenAdminSection }) => {
   const { width: viewportWidth } = useWindowDimensions();
   const systemColorScheme = useColorScheme();
   const isNarrowLayout = viewportWidth < 980;
@@ -561,6 +619,19 @@ const App: React.FC = () => {
     }
     setActivePage(page);
   }, [activePage]);
+
+  const openAdminSection = useCallback((section: AdminSectionRoute = initialAdminSection) => {
+    if (userRole !== 'admin') return;
+    onOpenAdminSection?.(section);
+  }, [initialAdminSection, onOpenAdminSection, userRole]);
+
+  useEffect(() => {
+    if (!navigationRef.isReady()) return;
+    const routeName = navigationRef.getCurrentRoute()?.name;
+    if (userRole !== 'admin' && routeName && routeName !== 'Main') {
+      navigationRef.navigate('Main');
+    }
+  }, [userRole]);
 
   const openMaps = useCallback((address: string) => {
     const url = buildMapUrl(address, mapApp);
@@ -2115,7 +2186,7 @@ const App: React.FC = () => {
     [backendUrl, headers, logout]
   );
 
-  return (
+  const mainWorkspace = (
     <SafeAreaView style={[styles.container, iosSafariSafeAreaStyle]}>
       <View style={[styles.topBar, isNarrowLayout && styles.topBarStacked]}>
         <View style={[styles.topBarLeft, isNarrowLayout && styles.topBarLeftNarrow]}>
@@ -2215,7 +2286,7 @@ const App: React.FC = () => {
               {userRole === 'admin' ? (
                 <TouchableOpacity
                   style={[styles.button, styles.smallButton, styles.topBarActionButton]}
-                  onPress={() => requestPageChange('admin')}
+                  onPress={() => openAdminSection('overview')}
                 >
                   <Text style={styles.buttonText}>Admin</Text>
                 </TouchableOpacity>
@@ -3004,12 +3075,6 @@ const App: React.FC = () => {
             />
           ) : null}
 
-          {activePage === 'admin' && userRole === 'admin' ? (
-            <AdminTab
-              backendUrl={backendUrl}
-              headers={headers}
-            />
-          ) : null}
         </ScrollView>
       ) : (
         <View style={styles.auth}>
@@ -3231,6 +3296,87 @@ const App: React.FC = () => {
         />
       ) : null}
     </SafeAreaView>
+  );
+
+  const renderAdminScreen = (section: AdminSectionRoute) => (
+    <AdminTab
+      backendUrl={backendUrl}
+      headers={headers}
+      initialSection={section}
+      onSectionChange={(nextSection) => {
+        if (nextSection === 'user-detail') return;
+        openAdminSection(nextSection as AdminSectionRoute);
+      }}
+    />
+  );
+
+  return (
+    <NavigationContainer ref={navigationRef} linking={linking}>
+      <RootStack.Navigator>
+        <RootStack.Screen name="Main" options={{ headerShown: false }}>
+          {() => mainWorkspace}
+        </RootStack.Screen>
+        <RootStack.Group
+          screenOptions={{
+            headerShown: true,
+            headerBackTitle: 'Back',
+          }}
+        >
+          <RootStack.Screen
+            name="AdminOverview"
+            options={{ title: 'Admin' }}
+          >
+            {() => renderAdminScreen('overview')}
+          </RootStack.Screen>
+          <RootStack.Screen
+            name="AdminUsers"
+            options={{ title: 'Admin Users' }}
+          >
+            {() => renderAdminScreen('users')}
+          </RootStack.Screen>
+          <RootStack.Screen
+            name="AdminTiers"
+            options={{ title: 'Admin Tiers' }}
+          >
+            {() => renderAdminScreen('tiers')}
+          </RootStack.Screen>
+          <RootStack.Screen
+            name="AdminFeatures"
+            options={{ title: 'Admin Features' }}
+          >
+            {() => renderAdminScreen('features')}
+          </RootStack.Screen>
+          <RootStack.Screen
+            name="AdminUserData"
+            options={{ title: 'Admin User Data' }}
+          >
+            {() => renderAdminScreen('user-data')}
+          </RootStack.Screen>
+          <RootStack.Screen
+            name="AdminAuditLog"
+            options={{ title: 'Admin Audit Log' }}
+          >
+            {() => renderAdminScreen('audit-log')}
+          </RootStack.Screen>
+        </RootStack.Group>
+      </RootStack.Navigator>
+    </NavigationContainer>
+  );
+};
+
+const App: React.FC = () => {
+  const openAdminSection = useCallback((section: AdminSectionRoute) => {
+    const screen = adminScreenBySection[section];
+    if (navigationRef.isReady()) {
+      navigationRef.navigate(screen);
+    }
+  }, []);
+
+  return (
+    <AppShell
+      initialAdminSection="overview"
+      onOpenAdminSection={openAdminSection}
+    />
   );
 };
 

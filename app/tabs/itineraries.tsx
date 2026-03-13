@@ -12,6 +12,14 @@ import { extractPromptTraitsFromTraits } from '../utils/promptTraits';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import type { Trait } from './traits';
 
+const createIdempotencyKey = (prefix: string): string => {
+  const cryptoApi = globalThis.crypto as { randomUUID?: () => string } | undefined;
+  if (typeof cryptoApi?.randomUUID === 'function') {
+    return `${prefix}-${cryptoApi.randomUUID()}`;
+  }
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+};
+
 type Styles = ReturnType<typeof StyleSheet.create>;
 type Setter<T> = React.Dispatch<React.SetStateAction<T>>;
 
@@ -559,9 +567,10 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
     setItineraryError('');
     setItineraryPlan('');
     try {
+      const idempotencyKey = createIdempotencyKey(`itinerary-${activeTripId}`);
       const res = await fetch(`${backendUrl}/api/itinerary/async`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...headers },
+        headers: { 'Content-Type': 'application/json', 'Idempotency-Key': idempotencyKey, ...headers },
         body: JSON.stringify({
           country,
           days: Number(days),
@@ -571,6 +580,7 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
           tripId: activeTripId,
           tt: promptTraits.tt,
           ut: promptTraits.ut,
+          idempotencyKey,
         }),
       });
       const data = await res.json().catch(() => ({}));

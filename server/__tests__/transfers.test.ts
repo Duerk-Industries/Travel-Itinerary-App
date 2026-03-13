@@ -2,7 +2,7 @@ import request from 'supertest';
 import { Pool } from 'pg';
 import { app } from '../src/app';
 import { initDb, closePool } from '../src/db';
-import { registerAndLoginWebUser, registerWebUser } from './helpers';
+import { registerAndLoginWebUser, registerWebUser, seedTiersForTest, setUserTierInDb } from './helpers';
 
 describe('Flights API passenger validation', () => {
   const user = { email: 'flight-user@example.com', firstName: 'Flight', lastName: 'Owner', password: 'testtest' };
@@ -16,9 +16,11 @@ describe('Flights API passenger validation', () => {
     process.env.NODE_ENV = 'test';
     await initDb();
     pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    await seedTiersForTest(pool);
     await pool.query('DELETE FROM users WHERE email IN ($1, $2)', [user.email, member.email]);
     const login = await registerAndLoginWebUser(pool, user);
     token = login.token;
+    await setUserTierInDb(pool, login.userId, 'premium');
 
     // Create the passenger as a real user so they can be added to the group.
     await registerWebUser(member);
@@ -298,10 +300,12 @@ describe('Pending passengers and payer rules', () => {
     process.env.NODE_ENV = 'test';
     await initDb();
     pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    await seedTiersForTest(pool);
     await pool.query('DELETE FROM users WHERE email = $1', [owner.email]);
 
     const login = await registerAndLoginWebUser(pool, owner);
     token = login.token;
+    await setUserTierInDb(pool, login.userId, 'premium');
 
     const groups = await request(app).get('/api/groups').set('Authorization', `Bearer ${token}`).expect(200);
     groupId = groups.body[0]?.id as string;
@@ -411,13 +415,16 @@ describe('Trip removal keeps passengers but strips payer status', () => {
     process.env.NODE_ENV = 'test';
     await initDb();
     pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    await seedTiersForTest(pool);
     await pool.query('DELETE FROM users WHERE email IN ($1, $2)', [owner.email, member.email]);
 
     const ownerLogin = await registerAndLoginWebUser(pool, owner);
     ownerToken = ownerLogin.token;
+    await setUserTierInDb(pool, ownerLogin.userId, 'premium');
 
     const memberLogin = await registerAndLoginWebUser(pool, member);
     memberToken = memberLogin.token;
+    await setUserTierInDb(pool, memberLogin.userId, 'premium');
 
     const groups = await request(app).get('/api/groups').set('Authorization', `Bearer ${ownerToken}`).expect(200);
     groupId = groups.body[0]?.id as string;

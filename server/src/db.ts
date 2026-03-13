@@ -339,6 +339,8 @@ export const getCurrentUserTier = async (...args: Parameters<ReturnType<typeof a
   adapter().getCurrentUserTier(...args);
 export const setUserTier = async (...args: Parameters<ReturnType<typeof adapter>['setUserTier']>) =>
   adapter().setUserTier(...args);
+export const ensureCurrentUserTier = async (...args: Parameters<ReturnType<typeof adapter>['ensureCurrentUserTier']>) =>
+  adapter().ensureCurrentUserTier(...args);
 export const getFeatureFlag = async (...args: Parameters<ReturnType<typeof adapter>['getFeatureFlag']>) =>
   adapter().getFeatureFlag(...args);
 export const listFeatureFlags = async (...args: Parameters<ReturnType<typeof adapter>['listFeatureFlags']>) =>
@@ -349,8 +351,25 @@ export const getUsageCounter = async (...args: Parameters<ReturnType<typeof adap
   adapter().getUsageCounter(...args);
 export const incrementUsageCounter = async (...args: Parameters<ReturnType<typeof adapter>['incrementUsageCounter']>) =>
   adapter().incrementUsageCounter(...args);
+export const appendUsageEvent = async (...args: Parameters<ReturnType<typeof adapter>['appendUsageEvent']>) =>
+  adapter().appendUsageEvent(...args);
 export const atomicIncrementIfUnderLimit = async (...args: Parameters<ReturnType<typeof adapter>['atomicIncrementIfUnderLimit']>) =>
   adapter().atomicIncrementIfUnderLimit(...args);
+export const getGenerationIdempotency = async (
+  ...args: Parameters<ReturnType<typeof adapter>['getGenerationIdempotency']>
+) => adapter().getGenerationIdempotency(...args);
+export const reserveGenerationIdempotency = async (
+  ...args: Parameters<ReturnType<typeof adapter>['reserveGenerationIdempotency']>
+) => adapter().reserveGenerationIdempotency(...args);
+export const completeGenerationIdempotency = async (
+  ...args: Parameters<ReturnType<typeof adapter>['completeGenerationIdempotency']>
+) => adapter().completeGenerationIdempotency(...args);
+export const failGenerationIdempotency = async (
+  ...args: Parameters<ReturnType<typeof adapter>['failGenerationIdempotency']>
+) => adapter().failGenerationIdempotency(...args);
+export const countReservedOrCompletedUsage = async (
+  ...args: Parameters<ReturnType<typeof adapter>['countReservedOrCompletedUsage']>
+) => adapter().countReservedOrCompletedUsage(...args);
 export const writeAuditLog = async (...args: Parameters<ReturnType<typeof adapter>['writeAuditLog']>) =>
   adapter().writeAuditLog(...args);
 export const listAuditLog = async (...args: Parameters<ReturnType<typeof adapter>['listAuditLog']>) =>

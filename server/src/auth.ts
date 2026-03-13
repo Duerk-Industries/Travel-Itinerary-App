@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
-import { findOrCreateUser, findOrCreateGoogleUser, getUserRole } from './db';
+import { findOrCreateUser, findOrCreateGoogleUser, getUserRole, ensureCurrentUserTier } from './db';
 import { isPasswordSetupRequired } from './db';
 import { User, UserRole } from './types';
 import { getEnvValue } from './env';
@@ -113,6 +113,7 @@ export const handleLogin = async (
   provider: User['provider']
 ): Promise<{ token: string; user: User }> => {
   const user = await findOrCreateUser(email, provider);
+  await ensureCurrentUserTier(user.id, 'free');
   const role = await getUserRole(user.id);
   const token = createToken({ userId: user.id, email: user.email, provider: user.provider, role });
   return { token, user };

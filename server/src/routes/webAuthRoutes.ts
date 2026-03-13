@@ -11,6 +11,7 @@ import {
   findUserByIdentifier,
   getPendingEmailVerification,
   getUserRole,
+  ensureCurrentUserTier,
   markEmailVerificationUsed,
   markAccountEmailVerified,
   markUserEmailVerificationUsed,
@@ -53,6 +54,7 @@ router.post('/register', async (req, res) => {
 
   try {
     const user = await createWebUser(firstName.trim(), lastName.trim(), email.trim().toLowerCase(), password.trim());
+    await ensureCurrentUserTier(user.id, 'free');
     if (user.emailVerified) {
       await ensureDefaultGroupForUser(user.id, user.email);
       await claimInvitesForUser(user.email, user.id);
@@ -150,6 +152,7 @@ router.post('/login', async (req, res) => {
       return;
     }
     await ensureDefaultGroupForUser(user.id, user.email);
+    await ensureCurrentUserTier(user.id, 'free');
     await claimInvitesForUser(user.email, user.id);
     const { firstLogin } = await recordWebUserLogin(user.id);
     await ensureAdminBootstrap(user.id, user.email);
@@ -199,6 +202,7 @@ router.get('/confirm', async (req, res) => {
     await markUserEmailVerified(verification.userId);
     await markEmailVerificationUsed(verification.id);
     await ensureDefaultGroupForUser(verification.userId, verification.email);
+    await ensureCurrentUserTier(verification.userId, 'free');
     await claimInvitesForUser(verification.email, verification.userId);
     await ensureAdminBootstrap(verification.userId, verification.email);
     res.json({ message: 'Email confirmed. You can now log in.' });

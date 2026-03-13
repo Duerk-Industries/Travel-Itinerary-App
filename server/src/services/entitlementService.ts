@@ -2,8 +2,11 @@ import {
   getUserRole, setUserRole, writeAuditLog,
   getFeatureFlag, listFeatureFlags, setFeatureFlag,
   getCurrentUserTier, listTiers, getTierLimitValue,
-  listFeatures, listTierEntitlements,
-  atomicIncrementIfUnderLimit, incrementUsageCounter, countActiveTripsForUser, countGroupMembers,
+  listFeatures, listTierEntitlements, upsertTierEntitlement,
+  incrementUsageCounter, countActiveTripsForUser, countGroupMembers,
+  appendUsageEvent,
+  ensureCurrentUserTier, reserveGenerationIdempotency, getGenerationIdempotency,
+  completeGenerationIdempotency, failGenerationIdempotency, countReservedOrCompletedUsage,
 } from '../db';
 import { UserRole, TierKey } from '../types';
 import { logInfo, logError } from '../logger';
@@ -60,6 +63,29 @@ export const seedEntitlementDefaults = async (): Promise<void> => {
       logInfo(`[entitlement] Seeded feature flag: ${key} = ${seed.enabled}`);
     }
   }
+
+  const tiers = await listTiers();
+  const features = await listFeatures();
+  const tierByKey = new Map(tiers.map((tier) => [tier.key, tier]));
+  const featureByKey = new Map(features.map((feature) => [feature.key, feature]));
+  const entitlementSeeds: Array<[TierKey, string, boolean]> = [
+    ['free', 'ai_itinerary_generation', true],
+    ['free', 'csv_export', true],
+    ['free', 'car_rentals', true],
+    ['free', 'trip_sharing', true],
+    ['free', 'trip_following', true],
+    ['free', 'cost_tracking', false],
+    ['free', 'multiple_groups', true],
+    ['free', 'trip_creation', true],
+    ['premium', 'cost_tracking', true],
+    ['pro', 'cost_tracking', true],
+  ];
+  for (const [tierKey, featureKey, isAllowed] of entitlementSeeds) {
+    const tier = tierByKey.get(tierKey);
+    const feature = featureByKey.get(featureKey);
+    if (!tier || !feature) continue;
+    await upsertTierEntitlement(tier.id, feature.id, isAllowed);
+  }
 };
 
 // ---------------------------------------------------------------------------
@@ -94,6 +120,7 @@ export const isFeatureEnabled = async (key: string): Promise<boolean> => {
  * Returns the active tier key for a user. Defaults to 'free' if no row exists.
  */
 export const getUserTierKey = async (userId: string): Promise<TierKey> => {
+  await ensureCurrentUserTier(userId, 'free');
   const userTier = await getCurrentUserTier(userId);
   return (userTier?.tierKey ?? 'free') as TierKey;
 };
@@ -119,6 +146,7 @@ const getCachedTiers = async () => {
  * Returns -1 for unlimited, null if no limit row exists anywhere in the inheritance chain.
  */
 export const getEffectiveLimit = async (userId: string, limitKey: string): Promise<number | null> => {
+  await ensureCurrentUserTier(userId, 'free');
   const userTier = await getCurrentUserTier(userId);
   if (!userTier) return null;
 
@@ -135,6 +163,11 @@ export const getEffectiveLimit = async (userId: string, limitKey: string): Promi
     if (value !== null) return value;
   }
   return null;
+};
+
+export const getLimit = async (userId: string, limitKey: string): Promise<number | null> => {
+  const limit = await getEffectiveLimit(userId, limitKey);
+  return limit === -1 ? Number.POSITIVE_INFINITY : limit;
 };
 
 // ---------------------------------------------------------------------------
@@ -182,18 +215,41 @@ export const assertCanUseFeature = async (
     return;
   }
 
+  await ensureCurrentUserTier(userId, 'free');
   const userTier = await getCurrentUserTier(userId);
   if (!userTier) return; // No tier row — treat as free; if free has no explicit deny, allow by default.
 
-  const entitlements = await listTierEntitlements(userTier.tierId);
-  const entry = entitlements.find(e => e.featureId === feature.id);
-  // If no explicit entitlement row, default to allowed (open by default for configured features).
-  if (entry && !entry.isAllowed) {
+  const allTiers = await getCachedTiers();
+  const userTierRank = allTiers.find(t => t.id === userTier.tierId)?.rank ?? 0;
+  const eligibleTiers = allTiers
+    .filter((tier) => tier.rank <= userTierRank)
+    .sort((a, b) => b.rank - a.rank);
+  let resolvedAllowance: boolean | null = null;
+  for (const tier of eligibleTiers) {
+    const entitlements = await listTierEntitlements(tier.id);
+    const entry = entitlements.find((item) => item.featureId === feature.id);
+    if (entry) {
+      resolvedAllowance = entry.isAllowed;
+      break;
+    }
+  }
+
+  if (resolvedAllowance === false) {
     throw new EntitlementError(
       'FEATURE_NOT_ENTITLED',
       `Your current plan does not include access to '${featureKey}'`,
       { featureKey }
     );
+  }
+};
+
+export const canUseFeature = async (userId: string, featureKey: string, role: UserRole = 'user'): Promise<boolean> => {
+  try {
+    await assertCanUseFeature(userId, featureKey, role);
+    return true;
+  } catch (err) {
+    if (err instanceof EntitlementError) return false;
+    throw err;
   }
 };
 
@@ -265,35 +321,94 @@ export const assertAndIncrementGenerationCount = async (
   windowKey: string,
   role: UserRole
 ): Promise<void> => {
-  const metricKey = 'ai_itinerary_generations';
-
-  if (role === 'admin') {
-    // Still increment for observability, but don't enforce the cap.
-    try {
-      await incrementUsageCounter(userId, metricKey, windowKey);
-    } catch (err) {
-      logError('[entitlement] Failed to increment generation counter for admin', err);
-    }
-    return;
-  }
-
   const limit = await getEffectiveLimit(userId, 'ai_itinerary_generations_per_month');
-  if (limit === null || limit === -1) {
-    // No limit configured — still track but allow.
-    try {
-      await incrementUsageCounter(userId, metricKey, windowKey);
-    } catch (err) {
-      logError('[entitlement] Failed to increment generation counter', err);
-    }
-    return;
-  }
-
-  const result = await atomicIncrementIfUnderLimit(userId, metricKey, windowKey, limit);
-  if (!result.allowed) {
+  if (role === 'admin' || limit === null || limit === -1) return;
+  const current = await countReservedOrCompletedUsage(userId, 'ai_itinerary_generations', windowKey);
+  if (current > limit) {
     throw new EntitlementError(
       'TIER_LIMIT_REACHED',
       `You have reached the AI itinerary generation limit of ${limit} for this month`,
       { limitKey: 'ai_itinerary_generations_per_month' }
     );
+  }
+};
+
+export const recordUsage = async (
+  userId: string,
+  usageKey: string,
+  amount = 1,
+  metadata?: { windowKey?: string | null; [key: string]: unknown }
+): Promise<void> => {
+  const windowKey = metadata?.windowKey ?? 'all-time';
+  await incrementUsageCounter(userId, usageKey, windowKey, amount);
+  if (windowKey !== 'all-time') {
+    await incrementUsageCounter(userId, usageKey, 'all-time', amount);
+  }
+  await appendUsageEvent(userId, usageKey, amount, metadata ?? null);
+};
+
+export const reserveGenerationUsage = async (params: {
+  userId: string;
+  tripId: string;
+  role: UserRole;
+  windowKey: string;
+  idempotencyKey: string;
+}): Promise<
+  | { status: 'reserved'; key: string }
+  | { status: 'completed'; responseBody: Record<string, unknown> | null }
+  | { status: 'pending' }
+> => {
+  const existing = await getGenerationIdempotency(params.idempotencyKey);
+  if (existing?.userId === params.userId) {
+    if (existing.status === 'completed') {
+      return { status: 'completed', responseBody: existing.responseBody ?? null };
+    }
+    if (existing.status === 'pending') {
+      return { status: 'pending' };
+    }
+  }
+  const reservation = await reserveGenerationIdempotency({
+    key: params.idempotencyKey,
+    userId: params.userId,
+    tripId: params.tripId,
+    usageKey: 'ai_itinerary_generations',
+    windowKey: params.windowKey,
+    ttlSeconds: 3600,
+  });
+  if (!reservation.created) {
+    const current = reservation.record;
+    if (current?.userId === params.userId && current.status === 'completed') {
+      return { status: 'completed', responseBody: current.responseBody ?? null };
+    }
+    return { status: 'pending' };
+  }
+  try {
+    await assertAndIncrementGenerationCount(params.userId, params.windowKey, params.role);
+  } catch (err) {
+    await failGenerationUsage(params.idempotencyKey, (err as Error).message);
+    throw err;
+  }
+  return { status: 'reserved', key: params.idempotencyKey };
+};
+
+export const finalizeGenerationUsage = async (params: {
+  userId: string;
+  windowKey: string;
+  idempotencyKey: string;
+  responseBody: Record<string, unknown>;
+  tokensUsed?: number;
+}): Promise<void> => {
+  await completeGenerationIdempotency(params.idempotencyKey, params.responseBody);
+  await recordUsage(params.userId, 'ai_itinerary_generations', 1, { windowKey: params.windowKey });
+  if ((params.tokensUsed ?? 0) > 0) {
+    await recordUsage(params.userId, 'openai_tokens', params.tokensUsed ?? 0, { windowKey: params.windowKey });
+  }
+};
+
+export const failGenerationUsage = async (idempotencyKey: string, errorMessage: string): Promise<void> => {
+  try {
+    await failGenerationIdempotency(idempotencyKey, errorMessage);
+  } catch (err) {
+    logError('[entitlement] Failed to mark generation reservation as failed', err);
   }
 };

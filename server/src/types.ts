@@ -71,7 +71,7 @@ export interface UserTier {
   id: string;
   userId: string;
   tierId: string;
-  source: 'system' | 'admin';
+  source: 'system' | 'billing' | 'admin_override' | 'admin' | string;
   reason?: string | null;
   assignedBy?: string | null;
   effectiveFrom: string;
@@ -96,6 +96,20 @@ export interface UsageCounter {
   windowKey: string;
   count: number;
   updatedAt: string;
+}
+
+export interface GenerationIdempotencyRecord {
+  key: string;
+  userId: string;
+  tripId: string;
+  usageKey?: string | null;
+  windowKey?: string | null;
+  status: 'pending' | 'completed' | 'failed';
+  resultRef?: string | null;
+  responseBody?: Record<string, unknown> | null;
+  errorMessage?: string | null;
+  createdAt: string;
+  expiresAt: string;
 }
 
 export type AuditAction =

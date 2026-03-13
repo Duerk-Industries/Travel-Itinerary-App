@@ -2,74 +2,66 @@
 
 ## Overview
 
-The tier system controls per-user numeric limits (e.g. max active trips) and feature entitlements (e.g. AI itinerary generation access). Every user has an active tier; new users are automatically assigned the **free** tier.
+Tiers are entitlement controls, not deployment toggles. Runtime truth lives in the database, and every new user is assigned `free` on first signup/login. The backend is the source of truth for all feature and limit checks.
 
 ## Tier definitions
 
-| Tier | Key | Rank | Max active trips | Max travelers/trip | AI generations/month |
-|---|---|---|---|---|---|
-| Free | `free` | 1 | 3 | 6 | 5 |
-| Premium | `premium` | 2 | 250 | 200 | unlimited |
-| Pro | `pro` | 3 | 250 | 200 | unlimited |
+| Tier | Key | Rank | Max active trips | Max travelers/trip | AI generations/month | Notes |
+|---|---|---:|---:|---:|---:|---|
+| Free | `free` | 1 | 3 | 6 | 5 | Can share trips and follow trips |
+| Premium | `premium` | 2 | 250 | 200 | unlimited | Includes cost tracking |
+| Pro | `pro` | 3 | 250 | 200 | unlimited | Inherits Premium and Free |
 
-Rank is used for inheritance: a user on rank-2 tier inherits the limits of rank-1 if no explicit row exists at rank-2. This allows tiers to be additive without duplicating every row.
+`rank` defines inheritance. Higher tiers inherit lower-tier capabilities unless they override them explicitly.
 
-`limit_value = -1` means unlimited. `null` (no row found at any tier in the chain) also means unlimited (fail-open).
+## Active trip rules
 
-## Active trip definition
+- An active trip uses `endDate >= nowUtc` inclusive.
+- `endDate = null` counts as active.
+- Trips the user follows do not count toward active-trip limits.
+- Trips the user owns or has accepted as a group member do count.
+- Non-admin users cannot create or update trips with `endDate < nowUtc`.
 
-A trip counts as "active" toward a user's limit if:
-- The user is the owner of the trip's group (`groups.owner_id`), **or**
-- The user has a non-removed, claimed `group_members` row for the trip's group.
+## Entitlement defaults
 
-Trips the user follows (via `trip_followers`) are **not** counted.
+| Feature | Free | Premium | Pro |
+|---|---|---|---|
+| `trip_creation` | allowed | inherited | inherited |
+| `trip_sharing` | allowed | inherited | inherited |
+| `trip_following` | allowed | inherited | inherited |
+| `ai_itinerary_generation` | allowed | inherited | inherited |
+| `car_rentals` | allowed | inherited | inherited |
+| `csv_export` | allowed | inherited | inherited |
+| `cost_tracking` | denied | allowed | allowed |
 
-## How a user's tier is resolved
+## Gate functions
 
-1. Query `user_tiers WHERE user_id = $1 AND effective_to IS NULL` — the current active row.
-2. If no row exists, default to `free`.
-3. The `tier_id` foreign key points to the `tiers` table row.
+All API and UI flows should rely on the same backend contract:
 
-Only one `user_tiers` row is active at a time (`effective_to IS NULL`). When a tier is changed, the old row gets `effective_to = NOW()` and a new row is inserted. This preserves a full tier history for a user.
+- `canUseFeature(userId, featureKey)`
+- `getLimit(userId, limitKey)`
+- `recordUsage(userId, usageKey, amount, metadata)`
 
-## How limit inheritance works
+`getLimit(...)` resolves values by walking the user's tier rank downward until it finds an explicit row. `-1` means unlimited.
 
-`getEffectiveLimit(userId, limitKey)` in `entitlementService.ts`:
+`recordUsage(...)` writes both counters and append-only usage events. Rolling reporting uses usage events; monthly quota enforcement uses UTC month keys plus idempotency-aware reservations.
 
-1. Resolve the user's current tier and its rank.
-2. Collect all tiers with `rank <= userTierRank`, sorted descending by rank.
-3. Walk the list; return the first explicit `tier_limits` row found for the given `limitKey`.
-4. If no row is found anywhere in the chain, return `null` (unlimited).
+## Admin behavior
 
-## How admin bypasses work
+Admins bypass:
 
-Admins bypass **limit checks** (trip count, traveler count, generation count) — they can always create trips, add members, and generate itineraries regardless of what limits are configured.
+- numeric limits
+- past-trip-date restrictions
 
-Admins do **not** bypass **feature flags** — if a flag is off, even admins cannot use that feature.
+Admins do not bypass:
 
-## How to add a new tier
+- feature flags
+- authentication
+- admin RBAC checks
 
-1. Insert a row in the `tiers` table with a unique `key`, `display_name`, and `rank`.
-2. Insert corresponding `tier_limits` rows.
-3. Insert `tier_entitlements` rows if the new tier should restrict any features.
-4. The seed in `initDb()` uses `ON CONFLICT (key) DO NOTHING` — existing rows are never overwritten by re-deployment.
+## AI itinerary counting
 
-## How to change a user's tier
-
-**Via admin panel:** Navigate to Admin → Users → select user → Change Tier.
-
-**Via admin API:**
-```
-PATCH /api/admin/users/:userId/tier
-{ "tierKey": "premium", "reason": "Upgraded after payment" }
-```
-
-**Direct DB (emergency only):**
-```sql
-UPDATE user_tiers SET effective_to = NOW()
-WHERE user_id = '<uuid>' AND effective_to IS NULL;
-
-INSERT INTO user_tiers (id, user_id, tier_id, source, reason)
-SELECT uuid_generate_v4(), '<uuid>', id, 'admin', 'Manual upgrade'
-FROM tiers WHERE key = 'premium';
-```
+- Count window: UTC calendar month.
+- Only successful generations count.
+- Duplicate requests must reuse an idempotency key and must not double-charge usage.
+- Enforcement occurs server-side before and after generation finalization.

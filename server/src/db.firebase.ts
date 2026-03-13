@@ -197,6 +197,28 @@ export const initDb = async (): Promise<void> => {
     }
   }
 
+  const tierEntitlementSeeds: Array<{ tierKey: string; featureKey: string; isAllowed: boolean }> = [
+    { tierKey: 'free', featureKey: 'ai_itinerary_generation', isAllowed: true },
+    { tierKey: 'free', featureKey: 'csv_export', isAllowed: true },
+    { tierKey: 'free', featureKey: 'car_rentals', isAllowed: true },
+    { tierKey: 'free', featureKey: 'trip_sharing', isAllowed: true },
+    { tierKey: 'free', featureKey: 'trip_following', isAllowed: true },
+    { tierKey: 'free', featureKey: 'cost_tracking', isAllowed: false },
+    { tierKey: 'free', featureKey: 'multiple_groups', isAllowed: true },
+    { tierKey: 'free', featureKey: 'trip_creation', isAllowed: true },
+    { tierKey: 'premium', featureKey: 'cost_tracking', isAllowed: true },
+    { tierKey: 'pro', featureKey: 'cost_tracking', isAllowed: true },
+  ];
+  for (const { tierKey, featureKey, isAllowed } of tierEntitlementSeeds) {
+    const docId = `${tierKey}_${featureKey}`;
+    const ref = db.collection('tier_entitlements').doc(docId);
+    const doc = await ref.get();
+    if (!doc.exists) {
+      await ref.set({ tierId: tierKey, featureId: featureKey, isAllowed, createdAt: nowIso() });
+      logInfo(`[db.firebase] Seeded tier entitlement: ${tierKey}/${featureKey}`);
+    }
+  }
+
   // Seed tier limits (skip if already present)
   const tierLimitSeeds: Array<{ tierKey: string; limitKey: string; limitValue: number }> = [
     { tierKey: 'free',    limitKey: 'max_active_trips',                   limitValue: 3 },
@@ -3573,7 +3595,7 @@ export const getCurrentUserTier = async (userId: string): Promise<(UserTier & { 
 export const setUserTier = async (
   userId: string,
   tierKey: string,
-  source: 'system' | 'admin',
+  source: 'system' | 'billing' | 'admin_override' | 'admin',
   assignedBy: string | null,
   reason?: string
 ): Promise<void> => {
@@ -3592,6 +3614,12 @@ export const setUserTier = async (
   const newRef = db.collection('user_tiers').doc(randomUUID());
   batch.set(newRef, { userId, tierId: tier.id, tierKey, source, reason: reason ?? null, assignedBy, effectiveFrom: now, effectiveTo: null, createdAt: now });
   await batch.commit();
+};
+
+export const ensureCurrentUserTier = async (userId: string, tierKey = 'free'): Promise<void> => {
+  const current = await getCurrentUserTier(userId);
+  if (current) return;
+  await setUserTier(userId, tierKey, 'system', null, 'Automatic default tier assignment');
 };
 
 export const getFeatureFlag = async (key: string): Promise<FeatureFlag | null> => {
@@ -3638,6 +3666,22 @@ export const incrementUsageCounter = async (
   return updated.data()!.count ?? amount;
 };
 
+export const appendUsageEvent = async (
+  userId: string,
+  metricKey: string,
+  amount = 1,
+  metadata?: Record<string, unknown> | null
+): Promise<void> => {
+  const db = getDb();
+  await db.collection('usage_events').doc(randomUUID()).set({
+    userId,
+    metricKey,
+    amount,
+    metadata: metadata ?? null,
+    createdAt: nowIso(),
+  });
+};
+
 export const atomicIncrementIfUnderLimit = async (
   userId: string,
   metricKey: string,
@@ -3661,6 +3705,92 @@ export const atomicIncrementIfUnderLimit = async (
     }
     return { allowed: true, newCount: current + 1 };
   });
+};
+
+export const getGenerationIdempotency = async (key: string) => {
+  const db = getDb();
+  const doc = await db.collection('generation_idempotency').doc(key).get();
+  if (!doc.exists) return null;
+  const data = doc.data()!;
+  return {
+    key: doc.id,
+    userId: data.userId,
+    tripId: data.tripId,
+    usageKey: data.usageKey ?? null,
+    windowKey: data.windowKey ?? null,
+    status: data.status ?? 'pending',
+    resultRef: data.resultRef ?? null,
+    responseBody: data.responseBody ?? null,
+    errorMessage: data.errorMessage ?? null,
+    createdAt: data.createdAt ?? nowIso(),
+    expiresAt: data.expiresAt ?? nowIso(),
+  };
+};
+
+export const reserveGenerationIdempotency = async (params: {
+  key: string;
+  userId: string;
+  tripId: string;
+  usageKey: string;
+  windowKey: string;
+  ttlSeconds?: number;
+}) => {
+  const db = getDb();
+  const ref = db.collection('generation_idempotency').doc(params.key);
+  const ttlSeconds = Math.max(60, params.ttlSeconds ?? 3600);
+  const expiresAt = new Date(Date.now() + ttlSeconds * 1000).toISOString();
+  let created = false;
+  await db.runTransaction(async (tx) => {
+    const doc = await tx.get(ref);
+    if (!doc.exists) {
+      created = true;
+      tx.set(ref, {
+        userId: params.userId,
+        tripId: params.tripId,
+        usageKey: params.usageKey,
+        windowKey: params.windowKey,
+        status: 'pending',
+        resultRef: null,
+        responseBody: null,
+        errorMessage: null,
+        createdAt: nowIso(),
+        expiresAt,
+      });
+    }
+  });
+  return { created, record: await getGenerationIdempotency(params.key) };
+};
+
+export const completeGenerationIdempotency = async (key: string, responseBody: Record<string, unknown>, resultRef?: string | null): Promise<void> => {
+  const db = getDb();
+  await db.collection('generation_idempotency').doc(key).set({
+    status: 'completed',
+    resultRef: resultRef ?? null,
+    responseBody,
+    errorMessage: null,
+  }, { merge: true });
+};
+
+export const failGenerationIdempotency = async (key: string, errorMessage: string): Promise<void> => {
+  const db = getDb();
+  await db.collection('generation_idempotency').doc(key).set({
+    status: 'failed',
+    errorMessage,
+  }, { merge: true });
+};
+
+export const countReservedOrCompletedUsage = async (userId: string, usageKey: string, windowKey: string): Promise<number> => {
+  const db = getDb();
+  const now = nowIso();
+  const snap = await db.collection('generation_idempotency')
+    .where('userId', '==', userId)
+    .where('usageKey', '==', usageKey)
+    .where('windowKey', '==', windowKey)
+    .get();
+  return snap.docs.filter((doc) => {
+    const data = doc.data();
+    return ['pending', 'completed'].includes(data.status) && String(data.expiresAt ?? now) > now;
+  }).length;
 };
 
 export const writeAuditLog = async (entry: {
@@ -3752,7 +3882,7 @@ export const adminGetUserData = async (_opts: {
   window?: '7d' | '30d' | 'all-time'; page?: number; limit?: number;
 }): Promise<{
   summary: { totalUsers: number; byTier: Record<string, number> };
-  users: Array<{ id: string; email: string; role: string; tierKey: string | null; aiGenerations: number; tokens: number; createdAt: string }>;
+  users: Array<{ id: string; email: string; role: string; tierKey: string | null; tripCount: number; tripCreations: number; aiGenerations: number; tokens: number; apiCalls: Record<string, number>; createdAt: string }>;
   total: number;
 }> => ({ summary: { totalUsers: 0, byTier: {} }, users: [], total: 0 });
 

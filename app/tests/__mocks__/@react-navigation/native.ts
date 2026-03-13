@@ -17,3 +17,9 @@ export const useFocusEffect = (callback: () => void) => {
 export const useIsFocused = () => true;
 
 export const NavigationContainer = ({ children }: { children: any }) => children as any;
+
+export const createNavigationContainerRef = () => ({
+  isReady: () => true,
+  navigate: jest.fn(),
+  getCurrentRoute: () => ({ name: 'Main' }),
+});

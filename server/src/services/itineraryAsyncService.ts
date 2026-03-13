@@ -14,6 +14,7 @@ import {
   upsertExpenseForSource,
 } from '../db';
 import { logError, logInfo } from '../logger';
+import { failGenerationUsage, finalizeGenerationUsage } from './entitlementService';
 import {
   generateItineraryViaPromptPlan,
   type ItineraryGeneratedItems,
@@ -63,6 +64,8 @@ type QueueInput = {
   tripEndDate?: string | null;
   tripStartMonth?: number | null;
   tripStartYear?: number | null;
+  idempotencyKey?: string;
+  usageWindowKey?: string;
 };
 
 const jobs = new Map<string, AsyncItineraryJob>();
@@ -634,6 +637,21 @@ const runJob = async (jobId: string, input: QueueInput): Promise<void> => {
     job.updatedAt = nowIso();
     job.result = { itineraryId, ...persisted };
     jobs.set(jobId, job);
+    if (input.idempotencyKey && input.usageWindowKey) {
+      await finalizeGenerationUsage({
+        userId: input.userId,
+        windowKey: input.usageWindowKey,
+        idempotencyKey: input.idempotencyKey,
+        responseBody: {
+          jobId,
+          tripId: input.tripId,
+          itineraryId,
+          status: 'completed',
+          result: job.result,
+        },
+        tokensUsed: result.tokenUsage.totalTokens,
+      });
+    }
     logInfo(
       `[itinerary][async] completed job=${jobId} trip=${input.tripId} itinerary=${itineraryId} details=${persisted.detailsCount} transfers=${persisted.transfersCount} lodgings=${persisted.lodgingsCount} activities=${persisted.activitiesCount} carRentals=${persisted.carRentalsCount}`
     );
@@ -643,6 +661,9 @@ const runJob = async (jobId: string, input: QueueInput): Promise<void> => {
     job.error = message;
     job.updatedAt = nowIso();
     jobs.set(jobId, job);
+    if (input.idempotencyKey) {
+      await failGenerationUsage(input.idempotencyKey, message);
+    }
     logError(`[itinerary][async] failed job=${jobId} trip=${input.tripId}`, err);
   }
 };

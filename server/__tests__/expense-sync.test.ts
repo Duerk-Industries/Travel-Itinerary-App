@@ -2,7 +2,7 @@ import request from 'supertest';
 import { Pool } from 'pg';
 import { app } from '../src/app';
 import { initDb, closePool } from '../src/db';
-import { registerAndLoginWebUser, registerWebUser } from './helpers';
+import { registerAndLoginWebUser, registerWebUser, seedTiersForTest, setUserTierInDb } from './helpers';
 
 describe('Expense sync for source-backed items', () => {
   const uniq = Date.now();
@@ -19,9 +19,11 @@ describe('Expense sync for source-backed items', () => {
     process.env.NODE_ENV = 'test';
     await initDb();
     pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    await seedTiersForTest(pool);
 
     const loginA = await registerAndLoginWebUser(pool, userA);
     tokenA = loginA.token;
+    await setUserTierInDb(pool, loginA.userId, 'premium');
 
     const groupsA = await request(app).get('/api/groups').set('Authorization', `Bearer ${tokenA}`).expect(200);
     groupId = groupsA.body[0]?.id as string;

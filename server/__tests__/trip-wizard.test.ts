@@ -35,8 +35,8 @@ describe('Trip wizard flow', () => {
         name: 'Test Trip',
         description: 'A **bold** trip',
         locationIds: ['paris-abc123', 'london-def456'],
-        startDate: '2025-03-01',
-        endDate: '2025-03-05',
+        startDate: '2027-03-01',
+        endDate: '2027-03-05',
         participants: [
           { firstName: 'Casey', lastName: 'Guest' },
           { firstName: 'Pat', lastName: 'Invite', email: 'pat-invite@example.com' },

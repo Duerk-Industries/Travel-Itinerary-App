@@ -147,6 +147,8 @@ export const getApiLimitProviderConfig = (provider: string): ProviderLimits | un
   return config.providers[normalizeKeyPart(provider)];
 };
 
+export const getApiLimitsConfig = (): ApiLimitsConfig => loadConfigFromFile();
+
 export const getApiCacheSetting = (group: string, setting: string): number | undefined => {
   const config = loadConfigFromFile();
   return config.caching[normalizeKeyPart(group)]?.[normalizeKeyPart(setting)];
