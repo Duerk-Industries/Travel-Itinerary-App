@@ -2623,7 +2623,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                         </TouchableOpacity>
                       </>
                     ) : null}
-                    <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => removeCarRental(car.id)}>
+                    <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => removeCarRental(car.id)} testID={`car-rental-delete-${car.id}`}>
                       <Text style={styles.buttonText}>Delete</Text>
                     </TouchableOpacity>
                   </View>
@@ -2827,7 +2827,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                     ))}
                 </View>
               </View>
-              <TouchableOpacity style={[styles.button, styles.carAddButton]} onPress={addCarRental}>
+              <TouchableOpacity style={[styles.button, styles.carAddButton]} onPress={addCarRental} testID="car-rental-add">
                 <Text style={styles.buttonText}>Add</Text>
               </TouchableOpacity>
             </View>
@@ -3204,7 +3204,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       ) : null}
       {userToken && pendingInviteModalOpen ? (
         <View style={styles.wizardOverlay}>
-          <View style={[styles.wizardModal, styles.pendingInviteModal]}>
+          <View style={[styles.wizardModal, styles.pendingInviteModal]} testID="invite-modal">
             <View style={styles.card}>
               <View style={styles.sectionHeaderRow}>
                 <Text style={styles.sectionTitle}>Trip Invites</Text>
@@ -3226,12 +3226,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                       <Text style={styles.bodyText}>{tripLabel}</Text>
                       <Text style={styles.helperText}>Invited by {inviterLine}</Text>
                       <View style={styles.row}>
-                        <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => acceptInvite(invite)}>
+                        <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => acceptInvite(invite)} testID={`invite-join-${invite.id}`}>
                           <Text style={styles.buttonText}>Join</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                           style={[styles.button, styles.smallButton, styles.dangerButton]}
                           onPress={() => rejectInvite(invite)}
+                          testID={`invite-decline-${invite.id}`}
                         >
                           <Text style={styles.buttonText}>Decline</Text>
                         </TouchableOpacity>

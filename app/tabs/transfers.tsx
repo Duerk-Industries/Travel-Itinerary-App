@@ -1241,7 +1241,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
         <>
       <View style={styles.row}>
         <Text style={styles.sectionTitle}>Transfers</Text>
-        <TouchableOpacity style={[styles.button, styles.roundButton]} onPress={handleAddPress}>
+        <TouchableOpacity style={[styles.button, styles.roundButton]} onPress={handleAddPress} testID="transfer-add">
           <Text style={styles.buttonText}>+</Text>
         </TouchableOpacity>
       </View>
@@ -1262,7 +1262,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
             ))}
           </View>
           {sortedFlights.map((item) => (
-            <View key={item.id} style={styles.tableRow}>
+            <View key={item.id} style={styles.tableRow} testID={`transfer-row-${item.id}`}>
               {columns.map((col, idx) => {
                 const isLast = idx === columns.length - 1;
                 if (col.key === 'actions') {
@@ -1278,10 +1278,10 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                     >
                       {!item.passengerInGroup ? <Text style={styles.warningText}>Passenger not in trip group</Text> : null}
                       <View style={styles.actionCell}>
-                        <TouchableOpacity style={[styles.tableActionButton, styles.tableActionButtonPrimary]} onPress={() => openFlightDetails(item)}>
+                        <TouchableOpacity style={[styles.tableActionButton, styles.tableActionButtonPrimary]} onPress={() => openFlightDetails(item)} testID={`transfer-edit-${item.id}`}>
                           <Text style={styles.buttonText}>Edit</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={[styles.tableActionButton, styles.tableActionButtonDanger]} onPress={() => removeFlight(item.id)}>
+                        <TouchableOpacity style={[styles.tableActionButton, styles.tableActionButtonDanger]} onPress={() => removeFlight(item.id)} testID={`transfer-delete-${item.id}`}>
                           <Text style={styles.buttonText}>Delete</Text>
                         </TouchableOpacity>
                       </View>

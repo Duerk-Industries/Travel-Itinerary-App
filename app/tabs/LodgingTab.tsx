@@ -193,7 +193,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
     <View style={styles.card}>
       <View style={styles.row}>
         <Text style={styles.sectionTitle}>Lodging</Text>
-        <TouchableOpacity style={[styles.button, styles.roundButton]} onPress={openAddDialog}>
+        <TouchableOpacity style={[styles.button, styles.roundButton]} onPress={openAddDialog} testID="lodging-add">
           <Text style={styles.buttonText}>+</Text>
         </TouchableOpacity>
       </View>
@@ -277,12 +277,14 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
                   <TouchableOpacity
                     style={[styles.tableActionButton, styles.tableActionButtonPrimary]}
                     onPress={() => openEditDialog(lodging)}
+                    testID={`lodging-edit-${lodging.id}`}
                   >
                     <Text style={styles.buttonText}>Edit</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.tableActionButton, styles.tableActionButtonDanger]}
                     onPress={() => setLodgingToDelete(lodging)}
+                    testID={`lodging-delete-${lodging.id}`}
                   >
                     <Text style={styles.buttonText}>Delete</Text>
                   </TouchableOpacity>

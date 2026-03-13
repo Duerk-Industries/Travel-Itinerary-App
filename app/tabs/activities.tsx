@@ -456,7 +456,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
     <View style={styles.card}>
       <View style={styles.sectionHeaderRow}>
         <Text style={styles.sectionTitle}>Activities</Text>
-        <TouchableOpacity style={[styles.button, styles.roundButton]} onPress={() => openTourEditor()}>
+        <TouchableOpacity style={[styles.button, styles.roundButton]} onPress={() => openTourEditor()} testID="activity-add">
           <Text style={styles.buttonText}>+</Text>
         </TouchableOpacity>
       </View>
@@ -511,7 +511,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
             ))}
           </View>
           {sortedTours.map((t) => (
-            <View key={t.id} style={styles.tableRow}>
+            <View key={t.id} style={styles.tableRow} testID={`activity-row-${t.id}`}>
               <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
                 <Text style={styles.cellText}>{formatDateLong(t.date)}</Text>
               </View>
@@ -579,10 +579,10 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                 <Text style={styles.cellText}>{t.paidBy.length ? t.paidBy.map(payerName).join(', ') : '-'}</Text>
               </View>
               <View style={[styles.cell, styles.actionCell, styles.lastCell, { minWidth: 160, flex: 1 }]}>
-                <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => openTourEditor(t)}>
+                <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => openTourEditor(t)} testID={`activity-edit-${t.id}`}>
                   <Text style={styles.buttonText}>Edit</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => removeTour(t.id)}>
+                <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => removeTour(t.id)} testID={`activity-delete-${t.id}`}>
                   <Text style={styles.buttonText}>Delete</Text>
                 </TouchableOpacity>
               </View>
@@ -604,7 +604,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
       </View>
       {editingTour ? (
         <Modal transparent visible={Boolean(editingTour)} animationType="fade" onRequestClose={closeTourEditor}>
-          <View style={styles.modalOverlay}>
+          <View style={styles.modalOverlay} testID="activity-form-modal">
             <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={closeTourEditor} />
             <View style={[styles.modalCard, { marginTop: 0 }]}>
             <Text style={styles.sectionTitle}>{editingTourId ? 'Edit Activity' : 'Add Activity'}</Text>
@@ -813,10 +813,10 @@ export const ActivityTab: React.FC<TourTabProps> = ({
               </View>
             </ScrollView>
             <View style={[styles.tableFooter, { justifyContent: 'space-between' }]}>
-              <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={closeTourEditor}>
+              <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={closeTourEditor} testID="activity-cancel">
                 <Text style={styles.buttonText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.button} onPress={saveTour}>
+              <TouchableOpacity style={styles.button} onPress={saveTour} testID="activity-save">
                 <Text style={styles.buttonText}>Save</Text>
               </TouchableOpacity>
             </View>
