@@ -299,6 +299,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
         <TouchableOpacity
           style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
           onPress={() => setAddExpenseVisible(true)}
+          testID="expense-add-button"
         >
           <Text style={styles.buttonText}>+ Add Expense</Text>
         </TouchableOpacity>
@@ -449,7 +450,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                 </View>
 
                 <View style={styles.row}>
-                  <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={saveExpense}>
+                  <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={saveExpense} testID="expense-save">
                     <Text style={styles.buttonText}>Save Expense</Text>
                   </TouchableOpacity>
                 </View>
@@ -480,7 +481,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                 return (
                   <View key={`${date}-${category}`} style={[styles.cell, { minWidth: 110, flex: 1 }]}>
                     {value ? (
-                      <TouchableOpacity onPress={() => setDetailTarget({ date, category })}>
+                      <TouchableOpacity onPress={() => setDetailTarget({ date, category })} testID={`expense-cell-${date}-${category}`}>
                         <Text style={[styles.cellText, styles.linkText]}>{content}</Text>
                       </TouchableOpacity>
                     ) : (
@@ -556,6 +557,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                         <TouchableOpacity
                           style={[styles.tableActionButton, styles.tableActionButtonDanger]}
                           onPress={() => setPendingDeleteExpense(expense)}
+                          testID={`expense-delete-${expense.id}`}
                         >
                           <Text style={styles.buttonText}>Delete</Text>
                         </TouchableOpacity>

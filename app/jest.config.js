@@ -19,6 +19,8 @@ module.exports = {
   moduleNameMapper: {
     '^canvas$': '<rootDir>/tests/__mocks__/canvas.ts',
     '^@react-native-community/datetimepicker$': '<rootDir>/tests/__mocks__/@react-native-community/datetimepicker.ts',
+    '^@react-navigation/native$': '<rootDir>/tests/__mocks__/@react-navigation/native.ts',
+    '^@react-navigation/native-stack$': '<rootDir>/tests/__mocks__/@react-navigation/native-stack.ts',
   },
 
   // A setup file that runs before each test.

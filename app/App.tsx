@@ -12,6 +12,8 @@
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Image, Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme, useWindowDimensions } from 'react-native';
+import { NavigationContainer, createNavigationContainerRef, type LinkingOptions } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Constants from 'expo-constants';
 import { formatDateLong } from './utils/formatDateLong';
 import { normalizeDateString } from './utils/normalizeDateString';
@@ -58,6 +60,18 @@ import { toWebStyle } from './utils/webStyle';
 import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from './utils/votes';
 
 import LodgingTab from './tabs/LodgingTab';
+import AdminTab from './tabs/AdminTab';
+import PresenceAvatars from './components/PresenceAvatars';
+import ChatButton from './components/ChatButton';
+import ChatPanel from './components/ChatPanel';
+import {
+  connectSocket,
+  disconnectSocket,
+  getSocket,
+  CLIENT_EVENTS,
+  SERVER_EVENTS,
+} from './utils/socket';
+import type { PresenceUser } from '../packages/messaging/src/types';
 
 const TOP_BANNER_ICON = require('./assets/wanderbunnies-reference.png');
 
@@ -194,7 +208,59 @@ type Page =
   | 'cost'
   | 'account'
   | 'follow'
-  | 'following';
+  | 'following'
+  | 'admin';
+
+type AdminSectionRoute = 'overview' | 'users' | 'tiers' | 'features' | 'user-data' | 'audit-log';
+
+type RootStackParamList = {
+  Main: undefined;
+  AdminOverview: undefined;
+  AdminUsers: undefined;
+  AdminTiers: undefined;
+  AdminFeatures: undefined;
+  AdminUserData: undefined;
+  AdminAuditLog: undefined;
+};
+
+const RootStack = createNativeStackNavigator<RootStackParamList>();
+const navigationRef = createNavigationContainerRef<RootStackParamList>();
+
+const adminScreenBySection: Record<AdminSectionRoute, keyof RootStackParamList> = {
+  overview: 'AdminOverview',
+  users: 'AdminUsers',
+  tiers: 'AdminTiers',
+  features: 'AdminFeatures',
+  'user-data': 'AdminUserData',
+  'audit-log': 'AdminAuditLog',
+};
+
+const adminSectionByScreen: Record<Exclude<keyof RootStackParamList, 'Main'>, AdminSectionRoute> = {
+  AdminOverview: 'overview',
+  AdminUsers: 'users',
+  AdminTiers: 'tiers',
+  AdminFeatures: 'features',
+  AdminUserData: 'user-data',
+  AdminAuditLog: 'audit-log',
+};
+
+const linking: LinkingOptions<RootStackParamList> = {
+  prefixes: [
+    'wanderbunnies://',
+    ...(Platform.OS === 'web' && typeof window !== 'undefined' ? [window.location.origin] : []),
+  ],
+  config: {
+    screens: {
+      Main: '',
+      AdminOverview: 'admin',
+      AdminUsers: 'admin/users',
+      AdminTiers: 'admin/tiers',
+      AdminFeatures: 'admin/features',
+      AdminUserData: 'admin/user-data',
+      AdminAuditLog: 'admin/audit-log',
+    },
+  },
+};
 
 // Resolve backend URL; keep Expo web on localhost hitting the local API over HTTP to avoid HTTPS upgrades/CORS issues.
 const resolveBackendUrl = (): string => {
@@ -278,7 +344,26 @@ const extractTokenFromUrl = (rawUrl: string) => {
   return { token: null, url: null, source: null, isConfirm: false, isSecondaryConfirm: false, requirePasswordSetup: false } as const;
 };
 
-const App: React.FC = () => {
+const decodeTokenClaims = (
+  token: string
+): { firstName?: string; lastName?: string; email?: string; provider?: string; role?: string } | null => {
+  try {
+    const payload = token.split('.')[1];
+    if (!payload) return null;
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+    return JSON.parse(Buffer.from(padded, 'base64').toString());
+  } catch {
+    return null;
+  }
+};
+
+type AppShellProps = {
+  initialAdminSection?: AdminSectionRoute;
+  onOpenAdminSection?: (section: AdminSectionRoute) => void;
+};
+
+const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', onOpenAdminSection }) => {
   const { width: viewportWidth } = useWindowDimensions();
   const systemColorScheme = useColorScheme();
   const isNarrowLayout = viewportWidth < 980;
@@ -380,6 +465,8 @@ const App: React.FC = () => {
   const [tripDropdownOpenId, setTripDropdownOpenId] = useState<string | null>(null);
   const [activeTripId, setActiveTripId] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<'user' | 'admin'>('user');
   const [showActiveTripDropdown, setShowActiveTripDropdown] = useState(false);
   const [openShareFromHeaderSignal, setOpenShareFromHeaderSignal] = useState(0);
   const [groupMembers, setGroupMembers] = useState<GroupMemberOption[]>([]);
@@ -388,6 +475,12 @@ const App: React.FC = () => {
   const [selectedLodging, setSelectedLodging] = useState<Lodging | null>(null);
   const [showLodgingDetails, setShowLodgingDetails] = useState(false);
   const [lodgingToDelete, setLodgingToDelete] = useState<Lodging | null>(null);
+
+  // Socket.IO / presence / chat
+  const [presenceUsers, setPresenceUsers] = useState<PresenceUser[]>([]);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatMinimized, setChatMinimized] = useState(false);
+  const [chatUnread, setChatUnread] = useState(0);
 
   const [tours, setTours] = useState<Tour[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -558,6 +651,19 @@ const App: React.FC = () => {
     }
     setActivePage(page);
   }, [activePage]);
+
+  const openAdminSection = useCallback((section: AdminSectionRoute = initialAdminSection) => {
+    if (userRole !== 'admin') return;
+    onOpenAdminSection?.(section);
+  }, [initialAdminSection, onOpenAdminSection, userRole]);
+
+  useEffect(() => {
+    if (!navigationRef.isReady()) return;
+    const routeName = navigationRef.getCurrentRoute()?.name;
+    if (userRole !== 'admin' && routeName && routeName !== 'Main') {
+      navigationRef.navigate('Main');
+    }
+  }, [userRole]);
 
   const openMaps = useCallback((address: string) => {
     const url = buildMapUrl(address, mapApp);
@@ -885,6 +991,8 @@ const App: React.FC = () => {
     setUserToken(null);
     setUserName(null);
     setUserEmail(null);
+    setUserId(null);
+    setUserRole('user');
     setTrips([]);
     setActiveTripId(null);
     setFlights([]);
@@ -916,6 +1024,10 @@ const App: React.FC = () => {
     setLastRefreshAt(null);
     setIsRefreshing(false);
     refreshInFlightRef.current = false;
+    disconnectSocket();
+    setPresenceUsers([]);
+    setChatOpen(false);
+    setChatUnread(0);
     clearSession();
   }, []);
 
@@ -995,22 +1107,17 @@ const App: React.FC = () => {
 
   const handleAuthSuccess = useCallback(
     (token: string, firstLoginOverride?: boolean, options?: { requirePasswordSetup?: boolean }) => {
-    let decoded: { firstName?: string; lastName?: string; email?: string; provider?: string } | null = null;
-    try {
-      const payload = token.split('.')[1];
-      if (payload) {
-        const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
-        const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
-        decoded = JSON.parse(Buffer.from(padded, 'base64').toString());
-      }
-    } catch {
-      decoded = null;
-    }
+    const decoded = decodeTokenClaims(token);
     const name =
       `${decoded?.firstName ?? ''} ${decoded?.lastName ?? ''}`.trim() || decoded?.email || 'Traveler';
+    const decodedRole: 'user' | 'admin' = decoded?.role === 'admin' ? 'admin' : 'user';
+    const decodedUserId = (decoded as any)?.userId ?? null;
     setUserToken(token);
     setUserName(name);
+    setUserRole(decodedRole);
+    setUserId(decodedUserId);
     setInvitesLoaded(false);
+    connectSocket(token);
     if (decoded?.email) {
       setUserEmail(decoded.email);
     }
@@ -1040,7 +1147,7 @@ const App: React.FC = () => {
     }
     setPageForwardHistory([]);
     setPageHistory([]);
-    saveSession(token, name, firstLogin ? 'home' : 'overview', decoded?.email, restoredTripId, []);
+    saveSession(token, name, firstLogin ? 'home' : 'overview', decoded?.email, restoredTripId, [], decodedRole);
     },
     [activeTripId]
   );
@@ -1585,6 +1692,33 @@ const App: React.FC = () => {
     }
   }, [userToken]);
 
+  // Socket.IO: join trip room when active trip changes
+  useEffect(() => {
+    if (!userToken || !activeTripId) return;
+    const socket = getSocket();
+
+    const onPresence = (list: PresenceUser[]) => setPresenceUsers(list);
+    const onUnread = (data: { tripId: string; count: number }) => {
+      if (data.tripId === activeTripId) setChatUnread(data.count);
+    };
+
+    socket.on(SERVER_EVENTS.PRESENCE_UPDATE, onPresence);
+    socket.on(SERVER_EVENTS.UNREAD_COUNT, onUnread);
+
+    if (socket.connected) {
+      socket.emit(CLIENT_EVENTS.JOIN_TRIP, activeTripId);
+    } else {
+      socket.once('connect', () => {
+        socket.emit(CLIENT_EVENTS.JOIN_TRIP, activeTripId);
+      });
+    }
+
+    return () => {
+      socket.off(SERVER_EVENTS.PRESENCE_UPDATE, onPresence);
+      socket.off(SERVER_EVENTS.UNREAD_COUNT, onUnread);
+    };
+  }, [userToken, activeTripId]);
+
   useEffect(() => {
     if (!userToken) return;
     const pendingEntries = Object.entries(asyncItineraryByTrip).filter(([, tracker]) => tracker.status === 'pending');
@@ -1663,7 +1797,7 @@ const App: React.FC = () => {
     if (pendingInviteModalOpen || invites.length) return;
     setDeferFirstLoginRedirect(false);
     setActivePage('account');
-    saveSession(userToken, userName ?? 'Traveler', 'account', userEmail ?? undefined, activeTripId ?? null, pageHistory);
+    saveSession(userToken, userName ?? 'Traveler', 'account', userEmail ?? undefined, activeTripId ?? null, pageHistory, userRole);
   }, [
     activeTripId,
     deferFirstLoginRedirect,
@@ -1673,6 +1807,7 @@ const App: React.FC = () => {
     pendingInviteModalOpen,
     userEmail,
     userName,
+    userRole,
     userToken,
   ]);
 
@@ -1688,9 +1823,13 @@ const App: React.FC = () => {
     if (userToken) return;
     const session = loadSession();
     if (session) {
+      const decoded = decodeTokenClaims(session.token);
+      const restoredRole: 'user' | 'admin' =
+        session.role === 'admin' || decoded?.role === 'admin' ? 'admin' : 'user';
       setUserToken(session.token);
       setUserName(session.name);
       setUserEmail(session.email ?? null);
+      setUserRole(restoredRole);
       const sessionHistory = Array.isArray(session.pageHistory)
         ? session.pageHistory.filter((p) => typeof p === 'string') as Page[]
         : [];
@@ -2042,8 +2181,8 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (!userToken) return;
-    saveSession(userToken, userName ?? 'Traveler', activePage, userEmail, activeTripId, pageHistory);
-  }, [userToken, userName, userEmail, activePage, activeTripId, pageHistory]);
+    saveSession(userToken, userName ?? 'Traveler', activePage, userEmail, activeTripId, pageHistory, userRole);
+  }, [userToken, userName, userEmail, activePage, activeTripId, pageHistory, userRole]);
 
   const disabledPages = useMemo(() => {
     const pages: Page[] = [
@@ -2108,7 +2247,7 @@ const App: React.FC = () => {
     [backendUrl, headers, logout]
   );
 
-  return (
+  const mainWorkspace = (
     <SafeAreaView style={[styles.container, iosSafariSafeAreaStyle]}>
       <View style={[styles.topBar, isNarrowLayout && styles.topBarStacked]}>
         <View style={[styles.topBarLeft, isNarrowLayout && styles.topBarLeftNarrow]}>
@@ -2198,11 +2337,27 @@ const App: React.FC = () => {
             ) : null}
             <View style={[styles.topRight, isNarrowLayout && styles.topRightNarrow]}>
               {!isPhoneLayout ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  {activeTripId && (
+                    <PresenceAvatars
+                      currentUserId={userId ?? ''}
+                      presenceUsers={presenceUsers}
+                    />
+                  )}
+                  <TouchableOpacity
+                    style={[styles.userNameButton, styles.smallButton, styles.topBarActionButton]}
+                    onPress={() => requestPageChange('account')}
+                  >
+                    <Text style={styles.userNameButtonText}>{userName ?? 'Traveler'}</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
+              {userRole === 'admin' ? (
                 <TouchableOpacity
-                  style={[styles.userNameButton, styles.smallButton, styles.topBarActionButton]}
-                  onPress={() => requestPageChange('account')}
+                  style={[styles.button, styles.smallButton, styles.topBarActionButton]}
+                  onPress={() => openAdminSection('overview')}
                 >
-                  <Text style={styles.userNameButtonText}>{userName ?? 'Traveler'}</Text>
+                  <Text style={styles.buttonText}>Admin</Text>
                 </TouchableOpacity>
               ) : null}
               <TouchableOpacity style={[styles.button, styles.smallButton, styles.topBarActionButton]} onPress={logout}>
@@ -2529,7 +2684,7 @@ const App: React.FC = () => {
                         </TouchableOpacity>
                       </>
                     ) : null}
-                    <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => removeCarRental(car.id)}>
+                    <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => removeCarRental(car.id)} testID={`car-rental-delete-${car.id}`}>
                       <Text style={styles.buttonText}>Delete</Text>
                     </TouchableOpacity>
                   </View>
@@ -2733,7 +2888,7 @@ const App: React.FC = () => {
                     ))}
                 </View>
               </View>
-              <TouchableOpacity style={[styles.button, styles.carAddButton]} onPress={addCarRental}>
+              <TouchableOpacity style={[styles.button, styles.carAddButton]} onPress={addCarRental} testID="car-rental-add">
                 <Text style={styles.buttonText}>Add</Text>
               </TouchableOpacity>
             </View>
@@ -2988,6 +3143,7 @@ const App: React.FC = () => {
               onUnfollowTrip={handleUnfollowTrip}
             />
           ) : null}
+
         </ScrollView>
       ) : (
         <View style={styles.auth}>
@@ -3109,7 +3265,7 @@ const App: React.FC = () => {
       ) : null}
       {userToken && pendingInviteModalOpen ? (
         <View style={styles.wizardOverlay}>
-          <View style={[styles.wizardModal, styles.pendingInviteModal]}>
+          <View style={[styles.wizardModal, styles.pendingInviteModal]} testID="invite-modal">
             <View style={styles.card}>
               <View style={styles.sectionHeaderRow}>
                 <Text style={styles.sectionTitle}>Trip Invites</Text>
@@ -3131,12 +3287,13 @@ const App: React.FC = () => {
                       <Text style={styles.bodyText}>{tripLabel}</Text>
                       <Text style={styles.helperText}>Invited by {inviterLine}</Text>
                       <View style={styles.row}>
-                        <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => acceptInvite(invite)}>
+                        <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => acceptInvite(invite)} testID={`invite-join-${invite.id}`}>
                           <Text style={styles.buttonText}>Join</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                           style={[styles.button, styles.smallButton, styles.dangerButton]}
                           onPress={() => rejectInvite(invite)}
+                          testID={`invite-decline-${invite.id}`}
                         >
                           <Text style={styles.buttonText}>Decline</Text>
                         </TouchableOpacity>
@@ -3208,7 +3365,115 @@ const App: React.FC = () => {
           onOpenMap={openMaps}
         />
       ) : null}
+      {/* Chat FAB — only when logged in and a trip is active */}
+      {userToken && activeTripId && !chatOpen && (
+        <ChatButton
+          onPress={() => { setChatOpen(true); setChatMinimized(false); }}
+          unreadCount={chatUnread}
+        />
+      )}
+      {/* Chat Panel */}
+      {userToken && activeTripId && chatOpen && !chatMinimized && (
+        <ChatPanel
+          socket={getSocket()}
+          tripId={activeTripId}
+          currentUserId={userId ?? ''}
+          currentUserName={userName ?? 'Traveler'}
+          onClose={() => setChatOpen(false)}
+          onMinimize={() => setChatMinimized(true)}
+          unreadCount={chatUnread}
+          onUnreadChange={setChatUnread}
+        />
+      )}
+      {/* Minimized chat badge */}
+      {userToken && activeTripId && chatOpen && chatMinimized && (
+        <ChatButton
+          onPress={() => setChatMinimized(false)}
+          unreadCount={chatUnread}
+        />
+      )}
     </SafeAreaView>
+  );
+
+  const renderAdminScreen = (section: AdminSectionRoute) => (
+    <AdminTab
+      backendUrl={backendUrl}
+      headers={headers}
+      initialSection={section}
+      onSectionChange={(nextSection) => {
+        if (nextSection === 'user-detail') return;
+        openAdminSection(nextSection as AdminSectionRoute);
+      }}
+    />
+  );
+
+  return (
+    <NavigationContainer ref={navigationRef} linking={linking}>
+      <RootStack.Navigator>
+        <RootStack.Screen name="Main" options={{ headerShown: false }}>
+          {() => mainWorkspace}
+        </RootStack.Screen>
+        <RootStack.Group
+          screenOptions={{
+            headerShown: true,
+            headerBackTitle: 'Back',
+          }}
+        >
+          <RootStack.Screen
+            name="AdminOverview"
+            options={{ title: 'Admin' }}
+          >
+            {() => renderAdminScreen('overview')}
+          </RootStack.Screen>
+          <RootStack.Screen
+            name="AdminUsers"
+            options={{ title: 'Admin Users' }}
+          >
+            {() => renderAdminScreen('users')}
+          </RootStack.Screen>
+          <RootStack.Screen
+            name="AdminTiers"
+            options={{ title: 'Admin Tiers' }}
+          >
+            {() => renderAdminScreen('tiers')}
+          </RootStack.Screen>
+          <RootStack.Screen
+            name="AdminFeatures"
+            options={{ title: 'Admin Features' }}
+          >
+            {() => renderAdminScreen('features')}
+          </RootStack.Screen>
+          <RootStack.Screen
+            name="AdminUserData"
+            options={{ title: 'Admin User Data' }}
+          >
+            {() => renderAdminScreen('user-data')}
+          </RootStack.Screen>
+          <RootStack.Screen
+            name="AdminAuditLog"
+            options={{ title: 'Admin Audit Log' }}
+          >
+            {() => renderAdminScreen('audit-log')}
+          </RootStack.Screen>
+        </RootStack.Group>
+      </RootStack.Navigator>
+    </NavigationContainer>
+  );
+};
+
+const App: React.FC = () => {
+  const openAdminSection = useCallback((section: AdminSectionRoute) => {
+    const screen = adminScreenBySection[section];
+    if (navigationRef.isReady()) {
+      navigationRef.navigate(screen);
+    }
+  }, []);
+
+  return (
+    <AppShell
+      initialAdminSection="overview"
+      onOpenAdminSection={openAdminSection}
+    />
   );
 };
 

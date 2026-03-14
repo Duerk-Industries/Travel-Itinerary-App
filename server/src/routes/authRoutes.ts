@@ -9,6 +9,7 @@ import {
   ensureDefaultGroupForUser,
   findUserByIdentifier,
   getPendingEmailVerification,
+  getUserRole,
   markEmailVerificationUsed,
   markUserEmailVerified,
   recordWebUserLogin,
@@ -17,6 +18,8 @@ import {
 } from '../db';
 import { sendVerificationEmailBestEffort } from '../mailer';
 import { getAuthFlag } from '../config/authFlags';
+import { ensureAdminBootstrap } from '../services/entitlementService';
+import { ensureCurrentUserTier } from '../db';
 
 // Auth routes for device-based auth tokens (non-web).
 const router = Router();
@@ -42,11 +45,14 @@ router.post('/register', async (req, res) => {
 
   try {
     const user = await createWebUser(firstName.trim(), lastName.trim(), email.trim().toLowerCase(), password.trim());
+    await ensureCurrentUserTier(user.id, 'free');
     if (user.emailVerified) {
       await ensureDefaultGroupForUser(user.id, user.email);
       await claimInvitesForUser(user.email, user.id);
       const { firstLogin } = await recordWebUserLogin(user.id);
-      const token = createToken({ userId: user.id, email: user.email, provider: 'email' });
+      await ensureAdminBootstrap(user.id, user.email);
+      const role = await getUserRole(user.id);
+      const token = createToken({ userId: user.id, email: user.email, provider: 'email', role });
       res.status(201).json({ message: 'Account created', token, user, firstLogin });
       return;
     }
@@ -136,9 +142,12 @@ router.post('/login', async (req, res) => {
       return;
     }
     await ensureDefaultGroupForUser(user.id, user.email);
+    await ensureCurrentUserTier(user.id, 'free');
     await claimInvitesForUser(user.email, user.id);
     const { firstLogin } = await recordWebUserLogin(user.id);
-    const token = createToken({ userId: user.id, email: user.email, provider: 'email' });
+    await ensureAdminBootstrap(user.id, user.email);
+    const role = await getUserRole(user.id);
+    const token = createToken({ userId: user.id, email: user.email, provider: 'email', role });
     res.json({ message: 'Login successful', token, user, firstLogin });
   } catch {
     res.status(500).json({ error: 'Failed to login' });
@@ -167,7 +176,9 @@ router.get('/confirm', async (req, res) => {
     await markUserEmailVerified(verification.userId);
     await markEmailVerificationUsed(verification.id);
     await ensureDefaultGroupForUser(verification.userId, verification.email);
+    await ensureCurrentUserTier(verification.userId, 'free');
     await claimInvitesForUser(verification.email, verification.userId);
+    await ensureAdminBootstrap(verification.userId, verification.email);
     res.json({ message: 'Email confirmed. You can now log in.' });
   } catch {
     res.status(500).json({ error: 'Failed to confirm email' });

@@ -5,7 +5,8 @@
   "type": "module",
   "workspaces": [
     "server",
-    "app"
+    "app",
+    "packages/messaging"
   ],
   "scripts": {
     "start": "node server/scripts/start-with-debug.js",
@@ -32,7 +33,8 @@
   },
   "overrides": {
     "glob": "13.0.5",
-    "minimatch": "10.2.1",
+    "minimatch": "10.2.4",
+    "@tootallnate/once": "3.0.1",
     "rimraf": "6.1.3",
     "react": "19.2.4",
     "react-dom": "19.2.4",

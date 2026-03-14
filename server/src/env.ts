@@ -62,6 +62,10 @@ export const isLocalEnv = (): boolean => {
   if (process.env.K_SERVICE) {
     return false;
   }
+  // Allow E2E test runners to signal local-mode without requiring a .local_env file.
+  if (getEnvFlag('E2E_MODE')) {
+    return true;
+  }
   // Check for a marker file that only exists in the local dev environment.
   return hasRunLocalFlag(path.resolve(__dirname, '../.local_env'));
 };

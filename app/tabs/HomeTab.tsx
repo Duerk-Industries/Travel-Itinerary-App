@@ -121,7 +121,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
         <Text style={styles.homeTitle}>Your trip</Text>
         <Pressable
           testID="home-hero-card"
-          style={({ pressed }) => [styles.homeHeroCard, pressed && styles.homeHeroCardPressed]}
+          style={({ pressed }: { pressed: boolean }) => [styles.homeHeroCard, pressed && styles.homeHeroCardPressed]}
           onPress={() => setShowTripPicker(true)}
         >
           {heroImage ? (
@@ -141,7 +141,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
             <Pressable
               key={item.key}
               testID={`home-nav-${item.key}`}
-              style={({ pressed }) => [
+              style={({ pressed }: { pressed: boolean }) => [
                 styles.homeNavButton,
                 disabledPages?.has(item.key) && styles.homeNavButtonDisabled,
                 pressed && !disabledPages?.has(item.key) && styles.homeNavButtonPressed,
@@ -165,7 +165,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
                 <Text style={styles.homeModalTitle}>Select a trip</Text>
                 <Pressable
                   onPress={() => setShowTripPicker(false)}
-                  style={({ pressed }) => [styles.homeModalClose, pressed && styles.homeModalClosePressed]}
+                  style={({ pressed }: { pressed: boolean }) => [styles.homeModalClose, pressed && styles.homeModalClosePressed]}
                 >
                   <Text style={styles.homeModalCloseText}>✕</Text>
                 </Pressable>
@@ -175,7 +175,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
                   <Pressable
                     key={trip.id}
                     testID={`home-trip-row-${trip.id}`}
-                    style={({ pressed }) => [
+                    style={({ pressed }: { pressed: boolean }) => [
                       styles.homeModalRow,
                       idx === 0 && trip.id === activeTripId && styles.homeModalRowActive,
                       pressed && styles.homeModalRowPressed,

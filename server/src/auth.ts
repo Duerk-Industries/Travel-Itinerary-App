@@ -1,8 +1,8 @@
 import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
-import { findOrCreateUser, findOrCreateGoogleUser } from './db';
+import { findOrCreateUser, findOrCreateGoogleUser, getUserRole, ensureCurrentUserTier } from './db';
 import { isPasswordSetupRequired } from './db';
-import { User } from './types';
+import { User, UserRole } from './types';
 import { getEnvValue } from './env';
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
@@ -36,14 +36,19 @@ export const initPassport = () => {
     });
 };
 
-interface TokenPayload {
+export interface TokenPayload {
   userId: string;
   email: string;
   provider: User['provider'];
+  role: UserRole;
 }
 
 export const createToken = (payload: TokenPayload): string => {
   return jwt.sign(payload, secret, { expiresIn: '7d' });
+};
+
+export const verifyToken = (token: string): TokenPayload => {
+  return jwt.verify(token, secret) as TokenPayload;
 };
 
 export const createWebUserToken = (payload: { userId: string; username: string }): string => {
@@ -112,6 +117,8 @@ export const handleLogin = async (
   provider: User['provider']
 ): Promise<{ token: string; user: User }> => {
   const user = await findOrCreateUser(email, provider);
-  const token = createToken({ userId: user.id, email: user.email, provider: user.provider });
+  await ensureCurrentUserTier(user.id, 'free');
+  const role = await getUserRole(user.id);
+  const token = createToken({ userId: user.id, email: user.email, provider: user.provider, role });
   return { token, user };
 };

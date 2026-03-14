@@ -17,6 +17,7 @@ export type StoredSession = {
   token: string;
   name: string;
   email?: string;
+  role?: 'user' | 'admin';
   page?: string;
   pageHistory?: string[];
   tripId?: string | null;
@@ -27,6 +28,7 @@ export const loadSession = (): {
   token: string;
   name: string;
   email?: string;
+  role?: 'user' | 'admin';
   page?: string;
   pageHistory?: string[];
   tripId?: string | null;
@@ -45,6 +47,7 @@ export const loadSession = (): {
       token: data.token,
       name: data.name,
       email: data.email,
+      role: data.role,
       page: data.page,
       pageHistory: Array.isArray(data.pageHistory) ? data.pageHistory : undefined,
       tripId: data.tripId ?? null,
@@ -60,13 +63,15 @@ export const saveSession = (
   page?: string,
   email?: string | null,
   tripId?: string | null,
-  pageHistory?: string[]
+  pageHistory?: string[],
+  role?: 'user' | 'admin'
 ): void => {
   if (!canAccessStorage()) return;
   const payload: StoredSession = {
     token,
     name,
     email: email ?? undefined,
+    role,
     page,
     pageHistory,
     tripId: tripId ?? undefined,

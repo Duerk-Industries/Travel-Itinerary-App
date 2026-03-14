@@ -2,6 +2,9 @@ import { Router } from 'express';
 import bodyParser from 'body-parser';
 import { authenticate } from '../auth';
 import { deleteExpense, ensureUserInTrip, insertExpense, listExpenses, listGroupMembers } from '../db';
+import { assertCanUseFeature } from '../services/entitlementService';
+import { EntitlementError } from '../errors';
+import { TokenPayload } from '../auth';
 
 const router = Router();
 router.use(bodyParser.json());
@@ -23,17 +26,28 @@ const allowedCategories = new Set([
 
 router.get('/', async (req, res) => {
   const userId = (req as any).user.userId as string;
+  const role = ((req as any).user as TokenPayload).role;
   const tripId = req.query.tripId as string | undefined;
   if (!tripId) {
     res.status(400).json({ error: 'tripId is required' });
     return;
   }
-  const expenses = await listExpenses(userId, tripId);
-  res.json(expenses);
+  try {
+    await assertCanUseFeature(userId, 'cost_tracking', role);
+    const expenses = await listExpenses(userId, tripId);
+    res.json(expenses);
+  } catch (err) {
+    if (err instanceof EntitlementError) {
+      res.status(402).json({ error: err.message, code: err.code });
+      return;
+    }
+    res.status(500).json({ error: 'Failed to load expenses' });
+  }
 });
 
 router.post('/', async (req, res) => {
   const userId = (req as any).user.userId as string;
+  const role = ((req as any).user as TokenPayload).role;
   const {
     tripId,
     expenseDate,
@@ -51,6 +65,15 @@ router.post('/', async (req, res) => {
   if (!tripId || !expenseDate || !category) {
     res.status(400).json({ error: 'tripId, expenseDate, and category are required' });
     return;
+  }
+  try {
+    await assertCanUseFeature(userId, 'cost_tracking', role);
+  } catch (err) {
+    if (err instanceof EntitlementError) {
+      res.status(402).json({ error: err.message, code: err.code });
+      return;
+    }
+    throw err;
   }
   const normalizedCategory = String(category).trim();
   if (!allowedCategories.has(normalizedCategory)) {
@@ -105,10 +128,16 @@ router.post('/', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   const userId = (req as any).user.userId as string;
+  const role = ((req as any).user as TokenPayload).role;
   try {
+    await assertCanUseFeature(userId, 'cost_tracking', role);
     await deleteExpense(req.params.id, userId);
     res.status(204).send();
   } catch (err) {
+    if (err instanceof EntitlementError) {
+      res.status(402).json({ error: err.message, code: err.code });
+      return;
+    }
     res.status(400).json({ error: (err as Error).message });
   }
 });

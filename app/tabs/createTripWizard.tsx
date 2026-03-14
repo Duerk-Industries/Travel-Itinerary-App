@@ -61,6 +61,14 @@ import LodgingDialog from '../components/LodgingDialog';
 import { LocationSelector, type LocationOption } from '../components/LocationSelector';
 import { MustSeeAttractionSelector, type AttractionOption } from '../components/MustSeeAttractionSelector';
   
+const createIdempotencyKey = (prefix: string): string => {
+  const cryptoApi = globalThis.crypto as { randomUUID?: () => string } | undefined;
+  if (typeof cryptoApi?.randomUUID === 'function') {
+    return `${prefix}-${cryptoApi.randomUUID()}`;
+  }
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+};
+
 type Suggestion = {
   id: string;
   firstName?: string;
@@ -1217,11 +1225,12 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             }
             if (generateItinerary) {
               console.info(`${wizardDebugPrefix} ai-generation-enqueue-start tripId=${tripId} days=${days} destination="${destination}"`);
+              const idempotencyKey = createIdempotencyKey(`wizard-${tripId}`);
               const aiRes = await fetchWithTimeout(
                 `${backendUrl}/api/itinerary/async`,
                 {
                   method: 'POST',
-                  headers: { 'Content-Type': 'application/json', ...headers },
+                  headers: { 'Content-Type': 'application/json', 'Idempotency-Key': idempotencyKey, ...headers },
                   body: JSON.stringify({
                     country: destination,
                     locations: locationNames,
@@ -1234,6 +1243,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     itineraryId,
                     tt: wizardPromptTraits.tt,
                     ut: wizardPromptTraits.ut,
+                    idempotencyKey,
                   }),
                 },
                 10000

@@ -29,7 +29,7 @@ type RawApiLimitsConfig = {
   caching?: Record<string, Record<string, unknown>>;
 };
 
-const DEFAULT_CONFIG_RELATIVE_PATH = '../../config/api-limits.yaml';
+const CONFIG_FILENAME = 'api-limits.yaml';
 
 const normalizeKeyPart = (value: string): string =>
   value
@@ -92,7 +92,13 @@ const resolveConfigPath = (): string => {
   if (override) {
     return path.isAbsolute(override) ? override : path.resolve(process.cwd(), override);
   }
-  return path.resolve(__dirname, DEFAULT_CONFIG_RELATIVE_PATH);
+  const candidates = [
+    path.resolve(process.cwd(), 'config', CONFIG_FILENAME),
+    path.resolve(process.cwd(), 'server', 'config', CONFIG_FILENAME),
+    path.resolve(__dirname, '../../config', CONFIG_FILENAME),
+    path.resolve(__dirname, '../../../config', CONFIG_FILENAME),
+  ];
+  return candidates.find(p => fs.existsSync(p)) ?? candidates[0];
 };
 
 export const getResolvedApiLimitsConfigPath = (): string => resolveConfigPath();
@@ -140,6 +146,8 @@ export const getApiLimitProviderConfig = (provider: string): ProviderLimits | un
   const config = loadConfigFromFile();
   return config.providers[normalizeKeyPart(provider)];
 };
+
+export const getApiLimitsConfig = (): ApiLimitsConfig => loadConfigFromFile();
 
 export const getApiCacheSetting = (group: string, setting: string): number | undefined => {
   const config = loadConfigFromFile();

@@ -1,0 +1,30 @@
+# Feature flag seed defaults.
+# These values are only applied when a flag does not yet exist in the database.
+# Once a flag exists in the DB, the DB value is authoritative — changing this
+# file has no effect on already-seeded flags. Use the admin API to change live values.
+
+flags:
+  ai_itinerary_generation:
+    enabled: true
+    description: "Enable AI-powered itinerary generation via OpenAI"
+  csv_export:
+    enabled: true
+    description: "Enable CSV export of trip data"
+  car_rentals:
+    enabled: true
+    description: "Enable car rental booking integration"
+  trip_sharing:
+    enabled: true
+    description: "Enable sharing trips with other users"
+  trip_following:
+    enabled: true
+    description: "Enable following other users' public trips"
+  cost_tracking:
+    enabled: true
+    description: "Enable cost/expense tracking for trips"
+  multiple_groups:
+    enabled: true
+    description: "Enable multiple traveler groups per account"
+  trip_creation:
+    enabled: true
+    description: "Enable creation of new trips"

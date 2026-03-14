@@ -22,7 +22,7 @@ type RawAuthFlagsConfig = {
   reservedUsernames?: unknown;
 };
 
-const DEFAULT_CONFIG_RELATIVE_PATH = '../../config/auth-flags.yaml';
+const CONFIG_FILENAME = 'auth-flags.yaml';
 const DEFAULT_FLAGS: AuthFlags = {
   usernameLoginEnabled: false,
   multiEmailEnabled: false,
@@ -88,7 +88,13 @@ const resolveConfigPath = (): string => {
   if (override) {
     return path.isAbsolute(override) ? override : path.resolve(process.cwd(), override);
   }
-  return path.resolve(__dirname, DEFAULT_CONFIG_RELATIVE_PATH);
+  const candidates = [
+    path.resolve(process.cwd(), 'config', CONFIG_FILENAME),
+    path.resolve(process.cwd(), 'server', 'config', CONFIG_FILENAME),
+    path.resolve(__dirname, '../../config', CONFIG_FILENAME),
+    path.resolve(__dirname, '../../../config', CONFIG_FILENAME),
+  ];
+  return candidates.find(p => fs.existsSync(p)) ?? candidates[0];
 };
 
 export const getResolvedAuthFlagsConfigPath = (): string => resolveConfigPath();

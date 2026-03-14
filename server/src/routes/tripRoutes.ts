@@ -25,10 +25,14 @@ import {
   updateTripCovering,
   updateTripDetails,
   updateTripGroup,
+  listTripMessages,
 } from '../db';
 import { detectCoveringConflict, detectCycle } from '../utils/coveredBy';
 import { sendTripInviteEmailBestEffort } from '../mailer';
 import { aggregateTripActivity } from '../services/activityFeed';
+import { assertCanUseFeature, assertUnderActiveTripLimit, getLimit, recordUsage } from '../services/entitlementService';
+import { EntitlementError } from '../errors';
+import { TokenPayload } from '../auth';
 
 const normalizeLocationIds = (value: unknown): string[] => {
   if (!Array.isArray(value)) return [];
@@ -56,6 +60,8 @@ const parseGroupParam = (raw: unknown): boolean => {
 const normalizeEmail = (value: unknown): string => String(value ?? '').trim().toLowerCase();
 
 const isValidEmail = (value: string): boolean => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+const getTodayUtcDate = (): string => new Date().toISOString().slice(0, 10);
+const isPastUtcDate = (value?: string | null): boolean => Boolean(value && value < getTodayUtcDate());
 
 // Trips API: create/list/delete trips for the authenticated user.
 const router = Router();
@@ -71,12 +77,14 @@ router.get('/followed', async (req, res) => {
 
 router.post('/follow', async (req, res) => {
   const userId = (req as any).user.userId as string;
+  const role = ((req as any).user as TokenPayload).role;
   const inviteCode = String(req.body?.inviteCode ?? req.body?.code ?? '').trim();
   if (!inviteCode) {
     res.status(400).json({ error: 'inviteCode is required' });
     return;
   }
   try {
+    await assertCanUseFeature(userId, 'trip_following', role);
     const result = await followTripByCode(userId, inviteCode);
     res.status(result.alreadyFollowing ? 200 : 201).json({
       trip: result.trip,
@@ -85,6 +93,10 @@ router.post('/follow', async (req, res) => {
       todayDetails: [],
     });
   } catch (err) {
+    if (err instanceof EntitlementError) {
+      res.status(402).json({ error: err.message, code: err.code });
+      return;
+    }
     const message = (err as Error).message;
     if (/invalid|expired/i.test(message)) {
       res.status(404).json({ error: message });
@@ -172,6 +184,7 @@ router.get('/:id/share/invites', async (req, res) => {
 
 router.post('/:id/share/invites', async (req, res) => {
   const userId = (req as any).user.userId as string;
+  const role = ((req as any).user as TokenPayload).role;
   const rawInvites = Array.isArray(req.body?.invites) ? req.body.invites : [];
   if (!rawInvites.length) {
     res.status(400).json({ error: 'invites is required and must be a non-empty array' });
@@ -205,6 +218,7 @@ router.post('/:id/share/invites', async (req, res) => {
   }
 
   try {
+    await assertCanUseFeature(userId, 'trip_sharing', role);
     const created = await Promise.all(
       normalized.map((invite) =>
         createTripShareInvite(userId, req.params.id, invite.email, invite.role as 'member' | 'follower')
@@ -219,6 +233,10 @@ router.post('/:id/share/invites', async (req, res) => {
       })),
     });
   } catch (err) {
+    if (err instanceof EntitlementError) {
+      res.status(402).json({ error: err.message, code: err.code });
+      return;
+    }
     const message = (err as Error).message;
     if (/not authorized/i.test(message)) {
       res.status(403).json({ error: message });
@@ -337,6 +355,18 @@ router.post('/:id/comments', async (req, res) => {
   }
 });
 
+router.get('/:id/messages', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const access = await ensureUserCanReadTrip(req.params.id, userId);
+  if (!access) {
+    res.status(403).json({ error: 'Not authorized to view messages for this trip' });
+    return;
+  }
+  const limit = Math.min(Number(req.query.limit ?? 200), 500);
+  const messages = await listTripMessages(req.params.id, limit);
+  res.json({ tripId: req.params.id, messages });
+});
+
 router.get('/:id/covered-by', async (req, res) => {
   const userId = (req as any).user.userId as string;
   try {
@@ -375,12 +405,19 @@ router.put('/:id/covered-by', async (req, res) => {
 
 router.post('/', async (req, res) => {
   const userId = (req as any).user.userId as string;
+  const role = ((req as any).user as TokenPayload).role;
   const { name, groupId, description, locationIds, startDate, endDate, startMonth, startYear, durationDays, currency } = req.body ?? {};
   if (!name || !groupId) {
     res.status(400).json({ error: 'name and groupId are required' });
     return;
   }
   try {
+    await assertCanUseFeature(userId, 'trip_creation', role);
+    if (role !== 'admin' && isPastUtcDate(typeof endDate === 'string' ? endDate : null)) {
+      res.status(403).json({ error: 'Non-admin users cannot create trips that end in the past.' });
+      return;
+    }
+    await assertUnderActiveTripLimit(userId, role);
     const trip = await createTrip(userId, groupId, name.trim(), {
       description: typeof description === 'string' ? description.trim() || null : null,
       destination: null,
@@ -392,8 +429,13 @@ router.post('/', async (req, res) => {
       durationDays: Number.isFinite(Number(durationDays)) ? Number(durationDays) : null,
       currency: typeof currency === 'string' && currency.trim() ? currency.trim().toUpperCase() : 'USD',
     });
+    await recordUsage(userId, 'trip_creations', 1, { windowKey: 'all-time', tripId: trip.id });
     res.status(201).json(trip);
   } catch (err) {
+    if (err instanceof EntitlementError) {
+      res.status(402).json({ error: err.message, code: err.code });
+      return;
+    }
     const message = (err as Error).message;
     if (/log in again/i.test(message) || /user not found/i.test(message)) {
       res.status(401).json({ error: message });
@@ -405,6 +447,7 @@ router.post('/', async (req, res) => {
 
 router.post('/wizard', async (req, res) => {
   const userId = (req as any).user.userId as string;
+  const role = ((req as any).user as TokenPayload).role;
   const { name, description, locationIds, startDate, endDate, startMonth, startYear, durationDays, participants, currency } = req.body ?? {};
   if (!name || !String(name).trim()) {
     res.status(400).json({ error: 'Trip name is required' });
@@ -433,6 +476,25 @@ router.post('/wizard', async (req, res) => {
   });
 
   try {
+    await assertCanUseFeature(userId, 'trip_creation', role);
+    if (role !== 'admin' && isPastUtcDate(typeof endDate === 'string' ? endDate : null)) {
+      res.status(403).json({ error: 'Non-admin users cannot create trips that end in the past.' });
+      return;
+    }
+    const travelerLimit = await getLimit(userId, 'max_travelers_per_trip');
+    if (
+      role !== 'admin' &&
+      Number.isFinite(travelerLimit) &&
+      typeof travelerLimit === 'number' &&
+      memberInputs.length + 1 > travelerLimit
+    ) {
+      throw new EntitlementError(
+        'TIER_LIMIT_REACHED',
+        `You have reached the traveler limit of ${travelerLimit} for your current plan`,
+        { limitKey: 'max_travelers_per_trip' }
+      );
+    }
+    await assertUnderActiveTripLimit(userId, role);
     const result = await createTripWithGroupAndMembers({
       ownerId: userId,
       tripName: String(name).trim(),
@@ -447,6 +509,7 @@ router.post('/wizard', async (req, res) => {
       currency: typeof currency === 'string' && currency.trim() ? currency.trim().toUpperCase() : 'USD',
       members,
     });
+    await recordUsage(userId, 'trip_creations', 1, { windowKey: 'all-time', tripId: result.trip.id });
 
     for (const p of memberInputs) {
       const email = String(p.email ?? '').trim();
@@ -471,6 +534,10 @@ router.post('/wizard', async (req, res) => {
 
     res.status(201).json({ trip: result.trip, groupId: result.groupId, invites: result.invites });
   } catch (err) {
+    if (err instanceof EntitlementError) {
+      res.status(402).json({ error: err.message, code: err.code });
+      return;
+    }
     res.status(400).json({ error: (err as Error).message });
   }
 });
@@ -518,12 +585,17 @@ router.patch('/:id/group', async (req, res) => {
 
 router.patch('/:id', async (req, res) => {
   const userId = (req as any).user.userId as string;
+  const role = ((req as any).user as TokenPayload).role;
   const { description, locationIds, startDate, endDate, startMonth, startYear, durationDays, dateMode, currency } = req.body ?? {};
   if (description == null && locationIds == null && startDate == null && endDate == null && startMonth == null && startYear == null && durationDays == null && currency == null) {
     res.status(400).json({ error: 'At least one field is required' });
     return;
   }
   try {
+    if (role !== 'admin' && isPastUtcDate(typeof endDate === 'string' ? endDate : null)) {
+      res.status(403).json({ error: 'Non-admin users cannot update a trip to end in the past.' });
+      return;
+    }
     const updated = await updateTripDetails(userId, req.params.id, {
       description: typeof description === 'string' ? description : null,
       destination: null,

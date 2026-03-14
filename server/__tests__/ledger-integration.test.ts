@@ -2,7 +2,7 @@ import request from 'supertest';
 import { Pool } from 'pg';
 import { app } from '../src/app';
 import { initDb, closePool } from '../src/db';
-import { registerAndLoginWebUser } from './helpers';
+import { registerAndLoginWebUser, seedTiersForTest, setUserTierInDb } from './helpers';
 
 type Rng = () => number;
 
@@ -38,9 +38,11 @@ describe('Ledger integration data setup', () => {
     process.env.NODE_ENV = 'test';
     await initDb();
     pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    await seedTiersForTest(pool);
 
     const login = await registerAndLoginWebUser(pool, user);
     token = login.token;
+    await setUserTierInDb(pool, login.userId, 'premium');
 
     const groups = await request(app).get('/api/groups').set('Authorization', `Bearer ${token}`).expect(200);
     groupId = groups.body[0]?.id as string;

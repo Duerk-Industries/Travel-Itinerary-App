@@ -1,6 +1,6 @@
 // Firebase adapter (Firestore-backed)
 import { initializeApp, cert, deleteApp, getApps, App } from 'firebase-admin/app';
-import { getFirestore, Firestore, FieldPath } from 'firebase-admin/firestore';
+import { getFirestore, Firestore, FieldPath, FieldValue } from 'firebase-admin/firestore';
 import { createHash, randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
 import {
   Flight,
@@ -10,6 +10,7 @@ import {
   Trait,
   Trip,
   User,
+  UserRole,
   WebUser,
   Itinerary,
   ItineraryDetail,
@@ -22,10 +23,21 @@ import {
   TripActivity,
   TripActivityType,
   TripComment,
+  Tier,
+  Feature,
+  TierEntitlement,
+  TierLimit,
+  UserTier,
+  FeatureFlag,
+  UsageCounter,
+  AuditLogEntry,
+  AuditAction,
+  TripChatMessage,
 } from './types';
 import { logError, logInfo } from './logger';
 import { getEnvValue, isLocalEnv } from './env';
 import { normalizeItineraryStatus } from './utils/itineraryStatus';
+import { getApiLimitsConfig } from './config/apiLimits';
 
 let app: App | null = null;
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
@@ -36,6 +48,151 @@ const stripUndefined = <T extends Record<string, any>>(updates: T): Partial<T> =
 const hashToken = (token: string): string => createHash('sha256').update(token).digest('hex');
 const FOLLOW_CODE_LENGTH = 6;
 const FOLLOW_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const ADMIN_ANALYTICS_VERSION = 1;
+
+const getDayKey = (iso: string): string => String(iso ?? '').slice(0, 10);
+const getAdminAnalyticsDailyDocId = (userId: string, dayKey: string): string => `${userId}_${dayKey}`;
+
+const incrementAdminUserAnalyticsMetric = async (
+  userId: string,
+  metricKey: string,
+  amount: number,
+  createdAt = nowIso()
+): Promise<void> => {
+  const db = getDb();
+  const dayKey = getDayKey(createdAt);
+  await Promise.all([
+    db.collection('admin_user_analytics').doc(userId).set({
+      userId,
+      analyticsVersion: ADMIN_ANALYTICS_VERSION,
+      metrics: { [metricKey]: FieldValue.increment(amount) },
+      updatedAt: createdAt,
+    }, { merge: true }),
+    db.collection('admin_user_analytics_daily').doc(getAdminAnalyticsDailyDocId(userId, dayKey)).set({
+      userId,
+      dayKey,
+      analyticsVersion: ADMIN_ANALYTICS_VERSION,
+      metrics: { [metricKey]: FieldValue.increment(amount) },
+      updatedAt: createdAt,
+    }, { merge: true }),
+  ]);
+};
+
+const incrementAdminUserTripCount = async (userId: string, amount: number, updatedAt = nowIso()): Promise<void> => {
+  const db = getDb();
+  await db.collection('admin_user_analytics').doc(userId).set({
+    userId,
+    analyticsVersion: ADMIN_ANALYTICS_VERSION,
+    tripCount: FieldValue.increment(amount),
+    updatedAt,
+  }, { merge: true });
+};
+
+const listActiveGroupUserIds = async (groupId: string): Promise<string[]> => {
+  const db = getDb();
+  const membersSnap = await db.collection('group_members')
+    .where('groupId', '==', groupId)
+    .where('removedAt', '==', null)
+    .get();
+  return Array.from(
+    new Set(
+      membersSnap.docs
+        .map((doc) => String((doc.data() as any)?.userId ?? '').trim())
+        .filter((userId) => userId.length > 0)
+    )
+  );
+};
+
+const countVisibleTripsForUserInGroup = async (userId: string, groupId: string): Promise<number> => {
+  const db = getDb();
+  const [tripsSnap, removalsSnap] = await Promise.all([
+    db.collection('trips').where('groupId', '==', groupId).get(),
+    db.collection('trip_removals').where('userId', '==', userId).get(),
+  ]);
+  const removedTripIds = new Set(
+    removalsSnap.docs
+      .map((doc) => String((doc.data() as any)?.tripId ?? '').trim())
+      .filter((tripId) => tripId.length > 0)
+  );
+  return tripsSnap.docs.filter((doc) => !removedTripIds.has(doc.id)).length;
+};
+
+const writeAdminUserAnalyticsBackfill = async (params: {
+  userId: string;
+  tripCount: number;
+  totalMetrics: Record<string, number>;
+  dailyMetrics: Record<string, Record<string, number>>;
+}): Promise<void> => {
+  const db = getDb();
+  const updatedAt = nowIso();
+  await db.collection('admin_user_analytics').doc(params.userId).set({
+    userId: params.userId,
+    analyticsVersion: ADMIN_ANALYTICS_VERSION,
+    backfilledAt: updatedAt,
+    tripCount: params.tripCount,
+    metrics: params.totalMetrics,
+    updatedAt,
+  }, { merge: true });
+
+  const entries = Object.entries(params.dailyMetrics);
+  for (let i = 0; i < entries.length; i += 400) {
+    const batch = db.batch();
+    for (const [dayKey, metrics] of entries.slice(i, i + 400)) {
+      batch.set(
+        db.collection('admin_user_analytics_daily').doc(getAdminAnalyticsDailyDocId(params.userId, dayKey)),
+        {
+          userId: params.userId,
+          dayKey,
+          analyticsVersion: ADMIN_ANALYTICS_VERSION,
+          metrics,
+          updatedAt,
+        },
+        { merge: true }
+      );
+    }
+    await batch.commit();
+  }
+};
+
+const backfillAdminAnalyticsForUser = async (userId: string): Promise<void> => {
+  const db = getDb();
+  const [usageEventsSnap, groupsSnap, membershipsSnap] = await Promise.all([
+    db.collection('usage_events').where('userId', '==', userId).get(),
+    db.collection('groups').where('ownerId', '==', userId).get(),
+    db.collection('group_members').where('userId', '==', userId).where('removedAt', '==', null).get(),
+  ]);
+
+  const totalMetrics: Record<string, number> = {};
+  const dailyMetrics: Record<string, Record<string, number>> = {};
+  for (const doc of usageEventsSnap.docs) {
+    const data = doc.data() as any;
+    const metricKey = String(data.metricKey ?? '').trim();
+    if (!metricKey) continue;
+    const amount = Number(data.amount ?? 0);
+    const createdAt = String(data.createdAt ?? nowIso());
+    const dayKey = getDayKey(createdAt);
+    totalMetrics[metricKey] = (totalMetrics[metricKey] ?? 0) + amount;
+    dailyMetrics[dayKey] = dailyMetrics[dayKey] ?? {};
+    dailyMetrics[dayKey][metricKey] = (dailyMetrics[dayKey][metricKey] ?? 0) + amount;
+  }
+
+  const groupIds = Array.from(new Set([
+    ...groupsSnap.docs.map((doc) => doc.id),
+    ...membershipsSnap.docs.map((doc) => String((doc.data() as any)?.groupId ?? '').trim()).filter(Boolean),
+  ]));
+  const tripIds = new Set<string>();
+  for (const groupId of groupIds) {
+    const tripsSnap = await db.collection('trips').where('groupId', '==', groupId).get();
+    tripsSnap.docs.forEach((doc) => tripIds.add(doc.id));
+  }
+
+  await writeAdminUserAnalyticsBackfill({
+    userId,
+    tripCount: tripIds.size,
+    totalMetrics,
+    dailyMetrics,
+  });
+};
 
 const generateFollowCode = (): string => {
   const bytes = randomBytes(FOLLOW_CODE_LENGTH);
@@ -92,6 +249,9 @@ export const getDb = (): Firestore => {
       const emulatorHost = getEnvValue('FIRESTORE_EMULATOR_HOST', { defaultValue: 'localhost:8080' });
       logInfo(`Using Firestore emulator at ${emulatorHost}`);
       process.env.FIRESTORE_EMULATOR_HOST = emulatorHost;
+      // Prevent firebase-admin from trying ADC via a local credentials file when we explicitly target the emulator.
+      delete process.env.GOOGLE_APPLICATION_CREDENTIALS;
+      delete process.env.GOOGLE_APPLICATION_CREDENTIALS_FILE;
       app = initializeApp({ projectId });
     } else {
       if (!projectId) {
@@ -151,6 +311,85 @@ export const initDb = async (): Promise<void> => {
     }
     throw error;
   }
+
+  // Seed tiers (skip if already present)
+  const tierSeeds: Array<{ key: string; displayName: string; rank: number }> = [
+    { key: 'free',    displayName: 'Free',    rank: 1 },
+    { key: 'premium', displayName: 'Premium', rank: 2 },
+    { key: 'pro',     displayName: 'Pro',     rank: 3 },
+  ];
+  for (const tier of tierSeeds) {
+    const ref = db.collection('tiers').doc(tier.key);
+    const doc = await ref.get();
+    if (!doc.exists) {
+      await ref.set({ key: tier.key, displayName: tier.displayName, rank: tier.rank, isActive: true, createdAt: nowIso() });
+      logInfo(`[db.firebase] Seeded tier: ${tier.key}`);
+    }
+  }
+
+  // Seed features (skip if already present)
+  const featureSeeds: Array<{ key: string; description: string }> = [
+    { key: 'ai_itinerary_generation', description: 'AI-powered itinerary generation' },
+    { key: 'csv_export',              description: 'Export cost reports as CSV' },
+    { key: 'car_rentals',             description: 'Car rental tracking' },
+    { key: 'trip_sharing',            description: 'Share trips with other users' },
+    { key: 'trip_following',          description: 'Follow trips as read-only observer' },
+    { key: 'cost_tracking',           description: 'Expense and cost tracking' },
+    { key: 'multiple_groups',         description: 'Create more than one group' },
+    { key: 'trip_creation',           description: 'Create new trips' },
+  ];
+  for (const feature of featureSeeds) {
+    const ref = db.collection('features').doc(feature.key);
+    const doc = await ref.get();
+    if (!doc.exists) {
+      await ref.set({ key: feature.key, description: feature.description, defaultEnabled: true, createdAt: nowIso() });
+      logInfo(`[db.firebase] Seeded feature: ${feature.key}`);
+    }
+  }
+
+  const tierEntitlementSeeds: Array<{ tierKey: string; featureKey: string; isAllowed: boolean }> = [
+    { tierKey: 'free', featureKey: 'ai_itinerary_generation', isAllowed: true },
+    { tierKey: 'free', featureKey: 'csv_export', isAllowed: true },
+    { tierKey: 'free', featureKey: 'car_rentals', isAllowed: true },
+    { tierKey: 'free', featureKey: 'trip_sharing', isAllowed: true },
+    { tierKey: 'free', featureKey: 'trip_following', isAllowed: true },
+    { tierKey: 'free', featureKey: 'cost_tracking', isAllowed: false },
+    { tierKey: 'free', featureKey: 'multiple_groups', isAllowed: true },
+    { tierKey: 'free', featureKey: 'trip_creation', isAllowed: true },
+    { tierKey: 'premium', featureKey: 'cost_tracking', isAllowed: true },
+    { tierKey: 'pro', featureKey: 'cost_tracking', isAllowed: true },
+  ];
+  for (const { tierKey, featureKey, isAllowed } of tierEntitlementSeeds) {
+    const docId = `${tierKey}_${featureKey}`;
+    const ref = db.collection('tier_entitlements').doc(docId);
+    const doc = await ref.get();
+    if (!doc.exists) {
+      await ref.set({ tierId: tierKey, featureId: featureKey, isAllowed, createdAt: nowIso() });
+      logInfo(`[db.firebase] Seeded tier entitlement: ${tierKey}/${featureKey}`);
+    }
+  }
+
+  // Seed tier limits (skip if already present)
+  const tierLimitSeeds: Array<{ tierKey: string; limitKey: string; limitValue: number }> = [
+    { tierKey: 'free',    limitKey: 'max_active_trips',                   limitValue: 3 },
+    { tierKey: 'free',    limitKey: 'max_travelers_per_trip',             limitValue: 6 },
+    { tierKey: 'free',    limitKey: 'ai_itinerary_generations_per_month', limitValue: 5 },
+    { tierKey: 'premium', limitKey: 'max_active_trips',                   limitValue: 250 },
+    { tierKey: 'premium', limitKey: 'max_travelers_per_trip',             limitValue: 200 },
+    { tierKey: 'premium', limitKey: 'ai_itinerary_generations_per_month', limitValue: -1 },
+    { tierKey: 'pro',     limitKey: 'max_active_trips',                   limitValue: 250 },
+    { tierKey: 'pro',     limitKey: 'max_travelers_per_trip',             limitValue: 200 },
+    { tierKey: 'pro',     limitKey: 'ai_itinerary_generations_per_month', limitValue: -1 },
+  ];
+  for (const { tierKey, limitKey, limitValue } of tierLimitSeeds) {
+    const docId = `${tierKey}_${limitKey}`;
+    const ref = db.collection('tier_limits').doc(docId);
+    const doc = await ref.get();
+    if (!doc.exists) {
+      await ref.set({ tierId: tierKey, limitKey, limitValue, createdAt: nowIso() });
+      logInfo(`[db.firebase] Seeded tier limit: ${tierKey}/${limitKey}`);
+    }
+  }
 };
 
 export const closePool = async (): Promise<void> => {
@@ -173,11 +412,11 @@ export const findOrCreateUser = async (email: string, provider: User['provider']
   if (!existing.empty) {
     const doc = existing.docs[0];
     const data = doc.data() as User;
-    return { id: doc.id, email: data.email, provider: data.provider };
+    return { id: doc.id, email: data.email, provider: data.provider, role: (data.role ?? 'user') as UserRole };
   }
   const id = randomUUID();
-  await db.collection('users').doc(id).set({ email: normalized, provider, createdAt: nowIso(), emailVerified: true });
-  return { id, email: normalized, provider };
+  await db.collection('users').doc(id).set({ email: normalized, provider, role: 'user', createdAt: nowIso(), emailVerified: true });
+  return { id, email: normalized, provider, role: 'user' };
 };
 
 export const ensureDefaultGroupForUser = async (userId: string, email: string): Promise<void> => {
@@ -202,7 +441,7 @@ export const findUserByEmail = async (email: string): Promise<User | null> => {
   if (snapshot.empty) return null;
   const doc = snapshot.docs[0];
   const data = doc.data() as User;
-  return { id: doc.id, email: data.email, provider: data.provider };
+  return { id: doc.id, email: data.email, provider: data.provider, role: (data.role ?? 'user') as UserRole };
 };
 
 export const findUserByIdentifier = async (identifier: string): Promise<User | null> => {
@@ -212,7 +451,7 @@ export const findUserByIdentifier = async (identifier: string): Promise<User | n
     if (usersByUsername.empty) return null;
     const doc = usersByUsername.docs[0];
     const data = doc.data() as User;
-    return { id: doc.id, email: data.email, provider: data.provider };
+    return { id: doc.id, email: data.email, provider: data.provider, role: (data.role ?? 'user') as UserRole };
   }
   return findUserByEmail(normalized);
 };
@@ -889,7 +1128,14 @@ export const removeGroupMember = async (requesterId: string, groupId: string, me
   if (!authorized) throw new Error('Not authorized to remove members');
   const memberDoc = await db.collection('group_members').doc(memberId).get();
   if (!memberDoc.exists) throw new Error('Member not found');
+  const removedMemberUserId = String((memberDoc.data() as any)?.userId ?? '').trim();
   await db.collection('group_members').doc(memberId).set({ removedAt: nowIso() }, { merge: true });
+  if (removedMemberUserId) {
+    const visibleTrips = await countVisibleTripsForUserInGroup(removedMemberUserId, groupId);
+    if (visibleTrips > 0) {
+      await incrementAdminUserTripCount(removedMemberUserId, -visibleTrips);
+    }
+  }
   const requesterSnap = await db
     .collection('group_members')
     .where('groupId', '==', groupId)
@@ -963,6 +1209,13 @@ export const deleteGroup = async (ownerId: string, groupId: string): Promise<voi
   const db = getDb();
   const group = await db.collection('groups').doc(groupId).get();
   if (!group.exists || group.data()?.ownerId !== ownerId) throw new Error('Group not found or not owner');
+  const activeUserIds = await listActiveGroupUserIds(groupId);
+  const visibleTripCounts = new Map<string, number>();
+  await Promise.all(
+    activeUserIds.map(async (userId) => {
+      visibleTripCounts.set(userId, await countVisibleTripsForUserInGroup(userId, groupId));
+    })
+  );
   const batch = db.batch();
   batch.delete(group.ref);
   const members = await db.collection('group_members').where('groupId', '==', groupId).get();
@@ -972,6 +1225,11 @@ export const deleteGroup = async (ownerId: string, groupId: string): Promise<voi
   const trips = await db.collection('trips').where('groupId', '==', groupId).get();
   trips.forEach((t) => batch.delete(t.ref));
   await batch.commit();
+  await Promise.all(
+    Array.from(visibleTripCounts.entries())
+      .filter(([, tripCount]) => tripCount > 0)
+      .map(([userId, tripCount]) => incrementAdminUserTripCount(userId, -tripCount))
+  );
 };
 
 export const listTrips = async (userId: string): Promise<Array<Trip & { groupName: string }>> => {
@@ -1048,6 +1306,8 @@ export const createTrip = async (
     createdAt: nowIso(),
   };
   await db.collection('trips').doc(id).set(payload);
+  const activeUserIds = await listActiveGroupUserIds(groupId);
+  await Promise.all(activeUserIds.map((memberUserId) => incrementAdminUserTripCount(memberUserId, 1, payload.createdAt)));
   return { id, ...payload } as any;
 };
 
@@ -1139,6 +1399,7 @@ export const deleteTrip = async (userId: string, tripId: string): Promise<void> 
     expenses.forEach((doc) => batch.delete(doc.ref));
     batch.delete(trip.ref);
     await batch.commit();
+    await incrementAdminUserTripCount(userId, -1);
     return;
   }
 
@@ -1149,6 +1410,7 @@ export const deleteTrip = async (userId: string, tripId: string): Promise<void> 
       memberId: memberDoc.id,
       createdAt: nowIso(),
     });
+    await incrementAdminUserTripCount(userId, -1);
   }
 
   await removeMemberFromTripData(tripId, memberDoc.id);
@@ -1167,7 +1429,21 @@ export const updateTripGroup = async (
   if (!allowed) throw new Error('Not authorized to move trip');
   const newMembership = await ensureMembership(newGroupId, userId);
   if (!newMembership) throw new Error('Not authorized for destination group');
+  const [oldActiveUserIds, newActiveUserIds] = await Promise.all([
+    listActiveGroupUserIds(data.groupId),
+    listActiveGroupUserIds(newGroupId),
+  ]);
   await db.collection('trips').doc(tripId).update({ groupId: newGroupId });
+  const oldSet = new Set(oldActiveUserIds);
+  const newSet = new Set(newActiveUserIds);
+  await Promise.all([
+    ...oldActiveUserIds
+      .filter((memberUserId) => !newSet.has(memberUserId))
+      .map((memberUserId) => incrementAdminUserTripCount(memberUserId, -1)),
+    ...newActiveUserIds
+      .filter((memberUserId) => !oldSet.has(memberUserId))
+      .map((memberUserId) => incrementAdminUserTripCount(memberUserId, 1)),
+  ]);
   const newGroup = await db.collection('groups').doc(newGroupId).get();
   return { ...(data as any), id: tripId, groupId: newGroupId, groupName: (newGroup.data() as any)?.name ?? '' };
 };
@@ -1432,6 +1708,10 @@ export const acceptGroupInvite = async (inviteId: string, userId: string, email?
     });
   }
   await db.collection('group_invites').doc(inviteId).update({ status: 'accepted', inviteeUserId: userId });
+  const tripCount = await countVisibleTripsForUserInGroup(userId, data.groupId);
+  if (tripCount > 0) {
+    await incrementAdminUserTripCount(userId, tripCount);
+  }
 };
 
 export const rejectGroupInvite = async (inviteId: string, userId: string, email?: string): Promise<void> => {
@@ -1484,6 +1764,14 @@ export const rejectGroupInvite = async (inviteId: string, userId: string, email?
     await db.collection('group_members').doc(memberId).update({ removedAt: nowIso() });
   } else if (memberId) {
     await db.collection('group_members').doc(memberId).update({ removedAt: nowIso() });
+  }
+
+  const resolvedMemberUserId = String((memberDoc?.data() as any)?.userId ?? '').trim();
+  if (resolvedMemberUserId) {
+    const visibleTrips = await countVisibleTripsForUserInGroup(resolvedMemberUserId, groupId);
+    if (visibleTrips > 0) {
+      await incrementAdminUserTripCount(resolvedMemberUserId, -visibleTrips);
+    }
   }
 
   await db.collection('group_invites').doc(inviteId).delete();
@@ -2835,8 +3123,43 @@ export const searchUsersByEmail = async (query: string): Promise<User[]> => {
   const db = getDb();
   const normalized = query.trim().toLowerCase();
   if (!normalized) return [];
-  const snapshot = await db.collection('users').where('email', '>=', normalized).where('email', '<=', normalized + '\\uf8ff').limit(10).get();
-  return snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+  const [userSnap, webUserSnap, userEmailSnap] = await Promise.all([
+    db.collection('users').get(),
+    db.collection('web_users').get(),
+    db.collection('user_emails').get(),
+  ]);
+  const webUsersById = new Map(webUserSnap.docs.map((doc) => [doc.id, doc.data()] as const));
+  const userEmailsByUserId = new Map<string, string[]>();
+
+  userEmailSnap.docs.forEach((doc) => {
+    const data = doc.data() as any;
+    const userId = String(data.userId ?? '');
+    const email = String(data.email ?? '').toLowerCase();
+    if (!userId || !email) return;
+    const existing = userEmailsByUserId.get(userId) ?? [];
+    existing.push(email);
+    userEmailsByUserId.set(userId, existing);
+  });
+
+  return userSnap.docs
+    .map((d) => {
+      const user = d.data() as any;
+      const webUser = webUsersById.get(d.id) as any;
+      const haystack = [
+        String(user.email ?? ''),
+        String(user.firstName ?? ''),
+        String(user.lastName ?? ''),
+        String(webUser?.firstName ?? ''),
+        String(webUser?.lastName ?? ''),
+        ...(userEmailsByUserId.get(d.id) ?? []),
+      ]
+        .join(' ')
+        .toLowerCase();
+      return { matches: haystack.includes(normalized), user: { id: d.id, ...user } as User };
+    })
+    .filter((entry) => entry.matches)
+    .slice(0, 10)
+    .map((entry) => entry.user);
 };
 
 export const listTraitsForGroupTrip = async (userId: string, tripId: string) => {
@@ -3357,7 +3680,7 @@ export const findOrCreateGoogleUser = async (profile: any): Promise<User> => {
         await doc.ref.update(updateData);
         const updatedDoc = await doc.ref.get();
         const data = updatedDoc.data() as User;
-        return { id: doc.id, email: data.email, provider: data.provider };
+        return { id: doc.id, email: data.email, provider: data.provider, role: (data.role ?? 'user') as UserRole };
     }
 
     const existingByEmail = await db.collection('users').where('email', '==', normalizedEmail).limit(1).get();
@@ -3374,7 +3697,7 @@ export const findOrCreateGoogleUser = async (profile: any): Promise<User> => {
         await doc.ref.update(updateData);
         const updatedDoc = await doc.ref.get();
         const data = updatedDoc.data() as User;
-        return { id: doc.id, email: data.email, provider: data.provider };
+        return { id: doc.id, email: data.email, provider: data.provider, role: (data.role ?? 'user') as UserRole };
     }
 
     const newUserId = randomUUID();
@@ -3390,6 +3713,782 @@ export const findOrCreateGoogleUser = async (profile: any): Promise<User> => {
         createdAt: nowIso(),
     });
 
-    return { id: newUserId, email: normalizedEmail, provider: 'google' };
+    return { id: newUserId, email: normalizedEmail, provider: 'google', role: 'user' };
 };
 
+// ---- Entitlement system functions ----
+
+export const getUserRole = async (userId: string): Promise<UserRole> => {
+  const db = getDb();
+  const doc = await db.collection('users').doc(userId).get();
+  return ((doc.data()?.role as string) ?? 'user') as UserRole;
+};
+
+export const setUserRole = async (userId: string, role: UserRole): Promise<void> => {
+  const db = getDb();
+  await db.collection('users').doc(userId).update({ role });
+};
+
+export const listTiers = async (): Promise<Tier[]> => {
+  const db = getDb();
+  const snap = await db.collection('tiers').orderBy('rank').get();
+  return snap.docs.map(d => {
+    const data = d.data();
+    return {
+      id: data.id ?? d.id,
+      key: d.id,
+      displayName: data.displayName,
+      rank: data.rank,
+      isActive: data.isActive ?? true,
+      createdAt: data.createdAt ?? nowIso(),
+    };
+  });
+};
+
+export const getTierByKey = async (key: string): Promise<Tier | null> => {
+  const db = getDb();
+  const doc = await db.collection('tiers').doc(key).get();
+  if (!doc.exists) return null;
+  const data = doc.data()!;
+  return { id: data.id ?? doc.id, key: doc.id, displayName: data.displayName, rank: data.rank, isActive: data.isActive ?? true, createdAt: data.createdAt ?? nowIso() };
+};
+
+export const listFeatures = async (): Promise<Feature[]> => {
+  const db = getDb();
+  const snap = await db.collection('features').orderBy('key').get();
+  return snap.docs.map(d => {
+    const data = d.data();
+    return { id: data.id ?? d.id, key: d.id, description: data.description ?? '', defaultEnabled: data.defaultEnabled ?? false, createdAt: data.createdAt ?? nowIso() };
+  });
+};
+
+export const listTierLimits = async (tierId: string): Promise<TierLimit[]> => {
+  const db = getDb();
+  const snap = await db.collection('tier_limits').where('tierId', '==', tierId).get();
+  return snap.docs.map(d => {
+    const data = d.data();
+    return { id: d.id, tierId: data.tierId, limitKey: data.limitKey, limitValue: data.limitValue, createdAt: data.createdAt ?? nowIso() };
+  });
+};
+
+export const upsertTierLimit = async (tierId: string, limitKey: string, limitValue: number): Promise<void> => {
+  const db = getDb();
+  const docId = `${tierId}_${limitKey}`;
+  await db.collection('tier_limits').doc(docId).set({ tierId, limitKey, limitValue, updatedAt: nowIso() }, { merge: true });
+};
+
+export const getTierLimitValue = async (tierId: string, limitKey: string): Promise<number | null> => {
+  const db = getDb();
+  const docId = `${tierId}_${limitKey}`;
+  const doc = await db.collection('tier_limits').doc(docId).get();
+  if (!doc.exists) return null;
+  return doc.data()!.limitValue ?? null;
+};
+
+export const listTierEntitlements = async (tierId: string): Promise<TierEntitlement[]> => {
+  const db = getDb();
+  const snap = await db.collection('tier_entitlements').where('tierId', '==', tierId).get();
+  return snap.docs.map(d => {
+    const data = d.data();
+    return { id: d.id, tierId: data.tierId, featureId: data.featureId, isAllowed: data.isAllowed, createdAt: data.createdAt ?? nowIso() };
+  });
+};
+
+export const upsertTierEntitlement = async (tierId: string, featureId: string, isAllowed: boolean): Promise<void> => {
+  const db = getDb();
+  const docId = `${tierId}_${featureId}`;
+  await db.collection('tier_entitlements').doc(docId).set({ tierId, featureId, isAllowed, updatedAt: nowIso() }, { merge: true });
+};
+
+export const getCurrentUserTier = async (userId: string): Promise<(UserTier & { tierKey: string }) | null> => {
+  const db = getDb();
+  const snap = await db.collection('user_tiers')
+    .where('userId', '==', userId)
+    .where('effectiveTo', '==', null)
+    .orderBy('effectiveFrom', 'desc')
+    .limit(1)
+    .get();
+  if (snap.empty) return null;
+  const doc = snap.docs[0];
+  const data = doc.data();
+  const tier = await getTierByKey(data.tierKey);
+  return {
+    id: doc.id,
+    userId: data.userId,
+    tierId: data.tierId,
+    source: data.source,
+    reason: data.reason ?? null,
+    assignedBy: data.assignedBy ?? null,
+    effectiveFrom: data.effectiveFrom,
+    effectiveTo: data.effectiveTo ?? null,
+    createdAt: data.createdAt ?? nowIso(),
+    tierKey: tier?.key ?? data.tierKey ?? 'free',
+  };
+};
+
+export const setUserTier = async (
+  userId: string,
+  tierKey: string,
+  source: 'system' | 'billing' | 'admin_override' | 'admin',
+  assignedBy: string | null,
+  reason?: string
+): Promise<void> => {
+  const db = getDb();
+  const tier = await getTierByKey(tierKey);
+  if (!tier) throw new Error(`Tier not found: ${tierKey}`);
+  const existing = await db.collection('user_tiers')
+    .where('userId', '==', userId)
+    .where('effectiveTo', '==', null)
+    .get();
+  const batch = db.batch();
+  const now = nowIso();
+  for (const doc of existing.docs) {
+    batch.update(doc.ref, { effectiveTo: now });
+  }
+  const newRef = db.collection('user_tiers').doc(randomUUID());
+  batch.set(newRef, { userId, tierId: tier.id, tierKey, source, reason: reason ?? null, assignedBy, effectiveFrom: now, effectiveTo: null, createdAt: now });
+  await batch.commit();
+};
+
+export const ensureCurrentUserTier = async (userId: string, tierKey = 'free'): Promise<void> => {
+  const current = await getCurrentUserTier(userId);
+  if (current) return;
+  await setUserTier(userId, tierKey, 'system', null, 'Automatic default tier assignment');
+};
+
+export const getFeatureFlag = async (key: string): Promise<FeatureFlag | null> => {
+  const db = getDb();
+  const doc = await db.collection('feature_flags').doc(key).get();
+  if (!doc.exists) return null;
+  const data = doc.data()!;
+  return { id: doc.id, key: doc.id, enabled: data.enabled, scope: 'global', updatedBy: data.updatedBy ?? null, updatedAt: data.updatedAt ?? nowIso(), createdAt: data.createdAt ?? nowIso() };
+};
+
+export const listFeatureFlags = async (): Promise<FeatureFlag[]> => {
+  const db = getDb();
+  const snap = await db.collection('feature_flags').orderBy('key').get();
+  return snap.docs.map(d => {
+    const data = d.data();
+    return { id: d.id, key: d.id, enabled: data.enabled, scope: 'global' as const, updatedBy: data.updatedBy ?? null, updatedAt: data.updatedAt ?? nowIso(), createdAt: data.createdAt ?? nowIso() };
+  });
+};
+
+export const setFeatureFlag = async (key: string, enabled: boolean, updatedBy: string | null): Promise<void> => {
+  const db = getDb();
+  await db.collection('feature_flags').doc(key).set({ enabled, updatedBy, updatedAt: nowIso() }, { merge: true });
+};
+
+export const getUsageCounter = async (userId: string, metricKey: string, windowKey: string): Promise<number> => {
+  const db = getDb();
+  const docId = `${userId}_${metricKey}_${windowKey}`;
+  const doc = await db.collection('usage_counters').doc(docId).get();
+  return doc.exists ? (doc.data()!.count ?? 0) : 0;
+};
+
+export const incrementUsageCounter = async (
+  userId: string,
+  metricKey: string,
+  windowKey: string,
+  amount = 1
+): Promise<number> => {
+  const db = getDb();
+  const docId = `${userId}_${metricKey}_${windowKey}`;
+  const ref = db.collection('usage_counters').doc(docId);
+  const { FieldValue } = await import('firebase-admin/firestore');
+  await ref.set({ userId, metricKey, windowKey, count: FieldValue.increment(amount), updatedAt: nowIso() }, { merge: true });
+  const updated = await ref.get();
+  return updated.data()!.count ?? amount;
+};
+
+export const appendUsageEvent = async (
+  userId: string,
+  metricKey: string,
+  amount = 1,
+  metadata?: Record<string, unknown> | null
+): Promise<void> => {
+  const db = getDb();
+  const createdAt = nowIso();
+  await db.collection('usage_events').doc(randomUUID()).set({
+    userId,
+    metricKey,
+    amount,
+    metadata: metadata ?? null,
+    createdAt,
+  });
+  await incrementAdminUserAnalyticsMetric(userId, metricKey, amount, createdAt);
+};
+
+export const atomicIncrementIfUnderLimit = async (
+  userId: string,
+  metricKey: string,
+  windowKey: string,
+  limit: number
+): Promise<{ allowed: boolean; newCount: number }> => {
+  const db = getDb();
+  const docId = `${userId}_${metricKey}_${windowKey}`;
+  const ref = db.collection('usage_counters').doc(docId);
+  const { FieldValue } = await import('firebase-admin/firestore');
+  return db.runTransaction(async tx => {
+    const doc = await tx.get(ref);
+    const current = doc.exists ? (doc.data()!.count ?? 0) : 0;
+    if (current >= limit) {
+      return { allowed: false, newCount: current };
+    }
+    if (doc.exists) {
+      tx.update(ref, { count: FieldValue.increment(1), updatedAt: nowIso() });
+    } else {
+      tx.set(ref, { userId, metricKey, windowKey, count: 1, updatedAt: nowIso() });
+    }
+    return { allowed: true, newCount: current + 1 };
+  });
+};
+
+export const getGenerationIdempotency = async (key: string) => {
+  const db = getDb();
+  const doc = await db.collection('generation_idempotency').doc(key).get();
+  if (!doc.exists) return null;
+  const data = doc.data()!;
+  return {
+    key: doc.id,
+    userId: data.userId,
+    tripId: data.tripId,
+    usageKey: data.usageKey ?? null,
+    windowKey: data.windowKey ?? null,
+    status: data.status ?? 'pending',
+    resultRef: data.resultRef ?? null,
+    responseBody: data.responseBody ?? null,
+    errorMessage: data.errorMessage ?? null,
+    createdAt: data.createdAt ?? nowIso(),
+    expiresAt: data.expiresAt ?? nowIso(),
+  };
+};
+
+export const reserveGenerationIdempotency = async (params: {
+  key: string;
+  userId: string;
+  tripId: string;
+  usageKey: string;
+  windowKey: string;
+  ttlSeconds?: number;
+}) => {
+  const db = getDb();
+  const ref = db.collection('generation_idempotency').doc(params.key);
+  const ttlSeconds = Math.max(60, params.ttlSeconds ?? 3600);
+  const expiresAt = new Date(Date.now() + ttlSeconds * 1000).toISOString();
+  let created = false;
+  await db.runTransaction(async (tx) => {
+    const doc = await tx.get(ref);
+    if (!doc.exists) {
+      created = true;
+      tx.set(ref, {
+        userId: params.userId,
+        tripId: params.tripId,
+        usageKey: params.usageKey,
+        windowKey: params.windowKey,
+        status: 'pending',
+        resultRef: null,
+        responseBody: null,
+        errorMessage: null,
+        createdAt: nowIso(),
+        expiresAt,
+      });
+    }
+  });
+  return { created, record: await getGenerationIdempotency(params.key) };
+};
+
+export const completeGenerationIdempotency = async (key: string, responseBody: Record<string, unknown>, resultRef?: string | null): Promise<void> => {
+  const db = getDb();
+  await db.collection('generation_idempotency').doc(key).set({
+    status: 'completed',
+    resultRef: resultRef ?? null,
+    responseBody,
+    errorMessage: null,
+  }, { merge: true });
+};
+
+export const failGenerationIdempotency = async (key: string, errorMessage: string): Promise<void> => {
+  const db = getDb();
+  await db.collection('generation_idempotency').doc(key).set({
+    status: 'failed',
+    errorMessage,
+  }, { merge: true });
+};
+
+export const countReservedOrCompletedUsage = async (userId: string, usageKey: string, windowKey: string): Promise<number> => {
+  const db = getDb();
+  const now = nowIso();
+  const snap = await db.collection('generation_idempotency')
+    .where('userId', '==', userId)
+    .where('usageKey', '==', usageKey)
+    .where('windowKey', '==', windowKey)
+    .get();
+  return snap.docs.filter((doc) => {
+    const data = doc.data();
+    return ['pending', 'completed'].includes(data.status) && String(data.expiresAt ?? now) > now;
+  }).length;
+};
+
+export const writeAuditLog = async (entry: {
+  actorUserId?: string | null;
+  targetUserId?: string | null;
+  action: AuditAction;
+  beforeState?: Record<string, unknown> | null;
+  afterState?: Record<string, unknown> | null;
+  reason?: string | null;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+}): Promise<AuditLogEntry> => {
+  const db = getDb();
+  const id = randomUUID();
+  const createdAt = nowIso();
+  await db.collection('audit_log').doc(id).set({
+    actorUserId: entry.actorUserId ?? null,
+    targetUserId: entry.targetUserId ?? null,
+    action: entry.action,
+    beforeState: entry.beforeState ?? null,
+    afterState: entry.afterState ?? null,
+    reason: entry.reason ?? null,
+    ipAddress: entry.ipAddress ?? null,
+    userAgent: entry.userAgent ?? null,
+    createdAt,
+  });
+  return { id, ...entry, actorUserId: entry.actorUserId ?? null, targetUserId: entry.targetUserId ?? null, beforeState: entry.beforeState ?? null, afterState: entry.afterState ?? null, reason: entry.reason ?? null, ipAddress: entry.ipAddress ?? null, userAgent: entry.userAgent ?? null, createdAt };
+};
+
+export const listAuditLog = async (opts: {
+  actorUserId?: string;
+  targetUserId?: string;
+  action?: string;
+  page?: number;
+  limit?: number;
+}): Promise<{ entries: AuditLogEntry[]; total: number }> => {
+  const db = getDb();
+  let query: FirebaseFirestore.Query = db.collection('audit_log').orderBy('createdAt', 'desc');
+  if (opts.actorUserId) query = query.where('actorUserId', '==', opts.actorUserId);
+  if (opts.targetUserId) query = query.where('targetUserId', '==', opts.targetUserId);
+  if (opts.action) query = query.where('action', '==', opts.action);
+  const page = Math.max(1, opts.page ?? 1);
+  const limit = Math.min(100, Math.max(1, opts.limit ?? 50));
+  const offset = (page - 1) * limit;
+  const allSnap = await query.get();
+  const total = allSnap.size;
+  const entries = allSnap.docs.slice(offset, offset + limit).map(d => {
+    const data = d.data();
+    return {
+      id: d.id,
+      actorUserId: data.actorUserId ?? null,
+      targetUserId: data.targetUserId ?? null,
+      action: data.action as AuditAction,
+      beforeState: data.beforeState ?? null,
+      afterState: data.afterState ?? null,
+      reason: data.reason ?? null,
+      ipAddress: data.ipAddress ?? null,
+      userAgent: data.userAgent ?? null,
+      createdAt: data.createdAt,
+    };
+  });
+  return { entries, total };
+};
+
+export const countGroupMembers = async (groupId: string): Promise<number> => {
+  const db = getDb();
+  const snap = await db.collection('group_members')
+    .where('groupId', '==', groupId)
+    .where('removedAt', '==', null)
+    .get();
+  return snap.size;
+};
+
+import type { AdminUserRow } from './db.postgres';
+export { AdminUserRow };
+
+export const adminSearchUsers = async (opts: {
+  search?: string; page?: number; limit?: number;
+}): Promise<{ users: AdminUserRow[]; total: number }> => {
+  const db = getDb();
+  const page = Math.max(1, opts.page ?? 1);
+  const limit = Math.min(100, Math.max(1, opts.limit ?? 20));
+  const offset = (page - 1) * limit;
+  const search = opts.search?.trim().toLowerCase() ?? '';
+
+  const [userSnap, webUserSnap, tierSnap, userTierSnap, userEmailSnap] = await Promise.all([
+    db.collection('users').get(),
+    db.collection('web_users').get(),
+    db.collection('tiers').get(),
+    db.collection('user_tiers').where('effectiveTo', '==', null).get(),
+    db.collection('user_emails').get(),
+  ]);
+
+  const webUsersById = new Map(
+    webUserSnap.docs.map((doc) => [doc.id, doc.data()] as const)
+  );
+  const tiersById = new Map<string, Record<string, unknown>>(
+    tierSnap.docs.map((doc) => [doc.id, { id: doc.id, ...doc.data() }])
+  );
+  const activeTierByUserId = new Map(
+    userTierSnap.docs.map((doc) => [String(doc.data().userId), doc.data()] as const)
+  );
+  const userEmailsByUserId = new Map<string, string[]>();
+
+  userEmailSnap.docs.forEach((doc) => {
+    const data = doc.data() as any;
+    const userId = String(data.userId ?? '');
+    const email = String(data.email ?? '').toLowerCase();
+    if (!userId || !email) return;
+    const existing = userEmailsByUserId.get(userId) ?? [];
+    existing.push(email);
+    userEmailsByUserId.set(userId, existing);
+  });
+
+  const allUsers: AdminUserRow[] = userSnap.docs.map((doc) => {
+    const user = doc.data();
+    const webUser = webUsersById.get(doc.id) ?? {};
+    const activeTier = activeTierByUserId.get(doc.id) ?? null;
+    const tier = activeTier ? tiersById.get(String(activeTier.tierId ?? activeTier.tierKey ?? '')) : null;
+
+    return {
+      id: doc.id,
+      email: (user.email as string | null) ?? '',
+      firstName: (webUser.firstName as string | null) ?? (user.firstName as string | null) ?? null,
+      lastName: (webUser.lastName as string | null) ?? (user.lastName as string | null) ?? null,
+      role: ((user.role as string | null) ?? 'user'),
+      tierKey: (activeTier?.tierKey as string | null) ?? (tier ? (tier.id as string) : null),
+      tierDisplayName: tier ? ((tier.displayName as string | null) ?? null) : null,
+      tierSince: (activeTier?.effectiveFrom as string | null) ?? null,
+      createdAt: (user.createdAt as string | null) ?? nowIso(),
+    };
+  });
+
+  const filtered = search
+    ? allUsers.filter((user) => {
+        const haystack = [
+          user.email ?? '',
+          user.firstName ?? '',
+          user.lastName ?? '',
+          ...(userEmailsByUserId.get(user.id) ?? []),
+          user.id,
+        ]
+          .join(' ')
+          .toLowerCase();
+        return haystack.includes(search);
+      })
+    : allUsers;
+
+  filtered.sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')));
+
+  return {
+    users: filtered.slice(offset, offset + limit),
+    total: filtered.length,
+  };
+};
+
+export const adminGetUser = async (userId: string): Promise<{
+  id: string; email: string; firstName: string | null; lastName: string | null;
+  role: string; tierKey: string | null; tierDisplayName: string | null;
+  tierSince: string | null; tierSource: string | null; createdAt: string;
+  usage: { metricKey: string; windowKey: string; count: number }[];
+} | null> => {
+  const db = getDb();
+  const [userDoc, webUserDoc, activeTierSnap, tierSnap, usageSnap] = await Promise.all([
+    db.collection('users').doc(userId).get(),
+    db.collection('web_users').doc(userId).get(),
+    db.collection('user_tiers')
+      .where('userId', '==', userId)
+      .where('effectiveTo', '==', null)
+      .orderBy('effectiveFrom', 'desc')
+      .limit(1)
+      .get(),
+    db.collection('tiers').get(),
+    db.collection('usage_counters').where('userId', '==', userId).get(),
+  ]);
+
+  if (!userDoc.exists) return null;
+
+  const user = userDoc.data() ?? {};
+  const webUser = webUserDoc.exists ? webUserDoc.data() ?? {} : {};
+  const activeTier = activeTierSnap.empty ? null : activeTierSnap.docs[0].data();
+  const tiersById = new Map<string, Record<string, unknown>>(
+    tierSnap.docs.map((doc) => [doc.id, { id: doc.id, ...doc.data() }])
+  );
+  const tier = activeTier ? tiersById.get(String(activeTier.tierId ?? activeTier.tierKey ?? '')) : null;
+
+  return {
+    id: userId,
+    email: (user.email as string | null) ?? '',
+    firstName: (webUser.firstName as string | null) ?? (user.firstName as string | null) ?? null,
+    lastName: (webUser.lastName as string | null) ?? (user.lastName as string | null) ?? null,
+    role: ((user.role as string | null) ?? 'user'),
+    tierKey: (activeTier?.tierKey as string | null) ?? (tier ? (tier.id as string) : null),
+    tierDisplayName: tier ? ((tier.displayName as string | null) ?? null) : null,
+    tierSince: (activeTier?.effectiveFrom as string | null) ?? null,
+    tierSource: (activeTier?.source as string | null) ?? null,
+    createdAt: (user.createdAt as string | null) ?? nowIso(),
+    usage: usageSnap.docs
+      .map((doc) => doc.data())
+      .map((data) => ({
+        metricKey: String(data.metricKey ?? ''),
+        windowKey: String(data.windowKey ?? ''),
+        count: Number(data.count ?? 0),
+      }))
+      .sort((a, b) => `${b.windowKey}:${a.metricKey}`.localeCompare(`${a.windowKey}:${b.metricKey}`)),
+  };
+};
+
+export const adminGetUserData = async (opts: {
+  window?: '7d' | '30d' | 'all-time'; page?: number; limit?: number;
+}): Promise<{
+  summary: { totalUsers: number; byTier: Record<string, number> };
+  users: Array<{ id: string; email: string; role: string; tierKey: string | null; tripCount: number; tripCreations: number; aiGenerations: number; tokens: number; apiCalls: Record<string, number>; createdAt: string }>;
+  total: number;
+}> => {
+  const db = getDb();
+  const page = Math.max(1, opts.page ?? 1);
+  const limit = Math.min(100, Math.max(1, opts.limit ?? 20));
+  const offset = (page - 1) * limit;
+  const providerKeys = Object.keys(getApiLimitsConfig().providers ?? {});
+  const windowDays = opts.window === '7d' ? 7 : opts.window === '30d' ? 30 : null;
+  const windowStartDayKey = windowDays
+    ? getDayKey(new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000).toISOString())
+    : null;
+
+  const [userSnap, tierSnap, userTierSnap] = await Promise.all([
+    db.collection('users').get(),
+    db.collection('tiers').get(),
+    db.collection('user_tiers').where('effectiveTo', '==', null).get(),
+  ]);
+
+  const tiersById = new Map<string, Record<string, unknown>>(
+    tierSnap.docs.map((doc) => [doc.id, { id: doc.id, ...doc.data() }])
+  );
+  const activeTierByUserId = new Map<string, Record<string, unknown>>(
+    userTierSnap.docs.map((doc) => [String(doc.data().userId), doc.data()])
+  );
+
+  const allUsers = userSnap.docs.map((doc) => {
+    const data = doc.data();
+    const activeTier = activeTierByUserId.get(doc.id) ?? null;
+    const tier = activeTier ? tiersById.get(String(activeTier.tierId ?? activeTier.tierKey ?? '')) : null;
+    return {
+      id: doc.id,
+      email: (data.email as string | null) ?? '',
+      role: ((data.role as string | null) ?? 'user'),
+      tierKey: (activeTier?.tierKey as string | null) ?? (tier ? (tier.id as string) : null),
+      createdAt: (data.createdAt as string | null) ?? nowIso(),
+    };
+  });
+
+  allUsers.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+
+  const byTier: Record<string, number> = {};
+  for (const user of allUsers) {
+    const key = user.tierKey ?? 'none';
+    byTier[key] = (byTier[key] ?? 0) + 1;
+  }
+
+  const pagedUsers = allUsers.slice(offset, offset + limit);
+  const analyticsRefs = pagedUsers.map((user) => db.collection('admin_user_analytics').doc(user.id));
+  let analyticsDocs = analyticsRefs.length ? await db.getAll(...analyticsRefs) : [];
+
+  const usersNeedingBackfill = analyticsDocs
+    .filter((doc) => {
+      const data = doc.exists ? doc.data() as any : null;
+      return !doc.exists || !data?.backfilledAt;
+    })
+    .map((doc) => doc.id);
+
+  if (usersNeedingBackfill.length) {
+    await Promise.all(usersNeedingBackfill.map((userId) => backfillAdminAnalyticsForUser(userId)));
+    analyticsDocs = analyticsRefs.length ? await db.getAll(...analyticsRefs) : [];
+  }
+
+  const analyticsByUserId = new Map(
+    analyticsDocs.map((doc) => [doc.id, (doc.exists ? doc.data() : null) as any])
+  );
+
+  const dailyMetricsByUser = new Map<string, Record<string, number>>();
+  if (windowStartDayKey) {
+    const userIds = pagedUsers.map((user) => user.id);
+    for (let i = 0; i < userIds.length; i += 10) {
+      const chunk = userIds.slice(i, i + 10);
+      const dailySnap = await db.collection('admin_user_analytics_daily').where('userId', 'in', chunk).get();
+      for (const doc of dailySnap.docs) {
+        const data = doc.data() as any;
+        const dayKey = String(data.dayKey ?? '');
+        if (!dayKey || dayKey < windowStartDayKey) continue;
+        const userId = String(data.userId ?? '');
+        const sourceMetrics = (data.metrics ?? {}) as Record<string, number>;
+        const bucket = dailyMetricsByUser.get(userId) ?? {};
+        for (const [metricKey, rawValue] of Object.entries(sourceMetrics)) {
+          bucket[metricKey] = (bucket[metricKey] ?? 0) + Number(rawValue ?? 0);
+        }
+        dailyMetricsByUser.set(userId, bucket);
+      }
+    }
+  }
+
+  return {
+    summary: { totalUsers: allUsers.length, byTier },
+    total: allUsers.length,
+    users: pagedUsers.map((user) => {
+      const aggregate = analyticsByUserId.get(user.id) ?? {};
+      const metrics = windowStartDayKey
+        ? (dailyMetricsByUser.get(user.id) ?? {})
+        : ((aggregate.metrics ?? {}) as Record<string, number>);
+      return {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        tierKey: user.tierKey,
+        tripCount: Number(aggregate.tripCount ?? 0),
+        tripCreations: metrics.trip_creations ?? 0,
+        aiGenerations: metrics.ai_itinerary_generations ?? 0,
+        tokens: metrics.openai_tokens ?? 0,
+        apiCalls: providerKeys.reduce<Record<string, number>>((acc, providerKey) => {
+          const metricKey = `api_calls_${providerKey.toLowerCase()}`;
+          acc[providerKey] =
+            metrics[metricKey] ??
+            (providerKey === 'OPENAI' ? metrics.ai_itinerary_generations ?? 0 : 0);
+          return acc;
+        }, {}),
+        createdAt: user.createdAt,
+      };
+    }),
+  };
+};
+
+export const countActiveTripsForUser = async (userId: string): Promise<number> => {
+  const db = getDb();
+  const today = new Date().toISOString().slice(0, 10);
+  const groupsSnap = await db.collection('groups').where('ownerId', '==', userId).get();
+  const memberSnap = await db.collection('group_members')
+    .where('userId', '==', userId)
+    .where('removedAt', '==', null)
+    .get();
+  const groupIds = new Set<string>([
+    ...groupsSnap.docs.map(d => d.id),
+    ...memberSnap.docs.map(d => d.data().groupId as string),
+  ]);
+  if (groupIds.size === 0) return 0;
+  let count = 0;
+  for (const groupId of groupIds) {
+    const tripsSnap = await db.collection('trips').where('groupId', '==', groupId).get();
+    for (const tripDoc of tripsSnap.docs) {
+      const endDate = tripDoc.data().endDate;
+      if (!endDate || endDate >= today) count++;
+    }
+  }
+  return count;
+};
+
+
+// ---------------------------------------------------------------------------
+// Chat / Messaging
+// ---------------------------------------------------------------------------
+
+export const listTripMessages = async (
+  tripId: string,
+  limit = 200,
+): Promise<TripChatMessage[]> => {
+  const db = getDb();
+  const snap = await db
+    .collection('trip_messages')
+    .where('tripId', '==', tripId)
+    .orderBy('createdAt', 'asc')
+    .limit(limit)
+    .get();
+
+  const messages: TripChatMessage[] = snap.docs.map((doc) => {
+    const d = doc.data() as any;
+    return {
+      id: doc.id,
+      appId: d.appId ?? 'WanderBunnies',
+      tripId: d.tripId,
+      senderId: d.senderId,
+      senderName: d.senderName ?? '',
+      senderInitials: d.senderInitials ?? '',
+      body: d.body ?? '',
+      createdAt: d.createdAt ?? nowIso(),
+      readBy: d.readBy ?? [],
+    };
+  });
+
+  return messages;
+};
+
+export const addTripMessage = async (msg: {
+  appId: string;
+  tripId: string;
+  senderId: string;
+  senderName: string;
+  senderInitials: string;
+  body: string;
+}): Promise<TripChatMessage> => {
+  const db = getDb();
+  const text = String(msg.body ?? '').trim();
+  if (!text) throw new Error('Message body is required');
+  const id = randomUUID();
+  const createdAt = nowIso();
+  const payload: TripChatMessage = {
+    id,
+    appId: msg.appId,
+    tripId: msg.tripId,
+    senderId: msg.senderId,
+    senderName: msg.senderName,
+    senderInitials: msg.senderInitials,
+    body: text,
+    createdAt,
+    readBy: [],
+  };
+  await db.collection('trip_messages').doc(id).set(payload);
+  return payload;
+};
+
+export const markMessagesRead = async (
+  tripId: string,
+  userId: string,
+  upToMessageId: string,
+): Promise<void> => {
+  const db = getDb();
+  // Get the createdAt of the upToMessage
+  const upToDoc = await db.collection('trip_messages').doc(upToMessageId).get();
+  if (!upToDoc.exists) return;
+  const upToCreatedAt = (upToDoc.data() as any).createdAt ?? '';
+
+  const snap = await db
+    .collection('trip_messages')
+    .where('tripId', '==', tripId)
+    .where('createdAt', '<=', upToCreatedAt)
+    .get();
+
+  const batch = db.batch();
+  for (const doc of snap.docs) {
+    const readBy: string[] = (doc.data() as any).readBy ?? [];
+    if (!readBy.includes(userId)) {
+      batch.update(doc.ref, { readBy: FieldValue.arrayUnion(userId) });
+    }
+    // Also write to message_reads sub-collection for cross-referencing
+    const readRef = db
+      .collection('message_reads')
+      .doc(`${doc.id}_${userId}`);
+    batch.set(readRef, { messageId: doc.id, userId, readAt: nowIso() }, { merge: true });
+  }
+  await batch.commit();
+};
+
+export const countUnreadMessages = async (
+  tripId: string,
+  userId: string,
+): Promise<number> => {
+  const db = getDb();
+  const snap = await db
+    .collection('trip_messages')
+    .where('tripId', '==', tripId)
+    .get();
+  let count = 0;
+  for (const doc of snap.docs) {
+    const readBy: string[] = (doc.data() as any).readBy ?? [];
+    if (!readBy.includes(userId)) count++;
+  }
+  return count;
+};

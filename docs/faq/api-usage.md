@@ -2,7 +2,7 @@
 
 ## How broad is the current API surface?
 
-- 81 route handlers across `server/src/routes/*`.
+- 92 route handlers across `server/src/routes/*`.
 
 ## What are the main API domains?
 
@@ -15,6 +15,7 @@
 - Itinerary generation and itinerary records/details
 - Traits and demographics
 - Place search and location option endpoints
+- Admin: `adminRoutes` (requires `role = 'admin'` in JWT)
 
 ## Are any endpoints placeholders or intentionally limited?
 
@@ -22,6 +23,14 @@
 - `POST /api/trips/follow` returns `501`.
 - `GET /api/trips/:id/follow-code` returns `501`.
 - `GET /api/places/:placeId` currently returns `404` ("temporarily unavailable").
+
+## Admin API
+
+See [docs/admin.md](../admin.md) for the full admin API reference.
+
+All `/api/admin/*` endpoints require a valid JWT with `role: 'admin'`. All mutating endpoints require a `reason` string (min 3 chars).
+
+Entitlement enforcement returns HTTP 402 with a JSON body `{ "error": "...", "code": "TIER_LIMIT_REACHED" | "FEATURE_DISABLED" | "FEATURE_NOT_ENTITLED" }` when a user is blocked by a tier limit or feature flag.
 
 ## What key validation/authorization rules should clients expect?
 

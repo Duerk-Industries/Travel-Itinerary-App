@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import bodyParser from 'body-parser';
 import { authenticate, createToken } from '../auth';
+import { getUserRole } from '../db';
 import {
   deleteWebUserAndCleanup,
   acceptFamilyRelationship,
@@ -40,6 +41,9 @@ import {
 import { sendShareEmailBestEffort, sendTripInviteEmailBestEffort, sendVerificationEmailBestEffort } from '../mailer';
 import { logError } from '../logger';
 import { getAuthFlag } from '../config/authFlags';
+import { assertUnderTravelerLimit } from '../services/entitlementService';
+import { EntitlementError } from '../errors';
+import { TokenPayload } from '../auth';
 
 // Account management (profile, password, deletion) for authenticated web users.
 const router = Router();
@@ -77,7 +81,8 @@ router.patch('/profile', async (req, res) => {
       mapPreference: typeof mapPreference === 'string' ? mapPreference.trim().toLowerCase() : undefined,
       appearancePreference: typeof appearancePreference === 'string' ? appearancePreference.trim().toLowerCase() : undefined,
     });
-    const token = createToken({ userId: updated.id, email: updated.email, provider: 'email' });
+    const role = await getUserRole(updated.id);
+    const token = createToken({ userId: updated.id, email: updated.email, provider: 'email', role });
     res.json({ user: updated, token });
   } catch (err: any) {
     if (err?.code === 'EMAIL_TAKEN') {
@@ -173,7 +178,8 @@ router.patch('/emails/primary', async (req, res) => {
   try {
     const emails = await setPrimaryUserEmail(userId, email);
     const profile = await getWebUserProfile(userId);
-    const token = profile ? createToken({ userId: profile.id, email: profile.email, provider: 'email' }) : null;
+    const role = profile ? await getUserRole(profile.id) : null;
+    const token = profile && role ? createToken({ userId: profile.id, email: profile.email, provider: 'email', role }) : null;
     res.json({ emails, token });
   } catch (err: any) {
     if (err?.code === 'EMAIL_NOT_VERIFIED') {
@@ -451,7 +457,7 @@ router.get('/trips/:tripId/members', async (req, res) => {
 
 router.post('/trips/:tripId/members', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  console.log('[DEBUG] Add member request body:', req.body);
+  const role = ((req as any).user as TokenPayload).role;
   const membership = await ensureUserInTrip(req.params.tripId, userId);
   if (!membership) {
     res.status(403).json({ error: 'Not authorized to add members to this trip' });
@@ -464,23 +470,23 @@ router.post('/trips/:tripId/members', async (req, res) => {
     lastName?: string;
   };
   try {
+    await assertUnderTravelerLimit(userId, membership.groupId, role);
     const result = await addGroupMember(userId, membership.groupId, { email, guestName, firstName, lastName });
-    console.log('[DEBUG] addGroupMember result:', result);
     if (result.inviteId) {
       await attachInviteToTrip(result.inviteId, req.params.tripId);
     }
     if (result.email) {
-      console.log('[DEBUG] Attempting to send trip invite email');
       const trip = await getTripById(req.params.tripId);
       const tripName = trip?.name ?? 'Trip';
       const inviterEmail = (req as any).user?.email as string | undefined;
-      await sendTripInviteEmailBestEffort(result.email, tripName, inviterEmail ?? null).catch((err) => {
-        console.error('[DEBUG] Failed to send trip invite email:', err);
-      });
+      await sendTripInviteEmailBestEffort(result.email, tripName, inviterEmail ?? null).catch(() => undefined);
     }
     res.status(201).json(result);
   } catch (err) {
-    console.error('[DEBUG] Error in add member endpoint:', err);
+    if (err instanceof EntitlementError) {
+      res.status(402).json({ error: err.message, code: err.code });
+      return;
+    }
     res.status(400).json({ error: (err as Error).message });
   }
 });
@@ -596,7 +602,7 @@ groupsRouter.post('/', async (req, res) => {
 });
 
 groupsRouter.post('/:id/members', async (req, res) => {
-  const user = (req as any).user as { userId: string; email: string };
+  const user = (req as any).user as TokenPayload & { userId: string; email: string };
   const { email, guestName, firstName, lastName } = req.body as { email?: string; guestName?: string; firstName?: string; lastName?: string };
   const given = typeof firstName === 'string' ? firstName.trim() : '';
   const family = typeof lastName === 'string' ? lastName.trim() : '';
@@ -606,6 +612,7 @@ groupsRouter.post('/:id/members', async (req, res) => {
   }
   const normalizedGuestName = guestName?.trim() || (given && family ? `${given} ${family}` : undefined);
   try {
+    await assertUnderTravelerLimit(user.userId, req.params.id, user.role);
     const result = await addGroupMember(user.userId, req.params.id, {
       email,
       guestName: normalizedGuestName,
@@ -619,6 +626,10 @@ groupsRouter.post('/:id/members', async (req, res) => {
     }
     res.status(201).json(result);
   } catch (err) {
+    if (err instanceof EntitlementError) {
+      res.status(402).json({ error: err.message, code: err.code });
+      return;
+    }
     res.status(400).json({ error: (err as Error).message });
   }
 });

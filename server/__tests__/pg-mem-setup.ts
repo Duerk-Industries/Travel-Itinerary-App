@@ -1,4 +1,5 @@
 import { newDb, DataType } from 'pg-mem';
+import { randomUUID } from 'crypto';
 
 // Create a shared in-memory database for all test suites.
 const db = newDb({ autoCreateForeignKeyIndices: true, noAstCoverageCheck: true });
@@ -34,16 +35,18 @@ db.public.registerFunction({
   },
 });
 
+db.public.registerFunction({ name: 'uuid_generate_v4', args: [], returns: DataType.uuid, implementation: () => randomUUID() });
+
 // Allow longer async flows in integration tests.
 jest.setTimeout(30000);
 
 // Silence expected console output so Jest only reports pass/fail lines.
 const silenceConsole = () => {
   if (process.env.SHOW_TEST_LOGS === '1') return;
-  jest.spyOn(console, 'log').mockImplementation(() => {});
-  jest.spyOn(console, 'info').mockImplementation(() => {});
-  jest.spyOn(console, 'warn').mockImplementation(() => {});
-  jest.spyOn(console, 'error').mockImplementation(() => {});
+  if (!(console.log as any)._isMockFunction) jest.spyOn(console, 'log').mockImplementation(() => {});
+  if (!(console.info as any)._isMockFunction) jest.spyOn(console, 'info').mockImplementation(() => {});
+  if (!(console.warn as any)._isMockFunction) jest.spyOn(console, 'warn').mockImplementation(() => {});
+  if (!(console.error as any)._isMockFunction) jest.spyOn(console, 'error').mockImplementation(() => {});
 };
 silenceConsole();
 

@@ -15,6 +15,9 @@ import {
 } from '../db';
 import { normalizeItineraryStatus, shouldRelaxRequiredFields } from '../utils/itineraryStatus';
 import { applyVoteSummary } from '../services/itemVoteService';
+import { assertCanUseFeature } from '../services/entitlementService';
+import { EntitlementError } from '../errors';
+import { TokenPayload } from '../auth';
 
 const router = Router();
 router.use(bodyParser.json());
@@ -22,7 +25,17 @@ router.use(authenticate);
 
 router.get('/', async (req, res) => {
   const userId = (req as any).user.userId as string;
+  const role = ((req as any).user as TokenPayload).role;
   const tripId = req.query.tripId as string | undefined;
+  try {
+    await assertCanUseFeature(userId, 'car_rentals', role);
+  } catch (err) {
+    if (err instanceof EntitlementError) {
+      res.status(402).json({ error: err.message, code: err.code });
+      return;
+    }
+    throw err;
+  }
   const rentals = await listCarRentals(userId, tripId);
   if (tripId) {
     const withVotes = await applyVoteSummary(userId, tripId, 'car_rental', rentals as any[]);
@@ -47,6 +60,7 @@ router.get('/', async (req, res) => {
 
 router.post('/', async (req, res) => {
   const userId = (req as any).user.userId as string;
+  const role = ((req as any).user as TokenPayload).role;
   const {
     tripId,
     status: incomingStatus,
@@ -66,6 +80,15 @@ router.post('/', async (req, res) => {
 
   const status = normalizeItineraryStatus(incomingStatus);
   const relaxed = shouldRelaxRequiredFields(status);
+  try {
+    await assertCanUseFeature(userId, 'car_rentals', role);
+  } catch (err) {
+    if (err instanceof EntitlementError) {
+      res.status(402).json({ error: err.message, code: err.code });
+      return;
+    }
+    throw err;
+  }
   if (!tripId || (!relaxed && !String(pickupLocation ?? '').trim() && !String(vendor ?? '').trim() && !String(model ?? '').trim())) {
     res.status(400).json({ error: 'Missing required fields' });
     return;
@@ -118,6 +141,16 @@ router.post('/', async (req, res) => {
 
 router.patch('/:id', async (req, res) => {
   const userId = (req as any).user.userId as string;
+  const role = ((req as any).user as TokenPayload).role;
+  try {
+    await assertCanUseFeature(userId, 'car_rentals', role);
+  } catch (err) {
+    if (err instanceof EntitlementError) {
+      res.status(402).json({ error: err.message, code: err.code });
+      return;
+    }
+    throw err;
+  }
   const updates = req.body ?? {};
   const updated = await updateCarRental(req.params.id, userId, {
     status: typeof updates.status === 'undefined' ? undefined : normalizeItineraryStatus(updates.status),
@@ -165,6 +198,16 @@ router.patch('/:id', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   const userId = (req as any).user.userId as string;
+  const role = ((req as any).user as TokenPayload).role;
+  try {
+    await assertCanUseFeature(userId, 'car_rentals', role);
+  } catch (err) {
+    if (err instanceof EntitlementError) {
+      res.status(402).json({ error: err.message, code: err.code });
+      return;
+    }
+    throw err;
+  }
   await deleteCarRental(req.params.id, userId);
   await deleteExpenseForSource('car_rental', req.params.id, userId);
   res.status(204).send();

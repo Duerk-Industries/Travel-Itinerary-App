@@ -36,7 +36,7 @@ describe('session persistence', () => {
   });
 
   test('saveSession and loadSession round-trip stored data', () => {
-    saveSession('token-1', 'Traveler', 'overview', 'traveler@example.com', 'trip-1');
+    saveSession('token-1', 'Traveler', 'overview', 'traveler@example.com', 'trip-1', [], 'admin');
     const session = loadSession();
     expect(session).not.toBeNull();
     expect(session?.token).toBe('token-1');
@@ -44,6 +44,7 @@ describe('session persistence', () => {
     expect(session?.email).toBe('traveler@example.com');
     expect(session?.page).toBe('overview');
     expect(session?.tripId).toBe('trip-1');
+    expect(session?.role).toBe('admin');
   });
 
   test('clearSession removes the stored entry', () => {

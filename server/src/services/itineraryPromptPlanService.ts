@@ -210,6 +210,7 @@ export type ItineraryPromptPlanResult = {
   details: ItineraryGeneratedDetail[];
   generatedItems: ItineraryGeneratedItems;
   profile: ItineraryPromptProfile;
+  tokenUsage: { promptTokens: number; completionTokens: number; totalTokens: number };
 };
 
 type ServiceInput = {
@@ -1428,26 +1429,31 @@ const runJsonStage = async <T>(params: {
   replacements: Record<string, string>;
   maxTokens: number;
   fallbackValue: T;
+  acc?: { promptTokens: number; completionTokens: number };
 }): Promise<T> => {
   const sys = applyTemplate(params.template.sys, params.replacements);
   const usr = applyTemplate(params.template.usr, params.replacements);
   logInfo(`[itinerary] stage start caller=${params.caller} maxTokens=${params.maxTokens}`);
-  const content = await runItineraryPromptStageViaOpenAi({
+  const result = await runItineraryPromptStageViaOpenAi({
     apiKey: params.apiKey,
     caller: params.caller,
     systemPrompt: sys,
     userPrompt: usr,
     maxTokens: params.maxTokens,
   });
-  if (!content) {
+  if (params.acc) {
+    params.acc.promptTokens += result.promptTokens;
+    params.acc.completionTokens += result.completionTokens;
+  }
+  if (!result.text) {
     logError(`[itinerary] ${params.caller} returned empty response; using fallback`);
     return params.fallbackValue;
   }
-  logInfo(`[itinerary] stage response caller=${params.caller} chars=${content.length}`);
+  logInfo(`[itinerary] stage response caller=${params.caller} chars=${result.text.length}`);
   try {
-    return parseModelJson<T>(content);
+    return parseModelJson<T>(result.text);
   } catch (err) {
-    const snippet = String(content).slice(0, 600).replace(/\s+/g, ' ');
+    const snippet = String(result.text).slice(0, 600).replace(/\s+/g, ' ');
     logError(`[itinerary] ${params.caller} JSON parse failed; using fallback`, {
       error: err instanceof Error ? err.message : String(err),
       snippet,
@@ -1460,17 +1466,23 @@ const runRenderStage = async (params: {
   apiKey: string;
   template: PromptTemplate;
   replacements: Record<string, string>;
+  acc?: { promptTokens: number; completionTokens: number };
 }): Promise<string | null> => {
   const sys = applyTemplate(params.template.sys, params.replacements);
   const usr = applyTemplate(params.template.usr, params.replacements);
   logInfo('[itinerary] stage start caller=ITINERARY_PLAN_P4_RENDER maxTokens=900');
-  return runItineraryPromptStageViaOpenAi({
+  const result = await runItineraryPromptStageViaOpenAi({
     apiKey: params.apiKey,
     caller: OPENAI_CALLER_ITINERARY_PLAN_P4_RENDER,
     systemPrompt: sys,
     userPrompt: usr,
     maxTokens: 900,
   });
+  if (params.acc) {
+    params.acc.promptTokens += result.promptTokens;
+    params.acc.completionTokens += result.completionTokens;
+  }
+  return result.text;
 };
 
 export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promise<ItineraryPromptPlanResult> => {
@@ -1482,6 +1494,8 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
     `[itinerary] prompt-plan start destinations=${promptRequest.d.length} mustSee=${promptRequest.ms?.length ?? 0} days=${promptRequest.dur ?? input.days} budget=${input.budgetMin}-${input.budgetMax}`
   );
 
+  const tokenAcc = { promptTokens: 0, completionTokens: 0 };
+
   const normRaw = await runJsonStage<unknown>({
     apiKey: input.apiKey,
     caller: OPENAI_CALLER_ITINERARY_PLAN_P0_NORM,
@@ -1492,6 +1506,7 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
     },
     maxTokens: 700,
     fallbackValue: {},
+    acc: tokenAcc,
   });
   const normalized = sanitizeNorm(normRaw, promptRequest);
   logInfo(
@@ -1544,6 +1559,7 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
     },
     maxTokens: 1200,
     fallbackValue: {},
+    acc: tokenAcc,
   });
   const route = sanitizeRoute(routeRaw, normalized, promptRequest);
   logInfo(
@@ -1562,6 +1578,7 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
     },
     maxTokens: Math.max(1100, Math.min(3500, Math.round(promptRequest.dur ?? 1) * 280)),
     fallbackValue: {},
+    acc: tokenAcc,
   });
   const dayItinerary = sanitizeItinerary(dayRaw, route, normalized, promptRequest);
   logInfo(
@@ -1578,6 +1595,7 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
     },
     maxTokens: 1400,
     fallbackValue: dayItinerary,
+    acc: tokenAcc,
   });
   const itinerary = enforceShortlistGrounding(
     sanitizeItinerary(validatedRaw, route, normalized, promptRequest),
@@ -1609,6 +1627,7 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
     replacements: {
       FINAL_JSON: JSON.stringify(itineraryWithMustSee),
     },
+    acc: tokenAcc,
   });
   const renderedMarkdown = String(render ?? '')
     .replace(/[\u200B-\u200D\uFEFF]/g, '')
@@ -1641,5 +1660,10 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
     details: safeDetails,
     generatedItems: items,
     profile,
+    tokenUsage: {
+      promptTokens: tokenAcc.promptTokens,
+      completionTokens: tokenAcc.completionTokens,
+      totalTokens: tokenAcc.promptTokens + tokenAcc.completionTokens,
+    },
   };
 };
