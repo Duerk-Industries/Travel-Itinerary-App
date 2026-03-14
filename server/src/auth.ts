@@ -47,6 +47,10 @@ export const createToken = (payload: TokenPayload): string => {
   return jwt.sign(payload, secret, { expiresIn: '7d' });
 };
 
+export const verifyToken = (token: string): TokenPayload => {
+  return jwt.verify(token, secret) as TokenPayload;
+};
+
 export const createWebUserToken = (payload: { userId: string; username: string }): string => {
   return jwt.sign(payload, secret, { expiresIn: '7d' });
 };

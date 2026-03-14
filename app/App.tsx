@@ -61,6 +61,17 @@ import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from '
 
 import LodgingTab from './tabs/LodgingTab';
 import AdminTab from './tabs/AdminTab';
+import PresenceAvatars from './components/PresenceAvatars';
+import ChatButton from './components/ChatButton';
+import ChatPanel from './components/ChatPanel';
+import {
+  connectSocket,
+  disconnectSocket,
+  getSocket,
+  CLIENT_EVENTS,
+  SERVER_EVENTS,
+} from './utils/socket';
+import type { PresenceUser } from '../packages/messaging/src/types';
 
 const TOP_BANNER_ICON = require('./assets/wanderbunnies-reference.png');
 
@@ -454,6 +465,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [tripDropdownOpenId, setTripDropdownOpenId] = useState<string | null>(null);
   const [activeTripId, setActiveTripId] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<'user' | 'admin'>('user');
   const [showActiveTripDropdown, setShowActiveTripDropdown] = useState(false);
   const [openShareFromHeaderSignal, setOpenShareFromHeaderSignal] = useState(0);
@@ -463,6 +475,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [selectedLodging, setSelectedLodging] = useState<Lodging | null>(null);
   const [showLodgingDetails, setShowLodgingDetails] = useState(false);
   const [lodgingToDelete, setLodgingToDelete] = useState<Lodging | null>(null);
+
+  // Socket.IO / presence / chat
+  const [presenceUsers, setPresenceUsers] = useState<PresenceUser[]>([]);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatMinimized, setChatMinimized] = useState(false);
+  const [chatUnread, setChatUnread] = useState(0);
 
   const [tours, setTours] = useState<Tour[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -973,6 +991,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setUserToken(null);
     setUserName(null);
     setUserEmail(null);
+    setUserId(null);
     setUserRole('user');
     setTrips([]);
     setActiveTripId(null);
@@ -1005,6 +1024,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setLastRefreshAt(null);
     setIsRefreshing(false);
     refreshInFlightRef.current = false;
+    disconnectSocket();
+    setPresenceUsers([]);
+    setChatOpen(false);
+    setChatUnread(0);
     clearSession();
   }, []);
 
@@ -1088,10 +1111,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     const name =
       `${decoded?.firstName ?? ''} ${decoded?.lastName ?? ''}`.trim() || decoded?.email || 'Traveler';
     const decodedRole: 'user' | 'admin' = decoded?.role === 'admin' ? 'admin' : 'user';
+    const decodedUserId = (decoded as any)?.userId ?? null;
     setUserToken(token);
     setUserName(name);
     setUserRole(decodedRole);
+    setUserId(decodedUserId);
     setInvitesLoaded(false);
+    connectSocket(token);
     if (decoded?.email) {
       setUserEmail(decoded.email);
     }
@@ -1665,6 +1691,33 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       refreshAllData();
     }
   }, [userToken]);
+
+  // Socket.IO: join trip room when active trip changes
+  useEffect(() => {
+    if (!userToken || !activeTripId) return;
+    const socket = getSocket();
+
+    const onPresence = (list: PresenceUser[]) => setPresenceUsers(list);
+    const onUnread = (data: { tripId: string; count: number }) => {
+      if (data.tripId === activeTripId) setChatUnread(data.count);
+    };
+
+    socket.on(SERVER_EVENTS.PRESENCE_UPDATE, onPresence);
+    socket.on(SERVER_EVENTS.UNREAD_COUNT, onUnread);
+
+    if (socket.connected) {
+      socket.emit(CLIENT_EVENTS.JOIN_TRIP, activeTripId);
+    } else {
+      socket.once('connect', () => {
+        socket.emit(CLIENT_EVENTS.JOIN_TRIP, activeTripId);
+      });
+    }
+
+    return () => {
+      socket.off(SERVER_EVENTS.PRESENCE_UPDATE, onPresence);
+      socket.off(SERVER_EVENTS.UNREAD_COUNT, onUnread);
+    };
+  }, [userToken, activeTripId]);
 
   useEffect(() => {
     if (!userToken) return;
@@ -2284,12 +2337,20 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             ) : null}
             <View style={[styles.topRight, isNarrowLayout && styles.topRightNarrow]}>
               {!isPhoneLayout ? (
-                <TouchableOpacity
-                  style={[styles.userNameButton, styles.smallButton, styles.topBarActionButton]}
-                  onPress={() => requestPageChange('account')}
-                >
-                  <Text style={styles.userNameButtonText}>{userName ?? 'Traveler'}</Text>
-                </TouchableOpacity>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  {activeTripId && (
+                    <PresenceAvatars
+                      currentUserId={userId ?? ''}
+                      presenceUsers={presenceUsers}
+                    />
+                  )}
+                  <TouchableOpacity
+                    style={[styles.userNameButton, styles.smallButton, styles.topBarActionButton]}
+                    onPress={() => requestPageChange('account')}
+                  >
+                    <Text style={styles.userNameButtonText}>{userName ?? 'Traveler'}</Text>
+                  </TouchableOpacity>
+                </View>
               ) : null}
               {userRole === 'admin' ? (
                 <TouchableOpacity
@@ -3304,6 +3365,33 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           onOpenMap={openMaps}
         />
       ) : null}
+      {/* Chat FAB — only when logged in and a trip is active */}
+      {userToken && activeTripId && !chatOpen && (
+        <ChatButton
+          onPress={() => { setChatOpen(true); setChatMinimized(false); }}
+          unreadCount={chatUnread}
+        />
+      )}
+      {/* Chat Panel */}
+      {userToken && activeTripId && chatOpen && !chatMinimized && (
+        <ChatPanel
+          socket={getSocket()}
+          tripId={activeTripId}
+          currentUserId={userId ?? ''}
+          currentUserName={userName ?? 'Traveler'}
+          onClose={() => setChatOpen(false)}
+          onMinimize={() => setChatMinimized(true)}
+          unreadCount={chatUnread}
+          onUnreadChange={setChatUnread}
+        />
+      )}
+      {/* Minimized chat badge */}
+      {userToken && activeTripId && chatOpen && chatMinimized && (
+        <ChatButton
+          onPress={() => setChatMinimized(false)}
+          unreadCount={chatUnread}
+        />
+      )}
     </SafeAreaView>
   );
 

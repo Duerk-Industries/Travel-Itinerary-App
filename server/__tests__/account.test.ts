@@ -1,5 +1,6 @@
 import request from 'supertest';
 import { Pool } from 'pg';
+import { randomUUID } from 'crypto';
 import { app } from '../src/app';
 import { initDb, closePool, createWebUser, createEmailVerification } from '../src/db';
 import { confirmWebUser, loginWebUser, registerAndLoginWebUser, registerWebUser } from './helpers';
@@ -362,6 +363,54 @@ describe('Account lifecycle API with shared trip', () => {
       .expect(200);
     const removedMember = membersAfter.body.find((m: any) => (m.email ?? m.userEmail) === joiner.email);
     expect(removedMember?.status).toBe('pending');
+  });
+});
+
+describe('Group user search', () => {
+  let pool: Pool;
+
+  beforeAll(async () => {
+    process.env.NODE_ENV = 'test';
+    await initDb();
+    pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  });
+
+  afterAll(async () => {
+    await pool.query('DELETE FROM users WHERE email LIKE $1', ['search-users-test+%@example.com']);
+    await pool.end();
+    await closePool();
+  });
+
+  it('finds users by name and alternate email on the shared search endpoint', async () => {
+    const primaryEmail = `search-users-test+primary${Date.now()}@example.com`;
+    const alternateEmail = `search-users-test+alias${Date.now()}@example.com`;
+
+    const { token, userId } = await registerAndLoginWebUser(pool, {
+      firstName: 'Searchable',
+      lastName: 'Traveler',
+      email: primaryEmail,
+      password: 'testtest',
+    });
+
+    await pool.query(
+      `INSERT INTO user_emails (id, user_id, email, email_normalized, is_primary, is_verified)
+       VALUES ($1, $2, $3, LOWER($3), FALSE, TRUE)`,
+      [randomUUID(), userId, alternateEmail]
+    );
+
+    const nameRes = await request(app)
+      .get('/api/groups/search-users?q=Searchable%20Traveler')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(nameRes.body.some((user: any) => user.id === userId)).toBe(true);
+
+    const emailRes = await request(app)
+      .get(`/api/groups/search-users?q=${encodeURIComponent(alternateEmail)}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(emailRes.body.some((user: any) => user.id === userId)).toBe(true);
   });
 });
 

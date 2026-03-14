@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme } from 'react-native';
-import { getAppTheme } from '../theme/theme';
+import { getAppTheme, type AppTheme } from '../theme/theme';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -96,6 +96,10 @@ type AdminTabProps = {
   onSectionChange?: (section: AdminSection) => void;
 };
 
+type ThemedSectionProps = {
+  theme: AppTheme;
+};
+
 // ---------------------------------------------------------------------------
 // API helpers
 // ---------------------------------------------------------------------------
@@ -109,14 +113,41 @@ const apiFetch = async (backendUrl: string, headers: Record<string, string>, pat
   return res.json();
 };
 
+const getCardStyle = (theme: AppTheme) => ({
+  backgroundColor: theme.colors.surface,
+  borderColor: theme.colors.border,
+  shadowColor: theme.mode === 'dark' ? '#000000' : theme.colors.primary,
+});
+
+const getInputStyle = (theme: AppTheme) => ({
+  backgroundColor: theme.mode === 'dark' ? theme.colors.backgroundAlt : theme.colors.surfaceMuted,
+  borderColor: theme.colors.border,
+  color: theme.colors.text,
+});
+
+const getSecondaryPillStyle = (theme: AppTheme, active = false) => ({
+  backgroundColor: active ? theme.colors.primary : theme.colors.backgroundAlt,
+  borderColor: active ? theme.colors.primary : theme.colors.border,
+});
+
+const getSecondaryPillTextStyle = (theme: AppTheme, active = false) => ({
+  color: active ? theme.colors.onPrimary : theme.colors.text,
+});
+
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
 
 // --- Overview ---
-const OverviewSection: React.FC<{ onNav: (s: AdminSection) => void }> = ({ onNav }) => (
+const OverviewSection: React.FC<{ onNav: (s: AdminSection) => void } & ThemedSectionProps> = ({ onNav, theme }) => (
   <View style={localStyles.section}>
-    <Text style={localStyles.sectionTitle}>Admin Panel</Text>
+    <View style={[localStyles.heroCard, getCardStyle(theme), { backgroundColor: theme.colors.primary }]}>
+      <Text style={[localStyles.heroEyebrow, { color: theme.colors.link }]}>Operations</Text>
+      <Text style={[localStyles.heroTitle, { color: theme.colors.onPrimary }]}>Admin Panel</Text>
+      <Text style={[localStyles.heroBody, { color: theme.colors.onPrimary }]}>
+        Manage users, access, entitlements, and audit visibility from one place.
+      </Text>
+    </View>
     {(
       [
         { label: 'Users', section: 'users' as AdminSection, desc: 'Search users, change tiers and roles' },
@@ -126,18 +157,20 @@ const OverviewSection: React.FC<{ onNav: (s: AdminSection) => void }> = ({ onNav
         { label: 'Audit Log', section: 'audit-log' as AdminSection, desc: 'History of admin actions' },
       ] as { label: string; section: AdminSection; desc: string }[]
     ).map((item) => (
-      <TouchableOpacity key={item.section} style={localStyles.navCard} onPress={() => onNav(item.section)}>
-        <Text style={localStyles.navCardTitle}>{item.label}</Text>
-        <Text style={localStyles.navCardDesc}>{item.desc}</Text>
+      <TouchableOpacity key={item.section} style={[localStyles.navCard, getCardStyle(theme)]} onPress={() => onNav(item.section)}>
+        <View style={[localStyles.navAccent, { backgroundColor: item.section === 'features' ? theme.colors.link : item.section === 'tiers' ? theme.colors.premium : theme.colors.cta }]} />
+        <Text style={[localStyles.navCardTitle, { color: theme.colors.text }]}>{item.label}</Text>
+        <Text style={[localStyles.navCardDesc, { color: theme.colors.textMuted }]}>{item.desc}</Text>
       </TouchableOpacity>
     ))}
   </View>
 );
 
 // --- Feature Flags ---
-const FeaturesSection: React.FC<{ backendUrl: string; headers: Record<string, string> }> = ({
+const FeaturesSection: React.FC<{ backendUrl: string; headers: Record<string, string> } & ThemedSectionProps> = ({
   backendUrl,
   headers,
+  theme,
 }) => {
   const [flags, setFlags] = useState<FeatureFlag[]>([]);
   const [loading, setLoading] = useState(true);
@@ -184,34 +217,44 @@ const FeaturesSection: React.FC<{ backendUrl: string; headers: Record<string, st
     }
   };
 
-  if (loading) return <Text style={localStyles.loading}>Loading...</Text>;
-  if (error) return <Text style={localStyles.errorText}>{error}</Text>;
+  if (loading) return <Text style={[localStyles.loading, { color: theme.colors.textMuted }]}>Loading...</Text>;
+  if (error) return <Text style={[localStyles.errorText, { color: theme.colors.error }]}>{error}</Text>;
 
   return (
     <View style={localStyles.section}>
-      <Text style={localStyles.sectionTitle}>Feature Flags</Text>
-      {flags.length === 0 && <Text style={localStyles.emptyText}>No feature flags found.</Text>}
+      <Text style={[localStyles.sectionTitle, { color: theme.colors.text }]}>Feature Flags</Text>
+      {flags.length === 0 && <Text style={[localStyles.emptyText, { color: theme.colors.textMuted }]}>No feature flags found.</Text>}
       {flags.map((flag) => (
-        <View key={flag.key} style={localStyles.card}>
+        <View key={flag.key} style={[localStyles.card, getCardStyle(theme)]}>
           <View style={localStyles.row}>
             <View style={localStyles.flex}>
-              <Text style={localStyles.cardTitle}>{flag.key}</Text>
-              {flag.description ? <Text style={localStyles.cardSub}>{flag.description}</Text> : null}
+              <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>{flag.key}</Text>
+              {flag.description ? <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>{flag.description}</Text> : null}
             </View>
-            <View style={[localStyles.badge, flag.enabled ? localStyles.badgeOn : localStyles.badgeOff]}>
+            <View
+              style={[
+                localStyles.badge,
+                { backgroundColor: flag.enabled ? theme.colors.success : theme.colors.alert },
+              ]}
+            >
               <Text style={localStyles.badgeText}>{flag.enabled ? 'ON' : 'OFF'}</Text>
             </View>
           </View>
           {reasonVisible[flag.key] || true ? (
             <View style={localStyles.inlineForm}>
               <TextInput
-                style={localStyles.smallInput}
+                style={[localStyles.smallInput, getInputStyle(theme)]}
                 placeholder="Reason (required)"
+                placeholderTextColor={theme.colors.textMuted}
                 value={reasonInputs[flag.key] ?? ''}
                 onChangeText={(t: string) => setReasonInputs((r) => ({ ...r, [flag.key]: t }))}
               />
               <TouchableOpacity
-                style={[localStyles.smallButton, pendingKey === flag.key && localStyles.buttonDisabled]}
+                style={[
+                  localStyles.smallButton,
+                  { backgroundColor: theme.colors.cta },
+                  pendingKey === flag.key && localStyles.buttonDisabled,
+                ]}
                 disabled={pendingKey === flag.key}
                 onPress={() => toggle(flag)}
               >
@@ -230,7 +273,7 @@ const UsersSection: React.FC<{
   backendUrl: string;
   headers: Record<string, string>;
   onViewUser: (user: AdminUser) => void;
-}> = ({ backendUrl, headers, onViewUser }) => {
+} & ThemedSectionProps> = ({ backendUrl, headers, onViewUser, theme }) => {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
@@ -261,28 +304,39 @@ const UsersSection: React.FC<{
 
   return (
     <View style={localStyles.section}>
-      <Text style={localStyles.sectionTitle}>Users</Text>
+      <Text style={[localStyles.sectionTitle, { color: theme.colors.text }]}>Users</Text>
       <TextInput
-        style={localStyles.input}
+        style={[localStyles.input, getInputStyle(theme)]}
         placeholder="Search by email, name, or user ID..."
+        placeholderTextColor={theme.colors.textMuted}
         value={search}
         onChangeText={(t: string) => { setSearch(t); setPage(1); }}
       />
-      {error ? <Text style={localStyles.errorText}>{error}</Text> : null}
-      {loading ? <Text style={localStyles.loading}>Loading...</Text> : null}
-      {!loading && users.length === 0 ? <Text style={localStyles.emptyText}>No users found.</Text> : null}
+      {error ? <Text style={[localStyles.errorText, { color: theme.colors.error }]}>{error}</Text> : null}
+      {loading ? <Text style={[localStyles.loading, { color: theme.colors.textMuted }]}>Loading...</Text> : null}
+      {!loading && users.length === 0 ? <Text style={[localStyles.emptyText, { color: theme.colors.textMuted }]}>No users found.</Text> : null}
       {users.map((u) => (
-        <TouchableOpacity key={u.id} style={localStyles.card} onPress={() => onViewUser(u)}>
+        <TouchableOpacity key={u.id} style={[localStyles.card, getCardStyle(theme)]} onPress={() => onViewUser(u)}>
           <View style={localStyles.row}>
             <View style={localStyles.flex}>
-              <Text style={localStyles.cardTitle}>{u.email ?? u.id}</Text>
+              <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>{u.email ?? u.id}</Text>
               {(u.firstName || u.lastName) ? (
-                <Text style={localStyles.cardSub}>{[u.firstName, u.lastName].filter(Boolean).join(' ')}</Text>
+                <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+                  {[u.firstName, u.lastName].filter(Boolean).join(' ')}
+                </Text>
               ) : null}
             </View>
             <View style={localStyles.tagRow}>
-              {u.role === 'admin' ? <View style={localStyles.tagAdmin}><Text style={localStyles.tagText}>admin</Text></View> : null}
-              {u.tierKey ? <View style={localStyles.tagTier}><Text style={localStyles.tagText}>{u.tierKey}</Text></View> : null}
+              {u.role === 'admin' ? (
+                <View style={[localStyles.tagAdmin, { backgroundColor: theme.colors.primary }]}>
+                  <Text style={localStyles.tagText}>admin</Text>
+                </View>
+              ) : null}
+              {u.tierKey ? (
+                <View style={[localStyles.tagTier, { backgroundColor: theme.colors.premium }]}>
+                  <Text style={localStyles.tagText}>{u.tierKey}</Text>
+                </View>
+              ) : null}
             </View>
           </View>
         </TouchableOpacity>
@@ -290,15 +344,23 @@ const UsersSection: React.FC<{
       {totalPages > 1 ? (
         <View style={localStyles.pagination}>
           <TouchableOpacity
-            style={[localStyles.pageButton, page === 1 && localStyles.buttonDisabled]}
+            style={[
+              localStyles.pageButton,
+              { backgroundColor: theme.colors.primary },
+              page === 1 && localStyles.buttonDisabled,
+            ]}
             disabled={page === 1}
             onPress={() => setPage((p) => p - 1)}
           >
             <Text style={localStyles.pageButtonText}>Prev</Text>
           </TouchableOpacity>
-          <Text style={localStyles.pageInfo}>{page} / {totalPages}</Text>
+          <Text style={[localStyles.pageInfo, { color: theme.colors.textMuted }]}>{page} / {totalPages}</Text>
           <TouchableOpacity
-            style={[localStyles.pageButton, page === totalPages && localStyles.buttonDisabled]}
+            style={[
+              localStyles.pageButton,
+              { backgroundColor: theme.colors.primary },
+              page === totalPages && localStyles.buttonDisabled,
+            ]}
             disabled={page === totalPages}
             onPress={() => setPage((p) => p + 1)}
           >
@@ -317,7 +379,7 @@ const UserDetailSection: React.FC<{
   userId: string;
   tiers: Tier[];
   onBack: () => void;
-}> = ({ backendUrl, headers, userId, tiers, onBack }) => {
+} & ThemedSectionProps> = ({ backendUrl, headers, userId, tiers, onBack, theme }) => {
   const [user, setUser] = useState<AdminUserDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -385,8 +447,8 @@ const UserDetailSection: React.FC<{
     }
   };
 
-  if (loading) return <Text style={localStyles.loading}>Loading...</Text>;
-  if (error) return <Text style={localStyles.errorText}>{error}</Text>;
+  if (loading) return <Text style={[localStyles.loading, { color: theme.colors.textMuted }]}>Loading...</Text>;
+  if (error) return <Text style={[localStyles.errorText, { color: theme.colors.error }]}>{error}</Text>;
   if (!user) return null;
 
   const displayName = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email || user.id;
@@ -394,35 +456,36 @@ const UserDetailSection: React.FC<{
   return (
     <View style={localStyles.section}>
       <TouchableOpacity onPress={onBack} style={localStyles.backLink}>
-        <Text style={localStyles.backLinkText}>Back to Users</Text>
+        <Text style={[localStyles.backLinkText, { color: theme.colors.link }]}>Back to Users</Text>
       </TouchableOpacity>
-      <Text style={localStyles.sectionTitle}>{displayName}</Text>
-      <Text style={localStyles.cardSub}>{user.email}</Text>
+      <Text style={[localStyles.sectionTitle, { color: theme.colors.text }]}>{displayName}</Text>
+      <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>{user.email}</Text>
 
-      <View style={localStyles.card}>
-        <Text style={localStyles.cardTitle}>Current Tier: {user.tierKey ?? 'none'}</Text>
-        <Text style={localStyles.fieldLabel}>Change Tier</Text>
+      <View style={[localStyles.card, getCardStyle(theme)]}>
+        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Current Tier: {user.tierKey ?? 'none'}</Text>
+        <Text style={[localStyles.fieldLabel, { color: theme.colors.textMuted }]}>Change Tier</Text>
         <View style={localStyles.tierButtons}>
           {tiers.map((t) => (
             <TouchableOpacity
               key={t.key}
-              style={[localStyles.tierButton, tierKey === t.key && localStyles.tierButtonActive]}
+              style={[localStyles.tierButton, getSecondaryPillStyle(theme, tierKey === t.key)]}
               onPress={() => setTierKey(t.key)}
             >
-              <Text style={[localStyles.tierButtonText, tierKey === t.key && localStyles.tierButtonTextActive]}>
+              <Text style={[localStyles.tierButtonText, getSecondaryPillTextStyle(theme, tierKey === t.key)]}>
                 {t.displayName}
               </Text>
             </TouchableOpacity>
           ))}
         </View>
         <TextInput
-          style={localStyles.smallInput}
+          style={[localStyles.smallInput, getInputStyle(theme)]}
           placeholder="Reason (required)"
+          placeholderTextColor={theme.colors.textMuted}
           value={tierReason}
           onChangeText={setTierReason}
         />
         <TouchableOpacity
-          style={[localStyles.smallButton, saving && localStyles.buttonDisabled]}
+          style={[localStyles.smallButton, { backgroundColor: theme.colors.cta }, saving && localStyles.buttonDisabled]}
           disabled={saving}
           onPress={saveTier}
         >
@@ -430,28 +493,29 @@ const UserDetailSection: React.FC<{
         </TouchableOpacity>
       </View>
 
-      <View style={localStyles.card}>
-        <Text style={localStyles.cardTitle}>Current Role: {user.role}</Text>
-        <Text style={localStyles.fieldLabel}>Change Role</Text>
+      <View style={[localStyles.card, getCardStyle(theme)]}>
+        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Current Role: {user.role}</Text>
+        <Text style={[localStyles.fieldLabel, { color: theme.colors.textMuted }]}>Change Role</Text>
         <View style={localStyles.tierButtons}>
           {(['user', 'admin'] as const).map((r) => (
             <TouchableOpacity
               key={r}
-              style={[localStyles.tierButton, role === r && localStyles.tierButtonActive]}
+              style={[localStyles.tierButton, getSecondaryPillStyle(theme, role === r)]}
               onPress={() => setRole(r)}
             >
-              <Text style={[localStyles.tierButtonText, role === r && localStyles.tierButtonTextActive]}>{r}</Text>
+              <Text style={[localStyles.tierButtonText, getSecondaryPillTextStyle(theme, role === r)]}>{r}</Text>
             </TouchableOpacity>
           ))}
         </View>
         <TextInput
-          style={localStyles.smallInput}
+          style={[localStyles.smallInput, getInputStyle(theme)]}
           placeholder="Reason (required)"
+          placeholderTextColor={theme.colors.textMuted}
           value={roleReason}
           onChangeText={setRoleReason}
         />
         <TouchableOpacity
-          style={[localStyles.smallButton, saving && localStyles.buttonDisabled]}
+          style={[localStyles.smallButton, { backgroundColor: theme.colors.cta }, saving && localStyles.buttonDisabled]}
           disabled={saving}
           onPress={saveRole}
         >
@@ -459,15 +523,15 @@ const UserDetailSection: React.FC<{
         </TouchableOpacity>
       </View>
 
-      {saveMsg ? <Text style={localStyles.saveMsg}>{saveMsg}</Text> : null}
+      {saveMsg ? <Text style={[localStyles.saveMsg, { color: saveMsg.startsWith('Error:') ? theme.colors.error : theme.colors.success }]}>{saveMsg}</Text> : null}
 
       {user.usage && user.usage.length > 0 ? (
-        <View style={localStyles.card}>
-          <Text style={localStyles.cardTitle}>Usage</Text>
+        <View style={[localStyles.card, getCardStyle(theme)]}>
+          <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Usage</Text>
           {user.usage.map((c, i) => (
             <View key={i} style={localStyles.row}>
-              <Text style={localStyles.flex}>{c.metricKey} ({c.windowKey})</Text>
-              <Text style={localStyles.cardSub}>{c.count}</Text>
+              <Text style={[localStyles.flex, { color: theme.colors.text }]}>{c.metricKey} ({c.windowKey})</Text>
+              <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>{c.count}</Text>
             </View>
           ))}
         </View>
@@ -1005,9 +1069,10 @@ const TiersSection: React.FC<{
 };
 
 // --- User Data ---
-const UserDataSection: React.FC<{ backendUrl: string; headers: Record<string, string> }> = ({
+const UserDataSection: React.FC<{ backendUrl: string; headers: Record<string, string> } & ThemedSectionProps> = ({
   backendUrl,
   headers,
+  theme,
 }) => {
   const [rows, setRows] = useState<UserDataRow[]>([]);
   const [total, setTotal] = useState(0);
@@ -1038,34 +1103,34 @@ const UserDataSection: React.FC<{ backendUrl: string; headers: Record<string, st
 
   return (
     <View style={localStyles.section}>
-      <Text style={localStyles.sectionTitle}>User Data</Text>
+      <Text style={[localStyles.sectionTitle, { color: theme.colors.text }]}>User Data</Text>
       <View style={localStyles.tierButtons}>
         {(['7d', '30d', 'all-time'] as const).map((w) => (
           <TouchableOpacity
             key={w}
-            style={[localStyles.tierButton, window === w && localStyles.tierButtonActive]}
+            style={[localStyles.tierButton, getSecondaryPillStyle(theme, window === w)]}
             onPress={() => { setWindow(w); setPage(1); }}
           >
-            <Text style={[localStyles.tierButtonText, window === w && localStyles.tierButtonTextActive]}>{w}</Text>
+            <Text style={[localStyles.tierButtonText, getSecondaryPillTextStyle(theme, window === w)]}>{w}</Text>
           </TouchableOpacity>
         ))}
       </View>
-      {error ? <Text style={localStyles.errorText}>{error}</Text> : null}
-      {loading ? <Text style={localStyles.loading}>Loading...</Text> : null}
-      {!loading && rows.length === 0 ? <Text style={localStyles.emptyText}>No data.</Text> : null}
+      {error ? <Text style={[localStyles.errorText, { color: theme.colors.error }]}>{error}</Text> : null}
+      {loading ? <Text style={[localStyles.loading, { color: theme.colors.textMuted }]}>Loading...</Text> : null}
+      {!loading && rows.length === 0 ? <Text style={[localStyles.emptyText, { color: theme.colors.textMuted }]}>No data.</Text> : null}
       {rows.map((row) => (
-        <View key={row.id} style={localStyles.card}>
-          <Text style={localStyles.cardTitle}>{row.email ?? row.id}</Text>
+        <View key={row.id} style={[localStyles.card, getCardStyle(theme)]}>
+          <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>{row.email ?? row.id}</Text>
           <View style={localStyles.tagRow}>
-            {row.role === 'admin' ? <View style={localStyles.tagAdmin}><Text style={localStyles.tagText}>admin</Text></View> : null}
-            {row.tierKey ? <View style={localStyles.tagTier}><Text style={localStyles.tagText}>{row.tierKey}</Text></View> : null}
+            {row.role === 'admin' ? <View style={[localStyles.tagAdmin, { backgroundColor: theme.colors.primary }]}><Text style={localStyles.tagText}>admin</Text></View> : null}
+            {row.tierKey ? <View style={[localStyles.tagTier, { backgroundColor: theme.colors.premium }]}><Text style={localStyles.tagText}>{row.tierKey}</Text></View> : null}
           </View>
-          <Text style={localStyles.cardSub}>Trips: {row.tripCount}</Text>
-          <Text style={localStyles.cardSub}>Trip creations: {row.tripCreations}</Text>
-          <Text style={localStyles.cardSub}>AI generations: {row.aiGenerations}</Text>
-          <Text style={localStyles.cardSub}>Tokens: {row.tokens}</Text>
+          <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>Trips: {row.tripCount}</Text>
+          <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>Trip creations: {row.tripCreations}</Text>
+          <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>AI generations: {row.aiGenerations}</Text>
+          <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>Tokens: {row.tokens}</Text>
           {row.apiCalls ? (
-            <Text style={localStyles.cardSub}>
+            <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
               API calls: {Object.entries(row.apiCalls).map(([key, value]) => `${key} ${value}`).join(' | ')}
             </Text>
           ) : null}
@@ -1074,15 +1139,15 @@ const UserDataSection: React.FC<{ backendUrl: string; headers: Record<string, st
       {totalPages > 1 ? (
         <View style={localStyles.pagination}>
           <TouchableOpacity
-            style={[localStyles.pageButton, page === 1 && localStyles.buttonDisabled]}
+            style={[localStyles.pageButton, { backgroundColor: theme.colors.primary }, page === 1 && localStyles.buttonDisabled]}
             disabled={page === 1}
             onPress={() => setPage((p) => p - 1)}
           >
             <Text style={localStyles.pageButtonText}>Prev</Text>
           </TouchableOpacity>
-          <Text style={localStyles.pageInfo}>{page} / {totalPages}</Text>
+          <Text style={[localStyles.pageInfo, { color: theme.colors.textMuted }]}>{page} / {totalPages}</Text>
           <TouchableOpacity
-            style={[localStyles.pageButton, page === totalPages && localStyles.buttonDisabled]}
+            style={[localStyles.pageButton, { backgroundColor: theme.colors.primary }, page === totalPages && localStyles.buttonDisabled]}
             disabled={page === totalPages}
             onPress={() => setPage((p) => p + 1)}
           >
@@ -1095,9 +1160,10 @@ const UserDataSection: React.FC<{ backendUrl: string; headers: Record<string, st
 };
 
 // --- Audit Log ---
-const AuditLogSection: React.FC<{ backendUrl: string; headers: Record<string, string> }> = ({
+const AuditLogSection: React.FC<{ backendUrl: string; headers: Record<string, string> } & ThemedSectionProps> = ({
   backendUrl,
   headers,
+  theme,
 }) => {
   const [entries, setEntries] = useState<AuditEntry[]>([]);
   const [total, setTotal] = useState(0);
@@ -1128,33 +1194,33 @@ const AuditLogSection: React.FC<{ backendUrl: string; headers: Record<string, st
 
   return (
     <View style={localStyles.section}>
-      <Text style={localStyles.sectionTitle}>Audit Log</Text>
-      {error ? <Text style={localStyles.errorText}>{error}</Text> : null}
-      {loading ? <Text style={localStyles.loading}>Loading...</Text> : null}
-      {!loading && entries.length === 0 ? <Text style={localStyles.emptyText}>No audit entries.</Text> : null}
+      <Text style={[localStyles.sectionTitle, { color: theme.colors.text }]}>Audit Log</Text>
+      {error ? <Text style={[localStyles.errorText, { color: theme.colors.error }]}>{error}</Text> : null}
+      {loading ? <Text style={[localStyles.loading, { color: theme.colors.textMuted }]}>Loading...</Text> : null}
+      {!loading && entries.length === 0 ? <Text style={[localStyles.emptyText, { color: theme.colors.textMuted }]}>No audit entries.</Text> : null}
       {entries.map((entry) => (
-        <View key={entry.id} style={localStyles.card}>
+        <View key={entry.id} style={[localStyles.card, getCardStyle(theme)]}>
           <View style={localStyles.row}>
-            <Text style={[localStyles.cardTitle, localStyles.flex]}>{entry.action}</Text>
-            <Text style={localStyles.cardSub}>{fmt(entry.createdAt)}</Text>
+            <Text style={[localStyles.cardTitle, localStyles.flex, { color: theme.colors.text }]}>{entry.action}</Text>
+            <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>{fmt(entry.createdAt)}</Text>
           </View>
-          {entry.reason ? <Text style={localStyles.cardSub}>Reason: {entry.reason}</Text> : null}
-          {entry.actorUserId ? <Text style={localStyles.cardSub}>Actor: {entry.actorUserId}</Text> : null}
-          {entry.targetUserId ? <Text style={localStyles.cardSub}>Target: {entry.targetUserId}</Text> : null}
+          {entry.reason ? <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>Reason: {entry.reason}</Text> : null}
+          {entry.actorUserId ? <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>Actor: {entry.actorUserId}</Text> : null}
+          {entry.targetUserId ? <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>Target: {entry.targetUserId}</Text> : null}
         </View>
       ))}
       {totalPages > 1 ? (
         <View style={localStyles.pagination}>
           <TouchableOpacity
-            style={[localStyles.pageButton, page === 1 && localStyles.buttonDisabled]}
+            style={[localStyles.pageButton, { backgroundColor: theme.colors.primary }, page === 1 && localStyles.buttonDisabled]}
             disabled={page === 1}
             onPress={() => setPage((p) => p - 1)}
           >
             <Text style={localStyles.pageButtonText}>Prev</Text>
           </TouchableOpacity>
-          <Text style={localStyles.pageInfo}>{page} / {totalPages}</Text>
+          <Text style={[localStyles.pageInfo, { color: theme.colors.textMuted }]}>{page} / {totalPages}</Text>
           <TouchableOpacity
-            style={[localStyles.pageButton, page === totalPages && localStyles.buttonDisabled]}
+            style={[localStyles.pageButton, { backgroundColor: theme.colors.primary }, page === totalPages && localStyles.buttonDisabled]}
             disabled={page === totalPages}
             onPress={() => setPage((p) => p + 1)}
           >
@@ -1194,11 +1260,11 @@ const AdminTab: React.FC<AdminTabProps> = ({ backendUrl, headers, initialSection
   const renderSection = () => {
     switch (section) {
       case 'overview':
-        return <OverviewSection onNav={goTo} />;
+        return <OverviewSection onNav={goTo} theme={theme} />;
       case 'features':
-        return <FeaturesSection backendUrl={backendUrl} headers={headers} />;
+        return <FeaturesSection backendUrl={backendUrl} headers={headers} theme={theme} />;
       case 'users':
-        return <UsersSection backendUrl={backendUrl} headers={headers} onViewUser={handleViewUser} />;
+        return <UsersSection backendUrl={backendUrl} headers={headers} onViewUser={handleViewUser} theme={theme} />;
       case 'user-detail':
         return selectedUser ? (
           <UserDetailSection
@@ -1207,14 +1273,15 @@ const AdminTab: React.FC<AdminTabProps> = ({ backendUrl, headers, initialSection
             userId={selectedUser.id}
             tiers={loadedTiers}
             onBack={() => goTo('users')}
+            theme={theme}
           />
         ) : null;
       case 'tiers':
         return <TiersSection backendUrl={backendUrl} headers={headers} onTiersLoaded={setLoadedTiers} />;
       case 'user-data':
-        return <UserDataSection backendUrl={backendUrl} headers={headers} />;
+        return <UserDataSection backendUrl={backendUrl} headers={headers} theme={theme} />;
       case 'audit-log':
-        return <AuditLogSection backendUrl={backendUrl} headers={headers} />;
+        return <AuditLogSection backendUrl={backendUrl} headers={headers} theme={theme} />;
       default:
         return null;
     }
@@ -1262,30 +1329,45 @@ const localStyles = StyleSheet.create({
   saveMsg: { color: '#27ae60', marginTop: 8, fontWeight: '600' },
   // Cards
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 10,
-    shadowColor: '#000',
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 14,
+    marginBottom: 12,
     shadowOpacity: 0.06,
-    shadowRadius: 4,
+    shadowRadius: 10,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
   },
   cardTitle: { fontSize: 15, fontWeight: '600', color: '#1a1a2e', marginBottom: 2 },
   cardSub: { fontSize: 13, color: '#555', marginTop: 2 },
+  heroCard: {
+    borderRadius: 24,
+    borderWidth: 1,
+    paddingVertical: 22,
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  heroEyebrow: {
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+    marginBottom: 8,
+  },
+  heroTitle: { fontSize: 28, fontWeight: '700', marginBottom: 8 },
+  heroBody: { fontSize: 14, lineHeight: 20, maxWidth: 520 },
   // Nav cards
   navCard: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
+    borderRadius: 18,
+    borderWidth: 1,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
     shadowOpacity: 0.07,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
     elevation: 3,
   },
+  navAccent: { width: 48, height: 6, borderRadius: 999, marginBottom: 14 },
   navCardTitle: { fontSize: 17, fontWeight: '700', color: '#1a1a2e', marginBottom: 4 },
   navCardDesc: { fontSize: 13, color: '#666' },
   // Layout

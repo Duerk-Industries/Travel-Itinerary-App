@@ -385,3 +385,11 @@ export const adminGetUser = async (...args: Parameters<ReturnType<typeof adapter
 export const adminGetUserData = async (...args: Parameters<ReturnType<typeof adapter>['adminGetUserData']>) =>
   adapter().adminGetUserData(...args);
 
+export const listTripMessages = async (...args: Parameters<ReturnType<typeof adapter>['listTripMessages']>) =>
+  adapter().listTripMessages(...args);
+export const addTripMessage = async (...args: Parameters<ReturnType<typeof adapter>['addTripMessage']>) =>
+  adapter().addTripMessage(...args);
+export const markMessagesRead = async (...args: Parameters<ReturnType<typeof adapter>['markMessagesRead']>) =>
+  adapter().markMessagesRead(...args);
+export const countUnreadMessages = async (...args: Parameters<ReturnType<typeof adapter>['countUnreadMessages']>) =>
+  adapter().countUnreadMessages(...args);

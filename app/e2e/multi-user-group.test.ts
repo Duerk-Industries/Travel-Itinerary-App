@@ -4,9 +4,10 @@
  * Tests the complete Owner → Invite → Invitee Accept / Decline lifecycle
  * using two independent browser contexts that share the same server instance.
  *
- * Because the app has NO real-time push (no WebSockets / SSE), invitee data
- * is polled via the API after the owner's actions rather than relying on
- * live UI updates. See docs/realtime-sync-recommendation.md for the upgrade path.
+ * The invite-detection strategy was updated from API-polling to a
+ * Socket.IO-driven approach: the invite modal appears automatically once
+ * the Socket.IO server pushes a presence/invite notification to the
+ * invitee's browser session. The test simply waits for the UI element.
  */
 import { test, expect, type Page } from '@playwright/test';
 import {
@@ -16,33 +17,17 @@ import {
   loginAsUser,
   loginAsNewUser,
   createTripViaWizard,
-  createSecondUserContext,
 } from './fixtures';
 
 // ---------------------------------------------------------------------------
-// Helper: wait for the invitee's invite list to be non-empty via API polling
+// Helper: wait for the invite modal via UI (Socket.IO pushes updates)
 // ---------------------------------------------------------------------------
-async function waitForInvite(
-  page: Page,
-  token: string,
-  maxWaitMs = 5000,
-): Promise<string | null> {
-  const deadline = Date.now() + maxWaitMs;
-  while (Date.now() < deadline) {
-    const res = await page.request.get(`${API_BASE}/api/groups/invites`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (res.ok()) {
-      const invites: Array<{ id: string }> = await res.json();
-      if (invites.length) return invites[0].id;
-    }
-    await new Promise((r) => setTimeout(r, 300));
-  }
-  return null;
+async function waitForInviteModal(page: Page, timeout = 12_000): Promise<void> {
+  await expect(page.getByTestId('invite-modal')).toBeVisible({ timeout });
 }
 
 // ---------------------------------------------------------------------------
-// Helper: extract JWT from page localStorage
+// Helper: extract JWT from page localStorage (for API calls if needed)
 // ---------------------------------------------------------------------------
 async function getToken(page: Page): Promise<string> {
   const token = await page.evaluate((): string | null => {
@@ -55,6 +40,18 @@ async function getToken(page: Page): Promise<string> {
   });
   if (!token) throw new Error('No JWT found in localStorage');
   return token;
+}
+
+// ---------------------------------------------------------------------------
+// Helper: get first invite ID via API (fallback for extracting testId)
+// ---------------------------------------------------------------------------
+async function getFirstInviteId(page: Page, token: string): Promise<string | null> {
+  const res = await page.request.get(`${API_BASE}/api/groups/invites`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok()) return null;
+  const invites: Array<{ id: string }> = await res.json();
+  return invites[0]?.id ?? null;
 }
 
 // ---------------------------------------------------------------------------
@@ -74,24 +71,17 @@ test.describe('Multi-User Group Invitation', () => {
     await createTripViaWizard(ownerPage, { participantEmail: userB.email });
 
     // --- Context 2: User B ---
-    const { context: userBCtx, page: userBPage } = await createSecondUserContext(browser, {
-      email: userB.email,
-      username: userB.username,
-      password: TEST_USER_PASSWORD,
-      firstName: userB.firstName,
-      lastName: userB.lastName,
-    });
-
-    // Actually, User B was pre-registered; we just need to log in
+    const userBCtx = await browser.newContext();
+    const userBPage = await userBCtx.newPage();
     await loginAsUser(userBPage, userB);
+
+    // Wait for invite modal — Socket.IO pushes it on connection
+    await waitForInviteModal(userBPage);
+
+    // Get invite ID via API so we can target the right button
     const userBToken = await getToken(userBPage);
-
-    // Poll API until invite arrives (max 5 s)
-    const inviteId = await waitForInvite(userBPage, userBToken);
+    const inviteId = await getFirstInviteId(userBPage, userBToken);
     expect(inviteId, 'Invite should arrive for User B').not.toBeNull();
-
-    // The pending invite modal should show automatically on first login
-    await expect(userBPage.getByTestId('invite-modal')).toBeVisible({ timeout: 8000 });
 
     // Click "Join" for the invite
     await userBPage.getByTestId(`invite-join-${inviteId}`).click();
@@ -118,12 +108,13 @@ test.describe('Multi-User Group Invitation', () => {
     const userBCtx = await browser.newContext();
     const userBPage = await userBCtx.newPage();
     await loginAsUser(userBPage, userB);
-    const userBToken = await getToken(userBPage);
 
-    const inviteId = await waitForInvite(userBPage, userBToken);
+    await waitForInviteModal(userBPage);
+
+    const userBToken = await getToken(userBPage);
+    const inviteId = await getFirstInviteId(userBPage, userBToken);
     expect(inviteId).not.toBeNull();
 
-    await expect(userBPage.getByTestId('invite-modal')).toBeVisible({ timeout: 8000 });
     await userBPage.getByTestId(`invite-decline-${inviteId}`).click();
     await userBPage.waitForLoadState('networkidle');
 
@@ -139,22 +130,22 @@ test.describe('Multi-User Group Invitation', () => {
   });
 
   test('member added to trip can view trip data after refresh', async ({ browser }) => {
-    // Owner creates trip and invites User B
     const ownerCtx = await browser.newContext();
     const ownerPage = await ownerCtx.newPage();
     await loginAsNewUser(ownerPage);
     const userB = await registerUser(ownerPage.request);
     const tripName = await createTripViaWizard(ownerPage, { participantEmail: userB.email });
 
-    // User B logs in and accepts
     const userBCtx = await browser.newContext();
     const userBPage = await userBCtx.newPage();
     await loginAsUser(userBPage, userB);
+
+    await waitForInviteModal(userBPage);
+
     const userBToken = await getToken(userBPage);
-    const inviteId = await waitForInvite(userBPage, userBToken);
+    const inviteId = await getFirstInviteId(userBPage, userBToken);
     expect(inviteId).not.toBeNull();
 
-    await expect(userBPage.getByTestId('invite-modal')).toBeVisible({ timeout: 8000 });
     await userBPage.getByTestId(`invite-join-${inviteId}`).click();
     await userBPage.waitForLoadState('networkidle');
 

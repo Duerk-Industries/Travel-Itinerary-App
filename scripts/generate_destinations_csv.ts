@@ -15,6 +15,7 @@ interface DestinationSeed {
   state: string;
   city: string;
   officialName?: string;
+  population?: number;
 }
 
 interface Country {
@@ -1063,11 +1064,17 @@ async function fetchTopCitySeeds(countryName: string, targetCount: number): Prom
           const state = parenthetical ? parenthetical[1].trim() : '';
           const cityName = rawName.replace(/\s*\([^)]*\)\s*$/, '').trim();
 
+          const latestCount = (record.populationCounts ?? [])
+            .filter((pc) => pc.sex === 'Both Sexes' || !pc.sex)
+            .sort((a, b) => Number(b.year ?? 0) - Number(a.year ?? 0))[0];
+          const pop = Number(latestCount?.value ?? 0);
+
           return {
             name: cityName,
             city: cityName,
             state,
             officialName: cityName,
+            population: pop > 0 ? pop : undefined,
           };
         })
     );
@@ -1213,7 +1220,7 @@ function getDestinationQuota(
     scaled = Math.max(scaled, 120);
   }
 
-  return Math.max(1, Math.min(200, scaled));
+  return Math.max(20, Math.min(200, scaled));
 }
 
 function getNatureQuota(country: Country): number {
@@ -1237,21 +1244,41 @@ function buildFallbackDestination(country: Country): DestinationSeed {
   };
 }
 
-async function seedsToDestinations(country: Country, quota: number): Promise<Destination[]> {
+const LARGE_CITY_POPULATION_THRESHOLD = 2_000_000;
+
+async function seedsToDestinations(country: Country, quota: number, existingKeys?: Set<string>): Promise<Destination[]> {
   const curatedAll = getCountryCatalog(country);
   const curated = curatedAll.slice(0, quota);
   const fallback = buildFallbackDestination(country);
   const seedList: DestinationSeed[] = [...curated];
 
+  const countryCandidates = [country.name, country.officialName].filter(Boolean);
+  let allCitySeeds: DestinationSeed[] = [];
+
   if (seedList.length < quota) {
-    const countryCandidates = [country.name, country.officialName].filter(Boolean);
     for (const candidate of countryCandidates) {
       const citySeeds = await fetchTopCitySeeds(candidate, quota - seedList.length);
+      allCitySeeds = citySeeds;
       for (const seed of citySeeds) {
         seedList.push(seed);
         if (seedList.length >= quota) break;
       }
       if (seedList.length >= quota) break;
+    }
+  } else {
+    // Still fetch city seeds so we can check for 2M+ cities
+    for (const candidate of countryCandidates) {
+      allCitySeeds = await fetchTopCitySeeds(candidate, quota);
+      if (allCitySeeds.length > 0) break;
+    }
+  }
+
+  // Ensure all cities with 2M+ population are included regardless of quota
+  const seedNameKeys = new Set(seedList.map((s) => normalizeKey(s.name)));
+  for (const seed of allCitySeeds) {
+    if ((seed.population ?? 0) >= LARGE_CITY_POPULATION_THRESHOLD && !seedNameKeys.has(normalizeKey(seed.name))) {
+      seedList.push(seed);
+      seedNameKeys.add(normalizeKey(seed.name));
     }
   }
 
@@ -1270,6 +1297,10 @@ async function seedsToDestinations(country: Country, quota: number): Promise<Des
     const key = normalizeKey(`${country.name}|${seed.name}|${seed.city}`);
     if (seen.has(key)) continue;
     seen.add(key);
+
+    // Skip destinations that already exist in the CSV
+    const existingKey = normalizeKey(`${country.name}|${seed.name}`);
+    if (existingKeys?.has(existingKey)) continue;
 
     destinations.push({
       'Destination English Name': seed.name,
@@ -1298,6 +1329,12 @@ import { fileURLToPath } from 'url';
 async function main() {
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
+  const serverDataCsvPath = path.resolve(__dirname, '../server/data/destinations.csv');
+
+  // Load existing destinations so we don't re-process them
+  const existingKeys = loadExistingDestinations(serverDataCsvPath);
+  console.log(`Loaded ${existingKeys.size} existing destinations from CSV — these will be skipped.`);
+
   const countries = await getCountries();
   const tourismByIso3 = await getTourismDemandByIso3();
   const maxArea = countries.reduce((max, country) => Math.max(max, country.areaKm2), 0);
@@ -1308,7 +1345,7 @@ async function main() {
 
   for (const country of countries) {
     const quota = getDestinationQuota(country, tourismByIso3, maxArea, maxPopulation, maxTourism);
-    const rows = await seedsToDestinations(country, quota);
+    const rows = await seedsToDestinations(country, quota, existingKeys);
     allDestinations.push(...rows);
   }
 
@@ -1357,7 +1394,6 @@ async function main() {
   ];
 
   const csvContent = `${lines.join('\n')}\n`;
-  const serverDataCsvPath = path.resolve(__dirname, '../server/data/destinations.csv');
   const sourcesPath = path.resolve(__dirname, 'destination_sources.json');
 
   fs.writeFileSync(serverDataCsvPath, csvContent, 'utf8');
@@ -1400,6 +1436,32 @@ function parseCsvLine(line: string): string[] {
 
   values.push(current);
   return values;
+}
+
+function loadExistingDestinations(filePath: string): Set<string> {
+  const existing = new Set<string>();
+  if (!fs.existsSync(filePath)) return existing;
+
+  const csvData = fs.readFileSync(filePath, 'utf8');
+  const lines = csvData.split(/\r?\n/).filter((line) => line.trim().length > 0);
+  if (lines.length <= 1) return existing;
+
+  const headers = parseCsvLine(lines[0]);
+  const nameIndex = headers.indexOf('Destination English Name');
+  const countryIndex = headers.indexOf('Country');
+  if (nameIndex === -1 || countryIndex === -1) return existing;
+
+  for (let i = 1; i < lines.length; i += 1) {
+    const values = parseCsvLine(lines[i]);
+    if (values.length < Math.max(nameIndex, countryIndex) + 1) continue;
+    const name = values[nameIndex].replace(/"/g, '').trim();
+    const country = values[countryIndex].replace(/"/g, '').trim();
+    if (name && country) {
+      existing.add(normalizeKey(`${country}|${name}`));
+    }
+  }
+
+  return existing;
 }
 
 async function verifyDestinations(filePath: string) {

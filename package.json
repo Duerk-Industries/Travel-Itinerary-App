@@ -5,7 +5,8 @@
   "type": "module",
   "workspaces": [
     "server",
-    "app"
+    "app",
+    "packages/messaging"
   ],
   "scripts": {
     "start": "node server/scripts/start-with-debug.js",

@@ -598,3 +598,26 @@ export interface TripShareInvite {
   createdAt: string;
   updatedAt: string;
 }
+
+// ---------------------------------------------------------------------------
+// Chat / Messaging
+// ---------------------------------------------------------------------------
+
+export interface TripChatMessage {
+  id: string;
+  appId: string;
+  tripId: string;
+  senderId: string;
+  senderName: string;
+  senderInitials: string;
+  body: string;
+  createdAt: string;
+  /** IDs of users who have read this message */
+  readBy?: string[];
+}
+
+export interface TripMessageRead {
+  messageId: string;
+  userId: string;
+  readAt: string;
+}

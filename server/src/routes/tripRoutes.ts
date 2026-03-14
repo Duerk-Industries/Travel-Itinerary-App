@@ -25,6 +25,7 @@ import {
   updateTripCovering,
   updateTripDetails,
   updateTripGroup,
+  listTripMessages,
 } from '../db';
 import { detectCoveringConflict, detectCycle } from '../utils/coveredBy';
 import { sendTripInviteEmailBestEffort } from '../mailer';
@@ -352,6 +353,18 @@ router.post('/:id/comments', async (req, res) => {
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });
   }
+});
+
+router.get('/:id/messages', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const access = await ensureUserCanReadTrip(req.params.id, userId);
+  if (!access) {
+    res.status(403).json({ error: 'Not authorized to view messages for this trip' });
+    return;
+  }
+  const limit = Math.min(Number(req.query.limit ?? 200), 500);
+  const messages = await listTripMessages(req.params.id, limit);
+  res.json({ tripId: req.params.id, messages });
 });
 
 router.get('/:id/covered-by', async (req, res) => {

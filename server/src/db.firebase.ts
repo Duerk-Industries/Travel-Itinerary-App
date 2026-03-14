@@ -32,6 +32,7 @@ import {
   UsageCounter,
   AuditLogEntry,
   AuditAction,
+  TripChatMessage,
 } from './types';
 import { logError, logInfo } from './logger';
 import { getEnvValue, isLocalEnv } from './env';
@@ -248,6 +249,9 @@ export const getDb = (): Firestore => {
       const emulatorHost = getEnvValue('FIRESTORE_EMULATOR_HOST', { defaultValue: 'localhost:8080' });
       logInfo(`Using Firestore emulator at ${emulatorHost}`);
       process.env.FIRESTORE_EMULATOR_HOST = emulatorHost;
+      // Prevent firebase-admin from trying ADC via a local credentials file when we explicitly target the emulator.
+      delete process.env.GOOGLE_APPLICATION_CREDENTIALS;
+      delete process.env.GOOGLE_APPLICATION_CREDENTIALS_FILE;
       app = initializeApp({ projectId });
     } else {
       if (!projectId) {
@@ -3119,8 +3123,43 @@ export const searchUsersByEmail = async (query: string): Promise<User[]> => {
   const db = getDb();
   const normalized = query.trim().toLowerCase();
   if (!normalized) return [];
-  const snapshot = await db.collection('users').where('email', '>=', normalized).where('email', '<=', normalized + '\\uf8ff').limit(10).get();
-  return snapshot.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+  const [userSnap, webUserSnap, userEmailSnap] = await Promise.all([
+    db.collection('users').get(),
+    db.collection('web_users').get(),
+    db.collection('user_emails').get(),
+  ]);
+  const webUsersById = new Map(webUserSnap.docs.map((doc) => [doc.id, doc.data()] as const));
+  const userEmailsByUserId = new Map<string, string[]>();
+
+  userEmailSnap.docs.forEach((doc) => {
+    const data = doc.data() as any;
+    const userId = String(data.userId ?? '');
+    const email = String(data.email ?? '').toLowerCase();
+    if (!userId || !email) return;
+    const existing = userEmailsByUserId.get(userId) ?? [];
+    existing.push(email);
+    userEmailsByUserId.set(userId, existing);
+  });
+
+  return userSnap.docs
+    .map((d) => {
+      const user = d.data() as any;
+      const webUser = webUsersById.get(d.id) as any;
+      const haystack = [
+        String(user.email ?? ''),
+        String(user.firstName ?? ''),
+        String(user.lastName ?? ''),
+        String(webUser?.firstName ?? ''),
+        String(webUser?.lastName ?? ''),
+        ...(userEmailsByUserId.get(d.id) ?? []),
+      ]
+        .join(' ')
+        .toLowerCase();
+      return { matches: haystack.includes(normalized), user: { id: d.id, ...user } as User };
+    })
+    .filter((entry) => entry.matches)
+    .slice(0, 10)
+    .map((entry) => entry.user);
 };
 
 export const listTraitsForGroupTrip = async (userId: string, tripId: string) => {
@@ -4073,11 +4112,12 @@ export const adminSearchUsers = async (opts: {
   const offset = (page - 1) * limit;
   const search = opts.search?.trim().toLowerCase() ?? '';
 
-  const [userSnap, webUserSnap, tierSnap, userTierSnap] = await Promise.all([
+  const [userSnap, webUserSnap, tierSnap, userTierSnap, userEmailSnap] = await Promise.all([
     db.collection('users').get(),
     db.collection('web_users').get(),
     db.collection('tiers').get(),
     db.collection('user_tiers').where('effectiveTo', '==', null).get(),
+    db.collection('user_emails').get(),
   ]);
 
   const webUsersById = new Map(
@@ -4089,6 +4129,17 @@ export const adminSearchUsers = async (opts: {
   const activeTierByUserId = new Map(
     userTierSnap.docs.map((doc) => [String(doc.data().userId), doc.data()] as const)
   );
+  const userEmailsByUserId = new Map<string, string[]>();
+
+  userEmailSnap.docs.forEach((doc) => {
+    const data = doc.data() as any;
+    const userId = String(data.userId ?? '');
+    const email = String(data.email ?? '').toLowerCase();
+    if (!userId || !email) return;
+    const existing = userEmailsByUserId.get(userId) ?? [];
+    existing.push(email);
+    userEmailsByUserId.set(userId, existing);
+  });
 
   const allUsers: AdminUserRow[] = userSnap.docs.map((doc) => {
     const user = doc.data();
@@ -4115,6 +4166,7 @@ export const adminSearchUsers = async (opts: {
           user.email ?? '',
           user.firstName ?? '',
           user.lastName ?? '',
+          ...(userEmailsByUserId.get(user.id) ?? []),
           user.id,
         ]
           .join(' ')
@@ -4329,3 +4381,114 @@ export const countActiveTripsForUser = async (userId: string): Promise<number> =
   return count;
 };
 
+
+// ---------------------------------------------------------------------------
+// Chat / Messaging
+// ---------------------------------------------------------------------------
+
+export const listTripMessages = async (
+  tripId: string,
+  limit = 200,
+): Promise<TripChatMessage[]> => {
+  const db = getDb();
+  const snap = await db
+    .collection('trip_messages')
+    .where('tripId', '==', tripId)
+    .orderBy('createdAt', 'asc')
+    .limit(limit)
+    .get();
+
+  const messages: TripChatMessage[] = snap.docs.map((doc) => {
+    const d = doc.data() as any;
+    return {
+      id: doc.id,
+      appId: d.appId ?? 'WanderBunnies',
+      tripId: d.tripId,
+      senderId: d.senderId,
+      senderName: d.senderName ?? '',
+      senderInitials: d.senderInitials ?? '',
+      body: d.body ?? '',
+      createdAt: d.createdAt ?? nowIso(),
+      readBy: d.readBy ?? [],
+    };
+  });
+
+  return messages;
+};
+
+export const addTripMessage = async (msg: {
+  appId: string;
+  tripId: string;
+  senderId: string;
+  senderName: string;
+  senderInitials: string;
+  body: string;
+}): Promise<TripChatMessage> => {
+  const db = getDb();
+  const text = String(msg.body ?? '').trim();
+  if (!text) throw new Error('Message body is required');
+  const id = randomUUID();
+  const createdAt = nowIso();
+  const payload: TripChatMessage = {
+    id,
+    appId: msg.appId,
+    tripId: msg.tripId,
+    senderId: msg.senderId,
+    senderName: msg.senderName,
+    senderInitials: msg.senderInitials,
+    body: text,
+    createdAt,
+    readBy: [],
+  };
+  await db.collection('trip_messages').doc(id).set(payload);
+  return payload;
+};
+
+export const markMessagesRead = async (
+  tripId: string,
+  userId: string,
+  upToMessageId: string,
+): Promise<void> => {
+  const db = getDb();
+  // Get the createdAt of the upToMessage
+  const upToDoc = await db.collection('trip_messages').doc(upToMessageId).get();
+  if (!upToDoc.exists) return;
+  const upToCreatedAt = (upToDoc.data() as any).createdAt ?? '';
+
+  const snap = await db
+    .collection('trip_messages')
+    .where('tripId', '==', tripId)
+    .where('createdAt', '<=', upToCreatedAt)
+    .get();
+
+  const batch = db.batch();
+  for (const doc of snap.docs) {
+    const readBy: string[] = (doc.data() as any).readBy ?? [];
+    if (!readBy.includes(userId)) {
+      batch.update(doc.ref, { readBy: FieldValue.arrayUnion(userId) });
+    }
+    // Also write to message_reads sub-collection for cross-referencing
+    const readRef = db
+      .collection('message_reads')
+      .doc(`${doc.id}_${userId}`);
+    batch.set(readRef, { messageId: doc.id, userId, readAt: nowIso() }, { merge: true });
+  }
+  await batch.commit();
+};
+
+export const countUnreadMessages = async (
+  tripId: string,
+  userId: string,
+): Promise<number> => {
+  const db = getDb();
+  const snap = await db
+    .collection('trip_messages')
+    .where('tripId', '==', tripId)
+    .get();
+  let count = 0;
+  for (const doc of snap.docs) {
+    const readBy: string[] = (doc.data() as any).readBy ?? [];
+    if (!readBy.includes(userId)) count++;
+  }
+  return count;
+};

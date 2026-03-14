@@ -8,6 +8,7 @@ import { doesAuthFlagsConfigExist, getResolvedAuthFlagsConfigPath } from './conf
 import { doesFeatureFlagsConfigExist, getResolvedFeatureFlagsConfigPath } from './config/featureFlags';
 import { seedEntitlementDefaults } from './services/entitlementService';
 import { syncAttractionsCatalogFromCsvToDbOnStartup } from './services/attractionsCatalogService';
+import { createSocketServer } from './socket';
 
 const defaultPort = Number(process.env.PORT) || 4000;
 
@@ -56,6 +57,9 @@ export const startServer = async (portOverride?: number): Promise<Server> => {
   await seedEntitlementDefaults();
   const portToUse = portOverride ?? defaultPort;
   const server = app.listen(portToUse, '0.0.0.0', () => console.log(`API server running on port ${portToUse}`));
+
+  // Attach Socket.IO to the same HTTP server
+  createSocketServer(server);
 
   const runAttractionsStartupSync = getEnvFlag('ATTRACTIONS_STARTUP_SYNC', { defaultValue: true });
   if (runAttractionsStartupSync) {

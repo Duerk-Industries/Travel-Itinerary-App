@@ -1,8 +1,16 @@
 # Real-Time Sync Recommendation
 
-## Current state
+## Status: Socket.IO implemented for chat and presence
 
-The app uses a pure request-response HTTP model. All data updates are user-initiated: a user's changes are only visible to other group members after those members manually reload the page or re-navigate to the affected tab. There are no WebSockets, Server-Sent Events (SSE), or polling loops anywhere in the current codebase.
+**Update (2026-03):** Socket.IO has been implemented for the chat and presence features. See [docs/websockets-and-chat.md](./websockets-and-chat.md) for the complete implementation details.
+
+Trip data changes (flights, lodgings, activities) still follow the request-response HTTP model described below. This document is retained as a reference for extending real-time sync to those areas.
+
+---
+
+## Original: HTTP-only state (pre-Socket.IO)
+
+The app uses a pure request-response HTTP model for trip data updates. All data updates are user-initiated: a user's changes are only visible to other group members after those members manually reload the page or re-navigate to the affected tab.
 
 This means:
 - User A adds a flight → User B must reload the Transfers tab to see it.
@@ -11,7 +19,11 @@ This means:
 
 ## Impact on E2E tests
 
-Because of the above, the multi-user E2E tests in `multi-user-group.test.ts` use `GET /api/groups/invites` polling with a 5 s deadline to detect that an invite has been created by the owner, and then reload the page to surface the invite modal. This is a workaround, not a correct simulation of the real collaborative UX.
+The multi-user E2E tests in `multi-user-group.test.ts` previously used `GET /api/groups/invites` polling to detect invites. They have been updated to rely on the Socket.IO invite-modal push; the test simply waits for `getByTestId('invite-modal')` to appear.
+
+## Recommended next upgrade: Server-Sent Events (SSE) for trip data
+
+SSE is the lightest-weight option and works over standard HTTP/1.1 (no upgrade handshake required). It provides server-to-client push for one-directional event streams, which is all that is needed here.
 
 ## Recommended upgrade: Server-Sent Events (SSE)
 

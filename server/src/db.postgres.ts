@@ -31,6 +31,8 @@ import {
   UsageCounter,
   AuditLogEntry,
   AuditAction,
+  TripChatMessage,
+  TripMessageRead,
 } from './types';
 import { logError } from './logger';
 import { getEnvValue } from './env';
@@ -556,6 +558,29 @@ export const initDb = async (): Promise<void> => {
   await p.query(`CREATE INDEX IF NOT EXISTS idx_trip_comments_trip_created ON trip_comments(trip_id, created_at DESC, id DESC);`);
 
   await p.query(`
+    CREATE TABLE IF NOT EXISTS trip_messages (
+      id UUID PRIMARY KEY,
+      app_id TEXT NOT NULL DEFAULT 'WanderBunnies',
+      trip_id UUID NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+      sender_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      sender_name TEXT NOT NULL,
+      sender_initials TEXT NOT NULL,
+      body TEXT NOT NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+  `);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_trip_messages_trip_created ON trip_messages(trip_id, created_at ASC, id ASC);`);
+
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS message_reads (
+      message_id UUID NOT NULL REFERENCES trip_messages(id) ON DELETE CASCADE,
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      read_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (message_id, user_id)
+    );
+  `);
+
+  await p.query(`
     CREATE TABLE IF NOT EXISTS locations (
       id TEXT PRIMARY KEY,
       source_type TEXT NOT NULL,
@@ -976,6 +1001,8 @@ export const initDb = async (): Promise<void> => {
     await p.query(`DELETE FROM feature_flags`);
     await p.query(`DELETE FROM tiers`);
     await p.query(`DELETE FROM features`);
+    await p.query(`DELETE FROM message_reads`);
+    await p.query(`DELETE FROM trip_messages`);
     await p.query(`DELETE FROM trip_comments`);
     await p.query(`DELETE FROM trip_activity`);
     await p.query(`DELETE FROM itinerary_details`);
@@ -6393,7 +6420,17 @@ export const searchUsersByEmail = async (query: string): Promise<User[]> => {
   const p = getPool();
   const like = `%${query.toLowerCase()}%`;
   const { rows } = await p.query<User>(
-    `SELECT id, email, provider FROM users WHERE LOWER(email) LIKE $1 ORDER BY email LIMIT 10`,
+    `SELECT DISTINCT ON (u.id) u.id, u.email, u.provider
+     FROM users u
+     LEFT JOIN web_users wu ON wu.id = u.id
+     LEFT JOIN user_emails ue ON ue.user_id = u.id
+     WHERE LOWER(u.email) LIKE $1
+        OR LOWER(COALESCE(wu.first_name, u.first_name, '')) LIKE $1
+        OR LOWER(COALESCE(wu.last_name, u.last_name, '')) LIKE $1
+        OR LOWER(COALESCE(wu.first_name, u.first_name, '') || ' ' || COALESCE(wu.last_name, u.last_name, '')) LIKE $1
+        OR LOWER(COALESCE(ue.email, '')) LIKE $1
+     ORDER BY u.id, u.email
+     LIMIT 10`,
     [like]
   );
   return rows;
@@ -7778,7 +7815,14 @@ export const adminSearchUsers = async (opts: {
   let idx = 1;
   if (search) {
     conditions.push(
-      `(u.email ILIKE $${idx} OR wu.first_name ILIKE $${idx} OR wu.last_name ILIKE $${idx} OR u.id::text ILIKE $${idx})`
+      `(
+        u.email ILIKE $${idx}
+        OR COALESCE(wu.first_name, u.first_name, '') ILIKE $${idx}
+        OR COALESCE(wu.last_name, u.last_name, '') ILIKE $${idx}
+        OR (COALESCE(wu.first_name, u.first_name, '') || ' ' || COALESCE(wu.last_name, u.last_name, '')) ILIKE $${idx}
+        OR COALESCE(ue.email, '') ILIKE $${idx}
+        OR u.id::text ILIKE $${idx}
+      )`
     );
     params.push(`%${search}%`);
     idx++;
@@ -7789,6 +7833,7 @@ export const adminSearchUsers = async (opts: {
     `SELECT COUNT(DISTINCT u.id) as count
      FROM users u
      LEFT JOIN web_users wu ON wu.id = u.id
+     LEFT JOIN user_emails ue ON ue.user_id = u.id
      ${where}`,
     params
   );
@@ -7800,7 +7845,7 @@ export const adminSearchUsers = async (opts: {
     role: string | null; tier_key: string | null; tier_display_name: string | null;
     tier_since: string | null; created_at: string;
   }>(
-    `SELECT u.id, u.email,
+    `SELECT DISTINCT ON (u.id) u.id, u.email,
             COALESCE(wu.first_name, u.first_name) as first_name,
             COALESCE(wu.last_name, u.last_name) as last_name,
             COALESCE(u.role, 'user') as role,
@@ -7808,10 +7853,11 @@ export const adminSearchUsers = async (opts: {
             ut.effective_from as tier_since, u.created_at
      FROM users u
      LEFT JOIN web_users wu ON wu.id = u.id
+     LEFT JOIN user_emails ue ON ue.user_id = u.id
      LEFT JOIN user_tiers ut ON ut.user_id = u.id AND ut.effective_to IS NULL
      LEFT JOIN tiers t ON t.id = ut.tier_id
      ${where}
-     ORDER BY u.created_at DESC
+     ORDER BY u.id, u.created_at DESC
      LIMIT $${idx} OFFSET $${idx + 1}`,
     dataParams
   );
@@ -8013,3 +8059,132 @@ export const adminGetUserData = async (opts: {
   };
 };
 
+
+// ---------------------------------------------------------------------------
+// Chat / Messaging
+// ---------------------------------------------------------------------------
+
+/** Fetch messages for a trip, oldest-first, with their read-by lists. */
+export const listTripMessages = async (
+  tripId: string,
+  limit = 200,
+): Promise<TripChatMessage[]> => {
+  const p = getPool();
+  const { rows } = await p.query<{
+    id: string;
+    appId: string;
+    tripId: string;
+    senderId: string;
+    senderName: string;
+    senderInitials: string;
+    body: string;
+    createdAt: string;
+  }>(
+    `SELECT id,
+            app_id          AS "appId",
+            trip_id         AS "tripId",
+            sender_id       AS "senderId",
+            sender_name     AS "senderName",
+            sender_initials AS "senderInitials",
+            body,
+            created_at      AS "createdAt"
+     FROM trip_messages
+     WHERE trip_id = $1
+     ORDER BY created_at ASC, id ASC
+     LIMIT $2`,
+    [tripId, limit],
+  );
+
+  if (rows.length === 0) return [];
+
+  // Fetch read receipts for this trip using a sub-select (pg-mem compatible)
+  const { rows: reads } = await p.query<{ messageId: string; userId: string }>(
+    `SELECT message_id AS "messageId", user_id AS "userId"
+     FROM message_reads
+     WHERE message_id IN (
+       SELECT id FROM trip_messages WHERE trip_id = $1
+     )`,
+    [tripId],
+  );
+  const readMap = new Map<string, string[]>();
+  for (const read of reads) {
+    if (!readMap.has(read.messageId)) readMap.set(read.messageId, []);
+    readMap.get(read.messageId)!.push(read.userId);
+  }
+
+  return rows.map((r) => ({ ...r, readBy: readMap.get(r.id) ?? [] }));
+};
+
+/** Persist a new chat message and return it. */
+export const addTripMessage = async (msg: {
+  appId: string;
+  tripId: string;
+  senderId: string;
+  senderName: string;
+  senderInitials: string;
+  body: string;
+}): Promise<TripChatMessage> => {
+  const p = getPool();
+  const text = String(msg.body ?? '').trim();
+  if (!text) throw new Error('Message body is required');
+  const id = randomUUID();
+  await p.query(
+    `INSERT INTO trip_messages (id, app_id, trip_id, sender_id, sender_name, sender_initials, body)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+    [id, msg.appId, msg.tripId, msg.senderId, msg.senderName, msg.senderInitials, text],
+  );
+  const msgs = await listTripMessages(msg.tripId, 1000);
+  const saved = msgs.find((m) => m.id === id);
+  if (!saved) throw new Error('Failed to retrieve saved message');
+  return saved;
+};
+
+/** Mark messages in a trip as read by a user up to and including upToMessageId. */
+export const markMessagesRead = async (
+  tripId: string,
+  userId: string,
+  upToMessageId: string,
+): Promise<void> => {
+  const p = getPool();
+  // Fetch the cutoff timestamp first
+  const { rows: cutoffRows } = await p.query<{ createdAt: string }>(
+    `SELECT created_at AS "createdAt" FROM trip_messages WHERE id = $1 LIMIT 1`,
+    [upToMessageId],
+  );
+  if (!cutoffRows.length) return;
+  const cutoff = cutoffRows[0].createdAt;
+
+  // Fetch messages to mark (read separately to avoid INSERT ... SELECT + ON CONFLICT in pg-mem)
+  const { rows: toMark } = await p.query<{ id: string }>(
+    `SELECT id FROM trip_messages WHERE trip_id = $1 AND created_at <= $2`,
+    [tripId, cutoff],
+  );
+
+  for (const row of toMark) {
+    try {
+      await p.query(
+        `INSERT INTO message_reads (message_id, user_id) VALUES ($1, $2)`,
+        [row.id, userId],
+      );
+    } catch {
+      // Already exists (duplicate primary key) — skip
+    }
+  }
+};
+
+/** Count unread messages for a user in a trip. */
+export const countUnreadMessages = async (
+  tripId: string,
+  userId: string,
+): Promise<number> => {
+  const p = getPool();
+  // Use LEFT JOIN instead of NOT EXISTS for pg-mem compatibility
+  const { rows } = await p.query<{ count: string }>(
+    `SELECT COUNT(m.id)::text AS count
+     FROM trip_messages m
+     LEFT JOIN message_reads mr ON mr.message_id = m.id AND mr.user_id = $2
+     WHERE m.trip_id = $1 AND mr.message_id IS NULL`,
+    [tripId, userId],
+  );
+  return parseInt(rows[0]?.count ?? '0', 10);
+};

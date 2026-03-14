@@ -158,9 +158,57 @@ Files with added testIDs:
 
 ---
 
+---
+
+## Suite 7 — Trip Chat (`chat.test.ts`)
+
+**Goal:** Verify the Socket.IO-backed trip chat and presence features.
+
+| ID | Test | Key Assertions |
+|---|---|---|
+| G1 | Open chat panel via FAB | `chat-panel` and `Trip Chat` text visible |
+| G2 | Send a message | Message text appears in `chat-message-list` |
+| G3 | Messages persist after reload | Message still visible after page reload + re-open chat |
+| G4 | Desktop minimize button | Panel hides; FAB re-appears |
+| G5 | Presence circles for another user | `presence-avatars` visible after second user joins |
+| G6 | Unread badge increments | `chat-unread-badge` text > 0 after other user sends |
+
+---
+
+## Test infrastructure
+
+### Shared helpers (`app/e2e/fixtures.ts`)
+
+| Helper | Purpose |
+|---|---|
+| `registerUser(request)` | POST `/api/auth/register`, returns `UserCredentials` |
+| `loginAsUser(page, creds)` | UI login, waits for `home-nav-trips` |
+| `loginAsNewUser(page)` | `registerUser` + `loginAsUser`, returns credentials |
+| `createSecondUserContext(browser)` | Creates isolated `BrowserContext` for a second user |
+| `createTripViaWizard(page, opts)` | Drives full wizard, returns trip name |
+| `openTab(page, key)` | Clicks `home-nav-{key}`, waits for `networkidle` |
+| `measureMs(fn)` | Returns wall-clock elapsed ms for an async action |
+
+### testID inventory (added for E2E coverage)
+
+See [docs/faq/testing-and-coverage.md](faq/testing-and-coverage.md#testid-naming-convention) for the full naming convention.
+
+Files with added testIDs:
+- `app/tabs/LodgingTab.tsx` — `lodging-add`, `lodging-edit-{id}`, `lodging-delete-{id}`
+- `app/tabs/activities.tsx` — `activity-add`, `activity-row-{id}`, `activity-edit-{id}`, `activity-delete-{id}`, `activity-form-modal`, `activity-save`, `activity-cancel`
+- `app/tabs/transfers.tsx` — `transfer-add`, `transfer-row-{id}`, `transfer-edit-{id}`, `transfer-delete-{id}`
+- `app/tabs/dailyExpenses.tsx` — `expense-add-button`, `expense-save`, `expense-cell-{date}-{category}`, `expense-delete-{id}`
+- `app/App.tsx` — `car-rental-add`, `car-rental-delete-{id}`, `invite-modal`, `invite-join-{id}`, `invite-decline-{id}`
+- `app/components/ChatButton.tsx` — `chat-fab`, `chat-unread-badge`
+- `app/components/ChatPanel.tsx` — `chat-panel`, `chat-back`, `chat-minimize`, `chat-close`, `chat-input`, `chat-send`, `chat-message-list`, `chat-message-{id}`
+- `app/components/PresenceAvatars.tsx` — `presence-avatars`, `presence-avatar-{userId}`
+
+---
+
 ## Known gaps and future work
 
-- **Real-time updates:** Multi-user tests currently require API polling to detect changes from another user. Once WebSocket / SSE support is added (see [realtime-sync-recommendation.md](realtime-sync-recommendation.md)), tests D1–D3 can assert live UI updates without polling.
+- **Real-time trip data updates:** Trip content changes (flights, lodgings) are still HTTP-only. Once SSE/WebSocket support is added for those (see [realtime-sync-recommendation.md](realtime-sync-recommendation.md)), further E2E tests can assert live UI updates.
+- **Multi-instance presence:** Presence manager is in-process. For multi-instance deployments, a Redis adapter is needed.
 - **Mobile viewport:** All tests run in Desktop Chrome. Add `{ ...devices['iPhone 14'] }` project to playwright.config.ts to cover mobile layout.
 - **Offline / error states:** No tests currently simulate network failures or server errors.
 - **Itinerary AI generation:** The `/api/itinerary` async job flow is not covered by E2E tests.

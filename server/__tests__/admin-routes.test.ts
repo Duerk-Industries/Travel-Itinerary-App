@@ -1,5 +1,6 @@
 import request from 'supertest';
 import { Pool } from 'pg';
+import { randomUUID } from 'crypto';
 import { app } from '../src/app';
 import { initDb, closePool } from '../src/db';
 import { makeAdminUser, registerAndLoginWebUser, seedTiersForTest } from './helpers';
@@ -107,6 +108,29 @@ describe('Admin routes', () => {
         .expect(200);
 
       expect(res.body.users.some((u: any) => u.id === userId)).toBe(true);
+    });
+
+    it('finds users by full name and alternate email', async () => {
+      const alternateEmail = `admin-routes-test+alias${Date.now()}@example.com`;
+      await pool.query(
+        `INSERT INTO user_emails (id, user_id, email, email_normalized, is_primary, is_verified)
+         VALUES ($1, $2, $3, LOWER($3), FALSE, TRUE)`,
+        [randomUUID(), userId, alternateEmail]
+      );
+
+      const byName = await request(app)
+        .get('/api/admin/users?search=Regular%20User')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(byName.body.users.some((u: any) => u.id === userId)).toBe(true);
+
+      const byAlias = await request(app)
+        .get(`/api/admin/users?search=${encodeURIComponent(alternateEmail)}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(byAlias.body.users.some((u: any) => u.id === userId)).toBe(true);
     });
   });
 
