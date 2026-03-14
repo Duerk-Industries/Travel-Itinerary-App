@@ -3,8 +3,7 @@
  * Manages message send/receive and read-receipt lifecycle for a single socket.
  */
 import type { Server, Socket } from 'socket.io';
-import { CLIENT_EVENTS, SERVER_EVENTS, APP_ID } from '@wanderbunnies/messaging';
-import { initialsForName } from '@wanderbunnies/messaging';
+import { CLIENT_EVENTS, SERVER_EVENTS, APP_ID, initialsForName } from './messaging';
 import {
   addTripMessage,
   listTripMessages,
