@@ -159,6 +159,18 @@ initPassport();
 app.use(passport.initialize());
 const googleOAuthConfigured = Boolean(getEnvValue('GOOGLE_CLIENT_ID') && getEnvValue('GOOGLE_CLIENT_SECRET'));
 
+const redirectToLoginWithError = (req: express.Request, res: express.Response, webUrl: string, code: string) => {
+  const state = typeof req.query.state === 'string' ? decodeOAuthState(req.query.state) : null;
+  let redirectUri = state?.redirectUri;
+  if (redirectUri && !isRedirectUriAllowed(redirectUri, webUrl)) {
+    redirectUri = undefined;
+  }
+  const fallback = new URL('/login', webUrl);
+  const nextUrl = new URL(redirectUri ?? fallback.toString());
+  nextUrl.searchParams.set('auth_error', code);
+  res.redirect(nextUrl.toString());
+};
+
 if (!isLocalEnv() && getEnvValue('AUTH_SECRET') === 'development-secret') {
     logError('[WARNING] AUTH_SECRET is not set or is using the default value in a non-local environment. This is a security risk and will cause authentication to fail.');
 }
@@ -188,38 +200,67 @@ app.get(
     }
     next();
   },
-  (req, _res, next) => {
-    next();
-  },
-  passport.authenticate('google', { failureRedirect: '/login', session: false }),
-  async (req, res) => {
-    const user = req.user as any;
-    await ensureDefaultGroupForUser(user.id, user.email);
-    await ensureCurrentUserTier(user.id, 'free');
-    const { requiresPasswordSetup } = await ensureWebPasswordAccountForOAuth(
-      user.id,
-      user.email,
-      user.firstName,
-      user.lastName
-    );
-    await ensureAdminBootstrap(user.id, user.email);
-    const role = await getUserRole(user.id);
-    const token = createToken({ userId: user.id, email: user.email, provider: user.provider, role });
-    const state = typeof req.query.state === 'string' ? decodeOAuthState(req.query.state) : null;
-    let redirectUri = state?.redirectUri;
-    if (redirectUri && !isRedirectUriAllowed(redirectUri, webUrl)) {
-      redirectUri = undefined;
-    }
-    if (redirectUri) {
-      const next = new URL(appendTokenToRedirect(redirectUri, token));
-      if (requiresPasswordSetup) {
-        next.searchParams.set('require_password_setup', '1');
+  async (req, res, next) => {
+    passport.authenticate('google', { session: false }, async (err: any, user: any, info: unknown) => {
+      if (err) {
+        logError('[auth] Google OAuth callback failed', {
+          name: err?.name,
+          message: err?.message,
+          oauthError: err?.oauthError?.data,
+          hasCode: typeof req.query.code === 'string',
+          hasState: typeof req.query.state === 'string',
+          info,
+        });
+        redirectToLoginWithError(req, res, webUrl, 'google_callback_failed');
+        return;
       }
-      res.redirect(next.toString());
-      return;
-    }
-    const suffix = requiresPasswordSetup ? `&require_password_setup=1` : '';
-    res.redirect(`/login?token=${encodeURIComponent(token)}${suffix}`);
+      if (!user) {
+        logError('[auth] Google OAuth callback returned no user', {
+          hasCode: typeof req.query.code === 'string',
+          hasState: typeof req.query.state === 'string',
+          info,
+        });
+        redirectToLoginWithError(req, res, webUrl, 'google_login_failed');
+        return;
+      }
+
+      try {
+        await ensureDefaultGroupForUser(user.id, user.email);
+        await ensureCurrentUserTier(user.id, 'free');
+        const { requiresPasswordSetup } = await ensureWebPasswordAccountForOAuth(
+          user.id,
+          user.email,
+          user.firstName,
+          user.lastName
+        );
+        await ensureAdminBootstrap(user.id, user.email);
+        const role = await getUserRole(user.id);
+        const token = createToken({ userId: user.id, email: user.email, provider: user.provider, role });
+        const state = typeof req.query.state === 'string' ? decodeOAuthState(req.query.state) : null;
+        let redirectUri = state?.redirectUri;
+        if (redirectUri && !isRedirectUriAllowed(redirectUri, webUrl)) {
+          redirectUri = undefined;
+        }
+        if (redirectUri) {
+          const next = new URL(appendTokenToRedirect(redirectUri, token));
+          if (requiresPasswordSetup) {
+            next.searchParams.set('require_password_setup', '1');
+          }
+          res.redirect(next.toString());
+          return;
+        }
+        const suffix = requiresPasswordSetup ? `&require_password_setup=1` : '';
+        res.redirect(`/login?token=${encodeURIComponent(token)}${suffix}`);
+      } catch (callbackErr: any) {
+        logError('[auth] Google OAuth post-login setup failed', {
+          name: callbackErr?.name,
+          message: callbackErr?.message,
+          userId: user?.id,
+          email: user?.email,
+        });
+        redirectToLoginWithError(req, res, webUrl, 'google_post_login_failed');
+      }
+    })(req, res, next);
   }
 );
 

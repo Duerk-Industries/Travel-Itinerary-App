@@ -54,12 +54,28 @@ const reserveGenerationRequestRateLimit = (userId: string, ip: string | null): v
   }
 };
 
-const resolveIdempotencyKey = (req: any, tripId: string): string => {
+const resolveIdempotencyKey = (req: any, userId: string, tripId: string): string => {
   const fromHeader = String(req.headers['idempotency-key'] ?? '').trim();
   const fromBody = String(req.body?.idempotencyKey ?? '').trim();
   const supplied = fromHeader || fromBody;
-  if (supplied) return supplied.slice(0, 200);
-  return `${(req as any).user.userId}:${tripId}:${Date.now()}:${Math.random().toString(36).slice(2)}`;
+  if (supplied) return `${userId}:${supplied.slice(0, 200)}`;
+  return `${userId}:${tripId}:${Date.now()}:${Math.random().toString(36).slice(2)}`;
+};
+
+const toFirestoreSafeValue = <T>(value: T): T => {
+  if (Array.isArray(value)) {
+    return value
+      .filter((item): item is Exclude<typeof item, undefined> => item !== undefined)
+      .map((item) => toFirestoreSafeValue(item)) as T;
+  }
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([, item]) => item !== undefined)
+        .map(([key, item]) => [key, toFirestoreSafeValue(item)])
+    ) as T;
+  }
+  return value;
 };
 
 // Itineraries API: manage itineraries, details, and sharing helpers.
@@ -196,7 +212,7 @@ router.post('/', async (req, res) => {
     logInfo(`[itinerary] trip context unavailable trip=${tripId}; proceeding without stored trip dates`);
   }
 
-  const idempotencyKey = resolveIdempotencyKey(req, tripId);
+  const idempotencyKey = resolveIdempotencyKey(req, userId, tripId);
   try {
     await assertCanUseFeature(userId, 'ai_itinerary_generation', role);
     reserveGenerationRequestRateLimit(userId, req.ip ?? null);
@@ -250,7 +266,7 @@ router.post('/', async (req, res) => {
       `[itinerary] generated trip=${tripId} details=${result.details.length} transfers=${result.generatedItems.transfers.length} lodgings=${result.generatedItems.lodgings.length} activities=${result.generatedItems.activities.length} carRentals=${result.generatedItems.carRentals.length} tokens=${result.tokenUsage.totalTokens} elapsedMs=${Date.now() - requestStartedAt}`
     );
 
-    const responseBody = {
+    const responseBody = toFirestoreSafeValue({
       plan: normalizedPlan,
       details: result.details,
       generatedItems: result.generatedItems,
@@ -260,7 +276,7 @@ router.post('/', async (req, res) => {
         route: result.route,
         itinerary: result.itinerary,
       },
-    };
+    });
     await finalizeGenerationUsage({
       userId,
       windowKey: getMonthWindowKey(),
@@ -370,7 +386,7 @@ router.post('/async', async (req, res) => {
   }
 
   // Entitlement checks — run before enqueuing so the user gets immediate feedback.
-  const idempotencyKey = resolveIdempotencyKey(req, tripId);
+  const idempotencyKey = resolveIdempotencyKey(req, userId, tripId);
   try {
     await assertCanUseFeature(userId, 'ai_itinerary_generation', role);
     reserveGenerationRequestRateLimit(userId, req.ip ?? null);

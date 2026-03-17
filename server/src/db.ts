@@ -90,6 +90,8 @@ export const isPasswordSetupRequired = async (...args: Parameters<ReturnType<typ
   adapter().isPasswordSetupRequired(...args);
 export const deleteWebUserAndCleanup = async (...args: Parameters<ReturnType<typeof adapter>['deleteWebUserAndCleanup']>) =>
   adapter().deleteWebUserAndCleanup(...args);
+export const deleteAllUsers = async (...args: Parameters<ReturnType<typeof adapter>['deleteAllUsers']>) =>
+  adapter().deleteAllUsers(...args);
 export const insertFlight = async (...args: Parameters<ReturnType<typeof adapter>['insertFlight']>) =>
   adapter().insertFlight(...args);
 export const deleteFlight = async (...args: Parameters<ReturnType<typeof adapter>['deleteFlight']>) =>
@@ -341,6 +343,10 @@ export const setUserTier = async (...args: Parameters<ReturnType<typeof adapter>
   adapter().setUserTier(...args);
 export const ensureCurrentUserTier = async (...args: Parameters<ReturnType<typeof adapter>['ensureCurrentUserTier']>) =>
   adapter().ensureCurrentUserTier(...args);
+export const upsertTier = async (...args: Parameters<ReturnType<typeof adapter>['upsertTier']>) =>
+  adapter().upsertTier(...args);
+export const upsertFeature = async (...args: Parameters<ReturnType<typeof adapter>['upsertFeature']>) =>
+  adapter().upsertFeature(...args);
 export const getFeatureFlag = async (...args: Parameters<ReturnType<typeof adapter>['getFeatureFlag']>) =>
   adapter().getFeatureFlag(...args);
 export const listFeatureFlags = async (...args: Parameters<ReturnType<typeof adapter>['listFeatureFlags']>) =>
@@ -349,6 +355,8 @@ export const setFeatureFlag = async (...args: Parameters<ReturnType<typeof adapt
   adapter().setFeatureFlag(...args);
 export const getUsageCounter = async (...args: Parameters<ReturnType<typeof adapter>['getUsageCounter']>) =>
   adapter().getUsageCounter(...args);
+export const setUsageCounter = async (...args: Parameters<ReturnType<typeof adapter>['setUsageCounter']>) =>
+  adapter().setUsageCounter(...args);
 export const incrementUsageCounter = async (...args: Parameters<ReturnType<typeof adapter>['incrementUsageCounter']>) =>
   adapter().incrementUsageCounter(...args);
 export const appendUsageEvent = async (...args: Parameters<ReturnType<typeof adapter>['appendUsageEvent']>) =>
@@ -374,6 +382,10 @@ export const writeAuditLog = async (...args: Parameters<ReturnType<typeof adapte
   adapter().writeAuditLog(...args);
 export const listAuditLog = async (...args: Parameters<ReturnType<typeof adapter>['listAuditLog']>) =>
   adapter().listAuditLog(...args);
+export const deleteAuditLog = async (...args: Parameters<ReturnType<typeof adapter>['deleteAuditLog']>) =>
+  adapter().deleteAuditLog(...args);
+export const setPasswordSetupRequired = async (...args: Parameters<ReturnType<typeof adapter>['setPasswordSetupRequired']>) =>
+  adapter().setPasswordSetupRequired(...args);
 export const countActiveTripsForUser = async (...args: Parameters<ReturnType<typeof adapter>['countActiveTripsForUser']>) =>
   adapter().countActiveTripsForUser(...args);
 export const countGroupMembers = async (...args: Parameters<ReturnType<typeof adapter>['countGroupMembers']>) =>

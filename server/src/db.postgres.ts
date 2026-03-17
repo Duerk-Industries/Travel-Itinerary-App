@@ -47,6 +47,11 @@ let pool: Pool | null = null;
 type QueryRunner = Pick<Pool, 'query'>;
 
 const hashToken = (token: string): string => createHash('sha256').update(token).digest('hex');
+const formatDate = (value: any) => {
+  if (value == null) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  return date.toISOString().slice(0, 10);
+};
 const FOLLOW_CODE_LENGTH = 6;
 const FOLLOW_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const TRIP_SHARE_TOKEN_BYTES = 24;
@@ -178,6 +183,34 @@ function getPool(): Pool {
       );
     }
 
+    if (typeof cs === 'string' && cs.startsWith('pg-mem://')) {
+      const { newDb, DataType } = require('pg-mem') as typeof import('pg-mem');
+      const { randomUUID } = require('crypto') as typeof import('crypto');
+      const db = newDb({ autoCreateForeignKeyIndices: true, noAstCoverageCheck: true });
+      const pgMem = db.adapters.createPg();
+      db.public.registerFunction({ name: 'to_char', args: [DataType.date, DataType.text], returns: DataType.text, implementation: formatDate });
+      db.public.registerFunction({ name: 'to_char', args: [DataType.timestamp, DataType.text], returns: DataType.text, implementation: formatDate });
+      db.public.registerFunction({
+        name: 'nullif',
+        args: [DataType.text, DataType.text],
+        returns: DataType.text,
+        implementation: (value: string | null, compare: string | null) => {
+          if (value == null) return null;
+          return value === compare ? null : value;
+        },
+      });
+      db.public.registerFunction({
+        name: 'replace',
+        args: [DataType.text, DataType.text, DataType.text],
+        returns: DataType.text,
+        implementation: (value: string | null, find: string | null, replaceWith: string | null) => {
+          if (value == null || find == null || replaceWith == null) return value;
+          return value.split(find).join(replaceWith);
+        },
+      });
+      db.public.registerFunction({ name: 'uuid_generate_v4', args: [], returns: DataType.uuid, implementation: () => randomUUID() });
+      PoolFactory = pgMem.Pool;
+    }
 
     pool = new PoolFactory({ connectionString: cs });
   }
@@ -2054,57 +2087,91 @@ export const deleteWebUserAndCleanup = async (userId: string): Promise<void> => 
     await client.query('BEGIN');
 
     // Move ownership to another member for shared groups; solo groups will be deleted via cascade when the user is removed.
-    const { rows: ownedGroups } = await client.query<{ id: string; newOwner: string | null }>(
+    const { rows: ownedGroups } = await client.query<{ id: string }>(
       `
-      SELECT g.id,
-        (
-          SELECT gm.user_id
-          FROM group_members gm
-          WHERE gm.group_id = g.id AND gm.user_id IS NOT NULL AND gm.user_id <> $1
-          ORDER BY gm.created_at ASC
-          LIMIT 1
-        ) as "newOwner"
-      FROM groups g
-      WHERE g.owner_id = $1
+      SELECT id
+      FROM groups
+      WHERE owner_id = $1
     `,
       [userId]
     );
     for (const g of ownedGroups) {
-      if (g.newOwner) {
-        await client.query(`UPDATE groups SET owner_id = $2 WHERE id = $1`, [g.id, g.newOwner]);
+      const { rows } = await client.query<{ userId: string }>(
+        `
+        SELECT user_id as "userId"
+        FROM group_members
+        WHERE group_id = $1 AND user_id IS NOT NULL AND user_id <> $2
+        ORDER BY created_at ASC
+        LIMIT 1
+      `,
+        [g.id, userId]
+      );
+      const newOwner = rows[0]?.userId ?? null;
+      if (newOwner) {
+        await client.query(`UPDATE groups SET owner_id = $2 WHERE id = $1`, [g.id, newOwner]);
       }
     }
 
     // Ensure memberships added by this user are retained by reassigning added_by to the new owner (or the member themself).
-    await client.query(
+    const { rows: membershipsAddedByUser } = await client.query<{
+      groupId: string;
+      userId: string | null;
+      addedBy: string | null;
+    }>(
       `
-      UPDATE group_members gm
-      SET added_by = COALESCE(
-        (SELECT owner_id FROM groups g WHERE g.id = gm.group_id),
-        gm.user_id,
-        gm.added_by
-      )
-      WHERE gm.added_by = $1
+      SELECT group_id as "groupId", user_id as "userId", added_by as "addedBy"
+      FROM group_members
+      WHERE added_by = $1
     `,
       [userId]
     );
+    for (const membership of membershipsAddedByUser) {
+      const { rows } = await client.query<{ ownerId: string | null }>(
+        `SELECT owner_id as "ownerId" FROM groups WHERE id = $1 LIMIT 1`,
+        [membership.groupId]
+      );
+      const nextAddedBy = rows[0]?.ownerId ?? membership.userId ?? membership.addedBy;
+      if (nextAddedBy && nextAddedBy !== membership.addedBy) {
+        await client.query(
+          `
+          UPDATE group_members
+          SET added_by = $3
+          WHERE group_id = $1 AND (
+            (user_id = $2) OR
+            (user_id IS NULL AND $2 IS NULL)
+          )
+        `,
+          [membership.groupId, membership.userId, nextAddedBy]
+        );
+      }
+    }
 
     // Trips where this user is the only non-guest member should be removed entirely.
-    const { rows: soloTrips } = await client.query<{ id: string }>(
-      `
-      SELECT t.id
-      FROM trips t
-      WHERE t.group_id IN (SELECT group_id FROM group_members WHERE user_id = $1)
-        AND NOT EXISTS (
-          SELECT 1 FROM group_members gm
-          WHERE gm.group_id = t.group_id
-            AND gm.user_id IS NOT NULL
-            AND gm.user_id <> $1
-        )
-    `,
+    const { rows: memberGroups } = await client.query<{ groupId: string }>(
+      `SELECT group_id as "groupId" FROM group_members WHERE user_id = $1`,
       [userId]
     );
-    const tripIds = soloTrips.map((t) => t.id);
+    const tripIds: string[] = [];
+    for (const membership of memberGroups) {
+      const { rows: otherMembers } = await client.query<{ count: string }>(
+        `
+        SELECT COUNT(*)::text as "count"
+        FROM group_members
+        WHERE group_id = $1
+          AND user_id IS NOT NULL
+          AND user_id <> $2
+      `,
+        [membership.groupId, userId]
+      );
+      if (Number(otherMembers[0]?.count ?? '0') > 0) {
+        continue;
+      }
+      const { rows: groupTrips } = await client.query<{ id: string }>(
+        `SELECT id FROM trips WHERE group_id = $1`,
+        [membership.groupId]
+      );
+      tripIds.push(...groupTrips.map((trip) => trip.id));
+    }
     if (tripIds.length) {
       await client.query(`DELETE FROM flights WHERE trip_id = ANY($1::uuid[])`, [tripIds]);
       await client.query(`DELETE FROM lodgings WHERE trip_id = ANY($1::uuid[])`, [tripIds]);
@@ -7467,6 +7534,26 @@ export const ensureCurrentUserTier = async (userId: string, tierKey = 'free'): P
   await setUserTier(userId, tierKey, 'system', null, 'Automatic default tier assignment');
 };
 
+export const upsertTier = async (key: string, displayName: string, rank: number): Promise<void> => {
+  const p = getPool();
+  await p.query(
+    `INSERT INTO tiers (id, key, display_name, rank)
+     VALUES (uuid_generate_v4(), $1, $2, $3)
+     ON CONFLICT (key) DO NOTHING`,
+    [key, displayName, rank],
+  );
+};
+
+export const upsertFeature = async (key: string, description: string, defaultEnabled: boolean): Promise<void> => {
+  const p = getPool();
+  await p.query(
+    `INSERT INTO features (id, key, description, default_enabled)
+     VALUES (uuid_generate_v4(), $1, $2, $3)
+     ON CONFLICT (key) DO NOTHING`,
+    [key, description, defaultEnabled],
+  );
+};
+
 export const getFeatureFlag = async (key: string): Promise<FeatureFlag | null> => {
   const p = getPool();
   const { rows } = await p.query<{
@@ -7538,6 +7625,22 @@ export const incrementUsageCounter = async (
     [userId, metricKey, windowKey, amount]
   );
   return parseInt(rows[0].count, 10);
+};
+
+export const setUsageCounter = async (
+  userId: string,
+  metricKey: string,
+  windowKey: string,
+  count: number
+): Promise<void> => {
+  const p = getPool();
+  await p.query(
+    `INSERT INTO usage_counters (id, user_id, metric_key, window_key, count, updated_at)
+     VALUES (uuid_generate_v4(), $1, $2, $3, $4, NOW())
+     ON CONFLICT (user_id, metric_key, window_key)
+     DO UPDATE SET count = $4, updated_at = NOW()`,
+    [userId, metricKey, windowKey, count]
+  );
 };
 
 export const appendUsageEvent = async (
@@ -7762,6 +7865,25 @@ export const listAuditLog = async (opts: {
       createdAt: r.created_at,
     })),
   };
+};
+
+export const deleteAuditLog = async (opts: {
+  targetUserId?: string;
+  action?: string;
+}): Promise<void> => {
+  const p = getPool();
+  const conditions: string[] = [];
+  const params: unknown[] = [];
+  let idx = 1;
+  if (opts.targetUserId) { conditions.push(`target_user_id = $${idx++}`); params.push(opts.targetUserId); }
+  if (opts.action) { conditions.push(`action = $${idx++}`); params.push(opts.action); }
+  if (!conditions.length) return;
+  await p.query(`DELETE FROM audit_log WHERE ${conditions.join(' AND ')}`, params);
+};
+
+export const setPasswordSetupRequired = async (userId: string, required: boolean): Promise<void> => {
+  const p = getPool();
+  await p.query(`UPDATE web_users SET password_setup_required = $1 WHERE id = $2`, [required, userId]);
 };
 
 export const countActiveTripsForUser = async (userId: string): Promise<number> => {

@@ -1,5 +1,4 @@
 import request from 'supertest';
-import { Pool } from 'pg';
 import { app } from '../src/app';
 import { initDb, closePool } from '../src/db';
 import { registerAndLoginWebUser, seedTiersForTest, setUserTierInDb } from './helpers';
@@ -7,7 +6,6 @@ import { registerAndLoginWebUser, seedTiersForTest, setUserTierInDb } from './he
 describe('Expenses API', () => {
   const uniq = Date.now();
   const user = { email: `expense+${uniq}@example.com`, firstName: 'Expense', lastName: 'Tester', password: 'testtest' };
-  let pool: Pool;
   let token: string;
   let tripId: string;
   let groupId: string;
@@ -16,12 +14,11 @@ describe('Expenses API', () => {
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
     await initDb();
-    pool = new Pool({ connectionString: process.env.DATABASE_URL });
-    await seedTiersForTest(pool);
+    await seedTiersForTest();
 
-    const login = await registerAndLoginWebUser(pool, user);
+    const login = await registerAndLoginWebUser(user);
     token = login.token;
-    await setUserTierInDb(pool, login.userId, 'premium');
+    await setUserTierInDb(login.userId, 'premium');
 
     const groups = await request(app).get('/api/groups').set('Authorization', `Bearer ${token}`).expect(200);
     groupId = groups.body[0]?.id as string;
@@ -40,7 +37,6 @@ describe('Expenses API', () => {
   });
 
   afterAll(async () => {
-    await pool.end();
     await closePool();
   });
 

@@ -1,17 +1,17 @@
 import request from 'supertest';
-import { Pool } from 'pg';
-import { randomUUID } from 'crypto';
 import { app } from '../src/app';
-import { initDb, closePool } from '../src/db';
-import { makeAdminUser, registerAndLoginWebUser, seedTiersForTest } from './helpers';
+import { initDb, closePool, addUserEmail, markAccountEmailVerified, listAuditLog } from '../src/db';
+import { makeAdminUser, registerAndLoginWebUser, seedTiersForTest, cleanupTestUsersByEmail } from './helpers';
 
 const ADMIN_EMAIL = `admin-routes-test+admin${Date.now()}@example.com`;
 const USER_EMAIL  = `admin-routes-test+user${Date.now()}@example.com`;
 const adminUser   = { firstName: 'Admin', lastName: 'Test', email: ADMIN_EMAIL, password: 'AdminPass1!' };
 const regularUser = { firstName: 'Regular', lastName: 'User', email: USER_EMAIL, password: 'UserPass1!' };
 
+// Track all emails created during tests for cleanup
+const testEmails: string[] = [ADMIN_EMAIL, USER_EMAIL];
+
 describe('Admin routes', () => {
-  let pool: Pool;
   let adminToken: string;
   let adminUserId: string;
   let userToken: string;
@@ -20,21 +20,23 @@ describe('Admin routes', () => {
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
     await initDb();
-    pool = new Pool({ connectionString: process.env.DATABASE_URL });
-    await seedTiersForTest(pool);
+    await seedTiersForTest();
 
-    const admin = await makeAdminUser(pool, adminUser);
+    const admin = await makeAdminUser(adminUser);
     adminToken = admin.token;
     adminUserId = admin.userId;
 
-    const user = await registerAndLoginWebUser(pool, regularUser);
+    const user = await registerAndLoginWebUser(regularUser);
     userToken = user.token;
     userId = user.userId;
   });
 
+  afterEach(async () => {
+    await seedTiersForTest();
+  });
+
   afterAll(async () => {
-    await pool.query('DELETE FROM users WHERE email LIKE $1', ['admin-routes-test+%']);
-    await pool.end();
+    await cleanupTestUsersByEmail(testEmails);
     await closePool();
   });
 
@@ -112,11 +114,10 @@ describe('Admin routes', () => {
 
     it('finds users by full name and alternate email', async () => {
       const alternateEmail = `admin-routes-test+alias${Date.now()}@example.com`;
-      await pool.query(
-        `INSERT INTO user_emails (id, user_id, email, email_normalized, is_primary, is_verified)
-         VALUES ($1, $2, $3, LOWER($3), FALSE, TRUE)`,
-        [randomUUID(), userId, alternateEmail]
-      );
+      testEmails.push(alternateEmail);
+
+      await addUserEmail(userId, alternateEmail);
+      await markAccountEmailVerified(userId, alternateEmail);
 
       const byName = await request(app)
         .get('/api/admin/users?search=Regular%20User')
@@ -198,11 +199,8 @@ describe('Admin routes', () => {
       expect(res.body.tierKey).toBe('premium');
 
       // Audit log entry should exist
-      const { rows } = await pool.query(
-        `SELECT * FROM audit_log WHERE target_user_id = $1 AND action = 'USER_TIER_CHANGED'`,
-        [userId],
-      );
-      expect(rows.length).toBeGreaterThanOrEqual(1);
+      const auditResult = await listAuditLog({ targetUserId: userId, action: 'USER_TIER_CHANGED' });
+      expect(auditResult.entries.length).toBeGreaterThanOrEqual(1);
     });
   });
 
@@ -237,11 +235,8 @@ describe('Admin routes', () => {
       expect(res.body.userId).toBe(userId);
       expect(res.body.role).toBe('admin');
 
-      const { rows } = await pool.query(
-        `SELECT * FROM audit_log WHERE target_user_id = $1 AND action = 'USER_ROLE_GRANTED'`,
-        [userId],
-      );
-      expect(rows.length).toBeGreaterThanOrEqual(1);
+      const auditResult = await listAuditLog({ targetUserId: userId, action: 'USER_ROLE_GRANTED' });
+      expect(auditResult.entries.length).toBeGreaterThanOrEqual(1);
     });
 
     it('revokes admin role and writes an audit log entry', async () => {
@@ -253,11 +248,8 @@ describe('Admin routes', () => {
 
       expect(res.body.role).toBe('user');
 
-      const { rows } = await pool.query(
-        `SELECT * FROM audit_log WHERE target_user_id = $1 AND action = 'USER_ROLE_REVOKED'`,
-        [userId],
-      );
-      expect(rows.length).toBeGreaterThanOrEqual(1);
+      const auditResult = await listAuditLog({ targetUserId: userId, action: 'USER_ROLE_REVOKED' });
+      expect(auditResult.entries.length).toBeGreaterThanOrEqual(1);
     });
 
     it('prevents an admin from revoking their own role', async () => {
@@ -405,10 +397,8 @@ describe('Admin routes', () => {
       expect(res.body.limitKey).toBe('max_active_trips');
       expect(res.body.limitValue).toBe(5);
 
-      const { rows } = await pool.query(
-        `SELECT * FROM audit_log WHERE action = 'TIER_LIMIT_UPDATED' ORDER BY created_at DESC LIMIT 1`,
-      );
-      expect(rows.length).toBe(1);
+      const auditResult = await listAuditLog({ action: 'TIER_LIMIT_UPDATED', limit: 1 });
+      expect(auditResult.entries.length).toBe(1);
     });
   });
 

@@ -320,28 +320,45 @@ const refreshIntervalMs = resolveRefreshIntervalMs();
 const sessionKey = 'stp.session';
 const sessionDurationMs = 12 * 60 * 60 * 1000;
 
+const mapAuthErrorToMessage = (authError: string | null): string | null => {
+  switch (authError) {
+    case 'google_callback_failed':
+      return 'Google sign-in could not be completed. Please try again.';
+    case 'google_login_failed':
+      return 'Google sign-in did not return a user account. Please try again.';
+    case 'google_post_login_failed':
+      return 'Google sign-in succeeded, but your account could not be finished on the server. Please try again.';
+    default:
+      return authError ? 'Sign-in failed. Please try again.' : null;
+  }
+};
+
 const extractTokenFromUrl = (rawUrl: string) => {
   try {
     const url = new URL(rawUrl);
     const token = url.searchParams.get('token');
+    const authError = url.searchParams.get('auth_error');
     const requirePasswordSetup = url.searchParams.get('require_password_setup') === '1';
     const isConfirm = url.pathname.endsWith('/confirm');
     const isSecondaryConfirm = url.pathname.endsWith('/confirm-email');
     if (token) {
-      return { token, url, source: 'query' as const, isConfirm, isSecondaryConfirm, requirePasswordSetup };
+      return { token, authError, url, source: 'query' as const, isConfirm, isSecondaryConfirm, requirePasswordSetup };
+    }
+    if (authError) {
+      return { token: null, authError, url, source: 'query' as const, isConfirm, isSecondaryConfirm, requirePasswordSetup };
     }
     const hash = url.hash.startsWith('#') ? url.hash.slice(1) : url.hash;
     if (hash) {
       const hashParams = new URLSearchParams(hash);
       const hashToken = hashParams.get('token');
       if (hashToken) {
-        return { token: hashToken, url, source: 'hash' as const, isConfirm, isSecondaryConfirm, requirePasswordSetup };
+        return { token: hashToken, authError: null, url, source: 'hash' as const, isConfirm, isSecondaryConfirm, requirePasswordSetup };
       }
     }
   } catch (e) {
     // ignore invalid URLs
   }
-  return { token: null, url: null, source: null, isConfirm: false, isSecondaryConfirm: false, requirePasswordSetup: false } as const;
+  return { token: null, authError: null, url: null, source: null, isConfirm: false, isSecondaryConfirm: false, requirePasswordSetup: false } as const;
 };
 
 const decodeTokenClaims = (
@@ -442,6 +459,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [passwordSetupForm, setPasswordSetupForm] = useState({ newPassword: '', newPasswordConfirm: '' });
   const [isFirstLogin, setIsFirstLogin] = useState(false);
   const [emailConfirmationMessage, setEmailConfirmationMessage] = useState<string | null>(null);
+  const [authErrorMessage, setAuthErrorMessage] = useState<string | null>(null);
   const [followInviteCode, setFollowInviteCode] = useState('');
   const [followLoading, setFollowLoading] = useState(false);
   const [followError, setFollowError] = useState('');
@@ -1086,6 +1104,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   };
 
   const loginWithGoogle = async () => {
+    setAuthErrorMessage(null);
     const redirectUrl = buildLoginRedirectUrl();
     const authUrl = `${backendUrl}/api/auth/google?redirect_uri=${encodeURIComponent(redirectUrl)}`;
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -1154,7 +1173,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
   useEffect(() => {
     const handleDeepLink = (event: { url: string }) => {
-      const { token, isConfirm, isSecondaryConfirm, requirePasswordSetup } = extractTokenFromUrl(event.url);
+      const { token, authError, isConfirm, isSecondaryConfirm, requirePasswordSetup } = extractTokenFromUrl(event.url);
       if (token && isConfirm) {
         confirmEmailToken(token, event.url);
         return;
@@ -1165,6 +1184,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       }
       if (token) {
         handleAuthSuccess(token, undefined, { requirePasswordSetup });
+        return;
+      }
+      if (authError) {
+        const message = mapAuthErrorToMessage(authError);
+        if (message) {
+          setAuthErrorMessage(message);
+        }
       }
     };
 
@@ -1206,7 +1232,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
     const subscription = Linking.addEventListener('url', handleDeepLink);
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      const { token, url, isConfirm, isSecondaryConfirm, requirePasswordSetup } = extractTokenFromUrl(window.location.href);
+      const { token, authError, url, isConfirm, isSecondaryConfirm, requirePasswordSetup } = extractTokenFromUrl(window.location.href);
       if (token && isConfirm) {
         confirmEmailToken(token, window.location.href);
       } else if (token && isSecondaryConfirm) {
@@ -1221,6 +1247,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           const newHash = hashParams.toString();
           url.hash = newHash ? `#${newHash}` : '';
         }
+        window.history.replaceState({}, '', url.toString());
+      } else if (authError && url) {
+        const message = mapAuthErrorToMessage(authError);
+        if (message) {
+          setAuthErrorMessage(message);
+        }
+        url.searchParams.delete('auth_error');
         window.history.replaceState({}, '', url.toString());
       }
     }
@@ -1265,6 +1298,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   };
 
   const loginWithPassword = async () => {
+    setAuthErrorMessage(null);
     try {
       const res = await fetch(`${backendUrl}/api/web-auth/login`, {
         method: 'POST',
@@ -1319,6 +1353,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   };
 
   const register = async () => {
+    setAuthErrorMessage(null);
     if (authForm.password !== authForm.passwordConfirm) {
       alert('Passwords do not match');
       return;
@@ -3219,6 +3254,11 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               </TouchableOpacity>
             </View>
           ) : null}
+          {authErrorMessage ? (
+            <View style={styles.authErrorBanner}>
+              <Text style={styles.authErrorBannerText}>{authErrorMessage}</Text>
+            </View>
+          ) : null}
                       <TouchableOpacity
                         style={styles.button}
                         onPress={authMode === 'login' ? loginWithPassword : register}
@@ -3901,6 +3941,18 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     color: theme.colors.textMuted,
     marginBottom: 8,
     fontSize: theme.typography.small,
+  },
+  authErrorBanner: {
+    width: '100%',
+    backgroundColor: theme.colors.error,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 12,
+  },
+  authErrorBannerText: {
+    color: theme.colors.onPrimary,
+    fontWeight: theme.typography.weightSemibold,
   },
   row: {
     flexDirection: 'row',

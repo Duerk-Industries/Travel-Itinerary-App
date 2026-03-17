@@ -1,24 +1,38 @@
 import request from 'supertest';
-import { Pool } from 'pg';
-import { randomUUID } from 'crypto';
 import { app } from '../src/app';
-import { initDb, closePool, createWebUser, createEmailVerification } from '../src/db';
-import { confirmWebUser, loginWebUser, registerAndLoginWebUser, registerWebUser } from './helpers';
+import {
+  initDb,
+  closePool,
+  createEmailVerification,
+  findUserByEmail,
+  setPasswordSetupRequired,
+  addUserEmail,
+  markAccountEmailVerified,
+} from '../src/db';
+import {
+  cleanupTestUsersByEmail,
+  confirmWebUser,
+  loginWebUser,
+  registerAndLoginWebUser,
+  registerWebUser,
+  setUserTierInDb,
+} from './helpers';
 
 describe('Password validation', () => {
-  let pool: Pool;
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
     await initDb();
-    pool = new Pool({ connectionString: process.env.DATABASE_URL });
   });
 
   afterAll(async () => {
-    await pool.query('DELETE FROM users WHERE email LIKE $1 OR email LIKE $2', [
-      'password-test+%@example.com',
-      'profile-test+%@example.com',
+    await cleanupTestUsersByEmail([
+      'password-test+mismatch@example.com',
+      'password-test+change@example.com',
+      'demographics-test@example.com',
+      'profile-test+optional@example.com',
+      'password-test+guard@example.com',
     ]);
-    await pool.end();
+    await closePool();
   });
 
   it('rejects registration when passwords do not match', async () => {
@@ -36,8 +50,8 @@ describe('Password validation', () => {
 
   it('requires correct current password and matching confirms when changing password', async () => {
     const email = 'password-test+change@example.com';
-    await pool.query('DELETE FROM users WHERE email = $1', [email]);
-    const { token } = await registerAndLoginWebUser(pool, {
+    await cleanupTestUsersByEmail([email]);
+    const { token } = await registerAndLoginWebUser({
       firstName: 'Change',
       lastName: 'User',
       email,
@@ -110,9 +124,9 @@ describe('Password validation', () => {
 
   it('returns demographics with null age/gender for a new user', async () => {
     const email = 'demographics-test@example.com';
-    await pool.query('DELETE FROM users WHERE email = $1', [email]);
+    await cleanupTestUsersByEmail([email]);
 
-    const { token } = await registerAndLoginWebUser(pool, {
+    const { token } = await registerAndLoginWebUser({
       firstName: 'Demo',
       lastName: 'Graphics',
       email,
@@ -128,9 +142,9 @@ describe('Password validation', () => {
 
   it('supports optional home address/preferred airport and persists map/appearance preferences on account profile', async () => {
     const email = 'profile-test+optional@example.com';
-    await pool.query('DELETE FROM users WHERE email = $1', [email]);
+    await cleanupTestUsersByEmail([email]);
 
-    const { token } = await registerAndLoginWebUser(pool, {
+    const { token } = await registerAndLoginWebUser({
       firstName: 'Profile',
       lastName: 'Fields',
       email,
@@ -178,16 +192,16 @@ describe('Password validation', () => {
 
   it('restricts non-invite endpoints until password setup is completed', async () => {
     const email = 'password-test+guard@example.com';
-    await pool.query('DELETE FROM users WHERE email = $1', [email]);
+    await cleanupTestUsersByEmail([email]);
 
-    const { token, userId } = await registerAndLoginWebUser(pool, {
+    const { token, userId } = await registerAndLoginWebUser({
       firstName: 'Guard',
       lastName: 'User',
       email,
       password: 'testtest',
     });
 
-    await pool.query(`UPDATE web_users SET password_setup_required = TRUE WHERE id = $1`, [userId]);
+    await setPasswordSetupRequired(userId, true);
 
     await request(app)
       .get('/api/groups/invites')
@@ -216,7 +230,6 @@ describe('Family relationships', () => {
   const owner = { email: 'family-owner@example.com', firstName: 'Owner', lastName: 'Test', password: 'testtest' };
   const member = { email: 'family-member@example.com', firstName: 'Member', lastName: 'User', password: 'testtest' };
   const guestEmail = 'family-guest@example.com';
-  let pool: Pool;
   let ownerToken: string;
   let memberToken: string;
   let guestRelationshipId: string;
@@ -225,23 +238,19 @@ describe('Family relationships', () => {
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
     await initDb();
-    pool = new Pool({ connectionString: process.env.DATABASE_URL });
-    await pool.query('DELETE FROM users WHERE email IN ($1, $2, $3)', [owner.email, member.email, guestEmail]);
+    await cleanupTestUsersByEmail([owner.email, member.email, guestEmail]);
   });
 
   afterAll(async () => {
-    if (pool) {
-      await pool.query('DELETE FROM users WHERE email IN ($1, $2, $3)', [owner.email, member.email, guestEmail]);
-      await pool.end();
-    }
+    await cleanupTestUsersByEmail([owner.email, member.email, guestEmail]);
     await closePool();
   });
 
   it('creates relationships, accepts, edits, and removes', async () => {
-    const ownerLogin = await registerAndLoginWebUser(pool, owner);
+    const ownerLogin = await registerAndLoginWebUser(owner);
     ownerToken = ownerLogin.token;
 
-    const memberLogin = await registerAndLoginWebUser(pool, member);
+    const memberLogin = await registerAndLoginWebUser(member);
     memberToken = memberLogin.token;
 
     // Add a non-user family profile (auto-accepted, editable)
@@ -306,27 +315,22 @@ describe('Family relationships', () => {
 describe('Account lifecycle API with shared trip', () => {
   const owner = { email: 'acct-owner@example.com', firstName: 'Acct', lastName: 'Owner', password: 'testtest' };
   const joiner = { email: 'acct-joiner@example.com', firstName: 'Acct', lastName: 'Joiner', password: 'testtest' };
-  let pool: Pool;
   let ownerToken: string;
   let tripId: string;
 
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
     await initDb();
-    pool = new Pool({ connectionString: process.env.DATABASE_URL });
-    await pool.query('DELETE FROM users WHERE email IN ($1, $2)', [owner.email, joiner.email]);
+    await cleanupTestUsersByEmail([owner.email, joiner.email]);
   });
 
   afterAll(async () => {
-    if (pool) {
-      await pool.query('DELETE FROM users WHERE email IN ($1, $2)', [owner.email, joiner.email]);
-      await pool.end();
-    }
+    await cleanupTestUsersByEmail([owner.email, joiner.email]);
     await closePool();
   });
 
   it('adds and removes a member for a trip via account routes', async () => {
-    const ownerLogin = await registerAndLoginWebUser(pool, owner);
+    const ownerLogin = await registerAndLoginWebUser(owner);
     ownerToken = ownerLogin.token;
 
     const trip = await request(app)
@@ -367,36 +371,34 @@ describe('Account lifecycle API with shared trip', () => {
 });
 
 describe('Group user search', () => {
-  let pool: Pool;
+  let createdPrimaryEmail: string;
 
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
     await initDb();
-    pool = new Pool({ connectionString: process.env.DATABASE_URL });
   });
 
   afterAll(async () => {
-    await pool.query('DELETE FROM users WHERE email LIKE $1', ['search-users-test+%@example.com']);
-    await pool.end();
+    if (createdPrimaryEmail) {
+      await cleanupTestUsersByEmail([createdPrimaryEmail]);
+    }
     await closePool();
   });
 
   it('finds users by name and alternate email on the shared search endpoint', async () => {
     const primaryEmail = `search-users-test+primary${Date.now()}@example.com`;
+    createdPrimaryEmail = primaryEmail;
     const alternateEmail = `search-users-test+alias${Date.now()}@example.com`;
 
-    const { token, userId } = await registerAndLoginWebUser(pool, {
+    const { token, userId } = await registerAndLoginWebUser({
       firstName: 'Searchable',
       lastName: 'Traveler',
       email: primaryEmail,
       password: 'testtest',
     });
 
-    await pool.query(
-      `INSERT INTO user_emails (id, user_id, email, email_normalized, is_primary, is_verified)
-       VALUES ($1, $2, $3, LOWER($3), FALSE, TRUE)`,
-      [randomUUID(), userId, alternateEmail]
-    );
+    await addUserEmail(userId, alternateEmail);
+    await markAccountEmailVerified(userId, alternateEmail);
 
     const nameRes = await request(app)
       .get('/api/groups/search-users?q=Searchable%20Traveler')
@@ -417,28 +419,27 @@ describe('Group user search', () => {
 describe('Pending group invites', () => {
   const owner = { email: 'invite-owner@example.com', firstName: 'Owner', lastName: 'Pending', password: 'testtest' };
   const invitee = { email: 'invitee-login@example.com', firstName: 'Invitee', lastName: 'Login', password: 'testtest' };
-  let pool: Pool;
   let ownerToken: string;
   let tripId: string;
+  let rejectInviteeEmail: string | undefined;
 
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
     await initDb();
-    pool = new Pool({ connectionString: process.env.DATABASE_URL });
-    await pool.query('DELETE FROM users WHERE email IN ($1, $2)', [owner.email, invitee.email]);
+    await cleanupTestUsersByEmail([owner.email, invitee.email]);
   });
 
   afterAll(async () => {
-    if (pool) {
-      await pool.query('DELETE FROM users WHERE email IN ($1, $2)', [owner.email, invitee.email]);
-      await pool.end();
-    }
+    const emails = [owner.email, invitee.email];
+    if (rejectInviteeEmail) emails.push(rejectInviteeEmail);
+    await cleanupTestUsersByEmail(emails);
     await closePool();
   });
 
   it('claims a pending invite for an existing email on login', async () => {
-    const ownerLogin = await registerAndLoginWebUser(pool, owner);
+    const ownerLogin = await registerAndLoginWebUser(owner);
     ownerToken = ownerLogin.token;
+    await setUserTierInDb(ownerLogin.userId, 'premium');
 
     const tripRes = await request(app)
       .post('/api/trips/wizard')
@@ -461,7 +462,7 @@ describe('Pending group invites', () => {
     const pending = pendingMembers.body.find((m: any) => m.email === invitee.email && m.status === 'pending');
     expect(pending).toBeTruthy();
 
-    const inviteeLogin = await registerAndLoginWebUser(pool, invitee);
+    const inviteeLogin = await registerAndLoginWebUser(invitee);
 
     const inviteList = await request(app)
       .get('/api/groups/invites')
@@ -487,8 +488,9 @@ describe('Pending group invites', () => {
 
   it('removes pending member data when an invite is rejected', async () => {
     if (!ownerToken) {
-      const ownerLogin = await registerAndLoginWebUser(pool, owner);
+      const ownerLogin = await registerAndLoginWebUser(owner);
       ownerToken = ownerLogin.token;
+      await setUserTierInDb(ownerLogin.userId, 'premium');
     }
 
     const suffix = Date.now();
@@ -498,6 +500,7 @@ describe('Pending group invites', () => {
       lastName: 'Invitee',
       password: 'testtest',
     };
+    rejectInviteeEmail = rejectInvitee.email;
 
     const groups = await request(app)
       .get('/api/groups')
@@ -592,7 +595,7 @@ describe('Pending group invites', () => {
       })
       .expect(201);
 
-    const rejectLogin = await registerAndLoginWebUser(pool, rejectInvitee);
+    const rejectLogin = await registerAndLoginWebUser(rejectInvitee);
     const inviteList = await request(app)
       .get('/api/groups/invites')
       .set('Authorization', `Bearer ${rejectLogin.token}`)
@@ -636,27 +639,22 @@ describe('Account onboarding trip flow', () => {
   const owner = { email: `onboard-owner+${suffix}@example.com`, firstName: 'Onboard', lastName: 'Owner', password: 'testtest' };
   const invited = { email: `onboard-invitee+${suffix}@example.com`, firstName: 'Onboard', lastName: 'Invitee', password: 'testtest' };
   const solo = { email: `onboard-solo+${suffix}@example.com`, firstName: 'Onboard', lastName: 'Solo', password: 'testtest' };
-  let pool: Pool;
   let ownerToken: string;
   let tripId: string;
 
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
     await initDb();
-    pool = new Pool({ connectionString: process.env.DATABASE_URL });
-    await pool.query('DELETE FROM users WHERE email IN ($1, $2, $3)', [owner.email, invited.email, solo.email]);
+    await cleanupTestUsersByEmail([owner.email, invited.email, solo.email]);
   });
 
   afterAll(async () => {
-    if (pool) {
-      await pool.query('DELETE FROM users WHERE email IN ($1, $2, $3)', [owner.email, invited.email, solo.email]);
-      await pool.end();
-    }
+    await cleanupTestUsersByEmail([owner.email, invited.email, solo.email]);
     await closePool();
   });
 
   it('returns trips only after an invited user accepts the invite', async () => {
-    const regOwner = await registerAndLoginWebUser(pool, owner);
+    const regOwner = await registerAndLoginWebUser(owner);
     ownerToken = regOwner.token;
 
     const tripRes = await request(app)
@@ -673,7 +671,7 @@ describe('Account onboarding trip flow', () => {
       .send({ email: invited.email })
       .expect(201);
 
-    const invitedLogin = await registerAndLoginWebUser(pool, invited);
+    const invitedLogin = await registerAndLoginWebUser(invited);
 
     const preTrips = await request(app)
       .get('/api/trips')
@@ -703,7 +701,7 @@ describe('Account onboarding trip flow', () => {
   });
 
   it('returns no trips for a newly registered user without invites', async () => {
-    const soloLogin = await registerAndLoginWebUser(pool, solo);
+    const soloLogin = await registerAndLoginWebUser(solo);
 
     const trips = await request(app)
       .get('/api/trips')
@@ -715,7 +713,6 @@ describe('Account onboarding trip flow', () => {
 });
 
 describe('Web Authentication', () => {
-  let pool: Pool;
   const testUser = {
     firstName: 'WebAuth',
     lastName: 'Tester',
@@ -726,15 +723,11 @@ describe('Web Authentication', () => {
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
     await initDb();
-    pool = new Pool({ connectionString: process.env.DATABASE_URL });
-    await pool.query('DELETE FROM users WHERE email = $1', [testUser.email]);
+    await cleanupTestUsersByEmail([testUser.email]);
   });
 
   afterAll(async () => {
-    if (pool) {
-      await pool.query('DELETE FROM users WHERE email = $1', [testUser.email]);
-      await pool.end();
-    }
+    await cleanupTestUsersByEmail([testUser.email, 'expire-user@example.com']);
     await closePool();
   });
 
@@ -767,7 +760,7 @@ describe('Web Authentication', () => {
   });
 
   it('successfully logs in an existing user after confirmation', async () => {
-    await confirmWebUser(pool, testUser.email);
+    await confirmWebUser(testUser.email);
     const res = await loginWebUser(testUser);
 
     expect(res.body.token).toBeDefined();
@@ -801,10 +794,10 @@ describe('Web Authentication', () => {
       email: 'expire-user@example.com',
       password: 'password123',
     };
-    await pool.query('DELETE FROM users WHERE email = $1', [expired.email]);
+    await cleanupTestUsersByEmail([expired.email]);
     await registerWebUser(expired);
-    const { rows } = await pool.query('SELECT id FROM users WHERE email = $1', [expired.email]);
-    const userId = rows[0]?.id as string | undefined;
+    const found = await findUserByEmail(expired.email);
+    const userId = found?.id as string | undefined;
     expect(userId).toBeTruthy();
     const verification = await createEmailVerification(userId as string, -1);
 
@@ -813,8 +806,7 @@ describe('Web Authentication', () => {
       .query({ token: verification.token })
       .expect(410);
 
-    const after = await pool.query('SELECT id FROM users WHERE email = $1', [expired.email]);
-    expect(after.rows.length).toBe(0);
+    const after = await findUserByEmail(expired.email);
+    expect(after).toBeFalsy();
   });
 });
-

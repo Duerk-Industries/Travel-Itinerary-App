@@ -1,8 +1,7 @@
 import request from 'supertest';
-import { Pool } from 'pg';
 import { app } from '../src/app';
 import { initDb, closePool } from '../src/db';
-import { registerAndLoginWebUser, registerWebUser } from './helpers';
+import { registerAndLoginWebUser, registerWebUser, cleanupTestUsersByEmail } from './helpers';
 import { buildFlightDraftFromRow } from '../../app/utils/overviewEditing';
 const buildPayload = (draft: any, defaultPayerId?: string | null) => {
   const trim = (v?: string | null) => (v ?? '').trim();
@@ -33,7 +32,6 @@ describe('Overview flight edit retains passengers', () => {
   const owner = { email: 'overview-owner@example.com', firstName: 'Owner', lastName: 'Overview', password: 'testtest' };
   const member = { email: 'overview-member@example.com', firstName: 'Member', lastName: 'Overview', password: 'testtest' };
   const pendingEmail = 'overview-pending@example.com';
-  let pool: Pool;
   let ownerToken: string;
   let groupId: string;
   let tripId: string;
@@ -44,10 +42,9 @@ describe('Overview flight edit retains passengers', () => {
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
     await initDb();
-    pool = new Pool({ connectionString: process.env.DATABASE_URL });
-    await pool.query('DELETE FROM users WHERE email IN ($1, $2, $3)', [owner.email, member.email, pendingEmail]);
+    await cleanupTestUsersByEmail([owner.email, member.email, pendingEmail]);
 
-    const ownerLogin = await registerAndLoginWebUser(pool, owner);
+    const ownerLogin = await registerAndLoginWebUser(owner);
     ownerToken = ownerLogin.token;
 
     await registerWebUser(member);
@@ -81,10 +78,7 @@ describe('Overview flight edit retains passengers', () => {
   });
 
   afterAll(async () => {
-    if (pool) {
-      await pool.query('DELETE FROM users WHERE email IN ($1, $2, $3)', [owner.email, member.email, pendingEmail]);
-      await pool.end();
-    }
+    await cleanupTestUsersByEmail([owner.email, member.email, pendingEmail]);
     await closePool();
   });
 

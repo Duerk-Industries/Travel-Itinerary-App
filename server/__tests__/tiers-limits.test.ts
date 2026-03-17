@@ -1,9 +1,8 @@
 import request from 'supertest';
-import { Pool } from 'pg';
 import { app } from '../src/app';
-import { closePool, initDb } from '../src/db';
+import { closePool, getCurrentUserTier, initDb } from '../src/db';
 import { canUseFeature } from '../src/services/entitlementService';
-import { makeAdminUser, registerAndLoginWebUser, seedTiersForTest, setUserTierInDb, type TestUser } from './helpers';
+import { cleanupTestUsersByEmail, makeAdminUser, registerAndLoginWebUser, seedTiersForTest, setUserTierInDb, type TestUser } from './helpers';
 
 const TS = Date.now();
 
@@ -17,40 +16,38 @@ const createGroup = async (token: string, name: string) => {
 };
 
 describe('tier and trip enforcement', () => {
-  let pool: Pool;
-
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
     await initDb();
-    pool = new Pool({ connectionString: process.env.DATABASE_URL });
-    await seedTiersForTest(pool);
+    await seedTiersForTest();
   });
 
   afterAll(async () => {
-    await pool.query(`DELETE FROM users WHERE email LIKE 'tier-enforcement-test+%'`);
-    await pool.end();
+    await cleanupTestUsersByEmail([
+      `tier-enforcement-test+default-${TS}@example.com`,
+      `tier-enforcement-test+free-${TS}@example.com`,
+      `tier-enforcement-test+past-user-${TS}@example.com`,
+      `tier-enforcement-test+past-admin-${TS}@example.com`,
+      `tier-enforcement-test+expense-free-${TS}@example.com`,
+      `tier-enforcement-test+inherited-premium-${TS}@example.com`,
+      `tier-enforcement-test+inherited-pro-${TS}@example.com`,
+    ]);
     await closePool();
   });
 
   it('defaults new users to the free tier', async () => {
-    const user = await registerAndLoginWebUser(pool, {
+    const user = await registerAndLoginWebUser({
       firstName: 'Default',
       lastName: 'Tier',
       email: `tier-enforcement-test+default-${TS}@example.com`,
       password: 'TestPass1!',
     });
-    const { rows } = await pool.query(
-      `SELECT t.key
-       FROM user_tiers ut
-       JOIN tiers t ON t.id = ut.tier_id
-       WHERE ut.user_id = $1 AND ut.effective_to IS NULL`,
-      [user.userId]
-    );
-    expect(rows[0]?.key).toBe('free');
+    const tierInfo = await getCurrentUserTier(user.userId);
+    expect(tierInfo?.tierKey).toBe('free');
   });
 
   it('blocks a free user from creating a fourth active trip and allows premium to exceed it', async () => {
-    const freeUser = await registerAndLoginWebUser(pool, {
+    const freeUser = await registerAndLoginWebUser({
       firstName: 'Free',
       lastName: 'Trips',
       email: `tier-enforcement-test+free-${TS}@example.com`,
@@ -82,7 +79,7 @@ describe('tier and trip enforcement', () => {
 
     expect(blocked.body.code).toBe('TIER_LIMIT_REACHED');
 
-    await setUserTierInDb(pool, freeUser.userId, 'premium');
+    await setUserTierInDb(freeUser.userId, 'premium');
 
     await request(app)
       .post('/api/trips')
@@ -102,7 +99,7 @@ describe('tier and trip enforcement', () => {
       email: `tier-enforcement-test+past-user-${TS}@example.com`,
       password: 'TestPass1!',
     };
-    const regular = await registerAndLoginWebUser(pool, user);
+    const regular = await registerAndLoginWebUser(user);
     const regularGroupId = await createGroup(regular.token, `Past Group ${TS}`);
 
     await request(app)
@@ -115,7 +112,7 @@ describe('tier and trip enforcement', () => {
       })
       .expect(403);
 
-    const admin = await makeAdminUser(pool, {
+    const admin = await makeAdminUser({
       firstName: 'Admin',
       lastName: 'Past',
       email: `tier-enforcement-test+past-admin-${TS}@example.com`,
@@ -135,7 +132,7 @@ describe('tier and trip enforcement', () => {
   });
 
   it('enforces premium-only cost tracking server-side', async () => {
-    const freeUser = await registerAndLoginWebUser(pool, {
+    const freeUser = await registerAndLoginWebUser({
       firstName: 'Free',
       lastName: 'Expense',
       email: `tier-enforcement-test+expense-free-${TS}@example.com`,
@@ -154,7 +151,7 @@ describe('tier and trip enforcement', () => {
       .set('Authorization', `Bearer ${freeUser.token}`)
       .expect(402);
 
-    await setUserTierInDb(pool, freeUser.userId, 'premium');
+    await setUserTierInDb(freeUser.userId, 'premium');
 
     await request(app)
       .get(`/api/expenses?tripId=${tripId}`)
@@ -163,21 +160,21 @@ describe('tier and trip enforcement', () => {
   });
 
   it('inherits lower-tier feature entitlements for higher tiers', async () => {
-    const premiumUser = await registerAndLoginWebUser(pool, {
+    const premiumUser = await registerAndLoginWebUser({
       firstName: 'Premium',
       lastName: 'Inherited',
       email: `tier-enforcement-test+inherited-premium-${TS}@example.com`,
       password: 'TestPass1!',
     });
-    await setUserTierInDb(pool, premiumUser.userId, 'premium');
+    await setUserTierInDb(premiumUser.userId, 'premium');
 
-    const proUser = await registerAndLoginWebUser(pool, {
+    const proUser = await registerAndLoginWebUser({
       firstName: 'Pro',
       lastName: 'Inherited',
       email: `tier-enforcement-test+inherited-pro-${TS}@example.com`,
       password: 'TestPass1!',
     });
-    await setUserTierInDb(pool, proUser.userId, 'pro');
+    await setUserTierInDb(proUser.userId, 'pro');
 
     await expect(canUseFeature(premiumUser.userId, 'csv_export', 'user')).resolves.toBe(true);
     await expect(canUseFeature(proUser.userId, 'csv_export', 'user')).resolves.toBe(true);

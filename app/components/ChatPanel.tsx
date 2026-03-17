@@ -56,9 +56,9 @@ const ChatPanel: React.FC<Props> = ({
   // Join trip room and wire up events
   // -------------------------------------------------------------------------
   useEffect(() => {
-    if (!socket.connected) return;
-
-    socket.emit(CLIENT_EVENTS.JOIN_TRIP, tripId);
+    const joinAndListen = () => {
+      socket.emit(CLIENT_EVENTS.JOIN_TRIP, tripId);
+    };
 
     const onHistory = (history: ChatMessage[]) => {
       setMessages(history);
@@ -82,10 +82,17 @@ const ChatPanel: React.FC<Props> = ({
     socket.on(SERVER_EVENTS.NEW_MESSAGE, onNewMessage);
     socket.on(SERVER_EVENTS.UNREAD_COUNT, onUnreadCount);
 
+    // Join now if already connected, otherwise join when connection establishes
+    if (socket.connected) {
+      joinAndListen();
+    }
+    socket.on('connect', joinAndListen);
+
     return () => {
       socket.off(SERVER_EVENTS.MESSAGE_HISTORY, onHistory);
       socket.off(SERVER_EVENTS.NEW_MESSAGE, onNewMessage);
       socket.off(SERVER_EVENTS.UNREAD_COUNT, onUnreadCount);
+      socket.off('connect', joinAndListen);
     };
   }, [socket, tripId, onUnreadChange]);
 

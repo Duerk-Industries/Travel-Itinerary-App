@@ -9,7 +9,11 @@
       "Bash(npm run:*)",
       "Bash(npm install:*)",
       "Bash(npm audit:*)",
-      "Bash(npm show:*)"
+      "Bash(npm show:*)",
+      "Bash(ls /c/Git/Tristan/Travel-Itinerary-App/server/__tests__/*.test.ts)",
+      "Bash(DB_PROVIDER=memory npx jest --config jest.config.js)",
+      "Bash(DB_PROVIDER=memory npx jest --config jest.projects.js)",
+      "Bash(DB_PROVIDER=memory npx jest --config jest.config.cjs)"
     ]
   }
 }

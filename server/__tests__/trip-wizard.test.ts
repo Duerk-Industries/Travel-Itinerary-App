@@ -1,29 +1,23 @@
 import request from 'supertest';
-import { Pool } from 'pg';
 import { app } from '../src/app';
 import { closePool, initDb } from '../src/db';
-import { registerAndLoginWebUser } from './helpers';
+import { registerAndLoginWebUser, cleanupTestUsersByEmail } from './helpers';
 
 describe('Trip wizard flow', () => {
-  let pool: Pool;
   let token: string;
   const owner = { email: 'wizard-owner@example.com', firstName: 'Wizard', lastName: 'Owner', password: 'testtest' };
 
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
     await initDb();
-    pool = new Pool({ connectionString: process.env.DATABASE_URL });
-    await pool.query('DELETE FROM users WHERE email = $1', [owner.email]);
+    await cleanupTestUsersByEmail([owner.email]);
 
-    const login = await registerAndLoginWebUser(pool, owner);
+    const login = await registerAndLoginWebUser(owner);
     token = login.token;
   });
 
   afterAll(async () => {
-    if (pool) {
-      await pool.query('DELETE FROM users WHERE email = $1', [owner.email]);
-      await pool.end();
-    }
+    await cleanupTestUsersByEmail([owner.email]);
     await closePool();
   });
 

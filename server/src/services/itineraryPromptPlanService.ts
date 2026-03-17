@@ -1319,7 +1319,7 @@ const mapItems = (itinerary: PromptItinerary, preferenceWeights: PromptWeights):
     carrier: '',
     flightNumber: '',
     bookingReference: '',
-    note: transfer.n,
+    ...(typeof transfer.n === 'string' && transfer.n.trim() ? { note: transfer.n } : {}),
   }));
 
   const lodgings: ItineraryGeneratedLodging[] = itinerary.b.map((base) => ({

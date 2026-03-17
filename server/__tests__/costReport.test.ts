@@ -1,5 +1,4 @@
 import request from 'supertest';
-import { Pool } from 'pg';
 import { app } from '../src/app';
 import { initDb, closePool } from '../src/db';
 import { registerAndLoginWebUser } from './helpers';
@@ -8,7 +7,6 @@ describe('Cost report calculations across lodging, tours, and flights', () => {
   const uniq = Date.now();
   const userA = { email: `cost-a+${uniq}@example.com`, firstName: 'CostA', lastName: 'Tester', password: 'testtest' };
   const userB = { email: `cost-b+${uniq}@example.com`, firstName: 'CostB', lastName: 'Tester', password: 'testtest' };
-  let pool: Pool;
   let tokenA: string;
   let tokenB: string;
   let groupId: string;
@@ -19,10 +17,9 @@ describe('Cost report calculations across lodging, tours, and flights', () => {
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
     await initDb();
-    pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
     // Register users (unique emails avoid collision; no deletion afterward)
-    const loginA = await registerAndLoginWebUser(pool, userA);
+    const loginA = await registerAndLoginWebUser(userA);
     tokenA = loginA.token;
 
     const groupsA = await request(app).get('/api/groups').set('Authorization', `Bearer ${tokenA}`).expect(200);
@@ -36,7 +33,7 @@ describe('Cost report calculations across lodging, tours, and flights', () => {
       .expect(201);
     tripId = trip.body.id as string;
 
-    const loginB = await registerAndLoginWebUser(pool, userB);
+    const loginB = await registerAndLoginWebUser(userB);
     tokenB = loginB.token;
 
     await request(app)
@@ -53,7 +50,6 @@ describe('Cost report calculations across lodging, tours, and flights', () => {
   });
 
   afterAll(async () => {
-    await pool.end();
     await closePool();
   });
 

@@ -1,5 +1,4 @@
 import request from 'supertest';
-import { Pool } from 'pg';
 import { app } from '../src/app';
 import { initDb, closePool } from '../src/db';
 import { registerAndLoginWebUser, registerWebUser, seedTiersForTest, setUserTierInDb } from './helpers';
@@ -8,7 +7,6 @@ describe('Expense sync for source-backed items', () => {
   const uniq = Date.now();
   const userA = { email: `expense-sync-a+${uniq}@example.com`, firstName: 'Expense', lastName: 'SyncA', password: 'testtest' };
   const userB = { email: `expense-sync-b+${uniq}@example.com`, firstName: 'Expense', lastName: 'SyncB', password: 'testtest' };
-  let pool: Pool;
   let tokenA: string;
   let groupId: string;
   let tripId: string;
@@ -18,12 +16,11 @@ describe('Expense sync for source-backed items', () => {
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
     await initDb();
-    pool = new Pool({ connectionString: process.env.DATABASE_URL });
-    await seedTiersForTest(pool);
+    await seedTiersForTest();
 
-    const loginA = await registerAndLoginWebUser(pool, userA);
+    const loginA = await registerAndLoginWebUser(userA);
     tokenA = loginA.token;
-    await setUserTierInDb(pool, loginA.userId, 'premium');
+    await setUserTierInDb(loginA.userId, 'premium');
 
     const groupsA = await request(app).get('/api/groups').set('Authorization', `Bearer ${tokenA}`).expect(200);
     groupId = groupsA.body[0]?.id as string;
@@ -49,7 +46,6 @@ describe('Expense sync for source-backed items', () => {
   });
 
   afterAll(async () => {
-    await pool.end();
     await closePool();
   });
 
