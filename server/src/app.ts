@@ -18,6 +18,8 @@ import accountRoutes, { groupsRouter } from './routes/accountRoutes';
 import placeRoutes from './routes/placeRoutes';
 import expenseRoutes from './routes/expenseRoutes';
 import adminRoutes from './routes/adminRoutes';
+import ingestionRoutes from './routes/ingestionRoutes';
+import ingestionAdminRoutes from './routes/ingestionAdminRoutes';
 
 import { loadEnv } from './env_loader';
 import { getEnvValue, hasRunLocalFlag, isLocalEnv } from './env';
@@ -282,7 +284,9 @@ app.use('/api/activities', activityRoutes);
 app.use('/api/car-rentals', carRentalRoutes);
 app.use('/api/account', accountRoutes);
 app.use('/api/expenses', expenseRoutes);
+app.use('/api/ingestion', ingestionRoutes);
 app.use('/api/admin', authenticate, requireAdmin, adminRoutes);
+app.use('/api/admin/ingestion', authenticate, requireAdmin, ingestionAdminRoutes);
 
 if (hasWebApp) {
   app.get(['/app', '/app/*', '/'], (_req, res) => {

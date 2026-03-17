@@ -6,7 +6,7 @@ import { getAppTheme, type AppTheme } from '../theme/theme';
 // Types
 // ---------------------------------------------------------------------------
 
-type AdminSection = 'overview' | 'users' | 'user-detail' | 'tiers' | 'features' | 'user-data' | 'audit-log';
+type AdminSection = 'overview' | 'users' | 'user-detail' | 'tiers' | 'features' | 'user-data' | 'audit-log' | 'ingestion';
 
 type FeatureFlag = { key: string; enabled: boolean; description?: string | null };
 
@@ -96,6 +96,20 @@ type AdminTabProps = {
   onSectionChange?: (section: AdminSection) => void;
 };
 
+type IngestionMetrics = {
+  ingestionVolumeBySourceAndTier: Array<{ sourceType: string; tierKey: string; count: number }>;
+  parseRateByStage: Array<{ stageName: string; successCount: number; failureCount: number }>;
+  duplicateRate: { duplicateCount: number; totalCount: number };
+  lowConfidenceRate: { lowConfidenceCount: number; totalCount: number };
+  averageLatencyByStage: Array<{ stageName: string; averageMs: number }>;
+  retryAndDeadLetter: { retryCount: number; deadLetterCount: number };
+  llmUsageByModel: Array<{ provider: string; modelName: string; tokensIn: number; tokensOut: number; estimatedCostUsd: number }>;
+  quotaByUserTier: Array<{ userId: string; tierKey: string; uploadsUsed: number }>;
+  gmailAuthFailures: number;
+  webhookSignatureFailures: number;
+  costPerUser: Array<{ userId: string; estimatedCostUsd: number }>;
+};
+
 type ThemedSectionProps = {
   theme: AppTheme;
 };
@@ -155,6 +169,7 @@ const OverviewSection: React.FC<{ onNav: (s: AdminSection) => void } & ThemedSec
         { label: 'Feature Flags', section: 'features' as AdminSection, desc: 'Enable or disable feature flags' },
         { label: 'User Data', section: 'user-data' as AdminSection, desc: 'Aggregate usage statistics' },
         { label: 'Audit Log', section: 'audit-log' as AdminSection, desc: 'History of admin actions' },
+        { label: 'Ingestion Ops', section: 'ingestion' as AdminSection, desc: 'Review import throughput, duplicates, and cost' },
       ] as { label: string; section: AdminSection; desc: string }[]
     ).map((item) => (
       <TouchableOpacity key={item.section} style={[localStyles.navCard, getCardStyle(theme)]} onPress={() => onNav(item.section)}>
@@ -1232,6 +1247,110 @@ const AuditLogSection: React.FC<{ backendUrl: string; headers: Record<string, st
   );
 };
 
+const IngestionSection: React.FC<{ backendUrl: string; headers: Record<string, string> } & ThemedSectionProps> = ({
+  backendUrl,
+  headers,
+  theme,
+}) => {
+  const [metrics, setMetrics] = useState<IngestionMetrics | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await apiFetch(backendUrl, headers, '/ingestion/metrics');
+      setMetrics(data as IngestionMetrics);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [backendUrl, headers]);
+
+  useEffect(() => { load(); }, [load]);
+
+  if (loading) return <Text style={[localStyles.loading, { color: theme.colors.textMuted }]}>Loading...</Text>;
+  if (error) return <Text style={[localStyles.errorText, { color: theme.colors.error }]}>{error}</Text>;
+  if (!metrics) return null;
+
+  const duplicateRate = metrics.duplicateRate.totalCount
+    ? `${Math.round((metrics.duplicateRate.duplicateCount / metrics.duplicateRate.totalCount) * 100)}%`
+    : '0%';
+  const lowConfidenceRate = metrics.lowConfidenceRate.totalCount
+    ? `${Math.round((metrics.lowConfidenceRate.lowConfidenceCount / metrics.lowConfidenceRate.totalCount) * 100)}%`
+    : '0%';
+
+  return (
+    <View style={localStyles.section}>
+      <Text style={[localStyles.sectionTitle, { color: theme.colors.text }]}>Ingestion Operations</Text>
+      <View style={[localStyles.card, getCardStyle(theme)]}>
+        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Duplicate Rate</Text>
+        <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>{duplicateRate}</Text>
+        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Low Confidence Rate</Text>
+        <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>{lowConfidenceRate}</Text>
+        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Retries / Dead Letters</Text>
+        <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+          {metrics.retryAndDeadLetter.retryCount} retries • {metrics.retryAndDeadLetter.deadLetterCount} dead-lettered
+        </Text>
+        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Gmail Auth Failures</Text>
+        <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>{metrics.gmailAuthFailures}</Text>
+        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Webhook Signature Failures</Text>
+        <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>{metrics.webhookSignatureFailures}</Text>
+      </View>
+
+      <View style={[localStyles.card, getCardStyle(theme)]}>
+        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Ingestion Volume by Source and Tier</Text>
+        {metrics.ingestionVolumeBySourceAndTier.map((row) => (
+          <Text key={`${row.sourceType}-${row.tierKey}`} style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+            {row.sourceType} • {row.tierKey}: {row.count}
+          </Text>
+        ))}
+      </View>
+
+      <View style={[localStyles.card, getCardStyle(theme)]}>
+        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Parse Success / Failure by Stage</Text>
+        {metrics.parseRateByStage.map((row) => (
+          <Text key={row.stageName} style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+            {row.stageName}: {row.successCount} success • {row.failureCount} failure
+          </Text>
+        ))}
+        <Text style={[localStyles.cardTitle, { color: theme.colors.text, marginTop: 10 }]}>Average Processing Latency</Text>
+        {metrics.averageLatencyByStage.map((row) => (
+          <Text key={row.stageName} style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+            {row.stageName}: {row.averageMs} ms
+          </Text>
+        ))}
+      </View>
+
+      <View style={[localStyles.card, getCardStyle(theme)]}>
+        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>LLM Usage and Estimated Cost</Text>
+        {metrics.llmUsageByModel.map((row) => (
+          <Text key={`${row.provider}-${row.modelName}`} style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+            {row.provider} / {row.modelName}: {row.tokensIn} in • {row.tokensOut} out • ${row.estimatedCostUsd.toFixed(2)}
+          </Text>
+        ))}
+        <Text style={[localStyles.cardTitle, { color: theme.colors.text, marginTop: 10 }]}>Cost per User</Text>
+        {metrics.costPerUser.map((row) => (
+          <Text key={row.userId} style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+            {row.userId}: ${row.estimatedCostUsd.toFixed(2)}
+          </Text>
+        ))}
+      </View>
+
+      <View style={[localStyles.card, getCardStyle(theme)]}>
+        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Quota Consumption by User / Tier</Text>
+        {metrics.quotaByUserTier.map((row) => (
+          <Text key={row.userId} style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+            {row.userId} • {row.tierKey}: {row.uploadsUsed}
+          </Text>
+        ))}
+      </View>
+    </View>
+  );
+};
+
 // ---------------------------------------------------------------------------
 // Main AdminTab
 // ---------------------------------------------------------------------------
@@ -1282,6 +1401,8 @@ const AdminTab: React.FC<AdminTabProps> = ({ backendUrl, headers, initialSection
         return <UserDataSection backendUrl={backendUrl} headers={headers} theme={theme} />;
       case 'audit-log':
         return <AuditLogSection backendUrl={backendUrl} headers={headers} theme={theme} />;
+      case 'ingestion':
+        return <IngestionSection backendUrl={backendUrl} headers={headers} theme={theme} />;
       default:
         return null;
     }
@@ -1295,6 +1416,7 @@ const AdminTab: React.FC<AdminTabProps> = ({ backendUrl, headers, initialSection
     features: 'Feature Flags',
     'user-data': 'User Data',
     'audit-log': 'Audit Log',
+    ingestion: 'Ingestion Ops',
   };
 
   return (

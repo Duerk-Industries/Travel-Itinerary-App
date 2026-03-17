@@ -28,6 +28,7 @@ import ItinerariesTab from './tabs/itineraries';
 import HomeTab from './tabs/HomeTab';
 import DailyExpensesTab from './tabs/dailyExpenses';
 import LedgerTab from './tabs/ledger';
+import IngestionTab from './tabs/ingestion';
 import OverviewTab from './tabs/overview';
 import CreateTripWizard from './tabs/createTripWizard';
 import { buildAllExpenses, calculateAllTotals, type UnifiedExpense, computePayerTotals } from './utils/costs';
@@ -201,6 +202,7 @@ type Page =
   | 'tours'
   | 'expenses'
   | 'ledger'
+  | 'ingest'
   | 'trips'
   | 'create-trip'
   | 'trip-details'
@@ -1891,6 +1893,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           sessionPage === 'tours' ||
           sessionPage === 'expenses' ||
           sessionPage === 'ledger' ||
+          sessionPage === 'ingest' ||
           sessionPage === 'cost' ||
           sessionPage === 'account' ||
           sessionPage === 'follow' ||
@@ -2235,6 +2238,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       'follow',
       'following',
       'itinerary',
+      'ingest',
     ];
     return new Set(pages.filter((page) => shouldDisableTab(activePage, page)));
   }, [activePage]);
@@ -2484,6 +2488,15 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               formatMemberName={formatMemberName}
               payerName={payerName}
               saveCoveredBy={saveCoveredBy}
+            />
+          ) : null}
+
+          {activePage === 'ingest' ? (
+            <IngestionTab
+              backendUrl={backendUrl}
+              headers={headers}
+              styles={styles}
+              onNavigate={requestPageChange}
             />
           ) : null}
 
