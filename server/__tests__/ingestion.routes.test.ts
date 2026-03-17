@@ -46,6 +46,11 @@ describe('ingestion routes', () => {
       .attach('files', fixturePath('plain-text-email.txt'))
       .expect(202);
 
+    await helpers.waitFor(async () => {
+      const review = await request(app).get('/api/ingestion/review-items').set(auth);
+      return (review.body.items ?? []).length === 1;
+    });
+
     const reviewRes = await request(app).get('/api/ingestion/review-items').set(auth).expect(200);
     expect(reviewRes.body.items).toHaveLength(1);
     const itemId = reviewRes.body.items[0].id as string;
@@ -73,6 +78,11 @@ describe('ingestion routes', () => {
       .set(deleteAuth)
       .attach('files', fixturePath('html-booking-confirmation.html'))
       .expect(202);
+
+    await helpers.waitFor(async () => {
+      const review = await request(app).get('/api/ingestion/review-items').set(deleteAuth);
+      return (review.body.items ?? []).length === 1;
+    });
 
     const deleteQueue = await request(app).get('/api/ingestion/review-items').set(deleteAuth).expect(200);
     expect(deleteQueue.body.items).toHaveLength(1);
@@ -108,6 +118,11 @@ describe('ingestion routes', () => {
       .set(auth)
       .attach('files', fixturePath('plain-text-email.txt'))
       .expect(202);
+
+    await helpers.waitFor(async () => {
+      const jobsRes = await request(app).get('/api/ingestion/jobs').set(auth);
+      return (jobsRes.body.jobs ?? []).length === 1 && (jobsRes.body.jobs[0]?.state === 'COMPLETED' || jobsRes.body.jobs[0]?.state === 'DUPLICATE_IGNORED');
+    });
 
     const queue = await request(app).get('/api/ingestion/review-items').set(auth).expect(200);
     expect(queue.body.items).toHaveLength(1);

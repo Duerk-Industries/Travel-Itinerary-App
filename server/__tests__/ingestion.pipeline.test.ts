@@ -47,6 +47,7 @@ describe('ingestion pipeline internals', () => {
       normalizedText: 'hello',
       normalizedHtml: null,
       extractedTextSource: 'text' as const,
+      normalizationQuality: 'FULL_TEXT' as const,
       rawSourceReference: 'manual:test',
       metadata: {},
       receivedAt: '2026-03-17T00:00:00.000Z',

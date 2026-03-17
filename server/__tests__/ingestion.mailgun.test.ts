@@ -57,6 +57,11 @@ describe('ingestion Mailgun webhook', () => {
       })
       .expect(202);
 
+    await helpers.waitFor(async () => {
+      const review = await request(app).get('/api/ingestion/review-items').set({ Authorization: `Bearer ${authToken}` });
+      return (review.body.items ?? []).length === 1;
+    });
+
     const reviewRes = await request(app)
       .get('/api/ingestion/review-items')
       .set({ Authorization: `Bearer ${authToken}` })
@@ -90,6 +95,11 @@ describe('ingestion Mailgun webhook', () => {
       .field('Message-Id', '<mailgun-attachment-1@example.com>')
       .attach('attachment-1', fixturePath('html-booking-confirmation.html'))
       .expect(202);
+
+    await helpers.waitFor(async () => {
+      const review = await request(app).get('/api/ingestion/review-items').set({ Authorization: `Bearer ${authToken}` });
+      return (review.body.items ?? []).length === 1;
+    });
 
     const reviewRes = await request(app)
       .get('/api/ingestion/review-items')
@@ -154,6 +164,11 @@ describe('ingestion Mailgun webhook', () => {
 
     await request(app).post('/api/ingestion/webhooks/mailgun').type('form').send(body).expect(202);
     await request(app).post('/api/ingestion/webhooks/mailgun').type('form').send(body).expect(406);
+
+    await helpers.waitFor(async () => {
+      const jobs = await request(app).get('/api/ingestion/jobs').set({ Authorization: `Bearer ${authToken}` });
+      return (jobs.body.jobs ?? []).length === 1;
+    });
 
     const reviewRes = await request(app)
       .get('/api/ingestion/review-items')

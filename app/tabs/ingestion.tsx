@@ -49,6 +49,7 @@ type ConfigResponse = {
     dryRunSupported: boolean;
     connection?: {
       connected: boolean;
+      status?: string;
       emailAddress?: string | null;
       tokenExpiry?: string | null;
       scopes?: string[];
@@ -103,6 +104,12 @@ const IngestionTab: React.FC<IngestionTabProps> = ({ backendUrl, headers, styles
   const [editNotes, setEditNotes] = useState('');
   const [assignTripId, setAssignTripId] = useState<string>('');
   const [gmailMessages, setGmailMessages] = useState<Array<{ id: string; subject: string; receivedAt: string }>>([]);
+  const [selectedDocumentSummary, setSelectedDocumentSummary] = useState<null | {
+    normalizationQuality?: string | null;
+    virusScanStatus?: string | null;
+    mimeType?: string | null;
+    originalFilename?: string | null;
+  }>(null);
 
   const load = async () => {
     setLoading(true);
@@ -160,12 +167,17 @@ const IngestionTab: React.FC<IngestionTabProps> = ({ backendUrl, headers, styles
     });
   }, [items, search, sourceFilter, statusFilter, typeFilter]);
 
-  const beginEdit = (item: ReviewItem) => {
+  const beginEdit = async (item: ReviewItem) => {
     setSelectedItem(item);
     setEditProvider(String(item.editedFields?.providerVendor ?? item.providerVendor ?? ''));
     setEditConfirmation(String(item.editedFields?.confirmationNumber ?? item.confirmationNumber ?? ''));
     setEditNotes(String(item.editedFields?.notes ?? item.extractedFields?.notes ?? item.extractedFields?.summary ?? ''));
     setAssignTripId('');
+    const response = await fetch(`${backendUrl}/api/ingestion/review-items/${item.id}`, {
+      headers,
+    });
+    const body = await response.json().catch(() => ({}));
+    setSelectedDocumentSummary((body as any).documentSummary ?? null);
   };
 
   const saveEdits = async () => {
@@ -195,6 +207,7 @@ const IngestionTab: React.FC<IngestionTabProps> = ({ backendUrl, headers, styles
       headers: { ...headers, 'Content-Type': 'application/json' },
       body: JSON.stringify({ tripId: assignTripId, editedFields }),
     });
+    setSelectedDocumentSummary(null);
     setSelectedItem(null);
     await load();
   };
@@ -204,7 +217,10 @@ const IngestionTab: React.FC<IngestionTabProps> = ({ backendUrl, headers, styles
       method: 'DELETE',
       headers,
     });
-    if (selectedItem?.id === itemId) setSelectedItem(null);
+    if (selectedItem?.id === itemId) {
+      setSelectedItem(null);
+      setSelectedDocumentSummary(null);
+    }
     await load();
   };
 
@@ -345,6 +361,9 @@ const IngestionTab: React.FC<IngestionTabProps> = ({ backendUrl, headers, styles
         <Text style={styles.helperText}>
           Connection: {config.gmail.connection?.connected ? `Connected${config.gmail.connection.emailAddress ? ` as ${config.gmail.connection.emailAddress}` : ''}` : 'Not connected'}
         </Text>
+        {config.gmail.connection?.status === 'AUTH_EXPIRED' ? (
+          <Text style={styles.warningText}>Gmail access expired. Reconnect before the next sync or import.</Text>
+        ) : null}
         {config.gmail.connection?.tokenExpiry ? (
           <Text style={styles.helperText}>Token expiry: {prettyDate(config.gmail.connection.tokenExpiry)}</Text>
         ) : null}
@@ -424,6 +443,11 @@ const IngestionTab: React.FC<IngestionTabProps> = ({ backendUrl, headers, styles
               <ScrollView style={{ maxHeight: 520 }}>
                 <Text style={styles.sectionTitle}>Review Item</Text>
                 <Text style={styles.helperText}>{selectedItem.itemType} • {selectedItem.status}</Text>
+                {selectedDocumentSummary ? (
+                  <Text style={styles.helperText}>
+                    {selectedDocumentSummary.originalFilename || 'Document'} • normalization {selectedDocumentSummary.normalizationQuality || 'unknown'} • virus scan {selectedDocumentSummary.virusScanStatus || 'unknown'}
+                  </Text>
+                ) : null}
                 <Text style={styles.helperText}>{JSON.stringify(selectedItem.extractedFields, null, 2)}</Text>
                 <Text style={styles.modalLabel}>Provider</Text>
                 <TextInput style={styles.input} value={editProvider} onChangeText={setEditProvider} />
@@ -460,7 +484,13 @@ const IngestionTab: React.FC<IngestionTabProps> = ({ backendUrl, headers, styles
                 <TouchableOpacity style={[styles.button, styles.tableActionButtonDanger]} onPress={() => deleteItem(selectedItem.id)}>
                   <Text style={styles.buttonText}>Delete</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.button} onPress={() => setSelectedItem(null)}>
+                <TouchableOpacity
+                  style={styles.button}
+                  onPress={() => {
+                    setSelectedItem(null);
+                    setSelectedDocumentSummary(null);
+                  }}
+                >
                   <Text style={styles.buttonText}>Close</Text>
                 </TouchableOpacity>
               </View>

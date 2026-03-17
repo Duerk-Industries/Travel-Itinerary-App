@@ -235,6 +235,11 @@ describe('ingestion Gmail routes', () => {
       .send({})
       .expect(202);
 
+    await helpers.waitFor(async () => {
+      const review = await request(app).get('/api/ingestion/review-items').set({ Authorization: `Bearer ${token}` });
+      return (review.body.items ?? []).length === 2;
+    });
+
     const reviewRes = await request(app)
       .get('/api/ingestion/review-items')
       .set({ Authorization: `Bearer ${token}` })

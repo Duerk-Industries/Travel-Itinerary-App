@@ -3,7 +3,7 @@ import { logError } from '../logger';
 import { isFeatureEnabled } from '../services/entitlementService';
 import { INGESTION_DEFAULT_FORWARDING_PROVIDER, INGESTION_FEATURE_FLAGS, INGESTION_USAGE_KEYS } from '../ingestion/config';
 import { buildMailgunWebhookPayloads, mailgunWebhookMiddleware, resolveMailgunWebhookUser, validateMailgunWebhookSignature } from '../ingestion/intake/mailgun';
-import { runIngestionPipeline } from '../ingestion/orchestrator';
+import { enqueueIngestionPipelineJob } from '../ingestion/orchestrator';
 import { getTierIngestionRules, assertAndConsumeMonthlyQuota } from '../ingestion/shared/quota';
 import { IngestionError } from '../ingestion/shared/userFailures';
 
@@ -38,7 +38,7 @@ router.post('/mailgun', mailgunWebhookMiddleware, async (req, res) => {
     const payloads = await buildMailgunWebhookPayloads(req, resolvedUser.userId, resolvedUser.senderEmail);
     const jobs = [];
     for (const payload of payloads) {
-      jobs.push(await runIngestionPipeline(payload, rules.llmEscalations === 'LARGE_ALLOWED', rules.llmEscalations !== 'NONE'));
+      jobs.push(await enqueueIngestionPipelineJob(payload, rules.llmEscalations === 'LARGE_ALLOWED', rules.llmEscalations !== 'NONE'));
     }
 
     res.status(202).json({

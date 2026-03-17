@@ -6,12 +6,13 @@ import { resolveAndValidateRedirectUri } from '../redirects';
 import { isFeatureEnabled } from '../services/entitlementService';
 import { INGESTION_DEFAULT_FORWARDING_ADDRESS, INGESTION_DEFAULT_FORWARDING_PROVIDER, INGESTION_FEATURE_FLAGS, INGESTION_FORWARDING_SETTINGS_COPY, INGESTION_TIER_RULES, INGESTION_USAGE_KEYS } from '../ingestion/config';
 import { assignReviewItemToTrip, deleteReviewItem, getReviewItem, updateReviewItemEdits } from '../ingestion/assignment';
-import { manualUploadMiddleware, buildManualUploadPayloads, buildGmailConsentUrl, buildGmailDryRunEntries, buildGmailIngestionPayloads, ensureFutureDatedExtraction, fetchGmailProfile, GMAIL_READONLY_SCOPE_URL, refreshGmailAccessToken } from '../ingestion/intake';
-import { runIngestionPipeline } from '../ingestion/orchestrator';
-import { listReviewQueueItems, listImportJobsForUser, getReviewQueueSignedUrl, getProviderConnection, disconnectProviderConnections, upsertProviderConnection } from '../ingestion/shared/repository';
+import { manualUploadMiddleware, buildManualUploadPayloads, buildGmailConsentUrl, buildGmailDryRunEntries, buildGmailIngestionPayloads, fetchGmailProfile, GMAIL_READONLY_SCOPE_URL, refreshGmailAccessToken } from '../ingestion/intake';
+import { enqueueIngestionPipelineJob } from '../ingestion/orchestrator';
+import { listReviewQueueItems, listImportJobsForUser, getReviewQueueSignedUrl, getProviderConnection, disconnectProviderConnections, upsertProviderConnection, updateProviderConnectionStatus, getIngestedDocumentById } from '../ingestion/shared/repository';
 import { assertAndConsumeMonthlyQuota, getTierIngestionRules } from '../ingestion/shared/quota';
 import { IngestionError } from '../ingestion/shared/userFailures';
 import { getEnvValue } from '../env';
+import { logError } from '../logger';
 
 const router = Router();
 router.use(bodyParser.json({ limit: '2mb' }));
@@ -43,6 +44,9 @@ const getActiveGmailConnection = async (userId: string) => {
   if (!connection) {
     throw new IngestionError('gmail_permission_missing', 400);
   }
+  if (connection.status === 'AUTH_EXPIRED') {
+    throw new IngestionError('provider_auth_expired', 400);
+  }
 
   const expiresAt = connection.tokenExpiry ? new Date(connection.tokenExpiry).getTime() : null;
   const expired = expiresAt !== null && expiresAt <= Date.now() + 60_000;
@@ -53,23 +57,38 @@ const getActiveGmailConnection = async (userId: string) => {
     throw new IngestionError('provider_auth_expired', 400);
   }
 
-  const refreshed = await refreshGmailAccessToken({ refreshToken: connection.refreshToken });
-  const profile = await fetchGmailProfile(refreshed.accessToken);
-  await upsertProviderConnection({
-    userId,
-    provider: 'gmail',
-    accessToken: refreshed.accessToken,
-    refreshToken: connection.refreshToken,
-    tokenExpiry: refreshed.tokenExpiry,
-    scopes: refreshed.scope.length ? refreshed.scope : connection.scopes,
-    metadata: {
-      ...connection.metadata,
-      emailAddress: profile.emailAddress,
-      messagesTotal: profile.messagesTotal ?? null,
-      threadsTotal: profile.threadsTotal ?? null,
-      refreshedAt: new Date().toISOString(),
-    },
-  });
+  try {
+    const refreshed = await refreshGmailAccessToken({ refreshToken: connection.refreshToken });
+    const profile = await fetchGmailProfile(refreshed.accessToken);
+    await upsertProviderConnection({
+      userId,
+      provider: 'gmail',
+      accessToken: refreshed.accessToken,
+      refreshToken: connection.refreshToken,
+      tokenExpiry: refreshed.tokenExpiry,
+      scopes: refreshed.scope.length ? refreshed.scope : connection.scopes,
+      metadata: {
+        ...connection.metadata,
+        emailAddress: profile.emailAddress,
+        messagesTotal: profile.messagesTotal ?? null,
+        threadsTotal: profile.threadsTotal ?? null,
+        refreshedAt: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    await updateProviderConnectionStatus({
+      userId,
+      provider: 'gmail',
+      status: 'AUTH_EXPIRED',
+      metadata: {
+        ...connection.metadata,
+        authExpiredAt: new Date().toISOString(),
+        lastAuthError: 'refresh_failed',
+      },
+    });
+    logError('[ingestion] gmail provider connection expired', { userId });
+    throw new IngestionError('provider_auth_expired', 400);
+  }
   const updated = await getProviderConnection(userId, 'gmail');
   if (!updated?.accessToken) {
     throw new IngestionError('provider_auth_expired', 400);
@@ -107,12 +126,14 @@ router.get('/config', async (req, res) => {
       connection: gmailConnection
         ? {
             connected: true,
+            status: gmailConnection.status,
             emailAddress: String(gmailConnection.metadata.emailAddress ?? ''),
             tokenExpiry: gmailConnection.tokenExpiry ?? null,
             scopes: gmailConnection.scopes,
           }
         : {
             connected: false,
+            status: 'DISCONNECTED',
             emailAddress: null,
             tokenExpiry: null,
             scopes: [],
@@ -160,7 +181,19 @@ router.get('/review-items/:id', async (req, res) => {
     return;
   }
   const signed = await getReviewQueueSignedUrl(item.rawDocId);
-  res.json({ item, signedDocument: signed });
+  const rawDocument = await getIngestedDocumentById(item.rawDocId);
+  res.json({
+    item,
+    signedDocument: signed,
+    documentSummary: rawDocument
+      ? {
+          normalizationQuality: rawDocument.normalizationQuality,
+          virusScanStatus: rawDocument.virusScanStatus,
+          mimeType: rawDocument.mimeType,
+          originalFilename: rawDocument.originalFilename,
+        }
+      : null,
+  });
 });
 
 router.post('/upload', manualUploadMiddleware.array('files', 10), async (req, res) => {
@@ -180,7 +213,7 @@ router.post('/upload', manualUploadMiddleware.array('files', 10), async (req, re
     const payloads = await buildManualUploadPayloads(req, user.userId);
     const jobs = [];
     for (const payload of payloads) {
-      jobs.push(await runIngestionPipeline(payload, tierAccess.rules.llmEscalations === 'LARGE_ALLOWED', tierAccess.rules.llmEscalations !== 'NONE'));
+      jobs.push(await enqueueIngestionPipelineJob(payload, tierAccess.rules.llmEscalations === 'LARGE_ALLOWED', tierAccess.rules.llmEscalations !== 'NONE'));
     }
     res.status(202).json({ jobs });
   } catch (error) {
@@ -257,6 +290,7 @@ router.get('/gmail/status', async (req, res) => {
   const connection = await getProviderConnection(userId, 'gmail');
   res.json({
     connected: Boolean(connection),
+    status: connection?.status ?? 'DISCONNECTED',
     scope: GMAIL_READONLY_SCOPE_URL,
     emailAddress: connection ? String(connection.metadata.emailAddress ?? '') : null,
     tokenExpiry: connection?.tokenExpiry ?? null,
@@ -335,11 +369,10 @@ router.post('/gmail/import', async (req, res) => {
       lookbackDays: tierAccess.rules.gmailLookbackDays,
     });
     const jobs = [];
-    const today = new Date().toISOString().slice(0, 10);
     for (const payload of payloads) {
       jobs.push(
-        await runIngestionPipeline(payload, tierAccess.rules.llmEscalations === 'LARGE_ALLOWED', tierAccess.rules.llmEscalations !== 'NONE', {
-          postExtractFn: ensureFutureDatedExtraction(today),
+        await enqueueIngestionPipelineJob(payload, tierAccess.rules.llmEscalations === 'LARGE_ALLOWED', tierAccess.rules.llmEscalations !== 'NONE', {
+          enforceFutureDated: true,
         })
       );
     }

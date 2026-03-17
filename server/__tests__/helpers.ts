@@ -179,3 +179,12 @@ export const cleanupTestUsersByEmail = async (emails: string[]): Promise<void> =
     }
   }
 };
+
+export const waitFor = async (predicate: () => Promise<boolean>, timeoutMs = 5000, intervalMs = 50): Promise<void> => {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (await predicate()) return;
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+  throw new Error('Timed out waiting for test condition.');
+};

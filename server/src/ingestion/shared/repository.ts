@@ -6,6 +6,8 @@ import { getCurrentDbProvider, poolClient, getTripById } from '../../db';
 import { getEnvValue } from '../../env';
 import {
   INGESTION_LOGIC_VERSION,
+  INGESTION_RETRY_POLICY_DEFAULTS,
+  INGESTION_RETRY_PROVIDER_GLOBAL,
   INGESTION_REVIEW_QUEUE_ACTIVE_STATES,
   INGESTION_SIGNED_URL_TTL_SECONDS,
 } from '../config';
@@ -14,11 +16,14 @@ import type {
   IngestionObservabilitySnapshot,
   IngestionSourceType,
   ImportJobState,
+  NormalizationQuality,
   ParsedItemCandidate,
   ParsedItemReviewState,
   PersistedImportJob,
   PersistedParsedItem,
   ProviderConnectionRecord,
+  QueuedImportProcessorConfig,
+  RetryPolicyConfigRecord,
   UserVisibleFailureCode,
   VirusScanStatus,
 } from '../contracts';
@@ -92,11 +97,32 @@ type IngestedDocumentRecord = {
   contentBytesRef: string;
   normalizedText: string;
   normalizedHtml?: string | null;
+  normalizationQuality: NormalizationQuality;
   metadata: Record<string, unknown>;
   virusScanStatus: VirusScanStatus;
   virusScannedAt?: string | null;
   virusScanProvider?: string | null;
   deletedRawAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type ImportJobPayloadRecord = {
+  jobId: string;
+  sourceId: string;
+  userId: string;
+  sourceType: IngestionSourceType;
+  externalMessageId: string;
+  receivedAt: string;
+  originalFilename: string;
+  mimeType: string;
+  contentBytesRef: string;
+  contentHash: string;
+  metadata: Record<string, unknown>;
+  correlationId: string;
+  dryRun: boolean;
+  virusScanStatus: VirusScanStatus;
+  processorConfig: QueuedImportProcessorConfig;
   createdAt: string;
   updatedAt: string;
 };
@@ -144,6 +170,15 @@ type ProviderConnectionRow = {
   scopes: string[] | string | null;
   metadata: Record<string, unknown> | null;
   created_at: string;
+  updated_at: string;
+};
+
+type RetryPolicyRow = {
+  provider: string;
+  max_attempts: number;
+  base_delay_seconds: number;
+  max_delay_seconds: number;
+  alert_threshold_percent: number;
   updated_at: string;
 };
 
@@ -265,6 +300,15 @@ const mapProviderConnectionRow = (row: ProviderConnectionRow): ProviderConnectio
   updatedAt: row.updated_at,
 });
 
+const mapRetryPolicyRow = (row: RetryPolicyRow): RetryPolicyConfigRecord => ({
+  provider: row.provider,
+  maxAttempts: Number(row.max_attempts ?? INGESTION_RETRY_POLICY_DEFAULTS.maxAttempts),
+  baseDelaySeconds: Number(row.base_delay_seconds ?? INGESTION_RETRY_POLICY_DEFAULTS.baseDelaySeconds),
+  maxDelaySeconds: Number(row.max_delay_seconds ?? INGESTION_RETRY_POLICY_DEFAULTS.maxDelaySeconds),
+  alertThresholdPercent: Number(row.alert_threshold_percent ?? INGESTION_RETRY_POLICY_DEFAULTS.alertDeadLetterRatePercent),
+  updatedAt: row.updated_at,
+});
+
 const getFirebaseDb = (): Firestore => {
   if (!firebaseApp) {
     if (getApps().length > 0) {
@@ -339,6 +383,27 @@ const ensurePgSchema = async (): Promise<void> => {
   `);
   await p.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_import_jobs_user_idempotency ON import_jobs(user_id, idempotency_key);`);
   await p.query(`
+    CREATE TABLE IF NOT EXISTS import_job_payloads (
+      job_id UUID PRIMARY KEY REFERENCES import_jobs(id) ON DELETE CASCADE,
+      source_id TEXT NOT NULL,
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      source_type TEXT NOT NULL,
+      external_message_id TEXT NOT NULL,
+      received_at TIMESTAMP NOT NULL,
+      original_filename TEXT NOT NULL,
+      mime_type TEXT NOT NULL,
+      content_bytes_ref TEXT NOT NULL,
+      content_hash TEXT NOT NULL,
+      metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+      correlation_id TEXT NOT NULL,
+      dry_run BOOLEAN NOT NULL DEFAULT FALSE,
+      virus_scan_status TEXT NOT NULL,
+      processor_config JSONB NOT NULL DEFAULT '{}'::jsonb,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+  `);
+  await p.query(`
     CREATE TABLE IF NOT EXISTS ingested_documents (
       id UUID PRIMARY KEY,
       import_job_id UUID NOT NULL REFERENCES import_jobs(id) ON DELETE CASCADE,
@@ -352,6 +417,7 @@ const ensurePgSchema = async (): Promise<void> => {
       content_bytes_ref TEXT NOT NULL,
       normalized_text TEXT NOT NULL,
       normalized_html TEXT,
+      normalization_quality TEXT NOT NULL DEFAULT 'FULL_TEXT',
       metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
       virus_scan_status TEXT NOT NULL,
       virus_scanned_at TIMESTAMP,
@@ -363,6 +429,28 @@ const ensurePgSchema = async (): Promise<void> => {
   `);
   await p.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_ingested_docs_user_content_hash ON ingested_documents(user_id, content_hash);`);
   await p.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_ingested_docs_user_normalized_hash ON ingested_documents(user_id, normalized_content_hash);`);
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS ingestion_retry_config (
+      provider TEXT PRIMARY KEY,
+      max_attempts INTEGER NOT NULL,
+      base_delay_seconds INTEGER NOT NULL,
+      max_delay_seconds INTEGER NOT NULL,
+      alert_threshold_percent INTEGER NOT NULL,
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+  `);
+  await p.query(
+    `INSERT INTO ingestion_retry_config (provider, max_attempts, base_delay_seconds, max_delay_seconds, alert_threshold_percent)
+     VALUES ($1,$2,$3,$4,$5)
+     ON CONFLICT (provider) DO NOTHING`,
+    [
+      INGESTION_RETRY_PROVIDER_GLOBAL,
+      INGESTION_RETRY_POLICY_DEFAULTS.maxAttempts,
+      INGESTION_RETRY_POLICY_DEFAULTS.baseDelaySeconds,
+      INGESTION_RETRY_POLICY_DEFAULTS.maxDelaySeconds,
+      INGESTION_RETRY_POLICY_DEFAULTS.alertDeadLetterRatePercent,
+    ]
+  );
   await p.query(`
     CREATE TABLE IF NOT EXISTS parsed_items (
       id UUID PRIMARY KEY,
@@ -511,7 +599,9 @@ const ensureFirestoreCollections = async (): Promise<void> => {
   await Promise.all([
     db.collection('ingestion_sources').limit(1).get(),
     db.collection('import_jobs').limit(1).get(),
+    db.collection('import_job_payloads').limit(1).get(),
     db.collection('ingested_documents').limit(1).get(),
+    db.collection('ingestion_retry_config').limit(1).get(),
     db.collection('ingestion_webhook_replay_tokens').limit(1).get(),
   ]);
   schemaReady.add('firebase');
@@ -979,6 +1069,116 @@ export const createImportJob = async (params: {
   return mapImportJobRow(rows[0]);
 };
 
+export const saveImportJobPayload = async (record: Omit<ImportJobPayloadRecord, 'createdAt' | 'updatedAt'>): Promise<void> => {
+  await ensureIngestionRepositoryReady();
+  if (getCurrentDbProvider() === 'firebase') {
+    await getFirebaseDb().collection('import_job_payloads').doc(record.jobId).set({
+      ...record,
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
+    });
+    return;
+  }
+  await getPg().query(
+    `INSERT INTO import_job_payloads (
+      job_id, source_id, user_id, source_type, external_message_id, received_at, original_filename, mime_type,
+      content_bytes_ref, content_hash, metadata, correlation_id, dry_run, virus_scan_status, processor_config
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+     ON CONFLICT (job_id) DO UPDATE
+     SET source_id = EXCLUDED.source_id,
+         user_id = EXCLUDED.user_id,
+         source_type = EXCLUDED.source_type,
+         external_message_id = EXCLUDED.external_message_id,
+         received_at = EXCLUDED.received_at,
+         original_filename = EXCLUDED.original_filename,
+         mime_type = EXCLUDED.mime_type,
+         content_bytes_ref = EXCLUDED.content_bytes_ref,
+         content_hash = EXCLUDED.content_hash,
+         metadata = EXCLUDED.metadata,
+         correlation_id = EXCLUDED.correlation_id,
+         dry_run = EXCLUDED.dry_run,
+         virus_scan_status = EXCLUDED.virus_scan_status,
+         processor_config = EXCLUDED.processor_config,
+         updated_at = CURRENT_TIMESTAMP::timestamp`,
+    [
+      record.jobId,
+      record.sourceId,
+      record.userId,
+      record.sourceType,
+      record.externalMessageId,
+      record.receivedAt,
+      record.originalFilename,
+      record.mimeType,
+      record.contentBytesRef,
+      record.contentHash,
+      JSON.stringify(record.metadata),
+      record.correlationId,
+      record.dryRun,
+      record.virusScanStatus,
+      JSON.stringify(record.processorConfig),
+    ]
+  );
+};
+
+export const getImportJobPayload = async (jobId: string): Promise<ImportJobPayloadRecord | null> => {
+  await ensureIngestionRepositoryReady();
+  if (getCurrentDbProvider() === 'firebase') {
+    const doc = await getFirebaseDb().collection('import_job_payloads').doc(jobId).get();
+    if (!doc.exists) return null;
+    const data = doc.data() as any;
+    return {
+      jobId: doc.id,
+      sourceId: String(data.sourceId),
+      userId: String(data.userId),
+      sourceType: data.sourceType,
+      externalMessageId: String(data.externalMessageId),
+      receivedAt: String(data.receivedAt),
+      originalFilename: String(data.originalFilename),
+      mimeType: String(data.mimeType),
+      contentBytesRef: String(data.contentBytesRef),
+      contentHash: String(data.contentHash),
+      metadata: data.metadata ?? {},
+      correlationId: String(data.correlationId),
+      dryRun: Boolean(data.dryRun),
+      virusScanStatus: data.virusScanStatus,
+      processorConfig: {
+        allowSmallLlm: Boolean(data.processorConfig?.allowSmallLlm),
+        allowLargeLlm: Boolean(data.processorConfig?.allowLargeLlm),
+        logicVersion: String(data.processorConfig?.logicVersion ?? INGESTION_LOGIC_VERSION),
+        enforceFutureDated: Boolean(data.processorConfig?.enforceFutureDated),
+      },
+      createdAt: String(data.createdAt),
+      updatedAt: String(data.updatedAt),
+    };
+  }
+  const { rows } = await getPg().query<any>(`SELECT * FROM import_job_payloads WHERE job_id = $1 LIMIT 1`, [jobId]);
+  if (!rows[0]) return null;
+  return {
+    jobId: rows[0].job_id,
+    sourceId: rows[0].source_id,
+    userId: rows[0].user_id,
+    sourceType: rows[0].source_type,
+    externalMessageId: rows[0].external_message_id,
+    receivedAt: rows[0].received_at,
+    originalFilename: rows[0].original_filename,
+    mimeType: rows[0].mime_type,
+    contentBytesRef: rows[0].content_bytes_ref,
+    contentHash: rows[0].content_hash,
+    metadata: rows[0].metadata ?? {},
+    correlationId: rows[0].correlation_id,
+    dryRun: rows[0].dry_run,
+    virusScanStatus: rows[0].virus_scan_status,
+    processorConfig: {
+      allowSmallLlm: Boolean(rows[0].processor_config?.allowSmallLlm ?? rows[0].processor_config?.allow_small_llm),
+      allowLargeLlm: Boolean(rows[0].processor_config?.allowLargeLlm ?? rows[0].processor_config?.allow_large_llm),
+      logicVersion: String(rows[0].processor_config?.logicVersion ?? rows[0].processor_config?.logic_version ?? INGESTION_LOGIC_VERSION),
+      enforceFutureDated: Boolean(rows[0].processor_config?.enforceFutureDated ?? rows[0].processor_config?.enforce_future_dated),
+    },
+    createdAt: rows[0].created_at,
+    updatedAt: rows[0].updated_at,
+  };
+};
+
 export const getImportJobById = async (jobId: string): Promise<PersistedImportJob | null> => {
   await ensureIngestionRepositoryReady();
   if (getCurrentDbProvider() === 'firebase') {
@@ -1011,6 +1211,45 @@ export const getImportJobById = async (jobId: string): Promise<PersistedImportJo
     };
   }
   const { rows } = await getPg().query<ImportJobRow>(`SELECT * FROM import_jobs WHERE id = $1`, [jobId]);
+  return rows[0] ? mapImportJobRow(rows[0]) : null;
+};
+
+export const requeueImportJob = async (jobId: string): Promise<PersistedImportJob | null> => {
+  await ensureIngestionRepositoryReady();
+  if (getCurrentDbProvider() === 'firebase') {
+    const ref = getFirebaseDb().collection('import_jobs').doc(jobId);
+    const snap = await ref.get();
+    if (!snap.exists) return null;
+    const data = snap.data() as any;
+    await ref.set(
+      {
+        state: 'PENDING',
+        retryCount: Number(data.retryCount ?? 0) + 1,
+        failureCode: null,
+        failureReason: null,
+        lastErrorCode: null,
+        completedAt: null,
+        updatedAt: nowIso(),
+        stateChangedAt: nowIso(),
+      },
+      { merge: true }
+    );
+    return getImportJobById(jobId);
+  }
+  const { rows } = await getPg().query<ImportJobRow>(
+    `UPDATE import_jobs
+     SET state = 'PENDING',
+         retry_count = retry_count + 1,
+         failure_code = NULL,
+         failure_reason = NULL,
+         last_error_code = NULL,
+         completed_at = NULL,
+         updated_at = CURRENT_TIMESTAMP::timestamp,
+         state_changed_at = CURRENT_TIMESTAMP::timestamp
+     WHERE id = $1
+     RETURNING *`,
+    [jobId]
+  );
   return rows[0] ? mapImportJobRow(rows[0]) : null;
 };
 
@@ -1105,6 +1344,70 @@ export const listImportJobsForUser = async (userId: string): Promise<PersistedIm
   return rows.map(mapImportJobRow);
 };
 
+export const listDeadLetterImportJobs = async (params?: {
+  sourceType?: IngestionSourceType;
+  startedAfter?: string | null;
+  endedBefore?: string | null;
+}): Promise<PersistedImportJob[]> => {
+  await ensureIngestionRepositoryReady();
+  const sourceType = params?.sourceType ?? null;
+  const startedAfter = params?.startedAfter ?? null;
+  const endedBefore = params?.endedBefore ?? null;
+  if (getCurrentDbProvider() === 'firebase') {
+    let query: FirebaseFirestore.Query = getFirebaseDb().collection('import_jobs').where('state', '==', 'DEAD_LETTERED');
+    if (sourceType) query = query.where('sourceType', '==', sourceType);
+    const snap = await query.get();
+    return snap.docs
+      .map((doc) => {
+        const data = doc.data() as any;
+        return {
+          id: doc.id,
+          userId: data.userId,
+          ingestionSourceId: data.ingestionSourceId,
+          sourceType: data.sourceType,
+          state: data.state,
+          idempotencyKey: data.idempotencyKey,
+          contentHash: data.contentHash,
+          normalizedContentHash: data.normalizedContentHash ?? null,
+          externalMessageId: data.externalMessageId,
+          originalFilename: data.originalFilename,
+          mimeType: data.mimeType,
+          failureCode: data.failureCode ?? null,
+          failureReason: data.failureReason ?? null,
+          correlationId: data.correlationId,
+          dryRun: Boolean(data.dryRun),
+          retryCount: data.retryCount ?? 0,
+          lastErrorCode: data.lastErrorCode ?? null,
+          createdAt: data.createdAt,
+          updatedAt: data.updatedAt,
+          stateChangedAt: data.stateChangedAt,
+          startedAt: data.startedAt ?? null,
+          completedAt: data.completedAt ?? null,
+        } satisfies PersistedImportJob;
+      })
+      .filter((job) => (!startedAfter || job.updatedAt >= startedAfter) && (!endedBefore || job.updatedAt <= endedBefore));
+  }
+  const values: unknown[] = [];
+  const conditions = [`state = 'DEAD_LETTERED'`];
+  if (sourceType) {
+    values.push(sourceType);
+    conditions.push(`source_type = $${values.length}`);
+  }
+  if (startedAfter) {
+    values.push(startedAfter);
+    conditions.push(`updated_at >= $${values.length}`);
+  }
+  if (endedBefore) {
+    values.push(endedBefore);
+    conditions.push(`updated_at <= $${values.length}`);
+  }
+  const { rows } = await getPg().query<ImportJobRow>(
+    `SELECT * FROM import_jobs WHERE ${conditions.join(' AND ')} ORDER BY updated_at DESC`,
+    values
+  );
+  return rows.map(mapImportJobRow);
+};
+
 export const findDocumentByNormalizedHash = async (userId: string, normalizedContentHash: string): Promise<IngestedDocumentRecord | null> => {
   await ensureIngestionRepositoryReady();
   if (getCurrentDbProvider() === 'firebase') {
@@ -1130,6 +1433,7 @@ export const findDocumentByNormalizedHash = async (userId: string, normalizedCon
       contentBytesRef: data.contentBytesRef,
       normalizedText: data.normalizedText,
       normalizedHtml: data.normalizedHtml ?? null,
+      normalizationQuality: data.normalizationQuality ?? 'FULL_TEXT',
       metadata: data.metadata ?? {},
       virusScanStatus: data.virusScanStatus,
       virusScannedAt: data.virusScannedAt ?? null,
@@ -1157,6 +1461,7 @@ export const findDocumentByNormalizedHash = async (userId: string, normalizedCon
     contentBytesRef: rows[0].content_bytes_ref,
     normalizedText: rows[0].normalized_text,
     normalizedHtml: rows[0].normalized_html,
+    normalizationQuality: rows[0].normalization_quality ?? 'FULL_TEXT',
     metadata: rows[0].metadata ?? {},
     virusScanStatus: rows[0].virus_scan_status,
     virusScannedAt: rows[0].virus_scanned_at,
@@ -1183,6 +1488,7 @@ export const createIngestedDocument = async (record: Omit<IngestedDocumentRecord
       contentBytesRef: record.contentBytesRef,
       normalizedText: record.normalizedText,
       normalizedHtml: record.normalizedHtml ?? null,
+      normalizationQuality: record.normalizationQuality,
       metadata: record.metadata,
       virusScanStatus: record.virusScanStatus,
       virusScannedAt: record.virusScannedAt ?? null,
@@ -1198,8 +1504,8 @@ export const createIngestedDocument = async (record: Omit<IngestedDocumentRecord
     `INSERT INTO ingested_documents (
       id, import_job_id, user_id, source_type, content_hash, normalized_content_hash, mime_type,
       original_filename, raw_source_reference, content_bytes_ref, normalized_text, normalized_html,
-      metadata, virus_scan_status, virus_scanned_at, virus_scan_provider, deleted_raw_at
-    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+      normalization_quality, metadata, virus_scan_status, virus_scanned_at, virus_scan_provider, deleted_raw_at
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
      RETURNING *`,
     [
       id,
@@ -1214,6 +1520,7 @@ export const createIngestedDocument = async (record: Omit<IngestedDocumentRecord
       record.contentBytesRef,
       record.normalizedText,
       record.normalizedHtml ?? null,
+      record.normalizationQuality,
       JSON.stringify(record.metadata),
       record.virusScanStatus,
       record.virusScannedAt ?? null,
@@ -1232,8 +1539,64 @@ export const createIngestedDocument = async (record: Omit<IngestedDocumentRecord
     originalFilename: rows[0].original_filename,
     rawSourceReference: rows[0].raw_source_reference,
     contentBytesRef: rows[0].content_bytes_ref,
+      normalizedText: rows[0].normalized_text,
+      normalizedHtml: rows[0].normalized_html,
+      normalizationQuality: rows[0].normalization_quality ?? 'FULL_TEXT',
+      metadata: rows[0].metadata ?? {},
+    virusScanStatus: rows[0].virus_scan_status,
+    virusScannedAt: rows[0].virus_scanned_at,
+    virusScanProvider: rows[0].virus_scan_provider,
+    deletedRawAt: rows[0].deleted_raw_at,
+    createdAt: rows[0].created_at,
+    updatedAt: rows[0].updated_at,
+  };
+};
+
+export const getIngestedDocumentById = async (documentId: string): Promise<IngestedDocumentRecord | null> => {
+  await ensureIngestionRepositoryReady();
+  if (getCurrentDbProvider() === 'firebase') {
+    const doc = await getFirebaseDb().collection('ingested_documents').doc(documentId).get();
+    if (!doc.exists) return null;
+    const data = doc.data() as any;
+    return {
+      id: doc.id,
+      importJobId: data.importJobId,
+      userId: data.userId,
+      sourceType: data.sourceType,
+      contentHash: data.contentHash,
+      normalizedContentHash: data.normalizedContentHash,
+      mimeType: data.mimeType,
+      originalFilename: data.originalFilename,
+      rawSourceReference: data.rawSourceReference,
+      contentBytesRef: data.contentBytesRef,
+      normalizedText: data.normalizedText,
+      normalizedHtml: data.normalizedHtml ?? null,
+      normalizationQuality: data.normalizationQuality ?? 'FULL_TEXT',
+      metadata: data.metadata ?? {},
+      virusScanStatus: data.virusScanStatus,
+      virusScannedAt: data.virusScannedAt ?? null,
+      virusScanProvider: data.virusScanProvider ?? null,
+      deletedRawAt: data.deletedRawAt ?? null,
+      createdAt: data.createdAt,
+      updatedAt: data.updatedAt,
+    };
+  }
+  const { rows } = await getPg().query<any>(`SELECT * FROM ingested_documents WHERE id = $1 LIMIT 1`, [documentId]);
+  if (!rows[0]) return null;
+  return {
+    id: rows[0].id,
+    importJobId: rows[0].import_job_id,
+    userId: rows[0].user_id,
+    sourceType: rows[0].source_type,
+    contentHash: rows[0].content_hash,
+    normalizedContentHash: rows[0].normalized_content_hash,
+    mimeType: rows[0].mime_type,
+    originalFilename: rows[0].original_filename,
+    rawSourceReference: rows[0].raw_source_reference,
+    contentBytesRef: rows[0].content_bytes_ref,
     normalizedText: rows[0].normalized_text,
     normalizedHtml: rows[0].normalized_html,
+    normalizationQuality: rows[0].normalization_quality ?? 'FULL_TEXT',
     metadata: rows[0].metadata ?? {},
     virusScanStatus: rows[0].virus_scan_status,
     virusScannedAt: rows[0].virus_scanned_at,
@@ -1742,7 +2105,7 @@ export const getIngestionObservabilitySnapshot = async (): Promise<IngestionObse
   await ensureIngestionRepositoryReady();
   if (getCurrentDbProvider() === 'firebase') {
     const db = getFirebaseDb();
-    const [jobs, items, attempts, stageLogs, metering, users, userTiers] = await Promise.all([
+    const [jobs, items, attempts, stageLogs, metering, users, userTiers, providerConnections] = await Promise.all([
       db.collection('import_jobs').get(),
       db.collection('parsed_items').get(),
       db.collection('parse_attempts').get(),
@@ -1750,6 +2113,7 @@ export const getIngestionObservabilitySnapshot = async (): Promise<IngestionObse
       db.collection('usage_metering').get(),
       db.collection('users').get(),
       db.collection('user_tiers').where('effectiveTo', '==', null).get(),
+      db.collection('provider_connections').get(),
     ]);
     const tierByUser = new Map<string, string>();
     userTiers.docs.forEach((doc) => tierByUser.set(String((doc.data() as any).userId), String((doc.data() as any).tierKey ?? 'free')));
@@ -1813,13 +2177,16 @@ export const getIngestionObservabilitySnapshot = async (): Promise<IngestionObse
         tierKey: tierByUser.get(doc.id) ?? 'free',
         uploadsUsed: jobs.docs.filter((job) => String((job.data() as any).userId) === doc.id).length,
       })),
-      gmailAuthFailures: jobs.docs.filter((doc) => String((doc.data() as any).failureCode ?? '') === 'provider_auth_expired').length,
+      gmailAuthFailures: providerConnections.docs.filter((doc) => {
+        const data = doc.data() as any;
+        return String(data.provider ?? '') === 'gmail' && String(data.status ?? '') === 'AUTH_EXPIRED';
+      }).length,
       webhookSignatureFailures: jobs.docs.filter((doc) => String((doc.data() as any).failureCode ?? '') === 'mailbox_webhook_temporary_failure').length,
       costPerUser: Array.from(costPerUserMap.entries()).map(([userId, estimatedCostUsd]) => ({ userId, estimatedCostUsd })),
     };
   }
   const p = getPg();
-  const [volume, stageRates, duplicates, lowConfidence, latency, retryDead, llmUsage, quotaRows, costPerUser] = await Promise.all([
+  const [volume, stageRates, duplicates, lowConfidence, latency, retryDead, llmUsage, quotaRows, costPerUser, gmailAuthFailures] = await Promise.all([
     p.query<{ source_type: string; tier_key: string; count: string }>(
       `SELECT ij.source_type, COALESCE(t.key, 'free') AS tier_key, COUNT(*)::text AS count
        FROM import_jobs ij
@@ -1872,6 +2239,9 @@ export const getIngestionObservabilitySnapshot = async (): Promise<IngestionObse
     p.query<{ user_id: string; estimated_cost_usd: string }>(
       `SELECT user_id, SUM(estimated_cost_usd)::text AS estimated_cost_usd FROM usage_metering GROUP BY user_id`
     ),
+    p.query<{ count: string }>(
+      `SELECT COUNT(*)::text AS count FROM provider_connections WHERE provider = 'gmail' AND status = 'AUTH_EXPIRED'`
+    ),
   ]);
   return {
     ingestionVolumeBySourceAndTier: volume.rows.map((row) => ({
@@ -1912,7 +2282,7 @@ export const getIngestionObservabilitySnapshot = async (): Promise<IngestionObse
       tierKey: row.tier_key,
       uploadsUsed: parseInt(row.uploads_used, 10),
     })),
-    gmailAuthFailures: 0,
+    gmailAuthFailures: parseInt(gmailAuthFailures.rows[0]?.count ?? '0', 10),
     webhookSignatureFailures: 0,
     costPerUser: costPerUser.rows.map((row) => ({
       userId: row.user_id,
@@ -1933,6 +2303,7 @@ export const deleteUserIngestionData = async (userId: string): Promise<void> => 
     const collections = [
       { name: 'provider_connections', field: 'userId' },
       { name: 'import_jobs', field: 'userId' },
+      { name: 'import_job_payloads', field: 'userId' },
       { name: 'ingested_documents', field: 'userId' },
       { name: 'parsed_items', field: 'userId' },
       { name: 'usage_metering', field: 'userId' },
@@ -1965,7 +2336,90 @@ export const deleteUserIngestionData = async (userId: string): Promise<void> => 
   await p.query(`DELETE FROM import_jobs WHERE user_id = $1`, [userId]);
   await p.query(`DELETE FROM usage_metering WHERE user_id = $1`, [userId]);
   await p.query(`DELETE FROM extraction_cache WHERE user_id = $1`, [userId]);
+  await p.query(`DELETE FROM import_job_payloads WHERE user_id = $1`, [userId]);
   await p.query(`DELETE FROM ingestion_sources WHERE user_id = $1`, [userId]);
+};
+
+export const getRetryPolicyConfig = async (provider = INGESTION_RETRY_PROVIDER_GLOBAL): Promise<RetryPolicyConfigRecord> => {
+  await ensureIngestionRepositoryReady();
+  if (getCurrentDbProvider() === 'firebase') {
+    const specific = await getFirebaseDb().collection('ingestion_retry_config').doc(provider).get();
+    if (specific.exists) {
+      const data = specific.data() as any;
+      return {
+        provider,
+        maxAttempts: Number(data.maxAttempts ?? INGESTION_RETRY_POLICY_DEFAULTS.maxAttempts),
+        baseDelaySeconds: Number(data.baseDelaySeconds ?? INGESTION_RETRY_POLICY_DEFAULTS.baseDelaySeconds),
+        maxDelaySeconds: Number(data.maxDelaySeconds ?? INGESTION_RETRY_POLICY_DEFAULTS.maxDelaySeconds),
+        alertThresholdPercent: Number(data.alertThresholdPercent ?? INGESTION_RETRY_POLICY_DEFAULTS.alertDeadLetterRatePercent),
+        updatedAt: String(data.updatedAt ?? nowIso()),
+      };
+    }
+    if (provider !== INGESTION_RETRY_PROVIDER_GLOBAL) {
+      return getRetryPolicyConfig(INGESTION_RETRY_PROVIDER_GLOBAL);
+    }
+    return {
+      provider,
+      maxAttempts: INGESTION_RETRY_POLICY_DEFAULTS.maxAttempts,
+      baseDelaySeconds: INGESTION_RETRY_POLICY_DEFAULTS.baseDelaySeconds,
+      maxDelaySeconds: INGESTION_RETRY_POLICY_DEFAULTS.maxDelaySeconds,
+      alertThresholdPercent: INGESTION_RETRY_POLICY_DEFAULTS.alertDeadLetterRatePercent,
+      updatedAt: nowIso(),
+    };
+  }
+  const { rows } = await getPg().query<RetryPolicyRow>(
+    `SELECT * FROM ingestion_retry_config WHERE provider = $1 LIMIT 1`,
+    [provider]
+  );
+  if (rows[0]) return mapRetryPolicyRow(rows[0]);
+  if (provider !== INGESTION_RETRY_PROVIDER_GLOBAL) {
+    return getRetryPolicyConfig(INGESTION_RETRY_PROVIDER_GLOBAL);
+  }
+  return {
+    provider,
+    maxAttempts: INGESTION_RETRY_POLICY_DEFAULTS.maxAttempts,
+    baseDelaySeconds: INGESTION_RETRY_POLICY_DEFAULTS.baseDelaySeconds,
+    maxDelaySeconds: INGESTION_RETRY_POLICY_DEFAULTS.maxDelaySeconds,
+    alertThresholdPercent: INGESTION_RETRY_POLICY_DEFAULTS.alertDeadLetterRatePercent,
+    updatedAt: nowIso(),
+  };
+};
+
+export const upsertRetryPolicyConfig = async (record: {
+  provider?: string;
+  maxAttempts: number;
+  baseDelaySeconds: number;
+  maxDelaySeconds: number;
+  alertThresholdPercent: number;
+}): Promise<RetryPolicyConfigRecord> => {
+  await ensureIngestionRepositoryReady();
+  const provider = record.provider ?? INGESTION_RETRY_PROVIDER_GLOBAL;
+  if (getCurrentDbProvider() === 'firebase') {
+    const payload = {
+      provider,
+      maxAttempts: record.maxAttempts,
+      baseDelaySeconds: record.baseDelaySeconds,
+      maxDelaySeconds: record.maxDelaySeconds,
+      alertThresholdPercent: record.alertThresholdPercent,
+      updatedAt: nowIso(),
+    };
+    await getFirebaseDb().collection('ingestion_retry_config').doc(provider).set(payload, { merge: true });
+    return payload;
+  }
+  const { rows } = await getPg().query<RetryPolicyRow>(
+    `INSERT INTO ingestion_retry_config (provider, max_attempts, base_delay_seconds, max_delay_seconds, alert_threshold_percent, updated_at)
+     VALUES ($1,$2,$3,$4,$5,CURRENT_TIMESTAMP::timestamp)
+     ON CONFLICT (provider)
+     DO UPDATE SET
+       max_attempts = EXCLUDED.max_attempts,
+       base_delay_seconds = EXCLUDED.base_delay_seconds,
+       max_delay_seconds = EXCLUDED.max_delay_seconds,
+       alert_threshold_percent = EXCLUDED.alert_threshold_percent,
+       updated_at = CURRENT_TIMESTAMP::timestamp
+     RETURNING *`,
+    [provider, record.maxAttempts, record.baseDelaySeconds, record.maxDelaySeconds, record.alertThresholdPercent]
+  );
+  return mapRetryPolicyRow(rows[0]);
 };
 
 export const upsertProviderConnection = async (params: {
@@ -2064,6 +2518,37 @@ export const listProviderConnections = async (userId: string): Promise<ProviderC
     [userId]
   );
   return rows.map(mapProviderConnectionRow);
+};
+
+export const updateProviderConnectionStatus = async (params: {
+  userId: string;
+  provider: string;
+  status: string;
+  metadata?: Record<string, unknown>;
+}): Promise<ProviderConnectionRecord | null> => {
+  await ensureIngestionRepositoryReady();
+  const existing = await getProviderConnection(params.userId, params.provider);
+  if (!existing) return null;
+  const metadata = { ...(existing.metadata ?? {}), ...(params.metadata ?? {}) };
+  if (getCurrentDbProvider() === 'firebase') {
+    await getFirebaseDb().collection('provider_connections').doc(existing.id).set(
+      {
+        status: params.status,
+        metadata,
+        updatedAt: nowIso(),
+      },
+      { merge: true }
+    );
+    return getProviderConnection(params.userId, params.provider);
+  }
+  const { rows } = await getPg().query<ProviderConnectionRow>(
+    `UPDATE provider_connections
+     SET status = $3, metadata = $4, updated_at = CURRENT_TIMESTAMP::timestamp
+     WHERE id = $1 AND user_id = $2
+     RETURNING *`,
+    [existing.id, params.userId, params.status, JSON.stringify(metadata)]
+  );
+  return rows[0] ? mapProviderConnectionRow(rows[0]) : null;
 };
 
 export const disconnectProviderConnections = async (userId: string, provider?: string): Promise<void> => {

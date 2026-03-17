@@ -7,10 +7,16 @@ export const INGESTION_WEBHOOK_MAX_AGE_MS = 5 * 60 * 1000;
 export const INGESTION_JOB_TOKEN_BUDGET_USD = 0.1;
 export const INGESTION_CONFIDENCE_HIGH = 0.9;
 export const INGESTION_CONFIDENCE_REVIEW_READY = 0.7;
+export const INGESTION_OCR_MIN_CHAR_COUNT = 50;
 export const INGESTION_DEFAULT_FORWARDING_ADDRESS = 'travel.docs@duerk.org';
 export const INGESTION_DEFAULT_FORWARDING_PROVIDER = 'mailgun';
 export const INGESTION_FORWARDING_SETTINGS_COPY =
   'Forward travel confirmations to the Mailgun-backed inbox. The displayed address can be copied by users, but changing the underlying destination requires an admin/provider update.';
+export const INGESTION_JOB_QUEUE_MODE_DEFAULT = 'cloud_run';
+export const INGESTION_RETRY_PROVIDER_GLOBAL = 'GLOBAL';
+export const INGESTION_VIRUS_SCAN_PROVIDER_DEFAULT = 'cloud_native';
+export const INGESTION_GMAIL_AUTH_EXPIRED_ALERT_THRESHOLD = 3;
+export const INGESTION_GMAIL_AUTH_EXPIRED_ALERT_WINDOW_MINUTES = 15;
 
 export const INGESTION_SUPPORTED_MIME_TYPES = [
   'text/plain',

@@ -21,6 +21,7 @@ export type ParsedItemReviewState =
   | 'DUPLICATE_FLAGGED';
 
 export type VirusScanStatus = 'PENDING' | 'PASSED' | 'FAILED' | 'SKIPPED';
+export type NormalizationQuality = 'FULL_TEXT' | 'STRUCTURAL_EXTRACT' | 'OCR' | 'FALLBACK_DECODE';
 
 export type UserVisibleFailureCode =
   | 'unsupported_file_type'
@@ -77,6 +78,7 @@ export interface NormalizedDocument {
   normalizedText: string;
   normalizedHtml?: string | null;
   extractedTextSource: 'text' | 'html' | 'pdf' | 'ocr' | 'fallback';
+  normalizationQuality: NormalizationQuality;
   rawSourceReference: string;
   metadata: Record<string, unknown>;
   receivedAt: string;
@@ -161,6 +163,13 @@ export interface PersistedImportJob {
   completedAt?: string | null;
 }
 
+export interface QueuedImportProcessorConfig {
+  allowSmallLlm: boolean;
+  allowLargeLlm: boolean;
+  logicVersion: string;
+  enforceFutureDated: boolean;
+}
+
 export interface PersistedParsedItem extends ParsedItemCandidate {
   id: string;
   userId: string;
@@ -186,6 +195,15 @@ export interface ProviderConnectionRecord {
   scopes: string[];
   metadata: Record<string, unknown>;
   createdAt: string;
+  updatedAt: string;
+}
+
+export interface RetryPolicyConfigRecord {
+  provider: string;
+  maxAttempts: number;
+  baseDelaySeconds: number;
+  maxDelaySeconds: number;
+  alertThresholdPercent: number;
   updatedAt: string;
 }
 

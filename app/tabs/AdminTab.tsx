@@ -110,6 +110,15 @@ type IngestionMetrics = {
   costPerUser: Array<{ userId: string; estimatedCostUsd: number }>;
 };
 
+type RetryPolicyConfig = {
+  provider: string;
+  maxAttempts: number;
+  baseDelaySeconds: number;
+  maxDelaySeconds: number;
+  alertThresholdPercent: number;
+  updatedAt: string;
+};
+
 type ThemedSectionProps = {
   theme: AppTheme;
 };
@@ -1253,15 +1262,35 @@ const IngestionSection: React.FC<{ backendUrl: string; headers: Record<string, s
   theme,
 }) => {
   const [metrics, setMetrics] = useState<IngestionMetrics | null>(null);
+  const [retryConfig, setRetryConfig] = useState<RetryPolicyConfig | null>(null);
+  const [retryForm, setRetryForm] = useState({
+    maxAttempts: '',
+    baseDelaySeconds: '',
+    maxDelaySeconds: '',
+    alertThresholdPercent: '',
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setMessage(null);
     try {
-      const data = await apiFetch(backendUrl, headers, '/ingestion/metrics');
-      setMetrics(data as IngestionMetrics);
+      const [metricsData, retryConfigData] = await Promise.all([
+        apiFetch(backendUrl, headers, '/ingestion/metrics'),
+        apiFetch(backendUrl, headers, '/ingestion/retry-config'),
+      ]);
+      setMetrics(metricsData as IngestionMetrics);
+      const config = retryConfigData as RetryPolicyConfig;
+      setRetryConfig(config);
+      setRetryForm({
+        maxAttempts: String(config.maxAttempts),
+        baseDelaySeconds: String(config.baseDelaySeconds),
+        maxDelaySeconds: String(config.maxDelaySeconds),
+        alertThresholdPercent: String(config.alertThresholdPercent),
+      });
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -1270,6 +1299,39 @@ const IngestionSection: React.FC<{ backendUrl: string; headers: Record<string, s
   }, [backendUrl, headers]);
 
   useEffect(() => { load(); }, [load]);
+
+  const saveRetryConfig = async () => {
+    try {
+      await apiFetch(backendUrl, headers, '/ingestion/retry-config', {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          maxAttempts: Number(retryForm.maxAttempts),
+          baseDelaySeconds: Number(retryForm.baseDelaySeconds),
+          maxDelaySeconds: Number(retryForm.maxDelaySeconds),
+          alertThresholdPercent: Number(retryForm.alertThresholdPercent),
+        }),
+      });
+      setMessage('Retry policy updated.');
+      await load();
+    } catch (e: any) {
+      setError(e.message);
+    }
+  };
+
+  const redriveDeadLetters = async (provider: 'ALL' | 'MAILGUN' | 'GMAIL') => {
+    try {
+      const result = await apiFetch(backendUrl, headers, '/ingestion/dead-letter/re-drive', {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider }),
+      });
+      setMessage(`Re-drive queued for ${provider}: ${result.retried ?? 0} jobs.`);
+      await load();
+    } catch (e: any) {
+      setError(e.message);
+    }
+  };
 
   if (loading) return <Text style={[localStyles.loading, { color: theme.colors.textMuted }]}>Loading...</Text>;
   if (error) return <Text style={[localStyles.errorText, { color: theme.colors.error }]}>{error}</Text>;
@@ -1285,6 +1347,7 @@ const IngestionSection: React.FC<{ backendUrl: string; headers: Record<string, s
   return (
     <View style={localStyles.section}>
       <Text style={[localStyles.sectionTitle, { color: theme.colors.text }]}>Ingestion Operations</Text>
+      {message ? <Text style={[localStyles.saveMsg, { color: theme.colors.success }]}>{message}</Text> : null}
       <View style={[localStyles.card, getCardStyle(theme)]}>
         <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Duplicate Rate</Text>
         <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>{duplicateRate}</Text>
@@ -1346,6 +1409,64 @@ const IngestionSection: React.FC<{ backendUrl: string; headers: Record<string, s
             {row.userId} • {row.tierKey}: {row.uploadsUsed}
           </Text>
         ))}
+      </View>
+
+      <View style={[localStyles.card, getCardStyle(theme)]}>
+        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Retry Policy</Text>
+        {retryConfig ? (
+          <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+            Last updated: {new Date(retryConfig.updatedAt).toLocaleString()}
+          </Text>
+        ) : null}
+        <TextInput
+          style={[localStyles.smallInput, getInputStyle(theme)]}
+          value={retryForm.maxAttempts}
+          onChangeText={(value) => setRetryForm((current) => ({ ...current, maxAttempts: value }))}
+          placeholder="Max attempts"
+          placeholderTextColor={theme.colors.textMuted}
+        />
+        <TextInput
+          style={[localStyles.smallInput, getInputStyle(theme)]}
+          value={retryForm.baseDelaySeconds}
+          onChangeText={(value) => setRetryForm((current) => ({ ...current, baseDelaySeconds: value }))}
+          placeholder="Base delay seconds"
+          placeholderTextColor={theme.colors.textMuted}
+        />
+        <TextInput
+          style={[localStyles.smallInput, getInputStyle(theme)]}
+          value={retryForm.maxDelaySeconds}
+          onChangeText={(value) => setRetryForm((current) => ({ ...current, maxDelaySeconds: value }))}
+          placeholder="Max delay seconds"
+          placeholderTextColor={theme.colors.textMuted}
+        />
+        <TextInput
+          style={[localStyles.smallInput, getInputStyle(theme)]}
+          value={retryForm.alertThresholdPercent}
+          onChangeText={(value) => setRetryForm((current) => ({ ...current, alertThresholdPercent: value }))}
+          placeholder="Alert threshold percent"
+          placeholderTextColor={theme.colors.textMuted}
+        />
+        <TouchableOpacity style={[localStyles.smallButton, { backgroundColor: theme.colors.cta }]} onPress={saveRetryConfig}>
+          <Text style={localStyles.smallButtonText}>Save Retry Policy</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={[localStyles.card, getCardStyle(theme)]}>
+        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Dead-Letter Re-drive</Text>
+        <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+          Move dead-lettered jobs back to `PENDING` and enqueue them again.
+        </Text>
+        <View style={localStyles.tierButtons}>
+          {(['ALL', 'MAILGUN', 'GMAIL'] as const).map((provider) => (
+            <TouchableOpacity
+              key={provider}
+              style={[localStyles.tierButton, getSecondaryPillStyle(theme)]}
+              onPress={() => redriveDeadLetters(provider)}
+            >
+              <Text style={[localStyles.tierButtonText, getSecondaryPillTextStyle(theme)]}>Re-drive {provider}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
     </View>
   );
