@@ -451,6 +451,15 @@ const ensurePgSchema = async (): Promise<void> => {
       UNIQUE (user_id, content_hash, logic_version)
     );
   `);
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS ingestion_webhook_replay_tokens (
+      id UUID PRIMARY KEY,
+      provider TEXT NOT NULL,
+      token_hash TEXT NOT NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      UNIQUE (provider, token_hash)
+    );
+  `);
   schemaReady.add('postgres');
 };
 
@@ -461,6 +470,7 @@ const ensureFirestoreCollections = async (): Promise<void> => {
     db.collection('ingestion_sources').limit(1).get(),
     db.collection('import_jobs').limit(1).get(),
     db.collection('ingested_documents').limit(1).get(),
+    db.collection('ingestion_webhook_replay_tokens').limit(1).get(),
   ]);
   schemaReady.add('firebase');
 };
@@ -1654,6 +1664,36 @@ export const saveExtractionCacheEntry = async (
      DO UPDATE SET extraction_result = EXCLUDED.extraction_result, updated_at = NOW()`,
     [randomUUID(), userId, contentHash, logicVersion, JSON.stringify(extractionResult)]
   );
+};
+
+export const claimWebhookReplayToken = async (provider: string, token: string): Promise<boolean> => {
+  await ensureIngestionRepositoryReady();
+  const tokenHash = createHash('sha256').update(`${provider}::${token}`).digest('hex');
+  if (getCurrentDbProvider() === 'firebase') {
+    const docId = `${provider}_${tokenHash}`;
+    const ref = getFirebaseDb().collection('ingestion_webhook_replay_tokens').doc(docId);
+    try {
+      await ref.create({
+        provider,
+        tokenHash,
+        createdAt: nowIso(),
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  const p = getPg();
+  try {
+    await p.query(
+      `INSERT INTO ingestion_webhook_replay_tokens (id, provider, token_hash) VALUES ($1,$2,$3)`,
+      [randomUUID(), provider, tokenHash]
+    );
+    return true;
+  } catch {
+    return false;
+  }
 };
 
 export const getIngestionObservabilitySnapshot = async (): Promise<IngestionObservabilitySnapshot> => {

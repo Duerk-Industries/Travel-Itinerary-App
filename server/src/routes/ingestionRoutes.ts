@@ -3,7 +3,7 @@ import bodyParser from 'body-parser';
 import { authenticate, type TokenPayload } from '../auth';
 import { listTrips } from '../db';
 import { isFeatureEnabled } from '../services/entitlementService';
-import { INGESTION_DEFAULT_FORWARDING_ADDRESS, INGESTION_FEATURE_FLAGS, INGESTION_FORWARDING_SETTINGS_COPY, INGESTION_TIER_RULES, INGESTION_USAGE_KEYS } from '../ingestion/config';
+import { INGESTION_DEFAULT_FORWARDING_ADDRESS, INGESTION_DEFAULT_FORWARDING_PROVIDER, INGESTION_FEATURE_FLAGS, INGESTION_FORWARDING_SETTINGS_COPY, INGESTION_TIER_RULES, INGESTION_USAGE_KEYS } from '../ingestion/config';
 import { assignReviewItemToTrip, deleteReviewItem, getReviewItem, updateReviewItemEdits } from '../ingestion/assignment';
 import { manualUploadMiddleware, buildManualUploadPayloads } from '../ingestion/intake';
 import { runIngestionPipeline } from '../ingestion/orchestrator';
@@ -43,6 +43,7 @@ router.get('/config', async (req, res) => {
     },
     quotas: rules,
     forwarding: {
+      provider: INGESTION_DEFAULT_FORWARDING_PROVIDER,
       currentAddress: INGESTION_DEFAULT_FORWARDING_ADDRESS,
       instructions: INGESTION_FORWARDING_SETTINGS_COPY,
       adminManagedNote: 'Changing the destination inbox may require an admin update and provider redeploy.',
@@ -178,6 +179,7 @@ router.get('/forwarding', async (_req, res) => {
   const enabled = await isFeatureEnabled(INGESTION_FEATURE_FLAGS.forwardedMailbox);
   res.status(enabled ? 200 : 403).json({
     enabled,
+    provider: INGESTION_DEFAULT_FORWARDING_PROVIDER,
     currentAddress: INGESTION_DEFAULT_FORWARDING_ADDRESS,
     instructions: INGESTION_FORWARDING_SETTINGS_COPY,
   });

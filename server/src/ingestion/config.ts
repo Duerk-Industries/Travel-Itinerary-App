@@ -8,8 +8,9 @@ export const INGESTION_JOB_TOKEN_BUDGET_USD = 0.1;
 export const INGESTION_CONFIDENCE_HIGH = 0.9;
 export const INGESTION_CONFIDENCE_REVIEW_READY = 0.7;
 export const INGESTION_DEFAULT_FORWARDING_ADDRESS = 'travel.docs@duerk.org';
+export const INGESTION_DEFAULT_FORWARDING_PROVIDER = 'mailgun';
 export const INGESTION_FORWARDING_SETTINGS_COPY =
-  'Forward travel confirmations to the configured inbox. The displayed address can be copied by users, but changing the underlying destination requires an admin/provider update.';
+  'Forward travel confirmations to the Mailgun-backed inbox. The displayed address can be copied by users, but changing the underlying destination requires an admin/provider update.';
 
 export const INGESTION_SUPPORTED_MIME_TYPES = [
   'text/plain',

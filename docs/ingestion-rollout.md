@@ -19,7 +19,7 @@ Priority order:
 | Stage | Feature flag | Scope | Status |
 |---|---|---|---|
 | Phase 1 | `feature_ingest_manual_upload` | Manual upload, parsing, review queue, assignment, soft delete | Implemented |
-| Phase 2 | `feature_ingest_forwarded_mailbox` | Forwarded mailbox ingestion via inbound provider/webhook | Scaffolded, docs-first |
+| Phase 2 | `feature_ingest_forwarded_mailbox` | Forwarded mailbox ingestion via Mailgun inbound webhook | Implemented behind flag |
 | Phase 3 | `feature_ingest_gmail_import` | Gmail OAuth connect, inbox search/import, dry run, scheduled sync | Scaffolded, docs-first |
 | Admin ops | `feature_ingest_admin_observability` | Ingestion metrics and dashboard widgets | Implemented |
 | Local dev scan stub | `feature_ingest_local_virus_scan_stub` | Skip real virus scanning in local/test environments | Implemented |
@@ -179,6 +179,8 @@ The implementation supports Firebase, PostgreSQL, and the in-memory adapter, wit
 ## Security and privacy
 
 - Supported types are text, HTML, PDF, and image, capped at 10 MB.
+- Mailgun inbound webhook traffic is validated with timestamp, token, and HMAC signature checks.
+- Replay protection stores hashed Mailgun webhook tokens and rejects reuse.
 - Local and test environments use the virus-scan stub when the stub feature flag is enabled.
 - Raw source files are deleted after parse completion in the current Phase 1 flow.
 - Signed review-document URLs are short-lived and fetched on demand, not embedded in list responses.

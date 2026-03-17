@@ -19,7 +19,8 @@ This file records conservative assumptions and known rollout gaps for the ingest
 
 ### Webhook hardening
 
-- The launch webhook payload contract exists, but production Mailgun or SES webhook endpoints, signature validation, replay storage, and provider-specific retry workers are still pending.
+- The Mailgun webhook endpoint, signature validation, and replay-token storage are implemented.
+- Provider-specific retry workers, dead-letter re-drive tooling, and admin-managed retry policy editing are still pending.
 - Admin-managed retry-policy editing is documented but not yet exposed as a writable admin configuration surface.
 
 ### Gmail integration

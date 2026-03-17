@@ -57,9 +57,10 @@ SES becomes more attractive. At larger volume, per-message economics and AWS-nat
 1. Verify the receiving domain and DNS in Mailgun.
 2. Create the forwarding address alias for `travel.docs@duerk.org`.
 3. Create a route that matches the launch alias.
-4. Forward matching messages to the ingestion webhook endpoint.
-5. Validate HMAC signature, timestamp freshness, and replay token handling server-side.
-6. Persist only the minimum travel-relevant content needed for normalization and extraction.
+4. Forward matching messages to the ingestion webhook endpoint at `/api/ingestion/webhooks/mailgun`.
+5. Set `MAILGUN_WEBHOOK_SIGNING_KEY` in the server environment.
+6. Validate HMAC signature, timestamp freshness, and replay token handling server-side.
+7. Persist only the minimum travel-relevant content needed for normalization and extraction.
 
 ### AWS SES fallback path
 
