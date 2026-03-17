@@ -21,6 +21,7 @@ import adminRoutes from './routes/adminRoutes';
 import ingestionRoutes from './routes/ingestionRoutes';
 import ingestionAdminRoutes from './routes/ingestionAdminRoutes';
 import ingestionWebhookRoutes from './routes/ingestionWebhookRoutes';
+import ingestionGmailOAuthRoutes from './routes/ingestionGmailOAuthRoutes';
 
 import { loadEnv } from './env_loader';
 import { getEnvValue, hasRunLocalFlag, isLocalEnv } from './env';
@@ -286,6 +287,7 @@ app.use('/api/car-rentals', carRentalRoutes);
 app.use('/api/account', accountRoutes);
 app.use('/api/expenses', expenseRoutes);
 app.use('/api/ingestion/webhooks', ingestionWebhookRoutes);
+app.use('/api/ingestion/gmail', ingestionGmailOAuthRoutes);
 app.use('/api/ingestion', ingestionRoutes);
 app.use('/api/admin', authenticate, requireAdmin, adminRoutes);
 app.use('/api/admin/ingestion', authenticate, requireAdmin, ingestionAdminRoutes);

@@ -25,8 +25,8 @@ This file records conservative assumptions and known rollout gaps for the ingest
 
 ### Gmail integration
 
-- Gmail dry run is scaffolded.
-- OAuth connect, encrypted token refresh lifecycle, inbox-only polling worker, disconnect UI, and mailbox data deletion automation need completion before Phase 3 can ship.
+- Gmail OAuth connect, encrypted token storage, token refresh, manual dry run, manual import, and disconnect are implemented.
+- Scheduled inbox polling every 4 hours / daily, provider auth alerting, and full mailbox data deletion automation still need completion before Phase 3 can be considered fully complete.
 
 ### Virus scanning
 

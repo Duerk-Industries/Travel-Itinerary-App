@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Linking, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 type ReviewItem = {
   id: string;
@@ -38,6 +38,7 @@ type ConfigResponse = {
     llmEscalations: string;
   };
   forwarding: {
+    provider?: string;
     currentAddress: string;
     instructions: string;
     adminManagedNote: string;
@@ -46,6 +47,12 @@ type ConfigResponse = {
     scope: string;
     inboxOnly: boolean;
     dryRunSupported: boolean;
+    connection?: {
+      connected: boolean;
+      emailAddress?: string | null;
+      tokenExpiry?: string | null;
+      scopes?: string[];
+    };
   };
 };
 
@@ -95,6 +102,7 @@ const IngestionTab: React.FC<IngestionTabProps> = ({ backendUrl, headers, styles
   const [editConfirmation, setEditConfirmation] = useState('');
   const [editNotes, setEditNotes] = useState('');
   const [assignTripId, setAssignTripId] = useState<string>('');
+  const [gmailMessages, setGmailMessages] = useState<Array<{ id: string; subject: string; receivedAt: string }>>([]);
 
   const load = async () => {
     setLoading(true);
@@ -218,6 +226,76 @@ const IngestionTab: React.FC<IngestionTabProps> = ({ backendUrl, headers, styles
     await load();
   };
 
+  const openExternalUrl = async (url: string) => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.open(url, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    await Linking.openURL(url);
+  };
+
+  const connectGmail = async () => {
+    const redirectUri =
+      Platform.OS === 'web' && typeof window !== 'undefined'
+        ? `${window.location.origin}/app`
+        : undefined;
+    const response = await fetch(`${backendUrl}/api/ingestion/gmail/connect`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ redirectUri }),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok || !(body as any).authUrl) {
+      setError((body as any).error ?? 'Unable to start Gmail connection.');
+      return;
+    }
+    await openExternalUrl((body as any).authUrl);
+  };
+
+  const disconnectGmail = async () => {
+    const response = await fetch(`${backendUrl}/api/ingestion/gmail/disconnect`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      setError((body as any).error ?? 'Unable to disconnect Gmail.');
+      return;
+    }
+    setGmailMessages([]);
+    await load();
+  };
+
+  const runGmailDryRun = async () => {
+    const response = await fetch(`${backendUrl}/api/ingestion/gmail/dry-run`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      setError((body as any).error ?? 'Unable to run Gmail dry run.');
+      return;
+    }
+    setGmailMessages((body as any).messages ?? []);
+  };
+
+  const runGmailImport = async () => {
+    const response = await fetch(`${backendUrl}/api/ingestion/gmail/import`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      setError((body as any).error ?? 'Unable to import Gmail messages.');
+      return;
+    }
+    setGmailMessages([]);
+    await load();
+  };
+
   if (!config) {
     return (
       <View style={styles.card}>
@@ -254,9 +332,54 @@ const IngestionTab: React.FC<IngestionTabProps> = ({ backendUrl, headers, styles
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Forwarding</Text>
+        <Text style={styles.helperText}>Provider: {config.forwarding.provider || 'mailgun'}</Text>
         <Text style={styles.helperText}>{config.forwarding.currentAddress}</Text>
         <Text style={styles.helperText}>{config.forwarding.instructions}</Text>
         <Text style={styles.helperText}>{config.forwarding.adminManagedNote}</Text>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Gmail Import</Text>
+        <Text style={styles.helperText}>Scope review: {config.gmail.scope}</Text>
+        <Text style={styles.helperText}>Inbox only: {config.gmail.inboxOnly ? 'Yes' : 'No'}</Text>
+        <Text style={styles.helperText}>
+          Connection: {config.gmail.connection?.connected ? `Connected${config.gmail.connection.emailAddress ? ` as ${config.gmail.connection.emailAddress}` : ''}` : 'Not connected'}
+        </Text>
+        {config.gmail.connection?.tokenExpiry ? (
+          <Text style={styles.helperText}>Token expiry: {prettyDate(config.gmail.connection.tokenExpiry)}</Text>
+        ) : null}
+        <View style={styles.row}>
+          {config.features.gmailImport ? (
+            <>
+              <TouchableOpacity style={styles.button} onPress={connectGmail}>
+                <Text style={styles.buttonText}>{config.gmail.connection?.connected ? 'Reconnect Gmail' : 'Connect Gmail'}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.button} onPress={runGmailDryRun} disabled={!config.gmail.connection?.connected}>
+                <Text style={styles.buttonText}>Dry Run</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.button} onPress={runGmailImport} disabled={!config.gmail.connection?.connected}>
+                <Text style={styles.buttonText}>Import Gmail</Text>
+              </TouchableOpacity>
+              {config.gmail.connection?.connected ? (
+                <TouchableOpacity style={[styles.button, styles.tableActionButtonDanger]} onPress={disconnectGmail}>
+                  <Text style={styles.buttonText}>Disconnect</Text>
+                </TouchableOpacity>
+              ) : null}
+            </>
+          ) : (
+            <Text style={styles.helperText}>Gmail import is currently disabled.</Text>
+          )}
+        </View>
+        {gmailMessages.length > 0 ? (
+          <View>
+            {gmailMessages.map((message) => (
+              <View key={message.id} style={styles.flightRow}>
+                <Text style={styles.flightTitle}>{message.subject}</Text>
+                <Text style={styles.helperText}>{prettyDate(message.receivedAt)}</Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
       </View>
 
       <View style={styles.section}>

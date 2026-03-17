@@ -20,7 +20,7 @@ Priority order:
 |---|---|---|---|
 | Phase 1 | `feature_ingest_manual_upload` | Manual upload, parsing, review queue, assignment, soft delete | Implemented |
 | Phase 2 | `feature_ingest_forwarded_mailbox` | Forwarded mailbox ingestion via Mailgun inbound webhook | Implemented behind flag |
-| Phase 3 | `feature_ingest_gmail_import` | Gmail OAuth connect, inbox search/import, dry run, scheduled sync | Scaffolded, docs-first |
+| Phase 3 | `feature_ingest_gmail_import` | Gmail OAuth connect, inbox search/import, dry run, scheduled sync | Partially implemented behind flag |
 | Admin ops | `feature_ingest_admin_observability` | Ingestion metrics and dashboard widgets | Implemented |
 | Local dev scan stub | `feature_ingest_local_virus_scan_stub` | Skip real virus scanning in local/test environments | Implemented |
 
@@ -185,7 +185,9 @@ The implementation supports Firebase, PostgreSQL, and the in-memory adapter, wit
 - Raw source files are deleted after parse completion in the current Phase 1 flow.
 - Signed review-document URLs are short-lived and fetched on demand, not embedded in list responses.
 - Gmail scope is limited to `https://www.googleapis.com/auth/gmail.readonly`.
-- Gmail dry run is intended for subject/date validation without ingesting content.
+- Gmail dry run is implemented for subject/date validation without ingesting content.
+- Gmail connect, callback, disconnect, status, and manual import are implemented behind the Gmail feature flag.
+- Scheduled Gmail sync remains future work.
 - Failure strings shown to users come from ingestion error templates, not raw exception messages.
 
 ## Retry and dead-letter baseline

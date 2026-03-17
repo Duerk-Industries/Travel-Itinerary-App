@@ -18,6 +18,7 @@ import type {
   ParsedItemReviewState,
   PersistedImportJob,
   PersistedParsedItem,
+  ProviderConnectionRecord,
   UserVisibleFailureCode,
   VirusScanStatus,
 } from '../contracts';
@@ -132,6 +133,20 @@ type ParseStageLogRecord = {
   correlationId: string;
 };
 
+type ProviderConnectionRow = {
+  id: string;
+  user_id: string;
+  provider: string;
+  status: string;
+  encrypted_access_token: string | null;
+  encrypted_refresh_token: string | null;
+  token_expiry: string | null;
+  scopes: string[] | string | null;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+};
+
 const SYSTEM_APP_ID = 'WanderBunnies';
 const SYSTEM_SENDER_NAME = 'WanderBunnies';
 const SYSTEM_SENDER_INITIALS = 'WB';
@@ -221,6 +236,33 @@ const mapParsedItemRow = (row: ParsedItemRow): PersistedParsedItem => ({
   assignedTripId: row.assigned_trip_id ?? null,
   assignmentTransactionId: row.assignment_transaction_id ?? null,
   previouslyDeletedNotice: row.duplicate_disposition === 'PREVIOUSLY_DELETED',
+});
+
+const normalizeScopes = (value: ProviderConnectionRow['scopes']): string[] => {
+  if (Array.isArray(value)) return value.map((entry) => String(entry));
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value) as unknown;
+      if (Array.isArray(parsed)) return parsed.map((entry) => String(entry));
+    } catch {
+      return value.split(/\s+/).filter(Boolean);
+    }
+  }
+  return [];
+};
+
+const mapProviderConnectionRow = (row: ProviderConnectionRow): ProviderConnectionRecord => ({
+  id: row.id,
+  userId: row.user_id,
+  provider: row.provider,
+  status: row.status,
+  accessToken: row.encrypted_access_token ? decryptToken(row.encrypted_access_token) : null,
+  refreshToken: row.encrypted_refresh_token ? decryptToken(row.encrypted_refresh_token) : null,
+  tokenExpiry: row.token_expiry ?? null,
+  scopes: normalizeScopes(row.scopes),
+  metadata: row.metadata ?? {},
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
 });
 
 const getFirebaseDb = (): Firestore => {
@@ -1939,6 +1981,7 @@ export const upsertProviderConnection = async (params: {
   const id = randomUUID();
   const encryptedAccessToken = params.accessToken ? encryptToken(params.accessToken) : null;
   const encryptedRefreshToken = params.refreshToken ? encryptToken(params.refreshToken) : null;
+  await disconnectProviderConnections(params.userId, params.provider);
   if (getCurrentDbProvider() === 'firebase') {
     await getFirebaseDb().collection('provider_connections').doc(id).set({
       userId: params.userId,
@@ -1960,6 +2003,67 @@ export const upsertProviderConnection = async (params: {
     [id, params.userId, params.provider, encryptedAccessToken, encryptedRefreshToken, params.tokenExpiry ?? null, JSON.stringify(params.scopes), JSON.stringify(params.metadata ?? {})]
   );
   return id;
+};
+
+export const getProviderConnection = async (userId: string, provider: string): Promise<ProviderConnectionRecord | null> => {
+  await ensureIngestionRepositoryReady();
+  if (getCurrentDbProvider() === 'firebase') {
+    const snap = await getFirebaseDb()
+      .collection('provider_connections')
+      .where('userId', '==', userId)
+      .where('provider', '==', provider)
+      .orderBy('updatedAt', 'desc')
+      .limit(1)
+      .get();
+    if (snap.empty) return null;
+    const data = snap.docs[0]!.data() as any;
+    return {
+      id: snap.docs[0]!.id,
+      userId: data.userId,
+      provider: data.provider,
+      status: data.status ?? 'connected',
+      accessToken: data.encryptedAccessToken ? decryptToken(String(data.encryptedAccessToken)) : null,
+      refreshToken: data.encryptedRefreshToken ? decryptToken(String(data.encryptedRefreshToken)) : null,
+      tokenExpiry: data.tokenExpiry ?? null,
+      scopes: Array.isArray(data.scopes) ? data.scopes.map((entry: unknown) => String(entry)) : [],
+      metadata: data.metadata ?? {},
+      createdAt: data.createdAt,
+      updatedAt: data.updatedAt,
+    };
+  }
+  const { rows } = await getPg().query<ProviderConnectionRow>(
+    `SELECT * FROM provider_connections WHERE user_id = $1 AND provider = $2 ORDER BY updated_at DESC LIMIT 1`,
+    [userId, provider]
+  );
+  return rows[0] ? mapProviderConnectionRow(rows[0]) : null;
+};
+
+export const listProviderConnections = async (userId: string): Promise<ProviderConnectionRecord[]> => {
+  await ensureIngestionRepositoryReady();
+  if (getCurrentDbProvider() === 'firebase') {
+    const snap = await getFirebaseDb().collection('provider_connections').where('userId', '==', userId).get();
+    return snap.docs.map((doc) => {
+      const data = doc.data() as any;
+      return {
+        id: doc.id,
+        userId: data.userId,
+        provider: data.provider,
+        status: data.status ?? 'connected',
+        accessToken: data.encryptedAccessToken ? decryptToken(String(data.encryptedAccessToken)) : null,
+        refreshToken: data.encryptedRefreshToken ? decryptToken(String(data.encryptedRefreshToken)) : null,
+        tokenExpiry: data.tokenExpiry ?? null,
+        scopes: Array.isArray(data.scopes) ? data.scopes.map((entry: unknown) => String(entry)) : [],
+        metadata: data.metadata ?? {},
+        createdAt: data.createdAt,
+        updatedAt: data.updatedAt,
+      } satisfies ProviderConnectionRecord;
+    });
+  }
+  const { rows } = await getPg().query<ProviderConnectionRow>(
+    `SELECT * FROM provider_connections WHERE user_id = $1 ORDER BY updated_at DESC`,
+    [userId]
+  );
+  return rows.map(mapProviderConnectionRow);
 };
 
 export const disconnectProviderConnections = async (userId: string, provider?: string): Promise<void> => {

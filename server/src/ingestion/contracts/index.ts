@@ -175,6 +175,20 @@ export interface PersistedParsedItem extends ParsedItemCandidate {
   previouslyDeletedNotice?: boolean;
 }
 
+export interface ProviderConnectionRecord {
+  id: string;
+  userId: string;
+  provider: string;
+  status: string;
+  accessToken?: string | null;
+  refreshToken?: string | null;
+  tokenExpiry?: string | null;
+  scopes: string[];
+  metadata: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface ReviewQueueFilters {
   sourceType?: IngestionSourceType | 'ALL';
   itemType?: ParsedItemType | 'ALL';

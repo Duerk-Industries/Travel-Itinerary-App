@@ -2,14 +2,16 @@ import { Router } from 'express';
 import bodyParser from 'body-parser';
 import { authenticate, type TokenPayload } from '../auth';
 import { listTrips } from '../db';
+import { resolveAndValidateRedirectUri } from '../redirects';
 import { isFeatureEnabled } from '../services/entitlementService';
 import { INGESTION_DEFAULT_FORWARDING_ADDRESS, INGESTION_DEFAULT_FORWARDING_PROVIDER, INGESTION_FEATURE_FLAGS, INGESTION_FORWARDING_SETTINGS_COPY, INGESTION_TIER_RULES, INGESTION_USAGE_KEYS } from '../ingestion/config';
 import { assignReviewItemToTrip, deleteReviewItem, getReviewItem, updateReviewItemEdits } from '../ingestion/assignment';
-import { manualUploadMiddleware, buildManualUploadPayloads } from '../ingestion/intake';
+import { manualUploadMiddleware, buildManualUploadPayloads, buildGmailConsentUrl, buildGmailDryRunEntries, buildGmailIngestionPayloads, ensureFutureDatedExtraction, fetchGmailProfile, GMAIL_READONLY_SCOPE_URL, refreshGmailAccessToken } from '../ingestion/intake';
 import { runIngestionPipeline } from '../ingestion/orchestrator';
-import { listReviewQueueItems, listImportJobsForUser, getReviewQueueSignedUrl } from '../ingestion/shared/repository';
+import { listReviewQueueItems, listImportJobsForUser, getReviewQueueSignedUrl, getProviderConnection, disconnectProviderConnections, upsertProviderConnection } from '../ingestion/shared/repository';
 import { assertAndConsumeMonthlyQuota, getTierIngestionRules } from '../ingestion/shared/quota';
 import { IngestionError } from '../ingestion/shared/userFailures';
+import { getEnvValue } from '../env';
 
 const router = Router();
 router.use(bodyParser.json({ limit: '2mb' }));
@@ -26,9 +28,59 @@ const requireTierAccess = async (userId: string, res: any): Promise<{ tierKey: s
   return { tierKey: String(tierKey), rules };
 };
 
+const ensureGmailFeatureAndTier = async (userId: string, res: any): Promise<{ tierKey: string; rules: TierRules } | null> => {
+  const tierAccess = await requireTierAccess(userId, res);
+  if (!tierAccess) return null;
+  if (!(await isFeatureEnabled(INGESTION_FEATURE_FLAGS.gmailImport))) {
+    res.status(403).json({ error: 'Gmail import is currently disabled.' });
+    return null;
+  }
+  return tierAccess;
+};
+
+const getActiveGmailConnection = async (userId: string) => {
+  const connection = await getProviderConnection(userId, 'gmail');
+  if (!connection) {
+    throw new IngestionError('gmail_permission_missing', 400);
+  }
+
+  const expiresAt = connection.tokenExpiry ? new Date(connection.tokenExpiry).getTime() : null;
+  const expired = expiresAt !== null && expiresAt <= Date.now() + 60_000;
+  if (!expired && connection.accessToken) {
+    return connection;
+  }
+  if (!connection.refreshToken) {
+    throw new IngestionError('provider_auth_expired', 400);
+  }
+
+  const refreshed = await refreshGmailAccessToken({ refreshToken: connection.refreshToken });
+  const profile = await fetchGmailProfile(refreshed.accessToken);
+  await upsertProviderConnection({
+    userId,
+    provider: 'gmail',
+    accessToken: refreshed.accessToken,
+    refreshToken: connection.refreshToken,
+    tokenExpiry: refreshed.tokenExpiry,
+    scopes: refreshed.scope.length ? refreshed.scope : connection.scopes,
+    metadata: {
+      ...connection.metadata,
+      emailAddress: profile.emailAddress,
+      messagesTotal: profile.messagesTotal ?? null,
+      threadsTotal: profile.threadsTotal ?? null,
+      refreshedAt: new Date().toISOString(),
+    },
+  });
+  const updated = await getProviderConnection(userId, 'gmail');
+  if (!updated?.accessToken) {
+    throw new IngestionError('provider_auth_expired', 400);
+  }
+  return updated;
+};
+
 router.get('/config', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const { tierKey, rules } = await getTierIngestionRules(userId);
+  const gmailConnection = await getProviderConnection(userId, 'gmail');
   const [manualFlag, mailboxFlag, gmailFlag] = await Promise.all([
     isFeatureEnabled(INGESTION_FEATURE_FLAGS.manualUpload),
     isFeatureEnabled(INGESTION_FEATURE_FLAGS.forwardedMailbox),
@@ -49,9 +101,22 @@ router.get('/config', async (req, res) => {
       adminManagedNote: 'Changing the destination inbox may require an admin update and provider redeploy.',
     },
     gmail: {
-      scope: 'https://www.googleapis.com/auth/gmail.readonly',
+      scope: GMAIL_READONLY_SCOPE_URL,
       inboxOnly: true,
       dryRunSupported: true,
+      connection: gmailConnection
+        ? {
+            connected: true,
+            emailAddress: String(gmailConnection.metadata.emailAddress ?? ''),
+            tokenExpiry: gmailConnection.tokenExpiry ?? null,
+            scopes: gmailConnection.scopes,
+          }
+        : {
+            connected: false,
+            emailAddress: null,
+            tokenExpiry: null,
+            scopes: [],
+          },
     },
   });
 });
@@ -185,26 +250,61 @@ router.get('/forwarding', async (_req, res) => {
   });
 });
 
-router.post('/gmail/dry-run', async (req, res) => {
+router.get('/gmail/status', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const tierAccess = await requireTierAccess(userId, res);
+  const tierAccess = await ensureGmailFeatureAndTier(userId, res);
   if (!tierAccess) return;
-  if (!(await isFeatureEnabled(INGESTION_FEATURE_FLAGS.gmailImport))) {
-    res.status(403).json({ error: 'Gmail import is currently disabled.' });
+  const connection = await getProviderConnection(userId, 'gmail');
+  res.json({
+    connected: Boolean(connection),
+    scope: GMAIL_READONLY_SCOPE_URL,
+    emailAddress: connection ? String(connection.metadata.emailAddress ?? '') : null,
+    tokenExpiry: connection?.tokenExpiry ?? null,
+    scopes: connection?.scopes ?? [],
+    lookbackDays: tierAccess.rules.gmailLookbackDays,
+  });
+});
+
+router.post('/gmail/connect', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  if (!(await ensureGmailFeatureAndTier(userId, res))) return;
+  const webUrl = getEnvValue('WEB_URL', { defaultValue: `${req.protocol}://${req.get('host')}` })!;
+  const rawRedirectUri = typeof req.body?.redirectUri === 'string' ? req.body.redirectUri : undefined;
+  const { redirectUri, error } = resolveAndValidateRedirectUri(rawRedirectUri, webUrl);
+  if (error) {
+    res.status(400).json({ error });
     return;
   }
+  const { authUrl, scope } = buildGmailConsentUrl({ userId, redirectUri, request: req });
+  res.json({
+    authUrl,
+    scope,
+    consentReview: [
+      'Read-only access to Gmail inbox messages and attachments.',
+      'No permission to send, modify, or delete Gmail content.',
+      'Only travel-relevant content needed for extraction should be retained.',
+    ],
+  });
+});
+
+router.post('/gmail/dry-run', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const tierAccess = await ensureGmailFeatureAndTier(userId, res);
+  if (!tierAccess) return;
   try {
     await assertAndConsumeMonthlyQuota({
       userId,
       usageKey: INGESTION_USAGE_KEYS.gmailSyncs,
       limit: Math.max(1, tierAccess.rules.gmailLookbackDays),
     });
+    const connection = await getActiveGmailConnection(userId);
+    const messages = await buildGmailDryRunEntries(connection.accessToken!, tierAccess.rules.gmailLookbackDays);
     res.json({
       dryRun: true,
       imported: 0,
       lookbackDays: tierAccess.rules.gmailLookbackDays,
-      scope: 'https://www.googleapis.com/auth/gmail.readonly',
-      messages: [],
+      scope: GMAIL_READONLY_SCOPE_URL,
+      messages,
     });
   } catch (error) {
     if (error instanceof IngestionError) {
@@ -216,6 +316,55 @@ router.post('/gmail/dry-run', async (req, res) => {
     }
     res.status(400).json({ error: 'Unable to run Gmail dry run.' });
   }
+});
+
+router.post('/gmail/import', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const tierAccess = await ensureGmailFeatureAndTier(userId, res);
+  if (!tierAccess) return;
+  try {
+    await assertAndConsumeMonthlyQuota({
+      userId,
+      usageKey: INGESTION_USAGE_KEYS.gmailSyncs,
+      limit: Math.max(1, tierAccess.rules.gmailLookbackDays),
+    });
+    const connection = await getActiveGmailConnection(userId);
+    const payloads = await buildGmailIngestionPayloads({
+      accessToken: connection.accessToken!,
+      userId,
+      lookbackDays: tierAccess.rules.gmailLookbackDays,
+    });
+    const jobs = [];
+    const today = new Date().toISOString().slice(0, 10);
+    for (const payload of payloads) {
+      jobs.push(
+        await runIngestionPipeline(payload, tierAccess.rules.llmEscalations === 'LARGE_ALLOWED', tierAccess.rules.llmEscalations !== 'NONE', {
+          postExtractFn: ensureFutureDatedExtraction(today),
+        })
+      );
+    }
+    res.status(202).json({
+      imported: payloads.length,
+      lookbackDays: tierAccess.rules.gmailLookbackDays,
+      jobs,
+    });
+  } catch (error) {
+    if (error instanceof IngestionError) {
+      if (error.retryAfterSeconds) {
+        res.setHeader('Retry-After', String(error.retryAfterSeconds));
+      }
+      res.status(error.httpStatus).json({ error: error.message, code: error.code });
+      return;
+    }
+    res.status(400).json({ error: 'Unable to run Gmail import.' });
+  }
+});
+
+router.post('/gmail/disconnect', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  if (!(await ensureGmailFeatureAndTier(userId, res))) return;
+  await disconnectProviderConnections(userId, 'gmail');
+  res.json({ disconnected: true });
 });
 
 export default router;

@@ -92,3 +92,4 @@ export const buildWebhookPayload = async (params: {
 };
 
 export * from './mailgun';
+export * from './gmail';

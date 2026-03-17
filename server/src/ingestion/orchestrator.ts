@@ -26,6 +26,7 @@ export const runIngestionPipeline = async (
       doc: Awaited<ReturnType<typeof normalizeIngestionPayload>>,
       config: Parameters<typeof extractCandidates>[1]
     ) => Promise<ExtractionResult>);
+    postExtractFn?: (result: ExtractionResult) => Promise<ExtractionResult> | ExtractionResult;
     logicVersion?: string;
   }
 ) => {
@@ -92,14 +93,15 @@ export const runIngestionPipeline = async (
       correlationId: payload.correlationId,
       logicVersion: overrides?.logicVersion ?? INGESTION_LOGIC_VERSION,
     });
-    if (Number(extraction.usageMetrics.estimatedCostUsd ?? 0) > INGESTION_JOB_TOKEN_BUDGET_USD) {
+    const finalExtraction = overrides?.postExtractFn ? await overrides.postExtractFn(extraction) : extraction;
+    if (Number(finalExtraction.usageMetrics.estimatedCostUsd ?? 0) > INGESTION_JOB_TOKEN_BUDGET_USD) {
       throw new Error('Token budget exceeded for import job');
     }
     await persistReviewQueueItems({
       userId: payload.userId,
       importJobId: job.id,
       rawDocId: rawDoc.id,
-      extractionResult: extraction,
+      extractionResult: finalExtraction,
       logicVersion: overrides?.logicVersion ?? INGESTION_LOGIC_VERSION,
     });
     await updateImportJobState({ jobId: job.id, state: 'AWAITING_REVIEW' });
