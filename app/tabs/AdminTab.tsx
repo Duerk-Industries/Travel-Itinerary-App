@@ -6,7 +6,7 @@ import { getAppTheme, type AppTheme } from '../theme/theme';
 // Types
 // ---------------------------------------------------------------------------
 
-type AdminSection = 'overview' | 'users' | 'user-detail' | 'tiers' | 'features' | 'user-data' | 'audit-log' | 'ingestion';
+type AdminSection = 'overview' | 'users' | 'user-detail' | 'tiers' | 'features' | 'user-data' | 'audit-log' | 'ingestion' | 'api-limits';
 
 type FeatureFlag = { key: string; enabled: boolean; description?: string | null };
 
@@ -178,6 +178,7 @@ const OverviewSection: React.FC<{ onNav: (s: AdminSection) => void } & ThemedSec
         { label: 'Feature Flags', section: 'features' as AdminSection, desc: 'Enable or disable feature flags' },
         { label: 'User Data', section: 'user-data' as AdminSection, desc: 'Aggregate usage statistics' },
         { label: 'Audit Log', section: 'audit-log' as AdminSection, desc: 'History of admin actions' },
+        { label: 'API Limits', section: 'api-limits' as AdminSection, desc: 'View API rate limits and current usage' },
         { label: 'Ingestion Ops', section: 'ingestion' as AdminSection, desc: 'Review import throughput, duplicates, and cost' },
       ] as { label: string; section: AdminSection; desc: string }[]
     ).map((item) => (
@@ -1521,6 +1522,83 @@ const IngestionSection: React.FC<{ backendUrl: string; headers: Record<string, s
 };
 
 // ---------------------------------------------------------------------------
+// API Limits section
+// ---------------------------------------------------------------------------
+
+type ApiLimitProvider = {
+  provider: string;
+  window: string;
+  windowHours: number;
+  overallLimit: number | null;
+  callers: Array<{ caller: string; limit: number; currentUsage: number }>;
+  overallUsage: number;
+};
+
+const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, string> } & ThemedSectionProps> = ({
+  backendUrl,
+  headers,
+  theme,
+}) => {
+  const [providers, setProviders] = useState<ApiLimitProvider[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await apiFetch(backendUrl, headers, '/api-limits');
+      setProviders((data as any).providers ?? []);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [backendUrl, headers]);
+
+  useEffect(() => { load(); }, [load]);
+
+  if (loading) return <Text style={[localStyles.loading, { color: theme.colors.textMuted }]}>Loading...</Text>;
+  if (error) return <Text style={[localStyles.errorText, { color: theme.colors.error }]}>{error}</Text>;
+
+  return (
+    <View style={localStyles.section}>
+      <Text style={[localStyles.sectionTitle, { color: theme.colors.text }]}>API Rate Limits</Text>
+      <Text style={[localStyles.cardSub, { color: theme.colors.textMuted, marginBottom: 12 }]}>
+        Limits are configured in api-limits.yaml. Usage resets per window period. Current usage shown is from in-memory counters (resets on restart).
+      </Text>
+      {providers.map((provider) => (
+        <View key={provider.provider} style={[localStyles.card, getCardStyle(theme)]}>
+          <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>
+            {provider.provider}
+          </Text>
+          <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+            Window: {provider.windowHours}h ({provider.window}) | Overall limit: {provider.overallLimit ?? 'none'} | Used: {provider.overallUsage}
+          </Text>
+          {provider.callers.map((caller) => {
+            const pct = caller.limit > 0 ? Math.round((caller.currentUsage / caller.limit) * 100) : 0;
+            const isHigh = pct >= 75;
+            return (
+              <View key={caller.caller} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 }}>
+                <Text style={[localStyles.cardSub, { color: theme.colors.textMuted, flex: 1 }]}>
+                  {caller.caller}
+                </Text>
+                <Text style={[localStyles.cardSub, { color: isHigh ? theme.colors.error : theme.colors.textMuted }]}>
+                  {caller.currentUsage} / {caller.limit} ({pct}%)
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+      ))}
+      <TouchableOpacity style={[localStyles.smallButton, { backgroundColor: theme.colors.cta, marginTop: 8 }]} onPress={load}>
+        <Text style={localStyles.smallButtonText}>Refresh</Text>
+      </TouchableOpacity>
+    </View>
+  );
+};
+
+// ---------------------------------------------------------------------------
 // Main AdminTab
 // ---------------------------------------------------------------------------
 
@@ -1572,6 +1650,8 @@ const AdminTab: React.FC<AdminTabProps> = ({ backendUrl, headers, initialSection
         return <AuditLogSection backendUrl={backendUrl} headers={headers} theme={theme} />;
       case 'ingestion':
         return <IngestionSection backendUrl={backendUrl} headers={headers} theme={theme} />;
+      case 'api-limits':
+        return <ApiLimitsSection backendUrl={backendUrl} headers={headers} theme={theme} />;
       default:
         return null;
     }
@@ -1586,6 +1666,7 @@ const AdminTab: React.FC<AdminTabProps> = ({ backendUrl, headers, initialSection
     'user-data': 'User Data',
     'audit-log': 'Audit Log',
     ingestion: 'Ingestion Ops',
+    'api-limits': 'API Limits',
   };
 
   return (

@@ -10,6 +10,8 @@ import {
 } from '../db';
 import { TokenPayload } from '../auth';
 import { logError } from '../logger';
+import { getApiLimitsConfig } from '../config/apiLimits';
+import { getApiUsageSummary } from '../apis/usageLimiter';
 
 // Admin routes — all guarded by authenticate + requireAdmin in app.ts
 const router = Router();
@@ -338,6 +340,33 @@ router.get('/audit-log', async (req, res) => {
   } catch (err) {
     logError('[admin] failed to list audit log', err);
     res.status(500).json({ error: 'Failed to list audit log' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// API Limits
+// ---------------------------------------------------------------------------
+
+router.get('/api-limits', async (_req, res) => {
+  try {
+    const config = getApiLimitsConfig();
+    const usage = getApiUsageSummary();
+    const providers = Object.entries(config.providers).map(([provider, providerConfig]) => ({
+      provider,
+      window: providerConfig.window ?? 'day',
+      windowHours: providerConfig.windowHours ?? 1,
+      overallLimit: providerConfig.overall ?? null,
+      callers: Object.entries(providerConfig.callers).map(([caller, limit]) => ({
+        caller,
+        limit,
+        currentUsage: usage.find((u) => u.provider === provider && u.caller === caller)?.used ?? 0,
+      })),
+      overallUsage: usage.find((u) => u.provider === provider && u.scope === 'overall')?.used ?? 0,
+    }));
+    res.json({ providers, caching: config.caching });
+  } catch (err) {
+    logError('[admin] failed to get api limits', err);
+    res.status(500).json({ error: 'Failed to get API limits' });
   }
 });
 

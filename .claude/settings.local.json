@@ -23,7 +23,8 @@
       "Bash(DB_PROVIDER=memory npx jest --testPathPatterns=\"ingestion.concurrency\" --no-coverage)",
       "Bash(DB_PROVIDER=memory npx jest --no-coverage)",
       "Bash(DB_PROVIDER=memory npx jest --testPathPatterns=\"ingestion.mailgun\" --no-coverage)",
-      "Bash(DB_PROVIDER=memory npx jest --testPathPatterns=\"ingestion.mailgun\" --no-coverage --verbose)"
+      "Bash(DB_PROVIDER=memory npx jest --testPathPatterns=\"ingestion.mailgun\" --no-coverage --verbose)",
+      "Bash(find /c/Git/Tristan/Travel-Itinerary-App/app -name *AdminTab* -o -name *admin*tab*)"
     ]
   }
 }

@@ -12,7 +12,11 @@
     "cSpell.words": [
         "100",
         "Cooldown",
+        "Firestore",
+        "HMAC",
+        "lookback",
         "sitelinks",
+        "Tesseract",
         "testtest"
     ],
     "diffEditor.codeLens": true,

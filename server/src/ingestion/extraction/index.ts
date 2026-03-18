@@ -3,6 +3,7 @@ import type { ExtractionConfig, ExtractionResult, NormalizedDocument, ParsedItem
 import { buildParsedItemFingerprint } from '../shared/hashing';
 import { getExtractionCacheEntry, recordParseAttempt, recordUsageMetering, saveExtractionCacheEntry } from '../shared/repository';
 import { resolveTimezone } from '../shared/timezoneResolver';
+import { reserveApiUsageOrThrow, ApiLimitExceededError } from '../../apis/usageLimiter';
 
 export interface ExtractionStrategy {
   canHandle(doc: NormalizedDocument): boolean;
@@ -238,7 +239,8 @@ class NoopLlmExtractor implements ExtractionStrategy {
   constructor(
     readonly strategyName: string,
     readonly minConfidenceToSkipNext: number,
-    private readonly canRun: (config: ExtractionConfig) => boolean
+    private readonly canRun: (config: ExtractionConfig) => boolean,
+    private readonly apiLimitCaller: string
   ) {}
 
   canHandle(_doc: NormalizedDocument): boolean {
@@ -263,6 +265,21 @@ class NoopLlmExtractor implements ExtractionStrategy {
         },
       };
     }
+
+    // Reserve API usage through the shared rate limiter
+    try {
+      reserveApiUsageOrThrow({ provider: 'OPENAI', caller: this.apiLimitCaller });
+    } catch (error) {
+      if (error instanceof ApiLimitExceededError) {
+        return {
+          parsedItems: [],
+          usageMetrics: { tokensIn: 0, tokensOut: 0, provider: this.strategyName, modelName: null, estimatedCostUsd: 0 },
+          metadata: { logicVersion: config.logicVersion, extractedAt: new Date().toISOString(), strategyName: this.strategyName },
+        };
+      }
+      throw error;
+    }
+
     return {
       parsedItems: [
         createCandidate({
@@ -292,8 +309,8 @@ class NoopLlmExtractor implements ExtractionStrategy {
 
 const defaultStrategies = [
   new RegexExtractor(),
-  new NoopLlmExtractor('SmallLLMExtractor', INGESTION_CONFIDENCE_REVIEW_READY, (config) => config.allowSmallLlm),
-  new NoopLlmExtractor('LargeLLMExtractor', 1, (config) => config.allowLargeLlm),
+  new NoopLlmExtractor('SmallLLMExtractor', INGESTION_CONFIDENCE_REVIEW_READY, (config) => config.allowSmallLlm, 'INGESTION_SMALL_LLM'),
+  new NoopLlmExtractor('LargeLLMExtractor', 1, (config) => config.allowLargeLlm, 'INGESTION_LARGE_LLM'),
 ];
 
 export const extractCandidates = async (
