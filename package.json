@@ -10,6 +10,7 @@
   ],
   "scripts": {
     "start": "node server/scripts/start-with-debug.js",
+    "dev": "npm --prefix server run dev",
     "build": "npm --prefix server run build",
     "lint": "echo \"Add linters per workspace\"",
     "test": "npm run test:app && npm run test:server",

@@ -28,12 +28,12 @@ The app now uses WanderBunnies user-visible branding while keeping existing deve
    - Copy `server/.env.example` to `server/.env` and update `DATABASE_URL` for your PostgreSQL instance and `AUTH_SECRET` for JWT signing.
    - Choose a database provider with `DB_PROVIDER=postgres|memory|dynamodb|firebase` (defaults to `postgres`; `memory` reuses pg-mem for tests; DynamoDB/Firebase paths are scaffolded and will throw until fully implemented). `USE_IN_MEMORY_DB=1` still works for backwards compatibility in tests.
    - Ensure PostgreSQL is running and accessible.
-3. Run the API (from repo root):
+3. Run the API:
    ```bash
-   cd server
    npm run dev
    ```
    The server will create the required tables on startup.
+   - If `ALLOW_TEST_ACCOUNT_SEED=1` is set in `.local_env`, `npm run dev` will also auto-seed the local test accounts before starting the server.
    - To enable sharing emails, set these in `server/.env`: `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`, and optionally `SMTP_USER`/`SMTP_PASS` if your SMTP server requires auth.
 4. Configure the Expo app:
    - Set `EXPO_PUBLIC_BACKEND_URL` (recommended) in your shell or `.env` when running the client.

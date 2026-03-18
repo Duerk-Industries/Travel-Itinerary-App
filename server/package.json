@@ -6,6 +6,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc -p .",
+    "predev": "tsx ../scripts/seed-dev-accounts.ts",
     "start": "NODE_ENV=production node dist/index.js",
     "dev": "tsx watch src/index.ts",
     "test": "jest --config jest.projects.js"
