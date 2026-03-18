@@ -119,7 +119,8 @@ export type AuditAction =
   | 'USER_TIER_CHANGED'
   | 'TIER_LIMIT_UPDATED'
   | 'TIER_ENTITLEMENT_UPDATED'
-  | 'FEATURE_FLAG_UPDATED';
+  | 'FEATURE_FLAG_UPDATED'
+  | 'API_LIMITS_UPDATED';
 
 export interface AuditLogEntry {
   id: string;

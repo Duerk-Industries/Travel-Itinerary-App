@@ -1534,21 +1534,48 @@ type ApiLimitProvider = {
   overallUsage: number;
 };
 
+type ApiLimitProviderForm = {
+  window: 'hour' | 'day';
+  windowHours: string;
+  overallLimit: string;
+  reason: string;
+  callers: Record<string, string>;
+};
+
 const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, string> } & ThemedSectionProps> = ({
   backendUrl,
   headers,
   theme,
 }) => {
   const [providers, setProviders] = useState<ApiLimitProvider[]>([]);
+  const [providerForms, setProviderForms] = useState<Record<string, ApiLimitProviderForm>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [savingProvider, setSavingProvider] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setMessage(null);
     try {
       const data = await apiFetch(backendUrl, headers, '/api-limits');
-      setProviders((data as any).providers ?? []);
+      const nextProviders = ((data as any).providers ?? []) as ApiLimitProvider[];
+      setProviders(nextProviders);
+      setProviderForms(
+        Object.fromEntries(
+          nextProviders.map((provider) => [
+            provider.provider,
+            {
+              window: provider.window === 'hour' ? 'hour' : 'day',
+              windowHours: String(provider.windowHours),
+              overallLimit: provider.overallLimit === null ? '' : String(provider.overallLimit),
+              reason: '',
+              callers: Object.fromEntries(provider.callers.map((caller) => [caller.caller, String(caller.limit)])),
+            },
+          ])
+        )
+      );
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -1558,15 +1585,91 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
 
   useEffect(() => { load(); }, [load]);
 
+  const updateProviderForm = (providerKey: string, patch: Partial<ApiLimitProviderForm>) => {
+    setProviderForms((current) => ({
+      ...current,
+      [providerKey]: {
+        ...current[providerKey],
+        ...patch,
+      },
+    }));
+  };
+
+  const updateCallerLimit = (providerKey: string, callerKey: string, value: string) => {
+    setProviderForms((current) => ({
+      ...current,
+      [providerKey]: {
+        ...current[providerKey],
+        callers: {
+          ...(current[providerKey]?.callers ?? {}),
+          [callerKey]: value,
+        },
+      },
+    }));
+  };
+
+  const saveProvider = async (provider: ApiLimitProvider) => {
+    const form = providerForms[provider.provider];
+    if (!form) return;
+    if (form.reason.trim().length < 3) {
+      setError('A reason with at least 3 characters is required.');
+      return;
+    }
+
+    const parsedWindowHours = Number(form.windowHours);
+    const parsedOverallLimit = form.overallLimit.trim() ? Number(form.overallLimit) : null;
+    const parsedCallers = Object.fromEntries(
+      provider.callers.map((caller) => [caller.caller, Number(form.callers[caller.caller] ?? '')])
+    );
+
+    if (!Number.isFinite(parsedWindowHours) || parsedWindowHours <= 0) {
+      setError(`Window hours for ${provider.provider} must be a positive number.`);
+      return;
+    }
+    if (parsedOverallLimit !== null && (!Number.isFinite(parsedOverallLimit) || parsedOverallLimit <= 0)) {
+      setError(`Overall limit for ${provider.provider} must be blank or a positive number.`);
+      return;
+    }
+    const invalidCaller = Object.entries(parsedCallers).find(([, value]) => !Number.isFinite(value) || value <= 0);
+    if (invalidCaller) {
+      setError(`Caller limit ${invalidCaller[0]} must be a positive number.`);
+      return;
+    }
+
+    setSavingProvider(provider.provider);
+    setError(null);
+    setMessage(null);
+    try {
+      await apiFetch(backendUrl, headers, `/api-limits/${provider.provider}`, {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          window: form.window,
+          windowHours: parsedWindowHours,
+          overallLimit: parsedOverallLimit,
+          callers: parsedCallers,
+          reason: form.reason.trim(),
+        }),
+      });
+      setMessage(`${provider.provider} rate limits updated.`);
+      await load();
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSavingProvider(null);
+    }
+  };
+
   if (loading) return <Text style={[localStyles.loading, { color: theme.colors.textMuted }]}>Loading...</Text>;
   if (error) return <Text style={[localStyles.errorText, { color: theme.colors.error }]}>{error}</Text>;
 
   return (
-    <View style={localStyles.section}>
+    <ScrollView style={[localStyles.section, localStyles.apiLimitsScroll]} contentContainerStyle={localStyles.apiLimitsScrollContent}>
       <Text style={[localStyles.sectionTitle, { color: theme.colors.text }]}>API Rate Limits</Text>
       <Text style={[localStyles.cardSub, { color: theme.colors.textMuted, marginBottom: 12 }]}>
         Limits are configured in api-limits.yaml. Usage resets per window period. Current usage shown is from in-memory counters (resets on restart).
       </Text>
+      {message ? <Text style={[localStyles.saveMsg, { color: theme.colors.success }]}>{message}</Text> : null}
       {providers.map((provider) => (
         <View key={provider.provider} style={[localStyles.card, getCardStyle(theme)]}>
           <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>
@@ -1575,26 +1678,80 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
           <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
             Window: {provider.windowHours}h ({provider.window}) | Overall limit: {provider.overallLimit ?? 'none'} | Used: {provider.overallUsage}
           </Text>
+          <Text style={[localStyles.fieldLabel, { color: theme.colors.textMuted }]}>Window</Text>
+          <View style={localStyles.tierButtons}>
+            {(['hour', 'day'] as const).map((windowOption) => (
+              <TouchableOpacity
+                key={`${provider.provider}-${windowOption}`}
+                style={[localStyles.tierButton, getSecondaryPillStyle(theme, providerForms[provider.provider]?.window === windowOption)]}
+                onPress={() => updateProviderForm(provider.provider, { window: windowOption })}
+              >
+                <Text style={[localStyles.tierButtonText, getSecondaryPillTextStyle(theme, providerForms[provider.provider]?.window === windowOption)]}>
+                  {windowOption}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <TextInput
+            style={[localStyles.smallInput, getInputStyle(theme)]}
+            placeholder="Window hours"
+            placeholderTextColor={theme.colors.textMuted}
+            keyboardType="numeric"
+            value={providerForms[provider.provider]?.windowHours ?? ''}
+            onChangeText={(value: string) => updateProviderForm(provider.provider, { windowHours: value })}
+          />
+          <TextInput
+            style={[localStyles.smallInput, getInputStyle(theme)]}
+            placeholder="Overall limit (blank for none)"
+            placeholderTextColor={theme.colors.textMuted}
+            keyboardType="numeric"
+            value={providerForms[provider.provider]?.overallLimit ?? ''}
+            onChangeText={(value: string) => updateProviderForm(provider.provider, { overallLimit: value })}
+          />
           {provider.callers.map((caller) => {
             const pct = caller.limit > 0 ? Math.round((caller.currentUsage / caller.limit) * 100) : 0;
             const isHigh = pct >= 75;
             return (
-              <View key={caller.caller} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 }}>
-                <Text style={[localStyles.cardSub, { color: theme.colors.textMuted, flex: 1 }]}>
-                  {caller.caller}
-                </Text>
-                <Text style={[localStyles.cardSub, { color: isHigh ? theme.colors.error : theme.colors.textMuted }]}>
-                  {caller.currentUsage} / {caller.limit} ({pct}%)
-                </Text>
+              <View key={caller.caller} style={localStyles.apiLimitCallerRow}>
+                <View style={localStyles.flex}>
+                  <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+                    {caller.caller}
+                  </Text>
+                  <Text style={[localStyles.cardSub, { color: isHigh ? theme.colors.error : theme.colors.textMuted }]}>
+                    Used: {caller.currentUsage} / {caller.limit} ({pct}%)
+                  </Text>
+                </View>
+                <TextInput
+                  style={[localStyles.apiLimitInput, getInputStyle(theme)]}
+                  placeholder="Limit"
+                  placeholderTextColor={theme.colors.textMuted}
+                  keyboardType="numeric"
+                  value={providerForms[provider.provider]?.callers[caller.caller] ?? ''}
+                  onChangeText={(value: string) => updateCallerLimit(provider.provider, caller.caller, value)}
+                />
               </View>
             );
           })}
+          <TextInput
+            style={[localStyles.smallInput, getInputStyle(theme)]}
+            placeholder="Reason for change (required)"
+            placeholderTextColor={theme.colors.textMuted}
+            value={providerForms[provider.provider]?.reason ?? ''}
+            onChangeText={(value: string) => updateProviderForm(provider.provider, { reason: value })}
+          />
+          <TouchableOpacity
+            style={[localStyles.smallButton, { backgroundColor: theme.colors.cta }, savingProvider === provider.provider && localStyles.buttonDisabled]}
+            disabled={savingProvider === provider.provider}
+            onPress={() => saveProvider(provider)}
+          >
+            <Text style={localStyles.smallButtonText}>Save {provider.provider}</Text>
+          </TouchableOpacity>
         </View>
       ))}
       <TouchableOpacity style={[localStyles.smallButton, { backgroundColor: theme.colors.cta, marginTop: 8 }]} onPress={load}>
         <Text style={localStyles.smallButtonText}>Refresh</Text>
       </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
 };
 
@@ -1680,7 +1837,9 @@ const AdminTab: React.FC<AdminTabProps> = ({ backendUrl, headers, initialSection
           <Text style={[localStyles.breadcrumbCurrent, { color: theme.colors.text }]}>{sectionLabel[section]}</Text>
         </View>
       ) : null}
-      {renderSection()}
+      <View style={section === 'api-limits' ? localStyles.sectionHost : undefined}>
+        {renderSection()}
+      </View>
     </View>
   );
 };
@@ -1692,8 +1851,9 @@ export default AdminTab;
 // ---------------------------------------------------------------------------
 
 const localStyles = StyleSheet.create({
-  content: { padding: 16, paddingBottom: 40, width: '100%' },
+  content: { flex: 1, padding: 16, paddingBottom: 40, width: '100%' },
   section: { marginBottom: 24 },
+  sectionHost: { flex: 1, minHeight: 0 },
   sectionTitle: { fontSize: 22, fontWeight: '700', marginBottom: 16, color: '#1a1a2e' },
   loading: { color: '#888', marginVertical: 8 },
   errorText: { color: '#c0392b', marginVertical: 8 },
@@ -1920,6 +2080,23 @@ const localStyles = StyleSheet.create({
   modalPrimaryButtonText: { fontSize: 14, fontWeight: '700' },
   // Pagination
   pagination: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 12, gap: 12 },
+  apiLimitsScroll: { flex: 1, minHeight: 0 },
+  apiLimitsScrollContent: { paddingBottom: 32 },
+  apiLimitCallerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    paddingVertical: 6,
+  },
+  apiLimitInput: {
+    minWidth: 110,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontSize: 13,
+  },
   pageButton: {
     paddingVertical: 7,
     paddingHorizontal: 16,

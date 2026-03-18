@@ -10,7 +10,7 @@ import {
 } from '../db';
 import { TokenPayload } from '../auth';
 import { logError } from '../logger';
-import { getApiLimitsConfig } from '../config/apiLimits';
+import { getApiLimitsConfig, normalizeApiLimitKeyPart, updateApiLimitProviderConfig } from '../config/apiLimits';
 import { getFeatureFlagSeeds } from '../config/featureFlags';
 import { getApiUsageSummary } from '../apis/usageLimiter';
 
@@ -399,6 +399,104 @@ router.get('/api-limits', async (_req, res) => {
   } catch (err) {
     logError('[admin] failed to get api limits', err);
     res.status(500).json({ error: 'Failed to get API limits' });
+  }
+});
+
+router.patch('/api-limits/:provider', async (req, res) => {
+  const { provider } = req.params;
+  const { window, windowHours, overallLimit, callers, reason } = req.body ?? {};
+  const reasonStr = requireReason(reason);
+  if (!reasonStr) {
+    res.status(400).json({ error: 'reason (min 3 chars) is required' });
+    return;
+  }
+  if (window !== 'hour' && window !== 'day') {
+    res.status(400).json({ error: 'window must be "hour" or "day"' });
+    return;
+  }
+  if (typeof windowHours !== 'number' || !Number.isFinite(windowHours) || windowHours <= 0) {
+    res.status(400).json({ error: 'windowHours must be a positive number' });
+    return;
+  }
+  if (overallLimit !== null && (typeof overallLimit !== 'number' || !Number.isFinite(overallLimit) || overallLimit <= 0)) {
+    res.status(400).json({ error: 'overallLimit must be null or a positive number' });
+    return;
+  }
+  if (typeof callers !== 'object' || callers === null || Array.isArray(callers)) {
+    res.status(400).json({ error: 'callers must be an object of positive numeric limits' });
+    return;
+  }
+
+  try {
+    const actorId = getActorId(req);
+    const config = getApiLimitsConfig();
+    const normalizedProvider = normalizeApiLimitKeyPart(provider);
+    const currentProvider = config.providers[normalizedProvider];
+    if (!currentProvider) {
+      res.status(404).json({ error: `API provider not found: ${provider}` });
+      return;
+    }
+
+    const normalizedCallers = Object.fromEntries(
+      Object.entries(callers as Record<string, unknown>).map(([callerKey, rawLimit]) => [
+        normalizeApiLimitKeyPart(callerKey),
+        Number(rawLimit),
+      ])
+    );
+    const unknownCallers = Object.keys(normalizedCallers).filter((callerKey) => !(callerKey in currentProvider.callers));
+    if (unknownCallers.length > 0) {
+      res.status(400).json({ error: `Unknown caller limits: ${unknownCallers.join(', ')}` });
+      return;
+    }
+    const invalidCallers = Object.entries(normalizedCallers).filter(([, limit]) => !Number.isFinite(limit) || limit <= 0);
+    if (invalidCallers.length > 0) {
+      res.status(400).json({ error: 'All caller limits must be positive numbers' });
+      return;
+    }
+
+    const nextProvider = {
+      window,
+      windowHours: Math.floor(windowHours),
+      overall: overallLimit === null ? null : Math.floor(overallLimit),
+      callers: Object.fromEntries(
+        Object.keys(currentProvider.callers).map((callerKey) => [
+          callerKey,
+          Math.floor(normalizedCallers[callerKey] ?? currentProvider.callers[callerKey]),
+        ])
+      ),
+    };
+
+    updateApiLimitProviderConfig(normalizedProvider, nextProvider);
+    await writeAuditLog({
+      actorUserId: actorId,
+      action: 'API_LIMITS_UPDATED',
+      beforeState: {
+        provider: normalizedProvider,
+        window: currentProvider.window ?? 'day',
+        windowHours: currentProvider.windowHours ?? 1,
+        overallLimit: currentProvider.overall ?? null,
+        callers: currentProvider.callers,
+      },
+      afterState: {
+        provider: normalizedProvider,
+        window: nextProvider.window,
+        windowHours: nextProvider.windowHours,
+        overallLimit: nextProvider.overall,
+        callers: nextProvider.callers,
+      },
+      reason: reasonStr,
+    });
+
+    res.json({
+      provider: normalizedProvider,
+      window: nextProvider.window,
+      windowHours: nextProvider.windowHours,
+      overallLimit: nextProvider.overall,
+      callers: nextProvider.callers,
+    });
+  } catch (err) {
+    logError('[admin] failed to update api limits', err);
+    res.status(500).json({ error: 'Failed to update API limits' });
   }
 });
 

@@ -1,18 +1,18 @@
 import fs from 'fs';
 import path from 'path';
-import { parse } from 'yaml';
+import { parse, stringify } from 'yaml';
 import { logError } from '../logger';
 
-type LimitWindow = 'hour' | 'day';
+export type LimitWindow = 'hour' | 'day';
 
-type ProviderLimits = {
+export type ProviderLimits = {
   window?: LimitWindow;
   windowHours?: number;
   overall?: number;
   callers: Record<string, number>;
 };
 
-type ApiLimitsConfig = {
+export type ApiLimitsConfig = {
   providers: Record<string, ProviderLimits>;
   caching: Record<string, Record<string, number>>;
 };
@@ -31,7 +31,7 @@ type RawApiLimitsConfig = {
 
 const CONFIG_FILENAME = 'api-limits.yaml';
 
-const normalizeKeyPart = (value: string): string =>
+export const normalizeApiLimitKeyPart = (value: string): string =>
   value
     .trim()
     .toUpperCase()
@@ -58,7 +58,7 @@ const normalizeProviderLimits = (raw: RawProviderLimits | undefined): ProviderLi
   for (const [caller, limit] of Object.entries(callers)) {
     const parsed = parsePositiveInt(limit);
     if (parsed !== undefined) {
-      normalizedCallers[normalizeKeyPart(caller)] = parsed;
+      normalizedCallers[normalizeApiLimitKeyPart(caller)] = parsed;
     }
   }
   return {
@@ -74,12 +74,12 @@ const normalizeCaching = (
 ): Record<string, Record<string, number>> => {
   const out: Record<string, Record<string, number>> = {};
   for (const [groupName, groupValues] of Object.entries(raw ?? {})) {
-    const normalizedGroupName = normalizeKeyPart(groupName);
+    const normalizedGroupName = normalizeApiLimitKeyPart(groupName);
     const normalizedGroup: Record<string, number> = {};
     for (const [settingName, settingValue] of Object.entries(groupValues ?? {})) {
       const parsed = parsePositiveInt(settingValue);
       if (parsed !== undefined) {
-        normalizedGroup[normalizeKeyPart(settingName)] = parsed;
+        normalizedGroup[normalizeApiLimitKeyPart(settingName)] = parsed;
       }
     }
     out[normalizedGroupName] = normalizedGroup;
@@ -109,6 +109,26 @@ let cachedConfig: ApiLimitsConfig | null = null;
 let cachedPath: string | null = null;
 let cachedMtimeMs = -1;
 
+const invalidateConfigCache = (): void => {
+  cachedConfig = null;
+  cachedPath = null;
+  cachedMtimeMs = -1;
+};
+
+const loadRawConfigFromFile = (): RawApiLimitsConfig => {
+  const configPath = resolveConfigPath();
+  if (!fs.existsSync(configPath)) {
+    return { providers: {}, caching: {} };
+  }
+  try {
+    const rawText = fs.readFileSync(configPath, 'utf8');
+    return (parse(rawText) ?? {}) as RawApiLimitsConfig;
+  } catch (err) {
+    logError(`[api-usage] Failed to load raw YAML config from ${configPath}`, err);
+    return { providers: {}, caching: {} };
+  }
+};
+
 const loadConfigFromFile = (): ApiLimitsConfig => {
   const configPath = resolveConfigPath();
   if (!fs.existsSync(configPath)) {
@@ -129,7 +149,7 @@ const loadConfigFromFile = (): ApiLimitsConfig => {
     const parsed = (parse(rawText) ?? {}) as RawApiLimitsConfig;
     const providers: Record<string, ProviderLimits> = {};
     for (const [provider, rawProvider] of Object.entries(parsed.providers ?? {})) {
-      providers[normalizeKeyPart(provider)] = normalizeProviderLimits(rawProvider);
+      providers[normalizeApiLimitKeyPart(provider)] = normalizeProviderLimits(rawProvider);
     }
     const caching = normalizeCaching(parsed.caching);
     cachedConfig = { providers, caching };
@@ -144,12 +164,49 @@ const loadConfigFromFile = (): ApiLimitsConfig => {
 
 export const getApiLimitProviderConfig = (provider: string): ProviderLimits | undefined => {
   const config = loadConfigFromFile();
-  return config.providers[normalizeKeyPart(provider)];
+  return config.providers[normalizeApiLimitKeyPart(provider)];
 };
 
 export const getApiLimitsConfig = (): ApiLimitsConfig => loadConfigFromFile();
 
 export const getApiCacheSetting = (group: string, setting: string): number | undefined => {
   const config = loadConfigFromFile();
-  return config.caching[normalizeKeyPart(group)]?.[normalizeKeyPart(setting)];
+  return config.caching[normalizeApiLimitKeyPart(group)]?.[normalizeApiLimitKeyPart(setting)];
+};
+
+export const updateApiLimitProviderConfig = (
+  provider: string,
+  nextProvider: {
+    window: LimitWindow;
+    windowHours: number;
+    overall: number | null;
+    callers: Record<string, number>;
+  }
+): ApiLimitsConfig => {
+  const configPath = resolveConfigPath();
+  const rawConfig = loadRawConfigFromFile();
+  const normalizedProvider = normalizeApiLimitKeyPart(provider);
+  const rawProviders = { ...(rawConfig.providers ?? {}) };
+  const nextRawProvider: RawProviderLimits = {
+    window: nextProvider.window,
+    windowHours: nextProvider.windowHours,
+    callers: Object.fromEntries(
+      Object.entries(nextProvider.callers)
+        .map(([caller, limit]) => [normalizeApiLimitKeyPart(caller), limit])
+        .sort(([a], [b]) => String(a).localeCompare(String(b)))
+    ),
+  };
+  if (nextProvider.overall !== null) {
+    nextRawProvider.overall = nextProvider.overall;
+  }
+
+  rawProviders[normalizedProvider] = nextRawProvider;
+  const nextRawConfig: RawApiLimitsConfig = {
+    providers: Object.fromEntries(Object.entries(rawProviders).sort(([a], [b]) => String(a).localeCompare(String(b)))),
+    caching: rawConfig.caching ?? {},
+  };
+
+  fs.writeFileSync(configPath, stringify(nextRawConfig), 'utf8');
+  invalidateConfigCache();
+  return loadConfigFromFile();
 };

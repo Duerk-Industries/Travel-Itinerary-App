@@ -2,6 +2,9 @@ import request from 'supertest';
 import { app } from '../src/app';
 import { initDb, closePool, addUserEmail, markAccountEmailVerified, listAuditLog, getCurrentUserTier, setUserRole, setUserTier } from '../src/db';
 import { makeAdminUser, registerAndLoginWebUser, seedTiersForTest, cleanupTestUsersByEmail } from './helpers';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 
 const ADMIN_EMAIL = `admin-routes-test+admin${Date.now()}@example.com`;
 const USER_EMAIL  = `admin-routes-test+user${Date.now()}@example.com`;
@@ -536,6 +539,59 @@ describe('Admin routes', () => {
         .expect(200);
 
       expect(res.body.entries.length).toBeLessThanOrEqual(2);
+    });
+  });
+
+  describe('PATCH /api/admin/api-limits/:provider', () => {
+    it('updates provider limits, writes an audit log, and persists to yaml', async () => {
+      const originalConfigPath = process.env.API_LIMITS_CONFIG_PATH;
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'admin-api-limits-'));
+      const tempConfigPath = path.join(tempDir, 'api-limits.yaml');
+      fs.copyFileSync(path.join(__dirname, '..', 'config', 'api-limits.yaml'), tempConfigPath);
+      process.env.API_LIMITS_CONFIG_PATH = tempConfigPath;
+
+      try {
+        const getRes = await request(app)
+          .get('/api/admin/api-limits')
+          .set('Authorization', `Bearer ${adminToken}`)
+          .expect(200);
+
+        const openAiProvider = getRes.body.providers.find((provider: any) => provider.provider === 'OPENAI');
+        expect(openAiProvider).toBeTruthy();
+
+        const callers = Object.fromEntries(
+          openAiProvider.callers.map((caller: any) => [caller.caller, caller.limit])
+        );
+        callers.ITINERARY_GENERATE_PLAN = 75;
+
+        await request(app)
+          .patch('/api/admin/api-limits/OPENAI')
+          .set('Authorization', `Bearer ${adminToken}`)
+          .send({
+            window: 'day',
+            windowHours: 48,
+            overallLimit: 1500,
+            callers,
+            reason: 'Increase OpenAI plan throughput for launch prep',
+          })
+          .expect(200);
+
+        const updatedYaml = fs.readFileSync(tempConfigPath, 'utf8');
+        expect(updatedYaml).toContain('windowHours: 48');
+        expect(updatedYaml).toContain('overall: 1500');
+        expect(updatedYaml).toContain('ITINERARY_GENERATE_PLAN: 75');
+
+        const auditResult = await listAuditLog({ action: 'API_LIMITS_UPDATED' as any });
+        expect(auditResult.entries.length).toBeGreaterThanOrEqual(1);
+        expect(auditResult.entries[0].reason).toBe('Increase OpenAI plan throughput for launch prep');
+      } finally {
+        if (originalConfigPath) {
+          process.env.API_LIMITS_CONFIG_PATH = originalConfigPath;
+        } else {
+          delete process.env.API_LIMITS_CONFIG_PATH;
+        }
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      }
     });
   });
 });
