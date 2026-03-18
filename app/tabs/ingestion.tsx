@@ -11,6 +11,8 @@ type ReviewItem = {
   status: string;
   travelerNames: string[];
   startDateTimeUtc?: string | null;
+  timezoneStatus?: string | null;
+  rawDatetimeString?: string | null;
   duplicateDisposition?: string | null;
   duplicateOfTripId?: string | null;
   extractedFields: Record<string, unknown>;
@@ -103,6 +105,8 @@ const IngestionTab: React.FC<IngestionTabProps> = ({ backendUrl, headers, styles
   const [editConfirmation, setEditConfirmation] = useState('');
   const [editNotes, setEditNotes] = useState('');
   const [assignTripId, setAssignTripId] = useState<string>('');
+  const [dateFilter, setDateFilter] = useState('');
+  const [confidenceFilter, setConfidenceFilter] = useState('');
   const [gmailMessages, setGmailMessages] = useState<Array<{ id: string; subject: string; receivedAt: string }>>([]);
   const [selectedDocumentSummary, setSelectedDocumentSummary] = useState<null | {
     normalizationQuality?: string | null;
@@ -153,10 +157,13 @@ const IngestionTab: React.FC<IngestionTabProps> = ({ backendUrl, headers, styles
   }, []);
 
   const filteredItems = useMemo(() => {
+    const minConf = confidenceFilter ? Number(confidenceFilter) : null;
     return items.filter((item) => {
       if (statusFilter !== 'ALL' && item.status !== statusFilter) return false;
       if (sourceFilter !== 'ALL' && item.sourceType !== sourceFilter) return false;
       if (typeFilter !== 'ALL' && item.itemType !== typeFilter) return false;
+      if (dateFilter && item.startDateTimeUtc && item.startDateTimeUtc.slice(0, 10) < dateFilter) return false;
+      if (minConf !== null && Number.isFinite(minConf) && item.confidenceScore < minConf) return false;
       if (!search.trim()) return true;
       const haystack = JSON.stringify({
         provider: item.providerVendor,
@@ -165,7 +172,7 @@ const IngestionTab: React.FC<IngestionTabProps> = ({ backendUrl, headers, styles
       }).toLowerCase();
       return haystack.includes(search.trim().toLowerCase());
     });
-  }, [items, search, sourceFilter, statusFilter, typeFilter]);
+  }, [items, search, sourceFilter, statusFilter, typeFilter, dateFilter, confidenceFilter]);
 
   const beginEdit = async (item: ReviewItem) => {
     setSelectedItem(item);
@@ -341,9 +348,11 @@ const IngestionTab: React.FC<IngestionTabProps> = ({ backendUrl, headers, styles
         ) : null}
       </View>
       <View style={styles.row}>
-        <TextInput style={[styles.input, { flex: 1, minWidth: 160 }]} value={statusFilter} onChangeText={setStatusFilter} placeholder="Status or ALL" />
-        <TextInput style={[styles.input, { flex: 1, minWidth: 160 }]} value={sourceFilter} onChangeText={setSourceFilter} placeholder="Source or ALL" />
-        <TextInput style={[styles.input, { flex: 1, minWidth: 160 }]} value={typeFilter} onChangeText={setTypeFilter} placeholder="Type or ALL" />
+        <TextInput style={[styles.input, { flex: 1, minWidth: 120 }]} value={statusFilter} onChangeText={setStatusFilter} placeholder="Status or ALL" />
+        <TextInput style={[styles.input, { flex: 1, minWidth: 120 }]} value={sourceFilter} onChangeText={setSourceFilter} placeholder="Source or ALL" />
+        <TextInput style={[styles.input, { flex: 1, minWidth: 120 }]} value={typeFilter} onChangeText={setTypeFilter} placeholder="Type or ALL" />
+        <TextInput style={[styles.input, { flex: 1, minWidth: 120 }]} value={dateFilter} onChangeText={setDateFilter} placeholder="Date from (YYYY-MM-DD)" />
+        <TextInput style={[styles.input, { flex: 1, minWidth: 100 }]} value={confidenceFilter} onChangeText={setConfidenceFilter} placeholder="Min confidence" keyboardType="numeric" />
       </View>
 
       <View style={styles.section}>
@@ -443,6 +452,9 @@ const IngestionTab: React.FC<IngestionTabProps> = ({ backendUrl, headers, styles
               <ScrollView style={{ maxHeight: 520 }}>
                 <Text style={styles.sectionTitle}>Review Item</Text>
                 <Text style={styles.helperText}>{selectedItem.itemType} • {selectedItem.status}</Text>
+                {selectedItem.timezoneStatus === 'UNKNOWN' ? (
+                  <Text style={styles.warningText}>Timezone unknown{selectedItem.rawDatetimeString ? ` (raw: ${selectedItem.rawDatetimeString})` : ''}</Text>
+                ) : null}
                 {selectedDocumentSummary ? (
                   <Text style={styles.helperText}>
                     {selectedDocumentSummary.originalFilename || 'Document'} • normalization {selectedDocumentSummary.normalizationQuality || 'unknown'} • virus scan {selectedDocumentSummary.virusScanStatus || 'unknown'}

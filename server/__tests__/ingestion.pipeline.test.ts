@@ -107,6 +107,8 @@ describe('ingestion pipeline internals', () => {
           startDateTimeUtc: null,
           endDateTimeUtc: null,
           originalTimezone: null,
+          timezoneStatus: 'UNKNOWN',
+          rawDatetimeString: null,
           timezoneDisplayHint: 'timezone unknown',
           rawSourceReference: 'manual:test',
           confidenceScore: 0.4,

@@ -13,7 +13,17 @@
       "Bash(ls /c/Git/Tristan/Travel-Itinerary-App/server/__tests__/*.test.ts)",
       "Bash(DB_PROVIDER=memory npx jest --config jest.config.js)",
       "Bash(DB_PROVIDER=memory npx jest --config jest.projects.js)",
-      "Bash(DB_PROVIDER=memory npx jest --config jest.config.cjs)"
+      "Bash(DB_PROVIDER=memory npx jest --config jest.config.cjs)",
+      "Bash(find /c/Git/Tristan/Travel-Itinerary-App/server/src/ingestion -type f -name *.ts)",
+      "Bash(wc -l /c/Git/Tristan/Travel-Itinerary-App/server/__tests__/ingestion*.test.ts)",
+      "Bash(find /c/Git/Tristan/Travel-Itinerary-App/server/src/routes -name *internal*)",
+      "Bash(find /c/Git/Tristan/Travel-Itinerary-App/server/src -name *migration* -o -name *schema*)",
+      "Bash(DB_PROVIDER=memory npx jest --testPathPattern=\"ingestion\" --no-coverage)",
+      "Bash(DB_PROVIDER=memory npx jest --testPathPatterns=\"ingestion\" --no-coverage)",
+      "Bash(DB_PROVIDER=memory npx jest --testPathPatterns=\"ingestion.concurrency\" --no-coverage)",
+      "Bash(DB_PROVIDER=memory npx jest --no-coverage)",
+      "Bash(DB_PROVIDER=memory npx jest --testPathPatterns=\"ingestion.mailgun\" --no-coverage)",
+      "Bash(DB_PROVIDER=memory npx jest --testPathPatterns=\"ingestion.mailgun\" --no-coverage --verbose)"
     ]
   }
 }

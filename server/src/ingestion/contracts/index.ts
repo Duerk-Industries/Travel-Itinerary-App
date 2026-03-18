@@ -46,6 +46,8 @@ export type ParsedItemType =
   | 'event_ticket'
   | 'generic_note';
 
+export type TimezoneStatus = 'RESOLVED' | 'INFERRED' | 'UNKNOWN';
+
 export type DuplicateDisposition = 'ACTIVE_MATCH' | 'ASSIGNED_MATCH' | 'PREVIOUSLY_DELETED';
 
 export type ParseAttemptStage = 'REGEX' | 'SMALL_LLM' | 'LARGE_LLM' | 'OCR' | 'CACHE';
@@ -109,6 +111,8 @@ export interface ParsedItemCandidate {
   startDateTimeUtc: string | null;
   endDateTimeUtc: string | null;
   originalTimezone: string | null;
+  timezoneStatus: TimezoneStatus;
+  rawDatetimeString: string | null;
   timezoneDisplayHint: string | null;
   rawSourceReference: string;
   confidenceScore: number;

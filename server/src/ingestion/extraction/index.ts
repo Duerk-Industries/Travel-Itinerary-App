@@ -1,7 +1,8 @@
 import { INGESTION_CONFIDENCE_HIGH, INGESTION_CONFIDENCE_REVIEW_READY, INGESTION_JOB_TOKEN_BUDGET_USD, INGESTION_LOGIC_VERSION } from '../config';
-import type { ExtractionConfig, ExtractionResult, NormalizedDocument, ParsedItemCandidate, ParsedItemType } from '../contracts';
+import type { ExtractionConfig, ExtractionResult, NormalizedDocument, ParsedItemCandidate, ParsedItemType, TimezoneStatus } from '../contracts';
 import { buildParsedItemFingerprint } from '../shared/hashing';
 import { getExtractionCacheEntry, recordParseAttempt, recordUsageMetering, saveExtractionCacheEntry } from '../shared/repository';
+import { resolveTimezone } from '../shared/timezoneResolver';
 
 export interface ExtractionStrategy {
   canHandle(doc: NormalizedDocument): boolean;
@@ -29,6 +30,27 @@ const extractTravelerNames = (text: string): string[] => {
   return Array.from(new Set(matches)).slice(0, 6);
 };
 
+const extractRawDatetimeString = (text: string): string | null => {
+  const iso = text.match(/\b(20\d{2}-\d{2}-\d{2}(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?)\b/);
+  if (iso) return iso[1];
+  const named = text.match(/\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2},?\s+20\d{2}(?:\s+\d{1,2}:\d{2}\s*(?:AM|PM)?)?/i);
+  return named ? named[0] : null;
+};
+
+const extractIataCode = (text: string, direction: 'from' | 'to'): string | null => {
+  const pattern = direction === 'from'
+    ? /\bfrom\s+(?:[A-Z][A-Za-z .'-]+\s+)?(?:\(([A-Z]{3})\)|([A-Z]{3}))\b/i
+    : /\bto\s+(?:[A-Z][A-Za-z .'-]+\s+)?(?:\(([A-Z]{3})\)|([A-Z]{3}))\b/i;
+  const match = text.match(pattern);
+  if (match) return (match[1] ?? match[2])?.toUpperCase() ?? null;
+  // Also try standalone 3-letter codes near departure/arrival keywords
+  const codePattern = direction === 'from'
+    ? /\b(?:departure|origin|from)\s*(?:[:=-])?\s*([A-Z]{3})\b/i
+    : /\b(?:arrival|destination|to)\s*(?:[:=-])?\s*([A-Z]{3})\b/i;
+  const codeMatch = text.match(codePattern);
+  return codeMatch?.[1]?.toUpperCase() ?? null;
+};
+
 const createCandidate = (params: {
   itemType: ParsedItemType;
   doc: NormalizedDocument;
@@ -39,6 +61,32 @@ const createCandidate = (params: {
 }): ParsedItemCandidate => {
   const travelerNames = extractTravelerNames(params.doc.normalizedText);
   const startDateTimeUtc = extractDate(params.doc.normalizedText);
+  const rawDatetimeString = extractRawDatetimeString(params.doc.normalizedText);
+
+  // Timezone resolution using the priority-ordered resolver
+  const departureCode = extractIataCode(params.doc.normalizedText, 'from')
+    ?? (String(params.extractedFields.departureAirportCode ?? '').toUpperCase() || null);
+  const arrivalCode = extractIataCode(params.doc.normalizedText, 'to')
+    ?? (String(params.extractedFields.arrivalAirportCode ?? '').toUpperCase() || null);
+  const departureCity = String(params.extractedFields.departureLocation ?? '').trim() || null;
+  const arrivalCity = String(params.extractedFields.arrivalLocation ?? '').trim() || null;
+  const propertyCity = String(params.extractedFields.address ?? params.extractedFields.location ?? '').trim() || null;
+
+  const tzResult = resolveTimezone({
+    itemType: params.itemType,
+    explicitTimezone: null,
+    departureCode,
+    arrivalCode,
+    departureCity,
+    arrivalCity,
+    propertyCity,
+    locationText: propertyCity,
+  });
+
+  const timezoneStatus: TimezoneStatus = tzResult.departureTimezone.timezoneStatus;
+  const originalTimezone = tzResult.departureTimezone.timezone;
+  const displayHint = tzResult.departureTimezone.displayHint;
+
   const candidate: ParsedItemCandidate = {
     itemType: params.itemType,
     sourceType: params.doc.sourceType,
@@ -48,8 +96,10 @@ const createCandidate = (params: {
     confirmationNumber: params.confirmationNumber ?? null,
     startDateTimeUtc,
     endDateTimeUtc: null,
-    originalTimezone: null,
-    timezoneDisplayHint: startDateTimeUtc ? 'item-local' : 'timezone unknown',
+    originalTimezone,
+    timezoneStatus,
+    rawDatetimeString,
+    timezoneDisplayHint: displayHint,
     rawSourceReference: params.doc.rawSourceReference,
     confidenceScore: params.confidenceScore,
     reviewStatus: params.confidenceScore >= INGESTION_CONFIDENCE_REVIEW_READY ? 'READY_FOR_REVIEW' : 'LOW_CONFIDENCE',

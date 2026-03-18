@@ -42,6 +42,8 @@ type ParsedItemRow = {
   start_datetime_utc: string | null;
   end_datetime_utc: string | null;
   original_timezone: string | null;
+  timezone_status: string | null;
+  raw_datetime_string: string | null;
   timezone_display_hint: string | null;
   raw_source_reference: string;
   confidence_score: string | number;
@@ -254,6 +256,8 @@ const mapParsedItemRow = (row: ParsedItemRow): PersistedParsedItem => ({
   startDateTimeUtc: row.start_datetime_utc,
   endDateTimeUtc: row.end_datetime_utc,
   originalTimezone: row.original_timezone,
+  timezoneStatus: (row.timezone_status as any) ?? 'UNKNOWN',
+  rawDatetimeString: row.raw_datetime_string ?? null,
   timezoneDisplayHint: row.timezone_display_hint,
   rawSourceReference: row.raw_source_reference,
   confidenceScore: Number(row.confidence_score ?? 0),
@@ -466,6 +470,8 @@ const ensurePgSchema = async (): Promise<void> => {
       start_datetime_utc TIMESTAMP,
       end_datetime_utc TIMESTAMP,
       original_timezone TEXT,
+      timezone_status TEXT NOT NULL DEFAULT 'UNKNOWN',
+      raw_datetime_string TEXT,
       timezone_display_hint TEXT,
       raw_source_reference TEXT NOT NULL,
       confidence_score NUMERIC NOT NULL DEFAULT 0,
@@ -1646,6 +1652,8 @@ export const findParsedItemByFingerprint = async (
       start_datetime_utc: data.startDateTimeUtc ?? null,
       end_datetime_utc: data.endDateTimeUtc ?? null,
       original_timezone: data.originalTimezone ?? null,
+      timezone_status: data.timezoneStatus ?? 'UNKNOWN',
+      raw_datetime_string: data.rawDatetimeString ?? null,
       timezone_display_hint: data.timezoneDisplayHint ?? null,
       raw_source_reference: data.rawSourceReference,
       confidence_score: data.confidenceScore ?? 0,
@@ -1693,6 +1701,8 @@ export const createParsedItem = async (params: {
       startDateTimeUtc: params.candidate.startDateTimeUtc,
       endDateTimeUtc: params.candidate.endDateTimeUtc,
       originalTimezone: params.candidate.originalTimezone,
+      timezoneStatus: params.candidate.timezoneStatus ?? 'UNKNOWN',
+      rawDatetimeString: params.candidate.rawDatetimeString ?? null,
       timezoneDisplayHint: params.candidate.timezoneDisplayHint,
       rawSourceReference: params.candidate.rawSourceReference,
       confidenceScore: params.candidate.confidenceScore,
@@ -1725,6 +1735,8 @@ export const createParsedItem = async (params: {
       start_datetime_utc: payload.startDateTimeUtc,
       end_datetime_utc: payload.endDateTimeUtc,
       original_timezone: payload.originalTimezone,
+      timezone_status: payload.timezoneStatus,
+      raw_datetime_string: payload.rawDatetimeString,
       timezone_display_hint: payload.timezoneDisplayHint,
       raw_source_reference: payload.rawSourceReference,
       confidence_score: payload.confidenceScore,
@@ -1746,10 +1758,11 @@ export const createParsedItem = async (params: {
     `INSERT INTO parsed_items (
       id, user_id, import_job_id, raw_doc_id, item_type, source_type, source_date, provider_vendor,
       traveler_names, confirmation_number, start_datetime_utc, end_datetime_utc, original_timezone,
-      timezone_display_hint, raw_source_reference, confidence_score, review_status,
-      deduplication_fingerprint, logic_version, extracted_fields, edited_fields,
+      timezone_status, raw_datetime_string, timezone_display_hint, raw_source_reference,
+      confidence_score, review_status, deduplication_fingerprint, logic_version,
+      extracted_fields, edited_fields,
       duplicate_disposition, duplicate_of_parsed_item_id, duplicate_of_trip_id
-    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26)
      RETURNING *`,
     [
       id,
@@ -1765,6 +1778,8 @@ export const createParsedItem = async (params: {
       params.candidate.startDateTimeUtc ? new Date(params.candidate.startDateTimeUtc) : null,
       params.candidate.endDateTimeUtc ? new Date(params.candidate.endDateTimeUtc) : null,
       params.candidate.originalTimezone ?? null,
+      params.candidate.timezoneStatus ?? 'UNKNOWN',
+      params.candidate.rawDatetimeString ?? null,
       params.candidate.timezoneDisplayHint ?? null,
       params.candidate.rawSourceReference,
       params.candidate.confidenceScore,
@@ -1806,6 +1821,8 @@ export const listReviewQueueItems = async (userId: string): Promise<PersistedPar
         start_datetime_utc: data.startDateTimeUtc ?? null,
         end_datetime_utc: data.endDateTimeUtc ?? null,
         original_timezone: data.originalTimezone ?? null,
+        timezone_status: data.timezoneStatus ?? 'UNKNOWN',
+        raw_datetime_string: data.rawDatetimeString ?? null,
         timezone_display_hint: data.timezoneDisplayHint ?? null,
         raw_source_reference: data.rawSourceReference,
         confidence_score: data.confidenceScore ?? 0,
@@ -1854,6 +1871,8 @@ export const getParsedItemById = async (userId: string, itemId: string): Promise
       start_datetime_utc: data.startDateTimeUtc ?? null,
       end_datetime_utc: data.endDateTimeUtc ?? null,
       original_timezone: data.originalTimezone ?? null,
+      timezone_status: data.timezoneStatus ?? 'UNKNOWN',
+      raw_datetime_string: data.rawDatetimeString ?? null,
       timezone_display_hint: data.timezoneDisplayHint ?? null,
       raw_source_reference: data.rawSourceReference,
       confidence_score: data.confidenceScore ?? 0,

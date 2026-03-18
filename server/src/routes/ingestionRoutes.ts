@@ -150,10 +150,18 @@ router.get('/review-items', async (req, res) => {
   const type = String(req.query.type ?? 'ALL');
   const status = String(req.query.status ?? 'ALL');
   const search = String(req.query.search ?? '').trim().toLowerCase();
+  const dateFrom = typeof req.query.dateFrom === 'string' ? req.query.dateFrom : null;
+  const dateTo = typeof req.query.dateTo === 'string' ? req.query.dateTo : null;
+  const minConfidence = typeof req.query.minConfidence === 'string' ? Number(req.query.minConfidence) : null;
+  const maxConfidence = typeof req.query.maxConfidence === 'string' ? Number(req.query.maxConfidence) : null;
   const filtered = items.filter((item) => {
     if (source !== 'ALL' && item.sourceType !== source) return false;
     if (type !== 'ALL' && item.itemType !== type) return false;
     if (status !== 'ALL' && item.status !== status) return false;
+    if (dateFrom && item.startDateTimeUtc && item.startDateTimeUtc < dateFrom) return false;
+    if (dateTo && item.startDateTimeUtc && item.startDateTimeUtc > dateTo) return false;
+    if (minConfidence !== null && Number.isFinite(minConfidence) && item.confidenceScore < minConfidence) return false;
+    if (maxConfidence !== null && Number.isFinite(maxConfidence) && item.confidenceScore > maxConfidence) return false;
     if (!search) return true;
     const haystack = JSON.stringify({
       provider: item.providerVendor,
@@ -224,7 +232,7 @@ router.post('/upload', manualUploadMiddleware.array('files', 10), async (req, re
       res.status(error.httpStatus).json({ error: error.message, code: error.code });
       return;
     }
-    console.error('Ingestion upload failed', error);
+    logError('Ingestion upload failed', error);
     res.status(400).json({ error: 'Unable to process upload.' });
   }
 });
