@@ -2613,8 +2613,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   }
 
   return (
-    <View style={{ position: 'relative' }}>
-      <ScrollView style={styles.card} contentContainerStyle={{ gap: 12 }}>
+    <View style={{ position: 'relative', flex: 1, minHeight: 0 }}>
+      <ScrollView style={[styles.card, { flex: 1, minHeight: 0 }]} contentContainerStyle={{ gap: 12, flexGrow: 1 }}>
         <View style={[styles.row, { alignItems: 'center', justifyContent: 'space-between' }]}>
           <View>
             <Text style={styles.sectionTitle}>Create Trip Wizard</Text>

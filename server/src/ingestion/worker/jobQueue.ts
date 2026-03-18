@@ -45,7 +45,7 @@ let cachedQueue: JobQueue | null = null;
 export const getJobQueue = (): JobQueue => {
   if (cachedQueue) return cachedQueue;
   const mode = (getEnvValue('INGESTION_JOB_QUEUE_MODE', {
-    defaultValue: process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'development' ? 'in_process' : INGESTION_JOB_QUEUE_MODE_DEFAULT,
+    defaultValue: process.env.NODE_ENV === 'production' ? INGESTION_JOB_QUEUE_MODE_DEFAULT : 'in_process',
   }) || 'in_process')
     .trim()
     .toLowerCase();

@@ -1470,28 +1470,28 @@ const IngestionSection: React.FC<{ backendUrl: string; headers: Record<string, s
         <TextInput
           style={[localStyles.smallInput, getInputStyle(theme)]}
           value={retryForm.maxAttempts}
-          onChangeText={(value) => setRetryForm((current) => ({ ...current, maxAttempts: value }))}
+          onChangeText={(value: string) => setRetryForm((current) => ({ ...current, maxAttempts: value }))}
           placeholder="Max attempts"
           placeholderTextColor={theme.colors.textMuted}
         />
         <TextInput
           style={[localStyles.smallInput, getInputStyle(theme)]}
           value={retryForm.baseDelaySeconds}
-          onChangeText={(value) => setRetryForm((current) => ({ ...current, baseDelaySeconds: value }))}
+          onChangeText={(value: string) => setRetryForm((current) => ({ ...current, baseDelaySeconds: value }))}
           placeholder="Base delay seconds"
           placeholderTextColor={theme.colors.textMuted}
         />
         <TextInput
           style={[localStyles.smallInput, getInputStyle(theme)]}
           value={retryForm.maxDelaySeconds}
-          onChangeText={(value) => setRetryForm((current) => ({ ...current, maxDelaySeconds: value }))}
+          onChangeText={(value: string) => setRetryForm((current) => ({ ...current, maxDelaySeconds: value }))}
           placeholder="Max delay seconds"
           placeholderTextColor={theme.colors.textMuted}
         />
         <TextInput
           style={[localStyles.smallInput, getInputStyle(theme)]}
           value={retryForm.alertThresholdPercent}
-          onChangeText={(value) => setRetryForm((current) => ({ ...current, alertThresholdPercent: value }))}
+          onChangeText={(value: string) => setRetryForm((current) => ({ ...current, alertThresholdPercent: value }))}
           placeholder="Alert threshold percent"
           placeholderTextColor={theme.colors.textMuted}
         />
@@ -1837,8 +1837,14 @@ const AdminTab: React.FC<AdminTabProps> = ({ backendUrl, headers, initialSection
           <Text style={[localStyles.breadcrumbCurrent, { color: theme.colors.text }]}>{sectionLabel[section]}</Text>
         </View>
       ) : null}
-      <View style={section === 'api-limits' ? localStyles.sectionHost : undefined}>
-        {renderSection()}
+      <View style={localStyles.sectionHost}>
+        {section === 'api-limits' ? (
+          renderSection()
+        ) : (
+          <ScrollView style={localStyles.sectionScroll} contentContainerStyle={localStyles.sectionScrollContent}>
+            {renderSection()}
+          </ScrollView>
+        )}
       </View>
     </View>
   );
@@ -1851,9 +1857,11 @@ export default AdminTab;
 // ---------------------------------------------------------------------------
 
 const localStyles = StyleSheet.create({
-  content: { flex: 1, padding: 16, paddingBottom: 40, width: '100%' },
+  content: { flex: 1, minHeight: 0, padding: 16, paddingBottom: 0, width: '100%' },
   section: { marginBottom: 24 },
   sectionHost: { flex: 1, minHeight: 0 },
+  sectionScroll: { flex: 1, minHeight: 0 },
+  sectionScrollContent: { paddingBottom: 40 },
   sectionTitle: { fontSize: 22, fontWeight: '700', marginBottom: 16, color: '#1a1a2e' },
   loading: { color: '#888', marginVertical: 8 },
   errorText: { color: '#c0392b', marginVertical: 8 },

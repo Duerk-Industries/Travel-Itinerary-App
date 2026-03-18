@@ -117,8 +117,12 @@ const HomeTab: React.FC<HomeTabProps> = ({
   ];
 
   return (
-    <View style={styles.card}>
-      <ScrollView contentContainerStyle={styles.homeScrollContent} showsVerticalScrollIndicator={false}>
+    <View style={[styles.card, { flex: 1, minHeight: 0 }]}>
+      <ScrollView
+        style={{ flex: 1, minHeight: 0 }}
+        contentContainerStyle={[styles.homeScrollContent, { flexGrow: 1 }]}
+        showsVerticalScrollIndicator={false}
+      >
         <Text style={styles.homeTitle}>Your trip</Text>
         <Pressable
           testID="home-hero-card"

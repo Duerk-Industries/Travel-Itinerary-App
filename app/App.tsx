@@ -2286,6 +2286,22 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     [backendUrl, headers, logout]
   );
 
+  const renderSharedPageScroll = (content: React.ReactNode) => (
+    <ScrollView
+      style={styles.pageScroll}
+      contentContainerStyle={[styles.pageScrollContent, iosSafariContentInsetStyle]}
+      keyboardShouldPersistTaps="handled"
+    >
+      <View style={styles.pageScrollInner}>{content}</View>
+    </ScrollView>
+  );
+
+  const renderBoundedPage = (content: React.ReactNode) => (
+    <View style={styles.pageViewport}>
+      <View style={[styles.pageViewportInner, iosSafariContentInsetStyle]}>{content}</View>
+    </View>
+  );
+
   const mainWorkspace = (
     <SafeAreaView style={[styles.container, iosSafariSafeAreaStyle]}>
       <View style={[styles.topBar, isNarrowLayout && styles.topBarStacked]}>
@@ -2407,100 +2423,109 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         ) : null}
       </View>
       {userToken ? (
-        <ScrollView
-          style={styles.contentScroll}
-          contentContainerStyle={[styles.contentScrollContent, iosSafariContentInsetStyle]}
-        >
-          {activePage === 'home' ? (
-            <HomeTab
-              backendUrl={backendUrl}
-              headers={headers}
-              activeTripId={activeTripId}
-              trips={trips}
-              styles={styles}
-              onSelectTrip={setActiveTripId}
-              onNavigate={handleHomeNavigate}
-              disabledPages={disabledPages}
-            />
-          ) : null}
+        <View style={styles.contentViewport}>
+          {activePage === 'home'
+            ? renderBoundedPage(
+                <HomeTab
+                  backendUrl={backendUrl}
+                  headers={headers}
+                  activeTripId={activeTripId}
+                  trips={trips}
+                  styles={styles}
+                  onSelectTrip={setActiveTripId}
+                  onNavigate={handleHomeNavigate}
+                  disabledPages={disabledPages}
+                />
+              )
+            : null}
 
-          {activePage === 'itinerary' ? (
-            <ItinerariesTab
-              backendUrl={backendUrl}
-              userToken={userToken}
-              activeTripId={activeTripId}
-              activeTrip={activeTrip}
-              traits={traits}
-              headers={headers}
-              setActiveTripId={setActiveTripId}
-              onAiItineraryQueued={onAiItineraryQueued}
-              styles={styles}
-            />
-          ) : null}
+          {activePage === 'itinerary'
+            ? renderSharedPageScroll(
+                <ItinerariesTab
+                  backendUrl={backendUrl}
+                  userToken={userToken}
+                  activeTripId={activeTripId}
+                  activeTrip={activeTrip}
+                  traits={traits}
+                  headers={headers}
+                  setActiveTripId={setActiveTripId}
+                  onAiItineraryQueued={onAiItineraryQueued}
+                  styles={styles}
+                />
+              )
+            : null}
 
-          {activePage === 'tours' ? (
-            <ActivityTab
-              backendUrl={backendUrl}
-              userToken={userToken}
-              activeTripId={activeTripId}
-              tours={tours}
-              setTours={setTours}
-              defaultPayerId={defaultPayerId}
-              payerName={payerName}
-              formatMemberName={formatMemberName}
-              groupMembers={groupMembers}
-              jsonHeaders={jsonHeaders}
-              payerTotals={tourPayerTotals}
-              toursTotal={toursTotal}
-              styles={styles}
-              nativeDateTimePicker={NativeDateTimePicker}
-              fetchTours={fetchTours}
-            />
-          ) : null}
+          {activePage === 'tours'
+            ? renderSharedPageScroll(
+                <ActivityTab
+                  backendUrl={backendUrl}
+                  userToken={userToken}
+                  activeTripId={activeTripId}
+                  tours={tours}
+                  setTours={setTours}
+                  defaultPayerId={defaultPayerId}
+                  payerName={payerName}
+                  formatMemberName={formatMemberName}
+                  groupMembers={groupMembers}
+                  jsonHeaders={jsonHeaders}
+                  payerTotals={tourPayerTotals}
+                  toursTotal={toursTotal}
+                  styles={styles}
+                  nativeDateTimePicker={NativeDateTimePicker}
+                  fetchTours={fetchTours}
+                />
+              )
+            : null}
 
-          {activePage === 'expenses' ? (
-            <DailyExpensesTab
-              backendUrl={backendUrl}
-              headers={headers}
-              jsonHeaders={jsonHeaders}
-              trip={activeTrip}
-              groupMembers={groupMembers}
-              expenses={expenses}
-              setExpenses={setExpenses}
-              defaultPayerId={defaultPayerId}
-              styles={styles}
-            />
-          ) : null}
+          {activePage === 'expenses'
+            ? renderSharedPageScroll(
+                <DailyExpensesTab
+                  backendUrl={backendUrl}
+                  headers={headers}
+                  jsonHeaders={jsonHeaders}
+                  trip={activeTrip}
+                  groupMembers={groupMembers}
+                  expenses={expenses}
+                  setExpenses={setExpenses}
+                  defaultPayerId={defaultPayerId}
+                  styles={styles}
+                />
+              )
+            : null}
 
-          {activePage === 'ledger' ? (
-            <LedgerTab
-              trip={activeTrip}
-              groupMembers={groupMembers}
-              reportableMembers={reportableMembers}
-              paidTotals={ledgerPaidTotals}
-              usedTotals={ledgerUsedTotals}
-              styles={styles}
-              onNavigate={requestPageChange}
-              downloadCsv={downloadCsv}
-              findActiveTrip={getActiveTrip}
-              coveredBy={coveredBy}
-              setCoveredBy={setCoveredBy}
-              formatMemberName={formatMemberName}
-              payerName={payerName}
-              saveCoveredBy={saveCoveredBy}
-            />
-          ) : null}
+          {activePage === 'ledger'
+            ? renderSharedPageScroll(
+                <LedgerTab
+                  trip={activeTrip}
+                  groupMembers={groupMembers}
+                  reportableMembers={reportableMembers}
+                  paidTotals={ledgerPaidTotals}
+                  usedTotals={ledgerUsedTotals}
+                  styles={styles}
+                  onNavigate={requestPageChange}
+                  downloadCsv={downloadCsv}
+                  findActiveTrip={getActiveTrip}
+                  coveredBy={coveredBy}
+                  setCoveredBy={setCoveredBy}
+                  formatMemberName={formatMemberName}
+                  payerName={payerName}
+                  saveCoveredBy={saveCoveredBy}
+                />
+              )
+            : null}
 
-          {activePage === 'ingest' ? (
-            <IngestionTab
-              backendUrl={backendUrl}
-              headers={headers}
-              styles={styles}
-              onNavigate={requestPageChange}
-            />
-          ) : null}
+          {activePage === 'ingest'
+            ? renderSharedPageScroll(
+                <IngestionTab
+                  backendUrl={backendUrl}
+                  headers={headers}
+                  styles={styles}
+                  onNavigate={handleHomeNavigate}
+                />
+              )
+            : null}
 
-          {activePage === 'cost' ? (
+          {activePage === 'cost' ? renderSharedPageScroll(
             <View style={[styles.card, styles.flightsSection]}>
               <View style={styles.sectionHeaderRow}>
                 <Text style={styles.sectionTitle}>Cost Report</Text>
@@ -2588,66 +2613,70 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             </View>
           ) : null}
 
-          {activePage === 'account' ? (
-            <AccountTab
+          {activePage === 'account'
+            ? renderSharedPageScroll(
+                <AccountTab
+                  backendUrl={backendUrl}
+                  userToken={userToken}
+                  activePage={activePage}
+                  accountProfile={accountProfile}
+                  setAccountProfile={setAccountProfile}
+                  familyRelationships={familyRelationships}
+                  setFamilyRelationships={setFamilyRelationships}
+                  fellowTravelers={fellowTravelers}
+                  setFellowTravelers={setFellowTravelers}
+                  showRelationshipDropdown={showRelationshipDropdown}
+                  setShowRelationshipDropdown={setShowRelationshipDropdown}
+                  setUserToken={setUserToken}
+                  setUserName={setUserName}
+                  setUserEmail={setUserEmail}
+                  mapApp={mapApp}
+                  onChangeMapApp={updateMapPreference}
+                  appearancePreference={appearancePreference}
+                  onChangeAppearancePreference={updateAppearancePreference}
+                  saveSession={saveSession}
+                  headers={headers}
+                  jsonHeaders={jsonHeaders}
+                  airportOptions={flightAirportOptions}
+                  onSearchAirports={fetchFlightAirports}
+                  logout={logout}
+                  styles={styles}
+                  traits={traits}
+                  setTraits={setTraits}
+                  selectedTraitNames={selectedTraitNames}
+                  setSelectedTraitNames={setSelectedTraitNames}
+                  traitAge={traitAge}
+                  setTraitAge={setTraitAge}
+                  traitGender={traitGender}
+                  setTraitGender={setTraitGender}
+                  newTraitName={newTraitName}
+                  setNewTraitName={setNewTraitName}
+                  fetchTraits={fetchTraits}
+                  fetchTraitProfile={fetchTraitProfile}
+                />
+              )
+            : null}
+
+      {activePage === 'lodging'
+        ? renderBoundedPage(
+            <LodgingTab
               backendUrl={backendUrl}
-              userToken={userToken}
-              activePage={activePage}
-              accountProfile={accountProfile}
-              setAccountProfile={setAccountProfile}
-              familyRelationships={familyRelationships}
-              setFamilyRelationships={setFamilyRelationships}
-              fellowTravelers={fellowTravelers}
-              setFellowTravelers={setFellowTravelers}
-              showRelationshipDropdown={showRelationshipDropdown}
-              setShowRelationshipDropdown={setShowRelationshipDropdown}
-              setUserToken={setUserToken}
-              setUserName={setUserName}
-              setUserEmail={setUserEmail}
-              mapApp={mapApp}
-              onChangeMapApp={updateMapPreference}
-              appearancePreference={appearancePreference}
-              onChangeAppearancePreference={updateAppearancePreference}
-              saveSession={saveSession}
-              headers={headers}
               jsonHeaders={jsonHeaders}
-              airportOptions={flightAirportOptions}
-              onSearchAirports={fetchFlightAirports}
-              logout={logout}
+              requestHeaders={headers}
+              trip={activeTrip}
+              lodgings={lodgings}
+              groupMembers={groupMembers}
+              defaultPayerId={defaultPayerId}
               styles={styles}
-              traits={traits}
-              setTraits={setTraits}
-              selectedTraitNames={selectedTraitNames}
-              setSelectedTraitNames={setSelectedTraitNames}
-              traitAge={traitAge}
-              setTraitAge={setTraitAge}
-              traitGender={traitGender}
-              setTraitGender={setTraitGender}
-              newTraitName={newTraitName}
-              setNewTraitName={setNewTraitName}
-              fetchTraits={fetchTraits}
-              fetchTraitProfile={fetchTraitProfile}
+              onRefreshLodgings={fetchLodgings}
+              onOpenMap={openMaps}
+              formatMemberName={formatMemberName}
+              payerName={payerName}
             />
-          ) : null}
+          )
+        : null}
 
-      {activePage === 'lodging' ? (
-        <LodgingTab
-          backendUrl={backendUrl}
-          jsonHeaders={jsonHeaders}
-          requestHeaders={headers}
-          trip={activeTrip}
-          lodgings={lodgings}
-          groupMembers={groupMembers}
-          defaultPayerId={defaultPayerId}
-          styles={styles}
-          onRefreshLodgings={fetchLodgings}
-          onOpenMap={openMaps}
-          formatMemberName={formatMemberName}
-          payerName={payerName}
-        />
-      ) : null}
-
-      {activePage === 'car' ? (
+      {activePage === 'car' ? renderSharedPageScroll(
         <View style={styles.card}>
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionTitle}>Car Rentals</Text>
@@ -2961,7 +2990,33 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       ) : null}
 
       
-      {activePage === 'flights' || externalFlightEditId ? (
+      {activePage === 'flights'
+        ? renderSharedPageScroll(
+            <FlightsTab
+              backendUrl={backendUrl}
+              userToken={userToken}
+              activeTripId={activeTripId}
+              flights={flights}
+              setFlights={setFlights}
+              groupMembers={groupMembers}
+              defaultPayerId={defaultPayerId}
+              formatMemberName={formatMemberName}
+              payerName={payerName}
+              headers={headers}
+              jsonHeaders={jsonHeaders}
+              findActiveTrip={getActiveTrip}
+              fetchGroupMembersForActiveTrip={fetchGroupMembersForActiveTrip}
+              styles={styles}
+              airportOptions={flightAirportOptions}
+              onSearchAirports={fetchFlightAirports}
+              externalEditFlightId={externalFlightEditId}
+              onDataChanged={handleFlightsDataChanged}
+              onExternalEditHandled={handleExternalEditHandled}
+              showList={true}
+            />
+          )
+        : null}
+      {activePage !== 'flights' && externalFlightEditId ? (
         <FlightsTab
           backendUrl={backendUrl}
           userToken={userToken}
@@ -2982,10 +3037,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           externalEditFlightId={externalFlightEditId}
           onDataChanged={handleFlightsDataChanged}
           onExternalEditHandled={handleExternalEditHandled}
-          showList={activePage === 'flights'}
+          showList={false}
         />
       ) : null}
-      {activePage === 'trips' ? (
+      {activePage === 'trips' ? renderSharedPageScroll(
             <View style={styles.card}>
               <View style={styles.row}>
                 <Text style={styles.sectionTitle}>Trips</Text>
@@ -3100,99 +3155,107 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             </View>
           ) : null}
 
-          {activePage === 'overview' ? (
-            <OverviewTab
+          {activePage === 'overview'
+            ? renderBoundedPage(
+                <OverviewTab
+                  backendUrl={backendUrl}
+                  headers={headers}
+                  jsonHeaders={jsonHeaders}
+                  trip={activeTrip}
+                  group={activeGroup}
+                  attendees={groupMembers}
+                  flights={flights}
+                  lodgings={lodgings}
+                  tours={tours}
+                  carRentals={carRentals}
+                  defaultPayerId={defaultPayerId}
+                  styles={styles}
+                  mapApp={mapApp}
+                  aiItineraryPending={Boolean(activeTripId && asyncItineraryByTrip[activeTripId]?.status === 'pending')}
+                  aiItineraryFailedMessage={
+                    activeTripId && asyncItineraryByTrip[activeTripId]?.status === 'failed'
+                      ? asyncItineraryByTrip[activeTripId]?.error ?? 'generation failed'
+                      : null
+                  }
+                  onOpenAddress={openMaps}
+                  onRefreshTrips={fetchTrips}
+                  onRefreshGroups={fetchGroups}
+                  onRefreshGroupMembers={fetchGroupMembersForActiveTrip}
+                  onFlightDataChanged={handleFlightsDataChanged}
+                  onLodgingDataChanged={handleLodgingsDataChanged}
+                  onTourDataChanged={handleToursDataChanged}
+                  onAddCarRental={addCarRentalFromOverview}
+                  openFlightInFlightsTab={openFlightInFlightsTab}
+                  openLodgingDetails={(lodging) => openLodgingDetails(lodging as Lodging)}
+                />
+              )
+            : null}
+
+      {activePage === 'trip-details'
+        ? renderBoundedPage(
+            <TripDetailsTab
               backendUrl={backendUrl}
               headers={headers}
-              jsonHeaders={jsonHeaders}
-              trip={activeTrip}
-              group={activeGroup}
-              attendees={groupMembers}
-              flights={flights}
-              lodgings={lodgings}
-              tours={tours}
-              carRentals={carRentals}
-              defaultPayerId={defaultPayerId}
+              trip={selectedTrip}
+              group={selectedTripGroup}
               styles={styles}
-              mapApp={mapApp}
-              aiItineraryPending={Boolean(activeTripId && asyncItineraryByTrip[activeTripId]?.status === 'pending')}
-              aiItineraryFailedMessage={
-                activeTripId && asyncItineraryByTrip[activeTripId]?.status === 'failed'
-                  ? asyncItineraryByTrip[activeTripId]?.error ?? 'generation failed'
-                  : null
-              }
-              onOpenAddress={openMaps}
-              onRefreshTrips={fetchTrips}
-              onRefreshGroups={fetchGroups}
-              onRefreshGroupMembers={fetchGroupMembersForActiveTrip}
-              onFlightDataChanged={handleFlightsDataChanged}
-              onLodgingDataChanged={handleLodgingsDataChanged}
-              onTourDataChanged={handleToursDataChanged}
-              onAddCarRental={addCarRentalFromOverview}
-              openFlightInFlightsTab={openFlightInFlightsTab}
-              openLodgingDetails={(lodging) => openLodgingDetails(lodging as Lodging)}
+              openShareSignal={openShareFromHeaderSignal}
+              onSetActive={(tripId) => setActiveTripId(tripId)}
+              onOpenItinerary={handleOpenTripItinerary}
+              onUpdateCurrency={updateTripCurrency}
             />
-          ) : null}
+          )
+        : null}
 
-      {activePage === 'trip-details' ? (
-        <TripDetailsTab
-          backendUrl={backendUrl}
-          headers={headers}
-          trip={selectedTrip}
-          group={selectedTripGroup}
-          styles={styles}
-          openShareSignal={openShareFromHeaderSignal}
-          onSetActive={(tripId) => setActiveTripId(tripId)}
-          onOpenItinerary={handleOpenTripItinerary}
-          onUpdateCurrency={updateTripCurrency}
-        />
-      ) : null}
+          {activePage === 'follow'
+            ? renderSharedPageScroll(
+                <FollowTab
+                  backendUrl={backendUrl}
+                  userToken={userToken}
+                  trips={trips}
+                  headers={headers}
+                  followInviteCode={followInviteCode}
+                  setFollowInviteCode={setFollowInviteCode}
+                  followLoading={followLoading}
+                  setFollowLoading={setFollowLoading}
+                  followError={followError}
+                  setFollowError={setFollowError}
+                  followedTrips={followedTrips}
+                  setFollowedTrips={setFollowedTrips}
+                  followCodes={followCodes}
+                  setFollowCodes={setFollowCodes}
+                  followCodeLoading={followCodeLoading}
+                  setFollowCodeLoading={setFollowCodeLoading}
+                  followCodeError={followCodeError}
+                  setFollowCodeError={setFollowCodeError}
+                  followCodePayloads={followCodePayloads}
+                  setFollowCodePayloads={setFollowCodePayloads}
+                  styles={styles}
+                  logout={logout}
+                  onOpenFollowedTrip={(tripId) => {
+                    setSelectedFollowedTripId(tripId);
+                    requestPageChange('following');
+                  }}
+                />
+              )
+            : null}
 
-          {activePage === 'follow' ? (
-            <FollowTab
-              backendUrl={backendUrl}
-              userToken={userToken}
-              trips={trips}
-              headers={headers}
-              followInviteCode={followInviteCode}
-              setFollowInviteCode={setFollowInviteCode}
-              followLoading={followLoading}
-              setFollowLoading={setFollowLoading}
-              followError={followError}
-              setFollowError={setFollowError}
-              followedTrips={followedTrips}
-              setFollowedTrips={setFollowedTrips}
-              followCodes={followCodes}
-              setFollowCodes={setFollowCodes}
-              followCodeLoading={followCodeLoading}
-              setFollowCodeLoading={setFollowCodeLoading}
-              followCodeError={followCodeError}
-              setFollowCodeError={setFollowCodeError}
-              followCodePayloads={followCodePayloads}
-              setFollowCodePayloads={setFollowCodePayloads}
-              styles={styles}
-              logout={logout}
-              onOpenFollowedTrip={(tripId) => {
-                setSelectedFollowedTripId(tripId);
-                requestPageChange('following');
-              }}
-            />
-          ) : null}
+          {activePage === 'following'
+            ? renderSharedPageScroll(
+                <FollowingTab
+                  backendUrl={backendUrl}
+                  headers={headers}
+                  followedTrips={followedTrips}
+                  styles={styles}
+                  onRequireLogin={logout}
+                  selectedTripId={selectedFollowedTripId}
+                  onSelectTrip={setSelectedFollowedTripId}
+                  onUnfollowTrip={handleUnfollowTrip}
+                />
+              )
+            : null}
 
-          {activePage === 'following' ? (
-            <FollowingTab
-              backendUrl={backendUrl}
-              headers={headers}
-              followedTrips={followedTrips}
-              styles={styles}
-              onRequireLogin={logout}
-              selectedTripId={selectedFollowedTripId}
-              onSelectTrip={setSelectedFollowedTripId}
-              onUnfollowTrip={handleUnfollowTrip}
-            />
-          ) : null}
-
-        </ScrollView>
+        </View>
       ) : (
         <View style={styles.auth}>
           <View style={styles.toggleRow}>
@@ -3619,6 +3682,40 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     gap: 16,
+  },
+  contentViewport: {
+    flex: 1,
+    width: '100%',
+    minHeight: 0,
+    position: 'relative',
+  },
+  pageScroll: {
+    flex: 1,
+    width: '100%',
+    minHeight: 0,
+  },
+  pageScrollContent: {
+    flexGrow: 1,
+    padding: 16,
+  },
+  pageScrollInner: {
+    width: '100%',
+    maxWidth: 1200,
+    alignSelf: 'center',
+    gap: 16,
+  },
+  pageViewport: {
+    flex: 1,
+    width: '100%',
+    minHeight: 0,
+    padding: 16,
+    alignItems: 'center',
+  },
+  pageViewportInner: {
+    flex: 1,
+    width: '100%',
+    minHeight: 0,
+    maxWidth: 1200,
   },
   card: {
     width: '100%',

@@ -1708,7 +1708,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             </TouchableOpacity>
             <ScrollView
               ref={scrollRef}
-              style={{ flex: 1 }}
+              style={{ flex: 1, minHeight: 0 }}
               contentContainerStyle={{ gap: isPhoneLayout ? 12 : 16, paddingTop: isPhoneLayout ? 48 : 56 }}
               onScroll={(e: any) => setScrollY(e.nativeEvent.contentOffset.y)}
               scrollEventThrottle={16}
@@ -2476,7 +2476,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   };
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, minHeight: 0 }}>
       {trip && aiItineraryPending ? (
         <View style={[styles.card, { borderColor: '#93c5fd', borderWidth: 1, marginBottom: 10 }]}>
           <Text style={styles.sectionTitle}>AI Itinerary In Progress</Text>

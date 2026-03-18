@@ -190,7 +190,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
   const travelerName = (id: string) => travelerNames.get(id) ?? 'Unknown';
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, { flex: 1, minHeight: 0 }]}>
       <View style={styles.row}>
         <Text style={styles.sectionTitle}>Lodging</Text>
         <TouchableOpacity style={[styles.button, styles.roundButton]} onPress={openAddDialog} testID="lodging-add">
@@ -198,7 +198,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+      <ScrollView style={{ flex: 1, minHeight: 0 }} contentContainerStyle={{ flexGrow: 1 }}>
         <View style={[styles.table, styles.lodgingTable]}>
           <View style={[styles.tableRow, styles.tableHeaderRow]}>
             <View style={[styles.tableHeaderCell, styles.lodgingTabNameCol]}>
