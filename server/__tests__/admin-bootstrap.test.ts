@@ -1,7 +1,8 @@
 import { app } from '../src/app';
-import { initDb, closePool, getUserRole, findUserByEmail, listAuditLog, setUserRole, deleteAuditLog } from '../src/db';
+import { initDb, closePool, getUserRole, getCurrentUserTier, findUserByEmail, listAuditLog, setUserRole, deleteAuditLog } from '../src/db';
 import { registerAndLoginWebUser, loginWebUser, cleanupTestUsersByEmail } from './helpers';
 import request from 'supertest';
+import { getSeededTierForEmail } from '../src/services/entitlementService';
 
 const BOOTSTRAP_EMAIL_1 = 'bryan.duerk@gmail.com';
 const BOOTSTRAP_EMAIL_2 = 'tristan.duerk@gmail.com';
@@ -25,6 +26,12 @@ describe('Admin bootstrap', () => {
 
     const role = await getUserRole(userId);
     expect(role).toBe('admin');
+  });
+
+  it('assigns Pro tier to bootstrap admins automatically', async () => {
+    const user = await findUserByEmail(BOOTSTRAP_EMAIL_1);
+    const tier = await getCurrentUserTier(user!.id);
+    expect(tier?.tierKey).toBe('pro');
   });
 
   it('JWT issued after bootstrap includes role: admin', async () => {
@@ -95,5 +102,12 @@ describe('Admin bootstrap', () => {
 
     const { deleteWebUserAndCleanup } = await import('../src/db');
     await deleteWebUserAndCleanup(userId);
+  });
+
+  it('returns seeded default tiers for known seeded accounts', () => {
+    expect(getSeededTierForEmail('vduerk@gmail.com')).toBe('premium');
+    expect(getSeededTierForEmail('VDUERK@GMAIL.COM')).toBe('premium');
+    expect(getSeededTierForEmail('jobs.duerk@gmail.com')).toBe('free');
+    expect(getSeededTierForEmail('someone@example.com')).toBe('free');
   });
 });

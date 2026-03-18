@@ -115,18 +115,20 @@ router.patch('/users/:userId/tier', async (req, res) => {
   try {
     const actorId = getActorId(req);
     const targetId = req.params.userId;
+    const targetRole = await getUserRole(targetId);
+    const resolvedTierKey = targetRole === 'admin' ? 'pro' : tierKey.trim();
     const before = await getCurrentUserTier(targetId);
-    await setUserTier(targetId, tierKey.trim(), 'admin', actorId, reasonStr);
+    await setUserTier(targetId, resolvedTierKey, 'admin', actorId, reasonStr);
     const after = await getCurrentUserTier(targetId);
     await writeAuditLog({
       actorUserId: actorId,
       targetUserId: targetId,
       action: 'USER_TIER_CHANGED',
-      beforeState: { tierKey: before?.tierKey ?? null },
+      beforeState: { tierKey: before?.tierKey ?? null, requestedTierKey: tierKey.trim() },
       afterState: { tierKey: after?.tierKey ?? null },
       reason: reasonStr,
     });
-    res.json({ userId: targetId, tierKey: after?.tierKey ?? null });
+    res.json({ userId: targetId, tierKey: after?.tierKey ?? null, lockedToPro: targetRole === 'admin' });
   } catch (err: any) {
     if (/not found/i.test(err?.message ?? '')) {
       res.status(404).json({ error: err.message });
@@ -157,6 +159,9 @@ router.patch('/users/:userId/role', async (req, res) => {
     }
     const previousRole = await getUserRole(targetId);
     await setUserRole(targetId, role);
+    if (role === 'admin') {
+      await setUserTier(targetId, 'pro', 'admin', actorId, 'Admin users are automatically assigned Pro tier');
+    }
     await writeAuditLog({
       actorUserId: actorId,
       targetUserId: targetId,

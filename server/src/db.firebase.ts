@@ -4609,24 +4609,34 @@ export const adminSearchUsers = async (opts: {
     userEmailsByUserId.set(userId, existing);
   });
 
-  const allUsers: AdminUserRow[] = userSnap.docs.map((doc) => {
+  const allUsers: AdminUserRow[] = await Promise.all(userSnap.docs.map(async (doc) => {
     const user = doc.data();
     const webUser = webUsersById.get(doc.id) ?? {};
     const activeTier = activeTierByUserId.get(doc.id) ?? null;
     const tier = activeTier ? tiersById.get(String(activeTier.tierId ?? activeTier.tierKey ?? '')) : null;
+    const role = ((user.role as string | null) ?? 'user');
+    let tierKey = (activeTier?.tierKey as string | null) ?? (tier ? (tier.id as string) : null);
+    let tierDisplayName = tier ? ((tier.displayName as string | null) ?? null) : null;
+
+    if (role === 'admin' && tierKey !== 'pro') {
+      await setUserTier(doc.id, 'pro', 'system', null, 'Admin users are automatically assigned Pro tier');
+      const proTier = tiersById.get('pro');
+      tierKey = 'pro';
+      tierDisplayName = proTier ? ((proTier.displayName as string | null) ?? 'Pro') : 'Pro';
+    }
 
     return {
       id: doc.id,
       email: (user.email as string | null) ?? '',
       firstName: (webUser.firstName as string | null) ?? (user.firstName as string | null) ?? null,
       lastName: (webUser.lastName as string | null) ?? (user.lastName as string | null) ?? null,
-      role: ((user.role as string | null) ?? 'user'),
-      tierKey: (activeTier?.tierKey as string | null) ?? (tier ? (tier.id as string) : null),
-      tierDisplayName: tier ? ((tier.displayName as string | null) ?? null) : null,
+      role,
+      tierKey,
+      tierDisplayName,
       tierSince: (activeTier?.effectiveFrom as string | null) ?? null,
       createdAt: (user.createdAt as string | null) ?? nowIso(),
     };
-  });
+  }));
 
   const filtered = search
     ? allUsers.filter((user) => {
@@ -4680,15 +4690,25 @@ export const adminGetUser = async (userId: string): Promise<{
     tierSnap.docs.map((doc) => [doc.id, { id: doc.id, ...doc.data() }])
   );
   const tier = activeTier ? tiersById.get(String(activeTier.tierId ?? activeTier.tierKey ?? '')) : null;
+  const role = ((user.role as string | null) ?? 'user');
+  let tierKey = (activeTier?.tierKey as string | null) ?? (tier ? (tier.id as string) : null);
+  let tierDisplayName = tier ? ((tier.displayName as string | null) ?? null) : null;
+
+  if (role === 'admin' && tierKey !== 'pro') {
+    await setUserTier(userId, 'pro', 'system', null, 'Admin users are automatically assigned Pro tier');
+    const proTier = tiersById.get('pro');
+    tierKey = 'pro';
+    tierDisplayName = proTier ? ((proTier.displayName as string | null) ?? 'Pro') : 'Pro';
+  }
 
   return {
     id: userId,
     email: (user.email as string | null) ?? '',
     firstName: (webUser.firstName as string | null) ?? (user.firstName as string | null) ?? null,
     lastName: (webUser.lastName as string | null) ?? (user.lastName as string | null) ?? null,
-    role: ((user.role as string | null) ?? 'user'),
-    tierKey: (activeTier?.tierKey as string | null) ?? (tier ? (tier.id as string) : null),
-    tierDisplayName: tier ? ((tier.displayName as string | null) ?? null) : null,
+    role,
+    tierKey,
+    tierDisplayName,
     tierSince: (activeTier?.effectiveFrom as string | null) ?? null,
     tierSource: (activeTier?.source as string | null) ?? null,
     createdAt: (user.createdAt as string | null) ?? nowIso(),

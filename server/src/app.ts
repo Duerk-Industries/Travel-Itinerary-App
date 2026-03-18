@@ -155,7 +155,7 @@ app.use(express.static(publicDir));
 import passport from 'passport';
 import { initPassport, createToken, createOAuthState, decodeOAuthState, authenticate } from './auth';
 import { ensureCurrentUserTier, ensureDefaultGroupForUser, ensureWebPasswordAccountForOAuth, getUserRole } from './db';
-import { ensureAdminBootstrap } from './services/entitlementService';
+import { ensureAdminBootstrap, getSeededTierForEmail } from './services/entitlementService';
 import { requireAdmin } from './middleware/requireAdmin';
 import { appendTokenToRedirect, isRedirectUriAllowed, resolveAndValidateRedirectUri } from './redirects';
 import { logError } from './logger';
@@ -231,7 +231,7 @@ app.get(
 
       try {
         await ensureDefaultGroupForUser(user.id, user.email);
-        await ensureCurrentUserTier(user.id, 'free');
+        await ensureCurrentUserTier(user.id, getSeededTierForEmail(user.email));
         const { requiresPasswordSetup } = await ensureWebPasswordAccountForOAuth(
           user.id,
           user.email,

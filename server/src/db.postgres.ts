@@ -7984,19 +7984,33 @@ export const adminSearchUsers = async (opts: {
     dataParams
   );
 
-  return {
-    total,
-    users: rows.map(r => ({
+  const users = await Promise.all(rows.map(async (r) => {
+    let tierKey = r.tier_key;
+    let tierDisplayName = r.tier_display_name;
+    const role = r.role ?? 'user';
+
+    if (role === 'admin' && tierKey !== 'pro') {
+      await setUserTier(r.id, 'pro', 'system', null, 'Admin users are automatically assigned Pro tier');
+      tierKey = 'pro';
+      tierDisplayName = 'Pro';
+    }
+
+    return {
       id: r.id,
       email: r.email,
       firstName: r.first_name,
       lastName: r.last_name,
-      role: r.role ?? 'user',
-      tierKey: r.tier_key,
-      tierDisplayName: r.tier_display_name,
+      role,
+      tierKey,
+      tierDisplayName,
       tierSince: r.tier_since,
       createdAt: r.created_at,
-    })),
+    };
+  }));
+
+  return {
+    total,
+    users,
   };
 };
 
@@ -8027,6 +8041,15 @@ export const adminGetUser = async (userId: string): Promise<{
   );
   if (!rows.length) return null;
   const r = rows[0];
+  let tierKey = r.tier_key;
+  let tierDisplayName = r.tier_display_name;
+  const role = r.role ?? 'user';
+
+  if (role === 'admin' && tierKey !== 'pro') {
+    await setUserTier(userId, 'pro', 'system', null, 'Admin users are automatically assigned Pro tier');
+    tierKey = 'pro';
+    tierDisplayName = 'Pro';
+  }
 
   const { rows: usageRows } = await p.query<{
     metric_key: string; window_key: string; count: string;
@@ -8043,9 +8066,9 @@ export const adminGetUser = async (userId: string): Promise<{
     email: r.email,
     firstName: r.first_name,
     lastName: r.last_name,
-    role: r.role ?? 'user',
-    tierKey: r.tier_key,
-    tierDisplayName: r.tier_display_name,
+    role,
+    tierKey,
+    tierDisplayName,
     tierSince: r.tier_since,
     tierSource: r.tier_source,
     createdAt: r.created_at,

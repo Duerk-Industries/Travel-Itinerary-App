@@ -405,9 +405,11 @@ const UserDetailSection: React.FC<{
   onBack: () => void;
 } & ThemedSectionProps> = ({ backendUrl, headers, userId, tiers, onBack, theme }) => {
   const [user, setUser] = useState<AdminUserDetail | null>(null);
+  const [availableTiers, setAvailableTiers] = useState<Tier[]>(tiers);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tierKey, setTierKey] = useState('');
+  const [tierDropdownOpen, setTierDropdownOpen] = useState(false);
   const [role, setRole] = useState<'user' | 'admin'>('user');
   const [tierReason, setTierReason] = useState('');
   const [roleReason, setRoleReason] = useState('');
@@ -418,18 +420,26 @@ const UserDetailSection: React.FC<{
     setLoading(true);
     setError(null);
     try {
-      const data = await apiFetch(backendUrl, headers, `/users/${userId}`);
+      const [userData, tierData] = await Promise.all([
+        apiFetch(backendUrl, headers, `/users/${userId}`),
+        tiers.length ? Promise.resolve({ tiers }) : apiFetch(backendUrl, headers, '/tiers'),
+      ]);
+      const data = userData as AdminUserDetail;
       setUser(data);
-      setTierKey(data.tierKey ?? '');
+      setTierKey(data.role === 'admin' ? 'pro' : (data.tierKey ?? ''));
       setRole(data.role === 'admin' ? 'admin' : 'user');
+      setAvailableTiers((tierData as any).tiers ?? tiers);
     } catch (e: any) {
       setError(e.message);
     } finally {
       setLoading(false);
     }
-  }, [backendUrl, headers, userId]);
+  }, [backendUrl, headers, tiers, userId]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (tiers.length) setAvailableTiers(tiers);
+  }, [tiers]);
 
   const saveTier = async () => {
     if (!tierKey.trim() || tierReason.trim().length < 3) return;
@@ -476,6 +486,10 @@ const UserDetailSection: React.FC<{
   if (!user) return null;
 
   const displayName = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email || user.id;
+  const tierLocked = user.role === 'admin';
+  const currentTierKey = tierLocked ? 'pro' : (user.tierKey ?? 'none');
+  const sortedTiers = [...availableTiers].sort((a, b) => a.rank - b.rank);
+  const selectedTierLabel = sortedTiers.find((tier) => tier.key === tierKey)?.displayName ?? tierKey ?? '';
 
   return (
     <View style={localStyles.section}>
@@ -486,35 +500,64 @@ const UserDetailSection: React.FC<{
       <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>{user.email}</Text>
 
       <View style={[localStyles.card, getCardStyle(theme)]}>
-        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Current Tier: {user.tierKey ?? 'none'}</Text>
+        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Current Tier: {currentTierKey}</Text>
         <Text style={[localStyles.fieldLabel, { color: theme.colors.textMuted }]}>Change Tier</Text>
-        <View style={localStyles.tierButtons}>
-          {tiers.map((t) => (
+        {!tierLocked ? (
+          <TouchableOpacity
+            testID="user-tier-dropdown-button"
+            style={[localStyles.dropdownButton, getInputStyle(theme)]}
+            onPress={() => setTierDropdownOpen((open) => !open)}
+          >
+            <Text style={[localStyles.dropdownButtonText, { color: theme.colors.text }]}>
+              {selectedTierLabel || 'Select a tier'} v
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={[localStyles.dropdownButton, getInputStyle(theme), localStyles.dropdownLocked]}>
+            <Text style={[localStyles.dropdownButtonText, { color: theme.colors.textMuted }]}>Pro (locked for admins)</Text>
+          </View>
+        )}
+        {tierDropdownOpen && !tierLocked ? (
+          <View style={[localStyles.dropdownMenu, getCardStyle(theme)]}>
+            {sortedTiers.map((tier) => (
+              <TouchableOpacity
+                key={tier.key}
+                testID={`user-tier-option-${tier.key}`}
+                style={[localStyles.dropdownOption, tierKey === tier.key && { backgroundColor: theme.colors.backgroundAlt }]}
+                onPress={() => {
+                  setTierKey(tier.key);
+                  setTierDropdownOpen(false);
+                }}
+              >
+                <Text style={[localStyles.dropdownOptionText, { color: theme.colors.text }]}>
+                  {tier.displayName}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : null}
+        {tierLocked ? (
+          <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>Admin users are automatically assigned the Pro tier.</Text>
+        ) : (
+          <>
+            <TextInput
+              testID="user-tier-reason-input"
+              style={[localStyles.smallInput, getInputStyle(theme)]}
+              placeholder="Reason (required)"
+              placeholderTextColor={theme.colors.textMuted}
+              value={tierReason}
+              onChangeText={setTierReason}
+            />
             <TouchableOpacity
-              key={t.key}
-              style={[localStyles.tierButton, getSecondaryPillStyle(theme, tierKey === t.key)]}
-              onPress={() => setTierKey(t.key)}
+              testID="user-tier-save-button"
+              style={[localStyles.smallButton, { backgroundColor: theme.colors.cta }, saving && localStyles.buttonDisabled]}
+              disabled={saving}
+              onPress={saveTier}
             >
-              <Text style={[localStyles.tierButtonText, getSecondaryPillTextStyle(theme, tierKey === t.key)]}>
-                {t.displayName}
-              </Text>
+              <Text style={localStyles.smallButtonText}>Save Tier</Text>
             </TouchableOpacity>
-          ))}
-        </View>
-        <TextInput
-          style={[localStyles.smallInput, getInputStyle(theme)]}
-          placeholder="Reason (required)"
-          placeholderTextColor={theme.colors.textMuted}
-          value={tierReason}
-          onChangeText={setTierReason}
-        />
-        <TouchableOpacity
-          style={[localStyles.smallButton, { backgroundColor: theme.colors.cta }, saving && localStyles.buttonDisabled]}
-          disabled={saving}
-          onPress={saveTier}
-        >
-          <Text style={localStyles.smallButtonText}>Save Tier</Text>
-        </TouchableOpacity>
+          </>
+        )}
       </View>
 
       <View style={[localStyles.card, getCardStyle(theme)]}>
@@ -531,7 +574,11 @@ const UserDetailSection: React.FC<{
             </TouchableOpacity>
           ))}
         </View>
+        {role === 'admin' ? (
+          <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>Saving the admin role will also set the tier to Pro.</Text>
+        ) : null}
         <TextInput
+          testID="user-role-reason-input"
           style={[localStyles.smallInput, getInputStyle(theme)]}
           placeholder="Reason (required)"
           placeholderTextColor={theme.colors.textMuted}
@@ -539,6 +586,7 @@ const UserDetailSection: React.FC<{
           onChangeText={setRoleReason}
         />
         <TouchableOpacity
+          testID="user-role-save-button"
           style={[localStyles.smallButton, { backgroundColor: theme.colors.cta }, saving && localStyles.buttonDisabled]}
           disabled={saving}
           onPress={saveRole}
@@ -1657,6 +1705,30 @@ const localStyles = StyleSheet.create({
   },
   smallButtonText: { color: '#fff', fontSize: 13, fontWeight: '600' },
   buttonDisabled: { opacity: 0.4 },
+  dropdownButton: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    marginBottom: 8,
+  },
+  dropdownLocked: {
+    justifyContent: 'center',
+  },
+  dropdownButtonText: { fontSize: 14, fontWeight: '600' },
+  dropdownMenu: {
+    borderRadius: 12,
+    borderWidth: 1,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  dropdownOption: {
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#999',
+  },
+  dropdownOptionText: { fontSize: 14, fontWeight: '500' },
   // Tier buttons
   tierButtons: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
   tierButton: {

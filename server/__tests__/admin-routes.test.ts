@@ -1,6 +1,6 @@
 import request from 'supertest';
 import { app } from '../src/app';
-import { initDb, closePool, addUserEmail, markAccountEmailVerified, listAuditLog } from '../src/db';
+import { initDb, closePool, addUserEmail, markAccountEmailVerified, listAuditLog, getCurrentUserTier, setUserRole, setUserTier } from '../src/db';
 import { makeAdminUser, registerAndLoginWebUser, seedTiersForTest, cleanupTestUsersByEmail } from './helpers';
 
 const ADMIN_EMAIL = `admin-routes-test+admin${Date.now()}@example.com`;
@@ -157,6 +157,22 @@ describe('Admin routes', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .expect(404);
     });
+
+    it('normalizes stale admin tiers back to Pro on fetch', async () => {
+      await setUserRole(userId, 'admin');
+      await setUserTier(userId, 'free', 'admin', adminUserId, 'Setting stale admin tier for normalization test');
+
+      const res = await request(app)
+        .get(`/api/admin/users/${userId}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(res.body.role).toBe('admin');
+      expect(res.body.tierKey).toBe('pro');
+
+      const currentTier = await getCurrentUserTier(userId);
+      expect(currentTier?.tierKey).toBe('pro');
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -164,6 +180,11 @@ describe('Admin routes', () => {
   // ---------------------------------------------------------------------------
 
   describe('PATCH /api/admin/users/:userId/tier', () => {
+    beforeEach(async () => {
+      await setUserRole(userId, 'user');
+      await setUserTier(userId, 'free', 'admin', adminUserId, 'Resetting test user tier before tier-route test');
+    });
+
     it('requires reason', async () => {
       await request(app)
         .patch(`/api/admin/users/${userId}/tier`)
@@ -202,6 +223,26 @@ describe('Admin routes', () => {
       const auditResult = await listAuditLog({ targetUserId: userId, action: 'USER_TIER_CHANGED' });
       expect(auditResult.entries.length).toBeGreaterThanOrEqual(1);
     });
+
+    it('keeps admin users locked to Pro when changing tier', async () => {
+      await request(app)
+        .patch(`/api/admin/users/${userId}/role`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ role: 'admin', reason: 'Promoting user for tier lock test' })
+        .expect(200);
+
+      const res = await request(app)
+        .patch(`/api/admin/users/${userId}/tier`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ tierKey: 'premium', reason: 'Trying to change admin tier' })
+        .expect(200);
+
+      expect(res.body.tierKey).toBe('pro');
+      expect(res.body.lockedToPro).toBe(true);
+
+      const currentTier = await getCurrentUserTier(userId);
+      expect(currentTier?.tierKey).toBe('pro');
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -237,6 +278,23 @@ describe('Admin routes', () => {
 
       const auditResult = await listAuditLog({ targetUserId: userId, action: 'USER_ROLE_GRANTED' });
       expect(auditResult.entries.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('upgrades a user tier to Pro when granting admin', async () => {
+      await request(app)
+        .patch(`/api/admin/users/${userId}/tier`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ tierKey: 'free', reason: 'Resetting tier before admin promotion' })
+        .expect(200);
+
+      await request(app)
+        .patch(`/api/admin/users/${userId}/role`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ role: 'admin', reason: 'Granting admin for tier promotion test' })
+        .expect(200);
+
+      const currentTier = await getCurrentUserTier(userId);
+      expect(currentTier?.tierKey).toBe('pro');
     });
 
     it('revokes admin role and writes an audit log entry', async () => {

@@ -1,7 +1,7 @@
 import {
   getUserRole, setUserRole, writeAuditLog,
   getFeatureFlag, listFeatureFlags, setFeatureFlag,
-  getCurrentUserTier, listTiers, getTierLimitValue,
+  getCurrentUserTier, listTiers, getTierLimitValue, setUserTier,
   listFeatures, listTierEntitlements, upsertTierEntitlement,
   incrementUsageCounter, countActiveTripsForUser, countGroupMembers,
   appendUsageEvent,
@@ -14,6 +14,16 @@ import { getFeatureFlagSeeds } from '../config/featureFlags';
 import { EntitlementError } from '../errors';
 
 const ADMIN_BOOTSTRAP_EMAILS = ['bryan.duerk@gmail.com', 'tristan.duerk@gmail.com'];
+const SEEDED_TIER_BY_EMAIL: Record<string, TierKey> = {
+  'vduerk@gmail.com': 'premium',
+  'jobs.duerk@gmail.com': 'free',
+};
+const ADMIN_DEFAULT_TIER: TierKey = 'pro';
+
+export const getSeededTierForEmail = (email: string | null | undefined): TierKey => {
+  const normalized = String(email ?? '').trim().toLowerCase();
+  return SEEDED_TIER_BY_EMAIL[normalized] ?? 'free';
+};
 
 /**
  * Called at every auth success path. Grants admin role on first login for bootstrap email addresses.
@@ -24,17 +34,22 @@ export const ensureAdminBootstrap = async (userId: string, email: string): Promi
   if (!ADMIN_BOOTSTRAP_EMAILS.includes(normalized)) return;
 
   const currentRole = await getUserRole(userId);
-  if (currentRole === 'admin') return;
+  if (currentRole !== 'admin') {
+    await setUserRole(userId, 'admin');
+    await writeAuditLog({
+      actorUserId: null,
+      targetUserId: userId,
+      action: 'ADMIN_BOOTSTRAP_GRANTED',
+      afterState: { email: normalized, role: 'admin' },
+      reason: 'Automatic bootstrap grant on first login',
+    });
+    logInfo(`[entitlement] Admin bootstrap granted to ${normalized}`);
+  }
 
-  await setUserRole(userId, 'admin');
-  await writeAuditLog({
-    actorUserId: null,
-    targetUserId: userId,
-    action: 'ADMIN_BOOTSTRAP_GRANTED',
-    afterState: { email: normalized, role: 'admin' },
-    reason: 'Automatic bootstrap grant on first login',
-  });
-  logInfo(`[entitlement] Admin bootstrap granted to ${normalized}`);
+  const currentTier = await getCurrentUserTier(userId);
+  if (currentTier?.tierKey !== ADMIN_DEFAULT_TIER) {
+    await setUserTier(userId, ADMIN_DEFAULT_TIER, 'system', null, 'Admin users are automatically assigned Pro tier');
+  }
 };
 
 /**

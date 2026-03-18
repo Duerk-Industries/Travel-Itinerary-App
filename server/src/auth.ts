@@ -7,6 +7,7 @@ import { getEnvValue } from './env';
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import crypto from 'crypto';
+import { getSeededTierForEmail } from './services/entitlementService';
 
 const secret = getEnvValue('AUTH_SECRET', { defaultValue: 'development-secret' })!;
 
@@ -117,7 +118,7 @@ export const handleLogin = async (
   provider: User['provider']
 ): Promise<{ token: string; user: User }> => {
   const user = await findOrCreateUser(email, provider);
-  await ensureCurrentUserTier(user.id, 'free');
+  await ensureCurrentUserTier(user.id, getSeededTierForEmail(user.email));
   const role = await getUserRole(user.id);
   const token = createToken({ userId: user.id, email: user.email, provider: user.provider, role });
   return { token, user };
