@@ -11,6 +11,7 @@ import {
 import { TokenPayload } from '../auth';
 import { logError } from '../logger';
 import { getApiLimitsConfig } from '../config/apiLimits';
+import { getFeatureFlagSeeds } from '../config/featureFlags';
 import { getApiUsageSummary } from '../apis/usageLimiter';
 
 // Admin routes — all guarded by authenticate + requireAdmin in app.ts
@@ -28,9 +29,40 @@ const requireReason = (reason: unknown): string | null => {
 // Feature flags
 // ---------------------------------------------------------------------------
 
+const listAdminFeatureFlags = async () => {
+  const storedFlags = await listFeatureFlags();
+  const seeds = getFeatureFlagSeeds();
+  const now = new Date().toISOString();
+  const mergedByKey = new Map(
+    storedFlags.map((flag) => [
+      flag.key,
+      {
+        ...flag,
+        description: seeds[flag.key]?.description ?? null,
+      },
+    ])
+  );
+
+  for (const [key, seed] of Object.entries(seeds)) {
+    if (mergedByKey.has(key)) continue;
+    mergedByKey.set(key, {
+      id: key,
+      key,
+      enabled: seed.enabled,
+      scope: 'global' as const,
+      updatedBy: null,
+      updatedAt: now,
+      createdAt: now,
+      description: seed.description ?? null,
+    });
+  }
+
+  return [...mergedByKey.values()].sort((a, b) => a.key.localeCompare(b.key));
+};
+
 router.get('/features', async (_req, res) => {
   try {
-    const flags = await listFeatureFlags();
+    const flags = await listAdminFeatureFlags();
     res.json({ features: flags });
   } catch (err) {
     res.status(500).json({ error: 'Failed to list feature flags' });
@@ -51,7 +83,7 @@ router.patch('/features/:key/flag', async (req, res) => {
   }
   try {
     const actorId = getActorId(req);
-    const flags = await listFeatureFlags();
+    const flags = await listAdminFeatureFlags();
     const existing = flags.find(f => f.key === key);
     if (!existing) {
       res.status(404).json({ error: `Feature flag not found: ${key}` });

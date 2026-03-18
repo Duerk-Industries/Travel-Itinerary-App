@@ -4300,16 +4300,18 @@ export const getFeatureFlag = async (key: string): Promise<FeatureFlag | null> =
 
 export const listFeatureFlags = async (): Promise<FeatureFlag[]> => {
   const db = getDb();
-  const snap = await db.collection('feature_flags').orderBy('key').get();
-  return snap.docs.map(d => {
-    const data = d.data();
-    return { id: d.id, key: d.id, enabled: data.enabled, scope: 'global' as const, updatedBy: data.updatedBy ?? null, updatedAt: data.updatedAt ?? nowIso(), createdAt: data.createdAt ?? nowIso() };
-  });
+  const snap = await db.collection('feature_flags').get();
+  return snap.docs
+    .map(d => {
+      const data = d.data();
+      return { id: d.id, key: d.id, enabled: data.enabled, scope: 'global' as const, updatedBy: data.updatedBy ?? null, updatedAt: data.updatedAt ?? nowIso(), createdAt: data.createdAt ?? nowIso() };
+    })
+    .sort((a, b) => a.key.localeCompare(b.key));
 };
 
 export const setFeatureFlag = async (key: string, enabled: boolean, updatedBy: string | null): Promise<void> => {
   const db = getDb();
-  await db.collection('feature_flags').doc(key).set({ enabled, updatedBy, updatedAt: nowIso() }, { merge: true });
+  await db.collection('feature_flags').doc(key).set({ key, enabled, updatedBy, updatedAt: nowIso() }, { merge: true });
 };
 
 export const getUsageCounter = async (userId: string, metricKey: string, windowKey: string): Promise<number> => {

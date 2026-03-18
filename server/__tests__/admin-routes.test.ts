@@ -326,7 +326,7 @@ describe('Admin routes', () => {
   // ---------------------------------------------------------------------------
 
   describe('GET /api/admin/features', () => {
-    it('returns a feature flags list', async () => {
+    it('returns the configured feature flag catalog with descriptions', async () => {
       const res = await request(app)
         .get('/api/admin/features')
         .set('Authorization', `Bearer ${adminToken}`)
@@ -334,6 +334,19 @@ describe('Admin routes', () => {
 
       expect(res.body).toHaveProperty('features');
       expect(Array.isArray(res.body.features)).toBe(true);
+      expect(res.body.features.length).toBeGreaterThan(0);
+      expect(res.body.features).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            key: 'feature_ingest_manual_upload',
+            description: expect.any(String),
+          }),
+          expect.objectContaining({
+            key: 'ai_itinerary_generation',
+            description: expect.any(String),
+          }),
+        ])
+      );
     });
   });
 
