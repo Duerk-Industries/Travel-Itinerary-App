@@ -8,14 +8,15 @@ import {
   fetchUnsplashImageForLocation,
 } from './apis/unsplashCallers';
 
-const storage = new Storage();
 const bucketName = process.env.LOCATION_BUCKET || 'duerk-travel-itinerary-app-location-data';
-const bucket = storage.bucket(bucketName);
 const CACHE_TTL_MS =
   Number(getApiCacheSetting('images', 'cacheTtlMs')) ||
   Number(process.env.IMAGE_CACHE_TTL_MS) ||
   1000 * 60 * 60 * 24 * 7;
 const SIGNED_URL_TTL_MS = Number(getApiCacheSetting('images', 'signedUrlTtlMs')) || 1000 * 60 * 60;
+let storage: Storage | null = null;
+let imageCacheDisabledReason: string | null = null;
+let imageCacheDisableLogged = false;
 
 function sanitizeFilename(name: string): string {
   return name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
@@ -70,7 +71,26 @@ const getUnsplashAccessKeyOrThrow = (): string => {
   return accessKey;
 };
 
+const isMissingDefaultCredentialsError = (error: unknown): boolean =>
+  String(error instanceof Error ? error.message : error ?? '').includes('Could not load the default credentials');
+
+const disableImageCache = (reason: string) => {
+  imageCacheDisabledReason = reason;
+  if (!imageCacheDisableLogged) {
+    console.warn(`Image cache disabled: ${reason}`);
+    imageCacheDisableLogged = true;
+  }
+};
+
+const getBucket = () => {
+  if (imageCacheDisabledReason) return null;
+  storage ??= new Storage();
+  return storage.bucket(bucketName);
+};
+
 async function getCachedImageUrl(filepath: string): Promise<string | null> {
+  const bucket = getBucket();
+  if (!bucket) return null;
   try {
     const file = bucket.file(filepath);
     const [exists] = await file.exists();
@@ -88,12 +108,18 @@ async function getCachedImageUrl(filepath: string): Promise<string | null> {
     });
     return url;
   } catch (error) {
+    if (isMissingDefaultCredentialsError(error)) {
+      disableImageCache('Google Cloud default credentials are unavailable in this environment');
+      return null;
+    }
     console.error('Error checking cache:', error);
     return null;
   }
 }
 
 async function cacheImage(filepath: string, imageUrl: string): Promise<string> {
+  const bucket = getBucket();
+  if (!bucket) return imageUrl;
   try {
     const file = bucket.file(filepath);
     const response = await axios({
@@ -121,6 +147,10 @@ async function cacheImage(filepath: string, imageUrl: string): Promise<string> {
     });
     return url;
   } catch (error) {
+    if (isMissingDefaultCredentialsError(error)) {
+      disableImageCache('Google Cloud default credentials are unavailable in this environment');
+      return imageUrl;
+    }
     console.error('Error caching image:', error);
     return imageUrl;
   }
