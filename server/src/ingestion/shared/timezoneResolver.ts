@@ -141,6 +141,11 @@ const IATA_TO_TIMEZONE: Record<string, string> = {
   CGK: 'Asia/Jakarta',
   SGN: 'Asia/Ho_Chi_Minh',
   HAN: 'Asia/Ho_Chi_Minh',
+  LPQ: 'Asia/Vientiane',
+  VTE: 'Asia/Vientiane',
+  CNX: 'Asia/Bangkok',
+  DMK: 'Asia/Bangkok',
+  BKI: 'Asia/Kuala_Lumpur',
 
   // South America
   GRU: 'America/Sao_Paulo',
@@ -284,6 +289,44 @@ export const resolveTimezoneFromIata = (iataCode: string | null | undefined): st
   return IATA_TO_TIMEZONE[iataCode.toUpperCase().trim()] ?? null;
 };
 
+/**
+ * In-memory cache for DB-resolved airport city→timezone lookups.
+ * Avoids repeated queries for the same code within a single server lifetime.
+ */
+const dbIataCache = new Map<string, string | null>();
+
+/**
+ * Async IATA resolver: checks hardcoded map first, then queries the airports
+ * table for the city name and resolves timezone from that.
+ */
+export const resolveTimezoneFromIataAsync = async (iataCode: string | null | undefined): Promise<string | null> => {
+  if (!iataCode) return null;
+  const code = iataCode.toUpperCase().trim();
+
+  // 1. Hardcoded map (fast path)
+  const hardcoded = IATA_TO_TIMEZONE[code];
+  if (hardcoded) return hardcoded;
+
+  // 2. In-memory cache from prior DB lookups
+  if (dbIataCache.has(code)) return dbIataCache.get(code) ?? null;
+
+  // 3. Query airports table for city, then resolve city→timezone
+  try {
+    const { getAirportByIataCode } = await import('../../db');
+    const airport = await getAirportByIataCode(code);
+    if (airport?.city) {
+      const tz = resolveTimezoneFromCity(airport.city);
+      dbIataCache.set(code, tz);
+      return tz;
+    }
+  } catch {
+    // DB not available (tests, startup race) — fall through silently
+  }
+
+  dbIataCache.set(code, null);
+  return null;
+};
+
 export const resolveTimezoneFromCity = (city: string | null | undefined): string | null => {
   if (!city) return null;
   checkBundleAge();
@@ -299,7 +342,7 @@ export const resolveTimezoneFromCity = (city: string | null | undefined): string
  * 3. For hotels/lodging: infer from property city or country.
  * 4. If inference fails: store timezone_status = UNKNOWN.
  */
-export const resolveTimezone = (params: {
+export const resolveTimezone = async (params: {
   itemType: string;
   explicitTimezone?: string | null;
   departureCode?: string | null;
@@ -308,10 +351,10 @@ export const resolveTimezone = (params: {
   arrivalCity?: string | null;
   propertyCity?: string | null;
   locationText?: string | null;
-}): {
+}): Promise<{
   departureTimezone: TimezoneResolution;
   arrivalTimezone: TimezoneResolution | null;
-} => {
+}> => {
   // Priority 1: explicit IANA timezone from source document
   if (params.explicitTimezone && isValidIanaTimezone(params.explicitTimezone)) {
     const resolved: TimezoneResolution = {
@@ -327,9 +370,9 @@ export const resolveTimezone = (params: {
   const isLodging = params.itemType === 'hotel';
 
   if (isTransfer) {
-    // Priority 2: infer from IATA codes
-    const depTz = resolveTimezoneFromIata(params.departureCode) ?? resolveTimezoneFromCity(params.departureCity);
-    const arrTz = resolveTimezoneFromIata(params.arrivalCode) ?? resolveTimezoneFromCity(params.arrivalCity);
+    // Priority 2: infer from IATA codes (hardcoded map → airports DB → city name)
+    const depTz = await resolveTimezoneFromIataAsync(params.departureCode) ?? resolveTimezoneFromCity(params.departureCity);
+    const arrTz = await resolveTimezoneFromIataAsync(params.arrivalCode) ?? resolveTimezoneFromCity(params.arrivalCity);
     return {
       departureTimezone: depTz
         ? { timezone: depTz, timezoneStatus: 'INFERRED', displayHint: 'item-local' }

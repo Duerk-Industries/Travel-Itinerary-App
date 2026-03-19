@@ -25,6 +25,7 @@ type ImportJob = {
   originalFilename: string;
   createdAt: string;
   failureCode?: string | null;
+  failureReason?: string | null;
 };
 
 type ConfigResponse = {
@@ -77,6 +78,8 @@ const prettyDate = (value?: string | null): string => {
   return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString();
 };
 
+const ACTIVE_JOB_STATES = new Set(['PENDING', 'RECEIVED', 'NORMALIZING', 'NORMALIZED', 'EXTRACTING', 'AWAITING_REVIEW']);
+
 const openFilePicker = async (): Promise<File[]> => {
   if (Platform.OS !== 'web' || typeof document === 'undefined') return [];
   return new Promise((resolve) => {
@@ -97,6 +100,7 @@ const IngestionTab: React.FC<IngestionTabProps> = ({ backendUrl, headers, styles
   const [selectedItem, setSelectedItem] = useState<ReviewItem | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const lastTapRef = React.useRef<{ id: string; time: number }>({ id: '', time: 0 });
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [sourceFilter, setSourceFilter] = useState('ALL');
@@ -114,6 +118,7 @@ const IngestionTab: React.FC<IngestionTabProps> = ({ backendUrl, headers, styles
     mimeType?: string | null;
     originalFilename?: string | null;
   }>(null);
+  const [signedDocumentUrl, setSignedDocumentUrl] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -153,8 +158,18 @@ const IngestionTab: React.FC<IngestionTabProps> = ({ backendUrl, headers, styles
   };
 
   useEffect(() => {
-    load();
+    void load();
   }, []);
+
+  useEffect(() => {
+    if (!jobs.some((job) => ACTIVE_JOB_STATES.has(job.state))) {
+      return;
+    }
+    const intervalId = setInterval(() => {
+      void load();
+    }, 3000);
+    return () => clearInterval(intervalId);
+  }, [jobs]);
 
   const filteredItems = useMemo(() => {
     const minConf = confidenceFilter ? Number(confidenceFilter) : null;
@@ -180,11 +195,22 @@ const IngestionTab: React.FC<IngestionTabProps> = ({ backendUrl, headers, styles
     setEditConfirmation(String(item.editedFields?.confirmationNumber ?? item.confirmationNumber ?? ''));
     setEditNotes(String(item.editedFields?.notes ?? item.extractedFields?.notes ?? item.extractedFields?.summary ?? ''));
     setAssignTripId('');
+    setSignedDocumentUrl(null);
     const response = await fetch(`${backendUrl}/api/ingestion/review-items/${item.id}`, {
       headers,
     });
     const body = await response.json().catch(() => ({}));
     setSelectedDocumentSummary((body as any).documentSummary ?? null);
+    setSignedDocumentUrl((body as any).signedDocument ?? null);
+  };
+
+  const openDocument = () => {
+    if (!signedDocumentUrl) return;
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.open(signedDocumentUrl, '_blank');
+    } else {
+      Linking.openURL(signedDocumentUrl).catch(() => {});
+    }
   };
 
   const saveEdits = async () => {
@@ -336,6 +362,9 @@ const IngestionTab: React.FC<IngestionTabProps> = ({ backendUrl, headers, styles
           ? 'Premium or Pro is required to upload and review imported travel items.'
           : `Plan: ${config.tierKey}. Upload quota: ${config.quotas.monthlyUploads} per month. Gmail lookback: ${config.quotas.gmailLookbackDays} days.`}
       </Text>
+      {jobs.some((job) => ACTIVE_JOB_STATES.has(job.state)) ? (
+        <Text style={styles.helperText}>Auto-refreshing while uploads process so pending jobs do not appear stuck.</Text>
+      ) : null}
       <View style={styles.row}>
         <TextInput style={[styles.input, { flex: 1, minWidth: 220 }]} value={search} onChangeText={setSearch} placeholder="Search provider or confirmation" />
         <TouchableOpacity style={styles.button} onPress={load}>
@@ -414,7 +443,27 @@ const IngestionTab: React.FC<IngestionTabProps> = ({ backendUrl, headers, styles
         <Text style={styles.sectionTitle}>Queued Items</Text>
         {filteredItems.length === 0 ? <Text style={styles.helperText}>No items are waiting in review.</Text> : null}
         {filteredItems.map((item) => (
-          <TouchableOpacity key={item.id} style={styles.flightRow} onPress={() => beginEdit(item)}>
+          <TouchableOpacity key={item.id} style={styles.flightRow} onPress={() => {
+            const now = Date.now();
+            const last = lastTapRef.current;
+            if (last.id === item.id && now - last.time < 400) {
+              // Double tap — fetch signed URL and open the original document
+              lastTapRef.current = { id: '', time: 0 };
+              fetch(`${backendUrl}/api/ingestion/review-items/${item.id}`, { headers })
+                .then((r) => r.json())
+                .then((body: any) => {
+                  const url = body?.signedDocument;
+                  if (url) {
+                    if (Platform.OS === 'web' && typeof window !== 'undefined') window.open(url, '_blank');
+                    else Linking.openURL(url).catch(() => {});
+                  }
+                })
+                .catch(() => {});
+              return;
+            }
+            lastTapRef.current = { id: item.id, time: now };
+            beginEdit(item);
+          }}>
             <Text style={styles.flightTitle}>
               {item.itemType} • {item.providerVendor || 'Unknown provider'}
             </Text>
@@ -441,6 +490,7 @@ const IngestionTab: React.FC<IngestionTabProps> = ({ backendUrl, headers, styles
             <Text style={styles.flightTitle}>{job.originalFilename}</Text>
             <Text style={styles.helperText}>{job.state} • {prettyDate(job.createdAt)}</Text>
             {job.failureCode ? <Text style={styles.warningText}>{job.failureCode}</Text> : null}
+            {job.failureReason ? <Text style={styles.helperText}>{job.failureReason}</Text> : null}
           </View>
         ))}
       </View>
@@ -487,6 +537,11 @@ const IngestionTab: React.FC<IngestionTabProps> = ({ backendUrl, headers, styles
                 )}
               </ScrollView>
               <View style={styles.row}>
+                {signedDocumentUrl ? (
+                  <TouchableOpacity style={styles.button} onPress={openDocument}>
+                    <Text style={styles.buttonText}>View Document</Text>
+                  </TouchableOpacity>
+                ) : null}
                 <TouchableOpacity style={styles.button} onPress={saveEdits}>
                   <Text style={styles.buttonText}>Save Edits</Text>
                 </TouchableOpacity>
@@ -501,6 +556,7 @@ const IngestionTab: React.FC<IngestionTabProps> = ({ backendUrl, headers, styles
                   onPress={() => {
                     setSelectedItem(null);
                     setSelectedDocumentSummary(null);
+                    setSignedDocumentUrl(null);
                   }}
                 >
                   <Text style={styles.buttonText}>Close</Text>

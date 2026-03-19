@@ -10,6 +10,7 @@ const setMemoryEnv = () => {
 
 describe('ingestion normalization golden fixtures', () => {
   const fixturePath = (...parts: string[]) => path.resolve(__dirname, '..', '..', 'tests', 'fixtures', 'golden', ...parts);
+  const repoInputPath = (...parts: string[]) => path.resolve(__dirname, '..', '..', 'test_inputs', ...parts);
 
   beforeEach(async () => {
     jest.resetModules();
@@ -72,6 +73,60 @@ describe('ingestion normalization golden fixtures', () => {
         virusScanStatus: 'SKIPPED',
       });
       expect(normalized.normalizedText).toBe(expectedText);
+    } finally {
+      await deleteTempBytes(ref);
+    }
+  });
+
+  it('extracts real text from Hotel_1.pdf instead of raw PDF bytes', async () => {
+    const { findOrCreateUser } = await import('../src/db');
+    const { writeTempBytes, deleteTempBytes } = await import('../src/ingestion/shared/tempStorage');
+    const { normalizeIngestionPayload } = await import('../src/ingestion/normalization');
+    const { createImportJob, getOrCreateIngestionSource } = await import('../src/ingestion/shared/repository');
+    const file = repoInputPath('lodging', 'Hotel_1.pdf');
+    const bytes = fs.readFileSync(file);
+    const ref = await writeTempBytes(path.basename(file), bytes);
+    try {
+      const user = await findOrCreateUser('hotel-fixture@example.com', 'email');
+      const userId = user.id;
+      const sourceType = 'MANUAL_UPLOAD';
+      const ingestionSourceId = await getOrCreateIngestionSource(userId, sourceType);
+      const job = await createImportJob({
+        userId,
+        ingestionSourceId,
+        sourceType,
+        idempotencyKey: 'hotel-1-test',
+        contentHash: 'hash-hotel-1',
+        externalMessageId: 'manual:test',
+        originalFilename: path.basename(file),
+        mimeType: 'application/pdf',
+        correlationId: 'corr-hotel-1',
+        dryRun: false,
+      });
+
+      const normalized = await normalizeIngestionPayload(job.id, {
+        sourceType: 'MANUAL_UPLOAD',
+        sourceId: ingestionSourceId,
+        userId,
+        externalMessageId: 'manual:test',
+        receivedAt: '2026-03-17T12:00:00.000Z',
+        originalFilename: path.basename(file),
+        mimeType: 'application/pdf',
+        contentBytesRef: ref,
+        contentHash: 'hash-hotel-1',
+        metadata: {},
+        correlationId: 'corr-hotel-1',
+        dryRun: false,
+        virusScanStatus: 'SKIPPED',
+      });
+
+      expect(normalized.extractedTextSource).toBe('pdf');
+      expect(normalized.normalizationQuality).toBe('STRUCTURAL_EXTRACT');
+      expect(normalized.normalizedText).toContain('Booking.com');
+      expect(normalized.normalizedText).toContain('Chic stay HANA Boutique hotel');
+      expect(normalized.normalizedText).toContain('Sunday, November 30, 2025');
+      expect(normalized.normalizedText).toContain('Wednesday, December 3, 2025');
+      expect(normalized.normalizedText).not.toContain('%PDF-1.7');
     } finally {
       await deleteTempBytes(ref);
     }

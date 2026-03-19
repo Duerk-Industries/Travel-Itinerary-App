@@ -8,6 +8,8 @@ export const INGESTION_JOB_TOKEN_BUDGET_USD = 0.1;
 export const INGESTION_CONFIDENCE_HIGH = 0.9;
 export const INGESTION_CONFIDENCE_REVIEW_READY = 0.7;
 export const INGESTION_OCR_MIN_CHAR_COUNT = 50;
+/** Firestore single-field limit is 1,048,487 bytes; leave headroom for encoding overhead. */
+export const INGESTION_MAX_NORMALIZED_TEXT_BYTES = 1_000_000;
 export const INGESTION_DEFAULT_FORWARDING_ADDRESS = 'travel.docs@duerk.org';
 export const INGESTION_DEFAULT_FORWARDING_PROVIDER = 'mailgun';
 export const INGESTION_FORWARDING_SETTINGS_COPY =

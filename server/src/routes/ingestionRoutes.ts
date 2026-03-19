@@ -12,7 +12,7 @@ import { listReviewQueueItems, listImportJobsForUser, getReviewQueueSignedUrl, g
 import { assertAndConsumeMonthlyQuota, getTierIngestionRules } from '../ingestion/shared/quota';
 import { IngestionError } from '../ingestion/shared/userFailures';
 import { getEnvValue } from '../env';
-import { logError } from '../logger';
+import { logError, logInfo } from '../logger';
 
 const router = Router();
 router.use(bodyParser.json({ limit: '2mb' }));
@@ -219,10 +219,16 @@ router.post('/upload', manualUploadMiddleware.array('files', 10), async (req, re
       limit: tierAccess.rules.monthlyUploads,
     });
     const payloads = await buildManualUploadPayloads(req, user.userId);
+    logInfo(
+      `[ingestion][upload] received manual upload user=${user.userId} tier=${tierAccess.tierKey} files=${payloads.length} filenames=${payloads
+        .map((payload) => `"${payload.originalFilename}"`)
+        .join(',')}`
+    );
     const jobs = [];
     for (const payload of payloads) {
       jobs.push(await enqueueIngestionPipelineJob(payload, tierAccess.rules.llmEscalations === 'LARGE_ALLOWED', tierAccess.rules.llmEscalations !== 'NONE'));
     }
+    logInfo(`[ingestion][upload] queued manual upload user=${user.userId} jobs=${jobs.map((job) => job.id).join(',')}`);
     res.status(202).json({ jobs });
   } catch (error) {
     if (error instanceof IngestionError) {

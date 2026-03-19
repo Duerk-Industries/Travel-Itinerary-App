@@ -2525,6 +2525,14 @@ export const shareFlight = async (flightId: string, sharedEmail: string): Promis
   await db.collection('flight_shares').doc(randomUUID()).set({ flightId, userId: user.id, createdAt: nowIso() });
 };
 
+export const getAirportByIataCode = async (iataCode: string): Promise<{ iataCode: string; name: string; city: string; country: string; lat: number | null; lng: number | null } | null> => {
+  const db = getDb();
+  const doc = await db.collection('airports').doc(iataCode.toUpperCase()).get().catch(() => null);
+  if (!doc || !doc.exists) return null;
+  const data = doc.data() as any;
+  return { iataCode: doc.id, name: data.name ?? '', city: data.city ?? '', country: data.country ?? '', lat: data.lat ?? null, lng: data.lng ?? null };
+};
+
 export const searchFlightLocations = async (_userId: string, query: string): Promise<string[]> => {
   const db = getDb();
   const normalized = query.trim().toLowerCase();

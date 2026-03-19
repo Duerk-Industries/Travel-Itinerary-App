@@ -83,9 +83,9 @@ This file records conservative assumptions and known rollout gaps for the ingest
 - The `STRUCTURAL_EXTRACT` quality level is set when byte decode looks text-like, but true structural extraction is not yet implemented.
 
 ### Production OCR
-- Image OCR currently falls back to byte decoding with a minimum character count check.
-- A production OCR provider (Google Cloud Vision, AWS Textract, or Tesseract) must be integrated before Phase 2.
-- OCR should only be invoked when text extraction returns fewer than the configured minimum character count (default: 50).
+- Image normalization now attempts OCR with Tesseract before any byte-decode fallback.
+- Byte decoding remains only as a low-quality fallback path for malformed fixtures or OCR initialization/runtime failures.
+- If OCR quality or throughput becomes insufficient at higher volume, a managed OCR provider (Google Cloud Vision or AWS Textract) may still be warranted.
 
 ### No automatic trip creation
 - The system does not automatically create trips from imported items. Users must create a trip first, then assign parsed items to it. This is intentional for the initial version.

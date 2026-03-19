@@ -4,6 +4,7 @@ import { getEnvValue } from '../env';
 import { processImportJob } from '../ingestion/orchestrator';
 import { getRetryPolicyConfig, listDeadLetterImportJobs } from '../ingestion/shared/repository';
 import { requeueDeadLetterImportJob } from '../ingestion/orchestrator';
+import { logError, logInfo } from '../logger';
 
 const router = Router();
 router.use(bodyParser.json({ limit: '1mb' }));
@@ -11,11 +12,13 @@ router.use(bodyParser.json({ limit: '1mb' }));
 const authenticateWorker = (req: any, res: any, next: any) => {
   const configured = getEnvValue('INGESTION_WORKER_SHARED_SECRET');
   if (!configured) {
+    logError('[ingestion][worker] rejected request because worker secret is not configured');
     res.status(503).json({ error: 'Worker secret not configured.' });
     return;
   }
   const provided = String(req.header('X-Ingestion-Worker-Secret') ?? '');
   if (!provided || provided !== configured) {
+    logError(`[ingestion][worker] rejected request job=${String(req.params?.jobId ?? 'unknown')} due to invalid shared secret`);
     res.status(403).json({ error: 'Forbidden.' });
     return;
   }
@@ -30,9 +33,12 @@ const calculateRetryDelayMs = (retryCount: number, baseDelaySeconds: number, max
 
 router.post('/jobs/:jobId/run', authenticateWorker, async (req, res) => {
   try {
+    logInfo(`[ingestion][worker] starting job=${req.params.jobId}`);
     const job = await processImportJob(req.params.jobId);
+    logInfo(`[ingestion][worker] finished job=${job.id} state=${job.state}`);
     res.status(202).json({ accepted: true, jobId: job.id, state: job.state });
   } catch (error) {
+    logError(`[ingestion][worker] failed job=${req.params.jobId}`, error);
     res.status(500).json({ error: 'Worker failed to process import job.' });
   }
 });

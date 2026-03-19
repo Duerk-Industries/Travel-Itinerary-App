@@ -213,6 +213,8 @@ export const rejectGroupInvite = async (...args: Parameters<ReturnType<typeof ad
   adapter().rejectGroupInvite(...args);
 export const claimInvitesForUser = async (...args: Parameters<ReturnType<typeof adapter>['claimInvitesForUser']>) =>
   adapter().claimInvitesForUser(...args);
+export const getAirportByIataCode = async (...args: Parameters<ReturnType<typeof adapter>['getAirportByIataCode']>) =>
+  adapter().getAirportByIataCode(...args);
 export const searchFlightLocations = async (...args: Parameters<ReturnType<typeof adapter>['searchFlightLocations']>) =>
   adapter().searchFlightLocations(...args);
 export const searchLocations = async (...args: Parameters<ReturnType<typeof adapter>['searchLocations']>): Promise<LocationRecord[]> =>

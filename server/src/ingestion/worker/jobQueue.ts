@@ -1,5 +1,5 @@
 import { getEnvValue } from '../../env';
-import { logError } from '../../logger';
+import { logError, logInfo } from '../../logger';
 import { INGESTION_JOB_QUEUE_MODE_DEFAULT } from '../config';
 
 export interface JobQueue {
@@ -8,6 +8,7 @@ export interface JobQueue {
 
 class InProcessJobQueue implements JobQueue {
   async enqueue(jobId: string): Promise<void> {
+    logInfo(`[ingestion][queue] dispatching in-process job=${jobId}`);
     setTimeout(() => {
       void import('../orchestrator')
         .then(({ processImportJob }) => processImportJob(jobId))
@@ -26,6 +27,7 @@ class CloudRunJobQueue implements JobQueue {
       throw new Error('INGESTION_WORKER_BASE_URL or WEB_URL must be configured for cloud job queue mode.');
     }
     const url = new URL(`/api/internal/ingestion/jobs/${jobId}/run`, baseUrl).toString();
+    logInfo(`[ingestion][queue] dispatching cloud-run job=${jobId} url=${url}`);
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -37,6 +39,7 @@ class CloudRunJobQueue implements JobQueue {
     if (!response.ok) {
       throw new Error(`Cloud worker enqueue failed with HTTP ${response.status}`);
     }
+    logInfo(`[ingestion][queue] accepted cloud-run job=${jobId} status=${response.status}`);
   }
 }
 
@@ -49,6 +52,7 @@ export const getJobQueue = (): JobQueue => {
   }) || 'in_process')
     .trim()
     .toLowerCase();
+  logInfo(`[ingestion][queue] initializing mode=${mode}`);
   cachedQueue = mode === 'in_process' ? new InProcessJobQueue() : new CloudRunJobQueue();
   return cachedQueue;
 };

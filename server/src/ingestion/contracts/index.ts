@@ -50,7 +50,7 @@ export type TimezoneStatus = 'RESOLVED' | 'INFERRED' | 'UNKNOWN';
 
 export type DuplicateDisposition = 'ACTIVE_MATCH' | 'ASSIGNED_MATCH' | 'PREVIOUSLY_DELETED';
 
-export type ParseAttemptStage = 'REGEX' | 'SMALL_LLM' | 'LARGE_LLM' | 'OCR' | 'CACHE';
+export type ParseAttemptStage = 'SOURCE_SPECIFIC' | 'REGEX' | 'SMALL_LLM' | 'LARGE_LLM' | 'OCR' | 'CACHE';
 
 export interface IngestionPayload {
   sourceType: IngestionSourceType;

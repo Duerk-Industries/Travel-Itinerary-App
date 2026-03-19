@@ -6025,6 +6025,16 @@ export const claimInvitesForUser = async (email: string, userId: string): Promis
   );
 };
 
+export const getAirportByIataCode = async (iataCode: string): Promise<{ iataCode: string; name: string; city: string; country: string; lat: number | null; lng: number | null } | null> => {
+  const p = getPool();
+  const { rows } = await p.query<any>(
+    `SELECT iata_code, name, city, country, lat, lng FROM airports WHERE iata_code = $1 LIMIT 1`,
+    [iataCode.toUpperCase()]
+  );
+  if (!rows.length) return null;
+  return { iataCode: rows[0].iata_code, name: rows[0].name, city: rows[0].city ?? '', country: rows[0].country ?? '', lat: rows[0].lat, lng: rows[0].lng };
+};
+
 export const searchFlightLocations = async (userId: string, query: string): Promise<string[]> => {
   const p = getPool();
   const like = `%${query.toLowerCase()}%`;

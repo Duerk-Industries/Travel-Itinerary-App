@@ -143,4 +143,218 @@ describe('ingestion pipeline internals', () => {
     const items = await listReviewQueueItems(DEAD_LETTER_USER_ID);
     expect(items).toHaveLength(0);
   });
+
+  it('falls back from source-specific and generic parsing to the LLM on low confidence and logs it', async () => {
+    const logInfo = jest.fn();
+    jest.doMock('../src/logger', () => ({
+      logInfo,
+      logError: jest.fn(),
+    }));
+    jest.doMock('../src/ingestion/shared/repository', () => ({
+      getExtractionCacheEntry: jest.fn().mockResolvedValue(null),
+      recordParseAttempt: jest.fn().mockResolvedValue(undefined),
+      recordUsageMetering: jest.fn().mockResolvedValue(undefined),
+      saveExtractionCacheEntry: jest.fn().mockResolvedValue(undefined),
+    }));
+
+    const { extractCandidates } = await import('../src/ingestion/extraction');
+
+    const doc = {
+      importJobId: '11111111-1111-4111-8111-111111111111',
+      userId: USER_ID,
+      sourceType: 'MANUAL_UPLOAD' as const,
+      sourceId: 'source-1',
+      originalFilename: 'booking-email.txt',
+      mimeType: 'text/plain',
+      contentHash: 'raw-hash',
+      normalizedContentHash: 'content-hash-low-confidence',
+      normalizedText: 'Booking.com booking is confirmed',
+      normalizedHtml: null,
+      extractedTextSource: 'text' as const,
+      normalizationQuality: 'FULL_TEXT' as const,
+      rawSourceReference: 'manual:test',
+      metadata: { fromAddress: 'noreply@booking.com' },
+      receivedAt: '2026-03-19T00:00:00.000Z',
+      correlationId: 'corr-low-confidence',
+    };
+
+    const makeResult = (strategyName: string, confidence: number): ExtractionResult => ({
+      parsedItems: [
+        {
+          itemType: 'hotel',
+          sourceType: 'MANUAL_UPLOAD',
+          sourceDate: '2026-03-19T00:00:00.000Z',
+          providerVendor: 'Booking.com',
+          travelerNames: ['Bryan Duerk'],
+          confirmationNumber: 'ABC123',
+          startDateTimeUtc: '2026-05-01T12:00:00.000Z',
+          endDateTimeUtc: '2026-05-03T12:00:00.000Z',
+          originalTimezone: null,
+          timezoneStatus: 'UNKNOWN',
+          rawDatetimeString: '2026-05-01',
+          timezoneDisplayHint: 'timezone unknown',
+          rawSourceReference: 'manual:test',
+          confidenceScore: confidence,
+          reviewStatus: confidence >= 0.7 ? 'READY_FOR_REVIEW' : 'LOW_CONFIDENCE',
+          deduplicationFingerprint: `${strategyName}-${confidence}`,
+          extractedFields: { name: 'Grand Hotel' },
+          editedFields: null,
+        },
+      ],
+      usageMetrics: {
+        tokensIn: strategyName === 'LlmExtractor' ? 10 : 0,
+        tokensOut: strategyName === 'LlmExtractor' ? 5 : 0,
+        provider: strategyName === 'LlmExtractor' ? 'llm' : 'regex',
+        modelName: strategyName === 'LlmExtractor' ? 'gpt-4o-mini' : null,
+        estimatedCostUsd: strategyName === 'LlmExtractor' ? 0.01 : 0,
+      },
+      metadata: {
+        logicVersion: 'v-fallback',
+        extractedAt: '2026-03-19T00:00:00.000Z',
+        strategyName,
+      },
+    });
+
+    const strategies = [
+      {
+        strategyName: 'SourceSpecificExtractor',
+        minConfidenceToSkipNext: 0.7,
+        canHandle: () => true,
+        extract: async () => makeResult('SourceSpecificExtractor', 0.55),
+      },
+      {
+        strategyName: 'RegexExtractor',
+        minConfidenceToSkipNext: 0.7,
+        canHandle: () => true,
+        extract: async () => makeResult('RegexExtractor', 0.6),
+      },
+      {
+        strategyName: 'LlmExtractor',
+        minConfidenceToSkipNext: 0.7,
+        canHandle: () => true,
+        extract: async () => makeResult('LlmExtractor', 0.91),
+      },
+    ];
+
+    const result = await extractCandidates(
+      doc,
+      {
+        allowLargeLlm: true,
+        allowSmallLlm: true,
+        contentHash: doc.normalizedContentHash,
+        userId: USER_ID,
+        importJobId: doc.importJobId,
+        correlationId: doc.correlationId,
+        logicVersion: 'v-fallback',
+      },
+      strategies as any
+    );
+
+    expect(result.metadata.strategyName).toBe('LlmExtractor');
+    expect(logInfo).toHaveBeenCalledWith(expect.stringContaining('low-confidence fallback to LLM'));
+  });
+
+  it('updates the learned source parser when the LLM handles a recognized source', async () => {
+    const logInfo = jest.fn();
+    const logError = jest.fn();
+    const upsertLearnedParser = jest.fn().mockResolvedValue(undefined);
+
+    jest.doMock('../src/logger', () => ({
+      logInfo,
+      logError,
+    }));
+    jest.doMock('../src/env', () => ({
+      isLocalEnv: () => true,
+      getEnvValue: (key: string) => (key === 'OPENAI_API_KEY' ? 'test-key' : undefined),
+    }));
+    jest.doMock('../src/apis/openaiApi', () => ({
+      postOpenAiChatCompletion: jest.fn().mockResolvedValue({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                itemType: 'hotel',
+                items: [
+                  {
+                    providerVendor: 'Booking.com',
+                    name: 'Grand Hotel',
+                    guestName: 'Bryan Duerk',
+                    address: '123 Main St',
+                    checkInDate: '2026-05-01',
+                    checkOutDate: '2026-05-03',
+                    confirmationNumber: 'ABC123',
+                  },
+                ],
+              }),
+            },
+          },
+        ],
+        usage: {
+          prompt_tokens: 100,
+          completion_tokens: 60,
+        },
+      }),
+    }));
+    jest.doMock('../src/ingestion/shared/repository', () => {
+      const actual = jest.requireActual('../src/ingestion/shared/repository');
+      return {
+        ...actual,
+        upsertLearnedParser,
+      };
+    });
+
+    const { LlmExtractor } = await import('../src/ingestion/extraction/llmExtractor');
+
+    const extractor = new LlmExtractor('LlmExtractor', 0.7, () => true);
+    const doc = {
+      importJobId: '22222222-2222-4222-8222-222222222222',
+      userId: USER_ID,
+      sourceType: 'MANUAL_UPLOAD' as const,
+      sourceId: 'source-1',
+      originalFilename: 'booking-email.txt',
+      mimeType: 'text/plain',
+      contentHash: 'raw-hash',
+      normalizedContentHash: 'content-hash-booking',
+      normalizedText: [
+        'Booking.com',
+        'booking is confirmed',
+        'Hotel Name: Grand Hotel',
+        'Guest name: Bryan Duerk',
+        'Address: 123 Main St',
+        'Check-in: 2026-05-01',
+        'Check-out: 2026-05-03',
+        'Confirmation number: ABC123',
+      ].join('\n'),
+      normalizedHtml: null,
+      extractedTextSource: 'text' as const,
+      normalizationQuality: 'FULL_TEXT' as const,
+      rawSourceReference: 'manual:test',
+      metadata: { fromAddress: 'noreply@booking.com' },
+      receivedAt: '2026-03-19T00:00:00.000Z',
+      correlationId: 'corr-learned-parser',
+    };
+
+    const result = await extractor.extract(doc, {
+      allowLargeLlm: true,
+      allowSmallLlm: true,
+      tokenBudgetUsd: 0.1,
+      contentHash: doc.normalizedContentHash,
+      userId: USER_ID,
+      importJobId: doc.importJobId,
+      correlationId: doc.correlationId,
+      logicVersion: 'v-learned-parser',
+    });
+
+    expect(result.parsedItems).toHaveLength(1);
+    expect(upsertLearnedParser).toHaveBeenCalledTimes(1);
+    expect(upsertLearnedParser).toHaveBeenCalledWith(
+      'booking.com',
+      'hotel',
+      expect.objectContaining({
+        guestName: expect.any(String),
+        checkInDate: expect.any(String),
+      }),
+      expect.any(Number)
+    );
+  });
 });

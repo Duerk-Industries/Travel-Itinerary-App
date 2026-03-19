@@ -21,6 +21,7 @@ import {
 } from './shared/repository';
 import { deleteTempBytes } from './shared/tempStorage';
 import { getJobQueue } from './worker/jobQueue';
+import { logError, logInfo } from '../logger';
 
 type PipelineOverrides = {
   extractFn?: typeof extractCandidates | ((
@@ -53,6 +54,9 @@ const ensureImportJob = async (
   const idempotencyKey = buildImportJobIdempotencyKey(payload);
   const existingJob = await getImportJobByIdempotencyKey(payload.userId, idempotencyKey);
   if (existingJob) {
+    logInfo(
+      `[ingestion][orchestrator] reusing existing job=${existingJob.id} state=${existingJob.state} source=${payload.sourceType} user=${payload.userId} file="${payload.originalFilename}"`
+    );
     return { job: existingJob, created: false };
   }
   const sourceId = await getOrCreateIngestionSource(payload.userId, payload.sourceType);
@@ -85,6 +89,9 @@ const ensureImportJob = async (
     virusScanStatus: payload.virusScanStatus,
     processorConfig,
   });
+  logInfo(
+    `[ingestion][orchestrator] created job=${job.id} source=${payload.sourceType} user=${payload.userId} file="${payload.originalFilename}" correlation=${payload.correlationId}`
+  );
   return { job, created: true };
 };
 
@@ -117,6 +124,9 @@ const processExistingImportJob = async (
   const processorConfig = payloadRecord.processorConfig;
 
   try {
+    logInfo(
+      `[ingestion][orchestrator] processing job=${job.id} state=${job.state} source=${payload.sourceType} user=${payload.userId} file="${payload.originalFilename}"`
+    );
     await updateImportJobState({ jobId: job.id, state: 'RECEIVED' });
     await updateImportJobState({ jobId: job.id, state: 'NORMALIZING' });
     const normalized = await normalizeIngestionPayload(job.id, payload);
@@ -128,6 +138,7 @@ const processExistingImportJob = async (
         normalizedContentHash: normalized.normalizedContentHash,
         failureCode: 'duplicate_document',
       });
+      logInfo(`[ingestion][orchestrator] duplicate job=${job.id} normalized_hash=${normalized.normalizedContentHash}`);
       await deleteTempBytes(payload.contentBytesRef);
       return (await getImportJobById(job.id)) ?? job;
     }
@@ -182,12 +193,17 @@ const processExistingImportJob = async (
       extractionResult: finalExtraction,
       logicVersion: processorConfig.logicVersion,
     });
+    logInfo(
+      `[ingestion][orchestrator] extracted job=${job.id} items=${finalExtraction.parsedItems.length} strategy=${finalExtraction.metadata.strategyName}`
+    );
     await updateImportJobState({ jobId: job.id, state: 'AWAITING_REVIEW' });
     await updateImportJobState({ jobId: job.id, state: 'COMPLETED' });
     await markIngestedDocumentRawDeleted(rawDoc.id);
     await deleteTempBytes(payload.contentBytesRef);
+    logInfo(`[ingestion][orchestrator] completed job=${job.id}`);
     return (await getImportJobById(job.id)) ?? job;
   } catch (error) {
+    logError(`[ingestion][orchestrator] failed job=${job.id}`, error);
     await updateImportJobState({
       jobId: job.id,
       state: String((error as Error).message).toLowerCase().includes('budget') ? 'DEAD_LETTERED' : 'FAILED',
@@ -231,9 +247,12 @@ export const enqueueIngestionPipelineJob = async (
     return job;
   }
   try {
+    logInfo(`[ingestion][orchestrator] enqueueing job=${job.id}`);
     await getJobQueue().enqueue(job.id);
+    logInfo(`[ingestion][orchestrator] enqueued job=${job.id}`);
     return (await getImportJobById(job.id)) ?? job;
   } catch (error) {
+    logError(`[ingestion][orchestrator] enqueue failed job=${job.id}`, error);
     await updateImportJobState({
       jobId: job.id,
       state: 'FAILED',
@@ -261,6 +280,7 @@ export const requeueDeadLetterImportJob = async (jobId: string): Promise<Persist
   if (!job) {
     throw new Error(`Import job not found: ${jobId}`);
   }
+  logInfo(`[ingestion][orchestrator] requeueing dead-lettered job=${job.id}`);
   await getJobQueue().enqueue(job.id);
   return job;
 };

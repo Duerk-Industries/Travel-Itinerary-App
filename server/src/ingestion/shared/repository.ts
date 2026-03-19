@@ -192,6 +192,9 @@ let firebaseApp: App | null = null;
 
 const nowIso = () => new Date().toISOString();
 
+const omitUndefinedFields = <T extends Record<string, unknown>>(value: T): T =>
+  Object.fromEntries(Object.entries(value).filter(([, fieldValue]) => typeof fieldValue !== 'undefined')) as T;
+
 const encryptionKey = (): Buffer => {
   const secret = getEnvValue('INGESTION_ENCRYPTION_SECRET', {
     defaultValue: getEnvValue('AUTH_SECRET', { defaultValue: 'development-secret' }) || 'development-secret',
@@ -585,6 +588,19 @@ const ensurePgSchema = async (): Promise<void> => {
       created_at TIMESTAMP NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
       UNIQUE (user_id, content_hash, logic_version)
+    );
+  `);
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS learned_source_parsers (
+      id UUID PRIMARY KEY,
+      source_key TEXT NOT NULL,
+      item_type TEXT NOT NULL,
+      field_patterns JSONB NOT NULL DEFAULT '{}'::jsonb,
+      sample_count INTEGER NOT NULL DEFAULT 1,
+      confidence_avg NUMERIC NOT NULL DEFAULT 0,
+      last_updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      UNIQUE (source_key, item_type)
     );
   `);
   await p.query(`
@@ -1270,7 +1286,7 @@ export const updateImportJobState = async (params: {
   await ensureIngestionRepositoryReady();
   if (getCurrentDbProvider() === 'firebase') {
     await getFirebaseDb().collection('import_jobs').doc(params.jobId).set(
-      {
+      omitUndefinedFields({
         state: params.state,
         normalizedContentHash: typeof params.normalizedContentHash === 'undefined' ? undefined : params.normalizedContentHash,
         failureCode: typeof params.failureCode === 'undefined' ? undefined : params.failureCode,
@@ -1282,7 +1298,7 @@ export const updateImportJobState = async (params: {
           ? nowIso()
           : undefined,
         completedAt: ['COMPLETED', 'FAILED', 'DEAD_LETTERED', 'DUPLICATE_IGNORED'].includes(params.state) ? nowIso() : undefined,
-      },
+      }),
       { merge: true }
     );
     return;
@@ -2588,4 +2604,109 @@ export const disconnectProviderConnections = async (userId: string, provider?: s
     return;
   }
   await getPg().query(`DELETE FROM provider_connections WHERE user_id = $1`, [userId]);
+};
+
+// ── Learned source parsers ──────────────────────────────────────────────────
+
+export interface LearnedParserRecord {
+  id: string;
+  sourceKey: string;
+  itemType: string;
+  fieldPatterns: Record<string, string>;
+  sampleCount: number;
+  confidenceAvg: number;
+  lastUpdatedAt: string;
+  createdAt: string;
+}
+
+export const getLearnedParser = async (sourceKey: string, itemType: string): Promise<LearnedParserRecord | null> => {
+  await ensureIngestionRepositoryReady();
+  if (getCurrentDbProvider() === 'firebase') {
+    const snap = await getFirebaseDb()
+      .collection('learned_source_parsers')
+      .where('sourceKey', '==', sourceKey)
+      .where('itemType', '==', itemType)
+      .limit(1)
+      .get();
+    if (snap.empty) return null;
+    const doc = snap.docs[0];
+    const d = doc.data() as any;
+    return {
+      id: doc.id,
+      sourceKey: d.sourceKey,
+      itemType: d.itemType,
+      fieldPatterns: d.fieldPatterns ?? {},
+      sampleCount: d.sampleCount ?? 1,
+      confidenceAvg: d.confidenceAvg ?? 0,
+      lastUpdatedAt: d.lastUpdatedAt ?? d.createdAt,
+      createdAt: d.createdAt,
+    };
+  }
+  const { rows } = await getPg().query<any>(
+    `SELECT * FROM learned_source_parsers WHERE source_key = $1 AND item_type = $2 LIMIT 1`,
+    [sourceKey, itemType]
+  );
+  if (!rows.length) return null;
+  return {
+    id: rows[0].id,
+    sourceKey: rows[0].source_key,
+    itemType: rows[0].item_type,
+    fieldPatterns: rows[0].field_patterns ?? {},
+    sampleCount: rows[0].sample_count,
+    confidenceAvg: parseFloat(rows[0].confidence_avg),
+    lastUpdatedAt: rows[0].last_updated_at,
+    createdAt: rows[0].created_at,
+  };
+};
+
+export const upsertLearnedParser = async (
+  sourceKey: string,
+  itemType: string,
+  fieldPatterns: Record<string, string>,
+  confidenceAvg: number
+): Promise<void> => {
+  await ensureIngestionRepositoryReady();
+  if (getCurrentDbProvider() === 'firebase') {
+    const snap = await getFirebaseDb()
+      .collection('learned_source_parsers')
+      .where('sourceKey', '==', sourceKey)
+      .where('itemType', '==', itemType)
+      .limit(1)
+      .get();
+    if (snap.empty) {
+      await getFirebaseDb().collection('learned_source_parsers').doc(randomUUID()).set({
+        sourceKey,
+        itemType,
+        fieldPatterns,
+        sampleCount: 1,
+        confidenceAvg,
+        lastUpdatedAt: nowIso(),
+        createdAt: nowIso(),
+      });
+    } else {
+      const doc = snap.docs[0];
+      const prev = doc.data() as any;
+      const newCount = (prev.sampleCount ?? 1) + 1;
+      const newAvg = ((prev.confidenceAvg ?? 0) * (prev.sampleCount ?? 1) + confidenceAvg) / newCount;
+      await doc.ref.set({
+        ...prev,
+        fieldPatterns,
+        sampleCount: newCount,
+        confidenceAvg: newAvg,
+        lastUpdatedAt: nowIso(),
+      }, { merge: true });
+    }
+    return;
+  }
+  await getPg().query(
+    `INSERT INTO learned_source_parsers (id, source_key, item_type, field_patterns, sample_count, confidence_avg, last_updated_at, created_at)
+     VALUES ($1, $2, $3, $4, 1, $5, NOW(), NOW())
+     ON CONFLICT (source_key, item_type)
+     DO UPDATE SET
+       field_patterns = $4,
+       sample_count = learned_source_parsers.sample_count + 1,
+       confidence_avg = (learned_source_parsers.confidence_avg * learned_source_parsers.sample_count + $5) / (learned_source_parsers.sample_count + 1),
+       last_updated_at = NOW()`,
+    [randomUUID(), sourceKey, itemType, JSON.stringify(fieldPatterns), confidenceAvg]
+  );
 };
