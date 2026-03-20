@@ -70,6 +70,7 @@ type IngestionTabProps = {
   headers: Record<string, string>;
   styles: Record<string, any>;
   onNavigate: (page: string) => void;
+  onAssignmentApplied?: (params: { itemType: string; tripId: string }) => void | Promise<void>;
 };
 
 const prettyDate = (value?: string | null): string => {
@@ -92,7 +93,13 @@ const openFilePicker = async (): Promise<File[]> => {
   });
 };
 
-const IngestionTab: React.FC<IngestionTabProps> = ({ backendUrl, headers, styles, onNavigate }) => {
+const IngestionTab: React.FC<IngestionTabProps> = ({
+  backendUrl,
+  headers,
+  styles,
+  onNavigate,
+  onAssignmentApplied,
+}) => {
   const [config, setConfig] = useState<ConfigResponse | null>(null);
   const [items, setItems] = useState<ReviewItem[]>([]);
   const [jobs, setJobs] = useState<ImportJob[]>([]);
@@ -230,16 +237,24 @@ const IngestionTab: React.FC<IngestionTabProps> = ({ backendUrl, headers, styles
 
   const assignItem = async () => {
     if (!selectedItem || !assignTripId) return;
+    const tripId = assignTripId;
+    const itemType = selectedItem.itemType;
     const editedFields = {
       providerVendor: editProvider.trim() || null,
       confirmationNumber: editConfirmation.trim() || null,
       notes: editNotes.trim() || null,
     };
-    await fetch(`${backendUrl}/api/ingestion/review-items/${selectedItem.id}/assign`, {
+    const response = await fetch(`${backendUrl}/api/ingestion/review-items/${selectedItem.id}/assign`, {
       method: 'POST',
       headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tripId: assignTripId, editedFields }),
+      body: JSON.stringify({ tripId, editedFields }),
     });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      setError((body as any).error ?? 'Unable to assign item to trip.');
+      return;
+    }
+    await onAssignmentApplied?.({ itemType, tripId });
     setSelectedDocumentSummary(null);
     setSelectedItem(null);
     await load();

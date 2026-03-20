@@ -1042,7 +1042,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   };
 
   const addTraveler = async () => {
-    if (!group?.id) return;
+    if (!trip?.id) return;
     const first = travelerDraft.firstName.trim();
     const last = travelerDraft.lastName.trim();
     const email = travelerDraft.email.trim();
@@ -1052,7 +1052,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     }
     const guestName = `${first} ${last}`.trim();
     const payload = email ? { email, firstName: first, lastName: last, guestName } : { guestName, firstName: first, lastName: last };
-    const res = await fetch(`${backendUrl}/api/groups/${group.id}/members`, {
+    const res = await fetch(`${backendUrl}/api/account/trips/${trip.id}/members`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...headers },
       body: JSON.stringify(payload),

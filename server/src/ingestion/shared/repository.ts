@@ -195,6 +195,20 @@ const nowIso = () => new Date().toISOString();
 const omitUndefinedFields = <T extends Record<string, unknown>>(value: T): T =>
   Object.fromEntries(Object.entries(value).filter(([, fieldValue]) => typeof fieldValue !== 'undefined')) as T;
 
+const deepOmitUndefined = <T>(value: T): T => {
+  if (Array.isArray(value)) {
+    return value.map((entry) => deepOmitUndefined(entry)) as T;
+  }
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .filter(([, fieldValue]) => typeof fieldValue !== 'undefined')
+        .map(([fieldName, fieldValue]) => [fieldName, deepOmitUndefined(fieldValue)])
+    ) as T;
+  }
+  return value;
+};
+
 const encryptionKey = (): Buffer => {
   const secret = getEnvValue('INGESTION_ENCRYPTION_SECRET', {
     defaultValue: getEnvValue('AUTH_SECRET', { defaultValue: 'development-secret' }) || 'development-secret',
@@ -1704,7 +1718,7 @@ export const createParsedItem = async (params: {
   await ensureIngestionRepositoryReady();
   const id = randomUUID();
   if (getCurrentDbProvider() === 'firebase') {
-    const payload = {
+    const payload = deepOmitUndefined({
       userId: params.userId,
       importJobId: params.importJobId,
       rawDocId: params.rawDocId,
@@ -1735,7 +1749,7 @@ export const createParsedItem = async (params: {
       createdAt: nowIso(),
       updatedAt: nowIso(),
       status: params.candidate.reviewStatus,
-    };
+    });
     await getFirebaseDb().collection('parsed_items').doc(id).set(payload);
     return mapParsedItemRow({
       id,
@@ -2091,7 +2105,7 @@ export const saveExtractionCacheEntry = async (
       userId,
       contentHash,
       logicVersion,
-      extractionResult,
+      extractionResult: deepOmitUndefined(extractionResult),
       createdAt: nowIso(),
       updatedAt: nowIso(),
     });

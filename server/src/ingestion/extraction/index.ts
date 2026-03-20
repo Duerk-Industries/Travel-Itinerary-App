@@ -5,6 +5,9 @@ import { getExtractionCacheEntry, recordParseAttempt, recordUsageMetering, saveE
 import { resolveTimezone } from '../shared/timezoneResolver';
 import { reserveApiUsageOrThrow, ApiLimitExceededError } from '../../apis/usageLimiter';
 import { logInfo } from '../../logger';
+import { getUserById } from '../../db';
+import { extractLabeledFieldValue, extractPhoneLikeValue, toTitleCaseWords } from './hotelFieldExtractors';
+import { extractSemanticFieldsForType } from './semanticFieldHelpers';
 
 export interface ExtractionStrategy {
   canHandle(doc: NormalizedDocument): boolean;
@@ -24,27 +27,123 @@ const extractDate = (text: string): string | null => {
   return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
 };
 
+const HOTEL_FIELD_STOP_TOKENS = [
+  'Check-in',
+  'Check-out',
+  'Guest name',
+  'Location',
+  'Address',
+  'Phone',
+  'Contact',
+  'Booking details',
+  'Reservation details',
+  'Room type',
+  'Rooms',
+  'Meals',
+  'Breakfast',
+  'Cancellation',
+  'Prepayment',
+  'Payment',
+  'Total Price',
+  'You paid',
+  'Max capacity',
+  'Price details',
+];
+
+const buildHotelFieldRegex = (label: string, extraStops: string[] = []): RegExp => {
+  const stopPattern = [...HOTEL_FIELD_STOP_TOKENS, ...extraStops]
+    .filter((token) => token !== label)
+    .map((token) => token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .join('|');
+  return new RegExp(`${label}\\s*:?[\\s]*([\\s\\S]{1,220}?)(?=\\s+(?:${stopPattern})\\b|$)`, 'i');
+};
+
+const cleanHotelField = (value: string | null | undefined): string | null => {
+  if (!value) return null;
+  const cleaned = value
+    .replace(/\s+/g, ' ')
+    .replace(/\s+([,.)])/g, '$1')
+    .replace(/\(\s+/g, '(')
+    .trim()
+    .replace(/^[,;:\-–]+/, '')
+    .replace(/[,;:\-–]+$/, '')
+    .trim();
+  return cleaned || null;
+};
+
 const extractConfirmation = (text: string): string | null => {
   const match = text.match(/\b(?:confirmation|booking|reservation|record locator|pnr)\s*(?:number|code|ref(?:erence)?)?[:#\s-]+([A-Z0-9]{5,10})\b/i);
   return match ? match[1].toUpperCase() : null;
 };
 
+const normalizeTravelerName = (value: string): string =>
+  value
+    .replace(/\s+/g, ' ')
+    .trim()
+    .split(/\s+/)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+
 const extractTravelerNames = (text: string): string[] => {
-  // Try structured "Traveler N:" format first (handles ALL-CAPS and mixed case names)
   const structured: string[] = [];
-  const travelerPattern = /Traveler\s+\d+\s*:\s*(.+)/gi;
+  const travelerPattern = /Traveler\s+\d+\s*:\s*([\s\S]{1,120}?)(?=\s+Traveler\s+\d+\s*:|\s+Important flight information\b|\s+Rules(?:\s|,)|\s+Payment summary\b|\s+Real ID Requirements\b|$)/gi;
   let tm;
   while ((tm = travelerPattern.exec(text)) !== null) {
-    const raw = tm[1].trim();
-    // Normalize "BRYAN Edward Duerk" → "Bryan Edward Duerk"
-    const name = raw.split(/\s+/).map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
-    structured.push(name);
+    const raw = tm[1]
+      .replace(/\b(?:airline confirmation|trip total|payment summary)\b[\s\S]*$/i, '')
+      .trim();
+    const name = normalizeTravelerName(raw);
+    if (/^[A-Z][A-Za-z' -]{1,40}(?:\s+[A-Z][A-Za-z' -]{1,40}){1,3}$/.test(name)) {
+      structured.push(name);
+    }
   }
   if (structured.length) return Array.from(new Set(structured)).slice(0, 6);
 
   // Fallback: title-case first+last pairs
   const matches = Array.from(text.matchAll(/\b([A-Z][a-z]+ [A-Z][a-z]+)\b/g)).map((match) => match[1].trim());
   return Array.from(new Set(matches)).slice(0, 6);
+};
+
+const extractionUserCache = new Map<string, Promise<Awaited<ReturnType<typeof getUserById>>>>();
+
+const getExtractionUser = async (userId: string) => {
+  if (!extractionUserCache.has(userId)) {
+    extractionUserCache.set(userId, getUserById(userId));
+  }
+  return extractionUserCache.get(userId)!;
+};
+
+const extractAccountHolderName = (text: string): string | null => {
+  const inlineHeader = text.match(/^\s*([A-Z][A-Za-z' -]{1,80})\s*<[^>]+>/);
+  if (inlineHeader?.[1]) return normalizeTravelerName(inlineHeader[1]);
+  const recipient = text.match(/\bTo:\s*([^\n<]+?)\s*<[^>]+>/i);
+  if (recipient?.[1]) return normalizeTravelerName(recipient[1]);
+  return null;
+};
+
+const filterTravelerNamesForUser = async (travelerNames: string[], userId: string, text: string): Promise<string[]> => {
+  if (travelerNames.length <= 1) return travelerNames;
+  const user = await getExtractionUser(userId);
+  const accountHolderName = extractAccountHolderName(text);
+  const firstName = String(user?.firstName ?? '').trim();
+  const lastName = String(user?.lastName ?? '').trim();
+  const fallbackTokens = accountHolderName?.toLowerCase().split(/\s+/) ?? [];
+  const normalizedFirst = firstName.toLowerCase();
+  const normalizedLast = lastName.toLowerCase();
+  const exactMatches = travelerNames.filter((name) => {
+    const parts = normalizeTravelerName(name).toLowerCase().split(/\s+/);
+    const matchesUserName = normalizedFirst && normalizedLast && parts.includes(normalizedFirst) && parts.includes(normalizedLast);
+    const matchesAccountHolder = fallbackTokens.length >= 2 && fallbackTokens.every((token) => parts.includes(token));
+    return matchesUserName || matchesAccountHolder;
+  });
+  if (!exactMatches.length) return travelerNames;
+  if (firstName && lastName) {
+    return [`${normalizeTravelerName(firstName)} ${normalizeTravelerName(lastName)}`];
+  }
+  if (accountHolderName) {
+    return [accountHolderName];
+  }
+  return exactMatches.slice(0, 1);
 };
 
 const extractRawDatetimeString = (text: string): string | null => {
@@ -115,15 +214,20 @@ const extractTimeCodePairs = (section: string): Array<{ time: string; code: stri
 // ── Hotel helpers ────────────────────────────────────────────────────────────
 
 const extractHotelName = (text: string): string | null => {
-  // "confirmed at HOTEL_NAME" (Booking.com, Hotels.com, Expedia, etc.)
-  const confirmedAt = text.match(/confirmed\s+at\s+([^\n]+)/i);
-  if (confirmedAt) return confirmedAt[1].trim();
-  // "HOTEL_NAME is expecting you" (Booking.com)
-  const expecting = text.match(/\b(.+?)\s+is expecting you\b/i);
-  if (expecting) return expecting[1].trim();
+  const patterns = [
+    /confirmed\s+at\s+(.{2,140}?)(?=\s+(?:\d+\s+message|Booking\.com\b|From:|To:|Date:|Subject:|Confirmation\b|PIN\b|Thanks,))/i,
+    /\b([A-Z][A-Za-z0-9 '&.-]{2,120}?)\s+is expecting you\b/i,
+    /\bYour booking summary[\s\S]{0,120}?\b([A-Z][A-Za-z0-9 '&.-]{2,120}?)\s+Confirmed\b/i,
+    buildHotelFieldRegex('Property', ['Confirmed']),
+  ];
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    const cleaned = cleanHotelField(match?.[1]);
+    if (cleaned) return cleaned;
+  }
   // Name with common accommodation suffix (case-insensitive on suffix)
-  const withSuffix = text.match(/\b([A-Z][A-Za-z0-9 '&.-]+\s+(?:Hotel|Resort|Inn|Suites|Lodge|Hostel|Motel|Villa|Boutique hotel))\b/i);
-  if (withSuffix) return withSuffix[1].trim();
+  const withSuffix = text.match(/\b([A-Z][A-Za-z0-9 '&.-]{2,100}\s+(?:Hotel|Resort|Inn|Suites|Lodge|Hostel|Motel|Villa|Boutique hotel))\b/i);
+  if (withSuffix) return cleanHotelField(withSuffix[1]);
   return null;
 };
 
@@ -135,28 +239,51 @@ const extractCheckInOutDates = (text: string): { checkIn: string | null; checkOu
     if (iso) return new Date(`${iso[1]}T12:00:00Z`).toISOString();
     return null;
   };
-  const ciMatch = text.match(/Check-in\s+([^\n]+)/i);
-  const coMatch = text.match(/Check-out\s+([^\n]+)/i);
+  const ciValue = extractLabeledFieldValue(
+    text,
+    ['Check-in'],
+    ['Check-out', 'Guest name', 'Rooms', 'Room type', 'Location', 'Address', 'Phone', 'Contact', 'Booking details', 'Reservation details'],
+    true,
+    140
+  );
+  const coValue = extractLabeledFieldValue(
+    text,
+    ['Check-out'],
+    ['Guest name', 'Rooms', 'Room type', 'Location', 'Address', 'Phone', 'Contact', 'Booking details', 'Reservation details', 'Cancellation'],
+    true,
+    140
+  );
   return {
-    checkIn: ciMatch ? parseDateField(ciMatch[1]) : null,
-    checkOut: coMatch ? parseDateField(coMatch[1]) : null,
+    checkIn: ciValue ? parseDateField(ciValue) : null,
+    checkOut: coValue ? parseDateField(coValue) : null,
   };
 };
 
 const extractHotelAddress = (text: string): string | null => {
-  // "Location 16 Wiedner Gürtel, ..." (Booking.com)
-  const location = text.match(/\bLocation\s+(\d[^\n]+)/i);
-  if (location) return location[1].trim();
-  const address = text.match(/\bAddress[:\s]+([^\n]+)/i);
-  if (address) return address[1].trim();
-  return null;
+  const labeled = extractLabeledFieldValue(
+    text,
+    ['Location', 'Address'],
+    ['Phone', 'Contact', 'Reservation details', 'Booking details', 'Guest name', 'Check-in', 'Check-out']
+  );
+  if (labeled) return labeled;
+  const inlineBeforePhone = cleanHotelField(
+    text.match(/\b(?:Hotel|Resort|Inn|Suites|Lodge|Hostel|Motel|Villa|Boutique hotel)\s+([^.\n]{10,180}?)(?=\s+Phone\b)/i)?.[1]
+  );
+  return inlineBeforePhone;
 };
 
 const extractHotelCost = (text: string): { amount: number; currency: string } => {
   const patterns: Array<{ regex: RegExp; currency: string }> = [
-    { regex: /(?:You paid|Total Price|Trip total)\s+(?:approx\.?\s*)?(?:US)?\$\s*([0-9,.]+)/i, currency: 'USD' },
-    { regex: /(?:You paid|Total Price|Trip total)\s+(?:approx\.?\s*)?€\s*([0-9,.]+)/i, currency: 'EUR' },
-    { regex: /(?:You paid|Total Price|Trip total)\s+(?:approx\.?\s*)?£\s*([0-9,.]+)/i, currency: 'GBP' },
+    { regex: /You paid\s*(?:approx\.?\s*)?(?:US)?\$\s*([0-9,.]+)/i, currency: 'USD' },
+    { regex: /You paid\s*(?:approx\.?\s*)?€\s*([0-9,.]+)/i, currency: 'EUR' },
+    { regex: /You paid\s*(?:approx\.?\s*)?£\s*([0-9,.]+)/i, currency: 'GBP' },
+    { regex: /Total Price\s*(?:approx\.?\s*)?€\s*([0-9,.]+)/i, currency: 'EUR' },
+    { regex: /Total Price\s*(?:approx\.?\s*)?£\s*([0-9,.]+)/i, currency: 'GBP' },
+    { regex: /Total Price\s*(?:approx\.?\s*)?(?:US)?\$\s*([0-9,.]+)/i, currency: 'USD' },
+    { regex: /Trip total\s*(?:approx\.?\s*)?(?:US)?\$\s*([0-9,.]+)/i, currency: 'USD' },
+    { regex: /Trip total\s*(?:approx\.?\s*)?€\s*([0-9,.]+)/i, currency: 'EUR' },
+    { regex: /Trip total\s*(?:approx\.?\s*)?£\s*([0-9,.]+)/i, currency: 'GBP' },
+    { regex: /Total price\s*:\s*approx\.?\s*(?:US)?\$\s*([0-9,.]+)/i, currency: 'USD' },
   ];
   for (const { regex, currency } of patterns) {
     const match = text.match(regex);
@@ -168,6 +295,32 @@ const extractHotelCost = (text: string): { amount: number; currency: string } =>
   if (euro) return { amount: parseFloat(euro[1].replace(/,/g, '')), currency: 'EUR' };
   return { amount: 0, currency: 'USD' };
 };
+
+const extractHotelGuestName = (text: string): string | null => {
+  const labeled = extractLabeledFieldValue(
+    text,
+    ['Guest name'],
+    ['Check-in', 'Check-out', 'Max capacity', 'Breakfast', 'Prepayment', 'Payment', 'Room', 'Location', 'Address', 'Phone', 'Contact', 'Reservation details', 'Booking details'],
+    true,
+    180
+  );
+  if (labeled && !/^below\b/i.test(labeled) && !/[<>@]/.test(labeled)) {
+    return toTitleCaseWords(labeled);
+  }
+  const fallback = text.match(/Thanks,\s*([A-Z][A-Za-z' -]{1,80})\s*!?\s+Your booking/i)?.[1];
+  return fallback ? toTitleCaseWords(fallback) : null;
+};
+
+const extractHotelPhone = (text: string): string | null =>
+  extractPhoneLikeValue(
+    extractLabeledFieldValue(
+    text,
+    ['Phone'],
+    ['Contact', 'Reservation details', 'Booking details', 'Guest name', 'Check-in', 'Check-out'],
+    false,
+    80
+    ) ?? text
+  );
 
 const extractFreeCancelDate = (text: string): string | null => {
   // "Until 23:59 on November 23, 2025 FREE"
@@ -187,6 +340,36 @@ const extractFreeCancelDate = (text: string): string | null => {
 const isChaseTravel = (text: string): boolean =>
   /Chase Travel/i.test(text) && /Trip ID/i.test(text);
 
+const containsTravelUpsellSignals = (text: string): boolean =>
+  /\b(book a hotel|find activities|attractions or tours|enhance your stay|need a car|add a car|book a car|things to do|travel protection|manage your trip online)\b/i.test(text);
+
+const hasStrongHotelBookingSignals = (text: string, fields: Record<string, unknown>, hotelName: string | null): boolean =>
+  Boolean(
+    hotelName
+    && !/\bbook a hotel\b/i.test(hotelName)
+    && (
+      fields.checkInDate
+      || fields.checkOutDate
+      || fields.guestName
+      || extractConfirmation(text)
+    )
+  );
+
+const hasStrongCarRentalSignals = (text: string, fields: Record<string, unknown>, providerVendor: string | null): boolean =>
+  Boolean(
+    (fields.pickupLocation && fields.dropoffLocation)
+    || (providerVendor && /\b(Hertz|Avis|Enterprise|Budget|National|Alamo|Sixt|Dollar|Thrifty|Fox)\b/i.test(providerVendor))
+    || /\b(car rental confirmation|rental confirmation|pickup date|dropoff date|vehicle class)\b/i.test(text)
+  );
+
+const hasStrongActivitySignals = (text: string, fields: Record<string, unknown>): boolean =>
+  Boolean(
+    fields.startDateTimeUtc
+    && fields.name
+    && !/\b(find activities|attractions or tours|enhance your stay|things to do)\b/i.test(String(fields.name))
+    && /\b(confirmation|reservation|ticket|event|tour|activity)\b/i.test(text)
+  );
+
 interface ChaseFlightLeg {
   date: Date | null;
   rawDate: string | null;
@@ -200,6 +383,18 @@ interface ChaseFlightLeg {
   duration: string | null;
   stops: string | null;
   fareClass: string | null;
+}
+
+interface GenericTransportLeg {
+  sectionText: string;
+  startDateTimeUtc: string | null;
+  rawDatetimeString: string | null;
+  departureCode: string | null;
+  arrivalCode: string | null;
+  providerVendor: string | null;
+  flightNumber: string | null;
+  departureLocation: string | null;
+  arrivalLocation: string | null;
 }
 
 /**
@@ -262,18 +457,18 @@ const parseChaseFlightLegs = (text: string): ChaseFlightLeg[] => {
 
     // Airline: "Jetblue Airways", "Lao Airlines", "Cathay Pacific Airways", etc.
     const airlineMatch = section.match(/\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\s+(?:Airlines?|Airways?))\b/i);
-    const airline = airlineMatch?.[1]?.trim() ?? null;
+    const airline = airlineMatch?.[1]?.trim().replace(/^Stop\s+/i, '') ?? null;
 
     // Flight numbers: "B6 187 Airbus ..." or "CX 740 Airbus ..."
     const flightNumbers: string[] = [];
-    const fnRegex = /\b([A-Z]{2})\s+(\d{2,4})\s+(?:Airbus|Boeing|ATR|Embraer|Bombardier|[A-Z]{2,}[- ])/gi;
+    const fnRegex = /\b([A-Z0-9]{2})\s+(\d{2,4})\s+(?:Airbus|Boeing|ATR|Embraer|Bombardier|[A-Z]{2,}[- ])/gi;
     let fnm;
     while ((fnm = fnRegex.exec(section)) !== null) {
       flightNumbers.push(`${fnm[1]}${fnm[2]}`);
     }
     // Broader fallback if no aircraft-qualified matches
     if (!flightNumbers.length) {
-      const fnSimple = section.match(/\b([A-Z]{2})\s+(\d{2,4})\b/);
+      const fnSimple = section.match(/\b([A-Z0-9]{2})\s+(\d{2,4})\b/);
       if (fnSimple) flightNumbers.push(`${fnSimple[1]}${fnSimple[2]}`);
     }
 
@@ -376,6 +571,133 @@ const extractChaseFlights = async (doc: NormalizedDocument): Promise<ParsedItemC
   return candidates.length ? candidates : null;
 };
 
+const splitTransportSections = (text: string): string[] => {
+  const markerRegex = /\b(?:Flight|Segment|Leg)\s+\d+\s*:|\bDepart\s*:/gi;
+  const markers = Array.from(text.matchAll(markerRegex)).map((match) => ({
+    index: match.index ?? 0,
+    value: match[0],
+  }));
+
+  const meaningfulMarkers = markers.filter((marker) => !/^Flight\s+\$/.test(marker.value));
+  if (meaningfulMarkers.length < 2) return [];
+
+  const sections: string[] = [];
+  for (let index = 0; index < meaningfulMarkers.length; index += 1) {
+    const start = meaningfulMarkers[index].index;
+    const end = meaningfulMarkers[index + 1]?.index ?? text.length;
+    const section = text.slice(start, end).trim();
+    if (section.length >= 40) {
+      sections.push(section);
+    }
+  }
+  return sections;
+};
+
+const extractGenericTransportLegs = (text: string): GenericTransportLeg[] => {
+  const sections = splitTransportSections(text);
+  if (sections.length < 2) return [];
+
+  const legs: GenericTransportLeg[] = [];
+  for (const section of sections) {
+    const semanticFields = extractSemanticFieldsForType('flight', section);
+    const departureCode =
+      extractIataCode(section, 'from')
+      ?? (String(semanticFields.departureAirportCode ?? '').toUpperCase() || null);
+    const arrivalCode =
+      extractIataCode(section, 'to')
+      ?? (String(semanticFields.arrivalAirportCode ?? '').toUpperCase() || null);
+    const flightNumber =
+      String(semanticFields.flightNumber ?? '').replace(/\s+/g, '')
+      || section.match(/\b([A-Z0-9]{2}\s?\d{2,4})\b/)?.[1]?.replace(/\s+/g, '')
+      || null;
+    const providerVendor =
+      String(semanticFields.providerVendor ?? '').trim()
+      || section.match(/\b([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+)*\s+(?:Airlines|Airways|Rail|Ferry|Bus))\b/)?.[1]
+      || null;
+    const rawDatetimeString =
+      extractRawDatetimeString(section)
+      ?? extractLabeledFieldValue(section, ['Departure', 'Depart', 'Date'], ['Arrival', 'Flight number', 'Confirmation', 'Booking'], false, 140)
+      ?? null;
+    const startDateTimeUtc =
+      extractDate(section)
+      ?? (typeof semanticFields.startDateTimeUtc === 'string' ? semanticFields.startDateTimeUtc : null);
+    const departureLocation =
+      String(semanticFields.departureLocation ?? '').trim()
+      || section.match(/\bfrom\s+([A-Z][A-Za-z .'-]+)/i)?.[1]?.trim()
+      || departureCode;
+    const arrivalLocation =
+      String(semanticFields.arrivalLocation ?? '').trim()
+      || section.match(/\bto\s+([A-Z][A-Za-z .'-]+)/i)?.[1]?.trim()
+      || arrivalCode;
+
+    const signalCount = [departureCode, arrivalCode, flightNumber, rawDatetimeString].filter(Boolean).length;
+    if (signalCount >= 2) {
+      legs.push({
+        sectionText: section,
+        startDateTimeUtc,
+        rawDatetimeString,
+        departureCode,
+        arrivalCode,
+        providerVendor,
+        flightNumber,
+        departureLocation,
+        arrivalLocation,
+      });
+    }
+  }
+
+  return legs.length >= 2 ? legs : [];
+};
+
+const extractTransportCandidates = async (
+  doc: NormalizedDocument,
+  itemType: ParsedItemType
+): Promise<ParsedItemCandidate[] | null> => {
+  if (itemType !== 'flight' && itemType !== 'rail' && itemType !== 'ferry_bus_transfer') {
+    return null;
+  }
+
+  if (itemType === 'flight') {
+    const chaseFlights = await extractChaseFlights(doc);
+    if (chaseFlights?.length) return chaseFlights;
+  }
+
+  const legs = extractGenericTransportLegs(doc.normalizedText);
+  if (!legs.length) return null;
+
+  const travelers = extractTravelerNames(doc.normalizedText);
+  const confirmation = extractConfirmation(doc.normalizedText);
+  const candidates: ParsedItemCandidate[] = [];
+
+  for (const leg of legs) {
+    candidates.push(
+      await createCandidate({
+        itemType,
+        doc,
+        providerVendor: leg.providerVendor,
+        confirmationNumber: confirmation,
+        extractedFields: {
+          providerVendor: leg.providerVendor,
+          departureAirportCode: leg.departureCode,
+          arrivalAirportCode: leg.arrivalCode,
+          departureLocation: leg.departureLocation,
+          arrivalLocation: leg.arrivalLocation,
+          flightNumber: leg.flightNumber,
+          startDateTimeUtc: leg.startDateTimeUtc,
+        },
+        confidenceScore: 0.9,
+        startDateTimeUtcOverride: leg.startDateTimeUtc,
+        rawDatetimeStringOverride: leg.rawDatetimeString,
+        travelerNamesOverride: travelers.length ? travelers : undefined,
+        departureCodeOverride: leg.departureCode,
+        arrivalCodeOverride: leg.arrivalCode,
+      })
+    );
+  }
+
+  return candidates.length ? candidates : null;
+};
+
 // ── Candidate builder ───────────────────────────────────────────────────────
 
 const createCandidate = async (params: {
@@ -393,7 +715,8 @@ const createCandidate = async (params: {
   departureCodeOverride?: string | null;
   arrivalCodeOverride?: string | null;
 }): Promise<ParsedItemCandidate> => {
-  const travelerNames = params.travelerNamesOverride ?? extractTravelerNames(params.doc.normalizedText);
+  const rawTravelerNames = params.travelerNamesOverride ?? extractTravelerNames(params.doc.normalizedText);
+  const travelerNames = await filterTravelerNamesForUser(rawTravelerNames, params.doc.userId, params.doc.normalizedText);
   const startDateTimeUtc = params.startDateTimeUtcOverride !== undefined
     ? params.startDateTimeUtcOverride
     : extractDate(params.doc.normalizedText);
@@ -455,7 +778,7 @@ const createCandidate = async (params: {
 
 // ── Extraction strategies ───────────────────────────────────────────────────
 
-class RegexExtractor implements ExtractionStrategy {
+export class RegexExtractor implements ExtractionStrategy {
   readonly strategyName = 'RegexExtractor';
   readonly minConfidenceToSkipNext = INGESTION_CONFIDENCE_REVIEW_READY;
 
@@ -467,24 +790,43 @@ class RegexExtractor implements ExtractionStrategy {
     const text = doc.normalizedText;
     const lower = text.toLowerCase();
     const items: ParsedItemCandidate[] = [];
-    if (/\b(flight|airline|boarding pass|departure|arrival|pnr|record locator)\b/.test(lower)) {
-      // Try Chase Travel specialized parser first (produces per-leg candidates)
-      const chaseFlights = await extractChaseFlights(doc);
-      if (chaseFlights?.length) {
-        items.push(...chaseFlights);
+    const chaseTravelDocument = isChaseTravel(text);
+    const hasHotelSignal = /\b(hotel|lodging|check-in|check-out|booking is confirmed|guest name|reservation details|booking details)\b/.test(lower);
+    const hasStrongFlightSignal = /\b(flight|airline|boarding pass|pnr|record locator)\b/.test(lower);
+    const hasWeakFlightSignal = /\b(departure|arrival)\b/.test(lower);
+    let chaseFlightsFound = false;
+    if (hasStrongFlightSignal || (hasWeakFlightSignal && !hasHotelSignal)) {
+      const transportItemType = /\b(train|rail)\b/.test(lower)
+        ? 'rail'
+        : /\b(ferry|bus transfer|coach)\b/.test(lower)
+          ? 'ferry_bus_transfer'
+          : 'flight';
+      const transportCandidates = await extractTransportCandidates(doc, transportItemType);
+      if (transportCandidates?.length) {
+        chaseFlightsFound = chaseTravelDocument && transportItemType === 'flight';
+        items.push(...transportCandidates);
       } else {
+        const semanticFlightFields = extractSemanticFieldsForType(
+          transportItemType,
+          text
+        );
         items.push(
           await createCandidate({
-            itemType: /\b(train|rail)\b/.test(lower) ? 'rail' : /\b(ferry|bus transfer|coach)\b/.test(lower) ? 'ferry_bus_transfer' : 'flight',
+            itemType: transportItemType,
             doc,
-            providerVendor: text.match(/\b([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+)* (?:Airlines|Airways|Rail|Ferry|Bus))\b/)?.[1] ?? null,
+            providerVendor: String(
+              semanticFlightFields.providerVendor
+              ?? text.match(/\b([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+)* (?:Airlines|Airways|Rail|Ferry|Bus))\b/)?.[1]
+              ?? ''
+            ) || null,
             confirmationNumber: extractConfirmation(text),
             extractedFields: {
-              providerVendor: text.match(/\b([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+)* (?:Airlines|Airways|Rail|Ferry|Bus))\b/)?.[1] ?? null,
-              departureLocation: text.match(/\bfrom\s+([A-Z][A-Za-z .'-]+)/i)?.[1] ?? null,
-              arrivalLocation: text.match(/\bto\s+([A-Z][A-Za-z .'-]+)/i)?.[1] ?? null,
-              flightNumber: text.match(/\b([A-Z]{2}\s?\d{2,4})\b/)?.[1]?.replace(/\s+/g, '') ?? null,
-              startDateTimeUtc: extractDate(text),
+              ...semanticFlightFields,
+              providerVendor: semanticFlightFields.providerVendor ?? text.match(/\b([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+)* (?:Airlines|Airways|Rail|Ferry|Bus))\b/)?.[1] ?? null,
+              departureLocation: semanticFlightFields.departureLocation ?? text.match(/\bfrom\s+([A-Z][A-Za-z .'-]+)/i)?.[1] ?? null,
+              arrivalLocation: semanticFlightFields.arrivalLocation ?? text.match(/\bto\s+([A-Z][A-Za-z .'-]+)/i)?.[1] ?? null,
+              flightNumber: semanticFlightFields.flightNumber ?? text.match(/\b([A-Z]{2}\s?\d{2,4})\b/)?.[1]?.replace(/\s+/g, '') ?? null,
+              startDateTimeUtc: semanticFlightFields.startDateTimeUtc ?? extractDate(text),
             },
             confidenceScore: /\b(boarding pass|flight number|pnr|record locator)\b/.test(lower) ? 0.94 : 0.82,
           })
@@ -492,62 +834,86 @@ class RegexExtractor implements ExtractionStrategy {
       }
     }
     if (/\b(hotel|lodging|check-in|check-out|booking is confirmed)\b/.test(lower)) {
+      const semanticHotelFields = extractSemanticFieldsForType('hotel', text);
       const hotelName = extractHotelName(text);
       const { checkIn, checkOut } = extractCheckInOutDates(text);
       const address = extractHotelAddress(text);
+      const phone = extractHotelPhone(text);
       const { amount: totalCost, currency } = extractHotelCost(text);
-      const guestName = text.match(/Guest name\s+(.+)/i)?.[1]?.trim() ?? null;
+      const guestName = extractHotelGuestName(text);
       // Booking.com uses long numeric confirmation codes
       const confirmation = text.match(/\bConfirmation\s*(?:number)?[:#\s-]+([A-Z0-9]{4,25})\b/i)?.[1]
         ?? extractConfirmation(text);
       const rooms = Number(text.match(/\b(\d+)\s+rooms?\b/i)?.[1] ?? '1');
       const breakfastIncluded = /breakfast\s+(?:is\s+)?included/i.test(text);
       const freeCancelBy = extractFreeCancelDate(text);
-      const paid = /you paid/i.test(text);
+      const paid = /you paid/i.test(text)
+        ? true
+        : /\b(?:you'?ll pay when you stay|pay at the property|payment will be handled by)\b/i.test(text)
+          ? false
+          : false;
 
-      items.push(
-        await createCandidate({
-          itemType: 'hotel',
-          doc,
-          providerVendor: hotelName,
-          confirmationNumber: confirmation,
-          extractedFields: {
-            name: hotelName ?? 'Imported lodging',
-            guestName,
-            address,
-            checkInDate: checkIn,
-            checkOutDate: checkOut,
-            freeCancelBy,
-            rooms,
-            breakfastIncluded,
-            totalCost,
-            currency,
-            paid,
-          },
-          confidenceScore: (checkIn && checkOut) ? 0.94 : /\b(check-in|check-out|reservation|booking is confirmed)\b/.test(lower) ? 0.91 : 0.75,
-          startDateTimeUtcOverride: checkIn ?? undefined,
-          endDateTimeUtcOverride: checkOut ?? undefined,
-          travelerNamesOverride: guestName ? [guestName] : undefined,
-        })
-      );
+      const hotelFields = {
+        ...semanticHotelFields,
+        name: hotelName ?? 'Imported lodging',
+        guestName: semanticHotelFields.guestName ?? guestName,
+        address: semanticHotelFields.address ?? address,
+        phone: semanticHotelFields.phone ?? phone,
+        checkInDate: semanticHotelFields.checkInDate ?? checkIn,
+        checkOutDate: semanticHotelFields.checkOutDate ?? checkOut,
+        freeCancelBy: semanticHotelFields.freeCancelBy ?? freeCancelBy,
+        rooms: semanticHotelFields.rooms ?? rooms,
+        breakfastIncluded: semanticHotelFields.breakfastIncluded ?? breakfastIncluded,
+        totalCost: totalCost > 0 ? totalCost : semanticHotelFields.totalCost ?? totalCost,
+        currency: totalCost > 0 ? currency : semanticHotelFields.currency ?? currency,
+        paid: semanticHotelFields.paid ?? paid,
+      };
+      const shouldSkipHotel =
+        !hasStrongHotelBookingSignals(text, hotelFields, hotelName)
+        || ((chaseTravelDocument || containsTravelUpsellSignals(text)) && !hasStrongHotelBookingSignals(text, hotelFields, hotelName))
+        || (chaseFlightsFound && /\bbook a hotel\b/i.test(text) && !hotelFields.checkInDate && !hotelFields.checkOutDate);
+      if (!shouldSkipHotel) {
+        items.push(
+          await createCandidate({
+            itemType: 'hotel',
+            doc,
+            providerVendor: hotelName,
+            confirmationNumber: confirmation,
+            extractedFields: hotelFields,
+            confidenceScore: ((semanticHotelFields.checkInDate ?? checkIn) && (semanticHotelFields.checkOutDate ?? checkOut)) ? 0.94 : /\b(check-in|check-out|reservation|booking is confirmed)\b/.test(lower) ? 0.91 : 0.75,
+            startDateTimeUtcOverride: (semanticHotelFields.checkInDate as string | null | undefined) ?? checkIn ?? undefined,
+            endDateTimeUtcOverride: (semanticHotelFields.checkOutDate as string | null | undefined) ?? checkOut ?? undefined,
+            travelerNamesOverride: (semanticHotelFields.guestName ?? guestName) ? [String(semanticHotelFields.guestName ?? guestName)] : undefined,
+          })
+        );
+      }
     }
     if (/\b(car rental|pickup|dropoff|rental agreement)\b/.test(lower)) {
-      items.push(
-        await createCandidate({
-          itemType: 'car_rental',
-          doc,
-          providerVendor: text.match(/\b(Hertz|Avis|Enterprise|Budget|National|Alamo|Sixt)\b/i)?.[1] ?? null,
-          confirmationNumber: extractConfirmation(text),
-          extractedFields: {
-            pickupLocation: text.match(/\bpickup[:\s]+([A-Z][A-Za-z .'-]+)/i)?.[1] ?? null,
-            dropoffLocation: text.match(/\bdropoff[:\s]+([A-Z][A-Za-z .'-]+)/i)?.[1] ?? null,
-            model: text.match(/\b(vehicle|car)\s*[:\-]\s*([A-Za-z0-9 -]+)/i)?.[2] ?? null,
-            cost: Number(text.match(/\$([0-9,.]+)/)?.[1]?.replace(/,/g, '') ?? '0'),
-            startDateTimeUtc: extractDate(text),
-          },
-          confidenceScore: 0.83,
-        })
-      );
+      const semanticCarFields = extractSemanticFieldsForType('car_rental', text);
+      const providerVendor = text.match(/\b(Hertz|Avis|Enterprise|Budget|National|Alamo|Sixt|Dollar|Thrifty|Fox)\b/i)?.[1] ?? null;
+      const carFields = {
+        ...semanticCarFields,
+        pickupLocation: semanticCarFields.pickupLocation ?? text.match(/\bpickup[:\s]+([A-Z][A-Za-z .'-]+)/i)?.[1] ?? null,
+        dropoffLocation: semanticCarFields.dropoffLocation ?? text.match(/\bdropoff[:\s]+([A-Z][A-Za-z .'-]+)/i)?.[1] ?? null,
+        model: semanticCarFields.model ?? text.match(/\b(vehicle|car)\s*[:\-]\s*([A-Za-z0-9 -]+)/i)?.[2] ?? null,
+        cost: semanticCarFields.cost ?? Number(text.match(/\$([0-9,.]+)/)?.[1]?.replace(/,/g, '') ?? '0'),
+        startDateTimeUtc: semanticCarFields.startDateTimeUtc ?? extractDate(text),
+      };
+      const shouldSkipCarRental =
+        !hasStrongCarRentalSignals(text, carFields, providerVendor)
+        || ((chaseTravelDocument || containsTravelUpsellSignals(text)) && !hasStrongCarRentalSignals(text, carFields, providerVendor));
+      if (!shouldSkipCarRental) {
+        items.push(
+          await createCandidate({
+            itemType: 'car_rental',
+            doc,
+            providerVendor,
+            confirmationNumber: extractConfirmation(text),
+            extractedFields: carFields,
+            confidenceScore: 0.83,
+          })
+        );
+      }
     }
     if (/\b(restaurant reservation|restaurant|table for|event ticket|concert|tour|activity)\b/.test(lower)) {
       const itemType: ParsedItemType = /\brestaurant\b/.test(lower)
@@ -555,22 +921,30 @@ class RegexExtractor implements ExtractionStrategy {
         : /\b(event|concert|ticket)\b/.test(lower)
           ? 'event_ticket'
           : 'tour_activity';
-      items.push(
-        await createCandidate({
-          itemType,
-          doc,
-          providerVendor: text.match(/\bprovider[:\s]+([A-Z][A-Za-z .'-]+)/i)?.[1] ?? null,
-          confirmationNumber: extractConfirmation(text),
-          extractedFields: {
-            name: text.match(/\b(?:event|tour|activity|restaurant)\s*[:\-]\s*([A-Z][A-Za-z0-9 '&.-]+)/i)?.[1] ?? 'Imported activity',
-            location: text.match(/\blocation[:\s]+([A-Z][A-Za-z .'-]+)/i)?.[1] ?? null,
-            duration: text.match(/\b(\d+\s*(?:hours?|hrs?|minutes?|mins?))\b/i)?.[1] ?? null,
-            cost: Number(text.match(/\$([0-9,.]+)/)?.[1]?.replace(/,/g, '') ?? '0'),
-            startDateTimeUtc: extractDate(text),
-          },
-          confidenceScore: 0.78,
-        })
-      );
+      const semanticActivityFields = extractSemanticFieldsForType(itemType, text);
+      const activityFields = {
+        ...semanticActivityFields,
+        name: semanticActivityFields.name ?? text.match(/\b(?:event|tour|activity|restaurant)\s*[:\-]\s*([A-Z][A-Za-z0-9 '&.-]+)/i)?.[1] ?? 'Imported activity',
+        location: semanticActivityFields.location ?? text.match(/\blocation[:\s]+([A-Z][A-Za-z .'-]+)/i)?.[1] ?? null,
+        duration: semanticActivityFields.duration ?? text.match(/\b(\d+\s*(?:hours?|hrs?|minutes?|mins?))\b/i)?.[1] ?? null,
+        cost: semanticActivityFields.cost ?? Number(text.match(/\$([0-9,.]+)/)?.[1]?.replace(/,/g, '') ?? '0'),
+        startDateTimeUtc: semanticActivityFields.startDateTimeUtc ?? extractDate(text),
+      };
+      const shouldSkipActivity =
+        !hasStrongActivitySignals(text, activityFields)
+        || ((chaseTravelDocument || containsTravelUpsellSignals(text)) && !hasStrongActivitySignals(text, activityFields));
+      if (!shouldSkipActivity) {
+        items.push(
+          await createCandidate({
+            itemType,
+            doc,
+            providerVendor: text.match(/\bprovider[:\s]+([A-Z][A-Za-z .'-]+)/i)?.[1] ?? null,
+            confirmationNumber: extractConfirmation(text),
+            extractedFields: activityFields,
+            confidenceScore: 0.78,
+          })
+        );
+      }
     }
     if (!items.length) {
       items.push(
@@ -679,6 +1053,7 @@ class NoopLlmExtractor implements ExtractionStrategy {
 
 // Re-export createCandidate for use by learnedExtractor and llmExtractor (avoids circular import of the full module)
 export const createCandidateExported = createCandidate;
+export const extractTransportCandidatesExported = extractTransportCandidates;
 
 // Lazy-load the new extractors to avoid circular imports at module parse time
 const getLearnedStrategies = async (): Promise<ExtractionStrategy[]> => {

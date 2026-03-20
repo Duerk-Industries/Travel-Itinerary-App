@@ -1311,7 +1311,18 @@ export const addGroupMember = async (
 ): Promise<{ inviteId?: string; email?: string }> => {
   const db = getDb();
   const groupDoc = await db.collection('groups').doc(groupId).get();
-  if (!groupDoc.exists || groupDoc.data()?.ownerId !== ownerId) throw new Error('Group not found or not owner');
+  if (!groupDoc.exists) throw new Error('Group not found or not a member');
+  const isOwner = groupDoc.data()?.ownerId === ownerId;
+  if (!isOwner) {
+    const memberSnap = await db
+      .collection('group_members')
+      .where('groupId', '==', groupId)
+      .where('userId', '==', ownerId)
+      .where('removedAt', '==', null)
+      .limit(1)
+      .get();
+    if (memberSnap.empty) throw new Error('Group not found or not a member');
+  }
 
   if (member.email && member.email.trim()) {
     const email = normalizeEmail(member.email);
@@ -2428,7 +2439,10 @@ export const deleteFlight = async (flightId: string, userId: string): Promise<vo
   const doc = await db.collection('flights').doc(flightId).get();
   if (!doc.exists) return;
   const data = doc.data() as any;
-  if (data.userId !== userId) throw new Error('Not authorized to delete');
+  const tripId = data.tripId ?? data.trip_id;
+  if (!tripId) return;
+  const membership = await ensureUserInTrip(tripId, userId);
+  if (!membership) throw new Error('Not authorized to delete');
   await db.collection('flights').doc(flightId).delete();
 };
 
@@ -2437,7 +2451,10 @@ export const updateFlight = async (flightId: string, userId: string, updates: Pa
   const doc = await db.collection('flights').doc(flightId).get();
   if (!doc.exists) return null;
   const data = doc.data() as any;
-  if (data.userId !== userId) throw new Error('Not authorized to update');
+  const tripId = (updates as any).tripId ?? (updates as any).trip_id ?? data.tripId ?? data.trip_id;
+  if (!tripId) return null;
+  const membership = await ensureUserInTrip(tripId, userId);
+  if (!membership) throw new Error('Not authorized to update');
   const updatePayload = stripUndefined(updates);
   await db.collection('flights').doc(flightId).update(updatePayload);
   const updated = await db.collection('flights').doc(flightId).get();
@@ -2448,7 +2465,10 @@ export const getFlightForUser = async (flightId: string, userId: string): Promis
   const doc = await getDb().collection('flights').doc(flightId).get();
   if (!doc.exists) return null;
   const data = doc.data() as any;
-  if (data.userId !== userId) return null;
+  const tripId = data.tripId ?? data.trip_id;
+  if (!tripId) return null;
+  const membership = await ensureUserInTrip(tripId, userId);
+  if (!membership) return null;
   return data as Flight;
 };
 

@@ -206,7 +206,7 @@ describe('Overview edit controls', () => {
       if (String(url).includes('/api/itineraries')) {
         return { ok: true, json: async () => [] };
       }
-      if (String(url).includes('/api/groups/') && options?.method === 'POST') {
+      if (String(url).includes(`/api/account/trips/${baseTrip.id}/members`) && options?.method === 'POST') {
         return { ok: true, json: async () => [] };
       }
       return { ok: true, json: async () => ({}) };
@@ -248,7 +248,7 @@ describe('Overview edit controls', () => {
       pressByText(root, 'Save Traveler');
     });
 
-    const addCall = fetchMock.mock.calls.find((call: any[]) => String(call[0]).includes('/api/groups/'));
+    const addCall = fetchMock.mock.calls.find((call: any[]) => String(call[0]).includes(`/api/account/trips/${baseTrip.id}/members`));
     if (!addCall) {
       throw new Error('Expected add traveler request');
     }

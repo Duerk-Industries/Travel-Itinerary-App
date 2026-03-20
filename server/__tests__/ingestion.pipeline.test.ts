@@ -266,6 +266,7 @@ describe('ingestion pipeline internals', () => {
     jest.doMock('../src/env', () => ({
       isLocalEnv: () => true,
       getEnvValue: (key: string) => (key === 'OPENAI_API_KEY' ? 'test-key' : undefined),
+      getEnvFlag: () => false,
     }));
     jest.doMock('../src/apis/openaiApi', () => ({
       postOpenAiChatCompletion: jest.fn().mockResolvedValue({

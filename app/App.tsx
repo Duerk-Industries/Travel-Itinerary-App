@@ -2256,6 +2256,20 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     fetchLodgings();
     fetchExpenses();
   }, [fetchExpenses, fetchLodgings]);
+
+  const handleIngestionAssignmentApplied = useCallback(
+    async ({ tripId }: { itemType: string; tripId: string }) => {
+      if (!tripId || tripId !== activeTripId) return;
+      await Promise.all([
+        fetchFlights(),
+        fetchLodgings(),
+        fetchTours(),
+        fetchCarRentals(),
+        fetchExpenses(),
+      ]);
+    },
+    [activeTripId, fetchCarRentals, fetchExpenses, fetchFlights, fetchLodgings, fetchTours]
+  );
   const handleToursDataChanged = useCallback(() => {
     fetchTours();
     fetchExpenses();
@@ -2521,6 +2535,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   headers={headers}
                   styles={styles}
                   onNavigate={handleHomeNavigate}
+                  onAssignmentApplied={handleIngestionAssignmentApplied}
                 />
               )
             : null}

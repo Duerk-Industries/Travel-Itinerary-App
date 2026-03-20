@@ -62,12 +62,24 @@ export const detectSource = (doc: NormalizedDocument): string | null => {
  */
 export const detectItemType = (text: string): string => {
   const lower = text.toLowerCase();
-  if (/\b(flight|airline|boarding pass|departure|arrival|pnr|record locator)\b/.test(lower)) {
+  const isChaseFlightItinerary =
+    /chase travel/i.test(text)
+    && /trip id/i.test(text)
+    && (/\bflight\s+\d+\s*:/i.test(text) || /\bairline confirmation\b/i.test(text));
+  if (isChaseFlightItinerary) {
+    return 'flight';
+  }
+  const hasHotelSignal = /\b(hotel|lodging|check-in|check-out|booking is confirmed|guest name|reservation details|booking details)\b/.test(lower);
+  const hasStrongFlightSignal = /\b(flight|airline|boarding pass|pnr|record locator)\b/.test(lower);
+  const hasWeakFlightSignal = /\b(departure|arrival)\b/.test(lower);
+  if (hasHotelSignal) {
+    return 'hotel';
+  }
+  if (hasStrongFlightSignal || (hasWeakFlightSignal && !hasHotelSignal)) {
     if (/\b(train|rail)\b/.test(lower)) return 'rail';
     if (/\b(ferry|bus transfer|coach)\b/.test(lower)) return 'ferry_bus_transfer';
     return 'flight';
   }
-  if (/\b(hotel|lodging|check-in|check-out|booking is confirmed)\b/.test(lower)) return 'hotel';
   if (/\b(car rental|pickup|dropoff|rental agreement)\b/.test(lower)) return 'car_rental';
   if (/\brestaurant\b/.test(lower)) return 'restaurant_reservation';
   if (/\b(event|concert|ticket)\b/.test(lower)) return 'event_ticket';

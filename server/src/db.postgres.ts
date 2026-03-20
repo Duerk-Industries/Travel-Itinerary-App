@@ -4764,10 +4764,14 @@ export const addGroupMember = async (
   try {
     await client.query('BEGIN');
     const { rows: groupRows } = await client.query(
-      `SELECT 1 FROM groups WHERE id = $1 AND owner_id = $2`,
+      `SELECT 1 FROM groups g
+       WHERE g.id = $1
+         AND (g.owner_id = $2 OR EXISTS (
+           SELECT 1 FROM group_members gm WHERE gm.group_id = $1 AND gm.user_id = $2 AND gm.removed_at IS NULL
+         ))`,
       [groupId, ownerId]
     );
-    if (!groupRows.length) throw new Error('Group not found or not owner');
+    if (!groupRows.length) throw new Error('Group not found or not a member');
 
     const emailValue = member.email && member.email.trim();
     if (emailValue) {
