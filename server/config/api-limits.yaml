@@ -39,6 +39,13 @@ providers:
     callers:
       DAILY_REFRESH: 500
 
+  FRANKFURTER:
+    window: hour
+    windowHours: 24
+    overall: 1000
+    callers:
+      INGESTION_ASSIGNMENT_FX: 1000
+
 caching:
   attractions:
     refreshDays: 365
@@ -57,4 +64,5 @@ caching:
     detailsCacheTimeoutMinutes: 1440
   unsplash:
     dnsLogTtlMs: 300000
-
+  frankfurter:
+    rateCacheTtlMinutes: 1440

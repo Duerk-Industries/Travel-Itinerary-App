@@ -76,6 +76,26 @@ const extractConfirmation = (text: string): string | null => {
   return match ? match[1].toUpperCase() : null;
 };
 
+const extractTripTotalCost = (text: string): { amount: number; currency: string } | null => {
+  const patterns: Array<{ regex: RegExp; currency?: string }> = [
+    { regex: /Trip total\s*(?:approx\.?\s*)?(?:US)?\$\s*([0-9,.]+)/i, currency: 'USD' },
+    { regex: /Trip total\s*(?:approx\.?\s*)?€\s*([0-9,.]+)/i, currency: 'EUR' },
+    { regex: /Trip total\s*(?:approx\.?\s*)?£\s*([0-9,.]+)/i, currency: 'GBP' },
+    { regex: /Trip total\s*(?:approx\.?\s*)?([A-Z]{3})\s*([0-9,.]+)/i },
+  ];
+  for (const { regex, currency } of patterns) {
+    const match = text.match(regex);
+    if (!match) continue;
+    const detectedCurrency = currency ?? String(match[1] ?? '').toUpperCase();
+    const amountIndex = currency ? 1 : 2;
+    const amount = Number(String(match[amountIndex] ?? '').replace(/,/g, ''));
+    if (detectedCurrency && Number.isFinite(amount) && amount > 0) {
+      return { amount, currency: detectedCurrency };
+    }
+  }
+  return null;
+};
+
 const normalizeTravelerName = (value: string): string =>
   value
     .replace(/\s+/g, ' ')
@@ -492,11 +512,13 @@ const extractChaseFlights = async (doc: NormalizedDocument): Promise<ParsedItemC
   const confirmation = text.match(/\bAirline confirmation\s*:\s*([A-Z0-9]{4,10})\b/i)?.[1]?.toUpperCase()
     ?? extractConfirmation(text);
   const travelers = extractTravelerNames(text);
-  const totalCost = parseFloat(text.match(/Trip total\s+\$([0-9,.]+)/i)?.[1]?.replace(/,/g, '') ?? '0');
+  const tripTotal = extractTripTotalCost(text);
+  const totalCost = tripTotal?.amount ?? 0;
+  const currency = tripTotal?.currency ?? null;
   const travelerCount = parseInt(text.match(/(\d+)\s+travelers?\b/i)?.[1] ?? '0', 10) || travelers.length;
 
   const candidates: ParsedItemCandidate[] = [];
-  for (const leg of legs) {
+  for (const [index, leg] of legs.entries()) {
     // Compute full departure/arrival datetimes
     let startDateTimeUtc: string | null = null;
     let endDateTimeUtc: string | null = null;
@@ -529,7 +551,9 @@ const extractChaseFlights = async (doc: NormalizedDocument): Promise<ParsedItemC
           duration: leg.duration,
           stops: leg.stops,
           fareClass: leg.fareClass,
+          cost: index === 0 ? totalCost : 0,
           totalCost,
+          currency,
           travelerCount,
           startDateTimeUtc,
           endDateTimeUtc,
@@ -645,9 +669,10 @@ const extractTransportCandidates = async (
 
   const travelers = extractTravelerNames(doc.normalizedText);
   const confirmation = extractConfirmation(doc.normalizedText);
+  const tripTotal = extractTripTotalCost(doc.normalizedText);
   const candidates: ParsedItemCandidate[] = [];
 
-  for (const leg of legs) {
+  for (const [index, leg] of legs.entries()) {
     candidates.push(
       await createCandidate({
         itemType,
@@ -661,6 +686,9 @@ const extractTransportCandidates = async (
           departureLocation: leg.departureLocation,
           arrivalLocation: leg.arrivalLocation,
           flightNumber: leg.flightNumber,
+          cost: index === 0 ? tripTotal?.amount ?? 0 : 0,
+          totalCost: tripTotal?.amount ?? null,
+          currency: tripTotal?.currency ?? null,
           startDateTimeUtc: leg.startDateTimeUtc,
         },
         confidenceScore: 0.9,

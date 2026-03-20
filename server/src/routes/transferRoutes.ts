@@ -26,6 +26,24 @@ import { applyVoteSummary } from '../services/itemVoteService';
 const TRANSFER_TYPES = ['Flight', 'Train', 'Bus', 'Private', 'Ferry', 'Other'] as const;
 type TransferType = (typeof TRANSFER_TYPES)[number];
 
+const normalizeMemberScopedIds = (ids: string[] | undefined, members: any[]): string[] | undefined => {
+  if (!Array.isArray(ids)) return undefined;
+  const memberById = new Map(members.map((member: any) => [String(member.id), String(member.id)]));
+  const memberByUserId = new Map(
+    members
+      .filter((member: any) => member?.userId)
+      .map((member: any) => [String(member.userId), String(member.id)])
+  );
+  return Array.from(
+    new Set(
+      ids
+        .map((id) => String(id))
+        .map((id) => memberById.get(id) ?? memberByUserId.get(id) ?? id)
+        .filter(Boolean)
+    )
+  );
+};
+
 // Transfers API: CRUD for transfers scoped to the authenticated user / their group trips.
 const router = Router();
 router.use(bodyParser.json());
@@ -113,7 +131,10 @@ router.post('/', async (req, res) => {
   const members = await listGroupMembers(tripGroup.groupId, userId);
   const memberIdSet = new Set(members.map((m) => String(m.id)));
   const validPassengerIds = new Set<string>(memberIdSet);
-  const normalizedPassengerIds = Array.isArray(passengerIds) ? passengerIds.map((id: any) => String(id)) : [];
+  const normalizedPassengerIds = normalizeMemberScopedIds(
+    Array.isArray(passengerIds) ? passengerIds.map((id: any) => String(id)) : [],
+    members
+  ) ?? [];
   const allValid = normalizedPassengerIds.every((id: string) => validPassengerIds.has(id));
   const allZero = normalizedPassengerIds.every((id: string) => id.startsWith('0000'));
   if (normalizedPassengerIds.length && !allValid) {
@@ -132,7 +153,10 @@ router.post('/', async (req, res) => {
   const passengerName = passengers
     .map((m: any) => m.guestName || `${m.firstName ?? ''} ${m.lastName ?? ''}`.trim() || m.email || 'Passenger')
     .join(', ') || 'Passenger';
-  const normalizedPaidBy = Array.isArray(paidBy) ? paidBy.map((id: any) => String(id)).filter(Boolean) : [];
+  const normalizedPaidBy = normalizeMemberScopedIds(
+    Array.isArray(paidBy) ? paidBy.map((id: any) => String(id)).filter(Boolean) : [],
+    members
+  ) ?? [];
   if (normalizedPaidBy.some((id) => !memberIdSet.has(id))) {
     res.status(400).json({ error: 'Payers must be trip members' });
     return;
@@ -231,6 +255,7 @@ router.patch('/:id', async (req, res) => {
     if (normalizedPassengerIds) {
       const members = await listGroupMembers(tripGroup.groupId, userId).catch(() => []);
       if (members.length) {
+        normalizedPassengerIds = normalizeMemberScopedIds(normalizedPassengerIds, members);
         const memberIdSet = new Set(members.map((m: any) => String(m.id)));
         const matchesExisting =
           flight.passengerIds &&
@@ -266,11 +291,14 @@ router.patch('/:id', async (req, res) => {
 
     if (normalizedPaidBy) {
       const members = await listGroupMembers(tripGroup.groupId, userId);
+      const normalizedPayerIds = normalizeMemberScopedIds(normalizedPaidBy.map((id: any) => String(id)), members) ?? [];
       const payerIdSet = new Set(members.map((m: any) => String(m.id)));
-      const payersValid = normalizedPaidBy.every((id: string) => payerIdSet.has(id));
+      const payersValid = normalizedPayerIds.every((id: string) => payerIdSet.has(id));
       if (!payersValid) {
         throw new Error('Payers must be trip members');
       }
+      normalizedPaidBy.length = 0;
+      normalizedPaidBy.push(...normalizedPayerIds);
     }
 
     const updated = await updateFlight(req.params.id, userId, {

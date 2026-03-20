@@ -7,6 +7,7 @@ import renderer, { act } from 'react-test-renderer';
 import { FlightEditingForm } from '../components/TransferEditingForm';
 import {
   buildFlightPayloadForCreate,
+  canonicalizeMemberSelectionIds,
   createFlightDraftForTrip,
   type FlightEditDraft,
   type GroupMemberOption,
@@ -249,6 +250,18 @@ describe('Flights dialog', () => {
     const layoverInput = root.findByProps({ testID: 'flight-modal-layover-location' });
     const layoverContainer = layoverInput.parent;
     expect(layoverContainer.findAllByType('TouchableOpacity')).toHaveLength(0);
+  });
+
+  test('canonicalizes legacy linked user ids to member ids for edit selections', () => {
+    expect(
+      canonicalizeMemberSelectionIds(
+        ['user-legacy', 'member-1'],
+        [
+          { id: 'member-1', userId: 'user-legacy' },
+          { id: 'member-2', userId: 'user-other' },
+        ]
+      )
+    ).toEqual(['member-1']);
   });
 });
 

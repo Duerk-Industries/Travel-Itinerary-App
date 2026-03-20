@@ -13,6 +13,7 @@ describe('ingestion repository firebase writes', () => {
       getCurrentDbProvider: () => 'firebase',
       poolClient: jest.fn(),
       getTripById: jest.fn(),
+      upsertExpenseForSource: jest.fn(),
     }));
     jest.doMock('../src/env', () => ({
       getEnvValue: jest.fn(),
@@ -59,6 +60,7 @@ describe('ingestion repository firebase writes', () => {
       getCurrentDbProvider: () => 'firebase',
       poolClient: jest.fn(),
       getTripById: jest.fn(),
+      upsertExpenseForSource: jest.fn(),
     }));
     jest.doMock('../src/env', () => ({
       getEnvValue: jest.fn(),
@@ -264,6 +266,8 @@ describe('ingestion repository firebase writes', () => {
         arrivalLocation: 'LPQ',
         arrivalAirportCode: 'LPQ',
         flightNumber: 'QV314',
+        cost: 591.2,
+        currency: 'USD',
       },
       editedFields: null,
       createdAt: '2026-03-20T00:00:00.000Z',
@@ -285,13 +289,23 @@ describe('ingestion repository firebase writes', () => {
       email: 'bryan.duerk@gmail.com',
     });
 
+    const upsertExpenseForSource = jest.fn().mockResolvedValue(undefined);
+
     jest.doMock('../src/db', () => ({
       getCurrentDbProvider: () => 'firebase',
       poolClient: jest.fn(),
-      getTripById: jest.fn(async (tripId: string) => (tripId === 'trip-1' ? { id: tripId, groupId: 'group-1', name: 'Trip 1' } : null)),
+      getTripById: jest.fn(async (tripId: string) => (
+        tripId === 'trip-1'
+          ? { id: tripId, groupId: 'group-1', name: 'Trip 1', currency: 'USD' }
+          : null
+      )),
+      upsertExpenseForSource,
     }));
     jest.doMock('../src/env', () => ({
       getEnvValue: jest.fn(),
+    }));
+    jest.doMock('../src/apis/frankfurterApi', () => ({
+      fetchFrankfurterExchangeRate: jest.fn(),
     }));
     jest.doMock('firebase-admin/app', () => ({
       getApps: () => [{}],
@@ -310,5 +324,215 @@ describe('ingestion repository firebase writes', () => {
     const storedFlight = (allFlights ? Array.from(allFlights.values())[0] : null) as any;
     expect(storedFlight?.passengerIds).toEqual(expect.arrayContaining(['gm-bryan', 'gm-vicky']));
     expect(fakeDb.getDocData('parsed_items', 'parsed-1')?.reviewStatus).toBe('ASSIGNED');
+    expect(upsertExpenseForSource).toHaveBeenCalledWith(expect.objectContaining({
+      tripId: 'trip-1',
+      category: 'Flights',
+      amount: 591.2,
+      currency: 'USD',
+      amountInTripCurrency: undefined,
+      exchangeRateToTripCurrency: undefined,
+      payerIds: expect.arrayContaining(['gm-bryan', 'gm-vicky']),
+      forIds: expect.arrayContaining(['gm-bryan', 'gm-vicky']),
+      sourceType: 'flight',
+    }));
+  });
+
+  it('converts assigned flight expenses into the trip currency when source currency differs', async () => {
+    class FakeDocSnapshot {
+      constructor(public id: string, private value: any) {}
+      get exists() {
+        return this.value !== undefined;
+      }
+      data() {
+        return this.value;
+      }
+    }
+
+    class FakeQuerySnapshot {
+      constructor(public docs: Array<{ id: string; ref: any; data: () => any }>) {}
+      get empty() {
+        return this.docs.length === 0;
+      }
+    }
+
+    type Filter = { field: string; op: string; value: any };
+
+    class FakeQuery {
+      constructor(private collection: FakeCollection, private filters: Filter[], private limitCount?: number) {}
+      where(field: string, op: string, value: any) {
+        return new FakeQuery(this.collection, [...this.filters, { field, op, value }], this.limitCount);
+      }
+      limit(count: number) {
+        return new FakeQuery(this.collection, this.filters, count);
+      }
+      async get() {
+        const docs = this.collection
+          .all()
+          .filter((doc) =>
+            this.filters.every((f) => {
+              const docValue = doc.data[f.field];
+              return docValue === f.value;
+            })
+          )
+          .slice(0, this.limitCount ?? undefined)
+          .map((doc) => ({
+            id: doc.id,
+            ref: this.collection.doc(doc.id),
+            data: () => doc.data,
+          }));
+        return new FakeQuerySnapshot(docs);
+      }
+    }
+
+    class FakeDocRef {
+      constructor(private collection: FakeCollection, private id: string) {}
+      async get() {
+        return new FakeDocSnapshot(this.id, this.collection.get(this.id));
+      }
+      async set(value: any, options?: { merge?: boolean }) {
+        if (options?.merge) {
+          const existing = this.collection.get(this.id) ?? {};
+          this.collection.set(this.id, { ...existing, ...value });
+          return;
+        }
+        this.collection.set(this.id, value);
+      }
+      async update(value: any) {
+        const existing = this.collection.get(this.id) ?? {};
+        this.collection.set(this.id, { ...existing, ...value });
+      }
+    }
+
+    class FakeCollection {
+      constructor(private store: Map<string, any>) {}
+      doc(id: string) {
+        return new FakeDocRef(this, id);
+      }
+      limit(count: number) {
+        return new FakeQuery(this, [], count);
+      }
+      where(field: string, op: string, value: any) {
+        return new FakeQuery(this, [{ field, op, value }], undefined);
+      }
+      set(id: string, value: any) {
+        this.store.set(id, value);
+      }
+      get(id: string) {
+        return this.store.get(id);
+      }
+      all() {
+        return Array.from(this.store.entries()).map(([id, data]) => ({ id, data }));
+      }
+    }
+
+    class FakeFirestore {
+      private collections = new Map<string, Map<string, any>>();
+      collection(name: string) {
+        if (!this.collections.has(name)) {
+          this.collections.set(name, new Map());
+        }
+        return new FakeCollection(this.collections.get(name)!);
+      }
+      async runTransaction(callback: (tx: { get: (ref: any) => Promise<any>; set: (ref: any, value: any) => Promise<void>; update: (ref: any, value: any) => Promise<void> }) => Promise<void>) {
+        const tx = {
+          get: async (ref: any) => ref.get(),
+          set: async (ref: any, value: any) => ref.set(value),
+          update: async (ref: any, value: any) => ref.update(value),
+        };
+        await callback(tx);
+      }
+    }
+
+    const fakeDb = new FakeFirestore();
+
+    fakeDb.collection('parsed_items').doc('parsed-2').set({
+      id: 'parsed-2',
+      userId: 'user-1',
+      importJobId: 'job-1',
+      rawDocId: 'doc-2',
+      itemType: 'flight',
+      sourceType: 'MANUAL_UPLOAD',
+      sourceDate: '2026-03-20T00:00:00.000Z',
+      providerVendor: 'Thai Airways',
+      travelerNames: ['Bryan Duerk'],
+      confirmationNumber: 'ABC123',
+      startDateTimeUtc: '2025-12-15T09:30:00.000Z',
+      endDateTimeUtc: '2025-12-15T11:00:00.000Z',
+      originalTimezone: 'Asia/Bangkok',
+      timezoneStatus: 'INFERRED',
+      rawDatetimeString: 'Dec 15, 2025 09:30 am',
+      timezoneDisplayHint: 'item-local',
+      rawSourceReference: 'manual:thai.pdf',
+      confidenceScore: 0.92,
+      reviewStatus: 'READY_FOR_REVIEW',
+      status: 'READY_FOR_REVIEW',
+      deduplicationFingerprint: 'fp-2',
+      logicVersion: 'logic-1',
+      extractedFields: {
+        departureLocation: 'BKK',
+        departureAirportCode: 'BKK',
+        arrivalLocation: 'CNX',
+        arrivalAirportCode: 'CNX',
+        flightNumber: 'TG102',
+        cost: 1000,
+        currency: 'THB',
+      },
+      editedFields: null,
+      createdAt: '2026-03-20T00:00:00.000Z',
+      updatedAt: '2026-03-20T00:00:00.000Z',
+    });
+    fakeDb.collection('group_members').doc('gm-bryan').set({
+      groupId: 'group-2',
+      guestName: 'Bryan Duerk',
+      removedAt: null,
+    });
+
+    const upsertExpenseForSource = jest.fn().mockResolvedValue(undefined);
+    const fetchFrankfurterExchangeRate = jest.fn().mockResolvedValue({ rate: 0.028, date: '2025-12-15' });
+
+    jest.doMock('../src/db', () => ({
+      getCurrentDbProvider: () => 'firebase',
+      poolClient: jest.fn(),
+      getTripById: jest.fn(async (tripId: string) => (
+        tripId === 'trip-2'
+          ? { id: tripId, groupId: 'group-2', name: 'Trip 2', currency: 'USD' }
+          : null
+      )),
+      upsertExpenseForSource,
+    }));
+    jest.doMock('../src/env', () => ({
+      getEnvValue: jest.fn(),
+    }));
+    jest.doMock('../src/apis/frankfurterApi', () => ({
+      fetchFrankfurterExchangeRate,
+    }));
+    jest.doMock('firebase-admin/app', () => ({
+      getApps: () => [{}],
+      initializeApp: jest.fn(),
+      cert: jest.fn(),
+    }));
+    jest.doMock('firebase-admin/firestore', () => ({
+      getFirestore: () => fakeDb,
+    }));
+
+    const { assignParsedItemToTrip } = await import('../src/ingestion/shared/repository');
+
+    await assignParsedItemToTrip('user-1', 'parsed-2', 'trip-2', 'user-1');
+
+    expect(fetchFrankfurterExchangeRate).toHaveBeenCalledWith({
+      caller: 'INGESTION_ASSIGNMENT_FX',
+      fromCurrency: 'THB',
+      toCurrency: 'USD',
+      date: '2025-12-15',
+    });
+    expect(upsertExpenseForSource).toHaveBeenCalledWith(expect.objectContaining({
+      tripId: 'trip-2',
+      amount: 1000,
+      currency: 'THB',
+      amountInTripCurrency: 28,
+      exchangeRateToTripCurrency: 0.028,
+      exchangeRateDate: '2025-12-15',
+      sourceType: 'flight',
+    }));
   });
 });

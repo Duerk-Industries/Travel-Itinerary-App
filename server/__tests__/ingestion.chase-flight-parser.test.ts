@@ -83,6 +83,8 @@ describe('Chase Travel flight regex extraction', () => {
       expect(result.parsedItems.map((item) => item.extractedFields.departureAirportCode)).toEqual(['BOS', 'SFO']);
       expect(result.parsedItems.map((item) => item.extractedFields.arrivalAirportCode)).toEqual(['LAX', 'BOS']);
       expect(result.parsedItems.map((item) => item.extractedFields.flightNumber)).toEqual(['B6187', 'B6734']);
+      expect(result.parsedItems.map((item) => item.extractedFields.cost)).toEqual([1257.6, 0]);
+      expect(result.parsedItems.map((item) => item.extractedFields.currency)).toEqual(['USD', 'USD']);
     } finally {
       await deleteTempBytes(tempRef);
     }
@@ -231,6 +233,8 @@ describe('Chase Travel flight regex extraction', () => {
       expect(flights.map((item) => item.extractedFields.departureAirportCode)).toEqual(['HAN', 'LPQ']);
       expect(flights.map((item) => item.extractedFields.arrivalAirportCode)).toEqual(['LPQ', 'CNX']);
       expect(flights[0].confirmationNumber).toBe('NGMDB9');
+      expect(flights.map((item) => item.extractedFields.cost)).toEqual([591.2, 0]);
+      expect(flights.map((item) => item.extractedFields.currency)).toEqual(['USD', 'USD']);
     } finally {
       await deleteTempBytes(tempRef);
     }

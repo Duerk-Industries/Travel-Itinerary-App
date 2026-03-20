@@ -1,6 +1,6 @@
 import request from 'supertest';
 import { app } from '../src/app';
-import { initDb, closePool } from '../src/db';
+import { initDb, closePool, findUserByEmail } from '../src/db';
 import { registerAndLoginWebUser, registerWebUser, seedTiersForTest, setUserTierInDb, cleanupTestUsersByEmail } from './helpers';
 
 describe('Flights API passenger validation', () => {
@@ -119,6 +119,37 @@ describe('Flights API passenger validation', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({ passengerIds: [memberId], carrier: 'DL2' })
       .expect(200);
+  });
+
+  it('accepts legacy linked user ids when updating passengers and normalizes them to member ids', async () => {
+    const memberUser = await findUserByEmail(member.email);
+    expect(memberUser?.id).toBeTruthy();
+
+    const createRes = await request(app)
+      .post('/api/transfers')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        passengerIds: [memberId],
+        departureDate: '2025-01-02',
+        departureTime: '09:00',
+        arrivalTime: '11:00',
+        carrier: 'DL',
+        flightNumber: '201',
+        bookingReference: 'LEGACY1',
+        tripId,
+        cost: 200,
+      })
+      .expect(201);
+
+    const flightId = createRes.body.id as string;
+
+    const patchRes = await request(app)
+      .patch(`/api/transfers/${flightId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ passengerIds: [memberUser!.id], carrier: 'DL3' })
+      .expect(200);
+
+    expect(patchRes.body.passengerIds || patchRes.body.passenger_ids).toEqual([memberId]);
   });
 
   it('creates a flight with optional carrier, flight number, and booking reference', async () => {

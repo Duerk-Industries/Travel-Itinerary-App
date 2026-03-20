@@ -2,8 +2,9 @@ import { cert, getApps, initializeApp, type App } from 'firebase-admin/app';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 import { randomUUID, createCipheriv, createDecipheriv, createHash, randomBytes } from 'crypto';
 import type { Pool } from 'pg';
-import { getCurrentDbProvider, poolClient, getTripById } from '../../db';
+import { getCurrentDbProvider, poolClient, getTripById, upsertExpenseForSource } from '../../db';
 import { getEnvValue } from '../../env';
+import { fetchFrankfurterExchangeRate } from '../../apis/frankfurterApi';
 import {
   INGESTION_LOGIC_VERSION,
   INGESTION_RETRY_POLICY_DEFAULTS,
@@ -681,6 +682,67 @@ const calculateLodgingCostPerNight = (checkInDate: string, checkOutDate: string,
   return Number((totalCost / nights).toFixed(2));
 };
 
+const normalizeCurrencyCode = (value: unknown): string | null => {
+  const text = String(value ?? '').trim().toUpperCase();
+  return /^[A-Z]{3}$/.test(text) ? text : null;
+};
+
+const syncAssignedFlightExpense = async (params: {
+  item: PersistedParsedItem;
+  tripId: string;
+  tripRecordId: string;
+  matchedMemberIds: string[];
+}): Promise<void> => {
+  if (params.item.itemType !== 'flight' && params.item.itemType !== 'rail' && params.item.itemType !== 'ferry_bus_transfer') {
+    return;
+  }
+  const trip = await getTripById(params.tripId);
+  if (!trip?.groupId) return;
+  const fields = mergeFields(params.item);
+  const amount = Number(fields.cost ?? 0);
+  const currency = normalizeCurrencyCode(fields.currency);
+  const expenseDate = toDateOnly(fields.startDateTimeUtc ?? params.item.startDateTimeUtc);
+  const tripCurrency = normalizeCurrencyCode(trip.currency) ?? 'USD';
+
+  let amountInTripCurrency: number | null | undefined = undefined;
+  let exchangeRateToTripCurrency: number | null | undefined = undefined;
+  let exchangeRateDate: string | null | undefined = undefined;
+
+  if (amount <= 0) {
+    amountInTripCurrency = 0;
+    exchangeRateToTripCurrency = currency && currency === tripCurrency ? 1 : null;
+  } else if (currency && currency !== tripCurrency) {
+    const rate = await fetchFrankfurterExchangeRate({
+      caller: 'INGESTION_ASSIGNMENT_FX',
+      fromCurrency: currency,
+      toCurrency: tripCurrency,
+      date: expenseDate,
+    }).catch(() => null);
+    if (rate) {
+      amountInTripCurrency = Number((amount * rate.rate).toFixed(2));
+      exchangeRateToTripCurrency = rate.rate;
+      exchangeRateDate = rate.date;
+    }
+  }
+
+  await upsertExpenseForSource({
+    userId: params.item.userId,
+    tripId: params.tripId,
+    groupId: trip.groupId,
+    expenseDate,
+    category: 'Flights',
+    amount,
+    currency,
+    amountInTripCurrency,
+    exchangeRateToTripCurrency,
+    exchangeRateDate,
+    payerIds: params.matchedMemberIds,
+    forIds: params.matchedMemberIds,
+    sourceType: 'flight',
+    sourceId: params.tripRecordId,
+  });
+};
+
 const mapActivityType = (itemType: PersistedParsedItem['itemType']): string => {
   switch (itemType) {
     case 'restaurant_reservation':
@@ -962,7 +1024,7 @@ const insertAssignmentArtifactsPostgres = async (client: Pool, item: PersistedPa
      WHERE id = $1`,
     [item.id, tripId, assignmentTransactionId]
   );
-  return { tripRecordId: id, assignmentTransactionId };
+  return { tripRecordId: id, assignmentTransactionId, matchedMemberIds };
 };
 
 const insertAssignmentArtifactsFirestore = async (item: PersistedParsedItem, tripId: string, assignedByUserId: string) => {
@@ -1081,7 +1143,7 @@ const insertAssignmentArtifactsFirestore = async (item: PersistedParsedItem, tri
       updatedAt: nowIso(),
     });
   });
-  return { tripRecordId, assignmentTransactionId };
+  return { tripRecordId, assignmentTransactionId, matchedMemberIds };
 };
 
 export const getOrCreateIngestionSource = async (userId: string, sourceType: IngestionSourceType): Promise<string> => {
@@ -2081,7 +2143,9 @@ export const assignParsedItemToTrip = async (userId: string, itemId: string, tri
   if (item.status === 'DELETED') throw new Error('Deleted items cannot be assigned');
 
   if (getCurrentDbProvider() === 'firebase') {
-    return insertAssignmentArtifactsFirestore(item, tripId, assignedByUserId);
+    const result = await insertAssignmentArtifactsFirestore(item, tripId, assignedByUserId);
+    await syncAssignedFlightExpense({ item, tripId, tripRecordId: result.tripRecordId, matchedMemberIds: result.matchedMemberIds });
+    return result;
   }
 
   const client = getPg();
@@ -2089,6 +2153,7 @@ export const assignParsedItemToTrip = async (userId: string, itemId: string, tri
   try {
     const result = await insertAssignmentArtifactsPostgres(client, item, tripId, assignedByUserId);
     await client.query('COMMIT');
+    await syncAssignedFlightExpense({ item, tripId, tripRecordId: result.tripRecordId, matchedMemberIds: result.matchedMemberIds });
     return result;
   } catch (error) {
     await client.query('ROLLBACK').catch(() => undefined);

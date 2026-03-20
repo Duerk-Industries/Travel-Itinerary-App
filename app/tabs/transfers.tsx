@@ -164,6 +164,7 @@ export const createInitialFlightCreateDraft = (): FlightCreateDraft => ({
 
 export type GroupMemberOption = {
   id: string;
+  userId?: string | null;
   guestName?: string;
   email?: string;
   firstName?: string;
@@ -214,6 +215,27 @@ export const createInitialFlightState = (): FlightDraft => ({
   bookingReference: '',
   paidBy: [],
 });
+
+export const canonicalizeMemberSelectionIds = (
+  ids: string[] | null | undefined,
+  members: Array<Pick<GroupMemberOption, 'id' | 'userId'>>
+): string[] => {
+  if (!Array.isArray(ids) || !ids.length) return [];
+  const memberById = new Map(members.map((member) => [String(member.id), String(member.id)]));
+  const memberByUserId = new Map(
+    members
+      .filter((member) => member.userId)
+      .map((member) => [String(member.userId), String(member.id)])
+  );
+  return Array.from(
+    new Set(
+      ids
+        .map((id) => String(id))
+        .map((id) => memberById.get(id) ?? memberByUserId.get(id) ?? id)
+        .filter((id) => memberById.has(id))
+    )
+  );
+};
 
 const getDefaultFlightDates = (trip?: Trip): { departureDate: string; arrivalDate: string } | null => {
   if (!trip) return null;
@@ -944,6 +966,14 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   };
 
   const openFlightDetails = (flight: Flight) => {
+    const normalizedPassengerIds = canonicalizeMemberSelectionIds(
+      Array.isArray(flight.passenger_ids) ? flight.passenger_ids : Array.isArray((flight as any).passengerIds) ? (flight as any).passengerIds : [],
+      groupMembers
+    );
+    const normalizedPaidBy = canonicalizeMemberSelectionIds(
+      Array.isArray(flight.paidBy) ? flight.paidBy : Array.isArray(flight.paid_by) ? flight.paid_by : [],
+      groupMembers
+    );
     setEditingFlightId(flight.id);
     const base: FlightEditDraft = {
       status: normalizeItineraryStatus((flight as any).status, LEGACY_ITINERARY_STATUS),
@@ -953,7 +983,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
           ? (flight as any).transfer_type
           : 'Flight',
       passengerName: flight.passenger_name,
-      passengerIds: Array.isArray(flight.passenger_ids) ? flight.passenger_ids : [],
+      passengerIds: normalizedPassengerIds,
       departureDate: normalizeDateString(flight.departure_date),
       arrivalDate: normalizeDateString(flight.arrival_date || (flight as any).arrivalDate || flight.departure_date),
       departureLocation: flight.departure_location ?? '',
@@ -969,7 +999,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       carrier: flight.carrier,
       flightNumber: flight.flight_number,
       bookingReference: flight.booking_reference,
-      paidBy: Array.isArray(flight.paidBy) ? flight.paidBy : Array.isArray(flight.paid_by) ? flight.paid_by : [],
+      paidBy: normalizedPaidBy,
     };
     if (base.paidBy.length === 0 && defaultPayerId) {
       base.paidBy = [defaultPayerId];
