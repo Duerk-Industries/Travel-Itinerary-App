@@ -123,4 +123,192 @@ describe('ingestion repository firebase writes', () => {
     expect(parsedItemPayload.extractedFields.flightNumber).toBe('AA100');
     expect('flightNumbers' in parsedItemPayload.extractedFields).toBe(false);
   });
+
+  it('matches Firebase group members via linked web user profile names during assignment', async () => {
+    class FakeDocSnapshot {
+      constructor(public id: string, private value: any) {}
+      get exists() {
+        return this.value !== undefined;
+      }
+      data() {
+        return this.value;
+      }
+    }
+
+    class FakeQuerySnapshot {
+      constructor(public docs: Array<{ id: string; ref: any; data: () => any }>) {}
+      get empty() {
+        return this.docs.length === 0;
+      }
+    }
+
+    type Filter = { field: string; op: string; value: any };
+
+    class FakeQuery {
+      constructor(private collection: FakeCollection, private filters: Filter[], private limitCount?: number) {}
+      where(field: string, op: string, value: any) {
+        return new FakeQuery(this.collection, [...this.filters, { field, op, value }], this.limitCount);
+      }
+      limit(count: number) {
+        return new FakeQuery(this.collection, this.filters, count);
+      }
+      async get() {
+        const docs = this.collection
+          .all()
+          .filter((doc) =>
+            this.filters.every((f) => {
+              const docValue = doc.data[f.field];
+              return docValue === f.value;
+            })
+          )
+          .slice(0, this.limitCount ?? undefined)
+          .map((doc) => ({
+            id: doc.id,
+            ref: this.collection.doc(doc.id),
+            data: () => doc.data,
+          }));
+        return new FakeQuerySnapshot(docs);
+      }
+    }
+
+    class FakeDocRef {
+      constructor(private collection: FakeCollection, private id: string) {}
+      async get() {
+        return new FakeDocSnapshot(this.id, this.collection.get(this.id));
+      }
+      async set(value: any, options?: { merge?: boolean }) {
+        if (options?.merge) {
+          const existing = this.collection.get(this.id) ?? {};
+          this.collection.set(this.id, { ...existing, ...value });
+          return;
+        }
+        this.collection.set(this.id, value);
+      }
+      async update(value: any) {
+        const existing = this.collection.get(this.id) ?? {};
+        this.collection.set(this.id, { ...existing, ...value });
+      }
+    }
+
+    class FakeCollection {
+      constructor(private store: Map<string, any>) {}
+      doc(id: string) {
+        return new FakeDocRef(this, id);
+      }
+      limit(count: number) {
+        return new FakeQuery(this, [], count);
+      }
+      where(field: string, op: string, value: any) {
+        return new FakeQuery(this, [{ field, op, value }], undefined);
+      }
+      set(id: string, value: any) {
+        this.store.set(id, value);
+      }
+      get(id: string) {
+        return this.store.get(id);
+      }
+      all() {
+        return Array.from(this.store.entries()).map(([id, data]) => ({ id, data }));
+      }
+    }
+
+    class FakeFirestore {
+      private collections = new Map<string, Map<string, any>>();
+      collection(name: string) {
+        if (!this.collections.has(name)) {
+          this.collections.set(name, new Map());
+        }
+        return new FakeCollection(this.collections.get(name)!);
+      }
+      async runTransaction(callback: (tx: { get: (ref: any) => Promise<any>; set: (ref: any, value: any) => Promise<void>; update: (ref: any, value: any) => Promise<void> }) => Promise<void>) {
+        const tx = {
+          get: async (ref: any) => ref.get(),
+          set: async (ref: any, value: any) => ref.set(value),
+          update: async (ref: any, value: any) => ref.update(value),
+        };
+        await callback(tx);
+      }
+      getDocData(name: string, id: string) {
+        return this.collections.get(name)?.get(id);
+      }
+    }
+
+    const fakeDb = new FakeFirestore();
+
+    fakeDb.collection('parsed_items').doc('parsed-1').set({
+      id: 'parsed-1',
+      userId: 'user-1',
+      importJobId: 'job-1',
+      rawDocId: 'doc-1',
+      itemType: 'flight',
+      sourceType: 'MANUAL_UPLOAD',
+      sourceDate: '2026-03-20T00:00:00.000Z',
+      providerVendor: 'Lao Airlines',
+      travelerNames: ['Bryan Duerk', 'Vicky Duerk'],
+      confirmationNumber: 'NGMDB9',
+      startDateTimeUtc: '2025-11-30T18:50:00.000Z',
+      endDateTimeUtc: '2025-11-30T20:00:00.000Z',
+      originalTimezone: 'Asia/Ho_Chi_Minh',
+      timezoneStatus: 'INFERRED',
+      rawDatetimeString: 'Nov 30, 2025 06:50 pm',
+      timezoneDisplayHint: 'item-local',
+      rawSourceReference: 'manual:test.pdf',
+      confidenceScore: 0.94,
+      reviewStatus: 'READY_FOR_REVIEW',
+      status: 'READY_FOR_REVIEW',
+      deduplicationFingerprint: 'fp-1',
+      logicVersion: 'logic-1',
+      extractedFields: {
+        departureLocation: 'HAN',
+        departureAirportCode: 'HAN',
+        arrivalLocation: 'LPQ',
+        arrivalAirportCode: 'LPQ',
+        flightNumber: 'QV314',
+      },
+      editedFields: null,
+      createdAt: '2026-03-20T00:00:00.000Z',
+      updatedAt: '2026-03-20T00:00:00.000Z',
+    });
+    fakeDb.collection('group_members').doc('gm-bryan').set({
+      groupId: 'group-1',
+      userId: 'user-bryan',
+      removedAt: null,
+    });
+    fakeDb.collection('group_members').doc('gm-vicky').set({
+      groupId: 'group-1',
+      guestName: 'Vicky Duerk',
+      removedAt: null,
+    });
+    fakeDb.collection('web_users').doc('user-bryan').set({
+      firstName: 'Bryan',
+      lastName: 'Duerk',
+      email: 'bryan.duerk@gmail.com',
+    });
+
+    jest.doMock('../src/db', () => ({
+      getCurrentDbProvider: () => 'firebase',
+      poolClient: jest.fn(),
+      getTripById: jest.fn(async (tripId: string) => (tripId === 'trip-1' ? { id: tripId, groupId: 'group-1', name: 'Trip 1' } : null)),
+    }));
+    jest.doMock('../src/env', () => ({
+      getEnvValue: jest.fn(),
+    }));
+    jest.doMock('firebase-admin/app', () => ({
+      getApps: () => [{}],
+      initializeApp: jest.fn(),
+      cert: jest.fn(),
+    }));
+    jest.doMock('firebase-admin/firestore', () => ({
+      getFirestore: () => fakeDb,
+    }));
+
+    const { assignParsedItemToTrip } = await import('../src/ingestion/shared/repository');
+
+    await assignParsedItemToTrip('user-1', 'parsed-1', 'trip-1', 'user-1');
+
+    const allFlights = (fakeDb as any).collections.get('flights');
+    const storedFlight = (allFlights ? Array.from(allFlights.values())[0] : null) as any;
+    expect(storedFlight?.passengerIds).toEqual(expect.arrayContaining(['gm-bryan', 'gm-vicky']));
+    expect(fakeDb.getDocData('parsed_items', 'parsed-1')?.reviewStatus).toBe('ASSIGNED');
+  });
 });

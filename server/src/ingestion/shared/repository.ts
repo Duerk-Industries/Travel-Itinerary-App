@@ -731,16 +731,37 @@ const matchTravelerNamesToGroupMemberIds = async (
     if (!trip?.groupId) return [];
 
     if (getCurrentDbProvider() === 'firebase') {
-      const snap = await getFirebaseDb()
+      const db = getFirebaseDb();
+      const snap = await db
         .collection('group_members')
         .where('groupId', '==', trip.groupId)
         .where('removedAt', '==', null)
         .get();
       if (snap.empty) return [];
+      const linkedUserIds = Array.from(
+        new Set(
+          snap.docs
+            .map((doc) => String((doc.data() as any).userId ?? '').trim())
+            .filter(Boolean)
+        )
+      );
+      const linkedProfiles = new Map<string, any>();
+      await Promise.all(
+        linkedUserIds.map(async (userId) => {
+          const profileSnap = await db.collection('web_users').doc(userId).get();
+          if (profileSnap.exists) {
+            linkedProfiles.set(userId, profileSnap.data() as any);
+          }
+        })
+      );
       const memberIds: string[] = [];
       for (const doc of snap.docs) {
         const d = doc.data() as any;
-        const memberName = [d.firstName ?? '', d.lastName ?? ''].join(' ').trim().toLowerCase();
+        const profile = d.userId ? linkedProfiles.get(String(d.userId)) : null;
+        const memberName = [
+          d.firstName ?? profile?.firstName ?? '',
+          d.lastName ?? profile?.lastName ?? '',
+        ].join(' ').trim().toLowerCase();
         const memberTokens = memberName.split(/\s+/).filter(Boolean);
         const guestName = (d.guestName ?? '').trim().toLowerCase();
         const guestTokens = guestName.split(/\s+/).filter(Boolean);
