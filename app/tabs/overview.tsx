@@ -1958,7 +1958,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 style={[styles.button, styles.smallButton, styles.dangerButton]}
                 onPress={cancelOverviewEdits}
               >
-                <Text style={styles.buttonText}>Cancel</Text>
+                <Text style={styles.dangerButtonText}>Cancel</Text>
               </TouchableOpacity>
             </View>
           ) : (
@@ -2241,12 +2241,16 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               <TextInput
                 style={[styles.input, { flex: 1 }]}
                 placeholder="First name"
+                autoComplete="given-name"
+                textContentType="givenName"
                 value={travelerDraft.firstName}
                 onChangeText={(text) => setTravelerDraft((prev) => ({ ...prev, firstName: text }))}
               />
               <TextInput
                 style={[styles.input, { flex: 1 }]}
                 placeholder="Last name"
+                autoComplete="family-name"
+                textContentType="familyName"
                 value={travelerDraft.lastName}
                 onChangeText={(text) => setTravelerDraft((prev) => ({ ...prev, lastName: text }))}
               />
@@ -2255,6 +2259,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               style={styles.input}
               placeholder="Email (optional)"
               autoCapitalize="none"
+              autoComplete="email"
+              textContentType="emailAddress"
               keyboardType="email-address"
               value={travelerDraft.email}
               onChangeText={(text) => setTravelerDraft((prev) => ({ ...prev, email: text }))}
@@ -2264,7 +2270,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 style={[styles.button, styles.smallButton, styles.dangerButton]}
                 onPress={() => setShowAddTraveler(false)}
               >
-                <Text style={styles.buttonText}>Cancel</Text>
+                <Text style={styles.dangerButtonText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={addTraveler}>
                 <Text style={styles.buttonText}>Save Traveler</Text>

@@ -33,6 +33,7 @@ const styles = {
     payerOptions: {},
     smallButton: {},
     dangerButton: {},
+    dangerButtonText: {},
     linkText: {},
     cellText: {},
     detailRow: {},

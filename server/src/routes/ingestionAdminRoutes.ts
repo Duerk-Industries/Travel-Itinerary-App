@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getIngestionObservabilitySnapshot, getRetryPolicyConfig, listDeadLetterImportJobs, upsertRetryPolicyConfig } from '../ingestion/shared/repository';
+import { clearExtractionCache, getIngestionObservabilitySnapshot, getRetryPolicyConfig, listDeadLetterImportJobs, upsertRetryPolicyConfig } from '../ingestion/shared/repository';
 import { isFeatureEnabled } from '../services/entitlementService';
 import { INGESTION_FEATURE_FLAGS } from '../ingestion/config';
 import { requeueDeadLetterImportJob } from '../ingestion/orchestrator';
@@ -61,6 +61,12 @@ router.post('/dead-letter/re-drive', async (req, res) => {
     matched: jobs.length,
     retried: retried.length,
   });
+});
+
+router.post('/clear-cache', async (_req, res) => {
+  if (!(await ensureEnabled(res))) return;
+  const result = await clearExtractionCache();
+  res.json(result);
 });
 
 export default router;

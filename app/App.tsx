@@ -213,7 +213,7 @@ type Page =
   | 'following'
   | 'admin';
 
-type AdminSectionRoute = 'overview' | 'users' | 'tiers' | 'features' | 'user-data' | 'audit-log';
+type AdminSectionRoute = 'overview' | 'users' | 'tiers' | 'features' | 'user-data' | 'audit-log' | 'ingestion' | 'api-limits';
 
 type RootStackParamList = {
   Main: undefined;
@@ -228,13 +228,14 @@ type RootStackParamList = {
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
-const adminScreenBySection: Record<AdminSectionRoute, keyof RootStackParamList> = {
+const adminScreenBySection: Partial<Record<AdminSectionRoute, keyof RootStackParamList>> = {
   overview: 'AdminOverview',
   users: 'AdminUsers',
   tiers: 'AdminTiers',
   features: 'AdminFeatures',
   'user-data': 'AdminUserData',
   'audit-log': 'AdminAuditLog',
+  // 'ingestion' and 'api-limits' are handled internally by AdminTab, no separate screen needed
 };
 
 const adminSectionByScreen: Record<Exclude<keyof RootStackParamList, 'Main'>, AdminSectionRoute> = {
@@ -2777,7 +2778,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                       </>
                     ) : null}
                     <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => removeCarRental(car.id)} testID={`car-rental-delete-${car.id}`}>
-                      <Text style={styles.buttonText}>Delete</Text>
+                      <Text style={styles.dangerButtonText}>Delete</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -3162,7 +3163,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                       <Text style={styles.buttonText}>View</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={() => deleteTrip(trip.id)}>
-                      <Text style={styles.buttonText}>Delete</Text>
+                      <Text style={styles.dangerButtonText}>Delete</Text>
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -3293,12 +3294,16 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               <TextInput
                 style={styles.input}
                 placeholder="First name"
+                autoComplete="given-name"
+                textContentType="givenName"
                 value={authForm.firstName}
                 onChangeText={(text: string) => setAuthForm((p) => ({ ...p, firstName: text }))}
               />
               <TextInput
                 style={styles.input}
                 placeholder="Last name"
+                autoComplete="family-name"
+                textContentType="familyName"
                 value={authForm.lastName}
                 onChangeText={(text: string) => setAuthForm((p) => ({ ...p, lastName: text }))}
               />
@@ -3309,6 +3314,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             style={styles.input}
             placeholder="Email or Username"
             autoCapitalize="none"
+            autoComplete={authMode === 'register' ? 'email' : 'username'}
+            textContentType={authMode === 'register' ? 'emailAddress' : 'username'}
+            inputMode="email"
+            nativeID="email"
             value={authForm.email}
             onChangeText={(text: string) => setAuthForm((p) => ({ ...p, email: text }))}
           />
@@ -3316,6 +3325,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             style={styles.input}
             placeholder="Password"
             secureTextEntry
+            autoComplete={authMode === 'register' ? 'new-password' : 'current-password'}
+            textContentType={authMode === 'register' ? 'newPassword' : 'password'}
+            nativeID="password"
             value={authForm.password}
             onChangeText={(text: string) => setAuthForm((p) => ({ ...p, password: text }))}
           />
@@ -3324,6 +3336,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               style={styles.input}
               placeholder="Confirm password"
               secureTextEntry
+              autoComplete="new-password"
+              textContentType="newPassword"
+              nativeID="password-confirm"
               value={authForm.passwordConfirm}
               onChangeText={(text: string) => setAuthForm((p) => ({ ...p, passwordConfirm: text }))}
             />
@@ -3373,6 +3388,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                 style={styles.input}
                 placeholder="New password"
                 secureTextEntry
+                autoComplete="new-password"
+                textContentType="newPassword"
+                nativeID="new-password"
                 value={passwordSetupForm.newPassword}
                 onChangeText={(text: string) => setPasswordSetupForm((p) => ({ ...p, newPassword: text }))}
               />
@@ -3380,6 +3398,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                 style={styles.input}
                 placeholder="Confirm new password"
                 secureTextEntry
+                autoComplete="new-password"
+                textContentType="newPassword"
+                nativeID="new-password-confirm"
                 value={passwordSetupForm.newPasswordConfirm}
                 onChangeText={(text: string) => setPasswordSetupForm((p) => ({ ...p, newPasswordConfirm: text }))}
               />
@@ -3426,7 +3447,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                           onPress={() => rejectInvite(invite)}
                           testID={`invite-decline-${invite.id}`}
                         >
-                          <Text style={styles.buttonText}>Decline</Text>
+                          <Text style={styles.dangerButtonText}>Decline</Text>
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -3595,7 +3616,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 const App: React.FC = () => {
   const openAdminSection = useCallback((section: AdminSectionRoute) => {
     const screen = adminScreenBySection[section];
-    if (navigationRef.isReady()) {
+    if (screen && navigationRef.isReady()) {
       navigationRef.navigate(screen);
     }
   }, []);
@@ -4024,6 +4045,29 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
   },
   dangerButton: {
     backgroundColor: theme.colors.error,
+  },
+  dangerButtonText: {
+    color: '#FFFFFF',
+    fontWeight: theme.typography.weightBold,
+  },
+  toggleOption: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+  },
+  toggleOptionSelected: {
+    backgroundColor: theme.mode === 'dark' ? '#1A3A50' : '#DDE8F0',
+    borderColor: theme.colors.link,
+  },
+  toggleOptionText: {
+    color: theme.colors.text,
+    fontWeight: theme.typography.weightSemibold,
+  },
+  toggleOptionTextSelected: {
+    color: theme.colors.link,
   },
   navRow: {
     flexDirection: 'row',

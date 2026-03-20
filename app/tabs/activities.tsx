@@ -583,7 +583,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                   <Text style={styles.buttonText}>Edit</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => removeTour(t.id)} testID={`activity-delete-${t.id}`}>
-                  <Text style={styles.buttonText}>Delete</Text>
+                  <Text style={styles.dangerButtonText}>Delete</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -814,7 +814,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
             </ScrollView>
             <View style={[styles.tableFooter, { justifyContent: 'space-between' }]}>
               <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={closeTourEditor} testID="activity-cancel">
-                <Text style={styles.buttonText}>Cancel</Text>
+                <Text style={styles.dangerButtonText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.button} onPress={saveTour} testID="activity-save">
                 <Text style={styles.buttonText}>Save</Text>

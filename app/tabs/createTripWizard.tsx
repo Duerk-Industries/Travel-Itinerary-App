@@ -1653,6 +1653,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                 style={[styles.input, { flex: 1 }]}
                 placeholder="First name"
                 title="First name"
+                autoComplete="given-name"
+                textContentType="givenName"
                 value={participantDraft.firstName}
                 onChangeText={(text: string) => setParticipantDraft((prev) => ({ ...prev, firstName: text }))}
               />
@@ -1660,6 +1662,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                 style={[styles.input, { flex: 1 }]}
                 placeholder="Last name"
                 title="Last name"
+                autoComplete="family-name"
+                textContentType="familyName"
                 value={participantDraft.lastName}
                 onChangeText={(text: string) => setParticipantDraft((prev) => ({ ...prev, lastName: text }))}
               />
@@ -1669,6 +1673,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               placeholder="Email (optional)"
               title="Email"
               autoCapitalize="none"
+              autoComplete="email"
+              textContentType="emailAddress"
               keyboardType="email-address"
               value={participantDraft.email ?? ''}
               onChangeText={(text: any) => setParticipantDraft((prev) => ({ ...prev, email: text }))}
@@ -2138,7 +2144,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                         style={[styles.button, styles.smallButton, styles.dangerButton]}
                         onPress={() => removeWizardLodging(l.id)}
                       >
-                        <Text style={styles.buttonText}>Delete</Text>
+                        <Text style={styles.dangerButtonText}>Delete</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -2265,7 +2271,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     </View>
                     <View style={[styles.cell, styles.actionCell, { minWidth: 160, flex: 1 }, styles.lastCell]}>
                       <TouchableOpacity style={[styles.smallButton, styles.dangerButton]} onPress={() => removeWizardCarRental(car.id)}>
-                        <Text style={styles.buttonText}>Delete</Text>
+                        <Text style={styles.dangerButtonText}>Delete</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -2626,7 +2632,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             style={[styles.button, styles.dangerButton, { paddingHorizontal: 12, paddingVertical: 6 }]}
             onPress={() => setShowExitConfirm(true)}
           >
-            <Text style={styles.buttonText}>X</Text>
+            <Text style={styles.dangerButtonText}>X</Text>
           </TouchableOpacity>
         </View>
         {wizardError ? <Text style={styles.errorText}>{wizardError}</Text> : null}
@@ -2636,7 +2642,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             style={[styles.button, styles.dangerButton, { flex: 1 }]}
             onPress={stepIndex === 0 ? onCancel : goBack}
           >
-            <Text style={styles.buttonText}>{stepIndex === 0 ? 'Cancel' : 'Back'}</Text>
+            <Text style={styles.dangerButtonText}>{stepIndex === 0 ? 'Cancel' : 'Back'}</Text>
           </TouchableOpacity>
           {stepIndex < totalSteps - 1 ? (
             <TouchableOpacity
@@ -2913,7 +2919,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             </ScrollView>
             <View style={styles.row}>
               <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={closeWizardLodgingEditor}>
-                <Text style={styles.buttonText}>Cancel</Text>
+                <Text style={styles.dangerButtonText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.button}
@@ -2938,7 +2944,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                   onCancel();
                 }}
               >
-                <Text style={styles.buttonText}>Exit</Text>
+                <Text style={styles.dangerButtonText}>Exit</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.button, { flex: 1 }]} onPress={() => setShowExitConfirm(false)}>
                 <Text style={styles.buttonText}>Stay</Text>

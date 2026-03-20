@@ -564,7 +564,7 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
                   <Text style={styles.buttonText}>Assign</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.button, styles.tableActionButtonDanger]} onPress={() => deleteItem(selectedItem.id)}>
-                  <Text style={styles.buttonText}>Delete</Text>
+                  <Text style={styles.dangerButtonText}>Delete</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.button}

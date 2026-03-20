@@ -1,6 +1,6 @@
 import type { ParsedItemReviewState, ParsedItemType, UserVisibleFailureCode } from './contracts';
 
-export const INGESTION_LOGIC_VERSION = '2026.03.17.phase1';
+export const INGESTION_LOGIC_VERSION = '2026.03.20.chase-flight-passengers';
 export const INGESTION_MAX_FILE_BYTES = 10 * 1024 * 1024;
 export const INGESTION_SIGNED_URL_TTL_SECONDS = 15 * 60;
 export const INGESTION_WEBHOOK_MAX_AGE_MS = 5 * 60 * 1000;

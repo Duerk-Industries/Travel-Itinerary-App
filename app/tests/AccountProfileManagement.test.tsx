@@ -20,6 +20,7 @@ const styles = {
   buttonText: {},
   divider: {},
   dangerButton: {},
+  dangerButtonText: {},
   modalOverlay: {},
   confirmModal: {},
   dropdownList: {},

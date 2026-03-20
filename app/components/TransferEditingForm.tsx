@@ -477,7 +477,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
         </ScrollView>
         <View style={styles.row}>
           <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={onClose}>
-            <Text style={styles.buttonText}>Cancel</Text>
+            <Text style={styles.dangerButtonText}>Cancel</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.button} onPress={onSave} testID="flight-modal-save">
             <Text style={styles.buttonText}>Save</Text>

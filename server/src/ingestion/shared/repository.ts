@@ -717,6 +717,96 @@ const ensureTripExists = async (tripId: string): Promise<void> => {
   }
 };
 
+/**
+ * Match extracted traveler names against trip group members, returning the
+ * member row IDs for any that match.  Uses case-insensitive first+last comparison.
+ */
+const matchTravelerNamesToGroupMemberIds = async (
+  travelerNames: string[],
+  tripId: string
+): Promise<string[]> => {
+  if (!travelerNames.length) return [];
+  try {
+    const trip = await getTripById(tripId);
+    if (!trip?.groupId) return [];
+
+    if (getCurrentDbProvider() === 'firebase') {
+      const snap = await getFirebaseDb()
+        .collection('group_members')
+        .where('groupId', '==', trip.groupId)
+        .where('removedAt', '==', null)
+        .get();
+      if (snap.empty) return [];
+      const memberIds: string[] = [];
+      for (const doc of snap.docs) {
+        const d = doc.data() as any;
+        const memberName = [d.firstName ?? '', d.lastName ?? ''].join(' ').trim().toLowerCase();
+        const memberTokens = memberName.split(/\s+/).filter(Boolean);
+        const guestName = (d.guestName ?? '').trim().toLowerCase();
+        const guestTokens = guestName.split(/\s+/).filter(Boolean);
+        for (const traveler of travelerNames) {
+          const t = traveler.trim().toLowerCase();
+          const travelerTokens = t.split(/\s+/).filter(Boolean);
+          if ((memberName && t === memberName) || (guestName && t === guestName)) {
+            memberIds.push(doc.id);
+            break;
+          }
+          if (memberTokens.length >= 2 && memberTokens.every((tok) => travelerTokens.includes(tok))) {
+            memberIds.push(doc.id);
+            break;
+          }
+          if (guestTokens.length >= 2 && guestTokens.every((tok: string) => travelerTokens.includes(tok))) {
+            memberIds.push(doc.id);
+            break;
+          }
+        }
+      }
+      return memberIds;
+    }
+
+    // Postgres: join group_members with users/web_users to get full names
+    const { rows } = await getPg().query<{ id: string; fullName: string; guestName: string | null }>(
+      `SELECT gm.id,
+              LOWER(TRIM(COALESCE(gm.first_name, wu.first_name, '') || ' ' || COALESCE(gm.last_name, wu.last_name, ''))) as "fullName",
+              LOWER(TRIM(COALESCE(gm.guest_name, ''))) as "guestName"
+       FROM group_members gm
+       LEFT JOIN web_users wu ON gm.user_id = wu.id
+       WHERE gm.group_id = $1 AND gm.removed_at IS NULL`,
+      [trip.groupId]
+    );
+    if (!rows.length) return [];
+
+    const normalizedTravelers = travelerNames.map((n) => n.trim().toLowerCase());
+    const matched: string[] = [];
+    for (const row of rows) {
+      const memberTokens = row.fullName.trim().split(/\s+/).filter(Boolean);
+      const guestTokens = (row.guestName ?? '').split(/\s+/).filter(Boolean);
+      for (const t of normalizedTravelers) {
+        const travelerTokens = t.split(/\s+/).filter(Boolean);
+        // Exact match
+        if ((row.fullName.trim() && t === row.fullName.trim()) || (row.guestName && t === row.guestName)) {
+          matched.push(row.id);
+          break;
+        }
+        // Fuzzy: member's first+last tokens are all contained in the traveler name
+        // e.g., member "Bryan Duerk" matches traveler "Bryan Edward Duerk"
+        if (memberTokens.length >= 2 && memberTokens.every((tok) => travelerTokens.includes(tok))) {
+          matched.push(row.id);
+          break;
+        }
+        if (guestTokens.length >= 2 && guestTokens.every((tok: string) => travelerTokens.includes(tok))) {
+          matched.push(row.id);
+          break;
+        }
+      }
+    }
+    return matched;
+  } catch {
+    // Best-effort: if matching fails (e.g., pg-mem limitations), return empty
+    return [];
+  }
+};
+
 const insertAssignmentArtifactsPostgres = async (client: Pool, item: PersistedParsedItem, tripId: string, assignedByUserId: string) => {
   const id = randomUUID();
   const messageId = randomUUID();
@@ -724,6 +814,9 @@ const insertAssignmentArtifactsPostgres = async (client: Pool, item: PersistedPa
   const trip = await getTripById(tripId);
   const tripName = trip?.name ?? 'trip';
   const fields = mergeFields(item);
+
+  // Auto-match extracted traveler names to trip group members
+  const matchedMemberIds = await matchTravelerNamesToGroupMemberIds(item.travelerNames ?? [], tripId);
 
   if (item.itemType === 'flight' || item.itemType === 'rail' || item.itemType === 'ferry_bus_transfer') {
     await client.query(
@@ -738,7 +831,7 @@ const insertAssignmentArtifactsPostgres = async (client: Pool, item: PersistedPa
         tripId,
         item.itemType === 'flight' ? 'Flight' : item.itemType === 'rail' ? 'Train' : 'Ferry',
         (item.travelerNames ?? []).join(', ') || 'Traveler',
-        JSON.stringify([]),
+        JSON.stringify(matchedMemberIds),
         toDateOnly(fields.startDateTimeUtc ?? item.startDateTimeUtc),
         String(fields.departureLocation ?? fields.location ?? ''),
         String(fields.departureAirportCode ?? ''),
@@ -751,7 +844,7 @@ const insertAssignmentArtifactsPostgres = async (client: Pool, item: PersistedPa
         String(fields.providerVendor ?? item.providerVendor ?? ''),
         String(fields.flightNumber ?? fields.segmentNumber ?? ''),
         String(fields.confirmationNumber ?? item.confirmationNumber ?? ''),
-        JSON.stringify([]),
+        JSON.stringify(matchedMemberIds),
       ]
     );
   } else if (item.itemType === 'hotel') {
@@ -775,8 +868,8 @@ const insertAssignmentArtifactsPostgres = async (client: Pool, item: PersistedPa
         totalCost,
         calculateLodgingCostPerNight(checkInDate, checkOutDate, totalCost),
         String(fields.address ?? fields.location ?? ''),
-        JSON.stringify([]),
-        JSON.stringify([]),
+        JSON.stringify(matchedMemberIds),
+        JSON.stringify(matchedMemberIds),
       ]
     );
   } else if (item.itemType === 'car_rental') {
@@ -799,8 +892,8 @@ const insertAssignmentArtifactsPostgres = async (client: Pool, item: PersistedPa
         Number(fields.cost ?? 0),
         String(fields.model ?? ''),
         String(fields.notes ?? ''),
-        JSON.stringify([]),
-        JSON.stringify([]),
+        JSON.stringify(matchedMemberIds),
+        JSON.stringify(matchedMemberIds),
       ]
     );
   } else if (item.itemType === 'tour_activity' || item.itemType === 'restaurant_reservation' || item.itemType === 'event_ticket') {
@@ -823,8 +916,8 @@ const insertAssignmentArtifactsPostgres = async (client: Pool, item: PersistedPa
         toDateOnly(fields.freeCancelBy ?? fields.startDateTimeUtc ?? item.startDateTimeUtc),
         nowIso().slice(0, 10),
         String(fields.confirmationNumber ?? item.confirmationNumber ?? ''),
-        JSON.stringify([]),
-        JSON.stringify([]),
+        JSON.stringify(matchedMemberIds),
+        JSON.stringify(matchedMemberIds),
       ]
     );
   }
@@ -859,6 +952,7 @@ const insertAssignmentArtifactsFirestore = async (item: PersistedParsedItem, tri
   const trip = await getTripById(tripId);
   const tripName = trip?.name ?? 'trip';
   const fields = mergeFields(item);
+  const matchedMemberIds = await matchTravelerNamesToGroupMemberIds(item.travelerNames ?? [], tripId);
   await db.runTransaction(async (tx) => {
     const parsedItemRef = db.collection('parsed_items').doc(item.id);
     const parsedItemDoc = await tx.get(parsedItemRef);
@@ -875,7 +969,7 @@ const insertAssignmentArtifactsFirestore = async (item: PersistedParsedItem, tri
         ...payload,
         transferType: item.itemType === 'flight' ? 'Flight' : item.itemType === 'rail' ? 'Train' : 'Ferry',
         passengerName: (item.travelerNames ?? []).join(', ') || 'Traveler',
-        passengerIds: [],
+        passengerIds: matchedMemberIds,
         departureDate: toDateOnly(fields.startDateTimeUtc ?? item.startDateTimeUtc),
         departureLocation: String(fields.departureLocation ?? ''),
         departureAirportCode: String(fields.departureAirportCode ?? ''),
@@ -888,7 +982,7 @@ const insertAssignmentArtifactsFirestore = async (item: PersistedParsedItem, tri
         carrier: String(fields.providerVendor ?? item.providerVendor ?? ''),
         flightNumber: String(fields.flightNumber ?? ''),
         bookingReference: String(fields.confirmationNumber ?? item.confirmationNumber ?? ''),
-        paidBy: [],
+        paidBy: matchedMemberIds,
       });
     } else if (item.itemType === 'hotel') {
       const checkInDate = toDateOnly(fields.startDateTimeUtc ?? item.startDateTimeUtc);
@@ -921,8 +1015,8 @@ const insertAssignmentArtifactsFirestore = async (item: PersistedParsedItem, tri
         cost: Number(fields.cost ?? 0),
         model: String(fields.model ?? ''),
         notes: String(fields.notes ?? ''),
-        paidBy: [],
-        travelerIds: [],
+        paidBy: matchedMemberIds,
+        travelerIds: matchedMemberIds,
       });
     } else if (item.itemType === 'tour_activity' || item.itemType === 'restaurant_reservation' || item.itemType === 'event_ticket') {
       tx.set(db.collection('tours').doc(tripRecordId), {
@@ -937,8 +1031,8 @@ const insertAssignmentArtifactsFirestore = async (item: PersistedParsedItem, tri
         freeCancelBy: toDateOnly(fields.freeCancelBy ?? fields.startDateTimeUtc ?? item.startDateTimeUtc),
         bookedOn: nowIso().slice(0, 10),
         reference: String(fields.confirmationNumber ?? item.confirmationNumber ?? ''),
-        paidBy: [],
-        travelerIds: [],
+        paidBy: matchedMemberIds,
+        travelerIds: matchedMemberIds,
       });
     }
     tx.set(db.collection('trip_messages').doc(messageId), {
@@ -2118,6 +2212,20 @@ export const saveExtractionCacheEntry = async (
      DO UPDATE SET extraction_result = EXCLUDED.extraction_result, updated_at = NOW()`,
     [randomUUID(), userId, contentHash, logicVersion, JSON.stringify(extractionResult)]
   );
+};
+
+export const clearExtractionCache = async (): Promise<{ deleted: number }> => {
+  await ensureIngestionRepositoryReady();
+  if (getCurrentDbProvider() === 'firebase') {
+    const snap = await getFirebaseDb().collection('extraction_cache').limit(500).get();
+    if (snap.empty) return { deleted: 0 };
+    const batch = getFirebaseDb().batch();
+    snap.docs.forEach((doc) => batch.delete(doc.ref));
+    await batch.commit();
+    return { deleted: snap.docs.length };
+  }
+  const result = await getPg().query(`DELETE FROM extraction_cache`);
+  return { deleted: result.rowCount ?? 0 };
 };
 
 export const claimWebhookReplayToken = async (provider: string, token: string): Promise<boolean> => {

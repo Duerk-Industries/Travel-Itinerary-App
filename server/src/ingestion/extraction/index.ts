@@ -121,30 +121,8 @@ const extractAccountHolderName = (text: string): string | null => {
   return null;
 };
 
-const filterTravelerNamesForUser = async (travelerNames: string[], userId: string, text: string): Promise<string[]> => {
-  if (travelerNames.length <= 1) return travelerNames;
-  const user = await getExtractionUser(userId);
-  const accountHolderName = extractAccountHolderName(text);
-  const firstName = String(user?.firstName ?? '').trim();
-  const lastName = String(user?.lastName ?? '').trim();
-  const fallbackTokens = accountHolderName?.toLowerCase().split(/\s+/) ?? [];
-  const normalizedFirst = firstName.toLowerCase();
-  const normalizedLast = lastName.toLowerCase();
-  const exactMatches = travelerNames.filter((name) => {
-    const parts = normalizeTravelerName(name).toLowerCase().split(/\s+/);
-    const matchesUserName = normalizedFirst && normalizedLast && parts.includes(normalizedFirst) && parts.includes(normalizedLast);
-    const matchesAccountHolder = fallbackTokens.length >= 2 && fallbackTokens.every((token) => parts.includes(token));
-    return matchesUserName || matchesAccountHolder;
-  });
-  if (!exactMatches.length) return travelerNames;
-  if (firstName && lastName) {
-    return [`${normalizeTravelerName(firstName)} ${normalizeTravelerName(lastName)}`];
-  }
-  if (accountHolderName) {
-    return [accountHolderName];
-  }
-  return exactMatches.slice(0, 1);
-};
+const filterTravelerNamesForUser = async (travelerNames: string[], _userId: string, _text: string): Promise<string[]> =>
+  Array.from(new Set(travelerNames.map((name) => normalizeTravelerName(name)).filter(Boolean)));
 
 const extractRawDatetimeString = (text: string): string | null => {
   const iso = text.match(/\b(20\d{2}-\d{2}-\d{2}(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?)\b/);
@@ -403,12 +381,12 @@ interface GenericTransportLeg {
  */
 const parseChaseFlightLegs = (text: string): ChaseFlightLeg[] => {
   // Find "Flight N:" section positions (skip the "Flight $xxx" price header)
-  const sectionPositions: { index: number; endOfHeader: number; header: string }[] = [];
-  const flightSectionRegex = /Flight\s+(\d+)\s*:?\s*([^\n]*)/gi;
+  const sectionPositions: { index: number; header: string }[] = [];
+  const flightSectionRegex = /Flight\s+(\d+)\s*:/gi;
   let sm;
   while ((sm = flightSectionRegex.exec(text)) !== null) {
-    if (/\$/.test(sm[0])) continue; // Skip "Flight $591.20" price line
-    sectionPositions.push({ index: sm.index, endOfHeader: sm.index + sm[0].length, header: sm[0] });
+    if (sm[0].includes('$')) continue; // Skip "Flight $591.20" price line
+    sectionPositions.push({ index: sm.index, header: sm[0] });
   }
 
   // If no "Flight N:" sections, try "Depart:" marker
@@ -416,7 +394,7 @@ const parseChaseFlightLegs = (text: string): ChaseFlightLeg[] => {
     const departRegex = /Depart\s*:\s*([^\n]*)/gi;
     let dm;
     while ((dm = departRegex.exec(text)) !== null) {
-      sectionPositions.push({ index: dm.index, endOfHeader: dm.index + dm[0].length, header: dm[0] });
+        sectionPositions.push({ index: dm.index, header: dm[0] });
     }
   }
 
@@ -578,7 +556,7 @@ const splitTransportSections = (text: string): string[] => {
     value: match[0],
   }));
 
-  const meaningfulMarkers = markers.filter((marker) => !/^Flight\s+\$/.test(marker.value));
+  const meaningfulMarkers = markers.filter((marker) => !marker.value.includes('$'));
   if (meaningfulMarkers.length < 2) return [];
 
   const sections: string[] = [];

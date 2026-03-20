@@ -345,10 +345,10 @@ const AccountProfileManagement = ({
         </View>
       ) : null}
       <View style={styles.row}>
-        <TextInput style={[styles.input, { flex: 1 }]} placeholder="First name" value={accountProfile.firstName} onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, firstName: text }))} />
-        <TextInput style={[styles.input, { flex: 1 }]} placeholder="Last name" value={accountProfile.lastName} onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, lastName: text }))} />
+        <TextInput style={[styles.input, { flex: 1 }]} placeholder="First name" autoComplete="given-name" textContentType="givenName" value={accountProfile.firstName} onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, firstName: text }))} />
+        <TextInput style={[styles.input, { flex: 1 }]} placeholder="Last name" autoComplete="family-name" textContentType="familyName" value={accountProfile.lastName} onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, lastName: text }))} />
       </View>
-      <TextInput style={styles.input} placeholder="Email" autoCapitalize="none" keyboardType="email-address" value={accountProfile.email} onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, email: text }))} />
+      <TextInput style={styles.input} placeholder="Email" autoCapitalize="none" autoComplete="email" textContentType="emailAddress" keyboardType="email-address" value={accountProfile.email} onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, email: text }))} />
       <TextInput
         style={styles.input}
         placeholder="Home address (optional)"
@@ -465,7 +465,7 @@ const AccountProfileManagement = ({
                   disabled={emailActionBusy}
                   onPress={() => handleDeleteSecondaryEmail(entry.email)}
                 >
-                  <Text style={styles.buttonText}>Delete</Text>
+                  <Text style={styles.dangerButtonText}>Delete</Text>
                 </TouchableOpacity>
               ) : null}
               {!entry.isVerified ? (
@@ -510,7 +510,7 @@ const AccountProfileManagement = ({
                 setShowPasswordEditor(false);
               }}
             >
-              <Text style={styles.buttonText}>Cancel</Text>
+              <Text style={styles.dangerButtonText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.button, { flex: 1 }]} onPress={handlePasswordChange}>
               <Text style={styles.buttonText}>Update Password</Text>
@@ -521,7 +521,7 @@ const AccountProfileManagement = ({
 
       <View style={styles.divider} />
       <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={() => setShowDeleteConfirm(true)}>
-        <Text style={styles.buttonText}>Delete Account</Text>
+        <Text style={styles.dangerButtonText}>Delete Account</Text>
       </TouchableOpacity>
       {showDeleteConfirm ? (
         <View style={styles.modalOverlay}>
@@ -533,7 +533,7 @@ const AccountProfileManagement = ({
                 <Text style={styles.buttonText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.button, styles.dangerButton, { flex: 1 }]} onPress={handleDeleteAccount}>
-                <Text style={styles.buttonText}>Delete</Text>
+                <Text style={styles.dangerButtonText}>Delete</Text>
               </TouchableOpacity>
             </View>
           </View>

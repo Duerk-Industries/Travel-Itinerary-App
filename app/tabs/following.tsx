@@ -302,7 +302,7 @@ const FollowingTab: React.FC<FollowingTabProps> = ({
                   }}
                   disabled={unfollowingTripId === trip.tripId}
                 >
-                  <Text style={styles.buttonText}>
+                  <Text style={styles.dangerButtonText}>
                     {unfollowingTripId === trip.tripId ? 'Unfollowing...' : 'Unfollow'}
                   </Text>
                 </TouchableOpacity>

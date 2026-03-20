@@ -91,7 +91,8 @@ export class LlmExtractor implements ExtractionStrategy {
   ) {}
 
   canHandle(_doc: NormalizedDocument): boolean {
-    return isLocalEnv();
+    // Only run in local dev, never during tests (test mocks interfere with OpenAI calls)
+    return isLocalEnv() && process.env.NODE_ENV !== 'test' && process.env.USE_IN_MEMORY_DB !== '1';
   }
 
   async extract(doc: NormalizedDocument, config: ExtractionConfig): Promise<ExtractionResult> {

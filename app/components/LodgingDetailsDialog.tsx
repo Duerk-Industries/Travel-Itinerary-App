@@ -242,7 +242,7 @@ const LodgingDetailsDialog: React.FC<LodgingDetailsDialogProps> = ({
               <Text style={styles.buttonText}>Edit</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={() => onDelete(lodging)}>
-              <Text style={styles.buttonText}>Delete</Text>
+              <Text style={styles.dangerButtonText}>Delete</Text>
             </TouchableOpacity>
           </View>
         </View>

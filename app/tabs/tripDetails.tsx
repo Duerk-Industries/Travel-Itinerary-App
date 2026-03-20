@@ -486,6 +486,10 @@ const TripDetailsTab: React.FC<TripDetailsTabProps> = ({
               style={[styles.input, { minHeight: 72, textAlignVertical: 'top' }]}
               multiline
               placeholder="Enter one or more emails (comma or new line separated)"
+              autoCapitalize="none"
+              autoComplete="email"
+              textContentType="emailAddress"
+              keyboardType="email-address"
               value={inviteInput}
               onChangeText={setInviteInput}
             />
@@ -523,7 +527,7 @@ const TripDetailsTab: React.FC<TripDetailsTabProps> = ({
                     </Text>
                     {invite.status === 'pending' ? (
                       <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => revokeInvite(invite.id)}>
-                        <Text style={styles.buttonText}>Revoke</Text>
+                        <Text style={styles.dangerButtonText}>Revoke</Text>
                       </TouchableOpacity>
                     ) : null}
                   </View>

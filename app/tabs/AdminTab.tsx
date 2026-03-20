@@ -1368,6 +1368,17 @@ const IngestionSection: React.FC<{ backendUrl: string; headers: Record<string, s
     }
   };
 
+  const clearCache = async () => {
+    try {
+      const result = await apiFetch(backendUrl, headers, '/ingestion/clear-cache', {
+        method: 'POST',
+      });
+      setMessage(`Extraction cache cleared: ${result.deleted ?? 0} entries removed.`);
+    } catch (e: any) {
+      setError(e.message);
+    }
+  };
+
   const redriveDeadLetters = async (provider: 'ALL' | 'MAILGUN' | 'GMAIL') => {
     try {
       const result = await apiFetch(backendUrl, headers, '/ingestion/dead-letter/re-drive', {
@@ -1497,6 +1508,19 @@ const IngestionSection: React.FC<{ backendUrl: string; headers: Record<string, s
         />
         <TouchableOpacity style={[localStyles.smallButton, { backgroundColor: theme.colors.cta }]} onPress={saveRetryConfig}>
           <Text style={localStyles.smallButtonText}>Save Retry Policy</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={[localStyles.card, getCardStyle(theme)]}>
+        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Clear Extraction Cache</Text>
+        <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+          Delete all cached extraction results so re-uploaded documents are re-parsed with the latest logic version.
+        </Text>
+        <TouchableOpacity
+          style={[localStyles.tierButton, getSecondaryPillStyle(theme)]}
+          onPress={clearCache}
+        >
+          <Text style={[localStyles.tierButtonText, getSecondaryPillTextStyle(theme)]}>Clear Cache</Text>
         </TouchableOpacity>
       </View>
 

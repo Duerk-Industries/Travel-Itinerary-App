@@ -858,7 +858,7 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
                   <Text style={styles.buttonText}>Edit</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => deleteItinerary(it.id)}>
-                  <Text style={styles.buttonText}>Delete</Text>
+                  <Text style={styles.dangerButtonText}>Delete</Text>
                 </TouchableOpacity>
                 <View style={[styles.button, isSelected && styles.toggleActive]}>
                   <Text style={styles.buttonText}>{isSelected ? 'Selected' : 'View'}</Text>
@@ -930,7 +930,7 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
                       fetchItineraryDetails(selectedItineraryId);
                     }}
                   >
-                    <Text style={styles.buttonText}>Delete</Text>
+                    <Text style={styles.dangerButtonText}>Delete</Text>
                   </TouchableOpacity>
                 </View>
               </View>
