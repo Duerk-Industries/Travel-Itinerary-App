@@ -338,7 +338,8 @@ const mapAuthErrorToMessage = (authError: string | null): string | null => {
 
 // Capture auth params from the initial URL immediately, before React Navigation
 // can process and strip them via history.replaceState during mount.
-const _capturedInitialAuthParams: {
+// Mutable so it can be consumed once and cleared.
+let _capturedInitialAuthParams: {
   token: string | null;
   authError: string | null;
   requirePasswordSetup: boolean;
@@ -1266,7 +1267,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       // Use params captured at module load time (before React Navigation could strip them),
       // falling back to the current URL for deep links that arrive later.
+      // Consume once so re-runs of this effect don't re-process the same params.
       const captured = _capturedInitialAuthParams;
+      _capturedInitialAuthParams = null;
       const source = captured ?? extractTokenFromUrl(window.location.href);
       const token = 'token' in source ? source.token : null;
       const authError = 'authError' in source ? source.authError : null;
