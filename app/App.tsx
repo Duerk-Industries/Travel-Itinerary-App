@@ -336,6 +336,35 @@ const mapAuthErrorToMessage = (authError: string | null): string | null => {
   }
 };
 
+// Capture auth params from the initial URL immediately, before React Navigation
+// can process and strip them via history.replaceState during mount.
+const _capturedInitialAuthParams: {
+  token: string | null;
+  authError: string | null;
+  requirePasswordSetup: boolean;
+  isConfirm: boolean;
+  isSecondaryConfirm: boolean;
+  rawUrl: string;
+} | null = (() => {
+  if (Platform.OS !== 'web' || typeof window === 'undefined') return null;
+  try {
+    const url = new URL(window.location.href);
+    const token = url.searchParams.get('token');
+    const authError = url.searchParams.get('auth_error');
+    if (!token && !authError) return null;
+    return {
+      token,
+      authError,
+      requirePasswordSetup: url.searchParams.get('require_password_setup') === '1',
+      isConfirm: url.pathname.endsWith('/confirm'),
+      isSecondaryConfirm: url.pathname.endsWith('/confirm-email'),
+      rawUrl: window.location.href,
+    };
+  } catch {
+    return null;
+  }
+})();
+
 const extractTokenFromUrl = (rawUrl: string) => {
   try {
     const url = new URL(rawUrl);
@@ -1235,29 +1264,44 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
     const subscription = Linking.addEventListener('url', handleDeepLink);
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      const { token, authError, url, isConfirm, isSecondaryConfirm, requirePasswordSetup } = extractTokenFromUrl(window.location.href);
+      // Use params captured at module load time (before React Navigation could strip them),
+      // falling back to the current URL for deep links that arrive later.
+      const captured = _capturedInitialAuthParams;
+      const source = captured ?? extractTokenFromUrl(window.location.href);
+      const token = 'token' in source ? source.token : null;
+      const authError = 'authError' in source ? source.authError : null;
+      const requirePasswordSetup = source.requirePasswordSetup;
+      const isConfirm = source.isConfirm;
+      const isSecondaryConfirm = source.isSecondaryConfirm;
+      const rawUrl = captured?.rawUrl ?? window.location.href;
       if (token && isConfirm) {
-        confirmEmailToken(token, window.location.href);
+        confirmEmailToken(token, rawUrl);
       } else if (token && isSecondaryConfirm) {
-        confirmSecondaryEmailToken(token, window.location.href);
+        confirmSecondaryEmailToken(token, rawUrl);
       } else if (token) {
         handleAuthSuccess(token, undefined, { requirePasswordSetup });
-        url.searchParams.delete('token');
-        url.searchParams.delete('require_password_setup');
-        if (url.hash) {
-          const hashParams = new URLSearchParams(url.hash.slice(1));
-          hashParams.delete('token');
-          const newHash = hashParams.toString();
-          url.hash = newHash ? `#${newHash}` : '';
-        }
-        window.history.replaceState({}, '', url.toString());
-      } else if (authError && url) {
+        try {
+          const cleanUrl = new URL(rawUrl);
+          cleanUrl.searchParams.delete('token');
+          cleanUrl.searchParams.delete('require_password_setup');
+          if (cleanUrl.hash) {
+            const hashParams = new URLSearchParams(cleanUrl.hash.slice(1));
+            hashParams.delete('token');
+            const newHash = hashParams.toString();
+            cleanUrl.hash = newHash ? `#${newHash}` : '';
+          }
+          window.history.replaceState({}, '', cleanUrl.toString());
+        } catch { /* ignore */ }
+      } else if (authError) {
         const message = mapAuthErrorToMessage(authError);
         if (message) {
           setAuthErrorMessage(message);
         }
-        url.searchParams.delete('auth_error');
-        window.history.replaceState({}, '', url.toString());
+        try {
+          const cleanUrl = new URL(rawUrl);
+          cleanUrl.searchParams.delete('auth_error');
+          window.history.replaceState({}, '', cleanUrl.toString());
+        } catch { /* ignore */ }
       }
     }
     return () => {
