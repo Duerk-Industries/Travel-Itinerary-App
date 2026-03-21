@@ -8,11 +8,13 @@ import { getItineraryImage } from '../image-service';
 import { generateItineraryViaPromptPlan } from '../services/itineraryPromptPlanService';
 import { enqueueAsyncItineraryJob, getAsyncItineraryJob } from '../services/itineraryAsyncService';
 import { ApiLimitExceededError } from '../apis/usageLimiter';
+import { fetchOverviewWeather } from '../apis/openMeteoWeatherApi';
 import {
   assertCanUseFeature,
   reserveGenerationUsage,
   finalizeGenerationUsage,
   failGenerationUsage,
+  recordUsage,
 } from '../services/entitlementService';
 import { EntitlementError } from '../errors';
 import { TokenPayload } from '../auth';
@@ -108,6 +110,55 @@ router.get('/images', async (req, res) => {
   } catch (err) {
     logError('[itinerary] image fetch error', err);
     res.json({ url: PLACEHOLDER_IMAGE, cached: false, provider: 'placeholder', fallbackUsed: true });
+  }
+});
+
+router.post('/weather/overview', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const role = ((req as any).user as TokenPayload).role;
+  const tripId = typeof req.body?.tripId === 'string' ? req.body.tripId.trim() : '';
+  const days = Array.isArray(req.body?.days) ? req.body.days.slice(0, 31) : [];
+  const requests = days
+    .map((entry: any) => ({
+      date: String(entry?.date ?? '').trim(),
+      location: String(entry?.location ?? '').trim(),
+    }))
+    .filter((entry: { date: string; location: string }) => entry.date && entry.location);
+
+  if (!requests.length) {
+    res.json({ weather: [] });
+    return;
+  }
+
+  try {
+    await assertCanUseFeature(userId, 'overview_weather', role);
+    const result = await fetchOverviewWeather(requests);
+    const windowKey = getMonthWindowKey();
+    await recordUsage(userId, 'overview_weather_requests', 1, {
+      windowKey,
+      tripId: tripId || null,
+      daysRequested: requests.length,
+      daysReturned: result.weather.length,
+    });
+    if (result.apiCalls > 0) {
+      await recordUsage(userId, 'api_calls_open_meteo', result.apiCalls, {
+        windowKey,
+        tripId: tripId || null,
+        route: 'overview_weather',
+      });
+    }
+    res.json({ weather: result.weather });
+  } catch (err) {
+    if (err instanceof EntitlementError) {
+      res.status(402).json({ error: err.message, code: err.code });
+      return;
+    }
+    if (err instanceof ApiLimitExceededError) {
+      res.status(429).json({ error: err.message });
+      return;
+    }
+    logError('[itinerary] overview weather error', err);
+    res.status(500).json({ error: 'Failed to load overview weather' });
   }
 });
 

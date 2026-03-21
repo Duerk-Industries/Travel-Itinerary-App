@@ -46,6 +46,14 @@ providers:
     callers:
       INGESTION_ASSIGNMENT_FX: 1000
 
+  OPEN_METEO:
+    window: hour
+    windowHours: 24
+    overall: 2000
+    callers:
+      OVERVIEW_DAY_WEATHER_GEOCODE: 1000
+      OVERVIEW_DAY_WEATHER_FORECAST: 1000
+
 caching:
   attractions:
     refreshDays: 365
@@ -66,3 +74,6 @@ caching:
     dnsLogTtlMs: 300000
   frankfurter:
     rateCacheTtlMinutes: 1440
+  weather:
+    geocodeCacheTtlMinutes: 1440
+    forecastCacheTtlMinutes: 60

@@ -348,6 +348,10 @@ describe('Admin routes', () => {
             key: 'ai_itinerary_generation',
             description: expect.any(String),
           }),
+          expect.objectContaining({
+            key: 'overview_weather',
+            description: expect.any(String),
+          }),
         ])
       );
     });

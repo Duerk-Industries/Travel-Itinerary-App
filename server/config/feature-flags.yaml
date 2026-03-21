@@ -43,3 +43,6 @@ flags:
   feature_ingest_local_virus_scan_stub:
     enabled: true
     description: "Allow local development to skip virus scanning with a stub"
+  overview_weather:
+    enabled: true
+    description: "Show daily overview weather for nearby trips"

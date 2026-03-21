@@ -266,6 +266,7 @@ describe('Overview UI (nested itinerary)', () => {
   });
 
   afterEach(() => {
+    jest.useRealTimers();
     fetchMock.mockRestore();
     if (!originalFetch) {
       delete (global as any).fetch;
@@ -416,5 +417,56 @@ describe('Overview UI (nested itinerary)', () => {
     const { findByText } = await renderOverview(<OverviewTab {...staleTripProps} />);
     expect(await findByText(/Dates: .*March.*2026/i)).toBeTruthy();
     expect(await findByText('Tue. 3')).toBeTruthy();
+  });
+
+  test('shows weather badges on overview cards when the trip starts within 7 days', async () => {
+    const now = new Date();
+    const start = new Date(now.getTime() + 4 * 24 * 60 * 60 * 1000);
+    const end = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000);
+    const startDate = start.toISOString().slice(0, 10);
+    const endDate = end.toISOString().slice(0, 10);
+    fetchMock.mockImplementation(async (input: any) => {
+      const url = String(input);
+      if (url.includes('/api/itinerary/weather/overview')) {
+        return {
+          ok: true,
+          json: async () => ({
+            weather: [
+              {
+                date: startDate,
+                icon: '☀',
+                temperatureHighC: 22,
+                description: 'Clear',
+                resolvedLocation: 'Test City',
+              },
+              {
+                date: endDate,
+                icon: '🌧',
+                temperatureHighC: 19,
+                description: 'Rain',
+                resolvedLocation: 'Test City',
+              },
+            ],
+          }),
+        } as any;
+      }
+      return {
+        ok: true,
+        json: async () => [],
+      } as any;
+    });
+
+    const weatherTripProps = {
+      ...baseProps,
+      trip: {
+        ...baseProps.trip,
+        startDate,
+        endDate,
+      },
+    };
+
+    const { findByTestId, findByText } = await renderOverview(<OverviewTab {...weatherTripProps} />);
+    expect(await findByTestId('overview-day-card-1-weather')).toBeTruthy();
+    expect(await findByText('☀ 22°C')).toBeTruthy();
   });
 });
