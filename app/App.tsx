@@ -1497,10 +1497,11 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     const res = await fetch(`${backendUrl}/api/groups?sort=${sort ?? groupSort}`, {
       headers: { Authorization: `Bearer ${userToken}` },
     });
-    if (res.status === 401 || res.status === 403) {
+    if (res.status === 401 || (res.status === 403 && !requirePasswordSetup)) {
       logout();
       return;
     }
+    if (res.status === 403) return;
     if (!res.ok) return;
     const data = await res.json();
     const normalized = (Array.isArray(data) ? data : []).map((group: GroupView) => ({
@@ -1511,7 +1512,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     if (!newTripGroupId && normalized.length) {
       setNewTripGroupId(normalized[0].id);
     }
-  }, [backendUrl, groupSort, newTripGroupId, userToken, logout]);
+  }, [backendUrl, groupSort, newTripGroupId, userToken, logout, requirePasswordSetup]);
 
   const fetchTrips = useCallback(async (tokenOverride?: string): Promise<Trip[]> => {
     const authToken = tokenOverride ?? userToken;
@@ -1521,10 +1522,11 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     }
     try {
       const res = await fetch(`${backendUrl}/api/trips`, { headers: { Authorization: `Bearer ${authToken}` } });
-      if (res.status === 401 || res.status === 403) {
+      if (res.status === 401 || (res.status === 403 && !requirePasswordSetup)) {
         logout();
         return [];
       }
+      if (res.status === 403) return [];
       if (!res.ok) return [];
       const data = await res.json();
       setTrips(data);
@@ -1537,7 +1539,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     } catch {
       return [];
     }
-  }, [activeTripId, backendUrl, logout, userToken]);
+  }, [activeTripId, backendUrl, logout, userToken, requirePasswordSetup]);
 
   const fetchGroupMembersForActiveTrip = useCallback(async () => {
     if (!userToken || !activeTripId) {
@@ -1666,7 +1668,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
   const refreshAllData = useCallback(async (tokenOverride?: string) => {
     const authToken = tokenOverride ?? userToken;
-    if (!authToken || refreshInFlightRef.current) return;
+    if (!authToken || refreshInFlightRef.current || requirePasswordSetup) return;
     refreshInFlightRef.current = true;
     setIsRefreshing(true);
     try {
@@ -1721,14 +1723,15 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     loadFamilyRelationships,
     loadFellowTravelers,
     backendUrl,
-    logout
+    logout,
+    requirePasswordSetup
   ]);
 
   useEffect(() => {
-    if (userToken) {
+    if (userToken && !requirePasswordSetup) {
       refreshAllData();
     }
-  }, [userToken]);
+  }, [userToken, requirePasswordSetup, refreshAllData]);
 
   // Socket.IO: join trip room when active trip changes
   useEffect(() => {
@@ -1850,12 +1853,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   ]);
 
   useEffect(() => {
-    if (userToken) {
+    if (userToken && !requirePasswordSetup) {
       fetchTrips();
       fetchGroups();
       fetchInvites();
     }
-  }, [userToken]);
+  }, [userToken, requirePasswordSetup, fetchTrips, fetchGroups, fetchInvites]);
 
   useEffect(() => {
     if (userToken) return;
@@ -1935,7 +1938,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   }, [followedTrips, selectedFollowedTripId]);
 
   useEffect(() => {
-    if (!userToken) return;
+    if (!userToken || requirePasswordSetup) return;
     if (!Number.isFinite(refreshIntervalMs) || refreshIntervalMs <= 0) return;
     const now = Date.now();
     const last = lastRefreshAt ?? now;
@@ -1952,29 +1955,29 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         refreshTimerRef.current = null;
       }
     };
-  }, [activeTripId, lastRefreshAt, userToken, refreshIntervalMs, refreshAllData]);
+  }, [activeTripId, lastRefreshAt, userToken, requirePasswordSetup, refreshIntervalMs, refreshAllData]);
 
   useEffect(() => {
-    if (userToken) {
+    if (userToken && !requirePasswordSetup) {
       fetchFlights();
       fetchLodgings();
       fetchTours();
       fetchExpenses();
     }
-  }, [activeTripId, fetchFlights, fetchLodgings, fetchTours, fetchExpenses]);
+  }, [activeTripId, fetchFlights, fetchLodgings, fetchTours, fetchExpenses, userToken, requirePasswordSetup]);
 
   useEffect(() => {
-    if (userToken) {
+    if (userToken && !requirePasswordSetup) {
       loadFamilyRelationships();
       loadFellowTravelers();
     }
-  }, [loadFamilyRelationships, loadFellowTravelers, userToken]);
+  }, [loadFamilyRelationships, loadFellowTravelers, userToken, requirePasswordSetup]);
 
   useEffect(() => {
-    if (userToken) {
+    if (userToken && !requirePasswordSetup) {
       fetchGroupMembersForActiveTrip();
     }
-  }, [userToken, activeTripId, trips, fetchGroupMembersForActiveTrip]);
+  }, [userToken, requirePasswordSetup, activeTripId, trips, fetchGroupMembersForActiveTrip]);
 
   useEffect(() => {
     if (!userToken || !activeTripId) {

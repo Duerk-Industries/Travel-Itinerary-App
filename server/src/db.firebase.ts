@@ -4244,16 +4244,20 @@ export const upsertTierEntitlement = async (tierId: string, featureId: string, i
   await db.collection('tier_entitlements').doc(docId).set({ tierId, featureId, isAllowed, updatedAt: nowIso() }, { merge: true });
 };
 
+const getLatestActiveUserTierDoc = <T extends { data: () => any }>(docs: T[]): T | null => docs
+  .slice()
+  .sort((a, b) => String(b.data().effectiveFrom ?? '').localeCompare(String(a.data().effectiveFrom ?? '')))[0] ?? null;
+
 export const getCurrentUserTier = async (userId: string): Promise<(UserTier & { tierKey: string }) | null> => {
   const db = getDb();
+  // Keep this as a two-filter query and sort in memory so login does not depend
+  // on a composite Firestore index being present in production.
   const snap = await db.collection('user_tiers')
     .where('userId', '==', userId)
     .where('effectiveTo', '==', null)
-    .orderBy('effectiveFrom', 'desc')
-    .limit(1)
     .get();
-  if (snap.empty) return null;
-  const doc = snap.docs[0];
+  const doc = getLatestActiveUserTierDoc(snap.docs);
+  if (!doc) return null;
   const data = doc.data();
   const tier = await getTierByKey(data.tierKey);
   return {
@@ -4704,8 +4708,6 @@ export const adminGetUser = async (userId: string): Promise<{
     db.collection('user_tiers')
       .where('userId', '==', userId)
       .where('effectiveTo', '==', null)
-      .orderBy('effectiveFrom', 'desc')
-      .limit(1)
       .get(),
     db.collection('tiers').get(),
     db.collection('usage_counters').where('userId', '==', userId).get(),
@@ -4715,7 +4717,8 @@ export const adminGetUser = async (userId: string): Promise<{
 
   const user = userDoc.data() ?? {};
   const webUser = webUserDoc.exists ? webUserDoc.data() ?? {} : {};
-  const activeTier = activeTierSnap.empty ? null : activeTierSnap.docs[0].data();
+  const activeTierDoc = getLatestActiveUserTierDoc(activeTierSnap.docs);
+  const activeTier = activeTierDoc ? activeTierDoc.data() : null;
   const tiersById = new Map<string, Record<string, unknown>>(
     tierSnap.docs.map((doc) => [doc.id, { id: doc.id, ...doc.data() }])
   );
