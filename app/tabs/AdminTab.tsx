@@ -793,14 +793,14 @@ const TiersSection: React.FC<{
     }
   };
 
-  if (loading) return <Text style={localStyles.loading}>Loading...</Text>;
-  if (error) return <Text style={localStyles.errorText}>{error}</Text>;
+  if (loading) return <Text style={[localStyles.loading, { color: theme.colors.textMuted }]}>Loading...</Text>;
+  if (error) return <Text style={[localStyles.errorText, { color: theme.colors.error }]}>{error}</Text>;
 
   return (
     <View style={localStyles.section}>
       <Text style={[localStyles.sectionTitle, { color: theme.colors.text }]}>Tiers</Text>
       {saveMsg ? <Text style={[localStyles.saveMsg, { color: theme.colors.success }]}>{saveMsg}</Text> : null}
-      {tiers.length === 0 ? <Text style={localStyles.emptyText}>No tiers found.</Text> : null}
+      {tiers.length === 0 ? <Text style={[localStyles.emptyText, { color: theme.colors.textMuted }]}>No tiers found.</Text> : null}
       {tiers.length > 0 ? (
         <View
           style={[

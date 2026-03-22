@@ -4,6 +4,7 @@ import { type Lodging, fetchPlaceDetailsApi, type PlaceDetailsPayload } from '..
 import { formatDateLong } from '../utils/formatDateLong';
 import { buildStaticMapUrl } from '../utils/googleMaps';
 import { LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from '../utils/itineraryStatus';
+import type { AppTheme } from '../theme/theme';
 
 type DetailRow = {
   label: string;
@@ -26,6 +27,7 @@ type LodgingDetailsDialogProps = {
   backendUrl: string;
   requestHeaders: Record<string, string>;
   styles: Record<string, any>;
+  theme?: AppTheme;
   payerName: (id: string) => string;
   travelerName?: (id: string) => string;
   onClose: () => void;
@@ -42,6 +44,7 @@ const LodgingDetailsDialog: React.FC<LodgingDetailsDialogProps> = ({
   backendUrl,
   requestHeaders,
   styles,
+  theme,
   payerName,
   travelerName,
   onClose,
@@ -52,6 +55,7 @@ const LodgingDetailsDialog: React.FC<LodgingDetailsDialogProps> = ({
 }) => {
   const { width } = useWindowDimensions();
   const isCompact = width < 520;
+  const detailStyles = useMemo(() => buildDetailStyles(theme), [theme]);
 
   const [placeDetails, setPlaceDetails] = useState<PlaceDetailsPayload | null>(null);
   const [placeDetailsStatus, setPlaceDetailsStatus] = useState<'idle' | 'loading' | 'done'>('idle');
@@ -253,7 +257,7 @@ const LodgingDetailsDialog: React.FC<LodgingDetailsDialogProps> = ({
 
 export default LodgingDetailsDialog;
 
-const detailStyles = StyleSheet.create({
+const buildDetailStyles = (theme?: AppTheme) => StyleSheet.create({
   detailCard: {
     borderRadius: 16,
     overflow: 'hidden',
@@ -264,7 +268,7 @@ const detailStyles = StyleSheet.create({
   imageWrap: {
     position: 'relative',
     height: 200,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: theme?.colors.surfaceMuted ?? '#e5e7eb',
   },
   image: {
     width: '100%',
@@ -303,7 +307,7 @@ const detailStyles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#0f172a',
+    color: theme?.colors.text ?? '#0f172a',
   },
   statusBadge: {
     borderRadius: 999,
@@ -311,7 +315,7 @@ const detailStyles = StyleSheet.create({
     borderColor: '#34d399',
     paddingHorizontal: 12,
     paddingVertical: 4,
-    backgroundColor: '#ecfdf5',
+    backgroundColor: theme?.mode === 'dark' ? 'rgba(52,211,153,0.15)' : '#ecfdf5',
   },
   statusText: {
     color: '#047857',
@@ -321,7 +325,7 @@ const detailStyles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 0,
     paddingBottom: 12,
-    backgroundColor: '#fff',
+    backgroundColor: theme?.colors.surface ?? '#fff',
   },
   detailList: {
     paddingHorizontal: 16,
@@ -336,14 +340,14 @@ const detailStyles = StyleSheet.create({
   },
   detailLabel: {
     width: 110,
-    color: '#0f172a',
+    color: theme?.colors.text ?? '#0f172a',
     fontWeight: '700',
     fontSize: 13,
   },
   detailValue: {
     flex: 1,
     textAlign: 'left',
-    color: '#111827',
+    color: theme?.colors.text ?? '#111827',
     fontSize: 13,
   },
   summaryRow: {
@@ -354,13 +358,13 @@ const detailStyles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 12,
-    color: '#475569',
+    color: theme?.colors.textMuted ?? '#475569',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   summaryValue: {
     fontSize: 16,
-    color: '#0f172a',
+    color: theme?.colors.text ?? '#0f172a',
     fontWeight: '600',
     textAlign: 'right',
     maxWidth: '70%',
@@ -369,14 +373,14 @@ const detailStyles = StyleSheet.create({
     margin: 16,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: theme?.colors.border ?? '#e5e7eb',
     overflow: 'hidden',
-    backgroundColor: '#fff',
+    backgroundColor: theme?.colors.surface ?? '#fff',
   },
   mapImage: {
     width: '100%',
     height: 180,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: theme?.colors.surfaceMuted ?? '#e5e7eb',
   },
   mapMeta: {
     padding: 12,

@@ -8,6 +8,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import type { PresenceUser } from '../../packages/messaging/src/types';
+import type { AppTheme } from '../theme/theme';
 
 interface Props {
   /** The current user's own ID — excluded from the list */
@@ -16,6 +17,7 @@ interface Props {
   presenceUsers: PresenceUser[];
   /** Max avatars to display before showing "+N" overflow */
   maxVisible?: number;
+  theme?: AppTheme;
 }
 
 const AVATAR_SIZE = 28;
@@ -25,6 +27,7 @@ const PresenceAvatars: React.FC<Props> = ({
   currentUserId,
   presenceUsers,
   maxVisible = 5,
+  theme,
 }) => {
   const others = presenceUsers.filter((u) => u.userId !== currentUserId);
   if (others.length === 0) return null;
@@ -39,7 +42,7 @@ const PresenceAvatars: React.FC<Props> = ({
           key={user.userId}
           style={[
             styles.avatar,
-            { backgroundColor: user.color, marginLeft: idx === 0 ? 0 : -OVERLAP },
+            { backgroundColor: user.color, marginLeft: idx === 0 ? 0 : -OVERLAP, borderColor: theme?.colors.background ?? '#fff' },
           ]}
           testID={`presence-avatar-${user.userId}`}
         >
@@ -47,7 +50,7 @@ const PresenceAvatars: React.FC<Props> = ({
         </View>
       ))}
       {overflow > 0 && (
-        <View style={[styles.avatar, styles.overflow, { marginLeft: -OVERLAP }]}>
+        <View style={[styles.avatar, styles.overflow, { marginLeft: -OVERLAP, borderColor: theme?.colors.background ?? '#fff' }]}>
           <Text style={styles.initials}>+{overflow}</Text>
         </View>
       )}

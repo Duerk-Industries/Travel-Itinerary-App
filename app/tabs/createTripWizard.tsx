@@ -22,6 +22,7 @@ import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { saveWizardFlights, saveWizardLodgings } from '../utils/wizardSaves';
 import { buildMapUrl, loadStoredMapPreference } from '../utils/mapLinks';
 import { toWebStyle } from '../utils/webStyle';
+import type { AppTheme } from '../theme/theme';
 import {
   DEFAULT_NEW_ITINERARY_STATUS,
   ITINERARY_STATUSES,
@@ -85,6 +86,7 @@ type CreateTripWizardProps = {
   airportOptions: string[];
   onSearchAirports: (q: string) => Promise<void> | void;
   styles: Record<string, any>;
+  theme?: AppTheme;
   onCancel: () => void;
   onTripCreated: (tripId: string) => void;
   onAiItineraryQueued?: (tripId: string, jobId: string) => void;
@@ -213,6 +215,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   airportOptions,
   onSearchAirports,
   styles,
+  theme,
   onCancel,
   onTripCreated,
   onAiItineraryQueued,
@@ -1349,7 +1352,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               <TouchableOpacity
                 style={[
                   {
-                    backgroundColor: dateModeSelected === 'range' ? '#0d6efd' : '#fff',
+                    backgroundColor: dateModeSelected === 'range' ? '#0d6efd' : (theme?.colors.surface ?? '#fff'),
                     borderColor: '#0d6efd',
                     borderWidth: 1,
                     paddingVertical: 8,
@@ -1375,7 +1378,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               <TouchableOpacity
                 style={[
                   {
-                    backgroundColor: dateModeSelected === 'month' ? '#0d6efd' : '#fff',
+                    backgroundColor: dateModeSelected === 'month' ? '#0d6efd' : (theme?.colors.surface ?? '#fff'),
                     borderColor: '#0d6efd',
                     borderWidth: 1,
                     paddingVertical: 8,

@@ -21,6 +21,7 @@ import {
 import type { Socket } from 'socket.io-client';
 import { CLIENT_EVENTS, SERVER_EVENTS } from '../../packages/messaging/src/events';
 import type { ChatMessage } from '../../packages/messaging/src/types';
+import type { AppTheme } from '../theme/theme';
 
 interface Props {
   socket: Socket;
@@ -31,6 +32,7 @@ interface Props {
   onMinimize?: () => void;
   unreadCount: number;
   onUnreadChange: (count: number) => void;
+  theme?: AppTheme;
 }
 
 const PANEL_WIDTH = 360;
@@ -45,7 +47,9 @@ const ChatPanel: React.FC<Props> = ({
   onMinimize,
   unreadCount,
   onUnreadChange,
+  theme,
 }) => {
+  const themedStyles = React.useMemo(() => buildStyles(theme), [theme]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(true);
@@ -113,20 +117,20 @@ const ChatPanel: React.FC<Props> = ({
     const isOwn = item.senderId === currentUserId;
     return (
       <View
-        style={[styles.messageRow, isOwn ? styles.ownRow : styles.otherRow]}
+        style={[themedStyles.messageRow, isOwn ? themedStyles.ownRow : themedStyles.otherRow]}
         testID={`chat-message-${item.id}`}
       >
         {!isOwn && (
-          <View style={[styles.avatarSmall, { backgroundColor: '#9e9e9e' }]}>
-            <Text style={styles.avatarText}>{item.senderInitials}</Text>
+          <View style={[themedStyles.avatarSmall, { backgroundColor: theme?.colors.textMuted ?? '#9e9e9e' }]}>
+            <Text style={themedStyles.avatarText}>{item.senderInitials}</Text>
           </View>
         )}
-        <View style={[styles.bubble, isOwn ? styles.ownBubble : styles.otherBubble]}>
+        <View style={[themedStyles.bubble, isOwn ? themedStyles.ownBubble : themedStyles.otherBubble]}>
           {!isOwn && (
-            <Text style={styles.senderName}>{item.senderName}</Text>
+            <Text style={themedStyles.senderName}>{item.senderName}</Text>
           )}
-          <Text style={isOwn ? styles.ownText : styles.otherText}>{item.body}</Text>
-          <Text style={styles.timestamp}>
+          <Text style={isOwn ? themedStyles.ownText : themedStyles.otherText}>{item.body}</Text>
+          <Text style={themedStyles.timestamp}>
             {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </Text>
         </View>
@@ -138,38 +142,38 @@ const ChatPanel: React.FC<Props> = ({
   // Layout
   // -------------------------------------------------------------------------
   const panelStyle = isWeb
-    ? styles.panelDesktop
-    : styles.panelMobile;
+    ? themedStyles.panelDesktop
+    : themedStyles.panelMobile;
 
   return (
     <KeyboardAvoidingView
-      style={[styles.container, panelStyle]}
+      style={[themedStyles.container, panelStyle]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       testID="chat-panel"
     >
       {/* Header */}
-      <View style={styles.header}>
+      <View style={themedStyles.header}>
         {!isWeb && (
-          <TouchableOpacity onPress={onClose} style={styles.headerBtn} testID="chat-back">
-            <Text style={styles.headerBtnText}>← Back</Text>
+          <TouchableOpacity onPress={onClose} style={themedStyles.headerBtn} testID="chat-back">
+            <Text style={themedStyles.headerBtnText}>← Back</Text>
           </TouchableOpacity>
         )}
-        <Text style={styles.headerTitle}>Trip Chat</Text>
+        <Text style={themedStyles.headerTitle}>Trip Chat</Text>
         {isWeb && onMinimize && (
-          <TouchableOpacity onPress={onMinimize} style={styles.headerBtn} testID="chat-minimize">
-            <Text style={styles.headerBtnText}>—</Text>
+          <TouchableOpacity onPress={onMinimize} style={themedStyles.headerBtn} testID="chat-minimize">
+            <Text style={themedStyles.headerBtnText}>—</Text>
           </TouchableOpacity>
         )}
         {isWeb && (
-          <TouchableOpacity onPress={onClose} style={styles.headerBtn} testID="chat-close">
-            <Text style={styles.headerBtnText}>✕</Text>
+          <TouchableOpacity onPress={onClose} style={themedStyles.headerBtn} testID="chat-close">
+            <Text style={themedStyles.headerBtnText}>✕</Text>
           </TouchableOpacity>
         )}
       </View>
 
       {/* Message list */}
       {loading ? (
-        <View style={styles.loadingContainer}>
+        <View style={themedStyles.loadingContainer}>
           <ActivityIndicator />
         </View>
       ) : (
@@ -178,7 +182,7 @@ const ChatPanel: React.FC<Props> = ({
           data={messages}
           keyExtractor={(item) => item.id}
           renderItem={renderMessage}
-          contentContainerStyle={styles.messageList}
+          contentContainerStyle={themedStyles.messageList}
           onContentSizeChange={() =>
             flatListRef.current?.scrollToEnd({ animated: false })
           }
@@ -187,9 +191,9 @@ const ChatPanel: React.FC<Props> = ({
       )}
 
       {/* Input */}
-      <View style={styles.inputRow}>
+      <View style={themedStyles.inputRow}>
         <TextInput
-          style={styles.input}
+          style={themedStyles.input}
           value={inputText}
           onChangeText={setInputText}
           placeholder="Message the group… (@ to mention)"
@@ -202,20 +206,20 @@ const ChatPanel: React.FC<Props> = ({
         />
         <TouchableOpacity
           onPress={sendMessage}
-          style={[styles.sendBtn, !inputText.trim() && styles.sendBtnDisabled]}
+          style={[themedStyles.sendBtn, !inputText.trim() && themedStyles.sendBtnDisabled]}
           disabled={!inputText.trim()}
           testID="chat-send"
         >
-          <Text style={styles.sendBtnText}>Send</Text>
+          <Text style={themedStyles.sendBtnText}>Send</Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
   );
 };
 
-const styles = StyleSheet.create({
+const buildStyles = (theme?: AppTheme) => StyleSheet.create({
   container: {
-    backgroundColor: '#fff',
+    backgroundColor: theme?.colors.surface ?? '#fff',
     borderRadius: 12,
     overflow: 'hidden',
     elevation: 8,
@@ -231,7 +235,7 @@ const styles = StyleSheet.create({
     width: PANEL_WIDTH,
     height: PANEL_HEIGHT,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: theme?.colors.border ?? '#e0e0e0',
   },
   panelMobile: {
     position: 'absolute' as any,
@@ -310,13 +314,13 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 4,
   },
   otherBubble: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: theme?.colors.surfaceMuted ?? '#f0f0f0',
     borderBottomLeftRadius: 4,
   },
   senderName: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#555',
+    color: theme?.colors.textMuted ?? '#555',
     marginBottom: 2,
   },
   ownText: {
@@ -324,7 +328,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   otherText: {
-    color: '#1a1a1a',
+    color: theme?.colors.text ?? '#1a1a1a',
     fontSize: 14,
   },
   timestamp: {
@@ -337,21 +341,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: theme?.colors.border ?? '#e0e0e0',
     padding: 8,
-    backgroundColor: '#fafafa',
+    backgroundColor: theme?.colors.backgroundAlt ?? '#fafafa',
   },
   input: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: theme?.colors.border ?? '#ccc',
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 8,
     maxHeight: 100,
     fontSize: 14,
-    backgroundColor: '#fff',
-    color: '#1a1a1a',
+    backgroundColor: theme?.colors.surface ?? '#fff',
+    color: theme?.colors.text ?? '#1a1a1a',
   },
   sendBtn: {
     marginLeft: 8,
@@ -361,7 +365,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   sendBtnDisabled: {
-    backgroundColor: '#bdbdbd',
+    backgroundColor: theme?.mode === 'dark' ? theme.colors.surfaceMuted : '#bdbdbd',
   },
   sendBtnText: {
     color: '#fff',

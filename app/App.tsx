@@ -2462,6 +2462,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                     <PresenceAvatars
                       currentUserId={userId ?? ''}
                       presenceUsers={presenceUsers}
+                      theme={theme}
                     />
                   )}
                   <TouchableOpacity
@@ -2536,6 +2537,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   payerTotals={tourPayerTotals}
                   toursTotal={toursTotal}
                   styles={styles}
+                  theme={theme}
                   nativeDateTimePicker={NativeDateTimePicker}
                   fetchTours={fetchTours}
                 />
@@ -3519,6 +3521,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               airportOptions={flightAirportOptions}
               onSearchAirports={fetchFlightAirports}
               styles={styles}
+              theme={theme}
               onCancel={closeTripWizard}
               onTripCreated={onTripCreated}
               onAiItineraryQueued={onAiItineraryQueued}
@@ -3551,6 +3554,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           backendUrl={backendUrl}
           requestHeaders={headers}
           styles={styles}
+          theme={theme}
           payerName={payerName}
           travelerName={payerName}
           onClose={() => setShowLodgingDetails(false)}
@@ -3585,6 +3589,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           onMinimize={() => setChatMinimized(true)}
           unreadCount={chatUnread}
           onUnreadChange={setChatUnread}
+          theme={theme}
         />
       )}
       {/* Minimized chat badge */}
@@ -3826,7 +3831,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     borderRadius: 20,
     overflow: 'hidden',
     height: 180,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: theme.colors.surfaceMuted,
   },
   homeHeroCardPressed: {
     opacity: 0.92,
@@ -3841,7 +3846,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     position: 'absolute',
     width: '100%',
     height: '100%',
-    backgroundColor: '#d1d5db',
+    backgroundColor: theme.colors.surfaceMuted,
   },
   homeHeroOverlay: {
     position: 'absolute',
@@ -3869,7 +3874,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
   homeNavList: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: theme.colors.border,
     overflow: 'hidden',
   },
   homeNavButton: {
@@ -3879,11 +3884,11 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderColor: '#e5e7eb',
-    backgroundColor: '#fff',
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
   },
   homeNavButtonPressed: {
-    backgroundColor: '#f3f4f6',
+    backgroundColor: theme.colors.surfaceMuted,
   },
   homeNavButtonDisabled: {
     opacity: 0.5,
@@ -3896,10 +3901,10 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
   homeNavLabel: {
     flex: 1,
     fontSize: 16,
-    color: '#111827',
+    color: theme.colors.text,
   },
   homeNavArrow: {
-    color: '#111827',
+    color: theme.colors.text,
     fontSize: 18,
     fontWeight: '600',
   },
@@ -3909,16 +3914,16 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#f8fafc',
+    backgroundColor: theme.colors.background,
     zIndex: 30000,
     padding: 16,
   },
   homeModalCard: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: theme.colors.border,
     padding: 16,
   },
   homeModalHeader: {
@@ -3930,23 +3935,23 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
   homeModalTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#111827',
+    color: theme.colors.text,
   },
   homeModalClose: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: theme.colors.surfaceMuted,
     alignItems: 'center',
     justifyContent: 'center',
   },
   homeModalClosePressed: {
-    backgroundColor: '#d1d5db',
+    backgroundColor: theme.colors.backgroundAlt,
   },
   homeModalCloseText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.colors.text,
   },
   homeModalList: {
     flex: 1,
@@ -3957,13 +3962,13 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     gap: 12,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: theme.colors.border,
   },
   homeModalRowPressed: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: theme.colors.surfaceMuted,
   },
   homeModalRowActive: {
-    backgroundColor: '#f1f5f9',
+    backgroundColor: theme.colors.backgroundAlt,
   },
   homeModalRowText: {
     flex: 1,
@@ -3971,10 +3976,10 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
   homeModalRowTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
+    color: theme.colors.text,
   },
   homeModalRowMeta: {
-    color: '#6b7280',
+    color: theme.colors.textMuted,
     fontSize: 13,
   },
   homeModalActiveBadge: {
@@ -4031,23 +4036,23 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#111',
-    backgroundColor: '#fff',
+    borderColor: theme.colors.text,
+    backgroundColor: theme.colors.surface,
   },
   expenseToggleSelected: {
-    backgroundColor: '#e5e7eb',
-    borderColor: '#111',
+    backgroundColor: theme.mode === 'dark' ? '#1A3A50' : '#DDE8F0',
+    borderColor: theme.colors.link,
   },
   expenseToggleUnselected: {
-    backgroundColor: '#fff',
-    borderColor: '#111',
+    backgroundColor: theme.colors.surface,
+    borderColor: theme.colors.text,
   },
   expenseToggleText: {
     fontWeight: '600',
-    color: '#111',
+    color: theme.colors.text,
   },
   expenseToggleTextSelected: {
-    color: '#111',
+    color: theme.colors.text,
   },
   input: {
     borderWidth: 1,
@@ -4427,8 +4432,8 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     alignItems: 'center',
   },
   dayHeroBadgeText: {
-    backgroundColor: '#fff',
-    color: '#111827',
+    backgroundColor: theme.colors.surface,
+    color: theme.colors.text,
     paddingHorizontal: 14,
     paddingVertical: 4,
     borderRadius: 999,
@@ -4463,7 +4468,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     top: 10,
     left: 10,
     zIndex: 10,
-    backgroundColor: '#111827',
+    backgroundColor: theme.colors.primary,
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 999,
@@ -4497,13 +4502,13 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 8,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: theme.colors.surfaceMuted,
   },
   lodgingImageFallback: {
     width: 80,
     height: 80,
     borderRadius: 8,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: theme.colors.surfaceMuted,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -4938,18 +4943,18 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 10,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: theme.mode === 'dark' ? theme.colors.surface : '#e0e0e0',
   },
   badgePending: {
     backgroundColor: '#f6c851',
   },
   badgeRemoved: {
-    backgroundColor: '#c7c7c7',
+    backgroundColor: theme.mode === 'dark' ? theme.colors.surfaceMuted : '#c7c7c7',
   },
   badgeText: {
     fontSize: theme.typography.caption,
     fontWeight: theme.typography.weightSemibold,
-    color: '#2b2b2b',
+    color: theme.colors.text,
   },
   buttonDisabled: {
     opacity: 0.6,

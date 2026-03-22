@@ -3,6 +3,7 @@ import { Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpac
 import { formatDateLong } from '../utils/formatDateLong';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { toWebStyle } from '../utils/webStyle';
+import type { AppTheme } from '../theme/theme';
 import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from '../utils/votes';
 import {
   DEFAULT_NEW_ITINERARY_STATUS,
@@ -215,6 +216,7 @@ type TourTabProps = {
   payerTotals: Record<string, number>;
   toursTotal: number;
   styles: ReturnType<typeof StyleSheet.create>;
+  theme?: AppTheme;
   nativeDateTimePicker: NativeDateTimePickerType | null;
   fetchTours: (token?: string) => Promise<void>;
   onDataChanged?: () => void;
@@ -235,6 +237,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   payerTotals,
   toursTotal,
   styles,
+  theme,
   nativeDateTimePicker,
   fetchTours,
   onDataChanged,
@@ -266,15 +269,15 @@ export const ActivityTab: React.FC<TourTabProps> = ({
     paddingVertical: 6,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#111',
-    backgroundColor: '#fff',
+    borderColor: theme?.colors.border ?? '#111',
+    backgroundColor: theme?.colors.surface ?? '#fff',
   };
   const toggleSelectedStyle = styles.toggleOptionSelected ?? {
-    backgroundColor: '#e5e7eb',
-    borderColor: '#111',
+    backgroundColor: theme ? (theme.mode === 'dark' ? '#1A3A50' : '#DDE8F0') : '#e5e7eb',
+    borderColor: theme?.colors.link ?? '#111',
   };
-  const toggleTextStyle = styles.toggleOptionText ?? { color: '#111', fontWeight: '600' };
-  const toggleTextSelectedStyle = styles.toggleOptionTextSelected ?? { color: '#111' };
+  const toggleTextStyle = styles.toggleOptionText ?? { color: theme?.colors.text ?? '#111', fontWeight: '600' };
+  const toggleTextSelectedStyle = styles.toggleOptionTextSelected ?? { color: theme?.colors.text ?? '#111' };
 
   const openTourEditor = (tour?: Tour) => {
     if (mode !== 'wizard' && !activeTripId) {
