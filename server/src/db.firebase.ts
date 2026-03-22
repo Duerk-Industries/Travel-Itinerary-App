@@ -2770,12 +2770,15 @@ export const listAttractionCatalogEntries = async (
   if (!key) return [];
   const db = getDb();
   const safeLimit = Math.min(Math.max(Number(limit) || 20, 1), 100);
-  const snapshot = await db.collection('locations').where('sourceType', '==', 'attraction').limit(500).get();
+  // Use top-level destinationKey field for an indexed Firestore query
+  // instead of loading 500 docs and filtering in-memory.
+  const snapshot = await db
+    .collection('locations')
+    .where('sourceType', '==', 'attraction')
+    .where('destinationKey', '==', key)
+    .limit(safeLimit * 2)
+    .get();
   const filtered = snapshot.docs
-    .filter((doc) => {
-      const payload = ((doc.data() as any).payload ?? {}) as Record<string, unknown>;
-      return String(payload.destinationKey ?? '').trim().toLowerCase() === key;
-    })
     .map((doc) => toAttractionCatalogEntry(doc.id, doc.data()))
     .sort((a, b) => (a.rank !== b.rank ? a.rank - b.rank : a.name.localeCompare(b.name)))
     .slice(0, safeLimit);
@@ -2817,6 +2820,8 @@ export const upsertAttractionCatalogEntry = async (entry: AttractionCatalogEntry
         name: entry.name,
         address: null,
         searchName: `${entry.name} ${entry.destinationDisplayName} ${entry.country ?? ''} ${entry.stateProvince ?? ''}`.toLowerCase(),
+        // Top-level destinationKey for indexed Firestore compound queries
+        destinationKey: String(entry.destinationKey ?? '').trim().toLowerCase(),
         payload: mergedPayload,
         updatedAt: nowIso(),
       },

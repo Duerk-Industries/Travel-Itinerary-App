@@ -629,6 +629,10 @@ export const initDb = async (): Promise<void> => {
   `);
   await p.query(`CREATE INDEX IF NOT EXISTS idx_locations_source_type ON locations(source_type);`);
   await p.query(`CREATE INDEX IF NOT EXISTS idx_locations_search_name ON locations(search_name);`);
+  // Composite index for attraction catalog queries that filter by source_type + destinationKey
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_locations_attraction_dest_key ON locations(source_type, (LOWER(COALESCE(payload->>'destinationKey', ''))));`);
+  // Partial index on category for shortlist blob lookups
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_locations_shortlist_blob ON locations(id) WHERE source_type = 'attraction_shortlist_blob';`);
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS trip_removals (

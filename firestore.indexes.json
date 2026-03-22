@@ -1,6 +1,20 @@
 {
   "indexes": [
     {
+      "collectionGroup": "locations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "sourceType",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "destinationKey",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "user_tiers",
       "queryScope": "COLLECTION",
       "fields": [

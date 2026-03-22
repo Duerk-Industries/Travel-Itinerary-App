@@ -8,6 +8,7 @@ import { doesAuthFlagsConfigExist, getResolvedAuthFlagsConfigPath } from './conf
 import { doesFeatureFlagsConfigExist, getResolvedFeatureFlagsConfigPath } from './config/featureFlags';
 import { seedEntitlementDefaults } from './services/entitlementService';
 import { syncAttractionsCatalogFromCsvToDbOnStartup } from './services/attractionsCatalogService';
+import { prewarmAutocompleteCache } from './services/destinationAttractionAutocompleteService';
 import { createSocketServer } from './socket';
 
 const defaultPort = Number(process.env.PORT) || 4000;
@@ -69,6 +70,12 @@ export const startServer = async (portOverride?: number): Promise<Server> => {
   } else {
     logInfo('[attractions] startup CSV import disabled via ATTRACTIONS_STARTUP_SYNC=0');
   }
+
+  // Pre-warm the destination/attraction autocomplete cache so the first
+  // wizard search doesn't pay the CSV parsing cost (~154k rows).
+  prewarmAutocompleteCache().catch((err: any) =>
+    logError('[autocomplete] cache pre-warm failed (background)', err)
+  );
 
   if (process.env.NODE_ENV !== 'test') {
     refreshAirportsDaily().catch((err: any) => logError('Airport refresh failed', err));

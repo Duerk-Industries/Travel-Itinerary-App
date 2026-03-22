@@ -45,6 +45,7 @@ type AutocompleteDataset = {
   destinationsByCountry: Map<string, DestinationRecord[]>;
   destinationsByState: Map<string, DestinationRecord[]>;
   attractions: AttractionRecord[];
+  attractionsByDestination: Map<string, AttractionRecord[]>;
 };
 
 type CachedResult<T> = { ts: number; results: T[] };
@@ -225,6 +226,15 @@ const buildDataset = (): AutocompleteDataset => {
     destinationsByKey.set(record.destinationKey, list);
   });
   const attractions = parseAttractions(attractionsRaw, destinationsByKey);
+  const attractionsByDestination = new Map<string, AttractionRecord[]>();
+  for (const attr of attractions) {
+    const list = attractionsByDestination.get(attr.destinationKey);
+    if (list) {
+      list.push(attr);
+    } else {
+      attractionsByDestination.set(attr.destinationKey, [attr]);
+    }
+  }
   const destinationsMtimeMs = fs.existsSync(destinationsPath) ? fs.statSync(destinationsPath).mtimeMs : 0;
   const attractionsMtimeMs = fs.existsSync(attractionsPath) ? fs.statSync(attractionsPath).mtimeMs : 0;
   return {
@@ -236,6 +246,7 @@ const buildDataset = (): AutocompleteDataset => {
     destinationsByCountry,
     destinationsByState,
     attractions,
+    attractionsByDestination,
   };
 };
 
@@ -373,9 +384,14 @@ export const searchAttractionOptionsForSelectedLocations = async (params: {
   const allowedDestinationKeys = resolveDestinationKeysForFilters(dataset, selectedIds, selectedNames);
   if (!allowedDestinationKeys.size) return [];
 
+  const candidates: AttractionRecord[] = [];
+  for (const key of allowedDestinationKeys) {
+    const group = dataset.attractionsByDestination.get(key);
+    if (group) candidates.push(...group);
+  }
+
   const seenNames = new Set<string>();
-  const filtered = dataset.attractions
-    .filter((item) => allowedDestinationKeys.has(item.destinationKey))
+  const filtered = candidates
     .filter((item) => item.searchText.includes(q))
     .sort((a, b) => {
       const scoreA = scoreMatch(a.name, a.searchText, q);
@@ -424,4 +440,12 @@ export const clearDestinationAttractionAutocompleteCache = (): void => {
   datasetLoadPromise = null;
   destinationQueryCache.clear();
   attractionQueryCache.clear();
+};
+
+/**
+ * Pre-warm the autocomplete dataset cache so the first user request
+ * doesn't pay the cost of parsing ~154k CSV rows.
+ */
+export const prewarmAutocompleteCache = async (): Promise<void> => {
+  await getDataset();
 };
