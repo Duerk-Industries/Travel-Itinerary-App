@@ -1,7 +1,11 @@
+import fs from 'fs';
+import path from 'path';
 import { getApps, initializeApp } from 'firebase-admin/app';
 import { getStorage } from 'firebase-admin/storage';
 import { getEnvValue } from '../env';
 import { getApiCacheSetting } from '../config/apiLimits';
+import { logError, logInfo } from '../logger';
+import { parseCsvLine } from './destinationsAttractionsCsv';
 
 export type LocationOption = {
   id: string;
@@ -144,6 +148,11 @@ const isTransientNetworkError = (err: unknown): boolean => {
 };
 
 const normalizeId = (prefix: string, id: number | string) => `${prefix}:${id}`;
+const normalizeSearchText = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
 
 const toNumber = (value: unknown): number | undefined => {
   if (value == null) return undefined;
@@ -335,6 +344,244 @@ const loadDatasetFromStorage = async (): Promise<LocationDataset> => {
   };
 };
 
+const resolveCountryStateCsvPath = (): string => {
+  const configured = getEnvValue('LOCATION_COUNTRY_STATE_CSV_LOCAL_PATH');
+  if (configured) return path.resolve(configured);
+  return path.resolve(__dirname, '../../data/locations/countries_and_regions.csv');
+};
+
+const resolveCitiesCsvPath = (): string => {
+  const configured = getEnvValue('LOCATION_CITY_CSV_LOCAL_PATH');
+  if (configured) return path.resolve(configured);
+  return path.resolve(__dirname, '../../data/locations/cities.csv');
+};
+
+const resolveDestinationsCsvPath = (): string => {
+  const configured = getEnvValue('DESTINATIONS_CSV_LOCAL_PATH');
+  if (configured) return path.resolve(configured);
+  return path.resolve(__dirname, '../../data/destinations.csv');
+};
+
+const normalizeCsvText = (value: unknown): string =>
+  String(value ?? '')
+    .trim()
+    .replace(/\s+/g, ' ');
+
+const splitStateCountry = (value: string): { stateName: string; countryName?: string } => {
+  const parts = value
+    .split(',')
+    .map((part) => normalizeCsvText(part))
+    .filter(Boolean);
+  if (parts.length <= 1) return { stateName: value };
+  return {
+    stateName: parts.slice(0, -1).join(', '),
+    countryName: parts[parts.length - 1],
+  };
+};
+
+const slugify = (value: string): string =>
+  normalizeSearchText(value)
+    .replace(/[^a-z0-9\s-]/g, ' ')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+
+const parseLocalCountryStateCsv = (raw: string): Pick<LocationDataset, 'countries' | 'states' | 'countryState'> => {
+  const lines = String(raw ?? '')
+    .split(/\r?\n/)
+    .filter((line) => line.trim().length > 0);
+  if (lines.length < 2) {
+    return { countries: [], states: [], countryState: [] };
+  }
+
+  const headers = parseCsvLine(lines[0]).map((header) => normalizeCsvText(header));
+  const categoryIndex = headers.indexOf('Category');
+  const nameIndex = headers.indexOf('Name');
+  if (categoryIndex === -1 || nameIndex === -1) {
+    return { countries: [], states: [], countryState: [] };
+  }
+
+  const countries: SearchableOption[] = [];
+  const states: SearchableOption[] = [];
+  const countryByName = new Map<string, SearchableOption>();
+
+  for (let i = 1; i < lines.length; i += 1) {
+    const values = parseCsvLine(lines[i]);
+    const category = normalizeCsvText(values[categoryIndex]);
+    const rawName = normalizeCsvText(values[nameIndex]);
+    if (!category || !rawName) continue;
+
+    if (category === 'Country') {
+      const countryId = normalizeId('country', slugify(rawName) || `country-${i}`);
+      const option: SearchableOption = {
+        id: countryId,
+        sourceType: 'country',
+        name: rawName,
+        searchName: normalizeSearchText(rawName),
+      };
+      countries.push(option);
+      countryByName.set(normalizeSearchText(rawName), option);
+      continue;
+    }
+
+    if (category === 'State/Province') {
+      const parsed = splitStateCountry(rawName);
+      const stateName = normalizeCsvText(parsed.stateName);
+      const countryName = normalizeCsvText(parsed.countryName);
+      const countryOption = countryByName.get(normalizeSearchText(countryName));
+      const stateIdSeed = [stateName, countryName].filter(Boolean).join(' ');
+      states.push({
+        id: normalizeId('state', slugify(stateIdSeed) || `state-${i}`),
+        sourceType: 'state',
+        name: stateName || rawName,
+        countryId: countryOption?.id,
+        countryName: countryOption?.name ?? countryName ?? undefined,
+        searchName: normalizeSearchText([stateName || rawName, countryName].filter(Boolean).join(' ')),
+      });
+    }
+  }
+
+  return {
+    countries,
+    states,
+    countryState: [...countries, ...states],
+  };
+};
+
+const mergeCountryOption = (
+  countries: SearchableOption[],
+  countryByName: Map<string, SearchableOption>,
+  countryName: string
+): SearchableOption | null => {
+  const normalized = normalizeSearchText(countryName);
+  if (!normalized) return null;
+  const existing = countryByName.get(normalized);
+  if (existing) return existing;
+  const option: SearchableOption = {
+    id: normalizeId('country', slugify(countryName) || normalized),
+    sourceType: 'country',
+    name: countryName,
+    searchName: normalized,
+  };
+  countries.push(option);
+  countryByName.set(normalized, option);
+  return option;
+};
+
+const mergeStateOption = (
+  states: SearchableOption[],
+  stateKeys: Set<string>,
+  stateName: string,
+  countryOption?: SearchableOption | null
+) => {
+  const normalizedState = normalizeSearchText(stateName);
+  if (!normalizedState) return;
+  const key = `${normalizedState}|${countryOption?.id ?? ''}`;
+  if (stateKeys.has(key)) return;
+  stateKeys.add(key);
+  states.push({
+    id: normalizeId('state', slugify(`${stateName} ${countryOption?.name ?? ''}`) || key),
+    sourceType: 'state',
+    name: stateName,
+    countryId: countryOption?.id,
+    countryName: countryOption?.name,
+    searchName: normalizeSearchText([stateName, countryOption?.name].filter(Boolean).join(' ')),
+  });
+};
+
+const parseDestinationGeoCsv = (raw: string): Pick<LocationDataset, 'countries' | 'states' | 'countryState'> => {
+  const lines = String(raw ?? '')
+    .split(/\r?\n/)
+    .filter((line) => line.trim().length > 0);
+  if (lines.length < 2) {
+    return { countries: [], states: [], countryState: [] };
+  }
+
+  const headers = parseCsvLine(lines[0]).map((header) => normalizeCsvText(header));
+  const countryIndex = headers.indexOf('Country');
+  const stateIndex = headers.indexOf('State/Provence');
+  if (countryIndex === -1) {
+    return { countries: [], states: [], countryState: [] };
+  }
+
+  const countries: SearchableOption[] = [];
+  const states: SearchableOption[] = [];
+  const countryByName = new Map<string, SearchableOption>();
+  const stateKeys = new Set<string>();
+
+  for (let i = 1; i < lines.length; i += 1) {
+    const values = parseCsvLine(lines[i]);
+    const countryName = normalizeCsvText(values[countryIndex]);
+    const stateName = stateIndex >= 0 ? normalizeCsvText(values[stateIndex]) : '';
+    const countryOption = mergeCountryOption(countries, countryByName, countryName);
+    if (!countryOption || !stateName || normalizeSearchText(stateName) === normalizeSearchText(countryName)) continue;
+    mergeStateOption(states, stateKeys, stateName, countryOption);
+  }
+
+  return {
+    countries,
+    states,
+    countryState: [...countries, ...states],
+  };
+};
+
+const parseLocalCitiesCsv = (raw: string): Pick<LocationDataset, 'cities' | 'citiesByCountryId' | 'citiesByStateId'> => {
+  const lines = String(raw ?? '')
+    .split(/\r?\n/)
+    .filter((line) => line.trim().length > 0);
+  if (lines.length < 2) {
+    return {
+      cities: [],
+      citiesByCountryId: new Map<string, SearchableOption[]>(),
+      citiesByStateId: new Map<string, SearchableOption[]>(),
+    };
+  }
+
+  return {
+    cities: [],
+    citiesByCountryId: new Map<string, SearchableOption[]>(),
+    citiesByStateId: new Map<string, SearchableOption[]>(),
+  };
+};
+
+const loadDatasetFromLocalCsv = async (): Promise<LocationDataset> => {
+  const countryStatePath = resolveCountryStateCsvPath();
+  const citiesPath = resolveCitiesCsvPath();
+  const destinationsPath = resolveDestinationsCsvPath();
+  const countryStateRaw = fs.existsSync(countryStatePath) ? fs.readFileSync(countryStatePath, 'utf8') : '';
+  const citiesRaw = fs.existsSync(citiesPath) ? fs.readFileSync(citiesPath, 'utf8') : '';
+  const destinationsRaw = fs.existsSync(destinationsPath) ? fs.readFileSync(destinationsPath, 'utf8') : '';
+  const countryState = parseLocalCountryStateCsv(countryStateRaw);
+  const destinationGeo = parseDestinationGeoCsv(destinationsRaw);
+  const mergedCountries = [...countryState.countries];
+  const mergedStates = [...countryState.states];
+  const mergedCountryByName = new Map(mergedCountries.map((country) => [normalizeSearchText(country.name), country]));
+  const mergedStateKeys = new Set(
+    mergedStates.map((state) => `${normalizeSearchText(state.name)}|${state.countryId ?? ''}`)
+  );
+  destinationGeo.countries.forEach((country) => {
+    mergeCountryOption(mergedCountries, mergedCountryByName, country.name);
+  });
+  destinationGeo.states.forEach((state) => {
+    const countryOption = state.countryName ? mergeCountryOption(mergedCountries, mergedCountryByName, state.countryName) : null;
+    mergeStateOption(mergedStates, mergedStateKeys, state.name, countryOption);
+  });
+  const cityData = parseLocalCitiesCsv(citiesRaw);
+  return {
+    loadedAt: Date.now(),
+    countries: mergedCountries,
+    states: mergedStates,
+    cities: cityData.cities,
+    countryState: [...mergedCountries, ...mergedStates],
+    citiesByCountryId: cityData.citiesByCountryId,
+    citiesByStateId: cityData.citiesByStateId,
+    countryById: new Map<number, CountryRow>(),
+    stateById: new Map<number, StateRow>(),
+    regionById: new Map<number, RegionRow>(),
+    subregionById: new Map<number, SubregionRow>(),
+  };
+};
+
 const getCachedDataset = async (): Promise<LocationDataset> => {
   const now = Date.now();
   if (cache && now - cache.loadedAt < cacheTtlMs()) {
@@ -349,7 +596,22 @@ const getCachedDataset = async (): Promise<LocationDataset> => {
   }
   cacheLoadPromise = (async () => {
     try {
-      const dataset = await loadDatasetFromStorage();
+      let dataset: LocationDataset;
+      try {
+        dataset = await loadDatasetFromStorage();
+      } catch (storageErr) {
+        logInfo('[locationServices] Storage dataset unavailable, falling back to local CSV');
+        try {
+          dataset = await loadDatasetFromLocalCsv();
+        } catch (localCsvErr) {
+          logError('[locationServices] Local CSV fallback also failed', localCsvErr);
+          throw storageErr;
+        }
+        if (dataset.countryState.length === 0 && dataset.cities.length === 0) {
+          logError('[locationServices] Local CSV fallback returned no data', storageErr);
+          throw storageErr;
+        }
+      }
       cache = dataset;
       consecutiveRefreshFailures = 0;
       refreshCooldownUntil = 0;

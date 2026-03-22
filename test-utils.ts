@@ -3,6 +3,17 @@
  */
 import { Page, expect } from '@playwright/test';
 
+type StoredSession = {
+  token: string;
+  name: string;
+  email?: string;
+  role?: 'user' | 'admin';
+  page?: string;
+  pageHistory?: string[];
+  tripId?: string | null;
+  expiresAt: number;
+};
+
 /**
  * A function to handle user creation and login for tests.
  * It registers a new user via the API, then logs them in via the UI
@@ -21,13 +32,13 @@ export async function loginAsNewUser(page: Page): Promise<void> {
 
   // The API URL is taken from your playwright.config.ts webServer setup
   const apiBaseUrl = process.env.API_BASE_URL || 'http://localhost:3000';
-  const registerPath = process.env.API_REGISTER_PATH || '/api/auth/register';
+  const registerPath = process.env.API_REGISTER_PATH || '/api/web-auth/register';
 
   // --- 1. Register a new user ---
   const registrationBody = {
-    username: `testuser_${randomId}`,
-    password,
     email,
+    password,
+    passwordConfirm: password,
     firstName,
     lastName,
   };
@@ -43,24 +54,33 @@ export async function loginAsNewUser(page: Page): Promise<void> {
     );
   }
 
-  // --- 2. Log in via the UI to establish a session ---
-  // The baseURL comes from playwright.config.ts
-  // We assume the login page is at '/login'
-  await page.goto('/login', { waitUntil: 'domcontentloaded', timeout: 90_000 });
+  // --- 2. Bootstrap a valid web session directly ---
+  const oauthResponse = await page.request.post(`${apiBaseUrl}/api/auth/oauth`, {
+    data: { email, provider: 'google' },
+  });
+  if (!oauthResponse.ok()) {
+    const errorBody = await oauthResponse.text();
+    throw new Error(
+      `Failed to bootstrap auth session. Status: ${oauthResponse.status()} ${oauthResponse.statusText()}. URL: ${oauthResponse.url()}. Body: ${errorBody}`
+    );
+  }
+  const oauthData = await oauthResponse.json();
+  const session: StoredSession = {
+    token: String(oauthData.token),
+    name: `${firstName} ${lastName}`.trim() || email,
+    email,
+    role: oauthData.user?.role === 'admin' ? 'admin' : 'user',
+    page: 'home',
+    pageHistory: [],
+    tripId: null,
+    expiresAt: Date.now() + 12 * 60 * 60 * 1000,
+  };
+  await page.addInitScript((payload) => {
+    window.localStorage.setItem('stp.session', JSON.stringify(payload));
+  }, session);
+  await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 90_000 });
 
-  // Fill in credentials and submit
-  await page.getByPlaceholder('Email').fill(email);
-  await page.getByPlaceholder('Password').fill(password);
-  // The login "button" is not a standard <button> element and lacks role="button",
-  // so we must use a different locator. The page has two "Login" texts,
-  // one in the header and one for the form. We can reliably select the form's
-  // button by taking the last one.
-  await page.getByText('Login').last().click();
-
-  // --- 3. Verify that login was successful ---
-  // Wait for a post-login element to be visible. The test that calls this
-  // function immediately looks for a "Trips" button, so we'll wait for that.
-  // This makes the helper function more robust.
+  // --- 3. Verify that auth bootstrap was successful ---
   await expect(page.getByTestId('home-nav-trips')).toBeVisible({ timeout: 15000 });
 }
 

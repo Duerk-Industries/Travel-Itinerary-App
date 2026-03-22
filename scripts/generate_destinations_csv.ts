@@ -1,14 +1,16 @@
 import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath, pathToFileURL } from 'url';
+import destinationCsvReconciliationModule from '../server/src/services/destinationCsvReconciliation';
 
-interface Destination {
-  'Destination English Name': string;
-  Country: string;
-  'State/Provence': string;
-  'Nearest City': string;
-  'Destination Official Name': string;
-}
+const {
+  getDestinationIdentityKey,
+  reconcileDestinationsWithAttractions,
+} = destinationCsvReconciliationModule as typeof import('../server/src/services/destinationCsvReconciliation');
+type DestinationCsvRow = import('../server/src/services/destinationCsvReconciliation').DestinationCsvRow;
+
+interface Destination extends DestinationCsvRow {}
 
 interface DestinationSeed {
   name: string;
@@ -17,6 +19,12 @@ interface DestinationSeed {
   officialName?: string;
   population?: number;
 }
+
+type DestinationSourceRecord = {
+  destination: string;
+  country: string;
+  sources: string[];
+};
 
 interface Country {
   name: string;
@@ -1324,12 +1332,11 @@ async function seedsToDestinations(country: Country, quota: number, existingKeys
   return destinations;
 }
 
-import { fileURLToPath } from 'url';
-
 async function main() {
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
   const serverDataCsvPath = path.resolve(__dirname, '../server/data/destinations.csv');
+  const attractionsCatalogCsvPath = path.resolve(__dirname, '../server/data/attractions_catalog.csv');
 
   // Load existing destinations so we don't re-process them
   const existingKeys = loadExistingDestinations(serverDataCsvPath);
@@ -1356,10 +1363,20 @@ async function main() {
   const capitalNormalizedDestinations = ensureEnglishCapitalCoverage(canonicalDestinations, capitalByCountry);
   const countriesByName = new Map(countries.map((country) => [country.name, country]));
   const { rows: finalizedDestinations, rejected } = applyDestinationQualityGates(capitalNormalizedDestinations, countriesByName);
-  const destinationSources: Array<{ destination: string; country: string; sources: string[] }> = [];
+  const attractionsCsvRaw = fs.existsSync(attractionsCatalogCsvPath)
+    ? fs.readFileSync(attractionsCatalogCsvPath, 'utf8')
+    : '';
+  const {
+    rows: reconciledDestinations,
+    sourceOverrides,
+    added: attractionBackfilledDestinations,
+  } = reconcileDestinationsWithAttractions(finalizedDestinations, attractionsCsvRaw);
+  const destinationSources: DestinationSourceRecord[] = [];
 
-  for (const row of finalizedDestinations) {
-    const sources = buildSources(row['Destination English Name']);
+  for (const row of reconciledDestinations) {
+    const sources =
+      sourceOverrides.get(getDestinationIdentityKey(row.Country, row['Destination English Name'])) ??
+      buildSources(row['Destination English Name']);
     if (sources.length < 2) {
       throw new Error(`Missing minimum sources for ${row['Destination English Name']}, ${row.Country}`);
     }
@@ -1380,7 +1397,7 @@ async function main() {
 
   const lines = [
     header.map(csvEscape).join(','),
-    ...finalizedDestinations.map((row) =>
+    ...reconciledDestinations.map((row) =>
       [
         row['Destination English Name'],
         row.Country,
@@ -1399,9 +1416,12 @@ async function main() {
   fs.writeFileSync(serverDataCsvPath, csvContent, 'utf8');
   fs.writeFileSync(sourcesPath, JSON.stringify(destinationSources, null, 2), 'utf8');
 
-  console.log(`Generated ${finalizedDestinations.length} destinations for ${countries.length} countries at ${serverDataCsvPath}.`);
+  console.log(`Generated ${reconciledDestinations.length} destinations for ${countries.length} countries at ${serverDataCsvPath}.`);
   if (rejected.length > 0) {
     console.log(`Rejected ${rejected.length} destinations by quality gates.`);
+  }
+  if (attractionBackfilledDestinations.length > 0) {
+    console.log(`Backfilled ${attractionBackfilledDestinations.length} destinations from attractions_catalog.csv.`);
   }
   await verifyDestinations(serverDataCsvPath);
 }
@@ -1527,7 +1547,15 @@ async function verifyDestinations(filePath: string) {
   }
 }
 
-main().catch((error) => {
-  console.error('Failed to generate destinations.csv:', error);
-  process.exit(1);
-});
+const isDirectExecution = (): boolean => {
+  const entry = process.argv[1];
+  if (!entry) return false;
+  return import.meta.url === pathToFileURL(path.resolve(entry)).href;
+};
+
+if (isDirectExecution()) {
+  main().catch((error) => {
+    console.error('Failed to generate destinations.csv:', error);
+    process.exit(1);
+  });
+}

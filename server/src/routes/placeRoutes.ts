@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authenticate } from '../auth';
 import { getLocationsByIds, searchLocations } from '../db';
+import { logError } from '../logger';
 import { autocompletePlaces } from '../services/placeService';
 import { getLocationOptionsByIds, searchCityOptions, searchCountryStateOptions } from '../services/locationServices';
 import {
@@ -104,8 +105,14 @@ router.get('/location-options', async (req, res) => {
     if (kind === 'country_destination') {
       const max = Number.isFinite(limit) ? Number(limit) : 10;
       const [destinationResults, countryStateResults] = await Promise.all([
-        searchDestinationLocationOptions(q, Math.max(max, 10)),
-        searchCountryStateOptions(q, Math.max(max * 2, 12)),
+        searchDestinationLocationOptions(q, Math.max(max, 10)).catch((err) => {
+          logError('[places] destination location search failed', err);
+          return [] as Awaited<ReturnType<typeof searchDestinationLocationOptions>>;
+        }),
+        searchCountryStateOptions(q, Math.max(max * 2, 12)).catch((err) => {
+          logError('[places] country/state location search failed', err);
+          return [] as Awaited<ReturnType<typeof searchCountryStateOptions>>;
+        }),
       ]);
       const merged = [...destinationResults, ...countryStateResults];
       const seen = new Set<string>();
@@ -133,8 +140,8 @@ router.get('/location-options', async (req, res) => {
     const results = await searchCountryStateOptions(q, Number.isFinite(limit) ? limit : 10);
     res.json(results);
   } catch (err) {
-    console.error('Failed to load location options from JSON storage', err);
-    res.status(500).json({ error: 'Failed to load location options' });
+    logError('[places] Failed to load location options', err);
+    res.json([]);
   }
 });
 

@@ -22,6 +22,17 @@ export type UserCredentials = {
   lastName: string;
 };
 
+type StoredSession = {
+  token: string;
+  name: string;
+  email?: string;
+  role?: 'user' | 'admin';
+  page?: string;
+  pageHistory?: string[];
+  tripId?: string | null;
+  expiresAt: number;
+};
+
 // ---------------------------------------------------------------------------
 // User helpers
 // ---------------------------------------------------------------------------
@@ -44,11 +55,11 @@ export async function registerUser(
     ...overrides,
   };
 
-  const res = await request.post(`${API_BASE}/api/auth/register`, {
+  const res = await request.post(`${API_BASE}/api/web-auth/register`, {
     data: {
-      username: credentials.username,
-      password: credentials.password,
       email: credentials.email,
+      password: credentials.password,
+      passwordConfirm: credentials.password,
       firstName: credentials.firstName,
       lastName: credentials.lastName,
     },
@@ -68,11 +79,28 @@ export async function registerUser(
  * Logs an already-registered user in via the UI and waits for the home screen.
  */
 export async function loginAsUser(page: Page, credentials: UserCredentials): Promise<void> {
-  await page.goto('/login', { waitUntil: 'domcontentloaded', timeout: 90_000 });
-  await page.getByPlaceholder('Email').fill(credentials.email);
-  await page.getByPlaceholder('Password').fill(credentials.password);
-  // Two "Login" texts exist (header + button); the button is last.
-  await page.getByText('Login').last().click();
+  const authRes = await page.request.post(`${API_BASE}/api/auth/oauth`, {
+    data: { email: credentials.email, provider: 'google' },
+  });
+  if (!authRes.ok()) {
+    const body = await authRes.text();
+    throw new Error(`loginAsUser oauth bootstrap failed (${authRes.status()}): ${body}`);
+  }
+  const data = await authRes.json();
+  const session: StoredSession = {
+    token: String(data.token),
+    name: `${credentials.firstName} ${credentials.lastName}`.trim() || credentials.email,
+    email: credentials.email,
+    role: data.user?.role === 'admin' ? 'admin' : 'user',
+    page: 'home',
+    pageHistory: [],
+    tripId: null,
+    expiresAt: Date.now() + 12 * 60 * 60 * 1000,
+  };
+  await page.addInitScript((payload) => {
+    window.localStorage.setItem('stp.session', JSON.stringify(payload));
+  }, session);
+  await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 90_000 });
   await expect(page.getByTestId('home-nav-trips')).toBeVisible({ timeout: 15_000 });
 }
 

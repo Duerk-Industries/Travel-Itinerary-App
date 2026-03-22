@@ -15,6 +15,7 @@ const serverEnv: Record<string, string> = {
   PORT: '3000',
   AUTH_SECRET: process.env.AUTH_SECRET ?? 'e2e-test-secret',
   E2E_MODE: '1',
+  ATTRACTIONS_STARTUP_SYNC: '0',
 };
 
 if (dbBackend === 'firebase') {
@@ -28,9 +29,10 @@ if (dbBackend === 'firebase') {
     serverEnv.DATABASE_URL = process.env.DATABASE_URL;
   }
 } else {
-  // memory (default)
+  // memory (default) — explicitly set DB_PROVIDER to prevent server/.env's DB_PROVIDER=firebase from winning
   serverEnv.DB_PROVIDER = 'memory';
   serverEnv.USE_IN_MEMORY_DB = '1';
+  serverEnv.FIRESTORE_EMULATOR_HOST = '';
 }
 
 export default defineConfig({
@@ -70,6 +72,7 @@ export default defineConfig({
         BACKEND_URL: 'http://localhost:3000',
         EXPO_PUBLIC_BACKEND_URL: 'http://localhost:3000',
         CI: 'true',
+        EXPO_NO_DOCTOR: '1',
       },
     },
   ],

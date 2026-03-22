@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc -p .",
+    "build": "tsc -p . && node ./scripts/copy-runtime-assets.js",
     "predev": "tsx ../scripts/seed-dev-accounts.ts",
     "start": "NODE_ENV=production node dist/index.js",
     "dev": "tsx watch src/index.ts",
