@@ -229,6 +229,15 @@ Feature flags:
   - Wikidata entity search + English Wikipedia sitelink title resolution
   - fallback to Wikipedia query/search disambiguation scoring
 - Dataset quality gates reject synthetic-looking rows and enforce fallback coverage so each country has at least one valid destination.
+- Destination generation also force-includes cities at `population >= 1,000,000` as additive coverage, while preserving the existing curated, nature, and attraction-backfill sources.
+- Auto-added 1M+ cities are confirmed from multiple web sources before source manifests are written (currently CountryNow population data plus GeoNames/Opendatasoft city records, alongside the existing Wikipedia/Wikivoyage destination links).
+- Runtime safety: country processing is parallelized, but upstream city-source calls are still provider-throttled with bounded concurrency and retry/backoff to reduce `429`/rate-limit rejections.
+- Tuning env vars:
+  - `DESTINATION_COUNTRY_CONCURRENCY` default `4`
+  - `DESTINATION_COUNTRYNOW_CONCURRENCY` default `2`
+  - `DESTINATION_COUNTRYNOW_MIN_INTERVAL_MS` default `1200`
+  - `DESTINATION_GEONAMES_CONCURRENCY` default `2`
+  - `DESTINATION_GEONAMES_MIN_INTERVAL_MS` default `800`
 - U.S. destination coverage includes all current U.S. National Parks in `server/data/destinations.csv`.
 - Attraction generation requires source-backed candidates and validates:
   - non-synthetic names

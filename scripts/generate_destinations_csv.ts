@@ -1,14 +1,28 @@
 import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath, pathToFileURL } from 'url';
-import destinationCsvReconciliationModule from '../server/src/services/destinationCsvReconciliation';
+import pLimit from 'p-limit';
+import { fileURLToPath } from 'url';
+import * as destinationCsvReconciliationModule from '../server/src/services/destinationCsvReconciliation';
+import largeCityCoverageModule from '../server/src/services/destinationLargeCityCoverage';
 
 const {
   getDestinationIdentityKey,
   reconcileDestinationsWithAttractions,
-} = destinationCsvReconciliationModule as typeof import('../server/src/services/destinationCsvReconciliation');
+} =
+  ((destinationCsvReconciliationModule as any).default ??
+    destinationCsvReconciliationModule) as typeof import('../server/src/services/destinationCsvReconciliation');
+const {
+  applyMillionPlusCoverage,
+  fetchCountryNowCitySeeds: fetchCountryNowCitySeedsFromService,
+  fetchGeoNamesMillionPlusCitySeeds: fetchGeoNamesMillionPlusCitySeedsFromService,
+  fetchMillionPlusCitySeeds: fetchMillionPlusCitySeedsFromService,
+  LARGE_CITY_POPULATION_THRESHOLD: LARGE_CITY_POPULATION_THRESHOLD_FROM_SERVICE,
+  mergeLargeCitySeedSources: mergeLargeCitySeedSourcesFromService,
+  normalizeSourceMatchKey: normalizeSourceMatchKeyFromService,
+} = largeCityCoverageModule as typeof import('../server/src/services/destinationLargeCityCoverage');
 type DestinationCsvRow = import('../server/src/services/destinationCsvReconciliation').DestinationCsvRow;
+const DEFAULT_COUNTRY_PROCESS_CONCURRENCY = 4;
 
 interface Destination extends DestinationCsvRow {}
 
@@ -18,6 +32,7 @@ interface DestinationSeed {
   city: string;
   officialName?: string;
   population?: number;
+  sourceUrls?: string[];
 }
 
 type DestinationSourceRecord = {
@@ -71,6 +86,20 @@ interface CountryNowCitiesResponse {
   error?: boolean;
   msg?: string;
   data?: string[];
+}
+
+interface GeoNamesCityRecord {
+  recordid?: string;
+  fields?: {
+    name?: string;
+    asciiname?: string;
+    alternatenames?: string;
+    population?: number;
+  };
+}
+
+interface GeoNamesSearchResponse {
+  records?: GeoNamesCityRecord[];
 }
 
 const DESTINATIONS_BY_COUNTRY: Record<string, DestinationSeed[]> = {
@@ -557,6 +586,20 @@ function buildSources(destinationName: string): string[] {
   ];
 }
 
+function buildSourceList(destinationName: string, extraSources?: string[]): string[] {
+  return Array.from(new Set([...buildSources(destinationName), ...(extraSources ?? [])]));
+}
+
+function getCountryProcessConcurrency(): number {
+  const raw = Number(process.env.DESTINATION_COUNTRY_CONCURRENCY ?? DEFAULT_COUNTRY_PROCESS_CONCURRENCY);
+  if (!Number.isFinite(raw) || raw <= 0) return DEFAULT_COUNTRY_PROCESS_CONCURRENCY;
+  return Math.max(1, Math.min(16, Math.floor(raw)));
+}
+
+function normalizeSourceMatchKey(value: string): string {
+  return normalizeSourceMatchKeyFromService(value);
+}
+
 type NameCanonicalizationCache = Record<string, string>;
 const WIKIMEDIA_HEADERS = {
   'User-Agent': 'TravelItineraryAppBot/1.0 (contact: local-dev)',
@@ -803,9 +846,6 @@ async function resolveEnglishWikipediaTitle(name: string, country: string): Prom
   if (!trimmed) return null;
 
   try {
-    const wikidataResolved = await resolveEnglishTitleViaWikidata(trimmed, country);
-    if (wikidataResolved) return wikidataResolved;
-
     const direct = await wikiApiGet({
       action: 'query',
       format: 'json',
@@ -818,9 +858,10 @@ async function resolveEnglishWikipediaTitle(name: string, country: string): Prom
     const pages = direct?.query?.pages;
     if (!pages || typeof pages !== 'object') return null;
     const firstPage = Object.values(pages)[0] as { title?: string; missing?: string; pageprops?: { disambiguation?: string } } | undefined;
-    if (!firstPage || typeof firstPage.title !== 'string' || firstPage.missing !== undefined) return null;
-    if (firstPage.pageprops?.disambiguation === undefined && normalizeKey(firstPage.title) !== normalizeKey(trimmed)) {
-      return firstPage.title.trim();
+    if (firstPage && typeof firstPage.title === 'string' && firstPage.missing === undefined) {
+      if (firstPage.pageprops?.disambiguation === undefined) {
+        return firstPage.title.trim();
+      }
     }
 
     const queryText = `${trimmed} ${country} city`;
@@ -863,7 +904,13 @@ async function resolveEnglishWikipediaTitle(name: string, country: string): Prom
     if (bestTitle && bestScore > 0) {
       return bestTitle;
     }
-    return firstPage.pageprops?.disambiguation === undefined ? firstPage.title.trim() : null;
+
+    const wikidataResolved = await resolveEnglishTitleViaWikidata(trimmed, country);
+    if (wikidataResolved) return wikidataResolved;
+
+    return firstPage && firstPage.pageprops?.disambiguation === undefined && typeof firstPage.title === 'string'
+      ? firstPage.title.trim()
+      : null;
   } catch (_error) {
     return null;
   }
@@ -1015,7 +1062,7 @@ async function canonicalizeDestinationEnglishNames(destinations: Destination[], 
   return dedupeDestinations(canonicalized);
 }
 
-const citySeedCache = new Map<string, DestinationSeed[]>();
+const countryNowCitySeedCache = new Map<string, DestinationSeed[]>();
 
 function uniqueSeeds(seeds: DestinationSeed[]): DestinationSeed[] {
   const seen = new Set<string>();
@@ -1031,96 +1078,22 @@ function uniqueSeeds(seeds: DestinationSeed[]): DestinationSeed[] {
   return deduped;
 }
 
-async function fetchTopCitySeeds(countryName: string, targetCount: number): Promise<DestinationSeed[]> {
+async function fetchCountryNowCitySeeds(countryName: string, targetCount: number): Promise<DestinationSeed[]> {
   const cacheKey = normalizeKey(countryName);
-  if (citySeedCache.has(cacheKey)) {
-    return citySeedCache.get(cacheKey) ?? [];
+  if (countryNowCitySeedCache.has(cacheKey)) {
+    return countryNowCitySeedCache.get(cacheKey) ?? [];
   }
+  const seeds = (await fetchCountryNowCitySeedsFromService(countryName, targetCount)) as DestinationSeed[];
+  countryNowCitySeedCache.set(cacheKey, seeds);
+  return seeds;
+}
 
-  try {
-    const requestBody = {
-      country: countryName,
-      order: 'dsc',
-      orderBy: 'value',
-      limit: Math.min(Math.max(targetCount * 3, 100), 400),
-    };
+async function fetchGeoNamesMillionPlusCitySeeds(country: Country): Promise<DestinationSeed[]> {
+  return (await fetchGeoNamesMillionPlusCitySeedsFromService(country)) as DestinationSeed[];
+}
 
-    let populationRecords: CountryNowCityRecord[] = [];
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      try {
-        const { data } = await axios.post<CountryNowFilterResponse>(
-          'https://countriesnow.space/api/v0.1/countries/population/cities/filter',
-          requestBody,
-          { timeout: 30000 }
-        );
-        populationRecords = Array.isArray(data?.data) ? data.data : [];
-        if (populationRecords.length > 0) break;
-      } catch (_error) {
-        await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
-      }
-    }
-
-    const seedsFromPopulation = uniqueSeeds(
-      populationRecords
-        .filter((record) => {
-          const city = (record.city ?? '').trim();
-          return city.length > 0 && !isLikelySyntheticName(city);
-        })
-        .map((record) => {
-          const rawName = (record.city ?? '').trim();
-          const parenthetical = rawName.match(/\(([^)]+)\)\s*$/);
-          const state = parenthetical ? parenthetical[1].trim() : '';
-          const cityName = rawName.replace(/\s*\([^)]*\)\s*$/, '').trim();
-
-          const latestCount = (record.populationCounts ?? [])
-            .filter((pc) => pc.sex === 'Both Sexes' || !pc.sex)
-            .sort((a, b) => Number(b.year ?? 0) - Number(a.year ?? 0))[0];
-          const pop = Number(latestCount?.value ?? 0);
-
-          return {
-            name: cityName,
-            city: cityName,
-            state,
-            officialName: cityName,
-            population: pop > 0 ? pop : undefined,
-          };
-        })
-    );
-
-    let seeds = [...seedsFromPopulation];
-    if (seeds.length < targetCount) {
-      const { data } = await axios.post<CountryNowCitiesResponse>(
-        'https://countriesnow.space/api/v0.1/countries/cities',
-        { country: countryName },
-        { timeout: 30000 }
-      );
-      const cityNames = Array.isArray(data?.data) ? data.data : [];
-      const fallbackSeeds = uniqueSeeds(
-        cityNames
-          .filter((name) => {
-            const city = String(name ?? '').trim();
-            return city.length > 0 && !isLikelySyntheticName(city);
-          })
-          .slice(0, Math.min(1200, targetCount * 20))
-          .map((name) => {
-            const cityName = String(name).trim();
-            return {
-              name: cityName,
-              city: cityName,
-              state: '',
-              officialName: cityName,
-            };
-          })
-      );
-      seeds = uniqueSeeds([...seeds, ...fallbackSeeds]);
-    }
-
-    citySeedCache.set(cacheKey, seeds);
-    return seeds;
-  } catch (error) {
-    citySeedCache.set(cacheKey, []);
-    return [];
-  }
+async function fetchTopCitySeeds(countryName: string, targetCount: number): Promise<DestinationSeed[]> {
+  return fetchCountryNowCitySeeds(countryName, targetCount);
 }
 
 async function getCountries(): Promise<Country[]> {
@@ -1252,13 +1225,26 @@ function buildFallbackDestination(country: Country): DestinationSeed {
   };
 }
 
-const LARGE_CITY_POPULATION_THRESHOLD = 2_000_000;
+export const LARGE_CITY_POPULATION_THRESHOLD = LARGE_CITY_POPULATION_THRESHOLD_FROM_SERVICE;
 
-async function seedsToDestinations(country: Country, quota: number, existingKeys?: Set<string>): Promise<Destination[]> {
+function mergeLargeCitySeedSources(primary: DestinationSeed, secondary?: DestinationSeed): DestinationSeed {
+  return mergeLargeCitySeedSourcesFromService(primary, secondary) as DestinationSeed;
+}
+
+async function fetchMillionPlusCitySeeds(country: Country, countryCandidates: string[]): Promise<DestinationSeed[]> {
+  return (await fetchMillionPlusCitySeedsFromService(country, countryCandidates)) as DestinationSeed[];
+}
+
+export async function seedsToDestinations(
+  country: Country,
+  quota: number,
+  existingKeys?: Set<string>
+): Promise<{ rows: Destination[]; sourceOverrides: Map<string, string[]> }> {
   const curatedAll = getCountryCatalog(country);
   const curated = curatedAll.slice(0, quota);
   const fallback = buildFallbackDestination(country);
   const seedList: DestinationSeed[] = [...curated];
+  const sourceOverrides = new Map<string, string[]>();
 
   const countryCandidates = [country.name, country.officialName].filter(Boolean);
   let allCitySeeds: DestinationSeed[] = [];
@@ -1281,14 +1267,10 @@ async function seedsToDestinations(country: Country, quota: number, existingKeys
     }
   }
 
-  // Ensure all cities with 2M+ population are included regardless of quota
-  const seedNameKeys = new Set(seedList.map((s) => normalizeKey(s.name)));
-  for (const seed of allCitySeeds) {
-    if ((seed.population ?? 0) >= LARGE_CITY_POPULATION_THRESHOLD && !seedNameKeys.has(normalizeKey(seed.name))) {
-      seedList.push(seed);
-      seedNameKeys.add(normalizeKey(seed.name));
-    }
-  }
+  const millionPlusSeeds = await fetchMillionPlusCitySeeds(country, countryCandidates);
+  const seedListWithLargeCities = applyMillionPlusCoverage(seedList, millionPlusSeeds) as DestinationSeed[];
+  seedList.length = 0;
+  seedList.push(...seedListWithLargeCities);
 
   if (seedList.length === 0) {
     seedList.push(fallback);
@@ -1310,13 +1292,19 @@ async function seedsToDestinations(country: Country, quota: number, existingKeys
     const existingKey = normalizeKey(`${country.name}|${seed.name}`);
     if (existingKeys?.has(existingKey)) continue;
 
-    destinations.push({
+    const row = {
       'Destination English Name': seed.name,
       Country: country.name,
       'State/Provence': seed.state,
       'Nearest City': seed.city,
       'Destination Official Name': seed.officialName ?? seed.name,
-    });
+    };
+    destinations.push(row);
+
+    const combinedSources = buildSourceList(row['Destination English Name'], seed.sourceUrls);
+    if (combinedSources.length > buildSources(row['Destination English Name']).length) {
+      sourceOverrides.set(getDestinationIdentityKey(row.Country, row['Destination English Name']), combinedSources);
+    }
   }
 
   if (destinations.length === 0 || quota <= 0) {
@@ -1329,7 +1317,7 @@ async function seedsToDestinations(country: Country, quota: number, existingKeys
     });
   }
 
-  return destinations;
+  return { rows: destinations, sourceOverrides };
 }
 
 async function main() {
@@ -1347,15 +1335,45 @@ async function main() {
   const maxArea = countries.reduce((max, country) => Math.max(max, country.areaKm2), 0);
   const maxPopulation = countries.reduce((max, country) => Math.max(max, country.population), 0);
   const maxTourism = countries.reduce((max, country) => Math.max(max, tourismByIso3.get(country.iso3) ?? 0), 0);
+  const countryConcurrency = getCountryProcessConcurrency();
+  console.log(`Processing ${countries.length} countries with concurrency ${countryConcurrency}.`);
+
+  const limit = pLimit(countryConcurrency);
+  let completedCountries = 0;
+  const countryResults = await Promise.all(
+    countries.map((country, index) =>
+      limit(async () => {
+        if (index === 0 || (index + 1) % 25 === 0 || index === countries.length - 1) {
+          console.log(`Queued country ${index + 1}/${countries.length}: ${country.name}`);
+        }
+
+        const quota = getDestinationQuota(country, tourismByIso3, maxArea, maxPopulation, maxTourism);
+        const result = await seedsToDestinations(country, quota, existingKeys);
+        completedCountries += 1;
+
+        if (completedCountries === 1 || completedCountries % 25 === 0 || completedCountries === countries.length) {
+          console.log(`Completed countries ${completedCountries}/${countries.length}`);
+        }
+
+        return result;
+      })
+    )
+  );
 
   const allDestinations: Destination[] = [];
-
-  for (const country of countries) {
-    const quota = getDestinationQuota(country, tourismByIso3, maxArea, maxPopulation, maxTourism);
-    const rows = await seedsToDestinations(country, quota, existingKeys);
+  const generatedSourceOverrides = new Map<string, string[]>();
+  for (const { rows, sourceOverrides } of countryResults) {
     allDestinations.push(...rows);
+    for (const [key, sources] of sourceOverrides.entries()) {
+      generatedSourceOverrides.set(key, sources);
+    }
   }
 
+  console.log(`Built ${allDestinations.length} candidate destinations. Canonicalizing English names...`);
+  if (allDestinations.length === 0) {
+    console.log('No new destination candidates were generated. Nothing else to write.');
+    return;
+  }
   const canonicalDestinations = await canonicalizeDestinationEnglishNames(allDestinations, __dirname);
   const capitalByCountry = new Map<string, string>(
     countries.map((country) => [country.name, Array.isArray(country.capital) ? country.capital[0] ?? '' : ''])
@@ -1363,20 +1381,25 @@ async function main() {
   const capitalNormalizedDestinations = ensureEnglishCapitalCoverage(canonicalDestinations, capitalByCountry);
   const countriesByName = new Map(countries.map((country) => [country.name, country]));
   const { rows: finalizedDestinations, rejected } = applyDestinationQualityGates(capitalNormalizedDestinations, countriesByName);
+  console.log(`Quality gates kept ${finalizedDestinations.length} destinations${rejected.length ? ` and rejected ${rejected.length}` : ''}. Reconciling attractions...`);
   const attractionsCsvRaw = fs.existsSync(attractionsCatalogCsvPath)
     ? fs.readFileSync(attractionsCatalogCsvPath, 'utf8')
     : '';
   const {
     rows: reconciledDestinations,
-    sourceOverrides,
+    sourceOverrides: attractionSourceOverrides,
     added: attractionBackfilledDestinations,
   } = reconcileDestinationsWithAttractions(finalizedDestinations, attractionsCsvRaw);
+  const sourceOverrides = new Map<string, string[]>(generatedSourceOverrides);
+  for (const [key, sources] of attractionSourceOverrides.entries()) {
+    sourceOverrides.set(key, sources);
+  }
   const destinationSources: DestinationSourceRecord[] = [];
 
   for (const row of reconciledDestinations) {
     const sources =
       sourceOverrides.get(getDestinationIdentityKey(row.Country, row['Destination English Name'])) ??
-      buildSources(row['Destination English Name']);
+      buildSourceList(row['Destination English Name']);
     if (sources.length < 2) {
       throw new Error(`Missing minimum sources for ${row['Destination English Name']}, ${row.Country}`);
     }
@@ -1547,10 +1570,17 @@ async function verifyDestinations(filePath: string) {
   }
 }
 
+export const __test__ = {
+  buildSourceList,
+  fetchMillionPlusCitySeeds,
+  fetchGeoNamesMillionPlusCitySeeds,
+  fetchCountryNowCitySeeds,
+};
+
 const isDirectExecution = (): boolean => {
   const entry = process.argv[1];
   if (!entry) return false;
-  return import.meta.url === pathToFileURL(path.resolve(entry)).href;
+  return /generate_destinations_csv\.(ts|js)$/i.test(path.resolve(entry));
 };
 
 if (isDirectExecution()) {

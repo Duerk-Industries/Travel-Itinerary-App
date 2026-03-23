@@ -8,6 +8,7 @@ import {
   passAttractionQualityGates,
   validateAttractionsCsv,
 } from '../src/services/curatedGenerationHeuristics';
+import { dedupeAttractionsCatalogLines } from '../src/services/attractionsCatalogDedup';
 
 interface Destination {
   'Destination English Name': string;
@@ -956,11 +957,11 @@ async function buildGenerationContext(): Promise<GenerationContext> {
     return { metricsByCountry, tourismByIso3, maxArea, maxPopulation, maxTourism };
 }
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const moduleFilename = fileURLToPath(import.meta.url);
+const moduleDirname = path.dirname(moduleFilename);
 
 function resolveDestinationsFile(): string {
-    const canonical = path.resolve(__dirname, '../data/destinations.csv');
+    const canonical = path.resolve(moduleDirname, '../data/destinations.csv');
     if (!fs.existsSync(canonical)) {
         throw new Error(`Missing destinations file: ${canonical}. Run "npm run destinations:generate" first.`);
     }
@@ -985,10 +986,10 @@ async function main() {
     const todayYmd = toYmd(new Date());
     const refreshMinDays = 45;
     const destinationsFile = resolveDestinationsFile();
-    const sourcesFile = path.resolve(__dirname, '../../scripts/destination_sources.json');
-    const outputFile = path.resolve(__dirname, '../data/attractions_catalog.csv');
-    const qidCacheFile = path.resolve(__dirname, '../../scripts/destination_qid_cache.json');
-    const pageviewCacheFile = path.resolve(__dirname, '../../scripts/wikipedia_pageviews_cache.json');
+    const sourcesFile = path.resolve(moduleDirname, '../../scripts/destination_sources.json');
+    const outputFile = path.resolve(moduleDirname, '../data/attractions_catalog.csv');
+    const qidCacheFile = path.resolve(moduleDirname, '../../scripts/destination_qid_cache.json');
+    const pageviewCacheFile = path.resolve(moduleDirname, '../../scripts/wikipedia_pageviews_cache.json');
 
     const destinationsRawBefore = fs.readFileSync(destinationsFile, 'utf8');
     const sourceMap = loadDestinationSources(sourcesFile);
@@ -1171,17 +1172,23 @@ async function main() {
       seenDestinations.add(name);
       const generated = generatedByDestination.get(name);
       if (generated && generated.length) {
-        lines.push(...generated);
+        for (const row of generated) {
+          lines.push(row);
+        }
         continue;
       }
       const existing = existingAttractions.rowsByDestination.get(name);
       if (existing && existing.length) {
-        lines.push(...existing);
+        for (const row of existing) {
+          lines.push(row);
+        }
       }
     }
     for (const [name, existingRows] of existingAttractions.rowsByDestination.entries()) {
       if (!seenDestinations.has(name)) {
-        lines.push(...existingRows);
+        for (const row of existingRows) {
+          lines.push(row);
+        }
       }
     }
 
@@ -1195,14 +1202,17 @@ async function main() {
     );
 
     const normalizedLines = normalizeAttractionsSourceCount(lines);
+    const dedupedLines = dedupeAttractionsCatalogLines(normalizedLines);
     fs.writeFileSync(qidCacheFile, JSON.stringify(qidCache, null, 2), 'utf8');
     fs.writeFileSync(pageviewCacheFile, JSON.stringify(pageviewCache, null, 2), 'utf8');
-    fs.writeFileSync(outputFile, `${normalizedLines.join('\n')}\n`, 'utf8');
+    fs.writeFileSync(outputFile, `${dedupedLines.join('\n')}\n`, 'utf8');
     verifyAttractions(outputFile);
-    console.log(`Wrote ${normalizedLines.length - 1} source-backed attraction rows to ${outputFile}`);
+    const removedDuplicates = Math.max(0, normalizedLines.length - dedupedLines.length);
+    console.log(`Wrote ${dedupedLines.length - 1} source-backed attraction rows to ${outputFile}${removedDuplicates ? ` after removing ${removedDuplicates} duplicates` : ''}`);
 }
 
-const isDirectRun = process.argv[1] ? path.resolve(process.argv[1]) === __filename : false;
+const isDirectRun = process.argv[1] ? path.resolve(process.argv[1]) === moduleFilename : false;
+
 if (isDirectRun) {
     main().catch((error) => {
         console.error('Failed to generate curated attractions:', error);

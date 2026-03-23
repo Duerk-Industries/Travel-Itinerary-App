@@ -9,6 +9,8 @@
 - Destinations:
   - Rest Countries API (`https://restcountries.com/`) for global country coverage and baseline metadata.
   - World Bank tourism arrivals indicator (`ST.INT.ARVL`) for demand-aware scaling.
+  - CountryNow city population API (`https://countriesnow.space/`) for broad city-population candidate discovery.
+  - GeoNames city records via Opendatasoft (`https://documentation-resources.huwise.com/`) to cross-check large-city coverage.
   - Wikipedia + Wikidata APIs for US-English canonical destination names.
 - Attractions:
   - Wikidata SPARQL endpoint (`https://query.wikidata.org/`) for structured attraction candidates.
@@ -31,6 +33,8 @@
   - country size
   - population
   - tourism demand
+- Cities with `population >= 1,000,000` are force-included in addition to quota-based destination selection.
+- Those 1M+ additions keep multiple web-source confirmations in the destination source manifest before CSV output is finalized.
 - Attraction count scales by:
   - country signals
   - destination popularity (Wikimedia pageviews)

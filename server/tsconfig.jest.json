@@ -3,7 +3,9 @@
   "compilerOptions": {
     "rootDir": ".",
     "jsx": "react-jsx",
-    "allowJs": true
+    "allowJs": true,
+    "module": "Node20",
+    "isolatedModules": true
   },
-  "include": ["src/**/*", "__tests__/**/*", "../app/**/*"]
+  "include": ["src/**/*", "__tests__/**/*", "scripts/**/*", "../app/**/*", "../scripts/**/*"]
 }
