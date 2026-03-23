@@ -576,8 +576,7 @@ export function ensureAttractionsUpdatedColumnAndBackfill(doc: ParsedDestination
   for (const row of doc.rows) {
     const current = String(row.data[DESTINATIONS_ATTRACTIONS_UPDATED_HEADER as keyof Destination] ?? '').trim();
     if (!current) {
-      row.data[DESTINATIONS_ATTRACTIONS_UPDATED_HEADER as keyof Destination] = todayYmd;
-      changed = true;
+      row.data[DESTINATIONS_ATTRACTIONS_UPDATED_HEADER as keyof Destination] = '';
     }
     doc.lines[row.lineIndex] = destinationRowToCsv(doc.headers, row.data);
   }

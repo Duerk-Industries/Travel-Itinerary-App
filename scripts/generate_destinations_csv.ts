@@ -23,6 +23,7 @@ const {
 } = largeCityCoverageModule as typeof import('../server/src/services/destinationLargeCityCoverage');
 type DestinationCsvRow = import('../server/src/services/destinationCsvReconciliation').DestinationCsvRow;
 const DEFAULT_COUNTRY_PROCESS_CONCURRENCY = 4;
+const DESTINATIONS_ATTRACTIONS_UPDATED_HEADER = 'Attractions Updated';
 
 interface Destination extends DestinationCsvRow {}
 
@@ -1328,6 +1329,7 @@ async function main() {
 
   // Load existing destinations so we don't re-process them
   const existingKeys = loadExistingDestinations(serverDataCsvPath);
+  const existingAttractionsUpdatedByDestination = loadExistingAttractionsUpdatedByDestination(serverDataCsvPath);
   console.log(`Loaded ${existingKeys.size} existing destinations from CSV — these will be skipped.`);
 
   const countries = await getCountries();
@@ -1416,6 +1418,7 @@ async function main() {
     'State/Provence',
     'Nearest City',
     'Destination Official Name',
+    DESTINATIONS_ATTRACTIONS_UPDATED_HEADER,
   ];
 
   const lines = [
@@ -1427,6 +1430,7 @@ async function main() {
         row['State/Provence'],
         row['Nearest City'],
         row['Destination Official Name'],
+        existingAttractionsUpdatedByDestination.get(getDestinationIdentityKey(row.Country, row['Destination English Name'])) ?? '',
       ]
         .map((value) => csvEscape(value ?? ''))
         .join(',')
@@ -1505,6 +1509,33 @@ function loadExistingDestinations(filePath: string): Set<string> {
   }
 
   return existing;
+}
+
+function loadExistingAttractionsUpdatedByDestination(filePath: string): Map<string, string> {
+  const byDestination = new Map<string, string>();
+  if (!fs.existsSync(filePath)) return byDestination;
+
+  const csvData = fs.readFileSync(filePath, 'utf8');
+  const lines = csvData.split(/\r?\n/).filter((line) => line.trim().length > 0);
+  if (lines.length <= 1) return byDestination;
+
+  const headers = parseCsvLine(lines[0]);
+  const nameIndex = headers.indexOf('Destination English Name');
+  const countryIndex = headers.indexOf('Country');
+  const attractionsUpdatedIndex = headers.indexOf(DESTINATIONS_ATTRACTIONS_UPDATED_HEADER);
+  if (nameIndex === -1 || countryIndex === -1 || attractionsUpdatedIndex === -1) return byDestination;
+
+  for (let i = 1; i < lines.length; i += 1) {
+    const values = parseCsvLine(lines[i]);
+    if (values.length < Math.max(nameIndex, countryIndex, attractionsUpdatedIndex) + 1) continue;
+    const name = values[nameIndex].replace(/"/g, '').trim();
+    const country = values[countryIndex].replace(/"/g, '').trim();
+    const attractionsUpdated = values[attractionsUpdatedIndex].replace(/"/g, '').trim();
+    if (!name || !country || !attractionsUpdated) continue;
+    byDestination.set(getDestinationIdentityKey(country, name), attractionsUpdated);
+  }
+
+  return byDestination;
 }
 
 async function verifyDestinations(filePath: string) {
