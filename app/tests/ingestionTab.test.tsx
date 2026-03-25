@@ -198,7 +198,7 @@ describe('IngestionTab', () => {
       }
       if (url.endsWith(`/api/ingestion/review-items/${hotelItem.id}`) && method === 'GET') {
         return createJsonResponse({
-          documentSummary: { mimeType: 'application/pdf', originalFilename: 'Hotel_1.pdf' },
+          documentSummary: { mimeType: 'application/pdf', originalFilename: 'Chic stay HANA Boutique hotel.pdf' },
           signedDocument: null,
         });
       }

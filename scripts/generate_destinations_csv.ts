@@ -3,8 +3,12 @@ import fs from 'fs';
 import path from 'path';
 import pLimit from 'p-limit';
 import { fileURLToPath } from 'url';
+import * as envLoaderModule from '../server/src/env_loader';
 import * as destinationCsvReconciliationModule from '../server/src/services/destinationCsvReconciliation';
 import largeCityCoverageModule from '../server/src/services/destinationLargeCityCoverage';
+
+const { loadEnv } = ((envLoaderModule as any).default ?? envLoaderModule) as typeof import('../server/src/env_loader');
+loadEnv();
 
 const {
   getDestinationIdentityKey,
@@ -606,6 +610,12 @@ const WIKIMEDIA_HEADERS = {
   'User-Agent': `TravelItineraryAppDestinationsGenerator/1.0 (${String(process.env.WIKIMEDIA_CONTACT ?? 'local-dev').trim() || 'local-dev'})`,
 };
 
+function readPositiveIntEnv(name: string, fallback: number): number {
+  const raw = Number(process.env[name] ?? '');
+  if (!Number.isFinite(raw) || raw <= 0) return fallback;
+  return Math.floor(raw);
+}
+
 interface WikidataSearchResult {
   id?: string;
   label?: string;
@@ -639,9 +649,13 @@ interface AdaptiveThrottleState {
   lastRequestAtMs: number;
 }
 
-const WIKIDATA_THROTTLE_MIN_MS = 5000;
-const WIKIDATA_THROTTLE_MAX_MS = 120000;
-const WIKIDATA_SUCCESS_STREAK_TO_RELAX = 10;
+const WIKIDATA_THROTTLE_MIN_MS = readPositiveIntEnv('WIKIDATA_MIN_INTERVAL_MS', 5000);
+const WIKIDATA_THROTTLE_MAX_MS = Math.max(
+  WIKIDATA_THROTTLE_MIN_MS,
+  readPositiveIntEnv('WIKIDATA_MAX_BACKOFF_MS', 120000)
+);
+const WIKIDATA_SUCCESS_STREAK_TO_RELAX = readPositiveIntEnv('WIKIDATA_SUCCESS_STREAK_TO_RELAX', 10);
+const WIKIDATA_MAX_ATTEMPTS = readPositiveIntEnv('WIKIDATA_MAX_ATTEMPTS', 6);
 const wikidataThrottleState: AdaptiveThrottleState = {
   delayMs: 5000,
   successStreak: 0,
@@ -752,7 +766,7 @@ async function wikiApiGet(params: Record<string, string | number>): Promise<any 
 }
 
 async function wikidataApiGet(params: Record<string, string | number>): Promise<any | null> {
-  const maxAttempts = 6;
+  const maxAttempts = WIKIDATA_MAX_ATTEMPTS;
   const getRetryAfterMs = (error: any): number | null => {
     const rawValue = error?.response?.headers?.['retry-after'];
     if (rawValue === undefined || rawValue === null) return null;

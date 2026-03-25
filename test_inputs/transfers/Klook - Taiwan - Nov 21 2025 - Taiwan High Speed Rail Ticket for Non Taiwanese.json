@@ -1,0 +1,22 @@
+{
+  "itemType": "rail",
+  "source": "Klook",
+  "sourcePdf": "Klook - Taiwan - Nov 21 2025 - Taiwan High Speed Rail Ticket for Non Taiwanese.pdf",
+  "providerVendor": "Klook",
+  "confirmationNumber": "PBB670152",
+  "bookingReference": "PBB670152",
+  "travelers": ["Bryan Duerk"],
+  "totalCost": 19.15,
+  "currency": "USD",
+  "status": "Booked",
+  "transferType": "Train",
+  "departureDate": "2025-11-21",
+  "arrivalDate": "2025-11-21",
+  "departureLocation": "Taipei",
+  "departureTime": null,
+  "arrivalLocation": "Taichung",
+  "arrivalTime": null,
+  "duration": null,
+  "cost": 19.15,
+  "notes": "Includes separate gift coupon booking KVM595003 for Taiwan Starbucks drink coupons."
+}

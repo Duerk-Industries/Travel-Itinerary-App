@@ -1063,8 +1063,8 @@ export const extractTransportCandidatesExported = extractTransportCandidates;
 
 // Lazy-load the new extractors to avoid circular imports at module parse time
 const getLearnedStrategies = async (): Promise<ExtractionStrategy[]> => {
-  const { SourceSpecificExtractor } = await import('./learnedExtractor');
-  const { LlmExtractor } = await import('./llmExtractor');
+  const { SourceSpecificExtractor } = require('./learnedExtractor');
+  const { LlmExtractor } = require('./llmExtractor');
   return [
     new SourceSpecificExtractor(),
     new RegexExtractor(),

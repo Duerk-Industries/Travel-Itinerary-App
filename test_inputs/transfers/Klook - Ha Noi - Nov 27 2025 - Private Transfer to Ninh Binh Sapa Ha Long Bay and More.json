@@ -1,0 +1,22 @@
+{
+  "itemType": "ferry_bus_transfer",
+  "source": "Klook",
+  "sourcePdf": "Klook - Ha Noi - Nov 27 2025 - Private Transfer to Ninh Binh Sapa Ha Long Bay and More.pdf",
+  "providerVendor": "Klook",
+  "confirmationNumber": "QAX422522",
+  "bookingReference": "QAX422522",
+  "travelers": ["Bryan Duerk"],
+  "totalCost": null,
+  "currency": null,
+  "status": "Booked",
+  "transferType": "Private",
+  "departureDate": "2025-11-27",
+  "arrivalDate": "2025-11-27",
+  "departureLocation": "Ha Noi hotel pick-up",
+  "departureTime": null,
+  "arrivalLocation": "Sapa",
+  "arrivalTime": null,
+  "duration": "3 day 2 night package",
+  "cost": null,
+  "vehicleType": "SUV/MPV (Group of 5)"
+}

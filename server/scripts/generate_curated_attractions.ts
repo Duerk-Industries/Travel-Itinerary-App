@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import pLimit from 'p-limit';
 import { fileURLToPath } from 'url';
+import * as envLoaderModule from '../src/env_loader';
 import {
   getAttractionTarget,
   isLikelySyntheticAttractionName,
@@ -10,6 +11,9 @@ import {
   validateAttractionsCsv,
 } from '../src/services/curatedGenerationHeuristics';
 import { dedupeAttractionsCatalogLines } from '../src/services/attractionsCatalogDedup';
+
+const { loadEnv } = ((envLoaderModule as any).default ?? envLoaderModule) as typeof import('../src/env_loader');
+loadEnv();
 
 interface Destination {
   'Destination English Name': string;
@@ -131,10 +135,40 @@ const WEB_HEADERS = {
   'User-Agent': `TravelItineraryAppAttractionsGenerator/1.0 (${WIKIMEDIA_CONTACT})`,
 };
 
-const WIKIDATA_MIN_INTERVAL_MS = 5000;
-const WIKIDATA_MAX_BACKOFF_MS = 120000;
-const WIKIDATA_SUCCESS_STREAK_TO_RELAX = 8;
-const WIKIDATA_MAX_PARALLEL_SPARQL_QUERIES = 5;
+function readPositiveIntEnv(name: string, fallback: number): number {
+  const raw = Number(process.env[name] ?? '');
+  if (!Number.isFinite(raw) || raw <= 0) return fallback;
+  return Math.floor(raw);
+}
+
+function readBooleanEnv(name: string, fallback: boolean): boolean {
+  const raw = String(process.env[name] ?? '').trim().toLowerCase();
+  if (!raw) return fallback;
+  if (['1', 'true', 'yes', 'on'].includes(raw)) return true;
+  if (['0', 'false', 'no', 'off'].includes(raw)) return false;
+  return fallback;
+}
+
+const WIKIDATA_MIN_INTERVAL_MS = readPositiveIntEnv('WIKIDATA_MIN_INTERVAL_MS', 5000);
+const WIKIDATA_MAX_BACKOFF_MS = Math.max(
+  WIKIDATA_MIN_INTERVAL_MS,
+  readPositiveIntEnv('WIKIDATA_MAX_BACKOFF_MS', 120000)
+);
+const WIKIDATA_SUCCESS_STREAK_TO_RELAX = readPositiveIntEnv('WIKIDATA_SUCCESS_STREAK_TO_RELAX', 8);
+const WIKIDATA_MAX_ATTEMPTS = readPositiveIntEnv('WIKIDATA_MAX_ATTEMPTS', 6);
+const WIKIDATA_MAX_PARALLEL_SPARQL_QUERIES = Math.min(
+  5,
+  Math.max(1, readPositiveIntEnv('WIKIDATA_MAX_PARALLEL_SPARQL_QUERIES', 5))
+);
+const ATTRACTION_CANDIDATE_FETCH_CEILING = Math.max(
+  20,
+  readPositiveIntEnv('ATTRACTION_CANDIDATE_FETCH_CEILING', 180)
+);
+const ATTRACTION_SITELINK_POOL_CEILING = Math.max(
+  20,
+  readPositiveIntEnv('ATTRACTION_SITELINK_POOL_CEILING', 120)
+);
+const ENABLE_ATTRACTION_PAGEVIEWS = readBooleanEnv('ENABLE_ATTRACTION_PAGEVIEWS', true);
 
 interface WikidataRateLimitState {
   delayMs: number;
@@ -234,7 +268,7 @@ function recordWikidataSuccess(): void {
 }
 
 async function wikidataApiRequest<T>(config: AxiosRequestConfig): Promise<T | null> {
-  const maxAttempts = 6;
+  const maxAttempts = WIKIDATA_MAX_ATTEMPTS;
 
   const getRetryDelayMs = (error: any, attempt: number): number => {
     const status = Number(error?.response?.status ?? 0);
@@ -1124,9 +1158,14 @@ async function main() {
         const sources = sourceMap.get(sourceKey) ?? [];
         const destinationContext = await getDestinationContext(destinationQid);
         const destinationPageviews =
-          destinationContext?.wikipediaTitle ? await fetchWikipediaPageviews(destinationContext.wikipediaTitle, pageviewCache) : 0;
+          ENABLE_ATTRACTION_PAGEVIEWS && destinationContext?.wikipediaTitle
+            ? await fetchWikipediaPageviews(destinationContext.wikipediaTitle, pageviewCache)
+            : 0;
         const targetCount = getAttractionTarget(destination, context, destinationPageviews);
-        const candidateFetchLimit = Math.min(420, Math.max(targetCount * 4, 80));
+        const candidateFetchLimit = Math.min(
+          ATTRACTION_CANDIDATE_FETCH_CEILING,
+          Math.max(targetCount * 3, 60)
+        );
 
         const rawCandidates = await fetchTopAttractionsFromWikidata(destinationQid, candidateFetchLimit);
         const geoCandidates = await fetchTopAttractionsFromWikipediaGeosearch(destinationContext, candidateFetchLimit);
@@ -1159,7 +1198,10 @@ async function main() {
         const sortedBySitelinks = Array.from(byQid.values()).sort((a, b) =>
           b.sitelinks !== a.sitelinks ? b.sitelinks - a.sitelinks : a.name.localeCompare(b.name)
         );
-        const sitelinkPool = sortedBySitelinks.slice(0, Math.min(Math.max(targetCount * 3, 120), 420));
+        const sitelinkPool = sortedBySitelinks.slice(
+          0,
+          Math.min(Math.max(targetCount * 2, 80), ATTRACTION_SITELINK_POOL_CEILING)
+        );
         const geoProximityPool = Array.from(byQid.values())
           .filter((candidate) => candidate.source === 'geosearch')
           .sort((a, b) => (a.distanceMeters !== b.distanceMeters ? a.distanceMeters - b.distanceMeters : a.name.localeCompare(b.name)))
@@ -1173,6 +1215,10 @@ async function main() {
 
         for (const candidate of dedupedCandidates) {
             maxSitelinks = Math.max(maxSitelinks, candidate.sitelinks);
+            if (!ENABLE_ATTRACTION_PAGEVIEWS) {
+              pageviewsByQid.set(candidate.qid, 0);
+              continue;
+            }
             const articleTitle = wikipediaArticleFromUrl(candidate.url) ?? candidate.name;
             const pageviews = await fetchWikipediaPageviews(articleTitle, pageviewCache);
             pageviewsByQid.set(candidate.qid, pageviews);
@@ -1182,9 +1228,13 @@ async function main() {
         for (const candidate of dedupedCandidates) {
             const pageviews = pageviewsByQid.get(candidate.qid) ?? 0;
             const sitelinkScore = Math.log10(candidate.sitelinks + 1) / Math.log10(maxSitelinks + 1);
-            const pageviewScore = Math.log10(pageviews + 1) / Math.log10(maxPageviews + 1);
+            const pageviewScore = ENABLE_ATTRACTION_PAGEVIEWS
+              ? Math.log10(pageviews + 1) / Math.log10(maxPageviews + 1)
+              : 0;
             const sourceBoost = candidate.source === 'wikidata' ? 0.03 : 0;
-            const score = 0.55 * sitelinkScore + 0.45 * pageviewScore + sourceBoost;
+            const score = ENABLE_ATTRACTION_PAGEVIEWS
+              ? 0.55 * sitelinkScore + 0.45 * pageviewScore + sourceBoost
+              : sitelinkScore + sourceBoost;
             enriched.push({ ...candidate, pageviews, score });
         }
 

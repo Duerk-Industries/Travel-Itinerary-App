@@ -1,0 +1,23 @@
+{
+  "itemType": "hotel",
+  "source": "Booking.com",
+  "providerVendor": "Chic stay HANA Boutique hotel",
+  "confirmationNumber": "11578002766746166905",
+  "pin": "215386",
+  "hotelName": "Chic stay HANA Boutique hotel",
+  "guestName": "Bryan Duerk",
+  "travelers": ["Bryan Duerk"],
+  "checkOutDate": "2025-12-03",
+  "checkInDate": "2025-11-30",
+  "checkInWindow": "2:00 PM-11:00 PM",
+  "checkOutWindow": "12:00 PM",
+  "freeCancelBy": "2025-11-23",
+  "rooms": "1",
+  "roomType": "Superior King Room - Above 12 Years Old Only",
+  "breakfastIncluded": true,
+  "totalCost": "321.39",
+  "currency": "USD",
+  "paid": true,
+  "address": "Kisalat RD Ban Visoun Luangprabang, 06000 Luang Prabang, Laos",
+  "phone": "+856 20 54 443 905"
+}

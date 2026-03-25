@@ -1,0 +1,50 @@
+{
+  "itemType": "flight",
+  "source": "Chase Travel",
+  "providerVendor": "Lao Airlines",
+  "tripReservationId": "1005017403",
+  "confirmationNumber": "NGMDB9",
+  "travelers": ["BRYAN DUERK", "Vicky Duerk"],
+  "totalCost": 591.2,
+  "currency": "USD",
+  "status": "Booked",
+  "transferType": "Flight",
+  "segments": [
+    {
+      "departureDate": "2025-11-30",
+      "arrivalDate": "2025-11-30",
+      "departureLocation": "Hanoi",
+      "departureAirportCode": "HAN",
+      "departureTime": "06:50 PM",
+      "arrivalLocation": "Luang Prabang",
+      "arrivalAirportCode": "LPQ",
+      "arrivalTime": "08:00 PM",
+      "layoverLocation": null,
+      "layoverLocationCode": null,
+      "layoverDuration": null,
+      "duration": "1h 10m",
+      "carrier": "Lao Airlines",
+      "flightNumber": "QV314",
+      "bookingReference": "NGMDB9",
+      "cabinClass": "economy class"
+    },
+    {
+      "departureDate": "2025-12-03",
+      "arrivalDate": "2025-12-03",
+      "departureLocation": "Luang Prabang",
+      "departureAirportCode": "LPQ",
+      "departureTime": "01:10 PM",
+      "arrivalLocation": "Chiang Mai",
+      "arrivalAirportCode": "CNX",
+      "arrivalTime": "02:15 PM",
+      "layoverLocation": null,
+      "layoverLocationCode": null,
+      "layoverDuration": null,
+      "duration": "1h 5m",
+      "carrier": "Lao Airlines",
+      "flightNumber": "QV635",
+      "bookingReference": "NGMDB9",
+      "cabinClass": "economy class"
+    }
+  ]
+}
