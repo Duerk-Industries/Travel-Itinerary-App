@@ -36,6 +36,7 @@ const SOURCE_SIGNATURES: SourceSignature[] = [
   { sourceKey: 'google_flights', patterns: [/google\.com\/travel/i] },
   { sourceKey: 'united_airlines', patterns: [/united\.com/i, /united airlines/i] },
   { sourceKey: 'delta', patterns: [/delta\.com/i, /delta air lines/i] },
+  { sourceKey: 'austrian_airlines', patterns: [/austrian airlines|operated by:\s*austrian|austrian air/i] },
   { sourceKey: 'american_airlines', patterns: [/aa\.com/i, /american airlines/i] },
   { sourceKey: 'southwest', patterns: [/southwest\.com/i, /southwest airlines/i] },
 ];
@@ -80,6 +81,13 @@ export const detectItemType = (text: string): string => {
     /chase travel/i.test(text)
     && /trip id/i.test(text)
     && (/\bflight\s+\d+\s*:/i.test(text) || /\bairline confirmation\b/i.test(text));
+  const isChaseHotelItinerary =
+    /chase travel/i.test(text)
+    && /\bhotel confirmation\b/i.test(text)
+    && /\bcheck-in\s*:/i.test(text);
+  if (isChaseHotelItinerary) {
+    return 'hotel';
+  }
   if (isChaseFlightItinerary) {
     return 'flight';
   }

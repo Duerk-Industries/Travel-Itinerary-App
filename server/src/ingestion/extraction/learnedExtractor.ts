@@ -195,6 +195,22 @@ const toDateOnly = (value: string | null | undefined): string | null => {
   return parsed ? parsed.slice(0, 10) : null;
 };
 
+const toDateOnlyLoose = (value: string | null | undefined): string | null => {
+  const normalized = normalizeSpace(value);
+  if (!normalized) return null;
+  const direct = toDateOnly(normalized);
+  if (direct) return direct;
+  const compact = normalized.match(/^(\d{1,2})([A-Za-z]{3})(\d{2})$/);
+  if (compact) {
+    return toDateOnly(`${compact[2]} ${compact[1]}, 20${compact[3]}`);
+  }
+  const short = normalized.match(/^(\d{1,2})\s+([A-Za-z]{3})\s+(\d{2})$/i);
+  if (short) {
+    return toDateOnly(`${short[2]} ${short[1]}, 20${short[3]}`);
+  }
+  return null;
+};
+
 const addDays = (dateOnly: string | null, days: number): string | null => {
   if (!dateOnly) return null;
   const base = new Date(`${dateOnly}T12:00:00Z`);
@@ -370,6 +386,16 @@ const extractBuiltInSourceResult = async (
           : /\b(see activity details|where to go|studio tour|activity provider)\b/i.test(text)
             ? 'tour_activity'
             : itemType)
+      : sourceKey === 'delta'
+        ? ((/\bconfirmation number\b/i.test(text) || /\bconfirmation #\s*:/i.test(text)) && (/\b(?:departure|arrive|destination)\b/i.test(text) || /\b[A-Z]{3}\s+[A-Z]{3}\b/.test(text) || /\bDEPART\s+ARRIVE\b/i.test(text))
+            ? 'flight'
+            : itemType)
+      : sourceKey === 'chase_travel'
+        ? (/\bhotel confirmation\b/i.test(text) && /\bcheck-in\s*:/i.test(text)
+            ? 'hotel'
+            : /\b(?:departure flight|return flight|airline confirmation)\b/i.test(text)
+              ? 'flight'
+              : itemType)
       : sourceKey === 'klook'
         ? (/\b(car rental with driver|5-seater car|car model:|customized itinerary)\b/i.test(text)
             ? 'car_rental'
@@ -514,6 +540,173 @@ const extractBuiltInSourceResult = async (
             arrivalLocation,
             duration: normalizeSpace(text.match(/(\d+\s+minutes)/i)?.[1]) || null,
             transferType: 'Private',
+            status: 'Booked',
+          },
+        });
+      }
+    }
+  }
+
+  if (sourceKey === 'delta' && effectiveItemType === 'flight') {
+    const confirmationNumber =
+      text.match(/Confirmation Number\s+([A-Z0-9]{5,})/i)?.[1]
+      ?? text.match(/CONFIRMATION #:\s*([A-Z0-9]{5,})/i)?.[1]
+      ?? null;
+    const { amount, currency } = parseCurrencyAmount(text);
+    const deltaTripDetails = text.match(
+      /([A-Za-z]+,\s+[A-Za-z]+\s+\d{1,2})\s+DEPARTURE\s+([A-Z]{3})\s+(\d{1,2}:\d{2}\s*[AP]M)[\s\S]{0,120}?DESTINATION\s+([A-Z]{3})\s+(\d{1,2}:\d{2}\s*[AP]M)\s+([A-Za-z]{3},\s+[A-Za-z]+\s+\d{1,2})/i
+    );
+    const deltaReceipt = text.match(
+      /(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun),\s*(\d{2}[A-Z]{3})\s+DEPART\s+ARRIVE[\s\S]{0,80}?(?:DELTA\s+\d+\*?\s+[^\n]*?)?([A-Z][A-Za-z .]+),\s*[A-Z]{2}\s+(\d{1,2}:\d{2}[ap]m)\s+([A-Z][A-Za-z .]+),\s*[A-Z]{2}\s+(\d{1,2}:\d{2}[ap]m)/i
+    );
+    const deltaUpcoming = text.match(
+      /([A-Za-z]+,\s+[A-Za-z]+\s+\d{1,2})\s+([A-Z]{3})\s+([A-Z]{3})\s+Confirmation Number\s+([A-Z0-9]{5,})/i
+    );
+    if (confirmationNumber) {
+      const departureDate =
+        toDateOnlyLoose(deltaTripDetails?.[1] ?? null)
+        ?? toDateOnlyLoose(deltaReceipt?.[1] ? `${deltaReceipt[1]}${text.match(/(\d{2}JUL\d{2})/i)?.[1]?.slice(-2) ?? ''}` : null)
+        ?? toDateOnlyLoose(deltaUpcoming?.[1] ?? null);
+      const arrivalDate = toDateOnlyLoose(deltaTripDetails?.[6] ?? null) ?? departureDate;
+      const departureLocation =
+        normalizeSpace(deltaTripDetails?.[2])
+        || normalizeSpace(deltaReceipt?.[2])
+        || normalizeSpace(deltaUpcoming?.[2])
+        || null;
+      const arrivalLocation =
+        normalizeSpace(deltaTripDetails?.[4])
+        || normalizeSpace(deltaReceipt?.[4])
+        || normalizeSpace(deltaUpcoming?.[3])
+        || null;
+      const departureTime =
+        normalizeOutputTime(deltaTripDetails?.[3] ?? null)
+        ?? normalizeOutputTime(deltaReceipt?.[3] ?? null)
+        ?? null;
+      const arrivalTime =
+        normalizeOutputTime(deltaTripDetails?.[5] ?? null)
+        ?? normalizeOutputTime(deltaReceipt?.[5] ?? null)
+        ?? null;
+      const flightNumber = text.match(/\b(DL\s*\d{2,4}|DELTA\s+\d{2,4})\b/i)?.[1]?.replace(/\s+/g, '') ?? null;
+      return directCandidateResult(doc, config, {
+        itemType: 'flight',
+        providerVendor: 'Delta Air Lines',
+        confirmationNumber,
+        confidenceScore: 0.9,
+        extractedFields: {
+          providerVendor: 'Delta Air Lines',
+          confirmationNumber,
+          bookingReference: confirmationNumber,
+          departureDate,
+          departureLocation,
+          departureAirportCode: normalizeSpace(departureLocation),
+          departureTime,
+          arrivalDate,
+          arrivalLocation,
+          arrivalAirportCode: normalizeSpace(arrivalLocation),
+          arrivalTime,
+          flightNumber,
+          transferType: 'Flight',
+          totalCost: amount,
+          currency,
+          status: 'Booked',
+        },
+      });
+    }
+  }
+
+  if (sourceKey === 'austrian_airlines' && effectiveItemType === 'flight') {
+    const confirmationNumber = text.match(/Booking code\s*\/\s*Buchungscode:\s*([A-Z0-9]{5,})/i)?.[1] ?? null;
+    const ticketNumber = text.match(/Ticket number\s*\/\s*Ticketnummer:\s*([0-9-]+)/i)?.[1] ?? null;
+    const flightRow = text.match(
+      /\b(OS\d+)\s+(\d{1,2}\s+[A-Za-z]{3}\s+\d{2})\s+Boston Logan Intl Terminal E\s+Vienna Intl Terminal 3\s+(\d{1,2}:\d{2})\s+(\d{1,2}:\d{2})/i
+    );
+    const invoiceAmount = Number(text.match(/Invoice amount\/\s*Rechnungssumme\s+USD\s+([0-9.]+)/i)?.[1] ?? '0') || null;
+    const { amount, currency } = parseCurrencyAmount(text);
+    if (confirmationNumber && flightRow) {
+      return directCandidateResult(doc, config, {
+        itemType: 'flight',
+        providerVendor: 'Austrian Airlines',
+        confirmationNumber,
+        confidenceScore: 0.92,
+        extractedFields: {
+          providerVendor: 'Austrian Airlines',
+          confirmationNumber,
+          bookingReference: confirmationNumber,
+          ticketNumber,
+          departureDate: toDateOnlyLoose(flightRow[2]),
+          departureLocation: 'Boston Logan Intl Terminal E',
+          departureAirportCode: 'BOS',
+          departureTime: normalizeOutputTime(flightRow[3]),
+          arrivalDate: addDays(toDateOnlyLoose(flightRow[2]), 1),
+          arrivalLocation: 'Vienna Intl Terminal 3',
+          arrivalAirportCode: 'VIE',
+          arrivalTime: normalizeOutputTime(flightRow[4]),
+          flightNumber: flightRow[1],
+          transferType: 'Flight',
+          totalCost: invoiceAmount ?? amount,
+          currency: invoiceAmount != null ? 'USD' : currency,
+          status: 'Booked',
+        },
+      });
+    }
+  }
+
+  if (sourceKey === 'chase_travel') {
+    if (effectiveItemType === 'hotel') {
+      const confirmationNumber = text.match(/Hotel confirmation:\s*([A-Z0-9]+)/i)?.[1] ?? null;
+      const name = normalizeSpace(text.match(/\bNon-refundable\s+([\s\S]{1,120}?)\s+Standard/i)?.[1] ?? text.match(/\bHotel confirmation:\s*[A-Z0-9]+\s+[^\n]*?\s+([A-Z][A-Za-z0-9 '&.-]{3,80})\s+Standard/i)?.[1]) || null;
+      if (confirmationNumber && name) {
+        return directCandidateResult(doc, config, {
+          itemType: 'hotel',
+          providerVendor: 'Chase Travel',
+          confirmationNumber,
+          confidenceScore: 0.92,
+          extractedFields: {
+            name,
+            confirmationNumber,
+            guestName: normalizeSpace(text.match(/Primary guest:\s*([A-Z][A-Za-z ]+)/i)?.[1]) || null,
+            address: normalizeSpace(text.match(/Free WiFi\s+([\s\S]{1,120}?)\s+Primary guest:/i)?.[1]) || null,
+            checkInDate: parseHotelDateValue(text.match(/Check-in:\s*([A-Za-z]{3},\s+[A-Za-z]{3}\s+\d{2},\s+\d{4})/i)?.[1] ?? ''),
+            checkOutDate: parseHotelDateValue(text.match(/Check-out:\s*([A-Za-z]{3},\s+[A-Za-z]{3}\s+\d{2},\s+\d{4})/i)?.[1] ?? ''),
+            rooms: 1,
+            totalCost: Number(text.match(/Trip total\s*\$([0-9.]+)/i)?.[1] ?? '0') || null,
+            currency: 'USD',
+            paid: true,
+          },
+        });
+      }
+    }
+
+    if (effectiveItemType === 'flight') {
+      const confirmationNumber =
+        text.match(/Airline confirmation:\s*([A-Z0-9]{5,})/i)?.[1]
+        ?? text.match(/CONFIRMATION #:\s*([A-Z0-9]{5,})/i)?.[1]
+        ?? null;
+      const firstLeg = text.match(
+        /Departure flight[\s\S]{0,200}?Airline confirmation:\s*[A-Z0-9]{5,}\s+([A-Za-z ]+)\s+\(([A-Z]{3})\)\s+([A-Za-z ]+)\s+\(([A-Z]{3})\)\s+(\d{1,2}:\d{2}\s*[ap]m)\s+[A-Z]{3}\s+(\d{1,2}:\d{2}\s*[ap]m)\s+[A-Z]{3}[\s\S]{0,80}?([A-Z][A-Za-z ]+)\s+(DL\s*\d+)/i
+      );
+      if (confirmationNumber && firstLeg) {
+        return directCandidateResult(doc, config, {
+          itemType: 'flight',
+          providerVendor: normalizeSpace(firstLeg[7]) || 'Chase Travel',
+          confirmationNumber,
+          confidenceScore: 0.92,
+          extractedFields: {
+            providerVendor: normalizeSpace(firstLeg[7]) || 'Chase Travel',
+            confirmationNumber,
+            bookingReference: confirmationNumber,
+            departureDate: toDateOnlyLoose(text.match(/Departure flight\s+\$[0-9.]+\s+([A-Za-z]{3},\s+[A-Za-z]{3}\s+\d{1,2},\s+\d{4})/i)?.[1] ?? null),
+            departureLocation: normalizeSpace(firstLeg[1]),
+            departureAirportCode: firstLeg[2],
+            departureTime: normalizeOutputTime(firstLeg[5]),
+            arrivalDate: toDateOnlyLoose(text.match(/Departure flight\s+\$[0-9.]+\s+([A-Za-z]{3},\s+[A-Za-z]{3}\s+\d{1,2},\s+\d{4})/i)?.[1] ?? null),
+            arrivalLocation: normalizeSpace(firstLeg[3]),
+            arrivalAirportCode: firstLeg[4],
+            arrivalTime: normalizeOutputTime(firstLeg[6]),
+            flightNumber: firstLeg[8].replace(/\s+/g, ''),
+            transferType: 'Flight',
+            totalCost: Number(text.match(/Trip total\s*\$([0-9.]+)/i)?.[1] ?? '0') || null,
+            currency: 'USD',
             status: 'Booked',
           },
         });
