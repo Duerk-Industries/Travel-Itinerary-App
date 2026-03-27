@@ -1068,14 +1068,14 @@ const getLearnedStrategies = async (): Promise<ExtractionStrategy[]> => {
   return [
     new SourceSpecificExtractor(),
     new RegexExtractor(),
-    new LlmExtractor('LlmExtractor', INGESTION_CONFIDENCE_REVIEW_READY, (config) => config.allowSmallLlm || config.allowLargeLlm),
+    new LlmExtractor('LlmExtractor', INGESTION_CONFIDENCE_REVIEW_READY, (config: ExtractionConfig) => config.allowSmallLlm || config.allowLargeLlm),
   ];
 };
 
 const defaultStrategies = [
   new RegexExtractor(),
-  new NoopLlmExtractor('SmallLLMExtractor', INGESTION_CONFIDENCE_REVIEW_READY, (config) => config.allowSmallLlm, 'INGESTION_SMALL_LLM'),
-  new NoopLlmExtractor('LargeLLMExtractor', 1, (config) => config.allowLargeLlm, 'INGESTION_LARGE_LLM'),
+  new NoopLlmExtractor('SmallLLMExtractor', INGESTION_CONFIDENCE_REVIEW_READY, (config: ExtractionConfig) => config.allowSmallLlm, 'INGESTION_SMALL_LLM'),
+  new NoopLlmExtractor('LargeLLMExtractor', 1, (config: ExtractionConfig) => config.allowLargeLlm, 'INGESTION_LARGE_LLM'),
 ];
 
 export const extractCandidates = async (

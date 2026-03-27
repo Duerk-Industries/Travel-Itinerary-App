@@ -4,7 +4,7 @@ import type { Request } from 'express';
 import { INGESTION_DEFAULT_FORWARDING_ADDRESS, INGESTION_MAX_FILE_BYTES } from '../config';
 import type { IngestionPayload, IngestionSourceType } from '../contracts';
 import { sha256 } from '../shared/hashing';
-import { normalizeMimeType } from '../shared/parserSelection';
+import { isSupportedMimeType, normalizeMimeType } from '../shared/parserSelection';
 import { writeTempBytes } from '../shared/tempStorage';
 import { IngestionError } from '../shared/userFailures';
 import { scanDocumentOrStub } from '../shared/virusScan';
@@ -35,6 +35,10 @@ export const buildManualUploadPayloads = async (req: Request, userId: string): P
       if (!file.buffer || file.size > INGESTION_MAX_FILE_BYTES) {
         throw new IngestionError('file_too_large', 400);
       }
+      const mimeType = normalizeMimeType(file.mimetype, file.originalname);
+      if (!isSupportedMimeType(mimeType)) {
+        throw new IngestionError('unsupported_file_type', 400, undefined, `Unsupported file type: ${file.originalname}`);
+      }
       const contentBytesRef = await writeTempBytes(file.originalname, file.buffer);
       return {
         sourceType: 'MANUAL_UPLOAD' as IngestionSourceType,
@@ -43,7 +47,7 @@ export const buildManualUploadPayloads = async (req: Request, userId: string): P
         externalMessageId: `manual:${randomUUID()}`,
         receivedAt: new Date().toISOString(),
         originalFilename: file.originalname,
-        mimeType: normalizeMimeType(file.mimetype, file.originalname),
+        mimeType,
         contentBytesRef,
         contentHash: sha256(file.buffer.toString('base64')),
         metadata: {

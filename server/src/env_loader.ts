@@ -14,8 +14,8 @@ export const loadEnv = (options: LoadEnvOptions = {}) => {
         : [
               path.resolve(__dirname, '../../.env'), // root .env
               path.resolve(__dirname, '../.env'), // server/.env
-              path.resolve(__dirname, '../../.secrets'), // root .secrets
-              path.resolve(__dirname, '../.secrets'), // server/.secrets
+              path.resolve(__dirname, '../../.secrets'), // root .secrets fallback
+              path.resolve(__dirname, '../.secrets'), // server/.secrets fallback
           ];
 
     const localEnvPaths = options.serverOnly
@@ -39,6 +39,7 @@ export const loadEnv = (options: LoadEnvOptions = {}) => {
     if (options.serverOnly) {
         const secretsPath = path.resolve(__dirname, '../.secrets');
         if (fs.existsSync(secretsPath)) {
+            // Keep server/.secrets as a backwards-compatible fallback for local tooling.
             dotenv.config({ path: secretsPath, override: false });
             loadedEnvPaths.push(secretsPath);
         }

@@ -47,6 +47,9 @@ const buildProcessorConfig = (
   enforceFutureDated: Boolean(overrides?.enforceFutureDated),
 });
 
+const shouldRetryFailedManualUpload = (job: PersistedImportJob, payload: IngestionPayload): boolean =>
+  job.state === 'FAILED' && job.sourceType === 'MANUAL_UPLOAD' && payload.sourceType === 'MANUAL_UPLOAD';
+
 const ensureImportJob = async (
   payload: IngestionPayload,
   processorConfig: QueuedImportProcessorConfig
@@ -54,6 +57,30 @@ const ensureImportJob = async (
   const idempotencyKey = buildImportJobIdempotencyKey(payload);
   const existingJob = await getImportJobByIdempotencyKey(payload.userId, idempotencyKey);
   if (existingJob) {
+    if (shouldRetryFailedManualUpload(existingJob, payload)) {
+      await saveImportJobPayload({
+        jobId: existingJob.id,
+        sourceId: payload.sourceId,
+        userId: payload.userId,
+        sourceType: payload.sourceType,
+        externalMessageId: payload.externalMessageId,
+        receivedAt: payload.receivedAt,
+        originalFilename: payload.originalFilename,
+        mimeType: payload.mimeType,
+        contentBytesRef: payload.contentBytesRef,
+        contentHash: payload.contentHash,
+        metadata: payload.metadata,
+        correlationId: payload.correlationId,
+        dryRun: payload.dryRun,
+        virusScanStatus: payload.virusScanStatus,
+        processorConfig,
+      });
+      const retriedJob = await requeueImportJob(existingJob.id);
+      logInfo(
+        `[ingestion][orchestrator] retrying failed manual upload job=${existingJob.id} previous_state=${existingJob.state} user=${payload.userId} file="${payload.originalFilename}"`
+      );
+      return { job: retriedJob ?? existingJob, created: true };
+    }
     logInfo(
       `[ingestion][orchestrator] reusing existing job=${existingJob.id} state=${existingJob.state} source=${payload.sourceType} user=${payload.userId} file="${payload.originalFilename}"`
     );
@@ -131,7 +158,8 @@ const processExistingImportJob = async (
     await updateImportJobState({ jobId: job.id, state: 'NORMALIZING' });
     const normalized = await normalizeIngestionPayload(job.id, payload);
     const duplicate = await findDocumentByNormalizedHash(payload.userId, normalized.normalizedContentHash);
-    if (duplicate) {
+    const reusableRawDoc = duplicate?.importJobId === job.id ? duplicate : null;
+    if (duplicate && !reusableRawDoc) {
       await updateImportJobState({
         jobId: job.id,
         state: 'DUPLICATE_IGNORED',
@@ -143,7 +171,7 @@ const processExistingImportJob = async (
       return (await getImportJobById(job.id)) ?? job;
     }
 
-    const rawDoc = await createIngestedDocument({
+    const rawDoc = reusableRawDoc ?? (await createIngestedDocument({
       importJobId: job.id,
       userId: payload.userId,
       sourceType: payload.sourceType,
@@ -161,7 +189,7 @@ const processExistingImportJob = async (
       virusScannedAt: new Date().toISOString(),
       virusScanProvider: String(payload.metadata.virusScanProvider ?? (payload.virusScanStatus === 'SKIPPED' ? 'stub' : 'metadata_only')),
       deletedRawAt: null,
-    });
+    }));
 
     await updateImportJobState({ jobId: job.id, state: 'NORMALIZED', normalizedContentHash: normalized.normalizedContentHash });
     await updateImportJobState({ jobId: job.id, state: 'EXTRACTING' });

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import bodyParser from 'body-parser';
+import multer from 'multer';
 import { authenticate, type TokenPayload } from '../auth';
 import { listTrips } from '../db';
 import { resolveAndValidateRedirectUri } from '../redirects';
@@ -180,6 +181,31 @@ router.get('/jobs', async (req, res) => {
   res.json({ jobs });
 });
 
+const translateUploadError = (error: unknown): IngestionError | null => {
+  if (error instanceof IngestionError) return error;
+  if (error instanceof multer.MulterError) {
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      return new IngestionError('file_too_large', 400);
+    }
+    return new IngestionError('unsupported_file_type', 400, undefined, 'Unable to read uploaded files.');
+  }
+  return null;
+};
+
+const describeUploadRequest = (req: any): Record<string, unknown> => {
+  const files = Array.isArray(req.files) ? req.files as Express.Multer.File[] : [];
+  return {
+    userId: req.user?.userId ?? null,
+    fileCount: files.length,
+    files: files.map((file) => ({
+      filename: file.originalname,
+      mimeType: file.mimetype,
+      size: file.size,
+    })),
+    contentType: req.get?.('content-type') ?? null,
+  };
+};
+
 router.get('/review-items/:id', async (req, res) => {
   const userId = (req as any).user.userId as string;
   if (!(await requireTierAccess(userId, res))) return;
@@ -204,7 +230,17 @@ router.get('/review-items/:id', async (req, res) => {
   });
 });
 
-router.post('/upload', manualUploadMiddleware.array('files', 10), async (req, res) => {
+router.post('/upload', (req, res, next) => {
+  manualUploadMiddleware.array('files', 10)(req, res, (error: unknown) => {
+    const translated = translateUploadError(error);
+    if (translated) {
+      logError(`[ingestion][upload] rejected code=${translated.code}`, describeUploadRequest(req));
+      res.status(translated.httpStatus).json({ error: translated.message, code: translated.code });
+      return;
+    }
+    next(error);
+  });
+}, async (req, res) => {
   const user = (req as any).user as TokenPayload;
   if (!(await isFeatureEnabled(INGESTION_FEATURE_FLAGS.manualUpload))) {
     res.status(403).json({ error: 'Ingestion is currently disabled.' });
@@ -232,6 +268,7 @@ router.post('/upload', manualUploadMiddleware.array('files', 10), async (req, re
     res.status(202).json({ jobs });
   } catch (error) {
     if (error instanceof IngestionError) {
+      logError(`[ingestion][upload] rejected code=${error.code}`, describeUploadRequest(req));
       if (error.retryAfterSeconds) {
         res.setHeader('Retry-After', String(error.retryAfterSeconds));
       }

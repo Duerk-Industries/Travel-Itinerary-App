@@ -15,7 +15,7 @@ $gcloudCommand = if (Get-Command gcloud.cmd -ErrorAction SilentlyContinue) { 'gc
 
 function Usage {
   Write-Error "Usage: $PSCommandPath [path/to/.env]"
-  Write-Error "Configures Cloud Run env vars and Secret Manager mappings without deploying code."
+  Write-Error "Configures Cloud Run env vars from .env and optional Secret Manager mappings from .secrets/SECRETS without deploying code."
   exit 1
 }
 
@@ -82,6 +82,45 @@ function Should-IgnoreKey([string]$Key, [string]$List) {
   return $keys -contains $Key
 }
 
+function Is-VisibleEnvKey([string]$Key) {
+  $visibleKeys = @(
+    'GCLOUD_PROJECT_ID',
+    'GOOGLE_CLOUD_PROJECT',
+    'GOOGLE_CALLBACK_URL',
+    'LOCATION_BUCKET',
+    'LOCATION_RAW_CSV_PREFIX',
+    'FIRESTORE_DATABASE_ID',
+    'DB_PROVIDER',
+    'USE_IN_MEMORY_DB',
+    'SMTP_HOST',
+    'SMTP_PORT',
+    'SMTP_FROM',
+    'UNSPLASH_APP_ID',
+    'UNSPLASH_IMAGE_CACHE_TIMEOUT_MINUTES',
+    'SIGNED_IMAGE_URL_CACHE_TIMEOUT_MINUTES',
+    'GOOGLE_PLACES_DETAILS_CACHE_TIMEOUT_MINUTES',
+    'STORAGE_IMAGE_CACHE_CONTROL_TIMEOUT_MINUTES',
+    'UNSPLASH_AUTH_BLOCK_CACHE_TIMEOUT_MINUTES',
+    'SESSION_CACHE_TIMEOUT_MINUTES',
+    'PLACE_MATCH_THRESHOLD',
+    'AUTH_REDIRECT_URI_ALLOWLIST',
+    'EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN',
+    'EXPO_PUBLIC_FIREBASE_PROJECT_ID',
+    'EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET',
+    'EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID',
+    'EXPO_PUBLIC_FIREBASE_APP_ID'
+  )
+  return $visibleKeys -contains $Key
+}
+
+function Get-DisplayEnvPair([string]$Pair) {
+  $parts = $Pair -split '=', 2
+  $key = $parts[0]
+  $value = if ($parts.Length -gt 1) { $parts[1] } else { '' }
+  if (Is-VisibleEnvKey $key) { return "$key=$value" }
+  return "$key=<redacted>"
+}
+
 if (-not $EnvFile) {
   if (Test-Path -LiteralPath 'server/.env') {
     $EnvFile = 'server/.env'
@@ -111,7 +150,9 @@ if (-not $SecretsFile) {
   }
 }
 
+$secretMap = @{}
 $envPairs = @()
+$envKeys = @()
 $projectId = ''
 foreach ($pair in (Parse-DotEnv $EnvFile)) {
   if (Should-IgnoreKey $pair.Key $IgnoreKeys) { continue }
@@ -122,14 +163,6 @@ foreach ($pair in (Parse-DotEnv $EnvFile)) {
   $envPairs += "$($pair.Key)=$value"
 }
 
-if ($envPairs.Count -eq 0) {
-  Write-Error "No env vars parsed from $EnvFile."
-  exit 1
-}
-
-$envArg = ($envPairs -join ',')
-
-$secretMap = @{}
 if ($Secrets) {
   foreach ($entry in ($Secrets -split ',')) {
     if (-not $entry -or $entry -notmatch '=') { continue }
@@ -163,6 +196,12 @@ if ($secretMap.Count -gt 0) {
     $envPairs = $envPairs | Where-Object { $_ -notmatch $pattern }
   }
 }
+$envArg = ($envPairs -join ',')
+if ($envPairs.Count -eq 0) {
+  Write-Error "No env vars parsed from $EnvFile after filtering .secrets-managed keys."
+  exit 1
+}
+$envKeys = $envPairs | ForEach-Object { ($_ -split '=', 2)[0] } | Where-Object { $_ }
 
 $secretsArg = ''
 if ($secretMap.Count -gt 0) {
@@ -185,6 +224,12 @@ if ($hasSecretOverrides) {
   & $gcloudCommand @cmd
 }
 
+if ($envKeys.Count -gt 0) {
+  $cmd = @('run', 'services', 'update', $ServiceName, '--region', $Region, '--remove-secrets', ($envKeys -join ','))
+  if ($projectId) { $cmd += @('--project', $projectId) }
+  & $gcloudCommand @cmd
+}
+
 $cmd = @('run', 'services', 'update', $ServiceName, '--region', $Region, '--update-env-vars', $envArg)
 if ($projectId) { $cmd += @('--project', $projectId) }
 if ($secretsArg) { $cmd += @('--set-secrets', $secretsArg) }
@@ -201,6 +246,8 @@ Write-Host "Configuring Cloud Run service environment..."
 Write-Host "  Service: $ServiceName"
 Write-Host "  Region: $Region"
 Write-Host "  Env file: $EnvFile"
+Write-Host "  Env vars:"
+foreach ($pair in $envPairs) { Write-Host "    $(Get-DisplayEnvPair $pair)" }
 if ($SecretsFile) { Write-Host "  Secrets file: $SecretsFile" }
 if ($secretsArg) { Write-Host "  Secrets mapped: $($secretMap.Count)" }
 if ($secretsArg) { Write-Host "  Secrets arg: $secretsArg" }

@@ -4,6 +4,7 @@ import fs from 'fs';
 import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
+import './expressAsyncPatch';
 import authRoutes from './routes/authRoutes';
 import transferRoutes from './routes/transferRoutes';
 import webAuthRoutes from './routes/webAuthRoutes';
@@ -27,7 +28,8 @@ import internalIngestionWorkerRoutes from './routes/internalIngestionWorkerRoute
 import { loadEnv } from './env_loader';
 import { getEnvValue, hasRunLocalFlag, isLocalEnv } from './env';
 
-// Load env vars from server/.env and optionally server/.secrets (plus repo root fallbacks).
+// Load env vars from server/.env as the primary local source, with server/.secrets
+// still supported as a backwards-compatible fallback (plus repo root fallbacks).
 // .local_env files load only when RUN_LOCAL=1 is set inside that file.
 // Later files override earlier ones to make local overrides and secrets take precedence.
 const localEnvPaths = [
@@ -306,6 +308,25 @@ if (hasWebApp) {
     res.sendFile(webIndexPath);
   });
 }
+
+app.use((err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  const status = Number(err?.statusCode ?? err?.status ?? 500);
+  const safeStatus = Number.isFinite(status) && status >= 400 && status <= 599 ? status : 500;
+  logError('[api] request failed', {
+    method: req.method,
+    path: req.originalUrl,
+    status: safeStatus,
+    name: err?.name,
+    message: err?.message,
+    stack: err?.stack,
+  });
+  if (res.headersSent) {
+    return;
+  }
+  res.status(safeStatus).json({
+    error: safeStatus >= 500 ? 'Internal server error.' : String(err?.message ?? 'Request failed.'),
+  });
+});
 
 app.use((req, res, _next) => {
   console.log(`Final handler: 404 for ${req.method} ${req.originalUrl}`);

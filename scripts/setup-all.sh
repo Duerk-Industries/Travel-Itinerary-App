@@ -139,7 +139,7 @@ if [[ -z "$PROJECT_ID" && -f "server/.secrets" ]]; then
 fi
 
 if [[ -z "$PROJECT_ID" ]]; then
-  echo "GCLOUD_PROJECT_ID is required (set env or add to server/.env or server/.secrets)." >&2
+  echo "GCLOUD_PROJECT_ID is required (set env or add to server/.env; server/.secrets is still supported as a fallback)." >&2
   exit 1
 fi
 
