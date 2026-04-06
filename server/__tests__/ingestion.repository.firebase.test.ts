@@ -126,6 +126,206 @@ describe('ingestion repository firebase writes', () => {
     expect('flightNumbers' in parsedItemPayload.extractedFields).toBe(false);
   });
 
+  it('queries Firebase import jobs by userId and createdAt desc, matching the required composite index shape', async () => {
+    const getMock = jest.fn().mockResolvedValue({ docs: [] });
+    const limitMock = jest.fn(() => ({ get: getMock }));
+    const orderByMock = jest.fn(() => ({ limit: limitMock }));
+    const whereMock = jest.fn(() => ({ orderBy: orderByMock }));
+    const collectionMock = jest.fn(() => ({ where: whereMock, limit: limitMock }));
+    const firestoreMock = { collection: collectionMock } as any;
+
+    jest.doMock('../src/db', () => ({
+      getCurrentDbProvider: () => 'firebase',
+      poolClient: jest.fn(),
+      getTripById: jest.fn(),
+      upsertExpenseForSource: jest.fn(),
+    }));
+    jest.doMock('../src/env', () => ({
+      getEnvValue: jest.fn(),
+    }));
+    jest.doMock('firebase-admin/app', () => ({
+      getApps: () => [{}],
+      initializeApp: jest.fn(),
+      cert: jest.fn(),
+    }));
+    jest.doMock('firebase-admin/firestore', () => ({
+      getFirestore: () => firestoreMock,
+    }));
+
+    const { listImportJobsForUser } = await import('../src/ingestion/shared/repository');
+
+    await listImportJobsForUser('user-123');
+
+    expect(collectionMock).toHaveBeenCalledWith('import_jobs');
+    expect(whereMock).toHaveBeenCalledWith('userId', '==', 'user-123');
+    expect(orderByMock).toHaveBeenCalledWith('createdAt', 'desc');
+    expect(limitMock).toHaveBeenCalledWith(25);
+    expect(getMock).toHaveBeenCalled();
+  });
+
+  it('loads Firebase provider connections with filters only and picks the latest in memory to avoid a composite index', async () => {
+    const getMock = jest.fn().mockResolvedValue({
+      empty: false,
+      docs: [
+        {
+          id: 'older',
+          data: () => ({
+            userId: 'user-123',
+            provider: 'gmail',
+            status: 'connected',
+            encryptedAccessToken: null,
+            encryptedRefreshToken: null,
+            tokenExpiry: null,
+            scopes: ['scope-a'],
+            metadata: { emailAddress: 'older@example.com' },
+            createdAt: '2026-03-01T10:00:00.000Z',
+            updatedAt: '2026-03-01T10:00:00.000Z',
+          }),
+        },
+        {
+          id: 'latest',
+          data: () => ({
+            userId: 'user-123',
+            provider: 'gmail',
+            status: 'AUTH_EXPIRED',
+            encryptedAccessToken: null,
+            encryptedRefreshToken: null,
+            tokenExpiry: null,
+            scopes: ['scope-b'],
+            metadata: { emailAddress: 'latest@example.com' },
+            createdAt: '2026-03-02T10:00:00.000Z',
+            updatedAt: '2026-03-02T10:00:00.000Z',
+          }),
+        },
+      ],
+    });
+    const providerWhereMock = jest.fn(() => ({ get: getMock }));
+    const userWhereMock = jest.fn(() => ({ where: providerWhereMock }));
+    const limitMock = jest.fn(() => ({ get: getMock }));
+    const collectionMock = jest.fn(() => ({ where: userWhereMock, limit: limitMock }));
+    const firestoreMock = { collection: collectionMock } as any;
+
+    jest.doMock('../src/db', () => ({
+      getCurrentDbProvider: () => 'firebase',
+      poolClient: jest.fn(),
+      getTripById: jest.fn(),
+      upsertExpenseForSource: jest.fn(),
+    }));
+    jest.doMock('../src/env', () => ({
+      getEnvValue: jest.fn(),
+    }));
+    jest.doMock('firebase-admin/app', () => ({
+      getApps: () => [{}],
+      initializeApp: jest.fn(),
+      cert: jest.fn(),
+    }));
+    jest.doMock('firebase-admin/firestore', () => ({
+      getFirestore: () => firestoreMock,
+    }));
+
+    const { getProviderConnection } = await import('../src/ingestion/shared/repository');
+
+    const result = await getProviderConnection('user-123', 'gmail');
+
+    expect(collectionMock).toHaveBeenCalledWith('provider_connections');
+    expect(userWhereMock).toHaveBeenCalledWith('userId', '==', 'user-123');
+    expect(providerWhereMock).toHaveBeenCalledWith('provider', '==', 'gmail');
+    expect(result?.id).toBe('latest');
+    expect(result?.status).toBe('AUTH_EXPIRED');
+    expect(result?.metadata.emailAddress).toBe('latest@example.com');
+  });
+
+  it('loads Firebase review queue items with a user filter only and sorts active items in memory', async () => {
+    const getMock = jest.fn().mockResolvedValue({
+      docs: [
+        {
+          id: 'inactive',
+          data: () => ({
+            userId: 'user-123',
+            importJobId: 'job-inactive',
+            rawDocId: 'doc-inactive',
+            itemType: 'flight',
+            sourceType: 'MANUAL_UPLOAD',
+            rawSourceReference: 'inactive.pdf',
+            confidenceScore: 0.1,
+            reviewStatus: 'ASSIGNED',
+            deduplicationFingerprint: 'inactive',
+            extractedFields: {},
+            travelerNames: [],
+            updatedAt: '2026-03-01T10:00:00.000Z',
+            createdAt: '2026-03-01T09:00:00.000Z',
+          }),
+        },
+        {
+          id: 'older-active',
+          data: () => ({
+            userId: 'user-123',
+            importJobId: 'job-older',
+            rawDocId: 'doc-older',
+            itemType: 'flight',
+            sourceType: 'MANUAL_UPLOAD',
+            rawSourceReference: 'older.pdf',
+            confidenceScore: 0.8,
+            reviewStatus: 'READY_FOR_REVIEW',
+            deduplicationFingerprint: 'older',
+            extractedFields: {},
+            travelerNames: [],
+            updatedAt: '2026-03-01T10:00:00.000Z',
+            createdAt: '2026-03-01T09:00:00.000Z',
+          }),
+        },
+        {
+          id: 'latest-active',
+          data: () => ({
+            userId: 'user-123',
+            importJobId: 'job-latest',
+            rawDocId: 'doc-latest',
+            itemType: 'hotel',
+            sourceType: 'GMAIL',
+            rawSourceReference: 'latest.pdf',
+            confidenceScore: 0.9,
+            reviewStatus: 'LOW_CONFIDENCE',
+            deduplicationFingerprint: 'latest',
+            extractedFields: {},
+            travelerNames: [],
+            updatedAt: '2026-03-03T10:00:00.000Z',
+            createdAt: '2026-03-03T09:00:00.000Z',
+          }),
+        },
+      ],
+    });
+    const userWhereMock = jest.fn(() => ({ get: getMock }));
+    const limitMock = jest.fn(() => ({ get: getMock }));
+    const collectionMock = jest.fn(() => ({ where: userWhereMock, limit: limitMock }));
+    const firestoreMock = { collection: collectionMock } as any;
+
+    jest.doMock('../src/db', () => ({
+      getCurrentDbProvider: () => 'firebase',
+      poolClient: jest.fn(),
+      getTripById: jest.fn(),
+      upsertExpenseForSource: jest.fn(),
+    }));
+    jest.doMock('../src/env', () => ({
+      getEnvValue: jest.fn(),
+    }));
+    jest.doMock('firebase-admin/app', () => ({
+      getApps: () => [{}],
+      initializeApp: jest.fn(),
+      cert: jest.fn(),
+    }));
+    jest.doMock('firebase-admin/firestore', () => ({
+      getFirestore: () => firestoreMock,
+    }));
+
+    const { listReviewQueueItems } = await import('../src/ingestion/shared/repository');
+
+    const items = await listReviewQueueItems('user-123');
+
+    expect(collectionMock).toHaveBeenCalledWith('parsed_items');
+    expect(userWhereMock).toHaveBeenCalledWith('userId', '==', 'user-123');
+    expect(items.map((item) => item.id)).toEqual(['latest-active', 'older-active']);
+  });
+
   it('matches Firebase group members via linked web user profile names during assignment', async () => {
     class FakeDocSnapshot {
       constructor(public id: string, private value: any) {}

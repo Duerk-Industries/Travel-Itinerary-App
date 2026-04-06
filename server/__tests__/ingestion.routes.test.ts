@@ -1,4 +1,5 @@
 import path from 'path';
+import { INGESTION_MAX_FILE_BYTES } from '../src/ingestion/config';
 
 const setMemoryEnv = () => {
   process.env.DB_PROVIDER = 'memory';
@@ -129,4 +130,50 @@ describe('ingestion routes', () => {
     const jobs = await request(app).get('/api/ingestion/jobs').set(auth).expect(200);
     expect(jobs.body.jobs).toHaveLength(1);
   });
+
+  it('returns a clear 400 for unsupported manual upload file types', async () => {
+    const request = (await import('supertest')).default;
+    const { app } = await import('../src/app');
+    const helpers = await import('./helpers');
+    const user = { firstName: 'Upload', lastName: 'Type', email: 'upload-type@example.com', password: 'secret123' };
+    const { token, userId } = await helpers.registerAndLoginWebUser(user);
+    await helpers.setUserTierInDb(userId, 'premium');
+    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    try {
+      const res = await request(app)
+        .post('/api/ingestion/upload')
+        .set({ Authorization: `Bearer ${token}` })
+        .attach('files', Buffer.from('a,b,c\n1,2,3\n', 'utf8'), { filename: 'unsupported.csv', contentType: 'text/csv' })
+        .expect(400);
+
+      expect(res.body.code).toBe('unsupported_file_type');
+      expect(String(res.body.error)).toContain('Unsupported file type');
+      expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('[ingestion][upload] rejected code=unsupported_file_type'));
+      expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('"filename":"unsupported.csv"'));
+      expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('"mimeType":"text/csv"'));
+    } finally {
+      consoleErrorSpy.mockRestore();
+    }
+  });
+
+  it('returns a clear 400 for oversized manual uploads', async () => {
+    const request = (await import('supertest')).default;
+    const { app } = await import('../src/app');
+    const helpers = await import('./helpers');
+    const user = { firstName: 'Upload', lastName: 'Size', email: 'upload-size@example.com', password: 'secret123' };
+    const { token, userId } = await helpers.registerAndLoginWebUser(user);
+    await helpers.setUserTierInDb(userId, 'premium');
+
+    const oversizedBuffer = Buffer.alloc(INGESTION_MAX_FILE_BYTES + 1, 0x20);
+    const res = await request(app)
+      .post('/api/ingestion/upload')
+      .set({ Authorization: `Bearer ${token}` })
+      .attach('files', oversizedBuffer, { filename: 'too-large.pdf', contentType: 'application/pdf' })
+      .expect(400);
+
+    expect(res.body.code).toBe('file_too_large');
+    expect(String(res.body.error)).toContain('10MB');
+  });
+
 });

@@ -1,0 +1,16 @@
+{
+  "tripId": "trip_123",
+  "status": "Booked",
+  "pickupLocation": "Brussels Airport",
+  "pickupDate": "2026-08-14",
+  "dropoffLocation": "Brussels Airport",
+  "dropoffDate": "2026-08-17",
+  "reference": "HERTZ-98765",
+  "vendor": "Hertz",
+  "prepaid": "Yes",
+  "cost": 215.75,
+  "model": "Compact SUV",
+  "notes": "Automatic transmission",
+  "paidBy": ["member_1"],
+  "travelerIds": ["member_1", "member_2"]
+}

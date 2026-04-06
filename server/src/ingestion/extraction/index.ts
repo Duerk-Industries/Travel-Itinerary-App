@@ -1063,19 +1063,19 @@ export const extractTransportCandidatesExported = extractTransportCandidates;
 
 // Lazy-load the new extractors to avoid circular imports at module parse time
 const getLearnedStrategies = async (): Promise<ExtractionStrategy[]> => {
-  const { SourceSpecificExtractor } = await import('./learnedExtractor');
-  const { LlmExtractor } = await import('./llmExtractor');
+  const { SourceSpecificExtractor } = require('./learnedExtractor');
+  const { LlmExtractor } = require('./llmExtractor');
   return [
     new SourceSpecificExtractor(),
     new RegexExtractor(),
-    new LlmExtractor('LlmExtractor', INGESTION_CONFIDENCE_REVIEW_READY, (config) => config.allowSmallLlm || config.allowLargeLlm),
+    new LlmExtractor('LlmExtractor', INGESTION_CONFIDENCE_REVIEW_READY, (config: ExtractionConfig) => config.allowSmallLlm || config.allowLargeLlm),
   ];
 };
 
 const defaultStrategies = [
   new RegexExtractor(),
-  new NoopLlmExtractor('SmallLLMExtractor', INGESTION_CONFIDENCE_REVIEW_READY, (config) => config.allowSmallLlm, 'INGESTION_SMALL_LLM'),
-  new NoopLlmExtractor('LargeLLMExtractor', 1, (config) => config.allowLargeLlm, 'INGESTION_LARGE_LLM'),
+  new NoopLlmExtractor('SmallLLMExtractor', INGESTION_CONFIDENCE_REVIEW_READY, (config: ExtractionConfig) => config.allowSmallLlm, 'INGESTION_SMALL_LLM'),
+  new NoopLlmExtractor('LargeLLMExtractor', 1, (config: ExtractionConfig) => config.allowLargeLlm, 'INGESTION_LARGE_LLM'),
 ];
 
 export const extractCandidates = async (

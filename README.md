@@ -25,7 +25,7 @@ The app now uses WanderBunnies user-visible branding while keeping existing deve
    npm install
    ```
 2. Configure the API:
-   - Copy `server/.env.example` to `server/.env` and update `DATABASE_URL` for your PostgreSQL instance and `AUTH_SECRET` for JWT signing.
+   - Copy `server/.env.example` to `server/.env`. `server/.env` is the primary local source for both regular env vars and secrets. Update values like `DATABASE_URL`, `AUTH_SECRET`, API keys, and SMTP credentials there.
    - Choose a database provider with `DB_PROVIDER=postgres|memory|dynamodb|firebase` (defaults to `postgres`; `memory` reuses pg-mem for tests; DynamoDB/Firebase paths are scaffolded and will throw until fully implemented). `USE_IN_MEMORY_DB=1` still works for backwards compatibility in tests.
    - Ensure PostgreSQL is running and accessible.
 3. Run the API:

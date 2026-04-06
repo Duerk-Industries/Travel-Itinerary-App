@@ -119,7 +119,7 @@ Server runs on `http://localhost:4000` by default.
 
 ### Environment setup (server)
 
-Create `server/.env` (or `server/.local_env`) with:
+Create `server/.env` as the primary local source for both regular env vars and secrets (or use `server/.local_env` for local-only overrides) with:
 
 ```
 DB_PROVIDER=postgres          # or firebase / memory
@@ -132,7 +132,7 @@ UNSPLASH_ACCESS_KEY=...       # optional: destination photos
 WEB_URL=http://localhost:19006
 ```
 
-To activate local overrides, create `server/.local_env` with `RUN_LOCAL=1` at the top. This file is checked by `isLocalEnv()` to enable localhost CORS and other dev-only behavior.
+To activate local overrides, create `server/.local_env` with `RUN_LOCAL=1` at the top. This file is checked by `isLocalEnv()` to enable localhost CORS and other dev-only behavior. `server/.secrets` is still supported as a backwards-compatible fallback, but `server/.env` is the primary local source.
 
 Secret values can also be provided as file paths using the `_FILE` suffix convention (e.g., `AUTH_SECRET_FILE=/run/secrets/auth_secret`).
 

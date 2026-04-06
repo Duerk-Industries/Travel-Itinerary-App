@@ -158,7 +158,7 @@ export class LlmExtractor implements ExtractionStrategy {
     const itemType = (parsed.itemType ?? detectItemType(doc.normalizedText)) as ParsedItemType;
 
     // Lazy-import to avoid circular dependency
-    const { createCandidateExported } = await import('./index');
+    const { createCandidateExported } = require('./index');
 
     const candidates: ParsedItemCandidate[] = [];
     for (const item of llmItems) {

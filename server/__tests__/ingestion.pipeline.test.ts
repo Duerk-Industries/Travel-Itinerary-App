@@ -144,6 +144,99 @@ describe('ingestion pipeline internals', () => {
     expect(items).toHaveLength(0);
   });
 
+  it('retries a failed manual upload cleanly when the same file is uploaded again', async () => {
+    const { writeTempBytes } = await import('../src/ingestion/shared/tempStorage');
+    const { runIngestionPipeline } = await import('../src/ingestion/orchestrator');
+    const { listImportJobsForUser, listReviewQueueItems } = await import('../src/ingestion/shared/repository');
+
+    const firstBytesRef = await writeTempBytes('retry.txt', Buffer.from('retry payload', 'utf8'));
+    const secondBytesRef = await writeTempBytes('retry.txt', Buffer.from('retry payload', 'utf8'));
+
+    const basePayload = {
+      sourceType: 'MANUAL_UPLOAD' as const,
+      sourceId: 'manual-source',
+      userId: USER_ID,
+      externalMessageId: 'manual:retry-test',
+      receivedAt: '2026-03-17T00:00:00.000Z',
+      originalFilename: 'retry.txt',
+      mimeType: 'text/plain',
+      contentHash: 'retry-raw-hash',
+      metadata: {},
+      correlationId: 'corr-retry-test',
+      dryRun: false,
+      virusScanStatus: 'SKIPPED' as const,
+    };
+
+    await expect(
+      runIngestionPipeline(
+        { ...basePayload, contentBytesRef: firstBytesRef },
+        false,
+        false,
+        {
+          extractFn: async () => {
+            throw new Error('temporary extraction failure');
+          },
+        }
+      )
+    ).rejects.toThrow(/temporary extraction failure/i);
+
+    const successResult: ExtractionResult = {
+      parsedItems: [
+        {
+          itemType: 'generic_note',
+          sourceType: 'MANUAL_UPLOAD',
+          sourceDate: '2026-03-17T00:00:00.000Z',
+          providerVendor: null,
+          travelerNames: [],
+          confirmationNumber: null,
+          startDateTimeUtc: null,
+          endDateTimeUtc: null,
+          originalTimezone: null,
+          timezoneStatus: 'UNKNOWN',
+          rawDatetimeString: null,
+          timezoneDisplayHint: 'timezone unknown',
+          rawSourceReference: 'manual:test',
+          confidenceScore: 0.8,
+          reviewStatus: 'READY_FOR_REVIEW',
+          deduplicationFingerprint: 'retry-success-fp',
+          extractedFields: { summary: 'Recovered after retry' },
+          editedFields: null,
+        },
+      ],
+      usageMetrics: {
+        tokensIn: 0,
+        tokensOut: 0,
+        provider: 'regex',
+        modelName: null,
+        estimatedCostUsd: 0,
+      },
+      metadata: {
+        logicVersion: 'v-retry',
+        extractedAt: '2026-03-17T00:00:00.000Z',
+        strategyName: 'RetryExtractor',
+      },
+    };
+
+    const retriedJob = await runIngestionPipeline(
+      { ...basePayload, contentBytesRef: secondBytesRef, correlationId: 'corr-retry-test-2' },
+      false,
+      false,
+      {
+        extractFn: async () => successResult,
+      }
+    );
+
+    expect(retriedJob.state).toBe('COMPLETED');
+
+    const jobs = await listImportJobsForUser(USER_ID);
+    expect(jobs).toHaveLength(1);
+    expect(jobs[0]?.state).toBe('COMPLETED');
+    expect(jobs[0]?.retryCount).toBe(1);
+
+    const items = await listReviewQueueItems(USER_ID);
+    expect(items).toHaveLength(1);
+  });
+
   it('falls back from source-specific and generic parsing to the LLM on low confidence and logs it', async () => {
     const logInfo = jest.fn();
     jest.doMock('../src/logger', () => ({

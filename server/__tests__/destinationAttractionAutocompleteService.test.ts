@@ -3,6 +3,7 @@ import os from 'os';
 import path from 'path';
 import {
   clearDestinationAttractionAutocompleteCache,
+  searchDestinationLocationOptions,
   searchAttractionOptionsForSelectedLocations,
 } from '../src/services/destinationAttractionAutocompleteService';
 
@@ -95,5 +96,40 @@ describe('destination attraction autocomplete filtering', () => {
     const names = results.map((item) => item.name);
     expect(names).toContain('Louvre Museum');
     expect(names).not.toContain('Matisse Museum');
+  });
+
+  it('does not read the attractions CSV when serving destination-only autocomplete', async () => {
+    const destinationsPath = path.join(tmpDir, 'destinations.csv');
+    const attractionsPath = path.join(tmpDir, 'attractions_catalog.csv');
+    fs.writeFileSync(
+      destinationsPath,
+      [
+        'Destination English Name,Country,State/Provence,Nearest City,Destination Official Name,Attractions Updated',
+        'Chicago,United States,Illinois,Chicago,Chicago,2026-03-01',
+        'Chiclayo,Peru,Lambayeque,Chiclayo,Chiclayo,2026-03-01',
+      ].join('\n'),
+      'utf8'
+    );
+    fs.writeFileSync(
+      attractionsPath,
+      [
+        'id,destination_key,destination_display_name,country,state_province,name,rank,activity_type,interest_tags,source_url,source_label,snippet,source_count,budget_tier,updated_at,sitelinks,qid,lat,lon',
+        'attr:chicago:bean,chicago,Chicago,United States,Illinois,Cloud Gate,1,Open Access,landmark,https://example/bean,wiki,Iconic sculpture,2,free,2026-03-01T00:00:00.000Z,10,Q1,41.8826,-87.6233',
+      ].join('\n'),
+      'utf8'
+    );
+    process.env.DESTINATIONS_CSV_LOCAL_PATH = destinationsPath;
+    process.env.ATTRACTIONS_CSV_LOCAL_PATH = attractionsPath;
+
+    const readSpy = jest.spyOn(fs, 'readFileSync');
+
+    const results = await searchDestinationLocationOptions('chic', 10);
+
+    expect(results.map((item) => item.name)).toContain('Chicago');
+    expect(
+      readSpy.mock.calls.some((call) => String(call[0]).includes('attractions_catalog.csv'))
+    ).toBe(false);
+
+    readSpy.mockRestore();
   });
 });

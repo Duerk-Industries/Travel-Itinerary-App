@@ -3,8 +3,12 @@ import fs from 'fs';
 import path from 'path';
 import pLimit from 'p-limit';
 import { fileURLToPath } from 'url';
+import * as envLoaderModule from '../server/src/env_loader';
 import * as destinationCsvReconciliationModule from '../server/src/services/destinationCsvReconciliation';
 import largeCityCoverageModule from '../server/src/services/destinationLargeCityCoverage';
+
+const { loadEnv } = ((envLoaderModule as any).default ?? envLoaderModule) as typeof import('../server/src/env_loader');
+loadEnv();
 
 const {
   getDestinationIdentityKey,
@@ -603,8 +607,14 @@ function normalizeSourceMatchKey(value: string): string {
 
 type NameCanonicalizationCache = Record<string, string>;
 const WIKIMEDIA_HEADERS = {
-  'User-Agent': 'TravelItineraryAppBot/1.0 (contact: local-dev)',
+  'User-Agent': `TravelItineraryAppDestinationsGenerator/1.0 (${String(process.env.WIKIMEDIA_CONTACT ?? 'local-dev').trim() || 'local-dev'})`,
 };
+
+function readPositiveIntEnv(name: string, fallback: number): number {
+  const raw = Number(process.env[name] ?? '');
+  if (!Number.isFinite(raw) || raw <= 0) return fallback;
+  return Math.floor(raw);
+}
 
 interface WikidataSearchResult {
   id?: string;
@@ -634,15 +644,23 @@ interface WikidataEntityResponse {
 interface AdaptiveThrottleState {
   delayMs: number;
   successStreak: number;
+  consecutive429s: number;
+  cooldownUntilMs: number;
   lastRequestAtMs: number;
 }
 
-const WIKIDATA_THROTTLE_MIN_MS = 5000;
-const WIKIDATA_THROTTLE_MAX_MS = 120000;
-const WIKIDATA_SUCCESS_STREAK_TO_RELAX = 10;
+const WIKIDATA_THROTTLE_MIN_MS = readPositiveIntEnv('WIKIDATA_MIN_INTERVAL_MS', 5000);
+const WIKIDATA_THROTTLE_MAX_MS = Math.max(
+  WIKIDATA_THROTTLE_MIN_MS,
+  readPositiveIntEnv('WIKIDATA_MAX_BACKOFF_MS', 120000)
+);
+const WIKIDATA_SUCCESS_STREAK_TO_RELAX = readPositiveIntEnv('WIKIDATA_SUCCESS_STREAK_TO_RELAX', 10);
+const WIKIDATA_MAX_ATTEMPTS = readPositiveIntEnv('WIKIDATA_MAX_ATTEMPTS', 6);
 const wikidataThrottleState: AdaptiveThrottleState = {
   delayMs: 5000,
   successStreak: 0,
+  consecutive429s: 0,
+  cooldownUntilMs: 0,
   lastRequestAtMs: 0,
 };
 
@@ -653,26 +671,38 @@ async function sleep(ms: number): Promise<void> {
 
 async function waitForWikidataThrottleWindow(): Promise<void> {
   const now = Date.now();
-  const earliestNext = wikidataThrottleState.lastRequestAtMs + wikidataThrottleState.delayMs;
+  const earliestNext = Math.max(
+    wikidataThrottleState.cooldownUntilMs,
+    wikidataThrottleState.lastRequestAtMs + wikidataThrottleState.delayMs
+  );
   const waitMs = Math.max(0, earliestNext - now);
   await sleep(waitMs);
   wikidataThrottleState.lastRequestAtMs = Date.now();
 }
 
-function increaseWikidataThrottle(retryAfterMs?: number): void {
-  const doubled = Math.min(WIKIDATA_THROTTLE_MAX_MS, Math.max(wikidataThrottleState.delayMs * 2, WIKIDATA_THROTTLE_MIN_MS));
-  if (Number.isFinite(Number(retryAfterMs)) && Number(retryAfterMs) > 0) {
-    wikidataThrottleState.delayMs = Math.min(
-      WIKIDATA_THROTTLE_MAX_MS,
-      Math.max(doubled, Number(retryAfterMs))
-    );
-  } else {
-    wikidataThrottleState.delayMs = doubled;
-  }
+function recordWikidataThrottleHit(retryAfterMs?: number): number {
+  wikidataThrottleState.consecutive429s += 1;
   wikidataThrottleState.successStreak = 0;
+
+  const exponentialDelayMs = Math.min(
+    WIKIDATA_THROTTLE_MAX_MS,
+    WIKIDATA_THROTTLE_MIN_MS * Math.pow(2, Math.max(0, wikidataThrottleState.consecutive429s))
+  );
+  wikidataThrottleState.delayMs = Math.max(WIKIDATA_THROTTLE_MIN_MS, exponentialDelayMs);
+
+  const appliedDelayMs = Math.min(
+    WIKIDATA_THROTTLE_MAX_MS,
+    Math.max(Number(retryAfterMs) || 0, wikidataThrottleState.delayMs)
+  );
+  wikidataThrottleState.cooldownUntilMs = Date.now() + appliedDelayMs;
+  console.warn(
+    `Wikidata 429 received. backoff=${wikidataThrottleState.delayMs}ms cooldown=${appliedDelayMs}ms retryAfter=${retryAfterMs ?? 'none'} consecutive429s=${wikidataThrottleState.consecutive429s}`
+  );
+  return appliedDelayMs;
 }
 
 function recordSuccessfulWikidataCall(): void {
+  wikidataThrottleState.consecutive429s = 0;
   wikidataThrottleState.successStreak += 1;
   if (
     wikidataThrottleState.successStreak >= WIKIDATA_SUCCESS_STREAK_TO_RELAX &&
@@ -736,7 +766,7 @@ async function wikiApiGet(params: Record<string, string | number>): Promise<any 
 }
 
 async function wikidataApiGet(params: Record<string, string | number>): Promise<any | null> {
-  const maxAttempts = 6;
+  const maxAttempts = WIKIDATA_MAX_ATTEMPTS;
   const getRetryAfterMs = (error: any): number | null => {
     const rawValue = error?.response?.headers?.['retry-after'];
     if (rawValue === undefined || rawValue === null) return null;
@@ -773,12 +803,17 @@ async function wikidataApiGet(params: Record<string, string | number>): Promise<
       const status = Number(error?.response?.status ?? 0);
       if (status === 429) {
         const retryAfterMs = getRetryAfterMs(error) ?? undefined;
-        increaseWikidataThrottle(retryAfterMs);
+        const delayMs = recordWikidataThrottleHit(retryAfterMs);
+        const retryable = status === 403 || status === 429 || status >= 500 || status === 0;
+        if (!retryable || attempt === maxAttempts) return null;
+        await sleep(delayMs);
+        continue;
       } else {
         wikidataThrottleState.successStreak = 0;
       }
       const retryable = status === 403 || status === 429 || status >= 500 || status === 0;
       if (!retryable || attempt === maxAttempts) return null;
+      await sleep(Math.min(60000, 1000 * Math.pow(2, Math.max(0, attempt - 1))));
     }
   }
   return null;

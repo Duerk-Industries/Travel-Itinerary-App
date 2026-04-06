@@ -5,15 +5,18 @@ export const isSupportedMimeType = (mimeType: string): boolean =>
 
 export const normalizeMimeType = (mimeType: string, filename: string): string => {
   const normalized = String(mimeType ?? '').trim().toLowerCase();
-  if (normalized) return normalized;
   const lowerName = filename.toLowerCase();
-  if (lowerName.endsWith('.txt')) return 'text/plain';
-  if (lowerName.endsWith('.html') || lowerName.endsWith('.htm')) return 'text/html';
-  if (lowerName.endsWith('.pdf')) return 'application/pdf';
-  if (lowerName.endsWith('.png')) return 'image/png';
-  if (lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg')) return 'image/jpeg';
-  if (lowerName.endsWith('.webp')) return 'image/webp';
-  return normalized || 'application/octet-stream';
+  const inferFromFilename = (): string => {
+    if (lowerName.endsWith('.txt')) return 'text/plain';
+    if (lowerName.endsWith('.html') || lowerName.endsWith('.htm')) return 'text/html';
+    if (lowerName.endsWith('.pdf')) return 'application/pdf';
+    if (lowerName.endsWith('.png')) return 'image/png';
+    if (lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg')) return 'image/jpeg';
+    if (lowerName.endsWith('.webp')) return 'image/webp';
+    return normalized || 'application/octet-stream';
+  };
+  if (normalized && normalized !== 'application/octet-stream') return normalized;
+  return inferFromFilename();
 };
 
 export const classifyDocumentContent = (text: string): {

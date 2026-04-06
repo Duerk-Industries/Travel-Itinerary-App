@@ -78,12 +78,12 @@ describe('ingestion normalization golden fixtures', () => {
     }
   });
 
-  it('extracts real text from Hotel_1.pdf instead of raw PDF bytes', async () => {
+  it('extracts real text from Chic stay HANA Boutique hotel.pdf instead of raw PDF bytes', async () => {
     const { findOrCreateUser } = await import('../src/db');
     const { writeTempBytes, deleteTempBytes } = await import('../src/ingestion/shared/tempStorage');
     const { normalizeIngestionPayload } = await import('../src/ingestion/normalization');
     const { createImportJob, getOrCreateIngestionSource } = await import('../src/ingestion/shared/repository');
-    const file = repoInputPath('lodging', 'Hotel_1.pdf');
+    const file = repoInputPath('lodging', 'Chic stay HANA Boutique hotel.pdf');
     const bytes = fs.readFileSync(file);
     const ref = await writeTempBytes(path.basename(file), bytes);
     try {

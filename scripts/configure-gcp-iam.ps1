@@ -1,6 +1,6 @@
 param(
   [Parameter(Position = 0)]
-  [string]$SecretsFile = './server/.secrets'
+  [string]$SecretsFile = './server/.env'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -91,6 +91,9 @@ if (Test-Path -LiteralPath $SecretsFile) {
 if (-not $envVars.ContainsKey('GCLOUD_PROJECT_ID') -and (Test-Path -LiteralPath $envFileFallback)) {
   $envVars += Parse-DotEnv $envFileFallback
 }
+if ((Split-Path $SecretsFile -Leaf) -eq '.env') {
+  Write-Info "Using server/.env as the primary local source; server/.secrets remains a fallback."
+}
 
 $GCLOUD_PROJECT_ID = if ($env:GCLOUD_PROJECT_ID) { $env:GCLOUD_PROJECT_ID } else { $envVars['GCLOUD_PROJECT_ID'] }
 $GCLOUD_PROJECT_NUMBER = $envVars['GCLOUD_PROJECT_NUMBER']
@@ -99,9 +102,9 @@ $RUNTIME_SERVICE_ACCOUNT_EMAIL = $envVars['RUNTIME_SERVICE_ACCOUNT_EMAIL']
 $LOCATION_BUCKET = if ($env:LOCATION_BUCKET) { $env:LOCATION_BUCKET } else { $envVars['LOCATION_BUCKET'] }
 $FIREBASE_STORAGE_BUCKET = if ($env:FIREBASE_STORAGE_BUCKET) { $env:FIREBASE_STORAGE_BUCKET } else { $envVars['FIREBASE_STORAGE_BUCKET'] }
 
-if (-not $GCLOUD_PROJECT_ID) { Write-Fail "GCLOUD_PROJECT_ID must be set in '$SecretsFile'." }
-if (-not $GCLOUD_PROJECT_NUMBER) { Write-Fail "GCLOUD_PROJECT_NUMBER must be set in '$SecretsFile'." }
-if (-not $DEPLOYER_SERVICE_ACCOUNT_EMAIL) { Write-Fail "DEPLOYER_SERVICE_ACCOUNT_EMAIL must be set in '$SecretsFile'." }
+if (-not $GCLOUD_PROJECT_ID) { Write-Fail "GCLOUD_PROJECT_ID must be set in '$SecretsFile' (typically server/.env)." }
+if (-not $GCLOUD_PROJECT_NUMBER) { Write-Fail "GCLOUD_PROJECT_NUMBER must be set in '$SecretsFile' (typically server/.env)." }
+if (-not $DEPLOYER_SERVICE_ACCOUNT_EMAIL) { Write-Fail "DEPLOYER_SERVICE_ACCOUNT_EMAIL must be set in '$SecretsFile' (typically server/.env)." }
 
 if (-not $RUNTIME_SERVICE_ACCOUNT_EMAIL) {
   $RUNTIME_SERVICE_ACCOUNT_EMAIL = "$GCLOUD_PROJECT_NUMBER-compute@developer.gserviceaccount.com"

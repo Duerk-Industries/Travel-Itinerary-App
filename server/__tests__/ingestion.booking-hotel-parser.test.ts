@@ -65,12 +65,12 @@ describe('Booking.com hotel parsers', () => {
 
   const expectations = [
     {
-      pdf: 'Hotel_1.pdf',
-      json: 'Hotel_1.json',
+      pdf: 'Chic stay HANA Boutique hotel.pdf',
+      json: 'Chic stay HANA Boutique hotel.json',
     },
     {
-      pdf: 'Hotel_2.pdf',
-      json: 'Hotel_2.json',
+      pdf: 'MOOONS Vienna.pdf',
+      json: 'MOOONS Vienna.json',
     },
   ];
 

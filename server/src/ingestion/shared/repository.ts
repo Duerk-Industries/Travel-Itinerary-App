@@ -2009,44 +2009,45 @@ export const listReviewQueueItems = async (userId: string): Promise<PersistedPar
     const snap = await getFirebaseDb()
       .collection('parsed_items')
       .where('userId', '==', userId)
-      .where('reviewStatus', 'in', INGESTION_REVIEW_QUEUE_ACTIVE_STATES)
-      .orderBy('updatedAt', 'desc')
       .get();
-    return snap.docs.map((doc) => {
-      const data = doc.data() as any;
-      return mapParsedItemRow({
-        id: doc.id,
-        user_id: data.userId,
-        import_job_id: data.importJobId,
-        raw_doc_id: data.rawDocId,
-        item_type: data.itemType,
-        source_type: data.sourceType,
-        source_date: data.sourceDate ?? null,
-        provider_vendor: data.providerVendor ?? null,
-        traveler_names: data.travelerNames ?? [],
-        confirmation_number: data.confirmationNumber ?? null,
-        start_datetime_utc: data.startDateTimeUtc ?? null,
-        end_datetime_utc: data.endDateTimeUtc ?? null,
-        original_timezone: data.originalTimezone ?? null,
-        timezone_status: data.timezoneStatus ?? 'UNKNOWN',
-        raw_datetime_string: data.rawDatetimeString ?? null,
-        timezone_display_hint: data.timezoneDisplayHint ?? null,
-        raw_source_reference: data.rawSourceReference,
-        confidence_score: data.confidenceScore ?? 0,
-        review_status: data.reviewStatus,
-        deduplication_fingerprint: data.deduplicationFingerprint,
-        logic_version: data.logicVersion ?? INGESTION_LOGIC_VERSION,
-        extracted_fields: data.extractedFields ?? {},
-        edited_fields: data.editedFields ?? null,
-        duplicate_disposition: data.duplicateDisposition ?? null,
-        duplicate_of_parsed_item_id: data.duplicateOfParsedItemId ?? null,
-        duplicate_of_trip_id: data.duplicateOfTripId ?? null,
-        assigned_trip_id: data.assignedTripId ?? null,
-        assignment_transaction_id: data.assignmentTransactionId ?? null,
-        created_at: data.createdAt,
-        updated_at: data.updatedAt,
+    return snap.docs
+      .filter((doc) => INGESTION_REVIEW_QUEUE_ACTIVE_STATES.includes(String((doc.data() as any).reviewStatus ?? '') as any))
+      .sort((a, b) => String((b.data() as any).updatedAt ?? '').localeCompare(String((a.data() as any).updatedAt ?? '')))
+      .map((doc) => {
+        const data = doc.data() as any;
+        return mapParsedItemRow({
+          id: doc.id,
+          user_id: data.userId,
+          import_job_id: data.importJobId,
+          raw_doc_id: data.rawDocId,
+          item_type: data.itemType,
+          source_type: data.sourceType,
+          source_date: data.sourceDate ?? null,
+          provider_vendor: data.providerVendor ?? null,
+          traveler_names: data.travelerNames ?? [],
+          confirmation_number: data.confirmationNumber ?? null,
+          start_datetime_utc: data.startDateTimeUtc ?? null,
+          end_datetime_utc: data.endDateTimeUtc ?? null,
+          original_timezone: data.originalTimezone ?? null,
+          timezone_status: data.timezoneStatus ?? 'UNKNOWN',
+          raw_datetime_string: data.rawDatetimeString ?? null,
+          timezone_display_hint: data.timezoneDisplayHint ?? null,
+          raw_source_reference: data.rawSourceReference,
+          confidence_score: data.confidenceScore ?? 0,
+          review_status: data.reviewStatus,
+          deduplication_fingerprint: data.deduplicationFingerprint,
+          logic_version: data.logicVersion ?? INGESTION_LOGIC_VERSION,
+          extracted_fields: data.extractedFields ?? {},
+          edited_fields: data.editedFields ?? null,
+          duplicate_disposition: data.duplicateDisposition ?? null,
+          duplicate_of_parsed_item_id: data.duplicateOfParsedItemId ?? null,
+          duplicate_of_trip_id: data.duplicateOfTripId ?? null,
+          assigned_trip_id: data.assignedTripId ?? null,
+          assignment_transaction_id: data.assignmentTransactionId ?? null,
+          created_at: data.createdAt,
+          updated_at: data.updatedAt,
+        });
       });
-    });
   }
   const { rows } = await getPg().query<ParsedItemRow>(
     `SELECT * FROM parsed_items
@@ -2709,13 +2710,15 @@ export const getProviderConnection = async (userId: string, provider: string): P
       .collection('provider_connections')
       .where('userId', '==', userId)
       .where('provider', '==', provider)
-      .orderBy('updatedAt', 'desc')
-      .limit(1)
       .get();
     if (snap.empty) return null;
-    const data = snap.docs[0]!.data() as any;
+    const latest = snap.docs
+      .slice()
+      .sort((a, b) => String((b.data() as any).updatedAt ?? '').localeCompare(String((a.data() as any).updatedAt ?? '')))[0];
+    if (!latest) return null;
+    const data = latest.data() as any;
     return {
-      id: snap.docs[0]!.id,
+      id: latest.id,
       userId: data.userId,
       provider: data.provider,
       status: data.status ?? 'connected',

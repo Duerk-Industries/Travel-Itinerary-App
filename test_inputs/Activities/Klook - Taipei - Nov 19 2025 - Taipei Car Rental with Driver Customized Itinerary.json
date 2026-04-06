@@ -1,0 +1,21 @@
+{
+  "itemType": "car_rental",
+  "source": "Klook",
+  "sourcePdf": "Klook - Taipei - Nov 19 2025 - Taipei Car Rental with Driver Customized Itinerary.pdf",
+  "providerVendor": "Klook",
+  "confirmationNumber": "KPP806140",
+  "bookingReferenceNumber": "KPP806140",
+  "travelers": ["Bryan Duerk"],
+  "tripId": null,
+  "status": "Booked",
+  "pickupLocation": "Taipei",
+  "pickupDate": "2025-11-19",
+  "dropoffLocation": "Taipei",
+  "dropoffDate": "2025-11-19",
+  "reference": "KPP806140",
+  "vendor": "Klook",
+  "prepaid": "Unknown",
+  "cost": null,
+  "model": "5-Seater Car / Toyota RAV4, Cross, Artis, Camry or equivalent",
+  "notes": "10-hour charter; group of 1-4; Mandarin translator support; charter time 07:00-22:00"
+}
