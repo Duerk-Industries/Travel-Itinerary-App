@@ -3,6 +3,7 @@ import os from 'os';
 import path from 'path';
 import {
   clearDestinationAttractionAutocompleteCache,
+  prewarmAutocompleteCache,
   searchDestinationLocationOptions,
   searchAttractionOptionsForSelectedLocations,
 } from '../src/services/destinationAttractionAutocompleteService';
@@ -126,6 +127,83 @@ describe('destination attraction autocomplete filtering', () => {
     const results = await searchDestinationLocationOptions('chic', 10);
 
     expect(results.map((item) => item.name)).toContain('Chicago');
+    expect(
+      readSpy.mock.calls.some((call) => String(call[0]).includes('attractions_catalog.csv'))
+    ).toBe(false);
+
+    readSpy.mockRestore();
+  });
+
+  it('returns country rows from the destination CSV when searching destinations', async () => {
+    const destinationsPath = path.join(tmpDir, 'destinations.csv');
+    const attractionsPath = path.join(tmpDir, 'attractions_catalog.csv');
+    fs.writeFileSync(
+      destinationsPath,
+      [
+        'Destination English Name,Country,State/Provence,Nearest City,Destination Official Name,Attractions Updated',
+        'Italy,Italy,,Rome,Italian Republic,2026-03-01',
+        'Rome,Italy,Lazio,Rome,Roma,2026-03-01',
+      ].join('\n'),
+      'utf8'
+    );
+    fs.writeFileSync(
+      attractionsPath,
+      [
+        'id,destination_key,destination_display_name,country,state_province,name,rank,activity_type,interest_tags,source_url,source_label,snippet,source_count,budget_tier,updated_at,sitelinks,qid,lat,lon',
+      ].join('\n'),
+      'utf8'
+    );
+    process.env.DESTINATIONS_CSV_LOCAL_PATH = destinationsPath;
+    process.env.ATTRACTIONS_CSV_LOCAL_PATH = attractionsPath;
+
+    const results = await searchDestinationLocationOptions('ital', 10);
+
+    expect(results).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          sourceType: 'destination',
+          name: 'Italy',
+          countryName: 'Italy',
+        }),
+      ])
+    );
+  });
+
+  it('prewarms the attractions dataset so the first attraction query avoids reparsing the CSV', async () => {
+    const destinationsPath = path.join(tmpDir, 'destinations.csv');
+    const attractionsPath = path.join(tmpDir, 'attractions_catalog.csv');
+    fs.writeFileSync(
+      destinationsPath,
+      [
+        'Destination English Name,Country,State/Provence,Nearest City,Destination Official Name,Attractions Updated',
+        'Paris,France,Ile-de-France,Paris,Paris,2026-03-01',
+      ].join('\n'),
+      'utf8'
+    );
+    fs.writeFileSync(
+      attractionsPath,
+      [
+        'id,destination_key,destination_display_name,country,state_province,name,rank,activity_type,interest_tags,source_url,source_label,snippet,source_count,budget_tier,updated_at,sitelinks,qid,lat,lon',
+        'attr:paris:louvre,paris,Paris,France,Ile-de-France,Louvre Museum,1,Ticketed Attraction,culture,https://example/louvre,wiki,Top museum,2,paid,2026-03-01T00:00:00.000Z,10,Q1,48.8606,2.3376',
+      ].join('\n'),
+      'utf8'
+    );
+    process.env.DESTINATIONS_CSV_LOCAL_PATH = destinationsPath;
+    process.env.ATTRACTIONS_CSV_LOCAL_PATH = attractionsPath;
+
+    const readSpy = jest.spyOn(fs, 'readFileSync');
+
+    await prewarmAutocompleteCache();
+    readSpy.mockClear();
+
+    const results = await searchAttractionOptionsForSelectedLocations({
+      query: 'louvre',
+      selectedLocationNames: ['Paris'],
+      selectedLocationIds: ['destination:paris-france-ile-de-france'],
+      limit: 10,
+    });
+
+    expect(results.map((item) => item.name)).toContain('Louvre Museum');
     expect(
       readSpy.mock.calls.some((call) => String(call[0]).includes('attractions_catalog.csv'))
     ).toBe(false);

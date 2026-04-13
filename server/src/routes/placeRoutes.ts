@@ -45,6 +45,34 @@ const fallbackLocationNameFromId = (id: string): string => {
   return raw ? `${normalizedKind} ${raw}` : normalizedKind;
 };
 
+const normalizeMergedLocationKey = (item: {
+  id?: string;
+  sourceType?: string;
+  name?: string;
+  countryName?: string;
+  stateName?: string;
+}): string => {
+  const sourceType = String(item.sourceType ?? '').trim().toLowerCase();
+  const name = String(item.name ?? '').trim().toLowerCase();
+  const countryName = String(
+    item.countryName ?? (sourceType === 'country' ? item.name ?? '' : '')
+  )
+    .trim()
+    .toLowerCase();
+  const stateName = String(item.stateName ?? '').trim().toLowerCase();
+  if (!name) return String(item.id ?? '').trim().toLowerCase();
+  return [name, stateName, countryName].join('|');
+};
+
+const mergedLocationPriority = (item: { sourceType?: string }): number => {
+  const sourceType = String(item.sourceType ?? '').trim().toLowerCase();
+  if (sourceType === 'country') return 0;
+  if (sourceType === 'state') return 1;
+  if (sourceType === 'city') return 2;
+  if (sourceType === 'destination') return 3;
+  return 4;
+};
+
 const router = Router();
 router.use(authenticate);
 
@@ -114,14 +142,16 @@ router.get('/location-options', async (req, res) => {
           return [] as Awaited<ReturnType<typeof searchCountryStateOptions>>;
         }),
       ]);
-      const merged = [...destinationResults, ...countryStateResults];
-      const seen = new Set<string>();
-      const deduped = merged.filter((item) => {
-        const key = String((item as any).id ?? `${item.sourceType}:${String(item.name ?? '').trim().toLowerCase()}`);
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
+      const merged = [...countryStateResults, ...destinationResults];
+      const dedupedByKey = new Map<string, (typeof merged)[number]>();
+      merged.forEach((item) => {
+        const key = normalizeMergedLocationKey(item as any);
+        const existing = dedupedByKey.get(key);
+        if (!existing || mergedLocationPriority(item as any) < mergedLocationPriority(existing as any)) {
+          dedupedByKey.set(key, item);
+        }
       });
+      const deduped = Array.from(dedupedByKey.values());
       res.json(deduped.slice(0, Math.min(Math.max(max, 1), 50)));
       return;
     }

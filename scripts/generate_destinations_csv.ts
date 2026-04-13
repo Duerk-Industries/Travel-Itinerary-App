@@ -1261,6 +1261,16 @@ function buildFallbackDestination(country: Country): DestinationSeed {
   };
 }
 
+function buildCountryDestinationSeed(country: Country): DestinationSeed {
+  const capital = (country.capital[0] ?? '').trim() || country.name;
+  return {
+    name: country.name,
+    state: '',
+    city: capital,
+    officialName: country.officialName || country.name,
+  };
+}
+
 export const LARGE_CITY_POPULATION_THRESHOLD = LARGE_CITY_POPULATION_THRESHOLD_FROM_SERVICE;
 
 function mergeLargeCitySeedSources(primary: DestinationSeed, secondary?: DestinationSeed): DestinationSeed {
@@ -1279,7 +1289,8 @@ export async function seedsToDestinations(
   const curatedAll = getCountryCatalog(country);
   const curated = curatedAll.slice(0, quota);
   const fallback = buildFallbackDestination(country);
-  const seedList: DestinationSeed[] = [...curated];
+  const countrySeed = buildCountryDestinationSeed(country);
+  const seedList: DestinationSeed[] = [countrySeed, ...curated];
   const sourceOverrides = new Map<string, string[]>();
 
   const countryCandidates = [country.name, country.officialName].filter(Boolean);
@@ -1637,6 +1648,7 @@ async function verifyDestinations(filePath: string) {
 }
 
 export const __test__ = {
+  buildCountryDestinationSeed,
   buildSourceList,
   fetchMillionPlusCitySeeds,
   fetchGeoNamesMillionPlusCitySeeds,
