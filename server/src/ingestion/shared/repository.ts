@@ -675,6 +675,18 @@ const toTimeOnly = (value: unknown, fallback = '00:00'): string => {
   return iso.slice(11, 16);
 };
 
+const resolveAssignedDateOnly = (primary: unknown, fallbackValue: unknown, fallback = nowIso().slice(0, 10)): string =>
+  toDateOnly(primary ?? fallbackValue, fallback);
+
+const resolveAssignedTimeOnly = (primary: unknown, fallbackValue: unknown, fallback = '00:00'): string => {
+  const direct = toTimeOnly(primary, '');
+  if (direct) return direct;
+  return toTimeOnly(fallbackValue, fallback);
+};
+
+const resolveAssignedFlightCost = (fields: Record<string, unknown>): number =>
+  Number(fields.totalCost ?? fields.cost ?? 0);
+
 const calculateLodgingCostPerNight = (checkInDate: string, checkOutDate: string, totalCost: number): number => {
   const start = new Date(checkInDate).getTime();
   const end = new Date(checkOutDate).getTime();
@@ -699,7 +711,7 @@ const syncAssignedFlightExpense = async (params: {
   const trip = await getTripById(params.tripId);
   if (!trip?.groupId) return;
   const fields = mergeFields(params.item);
-  const amount = Number(fields.cost ?? 0);
+  const amount = resolveAssignedFlightCost(fields);
   const currency = normalizeCurrencyCode(fields.currency);
   const expenseDate = toDateOnly(fields.startDateTimeUtc ?? params.item.startDateTimeUtc);
   const tripCurrency = normalizeCurrencyCode(trip.currency) ?? 'USD';
@@ -900,6 +912,11 @@ const insertAssignmentArtifactsPostgres = async (client: Pool, item: PersistedPa
 
   // Auto-match extracted traveler names to trip group members
   const matchedMemberIds = await matchTravelerNamesToGroupMemberIds(item.travelerNames ?? [], tripId);
+  const departureDate = resolveAssignedDateOnly(fields.departureDate, fields.startDateTimeUtc ?? item.startDateTimeUtc);
+  const departureTime = resolveAssignedTimeOnly(fields.departureTime, fields.startDateTimeUtc ?? item.startDateTimeUtc);
+  const arrivalDate = resolveAssignedDateOnly(fields.arrivalDate, fields.endDateTimeUtc ?? item.endDateTimeUtc, departureDate);
+  const arrivalTime = resolveAssignedTimeOnly(fields.arrivalTime, fields.endDateTimeUtc ?? item.endDateTimeUtc);
+  const flightCost = resolveAssignedFlightCost(fields);
 
   if (item.itemType === 'flight' || item.itemType === 'rail' || item.itemType === 'ferry_bus_transfer') {
     await client.query(
@@ -915,15 +932,15 @@ const insertAssignmentArtifactsPostgres = async (client: Pool, item: PersistedPa
         item.itemType === 'flight' ? 'Flight' : item.itemType === 'rail' ? 'Train' : 'Ferry',
         (item.travelerNames ?? []).join(', ') || 'Traveler',
         JSON.stringify(matchedMemberIds),
-        toDateOnly(fields.startDateTimeUtc ?? item.startDateTimeUtc),
+        departureDate,
         String(fields.departureLocation ?? fields.location ?? ''),
         String(fields.departureAirportCode ?? ''),
-        toTimeOnly(fields.startDateTimeUtc ?? item.startDateTimeUtc),
+        departureTime,
         String(fields.arrivalLocation ?? ''),
         String(fields.arrivalAirportCode ?? ''),
-        toDateOnly(fields.endDateTimeUtc ?? item.endDateTimeUtc, toDateOnly(fields.startDateTimeUtc ?? item.startDateTimeUtc)),
-        toTimeOnly(fields.endDateTimeUtc ?? item.endDateTimeUtc),
-        Number(fields.cost ?? 0),
+        arrivalDate,
+        arrivalTime,
+        flightCost,
         String(fields.providerVendor ?? item.providerVendor ?? ''),
         String(fields.flightNumber ?? fields.segmentNumber ?? ''),
         String(fields.confirmationNumber ?? item.confirmationNumber ?? ''),
@@ -1036,6 +1053,11 @@ const insertAssignmentArtifactsFirestore = async (item: PersistedParsedItem, tri
   const tripName = trip?.name ?? 'trip';
   const fields = mergeFields(item);
   const matchedMemberIds = await matchTravelerNamesToGroupMemberIds(item.travelerNames ?? [], tripId);
+  const departureDate = resolveAssignedDateOnly(fields.departureDate, fields.startDateTimeUtc ?? item.startDateTimeUtc);
+  const departureTime = resolveAssignedTimeOnly(fields.departureTime, fields.startDateTimeUtc ?? item.startDateTimeUtc);
+  const arrivalDate = resolveAssignedDateOnly(fields.arrivalDate, fields.endDateTimeUtc ?? item.endDateTimeUtc, departureDate);
+  const arrivalTime = resolveAssignedTimeOnly(fields.arrivalTime, fields.endDateTimeUtc ?? item.endDateTimeUtc);
+  const flightCost = resolveAssignedFlightCost(fields);
   await db.runTransaction(async (tx) => {
     const parsedItemRef = db.collection('parsed_items').doc(item.id);
     const parsedItemDoc = await tx.get(parsedItemRef);
@@ -1053,15 +1075,15 @@ const insertAssignmentArtifactsFirestore = async (item: PersistedParsedItem, tri
         transferType: item.itemType === 'flight' ? 'Flight' : item.itemType === 'rail' ? 'Train' : 'Ferry',
         passengerName: (item.travelerNames ?? []).join(', ') || 'Traveler',
         passengerIds: matchedMemberIds,
-        departureDate: toDateOnly(fields.startDateTimeUtc ?? item.startDateTimeUtc),
+        departureDate,
         departureLocation: String(fields.departureLocation ?? ''),
         departureAirportCode: String(fields.departureAirportCode ?? ''),
-        departureTime: toTimeOnly(fields.startDateTimeUtc ?? item.startDateTimeUtc),
+        departureTime,
         arrivalLocation: String(fields.arrivalLocation ?? ''),
         arrivalAirportCode: String(fields.arrivalAirportCode ?? ''),
-        arrivalDate: toDateOnly(fields.endDateTimeUtc ?? item.endDateTimeUtc, toDateOnly(fields.startDateTimeUtc ?? item.startDateTimeUtc)),
-        arrivalTime: toTimeOnly(fields.endDateTimeUtc ?? item.endDateTimeUtc),
-        cost: Number(fields.cost ?? 0),
+        arrivalDate,
+        arrivalTime,
+        cost: flightCost,
         carrier: String(fields.providerVendor ?? item.providerVendor ?? ''),
         flightNumber: String(fields.flightNumber ?? ''),
         bookingReference: String(fields.confirmationNumber ?? item.confirmationNumber ?? ''),

@@ -465,8 +465,12 @@ describe('ingestion repository firebase writes', () => {
         departureAirportCode: 'HAN',
         arrivalLocation: 'LPQ',
         arrivalAirportCode: 'LPQ',
+        departureDate: '2025-12-01',
+        departureTime: '09:20',
+        arrivalDate: '2025-12-01',
+        arrivalTime: '10:40',
         flightNumber: 'QV314',
-        cost: 591.2,
+        totalCost: 591.2,
         currency: 'USD',
       },
       editedFields: null,
@@ -523,6 +527,11 @@ describe('ingestion repository firebase writes', () => {
     const allFlights = (fakeDb as any).collections.get('flights');
     const storedFlight = (allFlights ? Array.from(allFlights.values())[0] : null) as any;
     expect(storedFlight?.passengerIds).toEqual(expect.arrayContaining(['gm-bryan', 'gm-vicky']));
+    expect(storedFlight?.departureDate).toBe('2025-12-01');
+    expect(storedFlight?.departureTime).toBe('09:20');
+    expect(storedFlight?.arrivalDate).toBe('2025-12-01');
+    expect(storedFlight?.arrivalTime).toBe('10:40');
+    expect(storedFlight?.cost).toBe(591.2);
     expect(fakeDb.getDocData('parsed_items', 'parsed-1')?.reviewStatus).toBe('ASSIGNED');
     expect(upsertExpenseForSource).toHaveBeenCalledWith(expect.objectContaining({
       tripId: 'trip-1',
