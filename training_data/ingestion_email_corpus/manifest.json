@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-14T17:54:30.183Z",
+  "generatedAt": "2026-04-14T18:26:19.278Z",
   "publicSources": [
     {
       "itemType": "flight",
@@ -29,14 +29,18 @@
     "flight": 12,
     "hotel": 12,
     "rail": 12,
-    "oss": 12
+    "oss": 12,
+    "curated": 8,
+    "weak": 8
   },
   "counts": {
     "public": 12,
+    "curatedTravel": 8,
+    "weakTravel": 0,
     "ossRaw": 12,
     "synthetic": 36,
-    "combined": 60,
-    "train": 50,
+    "combined": 68,
+    "train": 58,
     "validation": 10
   },
   "snapshots": [
@@ -65,14 +69,24 @@
       "provider": "Apache SpamAssassin",
       "url": "https://spamassassin.apache.org/old/publiccorpus/20030228_easy_ham.tar.bz2",
       "limit": 6,
-      "licenseHint": "Public corpus from Apache SpamAssassin"
+      "licenseHint": "Public corpus from Apache SpamAssassin",
+      "weakMine": false
     },
     {
       "title": "Apache SpamAssassin hard_ham",
       "provider": "Apache SpamAssassin",
       "url": "https://spamassassin.apache.org/old/publiccorpus/20030228_hard_ham.tar.bz2",
       "limit": 6,
-      "licenseHint": "Public corpus from Apache SpamAssassin"
+      "licenseHint": "Public corpus from Apache SpamAssassin",
+      "weakMine": false
+    },
+    {
+      "title": "Apache SpamAssassin spam_2",
+      "provider": "Apache SpamAssassin",
+      "url": "https://spamassassin.apache.org/old/publiccorpus/20050311_spam_2.tar.bz2",
+      "limit": 12,
+      "licenseHint": "Public corpus from Apache SpamAssassin",
+      "weakMine": true
     }
   ],
   "tarAvailable": true

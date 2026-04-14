@@ -40,7 +40,7 @@ export type ParserTrainingLabelItem = {
 export type ParserTrainingExample = {
   id: string;
   split: 'train' | 'validation';
-  origin: 'public_markup' | 'synthetic' | 'oss_raw_email';
+  origin: 'public_markup' | 'synthetic' | 'oss_raw_email' | 'curated_open_travel' | 'weak_travel_mined';
   source: {
     title: string;
     provider: string;
@@ -132,6 +132,9 @@ const normalizeRawText = (value: string): string =>
   value
     .replace(/\r\n/g, '\n')
     .replace(/\r/g, '\n');
+
+const stripHtmlTags = (value: string): string =>
+  decodeHtmlEntities(value.replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
 
 export const parseRawEmailBasic = (rawEmail: string): {
   from: string;
@@ -732,5 +735,198 @@ export const buildOssRawEmailExample = (params: {
       itemType: 'generic_note',
       items: [],
     },
+  };
+};
+
+export const parseFlightSummaryHtml = (html: string): Array<{
+  departureLocation: string | null;
+  arrivalLocation: string | null;
+  departureDate: string | null;
+  departureTime: string | null;
+  arrivalDateTime: string | null;
+  flightNumber: string | null;
+  emailSubject: string | null;
+}> => {
+  const results: Array<{
+    departureLocation: string | null;
+    arrivalLocation: string | null;
+    departureDate: string | null;
+    departureTime: string | null;
+    arrivalDateTime: string | null;
+    flightNumber: string | null;
+    emailSubject: string | null;
+  }> = [];
+  const pattern = /<tr><td class="left">[\s\S]*?<h5>From<\/h5>\s*([\s\S]*?)\s*<td class="middle"[\s\S]*?<h5>Destination<\/h5>\s*([\s\S]*?)\s*<\/tr>[\s\S]*?<h5>Depart<\/h5>\s*([\s\S]*?)\s*<td class="right">[\s\S]*?<h5>Date<\/h5>\s*([\s\S]*?)\s*<\/tr>[\s\S]*?<h5>Arriving<\/h5>\s*([\s\S]*?)\s*<h5>Flight number<\/h5>\s*([\s\S]*?)\s*<h5>Ticket<\/h5>[\s\S]*?<h5>Email<\/h5>\s*([\s\S]*?)\s*<\/td>/gi;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(html)) !== null) {
+    results.push({
+      departureLocation: stripHtmlTags(match[1]) || null,
+      arrivalLocation: stripHtmlTags(match[2]) || null,
+      departureTime: stripHtmlTags(match[3]) || null,
+      departureDate: stripHtmlTags(match[4]) || null,
+      arrivalDateTime: stripHtmlTags(match[5]) || null,
+      flightNumber: normalizeSpace(stripHtmlTags(match[6]).replace(/^Flight number/i, '')) || null,
+      emailSubject: stripHtmlTags(match[7]) || null,
+    });
+  }
+  return results;
+};
+
+export const buildCuratedOpenTravelExample = (params: {
+  title: string;
+  provider: string;
+  url: string;
+  harvestedAt: string;
+  departureLocation: string | null;
+  arrivalLocation: string | null;
+  departureDate: string | null;
+  departureTime: string | null;
+  arrivalDateTime: string | null;
+  flightNumber: string | null;
+  emailSubject: string | null;
+}): ParserTrainingExample => {
+  const item: ParserTrainingLabelItem = {
+    ...emptyLabelItem(),
+    providerVendor: params.provider,
+    confirmationNumber: null,
+    travelers: [],
+    airline: params.provider,
+    flightNumber: params.flightNumber,
+    departureDate: params.departureDate,
+    departureTime: params.departureTime,
+    arrivalTime: params.arrivalDateTime ? normalizeSpace(params.arrivalDateTime).split(' ').slice(1).join(' ') || null : null,
+    departureLocation: params.departureLocation,
+    arrivalLocation: params.arrivalLocation,
+  };
+  const subject = params.emailSubject || `Travel itinerary ${params.flightNumber ?? ''}`.trim();
+  const rendered = syntheticRawEmail(
+    'curated@example-travel-fixture.org',
+    'traveler@example.com',
+    subject,
+    'Open travel fixture converted from an OSS travel parser example.',
+    [
+      `From: ${params.departureLocation ?? 'Unknown'}`,
+      `To: ${params.arrivalLocation ?? 'Unknown'}`,
+      `Departure: ${params.departureDate ?? 'TBD'} ${params.departureTime ?? ''}`.trim(),
+      `Arrival: ${params.arrivalDateTime ?? 'TBD'}`,
+      `Flight number: ${params.flightNumber ?? 'Unknown'}`,
+    ],
+    'Curated open travel example.',
+  );
+  return {
+    id: randomUUID(),
+    split: toSplit(`${params.url}|${subject}`),
+    origin: 'curated_open_travel',
+    source: {
+      title: params.title,
+      provider: params.provider,
+      sourceType: 'oss_corpus',
+      url: params.url,
+      harvestedAt: params.harvestedAt,
+      licenseHint: 'Open-source curated travel summary fixture',
+    },
+    email: {
+      from: 'curated@example-travel-fixture.org',
+      to: 'traveler@example.com',
+      subject,
+      ...rendered,
+    },
+    label: {
+      itemType: 'flight',
+      items: [item],
+    },
+  };
+};
+
+const IATA_PAIR_REGEX = /\b([A-Z]{3})\s*(?:-|to|->|–|—)\s*([A-Z]{3})\b/;
+const CONFIRMATION_REGEX = /\b(?:confirmation|reservation|record locator|booking reference|pnr)[^A-Z0-9]{0,8}([A-Z0-9]{5,8})\b/i;
+
+export const buildWeakTravelMiningExample = (params: {
+  rawEmail: string;
+  title: string;
+  provider: string;
+  url: string;
+  harvestedAt: string;
+  licenseHint: string | null;
+}): ParserTrainingExample | null => {
+  const parsed = parseRawEmailBasic(params.rawEmail);
+  const text = normalizeSpace(`${parsed.subject}\n${parsed.textBody}\n${stripHtmlTags(parsed.htmlBody)}`);
+  const lower = text.toLowerCase();
+  const matchedSignals: string[] = [];
+  const addSignal = (name: string, condition: boolean) => {
+    if (condition) matchedSignals.push(name);
+  };
+
+  const hasIataPair = IATA_PAIR_REGEX.test(text);
+  const hasDepartureArrival = /\bdepart(?:ure|ing)?\b/i.test(text) && /\barriv(?:al|e|ing)\b/i.test(text);
+  addSignal('itinerary', /\bitinerary\b|\bflight reservation\b|\be-?ticket\b/i.test(text));
+  addSignal('boarding', /\bboarding pass\b/i.test(text));
+  addSignal('flight_number', /\bflight number\b|\b[A-Z]{2}\d{2,4}\b/.test(text));
+  addSignal('airport', /\bairport\b/i.test(text));
+  addSignal('hotel', /\bhotel reservation\b|\bstay confirmation\b|\bhotel\b/i.test(text));
+  addSignal('checkin', /\bcheck[- ]?in\b/i.test(text) && /\bcheck[- ]?out\b/i.test(text));
+  addSignal('train', /\btrain reservation\b|\brail ticket\b|\btrain ticket\b|\bdeparture station\b|\barrival station\b/i.test(text));
+  addSignal('iata_pair', hasIataPair);
+  addSignal('departure_arrival', hasDepartureArrival);
+  addSignal('reservation', /\breservation\b|\bconfirmation\b|\bbooking reference\b/i.test(text));
+
+  if (/\bflight to quality\b/i.test(text) || /\bgrand prix\b/i.test(text)) {
+    return null;
+  }
+
+  let itemType: ParserTrainingItemType | null = null;
+  if (
+    (matchedSignals.includes('itinerary') || matchedSignals.includes('boarding') || matchedSignals.includes('reservation'))
+    && (matchedSignals.includes('iata_pair') || matchedSignals.includes('departure_arrival'))
+  ) {
+    itemType = 'flight';
+  } else if (matchedSignals.includes('hotel') && matchedSignals.includes('checkin')) {
+    itemType = 'hotel';
+  } else if (matchedSignals.includes('train')) {
+    itemType = 'rail';
+  }
+
+  if (!itemType) return null;
+
+  const pair = text.match(IATA_PAIR_REGEX);
+  const confirmation = text.match(CONFIRMATION_REGEX)?.[1] ?? null;
+  const item: ParserTrainingLabelItem = {
+    ...emptyLabelItem(),
+    providerVendor: params.provider,
+    confirmationNumber: confirmation,
+    travelers: [],
+    airline: itemType === 'flight' ? params.provider : null,
+    departureAirportCode: pair?.[1] ?? null,
+    arrivalAirportCode: pair?.[2] ?? null,
+  };
+
+  return {
+    id: randomUUID(),
+    split: toSplit(`${params.url}|${parsed.subject}|${itemType}`),
+    origin: 'weak_travel_mined',
+    source: {
+      title: params.title,
+      provider: params.provider,
+      sourceType: 'oss_corpus',
+      url: params.url,
+      harvestedAt: params.harvestedAt,
+      licenseHint: params.licenseHint,
+    },
+    email: {
+      from: parsed.from || 'unknown@example.com',
+      to: parsed.to || 'unknown@example.com',
+      subject: parsed.subject || 'Untitled message',
+      textBody: parsed.textBody,
+      htmlBody: parsed.htmlBody,
+      rawEmail: params.rawEmail,
+    },
+    label: {
+      itemType,
+      items: [item],
+    },
+    artifacts: {
+      weakSupervision: true,
+      matchedSignals,
+    } as any,
   };
 };

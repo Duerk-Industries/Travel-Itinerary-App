@@ -9,10 +9,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const {
+  buildCuratedOpenTravelExample,
   buildOssRawEmailExample,
+  buildWeakTravelMiningExample,
   buildPublicMarkupExample,
   buildSyntheticExamples,
   extractJsonLdBlocks,
+  parseFlightSummaryHtml,
 } = ((parserTrainingCorpusModule as any).default ?? parserTrainingCorpusModule) as typeof import('../server/src/services/parserTrainingCorpus');
 
 type ParserTrainingExample = import('../server/src/services/parserTrainingCorpus').ParserTrainingExample;
@@ -48,6 +51,16 @@ const PUBLIC_SOURCES: PublicSource[] = [
   },
 ];
 
+const CURATED_TRAVEL_SOURCES = [
+  {
+    title: 'flight-reservation-emails summary',
+    provider: 'JohannesBuchner/flight-reservation-emails',
+    url: 'https://raw.githubusercontent.com/JohannesBuchner/flight-reservation-emails/master/summary.html',
+    limit: 12,
+    licenseHint: 'Open-source curated travel summary fixture',
+  },
+];
+
 const REFERENCE_URLS = [
   'https://schema.org/FlightReservation',
   'https://schema.org/LodgingReservation',
@@ -61,6 +74,7 @@ const OSS_RAW_ARCHIVES = [
     url: 'https://spamassassin.apache.org/old/publiccorpus/20030228_easy_ham.tar.bz2',
     limit: 6,
     licenseHint: 'Public corpus from Apache SpamAssassin',
+    weakMine: false,
   },
   {
     title: 'Apache SpamAssassin hard_ham',
@@ -68,6 +82,15 @@ const OSS_RAW_ARCHIVES = [
     url: 'https://spamassassin.apache.org/old/publiccorpus/20030228_hard_ham.tar.bz2',
     limit: 6,
     licenseHint: 'Public corpus from Apache SpamAssassin',
+    weakMine: false,
+  },
+  {
+    title: 'Apache SpamAssassin spam_2',
+    provider: 'Apache SpamAssassin',
+    url: 'https://spamassassin.apache.org/old/publiccorpus/20050311_spam_2.tar.bz2',
+    limit: 12,
+    licenseHint: 'Public corpus from Apache SpamAssassin',
+    weakMine: true,
   },
 ];
 
@@ -135,7 +158,7 @@ const extractArchiveEntry = (archivePath: string, entryName: string): string =>
   });
 
 const parseArgs = () => {
-  const defaults = { flight: 12, hotel: 12, rail: 12, oss: 12 };
+  const defaults = { flight: 12, hotel: 12, rail: 12, oss: 12, curated: 12, weak: 8 };
   for (const arg of process.argv.slice(2)) {
     const match = arg.match(/^--synthetic-(flight|hotel|rail)=(\d+)$/);
     if (match) {
@@ -145,6 +168,16 @@ const parseArgs = () => {
     const ossMatch = arg.match(/^--oss=(\d+)$/);
     if (ossMatch) {
       defaults.oss = Number(ossMatch[1]);
+      continue;
+    }
+    const curatedMatch = arg.match(/^--curated=(\d+)$/);
+    if (curatedMatch) {
+      defaults.curated = Number(curatedMatch[1]);
+      continue;
+    }
+    const weakMatch = arg.match(/^--weak=(\d+)$/);
+    if (weakMatch) {
+      defaults.weak = Number(weakMatch[1]);
     }
   }
   return defaults;
@@ -154,7 +187,9 @@ const main = async () => {
   ensureDir(OUTPUT_DIR);
   const harvestedAt = new Date().toISOString();
   const publicExamples: ParserTrainingExample[] = [];
+  const curatedTravelExamples: ParserTrainingExample[] = [];
   const ossRawExamples: ParserTrainingExample[] = [];
+  const weakTravelExamples: ParserTrainingExample[] = [];
   const sourceSnapshots: Array<{ title: string; url: string; htmlPath: string; blockCount: number }> = [];
 
   for (const source of PUBLIC_SOURCES) {
@@ -188,9 +223,26 @@ const main = async () => {
   }
 
   const syntheticCounts = parseArgs();
+  for (const source of CURATED_TRAVEL_SOURCES) {
+    if (syntheticCounts.curated <= 0) break;
+    const html = await fetchHtml(source.url);
+    const rows = parseFlightSummaryHtml(html).slice(0, Math.min(source.limit, syntheticCounts.curated));
+    for (const row of rows) {
+      curatedTravelExamples.push(
+        buildCuratedOpenTravelExample({
+          title: source.title,
+          provider: source.provider,
+          url: source.url,
+          harvestedAt,
+          ...row,
+        })
+      );
+    }
+  }
   ensureDir(CACHE_DIR);
   const canUseTar = ensureTarAvailable();
   const perArchiveLimit = Math.max(1, Math.floor((syntheticCounts.oss || 0) / Math.max(OSS_RAW_ARCHIVES.length, 1)));
+  const weakPerArchiveScan = Math.max(100, syntheticCounts.weak * 80);
 
   if (canUseTar && syntheticCounts.oss > 0) {
     for (const archive of OSS_RAW_ARCHIVES) {
@@ -215,11 +267,30 @@ const main = async () => {
           })
         );
       }
+
+      if (syntheticCounts.weak > 0 && archive.weakMine) {
+        for (const entry of listArchiveEntries(archivePath).slice(0, weakPerArchiveScan)) {
+          if (weakTravelExamples.length >= syntheticCounts.weak) break;
+          if (entry.endsWith('/')) continue;
+          const rawEmail = extractArchiveEntry(archivePath, entry);
+          const example = buildWeakTravelMiningExample({
+            rawEmail,
+            title: `${archive.title}: ${path.basename(entry)}`,
+            provider: archive.provider,
+            url: `${archive.url}#${entry}`,
+            harvestedAt,
+            licenseHint: archive.licenseHint,
+          });
+          if (example) {
+            weakTravelExamples.push(example);
+          }
+        }
+      }
     }
   }
 
   const syntheticExamples = buildSyntheticExamples(syntheticCounts);
-  const combinedExamples = [...publicExamples, ...ossRawExamples, ...syntheticExamples];
+  const combinedExamples = [...publicExamples, ...curatedTravelExamples, ...weakTravelExamples, ...ossRawExamples, ...syntheticExamples];
   const trainExamples = combinedExamples.filter((row) => row.split === 'train');
   const validationExamples = combinedExamples.filter((row) => row.split === 'validation');
 
@@ -230,6 +301,8 @@ const main = async () => {
     syntheticCounts,
     counts: {
       public: publicExamples.length,
+      curatedTravel: curatedTravelExamples.length,
+      weakTravel: weakTravelExamples.length,
       ossRaw: ossRawExamples.length,
       synthetic: syntheticExamples.length,
       combined: combinedExamples.length,
@@ -242,6 +315,8 @@ const main = async () => {
   });
 
   writeJsonl(path.join(OUTPUT_DIR, 'public_examples.jsonl'), publicExamples);
+  writeJsonl(path.join(OUTPUT_DIR, 'curated_travel_examples.jsonl'), curatedTravelExamples);
+  writeJsonl(path.join(OUTPUT_DIR, 'weak_travel_examples.jsonl'), weakTravelExamples);
   writeJsonl(path.join(OUTPUT_DIR, 'oss_raw_examples.jsonl'), ossRawExamples);
   writeJsonl(path.join(OUTPUT_DIR, 'synthetic_examples.jsonl'), syntheticExamples);
   writeJsonl(path.join(OUTPUT_DIR, 'combined_examples.jsonl'), combinedExamples);
@@ -257,6 +332,8 @@ const main = async () => {
       '',
       'Files:',
       '- `public_examples.jsonl`: examples harvested from official Gmail reservation markup docs.',
+      '- `curated_travel_examples.jsonl`: curated open travel-specific fixtures harvested from open-source travel parser example material.',
+      '- `weak_travel_examples.jsonl`: weakly supervised travel emails mined from OSS/public corpora using stricter travel heuristics.',
       '- `oss_raw_examples.jsonl`: curated public raw-email examples harvested from OSS/public corpora and labeled as `generic_note` noise examples.',
       '- `synthetic_examples.jsonl`: synthetic flight, hotel, and rail emails rendered into raw MIME emails with parser labels.',
       '- `combined_examples.jsonl`: public + synthetic examples.',
@@ -274,6 +351,8 @@ const main = async () => {
 
   console.log(`Wrote corpus to ${OUTPUT_DIR}`);
   console.log(`Public examples: ${publicExamples.length}`);
+  console.log(`Curated travel examples: ${curatedTravelExamples.length}`);
+  console.log(`Weak travel examples: ${weakTravelExamples.length}`);
   console.log(`OSS raw-email examples: ${ossRawExamples.length}`);
   console.log(`Synthetic examples: ${syntheticExamples.length}`);
   console.log(`Train: ${trainExamples.length}`);

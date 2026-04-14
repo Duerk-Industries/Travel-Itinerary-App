@@ -1,8 +1,11 @@
 import {
+  buildCuratedOpenTravelExample,
   buildOssRawEmailExample,
+  buildWeakTravelMiningExample,
   buildPublicMarkupExample,
   extractJsonLdBlocks,
   flightReservationToLabelItem,
+  parseFlightSummaryHtml,
   parseRawEmailBasic,
 } from '../src/services/parserTrainingCorpus';
 
@@ -107,5 +110,51 @@ describe('parserTrainingCorpus', () => {
     expect(example.label.itemType).toBe('generic_note');
     expect(example.label.items).toEqual([]);
     expect(example.email.subject).toBe('Hello there');
+  });
+
+  it('parses curated travel summary rows', () => {
+    const rows = parseFlightSummaryHtml(`
+      <tr><td class="left"><h5>From</h5>BOS<td class="middle" rowspan="2">&#9992;<td class="right"><h5>Destination</h5>LAX</tr>
+      <tr><td class="left"><h5>Depart</h5>08:05<td class="right"><h5>Date</h5>2027-04-05</tr>
+      <tr><td colspan="3" class="details"><h5>Arriving</h5>2027-04-05 11:30<h5>Flight number</h5>UA1704 with <h5>Ticket</h5></td></tr>
+      <tr><td colspan="3" class="email"><h5>Email</h5>\"Fwd: eTicket itinerary\"</td></tr>
+    `);
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].departureLocation).toBe('BOS');
+
+    const example = buildCuratedOpenTravelExample({
+      title: 'Curated Travel Fixture',
+      provider: 'Open Travel Repo',
+      url: 'https://example.com/summary.html',
+      harvestedAt: '2026-04-14T00:00:00.000Z',
+      ...rows[0],
+    });
+    expect(example.label.itemType).toBe('flight');
+    expect(example.email.subject).toContain('Fwd: eTicket itinerary');
+  });
+
+  it('builds weak travel examples only when travel-specific signals align', () => {
+    const example = buildWeakTravelMiningExample({
+      rawEmail: [
+        'From: alerts@example.com',
+        'To: traveler@example.com',
+        'Subject: Your itinerary and boarding pass',
+        'Content-Type: text/plain; charset=UTF-8',
+        '',
+        'Flight number AA120',
+        'Route: BOS-LAX',
+        'Confirmation: ZXCVB7',
+      ].join('\n'),
+      title: 'Weak travel sample',
+      provider: 'Corpus',
+      url: 'https://example.com/raw',
+      harvestedAt: '2026-04-14T00:00:00.000Z',
+      licenseHint: 'Public corpus',
+    });
+
+    expect(example?.label.itemType).toBe('flight');
+    expect(example?.label.items[0].departureAirportCode).toBe('BOS');
+    expect(example?.label.items[0].arrivalAirportCode).toBe('LAX');
   });
 });
