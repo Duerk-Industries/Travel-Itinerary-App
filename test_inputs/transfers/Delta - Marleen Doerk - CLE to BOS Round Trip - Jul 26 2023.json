@@ -5,6 +5,8 @@
   "providerVendor": "Delta Air Lines",
   "confirmationNumber": "GMURXT",
   "bookingReference": "GMURXT",
+  "departureAirportCode": "CLE",
+  "arrivalAirportCode": "BOS",
   "travelers": ["Marleen Mae Doerk"],
   "totalCost": 367.8,
   "currency": "USD",

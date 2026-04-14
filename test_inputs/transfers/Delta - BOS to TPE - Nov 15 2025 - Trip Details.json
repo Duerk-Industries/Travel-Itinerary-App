@@ -5,6 +5,8 @@
   "providerVendor": "Delta Air Lines",
   "confirmationNumber": "JPNYOL",
   "bookingReference": "JPNYOL",
+  "departureAirportCode": "BOS",
+  "arrivalAirportCode": "TPE",
   "travelers": ["Bryan Duerk"],
   "totalCost": null,
   "currency": null,

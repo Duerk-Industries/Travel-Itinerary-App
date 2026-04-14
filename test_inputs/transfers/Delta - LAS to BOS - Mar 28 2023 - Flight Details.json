@@ -5,6 +5,8 @@
   "providerVendor": "Delta Air Lines",
   "confirmationNumber": "F8KMH9",
   "bookingReference": "F8KMH9",
+  "departureAirportCode": "LAS",
+  "arrivalAirportCode": "BOS",
   "travelers": ["Bryan Duerk"],
   "totalCost": null,
   "currency": null,

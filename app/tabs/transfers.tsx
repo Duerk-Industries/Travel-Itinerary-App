@@ -134,6 +134,12 @@ export type FlightCreateDraft = {
   bookingReference: string;
 };
 
+export const filterAirportOptionLabels = (options: string[], query: string): string[] => {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!normalizedQuery) return options.slice(0, 15);
+  return options.filter((opt) => opt.toLowerCase().includes(normalizedQuery));
+};
+
 const isValidTime = (value: string): boolean => {
   const match = value.match(/^(\d{1,2}):(\d{2})$/);
   if (!match) return false;
@@ -596,12 +602,15 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   const [airportTarget, setAirportTarget] = useState<'dep' | 'arr' | 'modal-dep' | 'modal-arr' | 'modal-layover' | null>(null);
   const [airportQuery, setAirportQuery] = useState('');
   const airportSelectInProgressRef = useRef(false);
+  const airportQueryRef = useRef('');
+  const airportTargetRef = useRef<'dep' | 'arr' | 'modal-dep' | 'modal-arr' | 'modal-layover' | null>(null);
   const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
   const [locationTarget, setLocationTarget] = useState<'dep' | 'arr' | 'modal-dep' | 'modal-arr' | 'modal-layover' | null>(null);
   const [showLocationOverlay, setShowLocationOverlay] = useState(false);
   const [locationFieldTarget, setLocationFieldTarget] = useState<'dep' | 'arr' | null>(null);
   const [locationSearch, setLocationSearch] = useState('');
   const locationSelectInProgressRef = useRef(false);
+  const locationSearchRef = useRef('');
   const [isAddingRow] = useState(false);
   const passengerDropdownRef = useRef<React.ElementRef<typeof TouchableOpacity> | null>(null);
   const modalDepLocationRef = useRef<React.ElementRef<typeof TextInput> | null>(null);
@@ -689,11 +698,26 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       return fallbackAirports;
     }
     if (airportOptions.length) {
-      const parsed = airportOptions.map(parseAirportLabel);
+      const parsed = filterAirportOptionLabels(airportOptions, query).map(parseAirportLabel);
       const filtered = parsed.filter((a) => `${a.name ?? ''} ${a.city ?? ''} ${a.iata_code ?? ''}`.toLowerCase().includes(q));
       return (filtered.length ? filtered : parsed).slice(0, 8);
     }
     return filterAirports(query);
+  };
+
+  const fetchAirportLabels = async (query: string): Promise<string[]> => {
+    const trimmed = query.trim();
+    if (!trimmed || !userToken || isWizard) return [];
+    try {
+      const res = await fetch(`${backendUrl}/api/transfers/locations?q=${encodeURIComponent(trimmed)}`, {
+        headers: { Authorization: `Bearer ${userToken}` },
+      });
+      if (!res.ok) return [];
+      const data = (await res.json()) as string[];
+      return Array.isArray(data) ? data : [];
+    } catch {
+      return [];
+    }
   };
 
   const measureContainerOffset = () => {
@@ -779,6 +803,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   ) => {
     setLocationTarget(target);
     setLocationSearch(text);
+    locationSearchRef.current = text.trim();
     if (!userToken && !isWizard) {
       setLocationSuggestions([]);
       return;
@@ -794,32 +819,22 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       return;
     }
     try {
-      await onSearchAirports(q);
-      const filtered = airportOptions.filter((opt) => opt.toLowerCase().includes(q.toLowerCase()));
-      if (filtered.length) {
-        setLocationSuggestions(filtered);
-        return;
-      }
+      void onSearchAirports(q);
     } catch {
-      // fall through to local fetch
+      // Ignore background cache-warming errors.
     }
-    try {
-      const res = await fetch(`${backendUrl}/api/transfers/locations?q=${encodeURIComponent(q)}`, {
-        headers: { Authorization: `Bearer ${userToken}` },
-      });
-      if (!res.ok) {
-        setLocationSuggestions([]);
-        return;
-      }
-      const data = (await res.json()) as string[];
-      if (data.length) {
-        setLocationSuggestions(data);
-      } else {
-        setLocationSuggestions(filterAirports(q).map((a) => formatAirportLabel(a)));
-      }
-    } catch {
-      setLocationSuggestions([]);
+    const remote = await fetchAirportLabels(q);
+    if (locationSearchRef.current !== q) return;
+    if (remote.length) {
+      setLocationSuggestions(remote);
+      return;
     }
+    const filtered = filterAirportOptionLabels(airportOptions, q);
+    if (filtered.length) {
+      setLocationSuggestions(filtered);
+      return;
+    }
+    setLocationSuggestions(filterAirports(q).map((a) => formatAirportLabel(a)));
   };
 
   const togglePassengerDropdown = () => {
@@ -841,6 +856,8 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   const showAirportDropdown = (target: 'dep' | 'arr' | 'modal-dep' | 'modal-arr' | 'modal-layover', node: any, query: string) => {
     setAirportTarget(target);
     setAirportQuery(query);
+    airportTargetRef.current = target;
+    airportQueryRef.current = query.trim();
     setAirportSuggestions(buildAirportSuggestions(query));
     const inWindow = target.startsWith('modal-');
     setAirportAnchorInWindow(inWindow);
@@ -853,6 +870,12 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       } catch {
         // ignore background errors
       }
+      void (async () => {
+        const remote = await fetchAirportLabels(query);
+        if (!remote.length) return;
+        if (airportTargetRef.current !== target || airportQueryRef.current !== query.trim()) return;
+        setAirportSuggestions(remote.map(parseAirportLabel).slice(0, 8));
+      })();
     }
     let nextAnchor = { x: 16, y: 120, width: 260, height: 40 };
     if (node?.measureInWindow) {
@@ -880,10 +903,12 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
 
   const hideAirportDropdown = () => {
     setAirportTarget(null);
+    airportTargetRef.current = null;
     setAirportAnchor(null);
     setAirportAnchorInWindow(false);
     setAirportSuggestions([]);
     setAirportQuery('');
+    airportQueryRef.current = '';
   };
 
   const applyTopAirportSuggestion = (
@@ -1230,7 +1255,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   useEffect(() => {
     if (!locationTarget || !locationSearch.trim()) return;
     if (airportOptions.length) {
-      const filtered = airportOptions.filter((opt) => opt.toLowerCase().includes(locationSearch.trim().toLowerCase()));
+      const filtered = filterAirportOptionLabels(airportOptions, locationSearch);
       if (filtered.length) setLocationSuggestions(filtered);
     }
   }, [airportOptions, locationTarget, locationSearch]);

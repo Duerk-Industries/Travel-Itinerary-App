@@ -5,6 +5,8 @@
   "providerVendor": "Austrian Airlines",
   "confirmationNumber": "SQB7RX",
   "bookingReference": "SQB7RX",
+  "departureAirportCode": "BOS",
+  "arrivalAirportCode": "VIE",
   "ticketNumber": "257-2164548895",
   "travelers": ["Vicky Duerk"],
   "totalCost": 610.7,

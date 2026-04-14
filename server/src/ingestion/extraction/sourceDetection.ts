@@ -34,6 +34,7 @@ const SOURCE_SIGNATURES: SourceSignature[] = [
   { sourceKey: 'tripadvisor', patterns: [/tripadvisor\.com/i] },
   { sourceKey: 'agoda', patterns: [/agoda\.com/i] },
   { sourceKey: 'google_flights', patterns: [/google\.com\/travel/i] },
+  { sourceKey: 'ryanair', patterns: [/\bryanair\b/i, /itinerary@ryanair\.com/i] },
   { sourceKey: 'united_airlines', patterns: [/united\.com/i, /united airlines/i] },
   { sourceKey: 'delta', patterns: [/delta\.com/i, /delta air lines/i] },
   { sourceKey: 'austrian_airlines', patterns: [/austrian airlines|operated by:\s*austrian|austrian air/i] },
@@ -83,7 +84,7 @@ export const detectItemType = (text: string): string => {
     && (/\bflight\s+\d+\s*:/i.test(text) || /\bairline confirmation\b/i.test(text));
   const isChaseHotelItinerary =
     /chase travel/i.test(text)
-    && /\bhotel confirmation\b/i.test(text)
+    && /\b(?:hotel|stay)\s+confirmation\b/i.test(text)
     && /\bcheck-in\s*:/i.test(text);
   if (isChaseHotelItinerary) {
     return 'hotel';
@@ -121,16 +122,15 @@ export const detectItemType = (text: string): string => {
     return 'tour_activity';
   }
   if (hasCarRentalSignal) return 'car_rental';
-  if (hasRailSignal) return 'rail';
   if (hasPrivateTransferSignal) return 'ferry_bus_transfer';
   if (hasHotelSignal && !hasActivitySignal && !hasPrivateTransferSignal && !hasRailSignal) {
     return 'hotel';
   }
   if (hasStrongFlightSignal || hasFlightRouteSignal) {
-    if (hasRailSignal) return 'rail';
     if (/\b(ferry|bus transfer|coach)\b/.test(lower)) return 'ferry_bus_transfer';
     return 'flight';
   }
+  if (hasRailSignal) return 'rail';
   if (/\brestaurant\b/.test(lower)) return 'restaurant_reservation';
   if (hasEventTicketSignal) return 'event_ticket';
   if (hasActivitySignal) return 'tour_activity';

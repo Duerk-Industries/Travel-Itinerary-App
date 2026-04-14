@@ -1,0 +1,408 @@
+import fs from 'fs';
+import path from 'path';
+import axios from 'axios';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+type DestinationRow = {
+  destination: string;
+  country: string;
+};
+
+type Coordinate = {
+  lat: number;
+  lng: number;
+};
+
+type AirportCandidate = {
+  name: string;
+  label: string;
+  lat: number;
+  lng: number;
+};
+
+type TrainStationCandidate = {
+  name: string;
+  label: string;
+  lat: number;
+  lng: number;
+  sourceUrl: string | null;
+};
+
+type ProvenanceRow = {
+  destination: string;
+  country: string;
+  airport: string;
+  airportSource: string;
+  airportDistanceMiles: number | null;
+  trainStation: string;
+  trainStationSource: string | null;
+  trainStationDistanceMiles: number | null;
+};
+
+const DESTINATIONS_CSV_PATH = path.resolve(__dirname, '../server/data/destinations.csv');
+const ATTRACTIONS_CSV_PATH = path.resolve(__dirname, '../server/data/attractions_catalog.csv');
+const DESTINATION_QID_CACHE_PATH = path.resolve(__dirname, './destination_qid_cache.json');
+const DESTINATION_COORDINATE_CACHE_PATH = path.resolve(__dirname, './destination_coordinate_cache.json');
+const OUTPUT_CSV_PATH = path.resolve(__dirname, '../server/data/destination_transport_hubs.csv');
+const OUTPUT_PROVENANCE_PATH = path.resolve(__dirname, './destination_transport_hubs_sources.json');
+const AIRPORT_DATASET_URL = 'https://raw.githubusercontent.com/algolia/datasets/master/airports/airports.json';
+const AIRPORT_SOURCE_URL = AIRPORT_DATASET_URL;
+const WIKIDATA_API_URL = 'https://www.wikidata.org/w/api.php';
+const TRAIN_STATION_MAX_MILES = 50;
+const WIKIDATA_BATCH_SIZE = 50;
+
+const normalizeKey = (value: string): string =>
+  value
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+
+const quoteCsv = (value: string): string => {
+  const safe = String(value ?? '');
+  if (/[",\r\n]/.test(safe)) {
+    return `"${safe.replace(/"/g, '""')}"`;
+  }
+  return safe;
+};
+
+const toRadians = (degrees: number): number => (degrees * Math.PI) / 180;
+
+const haversineMiles = (a: Coordinate, b: Coordinate): number => {
+  const earthRadiusMiles = 3958.7613;
+  const dLat = toRadians(b.lat - a.lat);
+  const dLng = toRadians(b.lng - a.lng);
+  const sinLat = Math.sin(dLat / 2);
+  const sinLng = Math.sin(dLng / 2);
+  const lat1 = toRadians(a.lat);
+  const lat2 = toRadians(b.lat);
+  const arc =
+    (sinLat * sinLat)
+    + (Math.cos(lat1) * Math.cos(lat2) * sinLng * sinLng);
+  return 2 * earthRadiusMiles * Math.asin(Math.min(1, Math.sqrt(arc)));
+};
+
+const parseCsv = (text: string): string[][] => {
+  const rows: string[][] = [];
+  let currentRow: string[] = [];
+  let currentValue = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i += 1) {
+    const char = text[i];
+    const next = text[i + 1];
+
+    if (char === '"') {
+      if (inQuotes && next === '"') {
+        currentValue += '"';
+        i += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (char === ',' && !inQuotes) {
+      currentRow.push(currentValue);
+      currentValue = '';
+      continue;
+    }
+
+    if ((char === '\n' || char === '\r') && !inQuotes) {
+      if (char === '\r' && next === '\n') i += 1;
+      currentRow.push(currentValue);
+      rows.push(currentRow);
+      currentRow = [];
+      currentValue = '';
+      continue;
+    }
+
+    currentValue += char;
+  }
+
+  if (currentValue.length > 0 || currentRow.length > 0) {
+    currentRow.push(currentValue);
+    rows.push(currentRow);
+  }
+
+  return rows;
+};
+
+const parseDestinationRows = (): DestinationRow[] => {
+  const text = fs.readFileSync(DESTINATIONS_CSV_PATH, 'utf8');
+  const rows = parseCsv(text);
+  const header = rows[0] ?? [];
+  const destinationIndex = header.indexOf('Destination English Name');
+  const countryIndex = header.indexOf('Country');
+
+  if (destinationIndex < 0 || countryIndex < 0) {
+    throw new Error('destinations.csv is missing expected columns.');
+  }
+
+  return rows
+    .slice(1)
+    .map((row) => ({
+      destination: String(row[destinationIndex] ?? '').trim(),
+      country: String(row[countryIndex] ?? '').trim(),
+    }))
+    .filter((row) => row.destination && row.country);
+};
+
+const loadDestinationQids = (): Map<string, string> => {
+  const raw = JSON.parse(fs.readFileSync(DESTINATION_QID_CACHE_PATH, 'utf8')) as Record<string, string>;
+  return new Map(
+    Object.entries(raw)
+      .filter(([, qid]) => /^Q\d+$/i.test(String(qid)))
+      .map(([key, qid]) => [key, String(qid).toUpperCase()])
+  );
+};
+
+const loadDestinationCoordinateCache = (): Map<string, Coordinate> => {
+  if (!fs.existsSync(DESTINATION_COORDINATE_CACHE_PATH)) return new Map();
+  const raw = JSON.parse(fs.readFileSync(DESTINATION_COORDINATE_CACHE_PATH, 'utf8')) as Record<string, Coordinate>;
+  return new Map(
+    Object.entries(raw)
+      .filter(([, value]) => Number.isFinite(value?.lat) && Number.isFinite(value?.lng))
+      .map(([key, value]) => [key, { lat: Number(value.lat), lng: Number(value.lng) }])
+  );
+};
+
+const saveDestinationCoordinateCache = (cache: Map<string, Coordinate>): void => {
+  const serialized = Object.fromEntries(
+    Array.from(cache.entries()).sort(([left], [right]) => left.localeCompare(right))
+  );
+  fs.writeFileSync(DESTINATION_COORDINATE_CACHE_PATH, `${JSON.stringify(serialized, null, 2)}\n`, 'utf8');
+};
+
+const parseWikidataCoordinate = (value: unknown): Coordinate | null => {
+  const latitude = Number((value as any)?.latitude);
+  const longitude = Number((value as any)?.longitude);
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+  return { lat: latitude, lng: longitude };
+};
+
+const fetchDestinationCoordinates = async (
+  rows: DestinationRow[],
+  qidsByDestinationKey: Map<string, string>,
+  coordinateCache: Map<string, Coordinate>
+): Promise<Map<string, Coordinate>> => {
+  const keyByQid = new Map<string, string>();
+  for (const row of rows) {
+    const key = `${row.destination}::${row.country}`;
+    if (coordinateCache.has(key)) continue;
+    const qid = qidsByDestinationKey.get(key);
+    if (!qid) continue;
+    keyByQid.set(qid, key);
+  }
+
+  const qids = Array.from(keyByQid.keys());
+  for (let index = 0; index < qids.length; index += WIKIDATA_BATCH_SIZE) {
+    const batch = qids.slice(index, index + WIKIDATA_BATCH_SIZE);
+    const { data } = await axios.get(WIKIDATA_API_URL, {
+      timeout: 30000,
+      params: {
+        action: 'wbgetentities',
+        format: 'json',
+        ids: batch.join('|'),
+        props: 'claims',
+      },
+      headers: {
+        'User-Agent': 'Travel-Itinerary-App/1.0 (destination transport hubs generator)',
+      },
+    });
+
+    const entities = data?.entities ?? {};
+    for (const qid of batch) {
+      const claims = entities?.[qid]?.claims?.P625;
+      const coordinate = parseWikidataCoordinate(claims?.[0]?.mainsnak?.datavalue?.value);
+      const key = keyByQid.get(qid);
+      if (coordinate && key) {
+        coordinateCache.set(key, coordinate);
+      }
+    }
+
+    if ((index / WIKIDATA_BATCH_SIZE) % 10 === 0) {
+      console.log(`Resolved destination coordinates for ${Math.min(index + batch.length, qids.length)}/${qids.length} uncached destinations...`);
+    }
+  }
+
+  saveDestinationCoordinateCache(coordinateCache);
+  return coordinateCache;
+};
+
+const fetchAirportCandidates = async (): Promise<AirportCandidate[]> => {
+  const { data } = await axios.get(AIRPORT_DATASET_URL, {
+    timeout: 60000,
+    headers: {
+      'User-Agent': 'Travel-Itinerary-App/1.0 (destination transport hubs generator)',
+    },
+  });
+
+  if (!Array.isArray(data)) {
+    throw new Error('Unexpected airport dataset response.');
+  }
+
+  return data
+    .map((row: any) => {
+      const lat = Number(row?._geoloc?.lat ?? row?.lat);
+      const lng = Number(row?._geoloc?.lng ?? row?.lng);
+      const code = String(row?.iata_code ?? '').trim().toUpperCase();
+      const name = String(row?.name ?? '').trim();
+      const city = String(row?.city ?? '').trim();
+      if (!Number.isFinite(lat) || !Number.isFinite(lng) || !name) return null;
+      const label = code ? `${name} (${code})` : city ? `${name} - ${city}` : name;
+      return {
+        name,
+        label,
+        lat,
+        lng,
+      } satisfies AirportCandidate;
+    })
+    .filter((row): row is AirportCandidate => Boolean(row));
+};
+
+const isTrainStationName = (name: string): boolean => {
+  const lower = name.toLowerCase();
+  if (!/(railway station|train station|rail station|central railway station|central train station)/i.test(name)) {
+    return false;
+  }
+  if (/(power station|generating station|fire station|bus station|service station|police station|metro station|subway station|tram stop)/i.test(lower)) {
+    return false;
+  }
+  return true;
+};
+
+const parseTrainStationCandidates = (): TrainStationCandidate[] => {
+  const text = fs.readFileSync(ATTRACTIONS_CSV_PATH, 'utf8');
+  const rows = parseCsv(text);
+  const header = rows[0] ?? [];
+  const nameIndex = header.indexOf('name');
+  const sourceUrlIndex = header.indexOf('source_url');
+  const latIndex = header.indexOf('lat');
+  const lngIndex = header.indexOf('lon');
+  if (nameIndex < 0 || latIndex < 0 || lngIndex < 0) {
+    throw new Error('attractions_catalog.csv is missing expected columns.');
+  }
+
+  const deduped = new Map<string, TrainStationCandidate>();
+  for (const row of rows.slice(1)) {
+    const name = String(row[nameIndex] ?? '').trim();
+    const lat = Number(row[latIndex]);
+    const lng = Number(row[lngIndex]);
+    if (!name || !Number.isFinite(lat) || !Number.isFinite(lng) || !isTrainStationName(name)) continue;
+    const sourceUrl = sourceUrlIndex >= 0 ? String(row[sourceUrlIndex] ?? '').trim() || null : null;
+    const key = normalizeKey(name);
+    if (!deduped.has(key)) {
+      deduped.set(key, {
+        name,
+        label: name,
+        lat,
+        lng,
+        sourceUrl,
+      });
+    }
+  }
+
+  return Array.from(deduped.values());
+};
+
+const findNearest = <T extends { lat: number; lng: number }>(
+  origin: Coordinate,
+  candidates: T[],
+  maxMiles?: number
+): { candidate: T | null; distanceMiles: number | null } => {
+  let best: T | null = null;
+  let bestDistance = Number.POSITIVE_INFINITY;
+
+  for (const candidate of candidates) {
+    const distanceMiles = haversineMiles(origin, candidate);
+    if (distanceMiles < bestDistance) {
+      best = candidate;
+      bestDistance = distanceMiles;
+    }
+  }
+
+  if (!best || !Number.isFinite(bestDistance)) {
+    return { candidate: null, distanceMiles: null };
+  }
+  if (typeof maxMiles === 'number' && bestDistance > maxMiles) {
+    return { candidate: null, distanceMiles: null };
+  }
+  return { candidate: best, distanceMiles: bestDistance };
+};
+
+const main = async (): Promise<void> => {
+  const destinations = parseDestinationRows();
+  const qidsByDestinationKey = loadDestinationQids();
+  const coordinateCache = loadDestinationCoordinateCache();
+  const destinationCoordinates = await fetchDestinationCoordinates(destinations, qidsByDestinationKey, coordinateCache);
+  const airportCandidates = await fetchAirportCandidates();
+  const trainStationCandidates = parseTrainStationCandidates();
+
+  const outputRows: string[] = [
+    ['Destination', 'Airport', 'Train Station'].join(','),
+  ];
+  const provenanceRows: ProvenanceRow[] = [];
+
+  let missingCoordinates = 0;
+  for (const row of destinations) {
+    const key = `${row.destination}::${row.country}`;
+    const coordinate = destinationCoordinates.get(key);
+    if (!coordinate) {
+      missingCoordinates += 1;
+      outputRows.push([quoteCsv(row.destination), '', ''].join(','));
+      provenanceRows.push({
+        destination: row.destination,
+        country: row.country,
+        airport: '',
+        airportSource: AIRPORT_SOURCE_URL,
+        airportDistanceMiles: null,
+        trainStation: '',
+        trainStationSource: null,
+        trainStationDistanceMiles: null,
+      });
+      continue;
+    }
+
+    const nearestAirport = findNearest(coordinate, airportCandidates);
+    const nearestStation = findNearest(coordinate, trainStationCandidates, TRAIN_STATION_MAX_MILES);
+
+    const airportLabel = nearestAirport.candidate?.label ?? '';
+    const trainStationLabel = nearestStation.candidate?.label ?? '';
+
+    outputRows.push([
+      quoteCsv(row.destination),
+      quoteCsv(airportLabel),
+      quoteCsv(trainStationLabel),
+    ].join(','));
+
+    provenanceRows.push({
+      destination: row.destination,
+      country: row.country,
+      airport: airportLabel,
+      airportSource: AIRPORT_SOURCE_URL,
+      airportDistanceMiles: nearestAirport.distanceMiles == null ? null : Number(nearestAirport.distanceMiles.toFixed(2)),
+      trainStation: trainStationLabel,
+      trainStationSource: nearestStation.candidate?.sourceUrl ?? null,
+      trainStationDistanceMiles: nearestStation.distanceMiles == null ? null : Number(nearestStation.distanceMiles.toFixed(2)),
+    });
+  }
+
+  fs.writeFileSync(OUTPUT_CSV_PATH, `${outputRows.join('\n')}\n`, 'utf8');
+  fs.writeFileSync(OUTPUT_PROVENANCE_PATH, `${JSON.stringify(provenanceRows, null, 2)}\n`, 'utf8');
+
+  console.log(`Wrote ${destinations.length} rows to ${OUTPUT_CSV_PATH}`);
+  console.log(`Wrote provenance to ${OUTPUT_PROVENANCE_PATH}`);
+  console.log(`Missing destination coordinates: ${missingCoordinates}`);
+  console.log(`Airport dataset source: ${AIRPORT_SOURCE_URL}`);
+  console.log('Destination coordinate source: https://www.wikidata.org/w/api.php?action=help&modules=wbgetentities');
+};
+
+main().catch((error) => {
+  console.error('Failed to generate destination transport hubs CSV:', error);
+  process.exitCode = 1;
+});

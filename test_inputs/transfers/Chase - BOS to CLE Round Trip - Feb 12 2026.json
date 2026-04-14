@@ -5,6 +5,8 @@
   "providerVendor": "Delta Air Lines",
   "tripReservationId": "1011800549",
   "confirmationNumber": "GF2AJE",
+  "departureAirportCode": "BOS",
+  "arrivalAirportCode": "CLE",
   "travelers": ["Bryan Duerk"],
   "totalCost": 136.98,
   "currency": "USD",

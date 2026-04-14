@@ -1,0 +1,13 @@
+{
+  "itemType": "flight",
+  "confirmationNumber": "N2N5JT",
+  "bookingReference": "N2N5JT",
+  "departureAirportCode": "BGY",
+  "arrivalAirportCode": "OTP",
+  "departureDate": "2026-09-05",
+  "departureLocation": "Milan (Bergamo)",
+  "arrivalLocation": "Bucharest (Otopeni)",
+  "transferType": "Flight",
+  "totalCost": 124.58,
+  "currency": "USD"
+}

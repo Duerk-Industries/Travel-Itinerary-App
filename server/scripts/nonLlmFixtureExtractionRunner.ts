@@ -15,6 +15,7 @@ const providerFromFilename = (filename: string): string => {
   if (lower.includes('guruwalk')) return 'support@guruwalk.com';
   if (lower.includes('klook')) return 'support-noreply@klook.com';
   if (lower.includes('antelope') || lower.includes('fareharbor')) return 'messages@fareharbor.com';
+  if (lower.includes('ryanair')) return 'itinerary@ryanair.com';
   if (lower.includes('chase') || lower.includes('trip id')) return 'donotreply@chasetravel.com';
   return 'fixtures@example.com';
 };

@@ -4,6 +4,8 @@
   "providerVendor": "Lao Airlines",
   "tripReservationId": "1005017403",
   "confirmationNumber": "NGMDB9",
+  "departureAirportCode": "HAN",
+  "arrivalAirportCode": "LPQ",
   "travelers": ["BRYAN DUERK", "Vicky Duerk"],
   "totalCost": 591.2,
   "currency": "USD",

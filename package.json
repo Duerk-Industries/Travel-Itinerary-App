@@ -29,6 +29,7 @@
     "accounts:seed": "tsx scripts/create-test-accounts.ts",
     "ingestion:debug-pdf": "tsx scripts/debug-ingestion-pdf.ts",
     "destinations:generate": "tsx scripts/generate_destinations_csv.ts",
+    "transport-hubs:generate": "tsx scripts/generate_destination_transport_hubs_csv.ts",
     "attractions:generate": "tsx server/scripts/generate_curated_attractions.ts",
     "attractions:backfill-geo": "tsx server/scripts/backfill_attractions_geography.ts",
     "catalog:generate": "npm run destinations:generate && npm run attractions:generate"

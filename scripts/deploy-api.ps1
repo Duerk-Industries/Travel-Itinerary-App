@@ -3,6 +3,7 @@ $ErrorActionPreference = 'Stop'
 $ServiceName = if ($env:SERVICE_NAME) { $env:SERVICE_NAME } else { 'travel-itinerary-app' }
 $Region = if ($env:REGION) { $env:REGION } else { 'us-east5' }
 $SourceDir = if ($env:SOURCE_DIR) { $env:SOURCE_DIR } else { 'server' }
+$Memory = if ($env:MEMORY) { $env:MEMORY } else { '1Gi' }
 $EnvFile = if ($env:ENV_FILE) { $env:ENV_FILE } else { '' }
 $SecretsFile = if ($env:SECRETS_FILE) { $env:SECRETS_FILE } else { '' }
 $Secrets = if ($env:SECRETS) { $env:SECRETS } else { '' }
@@ -116,6 +117,7 @@ Write-Host "Deploying Cloud Run service source code..."
 Write-Host "  Service: $ServiceName"
 Write-Host "  Region: $Region"
 Write-Host "  Source: $SourceDir"
+Write-Host "  Memory: $Memory"
 
 if (-not $EnvFile) {
   if (Test-Path -LiteralPath 'server/.env') {
@@ -208,6 +210,7 @@ if ($secretMap.Count -gt 0) {
 }
 
 $cmd = @('run', 'deploy', $ServiceName, '--source', $SourceDir, '--region', $Region)
+$cmd += @('--memory', $Memory)
 if ($envArg) { $cmd += @('--update-env-vars', $envArg) }
 if ($secretsArg) { $cmd += @('--set-secrets', $secretsArg) }
 if ($secretMap.Count -gt 0) { $cmd += @('--remove-env-vars', ($secretMap.Keys -join ',')) }
@@ -232,21 +235,21 @@ if (-not $SkipFirestoreIndexes) {
   Write-Host "Skipping Firestore index deployment because SKIP_FIRESTORE_INDEXES=1."
 }
 
-if ($envKeys.Count -gt 0) {
-  Write-Host "Removing legacy secret bindings for .env-managed keys..."
-  $migrateCmd = @('run', 'services', 'update', $ServiceName, '--region', $Region, '--remove-secrets', ($envKeys -join ','))
-  & gcloud @migrateCmd
-  if ($LASTEXITCODE -ne 0) {
-    Write-Error "Legacy secret removal failed with gcloud exit code $LASTEXITCODE."
-    exit $LASTEXITCODE
-  }
-}
-
 & gcloud @cmd
 
 if ($LASTEXITCODE -ne 0) {
   Write-Error "API deployment failed with gcloud exit code $LASTEXITCODE."
   exit $LASTEXITCODE
+}
+
+if ($envKeys.Count -gt 0) {
+  Write-Host "Removing legacy secret bindings for .env-managed keys..."
+  $migrateCmd = @('run', 'services', 'update', $ServiceName, '--region', $Region, '--remove-secrets', ($envKeys -join ','), '--memory', $Memory)
+  & gcloud @migrateCmd
+  if ($LASTEXITCODE -ne 0) {
+    Write-Error "Legacy secret removal failed with gcloud exit code $LASTEXITCODE."
+    exit $LASTEXITCODE
+  }
 }
 
 Write-Host "API deployment completed."

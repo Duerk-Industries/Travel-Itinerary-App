@@ -4,6 +4,8 @@
   "providerVendor": "JetBlue Airways",
   "tripReservationId": "XVMGKBFT7",
   "confirmationNumber": "SJCKCS",
+  "departureAirportCode": "BOS",
+  "arrivalAirportCode": "LAX",
   "travelers": ["BRYAN Edward Duerk", "Vicky Duerk", "Tristan Duerk"],
   "totalCost": 1257.6,
   "currency": "USD",

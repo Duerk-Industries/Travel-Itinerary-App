@@ -236,6 +236,24 @@ const parseCurrencyAmount = (text: string): { amount: number | null; currency: s
   return { amount: Number.isFinite(amount) ? amount : null, currency };
 };
 
+const parseTrailingCurrencyAmount = (text: string): { amount: number | null; currency: string | null } => {
+  const match = text.match(/\b([0-9]+(?:[.,][0-9]{2})?)\s*(USD|EUR|GBP)\b/i);
+  if (!match) return { amount: null, currency: null };
+  const amount = Number(match[1].replace(/,/g, ''));
+  const currency = match[2].toUpperCase();
+  return { amount: Number.isFinite(amount) ? amount : null, currency };
+};
+
+const extractRyanairTravelerNames = (text: string): string[] => {
+  const segment = text.match(/Passenger\(s\):\s*([\s\S]{1,500}?)(?=\s+Receipt:|\s+Total price|\s+Check in now|\s+Need to make a change\?|$)/i)?.[1] ?? '';
+  const names = Array.from(segment.matchAll(/\b(?:Mr|Mrs|Ms|Miss)\.?\s+([A-Z][A-Z' -]+(?:\s+[A-Z][A-Z' -]+){1,3})/g))
+    .map((match) => toTitleCaseWords(match[1]));
+  return Array.from(new Set(names)).slice(0, 6);
+};
+
+const dateOnlyToIsoMidday = (value: string | null | undefined): string | null =>
+  value ? new Date(`${value}T12:00:00Z`).toISOString() : null;
+
 const extractActivityDateTime = (text: string): { date: string | null; time: string | null } => {
   const patterns: Array<RegExp> = [
     /\bfor\s+(20\d{2}-\d{2}-\d{2})\s+at\s+(\d{1,2}:\d{2})\b/i,
@@ -391,7 +409,7 @@ const extractBuiltInSourceResult = async (
             ? 'flight'
             : itemType)
       : sourceKey === 'chase_travel'
-        ? (/\bhotel confirmation\b/i.test(text) && /\bcheck-in\s*:/i.test(text)
+        ? (/\b(?:hotel|stay)\s+confirmation\b/i.test(text) && /\bcheck-in\s*:/i.test(text)
             ? 'hotel'
             : /\b(?:departure flight|return flight|airline confirmation)\b/i.test(text)
               ? 'flight'
@@ -562,12 +580,23 @@ const extractBuiltInSourceResult = async (
     const deltaUpcoming = text.match(
       /([A-Za-z]+,\s+[A-Za-z]+\s+\d{1,2})\s+([A-Z]{3})\s+([A-Z]{3})\s+Confirmation Number\s+([A-Z0-9]{5,})/i
     );
+    const deltaRouteCodes = text.match(/\b([A-Z]{3})-([A-Z]{3})\b/);
     if (confirmationNumber) {
       const departureDate =
         toDateOnlyLoose(deltaTripDetails?.[1] ?? null)
         ?? toDateOnlyLoose(deltaReceipt?.[1] ? `${deltaReceipt[1]}${text.match(/(\d{2}JUL\d{2})/i)?.[1]?.slice(-2) ?? ''}` : null)
         ?? toDateOnlyLoose(deltaUpcoming?.[1] ?? null);
       const arrivalDate = toDateOnlyLoose(deltaTripDetails?.[6] ?? null) ?? departureDate;
+      const departureAirportCode =
+        normalizeSpace(deltaTripDetails?.[2])
+        || normalizeSpace(deltaUpcoming?.[2])
+        || normalizeSpace(deltaRouteCodes?.[1])
+        || null;
+      const arrivalAirportCode =
+        normalizeSpace(deltaTripDetails?.[4])
+        || normalizeSpace(deltaUpcoming?.[3])
+        || normalizeSpace(deltaRouteCodes?.[2])
+        || null;
       const departureLocation =
         normalizeSpace(deltaTripDetails?.[2])
         || normalizeSpace(deltaReceipt?.[2])
@@ -598,11 +627,11 @@ const extractBuiltInSourceResult = async (
           bookingReference: confirmationNumber,
           departureDate,
           departureLocation,
-          departureAirportCode: normalizeSpace(departureLocation),
+          departureAirportCode,
           departureTime,
           arrivalDate,
           arrivalLocation,
-          arrivalAirportCode: normalizeSpace(arrivalLocation),
+          arrivalAirportCode,
           arrivalTime,
           flightNumber,
           transferType: 'Flight',
@@ -651,23 +680,81 @@ const extractBuiltInSourceResult = async (
     }
   }
 
+  if (sourceKey === 'ryanair' && effectiveItemType === 'flight') {
+    const confirmationNumber = text.match(/Reservation:\s*([A-Z0-9]{5,})/i)?.[1] ?? null;
+    const routeMatch = text.match(/\b([A-Z][A-Za-z .'-]+?\s+\([A-Za-z .'-]+\))\s*-\s*([A-Z][A-Za-z .'-]+?\s+\([A-Za-z .'-]+\))/);
+    const airportCodes = text.match(/\(([A-Z]{3})\)\s*-\s*\(([A-Z]{3})\)/);
+    const departureDate = toDateOnlyLoose(text.match(/\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun),?\s+(\d{1,2}\s+[A-Za-z]{3}\s+\d{2})\b/i)?.[1] ?? null);
+    const departureTime = normalizeOutputTime(text.match(/Departure time\s*-\s*(\d{1,2}:\d{2})/i)?.[1] ?? null);
+    const arrivalTime = normalizeOutputTime(text.match(/Arrival time\s*-\s*(\d{1,2}:\d{2})/i)?.[1] ?? null);
+    const flightNumber = text.match(/\b(FR\s*\d{1,4})\b/i)?.[1]?.replace(/\s+/g, '') ?? null;
+    const { amount, currency } = parseTrailingCurrencyAmount(text.match(/Receipt:\s*[\s\S]{0,200}/i)?.[0] ?? text);
+    const travelerNames = extractRyanairTravelerNames(text);
+
+    if (confirmationNumber && routeMatch && departureDate) {
+      return directCandidateResult(doc, config, {
+        itemType: 'flight',
+        providerVendor: 'Ryanair',
+        confirmationNumber,
+        confidenceScore: 0.94,
+        startDateTimeUtcOverride: dateOnlyToIsoMidday(departureDate),
+        travelerNamesOverride: travelerNames.length ? travelerNames : undefined,
+        extractedFields: {
+          providerVendor: 'Ryanair',
+          confirmationNumber,
+          bookingReference: confirmationNumber,
+          departureDate,
+          departureLocation: normalizeSpace(routeMatch[1]),
+          departureAirportCode: airportCodes?.[1] ?? null,
+          departureTime,
+          arrivalDate: departureDate,
+          arrivalLocation: normalizeSpace(routeMatch[2]),
+          arrivalAirportCode: airportCodes?.[2] ?? null,
+          arrivalTime,
+          flightNumber,
+          transferType: 'Flight',
+          totalCost: amount,
+          currency,
+          status: 'Booked',
+        },
+      });
+    }
+  }
+
   if (sourceKey === 'chase_travel') {
     if (effectiveItemType === 'hotel') {
-      const confirmationNumber = text.match(/Hotel confirmation:\s*([A-Z0-9]+)/i)?.[1] ?? null;
-      const name = normalizeSpace(text.match(/\bNon-refundable\s+([\s\S]{1,120}?)\s+Standard/i)?.[1] ?? text.match(/\bHotel confirmation:\s*[A-Z0-9]+\s+[^\n]*?\s+([A-Z][A-Za-z0-9 '&.-]{3,80})\s+Standard/i)?.[1]) || null;
+      const confirmationNumber =
+        text.match(/Hotel confirmation:\s*([A-Z0-9]+)/i)?.[1]
+        ?? text.match(/Stay confirmation:\s*([A-Z0-9]+)/i)?.[1]
+        ?? null;
+      const name = normalizeSpace(
+        text.match(/\bNon-refundable\s+([\s\S]{1,120}?)\s+Standard/i)?.[1]
+        ?? text.match(/\bHotel confirmation:\s*[A-Z0-9]+\s+[^\n]*?\s+([A-Z][A-Za-z0-9 '&.-]{3,80})\s+Standard/i)?.[1]
+        ?? text.match(/\bStay confirmation:\s*[A-Z0-9]+\s+([A-Z][A-Za-z0-9 '&.-]{3,100}?)\s+(?:Deluxe|Superior|Classic|Standard|Check-in:)/i)?.[1]
+      ) || null;
       if (confirmationNumber && name) {
+        const checkInDate = parseHotelDateValue(text.match(/Check-in:\s*([A-Za-z]{3},\s+[A-Za-z]{3}\s+\d{2},\s+\d{4}(?:,\s+\d{1,2}:\d{2}\s*[ap]m)?)/i)?.[1] ?? '');
+        const checkOutDate = parseHotelDateValue(text.match(/Check-out:\s*([A-Za-z]{3},\s+[A-Za-z]{3}\s+\d{2},\s+\d{4}(?:,\s+\d{1,2}:\d{2}\s*[ap]m)?)/i)?.[1] ?? '');
+        const freeCancelBy = parseHotelDateValue(text.match(/Free cancellation until\s+([A-Za-z]{3},\s+[A-Za-z]{3}\s+\d{2},\s+\d{4}(?:\s+\d{1,2}:\d{2}\s*[ap]m)?)/i)?.[1] ?? '');
         return directCandidateResult(doc, config, {
           itemType: 'hotel',
           providerVendor: 'Chase Travel',
           confirmationNumber,
           confidenceScore: 0.92,
+          startDateTimeUtcOverride: checkInDate,
+          endDateTimeUtcOverride: checkOutDate,
+          travelerNamesOverride: normalizeSpace(text.match(/Primary guest:\s*([A-Z][A-Z ]+)/i)?.[1]) ? [toTitleCaseWords(normalizeSpace(text.match(/Primary guest:\s*([A-Z][A-Z ]+)/i)?.[1] ?? ''))] : undefined,
           extractedFields: {
             name,
             confirmationNumber,
-            guestName: normalizeSpace(text.match(/Primary guest:\s*([A-Z][A-Za-z ]+)/i)?.[1]) || null,
-            address: normalizeSpace(text.match(/Free WiFi\s+([\s\S]{1,120}?)\s+Primary guest:/i)?.[1]) || null,
-            checkInDate: parseHotelDateValue(text.match(/Check-in:\s*([A-Za-z]{3},\s+[A-Za-z]{3}\s+\d{2},\s+\d{4})/i)?.[1] ?? ''),
-            checkOutDate: parseHotelDateValue(text.match(/Check-out:\s*([A-Za-z]{3},\s+[A-Za-z]{3}\s+\d{2},\s+\d{4})/i)?.[1] ?? ''),
+            guestName: normalizeSpace(text.match(/Primary guest:\s*([A-Z][A-Z ]+)/i)?.[1]) ? toTitleCaseWords(normalizeSpace(text.match(/Primary guest:\s*([A-Z][A-Z ]+)/i)?.[1] ?? '')) : null,
+            address: normalizeSpace(
+              text.match(/Check-out:\s*[^\n]*?(?:am|pm)\s+([\s\S]{1,140}?)(?=\s+Free cancellation|\s+Stay resort fee:|\s+Primary guest:)/i)?.[1]
+              ?? text.match(/Free WiFi\s+([\s\S]{1,120}?)\s+Primary guest:/i)?.[1]
+            ) || null,
+            checkInDate,
+            checkOutDate,
+            freeCancelBy,
             rooms: 1,
             totalCost: Number(text.match(/Trip total\s*\$([0-9.]+)/i)?.[1] ?? '0') || null,
             currency: 'USD',

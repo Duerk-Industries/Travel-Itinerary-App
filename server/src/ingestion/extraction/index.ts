@@ -802,8 +802,10 @@ export class RegexExtractor implements ExtractionStrategy {
     const hasWeakFlightSignal = /\b(departure|arrival)\b/.test(lower);
     let chaseFlightsFound = false;
     if (hasStrongFlightSignal || (hasWeakFlightSignal && !hasHotelSignal)) {
-      const transportItemType = /\b(train|rail)\b/.test(lower)
-        ? 'rail'
+      const transportItemType = hasStrongFlightSignal
+        ? 'flight'
+        : /\b(train|rail)\b/.test(lower)
+          ? 'rail'
         : /\b(ferry|bus transfer|coach)\b/.test(lower)
           ? 'ferry_bus_transfer'
           : 'flight';
