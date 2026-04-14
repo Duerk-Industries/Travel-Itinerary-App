@@ -2,9 +2,14 @@ import fs from 'fs';
 import path from 'path';
 import axios from 'axios';
 import { fileURLToPath } from 'url';
+import * as airportCatalogModule from '../server/src/services/airportCatalog';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const {
+  downloadNormalizedAirportDataset,
+} = ((airportCatalogModule as any).default ?? airportCatalogModule) as typeof import('../server/src/services/airportCatalog');
+type AirportCatalogRecord = import('../server/src/services/airportCatalog').AirportCatalogRecord;
 
 type DestinationRow = {
   destination: string;
@@ -17,10 +22,15 @@ type Coordinate = {
 };
 
 type AirportCandidate = {
+  iata_code: string;
   name: string;
+  city: string;
+  country: string;
   label: string;
   lat: number;
   lng: number;
+  is_international: boolean;
+  sourceUrl: string;
 };
 
 type TrainStationCandidate = {
@@ -35,6 +45,8 @@ type ProvenanceRow = {
   destination: string;
   country: string;
   airport: string;
+  airportIataCode: string;
+  airportName: string;
   airportSource: string;
   airportDistanceMiles: number | null;
   trainStation: string;
@@ -42,14 +54,17 @@ type ProvenanceRow = {
   trainStationDistanceMiles: number | null;
 };
 
+type DestinationTransportHubRow = ProvenanceRow;
+
 const DESTINATIONS_CSV_PATH = path.resolve(__dirname, '../server/data/destinations.csv');
 const ATTRACTIONS_CSV_PATH = path.resolve(__dirname, '../server/data/attractions_catalog.csv');
 const DESTINATION_QID_CACHE_PATH = path.resolve(__dirname, './destination_qid_cache.json');
 const DESTINATION_COORDINATE_CACHE_PATH = path.resolve(__dirname, './destination_coordinate_cache.json');
 const OUTPUT_CSV_PATH = path.resolve(__dirname, '../server/data/destination_transport_hubs.csv');
+const OUTPUT_JSON_PATH = path.resolve(__dirname, '../server/data/destination_transport_hubs.json');
+const AIRPORT_CODES_CSV_PATH = path.resolve(__dirname, '../server/data/airport_codes.csv');
+const AIRPORT_CODES_JSON_PATH = path.resolve(__dirname, '../server/data/airport_codes.json');
 const OUTPUT_PROVENANCE_PATH = path.resolve(__dirname, './destination_transport_hubs_sources.json');
-const AIRPORT_DATASET_URL = 'https://raw.githubusercontent.com/algolia/datasets/master/airports/airports.json';
-const AIRPORT_SOURCE_URL = AIRPORT_DATASET_URL;
 const WIKIDATA_API_URL = 'https://www.wikidata.org/w/api.php';
 const TRAIN_STATION_MAX_MILES = 50;
 const WIKIDATA_BATCH_SIZE = 50;
@@ -235,34 +250,35 @@ const fetchDestinationCoordinates = async (
 };
 
 const fetchAirportCandidates = async (): Promise<AirportCandidate[]> => {
-  const { data } = await axios.get(AIRPORT_DATASET_URL, {
-    timeout: 60000,
-    headers: {
-      'User-Agent': 'Travel-Itinerary-App/1.0 (destination transport hubs generator)',
-    },
-  });
+  const airports = await downloadNormalizedAirportDataset();
+  return airports
+    .filter((airport) => Number.isFinite(airport.lat) && Number.isFinite(airport.lng))
+    .map((airport) => ({
+      ...airport,
+      lat: Number(airport.lat),
+      lng: Number(airport.lng),
+      sourceUrl: airport.source_url,
+    }));
+};
 
-  if (!Array.isArray(data)) {
-    throw new Error('Unexpected airport dataset response.');
-  }
+const writeAirportCatalogOutputs = (airports: AirportCatalogRecord[]): void => {
+  const csvRows = [
+    ['iata_code', 'name', 'city', 'country', 'lat', 'lng', 'is_international', 'label', 'source_url'].join(','),
+    ...airports.map((airport) => [
+      quoteCsv(airport.iata_code),
+      quoteCsv(airport.name),
+      quoteCsv(airport.city),
+      quoteCsv(airport.country),
+      quoteCsv(airport.lat == null ? '' : String(airport.lat)),
+      quoteCsv(airport.lng == null ? '' : String(airport.lng)),
+      quoteCsv(airport.is_international ? 'true' : 'false'),
+      quoteCsv(airport.label),
+      quoteCsv(airport.source_url),
+    ].join(',')),
+  ];
 
-  return data
-    .map((row: any) => {
-      const lat = Number(row?._geoloc?.lat ?? row?.lat);
-      const lng = Number(row?._geoloc?.lng ?? row?.lng);
-      const code = String(row?.iata_code ?? '').trim().toUpperCase();
-      const name = String(row?.name ?? '').trim();
-      const city = String(row?.city ?? '').trim();
-      if (!Number.isFinite(lat) || !Number.isFinite(lng) || !name) return null;
-      const label = code ? `${name} (${code})` : city ? `${name} - ${city}` : name;
-      return {
-        name,
-        label,
-        lat,
-        lng,
-      } satisfies AirportCandidate;
-    })
-    .filter((row): row is AirportCandidate => Boolean(row));
+  fs.writeFileSync(AIRPORT_CODES_CSV_PATH, `${csvRows.join('\n')}\n`, 'utf8');
+  fs.writeFileSync(AIRPORT_CODES_JSON_PATH, `${JSON.stringify(airports, null, 2)}\n`, 'utf8');
 };
 
 const isTrainStationName = (name: string): boolean => {
@@ -341,12 +357,13 @@ const main = async (): Promise<void> => {
   const coordinateCache = loadDestinationCoordinateCache();
   const destinationCoordinates = await fetchDestinationCoordinates(destinations, qidsByDestinationKey, coordinateCache);
   const airportCandidates = await fetchAirportCandidates();
+  writeAirportCatalogOutputs(airportCandidates);
   const trainStationCandidates = parseTrainStationCandidates();
 
   const outputRows: string[] = [
     ['Destination', 'Airport', 'Train Station'].join(','),
   ];
-  const provenanceRows: ProvenanceRow[] = [];
+  const mergedRows: DestinationTransportHubRow[] = [];
 
   let missingCoordinates = 0;
   for (const row of destinations) {
@@ -355,11 +372,13 @@ const main = async (): Promise<void> => {
     if (!coordinate) {
       missingCoordinates += 1;
       outputRows.push([quoteCsv(row.destination), '', ''].join(','));
-      provenanceRows.push({
+      mergedRows.push({
         destination: row.destination,
         country: row.country,
         airport: '',
-        airportSource: AIRPORT_SOURCE_URL,
+        airportIataCode: '',
+        airportName: '',
+        airportSource: '',
         airportDistanceMiles: null,
         trainStation: '',
         trainStationSource: null,
@@ -380,11 +399,13 @@ const main = async (): Promise<void> => {
       quoteCsv(trainStationLabel),
     ].join(','));
 
-    provenanceRows.push({
+    mergedRows.push({
       destination: row.destination,
       country: row.country,
       airport: airportLabel,
-      airportSource: AIRPORT_SOURCE_URL,
+      airportIataCode: nearestAirport.candidate?.iata_code ?? '',
+      airportName: nearestAirport.candidate?.name ?? '',
+      airportSource: nearestAirport.candidate?.sourceUrl ?? '',
       airportDistanceMiles: nearestAirport.distanceMiles == null ? null : Number(nearestAirport.distanceMiles.toFixed(2)),
       trainStation: trainStationLabel,
       trainStationSource: nearestStation.candidate?.sourceUrl ?? null,
@@ -393,12 +414,15 @@ const main = async (): Promise<void> => {
   }
 
   fs.writeFileSync(OUTPUT_CSV_PATH, `${outputRows.join('\n')}\n`, 'utf8');
-  fs.writeFileSync(OUTPUT_PROVENANCE_PATH, `${JSON.stringify(provenanceRows, null, 2)}\n`, 'utf8');
+  fs.writeFileSync(OUTPUT_JSON_PATH, `${JSON.stringify(mergedRows, null, 2)}\n`, 'utf8');
+  fs.writeFileSync(OUTPUT_PROVENANCE_PATH, `${JSON.stringify(mergedRows, null, 2)}\n`, 'utf8');
 
   console.log(`Wrote ${destinations.length} rows to ${OUTPUT_CSV_PATH}`);
+  console.log(`Wrote merged JSON to ${OUTPUT_JSON_PATH}`);
+  console.log(`Wrote airport catalog CSV to ${AIRPORT_CODES_CSV_PATH}`);
+  console.log(`Wrote airport catalog JSON to ${AIRPORT_CODES_JSON_PATH}`);
   console.log(`Wrote provenance to ${OUTPUT_PROVENANCE_PATH}`);
   console.log(`Missing destination coordinates: ${missingCoordinates}`);
-  console.log(`Airport dataset source: ${AIRPORT_SOURCE_URL}`);
   console.log('Destination coordinate source: https://www.wikidata.org/w/api.php?action=help&modules=wbgetentities');
 };
 

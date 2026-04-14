@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import * as envLoaderModule from '../server/src/env_loader';
 import * as destinationCsvReconciliationModule from '../server/src/services/destinationCsvReconciliation';
 import largeCityCoverageModule from '../server/src/services/destinationLargeCityCoverage';
+import * as airportCatalogModule from '../server/src/services/airportCatalog';
 
 const { loadEnv } = ((envLoaderModule as any).default ?? envLoaderModule) as typeof import('../server/src/env_loader');
 loadEnv();
@@ -25,6 +26,9 @@ const {
   mergeLargeCitySeedSources: mergeLargeCitySeedSourcesFromService,
   normalizeSourceMatchKey: normalizeSourceMatchKeyFromService,
 } = largeCityCoverageModule as typeof import('../server/src/services/destinationLargeCityCoverage');
+const {
+  downloadNormalizedAirportDataset,
+} = ((airportCatalogModule as any).default ?? airportCatalogModule) as typeof import('../server/src/services/airportCatalog');
 type DestinationCsvRow = import('../server/src/services/destinationCsvReconciliation').DestinationCsvRow;
 const DEFAULT_COUNTRY_PROCESS_CONCURRENCY = 4;
 const DESTINATIONS_ATTRACTIONS_UPDATED_HEADER = 'Attractions Updated';
@@ -593,6 +597,46 @@ function buildSources(destinationName: string): string[] {
 
 function buildSourceList(destinationName: string, extraSources?: string[]): string[] {
   return Array.from(new Set([...buildSources(destinationName), ...(extraSources ?? [])]));
+}
+
+async function appendInternationalAirportDestinations(
+  destinations: Destination[],
+  sourceOverrides: Map<string, string[]>
+): Promise<{ rows: Destination[]; added: Destination[] }> {
+  const airports = await downloadNormalizedAirportDataset();
+  const rows = [...destinations];
+  const added: Destination[] = [];
+  const existingKeys = new Set(
+    rows.map((row) => getDestinationIdentityKey(row.Country, row['Destination English Name']))
+  );
+
+  for (const airport of airports) {
+    const city = airport.city.trim();
+    const country = airport.country.trim();
+    if (!airport.is_international || !city || !country) continue;
+    const key = getDestinationIdentityKey(country, city);
+    if (existingKeys.has(key)) continue;
+
+    const row: Destination = {
+      'Destination English Name': city,
+      Country: country,
+      'State/Provence': '',
+      'Nearest City': city,
+      'Destination Official Name': city,
+    };
+    rows.push(row);
+    added.push(row);
+    existingKeys.add(key);
+    sourceOverrides.set(key, buildSourceList(city, [airport.source_url]));
+  }
+
+  rows.sort((left, right) => {
+    const countryCompare = left.Country.localeCompare(right.Country);
+    if (countryCompare !== 0) return countryCompare;
+    return left['Destination English Name'].localeCompare(right['Destination English Name']);
+  });
+
+  return { rows, added };
 }
 
 function getCountryProcessConcurrency(): number {
@@ -1442,9 +1486,13 @@ async function main() {
   for (const [key, sources] of attractionSourceOverrides.entries()) {
     sourceOverrides.set(key, sources);
   }
+  const {
+    rows: airportBackfilledDestinations,
+    added: addedAirportBackfilledDestinations,
+  } = await appendInternationalAirportDestinations(reconciledDestinations, sourceOverrides);
   const destinationSources: DestinationSourceRecord[] = [];
 
-  for (const row of reconciledDestinations) {
+  for (const row of airportBackfilledDestinations) {
     const sources =
       sourceOverrides.get(getDestinationIdentityKey(row.Country, row['Destination English Name'])) ??
       buildSourceList(row['Destination English Name']);
@@ -1469,7 +1517,7 @@ async function main() {
 
   const lines = [
     header.map(csvEscape).join(','),
-    ...reconciledDestinations.map((row) =>
+    ...airportBackfilledDestinations.map((row) =>
       [
         row['Destination English Name'],
         row.Country,
@@ -1489,12 +1537,15 @@ async function main() {
   fs.writeFileSync(serverDataCsvPath, csvContent, 'utf8');
   fs.writeFileSync(sourcesPath, JSON.stringify(destinationSources, null, 2), 'utf8');
 
-  console.log(`Generated ${reconciledDestinations.length} destinations for ${countries.length} countries at ${serverDataCsvPath}.`);
+  console.log(`Generated ${airportBackfilledDestinations.length} destinations for ${countries.length} countries at ${serverDataCsvPath}.`);
   if (rejected.length > 0) {
     console.log(`Rejected ${rejected.length} destinations by quality gates.`);
   }
   if (attractionBackfilledDestinations.length > 0) {
     console.log(`Backfilled ${attractionBackfilledDestinations.length} destinations from attractions_catalog.csv.`);
+  }
+  if (addedAirportBackfilledDestinations.length > 0) {
+    console.log(`Backfilled ${addedAirportBackfilledDestinations.length} destinations from international airports.`);
   }
   await verifyDestinations(serverDataCsvPath);
 }

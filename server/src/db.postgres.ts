@@ -37,6 +37,7 @@ import {
 import { logError } from './logger';
 import { getEnvValue } from './env';
 import { downloadAirportDatasetForDailyRefresh } from './apis/airportDatasetCallers';
+import { normalizeAirportDataset } from './services/airportCatalog';
 import { getReservedUsernames } from './config/authFlags';
 import { getApiLimitsConfig } from './config/apiLimits';
 
@@ -6454,17 +6455,14 @@ export const refreshAirportsDaily = async (): Promise<void> => {
     return;
   }
 
-  const filtered = data
-    .filter((a) => typeof a.iata_code === 'string' && a.iata_code.length === 3)
-    .map((a) => ({
-      iata_code: a.iata_code,
-      name: a.name ?? '',
-      city: a.city ?? '',
-      country: a.country ?? '',
-      lat: typeof a._geoloc?.lat === 'number' ? a._geoloc.lat : null,
-      lng: typeof a._geoloc?.lng === 'number' ? a._geoloc.lng : null,
-    }))
-    .filter((a) => a.name && a.iata_code);
+  const filtered = normalizeAirportDataset(data).map((airport) => ({
+    iata_code: airport.iata_code,
+    name: airport.name,
+    city: airport.city,
+    country: airport.country,
+    lat: airport.lat,
+    lng: airport.lng,
+  }));
 
   if (!filtered.length) {
     console.warn('[airports] no records to process');
