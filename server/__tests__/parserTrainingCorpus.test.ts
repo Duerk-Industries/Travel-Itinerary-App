@@ -3,6 +3,7 @@ import {
   buildOssRawEmailExample,
   buildWeakTravelMiningExample,
   buildPublicMarkupExample,
+  extractWeakTravelMiningTextsFromHtml,
   extractJsonLdBlocks,
   flightReservationToLabelItem,
   parseFlightSummaryHtml,
@@ -132,6 +133,32 @@ describe('parserTrainingCorpus', () => {
     });
     expect(example.label.itemType).toBe('flight');
     expect(example.email.subject).toContain('Fwd: eTicket itinerary');
+  });
+
+  it('extracts travel-focused weak-mining text snippets from HTML', () => {
+    const snippets = extractWeakTravelMiningTextsFromHtml(`
+      <html><body>
+        <p>Ignore me</p>
+        <pre>
+          Your itinerary is confirmed.
+          Flight number AA120
+          Route: BOS-LAX
+          Confirmation: ZXCVB7
+        </pre>
+        <td>
+          Stay confirmation at Hotel Example.
+          Check-in 2027-05-01.
+          Check-out 2027-05-03.
+          Guest: Eva Green.
+          Address: 123 Example Street, Boston, MA.
+          Reservation reference: HOTEL123.
+        </td>
+      </body></html>
+    `);
+
+    expect(snippets).toHaveLength(2);
+    expect(snippets[0]).toContain('Flight number AA120');
+    expect(snippets[1]).toContain('Stay confirmation');
   });
 
   it('builds weak travel examples only when travel-specific signals align', () => {

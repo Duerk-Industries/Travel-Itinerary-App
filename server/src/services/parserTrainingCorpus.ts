@@ -772,6 +772,31 @@ export const parseFlightSummaryHtml = (html: string): Array<{
   return results;
 };
 
+export const extractWeakTravelMiningTextsFromHtml = (html: string): string[] => {
+  const candidates: string[] = [];
+  const seen = new Set<string>();
+  const push = (value: string) => {
+    const normalized = stripHtmlTags(value).replace(/\s+/g, ' ').trim();
+    if (!normalized || normalized.length < 80) return;
+    if (seen.has(normalized)) return;
+    seen.add(normalized);
+    candidates.push(normalized);
+  };
+
+  const prePattern = /<pre[^>]*>([\s\S]*?)<\/pre>/gi;
+  let match: RegExpExecArray | null;
+  while ((match = prePattern.exec(html)) !== null) {
+    push(match[1]);
+  }
+
+  const sectionPattern = /<(p|li|td)[^>]*>([\s\S]*?)<\/\1>/gi;
+  while ((match = sectionPattern.exec(html)) !== null) {
+    push(match[2]);
+  }
+
+  return candidates.slice(0, 50);
+};
+
 export const buildCuratedOpenTravelExample = (params: {
   title: string;
   provider: string;

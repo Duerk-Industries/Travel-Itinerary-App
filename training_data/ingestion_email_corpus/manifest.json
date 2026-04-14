@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-14T18:26:19.278Z",
+  "generatedAt": "2026-04-14T18:53:10.933Z",
   "publicSources": [
     {
       "itemType": "flight",
@@ -36,11 +36,11 @@
   "counts": {
     "public": 12,
     "curatedTravel": 8,
-    "weakTravel": 0,
+    "weakTravel": 8,
     "ossRaw": 12,
     "synthetic": 36,
-    "combined": 68,
-    "train": 58,
+    "combined": 76,
+    "train": 66,
     "validation": 10
   },
   "snapshots": [
@@ -61,6 +61,101 @@
       "url": "https://developers.google.com/workspace/gmail/markup/reference/train-reservation",
       "htmlPath": "C:\\Git\\Tristan\\Travel-Itinerary-App\\training_data\\ingestion_email_corpus\\gmail-train-reservation-markup.html",
       "blockCount": 5
+    }
+  ],
+  "weakTravelSources": [
+    {
+      "title": "Gmail Flight Reservation Markup",
+      "provider": "Google for Developers",
+      "url": "https://developers.google.com/workspace/gmail/markup/reference/flight-reservation",
+      "limit": 3,
+      "licenseHint": "Public travel reservation documentation snippet"
+    },
+    {
+      "title": "Gmail Hotel Reservation Markup",
+      "provider": "Google for Developers",
+      "url": "https://developers.google.com/workspace/gmail/markup/reference/hotel-reservation",
+      "limit": 3,
+      "licenseHint": "Public travel reservation documentation snippet"
+    },
+    {
+      "title": "Gmail Train Reservation Markup",
+      "provider": "Google for Developers",
+      "url": "https://developers.google.com/workspace/gmail/markup/reference/train-reservation",
+      "limit": 3,
+      "licenseHint": "Public travel reservation documentation snippet"
+    },
+    {
+      "title": "Schema.org FlightReservation",
+      "provider": "Schema.org",
+      "url": "https://schema.org/FlightReservation",
+      "limit": 2,
+      "licenseHint": "Public travel reservation schema reference"
+    },
+    {
+      "title": "Schema.org LodgingReservation",
+      "provider": "Schema.org",
+      "url": "https://schema.org/LodgingReservation",
+      "limit": 2,
+      "licenseHint": "Public travel reservation schema reference"
+    },
+    {
+      "title": "Schema.org TrainReservation",
+      "provider": "Schema.org",
+      "url": "https://schema.org/TrainReservation",
+      "limit": 2,
+      "licenseHint": "Public travel reservation schema reference"
+    },
+    {
+      "title": "flight-reservation-emails summary",
+      "provider": "JohannesBuchner/flight-reservation-emails",
+      "url": "https://raw.githubusercontent.com/JohannesBuchner/flight-reservation-emails/master/summary.html",
+      "limit": 6,
+      "licenseHint": "Open-source curated travel summary fixture"
+    }
+  ],
+  "weakTravelSnapshots": [
+    {
+      "title": "Gmail Flight Reservation Markup",
+      "url": "https://developers.google.com/workspace/gmail/markup/reference/flight-reservation",
+      "snippetCount": 3,
+      "exampleCount": 0
+    },
+    {
+      "title": "Gmail Hotel Reservation Markup",
+      "url": "https://developers.google.com/workspace/gmail/markup/reference/hotel-reservation",
+      "snippetCount": 3,
+      "exampleCount": 0
+    },
+    {
+      "title": "Gmail Train Reservation Markup",
+      "url": "https://developers.google.com/workspace/gmail/markup/reference/train-reservation",
+      "snippetCount": 3,
+      "exampleCount": 3
+    },
+    {
+      "title": "Schema.org FlightReservation",
+      "url": "https://schema.org/FlightReservation",
+      "snippetCount": 2,
+      "exampleCount": 1
+    },
+    {
+      "title": "Schema.org LodgingReservation",
+      "url": "https://schema.org/LodgingReservation",
+      "snippetCount": 2,
+      "exampleCount": 1
+    },
+    {
+      "title": "Schema.org TrainReservation",
+      "url": "https://schema.org/TrainReservation",
+      "snippetCount": 2,
+      "exampleCount": 1
+    },
+    {
+      "title": "flight-reservation-emails summary",
+      "url": "https://raw.githubusercontent.com/JohannesBuchner/flight-reservation-emails/master/summary.html",
+      "snippetCount": 6,
+      "exampleCount": 2
     }
   ],
   "ossRawArchives": [

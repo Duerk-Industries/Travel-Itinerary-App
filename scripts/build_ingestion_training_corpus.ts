@@ -14,6 +14,7 @@ const {
   buildWeakTravelMiningExample,
   buildPublicMarkupExample,
   buildSyntheticExamples,
+  extractWeakTravelMiningTextsFromHtml,
   extractJsonLdBlocks,
   parseFlightSummaryHtml,
 } = ((parserTrainingCorpusModule as any).default ?? parserTrainingCorpusModule) as typeof import('../server/src/services/parserTrainingCorpus');
@@ -65,6 +66,44 @@ const REFERENCE_URLS = [
   'https://schema.org/FlightReservation',
   'https://schema.org/LodgingReservation',
   'https://schema.org/TrainReservation',
+];
+
+const WEAK_TRAVEL_WEB_SOURCES = [
+  ...PUBLIC_SOURCES.map((source) => ({
+    title: source.title,
+    provider: source.provider,
+    url: source.url,
+    limit: 3,
+    licenseHint: 'Public travel reservation documentation snippet',
+  })),
+  {
+    title: 'Schema.org FlightReservation',
+    provider: 'Schema.org',
+    url: 'https://schema.org/FlightReservation',
+    limit: 2,
+    licenseHint: 'Public travel reservation schema reference',
+  },
+  {
+    title: 'Schema.org LodgingReservation',
+    provider: 'Schema.org',
+    url: 'https://schema.org/LodgingReservation',
+    limit: 2,
+    licenseHint: 'Public travel reservation schema reference',
+  },
+  {
+    title: 'Schema.org TrainReservation',
+    provider: 'Schema.org',
+    url: 'https://schema.org/TrainReservation',
+    limit: 2,
+    licenseHint: 'Public travel reservation schema reference',
+  },
+  {
+    title: 'flight-reservation-emails summary',
+    provider: 'JohannesBuchner/flight-reservation-emails',
+    url: 'https://raw.githubusercontent.com/JohannesBuchner/flight-reservation-emails/master/summary.html',
+    limit: 6,
+    licenseHint: 'Open-source curated travel summary fixture',
+  },
 ];
 
 const OSS_RAW_ARCHIVES = [
@@ -191,6 +230,7 @@ const main = async () => {
   const ossRawExamples: ParserTrainingExample[] = [];
   const weakTravelExamples: ParserTrainingExample[] = [];
   const sourceSnapshots: Array<{ title: string; url: string; htmlPath: string; blockCount: number }> = [];
+  const weakTravelSnapshots: Array<{ title: string; url: string; snippetCount: number; exampleCount: number }> = [];
 
   for (const source of PUBLIC_SOURCES) {
     const html = await fetchHtml(source.url);
@@ -242,7 +282,6 @@ const main = async () => {
   ensureDir(CACHE_DIR);
   const canUseTar = ensureTarAvailable();
   const perArchiveLimit = Math.max(1, Math.floor((syntheticCounts.oss || 0) / Math.max(OSS_RAW_ARCHIVES.length, 1)));
-  const weakPerArchiveScan = Math.max(100, syntheticCounts.weak * 80);
 
   if (canUseTar && syntheticCounts.oss > 0) {
     for (const archive of OSS_RAW_ARCHIVES) {
@@ -267,25 +306,51 @@ const main = async () => {
           })
         );
       }
+    }
+  }
 
-      if (syntheticCounts.weak > 0 && archive.weakMine) {
-        for (const entry of listArchiveEntries(archivePath).slice(0, weakPerArchiveScan)) {
-          if (weakTravelExamples.length >= syntheticCounts.weak) break;
-          if (entry.endsWith('/')) continue;
-          const rawEmail = extractArchiveEntry(archivePath, entry);
-          const example = buildWeakTravelMiningExample({
-            rawEmail,
-            title: `${archive.title}: ${path.basename(entry)}`,
-            provider: archive.provider,
-            url: `${archive.url}#${entry}`,
-            harvestedAt,
-            licenseHint: archive.licenseHint,
-          });
-          if (example) {
-            weakTravelExamples.push(example);
-          }
+  if (syntheticCounts.weak > 0) {
+    for (const source of WEAK_TRAVEL_WEB_SOURCES) {
+      if (weakTravelExamples.length >= syntheticCounts.weak) break;
+
+      const html = await fetchHtml(source.url);
+      const snippets = extractWeakTravelMiningTextsFromHtml(html).slice(0, source.limit);
+      let exampleCount = 0;
+
+      for (const [index, snippet] of snippets.entries()) {
+        if (weakTravelExamples.length >= syntheticCounts.weak) break;
+
+        // Wrap public travel snippets as simple raw emails so the weak miner exercises the same path as real messages.
+        const rawEmail = [
+          `From: weak-mined-${index + 1}@example.com`,
+          'To: traveler@example.com',
+          `Subject: ${source.title}`,
+          'Content-Type: text/plain; charset=UTF-8',
+          '',
+          snippet,
+        ].join('\n');
+
+        const example = buildWeakTravelMiningExample({
+          rawEmail,
+          title: `${source.title} snippet ${index + 1}`,
+          provider: source.provider,
+          url: `${source.url}#snippet-${index + 1}`,
+          harvestedAt,
+          licenseHint: source.licenseHint,
+        });
+
+        if (example) {
+          weakTravelExamples.push(example);
+          exampleCount += 1;
         }
       }
+
+      weakTravelSnapshots.push({
+        title: source.title,
+        url: source.url,
+        snippetCount: snippets.length,
+        exampleCount,
+      });
     }
   }
 
@@ -310,6 +375,8 @@ const main = async () => {
       validation: validationExamples.length,
     },
     snapshots: sourceSnapshots,
+    weakTravelSources: WEAK_TRAVEL_WEB_SOURCES,
+    weakTravelSnapshots,
     ossRawArchives: OSS_RAW_ARCHIVES,
     tarAvailable: canUseTar,
   });
@@ -333,7 +400,7 @@ const main = async () => {
       'Files:',
       '- `public_examples.jsonl`: examples harvested from official Gmail reservation markup docs.',
       '- `curated_travel_examples.jsonl`: curated open travel-specific fixtures harvested from open-source travel parser example material.',
-      '- `weak_travel_examples.jsonl`: weakly supervised travel emails mined from OSS/public corpora using stricter travel heuristics.',
+      '- `weak_travel_examples.jsonl`: weakly supervised travel emails mined from travel-focused public web sources using stricter travel heuristics.',
       '- `oss_raw_examples.jsonl`: curated public raw-email examples harvested from OSS/public corpora and labeled as `generic_note` noise examples.',
       '- `synthetic_examples.jsonl`: synthetic flight, hotel, and rail emails rendered into raw MIME emails with parser labels.',
       '- `combined_examples.jsonl`: public + synthetic examples.',
