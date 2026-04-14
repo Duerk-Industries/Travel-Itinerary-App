@@ -1,0 +1,60 @@
+{
+  "generatedAt": "2026-04-14T16:49:39.574Z",
+  "publicSources": [
+    {
+      "itemType": "flight",
+      "title": "Gmail Flight Reservation Markup",
+      "provider": "Google for Developers",
+      "url": "https://developers.google.com/workspace/gmail/markup/reference/flight-reservation"
+    },
+    {
+      "itemType": "hotel",
+      "title": "Gmail Hotel Reservation Markup",
+      "provider": "Google for Developers",
+      "url": "https://developers.google.com/workspace/gmail/markup/reference/hotel-reservation"
+    },
+    {
+      "itemType": "rail",
+      "title": "Gmail Train Reservation Markup",
+      "provider": "Google for Developers",
+      "url": "https://developers.google.com/workspace/gmail/markup/reference/train-reservation"
+    }
+  ],
+  "referenceUrls": [
+    "https://schema.org/FlightReservation",
+    "https://schema.org/LodgingReservation",
+    "https://schema.org/TrainReservation"
+  ],
+  "syntheticCounts": {
+    "flight": 12,
+    "hotel": 12,
+    "rail": 12
+  },
+  "counts": {
+    "public": 12,
+    "synthetic": 36,
+    "combined": 48,
+    "train": 41,
+    "validation": 7
+  },
+  "snapshots": [
+    {
+      "title": "Gmail Flight Reservation Markup",
+      "url": "https://developers.google.com/workspace/gmail/markup/reference/flight-reservation",
+      "htmlPath": "C:\\Git\\Tristan\\Travel-Itinerary-App\\training_data\\ingestion_email_corpus\\gmail-flight-reservation-markup.html",
+      "blockCount": 6
+    },
+    {
+      "title": "Gmail Hotel Reservation Markup",
+      "url": "https://developers.google.com/workspace/gmail/markup/reference/hotel-reservation",
+      "htmlPath": "C:\\Git\\Tristan\\Travel-Itinerary-App\\training_data\\ingestion_email_corpus\\gmail-hotel-reservation-markup.html",
+      "blockCount": 1
+    },
+    {
+      "title": "Gmail Train Reservation Markup",
+      "url": "https://developers.google.com/workspace/gmail/markup/reference/train-reservation",
+      "htmlPath": "C:\\Git\\Tristan\\Travel-Itinerary-App\\training_data\\ingestion_email_corpus\\gmail-train-reservation-markup.html",
+      "blockCount": 5
+    }
+  ]
+}
