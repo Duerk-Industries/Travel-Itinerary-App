@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'crypto';
 
-export type ParserTrainingItemType = 'flight' | 'hotel' | 'rail';
+export type ParserTrainingItemType = 'flight' | 'hotel' | 'rail' | 'generic_note';
 
 export type ParserTrainingLabelItem = {
   providerVendor: string | null;
@@ -40,11 +40,11 @@ export type ParserTrainingLabelItem = {
 export type ParserTrainingExample = {
   id: string;
   split: 'train' | 'validation';
-  origin: 'public_markup' | 'synthetic';
+  origin: 'public_markup' | 'synthetic' | 'oss_raw_email';
   source: {
     title: string;
     provider: string;
-    sourceType: 'official_docs' | 'synthetic';
+    sourceType: 'official_docs' | 'synthetic' | 'oss_corpus';
     url: string | null;
     harvestedAt: string;
     licenseHint: string | null;
@@ -122,6 +122,53 @@ const toSplit = (seed: string): 'train' | 'validation' =>
   parseInt(stableHash(seed).slice(0, 8), 16) % 5 === 0 ? 'validation' : 'train';
 
 const reservationArray = (value: unknown): any[] => Array.isArray(value) ? value : [value].filter(Boolean);
+
+const decodeQuotedPrintable = (value: string): string =>
+  value
+    .replace(/=\r?\n/g, '')
+    .replace(/=([A-Fa-f0-9]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+
+const normalizeRawText = (value: string): string =>
+  value
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n');
+
+export const parseRawEmailBasic = (rawEmail: string): {
+  from: string;
+  to: string;
+  subject: string;
+  textBody: string;
+  htmlBody: string;
+  headers: Record<string, string>;
+} => {
+  const normalized = normalizeRawText(rawEmail);
+  const splitIndex = normalized.indexOf('\n\n');
+  const headerText = splitIndex >= 0 ? normalized.slice(0, splitIndex) : normalized;
+  let bodyText = splitIndex >= 0 ? normalized.slice(splitIndex + 2) : '';
+  const unfolded = headerText.replace(/\n[ \t]+/g, ' ');
+  const headers: Record<string, string> = {};
+  for (const line of unfolded.split('\n')) {
+    const delimiter = line.indexOf(':');
+    if (delimiter <= 0) continue;
+    headers[line.slice(0, delimiter).trim().toLowerCase()] = line.slice(delimiter + 1).trim();
+  }
+
+  if (/quoted-printable/i.test(headers['content-transfer-encoding'] ?? '')) {
+    bodyText = decodeQuotedPrintable(bodyText);
+  }
+
+  const contentType = headers['content-type'] ?? '';
+  const textBody = /text\/html/i.test(contentType) ? '' : bodyText.trim();
+  const htmlBody = /text\/html/i.test(contentType) ? bodyText.trim() : '';
+  return {
+    from: headers.from ?? '',
+    to: headers.to ?? '',
+    subject: headers.subject ?? '',
+    textBody,
+    htmlBody,
+    headers,
+  };
+};
 
 const flattenJsonLdReservations = (value: unknown, targetType: string): any[] => {
   const reservations: any[] = [];
@@ -649,4 +696,41 @@ export const buildSyntheticExamples = (counts: {
   }
 
   return examples;
+};
+
+export const buildOssRawEmailExample = (params: {
+  rawEmail: string;
+  title: string;
+  provider: string;
+  url: string;
+  harvestedAt: string;
+  licenseHint: string | null;
+}): ParserTrainingExample => {
+  const parsed = parseRawEmailBasic(params.rawEmail);
+  const idSeed = `${params.url}|${params.rawEmail.slice(0, 200)}`;
+  return {
+    id: randomUUID(),
+    split: toSplit(idSeed),
+    origin: 'oss_raw_email',
+    source: {
+      title: params.title,
+      provider: params.provider,
+      sourceType: 'oss_corpus',
+      url: params.url,
+      harvestedAt: params.harvestedAt,
+      licenseHint: params.licenseHint,
+    },
+    email: {
+      from: parsed.from || 'unknown@example.com',
+      to: parsed.to || 'unknown@example.com',
+      subject: parsed.subject || 'Untitled message',
+      textBody: parsed.textBody,
+      htmlBody: parsed.htmlBody,
+      rawEmail: params.rawEmail,
+    },
+    label: {
+      itemType: 'generic_note',
+      items: [],
+    },
+  };
 };

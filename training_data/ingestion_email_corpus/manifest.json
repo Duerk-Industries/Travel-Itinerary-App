@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-14T16:49:39.574Z",
+  "generatedAt": "2026-04-14T17:54:30.183Z",
   "publicSources": [
     {
       "itemType": "flight",
@@ -28,14 +28,16 @@
   "syntheticCounts": {
     "flight": 12,
     "hotel": 12,
-    "rail": 12
+    "rail": 12,
+    "oss": 12
   },
   "counts": {
     "public": 12,
+    "ossRaw": 12,
     "synthetic": 36,
-    "combined": 48,
-    "train": 41,
-    "validation": 7
+    "combined": 60,
+    "train": 50,
+    "validation": 10
   },
   "snapshots": [
     {
@@ -56,5 +58,22 @@
       "htmlPath": "C:\\Git\\Tristan\\Travel-Itinerary-App\\training_data\\ingestion_email_corpus\\gmail-train-reservation-markup.html",
       "blockCount": 5
     }
-  ]
+  ],
+  "ossRawArchives": [
+    {
+      "title": "Apache SpamAssassin easy_ham",
+      "provider": "Apache SpamAssassin",
+      "url": "https://spamassassin.apache.org/old/publiccorpus/20030228_easy_ham.tar.bz2",
+      "limit": 6,
+      "licenseHint": "Public corpus from Apache SpamAssassin"
+    },
+    {
+      "title": "Apache SpamAssassin hard_ham",
+      "provider": "Apache SpamAssassin",
+      "url": "https://spamassassin.apache.org/old/publiccorpus/20030228_hard_ham.tar.bz2",
+      "limit": 6,
+      "licenseHint": "Public corpus from Apache SpamAssassin"
+    }
+  ],
+  "tarAvailable": true
 }

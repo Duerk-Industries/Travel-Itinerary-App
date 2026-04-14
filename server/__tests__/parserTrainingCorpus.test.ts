@@ -1,7 +1,9 @@
 import {
+  buildOssRawEmailExample,
   buildPublicMarkupExample,
   extractJsonLdBlocks,
   flightReservationToLabelItem,
+  parseRawEmailBasic,
 } from '../src/services/parserTrainingCorpus';
 
 describe('parserTrainingCorpus', () => {
@@ -77,5 +79,33 @@ describe('parserTrainingCorpus', () => {
     expect(example?.label.itemType).toBe('flight');
     expect(example?.label.items[0].departureAirportCode).toBe('BOS');
     expect(example?.email.rawEmail).toContain('Subject: Your flight reservation ABC123 is confirmed');
+  });
+
+  it('parses raw emails and wraps them as generic-note examples', () => {
+    const rawEmail = [
+      'From: sender@example.com',
+      'To: receiver@example.com',
+      'Subject: Hello there',
+      'Content-Type: text/plain; charset=UTF-8',
+      '',
+      'This is a test body.',
+    ].join('\n');
+
+    const parsed = parseRawEmailBasic(rawEmail);
+    expect(parsed.subject).toBe('Hello there');
+    expect(parsed.textBody).toContain('test body');
+
+    const example = buildOssRawEmailExample({
+      rawEmail,
+      title: 'Sample OSS Email',
+      provider: 'Example Project',
+      url: 'https://example.com/raw',
+      harvestedAt: '2026-04-14T00:00:00.000Z',
+      licenseHint: 'Public corpus',
+    });
+
+    expect(example.label.itemType).toBe('generic_note');
+    expect(example.label.items).toEqual([]);
+    expect(example.email.subject).toBe('Hello there');
   });
 });
