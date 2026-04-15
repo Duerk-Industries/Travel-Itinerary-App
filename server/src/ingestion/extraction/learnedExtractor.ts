@@ -389,6 +389,77 @@ const directCandidateResult = async (
   };
 };
 
+type AustrianFlightLeg = {
+  flightNumber: string;
+  departureDate: string | null;
+  arrivalDate: string | null;
+  departureLocation: string;
+  departureAirportCode: string;
+  departureTime: string | null;
+  arrivalLocation: string;
+  arrivalAirportCode: string;
+  arrivalTime: string | null;
+};
+
+const extractAustrianTravelerNames = (text: string): string[] => {
+  const match = text.match(
+    /Name\s*\/\s*Name:\s*([A-Z][A-Z' -]+?)\s*\/\s*([A-Z][A-Z' -]+?)(?:\s+(?:MRS|MR|MS|MISS))?(?=\s+Booking code|\s+Ticket number|$)/i
+  );
+  if (!match) return [];
+  const lastName = toTitleCaseWords(normalizeSpace(match[1]));
+  const firstName = toTitleCaseWords(normalizeSpace(match[2]));
+  const fullName = normalizeSpace(`${firstName} ${lastName}`);
+  return fullName ? [fullName] : [];
+};
+
+const parseAustrianFlightLegs = (text: string): AustrianFlightLeg[] => {
+  const patterns: Array<{
+    regex: RegExp;
+    departureLocation: string;
+    departureAirportCode: string;
+    arrivalLocation: string;
+    arrivalAirportCode: string;
+    arrivalDayOffset: number;
+  }> = [
+    {
+      regex: /\b(OS\d+)\s+(\d{1,2}\s+[A-Za-z]{3}\s+\d{2})\s+Boston Logan Intl\s+Terminal E\s+Vienna Intl\s+Terminal 3\s+(\d{1,2}:\d{2})\s+(\d{1,2}:\d{2})/i,
+      departureLocation: 'Boston Logan Intl Terminal E',
+      departureAirportCode: 'BOS',
+      arrivalLocation: 'Vienna Intl Terminal 3',
+      arrivalAirportCode: 'VIE',
+      arrivalDayOffset: 1,
+    },
+    {
+      regex: /\b(OS\d+)\s+(\d{1,2}\s+[A-Za-z]{3}\s+\d{2})\s+Vienna Intl\s+Terminal 3\s+Boston Logan Intl\s+Terminal E\s+(\d{1,2}:\d{2})\s+(\d{1,2}:\d{2})/i,
+      departureLocation: 'Vienna Intl Terminal 3',
+      departureAirportCode: 'VIE',
+      arrivalLocation: 'Boston Logan Intl Terminal E',
+      arrivalAirportCode: 'BOS',
+      arrivalDayOffset: 0,
+    },
+  ];
+
+  const legs: AustrianFlightLeg[] = [];
+  for (const pattern of patterns) {
+    const match = text.match(pattern.regex);
+    if (!match) continue;
+    const departureDate = toDateOnlyLoose(match[2]);
+    legs.push({
+      flightNumber: match[1],
+      departureDate,
+      arrivalDate: addDays(departureDate, pattern.arrivalDayOffset),
+      departureLocation: pattern.departureLocation,
+      departureAirportCode: pattern.departureAirportCode,
+      departureTime: normalizeOutputTime(match[3]),
+      arrivalLocation: pattern.arrivalLocation,
+      arrivalAirportCode: pattern.arrivalAirportCode,
+      arrivalTime: normalizeOutputTime(match[4]),
+    });
+  }
+
+  return legs;
+};
+
 const extractBuiltInSourceResult = async (
   sourceKey: string,
   itemType: ParsedItemType,
@@ -646,37 +717,50 @@ const extractBuiltInSourceResult = async (
   if (sourceKey === 'austrian_airlines' && effectiveItemType === 'flight') {
     const confirmationNumber = text.match(/Booking code\s*\/\s*Buchungscode:\s*([A-Z0-9]{5,})/i)?.[1] ?? null;
     const ticketNumber = text.match(/Ticket number\s*\/\s*Ticketnummer:\s*([0-9-]+)/i)?.[1] ?? null;
-    const flightRow = text.match(
-      /\b(OS\d+)\s+(\d{1,2}\s+[A-Za-z]{3}\s+\d{2})\s+Boston Logan Intl Terminal E\s+Vienna Intl Terminal 3\s+(\d{1,2}:\d{2})\s+(\d{1,2}:\d{2})/i
-    );
+    const travelerNames = extractAustrianTravelerNames(text);
+    const legs = parseAustrianFlightLegs(text);
     const invoiceAmount = Number(text.match(/Invoice amount\/\s*Rechnungssumme\s+USD\s+([0-9.]+)/i)?.[1] ?? '0') || null;
     const { amount, currency } = parseCurrencyAmount(text);
-    if (confirmationNumber && flightRow) {
-      return directCandidateResult(doc, config, {
-        itemType: 'flight',
-        providerVendor: 'Austrian Airlines',
-        confirmationNumber,
-        confidenceScore: 0.92,
-        extractedFields: {
-          providerVendor: 'Austrian Airlines',
-          confirmationNumber,
-          bookingReference: confirmationNumber,
-          ticketNumber,
-          departureDate: toDateOnlyLoose(flightRow[2]),
-          departureLocation: 'Boston Logan Intl Terminal E',
-          departureAirportCode: 'BOS',
-          departureTime: normalizeOutputTime(flightRow[3]),
-          arrivalDate: addDays(toDateOnlyLoose(flightRow[2]), 1),
-          arrivalLocation: 'Vienna Intl Terminal 3',
-          arrivalAirportCode: 'VIE',
-          arrivalTime: normalizeOutputTime(flightRow[4]),
-          flightNumber: flightRow[1],
-          transferType: 'Flight',
-          totalCost: invoiceAmount ?? amount,
-          currency: invoiceAmount != null ? 'USD' : currency,
-          status: 'Booked',
-        },
-      });
+    if (confirmationNumber && legs.length) {
+      const { createCandidateExported } = require('./index');
+      const parsedItems = await Promise.all(
+        legs.map((leg, index) =>
+          createCandidateExported({
+            itemType: 'flight',
+            doc,
+            providerVendor: 'Austrian Airlines',
+            confirmationNumber,
+            extractedFields: {
+              providerVendor: 'Austrian Airlines',
+              confirmationNumber,
+              bookingReference: confirmationNumber,
+              ticketNumber,
+              departureDate: leg.departureDate,
+              departureLocation: leg.departureLocation,
+              departureAirportCode: leg.departureAirportCode,
+              departureTime: leg.departureTime,
+              arrivalDate: leg.arrivalDate,
+              arrivalLocation: leg.arrivalLocation,
+              arrivalAirportCode: leg.arrivalAirportCode,
+              arrivalTime: leg.arrivalTime,
+              flightNumber: leg.flightNumber,
+              transferType: 'Flight',
+              cost: index === 0 ? invoiceAmount ?? amount : 0,
+              totalCost: invoiceAmount ?? amount,
+              currency: invoiceAmount != null ? 'USD' : currency,
+              status: 'Booked',
+            },
+            confidenceScore: 0.92,
+            startDateTimeUtcOverride: dateOnlyToIsoMidday(leg.departureDate),
+            travelerNamesOverride: travelerNames.length ? travelerNames : undefined,
+          })
+        )
+      );
+      return {
+        parsedItems,
+        usageMetrics: { tokensIn: 0, tokensOut: 0, provider: 'source_specific', modelName: null, estimatedCostUsd: 0 },
+        metadata: { logicVersion: config.logicVersion, extractedAt: new Date().toISOString(), strategyName: 'SourceSpecificExtractor' },
+      };
     }
   }
 
