@@ -46,3 +46,6 @@ flags:
   overview_weather:
     enabled: true
     description: "Show daily overview weather for nearby trips"
+  flight_parser:
+    enabled: true
+    description: "Enable LLM-based flight parser from text/emails"

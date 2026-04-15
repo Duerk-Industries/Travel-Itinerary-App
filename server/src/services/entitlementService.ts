@@ -92,8 +92,11 @@ export const seedEntitlementDefaults = async (): Promise<void> => {
     ['free', 'cost_tracking', false],
     ['free', 'multiple_groups', true],
     ['free', 'trip_creation', true],
+    ['free', 'flight_parser', false],
     ['premium', 'cost_tracking', true],
+    ['premium', 'flight_parser', true],
     ['pro', 'cost_tracking', true],
+    ['pro', 'flight_parser', true],
   ];
   for (const [tierKey, featureKey, isAllowed] of entitlementSeeds) {
     const tier = tierByKey.get(tierKey);

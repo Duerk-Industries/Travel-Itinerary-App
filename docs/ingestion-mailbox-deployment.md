@@ -1,5 +1,7 @@
 # Mailbox Ingestion Deployment
 
+For the full post-deploy Cloud Run, Mailgun, Gmail OAuth, and env-var checklist, see [GCP Email Ingest Setup](./gcp-email-ingest-setup.md).
+
 ## Default address
 
 The launch mailbox address is `travel.docs@duerk.org`.

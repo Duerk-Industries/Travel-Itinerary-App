@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Modal } from 'react-native';
 import { formatDateLong } from '../utils/formatDateLong';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { normalizeDateString } from '../utils/normalizeDateString';
@@ -619,6 +619,9 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   const [containerOffset, setContainerOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [timePickerTarget, setTimePickerTarget] = useState<'edit-dep' | 'edit-arr' | 'new-dep' | 'new-arr' | null>(null);
   const [timePickerValue, setTimePickerValue] = useState<Date>(new Date());
+  const [showPasteModal, setShowPasteModal] = useState(false);
+  const [pasteText, setPasteText] = useState('');
+  const [isParsing, setIsParsing] = useState(false);
 
   const normalizePassengerName = (name: string): string => {
     const trimmed = name.trim().replace(/\s+/g, ' ');
@@ -1217,6 +1220,82 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     setLocationSearch('');
   };
 
+  const handlePasteAndParse = async () => {
+    if (!userToken) return;
+    if (!activeTripId && !isWizard) {
+      alert('Select an active trip before adding a transfer.');
+      return;
+    }
+    const textToParse = pasteText.trim();
+    if (!textToParse) {
+      alert('Please paste some text first.');
+      return;
+    }
+
+    setIsParsing(true);
+    try {
+      const res = await fetch(`${backendUrl}/api/transfers/parse`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...headers },
+        body: JSON.stringify({ text: textToParse }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to parse');
+      }
+
+      // Convert parsed data into our flight draft
+      const primary = data.primary || {};
+      const init = createFlightDraftForTrip(findActiveTrip(), defaultPayerId);
+      
+      init.carrier = primary.carrier || '';
+      init.flightNumber = primary.flightNumber || '';
+      init.bookingReference = primary.bookingReference || '';
+      init.departureDate = primary.departureDate || init.departureDate;
+      init.departureLocation = primary.departureLocation || '';
+      init.departureAirportCode = primary.departureAirportCode || '';
+      init.departureTime = primary.departureTime || init.departureTime;
+      init.arrivalDate = primary.arrivalDate || init.arrivalDate;
+      init.arrivalLocation = primary.arrivalLocation || '';
+      init.arrivalAirportCode = primary.arrivalAirportCode || '';
+      init.arrivalTime = primary.arrivalTime || init.arrivalTime;
+      init.layoverLocation = primary.layoverLocation || '';
+      init.layoverLocationCode = primary.layoverLocationCode || '';
+      init.layoverDuration = primary.layoverDuration || '';
+      init.cost = primary.cost || '';
+      
+      if (groupMembers.length && primary.passengerName) {
+        // Try to match passenger name to group members
+        const lowerName = primary.passengerName.toLowerCase();
+        const matchedMembers = groupMembers.filter(m => {
+          const first = m.firstName?.toLowerCase() || '';
+          const last = m.lastName?.toLowerCase() || '';
+          const guest = m.guestName?.toLowerCase() || '';
+          return (first && lowerName.includes(first)) || 
+                 (last && lowerName.includes(last)) || 
+                 (guest && lowerName.includes(guest));
+        });
+        if (matchedMembers.length > 0) {
+          init.passengerIds = matchedMembers.map(m => m.id);
+          init.passengerName = buildPassengerName(init.passengerIds) || primary.passengerName;
+        } else {
+          init.passengerName = primary.passengerName;
+        }
+      } else {
+        init.passengerName = primary.passengerName || '';
+      }
+
+      setEditingFlightId('new');
+      setEditingFlight(init);
+      setShowPasteModal(false);
+      setPasteText('');
+    } catch (err: any) {
+      alert(err.message || 'Unable to parse text');
+    } finally {
+      setIsParsing(false);
+    }
+  };
+
   const handleAddPress = () => {
     if (!activeTripId && !isWizard) {
       alert('Select an active trip before adding a transfer.');
@@ -1296,9 +1375,14 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
         <>
       <View style={styles.row}>
         <Text style={styles.sectionTitle}>Transfers</Text>
-        <TouchableOpacity style={[styles.button, styles.roundButton]} onPress={handleAddPress} testID="transfer-add">
-          <Text style={styles.buttonText}>+</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <TouchableOpacity style={[styles.button, styles.outlineButton, { marginRight: 8 }]} onPress={() => setShowPasteModal(true)} testID="transfer-paste">
+            <Text style={styles.buttonText}>Paste Info</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.button, styles.roundButton]} onPress={handleAddPress} testID="transfer-add">
+            <Text style={styles.buttonText}>+</Text>
+          </TouchableOpacity>
+        </View>
       </View>
       <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
         <View style={styles.table}>
@@ -1873,6 +1957,33 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
             setTimePickerTarget(null);
           }}
         />
+      ) : null}
+      {showPasteModal ? (
+        <Modal transparent visible={showPasteModal} animationType="fade" onRequestClose={() => setShowPasteModal(false)}>
+          <View style={[styles.passengerOverlay, { backgroundColor: 'rgba(15,23,42,0.35)', justifyContent: 'center', alignItems: 'center', padding: 16 }]}>
+            <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={() => setShowPasteModal(false)} />
+            <View style={[styles.modalCard, { width: '100%', maxWidth: 500, maxHeight: '90%' }]}>
+              <Text style={styles.sectionTitle}>Paste Booking Info</Text>
+              <Text style={styles.helperText}>Paste your flight confirmation email or text below, and our AI will extract the details.</Text>
+              <TextInput
+                style={[styles.input, { height: 150, textAlignVertical: 'top', marginTop: 12, marginBottom: 16 }]}
+                multiline
+                placeholder="Paste email text or itinerary here..."
+                value={pasteText}
+                onChangeText={setPasteText}
+                editable={!isParsing}
+              />
+              <View style={styles.row}>
+                <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={() => { setShowPasteModal(false); setPasteText(''); }} disabled={isParsing}>
+                  <Text style={styles.buttonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.button, isParsing && { opacity: 0.5 }]} onPress={handlePasteAndParse} disabled={isParsing}>
+                  <Text style={styles.buttonText}>{isParsing ? 'Parsing...' : 'Parse & Add'}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       ) : null}
       <FlightEditingForm
         visible={Boolean(editingFlight && editingFlightId)}

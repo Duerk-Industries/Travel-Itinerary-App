@@ -22,6 +22,9 @@ import {
 import { isEmailConfigured, sendShareEmail } from '../mailer';
 import { normalizeItineraryStatus, shouldRelaxRequiredFields } from '../utils/itineraryStatus';
 import { applyVoteSummary } from '../services/itemVoteService';
+import { assertCanUseFeature, getUserRoleForToken } from '../services/entitlementService';
+import { reserveApiUsageOrThrow } from '../apis/usageLimiter';
+import { FlightParserConfigurator } from '../services/flightParserLLM';
 
 const TRANSFER_TYPES = ['Flight', 'Train', 'Bus', 'Private', 'Ferry', 'Other'] as const;
 type TransferType = (typeof TRANSFER_TYPES)[number];
@@ -83,6 +86,39 @@ router.get('/locations', async (req, res) => {
   }
   const results = await searchFlightLocations(userId, q);
   res.json(results);
+});
+
+router.post('/parse', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const role = await getUserRoleForToken(userId);
+  
+  try {
+    await assertCanUseFeature(userId, 'flight_parser', role);
+  } catch (err) {
+    res.status(403).json({ error: (err as Error).message });
+    return;
+  }
+
+  try {
+    reserveApiUsageOrThrow({ provider: 'LLM_PARSER', caller: 'PARSE_FLIGHT_TEXT' });
+  } catch (err) {
+    res.status(429).json({ error: (err as Error).message });
+    return;
+  }
+
+  const { text } = req.body;
+  if (!text || typeof text !== 'string') {
+    res.status(400).json({ error: 'Text to parse is required' });
+    return;
+  }
+
+  try {
+    const parser = FlightParserConfigurator.getParser();
+    const result = await parser.parse(text);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
 });
 
 router.post('/', async (req, res) => {

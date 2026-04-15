@@ -1,4 +1,11 @@
 providers:
+  LLM_PARSER:
+    window: hour
+    windowHours: 24
+    overall: 1000
+    callers:
+      PARSE_FLIGHT_TEXT: 200
+
   OPENAI:
     window: hour
     windowHours: 24
