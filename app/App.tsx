@@ -382,6 +382,23 @@ let _capturedInitialAuthParams: {
   }
 })();
 
+const pendingFollowCodeStorageKey = 'stp.pendingFollowCode';
+
+const extractFollowCodeFromUrl = (rawUrl: string): string | null => {
+  try {
+    const url = new URL(rawUrl);
+    const followCode = url.searchParams.get('followCode');
+    return followCode ? followCode.trim() : null;
+  } catch {
+    return null;
+  }
+};
+
+let _capturedInitialFollowCode: string | null = (() => {
+  if (Platform.OS !== 'web' || typeof window === 'undefined') return null;
+  return extractFollowCodeFromUrl(window.location.href);
+})();
+
 const extractTokenFromUrl = (rawUrl: string) => {
   try {
     const url = new URL(rawUrl);
@@ -495,6 +512,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [isRefreshing, setIsRefreshing] = useState(false);
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const refreshInFlightRef = useRef(false);
+  const autoRedeemedFollowCodeRef = useRef<string | null>(null);
   const [flights, setFlights] = useState<Flight[]>([]);
   const [externalFlightEditId, setExternalFlightEditId] = useState<string | null>(null);
   const [invites, setInvites] = useState<GroupInvite[]>([]);
@@ -517,6 +535,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [followCodeLoading, setFollowCodeLoading] = useState<Record<string, boolean>>({});
   const [followCodeError, setFollowCodeError] = useState<string | null>(null);
   const [followCodePayloads, setFollowCodePayloads] = useState<Record<string, InvitePayload>>({});
+  const [pendingFollowCode, setPendingFollowCode] = useState<string | null>(null);
   const [selectedFollowedTripId, setSelectedFollowedTripId] = useState<string | null>(null);
   const [groupName, setGroupName] = useState('');
   const [groupUserEmails, setGroupUserEmails] = useState('');
@@ -1983,6 +2002,22 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     if (Object.keys(storedPayloads).length) {
       setFollowCodePayloads(storedPayloads);
     }
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const storedPending = window.localStorage.getItem(pendingFollowCodeStorageKey)?.trim() || null;
+      const initialFollowCode = _capturedInitialFollowCode ?? extractFollowCodeFromUrl(window.location.href) ?? storedPending;
+      _capturedInitialFollowCode = null;
+      if (initialFollowCode) {
+        setPendingFollowCode(initialFollowCode);
+        setFollowInviteCode(initialFollowCode);
+        try {
+          const cleanUrl = new URL(window.location.href);
+          cleanUrl.searchParams.delete('followCode');
+          window.history.replaceState({}, '', cleanUrl.toString());
+        } catch {
+          // ignore cleanup failures
+        }
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -1992,6 +2027,15 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   useEffect(() => {
     saveFollowPayloads(followCodePayloads);
   }, [followCodePayloads]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+    if (pendingFollowCode) {
+      window.localStorage.setItem(pendingFollowCodeStorageKey, pendingFollowCode);
+    } else {
+      window.localStorage.removeItem(pendingFollowCodeStorageKey);
+    }
+  }, [pendingFollowCode]);
 
   useEffect(() => {
     if (!selectedFollowedTripId) return;
@@ -2035,6 +2079,54 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       loadFellowTravelers();
     }
   }, [loadFamilyRelationships, loadFellowTravelers, userToken, requirePasswordSetup]);
+
+  useEffect(() => {
+    if (!userToken || requirePasswordSetup || !pendingFollowCode) return;
+    const redemptionKey = `${userToken}:${pendingFollowCode}`;
+    if (autoRedeemedFollowCodeRef.current === redemptionKey) return;
+    autoRedeemedFollowCodeRef.current = redemptionKey;
+
+    let cancelled = false;
+    const redeemFollowCode = async () => {
+      try {
+        const res = await fetch(`${backendUrl}/api/trips/follow`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
+          body: JSON.stringify({ inviteCode: pendingFollowCode }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (cancelled) return;
+        if (res.status === 401 || res.status === 403) {
+          logout();
+          return;
+        }
+        if (!res.ok) {
+          setFollowError(data.error || 'Unable to follow trip');
+          return;
+        }
+        try {
+          const trips = await fetchFollowedTripsApi(backendUrl, { Authorization: `Bearer ${userToken}` });
+          if (!cancelled) {
+            setFollowedTrips(trips);
+          }
+        } catch {
+          // Ignore refresh failures after a successful follow.
+        }
+        setFollowError('');
+        setPendingFollowCode(null);
+        setFollowInviteCode('');
+      } catch (err) {
+        if (!cancelled) {
+          setFollowError((err as Error).message || 'Unable to follow trip');
+        }
+      }
+    };
+
+    void redeemFollowCode();
+    return () => {
+      cancelled = true;
+    };
+  }, [backendUrl, logout, pendingFollowCode, requirePasswordSetup, userToken]);
 
   useEffect(() => {
     if (userToken && !requirePasswordSetup) {
