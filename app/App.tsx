@@ -2811,6 +2811,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   formatMemberName={formatMemberName}
                   payerName={payerName}
                   saveCoveredBy={saveCoveredBy}
+                  readOnly={isFollowingMode}
                 />
               )
             : null}

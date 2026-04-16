@@ -32,6 +32,7 @@ type LedgerTabProps = {
   formatMemberName: (member: GroupMemberOption) => string;
   payerName: (id: string) => string;
   saveCoveredBy: () => Promise<void>;
+  readOnly?: boolean;
 };
 
 const LedgerTab: React.FC<LedgerTabProps> = ({
@@ -49,6 +50,7 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
   formatMemberName,
   payerName,
   saveCoveredBy,
+  readOnly,
 }) => {
   const tripCurrency = (trip?.currency ?? 'USD').toUpperCase();
 
@@ -186,16 +188,18 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
           </View>
         </ScrollView>
       </View>
-      <ExpenseCovering
-        groupMembers={groupMembers}
-        reportableMembers={reportableMembers}
-        coveredBy={coveredBy}
-        setCoveredBy={setCoveredBy}
-        formatMemberName={formatMemberName}
-        payerName={payerName}
-        saveCoveredBy={saveCoveredBy}
-        styles={styles}
-      />
+      {!readOnly && (
+        <ExpenseCovering
+          groupMembers={groupMembers}
+          reportableMembers={reportableMembers}
+          coveredBy={coveredBy}
+          setCoveredBy={setCoveredBy}
+          formatMemberName={formatMemberName}
+          payerName={payerName}
+          saveCoveredBy={saveCoveredBy}
+          styles={styles}
+        />
+      )}
     </View>
   );
 };
