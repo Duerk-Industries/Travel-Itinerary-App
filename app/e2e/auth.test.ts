@@ -56,10 +56,8 @@ test.describe('Authentication', () => {
   test('logout clears session and returns to login screen', async ({ page }) => {
     await loginAsNewUser(page);
 
-    // Navigate to Account tab and find a logout button
-    await page.getByTestId('home-nav-account').click();
-    await page.waitForLoadState('networkidle');
-    await page.getByText(/log.?out|sign.?out/i).first().click();
+    // Logout is exposed from the persistent top bar on authenticated screens.
+    await page.getByTestId('topbar-logout').click();
 
     // After logout the login form must be visible
     await expect(page.getByPlaceholder('Email')).toBeVisible({ timeout: 8000 });

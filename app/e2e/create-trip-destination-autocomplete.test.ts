@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { loginAsNewUser } from './test-utils';
 
+const apiBaseUrl = process.env.API_BASE_URL ?? 'http://127.0.0.1:4000';
+
 test.describe('Create Trip Destination Autocomplete', () => {
   test.beforeEach(async ({ page }) => {
     await loginAsNewUser(page);
@@ -16,9 +18,9 @@ test.describe('Create Trip Destination Autocomplete', () => {
     const apiLogs: string[] = [];
     page.on('response', async (response) => {
       const url = response.url();
-      if (url.includes('localhost:3000/api')) {
+      if (url.startsWith(`${apiBaseUrl}/api`)) {
         const authHeader = response.request().headers()['authorization'] ?? 'NONE';
-        apiLogs.push(`${response.status()} ${response.request().method()} ${url.replace('http://localhost:3000', '')} auth=${authHeader.substring(0, 30)}`);
+        apiLogs.push(`${response.status()} ${response.request().method()} ${url.replace(apiBaseUrl, '')} auth=${authHeader.substring(0, 30)}`);
       }
     });
 

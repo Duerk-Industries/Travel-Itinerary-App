@@ -7,7 +7,7 @@
  */
 import { type APIRequestContext, type Browser, type BrowserContext, type Page, expect } from '@playwright/test';
 
-export const API_BASE = process.env.API_BASE_URL ?? 'http://localhost:3000';
+export const API_BASE = process.env.API_BASE_URL ?? 'http://127.0.0.1:4000';
 export const TEST_USER_PASSWORD = 'password123';
 
 // ---------------------------------------------------------------------------
@@ -71,6 +71,18 @@ export async function registerUser(
       `registerUser failed (${res.status()}): ${body}`,
     );
   }
+  const registrationData = (await res.json().catch(() => ({}))) as { verificationToken?: string };
+  const verificationToken = registrationData.verificationToken;
+  if (!verificationToken) {
+    throw new Error(`registerUser missing verification token for ${credentials.email}`);
+  }
+  const confirmRes = await request.get(`${API_BASE}/api/web-auth/confirm`, {
+    params: { token: verificationToken },
+  });
+  if (!confirmRes.ok()) {
+    const body = await confirmRes.text();
+    throw new Error(`registerUser confirmation failed (${confirmRes.status()}): ${body}`);
+  }
 
   return credentials;
 }
@@ -79,12 +91,12 @@ export async function registerUser(
  * Logs an already-registered user in via the UI and waits for the home screen.
  */
 export async function loginAsUser(page: Page, credentials: UserCredentials): Promise<void> {
-  const authRes = await page.request.post(`${API_BASE}/api/auth/oauth`, {
-    data: { email: credentials.email, provider: 'google' },
+  const authRes = await page.request.post(`${API_BASE}/api/web-auth/login`, {
+    data: { email: credentials.email, password: credentials.password },
   });
   if (!authRes.ok()) {
     const body = await authRes.text();
-    throw new Error(`loginAsUser oauth bootstrap failed (${authRes.status()}): ${body}`);
+    throw new Error(`loginAsUser failed (${authRes.status()}): ${body}`);
   }
   const data = await authRes.json();
   const session: StoredSession = {
@@ -99,6 +111,7 @@ export async function loginAsUser(page: Page, credentials: UserCredentials): Pro
   };
   await page.addInitScript((payload) => {
     window.localStorage.setItem('stp.session', JSON.stringify(payload));
+    window.localStorage.setItem('stp.session.token', payload.token);
   }, session);
   await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 90_000 });
   await expect(page.getByTestId('home-nav-trips')).toBeVisible({ timeout: 15_000 });

@@ -58,7 +58,11 @@ router.post('/register', async (req, res) => {
     }
     const verification = await createEmailVerification(user.id);
     await sendVerificationEmailBestEffort(user.email, verification.token);
-    res.status(201).json({ message: 'Verification required. Check your email to confirm your account.', verificationRequired: true });
+    res.status(201).json({
+      message: 'Verification required. Check your email to confirm your account.',
+      verificationRequired: true,
+      verificationToken: process.env.NODE_ENV !== 'production' ? verification.token : undefined,
+    });
   } catch (err: any) {
     if (err?.code === 'USER_EXISTS') {
       res.status(409).json({ error: 'User already exists' });

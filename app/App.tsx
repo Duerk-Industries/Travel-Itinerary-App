@@ -287,12 +287,25 @@ const resolveBackendUrl = (): string => {
     }
     return `${defaultProtocol}://${trimmed}`;
   };
+  const remapLocalBackendHost = (raw: string, browserHostname: string): string => {
+    const normalized = normalizeBackendUrl(raw, 'http');
+    try {
+      const parsed = new URL(normalized);
+      if (!isLocalHost(parsed.hostname) || !isLocalHost(browserHostname)) {
+        return normalized;
+      }
+      parsed.hostname = browserHostname;
+      return parsed.toString().replace(/\/$/, '');
+    } catch {
+      return normalized;
+    }
+  };
   if (process.env.NODE_ENV === 'development') {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       const { hostname, protocol } = window.location;
       if (isLocalHost(hostname)) {
-        if (configuredBackend && isLocalHost(new URL(normalizeBackendUrl(configuredBackend, 'http')).hostname)) {
-          return normalizeBackendUrl(configuredBackend, 'http');
+        if (configuredBackend) {
+          return remapLocalBackendHost(configuredBackend, hostname);
         }
         return `${protocol}//${hostname}:4000`;
       }
@@ -1361,18 +1374,18 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         if (res.status === 403 && /confirm/i.test(message)) {
           setShowResendConfirmation(true);
         }
-        alert(data.error || 'Login failed');
+        setAuthErrorMessage(data.error || 'Login failed');
         return;
       }
       setShowResendConfirmation(false);
       if (!data?.user || typeof data.token !== 'string') {
-        alert(data.error || 'Login failed');
+        setAuthErrorMessage(data.error || 'Login failed');
         return;
       }
       handleAuthSuccess(data.token, Boolean(data.firstLogin));
     } catch (err) {
       const message = (err as Error).message || 'Login failed';
-      alert(`${message} (backend: ${backendUrl})`);
+      setAuthErrorMessage(`${message} (backend: ${backendUrl})`);
     }
   };
 
@@ -2481,7 +2494,11 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   <Text style={styles.buttonText}>Admin</Text>
                 </TouchableOpacity>
               ) : null}
-              <TouchableOpacity style={[styles.button, styles.smallButton, styles.topBarActionButton]} onPress={logout}>
+              <TouchableOpacity
+                style={[styles.button, styles.smallButton, styles.topBarActionButton]}
+                onPress={logout}
+                testID="topbar-logout"
+              >
                 <Text style={styles.buttonText}>Logout</Text>
               </TouchableOpacity>
             </View>
