@@ -5,7 +5,7 @@
   "scripts": {
     "test": "jest -c jest.config.js",
     "export:web": "expo export --platform web",
-    "web": "expo start --web"
+    "web": "node ./scripts/start-web.js"
   },
   "overrides": {
     "glob": "13.0.5",

@@ -2,8 +2,18 @@ const path = require('path');
 const { spawn } = require('child_process');
 const dotenv = require('dotenv');
 
-dotenv.config();
-dotenv.config({ path: path.join(__dirname, '..', '..', 'server', '.env') });
+const loadEnv = (envPath, override = false) => {
+  dotenv.config({ path: envPath, override });
+};
+
+loadEnv(path.join(__dirname, '..', '.env'));
+loadEnv(path.join(__dirname, '..', '..', '.env'), true);
+loadEnv(path.join(__dirname, '..', '..', 'server', '.env'), true);
+loadEnv(path.join(__dirname, '..', '..', 'server', '.local_env'), true);
+
+if (!process.env.EXPO_PUBLIC_BACKEND_URL && process.env.API_BASE_URL) {
+  process.env.EXPO_PUBLIC_BACKEND_URL = process.env.API_BASE_URL;
+}
 
 const useInMemory = process.env.USE_IN_MEMORY_DB === '1';
 const portArgs = useInMemory ? ['--port', '80'] : [];

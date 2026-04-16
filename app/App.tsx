@@ -300,16 +300,19 @@ const resolveBackendUrl = (): string => {
       return normalized;
     }
   };
-  if (process.env.NODE_ENV === 'development') {
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      const { hostname, protocol } = window.location;
-      if (isLocalHost(hostname)) {
-        if (configuredBackend) {
-          return remapLocalBackendHost(configuredBackend, hostname);
-        }
-        return `${protocol}//${hostname}:4000`;
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    const { hostname, protocol, port, origin } = window.location;
+    if (isLocalHost(hostname)) {
+      if (port === '4000') {
+        return origin.replace(/\/$/, '');
       }
+      if (configuredBackend) {
+        return remapLocalBackendHost(configuredBackend, hostname);
+      }
+      return `${protocol}//${hostname}:4000`;
     }
+  }
+  if (process.env.NODE_ENV === 'development') {
     if (configuredBackend) {
       return normalizeBackendUrl(configuredBackend, 'http');
     }
