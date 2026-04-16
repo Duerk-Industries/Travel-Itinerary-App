@@ -1,8 +1,10 @@
 import childProcess from 'child_process';
+import path from 'path';
 
 describe('Austrian Airlines source-specific parsing', () => {
   it('keeps both Austrian legs in the non-LLM fixture pipeline', () => {
-    const output = childProcess.execSync('npx --prefix server tsx server/scripts/nonLlmFixtureExtractionRunner.ts', {
+    const runnerPath = path.resolve(__dirname, '../scripts/nonLlmFixtureExtractionRunner.ts');
+    const output = childProcess.execSync(`npx tsx "${runnerPath}"`, {
       cwd: process.cwd(),
       encoding: 'utf8',
       timeout: 120000,

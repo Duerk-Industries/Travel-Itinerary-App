@@ -13,16 +13,16 @@ describe('ingestion pending queue progression', () => {
   beforeEach(async () => {
     jest.resetModules();
     setMemoryEnv();
-    const db = await import('../src/db');
+    const db = require('../src/db') as typeof import('../src/db');
     await db.initDb();
-    const helpers = await import('./helpers');
+    const helpers = require('./helpers') as typeof import('./helpers');
     await helpers.seedTiersForTest();
   });
 
   it('advances a manual PDF upload beyond PENDING', async () => {
-    const request = (await import('supertest')).default;
-    const { app } = await import('../src/app');
-    const helpers = await import('./helpers');
+    const request = require('supertest') as typeof import('supertest');
+    const { app } = require('../src/app') as typeof import('../src/app');
+    const helpers = require('./helpers') as typeof import('./helpers');
     const user = {
       firstName: 'Bryan',
       lastName: 'Admin',
@@ -42,13 +42,12 @@ describe('ingestion pending queue progression', () => {
     await helpers.waitFor(async () => {
       const jobsRes = await request(app).get('/api/ingestion/jobs').set(auth).expect(200);
       const jobs = jobsRes.body.jobs ?? [];
-      return jobs.length === 1 && jobs[0].state !== 'PENDING';
+      return jobs.length === 1 && !['PENDING', 'RECEIVED', 'NORMALIZING', 'NORMALIZED', 'EXTRACTING'].includes(jobs[0].state);
     }, 10000, 100);
 
     const jobsRes = await request(app).get('/api/ingestion/jobs').set(auth).expect(200);
     expect(jobsRes.body.jobs).toHaveLength(1);
-    expect(jobsRes.body.jobs[0].state).not.toBe('PENDING');
-    expect(['RECEIVED', 'NORMALIZING', 'NORMALIZED', 'EXTRACTING', 'AWAITING_REVIEW', 'COMPLETED', 'FAILED', 'DEAD_LETTERED', 'DUPLICATE_IGNORED']).toContain(
+    expect(['AWAITING_REVIEW', 'COMPLETED', 'FAILED', 'DEAD_LETTERED', 'DUPLICATE_IGNORED']).toContain(
       jobsRes.body.jobs[0].state
     );
   });

@@ -2,6 +2,7 @@ import request from 'supertest';
 import { app } from '../src/app';
 import {
   createEmailVerification,
+  deleteWebUserAndCleanup,
   findUserByEmail,
   getTierByKey,
   setUserRole,
@@ -135,6 +136,7 @@ export const seedTiersForTest = async (): Promise<void> => {
     ['ai_itinerary_generation', 'AI-powered itinerary generation', true],
     ['csv_export', 'Export cost reports as CSV', true],
     ['car_rentals', 'Car rental tracking', true],
+    ['flight_parser', 'Parse flight details from free-form text', true],
     ['trip_sharing', 'Share trips with other users', true],
     ['trip_following', 'Follow trips as read-only observer', true],
     ['cost_tracking', 'Expense and cost tracking', true],
@@ -149,13 +151,16 @@ export const seedTiersForTest = async (): Promise<void> => {
     ['free', 'ai_itinerary_generation', true],
     ['free', 'csv_export', true],
     ['free', 'car_rentals', true],
+    ['free', 'flight_parser', false],
     ['free', 'trip_sharing', true],
     ['free', 'trip_following', true],
     ['free', 'cost_tracking', false],
     ['free', 'multiple_groups', true],
     ['free', 'trip_creation', true],
     ['premium', 'cost_tracking', true],
+    ['premium', 'flight_parser', true],
     ['pro', 'cost_tracking', true],
+    ['pro', 'flight_parser', true],
   ];
   const allFeatures = await listFeatures();
   for (const [tierKey, featureKey, isAllowed] of entitlements) {
@@ -174,7 +179,6 @@ export const cleanupTestUsersByEmail = async (emails: string[]): Promise<void> =
   for (const email of emails) {
     const user = await findUserByEmail(email);
     if (user) {
-      const { deleteWebUserAndCleanup } = await import('../src/db');
       await deleteWebUserAndCleanup(user.id);
     }
   }

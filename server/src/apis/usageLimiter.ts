@@ -264,6 +264,11 @@ export const getApiUsageSummary = (): ApiUsageSummaryEntry[] => {
   return entries;
 };
 
+export const resetApiUsageSummaries = (): void => {
+  usageBuckets.clear();
+  blockedLogStates.clear();
+};
+
 export const reserveApiUsageOrThrow = (params: { provider: string; caller: string }): void => {
   const provider = normalizeKeyPart(params.provider);
   const caller = normalizeKeyPart(params.caller);

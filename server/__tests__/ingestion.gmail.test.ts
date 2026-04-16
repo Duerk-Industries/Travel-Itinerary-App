@@ -21,9 +21,9 @@ describe('ingestion Gmail routes', () => {
   beforeEach(async () => {
     jest.resetModules();
     setMemoryEnv();
-    const db = await import('../src/db');
+    const db = require('../src/db') as typeof import('../src/db');
     await db.initDb();
-    const helpers = await import('./helpers');
+    const helpers = require('./helpers') as typeof import('./helpers');
     await helpers.seedTiersForTest();
     await db.setFeatureFlag('feature_ingest_gmail_import', true, null);
   });
@@ -33,10 +33,10 @@ describe('ingestion Gmail routes', () => {
   });
 
   it('creates a Gmail connect URL and completes callback token storage', async () => {
-    const request = (await import('supertest')).default;
-    const { app } = await import('../src/app');
-    const helpers = await import('./helpers');
-    const { getProviderConnection } = await import('../src/ingestion/shared/repository');
+    const request = require('supertest') as typeof import('supertest');
+    const { app } = require('../src/app') as typeof import('../src/app');
+    const helpers = require('./helpers') as typeof import('./helpers');
+    const { getProviderConnection } = require('../src/ingestion/shared/repository') as typeof import('../src/ingestion/shared/repository');
     const user = { firstName: 'Gmail', lastName: 'Connect', email: 'gmail-connect@example.com', password: 'secret123' };
     const { token, userId } = await helpers.registerAndLoginWebUser(user);
     await helpers.setUserTierInDb(userId, 'premium');
@@ -86,10 +86,10 @@ describe('ingestion Gmail routes', () => {
   });
 
   it('returns Gmail status and dry-run results for a connected user', async () => {
-    const request = (await import('supertest')).default;
-    const { app } = await import('../src/app');
-    const helpers = await import('./helpers');
-    const { upsertProviderConnection } = await import('../src/ingestion/shared/repository');
+    const request = require('supertest') as typeof import('supertest');
+    const { app } = require('../src/app') as typeof import('../src/app');
+    const helpers = require('./helpers') as typeof import('./helpers');
+    const { upsertProviderConnection } = require('../src/ingestion/shared/repository') as typeof import('../src/ingestion/shared/repository');
     const user = { firstName: 'Gmail', lastName: 'DryRun', email: 'gmail-dryrun@example.com', password: 'secret123' };
     const { token, userId } = await helpers.registerAndLoginWebUser(user);
     await helpers.setUserTierInDb(userId, 'premium');
@@ -152,10 +152,10 @@ describe('ingestion Gmail routes', () => {
   });
 
   it('imports Gmail messages into the shared review queue and preserves low-confidence undated items', async () => {
-    const request = (await import('supertest')).default;
-    const { app } = await import('../src/app');
-    const helpers = await import('./helpers');
-    const { upsertProviderConnection } = await import('../src/ingestion/shared/repository');
+    const request = require('supertest') as typeof import('supertest');
+    const { app } = require('../src/app') as typeof import('../src/app');
+    const helpers = require('./helpers') as typeof import('./helpers');
+    const { upsertProviderConnection } = require('../src/ingestion/shared/repository') as typeof import('../src/ingestion/shared/repository');
     const user = { firstName: 'Gmail', lastName: 'Import', email: 'gmail-import@example.com', password: 'secret123' };
     const { token, userId } = await helpers.registerAndLoginWebUser(user);
     await helpers.setUserTierInDb(userId, 'pro');
@@ -251,10 +251,10 @@ describe('ingestion Gmail routes', () => {
   });
 
   it('disconnects Gmail provider connections', async () => {
-    const request = (await import('supertest')).default;
-    const { app } = await import('../src/app');
-    const helpers = await import('./helpers');
-    const { upsertProviderConnection, getProviderConnection } = await import('../src/ingestion/shared/repository');
+    const request = require('supertest') as typeof import('supertest');
+    const { app } = require('../src/app') as typeof import('../src/app');
+    const helpers = require('./helpers') as typeof import('./helpers');
+    const { upsertProviderConnection, getProviderConnection } = require('../src/ingestion/shared/repository') as typeof import('../src/ingestion/shared/repository');
     const user = { firstName: 'Gmail', lastName: 'Disconnect', email: 'gmail-disconnect@example.com', password: 'secret123' };
     const { token, userId } = await helpers.registerAndLoginWebUser(user);
     await helpers.setUserTierInDb(userId, 'premium');

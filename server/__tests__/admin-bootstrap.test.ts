@@ -100,7 +100,7 @@ describe('Admin bootstrap', () => {
     const role = await getUserRole(userId);
     expect(role).toBe('user');
 
-    const { deleteWebUserAndCleanup } = await import('../src/db');
+    const { deleteWebUserAndCleanup } = require('../src/db') as typeof import('../src/db');
     await deleteWebUserAndCleanup(userId);
   });
 

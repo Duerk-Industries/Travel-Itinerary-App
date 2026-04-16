@@ -27,7 +27,7 @@ describe('ingestion repository firebase writes', () => {
       getFirestore: () => firestoreMock,
     }));
 
-    const { updateImportJobState } = await import('../src/ingestion/shared/repository');
+    const { updateImportJobState } = require('../src/ingestion/shared/repository') as typeof import('../src/ingestion/shared/repository');
 
     await updateImportJobState({
       jobId: 'job-1',
@@ -74,7 +74,7 @@ describe('ingestion repository firebase writes', () => {
       getFirestore: () => firestoreMock,
     }));
 
-    const { createParsedItem, saveExtractionCacheEntry } = await import('../src/ingestion/shared/repository');
+    const { createParsedItem, saveExtractionCacheEntry } = require('../src/ingestion/shared/repository') as typeof import('../src/ingestion/shared/repository');
 
     await saveExtractionCacheEntry('user-1', 'hash-1', 'logic-1', {
       parsedItems: [
@@ -152,7 +152,7 @@ describe('ingestion repository firebase writes', () => {
       getFirestore: () => firestoreMock,
     }));
 
-    const { listImportJobsForUser } = await import('../src/ingestion/shared/repository');
+    const { listImportJobsForUser } = require('../src/ingestion/shared/repository') as typeof import('../src/ingestion/shared/repository');
 
     await listImportJobsForUser('user-123');
 
@@ -223,7 +223,7 @@ describe('ingestion repository firebase writes', () => {
       getFirestore: () => firestoreMock,
     }));
 
-    const { getProviderConnection } = await import('../src/ingestion/shared/repository');
+    const { getProviderConnection } = require('../src/ingestion/shared/repository') as typeof import('../src/ingestion/shared/repository');
 
     const result = await getProviderConnection('user-123', 'gmail');
 
@@ -317,7 +317,7 @@ describe('ingestion repository firebase writes', () => {
       getFirestore: () => firestoreMock,
     }));
 
-    const { listReviewQueueItems } = await import('../src/ingestion/shared/repository');
+    const { listReviewQueueItems } = require('../src/ingestion/shared/repository') as typeof import('../src/ingestion/shared/repository');
 
     const items = await listReviewQueueItems('user-123');
 
@@ -520,7 +520,7 @@ describe('ingestion repository firebase writes', () => {
       getFirestore: () => fakeDb,
     }));
 
-    const { assignParsedItemToTrip } = await import('../src/ingestion/shared/repository');
+    const { assignParsedItemToTrip } = require('../src/ingestion/shared/repository') as typeof import('../src/ingestion/shared/repository');
 
     await assignParsedItemToTrip('user-1', 'parsed-1', 'trip-1', 'user-1');
 
@@ -724,7 +724,7 @@ describe('ingestion repository firebase writes', () => {
       getFirestore: () => fakeDb,
     }));
 
-    const { assignParsedItemToTrip } = await import('../src/ingestion/shared/repository');
+    const { assignParsedItemToTrip } = require('../src/ingestion/shared/repository') as typeof import('../src/ingestion/shared/repository');
 
     await assignParsedItemToTrip('user-1', 'parsed-2', 'trip-2', 'user-1');
 

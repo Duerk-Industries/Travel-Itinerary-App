@@ -1,7 +1,6 @@
 import request from 'supertest';
 import { app } from '../src/app';
-import { initDb, closePool } from '../src/db';
-import { setUserRole } from '../src/services/entitlementService';
+import { initDb, closePool, setUserRole } from '../src/db';
 import { resetApiUsageSummaries } from '../src/apis/usageLimiter';
 import { registerAndLoginWebUser, seedTiersForTest, cleanupTestUsersByEmail, setUserTierInDb } from './helpers';
 import { FlightParserConfigurator } from '../src/services/flightParserLLM';
@@ -74,7 +73,7 @@ describe('POST /api/transfers/parse', () => {
       .send({ text: 'Flight to JFK on May 15' });
 
     expect(res.status).toBe(403);
-    expect(res.body.error).toContain('Not entitled');
+    expect(res.body.error).toContain("does not include access to 'flight_parser'");
   });
 
   it('allows admins to parse text', async () => {
@@ -106,9 +105,14 @@ describe('POST /api/transfers/parse', () => {
 
     expect(res.status).toBe(200);
     
-    const summary = require('../src/apis/usageLimiter').getApiUsageSummary();
-    expect(summary['LLM_PARSER']).toBeDefined();
-    expect(summary['LLM_PARSER'].requests).toBeGreaterThanOrEqual(1);
-    expect(summary['LLM_PARSER'].callers['PARSE_FLIGHT_TEXT']).toBeGreaterThanOrEqual(1);
+    const summary = require('../src/apis/usageLimiter').getApiUsageSummary() as Array<{
+      provider: string;
+      caller: string;
+      used: number;
+    }>;
+    const providerEntries = summary.filter((entry) => entry.provider === 'LLM_PARSER');
+    expect(providerEntries.length).toBeGreaterThan(0);
+    expect(providerEntries.some((entry) => entry.used >= 1)).toBe(true);
+    expect(providerEntries.some((entry) => entry.caller === 'PARSE_FLIGHT_TEXT' && entry.used >= 1)).toBe(true);
   });
 });

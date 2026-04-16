@@ -4204,11 +4204,19 @@ export const getTierByKey = async (key: string): Promise<Tier | null> => {
 
 export const listFeatures = async (): Promise<Feature[]> => {
   const db = getDb();
-  const snap = await db.collection('features').orderBy('key').get();
-  return snap.docs.map(d => {
-    const data = d.data();
-    return { id: data.id ?? d.id, key: d.id, description: data.description ?? '', defaultEnabled: data.defaultEnabled ?? false, createdAt: data.createdAt ?? nowIso() };
-  });
+  const snap = await db.collection('features').get();
+  return snap.docs
+    .map(d => {
+      const data = d.data();
+      return {
+        id: data.id ?? d.id,
+        key: data.key ?? d.id,
+        description: data.description ?? '',
+        defaultEnabled: data.defaultEnabled ?? false,
+        createdAt: data.createdAt ?? nowIso(),
+      };
+    })
+    .sort((a, b) => a.key.localeCompare(b.key));
 };
 
 export const listTierLimits = async (tierId: string): Promise<TierLimit[]> => {
@@ -4323,7 +4331,7 @@ export const upsertFeature = async (key: string, description: string, defaultEna
   const ref = db.collection('features').doc(key);
   const doc = await ref.get();
   if (!doc.exists) {
-    await ref.set({ description, defaultEnabled, createdAt: nowIso() });
+    await ref.set({ key, description, defaultEnabled, createdAt: nowIso() });
   }
 };
 
@@ -4367,7 +4375,6 @@ export const incrementUsageCounter = async (
   const db = getDb();
   const docId = `${userId}_${metricKey}_${windowKey}`;
   const ref = db.collection('usage_counters').doc(docId);
-  const { FieldValue } = await import('firebase-admin/firestore');
   await ref.set({ userId, metricKey, windowKey, count: FieldValue.increment(amount), updatedAt: nowIso() }, { merge: true });
   const updated = await ref.get();
   return updated.data()!.count ?? amount;
@@ -4414,7 +4421,6 @@ export const atomicIncrementIfUnderLimit = async (
   const db = getDb();
   const docId = `${userId}_${metricKey}_${windowKey}`;
   const ref = db.collection('usage_counters').doc(docId);
-  const { FieldValue } = await import('firebase-admin/firestore');
   return db.runTransaction(async tx => {
     const doc = await tx.get(ref);
     const current = doc.exists ? (doc.data()!.count ?? 0) : 0;

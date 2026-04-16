@@ -10,7 +10,7 @@ describe('image normalization OCR', () => {
     jest.resetModules();
     jest.clearAllMocks();
     setMemoryEnv();
-    const db = await import('../src/db');
+    const db = require('../src/db') as typeof import('../src/db');
     await db.initDb();
   });
 
@@ -20,8 +20,8 @@ describe('image normalization OCR', () => {
         'Printed Boarding Pass\nPassenger: Jamie Chen\nAirline: JetBlue Airways\nFlight Number: B6123\nConfirmation Code: JET123'
       ),
     }));
-    const { writeTempBytes, deleteTempBytes } = await import('../src/ingestion/shared/tempStorage');
-    const { normalizeIngestionPayload } = await import('../src/ingestion/normalization');
+    const { writeTempBytes, deleteTempBytes } = require('../src/ingestion/shared/tempStorage') as typeof import('../src/ingestion/shared/tempStorage');
+    const { normalizeIngestionPayload } = require('../src/ingestion/normalization') as typeof import('../src/ingestion/normalization');
     const ref = await writeTempBytes(
       'boarding-pass.png',
       Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d])
@@ -56,8 +56,8 @@ describe('image normalization OCR', () => {
     jest.doMock('../src/ingestion/normalization/ocr', () => ({
       extractImageTextViaOcr: jest.fn().mockResolvedValue(''),
     }));
-    const { writeTempBytes, deleteTempBytes } = await import('../src/ingestion/shared/tempStorage');
-    const { normalizeIngestionPayload } = await import('../src/ingestion/normalization');
+    const { writeTempBytes, deleteTempBytes } = require('../src/ingestion/shared/tempStorage') as typeof import('../src/ingestion/shared/tempStorage');
+    const { normalizeIngestionPayload } = require('../src/ingestion/normalization') as typeof import('../src/ingestion/normalization');
     const readableFallback = Buffer.from(
       'Printed Boarding Pass\nPassenger: Jamie Chen\nAirline: JetBlue Airways\nFlight Number: B6123\nConfirmation Code: JET123',
       'utf8'

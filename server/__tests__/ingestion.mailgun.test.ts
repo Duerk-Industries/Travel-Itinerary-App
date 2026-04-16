@@ -20,17 +20,17 @@ describe('ingestion Mailgun webhook', () => {
   beforeEach(async () => {
     jest.resetModules();
     setMemoryEnv();
-    const db = await import('../src/db');
+    const db = require('../src/db') as typeof import('../src/db');
     await db.initDb();
-    const helpers = await import('./helpers');
+    const helpers = require('./helpers') as typeof import('./helpers');
     await helpers.seedTiersForTest();
     await db.setFeatureFlag('feature_ingest_forwarded_mailbox', true, null);
   });
 
   it('ingests a signed Mailgun body-only webhook for a premium user', async () => {
-    const request = (await import('supertest')).default;
-    const { app } = await import('../src/app');
-    const helpers = await import('./helpers');
+    const request = require('supertest') as typeof import('supertest');
+    const { app } = require('../src/app') as typeof import('../src/app');
+    const helpers = require('./helpers') as typeof import('./helpers');
     const user = { firstName: 'Mail', lastName: 'Body', email: 'mailgun-body@example.com', password: 'secret123' };
     const { token: authToken, userId } = await helpers.registerAndLoginWebUser(user);
     await helpers.setUserTierInDb(userId, 'premium');
@@ -72,9 +72,9 @@ describe('ingestion Mailgun webhook', () => {
   });
 
   it('ingests Mailgun attachments through the shared pipeline', async () => {
-    const request = (await import('supertest')).default;
-    const { app } = await import('../src/app');
-    const helpers = await import('./helpers');
+    const request = require('supertest') as typeof import('supertest');
+    const { app } = require('../src/app') as typeof import('../src/app');
+    const helpers = require('./helpers') as typeof import('./helpers');
     const user = { firstName: 'Mail', lastName: 'Attachment', email: 'mailgun-attachment@example.com', password: 'secret123' };
     const { token: authToken, userId } = await helpers.registerAndLoginWebUser(user);
     await helpers.setUserTierInDb(userId, 'premium');
@@ -112,9 +112,9 @@ describe('ingestion Mailgun webhook', () => {
   });
 
   it('rejects invalid Mailgun signatures', async () => {
-    const request = (await import('supertest')).default;
-    const { app } = await import('../src/app');
-    const helpers = await import('./helpers');
+    const request = require('supertest') as typeof import('supertest');
+    const { app } = require('../src/app') as typeof import('../src/app');
+    const helpers = require('./helpers') as typeof import('./helpers');
     const user = { firstName: 'Mail', lastName: 'Invalid', email: 'mailgun-invalid@example.com', password: 'secret123' };
     const { userId } = await helpers.registerAndLoginWebUser(user);
     await helpers.setUserTierInDb(userId, 'premium');
@@ -140,9 +140,9 @@ describe('ingestion Mailgun webhook', () => {
   });
 
   it('rejects replayed Mailgun webhook tokens', async () => {
-    const request = (await import('supertest')).default;
-    const { app } = await import('../src/app');
-    const helpers = await import('./helpers');
+    const request = require('supertest') as typeof import('supertest');
+    const { app } = require('../src/app') as typeof import('../src/app');
+    const helpers = require('./helpers') as typeof import('./helpers');
     const user = { firstName: 'Mail', lastName: 'Replay', email: 'mailgun-replay@example.com', password: 'secret123' };
     const { token: authToken, userId } = await helpers.registerAndLoginWebUser(user);
     await helpers.setUserTierInDb(userId, 'premium');
@@ -166,8 +166,8 @@ describe('ingestion Mailgun webhook', () => {
     await request(app).post('/api/ingestion/webhooks/mailgun').type('form').send(body).expect(406);
 
     await helpers.waitFor(async () => {
-      const jobs = await request(app).get('/api/ingestion/jobs').set({ Authorization: `Bearer ${authToken}` });
-      return (jobs.body.jobs ?? []).length === 1;
+      const review = await request(app).get('/api/ingestion/review-items').set({ Authorization: `Bearer ${authToken}` });
+      return (review.body.items ?? []).length === 1;
     });
 
     const reviewRes = await request(app)

@@ -14,7 +14,7 @@ describe('ingestion pipeline internals', () => {
   beforeEach(async () => {
     jest.resetModules();
     setMemoryEnv();
-    const db = await import('../src/db');
+    const db = require('../src/db') as typeof import('../src/db');
     await db.initDb();
     await db.createWebUser('Cache', 'User', 'cache-user@example.com', 'secret123');
     await db.createWebUser('Dead', 'Letter', 'dead-letter@example.com', 'secret123');
@@ -27,8 +27,8 @@ describe('ingestion pipeline internals', () => {
   });
 
   it('reuses extraction cache when logic version matches', async () => {
-    const { saveExtractionCacheEntry } = await import('../src/ingestion/shared/repository');
-    const { extractCandidates } = await import('../src/ingestion/extraction');
+    const { saveExtractionCacheEntry } = require('../src/ingestion/shared/repository') as typeof import('../src/ingestion/shared/repository');
+    const { extractCandidates } = require('../src/ingestion/extraction') as typeof import('../src/ingestion/extraction');
     const cached = {
       parsedItems: [],
       usageMetrics: { tokensIn: 0, tokensOut: 0, provider: 'cache', modelName: null, estimatedCostUsd: 0 },
@@ -75,9 +75,9 @@ describe('ingestion pipeline internals', () => {
   });
 
   it('dead-letters a job that exceeds the token budget threshold and creates no parsed items', async () => {
-    const { writeTempBytes } = await import('../src/ingestion/shared/tempStorage');
-    const { runIngestionPipeline } = await import('../src/ingestion/orchestrator');
-    const { listReviewQueueItems, listImportJobsForUser } = await import('../src/ingestion/shared/repository');
+    const { writeTempBytes } = require('../src/ingestion/shared/tempStorage') as typeof import('../src/ingestion/shared/tempStorage');
+    const { runIngestionPipeline } = require('../src/ingestion/orchestrator') as typeof import('../src/ingestion/orchestrator');
+    const { listReviewQueueItems, listImportJobsForUser } = require('../src/ingestion/shared/repository') as typeof import('../src/ingestion/shared/repository');
     const bytesRef = await writeTempBytes('expensive.txt', Buffer.from('expensive extraction payload', 'utf8'));
     const payload = {
       sourceType: 'MANUAL_UPLOAD' as const,
@@ -145,9 +145,9 @@ describe('ingestion pipeline internals', () => {
   });
 
   it('retries a failed manual upload cleanly when the same file is uploaded again', async () => {
-    const { writeTempBytes } = await import('../src/ingestion/shared/tempStorage');
-    const { runIngestionPipeline } = await import('../src/ingestion/orchestrator');
-    const { listImportJobsForUser, listReviewQueueItems } = await import('../src/ingestion/shared/repository');
+    const { writeTempBytes } = require('../src/ingestion/shared/tempStorage') as typeof import('../src/ingestion/shared/tempStorage');
+    const { runIngestionPipeline } = require('../src/ingestion/orchestrator') as typeof import('../src/ingestion/orchestrator');
+    const { listImportJobsForUser, listReviewQueueItems } = require('../src/ingestion/shared/repository') as typeof import('../src/ingestion/shared/repository');
 
     const firstBytesRef = await writeTempBytes('retry.txt', Buffer.from('retry payload', 'utf8'));
     const secondBytesRef = await writeTempBytes('retry.txt', Buffer.from('retry payload', 'utf8'));
@@ -250,7 +250,7 @@ describe('ingestion pipeline internals', () => {
       saveExtractionCacheEntry: jest.fn().mockResolvedValue(undefined),
     }));
 
-    const { extractCandidates } = await import('../src/ingestion/extraction');
+    const { extractCandidates } = require('../src/ingestion/extraction') as typeof import('../src/ingestion/extraction');
 
     const doc = {
       importJobId: '11111111-1111-4111-8111-111111111111',
@@ -397,7 +397,7 @@ describe('ingestion pipeline internals', () => {
       };
     });
 
-    const { LlmExtractor } = await import('../src/ingestion/extraction/llmExtractor');
+    const { LlmExtractor } = require('../src/ingestion/extraction/llmExtractor') as typeof import('../src/ingestion/extraction/llmExtractor');
 
     const extractor = new LlmExtractor('LlmExtractor', 0.7, () => true);
     const doc = {

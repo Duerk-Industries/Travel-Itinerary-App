@@ -64,6 +64,16 @@ const getPdfParse = async (): Promise<(dataBuffer: Buffer) => Promise<{ text?: s
 
 const extractPdfText = async (bytes: Buffer): Promise<string> => {
   try {
+    const pdfParse = await getPdfParse();
+    const parsed = await pdfParse(bytes);
+    const pdfParseText = String(parsed?.text ?? '').trim();
+    if (looksTextLike(pdfParseText)) {
+      return pdfParseText;
+    }
+  } catch {
+    // Fall through to the secondary parser below.
+  }
+  try {
     const pdfjs = await getPdfJs();
     const loadingTask = pdfjs.getDocument({
       data: new Uint8Array(bytes),
@@ -90,9 +100,7 @@ const extractPdfText = async (bytes: Buffer): Promise<string> => {
   } catch {
     // Fall through to the secondary parser below.
   }
-  const pdfParse = await getPdfParse();
-  const parsed = await pdfParse(bytes);
-  return String(parsed?.text ?? '').trim();
+  return '';
 };
 
 const looksTextLike = (value: string): boolean => {

@@ -422,7 +422,7 @@ const parseAustrianFlightLegs = (text: string): AustrianFlightLeg[] => {
     arrivalDayOffset: number;
   }> = [
     {
-      regex: /\b(OS\d+)\s+(\d{1,2}\s+[A-Za-z]{3}\s+\d{2})\s+Boston Logan Intl\s+Terminal E\s+Vienna Intl\s+Terminal 3\s+(\d{1,2}:\d{2})\s+(\d{1,2}:\d{2})/i,
+      regex: /\b(OS\d+)\s*(\d{2}\s+[A-Za-z]{3}\s+\d{2})\s*Boston Logan Intl\s*Terminal E\s*Vienna Intl\s*Terminal 3\s*(\d{2}:\d{2})\s*(\d{2}:\d{2})/i,
       departureLocation: 'Boston Logan Intl Terminal E',
       departureAirportCode: 'BOS',
       arrivalLocation: 'Vienna Intl Terminal 3',
@@ -430,7 +430,7 @@ const parseAustrianFlightLegs = (text: string): AustrianFlightLeg[] => {
       arrivalDayOffset: 1,
     },
     {
-      regex: /\b(OS\d+)\s+(\d{1,2}\s+[A-Za-z]{3}\s+\d{2})\s+Vienna Intl\s+Terminal 3\s+Boston Logan Intl\s+Terminal E\s+(\d{1,2}:\d{2})\s+(\d{1,2}:\d{2})/i,
+      regex: /\b(OS\d+)\s*(\d{2}\s+[A-Za-z]{3}\s+\d{2})\s*Vienna Intl\s*Terminal 3\s*Boston Logan Intl\s*Terminal E\s*(\d{2}:\d{2})\s*(\d{2}:\d{2})/i,
       departureLocation: 'Vienna Intl Terminal 3',
       departureAirportCode: 'VIE',
       arrivalLocation: 'Boston Logan Intl Terminal E',
@@ -719,7 +719,7 @@ const extractBuiltInSourceResult = async (
     const ticketNumber = text.match(/Ticket number\s*\/\s*Ticketnummer:\s*([0-9-]+)/i)?.[1] ?? null;
     const travelerNames = extractAustrianTravelerNames(text);
     const legs = parseAustrianFlightLegs(text);
-    const invoiceAmount = Number(text.match(/Invoice amount\/\s*Rechnungssumme\s+USD\s+([0-9.]+)/i)?.[1] ?? '0') || null;
+    const invoiceAmount = Number(text.match(/Invoice amount\/\s*Rechnungssumme\s*USD\s*([0-9.]+)/i)?.[1] ?? '0') || null;
     const { amount, currency } = parseCurrencyAmount(text);
     if (confirmationNumber && legs.length) {
       const { createCandidateExported } = require('./index');

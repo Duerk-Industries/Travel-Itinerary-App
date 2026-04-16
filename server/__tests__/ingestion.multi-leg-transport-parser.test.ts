@@ -9,17 +9,17 @@ describe('generic multi-leg transport extraction', () => {
   beforeEach(async () => {
     jest.resetModules();
     setMemoryEnv();
-    const db = await import('../src/db');
+    const db = require('../src/db') as typeof import('../src/db');
     await db.initDb();
     await db.createWebUser('Multi', 'Leg', 'multi-leg@example.com', 'secret123');
   });
 
   it('emits separate generic flight items when the document contains repeated leg markers', async () => {
-    const db = await import('../src/db');
+    const db = require('../src/db') as typeof import('../src/db');
     const user = await db.findUserByEmail('multi-leg@example.com');
     expect(user).not.toBeNull();
 
-    const { RegexExtractor } = await import('../src/ingestion/extraction');
+    const { RegexExtractor } = require('../src/ingestion/extraction') as typeof import('../src/ingestion/extraction');
     const extractor = new RegexExtractor();
     const doc = {
       importJobId: 'job-multi-leg',

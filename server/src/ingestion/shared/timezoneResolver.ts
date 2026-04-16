@@ -1,4 +1,5 @@
 import { logInfo } from '../../logger';
+import { getAirportByIataCode } from '../../db';
 
 export type TimezoneStatus = 'RESOLVED' | 'INFERRED' | 'UNKNOWN';
 
@@ -312,7 +313,6 @@ export const resolveTimezoneFromIataAsync = async (iataCode: string | null | und
 
   // 3. Query airports table for city, then resolve city→timezone
   try {
-    const { getAirportByIataCode } = await import('../../db');
     const airport = await getAirportByIataCode(code);
     if (airport?.city) {
       const tz = resolveTimezoneFromCity(airport.city);

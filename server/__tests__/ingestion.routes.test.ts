@@ -14,16 +14,16 @@ describe('ingestion routes', () => {
   beforeEach(async () => {
     jest.resetModules();
     setMemoryEnv();
-    const db = await import('../src/db');
+    const db = require('../src/db') as typeof import('../src/db');
     await db.initDb();
-    const helpers = await import('./helpers');
+    const helpers = require('./helpers') as typeof import('./helpers');
     await helpers.seedTiersForTest();
   });
 
   it('allows premium users to upload, review, edit, assign, and soft-delete items', async () => {
-    const request = (await import('supertest')).default;
-    const { app } = await import('../src/app');
-    const helpers = await import('./helpers');
+    const request = require('supertest') as typeof import('supertest');
+    const { app } = require('../src/app') as typeof import('../src/app');
+    const helpers = require('./helpers') as typeof import('./helpers');
     const user = { firstName: 'Prem', lastName: 'User', email: 'prem@example.com', password: 'secret123' };
     const secondUser = { firstName: 'Delete', lastName: 'User', email: 'delete@example.com', password: 'secret123' };
     const { token, userId } = await helpers.registerAndLoginWebUser(user);
@@ -93,9 +93,9 @@ describe('ingestion routes', () => {
   });
 
   it('denies free users from ingestion endpoints and suppresses duplicate uploads', async () => {
-    const request = (await import('supertest')).default;
-    const { app } = await import('../src/app');
-    const helpers = await import('./helpers');
+    const request = require('supertest') as typeof import('supertest');
+    const { app } = require('../src/app') as typeof import('../src/app');
+    const helpers = require('./helpers') as typeof import('./helpers');
     const freeUser = { firstName: 'Free', lastName: 'User', email: 'free@example.com', password: 'secret123' };
     const premiumUser = { firstName: 'Dupe', lastName: 'User', email: 'dupe@example.com', password: 'secret123' };
     const { token: freeToken } = await helpers.registerAndLoginWebUser(freeUser);
@@ -132,9 +132,9 @@ describe('ingestion routes', () => {
   });
 
   it('returns a clear 400 for unsupported manual upload file types', async () => {
-    const request = (await import('supertest')).default;
-    const { app } = await import('../src/app');
-    const helpers = await import('./helpers');
+    const request = require('supertest') as typeof import('supertest');
+    const { app } = require('../src/app') as typeof import('../src/app');
+    const helpers = require('./helpers') as typeof import('./helpers');
     const user = { firstName: 'Upload', lastName: 'Type', email: 'upload-type@example.com', password: 'secret123' };
     const { token, userId } = await helpers.registerAndLoginWebUser(user);
     await helpers.setUserTierInDb(userId, 'premium');
@@ -158,9 +158,9 @@ describe('ingestion routes', () => {
   });
 
   it('returns a clear 400 for oversized manual uploads', async () => {
-    const request = (await import('supertest')).default;
-    const { app } = await import('../src/app');
-    const helpers = await import('./helpers');
+    const request = require('supertest') as typeof import('supertest');
+    const { app } = require('../src/app') as typeof import('../src/app');
+    const helpers = require('./helpers') as typeof import('./helpers');
     const user = { firstName: 'Upload', lastName: 'Size', email: 'upload-size@example.com', password: 'secret123' };
     const { token, userId } = await helpers.registerAndLoginWebUser(user);
     await helpers.setUserTierInDb(userId, 'premium');

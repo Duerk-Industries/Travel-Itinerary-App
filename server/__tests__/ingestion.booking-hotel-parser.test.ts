@@ -15,15 +15,15 @@ describe('Booking.com hotel parsers', () => {
   beforeEach(async () => {
     jest.resetModules();
     setMemoryEnv();
-    const db = await import('../src/db');
+    const db = require('../src/db') as typeof import('../src/db');
     await db.initDb();
   });
 
   const loadNormalizedDoc = async (filename: string) => {
-    const { findOrCreateUser } = await import('../src/db');
-    const { writeTempBytes, deleteTempBytes } = await import('../src/ingestion/shared/tempStorage');
-    const { normalizeIngestionPayload } = await import('../src/ingestion/normalization');
-    const { createImportJob, getOrCreateIngestionSource } = await import('../src/ingestion/shared/repository');
+    const { findOrCreateUser } = require('../src/db') as typeof import('../src/db');
+    const { writeTempBytes, deleteTempBytes } = require('../src/ingestion/shared/tempStorage') as typeof import('../src/ingestion/shared/tempStorage');
+    const { normalizeIngestionPayload } = require('../src/ingestion/normalization') as typeof import('../src/ingestion/normalization');
+    const { createImportJob, getOrCreateIngestionSource } = require('../src/ingestion/shared/repository') as typeof import('../src/ingestion/shared/repository');
     const bytes = fs.readFileSync(lodgingPath(filename));
     const ref = await writeTempBytes(filename, bytes);
     const user = await findOrCreateUser(`fixture-${filename}@example.com`, 'email');
@@ -75,7 +75,7 @@ describe('Booking.com hotel parsers', () => {
   ];
 
   it.each(expectations)('generic regex hotel parser extracts Booking.com fields from $pdf', async ({ pdf, json }) => {
-    const { RegexExtractor } = await import('../src/ingestion/extraction');
+    const { RegexExtractor } = require('../src/ingestion/extraction') as typeof import('../src/ingestion/extraction');
     const expected = JSON.parse(fs.readFileSync(lodgingPath(json), 'utf8'));
     const { doc, cleanup } = await loadNormalizedDoc(pdf);
     try {
@@ -111,7 +111,7 @@ describe('Booking.com hotel parsers', () => {
   });
 
   it.each(expectations)('source-specific Booking.com parser extracts hotel fields from $pdf', async ({ pdf, json }) => {
-    const { SourceSpecificExtractor } = await import('../src/ingestion/extraction/learnedExtractor');
+    const { SourceSpecificExtractor } = require('../src/ingestion/extraction/learnedExtractor') as typeof import('../src/ingestion/extraction/learnedExtractor');
     const expected = JSON.parse(fs.readFileSync(lodgingPath(json), 'utf8'));
     const { doc, cleanup } = await loadNormalizedDoc(pdf);
     try {

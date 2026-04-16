@@ -10,7 +10,8 @@ class InProcessJobQueue implements JobQueue {
   async enqueue(jobId: string): Promise<void> {
     logInfo(`[ingestion][queue] dispatching in-process job=${jobId}`);
     setTimeout(() => {
-      void import('../orchestrator')
+      void Promise.resolve()
+        .then(() => require('../orchestrator') as typeof import('../orchestrator'))
         .then(({ processImportJob }) => processImportJob(jobId))
         .catch((error) => {
           logError(`[ingestion] in-process worker failed job=${jobId}`, error);

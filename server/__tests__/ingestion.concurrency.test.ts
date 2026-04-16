@@ -13,16 +13,16 @@ describe('ingestion concurrency and idempotency', () => {
   beforeEach(async () => {
     jest.resetModules();
     setMemoryEnv();
-    const db = await import('../src/db');
+    const db = require('../src/db') as typeof import('../src/db');
     await db.initDb();
-    const helpers = await import('./helpers');
+    const helpers = require('./helpers') as typeof import('./helpers');
     await helpers.seedTiersForTest();
   });
 
   it('same file uploaded twice quickly produces only one review item via idempotency', async () => {
-    const request = (await import('supertest')).default;
-    const { app } = await import('../src/app');
-    const helpers = await import('./helpers');
+    const request = require('supertest') as typeof import('supertest');
+    const { app } = require('../src/app') as typeof import('../src/app');
+    const helpers = require('./helpers') as typeof import('./helpers');
     const user = { firstName: 'Concurrent', lastName: 'Upload', email: 'concurrent-upload@example.com', password: 'secret123' };
     const { token, userId } = await helpers.registerAndLoginWebUser(user);
     await helpers.setUserTierInDb(userId, 'premium');
@@ -53,10 +53,10 @@ describe('ingestion concurrency and idempotency', () => {
   });
 
   it('same message received twice concurrently does not create duplicate items', async () => {
-    const { writeTempBytes } = await import('../src/ingestion/shared/tempStorage');
-    const { runIngestionPipeline } = await import('../src/ingestion/orchestrator');
-    const { listReviewQueueItems, listImportJobsForUser } = await import('../src/ingestion/shared/repository');
-    const db = await import('../src/db');
+    const { writeTempBytes } = require('../src/ingestion/shared/tempStorage') as typeof import('../src/ingestion/shared/tempStorage');
+    const { runIngestionPipeline } = require('../src/ingestion/orchestrator') as typeof import('../src/ingestion/orchestrator');
+    const { listReviewQueueItems, listImportJobsForUser } = require('../src/ingestion/shared/repository') as typeof import('../src/ingestion/shared/repository');
+    const db = require('../src/db') as typeof import('../src/db');
 
     await db.createWebUser('Double', 'Message', 'double-message@example.com', 'secret123');
     const user = await db.findUserByEmail('double-message@example.com');
@@ -101,9 +101,9 @@ describe('ingestion concurrency and idempotency', () => {
   });
 
   it('duplicate badge behavior when existing assigned item matches new upload fingerprint', async () => {
-    const request = (await import('supertest')).default;
-    const { app } = await import('../src/app');
-    const helpers = await import('./helpers');
+    const request = require('supertest') as typeof import('supertest');
+    const { app } = require('../src/app') as typeof import('../src/app');
+    const helpers = require('./helpers') as typeof import('./helpers');
     const user = { firstName: 'Badge', lastName: 'Test', email: 'badge-test@example.com', password: 'secret123' };
     const { token, userId } = await helpers.registerAndLoginWebUser(user);
     await helpers.setUserTierInDb(userId, 'premium');
@@ -165,9 +165,9 @@ describe('ingestion concurrency and idempotency', () => {
   });
 
   it('atomic assignment under concurrent submit attempts', async () => {
-    const request = (await import('supertest')).default;
-    const { app } = await import('../src/app');
-    const helpers = await import('./helpers');
+    const request = require('supertest') as typeof import('supertest');
+    const { app } = require('../src/app') as typeof import('../src/app');
+    const helpers = require('./helpers') as typeof import('./helpers');
     const user = { firstName: 'Atomic', lastName: 'Assign', email: 'atomic-assign@example.com', password: 'secret123' };
     const { token, userId } = await helpers.registerAndLoginWebUser(user);
     await helpers.setUserTierInDb(userId, 'premium');
@@ -218,10 +218,10 @@ describe('ingestion concurrency and idempotency', () => {
   });
 
   it('Gmail import rerun on same mailbox window is idempotent', async () => {
-    const { writeTempBytes } = await import('../src/ingestion/shared/tempStorage');
-    const { runIngestionPipeline } = await import('../src/ingestion/orchestrator');
-    const { listReviewQueueItems, listImportJobsForUser } = await import('../src/ingestion/shared/repository');
-    const db = await import('../src/db');
+    const { writeTempBytes } = require('../src/ingestion/shared/tempStorage') as typeof import('../src/ingestion/shared/tempStorage');
+    const { runIngestionPipeline } = require('../src/ingestion/orchestrator') as typeof import('../src/ingestion/orchestrator');
+    const { listReviewQueueItems, listImportJobsForUser } = require('../src/ingestion/shared/repository') as typeof import('../src/ingestion/shared/repository');
+    const db = require('../src/db') as typeof import('../src/db');
 
     await db.createWebUser('Gmail', 'Rerun', 'gmail-rerun@example.com', 'secret123');
     const user = await db.findUserByEmail('gmail-rerun@example.com');

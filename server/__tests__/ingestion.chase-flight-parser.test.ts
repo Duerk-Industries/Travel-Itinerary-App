@@ -12,7 +12,7 @@ describe('Chase Travel flight regex extraction', () => {
   beforeEach(async () => {
     jest.resetModules();
     setMemoryEnv();
-    const db = await import('../src/db');
+    const db = require('../src/db') as typeof import('../src/db');
     await db.initDb();
     await db.createWebUser('Bryan', 'Duerk', 'bryan.duerk@gmail.com', 'secret123');
   });
@@ -21,15 +21,15 @@ describe('Chase Travel flight regex extraction', () => {
     const fixturePath = path.resolve(__dirname, '..', '..', 'test_inputs', 'transfers', 'Boston to Los Angeles.pdf');
     const bytes = fs.readFileSync(fixturePath);
 
-    const db = await import('../src/db');
+    const db = require('../src/db') as typeof import('../src/db');
     const user = await db.findUserByEmail('bryan.duerk@gmail.com');
     expect(user).not.toBeNull();
 
-    const { writeTempBytes, deleteTempBytes } = await import('../src/ingestion/shared/tempStorage');
-    const { sha256 } = await import('../src/ingestion/shared/hashing');
-    const { normalizeIngestionPayload } = await import('../src/ingestion/normalization');
-    const { extractCandidates } = await import('../src/ingestion/extraction');
-    const { createImportJob, getOrCreateIngestionSource } = await import('../src/ingestion/shared/repository');
+    const { writeTempBytes, deleteTempBytes } = require('../src/ingestion/shared/tempStorage') as typeof import('../src/ingestion/shared/tempStorage');
+    const { sha256 } = require('../src/ingestion/shared/hashing') as typeof import('../src/ingestion/shared/hashing');
+    const { normalizeIngestionPayload } = require('../src/ingestion/normalization') as typeof import('../src/ingestion/normalization');
+    const { extractCandidates } = require('../src/ingestion/extraction') as typeof import('../src/ingestion/extraction');
+    const { createImportJob, getOrCreateIngestionSource } = require('../src/ingestion/shared/repository') as typeof import('../src/ingestion/shared/repository');
 
     const tempRef = await writeTempBytes(path.basename(fixturePath), bytes);
     try {
@@ -94,15 +94,15 @@ describe('Chase Travel flight regex extraction', () => {
     const fixturePath = path.resolve(__dirname, '..', '..', 'test_inputs', 'transfers', 'Boston to Los Angeles.pdf');
     const bytes = fs.readFileSync(fixturePath);
 
-    const db = await import('../src/db');
+    const db = require('../src/db') as typeof import('../src/db');
     const user = await db.findUserByEmail('bryan.duerk@gmail.com');
     expect(user).not.toBeNull();
 
-    const { writeTempBytes, deleteTempBytes } = await import('../src/ingestion/shared/tempStorage');
-    const { sha256 } = await import('../src/ingestion/shared/hashing');
-    const { normalizeIngestionPayload } = await import('../src/ingestion/normalization');
-    const { SourceSpecificExtractor } = await import('../src/ingestion/extraction/learnedExtractor');
-    const { createImportJob, getOrCreateIngestionSource } = await import('../src/ingestion/shared/repository');
+    const { writeTempBytes, deleteTempBytes } = require('../src/ingestion/shared/tempStorage') as typeof import('../src/ingestion/shared/tempStorage');
+    const { sha256 } = require('../src/ingestion/shared/hashing') as typeof import('../src/ingestion/shared/hashing');
+    const { normalizeIngestionPayload } = require('../src/ingestion/normalization') as typeof import('../src/ingestion/normalization');
+    const { SourceSpecificExtractor } = require('../src/ingestion/extraction/learnedExtractor') as typeof import('../src/ingestion/extraction/learnedExtractor');
+    const { createImportJob, getOrCreateIngestionSource } = require('../src/ingestion/shared/repository') as typeof import('../src/ingestion/shared/repository');
 
     const tempRef = await writeTempBytes(path.basename(fixturePath), bytes);
     try {
@@ -160,7 +160,7 @@ describe('Chase Travel flight regex extraction', () => {
   });
 
   it('parses both Chase flight sections even when PDF extraction flattens them onto one line', async () => {
-    const { _parseChaseFlightLegs } = await import('../src/ingestion/extraction');
+    const { _parseChaseFlightLegs } = require('../src/ingestion/extraction') as typeof import('../src/ingestion/extraction');
 
     const flattenedText = [
       'Flight 1: Sat, Jun 08, 2024 airline logo Jetblue Airways 07:15 pm BOS 10:42 pm LAX 6h 27m | Non-Stop Jetblue Airways B6 187 Airbus A320',
@@ -176,15 +176,15 @@ describe('Chase Travel flight regex extraction', () => {
     if (!fs.existsSync(fixturePath)) return;
     const bytes = fs.readFileSync(fixturePath);
 
-    const db = await import('../src/db');
+    const db = require('../src/db') as typeof import('../src/db');
     const user = await db.findUserByEmail('bryan.duerk@gmail.com');
     expect(user).not.toBeNull();
 
-    const { writeTempBytes, deleteTempBytes } = await import('../src/ingestion/shared/tempStorage');
-    const { sha256 } = await import('../src/ingestion/shared/hashing');
-    const { normalizeIngestionPayload } = await import('../src/ingestion/normalization');
-    const { extractCandidates } = await import('../src/ingestion/extraction');
-    const { createImportJob, getOrCreateIngestionSource } = await import('../src/ingestion/shared/repository');
+    const { writeTempBytes, deleteTempBytes } = require('../src/ingestion/shared/tempStorage') as typeof import('../src/ingestion/shared/tempStorage');
+    const { sha256 } = require('../src/ingestion/shared/hashing') as typeof import('../src/ingestion/shared/hashing');
+    const { normalizeIngestionPayload } = require('../src/ingestion/normalization') as typeof import('../src/ingestion/normalization');
+    const { extractCandidates } = require('../src/ingestion/extraction') as typeof import('../src/ingestion/extraction');
+    const { createImportJob, getOrCreateIngestionSource } = require('../src/ingestion/shared/repository') as typeof import('../src/ingestion/shared/repository');
 
     const tempRef = await writeTempBytes(path.basename(fixturePath), bytes);
     try {

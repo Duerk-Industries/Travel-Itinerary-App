@@ -45,7 +45,7 @@ describe('isLocalEnv', () => {
       },
     }));
 
-    const { isLocalEnv } = await import('../src/env');
+    const { isLocalEnv } = require('../src/env') as typeof import('../src/env');
 
     expect(isLocalEnv()).toBe(true);
   });

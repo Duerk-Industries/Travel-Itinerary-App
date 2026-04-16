@@ -15,7 +15,7 @@ describe('ingestion normalization golden fixtures', () => {
   beforeEach(async () => {
     jest.resetModules();
     setMemoryEnv();
-    const db = await import('../src/db');
+    const db = require('../src/db') as typeof import('../src/db');
     await db.initDb();
   });
 
@@ -52,8 +52,8 @@ describe('ingestion normalization golden fixtures', () => {
   ];
 
   it.each(fixtures)('normalizes $file exactly', async ({ file, mimeType, expectedText }) => {
-    const { writeTempBytes, deleteTempBytes } = await import('../src/ingestion/shared/tempStorage');
-    const { normalizeIngestionPayload } = await import('../src/ingestion/normalization');
+    const { writeTempBytes, deleteTempBytes } = require('../src/ingestion/shared/tempStorage') as typeof import('../src/ingestion/shared/tempStorage');
+    const { normalizeIngestionPayload } = require('../src/ingestion/normalization') as typeof import('../src/ingestion/normalization');
     const bytes = fs.readFileSync(file);
     const ref = await writeTempBytes(path.basename(file), bytes);
     try {
@@ -79,10 +79,10 @@ describe('ingestion normalization golden fixtures', () => {
   });
 
   it('extracts real text from Chic stay HANA Boutique hotel.pdf instead of raw PDF bytes', async () => {
-    const { findOrCreateUser } = await import('../src/db');
-    const { writeTempBytes, deleteTempBytes } = await import('../src/ingestion/shared/tempStorage');
-    const { normalizeIngestionPayload } = await import('../src/ingestion/normalization');
-    const { createImportJob, getOrCreateIngestionSource } = await import('../src/ingestion/shared/repository');
+    const { findOrCreateUser } = require('../src/db') as typeof import('../src/db');
+    const { writeTempBytes, deleteTempBytes } = require('../src/ingestion/shared/tempStorage') as typeof import('../src/ingestion/shared/tempStorage');
+    const { normalizeIngestionPayload } = require('../src/ingestion/normalization') as typeof import('../src/ingestion/normalization');
+    const { createImportJob, getOrCreateIngestionSource } = require('../src/ingestion/shared/repository') as typeof import('../src/ingestion/shared/repository');
     const file = repoInputPath('lodging', 'Chic stay HANA Boutique hotel.pdf');
     const bytes = fs.readFileSync(file);
     const ref = await writeTempBytes(path.basename(file), bytes);
