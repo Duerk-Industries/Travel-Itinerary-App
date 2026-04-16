@@ -30,6 +30,7 @@ type LodgingDetailsDialogProps = {
   theme?: AppTheme;
   payerName: (id: string) => string;
   travelerName?: (id: string) => string;
+  readOnly?: boolean;
   onClose: () => void;
   onEdit: (lodging: Lodging) => void;
   onDelete: (lodging: Lodging) => void;
@@ -47,6 +48,7 @@ const LodgingDetailsDialog: React.FC<LodgingDetailsDialogProps> = ({
   theme,
   payerName,
   travelerName,
+  readOnly = false,
   onClose,
   onEdit,
   onDelete,
@@ -241,14 +243,16 @@ const LodgingDetailsDialog: React.FC<LodgingDetailsDialogProps> = ({
               <Text style={styles.buttonText}>Close</Text>
             </TouchableOpacity>
           </View>
-          <View style={detailStyles.actionGroup}>
-            <TouchableOpacity style={styles.button} onPress={() => onEdit(lodging)}>
-              <Text style={styles.buttonText}>Edit</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={() => onDelete(lodging)}>
-              <Text style={styles.dangerButtonText}>Delete</Text>
-            </TouchableOpacity>
-          </View>
+          {!readOnly ? (
+            <View style={detailStyles.actionGroup}>
+              <TouchableOpacity style={styles.button} onPress={() => onEdit(lodging)}>
+                <Text style={styles.buttonText}>Edit</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={() => onDelete(lodging)}>
+                <Text style={styles.dangerButtonText}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
         </View>
       </View>
     </View>

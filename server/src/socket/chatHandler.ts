@@ -48,6 +48,8 @@ export const registerChatHandlers = (io: Server, socket: Socket): void => {
       socket.emit(SERVER_EVENTS.MESSAGE_HISTORY, history);
     } catch (err) {
       logError('[chat] listTripMessages error', err);
+      socket.emit(SERVER_EVENTS.ERROR, 'Unable to load chat history right now.');
+      socket.emit(SERVER_EVENTS.MESSAGE_HISTORY, []);
     }
 
     // Send current unread count

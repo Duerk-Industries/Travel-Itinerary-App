@@ -469,4 +469,45 @@ describe('Overview UI (nested itinerary)', () => {
     expect(await findByTestId('overview-day-card-1-weather')).toBeTruthy();
     expect(await findByText('☀ 22°C')).toBeTruthy();
   });
+
+  test('renders transfer rows for a followed-style trip payload', async () => {
+    const followedTripProps = {
+      ...baseProps,
+      trip: {
+        id: 'followed-trip-1',
+        groupId: 'group-1',
+        groupName: 'Group',
+        name: 'Followed Romania',
+        destination: 'Bucharest',
+        startDate: '2026-09-01',
+        endDate: '2026-09-03',
+        createdAt: '2026-08-01',
+      },
+      flights: [
+        {
+          id: 'flight-followed-1',
+          passenger_name: 'Bryan Traveler',
+          passenger_ids: ['member-1'],
+          trip_id: 'followed-trip-1',
+          departure_date: '2026-09-01',
+          departure_location: 'MXP',
+          departure_airport_code: 'MXP',
+          departure_time: '08:00',
+          arrival_date: '2026-09-01',
+          arrival_location: 'OTP',
+          arrival_airport_code: 'OTP',
+          arrival_time: '11:00',
+          cost: 124.58,
+          carrier: 'Ryanair',
+          flight_number: 'FR259',
+          booking_reference: 'ABC123',
+        },
+      ] as any[],
+    };
+
+    const { findByTestId, findByText } = await renderOverview(<OverviewTab {...followedTripProps} />);
+    expect(await findByText(/MXP - Travel day/i)).toBeTruthy();
+    fireEvent.press(await findByTestId('overview-day-card-1'));
+    expect(await findByText(/MXP → OTP/i)).toBeTruthy();
+  });
 });

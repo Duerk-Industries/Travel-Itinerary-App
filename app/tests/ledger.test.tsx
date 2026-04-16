@@ -163,4 +163,34 @@ describe('LedgerTab', () => {
     );
     expect(totals).toEqual({});
   });
+
+  it('renders normally for followed-trip style trip objects', async () => {
+    const followedTrip = {
+      id: 'followed-1',
+      name: 'Romania (Following)',
+      currency: 'USD',
+    };
+
+    const { getByTestId, queryByText } = render(
+      <LedgerTab
+        trip={followedTrip}
+        groupMembers={groupMembers}
+        reportableMembers={groupMembers}
+        paidTotals={paidTotals}
+        usedTotals={usedTotals}
+        styles={styles}
+        downloadCsv={downloadCsv}
+        findActiveTrip={() => followedTrip}
+        onNavigate={() => {}}
+        coveredBy={coveredBy}
+        setCoveredBy={jest.fn()}
+        formatMemberName={(member) => `${member.firstName ?? ''} ${member.lastName ?? ''}`.trim()}
+        payerName={(id) => id}
+        saveCoveredBy={async () => {}}
+      />
+    );
+
+    expect(queryByText('Select a trip to view the ledger.')).toBeNull();
+    expect(await waitFor(() => getByTestId('ledger-table'))).toBeTruthy();
+  });
 });

@@ -53,19 +53,24 @@ const ChatPanel: React.FC<Props> = ({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(true);
-  const flatListRef = useRef<FlatList>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const flatListRef = useRef<any>(null);
   const isWeb = Platform.OS === 'web';
 
   // -------------------------------------------------------------------------
   // Join trip room and wire up events
   // -------------------------------------------------------------------------
   useEffect(() => {
+    setLoading(true);
+    setErrorMessage(null);
+
     const joinAndListen = () => {
       socket.emit(CLIENT_EVENTS.JOIN_TRIP, tripId);
     };
 
     const onHistory = (history: ChatMessage[]) => {
       setMessages(history);
+      setErrorMessage(null);
       setLoading(false);
       // Scroll to bottom
       setTimeout(() => flatListRef.current?.scrollToEnd({ animated: false }), 100);
@@ -82,21 +87,44 @@ const ChatPanel: React.FC<Props> = ({
       if (data.tripId === tripId) onUnreadChange(data.count);
     };
 
+    const onChatError = (message: string) => {
+      setMessages([]);
+      setErrorMessage(message || 'Unable to load chat right now.');
+      setLoading(false);
+    };
+
+    const onConnectError = () => {
+      setMessages([]);
+      setErrorMessage('Unable to connect to chat right now.');
+      setLoading(false);
+    };
+
+    const historyTimeout = setTimeout(() => {
+      setMessages([]);
+      setErrorMessage('Unable to load chat history right now.');
+      setLoading(false);
+    }, 5000);
+
     socket.on(SERVER_EVENTS.MESSAGE_HISTORY, onHistory);
     socket.on(SERVER_EVENTS.NEW_MESSAGE, onNewMessage);
     socket.on(SERVER_EVENTS.UNREAD_COUNT, onUnreadCount);
+    socket.on(SERVER_EVENTS.ERROR, onChatError);
 
     // Join now if already connected, otherwise join when connection establishes
     if (socket.connected) {
       joinAndListen();
     }
     socket.on('connect', joinAndListen);
+    socket.on('connect_error', onConnectError);
 
     return () => {
+      clearTimeout(historyTimeout);
       socket.off(SERVER_EVENTS.MESSAGE_HISTORY, onHistory);
       socket.off(SERVER_EVENTS.NEW_MESSAGE, onNewMessage);
       socket.off(SERVER_EVENTS.UNREAD_COUNT, onUnreadCount);
+      socket.off(SERVER_EVENTS.ERROR, onChatError);
       socket.off('connect', joinAndListen);
+      socket.off('connect_error', onConnectError);
     };
   }, [socket, tripId, onUnreadChange]);
 
@@ -175,6 +203,16 @@ const ChatPanel: React.FC<Props> = ({
       {loading ? (
         <View style={themedStyles.loadingContainer}>
           <ActivityIndicator />
+        </View>
+      ) : errorMessage ? (
+        <View style={themedStyles.stateContainer} testID="chat-error-state">
+          <Text style={themedStyles.stateTitle}>Chat unavailable</Text>
+          <Text style={themedStyles.stateBody}>{errorMessage}</Text>
+        </View>
+      ) : !messages.length ? (
+        <View style={themedStyles.stateContainer} testID="chat-empty-state">
+          <Text style={themedStyles.stateTitle}>No messages yet</Text>
+          <Text style={themedStyles.stateBody}>Start the conversation for this trip.</Text>
         </View>
       ) : (
         <FlatList
@@ -272,6 +310,25 @@ const buildStyles = (theme?: AppTheme) => StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  stateContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    gap: 8,
+  },
+  stateTitle: {
+    color: theme?.colors.text ?? '#1a1a1a',
+    fontSize: 16,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  stateBody: {
+    color: theme?.colors.textMuted ?? '#555',
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 18,
   },
   messageList: {
     padding: 10,

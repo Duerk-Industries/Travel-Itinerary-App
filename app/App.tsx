@@ -51,7 +51,7 @@ import {
   persistAppearancePreference,
 } from './utils/appearancePreference';
 import { getAppTheme, type AppTheme } from './theme/theme';
-import { shouldAllowPageChange, shouldDisableTab } from './utils/wizardGuard';
+import { FOLLOWED_TRIP_HIDDEN_PAGES, shouldAllowPageChange, shouldDisableTab } from './utils/wizardGuard';
 import * as WebBrowser from 'expo-web-browser';
 import { Buffer } from 'buffer';
 import { loadSession, saveSession, clearSession } from './utils/session';
@@ -537,6 +537,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [followCodePayloads, setFollowCodePayloads] = useState<Record<string, InvitePayload>>({});
   const [pendingFollowCode, setPendingFollowCode] = useState<string | null>(null);
   const [selectedFollowedTripId, setSelectedFollowedTripId] = useState<string | null>(null);
+  const [selectedFollowedTripDetails, setSelectedFollowedTripDetails] = useState<Trip | null>(null);
   const [groupName, setGroupName] = useState('');
   const [groupUserEmails, setGroupUserEmails] = useState('');
   const [groupGuestNames, setGroupGuestNames] = useState('');
@@ -711,6 +712,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const activeTrip = useMemo(() => trips.find((t) => t.id === activeTripId) ?? null, [trips, activeTripId]);
   const tripById = useMemo(() => new Map(trips.map((trip) => [trip.id, trip] as const)), [trips]);
   const groupById = useMemo(() => new Map(groups.map((group) => [group.id, group] as const)), [groups]);
+  const followedTripById = useMemo(
+    () => new Map(followedTrips.map((trip) => [trip.tripId, trip] as const)),
+    [followedTrips]
+  );
   const activeGroup = useMemo(
     () => (activeTrip?.groupId ? groupById.get(activeTrip.groupId) ?? null : null),
     [activeTrip?.groupId, groupById]
@@ -723,10 +728,39 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     () => (selectedTrip?.groupId ? groupById.get(selectedTrip.groupId) ?? null : null),
     [selectedTrip?.groupId, groupById]
   );
+  const selectedFollowedTrip = useMemo(
+    () => (selectedFollowedTripId ? followedTripById.get(selectedFollowedTripId) ?? null : null),
+    [followedTripById, selectedFollowedTripId]
+  );
+  const isFollowingMode = Boolean(selectedFollowedTripId);
+  const followedTripFallback = useMemo<Trip | null>(
+    () =>
+      selectedFollowedTrip
+        ? {
+            id: selectedFollowedTrip.tripId,
+            groupId: '',
+            groupName: '',
+            name: selectedFollowedTrip.tripName,
+            destination: selectedFollowedTrip.destination ?? selectedFollowedTrip.tripName,
+            startDate: null,
+            endDate: null,
+            durationDays: null,
+            createdAt: '',
+          }
+        : null,
+    [selectedFollowedTrip]
+  );
+  const activeTripForHome = selectedFollowedTripDetails ?? followedTripFallback;
+  const activeTripSelectorLabel = useMemo(() => {
+    if (isFollowingMode && selectedFollowedTrip?.tripName) {
+      return `${selectedFollowedTrip.tripName} (Following)`;
+    }
+    return activeTrip?.name ?? 'Select';
+  }, [activeTrip?.name, isFollowingMode, selectedFollowedTrip?.tripName]);
 
   const isTripWizardOpen = activePage === 'create-trip';
   const requestPageChange = useCallback((page: Page, opts?: { skipHistory?: boolean }) => {
-    if (!shouldAllowPageChange(activePage, page)) return;
+    if (!shouldAllowPageChange(activePage, page, { isFollowedTrip: isFollowingMode })) return;
     if (page === activePage) return;
     setPageForwardHistory([]);
     if (!opts?.skipHistory) {
@@ -736,7 +770,19 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       });
     }
     setActivePage(page);
-  }, [activePage]);
+  }, [activePage, isFollowingMode]);
+
+  const handleSelectOwnedTrip = useCallback((tripId: string) => {
+    setSelectedFollowedTripId(null);
+    setActiveTripId(tripId);
+  }, []);
+
+  const handleSelectFollowedTrip = useCallback((tripId: string) => {
+    setActiveTripId(tripId);
+    setSelectedFollowedTripId(tripId);
+    setShowActiveTripDropdown(false);
+    requestPageChange('home');
+  }, [requestPageChange]);
 
   const openAdminSection = useCallback((section: AdminSectionRoute = initialAdminSection) => {
     if (userRole !== 'admin') return;
@@ -770,6 +816,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   }, []);
 
   const addCarRental = useCallback(async () => {
+    if (isFollowingMode) return;
     if (!activeTripId) {
       alert('Select an active trip before adding a car rental.');
       return;
@@ -807,9 +854,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       setCarRentals(cars);
     }
     setCarDraft(createInitialCarRentalDraft());
-  }, [activeTripId, carDraft, defaultPayerId, memberIds, backendUrl, jsonHeaders, userToken]);
+  }, [activeTripId, carDraft, defaultPayerId, memberIds, backendUrl, jsonHeaders, userToken, isFollowingMode]);
 
   const addCarRentalFromOverview = useCallback(async (rental: CarRental) => {
+    if (isFollowingMode) return;
     if (!activeTripId) {
       alert('Select an active trip before adding a car rental.');
       return;
@@ -842,9 +890,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       const cars = await fetchCarRentalsForTrip({ backendUrl, activeTripId, token: userToken });
       setCarRentals(cars);
     }
-  }, [activeTripId, backendUrl, jsonHeaders, userToken]);
+  }, [activeTripId, backendUrl, jsonHeaders, userToken, isFollowingMode]);
 
   const removeCarRental = useCallback(async (id: string) => {
+    if (isFollowingMode) return;
     const res = await fetch(`${backendUrl}/api/car-rentals/${id}`, { method: 'DELETE', headers: jsonHeaders });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
@@ -864,9 +913,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       const cars = await fetchCarRentalsForTrip({ backendUrl, activeTripId, token: userToken });
       setCarRentals(cars);
     }
-  }, [backendUrl, jsonHeaders, activeTripId, userToken]);
+  }, [backendUrl, jsonHeaders, activeTripId, userToken, isFollowingMode]);
 
   const voteOnCarRental = useCallback(async (id: string, value: 1 | -1) => {
+    if (isFollowingMode) return;
     const res = await fetch(`${backendUrl}/api/car-rentals/${id}/vote`, {
       method: 'POST',
       headers: jsonHeaders,
@@ -881,9 +931,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       const cars = await fetchCarRentalsForTrip({ backendUrl, activeTripId, token: userToken });
       setCarRentals(cars);
     }
-  }, [backendUrl, jsonHeaders, activeTripId, userToken]);
+  }, [backendUrl, jsonHeaders, activeTripId, userToken, isFollowingMode]);
 
   const rateOnCarRental = useCallback(async (id: string, value: 1 | -1) => {
+    if (isFollowingMode) return;
     const res = await fetch(`${backendUrl}/api/car-rentals/${id}/rating`, {
       method: 'POST',
       headers: jsonHeaders,
@@ -898,7 +949,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       const cars = await fetchCarRentalsForTrip({ backendUrl, activeTripId, token: userToken });
       setCarRentals(cars);
     }
-  }, [backendUrl, jsonHeaders, activeTripId, userToken]);
+  }, [backendUrl, jsonHeaders, activeTripId, userToken, isFollowingMode]);
 
   const openCarDatePicker = useCallback((field: 'pickup' | 'dropoff') => {
     if (Platform.OS !== 'web' && NativeDateTimePicker) {
@@ -1614,21 +1665,21 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       setTrips(data);
       if (!activeTripId && data.length) {
         setActiveTripId(data[0].id);
-      } else if (activeTripId && !data.find((t: Trip) => t.id === activeTripId)) {
+      } else if (activeTripId && !isFollowingMode && !data.find((t: Trip) => t.id === activeTripId)) {
         setActiveTripId(data[0]?.id ?? null);
       }
       return data;
     } catch {
       return [];
     }
-  }, [activeTripId, backendUrl, logout, userToken, requirePasswordSetup]);
+  }, [activeTripId, backendUrl, isFollowingMode, logout, userToken, requirePasswordSetup]);
 
   const fetchGroupMembersForActiveTrip = useCallback(async () => {
     if (!userToken || !activeTripId) {
       setGroupMembers([]);
       return;
     }
-    const trip = trips.find((t) => t.id === activeTripId);
+    const trip = isFollowingMode ? selectedFollowedTripDetails : trips.find((t) => t.id === activeTripId);
     const groupId = trip?.groupId;
     if (!groupId) {
       setGroupMembers([]);
@@ -1656,7 +1707,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     } catch {
       setGroupMembers([]);
     }
-  }, [activeTripId, backendUrl, trips, userToken]);
+  }, [activeTripId, backendUrl, isFollowingMode, selectedFollowedTripDetails, trips, userToken]);
 
   const fetchTraits = useCallback(async () => {
     if (!userToken) return;
@@ -2045,6 +2096,49 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   }, [followedTrips, selectedFollowedTripId]);
 
   useEffect(() => {
+    if (!selectedFollowedTripId || !userToken) {
+      setSelectedFollowedTripDetails(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`${backendUrl}/api/trips/${selectedFollowedTripId}`, {
+          headers: { Authorization: `Bearer ${userToken}` },
+        });
+        if (!res.ok) {
+          if (!cancelled) setSelectedFollowedTripDetails(null);
+          return;
+        }
+        const data = await res.json().catch(() => null);
+        if (!cancelled && data?.id) {
+          setSelectedFollowedTripDetails({
+            id: data.id,
+            groupId: data.groupId ?? '',
+            groupName: data.groupName ?? '',
+            name: data.name ?? selectedFollowedTrip?.tripName ?? 'Trip',
+            description: data.description ?? null,
+            destination: data.destination ?? selectedFollowedTrip?.destination ?? null,
+            locationIds: Array.isArray(data.locationIds) ? data.locationIds : [],
+            startDate: data.startDate ?? null,
+            endDate: data.endDate ?? null,
+            startMonth: data.startMonth ?? null,
+            startYear: data.startYear ?? null,
+            durationDays: data.durationDays ?? null,
+            currency: data.currency ?? null,
+            createdAt: data.createdAt ?? '',
+          });
+        }
+      } catch {
+        if (!cancelled) setSelectedFollowedTripDetails(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [backendUrl, selectedFollowedTrip?.destination, selectedFollowedTrip?.tripName, selectedFollowedTripId, userToken]);
+
+  useEffect(() => {
     if (!userToken || requirePasswordSetup) return;
     if (!Number.isFinite(refreshIntervalMs) || refreshIntervalMs <= 0) return;
     const now = Date.now();
@@ -2354,12 +2448,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const goBack = useCallback(() => {
     if (pageHistory.length === 0) return;
     const previousPage = pageHistory[pageHistory.length - 1];
-    if (shouldAllowPageChange(activePage, previousPage)) {
+    if (shouldAllowPageChange(activePage, previousPage, { isFollowedTrip: isFollowingMode })) {
       setPageForwardHistory((prev) => [activePage, ...prev].slice(0, 25));
       setPageHistory((prev) => prev.slice(0, -1));
       setActivePage(previousPage);
     }
-  }, [pageHistory, activePage]);
+  }, [pageHistory, activePage, isFollowingMode]);
 
   const closeTripWizard = useCallback(() => {
     setPageForwardHistory([]);
@@ -2369,12 +2463,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const goForward = useCallback(() => {
     if (pageForwardHistory.length === 0) return;
     const nextPage = pageForwardHistory[0];
-    if (shouldAllowPageChange(activePage, nextPage)) {
+    if (shouldAllowPageChange(activePage, nextPage, { isFollowedTrip: isFollowingMode })) {
       setPageHistory((prev) => [...prev, activePage].slice(-25));
       setPageForwardHistory((prev) => prev.slice(1));
       setActivePage(nextPage);
     }
-  }, [pageForwardHistory, activePage]);
+  }, [pageForwardHistory, activePage, isFollowingMode]);
 
   useEffect(() => {
     if (!userToken) return;
@@ -2399,13 +2493,20 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       'itinerary',
       'ingest',
     ];
-    return new Set(pages.filter((page) => shouldDisableTab(activePage, page)));
-  }, [activePage]);
+    return new Set(pages.filter((page) => shouldDisableTab(activePage, page, { isFollowedTrip: isFollowingMode })));
+  }, [activePage, isFollowingMode]);
+  const hiddenPages = useMemo(
+    () => new Set<string>(isFollowingMode ? FOLLOWED_TRIP_HIDDEN_PAGES : []),
+    [isFollowingMode]
+  );
   const activeTripName = useMemo(
     () => activeTrip?.name?.replace(/\s/g, '_') ?? 'export',
     [activeTrip?.name]
   );
-  const getActiveTrip = useCallback(() => activeTrip ?? undefined, [activeTrip]);
+  const getActiveTrip = useCallback(
+    () => activeTripForHome ?? activeTrip ?? undefined,
+    [activeTrip, activeTripForHome]
+  );
   const handleHomeNavigate = useCallback((page: string) => requestPageChange(page as Page), [requestPageChange]);
   const handleFlightsDataChanged = useCallback(() => {
     fetchFlights();
@@ -2527,7 +2628,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                 <Text style={styles.buttonText}>Share</Text>
               </TouchableOpacity>
             ) : null}
-            {trips.length ? (
+            {trips.length || followedTrips.length ? (
               <TouchableOpacity
                 activeOpacity={0.8}
                 disabled={isTripWizardOpen}
@@ -2543,7 +2644,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                 onPress={() => setShowActiveTripDropdown((s) => !s)}
               >
                 <Text style={styles.cellText} numberOfLines={1} ellipsizeMode="tail">
-                  Active Trip: {activeTrip?.name ?? 'Select'}
+                  Active Trip: {activeTripSelectorLabel}
                 </Text>
                 {showActiveTripDropdown && (
                   <View style={styles.dropdownList}>
@@ -2552,13 +2653,29 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                         key={trip.id}
                         style={styles.dropdownOption}
                         onPress={() => {
-                          setActiveTripId(trip.id);
+                          handleSelectOwnedTrip(trip.id);
                           setShowActiveTripDropdown(false);
                         }}
                       >
                         <Text style={styles.cellText}>{trip.name}</Text>
                       </TouchableOpacity>
                     ))}
+                    {followedTrips.length ? (
+                      <View>
+                        <Text style={styles.modalLabelSmall}>Followed Trips</Text>
+                        {followedTrips.map((trip) => (
+                          <TouchableOpacity
+                            key={`followed-${trip.tripId}`}
+                            style={styles.dropdownOption}
+                            onPress={() => {
+                              handleSelectFollowedTrip(trip.tripId);
+                            }}
+                          >
+                            <Text style={styles.cellText}>{trip.tripName} (Following)</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    ) : null}
                   </View>
                 )}
               </TouchableOpacity>
@@ -2609,10 +2726,14 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   headers={headers}
                   activeTripId={activeTripId}
                   trips={trips}
+                  followedTrips={followedTrips}
+                  activeTripOverride={activeTripForHome}
                   styles={styles}
-                  onSelectTrip={setActiveTripId}
+                  onSelectTrip={handleSelectOwnedTrip}
+                  onSelectFollowedTrip={handleSelectFollowedTrip}
                   onNavigate={handleHomeNavigate}
                   disabledPages={disabledPages}
+                  hiddenPages={hiddenPages}
                 />
               )
             : null}
@@ -2652,6 +2773,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   theme={theme}
                   nativeDateTimePicker={NativeDateTimePicker}
                   fetchTours={fetchTours}
+                  readOnly={isFollowingMode}
                 />
               )
             : null}
@@ -2675,7 +2797,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           {activePage === 'ledger'
             ? renderSharedPageScroll(
                 <LedgerTab
-                  trip={activeTrip}
+                  trip={activeTripForHome ?? activeTrip}
                   groupMembers={groupMembers}
                   reportableMembers={reportableMembers}
                   paidTotals={ledgerPaidTotals}
@@ -2843,7 +2965,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               backendUrl={backendUrl}
               jsonHeaders={jsonHeaders}
               requestHeaders={headers}
-              trip={activeTrip}
+              trip={activeTripForHome ?? activeTrip}
               lodgings={lodgings}
               groupMembers={groupMembers}
               defaultPayerId={defaultPayerId}
@@ -2852,6 +2974,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               onOpenMap={openMaps}
               formatMemberName={formatMemberName}
               payerName={payerName}
+              readOnly={isFollowingMode}
             />
           )
         : null}
@@ -2921,7 +3044,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                 </View>
                 <View style={[styles.tableCell, { minWidth: 180 }, styles.lastCell]}>
                   <View style={styles.actionCell}>
-                    {shouldShowVoteButtons((car as any).status, (car as any).userVote) ? (
+                    {!isFollowingMode && shouldShowVoteButtons((car as any).status, (car as any).userVote) ? (
                       <>
                         <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => voteOnCarRental(car.id, 1)}>
                           <Text style={styles.buttonText}>👍</Text>
@@ -2931,7 +3054,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                         </TouchableOpacity>
                       </>
                     ) : null}
-                    {shouldShowRatingButtons((car as any).status, (car as any).userRating) ? (
+                    {!isFollowingMode && shouldShowRatingButtons((car as any).status, (car as any).userRating) ? (
                       <>
                         <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => rateOnCarRental(car.id, 1)}>
                           <Text style={styles.buttonText}>⭐</Text>
@@ -2941,18 +3064,23 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                         </TouchableOpacity>
                       </>
                     ) : null}
-                    <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => removeCarRental(car.id)} testID={`car-rental-delete-${car.id}`}>
-                      <Text style={styles.dangerButtonText}>Delete</Text>
-                    </TouchableOpacity>
+                    {!isFollowingMode ? (
+                      <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => removeCarRental(car.id)} testID={`car-rental-delete-${car.id}`}>
+                        <Text style={styles.dangerButtonText}>Delete</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <Text style={styles.cellText}>View only</Text>
+                    )}
                   </View>
                 </View>
               </View>
             ))}
           </View>
 
-          <View style={styles.carFormSection}>
-            <Text style={styles.helperText}>Add Car Rental</Text>
-            <View style={styles.carFormGrid}>
+          {!isFollowingMode ? (
+            <View style={styles.carFormSection}>
+              <Text style={styles.helperText}>Add Car Rental</Text>
+              <View style={styles.carFormGrid}>
               <TextInput
                 style={[styles.input, styles.carFormField]}
                 placeholder="Pick up location"
@@ -3086,70 +3214,71 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                 onChangeText={(text: string) => setCarDraft((p) => ({ ...p, notes: text }))}
                 multiline
               />
-            </View>
-            <View style={styles.carMemberRow}>
-              <View style={[styles.carMemberField, { flex: 1 }]}>
-                <Text style={styles.modalLabelSmall}>For</Text>
-                <View style={styles.payerChips}>
-                  {carDraft.travelerIds.map((id) => (
-                    <View key={`car-traveler-${id}`} style={styles.payerChip}>
-                      <Text style={styles.cellText}>{payerName(id)}</Text>
-                      <TouchableOpacity onPress={() => setCarDraft((prev) => ({ ...prev, travelerIds: prev.travelerIds.filter((x) => x !== id) }))}>
-                        <Text style={styles.removeText}>x</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                </View>
-                <View style={styles.payerOptions}>
-                  {userMembers
-                    .filter((m) => !carDraft.travelerIds.includes(m.id))
-                    .map((m) => (
-                      <TouchableOpacity
-                        key={`car-traveler-add-${m.id}`}
-                        style={styles.smallButton}
-                        onPress={() =>
-                          setCarDraft((prev) => ({
-                            ...prev,
-                            travelerIds: [...prev.travelerIds, m.id],
-                          }))
-                        }
-                      >
-                        <Text style={styles.buttonText}>Add {formatMemberName(m)}</Text>
-                      </TouchableOpacity>
-                    ))}
-                </View>
               </View>
-              <View style={[styles.carMemberField, { flex: 1 }]}>
-                <Text style={styles.modalLabelSmall}>Paid By</Text>
-                <View style={styles.payerChips}>
-                  {carDraft.paidBy.map((id) => (
-                    <View key={id} style={styles.payerChip}>
-                      <Text style={styles.cellText}>{payerName(id)}</Text>
-                      <TouchableOpacity onPress={() => setCarDraft((prev) => ({ ...prev, paidBy: prev.paidBy.filter((x) => x !== id) }))}>
-                        <Text style={styles.removeText}>x</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                </View>
-                <View style={styles.payerOptions}>
-                  {userMembers
-                    .filter((m) => !carDraft.paidBy.includes(m.id))
-                    .map((m) => (
-                      <TouchableOpacity
-                        key={m.id}
-                        style={styles.smallButton}
-                        onPress={() => setCarDraft((prev) => ({ ...prev, paidBy: [...prev.paidBy, m.id] }))}
-                      >
-                        <Text style={styles.buttonText}>Add {formatMemberName(m)}</Text>
-                      </TouchableOpacity>
+              <View style={styles.carMemberRow}>
+                <View style={[styles.carMemberField, { flex: 1 }]}>
+                  <Text style={styles.modalLabelSmall}>For</Text>
+                  <View style={styles.payerChips}>
+                    {carDraft.travelerIds.map((id) => (
+                      <View key={`car-traveler-${id}`} style={styles.payerChip}>
+                        <Text style={styles.cellText}>{payerName(id)}</Text>
+                        <TouchableOpacity onPress={() => setCarDraft((prev) => ({ ...prev, travelerIds: prev.travelerIds.filter((x) => x !== id) }))}>
+                          <Text style={styles.removeText}>x</Text>
+                        </TouchableOpacity>
+                      </View>
                     ))}
+                  </View>
+                  <View style={styles.payerOptions}>
+                    {userMembers
+                      .filter((m) => !carDraft.travelerIds.includes(m.id))
+                      .map((m) => (
+                        <TouchableOpacity
+                          key={`car-traveler-add-${m.id}`}
+                          style={styles.smallButton}
+                          onPress={() =>
+                            setCarDraft((prev) => ({
+                              ...prev,
+                              travelerIds: [...prev.travelerIds, m.id],
+                            }))
+                          }
+                        >
+                          <Text style={styles.buttonText}>Add {formatMemberName(m)}</Text>
+                        </TouchableOpacity>
+                      ))}
+                  </View>
                 </View>
+                <View style={[styles.carMemberField, { flex: 1 }]}>
+                  <Text style={styles.modalLabelSmall}>Paid By</Text>
+                  <View style={styles.payerChips}>
+                    {carDraft.paidBy.map((id) => (
+                      <View key={id} style={styles.payerChip}>
+                        <Text style={styles.cellText}>{payerName(id)}</Text>
+                        <TouchableOpacity onPress={() => setCarDraft((prev) => ({ ...prev, paidBy: prev.paidBy.filter((x) => x !== id) }))}>
+                          <Text style={styles.removeText}>x</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                  <View style={styles.payerOptions}>
+                    {userMembers
+                      .filter((m) => !carDraft.paidBy.includes(m.id))
+                      .map((m) => (
+                        <TouchableOpacity
+                          key={m.id}
+                          style={styles.smallButton}
+                          onPress={() => setCarDraft((prev) => ({ ...prev, paidBy: [...prev.paidBy, m.id] }))}
+                        >
+                          <Text style={styles.buttonText}>Add {formatMemberName(m)}</Text>
+                        </TouchableOpacity>
+                      ))}
+                  </View>
+                </View>
+                <TouchableOpacity style={[styles.button, styles.carAddButton]} onPress={addCarRental} testID="car-rental-add">
+                  <Text style={styles.buttonText}>Add</Text>
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity style={[styles.button, styles.carAddButton]} onPress={addCarRental} testID="car-rental-add">
-                <Text style={styles.buttonText}>Add</Text>
-              </TouchableOpacity>
             </View>
-          </View>
+          ) : null}
         </View>
       ) : null}
 
@@ -3193,6 +3322,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               onDataChanged={handleFlightsDataChanged}
               onExternalEditHandled={handleExternalEditHandled}
               showList={true}
+              readOnly={isFollowingMode}
             />
           )
         : null}
@@ -3218,6 +3348,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           onDataChanged={handleFlightsDataChanged}
           onExternalEditHandled={handleExternalEditHandled}
           showList={false}
+          readOnly={isFollowingMode}
         />
       ) : null}
       {activePage === 'trips' ? renderSharedPageScroll(
@@ -3341,7 +3472,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   backendUrl={backendUrl}
                   headers={headers}
                   jsonHeaders={jsonHeaders}
-                  trip={activeTrip}
+                  trip={activeTripForHome ?? activeTrip}
                   group={activeGroup}
                   attendees={groupMembers}
                   flights={flights}

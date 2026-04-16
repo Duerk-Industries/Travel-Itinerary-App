@@ -221,6 +221,7 @@ type TourTabProps = {
   fetchTours: (token?: string) => Promise<void>;
   onDataChanged?: () => void;
   mode?: 'live' | 'wizard';
+  readOnly?: boolean;
 };
 
 export const ActivityTab: React.FC<TourTabProps> = ({
@@ -242,6 +243,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   fetchTours,
   onDataChanged,
   mode = 'live',
+  readOnly = false,
 }) => {
   const [editingTour, setEditingTour] = useState<TourDraft | null>(null);
   const [editingTourId, setEditingTourId] = useState<string | null>(null);
@@ -280,6 +282,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   const toggleTextSelectedStyle = styles.toggleOptionTextSelected ?? { color: theme?.colors.text ?? '#111' };
 
   const openTourEditor = (tour?: Tour) => {
+    if (readOnly) return;
     if (mode !== 'wizard' && !activeTripId) {
       alert('Select an active trip before adding an activity.');
       return;
@@ -329,6 +332,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   };
 
   const saveTour = () => {
+    if (readOnly) return;
     if (!editingTour) return;
     const status = normalizeItineraryStatus(editingTour.status, DEFAULT_NEW_ITINERARY_STATUS);
     if (!shouldRelaxRequiredFields(status) && !editingTour.name.trim()) {
@@ -390,6 +394,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   };
 
   const removeTour = (id: string) => {
+    if (readOnly) return;
     if (mode === 'wizard') {
       setTours((prev) => prev.filter((t) => t.id !== id));
       return;
@@ -403,6 +408,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   };
 
   const voteOnTour = async (id: string, value: 1 | -1) => {
+    if (readOnly) return;
     try {
       const res = await fetch(`${backendUrl}/api/activities/${id}/vote`, {
         method: 'POST',
@@ -420,6 +426,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   };
 
   const rateTour = async (id: string, value: 1 | -1) => {
+    if (readOnly) return;
     try {
       const res = await fetch(`${backendUrl}/api/activities/${id}/rating`, {
         method: 'POST',
@@ -459,9 +466,11 @@ export const ActivityTab: React.FC<TourTabProps> = ({
     <View style={styles.card}>
       <View style={styles.sectionHeaderRow}>
         <Text style={styles.sectionTitle}>Activities</Text>
-        <TouchableOpacity style={[styles.button, styles.roundButton]} onPress={() => openTourEditor()} testID="activity-add">
-          <Text style={styles.buttonText}>+</Text>
-        </TouchableOpacity>
+        {!readOnly ? (
+          <TouchableOpacity style={[styles.button, styles.roundButton]} onPress={() => openTourEditor()} testID="activity-add">
+            <Text style={styles.buttonText}>+</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
       {Platform.OS !== 'web' && tourDateField && editingTour && DateTimePickerComponent ? (
         <DateTimePickerComponent
@@ -522,7 +531,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                 <Text style={styles.cellText}>{normalizeItineraryStatus(t.status, LEGACY_ITINERARY_STATUS)}</Text>
               </View>
               <View style={[styles.cell, styles.actionCell, { minWidth: 120, flex: 1 }]}>
-                {shouldShowVoteButtons(t.status, t.userVote) ? (
+                {!readOnly && shouldShowVoteButtons(t.status, t.userVote) ? (
                   <>
                     <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => voteOnTour(t.id, 1)}>
                       <Text style={styles.buttonText}>👍</Text>
@@ -536,7 +545,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                 )}
               </View>
               <View style={[styles.cell, styles.actionCell, { minWidth: 120, flex: 1 }]}>
-                {shouldShowRatingButtons(t.status, t.userRating) ? (
+                {!readOnly && shouldShowRatingButtons(t.status, t.userRating) ? (
                   <>
                     <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => rateTour(t.id, 1)}>
                       <Text style={styles.buttonText}>👍</Text>
@@ -582,12 +591,18 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                 <Text style={styles.cellText}>{t.paidBy.length ? t.paidBy.map(payerName).join(', ') : '-'}</Text>
               </View>
               <View style={[styles.cell, styles.actionCell, styles.lastCell, { minWidth: 160, flex: 1 }]}>
-                <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => openTourEditor(t)} testID={`activity-edit-${t.id}`}>
-                  <Text style={styles.buttonText}>Edit</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => removeTour(t.id)} testID={`activity-delete-${t.id}`}>
-                  <Text style={styles.dangerButtonText}>Delete</Text>
-                </TouchableOpacity>
+                {!readOnly ? (
+                  <>
+                    <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => openTourEditor(t)} testID={`activity-edit-${t.id}`}>
+                      <Text style={styles.buttonText}>Edit</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => removeTour(t.id)} testID={`activity-delete-${t.id}`}>
+                      <Text style={styles.dangerButtonText}>Delete</Text>
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <Text style={styles.cellText}>View only</Text>
+                )}
               </View>
             </View>
           ))}
@@ -605,7 +620,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
           </View>
         ) : null}
       </View>
-      {editingTour ? (
+      {!readOnly && editingTour ? (
         <Modal transparent visible={Boolean(editingTour)} animationType="fade" onRequestClose={closeTourEditor}>
           <View style={styles.modalOverlay} testID="activity-form-modal">
             <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={closeTourEditor} />

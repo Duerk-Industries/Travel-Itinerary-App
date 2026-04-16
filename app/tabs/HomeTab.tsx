@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Image, Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { computeTripDays } from '../utils/createTripWizard';
 import { formatDateLong } from '../utils/formatDateLong';
+import { FollowedTrip } from './follow';
 
 type Trip = {
   id: string;
@@ -19,10 +20,14 @@ type HomeTabProps = {
   headers: Record<string, string>;
   activeTripId: string | null;
   trips: Trip[];
+  followedTrips: FollowedTrip[];
+  activeTripOverride?: Trip | null;
   styles: Record<string, any>;
   onSelectTrip: (tripId: string) => void;
+  onSelectFollowedTrip: (tripId: string) => void;
   onNavigate: (page: string) => void;
   disabledPages?: Set<string>;
+  hiddenPages?: Set<string>;
 };
 
 const formatTripDuration = (trip?: Trip | null): string | null => {
@@ -38,17 +43,21 @@ const HomeTab: React.FC<HomeTabProps> = ({
   headers,
   activeTripId,
   trips,
+  followedTrips,
+  activeTripOverride,
   styles,
   onSelectTrip,
+  onSelectFollowedTrip,
   onNavigate,
   disabledPages,
+  hiddenPages,
 }) => {
   const [heroImage, setHeroImage] = useState<string | null>(null);
   const [showTripPicker, setShowTripPicker] = useState(false);
 
   const activeTrip = useMemo(
-    () => trips.find((t) => t.id === activeTripId) ?? null,
-    [trips, activeTripId]
+    () => activeTripOverride ?? trips.find((t) => t.id === activeTripId) ?? null,
+    [activeTripOverride, trips, activeTripId]
   );
 
   const sortedTrips = useMemo(() => {
@@ -114,7 +123,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
     { key: 'account', label: 'Account', icon: '👤' },
     { key: 'follow', label: 'Follow Trip', icon: '🔗' },
     { key: 'following', label: 'Following Trips', icon: '👀' },
-  ];
+  ].filter((item) => !hiddenPages?.has(item.key));
 
   return (
     <View style={[styles.card, { flex: 1, minHeight: 0 }]}>
@@ -201,6 +210,31 @@ const HomeTab: React.FC<HomeTabProps> = ({
                     {trip.id === activeTripId ? <Text style={styles.homeModalActiveBadge}>Active</Text> : null}
                   </Pressable>
                 ))}
+                {followedTrips.length ? (
+                  <View>
+                    <Text style={styles.homeModalTitle}>Followed Trips</Text>
+                    {followedTrips.map((trip) => (
+                      <Pressable
+                        key={`followed-${trip.tripId}`}
+                        testID={`home-followed-trip-row-${trip.tripId}`}
+                        style={({ pressed }: { pressed: boolean }) => [
+                          styles.homeModalRow,
+                          pressed && styles.homeModalRowPressed,
+                        ]}
+                        onPress={() => {
+                          onSelectFollowedTrip(trip.tripId);
+                          setShowTripPicker(false);
+                        }}
+                      >
+                        <View style={styles.homeModalRowText}>
+                          <Text style={styles.homeModalRowTitle}>{trip.tripName}</Text>
+                          <Text style={styles.homeModalRowMeta}>{trip.destination || 'Followed trip'}</Text>
+                        </View>
+                        <Text style={styles.homeModalActiveBadge}>Following</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                ) : null}
               </ScrollView>
             </View>
           </View>

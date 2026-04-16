@@ -476,6 +476,7 @@ type FlightsTabProps = {
   onDataChanged?: () => void;
   showList?: boolean;
   mode?: 'live' | 'wizard';
+  readOnly?: boolean;
   modalOverlayStyle?: Record<string, any>;
   modalCardStyle?: Record<string, any>;
 };
@@ -543,6 +544,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   onDataChanged,
   showList = true,
   mode = 'live',
+  readOnly = false,
   modalOverlayStyle,
   modalCardStyle,
 }) => {
@@ -994,6 +996,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   };
 
   const openFlightDetails = (flight: Flight) => {
+    if (readOnly) return;
     const normalizedPassengerIds = canonicalizeMemberSelectionIds(
       Array.isArray(flight.passenger_ids) ? flight.passenger_ids : Array.isArray((flight as any).passengerIds) ? (flight as any).passengerIds : [],
       groupMembers
@@ -1053,6 +1056,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   }, [externalEditFlightId, flights]);
 
   const saveFlightDetails = async () => {
+    if (readOnly) return;
     if (!editingFlightId || !editingFlight) return;
     const relaxed = shouldRelaxRequiredFields(editingFlight.status);
     if (
@@ -1122,6 +1126,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
 
 
   const addFlight = async () => {
+    if (readOnly) return false;
     if (!userToken) return false;
     if (!activeTripId) {
       alert('Select an active trip before adding a transfer.');
@@ -1157,6 +1162,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   };
 
   const removeFlight = async (id: string) => {
+    if (readOnly) return;
     if (isWizard) {
       setFlights((prev) => prev.filter((flight) => flight.id !== id));
       return;
@@ -1171,6 +1177,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   };
 
   const voteOnFlight = async (id: string, value: 1 | -1) => {
+    if (readOnly) return;
     try {
       const res = await fetch(`${backendUrl}/api/transfers/${id}/vote`, {
         method: 'POST',
@@ -1188,6 +1195,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   };
 
   const rateFlight = async (id: string, value: 1 | -1) => {
+    if (readOnly) return;
     try {
       const res = await fetch(`${backendUrl}/api/transfers/${id}/rating`, {
         method: 'POST',
@@ -1221,6 +1229,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   };
 
   const handlePasteAndParse = async () => {
+    if (readOnly) return;
     if (!userToken) return;
     if (!activeTripId && !isWizard) {
       alert('Select an active trip before adding a transfer.');
@@ -1297,6 +1306,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   };
 
   const handleAddPress = () => {
+    if (readOnly) return;
     if (!activeTripId && !isWizard) {
       alert('Select an active trip before adding a transfer.');
       return;
@@ -1375,14 +1385,16 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
         <>
       <View style={styles.row}>
         <Text style={styles.sectionTitle}>Transfers</Text>
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          <TouchableOpacity style={[styles.button, styles.outlineButton, { marginRight: 8 }]} onPress={() => setShowPasteModal(true)} testID="transfer-paste">
-            <Text style={styles.buttonText}>Paste Info</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.button, styles.roundButton]} onPress={handleAddPress} testID="transfer-add">
-            <Text style={styles.buttonText}>+</Text>
-          </TouchableOpacity>
-        </View>
+        {!readOnly ? (
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TouchableOpacity style={[styles.button, styles.outlineButton, { marginRight: 8 }]} onPress={() => setShowPasteModal(true)} testID="transfer-paste">
+              <Text style={styles.buttonText}>Paste Info</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.button, styles.roundButton]} onPress={handleAddPress} testID="transfer-add">
+              <Text style={styles.buttonText}>+</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
       </View>
       <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
         <View style={styles.table}>
@@ -1417,12 +1429,18 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                     >
                       {!item.passengerInGroup ? <Text style={styles.warningText}>Passenger not in trip group</Text> : null}
                       <View style={styles.actionCell}>
-                        <TouchableOpacity style={[styles.tableActionButton, styles.tableActionButtonPrimary]} onPress={() => openFlightDetails(item)} testID={`transfer-edit-${item.id}`}>
-                          <Text style={styles.buttonText}>Edit</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.tableActionButton, styles.tableActionButtonDanger]} onPress={() => removeFlight(item.id)} testID={`transfer-delete-${item.id}`}>
-                          <Text style={styles.buttonText}>Delete</Text>
-                        </TouchableOpacity>
+                        {!readOnly ? (
+                          <>
+                            <TouchableOpacity style={[styles.tableActionButton, styles.tableActionButtonPrimary]} onPress={() => openFlightDetails(item)} testID={`transfer-edit-${item.id}`}>
+                              <Text style={styles.buttonText}>Edit</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[styles.tableActionButton, styles.tableActionButtonDanger]} onPress={() => removeFlight(item.id)} testID={`transfer-delete-${item.id}`}>
+                              <Text style={styles.buttonText}>Delete</Text>
+                            </TouchableOpacity>
+                          </>
+                        ) : (
+                          <Text style={styles.cellText}>View only</Text>
+                        )}
                       </View>
                     </View>
                   );
@@ -1442,7 +1460,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                         isLast && styles.lastCell,
                       ]}
                     >
-                      {showButtons ? (
+                      {!readOnly && showButtons ? (
                         <>
                           <TouchableOpacity
                             style={[styles.button, styles.smallButton]}
@@ -1479,7 +1497,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                         isLast && styles.lastCell,
                       ]}
                     >
-                      {showButtons ? (
+                      {!readOnly && showButtons ? (
                         <View style={styles.actionCell}>
                           <TouchableOpacity
                             style={[styles.button, styles.smallButton]}
@@ -1958,7 +1976,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
           }}
         />
       ) : null}
-      {showPasteModal ? (
+      {!readOnly && showPasteModal ? (
         <Modal transparent visible={showPasteModal} animationType="fade" onRequestClose={() => setShowPasteModal(false)}>
           <View style={[styles.passengerOverlay, { backgroundColor: 'rgba(15,23,42,0.35)', justifyContent: 'center', alignItems: 'center', padding: 16 }]}>
             <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={() => setShowPasteModal(false)} />
@@ -1986,7 +2004,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
         </Modal>
       ) : null}
       <FlightEditingForm
-        visible={Boolean(editingFlight && editingFlightId)}
+        visible={!readOnly && Boolean(editingFlight && editingFlightId)}
         flightId={editingFlightId}
         flight={editingFlight}
         overlayStyle={modalOverlayStyle}

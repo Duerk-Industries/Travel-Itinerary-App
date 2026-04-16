@@ -44,6 +44,7 @@ describe('HomeTab', () => {
     { id: 't2', name: 'Bravo Trip', destination: 'Cairo', startDate: '2026-02-01', endDate: '2026-02-05' },
     { id: 't3', name: 'Charlie Trip', destination: 'Oslo', startDate: '2026-03-01', endDate: '2026-03-05' },
   ];
+  const followedTrips = [{ tripId: 'f1', tripName: 'Followed Trip', destination: 'Bucharest', todayDetails: [] }];
 
   beforeEach(() => {
     jest.spyOn(global, 'fetch' as any).mockResolvedValue({
@@ -63,8 +64,10 @@ describe('HomeTab', () => {
         headers={{}}
         activeTripId="t2"
         trips={trips}
+        followedTrips={followedTrips}
         styles={styles}
         onSelectTrip={jest.fn()}
+        onSelectFollowedTrip={jest.fn()}
         onNavigate={jest.fn()}
       />
     );
@@ -86,8 +89,10 @@ describe('HomeTab', () => {
         headers={{}}
         activeTripId="t2"
         trips={trips}
+        followedTrips={followedTrips}
         styles={styles}
         onSelectTrip={jest.fn()}
+        onSelectFollowedTrip={jest.fn()}
         onNavigate={jest.fn()}
       />
     );
@@ -106,13 +111,49 @@ describe('HomeTab', () => {
         headers={{}}
         activeTripId="t2"
         trips={trips}
+        followedTrips={followedTrips}
         styles={styles}
         onSelectTrip={jest.fn()}
+        onSelectFollowedTrip={jest.fn()}
         onNavigate={onNavigate}
       />
     );
 
     fireEvent.press(getByTestId('home-nav-flights'));
     expect(onNavigate).toHaveBeenCalledWith('flights');
+  });
+
+  test('hides restricted pages for followed trips', () => {
+    const { queryByTestId, getByTestId } = render(
+      <HomeTab
+        backendUrl="http://localhost"
+        headers={{}}
+        activeTripId="f1"
+        trips={trips}
+        followedTrips={followedTrips}
+        activeTripOverride={{ id: 'f1', name: 'Followed Trip', destination: 'Bucharest' }}
+        styles={styles}
+        onSelectTrip={jest.fn()}
+        onSelectFollowedTrip={jest.fn()}
+        onNavigate={jest.fn()}
+        hiddenPages={new Set(['itinerary', 'expenses', 'ingest', 'trips', 'create-trip', 'account', 'follow', 'following'])}
+      />
+    );
+
+    expect(getByTestId('home-nav-overview')).toBeTruthy();
+    expect(getByTestId('home-nav-flights')).toBeTruthy();
+    expect(getByTestId('home-nav-lodging')).toBeTruthy();
+    expect(getByTestId('home-nav-tours')).toBeTruthy();
+    expect(getByTestId('home-nav-car')).toBeTruthy();
+    expect(getByTestId('home-nav-cost')).toBeTruthy();
+    expect(getByTestId('home-nav-ledger')).toBeTruthy();
+    expect(queryByTestId('home-nav-itinerary')).toBeNull();
+    expect(queryByTestId('home-nav-expenses')).toBeNull();
+    expect(queryByTestId('home-nav-ingest')).toBeNull();
+    expect(queryByTestId('home-nav-trips')).toBeNull();
+    expect(queryByTestId('home-nav-create-trip')).toBeNull();
+    expect(queryByTestId('home-nav-account')).toBeNull();
+    expect(queryByTestId('home-nav-follow')).toBeNull();
+    expect(queryByTestId('home-nav-following')).toBeNull();
   });
 });
