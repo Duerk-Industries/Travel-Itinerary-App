@@ -26,9 +26,9 @@ export const FOLLOWED_TRIP_HIDDEN_PAGES: PageKey[] = [
   'itinerary',
   'expenses',
   'ingest',
+  'ledger',
   'trips',
   'create-trip',
-  'account',
   'follow',
   'following',
 ];

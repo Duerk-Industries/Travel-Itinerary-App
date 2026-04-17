@@ -1168,6 +1168,46 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     clearSession();
   }, []);
 
+  const handleFollowTripByCode = useCallback(async (inviteCode: string): Promise<string | null> => {
+    if (!userToken) return 'You need to be logged in';
+    const code = inviteCode.trim();
+    if (!code) return 'Enter a follow code';
+    setFollowLoading(true);
+    setFollowError('');
+    try {
+      const res = await fetch(`${backendUrl}/api/trips/follow`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
+        body: JSON.stringify({ inviteCode: code }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401 || res.status === 403) {
+        logout();
+        return 'Unauthorized';
+      }
+      if (!res.ok) {
+        const message = data.error || 'Unable to follow trip';
+        setFollowError(message);
+        return message;
+      }
+      try {
+        const trips = await fetchFollowedTripsApi(backendUrl, { Authorization: `Bearer ${userToken}` });
+        setFollowedTrips(trips);
+      } catch {
+        // Ignore refresh failures after a successful follow.
+      }
+      setFollowInviteCode('');
+      setFollowError('');
+      return null;
+    } catch (err) {
+      const message = (err as Error).message || 'Unable to follow trip';
+      setFollowError(message);
+      return message;
+    } finally {
+      setFollowLoading(false);
+    }
+  }, [backendUrl, logout, userToken]);
+
   const loadAccountProfile = useCallback(
     (token?: string) =>
       fetchAccountProfile({
@@ -2182,37 +2222,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
     let cancelled = false;
     const redeemFollowCode = async () => {
-      try {
-        const res = await fetch(`${backendUrl}/api/trips/follow`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
-          body: JSON.stringify({ inviteCode: pendingFollowCode }),
-        });
-        const data = await res.json().catch(() => ({}));
-        if (cancelled) return;
-        if (res.status === 401 || res.status === 403) {
-          logout();
-          return;
-        }
-        if (!res.ok) {
-          setFollowError(data.error || 'Unable to follow trip');
-          return;
-        }
-        try {
-          const trips = await fetchFollowedTripsApi(backendUrl, { Authorization: `Bearer ${userToken}` });
-          if (!cancelled) {
-            setFollowedTrips(trips);
-          }
-        } catch {
-          // Ignore refresh failures after a successful follow.
-        }
-        setFollowError('');
+      const error = await handleFollowTripByCode(pendingFollowCode);
+      if (cancelled) return;
+      if (!error) {
         setPendingFollowCode(null);
-        setFollowInviteCode('');
-      } catch (err) {
-        if (!cancelled) {
-          setFollowError((err as Error).message || 'Unable to follow trip');
-        }
       }
     };
 
@@ -2220,7 +2233,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     return () => {
       cancelled = true;
     };
-  }, [backendUrl, logout, pendingFollowCode, requirePasswordSetup, userToken]);
+  }, [handleFollowTripByCode, pendingFollowCode, requirePasswordSetup, userToken]);
 
   useEffect(() => {
     if (userToken && !requirePasswordSetup) {
@@ -2629,56 +2642,61 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               </TouchableOpacity>
             ) : null}
             {trips.length || followedTrips.length ? (
-              <TouchableOpacity
-                activeOpacity={0.8}
-                disabled={isTripWizardOpen}
-                style={[
-                  styles.input,
-                  styles.inlineInput,
-                  styles.dropdown,
-                  styles.activeTrip,
-                  styles.topBarTripControl,
-                  isNarrowLayout && styles.activeTripNarrow,
-                  isTripWizardOpen && styles.buttonDisabled,
-                ]}
-                onPress={() => setShowActiveTripDropdown((s) => !s)}
-              >
-                <Text style={styles.cellText} numberOfLines={1} ellipsizeMode="tail">
-                  Active Trip: {activeTripSelectorLabel}
-                </Text>
-                {showActiveTripDropdown && (
-                  <View style={styles.dropdownList}>
-                    {trips.map((trip) => (
-                      <TouchableOpacity
-                        key={trip.id}
-                        style={styles.dropdownOption}
-                        onPress={() => {
-                          handleSelectOwnedTrip(trip.id);
-                          setShowActiveTripDropdown(false);
-                        }}
-                      >
-                        <Text style={styles.cellText}>{trip.name}</Text>
-                      </TouchableOpacity>
-                    ))}
-                    {followedTrips.length ? (
-                      <View>
-                        <Text style={styles.modalLabelSmall}>Followed Trips</Text>
-                        {followedTrips.map((trip) => (
-                          <TouchableOpacity
-                            key={`followed-${trip.tripId}`}
-                            style={styles.dropdownOption}
-                            onPress={() => {
-                              handleSelectFollowedTrip(trip.tripId);
-                            }}
-                          >
-                            <Text style={styles.cellText}>{trip.tripName} (Following)</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    ) : null}
-                  </View>
-                )}
-              </TouchableOpacity>
+              <View style={{ alignItems: 'flex-end' }}>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  disabled={isTripWizardOpen}
+                  style={[
+                    styles.input,
+                    styles.inlineInput,
+                    styles.dropdown,
+                    styles.activeTrip,
+                    styles.topBarTripControl,
+                    isNarrowLayout && styles.activeTripNarrow,
+                    isTripWizardOpen && styles.buttonDisabled,
+                  ]}
+                  onPress={() => setShowActiveTripDropdown((s) => !s)}
+                >
+                  <Text style={styles.cellText} numberOfLines={1} ellipsizeMode="tail">
+                    Active Trip: {activeTripSelectorLabel}
+                  </Text>
+                  {showActiveTripDropdown && (
+                    <View style={styles.dropdownList}>
+                      {trips.map((trip) => (
+                        <TouchableOpacity
+                          key={trip.id}
+                          style={styles.dropdownOption}
+                          onPress={() => {
+                            handleSelectOwnedTrip(trip.id);
+                            setShowActiveTripDropdown(false);
+                          }}
+                        >
+                          <Text style={styles.cellText}>{trip.name}</Text>
+                        </TouchableOpacity>
+                      ))}
+                      {followedTrips.length ? (
+                        <View>
+                          <Text style={styles.modalLabelSmall}>Followed Trips</Text>
+                          {followedTrips.map((trip) => (
+                            <TouchableOpacity
+                              key={`followed-${trip.tripId}`}
+                              style={styles.dropdownOption}
+                              onPress={() => {
+                                handleSelectFollowedTrip(trip.tripId);
+                              }}
+                            >
+                              <Text style={styles.cellText}>{trip.tripName} (Following)</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      ) : null}
+                    </View>
+                  )}
+                </TouchableOpacity>
+                {activePage === 'overview' ? (
+                  <Text style={[styles.modalLabelSmall, { marginTop: 4, textAlign: 'right' }]}>Click to Change Trip</Text>
+                ) : null}
+              </View>
             ) : null}
             <View style={[styles.topRight, isNarrowLayout && styles.topRightNarrow]}>
               {!isPhoneLayout ? (
@@ -2727,11 +2745,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   activeTripId={activeTripId}
                   trips={trips}
                   followedTrips={followedTrips}
+                  userRole={userRole}
                   activeTripOverride={activeTripForHome}
                   styles={styles}
                   onSelectTrip={handleSelectOwnedTrip}
                   onSelectFollowedTrip={handleSelectFollowedTrip}
                   onNavigate={handleHomeNavigate}
+                  onFollowTrip={handleFollowTripByCode}
                   disabledPages={disabledPages}
                   hiddenPages={hiddenPages}
                 />
@@ -2853,12 +2873,14 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   >
                     <Text style={styles.buttonText}>Export Incurred CSV</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.button, styles.smallButton]}
-                    onPress={() => requestPageChange('ledger')}
-                  >
-                    <Text style={styles.buttonText}>📒 Ledger</Text>
-                  </TouchableOpacity>
+                  {!isFollowingMode ? (
+                    <TouchableOpacity
+                      style={[styles.button, styles.smallButton]}
+                      onPress={() => requestPageChange('ledger')}
+                    >
+                      <Text style={styles.buttonText}>📒 Ledger</Text>
+                    </TouchableOpacity>
+                  ) : null}
                 </View>
               </View>
               <Text style={styles.helperText}>Combined totals by category and user.</Text>
@@ -4858,7 +4880,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
   },
   dropdown: {
     position: 'relative',
-    zIndex: 20,
+    zIndex: 120,
   },
   selectButton: {
     justifyContent: 'center',
@@ -4881,18 +4903,23 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
   },
   dropdownList: {
     position: 'absolute',
-    top: 40,
+    top: '100%',
     left: 0,
     right: 0,
+    marginTop: 8,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: 6,
+    borderRadius: 10,
     zIndex: 20000,
     elevation: 24,
+    overflow: 'hidden',
+    maxHeight: 280,
+    boxShadow: '0 10px 24px rgba(0,0,0,0.18)',
   },
   dropdownOption: {
-    padding: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
     borderBottomWidth: 1,
     borderColor: theme.colors.border,
     backgroundColor: theme.colors.surface,
@@ -5081,10 +5108,11 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: 6,
+    borderRadius: 10,
     zIndex: 14000,
     elevation: 40, // keep above other inputs on native
-    boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+    overflow: 'hidden',
+    boxShadow: '0 10px 24px rgba(0,0,0,0.18)',
   },
   locationField: {
     position: 'relative',

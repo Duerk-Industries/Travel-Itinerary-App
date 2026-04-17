@@ -452,9 +452,6 @@ const TripDetailsTab: React.FC<TripDetailsTabProps> = ({
         <TouchableOpacity style={[styles.button, { flex: 1 }]} onPress={() => onSetActive(trip.id)}>
           <Text style={styles.buttonText}>Set Active Trip</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.button, { flex: 1 }]} onPress={() => onOpenItinerary(trip.id)}>
-          <Text style={styles.buttonText}>Open Itinerary</Text>
-        </TouchableOpacity>
       </View>
 
       <Modal visible={shareOpen} transparent animationType="fade" onRequestClose={() => setShareOpen(false)}>

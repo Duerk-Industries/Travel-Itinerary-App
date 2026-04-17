@@ -49,12 +49,12 @@ describe('Trip wizard navigation lock', () => {
   });
 
   test('blocks restricted pages for followed trips', () => {
-    const blocked: PageKey[] = ['itinerary', 'expenses', 'ingest', 'trips', 'create-trip', 'account', 'follow', 'following'];
+    const blocked: PageKey[] = ['itinerary', 'expenses', 'ingest', 'ledger', 'trips', 'create-trip', 'follow', 'following'];
     blocked.forEach((page) => {
       expect(shouldAllowPageChange('home', page, { isFollowedTrip: true })).toBe(false);
       expect(shouldDisableTab('home', page, { isFollowedTrip: true })).toBe(true);
     });
-    ['overview', 'flights', 'lodging', 'car', 'tours', 'cost', 'ledger'].forEach((page) => {
+    ['overview', 'flights', 'lodging', 'car', 'tours', 'cost', 'account'].forEach((page) => {
       expect(shouldAllowPageChange('home', page as PageKey, { isFollowedTrip: true })).toBe(true);
       expect(shouldDisableTab('home', page as PageKey, { isFollowedTrip: true })).toBe(false);
     });

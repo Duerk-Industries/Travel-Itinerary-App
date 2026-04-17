@@ -3,6 +3,7 @@
  */
 
 import React from 'react';
+import { describe, expect, test, jest } from '@jest/globals';
 import { render } from '@testing-library/react-native';
 import { FlightsTab, type Flight, type GroupMemberOption, type Trip } from '../tabs/transfers';
 
@@ -89,7 +90,7 @@ describe('FlightsTab read-only mode', () => {
         userToken={null}
         activeTripId="trip-1"
         flights={[flight]}
-        setFlights={jest.fn()}
+        setFlights={jest.fn() as any}
         groupMembers={[member]}
         defaultPayerId="member-1"
         formatMemberName={(m) => `${m.firstName} ${m.lastName}`}
@@ -97,10 +98,10 @@ describe('FlightsTab read-only mode', () => {
         headers={{}}
         jsonHeaders={{}}
         findActiveTrip={() => trip}
-        fetchGroupMembersForActiveTrip={jest.fn().mockResolvedValue(undefined)}
+        fetchGroupMembersForActiveTrip={jest.fn(() => Promise.resolve()) as any}
         styles={styles}
         airportOptions={[]}
-        onSearchAirports={jest.fn()}
+        onSearchAirports={jest.fn() as any}
         readOnly
       />
     );

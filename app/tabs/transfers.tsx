@@ -476,7 +476,7 @@ type FlightsTabProps = {
   onDataChanged?: () => void;
   showList?: boolean;
   mode?: 'live' | 'wizard';
-  readOnly?: boolean;
+  readOnly?: boolean; // Prop added for read-only viewing of followed trips
   modalOverlayStyle?: Record<string, any>;
   modalCardStyle?: Record<string, any>;
 };

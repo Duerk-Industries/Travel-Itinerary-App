@@ -179,18 +179,50 @@ export const MustSeeAttractionSelector: React.FC<MustSeeAttractionSelectorProps>
 
   return (
     <View style={{ marginTop: 12 }}>
-      <View style={[styles.row, { alignItems: 'center' }]}>
-        <TextInput
-          ref={inputRef}
-          style={[styles.input, { flex: 1 }]}
-          placeholder={placeholder}
-          value={query}
-          onChangeText={setQuery}
-          onKeyPress={handleKeyPress}
-          onSubmitEditing={handleSubmit}
-          accessibilityLabel={title}
-          editable={canSearch}
-        />
+      <View style={[styles.row, { alignItems: 'flex-start' }]}>
+        <View style={[styles.dropdown, { flex: 1 }]}>
+          <TextInput
+            ref={inputRef}
+            style={[styles.input, { flex: 1 }]}
+            placeholder={placeholder}
+            value={query}
+            onChangeText={setQuery}
+            onKeyPress={handleKeyPress}
+            onSubmitEditing={handleSubmit}
+            accessibilityLabel={title}
+            editable={canSearch}
+          />
+          {(suggestions.length > 0 || (query.trim().length > 0 && suggestions.length === 0 && canSearch)) && (
+            <View style={styles.dropdownList}>
+              {suggestions.map((item) => (
+                <TouchableOpacity
+                  key={`must-see-suggestion-${item.id}`}
+                  style={styles.dropdownOption}
+                  onPress={() => handleAddSuggestion(item)}
+                  testID={`must-see-suggestion-${item.id}`}
+                >
+                  <View style={[styles.row, { justifyContent: 'space-between', alignItems: 'center' }]}>
+                    <Text style={styles.bodyText}>{item.name}</Text>
+                    <Text style={styles.helperText}>{helperLabel(item)}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+              {suggestions.length === 0 && query.trim().length > 0 && canSearch ? (
+                <TouchableOpacity
+                  key="manual-must-see-option"
+                  style={styles.dropdownOption}
+                  onPress={handleManualAdd}
+                  testID="manual-must-see-option"
+                >
+                  <View style={[styles.row, { justifyContent: 'space-between', alignItems: 'center' }]}>
+                    <Text style={styles.bodyText}>Add "{query.trim()}"</Text>
+                    <Text style={styles.helperText}>Manual Attraction</Text>
+                  </View>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          )}
+        </View>
         {loading && <ActivityIndicator size="small" color="#0d6efd" style={{ marginLeft: 8 }} testID="must-see-loading" />}
         <TouchableOpacity
           style={[styles.button, styles.smallButton, { marginLeft: 8 }]}
@@ -206,33 +238,6 @@ export const MustSeeAttractionSelector: React.FC<MustSeeAttractionSelectorProps>
         <Text style={[styles.helperText, { marginTop: 4 }]}>
           Select at least one destination, country, or state to load attractions.
         </Text>
-      )}
-
-      {(suggestions.length > 0 || (query.trim().length > 0 && suggestions.length === 0 && canSearch)) && (
-        <View style={[styles.card, { marginTop: 6 }]}>
-          {suggestions.map((item) => (
-            <TouchableOpacity
-              key={`must-see-suggestion-${item.id}`}
-              style={[styles.row, { justifyContent: 'space-between', paddingVertical: 6 }]}
-              onPress={() => handleAddSuggestion(item)}
-              testID={`must-see-suggestion-${item.id}`}
-            >
-              <Text style={styles.bodyText}>{item.name}</Text>
-              <Text style={styles.helperText}>{helperLabel(item)}</Text>
-            </TouchableOpacity>
-          ))}
-          {suggestions.length === 0 && query.trim().length > 0 && canSearch && (
-            <TouchableOpacity
-              key="manual-must-see-option"
-              style={[styles.row, { justifyContent: 'space-between', paddingVertical: 6 }]}
-              onPress={handleManualAdd}
-              testID="manual-must-see-option"
-            >
-              <Text style={styles.bodyText}>Add "{query.trim()}"</Text>
-              <Text style={styles.helperText}>Manual Attraction</Text>
-            </TouchableOpacity>
-          )}
-        </View>
       )}
 
       {selectedAttractions.length > 0 && (
