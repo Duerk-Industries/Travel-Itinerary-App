@@ -2,12 +2,18 @@ import { resolveAndValidateRedirectUri } from '../src/redirects';
 
 describe('resolveAndValidateRedirectUri', () => {
   const originalAllowlist = process.env.AUTH_REDIRECT_URI_ALLOWLIST;
+  const originalKService = process.env.K_SERVICE;
 
   afterEach(() => {
     if (originalAllowlist === undefined) {
       delete process.env.AUTH_REDIRECT_URI_ALLOWLIST;
     } else {
       process.env.AUTH_REDIRECT_URI_ALLOWLIST = originalAllowlist;
+    }
+    if (originalKService === undefined) {
+      delete process.env.K_SERVICE;
+    } else {
+      process.env.K_SERVICE = originalKService;
     }
   });
 
@@ -37,5 +43,21 @@ describe('resolveAndValidateRedirectUri', () => {
     const result = resolveAndValidateRedirectUri('/login', 'https://duerk.org');
     expect(result.error).toBeUndefined();
     expect(result.redirectUri).toBe('https://duerk.org/login');
+  });
+
+  it('rejects localhost web redirects in production even when allow-listed', () => {
+    process.env.K_SERVICE = 'travel-itinerary-app';
+    process.env.AUTH_REDIRECT_URI_ALLOWLIST = 'https://duerk.org,http://localhost:4000';
+    const result = resolveAndValidateRedirectUri('http://localhost:4000/login', 'https://duerk.org');
+    expect(result.redirectUri).toBeUndefined();
+    expect(result.error).toBe('redirect_uri is not allowed.');
+  });
+
+  it('still allows localhost web redirects in local development', () => {
+    delete process.env.K_SERVICE;
+    process.env.AUTH_REDIRECT_URI_ALLOWLIST = 'http://localhost:4000';
+    const result = resolveAndValidateRedirectUri('http://localhost:4000/login', 'https://duerk.org');
+    expect(result.error).toBeUndefined();
+    expect(result.redirectUri).toBe('http://localhost:4000/login');
   });
 });

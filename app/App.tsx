@@ -276,7 +276,7 @@ const resolveBackendUrl = (): string => {
         process.env.BACKEND_URL)) ||
     '';
   const appConfigured = Constants.expoConfig?.extra?.backendUrl;
-  const configuredBackend = [envConfigured, appConfigured].find(
+  const configuredBackend = [appConfigured, envConfigured].find(
     (val) => typeof val === 'string' && val.trim().length > 0
   ) as string | undefined;
   const isLocalHost = (value: string) => /^(localhost|127\.0\.0\.1)$/i.test(value);
