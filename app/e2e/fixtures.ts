@@ -7,7 +7,7 @@
  */
 import { type APIRequestContext, type Browser, type BrowserContext, type Page, expect } from '@playwright/test';
 
-export const API_BASE = process.env.API_BASE_URL ?? 'http://localhost:3000';
+export const API_BASE = process.env.API_BASE_URL ?? 'http://127.0.0.1:4000';
 export const TEST_USER_PASSWORD = 'password123';
 
 // ---------------------------------------------------------------------------
@@ -20,6 +20,17 @@ export type UserCredentials = {
   password: string;
   firstName: string;
   lastName: string;
+};
+
+type StoredSession = {
+  token: string;
+  name: string;
+  email?: string;
+  role?: 'user' | 'admin';
+  page?: string;
+  pageHistory?: string[];
+  tripId?: string | null;
+  expiresAt: number;
 };
 
 // ---------------------------------------------------------------------------
@@ -44,11 +55,11 @@ export async function registerUser(
     ...overrides,
   };
 
-  const res = await request.post(`${API_BASE}/api/auth/register`, {
+  const res = await request.post(`${API_BASE}/api/web-auth/register`, {
     data: {
-      username: credentials.username,
-      password: credentials.password,
       email: credentials.email,
+      password: credentials.password,
+      passwordConfirm: credentials.password,
       firstName: credentials.firstName,
       lastName: credentials.lastName,
     },
@@ -60,6 +71,18 @@ export async function registerUser(
       `registerUser failed (${res.status()}): ${body}`,
     );
   }
+  const registrationData = (await res.json().catch(() => ({}))) as { verificationToken?: string };
+  const verificationToken = registrationData.verificationToken;
+  if (!verificationToken) {
+    throw new Error(`registerUser missing verification token for ${credentials.email}`);
+  }
+  const confirmRes = await request.get(`${API_BASE}/api/web-auth/confirm`, {
+    params: { token: verificationToken },
+  });
+  if (!confirmRes.ok()) {
+    const body = await confirmRes.text();
+    throw new Error(`registerUser confirmation failed (${confirmRes.status()}): ${body}`);
+  }
 
   return credentials;
 }
@@ -68,11 +91,29 @@ export async function registerUser(
  * Logs an already-registered user in via the UI and waits for the home screen.
  */
 export async function loginAsUser(page: Page, credentials: UserCredentials): Promise<void> {
-  await page.goto('/login', { waitUntil: 'domcontentloaded', timeout: 90_000 });
-  await page.getByPlaceholder('Email').fill(credentials.email);
-  await page.getByPlaceholder('Password').fill(credentials.password);
-  // Two "Login" texts exist (header + button); the button is last.
-  await page.getByText('Login').last().click();
+  const authRes = await page.request.post(`${API_BASE}/api/web-auth/login`, {
+    data: { email: credentials.email, password: credentials.password },
+  });
+  if (!authRes.ok()) {
+    const body = await authRes.text();
+    throw new Error(`loginAsUser failed (${authRes.status()}): ${body}`);
+  }
+  const data = await authRes.json();
+  const session: StoredSession = {
+    token: String(data.token),
+    name: `${credentials.firstName} ${credentials.lastName}`.trim() || credentials.email,
+    email: credentials.email,
+    role: data.user?.role === 'admin' ? 'admin' : 'user',
+    page: 'home',
+    pageHistory: [],
+    tripId: null,
+    expiresAt: Date.now() + 12 * 60 * 60 * 1000,
+  };
+  await page.addInitScript((payload) => {
+    window.localStorage.setItem('stp.session', JSON.stringify(payload));
+    window.localStorage.setItem('stp.session.token', payload.token);
+  }, session);
+  await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 90_000 });
   await expect(page.getByTestId('home-nav-trips')).toBeVisible({ timeout: 15_000 });
 }
 

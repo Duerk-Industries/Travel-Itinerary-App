@@ -5,6 +5,7 @@ import { sanitizeCostInput } from '../utils/sanitizeCost';
 import type { FlightEditDraft, GroupMemberOption, TransferType } from '../tabs/transfers';
 import { toWebStyle } from '../utils/webStyle';
 import { DEFAULT_NEW_ITINERARY_STATUS, ITINERARY_STATUSES, normalizeItineraryStatus } from '../utils/itineraryStatus';
+import type { AppTheme } from '../theme/theme';
 
 type AirportTarget = 'dep' | 'arr' | 'modal-dep' | 'modal-arr' | 'modal-layover' | null;
 const TRANSFER_TYPES: TransferType[] = ['Flight', 'Train', 'Bus', 'Private', 'Ferry', 'Other'];
@@ -24,6 +25,7 @@ export type FlightEditingFormProps = {
   groupMembers: GroupMemberOption[];
   userMembers: GroupMemberOption[];
   styles: Record<string, any>;
+  theme?: AppTheme;
   formatMemberName: (member: GroupMemberOption) => string;
   payerName: (id: string) => string;
   getLocationInputValue: (raw: string, activeTarget: AirportTarget, currentTarget: AirportTarget) => string;
@@ -55,6 +57,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
   groupMembers,
   userMembers,
   styles,
+  theme,
   formatMemberName,
   payerName,
   airportTarget: activeAirportTarget,
@@ -89,15 +92,15 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
     paddingVertical: 6,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#111',
-    backgroundColor: '#fff',
+    borderColor: theme?.colors.border ?? '#111',
+    backgroundColor: theme?.colors.surface ?? '#fff',
   };
   const toggleSelectedStyle = styles.toggleOptionSelected ?? {
-    backgroundColor: '#e5e7eb',
-    borderColor: '#111',
+    backgroundColor: theme ? (theme.mode === 'dark' ? '#1A3A50' : '#DDE8F0') : '#e5e7eb',
+    borderColor: theme?.colors.link ?? '#111',
   };
-  const toggleTextStyle = styles.toggleOptionText ?? { color: '#111', fontWeight: '600' };
-  const toggleTextSelectedStyle = styles.toggleOptionTextSelected ?? { color: '#111' };
+  const toggleTextStyle = styles.toggleOptionText ?? { color: theme?.colors.text ?? '#111', fontWeight: '600' };
+  const toggleTextSelectedStyle = styles.toggleOptionTextSelected ?? { color: theme?.colors.text ?? '#111' };
   const rowStyle = [styles.modalRow, { flexWrap: 'wrap', gap: 8, alignItems: 'flex-start' }];
   const fieldStyle = [styles.modalField, { minWidth: 200, flex: 1 }];
   const dateFieldStyle = [styles.modalField, { flexGrow: 0, flexShrink: 0, flexBasis: 190, minWidth: 190, maxWidth: 240 }];
@@ -477,7 +480,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
         </ScrollView>
         <View style={styles.row}>
           <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={onClose}>
-            <Text style={styles.buttonText}>Cancel</Text>
+            <Text style={styles.dangerButtonText}>Cancel</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.button} onPress={onSave} testID="flight-modal-save">
             <Text style={styles.buttonText}>Save</Text>

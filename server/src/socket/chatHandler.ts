@@ -3,8 +3,7 @@
  * Manages message send/receive and read-receipt lifecycle for a single socket.
  */
 import type { Server, Socket } from 'socket.io';
-import { CLIENT_EVENTS, SERVER_EVENTS, APP_ID } from '@wanderbunnies/messaging';
-import { initialsForName } from '@wanderbunnies/messaging';
+import { CLIENT_EVENTS, SERVER_EVENTS, APP_ID, initialsForName } from './messaging';
 import {
   addTripMessage,
   listTripMessages,
@@ -49,6 +48,8 @@ export const registerChatHandlers = (io: Server, socket: Socket): void => {
       socket.emit(SERVER_EVENTS.MESSAGE_HISTORY, history);
     } catch (err) {
       logError('[chat] listTripMessages error', err);
+      socket.emit(SERVER_EVENTS.ERROR, 'Unable to load chat history right now.');
+      socket.emit(SERVER_EVENTS.MESSAGE_HISTORY, []);
     }
 
     // Send current unread count

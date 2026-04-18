@@ -34,6 +34,16 @@ Tiers are entitlement controls, not deployment toggles. Runtime truth lives in t
 | `csv_export` | allowed | inherited | inherited |
 | `cost_tracking` | denied | allowed | allowed |
 
+## Ingestion quotas
+
+| Capability | Free | Premium | Pro |
+|---|---:|---:|---:|
+| manual uploads / month | 0 | 50 | 500 |
+| Gmail lookback window | 0 days | 30 days | 90 days |
+| LLM escalation | none | small only | large allowed |
+
+Free users must not see the manual upload entry point or access ingestion endpoints. Premium and Pro users can access the ingest tab and review queue, subject to feature flags.
+
 ## Gate functions
 
 All API and UI flows should rely on the same backend contract:

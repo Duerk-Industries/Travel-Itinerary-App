@@ -36,23 +36,33 @@ type AttractionRecord = AttractionAutocompleteOption & {
   rank: number;
 };
 
-type AutocompleteDataset = {
+type DestinationDataset = {
   loadedAt: number;
   destinationsMtimeMs: number;
-  attractionsMtimeMs: number;
   destinations: DestinationRecord[];
   destinationsById: Map<string, DestinationRecord>;
+  destinationsByName: Map<string, DestinationRecord[]>;
   destinationsByCountry: Map<string, DestinationRecord[]>;
   destinationsByState: Map<string, DestinationRecord[]>;
+  destinationsByKey: Map<string, DestinationRecord[]>;
+};
+
+type AttractionDataset = {
+  loadedAt: number;
+  attractionsMtimeMs: number;
   attractions: AttractionRecord[];
+  attractionsByDestination: Map<string, AttractionRecord[]>;
 };
 
 type CachedResult<T> = { ts: number; results: T[] };
 
 const destinationQueryCache = new Map<string, CachedResult<DestinationLocationOption>>();
 const attractionQueryCache = new Map<string, CachedResult<AttractionAutocompleteOption>>();
-let datasetCache: AutocompleteDataset | null = null;
-let datasetLoadPromise: Promise<AutocompleteDataset> | null = null;
+const MAX_QUERY_CACHE_ENTRIES = 200;
+let destinationDatasetCache: DestinationDataset | null = null;
+let destinationDatasetLoadPromise: Promise<DestinationDataset> | null = null;
+let attractionDatasetCache: AttractionDataset | null = null;
+let attractionDatasetLoadPromise: Promise<AttractionDataset> | null = null;
 
 const normalizeText = (value: unknown): string =>
   String(value ?? '')
@@ -100,6 +110,30 @@ const purgeExpired = <T>(store: Map<string, CachedResult<T>>, ttlMs: number) => 
   const now = Date.now();
   for (const [key, value] of store.entries()) {
     if (now - value.ts >= ttlMs) store.delete(key);
+  }
+};
+
+const setCachedResults = <T>(store: Map<string, CachedResult<T>>, key: string, results: T[]): void => {
+  store.set(key, { ts: Date.now(), results });
+  if (store.size <= MAX_QUERY_CACHE_ENTRIES) return;
+
+  let oldestKey: string | null = null;
+  let oldestTs = Number.POSITIVE_INFINITY;
+  for (const [entryKey, entry] of store.entries()) {
+    if (entry.ts < oldestTs) {
+      oldestTs = entry.ts;
+      oldestKey = entryKey;
+    }
+  }
+  if (oldestKey) store.delete(oldestKey);
+};
+
+const pushMapArray = <T>(map: Map<string, T[]>, key: string, value: T): void => {
+  const list = map.get(key);
+  if (list) {
+    list.push(value);
+  } else {
+    map.set(key, [value]);
   }
 };
 
@@ -196,79 +230,114 @@ const parseAttractions = (
   return records;
 };
 
-const buildDataset = (): AutocompleteDataset => {
+const buildDestinationDataset = (): DestinationDataset => {
   const destinationsPath = resolveDestinationsCsvPath();
-  const attractionsPath = resolveAttractionsCsvPath();
   const destinationsRaw = fs.existsSync(destinationsPath) ? fs.readFileSync(destinationsPath, 'utf8') : '';
-  const attractionsRaw = fs.existsSync(attractionsPath) ? fs.readFileSync(attractionsPath, 'utf8') : '';
   const destinations = parseDestinations(destinationsRaw);
   const destinationsById = new Map<string, DestinationRecord>();
+  const destinationsByName = new Map<string, DestinationRecord[]>();
   const destinationsByCountry = new Map<string, DestinationRecord[]>();
   const destinationsByState = new Map<string, DestinationRecord[]>();
   const destinationsByKey = new Map<string, DestinationRecord[]>();
   destinations.forEach((record) => {
     destinationsById.set(record.id, record);
-    if (record.countryName) {
-      const key = normalizeKey(record.countryName);
-      const list = destinationsByCountry.get(key) ?? [];
-      list.push(record);
-      destinationsByCountry.set(key, list);
-    }
-    if (record.stateName) {
-      const key = normalizeKey(record.stateName);
-      const list = destinationsByState.get(key) ?? [];
-      list.push(record);
-      destinationsByState.set(key, list);
-    }
-    const list = destinationsByKey.get(record.destinationKey) ?? [];
-    list.push(record);
-    destinationsByKey.set(record.destinationKey, list);
+    pushMapArray(destinationsByName, record.destinationKey, record);
+    if (record.countryName) pushMapArray(destinationsByCountry, normalizeKey(record.countryName), record);
+    if (record.stateName) pushMapArray(destinationsByState, normalizeKey(record.stateName), record);
+    pushMapArray(destinationsByKey, record.destinationKey, record);
   });
-  const attractions = parseAttractions(attractionsRaw, destinationsByKey);
   const destinationsMtimeMs = fs.existsSync(destinationsPath) ? fs.statSync(destinationsPath).mtimeMs : 0;
-  const attractionsMtimeMs = fs.existsSync(attractionsPath) ? fs.statSync(attractionsPath).mtimeMs : 0;
   return {
     loadedAt: Date.now(),
     destinationsMtimeMs,
-    attractionsMtimeMs,
     destinations,
     destinationsById,
+    destinationsByName,
     destinationsByCountry,
     destinationsByState,
-    attractions,
+    destinationsByKey,
   };
 };
 
-const cacheStillFresh = (): boolean => {
-  if (!datasetCache) return false;
+const buildAttractionDataset = (destinationsByKey: Map<string, DestinationRecord[]>): AttractionDataset => {
+  const attractionsPath = resolveAttractionsCsvPath();
+  const attractionsRaw = fs.existsSync(attractionsPath) ? fs.readFileSync(attractionsPath, 'utf8') : '';
+  const attractions = parseAttractions(attractionsRaw, destinationsByKey);
+  const attractionsByDestination = new Map<string, AttractionRecord[]>();
+  for (const attr of attractions) {
+    const list = attractionsByDestination.get(attr.destinationKey);
+    if (list) {
+      list.push(attr);
+    } else {
+      attractionsByDestination.set(attr.destinationKey, [attr]);
+    }
+  }
+  const attractionsMtimeMs = fs.existsSync(attractionsPath) ? fs.statSync(attractionsPath).mtimeMs : 0;
+  return {
+    loadedAt: Date.now(),
+    attractionsMtimeMs,
+    attractions,
+    attractionsByDestination,
+  };
+};
+
+const destinationCacheStillFresh = (): boolean => {
+  if (!destinationDatasetCache) return false;
   const ttl = datasetTtlMs();
-  if (Date.now() - datasetCache.loadedAt >= ttl) return false;
+  if (Date.now() - destinationDatasetCache.loadedAt >= ttl) return false;
   try {
     const destinationsPath = resolveDestinationsCsvPath();
-    const attractionsPath = resolveAttractionsCsvPath();
     const destinationMtime = fs.existsSync(destinationsPath) ? fs.statSync(destinationsPath).mtimeMs : 0;
-    const attractionMtime = fs.existsSync(attractionsPath) ? fs.statSync(attractionsPath).mtimeMs : 0;
-    return (
-      destinationMtime === datasetCache.destinationsMtimeMs &&
-      attractionMtime === datasetCache.attractionsMtimeMs
-    );
+    return destinationMtime === destinationDatasetCache.destinationsMtimeMs;
   } catch {
     return false;
   }
 };
 
-const getDataset = async (): Promise<AutocompleteDataset> => {
-  if (cacheStillFresh() && datasetCache) return datasetCache;
-  if (datasetLoadPromise) return datasetLoadPromise;
-  datasetLoadPromise = (async () => {
-    const next = buildDataset();
-    datasetCache = next;
+const attractionCacheStillFresh = (): boolean => {
+  if (!attractionDatasetCache) return false;
+  const ttl = datasetTtlMs();
+  if (Date.now() - attractionDatasetCache.loadedAt >= ttl) return false;
+  try {
+    const attractionsPath = resolveAttractionsCsvPath();
+    const attractionMtime = fs.existsSync(attractionsPath) ? fs.statSync(attractionsPath).mtimeMs : 0;
+    return attractionMtime === attractionDatasetCache.attractionsMtimeMs;
+  } catch {
+    return false;
+  }
+};
+
+const getDestinationDataset = async (): Promise<DestinationDataset> => {
+  if (destinationCacheStillFresh() && destinationDatasetCache) return destinationDatasetCache;
+  if (destinationDatasetLoadPromise) return destinationDatasetLoadPromise;
+  destinationDatasetLoadPromise = (async () => {
+    const next = buildDestinationDataset();
+    destinationDatasetCache = next;
+    destinationQueryCache.clear();
+    attractionQueryCache.clear();
     return next;
   })();
   try {
-    return await datasetLoadPromise;
+    return await destinationDatasetLoadPromise;
   } finally {
-    datasetLoadPromise = null;
+    destinationDatasetLoadPromise = null;
+  }
+};
+
+const getAttractionDataset = async (): Promise<AttractionDataset> => {
+  if (attractionCacheStillFresh() && attractionDatasetCache) return attractionDatasetCache;
+  if (attractionDatasetLoadPromise) return attractionDatasetLoadPromise;
+  attractionDatasetLoadPromise = (async () => {
+    const destinationDataset = await getDestinationDataset();
+    const next = buildAttractionDataset(destinationDataset.destinationsByKey);
+    attractionDatasetCache = next;
+    attractionQueryCache.clear();
+    return next;
+  })();
+  try {
+    return await attractionDatasetLoadPromise;
+  } finally {
+    attractionDatasetLoadPromise = null;
   }
 };
 
@@ -284,12 +353,11 @@ const parseDelimitedValues = (value: unknown, delimiter: string): string[] =>
     .filter(Boolean);
 
 const resolveDestinationKeysForFilters = (
-  dataset: AutocompleteDataset,
+  dataset: DestinationDataset,
   selectedLocationIds: string[],
   selectedLocationNames: string[]
 ): Set<string> => {
   const keys = new Set<string>();
-  const normalizedNames = new Set(selectedLocationNames.map((name) => normalizeKey(name)).filter(Boolean));
 
   for (const id of selectedLocationIds) {
     if (id.startsWith('destination:')) {
@@ -298,21 +366,15 @@ const resolveDestinationKeysForFilters = (
     }
   }
 
-  for (const destination of dataset.destinations) {
-    const destinationName = normalizeKey(destination.name);
-    const countryName = normalizeKey(destination.countryName);
-    const stateName = normalizeKey(destination.stateName);
-    if (destinationName && normalizedNames.has(destinationName)) {
-      keys.add(destination.destinationKey);
-      continue;
+  for (const normalizedName of selectedLocationNames.map((name) => normalizeKey(name)).filter(Boolean)) {
+    for (const match of dataset.destinationsByName.get(normalizedName) ?? []) {
+      keys.add(match.destinationKey);
     }
-    if (stateName && normalizedNames.has(stateName)) {
-      keys.add(destination.destinationKey);
-      continue;
+    for (const match of dataset.destinationsByState.get(normalizedName) ?? []) {
+      keys.add(match.destinationKey);
     }
-    if (countryName && normalizedNames.has(countryName)) {
-      keys.add(destination.destinationKey);
-      continue;
+    for (const match of dataset.destinationsByCountry.get(normalizedName) ?? []) {
+      keys.add(match.destinationKey);
     }
   }
 
@@ -332,7 +394,7 @@ export const searchDestinationLocationOptions = async (
   const cached = destinationQueryCache.get(cacheKey);
   if (cached && Date.now() - cached.ts < ttl) return cached.results;
 
-  const dataset = await getDataset();
+  const dataset = await getDestinationDataset();
   const filtered = dataset.destinations
     .filter((item) => item.searchText.includes(q))
     .sort((a, b) => {
@@ -346,7 +408,7 @@ export const searchDestinationLocationOptions = async (
     filtered.map(({ destinationKey, searchText, ...rest }) => rest),
     max
   );
-  destinationQueryCache.set(cacheKey, { ts: Date.now(), results });
+  setCachedResults(destinationQueryCache, cacheKey, results);
   return results;
 };
 
@@ -369,13 +431,19 @@ export const searchAttractionOptionsForSelectedLocations = async (params: {
   const cached = attractionQueryCache.get(cacheKey);
   if (cached && Date.now() - cached.ts < ttl) return cached.results;
 
-  const dataset = await getDataset();
-  const allowedDestinationKeys = resolveDestinationKeysForFilters(dataset, selectedIds, selectedNames);
+  const destinationDataset = await getDestinationDataset();
+  const allowedDestinationKeys = resolveDestinationKeysForFilters(destinationDataset, selectedIds, selectedNames);
   if (!allowedDestinationKeys.size) return [];
+  const attractionDataset = await getAttractionDataset();
+
+  const candidates: AttractionRecord[] = [];
+  for (const key of allowedDestinationKeys) {
+    const group = attractionDataset.attractionsByDestination.get(key);
+    if (group) candidates.push(...group);
+  }
 
   const seenNames = new Set<string>();
-  const filtered = dataset.attractions
-    .filter((item) => allowedDestinationKeys.has(item.destinationKey))
+  const filtered = candidates
     .filter((item) => item.searchText.includes(q))
     .sort((a, b) => {
       const scoreA = scoreMatch(a.name, a.searchText, q);
@@ -396,7 +464,7 @@ export const searchAttractionOptionsForSelectedLocations = async (params: {
     filtered.map(({ destinationKey, searchText, rank, ...rest }) => rest),
     max
   );
-  attractionQueryCache.set(cacheKey, { ts: Date.now(), results });
+  setCachedResults(attractionQueryCache, cacheKey, results);
   return results;
 };
 
@@ -405,7 +473,7 @@ export const getDestinationLocationOptionsByIds = async (
 ): Promise<DestinationLocationOption[]> => {
   const normalized = Array.from(new Set((ids ?? []).map((id) => normalizeText(id)).filter(Boolean)));
   if (!normalized.length) return [];
-  const dataset = await getDataset();
+  const dataset = await getDestinationDataset();
   const out: DestinationLocationOption[] = [];
   normalized.forEach((id) => {
     const item = dataset.destinationsById.get(id);
@@ -420,8 +488,18 @@ export const splitSelectedLocationNames = (raw: unknown): string[] => parseDelim
 export const splitSelectedLocationIds = (raw: unknown): string[] => parseDelimitedValues(raw, ',');
 
 export const clearDestinationAttractionAutocompleteCache = (): void => {
-  datasetCache = null;
-  datasetLoadPromise = null;
+  destinationDatasetCache = null;
+  destinationDatasetLoadPromise = null;
+  attractionDatasetCache = null;
+  attractionDatasetLoadPromise = null;
   destinationQueryCache.clear();
   attractionQueryCache.clear();
+};
+
+/**
+ * Pre-warm the autocomplete dataset cache so the first user request
+ * doesn't pay the cost of parsing ~154k CSV rows.
+ */
+export const prewarmAutocompleteCache = async (): Promise<void> => {
+  await Promise.all([getDestinationDataset(), getAttractionDataset()]);
 };

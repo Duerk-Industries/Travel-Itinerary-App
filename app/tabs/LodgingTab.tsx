@@ -23,6 +23,7 @@ type LodgingTabProps = {
   onOpenMap: (address: string) => void;
   formatMemberName: (member: any) => string; // This will be ignored, but kept for compatibility
   payerName: (id: string) => string;
+  readOnly?: boolean;
 };
 
 export const formatShortDate = (dateString?: string | null): string => {
@@ -51,6 +52,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
   onOpenMap,
   formatMemberName: _formatMemberName, // unused
   payerName: _payerName, // unused
+  readOnly = false,
 }) => {
   const [selectedLodging, setSelectedLodging] = useState<Lodging | null>(null);
   const [showDetails, setShowDetails] = useState(false);
@@ -62,6 +64,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
   const activeTripId = trip?.id;
 
   const openAddDialog = () => {
+    if (readOnly) return;
     if (!activeTripId) {
       alert('Please select a trip first.');
       return;
@@ -78,6 +81,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
   };
 
   const openEditDialog = (lodging: Lodging) => {
+    if (readOnly) return;
     const draft = {
       ...lodging,
       totalCost: lodging.totalCost?.toString() || '',
@@ -107,6 +111,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
   };
 
   const handleSave = async () => {
+    if (readOnly) return;
     if (!lodgingDraft || !activeTripId) return;
 
     const { payload, error } = buildLodgingPayload(lodgingDraft, activeTripId, defaultPayerId);
@@ -125,6 +130,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
   };
 
   const handleDelete = async () => {
+    if (readOnly) return;
     if (!lodgingToDelete) return;
     const result = await removeLodgingApi(backendUrl, jsonHeaders, lodgingToDelete.id);
     if (result.ok) {
@@ -137,6 +143,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
   };
 
   const voteOnLodging = async (lodgingId: string, value: 1 | -1) => {
+    if (readOnly) return;
     const res = await fetch(`${backendUrl}/api/lodgings/${lodgingId}/vote`, {
       method: 'POST',
       headers: jsonHeaders,
@@ -151,6 +158,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
   };
 
   const rateOnLodging = async (lodgingId: string, value: 1 | -1) => {
+    if (readOnly) return;
     const res = await fetch(`${backendUrl}/api/lodgings/${lodgingId}/rating`, {
       method: 'POST',
       headers: jsonHeaders,
@@ -190,15 +198,17 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
   const travelerName = (id: string) => travelerNames.get(id) ?? 'Unknown';
 
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, { flex: 1, minHeight: 0 }]}>
       <View style={styles.row}>
         <Text style={styles.sectionTitle}>Lodging</Text>
-        <TouchableOpacity style={[styles.button, styles.roundButton]} onPress={openAddDialog} testID="lodging-add">
-          <Text style={styles.buttonText}>+</Text>
-        </TouchableOpacity>
+        {!readOnly ? (
+          <TouchableOpacity style={[styles.button, styles.roundButton]} onPress={openAddDialog} testID="lodging-add">
+            <Text style={styles.buttonText}>+</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
 
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+      <ScrollView style={{ flex: 1, minHeight: 0 }} contentContainerStyle={{ flexGrow: 1 }}>
         <View style={[styles.table, styles.lodgingTable]}>
           <View style={[styles.tableRow, styles.tableHeaderRow]}>
             <View style={[styles.tableHeaderCell, styles.lodgingTabNameCol]}>
@@ -243,7 +253,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
                 <Text style={styles.cellText}>{normalizeItineraryStatus(lodging.status, LEGACY_ITINERARY_STATUS)}</Text>
               </View>
               <View style={[styles.tableCell, styles.lodgingTabDateCol]}>
-                {shouldShowVoteButtons(lodging.status, (lodging as any).userVote) ? (
+                {!readOnly && shouldShowVoteButtons(lodging.status, (lodging as any).userVote) ? (
                   <View style={styles.actionCell}>
                     <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => voteOnLodging(lodging.id, 1)}>
                       <Text style={styles.buttonText}>👍</Text>
@@ -257,7 +267,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
                 )}
               </View>
               <View style={[styles.tableCell, styles.lodgingTabDateCol]}>
-                {shouldShowRatingButtons(lodging.status, (lodging as any).userRating) ? (
+                {!readOnly && shouldShowRatingButtons(lodging.status, (lodging as any).userRating) ? (
                   <View style={styles.actionCell}>
                     <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => rateOnLodging(lodging.id, 1)}>
                       <Text style={styles.buttonText}>👍</Text>
@@ -274,20 +284,26 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
               </View>
               <View style={[styles.tableCell, styles.lodgingTabActionsCol, styles.lastCell]}>
                 <View style={[styles.actionCell, { flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'flex-start' }]}>
-                  <TouchableOpacity
-                    style={[styles.tableActionButton, styles.tableActionButtonPrimary]}
-                    onPress={() => openEditDialog(lodging)}
-                    testID={`lodging-edit-${lodging.id}`}
-                  >
-                    <Text style={styles.buttonText}>Edit</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.tableActionButton, styles.tableActionButtonDanger]}
-                    onPress={() => setLodgingToDelete(lodging)}
-                    testID={`lodging-delete-${lodging.id}`}
-                  >
-                    <Text style={styles.buttonText}>Delete</Text>
-                  </TouchableOpacity>
+                  {!readOnly ? (
+                    <>
+                      <TouchableOpacity
+                        style={[styles.tableActionButton, styles.tableActionButtonPrimary]}
+                        onPress={() => openEditDialog(lodging)}
+                        testID={`lodging-edit-${lodging.id}`}
+                      >
+                        <Text style={styles.buttonText}>Edit</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.tableActionButton, styles.tableActionButtonDanger]}
+                        onPress={() => setLodgingToDelete(lodging)}
+                        testID={`lodging-delete-${lodging.id}`}
+                      >
+                        <Text style={styles.buttonText}>Delete</Text>
+                      </TouchableOpacity>
+                    </>
+                  ) : (
+                    <Text style={styles.cellText}>View only</Text>
+                  )}
                 </View>
               </View>
             </View>
@@ -305,6 +321,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
           styles={styles}
           payerName={payerName}
           travelerName={travelerName}
+          readOnly={readOnly}
           onClose={closeDetails}
           onEdit={openEditDialog}
           onDelete={() => setLodgingToDelete(selectedLodging)}

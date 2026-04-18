@@ -3,11 +3,13 @@ $ErrorActionPreference = 'Stop'
 $ServiceName = if ($env:SERVICE_NAME) { $env:SERVICE_NAME } else { 'travel-itinerary-app' }
 $Region = if ($env:REGION) { $env:REGION } else { 'us-east5' }
 $SourceDir = if ($env:SOURCE_DIR) { $env:SOURCE_DIR } else { 'server' }
+$Memory = if ($env:MEMORY) { $env:MEMORY } else { '1Gi' }
 $EnvFile = if ($env:ENV_FILE) { $env:ENV_FILE } else { '' }
 $SecretsFile = if ($env:SECRETS_FILE) { $env:SECRETS_FILE } else { '' }
 $Secrets = if ($env:SECRETS) { $env:SECRETS } else { '' }
 $IgnoreKeys = if ($env:IGNORE_KEYS) { $env:IGNORE_KEYS } else { 'PORT,FIRESTORE_EMULATOR_HOST,GCLOUD_PROJECT_NUMBER,DEPLOYER_SERVICE_ACCOUNT_EMAIL,RUNTIME_SERVICE_ACCOUNT_EMAIL,CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL,GOOGLE_APPLICATION_CREDENTIALS' }
 $IgnoreSecretKeys = if ($env:IGNORE_SECRET_KEYS) { $env:IGNORE_SECRET_KEYS } else { 'GCLOUD_PROJECT,GOOGLE_CLOUD_PROJECT,GCLOUD_PROJECT_ID,GCLOUD_PROJECT_NUMBER,DEPLOYER_SERVICE_ACCOUNT_EMAIL,RUNTIME_SERVICE_ACCOUNT_EMAIL,CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL,GOOGLE_APPLICATION_CREDENTIALS' }
+$SkipFirestoreIndexes = $env:SKIP_FIRESTORE_INDEXES -eq '1'
 
 function Strip-InlineComment([string]$Line) {
   $out = ''
@@ -72,10 +74,50 @@ function Should-IgnoreKey([string]$Key, [string]$List) {
   return $keys -contains $Key
 }
 
+function Is-VisibleEnvKey([string]$Key) {
+  $visibleKeys = @(
+    'GCLOUD_PROJECT_ID',
+    'GOOGLE_CLOUD_PROJECT',
+    'GOOGLE_CALLBACK_URL',
+    'LOCATION_BUCKET',
+    'LOCATION_RAW_CSV_PREFIX',
+    'FIRESTORE_DATABASE_ID',
+    'DB_PROVIDER',
+    'USE_IN_MEMORY_DB',
+    'SMTP_HOST',
+    'SMTP_PORT',
+    'SMTP_FROM',
+    'UNSPLASH_APP_ID',
+    'UNSPLASH_IMAGE_CACHE_TIMEOUT_MINUTES',
+    'SIGNED_IMAGE_URL_CACHE_TIMEOUT_MINUTES',
+    'GOOGLE_PLACES_DETAILS_CACHE_TIMEOUT_MINUTES',
+    'STORAGE_IMAGE_CACHE_CONTROL_TIMEOUT_MINUTES',
+    'UNSPLASH_AUTH_BLOCK_CACHE_TIMEOUT_MINUTES',
+    'SESSION_CACHE_TIMEOUT_MINUTES',
+    'PLACE_MATCH_THRESHOLD',
+    'AUTH_REDIRECT_URI_ALLOWLIST',
+    'EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN',
+    'EXPO_PUBLIC_FIREBASE_PROJECT_ID',
+    'EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET',
+    'EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID',
+    'EXPO_PUBLIC_FIREBASE_APP_ID'
+  )
+  return $visibleKeys -contains $Key
+}
+
+function Get-DisplayEnvPair([string]$Pair) {
+  $parts = $Pair -split '=', 2
+  $key = $parts[0]
+  $value = if ($parts.Length -gt 1) { $parts[1] } else { '' }
+  if (Is-VisibleEnvKey $key) { return "$key=$value" }
+  return "$key=<redacted>"
+}
+
 Write-Host "Deploying Cloud Run service source code..."
 Write-Host "  Service: $ServiceName"
 Write-Host "  Region: $Region"
 Write-Host "  Source: $SourceDir"
+Write-Host "  Memory: $Memory"
 
 if (-not $EnvFile) {
   if (Test-Path -LiteralPath 'server/.env') {
@@ -92,7 +134,9 @@ if (-not $SecretsFile) {
   }
 }
 
+$secretMap = @{}
 $envPairs = @()
+$envKeys = @()
 $sawGoogleApplicationCredentials = $false
 if ($EnvFile) {
   if ([System.IO.Path]::GetFileName($EnvFile) -eq '.local_env') {
@@ -117,8 +161,6 @@ if ($EnvFile) {
     $envPairs += "$($pair.Key)=$value"
   }
 }
-
-$secretMap = @{}
 if ($Secrets) {
   foreach ($entry in ($Secrets -split ',')) {
     if (-not $entry -or $entry -notmatch '=') { continue }
@@ -148,12 +190,13 @@ if ($secretMap.Count -gt 0) {
     $envPairs = $envPairs | Where-Object { $_ -notmatch $pattern }
   }
 }
+$envKeys = $envPairs | ForEach-Object { ($_ -split '=', 2)[0] } | Where-Object { $_ }
 
 $envArg = ''
 if ($envPairs.Count -gt 0) {
   $envArg = ($envPairs -join ',')
-  Write-Host "Non-secret env vars to upload:"
-  foreach ($pair in $envPairs) { Write-Host "  $pair" }
+  Write-Host "Env vars to upload:"
+  foreach ($pair in $envPairs) { Write-Host "  $(Get-DisplayEnvPair $pair)" }
 }
 $secretsArg = ''
 if ($secretMap.Count -gt 0) {
@@ -167,6 +210,7 @@ if ($secretMap.Count -gt 0) {
 }
 
 $cmd = @('run', 'deploy', $ServiceName, '--source', $SourceDir, '--region', $Region)
+$cmd += @('--memory', $Memory)
 if ($envArg) { $cmd += @('--update-env-vars', $envArg) }
 if ($secretsArg) { $cmd += @('--set-secrets', $secretsArg) }
 if ($secretMap.Count -gt 0) { $cmd += @('--remove-env-vars', ($secretMap.Keys -join ',')) }
@@ -176,11 +220,36 @@ foreach ($candidate in @('FIRESTORE_EMULATOR_HOST', 'GOOGLE_APPLICATION_CREDENTI
 }
 if ($removeEnvKeys.Count -gt 0) { $cmd += @('--remove-env-vars', ($removeEnvKeys -join ',')) }
 
+if (-not $SkipFirestoreIndexes) {
+  $indexScript = Join-Path $PSScriptRoot 'deploy-firestore-indexes.ps1'
+  if (-not (Test-Path -LiteralPath $indexScript)) {
+    Write-Error "Expected Firestore index deploy script not found: $indexScript"
+    exit 1
+  }
+  & $indexScript
+  if ($LASTEXITCODE -ne 0) {
+    Write-Error "Firestore index deployment failed with exit code $LASTEXITCODE."
+    exit $LASTEXITCODE
+  }
+} else {
+  Write-Host "Skipping Firestore index deployment because SKIP_FIRESTORE_INDEXES=1."
+}
+
 & gcloud @cmd
 
 if ($LASTEXITCODE -ne 0) {
   Write-Error "API deployment failed with gcloud exit code $LASTEXITCODE."
   exit $LASTEXITCODE
+}
+
+if ($envKeys.Count -gt 0) {
+  Write-Host "Removing legacy secret bindings for .env-managed keys..."
+  $migrateCmd = @('run', 'services', 'update', $ServiceName, '--region', $Region, '--remove-secrets', ($envKeys -join ','), '--memory', $Memory)
+  & gcloud @migrateCmd
+  if ($LASTEXITCODE -ne 0) {
+    Write-Error "Legacy secret removal failed with gcloud exit code $LASTEXITCODE."
+    exit $LASTEXITCODE
+  }
 }
 
 Write-Host "API deployment completed."

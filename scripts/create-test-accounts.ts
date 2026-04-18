@@ -156,7 +156,7 @@ const repairExistingAccount = async (account: AccountInput): Promise<void> => {
   }
 };
 
-const main = async () => {
+export const runCreateTestAccounts = async () => {
   requireLocalSeedAllowed();
   const accountsPath = path.resolve(__dirname, '../test_inputs/default_accounts.json');
   const accounts = loadAccounts(accountsPath);
@@ -196,7 +196,19 @@ const main = async () => {
   console.log(`Done. Created=${results.created} Repaired=${results.repaired} Errors=${results.errors}`);
 };
 
-main().catch((err) => {
-  console.error(err instanceof Error ? err.message : String(err));
-  process.exitCode = 1;
-});
+const isDirectRun = (() => {
+  const argvPath = process.argv[1];
+  if (!argvPath) return false;
+  try {
+    return path.resolve(argvPath) === __filename;
+  } catch {
+    return false;
+  }
+})();
+
+if (isDirectRun) {
+  runCreateTestAccounts().catch((err) => {
+    console.error(err instanceof Error ? err.message : String(err));
+    process.exitCode = 1;
+  });
+}

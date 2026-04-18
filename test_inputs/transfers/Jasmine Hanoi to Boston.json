@@ -1,0 +1,46 @@
+{
+  "itemType": "flight",
+  "source": "Chase Travel",
+  "providerVendor": "Cathay Pacific Airways",
+  "tripReservationId": "1001382261",
+  "confirmationNumber": "4434V8",
+  "departureAirportCode": "HAN",
+  "arrivalAirportCode": "BOS",
+  "travelers": ["Jasmine Lili Duerk"],
+  "totalCost": 1624.61,
+  "currency": "USD",
+  "status": "Booked",
+  "transferType": "Flight",
+  "departureDate": "2025-11-30",
+  "arrivalDate": "2025-11-30",
+  "departureLocation": "Hanoi",
+  "departureAirportCode": "HAN",
+  "departureTime": "11:05 AM",
+  "arrivalLocation": "Boston",
+  "arrivalAirportCode": "BOS",
+  "arrivalTime": "10:00 PM",
+  "layoverLocation": "Hong Kong",
+  "layoverDuration": "5h 40m",
+  "duration": "22h 55m",
+  "fareName": "Premium Economy Essential",
+  "cabinClass": "Mixed Cabin class",
+  "bookingReference": "4434V8",
+  "segments": [
+    {
+      "departureLocation": "Hanoi",
+      "departureAirportCode": "HAN",
+      "arrivalLocation": "Hong Kong",
+      "arrivalAirportCode": "HKG",
+      "carrier": "Cathay Pacific Airways",
+      "flightNumber": "CX740"
+    },
+    {
+      "departureLocation": "Hong Kong",
+      "departureAirportCode": "HKG",
+      "arrivalLocation": "Boston",
+      "arrivalAirportCode": "BOS",
+      "carrier": "Cathay Pacific Airways",
+      "flightNumber": "CX812"
+    }
+  ]
+}

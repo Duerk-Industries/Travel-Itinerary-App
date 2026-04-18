@@ -268,6 +268,83 @@ export const formatUserDisplayName = (member: {
   return 'Traveler';
 };
 
+type DayLocationInfo = {
+  flights: Flight[];
+  lodgings: Lodging[];
+  tours: Tour[];
+  rentals: CarRental[];
+};
+
+type OverviewWeather = {
+  date: string;
+  icon: string;
+  description?: string | null;
+  temperatureHighC?: number | null;
+  resolvedLocation?: string | null;
+};
+
+const compareTimes = (left?: string | null, right?: string | null) => {
+  const toValue = (value?: string | null) => {
+    const match = String(value ?? '').match(/^(\d{1,2}):(\d{2})$/);
+    if (!match) return -1;
+    return Number(match[1]) * 60 + Number(match[2]);
+  };
+  return toValue(left) - toValue(right);
+};
+
+export const buildDayWeatherLocation = (info?: DayLocationInfo | null, fallbackLocation?: string | null) => {
+  const fallback = String(fallbackLocation ?? '').trim();
+  if (!info) return fallback;
+
+  const lodging = info.lodgings.find((item) => String(item.address ?? '').trim()) ?? info.lodgings[0];
+  if (lodging) {
+    return String(lodging.address ?? lodging.name ?? '').trim() || fallback;
+  }
+
+  const arrivalFlight = [...info.flights]
+    .filter((flight) => String(flight.arrival_location ?? flight.arrival_airport_code ?? '').trim())
+    .sort((a, b) => compareTimes(b.arrival_time, a.arrival_time))[0];
+  if (arrivalFlight) {
+    return String(arrivalFlight.arrival_location ?? arrivalFlight.arrival_airport_code ?? '').trim() || fallback;
+  }
+
+  const tour = info.tours.find((item) => String(item.startLocation ?? '').trim()) ?? info.tours[0];
+  if (tour) {
+    return String(tour.startLocation ?? tour.name ?? '').trim() || fallback;
+  }
+
+  const rental = info.rentals.find((item) => String(item.dropoffLocation ?? item.pickupLocation ?? '').trim()) ?? info.rentals[0];
+  if (rental) {
+    return String(rental.dropoffLocation ?? rental.pickupLocation ?? rental.vendor ?? '').trim() || fallback;
+  }
+
+  const departureFlight = [...info.flights]
+    .filter((flight) => String(flight.departure_location ?? flight.departure_airport_code ?? '').trim())
+    .sort((a, b) => compareTimes(a.departure_time, b.departure_time))[0];
+  if (departureFlight) {
+    return String(departureFlight.departure_location ?? departureFlight.departure_airport_code ?? '').trim() || fallback;
+  }
+
+  return fallback;
+};
+
+export const isWithinOverviewWeatherWindow = (
+  currentDateIso?: string | null,
+  tripStartDateIso?: string | null,
+  tripEndDateIso?: string | null
+) => {
+  const current = normalizeDateString(currentDateIso ?? '');
+  const start = normalizeDateString(tripStartDateIso ?? '');
+  const end = normalizeDateString(tripEndDateIso ?? tripStartDateIso ?? '');
+  if (!current || !start || !end) return false;
+  const currentTime = new Date(current).getTime();
+  const startTime = new Date(start).getTime();
+  const endTime = new Date(end).getTime();
+  if ([currentTime, startTime, endTime].some((value) => Number.isNaN(value))) return false;
+  const msPerDay = 24 * 60 * 60 * 1000;
+  return currentTime >= startTime - 7 * msPerDay && currentTime <= endTime + msPerDay;
+};
+
 export const OverviewTab: React.FC<OverviewTabProps> = ({
   backendUrl,
   headers,
@@ -395,6 +472,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const [dayCards, setDayCards] = useState<DayCard[]>([]);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [dayImages, setDayImages] = useState<Record<string, string>>({});
+  const [dayWeather, setDayWeather] = useState<Record<string, OverviewWeather>>({});
+  const weatherRequestKeyRef = useRef<string>('');
 
   const formatFriendlyDate = (dateStr?: string | null, timeStr?: string | null): string | null =>
     require('../utils/overviewBuilder').formatFriendlyDate(dateStr, timeStr);
@@ -762,13 +841,23 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         rentalsForDay.forEach((r) => items.push(`Rental car (${r.vendor || 'vendor'}) ${r.pickupDate} -> ${r.dropoffDate}`));
         const label = `Day ${idx + 1}`;
         if (!items.length) items.push('Free Day');
-        return { date, label, items, location: tripLocationLabel || null };
+        const location =
+          buildDayWeatherLocation(
+            {
+              flights: flightsForDay,
+              lodgings: lodgingsForDay,
+              tours: toursForDay,
+              rentals: rentalsForDay,
+            },
+            tripLocationLabel || trip?.destination || null
+          ) || null;
+        return { date, label, items, location };
       });
       setDayCards(cards);
       setSelectedDay((prev) => (prev && cards.some((card) => card.date === prev) ? prev : null));
     };
     buildDayCards();
-  }, [allDates, flights, lodgings, tours, carRentals, tripLocationLabel]);
+  }, [allDates, flights, lodgings, tours, carRentals, tripLocationLabel, trip?.destination]);
 
   useEffect(() => {
     const cache = async () => {
@@ -803,6 +892,77 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     };
     loadCache().catch(() => undefined);
   }, [trip?.id, dayCards.length, allDates]);
+
+  useEffect(() => {
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const shouldFetchWeather = isWithinOverviewWeatherWindow(todayIso, overviewStartDate, overviewEndDate);
+    if (!shouldFetchWeather || !dayCards.length) {
+      weatherRequestKeyRef.current = '';
+      setDayWeather({});
+      return;
+    }
+
+    const days = dayCards
+      .map((card) => ({
+        date: card.date,
+        location: String(card.location || tripLocationLabel || trip?.destination || '').trim(),
+      }))
+      .filter((entry) => entry.date && entry.location);
+
+    if (!days.length) {
+      weatherRequestKeyRef.current = '';
+      setDayWeather({});
+      return;
+    }
+
+    const requestKey = JSON.stringify(days);
+    if (weatherRequestKeyRef.current === requestKey) {
+      return;
+    }
+
+    let active = true;
+    weatherRequestKeyRef.current = requestKey;
+    fetch(`${backendUrl}/api/itinerary/weather/overview`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...headers },
+      body: JSON.stringify({
+        tripId: trip?.id ?? null,
+        days,
+      }),
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!active) return;
+        const next = Array.isArray(data?.weather)
+          ? data.weather.reduce((acc: Record<string, OverviewWeather>, item: any) => {
+              const date = String(item?.date ?? '').trim();
+              if (!date) return acc;
+              acc[date] = {
+                date,
+                icon: String(item?.icon ?? '🌤'),
+                description: item?.description ? String(item.description) : null,
+                temperatureHighC:
+                  typeof item?.temperatureHighC === 'number' && Number.isFinite(item.temperatureHighC)
+                    ? Math.round(item.temperatureHighC)
+                    : null,
+                resolvedLocation: item?.resolvedLocation ? String(item.resolvedLocation) : null,
+              };
+              return acc;
+            }, {})
+          : {};
+        setDayWeather(next);
+      })
+      .catch(() => {
+        if (active) {
+          weatherRequestKeyRef.current = '';
+          setDayWeather({});
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [backendUrl, headers, dayCards, overviewStartDate, overviewEndDate, trip?.destination, trip?.id, tripLocationLabel]);
 
   useEffect(() => {
     const fetchImages = async () => {
@@ -1042,7 +1202,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   };
 
   const addTraveler = async () => {
-    if (!group?.id) return;
+    if (!trip?.id) return;
     const first = travelerDraft.firstName.trim();
     const last = travelerDraft.lastName.trim();
     const email = travelerDraft.email.trim();
@@ -1052,7 +1212,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     }
     const guestName = `${first} ${last}`.trim();
     const payload = email ? { email, firstName: first, lastName: last, guestName } : { guestName, firstName: first, lastName: last };
-    const res = await fetch(`${backendUrl}/api/groups/${group.id}/members`, {
+    const res = await fetch(`${backendUrl}/api/account/trips/${trip.id}/members`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...headers },
       body: JSON.stringify(payload),
@@ -1635,6 +1795,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
       const renderHeroCard = (card: DayCard, title: string, showAction: boolean, onPress?: () => void, testID?: string) => {
         const img = dayImages[card.date];
+        const weather = dayWeather[card.date];
+        const weatherLabel =
+          weather && weather.temperatureHighC != null ? `${weather.icon} ${weather.temperatureHighC}°C` : null;
         return (
           <TouchableOpacity
             testID={testID}
@@ -1654,6 +1817,22 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             <View style={styles.dayHeroBadge}>
               <Text style={styles.dayHeroBadgeText}>{card.label.toUpperCase()}</Text>
             </View>
+            {weatherLabel ? (
+              <View
+                style={{
+                  position: 'absolute',
+                  top: 12,
+                  right: 12,
+                  paddingHorizontal: 10,
+                  paddingVertical: 6,
+                  borderRadius: 999,
+                  backgroundColor: 'rgba(15, 23, 42, 0.74)',
+                }}
+                testID={`${testID || 'day-hero'}-weather`}
+              >
+                <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>{weatherLabel}</Text>
+              </View>
+            ) : null}
             <View style={styles.dayHeroTextWrap}>
               <Text
                 style={[
@@ -1708,7 +1887,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             </TouchableOpacity>
             <ScrollView
               ref={scrollRef}
-              style={{ flex: 1 }}
+              style={{ flex: 1, minHeight: 0 }}
               contentContainerStyle={{ gap: isPhoneLayout ? 12 : 16, paddingTop: isPhoneLayout ? 48 : 56 }}
               onScroll={(e: any) => setScrollY(e.nativeEvent.contentOffset.y)}
               scrollEventThrottle={16}
@@ -1958,7 +2137,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 style={[styles.button, styles.smallButton, styles.dangerButton]}
                 onPress={cancelOverviewEdits}
               >
-                <Text style={styles.buttonText}>Cancel</Text>
+                <Text style={styles.dangerButtonText}>Cancel</Text>
               </TouchableOpacity>
             </View>
           ) : (
@@ -2241,12 +2420,16 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               <TextInput
                 style={[styles.input, { flex: 1 }]}
                 placeholder="First name"
+                autoComplete="given-name"
+                textContentType="givenName"
                 value={travelerDraft.firstName}
                 onChangeText={(text) => setTravelerDraft((prev) => ({ ...prev, firstName: text }))}
               />
               <TextInput
                 style={[styles.input, { flex: 1 }]}
                 placeholder="Last name"
+                autoComplete="family-name"
+                textContentType="familyName"
                 value={travelerDraft.lastName}
                 onChangeText={(text) => setTravelerDraft((prev) => ({ ...prev, lastName: text }))}
               />
@@ -2255,6 +2438,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               style={styles.input}
               placeholder="Email (optional)"
               autoCapitalize="none"
+              autoComplete="email"
+              textContentType="emailAddress"
               keyboardType="email-address"
               value={travelerDraft.email}
               onChangeText={(text) => setTravelerDraft((prev) => ({ ...prev, email: text }))}
@@ -2264,7 +2449,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 style={[styles.button, styles.smallButton, styles.dangerButton]}
                 onPress={() => setShowAddTraveler(false)}
               >
-                <Text style={styles.buttonText}>Cancel</Text>
+                <Text style={styles.dangerButtonText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={addTraveler}>
                 <Text style={styles.buttonText}>Save Traveler</Text>
@@ -2476,7 +2661,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   };
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, minHeight: 0 }}>
       {trip && aiItineraryPending ? (
         <View style={[styles.card, { borderColor: '#93c5fd', borderWidth: 1, marginBottom: 10 }]}>
           <Text style={styles.sectionTitle}>AI Itinerary In Progress</Text>

@@ -1,17 +1,20 @@
 import request from 'supertest';
-import { Pool } from 'pg';
-import { randomUUID } from 'crypto';
 import { app } from '../src/app';
-import { initDb, closePool } from '../src/db';
-import { makeAdminUser, registerAndLoginWebUser, seedTiersForTest } from './helpers';
+import { initDb, closePool, addUserEmail, markAccountEmailVerified, listAuditLog, getCurrentUserTier, setUserRole, setUserTier } from '../src/db';
+import { makeAdminUser, registerAndLoginWebUser, seedTiersForTest, cleanupTestUsersByEmail } from './helpers';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 
 const ADMIN_EMAIL = `admin-routes-test+admin${Date.now()}@example.com`;
 const USER_EMAIL  = `admin-routes-test+user${Date.now()}@example.com`;
 const adminUser   = { firstName: 'Admin', lastName: 'Test', email: ADMIN_EMAIL, password: 'AdminPass1!' };
 const regularUser = { firstName: 'Regular', lastName: 'User', email: USER_EMAIL, password: 'UserPass1!' };
 
+// Track all emails created during tests for cleanup
+const testEmails: string[] = [ADMIN_EMAIL, USER_EMAIL];
+
 describe('Admin routes', () => {
-  let pool: Pool;
   let adminToken: string;
   let adminUserId: string;
   let userToken: string;
@@ -20,21 +23,23 @@ describe('Admin routes', () => {
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
     await initDb();
-    pool = new Pool({ connectionString: process.env.DATABASE_URL });
-    await seedTiersForTest(pool);
+    await seedTiersForTest();
 
-    const admin = await makeAdminUser(pool, adminUser);
+    const admin = await makeAdminUser(adminUser);
     adminToken = admin.token;
     adminUserId = admin.userId;
 
-    const user = await registerAndLoginWebUser(pool, regularUser);
+    const user = await registerAndLoginWebUser(regularUser);
     userToken = user.token;
     userId = user.userId;
   });
 
+  afterEach(async () => {
+    await seedTiersForTest();
+  });
+
   afterAll(async () => {
-    await pool.query('DELETE FROM users WHERE email LIKE $1', ['admin-routes-test+%']);
-    await pool.end();
+    await cleanupTestUsersByEmail(testEmails);
     await closePool();
   });
 
@@ -112,11 +117,10 @@ describe('Admin routes', () => {
 
     it('finds users by full name and alternate email', async () => {
       const alternateEmail = `admin-routes-test+alias${Date.now()}@example.com`;
-      await pool.query(
-        `INSERT INTO user_emails (id, user_id, email, email_normalized, is_primary, is_verified)
-         VALUES ($1, $2, $3, LOWER($3), FALSE, TRUE)`,
-        [randomUUID(), userId, alternateEmail]
-      );
+      testEmails.push(alternateEmail);
+
+      await addUserEmail(userId, alternateEmail);
+      await markAccountEmailVerified(userId, alternateEmail);
 
       const byName = await request(app)
         .get('/api/admin/users?search=Regular%20User')
@@ -156,6 +160,22 @@ describe('Admin routes', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .expect(404);
     });
+
+    it('normalizes stale admin tiers back to Pro on fetch', async () => {
+      await setUserRole(userId, 'admin');
+      await setUserTier(userId, 'free', 'admin', adminUserId, 'Setting stale admin tier for normalization test');
+
+      const res = await request(app)
+        .get(`/api/admin/users/${userId}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(res.body.role).toBe('admin');
+      expect(res.body.tierKey).toBe('pro');
+
+      const currentTier = await getCurrentUserTier(userId);
+      expect(currentTier?.tierKey).toBe('pro');
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -163,6 +183,11 @@ describe('Admin routes', () => {
   // ---------------------------------------------------------------------------
 
   describe('PATCH /api/admin/users/:userId/tier', () => {
+    beforeEach(async () => {
+      await setUserRole(userId, 'user');
+      await setUserTier(userId, 'free', 'admin', adminUserId, 'Resetting test user tier before tier-route test');
+    });
+
     it('requires reason', async () => {
       await request(app)
         .patch(`/api/admin/users/${userId}/tier`)
@@ -198,11 +223,28 @@ describe('Admin routes', () => {
       expect(res.body.tierKey).toBe('premium');
 
       // Audit log entry should exist
-      const { rows } = await pool.query(
-        `SELECT * FROM audit_log WHERE target_user_id = $1 AND action = 'USER_TIER_CHANGED'`,
-        [userId],
-      );
-      expect(rows.length).toBeGreaterThanOrEqual(1);
+      const auditResult = await listAuditLog({ targetUserId: userId, action: 'USER_TIER_CHANGED' });
+      expect(auditResult.entries.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('keeps admin users locked to Pro when changing tier', async () => {
+      await request(app)
+        .patch(`/api/admin/users/${userId}/role`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ role: 'admin', reason: 'Promoting user for tier lock test' })
+        .expect(200);
+
+      const res = await request(app)
+        .patch(`/api/admin/users/${userId}/tier`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ tierKey: 'premium', reason: 'Trying to change admin tier' })
+        .expect(200);
+
+      expect(res.body.tierKey).toBe('pro');
+      expect(res.body.lockedToPro).toBe(true);
+
+      const currentTier = await getCurrentUserTier(userId);
+      expect(currentTier?.tierKey).toBe('pro');
     });
   });
 
@@ -237,11 +279,25 @@ describe('Admin routes', () => {
       expect(res.body.userId).toBe(userId);
       expect(res.body.role).toBe('admin');
 
-      const { rows } = await pool.query(
-        `SELECT * FROM audit_log WHERE target_user_id = $1 AND action = 'USER_ROLE_GRANTED'`,
-        [userId],
-      );
-      expect(rows.length).toBeGreaterThanOrEqual(1);
+      const auditResult = await listAuditLog({ targetUserId: userId, action: 'USER_ROLE_GRANTED' });
+      expect(auditResult.entries.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('upgrades a user tier to Pro when granting admin', async () => {
+      await request(app)
+        .patch(`/api/admin/users/${userId}/tier`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ tierKey: 'free', reason: 'Resetting tier before admin promotion' })
+        .expect(200);
+
+      await request(app)
+        .patch(`/api/admin/users/${userId}/role`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ role: 'admin', reason: 'Granting admin for tier promotion test' })
+        .expect(200);
+
+      const currentTier = await getCurrentUserTier(userId);
+      expect(currentTier?.tierKey).toBe('pro');
     });
 
     it('revokes admin role and writes an audit log entry', async () => {
@@ -253,11 +309,8 @@ describe('Admin routes', () => {
 
       expect(res.body.role).toBe('user');
 
-      const { rows } = await pool.query(
-        `SELECT * FROM audit_log WHERE target_user_id = $1 AND action = 'USER_ROLE_REVOKED'`,
-        [userId],
-      );
-      expect(rows.length).toBeGreaterThanOrEqual(1);
+      const auditResult = await listAuditLog({ targetUserId: userId, action: 'USER_ROLE_REVOKED' });
+      expect(auditResult.entries.length).toBeGreaterThanOrEqual(1);
     });
 
     it('prevents an admin from revoking their own role', async () => {
@@ -276,7 +329,7 @@ describe('Admin routes', () => {
   // ---------------------------------------------------------------------------
 
   describe('GET /api/admin/features', () => {
-    it('returns a feature flags list', async () => {
+    it('returns the configured feature flag catalog with descriptions', async () => {
       const res = await request(app)
         .get('/api/admin/features')
         .set('Authorization', `Bearer ${adminToken}`)
@@ -284,6 +337,23 @@ describe('Admin routes', () => {
 
       expect(res.body).toHaveProperty('features');
       expect(Array.isArray(res.body.features)).toBe(true);
+      expect(res.body.features.length).toBeGreaterThan(0);
+      expect(res.body.features).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            key: 'feature_ingest_manual_upload',
+            description: expect.any(String),
+          }),
+          expect.objectContaining({
+            key: 'ai_itinerary_generation',
+            description: expect.any(String),
+          }),
+          expect.objectContaining({
+            key: 'overview_weather',
+            description: expect.any(String),
+          }),
+        ])
+      );
     });
   });
 
@@ -405,10 +475,8 @@ describe('Admin routes', () => {
       expect(res.body.limitKey).toBe('max_active_trips');
       expect(res.body.limitValue).toBe(5);
 
-      const { rows } = await pool.query(
-        `SELECT * FROM audit_log WHERE action = 'TIER_LIMIT_UPDATED' ORDER BY created_at DESC LIMIT 1`,
-      );
-      expect(rows.length).toBe(1);
+      const auditResult = await listAuditLog({ action: 'TIER_LIMIT_UPDATED', limit: 1 });
+      expect(auditResult.entries.length).toBe(1);
     });
   });
 
@@ -475,6 +543,59 @@ describe('Admin routes', () => {
         .expect(200);
 
       expect(res.body.entries.length).toBeLessThanOrEqual(2);
+    });
+  });
+
+  describe('PATCH /api/admin/api-limits/:provider', () => {
+    it('updates provider limits, writes an audit log, and persists to yaml', async () => {
+      const originalConfigPath = process.env.API_LIMITS_CONFIG_PATH;
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'admin-api-limits-'));
+      const tempConfigPath = path.join(tempDir, 'api-limits.yaml');
+      fs.copyFileSync(path.join(__dirname, '..', 'config', 'api-limits.yaml'), tempConfigPath);
+      process.env.API_LIMITS_CONFIG_PATH = tempConfigPath;
+
+      try {
+        const getRes = await request(app)
+          .get('/api/admin/api-limits')
+          .set('Authorization', `Bearer ${adminToken}`)
+          .expect(200);
+
+        const openAiProvider = getRes.body.providers.find((provider: any) => provider.provider === 'OPENAI');
+        expect(openAiProvider).toBeTruthy();
+
+        const callers = Object.fromEntries(
+          openAiProvider.callers.map((caller: any) => [caller.caller, caller.limit])
+        );
+        callers.ITINERARY_GENERATE_PLAN = 75;
+
+        await request(app)
+          .patch('/api/admin/api-limits/OPENAI')
+          .set('Authorization', `Bearer ${adminToken}`)
+          .send({
+            window: 'day',
+            windowHours: 48,
+            overallLimit: 1500,
+            callers,
+            reason: 'Increase OpenAI plan throughput for launch prep',
+          })
+          .expect(200);
+
+        const updatedYaml = fs.readFileSync(tempConfigPath, 'utf8');
+        expect(updatedYaml).toContain('windowHours: 48');
+        expect(updatedYaml).toContain('overall: 1500');
+        expect(updatedYaml).toContain('ITINERARY_GENERATE_PLAN: 75');
+
+        const auditResult = await listAuditLog({ action: 'API_LIMITS_UPDATED' as any });
+        expect(auditResult.entries.length).toBeGreaterThanOrEqual(1);
+        expect(auditResult.entries[0].reason).toBe('Increase OpenAI plan throughput for launch prep');
+      } finally {
+        if (originalConfigPath) {
+          process.env.API_LIMITS_CONFIG_PATH = originalConfigPath;
+        } else {
+          delete process.env.API_LIMITS_CONFIG_PATH;
+        }
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      }
     });
   });
 });

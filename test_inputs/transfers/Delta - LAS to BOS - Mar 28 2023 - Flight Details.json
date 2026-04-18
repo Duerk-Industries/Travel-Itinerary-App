@@ -1,0 +1,36 @@
+{
+  "itemType": "flight",
+  "source": "Delta Air Lines",
+  "sourcePdf": "Delta - LAS to BOS - Mar 28 2023 - Flight Details.pdf",
+  "providerVendor": "Delta Air Lines",
+  "confirmationNumber": "F8KMH9",
+  "bookingReference": "F8KMH9",
+  "departureAirportCode": "LAS",
+  "arrivalAirportCode": "BOS",
+  "travelers": ["Bryan Duerk"],
+  "totalCost": null,
+  "currency": null,
+  "status": "Booked",
+  "transferType": "Flight",
+  "segments": [
+    {
+      "departureDate": "2023-03-28",
+      "arrivalDate": "2023-03-28",
+      "departureLocation": "Las Vegas",
+      "departureAirportCode": "LAS",
+      "departureTime": null,
+      "arrivalLocation": "Boston",
+      "arrivalAirportCode": "BOS",
+      "arrivalTime": null,
+      "layoverLocation": null,
+      "layoverLocationCode": null,
+      "layoverDuration": null,
+      "duration": null,
+      "carrier": "Delta Air Lines",
+      "flightNumber": null,
+      "bookingReference": "F8KMH9",
+      "cabinClass": null,
+      "fareName": null
+    }
+  ]
+}

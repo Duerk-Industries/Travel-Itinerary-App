@@ -7,6 +7,7 @@ export type PageKey =
   | 'tours'
   | 'expenses'
   | 'ledger'
+  | 'ingest'
   | 'cost'
   | 'trips'
   | 'create-trip'
@@ -17,13 +18,47 @@ export type PageKey =
   | 'following'
   | 'admin';
 
-export const shouldAllowPageChange = (currentPage: PageKey, nextPage: PageKey): boolean => {
+type PageGuardOptions = {
+  isFollowedTrip?: boolean;
+};
+
+export const FOLLOWED_TRIP_HIDDEN_PAGES: PageKey[] = [
+  'itinerary',
+  'expenses',
+  'ingest',
+  'ledger',
+  'trips',
+  'create-trip',
+  'follow',
+  'following',
+];
+
+const followedTripHiddenPageSet = new Set<PageKey>(FOLLOWED_TRIP_HIDDEN_PAGES);
+
+export const shouldAllowPageChange = (
+  currentPage: PageKey,
+  nextPage: PageKey,
+  options: PageGuardOptions = {}
+): boolean => {
   if (currentPage === 'create-trip' && nextPage !== 'create-trip') {
+    return false;
+  }
+  if (options.isFollowedTrip && followedTripHiddenPageSet.has(nextPage)) {
     return false;
   }
   return true;
 };
 
-export const shouldDisableTab = (currentPage: PageKey, tabPage: PageKey): boolean => {
-  return currentPage === 'create-trip' && tabPage !== 'create-trip';
+export const shouldDisableTab = (
+  currentPage: PageKey,
+  tabPage: PageKey,
+  options: PageGuardOptions = {}
+): boolean => {
+  if (currentPage === 'create-trip' && tabPage !== 'create-trip') {
+    return true;
+  }
+  if (options.isFollowedTrip && followedTripHiddenPageSet.has(tabPage)) {
+    return true;
+  }
+  return false;
 };

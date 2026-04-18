@@ -1,4 +1,15 @@
+import path from 'path';
+import dotenv from 'dotenv';
 import { ExpoConfig } from 'expo/config';
+
+dotenv.config({ path: path.join(__dirname, '.env') });
+dotenv.config({ path: path.join(__dirname, '..', '.env'), override: true });
+dotenv.config({ path: path.join(__dirname, '..', 'server', '.env'), override: true });
+dotenv.config({ path: path.join(__dirname, '..', 'server', '.local_env'), override: true });
+
+if (!process.env.EXPO_PUBLIC_BACKEND_URL && process.env.API_BASE_URL) {
+  process.env.EXPO_PUBLIC_BACKEND_URL = process.env.API_BASE_URL;
+}
 
 const config: ExpoConfig = {
   name: 'WanderBunnies',

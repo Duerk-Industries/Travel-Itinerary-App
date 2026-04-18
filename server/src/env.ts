@@ -67,5 +67,10 @@ export const isLocalEnv = (): boolean => {
     return true;
   }
   // Check for a marker file that only exists in the local dev environment.
-  return hasRunLocalFlag(path.resolve(__dirname, '../.local_env'));
+  // Support both server/.local_env and repo-root/.local_env because local scripts
+  // and server startup load from both locations.
+  return (
+    hasRunLocalFlag(path.resolve(__dirname, '../.local_env')) ||
+    hasRunLocalFlag(path.resolve(__dirname, '../../.local_env'))
+  );
 };

@@ -22,6 +22,7 @@ Email matching is case-insensitive and normalized before comparison.
 | Features | `/admin/features` | Toggle feature flags with reason |
 | User Data | `/admin/user-data` | Aggregate user counts, trip counts, AI usage, token usage, and API-call summaries |
 | Audit Log | `/admin/audit-log` | Review who changed what and when |
+| Ingestion Ops | `/admin/ingestion` | Review ingestion volume, stage outcomes, duplicate rate, retries, and estimated LLM cost |
 
 ## Admin bypass rules
 
@@ -67,5 +68,21 @@ Metrics currently exposed per user:
 - successful itinerary generations
 - tokens used
 - API-call summary keyed from `api-limits.yaml`
+
+## Ingestion observability
+
+When `feature_ingest_admin_observability` is enabled, the admin UI exposes ingestion widgets for:
+
+- ingestion volume by source and tier
+- parse success and failure rate by stage
+- duplicate rate
+- low-confidence rate
+- average processing latency by stage
+- retry count and dead-letter count
+- LLM token usage and estimated cost by model/provider
+- quota consumption by user and tier
+- Gmail auth failure count
+- webhook signature failure count
+- cost per user
 
 Use pagination for large result sets.

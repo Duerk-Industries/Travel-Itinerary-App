@@ -1,0 +1,22 @@
+{
+  "itemType": "ferry_bus_transfer",
+  "source": "GetYourGuide",
+  "sourcePdf": "GetYourGuide - Taiwan - Nov 21 2025 - Sun Moon Lake One Way Transfer from Taichung City.pdf",
+  "providerVendor": "roundTAIWANround",
+  "confirmationNumber": "GYGLMR82GZRZ",
+  "bookingReference": "GYGLMR82GZRZ",
+  "travelers": ["Bryan Duerk"],
+  "totalCost": 80,
+  "currency": "USD",
+  "status": "Booked",
+  "transferType": "Private",
+  "departureDate": "2025-11-21",
+  "arrivalDate": "2025-11-21",
+  "departureLocation": "HSR Taichung Station Visitor Information Center, Zhanqu 2nd Road, Wuri District, Taichung City, Taiwan",
+  "departureTime": "10:00 AM",
+  "arrivalLocation": "Sun Moon Lake, Yuchi Township, Nantou County, Taiwan",
+  "arrivalTime": null,
+  "duration": "80 minutes",
+  "cost": 80,
+  "contactPhone": "+886 2 7756 3488"
+}

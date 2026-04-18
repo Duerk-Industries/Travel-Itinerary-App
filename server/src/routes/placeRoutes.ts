@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authenticate } from '../auth';
 import { getLocationsByIds, searchLocations } from '../db';
+import { logError } from '../logger';
 import { autocompletePlaces } from '../services/placeService';
 import { getLocationOptionsByIds, searchCityOptions, searchCountryStateOptions } from '../services/locationServices';
 import {
@@ -42,6 +43,34 @@ const fallbackLocationNameFromId = (id: string): string => {
               ? 'Attraction'
               : 'Location';
   return raw ? `${normalizedKind} ${raw}` : normalizedKind;
+};
+
+const normalizeMergedLocationKey = (item: {
+  id?: string;
+  sourceType?: string;
+  name?: string;
+  countryName?: string;
+  stateName?: string;
+}): string => {
+  const sourceType = String(item.sourceType ?? '').trim().toLowerCase();
+  const name = String(item.name ?? '').trim().toLowerCase();
+  const countryName = String(
+    item.countryName ?? (sourceType === 'country' ? item.name ?? '' : '')
+  )
+    .trim()
+    .toLowerCase();
+  const stateName = String(item.stateName ?? '').trim().toLowerCase();
+  if (!name) return String(item.id ?? '').trim().toLowerCase();
+  return [name, stateName, countryName].join('|');
+};
+
+const mergedLocationPriority = (item: { sourceType?: string }): number => {
+  const sourceType = String(item.sourceType ?? '').trim().toLowerCase();
+  if (sourceType === 'country') return 0;
+  if (sourceType === 'state') return 1;
+  if (sourceType === 'city') return 2;
+  if (sourceType === 'destination') return 3;
+  return 4;
 };
 
 const router = Router();
@@ -104,17 +133,25 @@ router.get('/location-options', async (req, res) => {
     if (kind === 'country_destination') {
       const max = Number.isFinite(limit) ? Number(limit) : 10;
       const [destinationResults, countryStateResults] = await Promise.all([
-        searchDestinationLocationOptions(q, Math.max(max, 10)),
-        searchCountryStateOptions(q, Math.max(max * 2, 12)),
+        searchDestinationLocationOptions(q, Math.max(max, 10)).catch((err) => {
+          logError('[places] destination location search failed', err);
+          return [] as Awaited<ReturnType<typeof searchDestinationLocationOptions>>;
+        }),
+        searchCountryStateOptions(q, Math.max(max * 2, 12)).catch((err) => {
+          logError('[places] country/state location search failed', err);
+          return [] as Awaited<ReturnType<typeof searchCountryStateOptions>>;
+        }),
       ]);
-      const merged = [...destinationResults, ...countryStateResults];
-      const seen = new Set<string>();
-      const deduped = merged.filter((item) => {
-        const key = String((item as any).id ?? `${item.sourceType}:${String(item.name ?? '').trim().toLowerCase()}`);
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
+      const merged = [...countryStateResults, ...destinationResults];
+      const dedupedByKey = new Map<string, (typeof merged)[number]>();
+      merged.forEach((item) => {
+        const key = normalizeMergedLocationKey(item as any);
+        const existing = dedupedByKey.get(key);
+        if (!existing || mergedLocationPriority(item as any) < mergedLocationPriority(existing as any)) {
+          dedupedByKey.set(key, item);
+        }
       });
+      const deduped = Array.from(dedupedByKey.values());
       res.json(deduped.slice(0, Math.min(Math.max(max, 1), 50)));
       return;
     }
@@ -133,8 +170,8 @@ router.get('/location-options', async (req, res) => {
     const results = await searchCountryStateOptions(q, Number.isFinite(limit) ? limit : 10);
     res.json(results);
   } catch (err) {
-    console.error('Failed to load location options from JSON storage', err);
-    res.status(500).json({ error: 'Failed to load location options' });
+    logError('[places] Failed to load location options', err);
+    res.json([]);
   }
 });
 

@@ -1,8 +1,7 @@
 import request from 'supertest';
-import { Pool } from 'pg';
 import { app } from '../src/app';
 import { closePool, initDb, writeActivity } from '../src/db';
-import { registerAndLoginWebUser } from './helpers';
+import { registerAndLoginWebUser, cleanupTestUsersByEmail } from './helpers';
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -18,21 +17,19 @@ describe('Trip activity feed', () => {
   let outsiderToken = '';
   let ownerUserId = '';
   let tripId = '';
-  let pool: Pool;
 
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
     await initDb();
-    pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
-    const ownerLogin = await registerAndLoginWebUser(pool, owner);
+    const ownerLogin = await registerAndLoginWebUser(owner);
     ownerToken = ownerLogin.token;
     ownerUserId = ownerLogin.userId;
 
-    const followerLogin = await registerAndLoginWebUser(pool, follower);
+    const followerLogin = await registerAndLoginWebUser(follower);
     followerToken = followerLogin.token;
 
-    const outsiderLogin = await registerAndLoginWebUser(pool, outsider);
+    const outsiderLogin = await registerAndLoginWebUser(outsider);
     outsiderToken = outsiderLogin.token;
 
     const groups = await request(app).get('/api/groups').set('Authorization', `Bearer ${ownerToken}`).expect(200);
@@ -63,10 +60,7 @@ describe('Trip activity feed', () => {
   });
 
   afterAll(async () => {
-    if (pool) {
-      await pool.query('DELETE FROM users WHERE email IN ($1, $2, $3)', [owner.email, follower.email, outsider.email]);
-      await pool.end();
-    }
+    await cleanupTestUsersByEmail([owner.email, follower.email, outsider.email]);
     await closePool();
   });
 

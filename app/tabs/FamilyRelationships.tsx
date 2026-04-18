@@ -254,6 +254,8 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
         style={styles.input}
         placeholder="Email"
         autoCapitalize="none"
+        autoComplete="email"
+        textContentType="emailAddress"
         keyboardType="email-address"
         value={familyForm.email}
         onChangeText={(text: string) => setFamilyForm((p) => ({ ...p, email: text }))}
@@ -290,7 +292,7 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
                       <Text style={styles.buttonText}>Accept</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={[styles.button, styles.dangerButton, { flex: 1 }]} onPress={() => rejectFamilyLink(rel.id)}>
-                      <Text style={styles.buttonText}>Reject</Text>
+                      <Text style={styles.dangerButtonText}>Reject</Text>
                     </TouchableOpacity>
                   </View>
                 ) : (
@@ -345,6 +347,8 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
                       style={styles.input}
                       placeholder="Email"
                       autoCapitalize="none"
+                      autoComplete="email"
+                      textContentType="emailAddress"
                       keyboardType="email-address"
                       value={editingFamilyDraft.email}
                       onChangeText={(text: string) => setEditingFamilyDraft((p) => (p ? { ...p, email: text } : p))}
@@ -366,7 +370,7 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
                           setEditingFamilyDraft(null);
                         }}
                       >
-                        <Text style={styles.buttonText}>Cancel</Text>
+                        <Text style={styles.dangerButtonText}>Cancel</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -386,12 +390,16 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
         <TextInput
           style={[styles.input, { flex: 1 }]}
           placeholder="First name"
+          autoComplete="given-name"
+          textContentType="givenName"
           value={fellowForm.firstName}
           onChangeText={(text: string) => setFellowForm((p) => ({ ...p, firstName: text }))}
         />
         <TextInput
           style={[styles.input, { flex: 1 }]}
           placeholder="Last name"
+          autoComplete="family-name"
+          textContentType="familyName"
           value={fellowForm.lastName}
           onChangeText={(text: string) => setFellowForm((p) => ({ ...p, lastName: text }))}
         />
@@ -429,12 +437,16 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
                       <TextInput
                         style={[styles.input, { flex: 1 }]}
                         placeholder="First name"
+                        autoComplete="given-name"
+                        textContentType="givenName"
                         value={editingFellowDraft.firstName}
                         onChangeText={(text: string) => setEditingFellowDraft((p) => (p ? { ...p, firstName: text } : p))}
                       />
                       <TextInput
                         style={[styles.input, { flex: 1 }]}
                         placeholder="Last name"
+                        autoComplete="family-name"
+                        textContentType="familyName"
                         value={editingFellowDraft.lastName}
                         onChangeText={(text: string) => setEditingFellowDraft((p) => (p ? { ...p, lastName: text } : p))}
                       />
@@ -450,7 +462,7 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
                           setEditingFellowDraft(null);
                         }}
                       >
-                        <Text style={styles.buttonText}>Cancel</Text>
+                        <Text style={styles.dangerButtonText}>Cancel</Text>
                       </TouchableOpacity>
                     </View>
                   </View>

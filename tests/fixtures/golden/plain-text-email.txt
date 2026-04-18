@@ -1,0 +1,8 @@
+Subject: Flight confirmation
+Traveler: Bryan Duerk
+Airline: Delta Airlines
+Flight Number: DL123
+Confirmation Code: ABC123
+Departure: 2026-07-04 09:30
+From: Boston
+To: San Francisco

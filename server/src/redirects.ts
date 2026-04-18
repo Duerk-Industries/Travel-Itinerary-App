@@ -1,4 +1,4 @@
-import { getEnvValue } from './env';
+import { getEnvValue, isLocalEnv } from './env';
 
 const isHttpProtocol = (protocol: string): boolean => protocol === 'http:' || protocol === 'https:';
 
@@ -38,6 +38,23 @@ const normalizeRedirectUri = (raw: string, webUrl: string): string | null => {
     }
   }
   return raw;
+};
+
+const isLoopbackHostname = (hostname: string): boolean => {
+  const normalized = hostname.trim().toLowerCase();
+  return normalized === 'localhost' || normalized === '127.0.0.1' || normalized === '::1';
+};
+
+const isForbiddenProductionLoopbackRedirect = (redirectUri: string): boolean => {
+  if (isLocalEnv()) {
+    return false;
+  }
+  try {
+    const url = new URL(redirectUri);
+    return isHttpProtocol(url.protocol) && isLoopbackHostname(url.hostname);
+  } catch {
+    return false;
+  }
 };
 
 export const isRedirectUriAllowed = (redirectUri: string, webUrl: string): boolean => {
@@ -86,6 +103,9 @@ export const resolveAndValidateRedirectUri = (
   const normalized = normalizeRedirectUri(raw, webUrl);
   if (!normalized) {
     return { error: 'Invalid redirect_uri format.' };
+  }
+  if (isForbiddenProductionLoopbackRedirect(normalized)) {
+    return { error: 'redirect_uri is not allowed.' };
   }
   if (!isRedirectUriAllowed(normalized, webUrl)) {
     return { error: 'redirect_uri is not allowed.' };

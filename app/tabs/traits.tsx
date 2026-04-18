@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import type { TraitRecord } from './traitsLogic';
 import {
   PROMPT_CAR_OPTIONS,
@@ -37,6 +37,87 @@ type TraitsTabProps<T extends TraitRecord> = {
   fetchTraits: () => Promise<void>;
   fetchTraitProfile: () => Promise<void>;
   styles: any;
+};
+
+const INTEREST_WEIGHT_FIELDS: Array<{
+  key: keyof PromptInterestWeights;
+  label: string;
+  lowDescriptor: string;
+  mediumDescriptor: string;
+  highDescriptor: string;
+}> = [
+  {
+    key: 'outdoors',
+    label: 'Outdoors',
+    lowDescriptor: 'Nature? Only through a window',
+    mediumDescriptor: 'Easy hikes with nice views',
+    highDescriptor: 'Sleep under the stars',
+  },
+  {
+    key: 'adventure',
+    label: 'Adventure',
+    lowDescriptor: 'Surround me with bubblewrap',
+    mediumDescriptor: 'A little thrill is fine',
+    highDescriptor: "I'm bored of base jumping",
+  },
+  {
+    key: 'culture',
+    label: 'Culture',
+    lowDescriptor: 'Skip the museums',
+    mediumDescriptor: 'History is good in small doses',
+    highDescriptor: 'Immerse me in the past',
+  },
+  {
+    key: 'food',
+    label: 'Food',
+    lowDescriptor: 'Its just fuel',
+    mediumDescriptor: 'Good local spots',
+    highDescriptor: 'Plan around the meals',
+  },
+  {
+    key: 'nightlife',
+    label: 'Nightlife',
+    lowDescriptor: 'Early to bed, early to rise',
+    mediumDescriptor: 'Late dinner is OK',
+    highDescriptor: 'Out until sunrise',
+  },
+  {
+    key: 'relax',
+    label: 'Relaxing',
+    lowDescriptor: 'Keep it moving',
+    mediumDescriptor: 'Mix busy and chill',
+    highDescriptor: 'Slow and easy',
+  },
+  {
+    key: 'photography',
+    label: 'Photography',
+    lowDescriptor: 'Phone stays pocketed',
+    mediumDescriptor: 'Some great shots to show mom',
+    highDescriptor: "I'm an professional",
+  },
+  {
+    key: 'authentic_local',
+    label: 'Authentic/Local',
+    lowDescriptor: 'Tourist is fine',
+    mediumDescriptor: 'Some hidden gems',
+    highDescriptor: 'Live like a local',
+  },
+  {
+    key: 'iconic_landmarks',
+    label: 'Iconic Landmarks',
+    lowDescriptor: 'Skip the big sights',
+    mediumDescriptor: 'Hit a few must-sees',
+    highDescriptor: 'All the classics',
+  },
+];
+
+const descriptorForValue = (
+  value: number,
+  descriptors: { lowDescriptor: string; mediumDescriptor: string; highDescriptor: string }
+): string => {
+  if (value <= 25) return descriptors.lowDescriptor;
+  if (value >= 75) return descriptors.highDescriptor;
+  return descriptors.mediumDescriptor;
 };
 
 export function TraitsTab<T extends TraitRecord>({
@@ -262,72 +343,41 @@ export function TraitsTab<T extends TraitRecord>({
           })}
         </View>
 
-        <Text style={styles.modalLabel}>Interest Weights (%)</Text>
-        <View style={styles.row}>
-          <TextInput
-            style={[styles.input, { minWidth: 120 }]}
-            placeholder="Outdoors"
-            keyboardType="numeric"
-            value={String(promptTraits.tt.w.outdoors)}
-            onChangeText={(text: string) => setTripWeight('outdoors', text)}
-          />
-          <TextInput
-            style={[styles.input, { minWidth: 120 }]}
-            placeholder="Adventure"
-            keyboardType="numeric"
-            value={String(promptTraits.tt.w.adventure)}
-            onChangeText={(text: string) => setTripWeight('adventure', text)}
-          />
-          <TextInput
-            style={[styles.input, { minWidth: 120 }]}
-            placeholder="Culture"
-            keyboardType="numeric"
-            value={String(promptTraits.tt.w.culture)}
-            onChangeText={(text: string) => setTripWeight('culture', text)}
-          />
-          <TextInput
-            style={[styles.input, { minWidth: 120 }]}
-            placeholder="Food"
-            keyboardType="numeric"
-            value={String(promptTraits.tt.w.food)}
-            onChangeText={(text: string) => setTripWeight('food', text)}
-          />
-          <TextInput
-            style={[styles.input, { minWidth: 120 }]}
-            placeholder="Nightlife"
-            keyboardType="numeric"
-            value={String(promptTraits.tt.w.nightlife)}
-            onChangeText={(text: string) => setTripWeight('nightlife', text)}
-          />
-          <TextInput
-            style={[styles.input, { minWidth: 120 }]}
-            placeholder="Relax"
-            keyboardType="numeric"
-            value={String(promptTraits.tt.w.relax)}
-            onChangeText={(text: string) => setTripWeight('relax', text)}
-          />
-          <TextInput
-            style={[styles.input, { minWidth: 120 }]}
-            placeholder="Photography"
-            keyboardType="numeric"
-            value={String(promptTraits.tt.w.photography)}
-            onChangeText={(text: string) => setTripWeight('photography', text)}
-          />
-          <TextInput
-            style={[styles.input, { minWidth: 120 }]}
-            placeholder="Authentic/Local"
-            keyboardType="numeric"
-            value={String(promptTraits.tt.w.authentic_local)}
-            onChangeText={(text: string) => setTripWeight('authentic_local', text)}
-          />
-          <TextInput
-            style={[styles.input, { minWidth: 120 }]}
-            placeholder="Iconic Landmarks"
-            keyboardType="numeric"
-            value={String(promptTraits.tt.w.iconic_landmarks)}
-            onChangeText={(text: string) => setTripWeight('iconic_landmarks', text)}
-          />
-        </View>
+        <Text style={styles.modalLabel}>Interest Weights</Text>
+        <Text style={styles.helperText}>
+          Higher values make itinerary generation emphasize that style more. We rebalance totals automatically when saving.
+        </Text>
+        {INTEREST_WEIGHT_FIELDS.map((field) => {
+          const value = promptTraits.tt.w[field.key];
+          const descriptor = descriptorForValue(value, field);
+          return (
+            <View key={`account-weight-${field.key}`} style={{ marginBottom: 10 }}>
+              <View style={[styles.row, { alignItems: 'center', justifyContent: 'space-between' }]}>
+                <Text style={styles.cellText}>{field.label}</Text>
+                <Text style={styles.helperText}>{descriptor}</Text>
+              </View>
+              {Platform.OS === 'web' ? (
+                <input
+                  aria-label={`${field.label} interest weight`}
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={value}
+                  onChange={(e: any) => setTripWeight(field.key, String(e.target.value))}
+                  style={{ width: '100%' }}
+                />
+              ) : (
+                <TextInput
+                  style={styles.input}
+                  keyboardType="numeric"
+                  value={String(value)}
+                  onChangeText={(text: string) => setTripWeight(field.key, text)}
+                />
+              )}
+            </View>
+          );
+        })}
 
         <Text style={styles.modalLabel}>Interests (`ut.i`)</Text>
         <View style={styles.traitGrid}>

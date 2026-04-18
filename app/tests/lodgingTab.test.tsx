@@ -33,6 +33,7 @@ const styles = {
     payerOptions: {},
     smallButton: {},
     dangerButton: {},
+    dangerButtonText: {},
     linkText: {},
     cellText: {},
     detailRow: {},
@@ -229,5 +230,34 @@ describe('LodgingTab', () => {
         } finally {
             (global as any).fetch = originalFetch;
         }
+    });
+
+    it('renders followed-trip lodging as view only', () => {
+        const { getByTestId, queryByTestId } = render(
+            <LodgingTab
+                backendUrl=""
+                jsonHeaders={{}}
+                requestHeaders={{}}
+                trip={trip}
+                lodgings={mockLodgings}
+                groupMembers={groupMembers}
+                defaultPayerId="m1"
+                styles={styles}
+                onRefreshLodgings={() => { }}
+                onOpenMap={() => { }}
+                formatMemberName={formatMemberName}
+                payerName={payerName}
+                readOnly
+            />
+        );
+
+        expect(queryByTestId('lodging-add')).toBeNull();
+        expect(queryByTestId('lodging-edit-l1')).toBeNull();
+        expect(queryByTestId('lodging-delete-l1')).toBeNull();
+
+        fireEvent.press(within(getByTestId('lodging-row-l1')).getByText('Hotel 1'));
+        const dialog = getByTestId('lodging-details-dialog');
+        expect(within(dialog).queryByText('Edit')).toBeNull();
+        expect(within(dialog).queryByText('Delete')).toBeNull();
     });
 });

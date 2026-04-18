@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { FollowedTrip } from './follow';
 
 type FollowingTabProps = {
@@ -302,7 +302,7 @@ const FollowingTab: React.FC<FollowingTabProps> = ({
                   }}
                   disabled={unfollowingTripId === trip.tripId}
                 >
-                  <Text style={styles.buttonText}>
+                  <Text style={styles.dangerButtonText}>
                     {unfollowingTripId === trip.tripId ? 'Unfollowing...' : 'Unfollow'}
                   </Text>
                 </TouchableOpacity>
@@ -313,7 +313,7 @@ const FollowingTab: React.FC<FollowingTabProps> = ({
       </View>
 
       {selectedTripId ? (
-        <ScrollView style={styles.card} contentContainerStyle={{ gap: 10 }}>
+        <View style={styles.card}>
           <Text style={styles.sectionTitle}>Trip Information</Text>
           {loading ? <Text style={styles.helperText}>Loading trip details...</Text> : null}
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -443,7 +443,7 @@ const FollowingTab: React.FC<FollowingTabProps> = ({
               )}
             </>
           ) : null}
-        </ScrollView>
+        </View>
       ) : null}
     </>
   );

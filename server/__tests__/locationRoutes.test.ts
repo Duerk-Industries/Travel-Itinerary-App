@@ -114,9 +114,28 @@ describe('/api/places location endpoints', () => {
       .expect(200);
 
     expect(res.body).toEqual([
-      { id: 'destination:paris-france', sourceType: 'destination', name: 'Paris', countryName: 'France' },
       { id: 'country:33', sourceType: 'country', name: 'France' },
       { id: 'state:10', sourceType: 'state', name: 'Ile-de-France' },
+      { id: 'destination:paris-france', sourceType: 'destination', name: 'Paris', countryName: 'France' },
+    ]);
+  });
+
+  it('prefers the country option when country and destination rows share the same label', async () => {
+    (destinationAttractionAutocompleteService.searchDestinationLocationOptions as jest.Mock).mockResolvedValue([
+      { id: 'destination:italy', sourceType: 'destination', name: 'Italy', countryName: 'Italy' },
+      { id: 'destination:rome-italy', sourceType: 'destination', name: 'Rome', countryName: 'Italy' },
+    ]);
+    (locationServices.searchCountryStateOptions as jest.Mock).mockResolvedValue([
+      { id: 'country:39', sourceType: 'country', name: 'Italy' },
+    ]);
+
+    const res = await request(app)
+      .get('/api/places/location-options?kind=country_destination&q=ita&limit=5')
+      .expect(200);
+
+    expect(res.body).toEqual([
+      { id: 'country:39', sourceType: 'country', name: 'Italy' },
+      { id: 'destination:rome-italy', sourceType: 'destination', name: 'Rome', countryName: 'Italy' },
     ]);
   });
 

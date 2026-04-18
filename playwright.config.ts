@@ -12,9 +12,10 @@ import { defineConfig, devices } from '@playwright/test';
 const dbBackend = (process.env.DB_BACKEND ?? 'memory') as 'memory' | 'firebase' | 'postgres';
 
 const serverEnv: Record<string, string> = {
-  PORT: '3000',
+  PORT: '4000',
   AUTH_SECRET: process.env.AUTH_SECRET ?? 'e2e-test-secret',
   E2E_MODE: '1',
+  ATTRACTIONS_STARTUP_SYNC: '0',
 };
 
 if (dbBackend === 'firebase') {
@@ -28,9 +29,10 @@ if (dbBackend === 'firebase') {
     serverEnv.DATABASE_URL = process.env.DATABASE_URL;
   }
 } else {
-  // memory (default)
+  // memory (default) — explicitly set DB_PROVIDER to prevent server/.env's DB_PROVIDER=firebase from winning
   serverEnv.DB_PROVIDER = 'memory';
   serverEnv.USE_IN_MEMORY_DB = '1';
+  serverEnv.FIRESTORE_EMULATOR_HOST = '';
 }
 
 export default defineConfig({
@@ -46,7 +48,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   use: {
-    baseURL: 'http://localhost:4173',
+    baseURL: 'http://127.0.0.1:4173',
     trace: 'on-first-retry',
   },
   projects: [
@@ -56,20 +58,22 @@ export default defineConfig({
   webServer: [
     {
       command: 'npm --prefix server run dev',
-      url: 'http://localhost:3000',
+      url: 'http://127.0.0.1:4000',
       reuseExistingServer: !process.env.CI,
       timeout: 120 * 1000,
       env: serverEnv,
     },
     {
       command: 'npm --prefix app run web -- --port 4173',
-      url: 'http://localhost:4173',
+      url: 'http://127.0.0.1:4173',
       reuseExistingServer: !process.env.CI,
       timeout: 120 * 1000,
       env: {
-        BACKEND_URL: 'http://localhost:3000',
-        EXPO_PUBLIC_BACKEND_URL: 'http://localhost:3000',
+        API_BASE_URL: 'http://127.0.0.1:4000',
+        BACKEND_URL: 'http://127.0.0.1:4000',
+        EXPO_PUBLIC_BACKEND_URL: 'http://127.0.0.1:4000',
         CI: 'true',
+        EXPO_NO_DOCTOR: '1',
       },
     },
   ],

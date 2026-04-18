@@ -11,7 +11,8 @@
 #   ./scripts/configure-gcp-iam.sh [path/to/.env]
 #
 # The script reads the following variables from the specified file (or ./server/.env),
-# falling back to ./server/.secrets for any missing values.
+# which is now the primary local source, while still falling back to ./server/.secrets
+# for any missing values.
 #   - GCLOUD_PROJECT_ID (required)
 #   - GCLOUD_PROJECT_NUMBER (required)
 #   - DEPLOYER_SERVICE_ACCOUNT_EMAIL (required)
@@ -70,13 +71,14 @@ normalize_bucket_name() {
   printf '%s' "$value"
 }
 
-# Source the env file to load variables.
+# Source the env file to load variables. server/.env is the primary local source.
 set -a
 # shellcheck source=/dev/null
 source <(grep -vE '^\s*#' "$SECRETS_FILE" | grep -v '^\s*$')
 set +a
 
 if [[ -f "./server/.secrets" ]]; then
+  # Backwards-compatible fallback for repos/environments still using server/.secrets.
   if [[ -z "${GCLOUD_PROJECT_ID:-}" ]]; then
     GCLOUD_PROJECT_ID="$(read_env_value "./server/.secrets" "GCLOUD_PROJECT_ID")"
   fi
@@ -100,13 +102,13 @@ fi
 # --- Variable Validation and Defaults ---
 
 if [[ -z "${GCLOUD_PROJECT_ID:-}" ]]; then
-  fail "GCLOUD_PROJECT_ID must be set in '$SECRETS_FILE'."
+  fail "GCLOUD_PROJECT_ID must be set in '$SECRETS_FILE' (typically server/.env)."
 fi
 if [[ -z "${GCLOUD_PROJECT_NUMBER:-}" ]]; then
-  fail "GCLOUD_PROJECT_NUMBER must be set in '$SECRETS_FILE'."
+  fail "GCLOUD_PROJECT_NUMBER must be set in '$SECRETS_FILE' (typically server/.env)."
 fi
 if [[ -z "${DEPLOYER_SERVICE_ACCOUNT_EMAIL:-}" ]]; then
-  fail "DEPLOYER_SERVICE_ACCOUNT_EMAIL must be set in '$SECRETS_FILE'."
+  fail "DEPLOYER_SERVICE_ACCOUNT_EMAIL must be set in '$SECRETS_FILE' (typically server/.env)."
 fi
 
 # Define service account emails

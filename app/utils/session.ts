@@ -1,4 +1,5 @@
 const sessionKey = 'stp.session';
+const sessionTokenKey = 'stp.session.token';
 const resolveSessionDurationMs = (): number => {
   const raw =
     process.env.EXPO_PUBLIC_SESSION_CACHE_TIMEOUT_MINUTES ??
@@ -78,9 +79,11 @@ export const saveSession = (
     expiresAt: Date.now() + sessionDurationMs,
   };
   window.localStorage.setItem(sessionKey, JSON.stringify(payload));
+  window.localStorage.setItem(sessionTokenKey, token);
 };
 
 export const clearSession = (): void => {
   if (!canAccessStorage()) return;
   window.localStorage.removeItem(sessionKey);
+  window.localStorage.removeItem(sessionTokenKey);
 };

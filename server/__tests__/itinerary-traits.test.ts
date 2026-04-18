@@ -1,31 +1,26 @@
 import request from 'supertest';
-import { Pool } from 'pg';
 import { app } from '../src/app';
 import { initDb, closePool } from '../src/db';
-import { registerAndLoginWebUser } from './helpers';
+import { registerAndLoginWebUser, cleanupTestUsersByEmail } from './helpers';
 import axios from 'axios';
 
 jest.mock('axios');
 const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 describe('Itinerary generation and trait lifecycle', () => {
-  let pool: Pool;
   let token: string;
   let groupId: string;
   let tripId: string;
+  const testEmails: string[] = [];
 
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
     process.env.OPENAI_API_KEY = 'REDACTED';
     await initDb();
-    pool = new Pool({ connectionString: process.env.DATABASE_URL });
   });
 
   afterAll(async () => {
-    if (pool) {
-      await pool.query('DELETE FROM users WHERE email LIKE $1', ['itinerary-trait-test+%@example.com']);
-      await pool.end();
-    }
+    await cleanupTestUsersByEmail(testEmails);
     await closePool();
   });
 
@@ -35,7 +30,8 @@ describe('Itinerary generation and trait lifecycle', () => {
 
   it('creates and deletes a custom trait via API', async () => {
     const email = `itinerary-trait-test+${Date.now()}@example.com`;
-    const login = await registerAndLoginWebUser(pool, {
+    testEmails.push(email);
+    const login = await registerAndLoginWebUser({
       firstName: 'Trait',
       lastName: 'Tester',
       email,

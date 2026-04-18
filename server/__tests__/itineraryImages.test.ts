@@ -1,9 +1,8 @@
 import request from 'supertest';
 import { PassThrough } from 'stream';
-import { Pool } from 'pg';
 import { app } from '../src/app';
 import { initDb, closePool } from '../src/db';
-import { registerAndLoginWebUser } from './helpers';
+import { registerAndLoginWebUser, cleanupTestUsersByEmail } from './helpers';
 
 jest.mock('@google-cloud/storage', () => {
   const { PassThrough } = require('stream');
@@ -51,17 +50,16 @@ jest.mock('axios', () => {
 
 describe('GET /api/itinerary/images', () => {
   jest.setTimeout(30000);
-  let pool: Pool;
   let token: string;
+  const testEmail = 'itinerary-image@example.com';
 
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
     process.env.UNSPLASH_ACCESS_KEY = 'test-unsplash';
 
     await initDb();
-    pool = new Pool({ connectionString: process.env.DATABASE_URL });
-    const login = await registerAndLoginWebUser(pool, {
-      email: 'itinerary-image@example.com',
+    const login = await registerAndLoginWebUser({
+      email: testEmail,
       firstName: 'Itinerary',
       lastName: 'Images',
       password: 'testtest',
@@ -70,10 +68,7 @@ describe('GET /api/itinerary/images', () => {
   });
 
   afterAll(async () => {
-    if (pool) {
-      await pool.query('DELETE FROM users WHERE email = $1', ['itinerary-image@example.com']);
-      await pool.end();
-    }
+    await cleanupTestUsersByEmail([testEmail]);
     await closePool();
   });
 

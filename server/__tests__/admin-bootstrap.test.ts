@@ -1,8 +1,8 @@
-import { Pool } from 'pg';
 import { app } from '../src/app';
-import { initDb, closePool } from '../src/db';
-import { registerAndLoginWebUser, loginWebUser } from './helpers';
+import { initDb, closePool, getUserRole, getCurrentUserTier, findUserByEmail, listAuditLog, setUserRole, deleteAuditLog } from '../src/db';
+import { registerAndLoginWebUser, loginWebUser, cleanupTestUsersByEmail } from './helpers';
 import request from 'supertest';
+import { getSeededTierForEmail } from '../src/services/entitlementService';
 
 const BOOTSTRAP_EMAIL_1 = 'bryan.duerk@gmail.com';
 const BOOTSTRAP_EMAIL_2 = 'tristan.duerk@gmail.com';
@@ -10,26 +10,28 @@ const bootstrapUser1 = { firstName: 'Bryan', lastName: 'Duerk', email: BOOTSTRAP
 const bootstrapUser2 = { firstName: 'Tristan', lastName: 'Duerk', email: BOOTSTRAP_EMAIL_2, password: 'Admin1234!' };
 
 describe('Admin bootstrap', () => {
-  let pool: Pool;
-
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
     await initDb();
-    pool = new Pool({ connectionString: process.env.DATABASE_URL });
-    await pool.query('DELETE FROM users WHERE email = ANY($1)', [[BOOTSTRAP_EMAIL_1, BOOTSTRAP_EMAIL_2]]);
+    await cleanupTestUsersByEmail([BOOTSTRAP_EMAIL_1, BOOTSTRAP_EMAIL_2]);
   });
 
   afterAll(async () => {
-    await pool.query('DELETE FROM users WHERE email = ANY($1)', [[BOOTSTRAP_EMAIL_1, BOOTSTRAP_EMAIL_2]]);
-    await pool.end();
+    await cleanupTestUsersByEmail([BOOTSTRAP_EMAIL_1, BOOTSTRAP_EMAIL_2]);
     await closePool();
   });
 
   it('grants role=admin on first login for bryan.duerk@gmail.com', async () => {
-    const { userId } = await registerAndLoginWebUser(pool, bootstrapUser1);
+    const { userId } = await registerAndLoginWebUser(bootstrapUser1);
 
-    const { rows } = await pool.query<{ role: string }>('SELECT role FROM users WHERE id = $1', [userId]);
-    expect(rows[0]?.role).toBe('admin');
+    const role = await getUserRole(userId);
+    expect(role).toBe('admin');
+  });
+
+  it('assigns Pro tier to bootstrap admins automatically', async () => {
+    const user = await findUserByEmail(BOOTSTRAP_EMAIL_1);
+    const tier = await getCurrentUserTier(user!.id);
+    expect(tier?.tierKey).toBe('pro');
   });
 
   it('JWT issued after bootstrap includes role: admin', async () => {
@@ -43,39 +45,30 @@ describe('Admin bootstrap', () => {
   });
 
   it('writes an ADMIN_BOOTSTRAP_GRANTED audit_log entry on first grant', async () => {
-    const { rows: users } = await pool.query<{ id: string }>('SELECT id FROM users WHERE email = $1', [BOOTSTRAP_EMAIL_1]);
-    const userId = users[0]?.id;
+    const user = await findUserByEmail(BOOTSTRAP_EMAIL_1);
+    const userId = user?.id;
     expect(userId).toBeTruthy();
 
-    const { rows } = await pool.query(
-      `SELECT * FROM audit_log WHERE target_user_id = $1 AND action = 'ADMIN_BOOTSTRAP_GRANTED'`,
-      [userId],
-    );
-    expect(rows.length).toBeGreaterThanOrEqual(1);
+    const { entries } = await listAuditLog({ targetUserId: userId!, action: 'ADMIN_BOOTSTRAP_GRANTED' });
+    expect(entries.length).toBeGreaterThanOrEqual(1);
   });
 
   it('does not write a duplicate audit event on subsequent logins', async () => {
-    const { rows: before } = await pool.query<{ id: string }>(
-      `SELECT id FROM users WHERE email = $1`,
-      [BOOTSTRAP_EMAIL_1],
-    );
-    const userId = before[0]?.id;
+    const user = await findUserByEmail(BOOTSTRAP_EMAIL_1);
+    const userId = user?.id;
 
     // Log in a second time
     await loginWebUser(bootstrapUser1);
 
-    const { rows } = await pool.query(
-      `SELECT COUNT(*) as count FROM audit_log WHERE target_user_id = $1 AND action = 'ADMIN_BOOTSTRAP_GRANTED'`,
-      [userId],
-    );
-    expect(parseInt(rows[0].count, 10)).toBe(1);
+    const { total } = await listAuditLog({ targetUserId: userId!, action: 'ADMIN_BOOTSTRAP_GRANTED' });
+    expect(total).toBe(1);
   });
 
   it('grants role=admin to tristan.duerk@gmail.com as well', async () => {
-    const { userId } = await registerAndLoginWebUser(pool, bootstrapUser2);
+    const { userId } = await registerAndLoginWebUser(bootstrapUser2);
 
-    const { rows } = await pool.query<{ role: string }>('SELECT role FROM users WHERE id = $1', [userId]);
-    expect(rows[0]?.role).toBe('admin');
+    const role = await getUserRole(userId);
+    expect(role).toBe('admin');
   });
 
   it('match is case-insensitive (uppercase email)', async () => {
@@ -83,33 +76,38 @@ describe('Admin bootstrap', () => {
     // Re-registering the same email (already exists) — just log in with stored creds
     // Instead, test directly with the entitlement service
     const { ensureAdminBootstrap } = require('../src/services/entitlementService');
-    const { rows } = await pool.query<{ id: string }>(
-      'SELECT id FROM users WHERE email = $1',
-      [BOOTSTRAP_EMAIL_1],
-    );
-    const userId = rows[0]?.id;
+    const user = await findUserByEmail(BOOTSTRAP_EMAIL_1);
+    const userId = user?.id;
     // Reset role to 'user' to test bootstrap from scratch
-    await pool.query(`UPDATE users SET role = 'user' WHERE id = $1`, [userId]);
-    await pool.query(`DELETE FROM audit_log WHERE target_user_id = $1 AND action = 'ADMIN_BOOTSTRAP_GRANTED'`, [userId]);
+    await setUserRole(userId!, 'user');
+    await deleteAuditLog({ targetUserId: userId!, action: 'ADMIN_BOOTSTRAP_GRANTED' });
 
     await ensureAdminBootstrap(userId, 'BRYAN.DUERK@GMAIL.COM');
 
-    const { rows: updated } = await pool.query<{ role: string }>('SELECT role FROM users WHERE id = $1', [userId]);
-    expect(updated[0]?.role).toBe('admin');
+    const role = await getUserRole(userId!);
+    expect(role).toBe('admin');
   });
 
   it('does not grant admin to non-bootstrap emails', async () => {
     const email = `bootstrap-other+${Date.now()}@example.com`;
-    const { userId } = await registerAndLoginWebUser(pool, {
+    const { userId } = await registerAndLoginWebUser({
       firstName: 'Other',
       lastName: 'User',
       email,
       password: 'testpass1!',
     });
 
-    const { rows } = await pool.query<{ role: string }>('SELECT role FROM users WHERE id = $1', [userId]);
-    expect(rows[0]?.role).toBe('user');
+    const role = await getUserRole(userId);
+    expect(role).toBe('user');
 
-    await pool.query('DELETE FROM users WHERE id = $1', [userId]);
+    const { deleteWebUserAndCleanup } = require('../src/db') as typeof import('../src/db');
+    await deleteWebUserAndCleanup(userId);
+  });
+
+  it('returns seeded default tiers for known seeded accounts', () => {
+    expect(getSeededTierForEmail('vduerk@gmail.com')).toBe('premium');
+    expect(getSeededTierForEmail('VDUERK@GMAIL.COM')).toBe('premium');
+    expect(getSeededTierForEmail('jobs.duerk@gmail.com')).toBe('free');
+    expect(getSeededTierForEmail('someone@example.com')).toBe('free');
   });
 });

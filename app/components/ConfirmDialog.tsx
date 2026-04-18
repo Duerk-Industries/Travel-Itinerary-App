@@ -32,7 +32,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         {message ? <Text style={styles.helperText}>{message}</Text> : null}
         <View style={styles.row}>
           <TouchableOpacity style={[styles.button, styles.dangerButton, { flex: 1 }]} onPress={onConfirm}>
-            <Text style={styles.buttonText}>{confirmLabel}</Text>
+            <Text style={styles.dangerButtonText}>{confirmLabel}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.button, { flex: 1 }]} onPress={onCancel}>
             <Text style={styles.buttonText}>{cancelLabel}</Text>

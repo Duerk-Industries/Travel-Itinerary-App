@@ -34,6 +34,15 @@ For admin APIs, RBAC must always pass. For product features, the backend remains
 | `cost_tracking` | Expense tracking |
 | `multiple_groups` | Multi-group support |
 | `trip_creation` | Trip creation |
+| `feature_ingest_manual_upload` | Phase 1 manual upload, parse, review, assign/delete |
+| `feature_ingest_forwarded_mailbox` | Phase 2 forwarded mailbox ingestion |
+| `feature_ingest_gmail_import` | Phase 3 Gmail OAuth search/import |
+| `feature_ingest_admin_observability` | Admin ingestion metrics and dashboard widgets |
+| `feature_ingest_local_virus_scan_stub` | Local/test virus-scan no-op path |
+
+## Ingestion note
+
+The ingestion feature is rolled out in phases, and the review queue can remain available even when a specific intake path is disabled. Intake-path flags control how new documents enter the system. The backend remains authoritative and returns `403` when a disabled ingestion route is called.
 
 ## Important rule
 

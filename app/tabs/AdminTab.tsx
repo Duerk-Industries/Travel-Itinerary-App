@@ -6,7 +6,7 @@ import { getAppTheme, type AppTheme } from '../theme/theme';
 // Types
 // ---------------------------------------------------------------------------
 
-type AdminSection = 'overview' | 'users' | 'user-detail' | 'tiers' | 'features' | 'user-data' | 'audit-log';
+type AdminSection = 'overview' | 'users' | 'user-detail' | 'tiers' | 'features' | 'user-data' | 'audit-log' | 'ingestion' | 'api-limits';
 
 type FeatureFlag = { key: string; enabled: boolean; description?: string | null };
 
@@ -96,6 +96,29 @@ type AdminTabProps = {
   onSectionChange?: (section: AdminSection) => void;
 };
 
+type IngestionMetrics = {
+  ingestionVolumeBySourceAndTier: Array<{ sourceType: string; tierKey: string; count: number }>;
+  parseRateByStage: Array<{ stageName: string; successCount: number; failureCount: number }>;
+  duplicateRate: { duplicateCount: number; totalCount: number };
+  lowConfidenceRate: { lowConfidenceCount: number; totalCount: number };
+  averageLatencyByStage: Array<{ stageName: string; averageMs: number }>;
+  retryAndDeadLetter: { retryCount: number; deadLetterCount: number };
+  llmUsageByModel: Array<{ provider: string; modelName: string; tokensIn: number; tokensOut: number; estimatedCostUsd: number }>;
+  quotaByUserTier: Array<{ userId: string; tierKey: string; uploadsUsed: number }>;
+  gmailAuthFailures: number;
+  webhookSignatureFailures: number;
+  costPerUser: Array<{ userId: string; estimatedCostUsd: number }>;
+};
+
+type RetryPolicyConfig = {
+  provider: string;
+  maxAttempts: number;
+  baseDelaySeconds: number;
+  maxDelaySeconds: number;
+  alertThresholdPercent: number;
+  updatedAt: string;
+};
+
 type ThemedSectionProps = {
   theme: AppTheme;
 };
@@ -155,6 +178,8 @@ const OverviewSection: React.FC<{ onNav: (s: AdminSection) => void } & ThemedSec
         { label: 'Feature Flags', section: 'features' as AdminSection, desc: 'Enable or disable feature flags' },
         { label: 'User Data', section: 'user-data' as AdminSection, desc: 'Aggregate usage statistics' },
         { label: 'Audit Log', section: 'audit-log' as AdminSection, desc: 'History of admin actions' },
+        { label: 'API Limits', section: 'api-limits' as AdminSection, desc: 'View API rate limits and current usage' },
+        { label: 'Ingestion Ops', section: 'ingestion' as AdminSection, desc: 'Review import throughput, duplicates, and cost' },
       ] as { label: string; section: AdminSection; desc: string }[]
     ).map((item) => (
       <TouchableOpacity key={item.section} style={[localStyles.navCard, getCardStyle(theme)]} onPress={() => onNav(item.section)}>
@@ -381,9 +406,11 @@ const UserDetailSection: React.FC<{
   onBack: () => void;
 } & ThemedSectionProps> = ({ backendUrl, headers, userId, tiers, onBack, theme }) => {
   const [user, setUser] = useState<AdminUserDetail | null>(null);
+  const [availableTiers, setAvailableTiers] = useState<Tier[]>(tiers);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tierKey, setTierKey] = useState('');
+  const [tierDropdownOpen, setTierDropdownOpen] = useState(false);
   const [role, setRole] = useState<'user' | 'admin'>('user');
   const [tierReason, setTierReason] = useState('');
   const [roleReason, setRoleReason] = useState('');
@@ -394,18 +421,26 @@ const UserDetailSection: React.FC<{
     setLoading(true);
     setError(null);
     try {
-      const data = await apiFetch(backendUrl, headers, `/users/${userId}`);
+      const [userData, tierData] = await Promise.all([
+        apiFetch(backendUrl, headers, `/users/${userId}`),
+        tiers.length ? Promise.resolve({ tiers }) : apiFetch(backendUrl, headers, '/tiers'),
+      ]);
+      const data = userData as AdminUserDetail;
       setUser(data);
-      setTierKey(data.tierKey ?? '');
+      setTierKey(data.role === 'admin' ? 'pro' : (data.tierKey ?? ''));
       setRole(data.role === 'admin' ? 'admin' : 'user');
+      setAvailableTiers((tierData as any).tiers ?? tiers);
     } catch (e: any) {
       setError(e.message);
     } finally {
       setLoading(false);
     }
-  }, [backendUrl, headers, userId]);
+  }, [backendUrl, headers, tiers, userId]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (tiers.length) setAvailableTiers(tiers);
+  }, [tiers]);
 
   const saveTier = async () => {
     if (!tierKey.trim() || tierReason.trim().length < 3) return;
@@ -452,6 +487,10 @@ const UserDetailSection: React.FC<{
   if (!user) return null;
 
   const displayName = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.email || user.id;
+  const tierLocked = user.role === 'admin';
+  const currentTierKey = tierLocked ? 'pro' : (user.tierKey ?? 'none');
+  const sortedTiers = [...availableTiers].sort((a, b) => a.rank - b.rank);
+  const selectedTierLabel = sortedTiers.find((tier) => tier.key === tierKey)?.displayName ?? tierKey ?? '';
 
   return (
     <View style={localStyles.section}>
@@ -462,35 +501,64 @@ const UserDetailSection: React.FC<{
       <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>{user.email}</Text>
 
       <View style={[localStyles.card, getCardStyle(theme)]}>
-        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Current Tier: {user.tierKey ?? 'none'}</Text>
+        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Current Tier: {currentTierKey}</Text>
         <Text style={[localStyles.fieldLabel, { color: theme.colors.textMuted }]}>Change Tier</Text>
-        <View style={localStyles.tierButtons}>
-          {tiers.map((t) => (
+        {!tierLocked ? (
+          <TouchableOpacity
+            testID="user-tier-dropdown-button"
+            style={[localStyles.dropdownButton, getInputStyle(theme)]}
+            onPress={() => setTierDropdownOpen((open) => !open)}
+          >
+            <Text style={[localStyles.dropdownButtonText, { color: theme.colors.text }]}>
+              {selectedTierLabel || 'Select a tier'} v
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={[localStyles.dropdownButton, getInputStyle(theme), localStyles.dropdownLocked]}>
+            <Text style={[localStyles.dropdownButtonText, { color: theme.colors.textMuted }]}>Pro (locked for admins)</Text>
+          </View>
+        )}
+        {tierDropdownOpen && !tierLocked ? (
+          <View style={[localStyles.dropdownMenu, getCardStyle(theme)]}>
+            {sortedTiers.map((tier) => (
+              <TouchableOpacity
+                key={tier.key}
+                testID={`user-tier-option-${tier.key}`}
+                style={[localStyles.dropdownOption, tierKey === tier.key && { backgroundColor: theme.colors.backgroundAlt }]}
+                onPress={() => {
+                  setTierKey(tier.key);
+                  setTierDropdownOpen(false);
+                }}
+              >
+                <Text style={[localStyles.dropdownOptionText, { color: theme.colors.text }]}>
+                  {tier.displayName}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : null}
+        {tierLocked ? (
+          <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>Admin users are automatically assigned the Pro tier.</Text>
+        ) : (
+          <>
+            <TextInput
+              testID="user-tier-reason-input"
+              style={[localStyles.smallInput, getInputStyle(theme)]}
+              placeholder="Reason (required)"
+              placeholderTextColor={theme.colors.textMuted}
+              value={tierReason}
+              onChangeText={setTierReason}
+            />
             <TouchableOpacity
-              key={t.key}
-              style={[localStyles.tierButton, getSecondaryPillStyle(theme, tierKey === t.key)]}
-              onPress={() => setTierKey(t.key)}
+              testID="user-tier-save-button"
+              style={[localStyles.smallButton, { backgroundColor: theme.colors.cta }, saving && localStyles.buttonDisabled]}
+              disabled={saving}
+              onPress={saveTier}
             >
-              <Text style={[localStyles.tierButtonText, getSecondaryPillTextStyle(theme, tierKey === t.key)]}>
-                {t.displayName}
-              </Text>
+              <Text style={localStyles.smallButtonText}>Save Tier</Text>
             </TouchableOpacity>
-          ))}
-        </View>
-        <TextInput
-          style={[localStyles.smallInput, getInputStyle(theme)]}
-          placeholder="Reason (required)"
-          placeholderTextColor={theme.colors.textMuted}
-          value={tierReason}
-          onChangeText={setTierReason}
-        />
-        <TouchableOpacity
-          style={[localStyles.smallButton, { backgroundColor: theme.colors.cta }, saving && localStyles.buttonDisabled]}
-          disabled={saving}
-          onPress={saveTier}
-        >
-          <Text style={localStyles.smallButtonText}>Save Tier</Text>
-        </TouchableOpacity>
+          </>
+        )}
       </View>
 
       <View style={[localStyles.card, getCardStyle(theme)]}>
@@ -507,7 +575,11 @@ const UserDetailSection: React.FC<{
             </TouchableOpacity>
           ))}
         </View>
+        {role === 'admin' ? (
+          <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>Saving the admin role will also set the tier to Pro.</Text>
+        ) : null}
         <TextInput
+          testID="user-role-reason-input"
           style={[localStyles.smallInput, getInputStyle(theme)]}
           placeholder="Reason (required)"
           placeholderTextColor={theme.colors.textMuted}
@@ -515,6 +587,7 @@ const UserDetailSection: React.FC<{
           onChangeText={setRoleReason}
         />
         <TouchableOpacity
+          testID="user-role-save-button"
           style={[localStyles.smallButton, { backgroundColor: theme.colors.cta }, saving && localStyles.buttonDisabled]}
           disabled={saving}
           onPress={saveRole}
@@ -720,14 +793,14 @@ const TiersSection: React.FC<{
     }
   };
 
-  if (loading) return <Text style={localStyles.loading}>Loading...</Text>;
-  if (error) return <Text style={localStyles.errorText}>{error}</Text>;
+  if (loading) return <Text style={[localStyles.loading, { color: theme.colors.textMuted }]}>Loading...</Text>;
+  if (error) return <Text style={[localStyles.errorText, { color: theme.colors.error }]}>{error}</Text>;
 
   return (
     <View style={localStyles.section}>
       <Text style={[localStyles.sectionTitle, { color: theme.colors.text }]}>Tiers</Text>
       {saveMsg ? <Text style={[localStyles.saveMsg, { color: theme.colors.success }]}>{saveMsg}</Text> : null}
-      {tiers.length === 0 ? <Text style={localStyles.emptyText}>No tiers found.</Text> : null}
+      {tiers.length === 0 ? <Text style={[localStyles.emptyText, { color: theme.colors.textMuted }]}>No tiers found.</Text> : null}
       {tiers.length > 0 ? (
         <View
           style={[
@@ -1232,6 +1305,480 @@ const AuditLogSection: React.FC<{ backendUrl: string; headers: Record<string, st
   );
 };
 
+const IngestionSection: React.FC<{ backendUrl: string; headers: Record<string, string> } & ThemedSectionProps> = ({
+  backendUrl,
+  headers,
+  theme,
+}) => {
+  const [metrics, setMetrics] = useState<IngestionMetrics | null>(null);
+  const [retryConfig, setRetryConfig] = useState<RetryPolicyConfig | null>(null);
+  const [retryForm, setRetryForm] = useState({
+    maxAttempts: '',
+    baseDelaySeconds: '',
+    maxDelaySeconds: '',
+    alertThresholdPercent: '',
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const [metricsData, retryConfigData] = await Promise.all([
+        apiFetch(backendUrl, headers, '/ingestion/metrics'),
+        apiFetch(backendUrl, headers, '/ingestion/retry-config'),
+      ]);
+      setMetrics(metricsData as IngestionMetrics);
+      const config = retryConfigData as RetryPolicyConfig;
+      setRetryConfig(config);
+      setRetryForm({
+        maxAttempts: String(config.maxAttempts),
+        baseDelaySeconds: String(config.baseDelaySeconds),
+        maxDelaySeconds: String(config.maxDelaySeconds),
+        alertThresholdPercent: String(config.alertThresholdPercent),
+      });
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [backendUrl, headers]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const saveRetryConfig = async () => {
+    try {
+      await apiFetch(backendUrl, headers, '/ingestion/retry-config', {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          maxAttempts: Number(retryForm.maxAttempts),
+          baseDelaySeconds: Number(retryForm.baseDelaySeconds),
+          maxDelaySeconds: Number(retryForm.maxDelaySeconds),
+          alertThresholdPercent: Number(retryForm.alertThresholdPercent),
+        }),
+      });
+      setMessage('Retry policy updated.');
+      await load();
+    } catch (e: any) {
+      setError(e.message);
+    }
+  };
+
+  const clearCache = async () => {
+    try {
+      const result = await apiFetch(backendUrl, headers, '/ingestion/clear-cache', {
+        method: 'POST',
+      });
+      setMessage(`Extraction cache cleared: ${result.deleted ?? 0} entries removed.`);
+    } catch (e: any) {
+      setError(e.message);
+    }
+  };
+
+  const redriveDeadLetters = async (provider: 'ALL' | 'MAILGUN' | 'GMAIL') => {
+    try {
+      const result = await apiFetch(backendUrl, headers, '/ingestion/dead-letter/re-drive', {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider }),
+      });
+      setMessage(`Re-drive queued for ${provider}: ${result.retried ?? 0} jobs.`);
+      await load();
+    } catch (e: any) {
+      setError(e.message);
+    }
+  };
+
+  if (loading) return <Text style={[localStyles.loading, { color: theme.colors.textMuted }]}>Loading...</Text>;
+  if (error) return <Text style={[localStyles.errorText, { color: theme.colors.error }]}>{error}</Text>;
+  if (!metrics) return null;
+
+  const duplicateRate = metrics.duplicateRate.totalCount
+    ? `${Math.round((metrics.duplicateRate.duplicateCount / metrics.duplicateRate.totalCount) * 100)}%`
+    : '0%';
+  const lowConfidenceRate = metrics.lowConfidenceRate.totalCount
+    ? `${Math.round((metrics.lowConfidenceRate.lowConfidenceCount / metrics.lowConfidenceRate.totalCount) * 100)}%`
+    : '0%';
+
+  return (
+    <View style={localStyles.section}>
+      <Text style={[localStyles.sectionTitle, { color: theme.colors.text }]}>Ingestion Operations</Text>
+      {message ? <Text style={[localStyles.saveMsg, { color: theme.colors.success }]}>{message}</Text> : null}
+      <View style={[localStyles.card, getCardStyle(theme)]}>
+        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Duplicate Rate</Text>
+        <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>{duplicateRate}</Text>
+        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Low Confidence Rate</Text>
+        <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>{lowConfidenceRate}</Text>
+        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Retries / Dead Letters</Text>
+        <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+          {metrics.retryAndDeadLetter.retryCount} retries • {metrics.retryAndDeadLetter.deadLetterCount} dead-lettered
+        </Text>
+        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Gmail Auth Failures</Text>
+        <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>{metrics.gmailAuthFailures}</Text>
+        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Webhook Signature Failures</Text>
+        <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>{metrics.webhookSignatureFailures}</Text>
+      </View>
+
+      <View style={[localStyles.card, getCardStyle(theme)]}>
+        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Ingestion Volume by Source and Tier</Text>
+        {metrics.ingestionVolumeBySourceAndTier.map((row) => (
+          <Text key={`${row.sourceType}-${row.tierKey}`} style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+            {row.sourceType} • {row.tierKey}: {row.count}
+          </Text>
+        ))}
+      </View>
+
+      <View style={[localStyles.card, getCardStyle(theme)]}>
+        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Parse Success / Failure by Stage</Text>
+        {metrics.parseRateByStage.map((row) => (
+          <Text key={row.stageName} style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+            {row.stageName}: {row.successCount} success • {row.failureCount} failure
+          </Text>
+        ))}
+        <Text style={[localStyles.cardTitle, { color: theme.colors.text, marginTop: 10 }]}>Average Processing Latency</Text>
+        {metrics.averageLatencyByStage.map((row) => (
+          <Text key={row.stageName} style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+            {row.stageName}: {row.averageMs} ms
+          </Text>
+        ))}
+      </View>
+
+      <View style={[localStyles.card, getCardStyle(theme)]}>
+        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>LLM Usage and Estimated Cost</Text>
+        {metrics.llmUsageByModel.map((row) => (
+          <Text key={`${row.provider}-${row.modelName}`} style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+            {row.provider} / {row.modelName}: {row.tokensIn} in • {row.tokensOut} out • ${row.estimatedCostUsd.toFixed(2)}
+          </Text>
+        ))}
+        <Text style={[localStyles.cardTitle, { color: theme.colors.text, marginTop: 10 }]}>Cost per User</Text>
+        {metrics.costPerUser.map((row) => (
+          <Text key={row.userId} style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+            {row.userId}: ${row.estimatedCostUsd.toFixed(2)}
+          </Text>
+        ))}
+      </View>
+
+      <View style={[localStyles.card, getCardStyle(theme)]}>
+        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Quota Consumption by User / Tier</Text>
+        {metrics.quotaByUserTier.map((row) => (
+          <Text key={row.userId} style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+            {row.userId} • {row.tierKey}: {row.uploadsUsed}
+          </Text>
+        ))}
+      </View>
+
+      <View style={[localStyles.card, getCardStyle(theme)]}>
+        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Retry Policy</Text>
+        {retryConfig ? (
+          <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+            Last updated: {new Date(retryConfig.updatedAt).toLocaleString()}
+          </Text>
+        ) : null}
+        <TextInput
+          style={[localStyles.smallInput, getInputStyle(theme)]}
+          value={retryForm.maxAttempts}
+          onChangeText={(value: string) => setRetryForm((current) => ({ ...current, maxAttempts: value }))}
+          placeholder="Max attempts"
+          placeholderTextColor={theme.colors.textMuted}
+        />
+        <TextInput
+          style={[localStyles.smallInput, getInputStyle(theme)]}
+          value={retryForm.baseDelaySeconds}
+          onChangeText={(value: string) => setRetryForm((current) => ({ ...current, baseDelaySeconds: value }))}
+          placeholder="Base delay seconds"
+          placeholderTextColor={theme.colors.textMuted}
+        />
+        <TextInput
+          style={[localStyles.smallInput, getInputStyle(theme)]}
+          value={retryForm.maxDelaySeconds}
+          onChangeText={(value: string) => setRetryForm((current) => ({ ...current, maxDelaySeconds: value }))}
+          placeholder="Max delay seconds"
+          placeholderTextColor={theme.colors.textMuted}
+        />
+        <TextInput
+          style={[localStyles.smallInput, getInputStyle(theme)]}
+          value={retryForm.alertThresholdPercent}
+          onChangeText={(value: string) => setRetryForm((current) => ({ ...current, alertThresholdPercent: value }))}
+          placeholder="Alert threshold percent"
+          placeholderTextColor={theme.colors.textMuted}
+        />
+        <TouchableOpacity style={[localStyles.smallButton, { backgroundColor: theme.colors.cta }]} onPress={saveRetryConfig}>
+          <Text style={localStyles.smallButtonText}>Save Retry Policy</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={[localStyles.card, getCardStyle(theme)]}>
+        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Clear Extraction Cache</Text>
+        <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+          Delete all cached extraction results so re-uploaded documents are re-parsed with the latest logic version.
+        </Text>
+        <TouchableOpacity
+          style={[localStyles.tierButton, getSecondaryPillStyle(theme)]}
+          onPress={clearCache}
+        >
+          <Text style={[localStyles.tierButtonText, getSecondaryPillTextStyle(theme)]}>Clear Cache</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={[localStyles.card, getCardStyle(theme)]}>
+        <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>Dead-Letter Re-drive</Text>
+        <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+          Move dead-lettered jobs back to `PENDING` and enqueue them again.
+        </Text>
+        <View style={localStyles.tierButtons}>
+          {(['ALL', 'MAILGUN', 'GMAIL'] as const).map((provider) => (
+            <TouchableOpacity
+              key={provider}
+              style={[localStyles.tierButton, getSecondaryPillStyle(theme)]}
+              onPress={() => redriveDeadLetters(provider)}
+            >
+              <Text style={[localStyles.tierButtonText, getSecondaryPillTextStyle(theme)]}>Re-drive {provider}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+    </View>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// API Limits section
+// ---------------------------------------------------------------------------
+
+type ApiLimitProvider = {
+  provider: string;
+  window: string;
+  windowHours: number;
+  overallLimit: number | null;
+  callers: Array<{ caller: string; limit: number; currentUsage: number }>;
+  overallUsage: number;
+};
+
+type ApiLimitProviderForm = {
+  window: 'hour' | 'day';
+  windowHours: string;
+  overallLimit: string;
+  reason: string;
+  callers: Record<string, string>;
+};
+
+const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, string> } & ThemedSectionProps> = ({
+  backendUrl,
+  headers,
+  theme,
+}) => {
+  const [providers, setProviders] = useState<ApiLimitProvider[]>([]);
+  const [providerForms, setProviderForms] = useState<Record<string, ApiLimitProviderForm>>({});
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [savingProvider, setSavingProvider] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const data = await apiFetch(backendUrl, headers, '/api-limits');
+      const nextProviders = ((data as any).providers ?? []) as ApiLimitProvider[];
+      setProviders(nextProviders);
+      setProviderForms(
+        Object.fromEntries(
+          nextProviders.map((provider) => [
+            provider.provider,
+            {
+              window: provider.window === 'hour' ? 'hour' : 'day',
+              windowHours: String(provider.windowHours),
+              overallLimit: provider.overallLimit === null ? '' : String(provider.overallLimit),
+              reason: '',
+              callers: Object.fromEntries(provider.callers.map((caller) => [caller.caller, String(caller.limit)])),
+            },
+          ])
+        )
+      );
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [backendUrl, headers]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const updateProviderForm = (providerKey: string, patch: Partial<ApiLimitProviderForm>) => {
+    setProviderForms((current) => ({
+      ...current,
+      [providerKey]: {
+        ...current[providerKey],
+        ...patch,
+      },
+    }));
+  };
+
+  const updateCallerLimit = (providerKey: string, callerKey: string, value: string) => {
+    setProviderForms((current) => ({
+      ...current,
+      [providerKey]: {
+        ...current[providerKey],
+        callers: {
+          ...(current[providerKey]?.callers ?? {}),
+          [callerKey]: value,
+        },
+      },
+    }));
+  };
+
+  const saveProvider = async (provider: ApiLimitProvider) => {
+    const form = providerForms[provider.provider];
+    if (!form) return;
+    if (form.reason.trim().length < 3) {
+      setError('A reason with at least 3 characters is required.');
+      return;
+    }
+
+    const parsedWindowHours = Number(form.windowHours);
+    const parsedOverallLimit = form.overallLimit.trim() ? Number(form.overallLimit) : null;
+    const parsedCallers = Object.fromEntries(
+      provider.callers.map((caller) => [caller.caller, Number(form.callers[caller.caller] ?? '')])
+    );
+
+    if (!Number.isFinite(parsedWindowHours) || parsedWindowHours <= 0) {
+      setError(`Window hours for ${provider.provider} must be a positive number.`);
+      return;
+    }
+    if (parsedOverallLimit !== null && (!Number.isFinite(parsedOverallLimit) || parsedOverallLimit <= 0)) {
+      setError(`Overall limit for ${provider.provider} must be blank or a positive number.`);
+      return;
+    }
+    const invalidCaller = Object.entries(parsedCallers).find(([, value]) => !Number.isFinite(value) || value <= 0);
+    if (invalidCaller) {
+      setError(`Caller limit ${invalidCaller[0]} must be a positive number.`);
+      return;
+    }
+
+    setSavingProvider(provider.provider);
+    setError(null);
+    setMessage(null);
+    try {
+      await apiFetch(backendUrl, headers, `/api-limits/${provider.provider}`, {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          window: form.window,
+          windowHours: parsedWindowHours,
+          overallLimit: parsedOverallLimit,
+          callers: parsedCallers,
+          reason: form.reason.trim(),
+        }),
+      });
+      setMessage(`${provider.provider} rate limits updated.`);
+      await load();
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSavingProvider(null);
+    }
+  };
+
+  if (loading) return <Text style={[localStyles.loading, { color: theme.colors.textMuted }]}>Loading...</Text>;
+  if (error) return <Text style={[localStyles.errorText, { color: theme.colors.error }]}>{error}</Text>;
+
+  return (
+    <ScrollView style={[localStyles.section, localStyles.apiLimitsScroll]} contentContainerStyle={localStyles.apiLimitsScrollContent}>
+      <Text style={[localStyles.sectionTitle, { color: theme.colors.text }]}>API Rate Limits</Text>
+      <Text style={[localStyles.cardSub, { color: theme.colors.textMuted, marginBottom: 12 }]}>
+        Limits are configured in api-limits.yaml. Usage resets per window period. Current usage shown is from in-memory counters (resets on restart).
+      </Text>
+      {message ? <Text style={[localStyles.saveMsg, { color: theme.colors.success }]}>{message}</Text> : null}
+      {providers.map((provider) => (
+        <View key={provider.provider} style={[localStyles.card, getCardStyle(theme)]}>
+          <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>
+            {provider.provider}
+          </Text>
+          <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+            Window: {provider.windowHours}h ({provider.window}) | Overall limit: {provider.overallLimit ?? 'none'} | Used: {provider.overallUsage}
+          </Text>
+          <Text style={[localStyles.fieldLabel, { color: theme.colors.textMuted }]}>Window</Text>
+          <View style={localStyles.tierButtons}>
+            {(['hour', 'day'] as const).map((windowOption) => (
+              <TouchableOpacity
+                key={`${provider.provider}-${windowOption}`}
+                style={[localStyles.tierButton, getSecondaryPillStyle(theme, providerForms[provider.provider]?.window === windowOption)]}
+                onPress={() => updateProviderForm(provider.provider, { window: windowOption })}
+              >
+                <Text style={[localStyles.tierButtonText, getSecondaryPillTextStyle(theme, providerForms[provider.provider]?.window === windowOption)]}>
+                  {windowOption}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <TextInput
+            style={[localStyles.smallInput, getInputStyle(theme)]}
+            placeholder="Window hours"
+            placeholderTextColor={theme.colors.textMuted}
+            keyboardType="numeric"
+            value={providerForms[provider.provider]?.windowHours ?? ''}
+            onChangeText={(value: string) => updateProviderForm(provider.provider, { windowHours: value })}
+          />
+          <TextInput
+            style={[localStyles.smallInput, getInputStyle(theme)]}
+            placeholder="Overall limit (blank for none)"
+            placeholderTextColor={theme.colors.textMuted}
+            keyboardType="numeric"
+            value={providerForms[provider.provider]?.overallLimit ?? ''}
+            onChangeText={(value: string) => updateProviderForm(provider.provider, { overallLimit: value })}
+          />
+          {provider.callers.map((caller) => {
+            const pct = caller.limit > 0 ? Math.round((caller.currentUsage / caller.limit) * 100) : 0;
+            const isHigh = pct >= 75;
+            return (
+              <View key={caller.caller} style={localStyles.apiLimitCallerRow}>
+                <View style={localStyles.flex}>
+                  <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+                    {caller.caller}
+                  </Text>
+                  <Text style={[localStyles.cardSub, { color: isHigh ? theme.colors.error : theme.colors.textMuted }]}>
+                    Used: {caller.currentUsage} / {caller.limit} ({pct}%)
+                  </Text>
+                </View>
+                <TextInput
+                  style={[localStyles.apiLimitInput, getInputStyle(theme)]}
+                  placeholder="Limit"
+                  placeholderTextColor={theme.colors.textMuted}
+                  keyboardType="numeric"
+                  value={providerForms[provider.provider]?.callers[caller.caller] ?? ''}
+                  onChangeText={(value: string) => updateCallerLimit(provider.provider, caller.caller, value)}
+                />
+              </View>
+            );
+          })}
+          <TextInput
+            style={[localStyles.smallInput, getInputStyle(theme)]}
+            placeholder="Reason for change (required)"
+            placeholderTextColor={theme.colors.textMuted}
+            value={providerForms[provider.provider]?.reason ?? ''}
+            onChangeText={(value: string) => updateProviderForm(provider.provider, { reason: value })}
+          />
+          <TouchableOpacity
+            style={[localStyles.smallButton, { backgroundColor: theme.colors.cta }, savingProvider === provider.provider && localStyles.buttonDisabled]}
+            disabled={savingProvider === provider.provider}
+            onPress={() => saveProvider(provider)}
+          >
+            <Text style={localStyles.smallButtonText}>Save {provider.provider}</Text>
+          </TouchableOpacity>
+        </View>
+      ))}
+      <TouchableOpacity style={[localStyles.smallButton, { backgroundColor: theme.colors.cta, marginTop: 8 }]} onPress={load}>
+        <Text style={localStyles.smallButtonText}>Refresh</Text>
+      </TouchableOpacity>
+    </ScrollView>
+  );
+};
+
 // ---------------------------------------------------------------------------
 // Main AdminTab
 // ---------------------------------------------------------------------------
@@ -1282,6 +1829,10 @@ const AdminTab: React.FC<AdminTabProps> = ({ backendUrl, headers, initialSection
         return <UserDataSection backendUrl={backendUrl} headers={headers} theme={theme} />;
       case 'audit-log':
         return <AuditLogSection backendUrl={backendUrl} headers={headers} theme={theme} />;
+      case 'ingestion':
+        return <IngestionSection backendUrl={backendUrl} headers={headers} theme={theme} />;
+      case 'api-limits':
+        return <ApiLimitsSection backendUrl={backendUrl} headers={headers} theme={theme} />;
       default:
         return null;
     }
@@ -1295,6 +1846,8 @@ const AdminTab: React.FC<AdminTabProps> = ({ backendUrl, headers, initialSection
     features: 'Feature Flags',
     'user-data': 'User Data',
     'audit-log': 'Audit Log',
+    ingestion: 'Ingestion Ops',
+    'api-limits': 'API Limits',
   };
 
   return (
@@ -1308,7 +1861,15 @@ const AdminTab: React.FC<AdminTabProps> = ({ backendUrl, headers, initialSection
           <Text style={[localStyles.breadcrumbCurrent, { color: theme.colors.text }]}>{sectionLabel[section]}</Text>
         </View>
       ) : null}
-      {renderSection()}
+      <View style={localStyles.sectionHost}>
+        {section === 'api-limits' ? (
+          renderSection()
+        ) : (
+          <ScrollView style={localStyles.sectionScroll} contentContainerStyle={localStyles.sectionScrollContent}>
+            {renderSection()}
+          </ScrollView>
+        )}
+      </View>
     </View>
   );
 };
@@ -1320,8 +1881,11 @@ export default AdminTab;
 // ---------------------------------------------------------------------------
 
 const localStyles = StyleSheet.create({
-  content: { padding: 16, paddingBottom: 40, width: '100%' },
+  content: { flex: 1, minHeight: 0, padding: 16, paddingBottom: 0, width: '100%' },
   section: { marginBottom: 24 },
+  sectionHost: { flex: 1, minHeight: 0 },
+  sectionScroll: { flex: 1, minHeight: 0 },
+  sectionScrollContent: { paddingBottom: 40 },
   sectionTitle: { fontSize: 22, fontWeight: '700', marginBottom: 16, color: '#1a1a2e' },
   loading: { color: '#888', marginVertical: 8 },
   errorText: { color: '#c0392b', marginVertical: 8 },
@@ -1414,6 +1978,30 @@ const localStyles = StyleSheet.create({
   },
   smallButtonText: { color: '#fff', fontSize: 13, fontWeight: '600' },
   buttonDisabled: { opacity: 0.4 },
+  dropdownButton: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    marginBottom: 8,
+  },
+  dropdownLocked: {
+    justifyContent: 'center',
+  },
+  dropdownButtonText: { fontSize: 14, fontWeight: '600' },
+  dropdownMenu: {
+    borderRadius: 12,
+    borderWidth: 1,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  dropdownOption: {
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#999',
+  },
+  dropdownOptionText: { fontSize: 14, fontWeight: '500' },
   // Tier buttons
   tierButtons: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
   tierButton: {
@@ -1524,6 +2112,23 @@ const localStyles = StyleSheet.create({
   modalPrimaryButtonText: { fontSize: 14, fontWeight: '700' },
   // Pagination
   pagination: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 12, gap: 12 },
+  apiLimitsScroll: { flex: 1, minHeight: 0 },
+  apiLimitsScrollContent: { paddingBottom: 32 },
+  apiLimitCallerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    paddingVertical: 6,
+  },
+  apiLimitInput: {
+    minWidth: 110,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontSize: 13,
+  },
   pageButton: {
     paddingVertical: 7,
     paddingHorizontal: 16,

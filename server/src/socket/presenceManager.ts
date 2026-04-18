@@ -7,8 +7,8 @@
  * NOTE: This is an in-memory implementation suitable for a single-process
  * deployment. A Redis adapter would be required for multi-instance scaling.
  */
-import { colorForUser, initialsForName } from '@wanderbunnies/messaging';
-import type { PresenceUser } from '@wanderbunnies/messaging';
+import { colorForUser, initialsForName } from './messaging';
+import type { PresenceUser } from './messaging';
 
 interface PresenceEntry extends PresenceUser {
   offlineTimer?: ReturnType<typeof setTimeout>;

@@ -9,9 +9,11 @@ SECRETS_FILE="${SECRETS_FILE:-}"
 SECRETS="${SECRETS:-}"
 IGNORE_KEYS="${IGNORE_KEYS:-PORT,FIRESTORE_EMULATOR_HOST,GCLOUD_PROJECT_NUMBER,DEPLOYER_SERVICE_ACCOUNT_EMAIL,RUNTIME_SERVICE_ACCOUNT_EMAIL,CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL,GOOGLE_APPLICATION_CREDENTIALS}"
 IGNORE_SECRET_KEYS="${IGNORE_SECRET_KEYS:-GCLOUD_PROJECT,GOOGLE_CLOUD_PROJECT,GCLOUD_PROJECT_ID,GCLOUD_PROJECT_NUMBER,DEPLOYER_SERVICE_ACCOUNT_EMAIL,RUNTIME_SERVICE_ACCOUNT_EMAIL,CLOUD_BUILD_SERVICE_ACCOUNT_EMAIL,GOOGLE_APPLICATION_CREDENTIALS}"
+SKIP_FIRESTORE_INDEXES="${SKIP_FIRESTORE_INDEXES:-0}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# This script deploys API code, applies non-secret env vars from .env,
-# and applies secret mappings by secret name via --set-secrets.
+# This script deploys API code, applies env vars from .env directly,
+# and applies optional secret mappings from .secrets or SECRETS via --set-secrets.
 
 echo "Deploying Cloud Run service source code..."
 echo "  Service: $SERVICE_NAME"
@@ -23,6 +25,12 @@ if [[ -z "$ENV_FILE" ]]; then
 fi
 if [[ -z "$SECRETS_FILE" && -f "server/.secrets" ]]; then
   SECRETS_FILE="server/.secrets"
+fi
+
+if [[ "$SKIP_FIRESTORE_INDEXES" != "1" ]]; then
+  "$SCRIPT_DIR/deploy-firestore-indexes.sh"
+else
+  echo "Skipping Firestore index deployment because SKIP_FIRESTORE_INDEXES=1."
 fi
 
 trim() {
@@ -90,7 +98,31 @@ should_ignore_secret_key() {
   [[ "$list" == *",$key,"* ]]
 }
 
+is_visible_env_key() {
+  local key="$1"
+  case "$key" in
+    GCLOUD_PROJECT_ID|GOOGLE_CLOUD_PROJECT|GOOGLE_CALLBACK_URL|LOCATION_BUCKET|LOCATION_RAW_CSV_PREFIX|FIRESTORE_DATABASE_ID|DB_PROVIDER|USE_IN_MEMORY_DB|SMTP_HOST|SMTP_PORT|SMTP_FROM|UNSPLASH_APP_ID|UNSPLASH_IMAGE_CACHE_TIMEOUT_MINUTES|SIGNED_IMAGE_URL_CACHE_TIMEOUT_MINUTES|GOOGLE_PLACES_DETAILS_CACHE_TIMEOUT_MINUTES|STORAGE_IMAGE_CACHE_CONTROL_TIMEOUT_MINUTES|UNSPLASH_AUTH_BLOCK_CACHE_TIMEOUT_MINUTES|SESSION_CACHE_TIMEOUT_MINUTES|PLACE_MATCH_THRESHOLD|AUTH_REDIRECT_URI_ALLOWLIST|EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN|EXPO_PUBLIC_FIREBASE_PROJECT_ID|EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET|EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID|EXPO_PUBLIC_FIREBASE_APP_ID)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+display_env_pair() {
+  local pair="$1"
+  local key="${pair%%=*}"
+  local value="${pair#*=}"
+  if is_visible_env_key "$key"; then
+    printf '%s=%s' "$key" "$value"
+  else
+    printf '%s=<redacted>' "$key"
+  fi
+}
+
 env_pairs=()
+declare -A secret_map=()
 saw_google_application_credentials=0
 if [[ -n "$ENV_FILE" ]]; then
   if [[ "$(basename "$ENV_FILE")" == ".local_env" ]]; then
@@ -132,7 +164,6 @@ if [[ "$saw_google_application_credentials" -eq 1 ]]; then
 fi
 
 env_arg=""
-declare -A secret_map=()
 if [[ -n "$SECRETS" ]]; then
   IFS=',' read -r -a secret_entries <<< "$SECRETS"
   for entry in "${secret_entries[@]}"; do
@@ -177,11 +208,15 @@ if [[ "${#secret_map[@]}" -gt 0 ]]; then
   done
   env_pairs=("${filtered_env_pairs[@]}")
 fi
+env_keys=()
+for pair in "${env_pairs[@]}"; do
+  env_keys+=("${pair%%=*}")
+done
 if [[ "${#env_pairs[@]}" -gt 0 ]]; then
   env_arg="$(IFS=,; echo "${env_pairs[*]}")"
-  echo "Non-secret env vars to upload:"
+  echo "Env vars to upload:"
   for pair in "${env_pairs[@]}"; do
-    echo "  $pair"
+    echo "  $(display_env_pair "$pair")"
   done
 fi
 secrets_arg=""
@@ -209,6 +244,17 @@ done
 remove_env_arg=""
 if [[ "${#remove_env_keys[@]}" -gt 0 ]]; then
   remove_env_arg="$(IFS=,; echo "${remove_env_keys[*]}")"
+fi
+remove_secrets_arg=""
+if [[ "${#env_keys[@]}" -gt 0 ]]; then
+  remove_secrets_arg="$(IFS=,; echo "${env_keys[*]}")"
+fi
+
+if [[ -n "$remove_secrets_arg" ]]; then
+  echo "Removing legacy secret bindings for .env-managed keys..."
+  gcloud run services update "$SERVICE_NAME" \
+    --region "$REGION" \
+    --remove-secrets "$remove_secrets_arg"
 fi
 
 gcloud run deploy "$SERVICE_NAME" \

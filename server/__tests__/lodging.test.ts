@@ -11,7 +11,6 @@ jest.mock('../src/image-service', () => ({
   getGooglePlaceImage: jest.fn().mockResolvedValue('https://example.com/mock-lodging.jpg'),
 }));
 
-import { Pool } from 'pg';
 import { app } from '../src/app';
 import { closePool, initDb } from '../src/db';
 import { registerAndLoginWebUser } from './helpers';
@@ -21,14 +20,12 @@ describe('Lodging creation with image URL', () => {
   const user = { email: `lodging+${uniq}@example.com`, firstName: 'Lodging', lastName: 'Tester', password: 'testtest' };
   let token: string;
   let tripId: string;
-  let pool: Pool;
 
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
     await initDb();
-    pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
-    const login = await registerAndLoginWebUser(pool, user);
+    const login = await registerAndLoginWebUser(user);
     token = login.token;
 
     const groups = await request(app).get('/api/groups').set('Authorization', `Bearer ${token}`).expect(200);
@@ -44,9 +41,6 @@ describe('Lodging creation with image URL', () => {
   });
 
   afterAll(async () => {
-    if (pool) {
-      await pool.end();
-    }
     await closePool();
   });
 

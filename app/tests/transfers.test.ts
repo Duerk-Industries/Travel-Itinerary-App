@@ -1,5 +1,5 @@
 import { describe, expect, test } from '@jest/globals';
-import { buildFlightPayloadForCreate, createInitialFlightCreateDraft, normalizeFlightFromApi } from '../tabs/transfers';
+import { buildFlightPayloadForCreate, createInitialFlightCreateDraft, filterAirportOptionLabels, normalizeFlightFromApi } from '../tabs/transfers';
 
 describe('Flights helpers', () => {
   test('requires an active trip id', () => {
@@ -117,6 +117,16 @@ describe('Flights helpers', () => {
       arrivalTime: '10:00',
     });
     expect(normalized.status).toBe('Booked');
+  });
+
+  test('filters airport labels by query for transfer autocomplete', () => {
+    const labels = [
+      'Boston (BOS)',
+      'Bucharest (OTP)',
+      'Milan Bergamo (BGY)',
+    ];
+    expect(filterAirportOptionLabels(labels, 'buch')).toEqual(['Bucharest (OTP)']);
+    expect(filterAirportOptionLabels(labels, 'bg')).toEqual(['Milan Bergamo (BGY)']);
   });
 });
 

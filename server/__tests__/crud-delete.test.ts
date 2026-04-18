@@ -1,8 +1,7 @@
 import request from 'supertest';
-import { Pool } from 'pg';
 import { app } from '../src/app';
 import { closePool, initDb } from '../src/db';
-import { registerAndLoginWebUser } from './helpers';
+import { registerAndLoginWebUser, cleanupTestUsersByEmail } from './helpers';
 
 describe('CRUD delete endpoints for transfers, lodgings, activities, and trips', () => {
   jest.setTimeout(60000);
@@ -14,16 +13,14 @@ describe('CRUD delete endpoints for transfers, lodgings, activities, and trips',
   let groupId: string;
   let memberId: string;
   let tripId: string;
-  let pool: Pool;
 
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
     await initDb();
-    pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
-    const login = await registerAndLoginWebUser(pool, user);
+    const login = await registerAndLoginWebUser(user);
     token = login.token;
-    const memberLogin = await registerAndLoginWebUser(pool, member);
+    const memberLogin = await registerAndLoginWebUser(member);
     memberToken = memberLogin.token;
 
     const groups = await request(app).get('/api/groups').set('Authorization', `Bearer ${token}`).expect(200);
@@ -55,10 +52,7 @@ describe('CRUD delete endpoints for transfers, lodgings, activities, and trips',
   });
 
   afterAll(async () => {
-    if (pool) {
-      await pool.query('DELETE FROM users WHERE email IN ($1, $2)', [user.email, member.email]);
-      await pool.end();
-    }
+    await cleanupTestUsersByEmail([user.email, member.email]);
     await closePool();
   });
 
@@ -166,4 +160,3 @@ describe('CRUD delete endpoints for transfers, lodgings, activities, and trips',
     expect((memberTripsAfter.body as any[]).some((t) => t.id === sharedTripId)).toBe(false);
   });
 });
-

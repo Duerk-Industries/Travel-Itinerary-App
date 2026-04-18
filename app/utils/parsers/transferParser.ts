@@ -164,6 +164,46 @@ const pickEarliestDate = (candidates: string[]): string | undefined => {
   return earliest ? earliest.iso : undefined;
 };
 
+const MONEY_CODE_PATTERN = 'USD|EUR|GBP|CAD|AUD|CHF|JPY|NZD|RON|BGN|HUF|PLN';
+const MONEY_AMOUNT_PATTERN = '\\d{1,4}(?:,\\d{3})*(?:\\.\\d{2})|\\d+\\.\\d{2}';
+
+const extractDecimalAmounts = (value: string): string[] =>
+  Array.from(value.matchAll(new RegExp(`(${MONEY_AMOUNT_PATTERN})`, 'gi')))
+    .map((match) => match[1]?.replace(/,/g, ''))
+    .filter((amount): amount is string => Boolean(amount));
+
+const extractCurrencyTaggedAmounts = (value: string): string[] =>
+  Array.from(
+    value.matchAll(
+      new RegExp(
+        `(?:[$€£]|\\b(?:${MONEY_CODE_PATTERN})\\b)\\s*(${MONEY_AMOUNT_PATTERN})|(${MONEY_AMOUNT_PATTERN})\\s*(?:\\b(?:${MONEY_CODE_PATTERN})\\b)`,
+        'gi'
+      )
+    )
+  )
+    .map((match) => (match[1] ?? match[2] ?? '').replace(/,/g, ''))
+    .filter((amount): amount is string => Boolean(amount));
+
+const extractCostFromText = (text: string): string | undefined => {
+  const normalized = text.replace(/\u00a0/g, ' ').replace(/[ \t]+/g, ' ');
+  const labeledWindowRegex =
+    /\b(?:receipt|total(?:\s+price)?(?:\s+of\s+your\s+trip)?|amount(?:\s+paid)?|payment(?:\s+amount)?|trip purchased)\b[\s\S]{0,160}/gi;
+
+  for (const match of normalized.matchAll(labeledWindowRegex)) {
+    const snippet = match[0];
+    const currencyTagged = extractCurrencyTaggedAmounts(snippet);
+    if (currencyTagged.length) return currencyTagged[currencyTagged.length - 1];
+    const decimals = extractDecimalAmounts(snippet);
+    if (decimals.length) return decimals[decimals.length - 1];
+  }
+
+  const globalCurrencyTagged = extractCurrencyTaggedAmounts(normalized);
+  if (globalCurrencyTagged.length) return globalCurrencyTagged[0];
+
+  const globalDecimals = extractDecimalAmounts(normalized);
+  return globalDecimals[0];
+};
+
 export const parseFlightText = (text: string): { primary: Partial<ParsedFlight>; bulk: ParsedFlight[] } => {
   const parsed: Partial<ParsedFlight> = {};
   const bookingMatch = text.match(/booking\s*(?:reference|ref|code)?[:\s]+([A-Z0-9]{5,8})/i);
@@ -261,9 +301,9 @@ export const parseFlightText = (text: string): { primary: Partial<ParsedFlight>;
   if (!parsed.departureTime && timeMatches[0]) parsed.departureTime = timeMatches[0].toUpperCase();
   if (!parsed.arrivalTime && timeMatches[1]) parsed.arrivalTime = timeMatches[1].toUpperCase();
 
-  const currencyMatches = Array.from(text.matchAll(/\$?\s?(\d{1,3}(?:,\d{3})*\.\d{2})/g)).map((m) => m[1]);
-  if (currencyMatches[0]) {
-    parsed.cost = currencyMatches[0].replace(/,/g, '');
+  const parsedCost = extractCostFromText(text);
+  if (parsedCost) {
+    parsed.cost = parsedCost;
   }
 
   // Normalize locations to city names when possible

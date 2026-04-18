@@ -232,6 +232,43 @@ const reserveScopeUsageOrThrow = (params: {
   }
 };
 
+export type ApiUsageSummaryEntry = {
+  provider: string;
+  caller: string;
+  scope: LimitScope;
+  used: number;
+  limit: number | null;
+  windowKey: string | null;
+};
+
+export const getApiUsageSummary = (): ApiUsageSummaryEntry[] => {
+  const entries: ApiUsageSummaryEntry[] = [];
+  for (const [key, bucket] of usageBuckets.entries()) {
+    const parts = key.split(':');
+    const scope = parts[0] as LimitScope;
+    const provider = parts[1] ?? '';
+    const caller = parts[2] ?? '';
+    const providerConfig = getApiLimitProviderConfig(provider);
+    const limit = scope === 'overall'
+      ? (providerConfig?.overall ?? null)
+      : (providerConfig?.callers?.[caller] ?? null);
+    entries.push({
+      provider,
+      caller: scope === 'overall' ? '*' : caller,
+      scope,
+      used: bucket.used,
+      limit: limit ?? null,
+      windowKey: bucket.windowKey,
+    });
+  }
+  return entries;
+};
+
+export const resetApiUsageSummaries = (): void => {
+  usageBuckets.clear();
+  blockedLogStates.clear();
+};
+
 export const reserveApiUsageOrThrow = (params: { provider: string; caller: string }): void => {
   const provider = normalizeKeyPart(params.provider);
   const caller = normalizeKeyPart(params.caller);

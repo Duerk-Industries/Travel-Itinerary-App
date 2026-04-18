@@ -1,4 +1,11 @@
 providers:
+  LLM_PARSER:
+    window: hour
+    windowHours: 24
+    overall: 1000
+    callers:
+      PARSE_FLIGHT_TEXT: 200
+
   OPENAI:
     window: hour
     windowHours: 24
@@ -10,6 +17,8 @@ providers:
       ITINERARY_PLAN_P2_DAYS: 200
       ITINERARY_PLAN_P3_VALIDATE: 200
       ITINERARY_PLAN_P4_RENDER: 200
+      INGESTION_SMALL_LLM: 100
+      INGESTION_LARGE_LLM: 50
 
   UNSPLASH:
     window: hour
@@ -37,6 +46,21 @@ providers:
     callers:
       DAILY_REFRESH: 500
 
+  FRANKFURTER:
+    window: hour
+    windowHours: 24
+    overall: 1000
+    callers:
+      INGESTION_ASSIGNMENT_FX: 1000
+
+  OPEN_METEO:
+    window: hour
+    windowHours: 24
+    overall: 2000
+    callers:
+      OVERVIEW_DAY_WEATHER_GEOCODE: 1000
+      OVERVIEW_DAY_WEATHER_FORECAST: 1000
+
 caching:
   attractions:
     refreshDays: 365
@@ -55,4 +79,8 @@ caching:
     detailsCacheTimeoutMinutes: 1440
   unsplash:
     dnsLogTtlMs: 300000
-
+  frankfurter:
+    rateCacheTtlMinutes: 1440
+  weather:
+    geocodeCacheTtlMinutes: 1440
+    forecastCacheTtlMinutes: 60

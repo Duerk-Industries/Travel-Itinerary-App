@@ -3,6 +3,7 @@ import { Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpac
 import { formatDateLong } from '../utils/formatDateLong';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { toWebStyle } from '../utils/webStyle';
+import type { AppTheme } from '../theme/theme';
 import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from '../utils/votes';
 import {
   DEFAULT_NEW_ITINERARY_STATUS,
@@ -215,10 +216,12 @@ type TourTabProps = {
   payerTotals: Record<string, number>;
   toursTotal: number;
   styles: ReturnType<typeof StyleSheet.create>;
+  theme?: AppTheme;
   nativeDateTimePicker: NativeDateTimePickerType | null;
   fetchTours: (token?: string) => Promise<void>;
   onDataChanged?: () => void;
   mode?: 'live' | 'wizard';
+  readOnly?: boolean;
 };
 
 export const ActivityTab: React.FC<TourTabProps> = ({
@@ -235,10 +238,12 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   payerTotals,
   toursTotal,
   styles,
+  theme,
   nativeDateTimePicker,
   fetchTours,
   onDataChanged,
   mode = 'live',
+  readOnly = false,
 }) => {
   const [editingTour, setEditingTour] = useState<TourDraft | null>(null);
   const [editingTourId, setEditingTourId] = useState<string | null>(null);
@@ -266,17 +271,18 @@ export const ActivityTab: React.FC<TourTabProps> = ({
     paddingVertical: 6,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#111',
-    backgroundColor: '#fff',
+    borderColor: theme?.colors.border ?? '#111',
+    backgroundColor: theme?.colors.surface ?? '#fff',
   };
   const toggleSelectedStyle = styles.toggleOptionSelected ?? {
-    backgroundColor: '#e5e7eb',
-    borderColor: '#111',
+    backgroundColor: theme ? (theme.mode === 'dark' ? '#1A3A50' : '#DDE8F0') : '#e5e7eb',
+    borderColor: theme?.colors.link ?? '#111',
   };
-  const toggleTextStyle = styles.toggleOptionText ?? { color: '#111', fontWeight: '600' };
-  const toggleTextSelectedStyle = styles.toggleOptionTextSelected ?? { color: '#111' };
+  const toggleTextStyle = styles.toggleOptionText ?? { color: theme?.colors.text ?? '#111', fontWeight: '600' };
+  const toggleTextSelectedStyle = styles.toggleOptionTextSelected ?? { color: theme?.colors.text ?? '#111' };
 
   const openTourEditor = (tour?: Tour) => {
+    if (readOnly) return;
     if (mode !== 'wizard' && !activeTripId) {
       alert('Select an active trip before adding an activity.');
       return;
@@ -326,6 +332,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   };
 
   const saveTour = () => {
+    if (readOnly) return;
     if (!editingTour) return;
     const status = normalizeItineraryStatus(editingTour.status, DEFAULT_NEW_ITINERARY_STATUS);
     if (!shouldRelaxRequiredFields(status) && !editingTour.name.trim()) {
@@ -387,6 +394,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   };
 
   const removeTour = (id: string) => {
+    if (readOnly) return;
     if (mode === 'wizard') {
       setTours((prev) => prev.filter((t) => t.id !== id));
       return;
@@ -400,6 +408,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   };
 
   const voteOnTour = async (id: string, value: 1 | -1) => {
+    if (readOnly) return;
     try {
       const res = await fetch(`${backendUrl}/api/activities/${id}/vote`, {
         method: 'POST',
@@ -417,6 +426,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   };
 
   const rateTour = async (id: string, value: 1 | -1) => {
+    if (readOnly) return;
     try {
       const res = await fetch(`${backendUrl}/api/activities/${id}/rating`, {
         method: 'POST',
@@ -456,9 +466,11 @@ export const ActivityTab: React.FC<TourTabProps> = ({
     <View style={styles.card}>
       <View style={styles.sectionHeaderRow}>
         <Text style={styles.sectionTitle}>Activities</Text>
-        <TouchableOpacity style={[styles.button, styles.roundButton]} onPress={() => openTourEditor()} testID="activity-add">
-          <Text style={styles.buttonText}>+</Text>
-        </TouchableOpacity>
+        {!readOnly ? (
+          <TouchableOpacity style={[styles.button, styles.roundButton]} onPress={() => openTourEditor()} testID="activity-add">
+            <Text style={styles.buttonText}>+</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
       {Platform.OS !== 'web' && tourDateField && editingTour && DateTimePickerComponent ? (
         <DateTimePickerComponent
@@ -519,7 +531,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                 <Text style={styles.cellText}>{normalizeItineraryStatus(t.status, LEGACY_ITINERARY_STATUS)}</Text>
               </View>
               <View style={[styles.cell, styles.actionCell, { minWidth: 120, flex: 1 }]}>
-                {shouldShowVoteButtons(t.status, t.userVote) ? (
+                {!readOnly && shouldShowVoteButtons(t.status, t.userVote) ? (
                   <>
                     <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => voteOnTour(t.id, 1)}>
                       <Text style={styles.buttonText}>👍</Text>
@@ -533,7 +545,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                 )}
               </View>
               <View style={[styles.cell, styles.actionCell, { minWidth: 120, flex: 1 }]}>
-                {shouldShowRatingButtons(t.status, t.userRating) ? (
+                {!readOnly && shouldShowRatingButtons(t.status, t.userRating) ? (
                   <>
                     <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => rateTour(t.id, 1)}>
                       <Text style={styles.buttonText}>👍</Text>
@@ -579,12 +591,18 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                 <Text style={styles.cellText}>{t.paidBy.length ? t.paidBy.map(payerName).join(', ') : '-'}</Text>
               </View>
               <View style={[styles.cell, styles.actionCell, styles.lastCell, { minWidth: 160, flex: 1 }]}>
-                <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => openTourEditor(t)} testID={`activity-edit-${t.id}`}>
-                  <Text style={styles.buttonText}>Edit</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => removeTour(t.id)} testID={`activity-delete-${t.id}`}>
-                  <Text style={styles.buttonText}>Delete</Text>
-                </TouchableOpacity>
+                {!readOnly ? (
+                  <>
+                    <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => openTourEditor(t)} testID={`activity-edit-${t.id}`}>
+                      <Text style={styles.buttonText}>Edit</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => removeTour(t.id)} testID={`activity-delete-${t.id}`}>
+                      <Text style={styles.dangerButtonText}>Delete</Text>
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <Text style={styles.cellText}>View only</Text>
+                )}
               </View>
             </View>
           ))}
@@ -602,7 +620,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
           </View>
         ) : null}
       </View>
-      {editingTour ? (
+      {!readOnly && editingTour ? (
         <Modal transparent visible={Boolean(editingTour)} animationType="fade" onRequestClose={closeTourEditor}>
           <View style={styles.modalOverlay} testID="activity-form-modal">
             <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={closeTourEditor} />
@@ -814,7 +832,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
             </ScrollView>
             <View style={[styles.tableFooter, { justifyContent: 'space-between' }]}>
               <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={closeTourEditor} testID="activity-cancel">
-                <Text style={styles.buttonText}>Cancel</Text>
+                <Text style={styles.dangerButtonText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.button} onPress={saveTour} testID="activity-save">
                 <Text style={styles.buttonText}>Save</Text>

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Modal } from 'react-native';
 import { formatDateLong } from '../utils/formatDateLong';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { normalizeDateString } from '../utils/normalizeDateString';
@@ -134,6 +134,12 @@ export type FlightCreateDraft = {
   bookingReference: string;
 };
 
+export const filterAirportOptionLabels = (options: string[], query: string): string[] => {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!normalizedQuery) return options.slice(0, 15);
+  return options.filter((opt) => opt.toLowerCase().includes(normalizedQuery));
+};
+
 const isValidTime = (value: string): boolean => {
   const match = value.match(/^(\d{1,2}):(\d{2})$/);
   if (!match) return false;
@@ -164,6 +170,7 @@ export const createInitialFlightCreateDraft = (): FlightCreateDraft => ({
 
 export type GroupMemberOption = {
   id: string;
+  userId?: string | null;
   guestName?: string;
   email?: string;
   firstName?: string;
@@ -214,6 +221,27 @@ export const createInitialFlightState = (): FlightDraft => ({
   bookingReference: '',
   paidBy: [],
 });
+
+export const canonicalizeMemberSelectionIds = (
+  ids: string[] | null | undefined,
+  members: Array<Pick<GroupMemberOption, 'id' | 'userId'>>
+): string[] => {
+  if (!Array.isArray(ids) || !ids.length) return [];
+  const memberById = new Map(members.map((member) => [String(member.id), String(member.id)]));
+  const memberByUserId = new Map(
+    members
+      .filter((member) => member.userId)
+      .map((member) => [String(member.userId), String(member.id)])
+  );
+  return Array.from(
+    new Set(
+      ids
+        .map((id) => String(id))
+        .map((id) => memberById.get(id) ?? memberByUserId.get(id) ?? id)
+        .filter((id) => memberById.has(id))
+    )
+  );
+};
 
 const getDefaultFlightDates = (trip?: Trip): { departureDate: string; arrivalDate: string } | null => {
   if (!trip) return null;
@@ -448,6 +476,7 @@ type FlightsTabProps = {
   onDataChanged?: () => void;
   showList?: boolean;
   mode?: 'live' | 'wizard';
+  readOnly?: boolean; // Prop added for read-only viewing of followed trips
   modalOverlayStyle?: Record<string, any>;
   modalCardStyle?: Record<string, any>;
 };
@@ -515,6 +544,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   onDataChanged,
   showList = true,
   mode = 'live',
+  readOnly = false,
   modalOverlayStyle,
   modalCardStyle,
 }) => {
@@ -574,12 +604,15 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   const [airportTarget, setAirportTarget] = useState<'dep' | 'arr' | 'modal-dep' | 'modal-arr' | 'modal-layover' | null>(null);
   const [airportQuery, setAirportQuery] = useState('');
   const airportSelectInProgressRef = useRef(false);
+  const airportQueryRef = useRef('');
+  const airportTargetRef = useRef<'dep' | 'arr' | 'modal-dep' | 'modal-arr' | 'modal-layover' | null>(null);
   const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
   const [locationTarget, setLocationTarget] = useState<'dep' | 'arr' | 'modal-dep' | 'modal-arr' | 'modal-layover' | null>(null);
   const [showLocationOverlay, setShowLocationOverlay] = useState(false);
   const [locationFieldTarget, setLocationFieldTarget] = useState<'dep' | 'arr' | null>(null);
   const [locationSearch, setLocationSearch] = useState('');
   const locationSelectInProgressRef = useRef(false);
+  const locationSearchRef = useRef('');
   const [isAddingRow] = useState(false);
   const passengerDropdownRef = useRef<React.ElementRef<typeof TouchableOpacity> | null>(null);
   const modalDepLocationRef = useRef<React.ElementRef<typeof TextInput> | null>(null);
@@ -588,6 +621,9 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   const [containerOffset, setContainerOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [timePickerTarget, setTimePickerTarget] = useState<'edit-dep' | 'edit-arr' | 'new-dep' | 'new-arr' | null>(null);
   const [timePickerValue, setTimePickerValue] = useState<Date>(new Date());
+  const [showPasteModal, setShowPasteModal] = useState(false);
+  const [pasteText, setPasteText] = useState('');
+  const [isParsing, setIsParsing] = useState(false);
 
   const normalizePassengerName = (name: string): string => {
     const trimmed = name.trim().replace(/\s+/g, ' ');
@@ -667,11 +703,26 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       return fallbackAirports;
     }
     if (airportOptions.length) {
-      const parsed = airportOptions.map(parseAirportLabel);
+      const parsed = filterAirportOptionLabels(airportOptions, query).map(parseAirportLabel);
       const filtered = parsed.filter((a) => `${a.name ?? ''} ${a.city ?? ''} ${a.iata_code ?? ''}`.toLowerCase().includes(q));
       return (filtered.length ? filtered : parsed).slice(0, 8);
     }
     return filterAirports(query);
+  };
+
+  const fetchAirportLabels = async (query: string): Promise<string[]> => {
+    const trimmed = query.trim();
+    if (!trimmed || !userToken || isWizard) return [];
+    try {
+      const res = await fetch(`${backendUrl}/api/transfers/locations?q=${encodeURIComponent(trimmed)}`, {
+        headers: { Authorization: `Bearer ${userToken}` },
+      });
+      if (!res.ok) return [];
+      const data = (await res.json()) as string[];
+      return Array.isArray(data) ? data : [];
+    } catch {
+      return [];
+    }
   };
 
   const measureContainerOffset = () => {
@@ -757,6 +808,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   ) => {
     setLocationTarget(target);
     setLocationSearch(text);
+    locationSearchRef.current = text.trim();
     if (!userToken && !isWizard) {
       setLocationSuggestions([]);
       return;
@@ -772,32 +824,22 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       return;
     }
     try {
-      await onSearchAirports(q);
-      const filtered = airportOptions.filter((opt) => opt.toLowerCase().includes(q.toLowerCase()));
-      if (filtered.length) {
-        setLocationSuggestions(filtered);
-        return;
-      }
+      void onSearchAirports(q);
     } catch {
-      // fall through to local fetch
+      // Ignore background cache-warming errors.
     }
-    try {
-      const res = await fetch(`${backendUrl}/api/transfers/locations?q=${encodeURIComponent(q)}`, {
-        headers: { Authorization: `Bearer ${userToken}` },
-      });
-      if (!res.ok) {
-        setLocationSuggestions([]);
-        return;
-      }
-      const data = (await res.json()) as string[];
-      if (data.length) {
-        setLocationSuggestions(data);
-      } else {
-        setLocationSuggestions(filterAirports(q).map((a) => formatAirportLabel(a)));
-      }
-    } catch {
-      setLocationSuggestions([]);
+    const remote = await fetchAirportLabels(q);
+    if (locationSearchRef.current !== q) return;
+    if (remote.length) {
+      setLocationSuggestions(remote);
+      return;
     }
+    const filtered = filterAirportOptionLabels(airportOptions, q);
+    if (filtered.length) {
+      setLocationSuggestions(filtered);
+      return;
+    }
+    setLocationSuggestions(filterAirports(q).map((a) => formatAirportLabel(a)));
   };
 
   const togglePassengerDropdown = () => {
@@ -819,6 +861,8 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   const showAirportDropdown = (target: 'dep' | 'arr' | 'modal-dep' | 'modal-arr' | 'modal-layover', node: any, query: string) => {
     setAirportTarget(target);
     setAirportQuery(query);
+    airportTargetRef.current = target;
+    airportQueryRef.current = query.trim();
     setAirportSuggestions(buildAirportSuggestions(query));
     const inWindow = target.startsWith('modal-');
     setAirportAnchorInWindow(inWindow);
@@ -831,6 +875,12 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       } catch {
         // ignore background errors
       }
+      void (async () => {
+        const remote = await fetchAirportLabels(query);
+        if (!remote.length) return;
+        if (airportTargetRef.current !== target || airportQueryRef.current !== query.trim()) return;
+        setAirportSuggestions(remote.map(parseAirportLabel).slice(0, 8));
+      })();
     }
     let nextAnchor = { x: 16, y: 120, width: 260, height: 40 };
     if (node?.measureInWindow) {
@@ -858,10 +908,12 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
 
   const hideAirportDropdown = () => {
     setAirportTarget(null);
+    airportTargetRef.current = null;
     setAirportAnchor(null);
     setAirportAnchorInWindow(false);
     setAirportSuggestions([]);
     setAirportQuery('');
+    airportQueryRef.current = '';
   };
 
   const applyTopAirportSuggestion = (
@@ -944,6 +996,15 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   };
 
   const openFlightDetails = (flight: Flight) => {
+    if (readOnly) return;
+    const normalizedPassengerIds = canonicalizeMemberSelectionIds(
+      Array.isArray(flight.passenger_ids) ? flight.passenger_ids : Array.isArray((flight as any).passengerIds) ? (flight as any).passengerIds : [],
+      groupMembers
+    );
+    const normalizedPaidBy = canonicalizeMemberSelectionIds(
+      Array.isArray(flight.paidBy) ? flight.paidBy : Array.isArray(flight.paid_by) ? flight.paid_by : [],
+      groupMembers
+    );
     setEditingFlightId(flight.id);
     const base: FlightEditDraft = {
       status: normalizeItineraryStatus((flight as any).status, LEGACY_ITINERARY_STATUS),
@@ -953,7 +1014,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
           ? (flight as any).transfer_type
           : 'Flight',
       passengerName: flight.passenger_name,
-      passengerIds: Array.isArray(flight.passenger_ids) ? flight.passenger_ids : [],
+      passengerIds: normalizedPassengerIds,
       departureDate: normalizeDateString(flight.departure_date),
       arrivalDate: normalizeDateString(flight.arrival_date || (flight as any).arrivalDate || flight.departure_date),
       departureLocation: flight.departure_location ?? '',
@@ -969,7 +1030,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       carrier: flight.carrier,
       flightNumber: flight.flight_number,
       bookingReference: flight.booking_reference,
-      paidBy: Array.isArray(flight.paidBy) ? flight.paidBy : Array.isArray(flight.paid_by) ? flight.paid_by : [],
+      paidBy: normalizedPaidBy,
     };
     if (base.paidBy.length === 0 && defaultPayerId) {
       base.paidBy = [defaultPayerId];
@@ -995,6 +1056,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   }, [externalEditFlightId, flights]);
 
   const saveFlightDetails = async () => {
+    if (readOnly) return;
     if (!editingFlightId || !editingFlight) return;
     const relaxed = shouldRelaxRequiredFields(editingFlight.status);
     if (
@@ -1064,6 +1126,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
 
 
   const addFlight = async () => {
+    if (readOnly) return false;
     if (!userToken) return false;
     if (!activeTripId) {
       alert('Select an active trip before adding a transfer.');
@@ -1099,6 +1162,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   };
 
   const removeFlight = async (id: string) => {
+    if (readOnly) return;
     if (isWizard) {
       setFlights((prev) => prev.filter((flight) => flight.id !== id));
       return;
@@ -1113,6 +1177,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   };
 
   const voteOnFlight = async (id: string, value: 1 | -1) => {
+    if (readOnly) return;
     try {
       const res = await fetch(`${backendUrl}/api/transfers/${id}/vote`, {
         method: 'POST',
@@ -1130,6 +1195,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   };
 
   const rateFlight = async (id: string, value: 1 | -1) => {
+    if (readOnly) return;
     try {
       const res = await fetch(`${backendUrl}/api/transfers/${id}/rating`, {
         method: 'POST',
@@ -1162,7 +1228,85 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     setLocationSearch('');
   };
 
+  const handlePasteAndParse = async () => {
+    if (readOnly) return;
+    if (!userToken) return;
+    if (!activeTripId && !isWizard) {
+      alert('Select an active trip before adding a transfer.');
+      return;
+    }
+    const textToParse = pasteText.trim();
+    if (!textToParse) {
+      alert('Please paste some text first.');
+      return;
+    }
+
+    setIsParsing(true);
+    try {
+      const res = await fetch(`${backendUrl}/api/transfers/parse`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...headers },
+        body: JSON.stringify({ text: textToParse }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to parse');
+      }
+
+      // Convert parsed data into our flight draft
+      const primary = data.primary || {};
+      const init = createFlightDraftForTrip(findActiveTrip(), defaultPayerId);
+      
+      init.carrier = primary.carrier || '';
+      init.flightNumber = primary.flightNumber || '';
+      init.bookingReference = primary.bookingReference || '';
+      init.departureDate = primary.departureDate || init.departureDate;
+      init.departureLocation = primary.departureLocation || '';
+      init.departureAirportCode = primary.departureAirportCode || '';
+      init.departureTime = primary.departureTime || init.departureTime;
+      init.arrivalDate = primary.arrivalDate || init.arrivalDate;
+      init.arrivalLocation = primary.arrivalLocation || '';
+      init.arrivalAirportCode = primary.arrivalAirportCode || '';
+      init.arrivalTime = primary.arrivalTime || init.arrivalTime;
+      init.layoverLocation = primary.layoverLocation || '';
+      init.layoverLocationCode = primary.layoverLocationCode || '';
+      init.layoverDuration = primary.layoverDuration || '';
+      init.cost = primary.cost || '';
+      
+      if (groupMembers.length && primary.passengerName) {
+        // Try to match passenger name to group members
+        const lowerName = primary.passengerName.toLowerCase();
+        const matchedMembers = groupMembers.filter(m => {
+          const first = m.firstName?.toLowerCase() || '';
+          const last = m.lastName?.toLowerCase() || '';
+          const guest = m.guestName?.toLowerCase() || '';
+          return (first && lowerName.includes(first)) || 
+                 (last && lowerName.includes(last)) || 
+                 (guest && lowerName.includes(guest));
+        });
+        if (matchedMembers.length > 0) {
+          init.passengerIds = matchedMembers.map(m => m.id);
+          init.passengerName = buildPassengerName(init.passengerIds) || primary.passengerName;
+        } else {
+          init.passengerName = primary.passengerName;
+        }
+      } else {
+        init.passengerName = primary.passengerName || '';
+      }
+
+      setEditingFlightId('new');
+      setEditingFlight(init);
+      setShowPasteModal(false);
+      setPasteText('');
+    } catch (err: any) {
+      alert(err.message || 'Unable to parse text');
+    } finally {
+      setIsParsing(false);
+    }
+  };
+
   const handleAddPress = () => {
+    if (readOnly) return;
     if (!activeTripId && !isWizard) {
       alert('Select an active trip before adding a transfer.');
       return;
@@ -1200,7 +1344,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   useEffect(() => {
     if (!locationTarget || !locationSearch.trim()) return;
     if (airportOptions.length) {
-      const filtered = airportOptions.filter((opt) => opt.toLowerCase().includes(locationSearch.trim().toLowerCase()));
+      const filtered = filterAirportOptionLabels(airportOptions, locationSearch);
       if (filtered.length) setLocationSuggestions(filtered);
     }
   }, [airportOptions, locationTarget, locationSearch]);
@@ -1241,9 +1385,16 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
         <>
       <View style={styles.row}>
         <Text style={styles.sectionTitle}>Transfers</Text>
-        <TouchableOpacity style={[styles.button, styles.roundButton]} onPress={handleAddPress} testID="transfer-add">
-          <Text style={styles.buttonText}>+</Text>
-        </TouchableOpacity>
+        {!readOnly ? (
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TouchableOpacity style={[styles.button, styles.outlineButton, { marginRight: 8 }]} onPress={() => setShowPasteModal(true)} testID="transfer-paste">
+              <Text style={styles.buttonText}>Paste Info</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.button, styles.roundButton]} onPress={handleAddPress} testID="transfer-add">
+              <Text style={styles.buttonText}>+</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
       </View>
       <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
         <View style={styles.table}>
@@ -1278,12 +1429,18 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                     >
                       {!item.passengerInGroup ? <Text style={styles.warningText}>Passenger not in trip group</Text> : null}
                       <View style={styles.actionCell}>
-                        <TouchableOpacity style={[styles.tableActionButton, styles.tableActionButtonPrimary]} onPress={() => openFlightDetails(item)} testID={`transfer-edit-${item.id}`}>
-                          <Text style={styles.buttonText}>Edit</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.tableActionButton, styles.tableActionButtonDanger]} onPress={() => removeFlight(item.id)} testID={`transfer-delete-${item.id}`}>
-                          <Text style={styles.buttonText}>Delete</Text>
-                        </TouchableOpacity>
+                        {!readOnly ? (
+                          <>
+                            <TouchableOpacity style={[styles.tableActionButton, styles.tableActionButtonPrimary]} onPress={() => openFlightDetails(item)} testID={`transfer-edit-${item.id}`}>
+                              <Text style={styles.buttonText}>Edit</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[styles.tableActionButton, styles.tableActionButtonDanger]} onPress={() => removeFlight(item.id)} testID={`transfer-delete-${item.id}`}>
+                              <Text style={styles.buttonText}>Delete</Text>
+                            </TouchableOpacity>
+                          </>
+                        ) : (
+                          <Text style={styles.cellText}>View only</Text>
+                        )}
                       </View>
                     </View>
                   );
@@ -1303,7 +1460,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                         isLast && styles.lastCell,
                       ]}
                     >
-                      {showButtons ? (
+                      {!readOnly && showButtons ? (
                         <>
                           <TouchableOpacity
                             style={[styles.button, styles.smallButton]}
@@ -1340,7 +1497,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                         isLast && styles.lastCell,
                       ]}
                     >
-                      {showButtons ? (
+                      {!readOnly && showButtons ? (
                         <View style={styles.actionCell}>
                           <TouchableOpacity
                             style={[styles.button, styles.smallButton]}
@@ -1819,8 +1976,35 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
           }}
         />
       ) : null}
+      {!readOnly && showPasteModal ? (
+        <Modal transparent visible={showPasteModal} animationType="fade" onRequestClose={() => setShowPasteModal(false)}>
+          <View style={[styles.passengerOverlay, { backgroundColor: 'rgba(15,23,42,0.35)', justifyContent: 'center', alignItems: 'center', padding: 16 }]}>
+            <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={() => setShowPasteModal(false)} />
+            <View style={[styles.modalCard, { width: '100%', maxWidth: 500, maxHeight: '90%' }]}>
+              <Text style={styles.sectionTitle}>Paste Booking Info</Text>
+              <Text style={styles.helperText}>Paste your flight confirmation email or text below, and our AI will extract the details.</Text>
+              <TextInput
+                style={[styles.input, { height: 150, textAlignVertical: 'top', marginTop: 12, marginBottom: 16 }]}
+                multiline
+                placeholder="Paste email text or itinerary here..."
+                value={pasteText}
+                onChangeText={setPasteText}
+                editable={!isParsing}
+              />
+              <View style={styles.row}>
+                <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={() => { setShowPasteModal(false); setPasteText(''); }} disabled={isParsing}>
+                  <Text style={styles.buttonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.button, isParsing && { opacity: 0.5 }]} onPress={handlePasteAndParse} disabled={isParsing}>
+                  <Text style={styles.buttonText}>{isParsing ? 'Parsing...' : 'Parse & Add'}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      ) : null}
       <FlightEditingForm
-        visible={Boolean(editingFlight && editingFlightId)}
+        visible={!readOnly && Boolean(editingFlight && editingFlightId)}
         flightId={editingFlightId}
         flight={editingFlight}
         overlayStyle={modalOverlayStyle}

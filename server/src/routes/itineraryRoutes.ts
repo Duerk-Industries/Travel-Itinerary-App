@@ -8,11 +8,13 @@ import { getItineraryImage } from '../image-service';
 import { generateItineraryViaPromptPlan } from '../services/itineraryPromptPlanService';
 import { enqueueAsyncItineraryJob, getAsyncItineraryJob } from '../services/itineraryAsyncService';
 import { ApiLimitExceededError } from '../apis/usageLimiter';
+import { fetchOverviewWeather } from '../apis/openMeteoWeatherApi';
 import {
   assertCanUseFeature,
   reserveGenerationUsage,
   finalizeGenerationUsage,
   failGenerationUsage,
+  recordUsage,
 } from '../services/entitlementService';
 import { EntitlementError } from '../errors';
 import { TokenPayload } from '../auth';
@@ -54,12 +56,28 @@ const reserveGenerationRequestRateLimit = (userId: string, ip: string | null): v
   }
 };
 
-const resolveIdempotencyKey = (req: any, tripId: string): string => {
+const resolveIdempotencyKey = (req: any, userId: string, tripId: string): string => {
   const fromHeader = String(req.headers['idempotency-key'] ?? '').trim();
   const fromBody = String(req.body?.idempotencyKey ?? '').trim();
   const supplied = fromHeader || fromBody;
-  if (supplied) return supplied.slice(0, 200);
-  return `${(req as any).user.userId}:${tripId}:${Date.now()}:${Math.random().toString(36).slice(2)}`;
+  if (supplied) return `${userId}:${supplied.slice(0, 200)}`;
+  return `${userId}:${tripId}:${Date.now()}:${Math.random().toString(36).slice(2)}`;
+};
+
+const toFirestoreSafeValue = <T>(value: T): T => {
+  if (Array.isArray(value)) {
+    return value
+      .filter((item): item is Exclude<typeof item, undefined> => item !== undefined)
+      .map((item) => toFirestoreSafeValue(item)) as T;
+  }
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([, item]) => item !== undefined)
+        .map(([key, item]) => [key, toFirestoreSafeValue(item)])
+    ) as T;
+  }
+  return value;
 };
 
 // Itineraries API: manage itineraries, details, and sharing helpers.
@@ -92,6 +110,55 @@ router.get('/images', async (req, res) => {
   } catch (err) {
     logError('[itinerary] image fetch error', err);
     res.json({ url: PLACEHOLDER_IMAGE, cached: false, provider: 'placeholder', fallbackUsed: true });
+  }
+});
+
+router.post('/weather/overview', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const role = ((req as any).user as TokenPayload).role;
+  const tripId = typeof req.body?.tripId === 'string' ? req.body.tripId.trim() : '';
+  const days = Array.isArray(req.body?.days) ? req.body.days.slice(0, 31) : [];
+  const requests = days
+    .map((entry: any) => ({
+      date: String(entry?.date ?? '').trim(),
+      location: String(entry?.location ?? '').trim(),
+    }))
+    .filter((entry: { date: string; location: string }) => entry.date && entry.location);
+
+  if (!requests.length) {
+    res.json({ weather: [] });
+    return;
+  }
+
+  try {
+    await assertCanUseFeature(userId, 'overview_weather', role);
+    const result = await fetchOverviewWeather(requests);
+    const windowKey = getMonthWindowKey();
+    await recordUsage(userId, 'overview_weather_requests', 1, {
+      windowKey,
+      tripId: tripId || null,
+      daysRequested: requests.length,
+      daysReturned: result.weather.length,
+    });
+    if (result.apiCalls > 0) {
+      await recordUsage(userId, 'api_calls_open_meteo', result.apiCalls, {
+        windowKey,
+        tripId: tripId || null,
+        route: 'overview_weather',
+      });
+    }
+    res.json({ weather: result.weather });
+  } catch (err) {
+    if (err instanceof EntitlementError) {
+      res.status(402).json({ error: err.message, code: err.code });
+      return;
+    }
+    if (err instanceof ApiLimitExceededError) {
+      res.status(429).json({ error: err.message });
+      return;
+    }
+    logError('[itinerary] overview weather error', err);
+    res.status(500).json({ error: 'Failed to load overview weather' });
   }
 });
 
@@ -196,7 +263,7 @@ router.post('/', async (req, res) => {
     logInfo(`[itinerary] trip context unavailable trip=${tripId}; proceeding without stored trip dates`);
   }
 
-  const idempotencyKey = resolveIdempotencyKey(req, tripId);
+  const idempotencyKey = resolveIdempotencyKey(req, userId, tripId);
   try {
     await assertCanUseFeature(userId, 'ai_itinerary_generation', role);
     reserveGenerationRequestRateLimit(userId, req.ip ?? null);
@@ -250,7 +317,7 @@ router.post('/', async (req, res) => {
       `[itinerary] generated trip=${tripId} details=${result.details.length} transfers=${result.generatedItems.transfers.length} lodgings=${result.generatedItems.lodgings.length} activities=${result.generatedItems.activities.length} carRentals=${result.generatedItems.carRentals.length} tokens=${result.tokenUsage.totalTokens} elapsedMs=${Date.now() - requestStartedAt}`
     );
 
-    const responseBody = {
+    const responseBody = toFirestoreSafeValue({
       plan: normalizedPlan,
       details: result.details,
       generatedItems: result.generatedItems,
@@ -260,7 +327,7 @@ router.post('/', async (req, res) => {
         route: result.route,
         itinerary: result.itinerary,
       },
-    };
+    });
     await finalizeGenerationUsage({
       userId,
       windowKey: getMonthWindowKey(),
@@ -370,7 +437,7 @@ router.post('/async', async (req, res) => {
   }
 
   // Entitlement checks — run before enqueuing so the user gets immediate feedback.
-  const idempotencyKey = resolveIdempotencyKey(req, tripId);
+  const idempotencyKey = resolveIdempotencyKey(req, userId, tripId);
   try {
     await assertCanUseFeature(userId, 'ai_itinerary_generation', role);
     reserveGenerationRequestRateLimit(userId, req.ip ?? null);

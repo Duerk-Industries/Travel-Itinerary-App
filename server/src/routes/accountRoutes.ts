@@ -44,6 +44,7 @@ import { getAuthFlag } from '../config/authFlags';
 import { assertUnderTravelerLimit } from '../services/entitlementService';
 import { EntitlementError } from '../errors';
 import { TokenPayload } from '../auth';
+import { deleteUserIngestionData } from '../ingestion/shared/repository';
 
 // Account management (profile, password, deletion) for authenticated web users.
 const router = Router();
@@ -367,6 +368,7 @@ router.delete('/family/:id', async (req, res) => {
 router.delete('/', async (req, res) => {
   const userId = (req as any).user.userId as string;
   try {
+    await deleteUserIngestionData(userId).catch(() => undefined);
     if (process.env.USE_IN_MEMORY_DB === '1') {
       const p = require('../db').poolClient();
       try {

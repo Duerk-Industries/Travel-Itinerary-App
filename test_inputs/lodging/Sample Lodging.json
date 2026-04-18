@@ -1,0 +1,15 @@
+{
+  "tripId": "trip_123",
+  "status": "Booked",
+  "name": "Hotel de Bruges",
+  "checkInDate": "2026-08-14",
+  "checkOutDate": "2026-08-17",
+  "rooms": 1,
+  "refundBy": "2026-08-10",
+  "totalCost": 540,
+  "costPerNight": 180,
+  "address": "Wollestraat 41, 8000 Bruges, Belgium",
+  "placeId": "google-place-id-here",
+  "paidBy": ["member_1"],
+  "travelerIds": ["member_1", "member_2"]
+}

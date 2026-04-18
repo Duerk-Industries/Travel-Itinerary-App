@@ -46,7 +46,7 @@ const LodgingDialog: React.FC<LodgingDialogProps> = (props) => {
           </ScrollView>
           <View style={props.styles.row}>
             <TouchableOpacity style={[props.styles.button, props.styles.dangerButton]} onPress={props.onCancel}>
-              <Text style={props.styles.buttonText}>Cancel</Text>
+              <Text style={props.styles.dangerButtonText}>Cancel</Text>
             </TouchableOpacity>
             {props.onSaveAndAddAnother ? (
               <TouchableOpacity style={props.styles.button} onPress={props.onSaveAndAddAnother}>

@@ -22,6 +22,7 @@ import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { saveWizardFlights, saveWizardLodgings } from '../utils/wizardSaves';
 import { buildMapUrl, loadStoredMapPreference } from '../utils/mapLinks';
 import { toWebStyle } from '../utils/webStyle';
+import type { AppTheme } from '../theme/theme';
 import {
   DEFAULT_NEW_ITINERARY_STATUS,
   ITINERARY_STATUSES,
@@ -85,6 +86,7 @@ type CreateTripWizardProps = {
   airportOptions: string[];
   onSearchAirports: (q: string) => Promise<void> | void;
   styles: Record<string, any>;
+  theme?: AppTheme;
   onCancel: () => void;
   onTripCreated: (tripId: string) => void;
   onAiItineraryQueued?: (tripId: string, jobId: string) => void;
@@ -213,6 +215,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   airportOptions,
   onSearchAirports,
   styles,
+  theme,
   onCancel,
   onTripCreated,
   onAiItineraryQueued,
@@ -1349,7 +1352,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               <TouchableOpacity
                 style={[
                   {
-                    backgroundColor: dateModeSelected === 'range' ? '#0d6efd' : '#fff',
+                    backgroundColor: dateModeSelected === 'range' ? '#0d6efd' : (theme?.colors.surface ?? '#fff'),
                     borderColor: '#0d6efd',
                     borderWidth: 1,
                     paddingVertical: 8,
@@ -1375,7 +1378,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               <TouchableOpacity
                 style={[
                   {
-                    backgroundColor: dateModeSelected === 'month' ? '#0d6efd' : '#fff',
+                    backgroundColor: dateModeSelected === 'month' ? '#0d6efd' : (theme?.colors.surface ?? '#fff'),
                     borderColor: '#0d6efd',
                     borderWidth: 1,
                     paddingVertical: 8,
@@ -1617,42 +1620,46 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             <Text style={styles.helperText}>
               Optional step. We'll add you by default—add fellow travelers or remove yourself if needed.
             </Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Search past travelers"
-              title="Search participants"
-              value={participantSearch}
-              onChangeText={setParticipantSearch}
-            />
-            {participantSuggestions.length ? (
-              <View style={styles.dropdownList}>
-                {participantSuggestions.map((suggestion) => (
-                  <TouchableOpacity
-                    key={`${suggestion.source}-${suggestion.id}`}
-                    style={styles.dropdownOption}
-                    onPress={() => {
-                      addParticipant({
-                        firstName: suggestion.firstName ?? '',
-                        lastName: suggestion.lastName ?? '',
-                        email: suggestion.email ?? '',
-                      });
-                      setParticipantSearch('');
-                      setParticipantSuggestions([]);
-                    }}
-                  >
-                    <Text style={styles.cellText}>
-                      {`${suggestion.firstName ?? ''} ${suggestion.lastName ?? ''}`.trim() || suggestion.email || 'Traveler'}
-                      {suggestion.email ? ` (${suggestion.email})` : ''}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            ) : null}
+            <View style={styles.dropdown}>
+              <TextInput
+                style={styles.input}
+                placeholder="Search past travelers"
+                title="Search participants"
+                value={participantSearch}
+                onChangeText={setParticipantSearch}
+              />
+              {participantSuggestions.length ? (
+                <View style={styles.dropdownList}>
+                  {participantSuggestions.map((suggestion) => (
+                    <TouchableOpacity
+                      key={`${suggestion.source}-${suggestion.id}`}
+                      style={styles.dropdownOption}
+                      onPress={() => {
+                        addParticipant({
+                          firstName: suggestion.firstName ?? '',
+                          lastName: suggestion.lastName ?? '',
+                          email: suggestion.email ?? '',
+                        });
+                        setParticipantSearch('');
+                        setParticipantSuggestions([]);
+                      }}
+                    >
+                      <Text style={styles.cellText}>
+                        {`${suggestion.firstName ?? ''} ${suggestion.lastName ?? ''}`.trim() || suggestion.email || 'Traveler'}
+                        {suggestion.email ? ` (${suggestion.email})` : ''}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ) : null}
+            </View>
             <View style={styles.row}>
               <TextInput
                 style={[styles.input, { flex: 1 }]}
                 placeholder="First name"
                 title="First name"
+                autoComplete="given-name"
+                textContentType="givenName"
                 value={participantDraft.firstName}
                 onChangeText={(text: string) => setParticipantDraft((prev) => ({ ...prev, firstName: text }))}
               />
@@ -1660,6 +1667,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                 style={[styles.input, { flex: 1 }]}
                 placeholder="Last name"
                 title="Last name"
+                autoComplete="family-name"
+                textContentType="familyName"
                 value={participantDraft.lastName}
                 onChangeText={(text: string) => setParticipantDraft((prev) => ({ ...prev, lastName: text }))}
               />
@@ -1669,6 +1678,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               placeholder="Email (optional)"
               title="Email"
               autoCapitalize="none"
+              autoComplete="email"
+              textContentType="emailAddress"
               keyboardType="email-address"
               value={participantDraft.email ?? ''}
               onChangeText={(text: any) => setParticipantDraft((prev) => ({ ...prev, email: text }))}
@@ -2138,7 +2149,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                         style={[styles.button, styles.smallButton, styles.dangerButton]}
                         onPress={() => removeWizardLodging(l.id)}
                       >
-                        <Text style={styles.buttonText}>Delete</Text>
+                        <Text style={styles.dangerButtonText}>Delete</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -2265,7 +2276,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     </View>
                     <View style={[styles.cell, styles.actionCell, { minWidth: 160, flex: 1 }, styles.lastCell]}>
                       <TouchableOpacity style={[styles.smallButton, styles.dangerButton]} onPress={() => removeWizardCarRental(car.id)}>
-                        <Text style={styles.buttonText}>Delete</Text>
+                        <Text style={styles.dangerButtonText}>Delete</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -2613,8 +2624,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   }
 
   return (
-    <View style={{ position: 'relative' }}>
-      <ScrollView style={styles.card} contentContainerStyle={{ gap: 12 }}>
+    <View style={{ position: 'relative', flex: 1, minHeight: 0 }}>
+      <ScrollView style={[styles.card, { flex: 1, minHeight: 0 }]} contentContainerStyle={{ gap: 12, flexGrow: 1 }}>
         <View style={[styles.row, { alignItems: 'center', justifyContent: 'space-between' }]}>
           <View>
             <Text style={styles.sectionTitle}>Create Trip Wizard</Text>
@@ -2626,7 +2637,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             style={[styles.button, styles.dangerButton, { paddingHorizontal: 12, paddingVertical: 6 }]}
             onPress={() => setShowExitConfirm(true)}
           >
-            <Text style={styles.buttonText}>X</Text>
+            <Text style={styles.dangerButtonText}>X</Text>
           </TouchableOpacity>
         </View>
         {wizardError ? <Text style={styles.errorText}>{wizardError}</Text> : null}
@@ -2636,16 +2647,27 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             style={[styles.button, styles.dangerButton, { flex: 1 }]}
             onPress={stepIndex === 0 ? onCancel : goBack}
           >
-            <Text style={styles.buttonText}>{stepIndex === 0 ? 'Cancel' : 'Back'}</Text>
+            <Text style={styles.dangerButtonText}>{stepIndex === 0 ? 'Cancel' : 'Back'}</Text>
           </TouchableOpacity>
           {stepIndex < totalSteps - 1 ? (
-            <TouchableOpacity
-              style={[styles.button, { flex: 1 }, !canMoveNext() && { opacity: 0.6 }]}
-              onPress={goNext}
-              disabled={!canMoveNext()}
-            >
-              <Text style={styles.buttonText}>Next</Text>
-            </TouchableOpacity>
+            <>
+              <TouchableOpacity
+                style={[styles.button, { flex: 1 }, !canMoveNext() && { opacity: 0.6 }]}
+                onPress={goNext}
+                disabled={!canMoveNext()}
+              >
+                <Text style={styles.buttonText}>Next</Text>
+              </TouchableOpacity>
+              {stepIndex >= 3 ? (
+                <TouchableOpacity
+                  style={[styles.button, { flex: 1 }, !canMoveNext() && { opacity: 0.6 }]}
+                  onPress={submitWizard}
+                  disabled={!canMoveNext() || isSubmitting}
+                >
+                  <Text style={styles.buttonText}>{isSubmitting ? 'Creating...' : 'Finish Trip'}</Text>
+                </TouchableOpacity>
+              ) : null}
+            </>
           ) : (
             <TouchableOpacity style={[styles.button, { flex: 1 }]} onPress={submitWizard} disabled={isSubmitting}>
               <Text style={styles.buttonText}>{isSubmitting ? 'Creating...' : 'Create Trip'}</Text>
@@ -2913,7 +2935,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             </ScrollView>
             <View style={styles.row}>
               <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={closeWizardLodgingEditor}>
-                <Text style={styles.buttonText}>Cancel</Text>
+                <Text style={styles.dangerButtonText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.button}
@@ -2938,7 +2960,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                   onCancel();
                 }}
               >
-                <Text style={styles.buttonText}>Exit</Text>
+                <Text style={styles.dangerButtonText}>Exit</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.button, { flex: 1 }]} onPress={() => setShowExitConfirm(false)}>
                 <Text style={styles.buttonText}>Stay</Text>

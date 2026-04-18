@@ -1,5 +1,13 @@
 # Travel Itinerary App — Deployment Runbook (duerk.org)
 
+Back to the project home: [README](README.md)
+
+Related docs:
+
+- [Documentation Hub](docs/README.md)
+- [FAQ](FAQ.md)
+- [GCP Email Ingest Setup](docs/gcp-email-ingest-setup.md)
+
 This document provides a complete guide for deploying and maintaining the Travel Itinerary App on Google Cloud and Firebase.
 
 ## 1. System Architecture
@@ -38,7 +46,7 @@ This setup ensures both the web and native apps use the same backend API, hosted
 These steps only need to be performed once per Google Cloud project.
 
 ### Fast Path: Run Everything Once
-If you already have your values in `server/.secrets`, you can run the full setup in one command:
+If you already have your values in `server/.env`, you can run the full setup in one command:
 
 ```bash
 ./scripts/setup-all.sh
@@ -76,9 +84,9 @@ This step uses a dedicated script to grant all necessary permissions for a secur
 *   **Cloud Build Service Account**: The default service account used by Google Cloud Build to execute the build and deployment process.
 *   **Runtime Service Account**: The identity that the Cloud Run service runs as, granting it access to other Google Cloud resources like Firestore.
 
-1.  **Define Service Accounts in `server/.secrets`**:
+1.  **Define Service Accounts in `server/.env`**:
 
-    Create or open the `server/.secrets` file and add the following required variables. This file is git-ignored and should not be committed.
+    Create or open the `server/.env` file and add the following required variables. This file is git-ignored and should not be committed. `server/.secrets` is still supported as a fallback, but `server/.env` is now the primary local source for both regular env vars and secrets.
 
     ```bash
     # The ID of your Google Cloud project.
@@ -99,7 +107,7 @@ This step uses a dedicated script to grant all necessary permissions for a secur
 
 2.  **Run the IAM Configuration Script**:
 
-    Execute the script from the root directory. It will read the variables from `server/.secrets` and apply the correct IAM role bindings to all three service accounts. The script is idempotent, so it's safe to run multiple times.
+    Execute the script from the root directory. It will read the variables from `server/.env` first, with `server/.secrets` still supported as a fallback, and apply the correct IAM role bindings to all three service accounts. The script is idempotent, so it's safe to run multiple times.
 
     ```bash
     ./scripts/setup-iam-permissions.sh
@@ -149,13 +157,13 @@ This command compiles the web app and places the static files into the `dist/` d
 ### Step 2: Configure the Backend Environment
 Your backend's configuration is managed through environment variables and secrets.
 
-*   **`server/.env`**: Contains non-sensitive configuration. A `GCLOUD_PROJECT_ID` entry is required.
-*   **`server/.secrets`**: Contains sensitive values like API keys or passwords. This file is git-ignored. Deployment/IAM settings also live here.
+*   **`server/.env`**: Primary local source for both non-sensitive configuration and secrets. A `GCLOUD_PROJECT_ID` entry is required.
+*   **`server/.secrets`**: Optional fallback file for backwards compatibility. It is still read by loaders and deploy scripts, but is no longer the primary local source.
 
 Run the following script to upload these variables and secrets to your Cloud Run service. It will create secrets in Google Secret Manager if they don't exist and then securely map them to your service.
 
 ```bash
-# This script reads from server/.env and server/.secrets by default.
+# This script reads from server/.env by default and still supports server/.secrets as a fallback.
 ./scripts/configure-run-env.sh
 ```
 
@@ -199,7 +207,7 @@ The `trigger.yaml` file in the root directory is a sample configuration for a na
 
 Navigate to your repository's `Settings > Secrets and variables > Actions` to configure the following:
 
-*   **`GCP_SERVICE_ACCOUNT_KEY`**: The JSON key for the **Deployer Service Account** defined as `DEPLOYER_SERVICE_ACCOUNT_EMAIL` in your `server/.secrets` file. The `./scripts/setup-iam-permissions.sh` script grants it the necessary roles to trigger builds and deploy Cloud Run:
+*   **`GCP_SERVICE_ACCOUNT_KEY`**: The JSON key for the **Deployer Service Account** defined as `DEPLOYER_SERVICE_ACCOUNT_EMAIL` in your `server/.env` file. The `./scripts/setup-iam-permissions.sh` script grants it the necessary roles to trigger builds and deploy Cloud Run:
     *   `Cloud Run Admin`
     *   `Cloud Build Editor`
     *   `Service Account User` (on the runtime service account)
@@ -217,7 +225,7 @@ Navigate to your repository's `Settings > Secrets and variables > Actions` to co
 
 Use this list to validate configuration before you rely on automated deployments:
 
-*   `server/.secrets` contains `GCLOUD_PROJECT_ID`, `GCLOUD_PROJECT_NUMBER`, and `DEPLOYER_SERVICE_ACCOUNT_EMAIL`.
+*   `server/.env` contains `GCLOUD_PROJECT_ID`, `GCLOUD_PROJECT_NUMBER`, and `DEPLOYER_SERVICE_ACCOUNT_EMAIL`.
 *   `./scripts/setup-iam-permissions.sh` runs successfully (safe to re-run) and grants the deployer `roles/run.admin` plus `roles/iam.serviceAccountUser` on the runtime service account.
 *   The Cloud Build service account has `roles/artifactregistry.writer` if you deploy with `gcloud run deploy --source`.
 *   GitHub Secrets include `GCP_SERVICE_ACCOUNT_KEY`, `GCLOUD_PROJECT_ID`, `FIREBASE_SERVICE_ACCOUNT_TRAVEL_ITINERARY_APP_483623`, and `EXPO_TOKEN`.

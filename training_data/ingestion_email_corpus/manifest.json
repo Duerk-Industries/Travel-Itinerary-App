@@ -1,0 +1,188 @@
+{
+  "generatedAt": "2026-04-14T18:53:10.933Z",
+  "publicSources": [
+    {
+      "itemType": "flight",
+      "title": "Gmail Flight Reservation Markup",
+      "provider": "Google for Developers",
+      "url": "https://developers.google.com/workspace/gmail/markup/reference/flight-reservation"
+    },
+    {
+      "itemType": "hotel",
+      "title": "Gmail Hotel Reservation Markup",
+      "provider": "Google for Developers",
+      "url": "https://developers.google.com/workspace/gmail/markup/reference/hotel-reservation"
+    },
+    {
+      "itemType": "rail",
+      "title": "Gmail Train Reservation Markup",
+      "provider": "Google for Developers",
+      "url": "https://developers.google.com/workspace/gmail/markup/reference/train-reservation"
+    }
+  ],
+  "referenceUrls": [
+    "https://schema.org/FlightReservation",
+    "https://schema.org/LodgingReservation",
+    "https://schema.org/TrainReservation"
+  ],
+  "syntheticCounts": {
+    "flight": 12,
+    "hotel": 12,
+    "rail": 12,
+    "oss": 12,
+    "curated": 8,
+    "weak": 8
+  },
+  "counts": {
+    "public": 12,
+    "curatedTravel": 8,
+    "weakTravel": 8,
+    "ossRaw": 12,
+    "synthetic": 36,
+    "combined": 76,
+    "train": 66,
+    "validation": 10
+  },
+  "snapshots": [
+    {
+      "title": "Gmail Flight Reservation Markup",
+      "url": "https://developers.google.com/workspace/gmail/markup/reference/flight-reservation",
+      "htmlPath": "C:\\Git\\Tristan\\Travel-Itinerary-App\\training_data\\ingestion_email_corpus\\gmail-flight-reservation-markup.html",
+      "blockCount": 6
+    },
+    {
+      "title": "Gmail Hotel Reservation Markup",
+      "url": "https://developers.google.com/workspace/gmail/markup/reference/hotel-reservation",
+      "htmlPath": "C:\\Git\\Tristan\\Travel-Itinerary-App\\training_data\\ingestion_email_corpus\\gmail-hotel-reservation-markup.html",
+      "blockCount": 1
+    },
+    {
+      "title": "Gmail Train Reservation Markup",
+      "url": "https://developers.google.com/workspace/gmail/markup/reference/train-reservation",
+      "htmlPath": "C:\\Git\\Tristan\\Travel-Itinerary-App\\training_data\\ingestion_email_corpus\\gmail-train-reservation-markup.html",
+      "blockCount": 5
+    }
+  ],
+  "weakTravelSources": [
+    {
+      "title": "Gmail Flight Reservation Markup",
+      "provider": "Google for Developers",
+      "url": "https://developers.google.com/workspace/gmail/markup/reference/flight-reservation",
+      "limit": 3,
+      "licenseHint": "Public travel reservation documentation snippet"
+    },
+    {
+      "title": "Gmail Hotel Reservation Markup",
+      "provider": "Google for Developers",
+      "url": "https://developers.google.com/workspace/gmail/markup/reference/hotel-reservation",
+      "limit": 3,
+      "licenseHint": "Public travel reservation documentation snippet"
+    },
+    {
+      "title": "Gmail Train Reservation Markup",
+      "provider": "Google for Developers",
+      "url": "https://developers.google.com/workspace/gmail/markup/reference/train-reservation",
+      "limit": 3,
+      "licenseHint": "Public travel reservation documentation snippet"
+    },
+    {
+      "title": "Schema.org FlightReservation",
+      "provider": "Schema.org",
+      "url": "https://schema.org/FlightReservation",
+      "limit": 2,
+      "licenseHint": "Public travel reservation schema reference"
+    },
+    {
+      "title": "Schema.org LodgingReservation",
+      "provider": "Schema.org",
+      "url": "https://schema.org/LodgingReservation",
+      "limit": 2,
+      "licenseHint": "Public travel reservation schema reference"
+    },
+    {
+      "title": "Schema.org TrainReservation",
+      "provider": "Schema.org",
+      "url": "https://schema.org/TrainReservation",
+      "limit": 2,
+      "licenseHint": "Public travel reservation schema reference"
+    },
+    {
+      "title": "flight-reservation-emails summary",
+      "provider": "JohannesBuchner/flight-reservation-emails",
+      "url": "https://raw.githubusercontent.com/JohannesBuchner/flight-reservation-emails/master/summary.html",
+      "limit": 6,
+      "licenseHint": "Open-source curated travel summary fixture"
+    }
+  ],
+  "weakTravelSnapshots": [
+    {
+      "title": "Gmail Flight Reservation Markup",
+      "url": "https://developers.google.com/workspace/gmail/markup/reference/flight-reservation",
+      "snippetCount": 3,
+      "exampleCount": 0
+    },
+    {
+      "title": "Gmail Hotel Reservation Markup",
+      "url": "https://developers.google.com/workspace/gmail/markup/reference/hotel-reservation",
+      "snippetCount": 3,
+      "exampleCount": 0
+    },
+    {
+      "title": "Gmail Train Reservation Markup",
+      "url": "https://developers.google.com/workspace/gmail/markup/reference/train-reservation",
+      "snippetCount": 3,
+      "exampleCount": 3
+    },
+    {
+      "title": "Schema.org FlightReservation",
+      "url": "https://schema.org/FlightReservation",
+      "snippetCount": 2,
+      "exampleCount": 1
+    },
+    {
+      "title": "Schema.org LodgingReservation",
+      "url": "https://schema.org/LodgingReservation",
+      "snippetCount": 2,
+      "exampleCount": 1
+    },
+    {
+      "title": "Schema.org TrainReservation",
+      "url": "https://schema.org/TrainReservation",
+      "snippetCount": 2,
+      "exampleCount": 1
+    },
+    {
+      "title": "flight-reservation-emails summary",
+      "url": "https://raw.githubusercontent.com/JohannesBuchner/flight-reservation-emails/master/summary.html",
+      "snippetCount": 6,
+      "exampleCount": 2
+    }
+  ],
+  "ossRawArchives": [
+    {
+      "title": "Apache SpamAssassin easy_ham",
+      "provider": "Apache SpamAssassin",
+      "url": "https://spamassassin.apache.org/old/publiccorpus/20030228_easy_ham.tar.bz2",
+      "limit": 6,
+      "licenseHint": "Public corpus from Apache SpamAssassin",
+      "weakMine": false
+    },
+    {
+      "title": "Apache SpamAssassin hard_ham",
+      "provider": "Apache SpamAssassin",
+      "url": "https://spamassassin.apache.org/old/publiccorpus/20030228_hard_ham.tar.bz2",
+      "limit": 6,
+      "licenseHint": "Public corpus from Apache SpamAssassin",
+      "weakMine": false
+    },
+    {
+      "title": "Apache SpamAssassin spam_2",
+      "provider": "Apache SpamAssassin",
+      "url": "https://spamassassin.apache.org/old/publiccorpus/20050311_spam_2.tar.bz2",
+      "limit": 12,
+      "licenseHint": "Public corpus from Apache SpamAssassin",
+      "weakMine": true
+    }
+  ],
+  "tarAvailable": true
+}

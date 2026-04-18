@@ -11,8 +11,9 @@ const formatDate = (value: any) => {
 export const createMemoryAdapter = () => {
   // When Jest mocks 'pg' we can reuse that Pool so tests share the same db instance.
   let poolFactory = require('pg').Pool as typeof import('pg').Pool;
+  const isJestMock = Boolean((poolFactory as any)?._isMockFunction);
 
-  if (!process.env.JEST_WORKER_ID) {
+  if (!isJestMock) {
     const db = newDb({ autoCreateForeignKeyIndices: true, noAstCoverageCheck: true });
     const pgMem = db.adapters.createPg();
     db.public.registerFunction({ name: 'to_char', args: [DataType.date, DataType.text], returns: DataType.text, implementation: formatDate });

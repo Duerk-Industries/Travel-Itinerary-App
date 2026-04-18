@@ -1,0 +1,22 @@
+{
+  "tripId": "trip_123",
+  "status": "Booked",
+  "transferType": "Flight",
+  "passengerIds": ["member_1", "member_2"],
+  "departureDate": "2026-08-13",
+  "departureLocation": "Boston",
+  "departureAirportCode": "BOS",
+  "departureTime": "18:30",
+  "arrivalLocation": "Brussels",
+  "arrivalAirportCode": "BRU",
+  "arrivalDate": "2026-08-14",
+  "arrivalTime": "07:15",
+  "layoverLocation": "Reykjavik",
+  "layoverLocationCode": "KEF",
+  "layoverDuration": "1h 20m",
+  "cost": 842.5,
+  "carrier": "Icelandair",
+  "flightNumber": "FI634",
+  "bookingReference": "ABC123",
+  "paidBy": ["member_1"]
+}

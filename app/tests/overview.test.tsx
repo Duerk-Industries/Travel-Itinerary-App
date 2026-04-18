@@ -266,6 +266,7 @@ describe('Overview UI (nested itinerary)', () => {
   });
 
   afterEach(() => {
+    jest.useRealTimers();
     fetchMock.mockRestore();
     if (!originalFetch) {
       delete (global as any).fetch;
@@ -416,5 +417,97 @@ describe('Overview UI (nested itinerary)', () => {
     const { findByText } = await renderOverview(<OverviewTab {...staleTripProps} />);
     expect(await findByText(/Dates: .*March.*2026/i)).toBeTruthy();
     expect(await findByText('Tue. 3')).toBeTruthy();
+  });
+
+  test('shows weather badges on overview cards when the trip starts within 7 days', async () => {
+    const now = new Date();
+    const start = new Date(now.getTime() + 4 * 24 * 60 * 60 * 1000);
+    const end = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000);
+    const startDate = start.toISOString().slice(0, 10);
+    const endDate = end.toISOString().slice(0, 10);
+    fetchMock.mockImplementation(async (input: any) => {
+      const url = String(input);
+      if (url.includes('/api/itinerary/weather/overview')) {
+        return {
+          ok: true,
+          json: async () => ({
+            weather: [
+              {
+                date: startDate,
+                icon: '☀',
+                temperatureHighC: 22,
+                description: 'Clear',
+                resolvedLocation: 'Test City',
+              },
+              {
+                date: endDate,
+                icon: '🌧',
+                temperatureHighC: 19,
+                description: 'Rain',
+                resolvedLocation: 'Test City',
+              },
+            ],
+          }),
+        } as any;
+      }
+      return {
+        ok: true,
+        json: async () => [],
+      } as any;
+    });
+
+    const weatherTripProps = {
+      ...baseProps,
+      trip: {
+        ...baseProps.trip,
+        startDate,
+        endDate,
+      },
+    };
+
+    const { findByTestId, findByText } = await renderOverview(<OverviewTab {...weatherTripProps} />);
+    expect(await findByTestId('overview-day-card-1-weather')).toBeTruthy();
+    expect(await findByText('☀ 22°C')).toBeTruthy();
+  });
+
+  test('renders transfer rows for a followed-style trip payload', async () => {
+    const followedTripProps = {
+      ...baseProps,
+      trip: {
+        id: 'followed-trip-1',
+        groupId: 'group-1',
+        groupName: 'Group',
+        name: 'Followed Romania',
+        destination: 'Bucharest',
+        startDate: '2026-09-01',
+        endDate: '2026-09-03',
+        createdAt: '2026-08-01',
+      },
+      flights: [
+        {
+          id: 'flight-followed-1',
+          passenger_name: 'Bryan Traveler',
+          passenger_ids: ['member-1'],
+          trip_id: 'followed-trip-1',
+          departure_date: '2026-09-01',
+          departure_location: 'MXP',
+          departure_airport_code: 'MXP',
+          departure_time: '08:00',
+          arrival_date: '2026-09-01',
+          arrival_location: 'OTP',
+          arrival_airport_code: 'OTP',
+          arrival_time: '11:00',
+          cost: 124.58,
+          carrier: 'Ryanair',
+          flight_number: 'FR259',
+          booking_reference: 'ABC123',
+        },
+      ] as any[],
+    };
+
+    const { findByTestId, findByText } = await renderOverview(<OverviewTab {...followedTripProps} />);
+    expect(await findByText(/MXP - Travel day/i)).toBeTruthy();
+    fireEvent.press(await findByTestId('overview-day-card-1'));
+    expect(await findByText(/MXP → OTP/i)).toBeTruthy();
   });
 });

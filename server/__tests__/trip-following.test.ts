@@ -1,8 +1,7 @@
 import request from 'supertest';
-import { Pool } from 'pg';
 import { app } from '../src/app';
 import { closePool, initDb } from '../src/db';
-import { registerAndLoginWebUser } from './helpers';
+import { registerAndLoginWebUser, cleanupTestUsersByEmail } from './helpers';
 
 describe('Trip following (read-only)', () => {
   jest.setTimeout(60000);
@@ -20,17 +19,15 @@ describe('Trip following (read-only)', () => {
   let tripId = '';
   let ownerMemberId = '';
   let inviteCode = '';
-  let pool: Pool;
 
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
     await initDb();
-    pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
-    const ownerLogin = await registerAndLoginWebUser(pool, owner);
+    const ownerLogin = await registerAndLoginWebUser(owner);
     ownerToken = ownerLogin.token;
 
-    const followerLogin = await registerAndLoginWebUser(pool, follower);
+    const followerLogin = await registerAndLoginWebUser(follower);
     followerToken = followerLogin.token;
 
     const groups = await request(app).get('/api/groups').set('Authorization', `Bearer ${ownerToken}`).expect(200);
@@ -68,10 +65,7 @@ describe('Trip following (read-only)', () => {
   });
 
   afterAll(async () => {
-    if (pool) {
-      await pool.query('DELETE FROM users WHERE email IN ($1, $2)', [owner.email, follower.email]);
-      await pool.end();
-    }
+    await cleanupTestUsersByEmail([owner.email, follower.email]);
     await closePool();
   });
 

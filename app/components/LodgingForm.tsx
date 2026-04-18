@@ -4,6 +4,7 @@ import type { LodgingDraft } from '../tabs/lodging';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { toWebStyle } from '../utils/webStyle';
 import { DEFAULT_NEW_ITINERARY_STATUS, ITINERARY_STATUSES, normalizeItineraryStatus } from '../utils/itineraryStatus';
+import type { AppTheme } from '../theme/theme';
 
 type MemberOption = {
   id: string;
@@ -23,6 +24,7 @@ type LodgingFormProps = {
   payerName: (id: string) => string;
   defaultPayerId?: string | null;
   styles: Record<string, any>;
+  theme?: AppTheme;
   onOpenDatePicker?: (field: 'checkIn' | 'checkOut' | 'refundBy') => void;
   isCompact: boolean;
 };
@@ -35,6 +37,7 @@ const LodgingForm: React.FC<LodgingFormProps> = ({
   payerName,
   defaultPayerId,
   styles,
+  theme,
   onOpenDatePicker,
   isCompact,
 }) => {
@@ -76,15 +79,15 @@ const LodgingForm: React.FC<LodgingFormProps> = ({
     paddingVertical: 6,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#111',
-    backgroundColor: '#fff',
+    borderColor: theme?.colors.border ?? '#111',
+    backgroundColor: theme?.colors.surface ?? '#fff',
   };
   const toggleSelectedStyle = styles.toggleOptionSelected ?? {
-    backgroundColor: '#e5e7eb',
-    borderColor: '#111',
+    backgroundColor: theme ? (theme.mode === 'dark' ? '#1A3A50' : '#DDE8F0') : '#e5e7eb',
+    borderColor: theme?.colors.link ?? '#111',
   };
-  const toggleTextStyle = styles.toggleOptionText ?? { color: '#111', fontWeight: '600' };
-  const toggleTextSelectedStyle = styles.toggleOptionTextSelected ?? { color: '#111' };
+  const toggleTextStyle = styles.toggleOptionText ?? { color: theme?.colors.text ?? '#111', fontWeight: '600' };
+  const toggleTextSelectedStyle = styles.toggleOptionTextSelected ?? { color: theme?.colors.text ?? '#111' };
 
   const renderDateInput = (
     field: 'checkIn' | 'checkOut' | 'refundBy',

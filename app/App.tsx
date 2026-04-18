@@ -28,6 +28,7 @@ import ItinerariesTab from './tabs/itineraries';
 import HomeTab from './tabs/HomeTab';
 import DailyExpensesTab from './tabs/dailyExpenses';
 import LedgerTab from './tabs/ledger';
+import IngestionTab from './tabs/ingestion';
 import OverviewTab from './tabs/overview';
 import CreateTripWizard from './tabs/createTripWizard';
 import { buildAllExpenses, calculateAllTotals, type UnifiedExpense, computePayerTotals } from './utils/costs';
@@ -50,7 +51,7 @@ import {
   persistAppearancePreference,
 } from './utils/appearancePreference';
 import { getAppTheme, type AppTheme } from './theme/theme';
-import { shouldAllowPageChange, shouldDisableTab } from './utils/wizardGuard';
+import { FOLLOWED_TRIP_HIDDEN_PAGES, shouldAllowPageChange, shouldDisableTab } from './utils/wizardGuard';
 import * as WebBrowser from 'expo-web-browser';
 import { Buffer } from 'buffer';
 import { loadSession, saveSession, clearSession } from './utils/session';
@@ -201,6 +202,7 @@ type Page =
   | 'tours'
   | 'expenses'
   | 'ledger'
+  | 'ingest'
   | 'trips'
   | 'create-trip'
   | 'trip-details'
@@ -211,7 +213,7 @@ type Page =
   | 'following'
   | 'admin';
 
-type AdminSectionRoute = 'overview' | 'users' | 'tiers' | 'features' | 'user-data' | 'audit-log';
+type AdminSectionRoute = 'overview' | 'users' | 'tiers' | 'features' | 'user-data' | 'audit-log' | 'ingestion' | 'api-limits';
 
 type RootStackParamList = {
   Main: undefined;
@@ -226,13 +228,14 @@ type RootStackParamList = {
 const RootStack = createNativeStackNavigator<RootStackParamList>();
 const navigationRef = createNavigationContainerRef<RootStackParamList>();
 
-const adminScreenBySection: Record<AdminSectionRoute, keyof RootStackParamList> = {
+const adminScreenBySection: Partial<Record<AdminSectionRoute, keyof RootStackParamList>> = {
   overview: 'AdminOverview',
   users: 'AdminUsers',
   tiers: 'AdminTiers',
   features: 'AdminFeatures',
   'user-data': 'AdminUserData',
   'audit-log': 'AdminAuditLog',
+  // 'ingestion' and 'api-limits' are handled internally by AdminTab, no separate screen needed
 };
 
 const adminSectionByScreen: Record<Exclude<keyof RootStackParamList, 'Main'>, AdminSectionRoute> = {
@@ -273,7 +276,7 @@ const resolveBackendUrl = (): string => {
         process.env.BACKEND_URL)) ||
     '';
   const appConfigured = Constants.expoConfig?.extra?.backendUrl;
-  const configuredBackend = [envConfigured, appConfigured].find(
+  const configuredBackend = [appConfigured, envConfigured].find(
     (val) => typeof val === 'string' && val.trim().length > 0
   ) as string | undefined;
   const isLocalHost = (value: string) => /^(localhost|127\.0\.0\.1)$/i.test(value);
@@ -284,16 +287,32 @@ const resolveBackendUrl = (): string => {
     }
     return `${defaultProtocol}://${trimmed}`;
   };
-  if (process.env.NODE_ENV === 'development') {
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      const { hostname, protocol } = window.location;
-      if (isLocalHost(hostname)) {
-        if (configuredBackend && isLocalHost(new URL(normalizeBackendUrl(configuredBackend, 'http')).hostname)) {
-          return normalizeBackendUrl(configuredBackend, 'http');
-        }
-        return `${protocol}//${hostname}:4000`;
+  const remapLocalBackendHost = (raw: string, browserHostname: string): string => {
+    const normalized = normalizeBackendUrl(raw, 'http');
+    try {
+      const parsed = new URL(normalized);
+      if (!isLocalHost(parsed.hostname) || !isLocalHost(browserHostname)) {
+        return normalized;
       }
+      parsed.hostname = browserHostname;
+      return parsed.toString().replace(/\/$/, '');
+    } catch {
+      return normalized;
     }
+  };
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    const { hostname, protocol, port, origin } = window.location;
+    if (isLocalHost(hostname)) {
+      if (port === '4000') {
+        return origin.replace(/\/$/, '');
+      }
+      if (configuredBackend) {
+        return remapLocalBackendHost(configuredBackend, hostname);
+      }
+      return `${protocol}//${hostname}:4000`;
+    }
+  }
+  if (process.env.NODE_ENV === 'development') {
     if (configuredBackend) {
       return normalizeBackendUrl(configuredBackend, 'http');
     }
@@ -320,28 +339,92 @@ const refreshIntervalMs = resolveRefreshIntervalMs();
 const sessionKey = 'stp.session';
 const sessionDurationMs = 12 * 60 * 60 * 1000;
 
+const mapAuthErrorToMessage = (authError: string | null): string | null => {
+  switch (authError) {
+    case 'google_callback_failed':
+      return 'Google sign-in could not be completed. Please try again.';
+    case 'google_login_failed':
+      return 'Google sign-in did not return a user account. Please try again.';
+    case 'google_post_login_failed':
+      return 'Google sign-in succeeded, but your account could not be finished on the server. Please try again.';
+    default:
+      return authError ? 'Sign-in failed. Please try again.' : null;
+  }
+};
+
+// Capture auth params from the initial URL immediately, before React Navigation
+// can process and strip them via history.replaceState during mount.
+// Mutable so it can be consumed once and cleared.
+let _capturedInitialAuthParams: {
+  token: string | null;
+  authError: string | null;
+  requirePasswordSetup: boolean;
+  isConfirm: boolean;
+  isSecondaryConfirm: boolean;
+  rawUrl: string;
+} | null = (() => {
+  if (Platform.OS !== 'web' || typeof window === 'undefined') return null;
+  try {
+    const url = new URL(window.location.href);
+    const token = url.searchParams.get('token');
+    const authError = url.searchParams.get('auth_error');
+    if (!token && !authError) return null;
+    return {
+      token,
+      authError,
+      requirePasswordSetup: url.searchParams.get('require_password_setup') === '1',
+      isConfirm: url.pathname.endsWith('/confirm'),
+      isSecondaryConfirm: url.pathname.endsWith('/confirm-email'),
+      rawUrl: window.location.href,
+    };
+  } catch {
+    return null;
+  }
+})();
+
+const pendingFollowCodeStorageKey = 'stp.pendingFollowCode';
+
+const extractFollowCodeFromUrl = (rawUrl: string): string | null => {
+  try {
+    const url = new URL(rawUrl);
+    const followCode = url.searchParams.get('followCode');
+    return followCode ? followCode.trim() : null;
+  } catch {
+    return null;
+  }
+};
+
+let _capturedInitialFollowCode: string | null = (() => {
+  if (Platform.OS !== 'web' || typeof window === 'undefined') return null;
+  return extractFollowCodeFromUrl(window.location.href);
+})();
+
 const extractTokenFromUrl = (rawUrl: string) => {
   try {
     const url = new URL(rawUrl);
     const token = url.searchParams.get('token');
+    const authError = url.searchParams.get('auth_error');
     const requirePasswordSetup = url.searchParams.get('require_password_setup') === '1';
     const isConfirm = url.pathname.endsWith('/confirm');
     const isSecondaryConfirm = url.pathname.endsWith('/confirm-email');
     if (token) {
-      return { token, url, source: 'query' as const, isConfirm, isSecondaryConfirm, requirePasswordSetup };
+      return { token, authError, url, source: 'query' as const, isConfirm, isSecondaryConfirm, requirePasswordSetup };
+    }
+    if (authError) {
+      return { token: null, authError, url, source: 'query' as const, isConfirm, isSecondaryConfirm, requirePasswordSetup };
     }
     const hash = url.hash.startsWith('#') ? url.hash.slice(1) : url.hash;
     if (hash) {
       const hashParams = new URLSearchParams(hash);
       const hashToken = hashParams.get('token');
       if (hashToken) {
-        return { token: hashToken, url, source: 'hash' as const, isConfirm, isSecondaryConfirm, requirePasswordSetup };
+        return { token: hashToken, authError: null, url, source: 'hash' as const, isConfirm, isSecondaryConfirm, requirePasswordSetup };
       }
     }
   } catch (e) {
     // ignore invalid URLs
   }
-  return { token: null, url: null, source: null, isConfirm: false, isSecondaryConfirm: false, requirePasswordSetup: false } as const;
+  return { token: null, authError: null, url: null, source: null, isConfirm: false, isSecondaryConfirm: false, requirePasswordSetup: false } as const;
 };
 
 const decodeTokenClaims = (
@@ -429,6 +512,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [isRefreshing, setIsRefreshing] = useState(false);
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const refreshInFlightRef = useRef(false);
+  const autoRedeemedFollowCodeRef = useRef<string | null>(null);
   const [flights, setFlights] = useState<Flight[]>([]);
   const [externalFlightEditId, setExternalFlightEditId] = useState<string | null>(null);
   const [invites, setInvites] = useState<GroupInvite[]>([]);
@@ -442,6 +526,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [passwordSetupForm, setPasswordSetupForm] = useState({ newPassword: '', newPasswordConfirm: '' });
   const [isFirstLogin, setIsFirstLogin] = useState(false);
   const [emailConfirmationMessage, setEmailConfirmationMessage] = useState<string | null>(null);
+  const [authErrorMessage, setAuthErrorMessage] = useState<string | null>(null);
   const [followInviteCode, setFollowInviteCode] = useState('');
   const [followLoading, setFollowLoading] = useState(false);
   const [followError, setFollowError] = useState('');
@@ -450,7 +535,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [followCodeLoading, setFollowCodeLoading] = useState<Record<string, boolean>>({});
   const [followCodeError, setFollowCodeError] = useState<string | null>(null);
   const [followCodePayloads, setFollowCodePayloads] = useState<Record<string, InvitePayload>>({});
+  const [pendingFollowCode, setPendingFollowCode] = useState<string | null>(null);
   const [selectedFollowedTripId, setSelectedFollowedTripId] = useState<string | null>(null);
+  const [selectedFollowedTripDetails, setSelectedFollowedTripDetails] = useState<Trip | null>(null);
   const [groupName, setGroupName] = useState('');
   const [groupUserEmails, setGroupUserEmails] = useState('');
   const [groupGuestNames, setGroupGuestNames] = useState('');
@@ -625,6 +712,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const activeTrip = useMemo(() => trips.find((t) => t.id === activeTripId) ?? null, [trips, activeTripId]);
   const tripById = useMemo(() => new Map(trips.map((trip) => [trip.id, trip] as const)), [trips]);
   const groupById = useMemo(() => new Map(groups.map((group) => [group.id, group] as const)), [groups]);
+  const followedTripById = useMemo(
+    () => new Map(followedTrips.map((trip) => [trip.tripId, trip] as const)),
+    [followedTrips]
+  );
   const activeGroup = useMemo(
     () => (activeTrip?.groupId ? groupById.get(activeTrip.groupId) ?? null : null),
     [activeTrip?.groupId, groupById]
@@ -637,10 +728,39 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     () => (selectedTrip?.groupId ? groupById.get(selectedTrip.groupId) ?? null : null),
     [selectedTrip?.groupId, groupById]
   );
+  const selectedFollowedTrip = useMemo(
+    () => (selectedFollowedTripId ? followedTripById.get(selectedFollowedTripId) ?? null : null),
+    [followedTripById, selectedFollowedTripId]
+  );
+  const isFollowingMode = Boolean(selectedFollowedTripId);
+  const followedTripFallback = useMemo<Trip | null>(
+    () =>
+      selectedFollowedTrip
+        ? {
+            id: selectedFollowedTrip.tripId,
+            groupId: '',
+            groupName: '',
+            name: selectedFollowedTrip.tripName,
+            destination: selectedFollowedTrip.destination ?? selectedFollowedTrip.tripName,
+            startDate: null,
+            endDate: null,
+            durationDays: null,
+            createdAt: '',
+          }
+        : null,
+    [selectedFollowedTrip]
+  );
+  const activeTripForHome = selectedFollowedTripDetails ?? followedTripFallback;
+  const activeTripSelectorLabel = useMemo(() => {
+    if (isFollowingMode && selectedFollowedTrip?.tripName) {
+      return `${selectedFollowedTrip.tripName} (Following)`;
+    }
+    return activeTrip?.name ?? 'Select';
+  }, [activeTrip?.name, isFollowingMode, selectedFollowedTrip?.tripName]);
 
   const isTripWizardOpen = activePage === 'create-trip';
   const requestPageChange = useCallback((page: Page, opts?: { skipHistory?: boolean }) => {
-    if (!shouldAllowPageChange(activePage, page)) return;
+    if (!shouldAllowPageChange(activePage, page, { isFollowedTrip: isFollowingMode })) return;
     if (page === activePage) return;
     setPageForwardHistory([]);
     if (!opts?.skipHistory) {
@@ -650,7 +770,19 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       });
     }
     setActivePage(page);
-  }, [activePage]);
+  }, [activePage, isFollowingMode]);
+
+  const handleSelectOwnedTrip = useCallback((tripId: string) => {
+    setSelectedFollowedTripId(null);
+    setActiveTripId(tripId);
+  }, []);
+
+  const handleSelectFollowedTrip = useCallback((tripId: string) => {
+    setActiveTripId(tripId);
+    setSelectedFollowedTripId(tripId);
+    setShowActiveTripDropdown(false);
+    requestPageChange('home');
+  }, [requestPageChange]);
 
   const openAdminSection = useCallback((section: AdminSectionRoute = initialAdminSection) => {
     if (userRole !== 'admin') return;
@@ -684,6 +816,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   }, []);
 
   const addCarRental = useCallback(async () => {
+    if (isFollowingMode) return;
     if (!activeTripId) {
       alert('Select an active trip before adding a car rental.');
       return;
@@ -721,9 +854,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       setCarRentals(cars);
     }
     setCarDraft(createInitialCarRentalDraft());
-  }, [activeTripId, carDraft, defaultPayerId, memberIds, backendUrl, jsonHeaders, userToken]);
+  }, [activeTripId, carDraft, defaultPayerId, memberIds, backendUrl, jsonHeaders, userToken, isFollowingMode]);
 
   const addCarRentalFromOverview = useCallback(async (rental: CarRental) => {
+    if (isFollowingMode) return;
     if (!activeTripId) {
       alert('Select an active trip before adding a car rental.');
       return;
@@ -756,9 +890,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       const cars = await fetchCarRentalsForTrip({ backendUrl, activeTripId, token: userToken });
       setCarRentals(cars);
     }
-  }, [activeTripId, backendUrl, jsonHeaders, userToken]);
+  }, [activeTripId, backendUrl, jsonHeaders, userToken, isFollowingMode]);
 
   const removeCarRental = useCallback(async (id: string) => {
+    if (isFollowingMode) return;
     const res = await fetch(`${backendUrl}/api/car-rentals/${id}`, { method: 'DELETE', headers: jsonHeaders });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
@@ -778,9 +913,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       const cars = await fetchCarRentalsForTrip({ backendUrl, activeTripId, token: userToken });
       setCarRentals(cars);
     }
-  }, [backendUrl, jsonHeaders, activeTripId, userToken]);
+  }, [backendUrl, jsonHeaders, activeTripId, userToken, isFollowingMode]);
 
   const voteOnCarRental = useCallback(async (id: string, value: 1 | -1) => {
+    if (isFollowingMode) return;
     const res = await fetch(`${backendUrl}/api/car-rentals/${id}/vote`, {
       method: 'POST',
       headers: jsonHeaders,
@@ -795,9 +931,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       const cars = await fetchCarRentalsForTrip({ backendUrl, activeTripId, token: userToken });
       setCarRentals(cars);
     }
-  }, [backendUrl, jsonHeaders, activeTripId, userToken]);
+  }, [backendUrl, jsonHeaders, activeTripId, userToken, isFollowingMode]);
 
   const rateOnCarRental = useCallback(async (id: string, value: 1 | -1) => {
+    if (isFollowingMode) return;
     const res = await fetch(`${backendUrl}/api/car-rentals/${id}/rating`, {
       method: 'POST',
       headers: jsonHeaders,
@@ -812,7 +949,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       const cars = await fetchCarRentalsForTrip({ backendUrl, activeTripId, token: userToken });
       setCarRentals(cars);
     }
-  }, [backendUrl, jsonHeaders, activeTripId, userToken]);
+  }, [backendUrl, jsonHeaders, activeTripId, userToken, isFollowingMode]);
 
   const openCarDatePicker = useCallback((field: 'pickup' | 'dropoff') => {
     if (Platform.OS !== 'web' && NativeDateTimePicker) {
@@ -1031,6 +1168,46 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     clearSession();
   }, []);
 
+  const handleFollowTripByCode = useCallback(async (inviteCode: string): Promise<string | null> => {
+    if (!userToken) return 'You need to be logged in';
+    const code = inviteCode.trim();
+    if (!code) return 'Enter a follow code';
+    setFollowLoading(true);
+    setFollowError('');
+    try {
+      const res = await fetch(`${backendUrl}/api/trips/follow`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
+        body: JSON.stringify({ inviteCode: code }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401 || res.status === 403) {
+        logout();
+        return 'Unauthorized';
+      }
+      if (!res.ok) {
+        const message = data.error || 'Unable to follow trip';
+        setFollowError(message);
+        return message;
+      }
+      try {
+        const trips = await fetchFollowedTripsApi(backendUrl, { Authorization: `Bearer ${userToken}` });
+        setFollowedTrips(trips);
+      } catch {
+        // Ignore refresh failures after a successful follow.
+      }
+      setFollowInviteCode('');
+      setFollowError('');
+      return null;
+    } catch (err) {
+      const message = (err as Error).message || 'Unable to follow trip';
+      setFollowError(message);
+      return message;
+    } finally {
+      setFollowLoading(false);
+    }
+  }, [backendUrl, logout, userToken]);
+
   const loadAccountProfile = useCallback(
     (token?: string) =>
       fetchAccountProfile({
@@ -1086,6 +1263,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   };
 
   const loginWithGoogle = async () => {
+    setAuthErrorMessage(null);
     const redirectUrl = buildLoginRedirectUrl();
     const authUrl = `${backendUrl}/api/auth/google?redirect_uri=${encodeURIComponent(redirectUrl)}`;
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -1154,7 +1332,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
   useEffect(() => {
     const handleDeepLink = (event: { url: string }) => {
-      const { token, isConfirm, isSecondaryConfirm, requirePasswordSetup } = extractTokenFromUrl(event.url);
+      const { token, authError, isConfirm, isSecondaryConfirm, requirePasswordSetup } = extractTokenFromUrl(event.url);
       if (token && isConfirm) {
         confirmEmailToken(token, event.url);
         return;
@@ -1165,6 +1343,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       }
       if (token) {
         handleAuthSuccess(token, undefined, { requirePasswordSetup });
+        return;
+      }
+      if (authError) {
+        const message = mapAuthErrorToMessage(authError);
+        if (message) {
+          setAuthErrorMessage(message);
+        }
       }
     };
 
@@ -1206,22 +1391,46 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
     const subscription = Linking.addEventListener('url', handleDeepLink);
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      const { token, url, isConfirm, isSecondaryConfirm, requirePasswordSetup } = extractTokenFromUrl(window.location.href);
+      // Use params captured at module load time (before React Navigation could strip them),
+      // falling back to the current URL for deep links that arrive later.
+      // Consume once so re-runs of this effect don't re-process the same params.
+      const captured = _capturedInitialAuthParams;
+      _capturedInitialAuthParams = null;
+      const source = captured ?? extractTokenFromUrl(window.location.href);
+      const token = 'token' in source ? source.token : null;
+      const authError = 'authError' in source ? source.authError : null;
+      const requirePasswordSetup = source.requirePasswordSetup;
+      const isConfirm = source.isConfirm;
+      const isSecondaryConfirm = source.isSecondaryConfirm;
+      const rawUrl = captured?.rawUrl ?? window.location.href;
       if (token && isConfirm) {
-        confirmEmailToken(token, window.location.href);
+        confirmEmailToken(token, rawUrl);
       } else if (token && isSecondaryConfirm) {
-        confirmSecondaryEmailToken(token, window.location.href);
+        confirmSecondaryEmailToken(token, rawUrl);
       } else if (token) {
         handleAuthSuccess(token, undefined, { requirePasswordSetup });
-        url.searchParams.delete('token');
-        url.searchParams.delete('require_password_setup');
-        if (url.hash) {
-          const hashParams = new URLSearchParams(url.hash.slice(1));
-          hashParams.delete('token');
-          const newHash = hashParams.toString();
-          url.hash = newHash ? `#${newHash}` : '';
+        try {
+          const cleanUrl = new URL(rawUrl);
+          cleanUrl.searchParams.delete('token');
+          cleanUrl.searchParams.delete('require_password_setup');
+          if (cleanUrl.hash) {
+            const hashParams = new URLSearchParams(cleanUrl.hash.slice(1));
+            hashParams.delete('token');
+            const newHash = hashParams.toString();
+            cleanUrl.hash = newHash ? `#${newHash}` : '';
+          }
+          window.history.replaceState({}, '', cleanUrl.toString());
+        } catch { /* ignore */ }
+      } else if (authError) {
+        const message = mapAuthErrorToMessage(authError);
+        if (message) {
+          setAuthErrorMessage(message);
         }
-        window.history.replaceState({}, '', url.toString());
+        try {
+          const cleanUrl = new URL(rawUrl);
+          cleanUrl.searchParams.delete('auth_error');
+          window.history.replaceState({}, '', cleanUrl.toString());
+        } catch { /* ignore */ }
       }
     }
     return () => {
@@ -1265,6 +1474,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   };
 
   const loginWithPassword = async () => {
+    setAuthErrorMessage(null);
     try {
       const res = await fetch(`${backendUrl}/api/web-auth/login`, {
         method: 'POST',
@@ -1277,18 +1487,18 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         if (res.status === 403 && /confirm/i.test(message)) {
           setShowResendConfirmation(true);
         }
-        alert(data.error || 'Login failed');
+        setAuthErrorMessage(data.error || 'Login failed');
         return;
       }
       setShowResendConfirmation(false);
       if (!data?.user || typeof data.token !== 'string') {
-        alert(data.error || 'Login failed');
+        setAuthErrorMessage(data.error || 'Login failed');
         return;
       }
       handleAuthSuccess(data.token, Boolean(data.firstLogin));
     } catch (err) {
       const message = (err as Error).message || 'Login failed';
-      alert(`${message} (backend: ${backendUrl})`);
+      setAuthErrorMessage(`${message} (backend: ${backendUrl})`);
     }
   };
 
@@ -1319,6 +1529,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   };
 
   const register = async () => {
+    setAuthErrorMessage(null);
     if (authForm.password !== authForm.passwordConfirm) {
       alert('Passwords do not match');
       return;
@@ -1459,10 +1670,11 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     const res = await fetch(`${backendUrl}/api/groups?sort=${sort ?? groupSort}`, {
       headers: { Authorization: `Bearer ${userToken}` },
     });
-    if (res.status === 401 || res.status === 403) {
+    if (res.status === 401 || (res.status === 403 && !requirePasswordSetup)) {
       logout();
       return;
     }
+    if (res.status === 403) return;
     if (!res.ok) return;
     const data = await res.json();
     const normalized = (Array.isArray(data) ? data : []).map((group: GroupView) => ({
@@ -1473,7 +1685,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     if (!newTripGroupId && normalized.length) {
       setNewTripGroupId(normalized[0].id);
     }
-  }, [backendUrl, groupSort, newTripGroupId, userToken, logout]);
+  }, [backendUrl, groupSort, newTripGroupId, userToken, logout, requirePasswordSetup]);
 
   const fetchTrips = useCallback(async (tokenOverride?: string): Promise<Trip[]> => {
     const authToken = tokenOverride ?? userToken;
@@ -1483,30 +1695,31 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     }
     try {
       const res = await fetch(`${backendUrl}/api/trips`, { headers: { Authorization: `Bearer ${authToken}` } });
-      if (res.status === 401 || res.status === 403) {
+      if (res.status === 401 || (res.status === 403 && !requirePasswordSetup)) {
         logout();
         return [];
       }
+      if (res.status === 403) return [];
       if (!res.ok) return [];
       const data = await res.json();
       setTrips(data);
       if (!activeTripId && data.length) {
         setActiveTripId(data[0].id);
-      } else if (activeTripId && !data.find((t: Trip) => t.id === activeTripId)) {
+      } else if (activeTripId && !isFollowingMode && !data.find((t: Trip) => t.id === activeTripId)) {
         setActiveTripId(data[0]?.id ?? null);
       }
       return data;
     } catch {
       return [];
     }
-  }, [activeTripId, backendUrl, logout, userToken]);
+  }, [activeTripId, backendUrl, isFollowingMode, logout, userToken, requirePasswordSetup]);
 
   const fetchGroupMembersForActiveTrip = useCallback(async () => {
     if (!userToken || !activeTripId) {
       setGroupMembers([]);
       return;
     }
-    const trip = trips.find((t) => t.id === activeTripId);
+    const trip = isFollowingMode ? selectedFollowedTripDetails : trips.find((t) => t.id === activeTripId);
     const groupId = trip?.groupId;
     if (!groupId) {
       setGroupMembers([]);
@@ -1534,7 +1747,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     } catch {
       setGroupMembers([]);
     }
-  }, [activeTripId, backendUrl, trips, userToken]);
+  }, [activeTripId, backendUrl, isFollowingMode, selectedFollowedTripDetails, trips, userToken]);
 
   const fetchTraits = useCallback(async () => {
     if (!userToken) return;
@@ -1628,7 +1841,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
   const refreshAllData = useCallback(async (tokenOverride?: string) => {
     const authToken = tokenOverride ?? userToken;
-    if (!authToken || refreshInFlightRef.current) return;
+    if (!authToken || refreshInFlightRef.current || requirePasswordSetup) return;
     refreshInFlightRef.current = true;
     setIsRefreshing(true);
     try {
@@ -1683,14 +1896,15 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     loadFamilyRelationships,
     loadFellowTravelers,
     backendUrl,
-    logout
+    logout,
+    requirePasswordSetup
   ]);
 
   useEffect(() => {
-    if (userToken) {
+    if (userToken && !requirePasswordSetup) {
       refreshAllData();
     }
-  }, [userToken]);
+  }, [userToken, requirePasswordSetup, refreshAllData]);
 
   // Socket.IO: join trip room when active trip changes
   useEffect(() => {
@@ -1812,12 +2026,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   ]);
 
   useEffect(() => {
-    if (userToken) {
+    if (userToken && !requirePasswordSetup) {
       fetchTrips();
       fetchGroups();
       fetchInvites();
     }
-  }, [userToken]);
+  }, [userToken, requirePasswordSetup, fetchTrips, fetchGroups, fetchInvites]);
 
   useEffect(() => {
     if (userToken) return;
@@ -1856,6 +2070,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           sessionPage === 'tours' ||
           sessionPage === 'expenses' ||
           sessionPage === 'ledger' ||
+          sessionPage === 'ingest' ||
           sessionPage === 'cost' ||
           sessionPage === 'account' ||
           sessionPage === 'follow' ||
@@ -1878,6 +2093,22 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     if (Object.keys(storedPayloads).length) {
       setFollowCodePayloads(storedPayloads);
     }
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const storedPending = window.localStorage.getItem(pendingFollowCodeStorageKey)?.trim() || null;
+      const initialFollowCode = _capturedInitialFollowCode ?? extractFollowCodeFromUrl(window.location.href) ?? storedPending;
+      _capturedInitialFollowCode = null;
+      if (initialFollowCode) {
+        setPendingFollowCode(initialFollowCode);
+        setFollowInviteCode(initialFollowCode);
+        try {
+          const cleanUrl = new URL(window.location.href);
+          cleanUrl.searchParams.delete('followCode');
+          window.history.replaceState({}, '', cleanUrl.toString());
+        } catch {
+          // ignore cleanup failures
+        }
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -1889,6 +2120,15 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   }, [followCodePayloads]);
 
   useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+    if (pendingFollowCode) {
+      window.localStorage.setItem(pendingFollowCodeStorageKey, pendingFollowCode);
+    } else {
+      window.localStorage.removeItem(pendingFollowCodeStorageKey);
+    }
+  }, [pendingFollowCode]);
+
+  useEffect(() => {
     if (!selectedFollowedTripId) return;
     if (!followedTrips.some((trip) => trip.tripId === selectedFollowedTripId)) {
       setSelectedFollowedTripId(null);
@@ -1896,7 +2136,50 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   }, [followedTrips, selectedFollowedTripId]);
 
   useEffect(() => {
-    if (!userToken) return;
+    if (!selectedFollowedTripId || !userToken) {
+      setSelectedFollowedTripDetails(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`${backendUrl}/api/trips/${selectedFollowedTripId}`, {
+          headers: { Authorization: `Bearer ${userToken}` },
+        });
+        if (!res.ok) {
+          if (!cancelled) setSelectedFollowedTripDetails(null);
+          return;
+        }
+        const data = await res.json().catch(() => null);
+        if (!cancelled && data?.id) {
+          setSelectedFollowedTripDetails({
+            id: data.id,
+            groupId: data.groupId ?? '',
+            groupName: data.groupName ?? '',
+            name: data.name ?? selectedFollowedTrip?.tripName ?? 'Trip',
+            description: data.description ?? null,
+            destination: data.destination ?? selectedFollowedTrip?.destination ?? null,
+            locationIds: Array.isArray(data.locationIds) ? data.locationIds : [],
+            startDate: data.startDate ?? null,
+            endDate: data.endDate ?? null,
+            startMonth: data.startMonth ?? null,
+            startYear: data.startYear ?? null,
+            durationDays: data.durationDays ?? null,
+            currency: data.currency ?? null,
+            createdAt: data.createdAt ?? '',
+          });
+        }
+      } catch {
+        if (!cancelled) setSelectedFollowedTripDetails(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [backendUrl, selectedFollowedTrip?.destination, selectedFollowedTrip?.tripName, selectedFollowedTripId, userToken]);
+
+  useEffect(() => {
+    if (!userToken || requirePasswordSetup) return;
     if (!Number.isFinite(refreshIntervalMs) || refreshIntervalMs <= 0) return;
     const now = Date.now();
     const last = lastRefreshAt ?? now;
@@ -1913,29 +2196,50 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         refreshTimerRef.current = null;
       }
     };
-  }, [activeTripId, lastRefreshAt, userToken, refreshIntervalMs, refreshAllData]);
+  }, [activeTripId, lastRefreshAt, userToken, requirePasswordSetup, refreshIntervalMs, refreshAllData]);
 
   useEffect(() => {
-    if (userToken) {
+    if (userToken && !requirePasswordSetup) {
       fetchFlights();
       fetchLodgings();
       fetchTours();
       fetchExpenses();
     }
-  }, [activeTripId, fetchFlights, fetchLodgings, fetchTours, fetchExpenses]);
+  }, [activeTripId, fetchFlights, fetchLodgings, fetchTours, fetchExpenses, userToken, requirePasswordSetup]);
 
   useEffect(() => {
-    if (userToken) {
+    if (userToken && !requirePasswordSetup) {
       loadFamilyRelationships();
       loadFellowTravelers();
     }
-  }, [loadFamilyRelationships, loadFellowTravelers, userToken]);
+  }, [loadFamilyRelationships, loadFellowTravelers, userToken, requirePasswordSetup]);
 
   useEffect(() => {
-    if (userToken) {
+    if (!userToken || requirePasswordSetup || !pendingFollowCode) return;
+    const redemptionKey = `${userToken}:${pendingFollowCode}`;
+    if (autoRedeemedFollowCodeRef.current === redemptionKey) return;
+    autoRedeemedFollowCodeRef.current = redemptionKey;
+
+    let cancelled = false;
+    const redeemFollowCode = async () => {
+      const error = await handleFollowTripByCode(pendingFollowCode);
+      if (cancelled) return;
+      if (!error) {
+        setPendingFollowCode(null);
+      }
+    };
+
+    void redeemFollowCode();
+    return () => {
+      cancelled = true;
+    };
+  }, [handleFollowTripByCode, pendingFollowCode, requirePasswordSetup, userToken]);
+
+  useEffect(() => {
+    if (userToken && !requirePasswordSetup) {
       fetchGroupMembersForActiveTrip();
     }
-  }, [userToken, activeTripId, trips, fetchGroupMembersForActiveTrip]);
+  }, [userToken, requirePasswordSetup, activeTripId, trips, fetchGroupMembersForActiveTrip]);
 
   useEffect(() => {
     if (!userToken || !activeTripId) {
@@ -2157,12 +2461,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const goBack = useCallback(() => {
     if (pageHistory.length === 0) return;
     const previousPage = pageHistory[pageHistory.length - 1];
-    if (shouldAllowPageChange(activePage, previousPage)) {
+    if (shouldAllowPageChange(activePage, previousPage, { isFollowedTrip: isFollowingMode })) {
       setPageForwardHistory((prev) => [activePage, ...prev].slice(0, 25));
       setPageHistory((prev) => prev.slice(0, -1));
       setActivePage(previousPage);
     }
-  }, [pageHistory, activePage]);
+  }, [pageHistory, activePage, isFollowingMode]);
 
   const closeTripWizard = useCallback(() => {
     setPageForwardHistory([]);
@@ -2172,12 +2476,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const goForward = useCallback(() => {
     if (pageForwardHistory.length === 0) return;
     const nextPage = pageForwardHistory[0];
-    if (shouldAllowPageChange(activePage, nextPage)) {
+    if (shouldAllowPageChange(activePage, nextPage, { isFollowedTrip: isFollowingMode })) {
       setPageHistory((prev) => [...prev, activePage].slice(-25));
       setPageForwardHistory((prev) => prev.slice(1));
       setActivePage(nextPage);
     }
-  }, [pageForwardHistory, activePage]);
+  }, [pageForwardHistory, activePage, isFollowingMode]);
 
   useEffect(() => {
     if (!userToken) return;
@@ -2200,14 +2504,22 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       'follow',
       'following',
       'itinerary',
+      'ingest',
     ];
-    return new Set(pages.filter((page) => shouldDisableTab(activePage, page)));
-  }, [activePage]);
+    return new Set(pages.filter((page) => shouldDisableTab(activePage, page, { isFollowedTrip: isFollowingMode })));
+  }, [activePage, isFollowingMode]);
+  const hiddenPages = useMemo(
+    () => new Set<string>(isFollowingMode ? FOLLOWED_TRIP_HIDDEN_PAGES : []),
+    [isFollowingMode]
+  );
   const activeTripName = useMemo(
     () => activeTrip?.name?.replace(/\s/g, '_') ?? 'export',
     [activeTrip?.name]
   );
-  const getActiveTrip = useCallback(() => activeTrip ?? undefined, [activeTrip]);
+  const getActiveTrip = useCallback(
+    () => activeTripForHome ?? activeTrip ?? undefined,
+    [activeTrip, activeTripForHome]
+  );
   const handleHomeNavigate = useCallback((page: string) => requestPageChange(page as Page), [requestPageChange]);
   const handleFlightsDataChanged = useCallback(() => {
     fetchFlights();
@@ -2217,6 +2529,20 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     fetchLodgings();
     fetchExpenses();
   }, [fetchExpenses, fetchLodgings]);
+
+  const handleIngestionAssignmentApplied = useCallback(
+    async ({ tripId }: { itemType: string; tripId: string }) => {
+      if (!tripId || tripId !== activeTripId) return;
+      await Promise.all([
+        fetchFlights(),
+        fetchLodgings(),
+        fetchTours(),
+        fetchCarRentals(),
+        fetchExpenses(),
+      ]);
+    },
+    [activeTripId, fetchCarRentals, fetchExpenses, fetchFlights, fetchLodgings, fetchTours]
+  );
   const handleToursDataChanged = useCallback(() => {
     fetchTours();
     fetchExpenses();
@@ -2245,6 +2571,22 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       setSelectedFollowedTripId((prev) => (prev === tripId ? null : prev));
     },
     [backendUrl, headers, logout]
+  );
+
+  const renderSharedPageScroll = (content: React.ReactNode) => (
+    <ScrollView
+      style={styles.pageScroll}
+      contentContainerStyle={[styles.pageScrollContent, iosSafariContentInsetStyle]}
+      keyboardShouldPersistTaps="handled"
+    >
+      <View style={styles.pageScrollInner}>{content}</View>
+    </ScrollView>
+  );
+
+  const renderBoundedPage = (content: React.ReactNode) => (
+    <View style={styles.pageViewport}>
+      <View style={[styles.pageViewportInner, iosSafariContentInsetStyle]}>{content}</View>
+    </View>
   );
 
   const mainWorkspace = (
@@ -2299,41 +2641,62 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                 <Text style={styles.buttonText}>Share</Text>
               </TouchableOpacity>
             ) : null}
-            {trips.length ? (
-              <TouchableOpacity
-                activeOpacity={0.8}
-                disabled={isTripWizardOpen}
-                style={[
-                  styles.input,
-                  styles.inlineInput,
-                  styles.dropdown,
-                  styles.activeTrip,
-                  styles.topBarTripControl,
-                  isNarrowLayout && styles.activeTripNarrow,
-                  isTripWizardOpen && styles.buttonDisabled,
-                ]}
-                onPress={() => setShowActiveTripDropdown((s) => !s)}
-              >
-                <Text style={styles.cellText} numberOfLines={1} ellipsizeMode="tail">
-                  Active Trip: {activeTrip?.name ?? 'Select'}
-                </Text>
-                {showActiveTripDropdown && (
-                  <View style={styles.dropdownList}>
-                    {trips.map((trip) => (
-                      <TouchableOpacity
-                        key={trip.id}
-                        style={styles.dropdownOption}
-                        onPress={() => {
-                          setActiveTripId(trip.id);
-                          setShowActiveTripDropdown(false);
-                        }}
-                      >
-                        <Text style={styles.cellText}>{trip.name}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
-              </TouchableOpacity>
+            {trips.length || followedTrips.length ? (
+              <View style={{ alignItems: 'flex-end' }}>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  disabled={isTripWizardOpen}
+                  style={[
+                    styles.input,
+                    styles.inlineInput,
+                    styles.dropdown,
+                    styles.activeTrip,
+                    styles.topBarTripControl,
+                    isNarrowLayout && styles.activeTripNarrow,
+                    isTripWizardOpen && styles.buttonDisabled,
+                  ]}
+                  onPress={() => setShowActiveTripDropdown((s) => !s)}
+                >
+                  <Text style={styles.cellText} numberOfLines={1} ellipsizeMode="tail">
+                    Active Trip: {activeTripSelectorLabel}
+                  </Text>
+                  {showActiveTripDropdown && (
+                    <View style={styles.dropdownList}>
+                      {trips.map((trip) => (
+                        <TouchableOpacity
+                          key={trip.id}
+                          style={styles.dropdownOption}
+                          onPress={() => {
+                            handleSelectOwnedTrip(trip.id);
+                            setShowActiveTripDropdown(false);
+                          }}
+                        >
+                          <Text style={styles.cellText}>{trip.name}</Text>
+                        </TouchableOpacity>
+                      ))}
+                      {followedTrips.length ? (
+                        <View>
+                          <Text style={styles.modalLabelSmall}>Followed Trips</Text>
+                          {followedTrips.map((trip) => (
+                            <TouchableOpacity
+                              key={`followed-${trip.tripId}`}
+                              style={styles.dropdownOption}
+                              onPress={() => {
+                                handleSelectFollowedTrip(trip.tripId);
+                              }}
+                            >
+                              <Text style={styles.cellText}>{trip.tripName} (Following)</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      ) : null}
+                    </View>
+                  )}
+                </TouchableOpacity>
+                {activePage === 'overview' ? (
+                  <Text style={[styles.modalLabelSmall, { marginTop: 4, textAlign: 'right' }]}>Click to Change Trip</Text>
+                ) : null}
+              </View>
             ) : null}
             <View style={[styles.topRight, isNarrowLayout && styles.topRightNarrow]}>
               {!isPhoneLayout ? (
@@ -2342,6 +2705,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                     <PresenceAvatars
                       currentUserId={userId ?? ''}
                       presenceUsers={presenceUsers}
+                      theme={theme}
                     />
                   )}
                   <TouchableOpacity
@@ -2360,7 +2724,11 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   <Text style={styles.buttonText}>Admin</Text>
                 </TouchableOpacity>
               ) : null}
-              <TouchableOpacity style={[styles.button, styles.smallButton, styles.topBarActionButton]} onPress={logout}>
+              <TouchableOpacity
+                style={[styles.button, styles.smallButton, styles.topBarActionButton]}
+                onPress={logout}
+                testID="topbar-logout"
+              >
                 <Text style={styles.buttonText}>Logout</Text>
               </TouchableOpacity>
             </View>
@@ -2368,91 +2736,119 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         ) : null}
       </View>
       {userToken ? (
-        <ScrollView
-          style={styles.contentScroll}
-          contentContainerStyle={[styles.contentScrollContent, iosSafariContentInsetStyle]}
-        >
-          {activePage === 'home' ? (
-            <HomeTab
-              backendUrl={backendUrl}
-              headers={headers}
-              activeTripId={activeTripId}
-              trips={trips}
-              styles={styles}
-              onSelectTrip={setActiveTripId}
-              onNavigate={handleHomeNavigate}
-              disabledPages={disabledPages}
-            />
-          ) : null}
+        <View style={styles.contentViewport}>
+          {activePage === 'home'
+            ? renderBoundedPage(
+                <HomeTab
+                  backendUrl={backendUrl}
+                  headers={headers}
+                  activeTripId={activeTripId}
+                  trips={trips}
+                  followedTrips={followedTrips}
+                  userRole={userRole}
+                  activeTripOverride={activeTripForHome}
+                  styles={styles}
+                  onSelectTrip={handleSelectOwnedTrip}
+                  onSelectFollowedTrip={handleSelectFollowedTrip}
+                  onNavigate={handleHomeNavigate}
+                  onFollowTrip={handleFollowTripByCode}
+                  disabledPages={disabledPages}
+                  hiddenPages={hiddenPages}
+                />
+              )
+            : null}
 
-          {activePage === 'itinerary' ? (
-            <ItinerariesTab
-              backendUrl={backendUrl}
-              userToken={userToken}
-              activeTripId={activeTripId}
-              activeTrip={activeTrip}
-              traits={traits}
-              headers={headers}
-              setActiveTripId={setActiveTripId}
-              onAiItineraryQueued={onAiItineraryQueued}
-              styles={styles}
-            />
-          ) : null}
+          {activePage === 'itinerary'
+            ? renderSharedPageScroll(
+                <ItinerariesTab
+                  backendUrl={backendUrl}
+                  userToken={userToken}
+                  activeTripId={activeTripId}
+                  activeTrip={activeTrip}
+                  traits={traits}
+                  headers={headers}
+                  setActiveTripId={setActiveTripId}
+                  onAiItineraryQueued={onAiItineraryQueued}
+                  styles={styles}
+                />
+              )
+            : null}
 
-          {activePage === 'tours' ? (
-            <ActivityTab
-              backendUrl={backendUrl}
-              userToken={userToken}
-              activeTripId={activeTripId}
-              tours={tours}
-              setTours={setTours}
-              defaultPayerId={defaultPayerId}
-              payerName={payerName}
-              formatMemberName={formatMemberName}
-              groupMembers={groupMembers}
-              jsonHeaders={jsonHeaders}
-              payerTotals={tourPayerTotals}
-              toursTotal={toursTotal}
-              styles={styles}
-              nativeDateTimePicker={NativeDateTimePicker}
-              fetchTours={fetchTours}
-            />
-          ) : null}
+          {activePage === 'tours'
+            ? renderSharedPageScroll(
+                <ActivityTab
+                  backendUrl={backendUrl}
+                  userToken={userToken}
+                  activeTripId={activeTripId}
+                  tours={tours}
+                  setTours={setTours}
+                  defaultPayerId={defaultPayerId}
+                  payerName={payerName}
+                  formatMemberName={formatMemberName}
+                  groupMembers={groupMembers}
+                  jsonHeaders={jsonHeaders}
+                  payerTotals={tourPayerTotals}
+                  toursTotal={toursTotal}
+                  styles={styles}
+                  theme={theme}
+                  nativeDateTimePicker={NativeDateTimePicker}
+                  fetchTours={fetchTours}
+                  readOnly={isFollowingMode}
+                />
+              )
+            : null}
 
-          {activePage === 'expenses' ? (
-            <DailyExpensesTab
-              backendUrl={backendUrl}
-              headers={headers}
-              jsonHeaders={jsonHeaders}
-              trip={activeTrip}
-              groupMembers={groupMembers}
-              expenses={expenses}
-              setExpenses={setExpenses}
-              defaultPayerId={defaultPayerId}
-              styles={styles}
-            />
-          ) : null}
+          {activePage === 'expenses'
+            ? renderSharedPageScroll(
+                <DailyExpensesTab
+                  backendUrl={backendUrl}
+                  headers={headers}
+                  jsonHeaders={jsonHeaders}
+                  trip={activeTrip}
+                  groupMembers={groupMembers}
+                  expenses={expenses}
+                  setExpenses={setExpenses}
+                  defaultPayerId={defaultPayerId}
+                  styles={styles}
+                />
+              )
+            : null}
 
-          {activePage === 'ledger' ? (
-            <LedgerTab
-              trip={activeTrip}
-              groupMembers={groupMembers}
-              reportableMembers={reportableMembers}
-              paidTotals={ledgerPaidTotals}
-              usedTotals={ledgerUsedTotals}
-              styles={styles}
-              onNavigate={requestPageChange}
-              downloadCsv={downloadCsv}
-              findActiveTrip={getActiveTrip}
-              coveredBy={coveredBy}
-              setCoveredBy={setCoveredBy}
-              formatMemberName={formatMemberName}
-              payerName={payerName}
-              saveCoveredBy={saveCoveredBy}
-            />
-          ) : null}
+          {activePage === 'ledger'
+            ? renderSharedPageScroll(
+                <LedgerTab
+                  trip={activeTripForHome ?? activeTrip}
+                  groupMembers={groupMembers}
+                  reportableMembers={reportableMembers}
+                  paidTotals={ledgerPaidTotals}
+                  usedTotals={ledgerUsedTotals}
+                  styles={styles}
+                  onNavigate={requestPageChange}
+                  downloadCsv={downloadCsv}
+                  findActiveTrip={getActiveTrip}
+                  coveredBy={coveredBy}
+                  setCoveredBy={setCoveredBy}
+                  formatMemberName={formatMemberName}
+                  payerName={payerName}
+                  saveCoveredBy={saveCoveredBy}
+                  readOnly={isFollowingMode}
+                />
+              )
+            : null}
 
-          {activePage === 'cost' ? (
+          {activePage === 'ingest'
+            ? renderSharedPageScroll(
+                <IngestionTab
+                  backendUrl={backendUrl}
+                  headers={headers}
+                  styles={styles}
+                  onNavigate={handleHomeNavigate}
+                  onAssignmentApplied={handleIngestionAssignmentApplied}
+                />
+              )
+            : null}
+
+          {activePage === 'cost' ? renderSharedPageScroll(
             <View style={[styles.card, styles.flightsSection]}>
               <View style={styles.sectionHeaderRow}>
                 <Text style={styles.sectionTitle}>Cost Report</Text>
@@ -2477,12 +2873,14 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   >
                     <Text style={styles.buttonText}>Export Incurred CSV</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.button, styles.smallButton]}
-                    onPress={() => requestPageChange('ledger')}
-                  >
-                    <Text style={styles.buttonText}>📒 Ledger</Text>
-                  </TouchableOpacity>
+                  {!isFollowingMode ? (
+                    <TouchableOpacity
+                      style={[styles.button, styles.smallButton]}
+                      onPress={() => requestPageChange('ledger')}
+                    >
+                      <Text style={styles.buttonText}>📒 Ledger</Text>
+                    </TouchableOpacity>
+                  ) : null}
                 </View>
               </View>
               <Text style={styles.helperText}>Combined totals by category and user.</Text>
@@ -2540,66 +2938,71 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             </View>
           ) : null}
 
-          {activePage === 'account' ? (
-            <AccountTab
+          {activePage === 'account'
+            ? renderSharedPageScroll(
+                <AccountTab
+                  backendUrl={backendUrl}
+                  userToken={userToken}
+                  activePage={activePage}
+                  accountProfile={accountProfile}
+                  setAccountProfile={setAccountProfile}
+                  familyRelationships={familyRelationships}
+                  setFamilyRelationships={setFamilyRelationships}
+                  fellowTravelers={fellowTravelers}
+                  setFellowTravelers={setFellowTravelers}
+                  showRelationshipDropdown={showRelationshipDropdown}
+                  setShowRelationshipDropdown={setShowRelationshipDropdown}
+                  setUserToken={setUserToken}
+                  setUserName={setUserName}
+                  setUserEmail={setUserEmail}
+                  mapApp={mapApp}
+                  onChangeMapApp={updateMapPreference}
+                  appearancePreference={appearancePreference}
+                  onChangeAppearancePreference={updateAppearancePreference}
+                  saveSession={saveSession}
+                  headers={headers}
+                  jsonHeaders={jsonHeaders}
+                  airportOptions={flightAirportOptions}
+                  onSearchAirports={fetchFlightAirports}
+                  logout={logout}
+                  styles={styles}
+                  traits={traits}
+                  setTraits={setTraits}
+                  selectedTraitNames={selectedTraitNames}
+                  setSelectedTraitNames={setSelectedTraitNames}
+                  traitAge={traitAge}
+                  setTraitAge={setTraitAge}
+                  traitGender={traitGender}
+                  setTraitGender={setTraitGender}
+                  newTraitName={newTraitName}
+                  setNewTraitName={setNewTraitName}
+                  fetchTraits={fetchTraits}
+                  fetchTraitProfile={fetchTraitProfile}
+                />
+              )
+            : null}
+
+      {activePage === 'lodging'
+        ? renderBoundedPage(
+            <LodgingTab
               backendUrl={backendUrl}
-              userToken={userToken}
-              activePage={activePage}
-              accountProfile={accountProfile}
-              setAccountProfile={setAccountProfile}
-              familyRelationships={familyRelationships}
-              setFamilyRelationships={setFamilyRelationships}
-              fellowTravelers={fellowTravelers}
-              setFellowTravelers={setFellowTravelers}
-              showRelationshipDropdown={showRelationshipDropdown}
-              setShowRelationshipDropdown={setShowRelationshipDropdown}
-              setUserToken={setUserToken}
-              setUserName={setUserName}
-              setUserEmail={setUserEmail}
-              mapApp={mapApp}
-              onChangeMapApp={updateMapPreference}
-              appearancePreference={appearancePreference}
-              onChangeAppearancePreference={updateAppearancePreference}
-              saveSession={saveSession}
-              headers={headers}
               jsonHeaders={jsonHeaders}
-              airportOptions={flightAirportOptions}
-              onSearchAirports={fetchFlightAirports}
-              logout={logout}
+              requestHeaders={headers}
+              trip={activeTripForHome ?? activeTrip}
+              lodgings={lodgings}
+              groupMembers={groupMembers}
+              defaultPayerId={defaultPayerId}
               styles={styles}
-              traits={traits}
-              setTraits={setTraits}
-              selectedTraitNames={selectedTraitNames}
-              setSelectedTraitNames={setSelectedTraitNames}
-              traitAge={traitAge}
-              setTraitAge={setTraitAge}
-              traitGender={traitGender}
-              setTraitGender={setTraitGender}
-              newTraitName={newTraitName}
-              setNewTraitName={setNewTraitName}
-              fetchTraits={fetchTraits}
-              fetchTraitProfile={fetchTraitProfile}
+              onRefreshLodgings={fetchLodgings}
+              onOpenMap={openMaps}
+              formatMemberName={formatMemberName}
+              payerName={payerName}
+              readOnly={isFollowingMode}
             />
-          ) : null}
+          )
+        : null}
 
-      {activePage === 'lodging' ? (
-        <LodgingTab
-          backendUrl={backendUrl}
-          jsonHeaders={jsonHeaders}
-          requestHeaders={headers}
-          trip={activeTrip}
-          lodgings={lodgings}
-          groupMembers={groupMembers}
-          defaultPayerId={defaultPayerId}
-          styles={styles}
-          onRefreshLodgings={fetchLodgings}
-          onOpenMap={openMaps}
-          formatMemberName={formatMemberName}
-          payerName={payerName}
-        />
-      ) : null}
-
-      {activePage === 'car' ? (
+      {activePage === 'car' ? renderSharedPageScroll(
         <View style={styles.card}>
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionTitle}>Car Rentals</Text>
@@ -2664,7 +3067,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                 </View>
                 <View style={[styles.tableCell, { minWidth: 180 }, styles.lastCell]}>
                   <View style={styles.actionCell}>
-                    {shouldShowVoteButtons((car as any).status, (car as any).userVote) ? (
+                    {!isFollowingMode && shouldShowVoteButtons((car as any).status, (car as any).userVote) ? (
                       <>
                         <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => voteOnCarRental(car.id, 1)}>
                           <Text style={styles.buttonText}>👍</Text>
@@ -2674,7 +3077,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                         </TouchableOpacity>
                       </>
                     ) : null}
-                    {shouldShowRatingButtons((car as any).status, (car as any).userRating) ? (
+                    {!isFollowingMode && shouldShowRatingButtons((car as any).status, (car as any).userRating) ? (
                       <>
                         <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => rateOnCarRental(car.id, 1)}>
                           <Text style={styles.buttonText}>⭐</Text>
@@ -2684,18 +3087,23 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                         </TouchableOpacity>
                       </>
                     ) : null}
-                    <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => removeCarRental(car.id)} testID={`car-rental-delete-${car.id}`}>
-                      <Text style={styles.buttonText}>Delete</Text>
-                    </TouchableOpacity>
+                    {!isFollowingMode ? (
+                      <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => removeCarRental(car.id)} testID={`car-rental-delete-${car.id}`}>
+                        <Text style={styles.dangerButtonText}>Delete</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <Text style={styles.cellText}>View only</Text>
+                    )}
                   </View>
                 </View>
               </View>
             ))}
           </View>
 
-          <View style={styles.carFormSection}>
-            <Text style={styles.helperText}>Add Car Rental</Text>
-            <View style={styles.carFormGrid}>
+          {!isFollowingMode ? (
+            <View style={styles.carFormSection}>
+              <Text style={styles.helperText}>Add Car Rental</Text>
+              <View style={styles.carFormGrid}>
               <TextInput
                 style={[styles.input, styles.carFormField]}
                 placeholder="Pick up location"
@@ -2829,70 +3237,71 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                 onChangeText={(text: string) => setCarDraft((p) => ({ ...p, notes: text }))}
                 multiline
               />
-            </View>
-            <View style={styles.carMemberRow}>
-              <View style={[styles.carMemberField, { flex: 1 }]}>
-                <Text style={styles.modalLabelSmall}>For</Text>
-                <View style={styles.payerChips}>
-                  {carDraft.travelerIds.map((id) => (
-                    <View key={`car-traveler-${id}`} style={styles.payerChip}>
-                      <Text style={styles.cellText}>{payerName(id)}</Text>
-                      <TouchableOpacity onPress={() => setCarDraft((prev) => ({ ...prev, travelerIds: prev.travelerIds.filter((x) => x !== id) }))}>
-                        <Text style={styles.removeText}>x</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                </View>
-                <View style={styles.payerOptions}>
-                  {userMembers
-                    .filter((m) => !carDraft.travelerIds.includes(m.id))
-                    .map((m) => (
-                      <TouchableOpacity
-                        key={`car-traveler-add-${m.id}`}
-                        style={styles.smallButton}
-                        onPress={() =>
-                          setCarDraft((prev) => ({
-                            ...prev,
-                            travelerIds: [...prev.travelerIds, m.id],
-                          }))
-                        }
-                      >
-                        <Text style={styles.buttonText}>Add {formatMemberName(m)}</Text>
-                      </TouchableOpacity>
-                    ))}
-                </View>
               </View>
-              <View style={[styles.carMemberField, { flex: 1 }]}>
-                <Text style={styles.modalLabelSmall}>Paid By</Text>
-                <View style={styles.payerChips}>
-                  {carDraft.paidBy.map((id) => (
-                    <View key={id} style={styles.payerChip}>
-                      <Text style={styles.cellText}>{payerName(id)}</Text>
-                      <TouchableOpacity onPress={() => setCarDraft((prev) => ({ ...prev, paidBy: prev.paidBy.filter((x) => x !== id) }))}>
-                        <Text style={styles.removeText}>x</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                </View>
-                <View style={styles.payerOptions}>
-                  {userMembers
-                    .filter((m) => !carDraft.paidBy.includes(m.id))
-                    .map((m) => (
-                      <TouchableOpacity
-                        key={m.id}
-                        style={styles.smallButton}
-                        onPress={() => setCarDraft((prev) => ({ ...prev, paidBy: [...prev.paidBy, m.id] }))}
-                      >
-                        <Text style={styles.buttonText}>Add {formatMemberName(m)}</Text>
-                      </TouchableOpacity>
+              <View style={styles.carMemberRow}>
+                <View style={[styles.carMemberField, { flex: 1 }]}>
+                  <Text style={styles.modalLabelSmall}>For</Text>
+                  <View style={styles.payerChips}>
+                    {carDraft.travelerIds.map((id) => (
+                      <View key={`car-traveler-${id}`} style={styles.payerChip}>
+                        <Text style={styles.cellText}>{payerName(id)}</Text>
+                        <TouchableOpacity onPress={() => setCarDraft((prev) => ({ ...prev, travelerIds: prev.travelerIds.filter((x) => x !== id) }))}>
+                          <Text style={styles.removeText}>x</Text>
+                        </TouchableOpacity>
+                      </View>
                     ))}
+                  </View>
+                  <View style={styles.payerOptions}>
+                    {userMembers
+                      .filter((m) => !carDraft.travelerIds.includes(m.id))
+                      .map((m) => (
+                        <TouchableOpacity
+                          key={`car-traveler-add-${m.id}`}
+                          style={styles.smallButton}
+                          onPress={() =>
+                            setCarDraft((prev) => ({
+                              ...prev,
+                              travelerIds: [...prev.travelerIds, m.id],
+                            }))
+                          }
+                        >
+                          <Text style={styles.buttonText}>Add {formatMemberName(m)}</Text>
+                        </TouchableOpacity>
+                      ))}
+                  </View>
                 </View>
+                <View style={[styles.carMemberField, { flex: 1 }]}>
+                  <Text style={styles.modalLabelSmall}>Paid By</Text>
+                  <View style={styles.payerChips}>
+                    {carDraft.paidBy.map((id) => (
+                      <View key={id} style={styles.payerChip}>
+                        <Text style={styles.cellText}>{payerName(id)}</Text>
+                        <TouchableOpacity onPress={() => setCarDraft((prev) => ({ ...prev, paidBy: prev.paidBy.filter((x) => x !== id) }))}>
+                          <Text style={styles.removeText}>x</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                  <View style={styles.payerOptions}>
+                    {userMembers
+                      .filter((m) => !carDraft.paidBy.includes(m.id))
+                      .map((m) => (
+                        <TouchableOpacity
+                          key={m.id}
+                          style={styles.smallButton}
+                          onPress={() => setCarDraft((prev) => ({ ...prev, paidBy: [...prev.paidBy, m.id] }))}
+                        >
+                          <Text style={styles.buttonText}>Add {formatMemberName(m)}</Text>
+                        </TouchableOpacity>
+                      ))}
+                  </View>
+                </View>
+                <TouchableOpacity style={[styles.button, styles.carAddButton]} onPress={addCarRental} testID="car-rental-add">
+                  <Text style={styles.buttonText}>Add</Text>
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity style={[styles.button, styles.carAddButton]} onPress={addCarRental} testID="car-rental-add">
-                <Text style={styles.buttonText}>Add</Text>
-              </TouchableOpacity>
             </View>
-          </View>
+          ) : null}
         </View>
       ) : null}
 
@@ -2913,7 +3322,34 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       ) : null}
 
       
-      {activePage === 'flights' || externalFlightEditId ? (
+      {activePage === 'flights'
+        ? renderSharedPageScroll(
+            <FlightsTab
+              backendUrl={backendUrl}
+              userToken={userToken}
+              activeTripId={activeTripId}
+              flights={flights}
+              setFlights={setFlights}
+              groupMembers={groupMembers}
+              defaultPayerId={defaultPayerId}
+              formatMemberName={formatMemberName}
+              payerName={payerName}
+              headers={headers}
+              jsonHeaders={jsonHeaders}
+              findActiveTrip={getActiveTrip}
+              fetchGroupMembersForActiveTrip={fetchGroupMembersForActiveTrip}
+              styles={styles}
+              airportOptions={flightAirportOptions}
+              onSearchAirports={fetchFlightAirports}
+              externalEditFlightId={externalFlightEditId}
+              onDataChanged={handleFlightsDataChanged}
+              onExternalEditHandled={handleExternalEditHandled}
+              showList={true}
+              readOnly={isFollowingMode}
+            />
+          )
+        : null}
+      {activePage !== 'flights' && externalFlightEditId ? (
         <FlightsTab
           backendUrl={backendUrl}
           userToken={userToken}
@@ -2934,10 +3370,11 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           externalEditFlightId={externalFlightEditId}
           onDataChanged={handleFlightsDataChanged}
           onExternalEditHandled={handleExternalEditHandled}
-          showList={activePage === 'flights'}
+          showList={false}
+          readOnly={isFollowingMode}
         />
       ) : null}
-      {activePage === 'trips' ? (
+      {activePage === 'trips' ? renderSharedPageScroll(
             <View style={styles.card}>
               <View style={styles.row}>
                 <Text style={styles.sectionTitle}>Trips</Text>
@@ -3044,7 +3481,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                       <Text style={styles.buttonText}>View</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={() => deleteTrip(trip.id)}>
-                      <Text style={styles.buttonText}>Delete</Text>
+                      <Text style={styles.dangerButtonText}>Delete</Text>
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -3052,99 +3489,107 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             </View>
           ) : null}
 
-          {activePage === 'overview' ? (
-            <OverviewTab
+          {activePage === 'overview'
+            ? renderBoundedPage(
+                <OverviewTab
+                  backendUrl={backendUrl}
+                  headers={headers}
+                  jsonHeaders={jsonHeaders}
+                  trip={activeTripForHome ?? activeTrip}
+                  group={activeGroup}
+                  attendees={groupMembers}
+                  flights={flights}
+                  lodgings={lodgings}
+                  tours={tours}
+                  carRentals={carRentals}
+                  defaultPayerId={defaultPayerId}
+                  styles={styles}
+                  mapApp={mapApp}
+                  aiItineraryPending={Boolean(activeTripId && asyncItineraryByTrip[activeTripId]?.status === 'pending')}
+                  aiItineraryFailedMessage={
+                    activeTripId && asyncItineraryByTrip[activeTripId]?.status === 'failed'
+                      ? asyncItineraryByTrip[activeTripId]?.error ?? 'generation failed'
+                      : null
+                  }
+                  onOpenAddress={openMaps}
+                  onRefreshTrips={fetchTrips}
+                  onRefreshGroups={fetchGroups}
+                  onRefreshGroupMembers={fetchGroupMembersForActiveTrip}
+                  onFlightDataChanged={handleFlightsDataChanged}
+                  onLodgingDataChanged={handleLodgingsDataChanged}
+                  onTourDataChanged={handleToursDataChanged}
+                  onAddCarRental={addCarRentalFromOverview}
+                  openFlightInFlightsTab={openFlightInFlightsTab}
+                  openLodgingDetails={(lodging) => openLodgingDetails(lodging as Lodging)}
+                />
+              )
+            : null}
+
+      {activePage === 'trip-details'
+        ? renderBoundedPage(
+            <TripDetailsTab
               backendUrl={backendUrl}
               headers={headers}
-              jsonHeaders={jsonHeaders}
-              trip={activeTrip}
-              group={activeGroup}
-              attendees={groupMembers}
-              flights={flights}
-              lodgings={lodgings}
-              tours={tours}
-              carRentals={carRentals}
-              defaultPayerId={defaultPayerId}
+              trip={selectedTrip}
+              group={selectedTripGroup}
               styles={styles}
-              mapApp={mapApp}
-              aiItineraryPending={Boolean(activeTripId && asyncItineraryByTrip[activeTripId]?.status === 'pending')}
-              aiItineraryFailedMessage={
-                activeTripId && asyncItineraryByTrip[activeTripId]?.status === 'failed'
-                  ? asyncItineraryByTrip[activeTripId]?.error ?? 'generation failed'
-                  : null
-              }
-              onOpenAddress={openMaps}
-              onRefreshTrips={fetchTrips}
-              onRefreshGroups={fetchGroups}
-              onRefreshGroupMembers={fetchGroupMembersForActiveTrip}
-              onFlightDataChanged={handleFlightsDataChanged}
-              onLodgingDataChanged={handleLodgingsDataChanged}
-              onTourDataChanged={handleToursDataChanged}
-              onAddCarRental={addCarRentalFromOverview}
-              openFlightInFlightsTab={openFlightInFlightsTab}
-              openLodgingDetails={(lodging) => openLodgingDetails(lodging as Lodging)}
+              openShareSignal={openShareFromHeaderSignal}
+              onSetActive={(tripId) => setActiveTripId(tripId)}
+              onOpenItinerary={handleOpenTripItinerary}
+              onUpdateCurrency={updateTripCurrency}
             />
-          ) : null}
+          )
+        : null}
 
-      {activePage === 'trip-details' ? (
-        <TripDetailsTab
-          backendUrl={backendUrl}
-          headers={headers}
-          trip={selectedTrip}
-          group={selectedTripGroup}
-          styles={styles}
-          openShareSignal={openShareFromHeaderSignal}
-          onSetActive={(tripId) => setActiveTripId(tripId)}
-          onOpenItinerary={handleOpenTripItinerary}
-          onUpdateCurrency={updateTripCurrency}
-        />
-      ) : null}
+          {activePage === 'follow'
+            ? renderSharedPageScroll(
+                <FollowTab
+                  backendUrl={backendUrl}
+                  userToken={userToken}
+                  trips={trips}
+                  headers={headers}
+                  followInviteCode={followInviteCode}
+                  setFollowInviteCode={setFollowInviteCode}
+                  followLoading={followLoading}
+                  setFollowLoading={setFollowLoading}
+                  followError={followError}
+                  setFollowError={setFollowError}
+                  followedTrips={followedTrips}
+                  setFollowedTrips={setFollowedTrips}
+                  followCodes={followCodes}
+                  setFollowCodes={setFollowCodes}
+                  followCodeLoading={followCodeLoading}
+                  setFollowCodeLoading={setFollowCodeLoading}
+                  followCodeError={followCodeError}
+                  setFollowCodeError={setFollowCodeError}
+                  followCodePayloads={followCodePayloads}
+                  setFollowCodePayloads={setFollowCodePayloads}
+                  styles={styles}
+                  logout={logout}
+                  onOpenFollowedTrip={(tripId) => {
+                    setSelectedFollowedTripId(tripId);
+                    requestPageChange('following');
+                  }}
+                />
+              )
+            : null}
 
-          {activePage === 'follow' ? (
-            <FollowTab
-              backendUrl={backendUrl}
-              userToken={userToken}
-              trips={trips}
-              headers={headers}
-              followInviteCode={followInviteCode}
-              setFollowInviteCode={setFollowInviteCode}
-              followLoading={followLoading}
-              setFollowLoading={setFollowLoading}
-              followError={followError}
-              setFollowError={setFollowError}
-              followedTrips={followedTrips}
-              setFollowedTrips={setFollowedTrips}
-              followCodes={followCodes}
-              setFollowCodes={setFollowCodes}
-              followCodeLoading={followCodeLoading}
-              setFollowCodeLoading={setFollowCodeLoading}
-              followCodeError={followCodeError}
-              setFollowCodeError={setFollowCodeError}
-              followCodePayloads={followCodePayloads}
-              setFollowCodePayloads={setFollowCodePayloads}
-              styles={styles}
-              logout={logout}
-              onOpenFollowedTrip={(tripId) => {
-                setSelectedFollowedTripId(tripId);
-                requestPageChange('following');
-              }}
-            />
-          ) : null}
+          {activePage === 'following'
+            ? renderSharedPageScroll(
+                <FollowingTab
+                  backendUrl={backendUrl}
+                  headers={headers}
+                  followedTrips={followedTrips}
+                  styles={styles}
+                  onRequireLogin={logout}
+                  selectedTripId={selectedFollowedTripId}
+                  onSelectTrip={setSelectedFollowedTripId}
+                  onUnfollowTrip={handleUnfollowTrip}
+                />
+              )
+            : null}
 
-          {activePage === 'following' ? (
-            <FollowingTab
-              backendUrl={backendUrl}
-              headers={headers}
-              followedTrips={followedTrips}
-              styles={styles}
-              onRequireLogin={logout}
-              selectedTripId={selectedFollowedTripId}
-              onSelectTrip={setSelectedFollowedTripId}
-              onUnfollowTrip={handleUnfollowTrip}
-            />
-          ) : null}
-
-        </ScrollView>
+        </View>
       ) : (
         <View style={styles.auth}>
           <View style={styles.toggleRow}>
@@ -3167,12 +3612,16 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               <TextInput
                 style={styles.input}
                 placeholder="First name"
+                autoComplete="given-name"
+                textContentType="givenName"
                 value={authForm.firstName}
                 onChangeText={(text: string) => setAuthForm((p) => ({ ...p, firstName: text }))}
               />
               <TextInput
                 style={styles.input}
                 placeholder="Last name"
+                autoComplete="family-name"
+                textContentType="familyName"
                 value={authForm.lastName}
                 onChangeText={(text: string) => setAuthForm((p) => ({ ...p, lastName: text }))}
               />
@@ -3183,6 +3632,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             style={styles.input}
             placeholder="Email or Username"
             autoCapitalize="none"
+            autoComplete={authMode === 'register' ? 'email' : 'username'}
+            textContentType={authMode === 'register' ? 'emailAddress' : 'username'}
+            inputMode="email"
+            nativeID="email"
             value={authForm.email}
             onChangeText={(text: string) => setAuthForm((p) => ({ ...p, email: text }))}
           />
@@ -3190,6 +3643,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             style={styles.input}
             placeholder="Password"
             secureTextEntry
+            autoComplete={authMode === 'register' ? 'new-password' : 'current-password'}
+            textContentType={authMode === 'register' ? 'newPassword' : 'password'}
+            nativeID="password"
             value={authForm.password}
             onChangeText={(text: string) => setAuthForm((p) => ({ ...p, password: text }))}
           />
@@ -3198,6 +3654,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               style={styles.input}
               placeholder="Confirm password"
               secureTextEntry
+              autoComplete="new-password"
+              textContentType="newPassword"
+              nativeID="password-confirm"
               value={authForm.passwordConfirm}
               onChangeText={(text: string) => setAuthForm((p) => ({ ...p, passwordConfirm: text }))}
             />
@@ -3217,6 +3676,11 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               >
                 <Text style={styles.buttonText}>Cancel</Text>
               </TouchableOpacity>
+            </View>
+          ) : null}
+          {authErrorMessage ? (
+            <View style={styles.authErrorBanner}>
+              <Text style={styles.authErrorBannerText}>{authErrorMessage}</Text>
             </View>
           ) : null}
                       <TouchableOpacity
@@ -3242,6 +3706,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                 style={styles.input}
                 placeholder="New password"
                 secureTextEntry
+                autoComplete="new-password"
+                textContentType="newPassword"
+                nativeID="new-password"
                 value={passwordSetupForm.newPassword}
                 onChangeText={(text: string) => setPasswordSetupForm((p) => ({ ...p, newPassword: text }))}
               />
@@ -3249,6 +3716,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                 style={styles.input}
                 placeholder="Confirm new password"
                 secureTextEntry
+                autoComplete="new-password"
+                textContentType="newPassword"
+                nativeID="new-password-confirm"
                 value={passwordSetupForm.newPasswordConfirm}
                 onChangeText={(text: string) => setPasswordSetupForm((p) => ({ ...p, newPasswordConfirm: text }))}
               />
@@ -3295,7 +3765,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                           onPress={() => rejectInvite(invite)}
                           testID={`invite-decline-${invite.id}`}
                         >
-                          <Text style={styles.buttonText}>Decline</Text>
+                          <Text style={styles.dangerButtonText}>Decline</Text>
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -3317,6 +3787,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               airportOptions={flightAirportOptions}
               onSearchAirports={fetchFlightAirports}
               styles={styles}
+              theme={theme}
               onCancel={closeTripWizard}
               onTripCreated={onTripCreated}
               onAiItineraryQueued={onAiItineraryQueued}
@@ -3349,6 +3820,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           backendUrl={backendUrl}
           requestHeaders={headers}
           styles={styles}
+          theme={theme}
           payerName={payerName}
           travelerName={payerName}
           onClose={() => setShowLodgingDetails(false)}
@@ -3383,6 +3855,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           onMinimize={() => setChatMinimized(true)}
           unreadCount={chatUnread}
           onUnreadChange={setChatUnread}
+          theme={theme}
         />
       )}
       {/* Minimized chat badge */}
@@ -3464,7 +3937,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 const App: React.FC = () => {
   const openAdminSection = useCallback((section: AdminSectionRoute) => {
     const screen = adminScreenBySection[section];
-    if (navigationRef.isReady()) {
+    if (screen && navigationRef.isReady()) {
       navigationRef.navigate(screen);
     }
   }, []);
@@ -3567,6 +4040,40 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     padding: 16,
     gap: 16,
   },
+  contentViewport: {
+    flex: 1,
+    width: '100%',
+    minHeight: 0,
+    position: 'relative',
+  },
+  pageScroll: {
+    flex: 1,
+    width: '100%',
+    minHeight: 0,
+  },
+  pageScrollContent: {
+    flexGrow: 1,
+    padding: 16,
+  },
+  pageScrollInner: {
+    width: '100%',
+    maxWidth: 1200,
+    alignSelf: 'center',
+    gap: 16,
+  },
+  pageViewport: {
+    flex: 1,
+    width: '100%',
+    minHeight: 0,
+    padding: 16,
+    alignItems: 'center',
+  },
+  pageViewportInner: {
+    flex: 1,
+    width: '100%',
+    minHeight: 0,
+    maxWidth: 1200,
+  },
   card: {
     width: '100%',
     maxWidth: 1200,
@@ -3590,7 +4097,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     borderRadius: 20,
     overflow: 'hidden',
     height: 180,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: theme.colors.surfaceMuted,
   },
   homeHeroCardPressed: {
     opacity: 0.92,
@@ -3605,7 +4112,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     position: 'absolute',
     width: '100%',
     height: '100%',
-    backgroundColor: '#d1d5db',
+    backgroundColor: theme.colors.surfaceMuted,
   },
   homeHeroOverlay: {
     position: 'absolute',
@@ -3633,7 +4140,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
   homeNavList: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: theme.colors.border,
     overflow: 'hidden',
   },
   homeNavButton: {
@@ -3643,11 +4150,11 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderColor: '#e5e7eb',
-    backgroundColor: '#fff',
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
   },
   homeNavButtonPressed: {
-    backgroundColor: '#f3f4f6',
+    backgroundColor: theme.colors.surfaceMuted,
   },
   homeNavButtonDisabled: {
     opacity: 0.5,
@@ -3660,10 +4167,10 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
   homeNavLabel: {
     flex: 1,
     fontSize: 16,
-    color: '#111827',
+    color: theme.colors.text,
   },
   homeNavArrow: {
-    color: '#111827',
+    color: theme.colors.text,
     fontSize: 18,
     fontWeight: '600',
   },
@@ -3673,16 +4180,16 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#f8fafc',
+    backgroundColor: theme.colors.background,
     zIndex: 30000,
     padding: 16,
   },
   homeModalCard: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surface,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: theme.colors.border,
     padding: 16,
   },
   homeModalHeader: {
@@ -3694,23 +4201,23 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
   homeModalTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#111827',
+    color: theme.colors.text,
   },
   homeModalClose: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: theme.colors.surfaceMuted,
     alignItems: 'center',
     justifyContent: 'center',
   },
   homeModalClosePressed: {
-    backgroundColor: '#d1d5db',
+    backgroundColor: theme.colors.backgroundAlt,
   },
   homeModalCloseText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#111827',
+    color: theme.colors.text,
   },
   homeModalList: {
     flex: 1,
@@ -3721,13 +4228,13 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     gap: 12,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: theme.colors.border,
   },
   homeModalRowPressed: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: theme.colors.surfaceMuted,
   },
   homeModalRowActive: {
-    backgroundColor: '#f1f5f9',
+    backgroundColor: theme.colors.backgroundAlt,
   },
   homeModalRowText: {
     flex: 1,
@@ -3735,10 +4242,10 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
   homeModalRowTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
+    color: theme.colors.text,
   },
   homeModalRowMeta: {
-    color: '#6b7280',
+    color: theme.colors.textMuted,
     fontSize: 13,
   },
   homeModalActiveBadge: {
@@ -3795,23 +4302,23 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#111',
-    backgroundColor: '#fff',
+    borderColor: theme.colors.text,
+    backgroundColor: theme.colors.surface,
   },
   expenseToggleSelected: {
-    backgroundColor: '#e5e7eb',
-    borderColor: '#111',
+    backgroundColor: theme.mode === 'dark' ? '#1A3A50' : '#DDE8F0',
+    borderColor: theme.colors.link,
   },
   expenseToggleUnselected: {
-    backgroundColor: '#fff',
-    borderColor: '#111',
+    backgroundColor: theme.colors.surface,
+    borderColor: theme.colors.text,
   },
   expenseToggleText: {
     fontWeight: '600',
-    color: '#111',
+    color: theme.colors.text,
   },
   expenseToggleTextSelected: {
-    color: '#111',
+    color: theme.colors.text,
   },
   input: {
     borderWidth: 1,
@@ -3860,6 +4367,29 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
   dangerButton: {
     backgroundColor: theme.colors.error,
   },
+  dangerButtonText: {
+    color: '#FFFFFF',
+    fontWeight: theme.typography.weightBold,
+  },
+  toggleOption: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+  },
+  toggleOptionSelected: {
+    backgroundColor: theme.mode === 'dark' ? '#1A3A50' : '#DDE8F0',
+    borderColor: theme.colors.link,
+  },
+  toggleOptionText: {
+    color: theme.colors.text,
+    fontWeight: theme.typography.weightSemibold,
+  },
+  toggleOptionTextSelected: {
+    color: theme.colors.link,
+  },
   navRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -3901,6 +4431,18 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     color: theme.colors.textMuted,
     marginBottom: 8,
     fontSize: theme.typography.small,
+  },
+  authErrorBanner: {
+    width: '100%',
+    backgroundColor: theme.colors.error,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 12,
+  },
+  authErrorBannerText: {
+    color: theme.colors.onPrimary,
+    fontWeight: theme.typography.weightSemibold,
   },
   row: {
     flexDirection: 'row',
@@ -4156,8 +4698,8 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     alignItems: 'center',
   },
   dayHeroBadgeText: {
-    backgroundColor: '#fff',
-    color: '#111827',
+    backgroundColor: theme.colors.surface,
+    color: theme.colors.text,
     paddingHorizontal: 14,
     paddingVertical: 4,
     borderRadius: 999,
@@ -4192,7 +4734,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     top: 10,
     left: 10,
     zIndex: 10,
-    backgroundColor: '#111827',
+    backgroundColor: theme.colors.primary,
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 999,
@@ -4226,13 +4768,13 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 8,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: theme.colors.surfaceMuted,
   },
   lodgingImageFallback: {
     width: 80,
     height: 80,
     borderRadius: 8,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: theme.colors.surfaceMuted,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -4338,7 +4880,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
   },
   dropdown: {
     position: 'relative',
-    zIndex: 20,
+    zIndex: 120,
   },
   selectButton: {
     justifyContent: 'center',
@@ -4361,18 +4903,23 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
   },
   dropdownList: {
     position: 'absolute',
-    top: 40,
+    top: '100%',
     left: 0,
     right: 0,
+    marginTop: 8,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: 6,
+    borderRadius: 10,
     zIndex: 20000,
     elevation: 24,
+    overflow: 'hidden',
+    maxHeight: 280,
+    boxShadow: '0 10px 24px rgba(0,0,0,0.18)',
   },
   dropdownOption: {
-    padding: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
     borderBottomWidth: 1,
     borderColor: theme.colors.border,
     backgroundColor: theme.colors.surface,
@@ -4561,10 +5108,11 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: 6,
+    borderRadius: 10,
     zIndex: 14000,
     elevation: 40, // keep above other inputs on native
-    boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+    overflow: 'hidden',
+    boxShadow: '0 10px 24px rgba(0,0,0,0.18)',
   },
   locationField: {
     position: 'relative',
@@ -4667,18 +5215,18 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 10,
-    backgroundColor: '#e0e0e0',
+    backgroundColor: theme.mode === 'dark' ? theme.colors.surface : '#e0e0e0',
   },
   badgePending: {
     backgroundColor: '#f6c851',
   },
   badgeRemoved: {
-    backgroundColor: '#c7c7c7',
+    backgroundColor: theme.mode === 'dark' ? theme.colors.surfaceMuted : '#c7c7c7',
   },
   badgeText: {
     fontSize: theme.typography.caption,
     fontWeight: theme.typography.weightSemibold,
-    color: '#2b2b2b',
+    color: theme.colors.text,
   },
   buttonDisabled: {
     opacity: 0.6,

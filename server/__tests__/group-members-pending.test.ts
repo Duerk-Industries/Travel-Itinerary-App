@@ -1,33 +1,24 @@
 import request from 'supertest';
-import { randomUUID } from 'crypto';
-import { Pool } from 'pg';
 import { app } from '../src/app';
-import { closePool, getPool, initDb } from '../src/db';
-import { registerAndLoginDeviceUser } from './helpers';
+import { closePool, initDb } from '../src/db';
+import { registerAndLoginDeviceUser, cleanupTestUsersByEmail } from './helpers';
 
 describe('Pending group members display names', () => {
   const owner = { email: 'pending-owner@example.com', firstName: 'Owner', lastName: 'Pending', password: 'testtest' };
   const invitee = { email: 'pending-invitee@example.com', firstName: 'Pending', lastName: 'Member', password: 'testtest' };
   const benEmail = 'ben.london@gmail.com';
-  let pool: Pool;
   let ownerToken: string;
-  let ownerId: string;
-  let inviteeId: string;
   let groupId: string;
 
   beforeAll(async () => {
-    pool = getPool();
     await initDb();
-    await pool.query('DELETE FROM group_invites WHERE invitee_email IN ($1, $2, $3)', [owner.email, invitee.email, benEmail]);
-    await pool.query('DELETE FROM group_members WHERE invite_email IN ($1, $2, $3)', [owner.email, invitee.email, benEmail]);
-    await pool.query('DELETE FROM users WHERE email IN ($1, $2, $3)', [owner.email, invitee.email, benEmail]);
+    await cleanupTestUsersByEmail([owner.email, invitee.email, benEmail]);
 
-    const ownerLogin = await registerAndLoginDeviceUser(pool, owner);
+    const ownerLogin = await registerAndLoginDeviceUser(owner);
     ownerToken = ownerLogin.token;
-    ownerId = ownerLogin.userId;
 
-    const inviteeLogin = await registerAndLoginDeviceUser(pool, invitee);
-    inviteeId = inviteeLogin.userId;
+    // Register invitee so they exist as a user
+    await registerAndLoginDeviceUser(invitee);
 
     const groupsRes = await request(app).get('/api/groups').set('Authorization', `Bearer ${ownerToken}`).expect(200);
     groupId = groupsRes.body[0]?.id as string;
@@ -40,18 +31,16 @@ describe('Pending group members display names', () => {
       groupId = created.body.id;
     }
 
-    const inviteId = randomUUID();
-    await pool.query(
-      `INSERT INTO group_invites (id, group_id, inviter_id, invitee_user_id, invitee_email, status)
-       VALUES ($1, $2, $3, $4, $5, 'pending')`,
-      [inviteId, groupId, ownerId, inviteeId, invitee.email]
-    );
+    // Use the HTTP API to create a pending invite for the existing invitee user
+    await request(app)
+      .post(`/api/groups/${groupId}/members`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ email: invitee.email })
+      .expect(201);
   });
 
   afterAll(async () => {
-    await pool.query('DELETE FROM group_invites WHERE invitee_email IN ($1, $2)', [owner.email, invitee.email]);
-    await pool.query('DELETE FROM group_members WHERE invite_email IN ($1, $2)', [owner.email, invitee.email]);
-    await pool.query('DELETE FROM users WHERE email IN ($1, $2)', [owner.email, invitee.email]);
+    await cleanupTestUsersByEmail([owner.email, invitee.email, benEmail]);
     await closePool();
   });
 

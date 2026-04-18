@@ -27,6 +27,7 @@ const styles = {
   row: {},
   button: {},
   dangerButton: {},
+  dangerButtonText: {},
   linkText: {},
   cellText: {},
   detailRow: {},

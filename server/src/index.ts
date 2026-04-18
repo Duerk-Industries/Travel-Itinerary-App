@@ -8,9 +8,11 @@ import { doesAuthFlagsConfigExist, getResolvedAuthFlagsConfigPath } from './conf
 import { doesFeatureFlagsConfigExist, getResolvedFeatureFlagsConfigPath } from './config/featureFlags';
 import { seedEntitlementDefaults } from './services/entitlementService';
 import { syncAttractionsCatalogFromCsvToDbOnStartup } from './services/attractionsCatalogService';
+import { prewarmAutocompleteCache } from './services/destinationAttractionAutocompleteService';
 import { createSocketServer } from './socket';
 
 const defaultPort = Number(process.env.PORT) || 4000;
+const isCloudRunRuntime = Boolean(process.env.K_SERVICE);
 
 const normalizeBucketName = (value?: string): string | undefined => {
   if (!value) return undefined;
@@ -53,21 +55,46 @@ export const startServer = async (portOverride?: number): Promise<Server> => {
   if (envLoadedFrom) {
     logInfo(`[startup] env loaded from: ${envLoadedFrom}`);
   }
-  await initDb();
-  await seedEntitlementDefaults();
   const portToUse = portOverride ?? defaultPort;
-  const server = app.listen(portToUse, '0.0.0.0', () => console.log(`API server running on port ${portToUse}`));
+  const server = await new Promise<Server>((resolve, reject) => {
+    const listeningServer = app.listen(portToUse, '0.0.0.0', () => {
+      logInfo(`[startup] API server listening on port ${portToUse}`);
+      resolve(listeningServer);
+    });
+    listeningServer.on('error', reject);
+  });
 
   // Attach Socket.IO to the same HTTP server
   createSocketServer(server);
 
-  const runAttractionsStartupSync = getEnvFlag('ATTRACTIONS_STARTUP_SYNC', { defaultValue: true });
+  try {
+    await initDb();
+    await seedEntitlementDefaults();
+  } catch (err) {
+    logError('[startup] initialization failed after binding port', err);
+    server.close(() => process.exit(1));
+    setTimeout(() => process.exit(1), 1000).unref();
+    throw err;
+  }
+
+  const runAttractionsStartupSync = getEnvFlag('ATTRACTIONS_STARTUP_SYNC', { defaultValue: !isCloudRunRuntime });
   if (runAttractionsStartupSync) {
     syncAttractionsCatalogFromCsvToDbOnStartup().catch((err: any) =>
       logError('[attractions] startup CSV import failed (background)', err)
     );
   } else {
-    logInfo('[attractions] startup CSV import disabled via ATTRACTIONS_STARTUP_SYNC=0');
+    logInfo('[attractions] startup CSV import disabled');
+  }
+
+  const runAutocompletePrewarm = getEnvFlag('AUTOCOMPLETE_PREWARM', { defaultValue: !isCloudRunRuntime });
+  if (runAutocompletePrewarm) {
+    // Pre-warm the destination/attraction autocomplete cache so the first
+    // wizard search doesn't pay the CSV parsing cost (~154k rows).
+    prewarmAutocompleteCache().catch((err: any) =>
+      logError('[autocomplete] cache pre-warm failed (background)', err)
+    );
+  } else {
+    logInfo('[autocomplete] cache pre-warm disabled');
   }
 
   if (process.env.NODE_ENV !== 'test') {

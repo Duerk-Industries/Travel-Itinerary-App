@@ -28,3 +28,24 @@ flags:
   trip_creation:
     enabled: true
     description: "Enable creation of new trips"
+  feature_ingest_manual_upload:
+    enabled: true
+    description: "Phase 1 manual upload ingestion and review queue"
+  feature_ingest_forwarded_mailbox:
+    enabled: false
+    description: "Phase 2 forwarded mailbox ingestion"
+  feature_ingest_gmail_import:
+    enabled: false
+    description: "Phase 3 Gmail import and dry-run flows"
+  feature_ingest_admin_observability:
+    enabled: true
+    description: "Enable admin ingestion observability widgets"
+  feature_ingest_local_virus_scan_stub:
+    enabled: true
+    description: "Allow local development to skip virus scanning with a stub"
+  overview_weather:
+    enabled: true
+    description: "Show daily overview weather for nearby trips"
+  flight_parser:
+    enabled: true
+    description: "Enable LLM-based flight parser from text/emails"

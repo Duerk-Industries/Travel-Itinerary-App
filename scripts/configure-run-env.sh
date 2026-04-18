@@ -11,7 +11,7 @@ SECRETS="${SECRETS:-}"
 
 usage() {
   echo "Usage: $0 [path/to/.env]" >&2
-  echo "Configures Cloud Run env vars and Secret Manager mappings without deploying code." >&2
+  echo "Configures Cloud Run env vars from .env and optional Secret Manager mappings from .secrets/SECRETS without deploying code." >&2
   exit 1
 }
 
@@ -114,8 +114,32 @@ should_ignore_secret_key() {
   [[ "$list" == *",$key,"* ]]
 }
 
+is_visible_env_key() {
+  local key="$1"
+  case "$key" in
+    GCLOUD_PROJECT_ID|GOOGLE_CLOUD_PROJECT|GOOGLE_CALLBACK_URL|LOCATION_BUCKET|LOCATION_RAW_CSV_PREFIX|FIRESTORE_DATABASE_ID|DB_PROVIDER|USE_IN_MEMORY_DB|SMTP_HOST|SMTP_PORT|SMTP_FROM|UNSPLASH_APP_ID|UNSPLASH_IMAGE_CACHE_TIMEOUT_MINUTES|SIGNED_IMAGE_URL_CACHE_TIMEOUT_MINUTES|GOOGLE_PLACES_DETAILS_CACHE_TIMEOUT_MINUTES|STORAGE_IMAGE_CACHE_CONTROL_TIMEOUT_MINUTES|UNSPLASH_AUTH_BLOCK_CACHE_TIMEOUT_MINUTES|SESSION_CACHE_TIMEOUT_MINUTES|PLACE_MATCH_THRESHOLD|AUTH_REDIRECT_URI_ALLOWLIST|EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN|EXPO_PUBLIC_FIREBASE_PROJECT_ID|EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET|EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID|EXPO_PUBLIC_FIREBASE_APP_ID)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+display_env_pair() {
+  local pair="$1"
+  local key="${pair%%=*}"
+  local value="${pair#*=}"
+  if is_visible_env_key "$key"; then
+    printf '%s=%s' "$key" "$value"
+  else
+    printf '%s=<redacted>' "$key"
+  fi
+}
+
 env_pairs=()
 project_id=""
+declare -A secret_map=()
 
 while IFS= read -r line || [[ -n "$line" ]]; do
   line="${line%%$'
@@ -169,14 +193,6 @@ if [[ -z "$project_id" && -n "$SECRETS_FILE" && -f "$SECRETS_FILE" ]]; then
   done < "$SECRETS_FILE"
 fi
 
-if [[ "${#env_pairs[@]}" -eq 0 ]]; then
-  echo "No env vars parsed from $ENV_FILE." >&2
-  exit 1
-fi
-
-env_arg="$(IFS=,; echo "${env_pairs[*]}")"
-
-declare -A secret_map=()
 if [[ -n "$SECRETS" ]]; then
   IFS=',' read -r -a secret_entries <<< "$SECRETS"
   for entry in "${secret_entries[@]}"; do
@@ -213,6 +229,26 @@ if [[ -n "${SECRETS_FILE}" && -f "${SECRETS_FILE}" ]]; then
     fi
   done < "$SECRETS_FILE"
 fi
+if [[ "${#secret_map[@]}" -gt 0 ]]; then
+  filtered_env_pairs=()
+  for pair in "${env_pairs[@]}"; do
+    key="${pair%%=*}"
+    if [[ -n "${secret_map[$key]:-}" ]]; then
+      continue
+    fi
+    filtered_env_pairs+=("$pair")
+  done
+  env_pairs=("${filtered_env_pairs[@]}")
+fi
+if [[ "${#env_pairs[@]}" -eq 0 ]]; then
+  echo "No env vars parsed from $ENV_FILE after filtering .secrets-managed keys." >&2
+  exit 1
+fi
+env_arg="$(IFS=,; echo "${env_pairs[*]}")"
+env_keys=()
+for pair in "${env_pairs[@]}"; do
+  env_keys+=("${pair%%=*}")
+done
 
 secrets_arg=""
 if [[ "${#secret_map[@]}" -gt 0 ]]; then
@@ -235,6 +271,10 @@ else
   # Use `gcloud run services update ... --clear-secrets` manually if needed.
   :
 fi
+if [[ "${#env_keys[@]}" -gt 0 ]]; then
+  remove_secrets_arg="$(IFS=,; echo "${env_keys[*]}")"
+  gcloud run services update "$SERVICE_NAME" --region "$REGION" ${project_id:+--project "$project_id"} --remove-secrets "$remove_secrets_arg"
+fi
 remove_env_keys=()
 for key in FIRESTORE_EMULATOR_HOST GOOGLE_APPLICATION_CREDENTIALS; do
   if should_ignore_key "$key"; then
@@ -250,6 +290,10 @@ echo "Configuring Cloud Run service environment..."
 echo "  Service: $SERVICE_NAME"
 echo "  Region: $REGION"
 echo "  Env file: $ENV_FILE"
+echo "  Env vars:"
+for pair in "${env_pairs[@]}"; do
+  echo "    $(display_env_pair "$pair")"
+done
 if [[ -n "$SECRETS_FILE" ]]; then
   echo "  Secrets file: $SECRETS_FILE"
 fi

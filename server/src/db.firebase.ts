@@ -41,6 +41,10 @@ import { getApiLimitsConfig } from './config/apiLimits';
 
 let app: App | null = null;
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
+const normalizeLoginIdentifier = (value: string): string => value.trim().toLowerCase();
+const isEmailLikeIdentifier = (value: string): boolean => value.includes('@');
+const USERNAME_MAX_LEN = 30;
+const USERNAME_ALLOWED_REGEX = /^[a-z0-9_-]{1,30}$/;
 const nowIso = () => new Date().toISOString();
 const hashPassword = (password: string, salt: string) => scryptSync(password, salt, 64).toString('hex');
 const stripUndefined = <T extends Record<string, any>>(updates: T): Partial<T> =>
@@ -49,6 +53,134 @@ const hashToken = (token: string): string => createHash('sha256').update(token).
 const FOLLOW_CODE_LENGTH = 6;
 const FOLLOW_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const ADMIN_ANALYTICS_VERSION = 1;
+
+const normalizeUsername = (value: string): string =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '')
+    .slice(0, USERNAME_MAX_LEN);
+
+const extractEmailLocalPart = (email: string): string => {
+  const normalized = normalizeEmail(email);
+  const local = normalized.split('@')[0] ?? normalized;
+  return normalizeUsername(local);
+};
+
+const buildUsernameBase = (firstName: string, lastName: string, email: string): string => {
+  const combined = normalizeUsername(`${firstName}${lastName}`);
+  if (combined.length > 0) return combined;
+  const local = extractEmailLocalPart(email);
+  if (local.length > 0) return local;
+  return 'user';
+};
+
+const appendUsernameSuffix = (base: string, suffix: number): string => {
+  const suffixText = String(suffix);
+  const maxBaseLength = USERNAME_MAX_LEN - suffixText.length;
+  const truncatedBase = base.slice(0, Math.max(1, maxBaseLength));
+  return `${truncatedBase}${suffixText}`;
+};
+
+const isUsernameAvailable = async (normalizedUsername: string, excludeUserId?: string): Promise<boolean> => {
+  const snap = await getDb().collection('users').where('username', '==', normalizedUsername).limit(5).get();
+  return snap.docs.every((doc) => doc.id === excludeUserId);
+};
+
+const generateUniqueUsername = async (
+  firstName: string,
+  lastName: string,
+  email: string,
+  preferredUsername?: string,
+  excludeUserId?: string
+): Promise<string> => {
+  const normalizedPreferred = preferredUsername ? normalizeUsername(preferredUsername) : '';
+  let base = normalizedPreferred || buildUsernameBase(firstName, lastName, email);
+  if (!base) base = 'user';
+
+  let candidate = base.slice(0, USERNAME_MAX_LEN);
+  let counter = 2;
+  while (!USERNAME_ALLOWED_REGEX.test(candidate) || !(await isUsernameAvailable(candidate, excludeUserId))) {
+    candidate = appendUsernameSuffix(base, counter);
+    counter += 1;
+    if (counter > 100000) {
+      throw new Error('Unable to generate a unique username');
+    }
+  }
+  return candidate;
+};
+
+const getUserEmailDocRef = (email: string) => getDb().collection('user_emails').doc(normalizeEmail(email));
+
+const upsertUserEmail = async (
+  userId: string,
+  email: string,
+  options: { isPrimary?: boolean; isVerified?: boolean; verifiedAt?: string | null } = {}
+): Promise<void> => {
+  const db = getDb();
+  const normalizedEmail = normalizeEmail(email);
+  const ref = getUserEmailDocRef(normalizedEmail);
+  const existing = await ref.get();
+  const existingData = existing.exists ? (existing.data() as any) : null;
+  const isPrimary = options.isPrimary ?? false;
+  const isVerified = options.isVerified ?? false;
+  const verifiedAt = options.verifiedAt ?? (isVerified ? nowIso() : existingData?.verifiedAt ?? null);
+  await ref.set({
+    userId,
+    email: normalizedEmail,
+    isPrimary,
+    isVerified: isVerified || Boolean(existingData?.isVerified),
+    verifiedAt,
+    createdAt: existingData?.createdAt ?? nowIso(),
+    updatedAt: nowIso(),
+  }, { merge: true });
+
+  if (isPrimary) {
+    const userEmails = await db.collection('user_emails').where('userId', '==', userId).get();
+    const batch = db.batch();
+    userEmails.docs.forEach((doc) => {
+      batch.update(doc.ref, { isPrimary: doc.id === normalizedEmail, updatedAt: nowIso() });
+    });
+    await batch.commit();
+  }
+};
+
+const listStoredUserEmails = async (userId: string): Promise<Array<{ email: string; isPrimary: boolean; isVerified: boolean; verifiedAt?: string | null; createdAt?: string | null }>> => {
+  const snap = await getDb().collection('user_emails').where('userId', '==', userId).get();
+  return snap.docs
+    .map((doc) => {
+      const data = doc.data() as any;
+      return {
+        email: String(data.email ?? doc.id).toLowerCase(),
+        isPrimary: Boolean(data.isPrimary),
+        isVerified: Boolean(data.isVerified),
+        verifiedAt: data.verifiedAt ?? null,
+        createdAt: data.createdAt ?? null,
+      };
+    })
+    .sort((a, b) => {
+      if (a.isPrimary !== b.isPrimary) return a.isPrimary ? -1 : 1;
+      return `${a.createdAt ?? ''}:${a.email}`.localeCompare(`${b.createdAt ?? ''}:${b.email}`);
+    });
+};
+
+const findUserByEmailDoc = async (email: string): Promise<{ id: string; data: any } | null> => {
+  const normalized = normalizeEmail(email);
+  const userEmailDoc = await getUserEmailDocRef(normalized).get();
+  if (userEmailDoc.exists) {
+    const userId = String((userEmailDoc.data() as any).userId ?? '').trim();
+    if (userId) {
+      const userDoc = await getDb().collection('users').doc(userId).get();
+      if (userDoc.exists) {
+        return { id: userDoc.id, data: userDoc.data() as any };
+      }
+    }
+  }
+  const snapshot = await getDb().collection('users').where('email', '==', normalized).limit(1).get();
+  if (snapshot.empty) return null;
+  const doc = snapshot.docs[0];
+  return { id: doc.id, data: doc.data() as any };
+};
 
 const getDayKey = (iso: string): string => String(iso ?? '').slice(0, 10);
 const getAdminAnalyticsDailyDocId = (userId: string, dayKey: string): string => `${userId}_${dayKey}`;
@@ -408,14 +540,23 @@ export const poolClient = (): any => {
 export const findOrCreateUser = async (email: string, provider: User['provider']): Promise<User> => {
   const db = getDb();
   const normalized = normalizeEmail(email);
-  const existing = await db.collection('users').where('email', '==', normalized).limit(1).get();
-  if (!existing.empty) {
-    const doc = existing.docs[0];
-    const data = doc.data() as User;
-    return { id: doc.id, email: data.email, provider: data.provider, role: (data.role ?? 'user') as UserRole };
+  const existing = await findUserByEmailDoc(normalized);
+  if (existing) {
+    const data = existing.data as User;
+    return { id: existing.id, email: data.email, provider: data.provider, role: (data.role ?? 'user') as UserRole };
   }
   const id = randomUUID();
-  await db.collection('users').doc(id).set({ email: normalized, provider, role: 'user', createdAt: nowIso(), emailVerified: true });
+  const username = await generateUniqueUsername('', '', normalized);
+  await db.collection('users').doc(id).set({
+    email: normalized,
+    username,
+    provider,
+    role: 'user',
+    createdAt: nowIso(),
+    emailVerified: true,
+    emailVerifiedAt: nowIso(),
+  });
+  await upsertUserEmail(id, normalized, { isPrimary: true, isVerified: true, verifiedAt: nowIso() });
   return { id, email: normalized, provider, role: 'user' };
 };
 
@@ -435,23 +576,20 @@ export const ensureDefaultGroupForUser = async (userId: string, email: string): 
 };
 
 export const findUserByEmail = async (email: string): Promise<User | null> => {
-  const db = getDb();
-  const normalized = normalizeEmail(email);
-  const snapshot = await db.collection('users').where('email', '==', normalized).limit(1).get();
-  if (snapshot.empty) return null;
-  const doc = snapshot.docs[0];
-  const data = doc.data() as User;
-  return { id: doc.id, email: data.email, provider: data.provider, role: (data.role ?? 'user') as UserRole };
+  const found = await findUserByEmailDoc(email);
+  if (!found) return null;
+  const data = found.data as User;
+  return { id: found.id, email: data.email, username: data.username, provider: data.provider, role: (data.role ?? 'user') as UserRole };
 };
 
 export const findUserByIdentifier = async (identifier: string): Promise<User | null> => {
-  const normalized = normalizeEmail(identifier);
-  if (!normalized.includes('@')) {
+  const normalized = normalizeLoginIdentifier(identifier);
+  if (!isEmailLikeIdentifier(normalized)) {
     const usersByUsername = await getDb().collection('users').where('username', '==', normalized).limit(1).get();
     if (usersByUsername.empty) return null;
     const doc = usersByUsername.docs[0];
     const data = doc.data() as User;
-    return { id: doc.id, email: data.email, provider: data.provider, role: (data.role ?? 'user') as UserRole };
+    return { id: doc.id, email: data.email, username: data.username, provider: data.provider, role: (data.role ?? 'user') as UserRole };
   }
   return findUserByEmail(normalized);
 };
@@ -460,7 +598,8 @@ export const createWebUser = async (
   firstName: string,
   lastName: string,
   email: string,
-  password: string
+  password: string,
+  usernameInput?: string
 ): Promise<WebUser> => {
   const db = getDb();
   const normalizedEmail = normalizeEmail(email);
@@ -484,22 +623,38 @@ export const createWebUser = async (
       passwordSetupRequired: false,
       createdAt: nowIso(),
     });
-    await db.collection('users').doc(existingUser.id).update({ firstName, lastName });
     const userDoc = await db.collection('users').doc(existingUser.id).get();
     const userData = userDoc.exists ? (userDoc.data() as any) : {};
+    const username = userData.username ?? await generateUniqueUsername(firstName, lastName, normalizedEmail, usernameInput, existingUser.id);
+    await db.collection('users').doc(existingUser.id).update({
+      firstName,
+      lastName,
+      email: normalizedEmail,
+      emailVerified: userData.emailVerified ?? false,
+      username,
+    });
+    await upsertUserEmail(existingUser.id, normalizedEmail, {
+      isPrimary: true,
+      isVerified: Boolean(userData.emailVerified ?? false),
+      verifiedAt: userData.emailVerifiedAt ?? null,
+    });
+    const updatedUserDoc = await db.collection('users').doc(existingUser.id).get();
+    const updatedUserData = updatedUserDoc.exists ? (updatedUserDoc.data() as any) : {};
     return {
       id: existingUser.id,
       email: normalizedEmail,
       firstName,
       lastName,
-      emailVerified: Boolean(userData.emailVerified),
+      emailVerified: Boolean(updatedUserData.emailVerified),
     };
   }
   const id = randomUUID();
   const salt = randomBytes(16).toString('hex');
   const passwordHash = hashPassword(password, salt);
+  const username = await generateUniqueUsername(firstName, lastName, normalizedEmail, usernameInput);
   await db.collection('users').doc(id).set({
     email: normalizedEmail,
+    username,
     provider: 'email',
     createdAt: nowIso(),
     firstName,
@@ -515,6 +670,7 @@ export const createWebUser = async (
     passwordSetupRequired: false,
     createdAt: nowIso(),
   });
+  await upsertUserEmail(id, normalizedEmail, { isPrimary: true, isVerified: false, verifiedAt: null });
   return { id, email: normalizedEmail, firstName, lastName, emailVerified: false };
 };
 
@@ -543,6 +699,7 @@ export const ensureWebPasswordAccountForOAuth = async (
     passwordSetupRequired: true,
     createdAt: nowIso(),
   });
+  await upsertUserEmail(userId, normalizeEmail(email), { isPrimary: true, isVerified: true, verifiedAt: nowIso() });
   return { requiresPasswordSetup: true };
 };
 
@@ -551,16 +708,25 @@ export const verifyWebUserCredentials = async (
   password: string
 ): Promise<{ id: string; email: string; firstName: string; lastName: string; emailVerified?: boolean } | null> => {
   const db = getDb();
-  const normalized = normalizeEmail(identifier);
-  let snapshot = await db.collection('web_users').where('email', '==', normalized).limit(1).get();
-  if (!normalized.includes('@')) {
+  const normalized = normalizeLoginIdentifier(identifier);
+  let snapshot = db.collection('web_users').where('email', '==', normalized).limit(1);
+  if (!isEmailLikeIdentifier(normalized)) {
     const userSnap = await db.collection('users').where('username', '==', normalized).limit(1).get();
     if (!userSnap.empty) {
-      snapshot = await db.collection('web_users').where(FieldPath.documentId(), '==', userSnap.docs[0].id).limit(1).get();
+      snapshot = db.collection('web_users').where(FieldPath.documentId(), '==', userSnap.docs[0].id).limit(1);
+    }
+  } else {
+    const userEmailDoc = await getUserEmailDocRef(normalized).get();
+    if (userEmailDoc.exists) {
+      const linkedUserId = String((userEmailDoc.data() as any).userId ?? '').trim();
+      if (linkedUserId) {
+        snapshot = db.collection('web_users').where(FieldPath.documentId(), '==', linkedUserId).limit(1);
+      }
     }
   }
-  if (snapshot.empty) return null;
-  const doc = snapshot.docs[0];
+  const snapshotResult = await snapshot.get();
+  if (snapshotResult.empty) return null;
+  const doc = snapshotResult.docs[0];
   const data = doc.data() as any;
   const hash = hashPassword(password, data.salt);
   if (!timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(data.passwordHash, 'hex'))) {
@@ -655,21 +821,42 @@ export const markEmailVerificationUsed = async (verificationId: string): Promise
 export const markUserEmailVerified = async (userId: string): Promise<void> => {
   const db = getDb();
   await db.collection('users').doc(userId).update({ emailVerified: true, emailVerifiedAt: nowIso() });
+  const emails = await listStoredUserEmails(userId);
+  const primary = emails.find((email) => email.isPrimary) ?? emails[0];
+  if (primary) {
+    await getUserEmailDocRef(primary.email).set({
+      isVerified: true,
+      verifiedAt: nowIso(),
+      updatedAt: nowIso(),
+    }, { merge: true });
+  }
 };
 
 export const listUserEmails = async (userId: string): Promise<Array<{ email: string; isPrimary: boolean; isVerified: boolean }>> => {
+  const stored = await listStoredUserEmails(userId);
+  if (stored.length) {
+    return stored.map(({ email, isPrimary, isVerified }) => ({ email, isPrimary, isVerified }));
+  }
   const db = getDb();
   const userDoc = await db.collection('users').doc(userId).get();
   if (!userDoc.exists) return [];
   const email = String((userDoc.data() as any).email ?? '').trim().toLowerCase();
   if (!email) return [];
-  return [{ email, isPrimary: true, isVerified: Boolean((userDoc.data() as any).emailVerified ?? true) }];
+  const isVerified = Boolean((userDoc.data() as any).emailVerified ?? true);
+  await upsertUserEmail(userId, email, { isPrimary: true, isVerified, verifiedAt: isVerified ? nowIso() : null });
+  return [{ email, isPrimary: true, isVerified }];
 };
 
-export const addUserEmail = async (_userId: string, _email: string): Promise<{ email: string; isPrimary: boolean; isVerified: boolean }> => {
-  const err: any = new Error('Multi-email account management is not implemented for Firebase provider');
-  err.code = 'NOT_IMPLEMENTED';
-  throw err;
+export const addUserEmail = async (userId: string, email: string): Promise<{ email: string; isPrimary: boolean; isVerified: boolean }> => {
+  const normalizedEmail = normalizeEmail(email);
+  const existing = await getUserEmailDocRef(normalizedEmail).get();
+  if (existing.exists && String((existing.data() as any).userId ?? '') !== userId) {
+    const err: any = new Error('Email is already associated with another account');
+    err.code = 'EMAIL_TAKEN';
+    throw err;
+  }
+  await upsertUserEmail(userId, normalizedEmail, { isPrimary: false, isVerified: false, verifiedAt: null });
+  return { email: normalizedEmail, isPrimary: false, isVerified: false };
 };
 
 export const createUserEmailVerification = async (
@@ -677,13 +864,20 @@ export const createUserEmailVerification = async (
   email: string,
   ttlHours = 24
 ): Promise<{ token: string; expiresAt: string }> => {
+  const normalizedEmail = normalizeEmail(email);
+  const emailDoc = await getUserEmailDocRef(normalizedEmail).get();
+  if (!emailDoc.exists || String((emailDoc.data() as any).userId ?? '') !== userId) {
+    const err: any = new Error('Email is not associated with this account');
+    err.code = 'EMAIL_NOT_FOUND';
+    throw err;
+  }
   const db = getDb();
   const token = randomBytes(32).toString('base64url');
   const tokenHash = hashToken(token);
   const expiresAt = new Date(Date.now() + ttlHours * 60 * 60 * 1000).toISOString();
   await db.collection('user_email_verifications').doc(randomUUID()).set({
     userId,
-    email: normalizeEmail(email),
+    email: normalizedEmail,
     tokenHash,
     expiresAt,
     createdAt: nowIso(),
@@ -719,19 +913,58 @@ export const markUserEmailVerificationUsed = async (verificationId: string): Pro
 };
 
 export const markAccountEmailVerified = async (userId: string, _email: string): Promise<void> => {
-  await markUserEmailVerified(userId);
+  const normalizedEmail = normalizeEmail(_email);
+  const emailDoc = await getUserEmailDocRef(normalizedEmail).get();
+  if (!emailDoc.exists || String((emailDoc.data() as any).userId ?? '') !== userId) return;
+  await emailDoc.ref.set({
+    isVerified: true,
+    verifiedAt: nowIso(),
+    updatedAt: nowIso(),
+  }, { merge: true });
 };
 
-export const setPrimaryUserEmail = async (_userId: string, _email: string): Promise<Array<{ email: string; isPrimary: boolean; isVerified: boolean }>> => {
-  const err: any = new Error('Multi-email account management is not implemented for Firebase provider');
-  err.code = 'NOT_IMPLEMENTED';
-  throw err;
+export const setPrimaryUserEmail = async (userId: string, email: string): Promise<Array<{ email: string; isPrimary: boolean; isVerified: boolean }>> => {
+  const normalizedEmail = normalizeEmail(email);
+  const emailDoc = await getUserEmailDocRef(normalizedEmail).get();
+  const data = emailDoc.exists ? (emailDoc.data() as any) : null;
+  if (!data || String(data.userId ?? '') !== userId || !data.isVerified) {
+    const err: any = new Error('Email must be linked and verified before it can be set as primary');
+    err.code = 'EMAIL_NOT_VERIFIED';
+    throw err;
+  }
+  await upsertUserEmail(userId, normalizedEmail, { isPrimary: true, isVerified: true, verifiedAt: data.verifiedAt ?? nowIso() });
+  await getDb().collection('users').doc(userId).set({
+    email: normalizedEmail,
+    emailVerified: true,
+    emailVerifiedAt: data.verifiedAt ?? nowIso(),
+  }, { merge: true });
+  await getDb().collection('web_users').doc(userId).set({ email: normalizedEmail }, { merge: true });
+  return listUserEmails(userId);
 };
 
-export const removeUserEmail = async (_userId: string, _email: string): Promise<Array<{ email: string; isPrimary: boolean; isVerified: boolean }>> => {
-  const err: any = new Error('Multi-email account management is not implemented for Firebase provider');
-  err.code = 'NOT_IMPLEMENTED';
-  throw err;
+export const removeUserEmail = async (userId: string, email: string): Promise<Array<{ email: string; isPrimary: boolean; isVerified: boolean }>> => {
+  const normalizedEmail = normalizeEmail(email);
+  const emailDoc = await getUserEmailDocRef(normalizedEmail).get();
+  const data = emailDoc.exists ? (emailDoc.data() as any) : null;
+  if (!data || String(data.userId ?? '') !== userId) {
+    const err: any = new Error('Email not found on this account');
+    err.code = 'EMAIL_NOT_FOUND';
+    throw err;
+  }
+  if (data.isPrimary) {
+    const err: any = new Error('Primary email cannot be deleted');
+    err.code = 'PRIMARY_EMAIL_IMMUTABLE';
+    throw err;
+  }
+  const emails = await listStoredUserEmails(userId);
+  const verifiedRemaining = emails.filter((entry) => entry.email !== normalizedEmail && entry.isVerified).length;
+  if (data.isVerified && verifiedRemaining === 0) {
+    const err: any = new Error('At least one verified email must remain on this account');
+    err.code = 'LAST_VERIFIED_EMAIL_REQUIRED';
+    throw err;
+  }
+  await emailDoc.ref.delete();
+  return listUserEmails(userId);
 };
 
 export const deleteUserRecord = async (userId: string): Promise<void> => {
@@ -826,7 +1059,9 @@ export const updateWebUserPassword = async (userId: string, oldPassword: string,
   const data = doc.data() as any;
   const oldHash = hashPassword(oldPassword, data.salt);
   if (!timingSafeEqual(Buffer.from(oldHash, 'hex'), Buffer.from(data.passwordHash, 'hex'))) {
-    throw new Error('Invalid password');
+    const err: any = new Error('Invalid password');
+    err.code = 'INVALID_PASSWORD';
+    throw err;
   }
   const salt = randomBytes(16).toString('hex');
   const passwordHash = hashPassword(newPassword, salt);
@@ -866,6 +1101,12 @@ export const deleteWebUserAndCleanup = async (userId: string): Promise<void> => 
   const invites = await db.collection('group_invites').where('inviteeUserId', '==', userId).get();
   invites.forEach((i) => batch.delete(i.ref));
   await batch.commit();
+};
+
+export const deleteAllUsers = async (userIds: string[]): Promise<void> => {
+  for (const userId of userIds) {
+    await deleteWebUserAndCleanup(userId);
+  }
 };
 
 // Helpers
@@ -910,8 +1151,16 @@ export const listGroupMembers = async (
   const userIds = Array.from(
     new Set(memberDocs.map((m) => m.data.userId).filter((id) => typeof id === 'string' && id.trim().length))
   );
+  const userRecords = new Map<string, any>();
   const userProfiles = new Map<string, any>();
   if (userIds.length) {
+    const userRefs = userIds.map((id) => db.collection('users').doc(id));
+    const userSnaps = await db.getAll(...userRefs);
+    userSnaps.forEach((doc) => {
+      if (doc.exists) {
+        userRecords.set(doc.id, doc.data() as any);
+      }
+    });
     const refs = userIds.map((id) => db.collection('web_users').doc(id));
     const snaps = await db.getAll(...refs);
     snaps.forEach((doc) => {
@@ -952,6 +1201,13 @@ export const listGroupMembers = async (
     });
   }
   if (allProfileIds.length) {
+    const userRefs = allProfileIds.map((id) => db.collection('users').doc(id));
+    const userSnaps = await db.getAll(...userRefs);
+    userSnaps.forEach((doc) => {
+      if (doc.exists) {
+        userRecords.set(doc.id, doc.data() as any);
+      }
+    });
     const profileRefs = allProfileIds.map((id) => db.collection('web_users').doc(id));
     const profileSnaps = await db.getAll(...profileRefs);
     profileSnaps.forEach((doc) => {
@@ -965,19 +1221,21 @@ export const listGroupMembers = async (
     const inviteEmail = data.inviteEmail ? normalizeEmail(data.inviteEmail) : '';
     const resolvedUserId = data.userId || (inviteEmail ? emailToUserId.get(inviteEmail) : null);
     const profile = resolvedUserId ? userProfiles.get(resolvedUserId) : null;
+    const userRecord = resolvedUserId ? userRecords.get(resolvedUserId) : null;
     const normalizedInvite = data.inviteEmail ? normalizeEmail(data.inviteEmail) : '';
     const inviteProfile = normalizedInvite ? emailProfiles.get(normalizedInvite) : null;
-    const email = data.inviteEmail ?? profile?.email ?? inviteProfile?.email ?? data.email;
+    const email = data.inviteEmail ?? profile?.email ?? userRecord?.email ?? inviteProfile?.email ?? data.email;
     const result = {
       id: doc.id,
       userId: resolvedUserId,
       guestName: data.guestName ?? null,
       email,
-      firstName: data.firstName ?? profile?.firstName ?? inviteProfile?.firstName ?? null,
-      lastName: data.lastName ?? profile?.lastName ?? inviteProfile?.lastName ?? null,
+      userEmail: userRecord?.email ?? profile?.email ?? null,
+      firstName: data.firstName ?? profile?.firstName ?? userRecord?.firstName ?? inviteProfile?.firstName ?? null,
+      lastName: data.lastName ?? profile?.lastName ?? userRecord?.lastName ?? inviteProfile?.lastName ?? null,
       preferredAirport: profile?.preferredAirport ?? inviteProfile?.preferredAirport ?? null,
       isGroupOwner: Boolean(resolvedUserId && groupOwnerId && resolvedUserId === groupOwnerId),
-      status: resolvedUserId ? 'active' : data.inviteEmail ? 'pending' : 'active',
+      status: data.userId ? 'active' : data.inviteEmail ? 'pending' : 'active',
       removedAt: data.removedAt ?? null,
     };
     return result;
@@ -995,13 +1253,15 @@ export const listGroupMembers = async (
       const profile = resolvedUserId
         ? userProfiles.get(resolvedUserId)
         : (email ? emailProfiles.get(email) : null);
+      const userRecord = resolvedUserId ? userRecords.get(resolvedUserId) : null;
       return {
         id: d.id,
         guestName: data.inviteeEmail,
         email: data.inviteeEmail,
         userId: resolvedUserId ?? null,
-        firstName: profile?.firstName ?? null,
-        lastName: profile?.lastName ?? null,
+        userEmail: userRecord?.email ?? profile?.email ?? null,
+        firstName: profile?.firstName ?? userRecord?.firstName ?? null,
+        lastName: profile?.lastName ?? userRecord?.lastName ?? null,
         preferredAirport: profile?.preferredAirport ?? null,
         isGroupOwner: Boolean(resolvedUserId && groupOwnerId && resolvedUserId === groupOwnerId),
         status: data.status,
@@ -1024,10 +1284,24 @@ export const listGroupsForUser = async (userId: string): Promise<Group[]> => {
   const groupIds = memberships.docs.map((d) => d.data().groupId as string);
   if (!groupIds.length) return [];
   const groupsSnap = await db.collection('groups').where(FieldPath.documentId(), 'in', groupIds).get();
-  return groupsSnap.docs.map((g) => {
+  const groups = await Promise.all(groupsSnap.docs.map(async (g) => {
     const data = g.data() as any;
-    return { id: g.id, ownerId: data.ownerId, name: data.name, createdAt: data.createdAt };
-  });
+    const members = await listGroupMembers(g.id, userId).catch(() => []);
+    const invitesSnap = await db.collection('group_invites').where('groupId', '==', g.id).where('status', '==', 'pending').get();
+    return {
+      id: g.id,
+      ownerId: data.ownerId,
+      name: data.name,
+      createdAt: data.createdAt,
+      members,
+      invites: invitesSnap.docs.map((doc) => {
+        const invite = doc.data() as any;
+        return { id: doc.id, inviteeEmail: invite.inviteeEmail, status: invite.status };
+      }),
+    };
+  }));
+  groups.sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')));
+  return groups;
 };
 
 export const addGroupMember = async (
@@ -1037,7 +1311,18 @@ export const addGroupMember = async (
 ): Promise<{ inviteId?: string; email?: string }> => {
   const db = getDb();
   const groupDoc = await db.collection('groups').doc(groupId).get();
-  if (!groupDoc.exists || groupDoc.data()?.ownerId !== ownerId) throw new Error('Group not found or not owner');
+  if (!groupDoc.exists) throw new Error('Group not found or not a member');
+  const isOwner = groupDoc.data()?.ownerId === ownerId;
+  if (!isOwner) {
+    const memberSnap = await db
+      .collection('group_members')
+      .where('groupId', '==', groupId)
+      .where('userId', '==', ownerId)
+      .where('removedAt', '==', null)
+      .limit(1)
+      .get();
+    if (memberSnap.empty) throw new Error('Group not found or not a member');
+  }
 
   if (member.email && member.email.trim()) {
     const email = normalizeEmail(member.email);
@@ -2143,7 +2428,7 @@ export const getTripById = async (tripId: string): Promise<Trip | null> => {
 export const insertFlight = async (flight: Omit<Flight, 'id'>): Promise<Flight> => {
   const db = getDb();
   const id = randomUUID();
-  const payload = { ...flight, status: normalizeItineraryStatus((flight as any).status), id, createdAt: nowIso() };
+  const payload = stripUndefined({ ...flight, status: normalizeItineraryStatus((flight as any).status), id, createdAt: nowIso() });
   await db.collection('flights').doc(id).set(payload);
   const saved = await db.collection('flights').doc(id).get();
   return { ...flight, status: normalizeItineraryStatus((flight as any).status), id };
@@ -2154,7 +2439,10 @@ export const deleteFlight = async (flightId: string, userId: string): Promise<vo
   const doc = await db.collection('flights').doc(flightId).get();
   if (!doc.exists) return;
   const data = doc.data() as any;
-  if (data.userId !== userId) throw new Error('Not authorized to delete');
+  const tripId = data.tripId ?? data.trip_id;
+  if (!tripId) return;
+  const membership = await ensureUserInTrip(tripId, userId);
+  if (!membership) throw new Error('Not authorized to delete');
   await db.collection('flights').doc(flightId).delete();
 };
 
@@ -2163,7 +2451,10 @@ export const updateFlight = async (flightId: string, userId: string, updates: Pa
   const doc = await db.collection('flights').doc(flightId).get();
   if (!doc.exists) return null;
   const data = doc.data() as any;
-  if (data.userId !== userId) throw new Error('Not authorized to update');
+  const tripId = (updates as any).tripId ?? (updates as any).trip_id ?? data.tripId ?? data.trip_id;
+  if (!tripId) return null;
+  const membership = await ensureUserInTrip(tripId, userId);
+  if (!membership) throw new Error('Not authorized to update');
   const updatePayload = stripUndefined(updates);
   await db.collection('flights').doc(flightId).update(updatePayload);
   const updated = await db.collection('flights').doc(flightId).get();
@@ -2174,7 +2465,10 @@ export const getFlightForUser = async (flightId: string, userId: string): Promis
   const doc = await getDb().collection('flights').doc(flightId).get();
   if (!doc.exists) return null;
   const data = doc.data() as any;
-  if (data.userId !== userId) return null;
+  const tripId = data.tripId ?? data.trip_id;
+  if (!tripId) return null;
+  const membership = await ensureUserInTrip(tripId, userId);
+  if (!membership) return null;
   return data as Flight;
 };
 
@@ -2249,6 +2543,14 @@ export const shareFlight = async (flightId: string, sharedEmail: string): Promis
   const email = normalizeEmail(sharedEmail);
   const user = await findOrCreateUser(email, 'email');
   await db.collection('flight_shares').doc(randomUUID()).set({ flightId, userId: user.id, createdAt: nowIso() });
+};
+
+export const getAirportByIataCode = async (iataCode: string): Promise<{ iataCode: string; name: string; city: string; country: string; lat: number | null; lng: number | null } | null> => {
+  const db = getDb();
+  const doc = await db.collection('airports').doc(iataCode.toUpperCase()).get().catch(() => null);
+  if (!doc || !doc.exists) return null;
+  const data = doc.data() as any;
+  return { iataCode: doc.id, name: data.name ?? '', city: data.city ?? '', country: data.country ?? '', lat: data.lat ?? null, lng: data.lng ?? null };
 };
 
 export const searchFlightLocations = async (_userId: string, query: string): Promise<string[]> => {
@@ -2335,6 +2637,35 @@ const toAttractionShortlistBlob = (id: string, data: any): AttractionShortlistBl
     updatedAt: String(data.updatedAt ?? nowIso()),
   };
 };
+
+const normalizeLodgingRecord = (data: any) => ({
+  ...data,
+  userId: data.userId ?? data.user_id,
+  tripId: data.tripId ?? data.trip_id,
+  checkInDate: data.checkInDate ?? data.check_in_date,
+  checkOutDate: data.checkOutDate ?? data.check_out_date,
+  refundBy: data.refundBy ?? data.refund_by,
+  totalCost: data.totalCost ?? data.total_cost ?? 0,
+  costPerNight: data.costPerNight ?? data.cost_per_night ?? 0,
+  paidBy: Array.isArray(data.paidBy) ? data.paidBy : Array.isArray(data.paid_by) ? data.paid_by : [],
+  travelerIds: Array.isArray(data.travelerIds) ? data.travelerIds : Array.isArray(data.traveler_ids) ? data.traveler_ids : [],
+  placeId: data.placeId ?? data.place_id ?? '',
+  status: normalizeItineraryStatus(data.status),
+});
+
+const normalizeActivityRecord = (data: any) => ({
+  ...data,
+  userId: data.userId ?? data.user_id,
+  tripId: data.tripId ?? data.trip_id,
+  startLocation: data.startLocation ?? data.start_location,
+  startTime: data.startTime ?? data.start_time,
+  freeCancelBy: data.freeCancelBy ?? data.free_cancel_by ?? null,
+  bookedOn: data.bookedOn ?? data.booked_on ?? '',
+  paidBy: Array.isArray(data.paidBy) ? data.paidBy : [],
+  travelerIds: Array.isArray(data.travelerIds) ? data.travelerIds : [],
+  activityType: (data.activityType ?? 'Tour') as Activity['activityType'],
+  status: normalizeItineraryStatus(data.status),
+});
 
 const toShortlistBlobId = (destinationKey: string, dateKey: string): string => {
   const clean = (value: string) =>
@@ -2439,12 +2770,15 @@ export const listAttractionCatalogEntries = async (
   if (!key) return [];
   const db = getDb();
   const safeLimit = Math.min(Math.max(Number(limit) || 20, 1), 100);
-  const snapshot = await db.collection('locations').where('sourceType', '==', 'attraction').limit(500).get();
+  // Use top-level destinationKey field for an indexed Firestore query
+  // instead of loading 500 docs and filtering in-memory.
+  const snapshot = await db
+    .collection('locations')
+    .where('sourceType', '==', 'attraction')
+    .where('destinationKey', '==', key)
+    .limit(safeLimit * 2)
+    .get();
   const filtered = snapshot.docs
-    .filter((doc) => {
-      const payload = ((doc.data() as any).payload ?? {}) as Record<string, unknown>;
-      return String(payload.destinationKey ?? '').trim().toLowerCase() === key;
-    })
     .map((doc) => toAttractionCatalogEntry(doc.id, doc.data()))
     .sort((a, b) => (a.rank !== b.rank ? a.rank - b.rank : a.name.localeCompare(b.name)))
     .slice(0, safeLimit);
@@ -2486,6 +2820,8 @@ export const upsertAttractionCatalogEntry = async (entry: AttractionCatalogEntry
         name: entry.name,
         address: null,
         searchName: `${entry.name} ${entry.destinationDisplayName} ${entry.country ?? ''} ${entry.stateProvince ?? ''}`.toLowerCase(),
+        // Top-level destinationKey for indexed Firestore compound queries
+        destinationKey: String(entry.destinationKey ?? '').trim().toLowerCase(),
         payload: mergedPayload,
         updatedAt: nowIso(),
       },
@@ -2565,7 +2901,7 @@ export const listLodgings = async (userId: string, tripId?: string | null): Prom
     const membership = await ensureUserCanReadTrip(tripId, userId);
     if (!membership) return [];
     const snapshot = await db.collection('lodgings').where('trip_id', '==', tripId).get();
-    return snapshot.docs.map((d) => ({ ...(d.data() as Lodging), status: normalizeItineraryStatus((d.data() as any).status) }));
+    return snapshot.docs.map((d) => normalizeLodgingRecord(d.data()));
   }
 
   const memberSnap = await db
@@ -2594,9 +2930,7 @@ export const listLodgings = async (userId: string, tripId?: string | null): Prom
   const lodgings: Lodging[] = [];
   for (const tripChunk of chunk(uniqueTripIds)) {
     const lodgingsSnap = await db.collection('lodgings').where('trip_id', 'in', tripChunk).get();
-    lodgingsSnap.docs.forEach((doc) =>
-      lodgings.push({ ...(doc.data() as Lodging), status: normalizeItineraryStatus((doc.data() as any).status) })
-    );
+    lodgingsSnap.docs.forEach((doc) => lodgings.push(normalizeLodgingRecord(doc.data()) as Lodging));
   }
   return lodgings;
 };
@@ -2665,15 +2999,17 @@ export const updateLodging = async (lodgingId: string, userId: string, updates: 
   const membership = await ensureUserInTrip(tripId, userId);
   if (!membership) return null;
   const updatePayload = stripUndefined(updates);
-  await db.collection('lodgings').doc(lodgingId).update(updatePayload);
+  if (Object.keys(updatePayload).length > 0) {
+    await db.collection('lodgings').doc(lodgingId).update(updatePayload);
+  }
   const updated = await db.collection('lodgings').doc(lodgingId).get();
-  return { ...(updated.data() as Lodging), status: normalizeItineraryStatus((updated.data() as any)?.status) };
+  return normalizeLodgingRecord(updated.data()) as Lodging;
 };
 
 export const getLodgingById = async (lodgingId: string): Promise<Lodging | null> => {
   const doc = await getDb().collection('lodgings').doc(lodgingId).get();
   if (!doc.exists) return null;
-  return { ...(doc.data() as Lodging), status: normalizeItineraryStatus((doc.data() as any)?.status) };
+  return normalizeLodgingRecord(doc.data()) as Lodging;
 };
 
 // Tours
@@ -2690,11 +3026,7 @@ export const listActivities = async (userId: string, tripId?: string): Promise<A
     const access = await ensureUserCanReadTrip(tripId, userId);
     if (!access) return [];
     const snapshot = await db.collection('tours').where('tripId', '==', tripId).get();
-    return snapshot.docs.map((d) => ({
-      ...(d.data() as Activity),
-      activityType: ((d.data() as any).activityType ?? 'Tour') as Activity['activityType'],
-      status: normalizeItineraryStatus((d.data() as any).status),
-    }));
+    return snapshot.docs.map((d) => normalizeActivityRecord(d.data()) as Activity);
   }
   const memberSnap = await db.collection('group_members').where('userId', '==', userId).where('removedAt', '==', null).get();
   const groupIds = memberSnap.docs.map((d) => (d.data() as any).groupId).filter(Boolean);
@@ -2713,13 +3045,7 @@ export const listActivities = async (userId: string, tripId?: string): Promise<A
   const activities: Activity[] = [];
   for (const ids of chunk(uniqueTripIds)) {
     const snapshot = await db.collection('tours').where('tripId', 'in', ids).get();
-    snapshot.docs.forEach((d) =>
-      activities.push({
-        ...(d.data() as Activity),
-        activityType: ((d.data() as any).activityType ?? 'Tour') as Activity['activityType'],
-        status: normalizeItineraryStatus((d.data() as any).status),
-      })
-    );
+    snapshot.docs.forEach((d) => activities.push(normalizeActivityRecord(d.data()) as Activity));
   }
   return activities;
 };
@@ -2747,13 +3073,11 @@ export const updateActivity = async (id: string, userId: string, activity: Parti
     ...activity,
     activityType: typeof (activity as any).activityType === 'undefined' ? undefined : (activity as any).activityType,
   });
-  await db.collection('tours').doc(id).update(updatePayload);
+  if (Object.keys(updatePayload).length > 0) {
+    await db.collection('tours').doc(id).update(updatePayload);
+  }
   const updated = await db.collection('tours').doc(id).get();
-  return {
-    ...(updated.data() as Activity),
-    activityType: ((updated.data() as any)?.activityType ?? 'Tour') as Activity['activityType'],
-    status: normalizeItineraryStatus((updated.data() as any)?.status),
-  };
+  return normalizeActivityRecord(updated.data()) as Activity;
 };
 
 export const deleteActivity = async (tourId: string, userId: string): Promise<void> => {
@@ -2767,11 +3091,7 @@ export const deleteActivity = async (tourId: string, userId: string): Promise<vo
 export const getActivityById = async (id: string): Promise<Activity | null> => {
   const doc = await getDb().collection('tours').doc(id).get();
   if (!doc.exists) return null;
-  return {
-    ...(doc.data() as Activity),
-    activityType: ((doc.data() as any)?.activityType ?? 'Tour') as Activity['activityType'],
-    status: normalizeItineraryStatus((doc.data() as any)?.status),
-  };
+  return normalizeActivityRecord(doc.data()) as Activity;
 };
 
 // Car rentals
@@ -3434,8 +3754,58 @@ export const upsertPlaceLookupCache = async (entry: {
 
 // Family & fellow travelers
 export const listFamilyRelationships = async (userId: string) => {
-  const rels = await getDb().collection('family_relationships').where('requesterId', '==', userId).get();
-  return rels.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+  const db = getDb();
+  const [requested, inboundPending] = await Promise.all([
+    db.collection('family_relationships').where('requesterId', '==', userId).get(),
+    db.collection('family_relationships').where('relativeId', '==', userId).where('status', '==', 'pending').get(),
+  ]);
+  const docs = [...requested.docs, ...inboundPending.docs];
+  const otherUserIds = Array.from(
+    new Set(
+      docs
+        .map((doc) => {
+          const data = doc.data() as any;
+          return data.requesterId === userId ? data.relativeId : data.requesterId;
+        })
+        .filter(Boolean)
+    )
+  );
+  const users = new Map<string, any>();
+  const webUsers = new Map<string, any>();
+  if (otherUserIds.length) {
+    const userDocs = await db.getAll(...otherUserIds.map((id) => db.collection('users').doc(id)));
+    userDocs.forEach((doc) => {
+      if (doc.exists) users.set(doc.id, doc.data() as any);
+    });
+    const webUserDocs = await db.getAll(...otherUserIds.map((id) => db.collection('web_users').doc(id)));
+    webUserDocs.forEach((doc) => {
+      if (doc.exists) webUsers.set(doc.id, doc.data() as any);
+    });
+  }
+  return docs.map((doc) => {
+    const data = doc.data() as any;
+    const direction = data.requesterId === userId ? 'outbound' : 'inbound';
+    const otherUserId = direction === 'outbound' ? data.relativeId : data.requesterId;
+    const user = users.get(otherUserId) ?? {};
+    const webUser = webUsers.get(otherUserId) ?? {};
+    const provider = String(user.provider ?? '');
+    return {
+      id: doc.id,
+      relationship: data.relationship,
+      status: data.status,
+      direction,
+      editableProfile: direction === 'outbound' && provider === 'family',
+      relative: {
+        id: otherUserId,
+        email: user.email ?? webUser.email ?? null,
+        firstName: webUser.firstName ?? user.firstName ?? null,
+        middleName: webUser.middleName ?? user.middleName ?? null,
+        lastName: webUser.lastName ?? user.lastName ?? null,
+        provider: provider || null,
+      },
+      createdAt: data.createdAt ?? nowIso(),
+    };
+  });
 };
 
 export const listFellowTravelers = async (ownerId: string) => {
@@ -3477,19 +3847,79 @@ export const searchTripContacts = async (ownerId: string, query: string) => {
 
 export const createFamilyRelationship = async (
   requesterId: string,
-  relativeEmail: string,
-  relationship: string
+  payloadOrEmail: { givenName: string; middleName?: string | null; familyName: string; email: string; relationship: string } | string,
+  maybeRelationship?: string
 ) => {
-  const user = await findOrCreateUser(relativeEmail, 'email');
+  const payload = typeof payloadOrEmail === 'string'
+    ? {
+        givenName: '',
+        familyName: '',
+        middleName: null,
+        email: payloadOrEmail,
+        relationship: maybeRelationship ?? 'Not Applicable',
+      }
+    : payloadOrEmail;
+  const given = String(payload.givenName ?? '').trim();
+  const family = String(payload.familyName ?? '').trim();
+  const rawEmail = String(payload.email ?? '').trim().toLowerCase();
+  const relationship = String(payload.relationship ?? '').trim() || 'Not Applicable';
+  if (!given || !family) {
+    throw new Error('givenName and familyName are required');
+  }
+
+  let user = rawEmail ? await findUserByEmail(rawEmail) : null;
+  if (user?.id === requesterId) {
+    throw new Error('Cannot add yourself as a family member');
+  }
+
+  if (!user) {
+    const id = randomUUID();
+    const email = rawEmail || `family-${id}@placeholder.local`;
+    const salt = randomBytes(16).toString('hex');
+    const passwordHash = hashPassword(randomBytes(12).toString('hex'), salt);
+    await getDb().collection('users').doc(id).set({
+      email,
+      username: await generateUniqueUsername(given, family, email),
+      provider: 'family',
+      firstName: given,
+      lastName: family,
+      role: 'user',
+      createdAt: nowIso(),
+      emailVerified: !rawEmail,
+      emailVerifiedAt: rawEmail ? null : nowIso(),
+    });
+    await getDb().collection('web_users').doc(id).set({
+      email,
+      firstName: given,
+      middleName: payload.middleName ?? null,
+      lastName: family,
+      passwordHash,
+      salt,
+      passwordSetupRequired: false,
+      createdAt: nowIso(),
+    }, { merge: true });
+    await upsertUserEmail(id, email, { isPrimary: true, isVerified: !rawEmail, verifiedAt: !rawEmail ? nowIso() : null });
+    user = { id, email, provider: 'family', role: 'user' };
+  }
   const id = randomUUID();
+  const status = rawEmail && user.provider !== 'family' ? 'pending' : 'accepted';
   await getDb().collection('family_relationships').doc(id).set({
     requesterId,
     relativeId: user.id,
     relationship,
-    status: 'pending',
+    status,
     createdAt: nowIso(),
   });
-  return { id, requesterId, relativeId: user.id, relationship, status: 'pending' };
+  if (status === 'accepted') {
+    await getDb().collection('family_relationships').doc(randomUUID()).set({
+      requesterId: user.id,
+      relativeId: requesterId,
+      relationship,
+      status: 'accepted',
+      createdAt: nowIso(),
+    });
+  }
+  return { id, requesterId, relativeId: user.id, relationship, status };
 };
 
 export const acceptFamilyRelationship = async (userId: string, relationshipId: string) => {
@@ -3649,10 +4079,20 @@ export const updateFamilyProfile = async (
   const updateFields: any = {};
   if (updates.relationship) updateFields.relationship = updates.relationship;
   await getDb().collection('family_relationships').doc(relationshipId).update(updateFields);
+  const profileUpdates = stripUndefined({
+    firstName: typeof updates.givenName === 'string' ? updates.givenName.trim() || undefined : undefined,
+    middleName: typeof updates.middleName === 'undefined' ? undefined : updates.middleName,
+    lastName: typeof updates.familyName === 'string' ? updates.familyName.trim() || undefined : undefined,
+  });
+  if (Object.keys(profileUpdates).length > 0) {
+    await getDb().collection('users').doc(data.relativeId).set(profileUpdates, { merge: true });
+    await getDb().collection('web_users').doc(data.relativeId).set(profileUpdates, { merge: true });
+  }
   if (updates.email) {
     const normalized = normalizeEmail(updates.email);
     await getDb().collection('users').doc(data.relativeId).set({ email: normalized }, { merge: true });
     await getDb().collection('web_users').doc(data.relativeId).set({ email: normalized }, { merge: true });
+    await upsertUserEmail(data.relativeId, normalized, { isPrimary: true, isVerified: true, verifiedAt: nowIso() });
   }
 };
 
@@ -3669,6 +4109,7 @@ export const findOrCreateGoogleUser = async (profile: any): Promise<User> => {
     const existing = await db.collection('users').where('googleId', '==', id).limit(1).get();
     if (!existing.empty) {
         const doc = existing.docs[0];
+        const currentData = doc.data() as any;
         const updateData = {
             email: normalizedEmail,
             picture: photos?.[0]?.value,
@@ -3676,16 +4117,19 @@ export const findOrCreateGoogleUser = async (profile: any): Promise<User> => {
             lastName: name?.familyName,
             emailVerified: true,
             emailVerifiedAt: nowIso(),
+            username: currentData.username ?? await generateUniqueUsername(name?.givenName ?? '', name?.familyName ?? '', normalizedEmail, undefined, doc.id),
         };
         await doc.ref.update(updateData);
+        await upsertUserEmail(doc.id, normalizedEmail, { isPrimary: true, isVerified: true, verifiedAt: nowIso() });
         const updatedDoc = await doc.ref.get();
         const data = updatedDoc.data() as User;
         return { id: doc.id, email: data.email, provider: data.provider, role: (data.role ?? 'user') as UserRole };
     }
 
-    const existingByEmail = await db.collection('users').where('email', '==', normalizedEmail).limit(1).get();
-    if (!existingByEmail.empty) {
-        const doc = existingByEmail.docs[0];
+    const existingByEmail = await findUserByEmailDoc(normalizedEmail);
+    if (existingByEmail) {
+        const doc = db.collection('users').doc(existingByEmail.id);
+        const currentData = existingByEmail.data as any;
         const updateData = {
             googleId: id,
             picture: photos?.[0]?.value,
@@ -3693,16 +4137,20 @@ export const findOrCreateGoogleUser = async (profile: any): Promise<User> => {
             lastName: name?.familyName,
             emailVerified: true,
             emailVerifiedAt: nowIso(),
+            username: currentData.username ?? await generateUniqueUsername(name?.givenName ?? '', name?.familyName ?? '', normalizedEmail, undefined, existingByEmail.id),
         };
-        await doc.ref.update(updateData);
-        const updatedDoc = await doc.ref.get();
+        await doc.set(updateData, { merge: true });
+        await upsertUserEmail(existingByEmail.id, normalizedEmail, { isPrimary: true, isVerified: true, verifiedAt: nowIso() });
+        const updatedDoc = await doc.get();
         const data = updatedDoc.data() as User;
-        return { id: doc.id, email: data.email, provider: data.provider, role: (data.role ?? 'user') as UserRole };
+        return { id: existingByEmail.id, email: data.email, provider: data.provider, role: (data.role ?? 'user') as UserRole };
     }
 
     const newUserId = randomUUID();
+    const username = await generateUniqueUsername(name?.givenName ?? '', name?.familyName ?? '', normalizedEmail);
     await db.collection('users').doc(newUserId).set({
         email: normalizedEmail,
+        username,
         provider: 'google',
         googleId: id,
         picture: photos?.[0]?.value,
@@ -3712,6 +4160,7 @@ export const findOrCreateGoogleUser = async (profile: any): Promise<User> => {
         emailVerifiedAt: nowIso(),
         createdAt: nowIso(),
     });
+    await upsertUserEmail(newUserId, normalizedEmail, { isPrimary: true, isVerified: true, verifiedAt: nowIso() });
 
     return { id: newUserId, email: normalizedEmail, provider: 'google', role: 'user' };
 };
@@ -3755,11 +4204,19 @@ export const getTierByKey = async (key: string): Promise<Tier | null> => {
 
 export const listFeatures = async (): Promise<Feature[]> => {
   const db = getDb();
-  const snap = await db.collection('features').orderBy('key').get();
-  return snap.docs.map(d => {
-    const data = d.data();
-    return { id: data.id ?? d.id, key: d.id, description: data.description ?? '', defaultEnabled: data.defaultEnabled ?? false, createdAt: data.createdAt ?? nowIso() };
-  });
+  const snap = await db.collection('features').get();
+  return snap.docs
+    .map(d => {
+      const data = d.data();
+      return {
+        id: data.id ?? d.id,
+        key: data.key ?? d.id,
+        description: data.description ?? '',
+        defaultEnabled: data.defaultEnabled ?? false,
+        createdAt: data.createdAt ?? nowIso(),
+      };
+    })
+    .sort((a, b) => a.key.localeCompare(b.key));
 };
 
 export const listTierLimits = async (tierId: string): Promise<TierLimit[]> => {
@@ -3800,16 +4257,20 @@ export const upsertTierEntitlement = async (tierId: string, featureId: string, i
   await db.collection('tier_entitlements').doc(docId).set({ tierId, featureId, isAllowed, updatedAt: nowIso() }, { merge: true });
 };
 
+const getLatestActiveUserTierDoc = <T extends { data: () => any }>(docs: T[]): T | null => docs
+  .slice()
+  .sort((a, b) => String(b.data().effectiveFrom ?? '').localeCompare(String(a.data().effectiveFrom ?? '')))[0] ?? null;
+
 export const getCurrentUserTier = async (userId: string): Promise<(UserTier & { tierKey: string }) | null> => {
   const db = getDb();
+  // Keep this as a two-filter query and sort in memory so login does not depend
+  // on a composite Firestore index being present in production.
   const snap = await db.collection('user_tiers')
     .where('userId', '==', userId)
     .where('effectiveTo', '==', null)
-    .orderBy('effectiveFrom', 'desc')
-    .limit(1)
     .get();
-  if (snap.empty) return null;
-  const doc = snap.docs[0];
+  const doc = getLatestActiveUserTierDoc(snap.docs);
+  if (!doc) return null;
   const data = doc.data();
   const tier = await getTierByKey(data.tierKey);
   return {
@@ -3856,6 +4317,24 @@ export const ensureCurrentUserTier = async (userId: string, tierKey = 'free'): P
   await setUserTier(userId, tierKey, 'system', null, 'Automatic default tier assignment');
 };
 
+export const upsertTier = async (key: string, displayName: string, rank: number): Promise<void> => {
+  const db = getDb();
+  const ref = db.collection('tiers').doc(key);
+  const doc = await ref.get();
+  if (!doc.exists) {
+    await ref.set({ displayName, rank, isActive: true, createdAt: nowIso() });
+  }
+};
+
+export const upsertFeature = async (key: string, description: string, defaultEnabled: boolean): Promise<void> => {
+  const db = getDb();
+  const ref = db.collection('features').doc(key);
+  const doc = await ref.get();
+  if (!doc.exists) {
+    await ref.set({ key, description, defaultEnabled, createdAt: nowIso() });
+  }
+};
+
 export const getFeatureFlag = async (key: string): Promise<FeatureFlag | null> => {
   const db = getDb();
   const doc = await db.collection('feature_flags').doc(key).get();
@@ -3866,16 +4345,18 @@ export const getFeatureFlag = async (key: string): Promise<FeatureFlag | null> =
 
 export const listFeatureFlags = async (): Promise<FeatureFlag[]> => {
   const db = getDb();
-  const snap = await db.collection('feature_flags').orderBy('key').get();
-  return snap.docs.map(d => {
-    const data = d.data();
-    return { id: d.id, key: d.id, enabled: data.enabled, scope: 'global' as const, updatedBy: data.updatedBy ?? null, updatedAt: data.updatedAt ?? nowIso(), createdAt: data.createdAt ?? nowIso() };
-  });
+  const snap = await db.collection('feature_flags').get();
+  return snap.docs
+    .map(d => {
+      const data = d.data();
+      return { id: d.id, key: d.id, enabled: data.enabled, scope: 'global' as const, updatedBy: data.updatedBy ?? null, updatedAt: data.updatedAt ?? nowIso(), createdAt: data.createdAt ?? nowIso() };
+    })
+    .sort((a, b) => a.key.localeCompare(b.key));
 };
 
 export const setFeatureFlag = async (key: string, enabled: boolean, updatedBy: string | null): Promise<void> => {
   const db = getDb();
-  await db.collection('feature_flags').doc(key).set({ enabled, updatedBy, updatedAt: nowIso() }, { merge: true });
+  await db.collection('feature_flags').doc(key).set({ key, enabled, updatedBy, updatedAt: nowIso() }, { merge: true });
 };
 
 export const getUsageCounter = async (userId: string, metricKey: string, windowKey: string): Promise<number> => {
@@ -3894,10 +4375,23 @@ export const incrementUsageCounter = async (
   const db = getDb();
   const docId = `${userId}_${metricKey}_${windowKey}`;
   const ref = db.collection('usage_counters').doc(docId);
-  const { FieldValue } = await import('firebase-admin/firestore');
   await ref.set({ userId, metricKey, windowKey, count: FieldValue.increment(amount), updatedAt: nowIso() }, { merge: true });
   const updated = await ref.get();
   return updated.data()!.count ?? amount;
+};
+
+export const setUsageCounter = async (
+  userId: string,
+  metricKey: string,
+  windowKey: string,
+  count: number
+): Promise<void> => {
+  const db = getDb();
+  const docId = `${userId}_${metricKey}_${windowKey}`;
+  await db.collection('usage_counters').doc(docId).set(
+    { userId, metricKey, windowKey, count, updatedAt: nowIso() },
+    { merge: true }
+  );
 };
 
 export const appendUsageEvent = async (
@@ -3927,7 +4421,6 @@ export const atomicIncrementIfUnderLimit = async (
   const db = getDb();
   const docId = `${userId}_${metricKey}_${windowKey}`;
   const ref = db.collection('usage_counters').doc(docId);
-  const { FieldValue } = await import('firebase-admin/firestore');
   return db.runTransaction(async tx => {
     const doc = await tx.get(ref);
     const current = doc.exists ? (doc.data()!.count ?? 0) : 0;
@@ -4091,6 +4584,26 @@ export const listAuditLog = async (opts: {
   return { entries, total };
 };
 
+export const deleteAuditLog = async (opts: {
+  targetUserId?: string;
+  action?: string;
+}): Promise<void> => {
+  const db = getDb();
+  let query: FirebaseFirestore.Query = db.collection('audit_log');
+  if (opts.targetUserId) query = query.where('targetUserId', '==', opts.targetUserId);
+  if (opts.action) query = query.where('action', '==', opts.action);
+  if (!opts.targetUserId && !opts.action) return;
+  const snap = await query.get();
+  const batch = db.batch();
+  snap.docs.forEach(d => batch.delete(d.ref));
+  if (snap.size > 0) await batch.commit();
+};
+
+export const setPasswordSetupRequired = async (userId: string, required: boolean): Promise<void> => {
+  const db = getDb();
+  await db.collection('web_users').doc(userId).update({ passwordSetupRequired: required });
+};
+
 export const countGroupMembers = async (groupId: string): Promise<number> => {
   const db = getDb();
   const snap = await db.collection('group_members')
@@ -4141,24 +4654,34 @@ export const adminSearchUsers = async (opts: {
     userEmailsByUserId.set(userId, existing);
   });
 
-  const allUsers: AdminUserRow[] = userSnap.docs.map((doc) => {
+  const allUsers: AdminUserRow[] = await Promise.all(userSnap.docs.map(async (doc) => {
     const user = doc.data();
     const webUser = webUsersById.get(doc.id) ?? {};
     const activeTier = activeTierByUserId.get(doc.id) ?? null;
     const tier = activeTier ? tiersById.get(String(activeTier.tierId ?? activeTier.tierKey ?? '')) : null;
+    const role = ((user.role as string | null) ?? 'user');
+    let tierKey = (activeTier?.tierKey as string | null) ?? (tier ? (tier.id as string) : null);
+    let tierDisplayName = tier ? ((tier.displayName as string | null) ?? null) : null;
+
+    if (role === 'admin' && tierKey !== 'pro') {
+      await setUserTier(doc.id, 'pro', 'system', null, 'Admin users are automatically assigned Pro tier');
+      const proTier = tiersById.get('pro');
+      tierKey = 'pro';
+      tierDisplayName = proTier ? ((proTier.displayName as string | null) ?? 'Pro') : 'Pro';
+    }
 
     return {
       id: doc.id,
       email: (user.email as string | null) ?? '',
       firstName: (webUser.firstName as string | null) ?? (user.firstName as string | null) ?? null,
       lastName: (webUser.lastName as string | null) ?? (user.lastName as string | null) ?? null,
-      role: ((user.role as string | null) ?? 'user'),
-      tierKey: (activeTier?.tierKey as string | null) ?? (tier ? (tier.id as string) : null),
-      tierDisplayName: tier ? ((tier.displayName as string | null) ?? null) : null,
+      role,
+      tierKey,
+      tierDisplayName,
       tierSince: (activeTier?.effectiveFrom as string | null) ?? null,
       createdAt: (user.createdAt as string | null) ?? nowIso(),
     };
-  });
+  }));
 
   const filtered = search
     ? allUsers.filter((user) => {
@@ -4196,8 +4719,6 @@ export const adminGetUser = async (userId: string): Promise<{
     db.collection('user_tiers')
       .where('userId', '==', userId)
       .where('effectiveTo', '==', null)
-      .orderBy('effectiveFrom', 'desc')
-      .limit(1)
       .get(),
     db.collection('tiers').get(),
     db.collection('usage_counters').where('userId', '==', userId).get(),
@@ -4207,20 +4728,31 @@ export const adminGetUser = async (userId: string): Promise<{
 
   const user = userDoc.data() ?? {};
   const webUser = webUserDoc.exists ? webUserDoc.data() ?? {} : {};
-  const activeTier = activeTierSnap.empty ? null : activeTierSnap.docs[0].data();
+  const activeTierDoc = getLatestActiveUserTierDoc(activeTierSnap.docs);
+  const activeTier = activeTierDoc ? activeTierDoc.data() : null;
   const tiersById = new Map<string, Record<string, unknown>>(
     tierSnap.docs.map((doc) => [doc.id, { id: doc.id, ...doc.data() }])
   );
   const tier = activeTier ? tiersById.get(String(activeTier.tierId ?? activeTier.tierKey ?? '')) : null;
+  const role = ((user.role as string | null) ?? 'user');
+  let tierKey = (activeTier?.tierKey as string | null) ?? (tier ? (tier.id as string) : null);
+  let tierDisplayName = tier ? ((tier.displayName as string | null) ?? null) : null;
+
+  if (role === 'admin' && tierKey !== 'pro') {
+    await setUserTier(userId, 'pro', 'system', null, 'Admin users are automatically assigned Pro tier');
+    const proTier = tiersById.get('pro');
+    tierKey = 'pro';
+    tierDisplayName = proTier ? ((proTier.displayName as string | null) ?? 'Pro') : 'Pro';
+  }
 
   return {
     id: userId,
     email: (user.email as string | null) ?? '',
     firstName: (webUser.firstName as string | null) ?? (user.firstName as string | null) ?? null,
     lastName: (webUser.lastName as string | null) ?? (user.lastName as string | null) ?? null,
-    role: ((user.role as string | null) ?? 'user'),
-    tierKey: (activeTier?.tierKey as string | null) ?? (tier ? (tier.id as string) : null),
-    tierDisplayName: tier ? ((tier.displayName as string | null) ?? null) : null,
+    role,
+    tierKey,
+    tierDisplayName,
     tierSince: (activeTier?.effectiveFrom as string | null) ?? null,
     tierSource: (activeTier?.source as string | null) ?? null,
     createdAt: (user.createdAt as string | null) ?? nowIso(),

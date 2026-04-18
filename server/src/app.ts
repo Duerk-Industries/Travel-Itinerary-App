@@ -4,6 +4,7 @@ import fs from 'fs';
 import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
+import './expressAsyncPatch';
 import authRoutes from './routes/authRoutes';
 import transferRoutes from './routes/transferRoutes';
 import webAuthRoutes from './routes/webAuthRoutes';
@@ -18,11 +19,17 @@ import accountRoutes, { groupsRouter } from './routes/accountRoutes';
 import placeRoutes from './routes/placeRoutes';
 import expenseRoutes from './routes/expenseRoutes';
 import adminRoutes from './routes/adminRoutes';
+import ingestionRoutes from './routes/ingestionRoutes';
+import ingestionAdminRoutes from './routes/ingestionAdminRoutes';
+import ingestionWebhookRoutes from './routes/ingestionWebhookRoutes';
+import ingestionGmailOAuthRoutes from './routes/ingestionGmailOAuthRoutes';
+import internalIngestionWorkerRoutes from './routes/internalIngestionWorkerRoutes';
 
 import { loadEnv } from './env_loader';
 import { getEnvValue, hasRunLocalFlag, isLocalEnv } from './env';
 
-// Load env vars from server/.env and optionally server/.secrets (plus repo root fallbacks).
+// Load env vars from server/.env as the primary local source, with server/.secrets
+// still supported as a backwards-compatible fallback (plus repo root fallbacks).
 // .local_env files load only when RUN_LOCAL=1 is set inside that file.
 // Later files override earlier ones to make local overrides and secrets take precedence.
 const localEnvPaths = [
@@ -139,6 +146,10 @@ app.get('/api/diagnostics/google-client-id', (_req, res) => {
   });
 });
 
+app.get('/healthz', (_req, res) => {
+  res.status(200).json({ ok: true });
+});
+
 if (!hasWebApp) {
   app.get('/', (_req, res) => {
     res.sendFile(loginPath);
@@ -150,7 +161,7 @@ app.use(express.static(publicDir));
 import passport from 'passport';
 import { initPassport, createToken, createOAuthState, decodeOAuthState, authenticate } from './auth';
 import { ensureCurrentUserTier, ensureDefaultGroupForUser, ensureWebPasswordAccountForOAuth, getUserRole } from './db';
-import { ensureAdminBootstrap } from './services/entitlementService';
+import { ensureAdminBootstrap, getSeededTierForEmail } from './services/entitlementService';
 import { requireAdmin } from './middleware/requireAdmin';
 import { appendTokenToRedirect, isRedirectUriAllowed, resolveAndValidateRedirectUri } from './redirects';
 import { logError } from './logger';
@@ -158,6 +169,18 @@ import { logError } from './logger';
 initPassport();
 app.use(passport.initialize());
 const googleOAuthConfigured = Boolean(getEnvValue('GOOGLE_CLIENT_ID') && getEnvValue('GOOGLE_CLIENT_SECRET'));
+
+const redirectToLoginWithError = (req: express.Request, res: express.Response, webUrl: string, code: string) => {
+  const state = typeof req.query.state === 'string' ? decodeOAuthState(req.query.state) : null;
+  let redirectUri = state?.redirectUri;
+  if (redirectUri && !isRedirectUriAllowed(redirectUri, webUrl)) {
+    redirectUri = undefined;
+  }
+  const fallback = new URL('/login', webUrl);
+  const nextUrl = new URL(redirectUri ?? fallback.toString());
+  nextUrl.searchParams.set('auth_error', code);
+  res.redirect(nextUrl.toString());
+};
 
 if (!isLocalEnv() && getEnvValue('AUTH_SECRET') === 'development-secret') {
     logError('[WARNING] AUTH_SECRET is not set or is using the default value in a non-local environment. This is a security risk and will cause authentication to fail.');
@@ -188,38 +211,67 @@ app.get(
     }
     next();
   },
-  (req, _res, next) => {
-    next();
-  },
-  passport.authenticate('google', { failureRedirect: '/login', session: false }),
-  async (req, res) => {
-    const user = req.user as any;
-    await ensureDefaultGroupForUser(user.id, user.email);
-    await ensureCurrentUserTier(user.id, 'free');
-    const { requiresPasswordSetup } = await ensureWebPasswordAccountForOAuth(
-      user.id,
-      user.email,
-      user.firstName,
-      user.lastName
-    );
-    await ensureAdminBootstrap(user.id, user.email);
-    const role = await getUserRole(user.id);
-    const token = createToken({ userId: user.id, email: user.email, provider: user.provider, role });
-    const state = typeof req.query.state === 'string' ? decodeOAuthState(req.query.state) : null;
-    let redirectUri = state?.redirectUri;
-    if (redirectUri && !isRedirectUriAllowed(redirectUri, webUrl)) {
-      redirectUri = undefined;
-    }
-    if (redirectUri) {
-      const next = new URL(appendTokenToRedirect(redirectUri, token));
-      if (requiresPasswordSetup) {
-        next.searchParams.set('require_password_setup', '1');
+  async (req, res, next) => {
+    passport.authenticate('google', { session: false }, async (err: any, user: any, info: unknown) => {
+      if (err) {
+        logError('[auth] Google OAuth callback failed', {
+          name: err?.name,
+          message: err?.message,
+          oauthError: err?.oauthError?.data,
+          hasCode: typeof req.query.code === 'string',
+          hasState: typeof req.query.state === 'string',
+          info,
+        });
+        redirectToLoginWithError(req, res, webUrl, 'google_callback_failed');
+        return;
       }
-      res.redirect(next.toString());
-      return;
-    }
-    const suffix = requiresPasswordSetup ? `&require_password_setup=1` : '';
-    res.redirect(`/login?token=${encodeURIComponent(token)}${suffix}`);
+      if (!user) {
+        logError('[auth] Google OAuth callback returned no user', {
+          hasCode: typeof req.query.code === 'string',
+          hasState: typeof req.query.state === 'string',
+          info,
+        });
+        redirectToLoginWithError(req, res, webUrl, 'google_login_failed');
+        return;
+      }
+
+      try {
+        await ensureDefaultGroupForUser(user.id, user.email);
+        await ensureCurrentUserTier(user.id, getSeededTierForEmail(user.email));
+        const { requiresPasswordSetup } = await ensureWebPasswordAccountForOAuth(
+          user.id,
+          user.email,
+          user.firstName,
+          user.lastName
+        );
+        await ensureAdminBootstrap(user.id, user.email);
+        const role = await getUserRole(user.id);
+        const token = createToken({ userId: user.id, email: user.email, provider: user.provider, role });
+        const state = typeof req.query.state === 'string' ? decodeOAuthState(req.query.state) : null;
+        let redirectUri = state?.redirectUri;
+        if (redirectUri && !isRedirectUriAllowed(redirectUri, webUrl)) {
+          redirectUri = undefined;
+        }
+        if (redirectUri) {
+          const next = new URL(appendTokenToRedirect(redirectUri, token));
+          if (requiresPasswordSetup) {
+            next.searchParams.set('require_password_setup', '1');
+          }
+          res.redirect(next.toString());
+          return;
+        }
+        const suffix = requiresPasswordSetup ? `&require_password_setup=1` : '';
+        res.redirect(`/login?token=${encodeURIComponent(token)}${suffix}`);
+      } catch (callbackErr: any) {
+        logError('[auth] Google OAuth post-login setup failed', {
+          name: callbackErr?.name,
+          message: callbackErr?.message,
+          userId: user?.id,
+          email: user?.email,
+        });
+        redirectToLoginWithError(req, res, webUrl, 'google_post_login_failed');
+      }
+    })(req, res, next);
   }
 );
 
@@ -241,7 +293,12 @@ app.use('/api/activities', activityRoutes);
 app.use('/api/car-rentals', carRentalRoutes);
 app.use('/api/account', accountRoutes);
 app.use('/api/expenses', expenseRoutes);
+app.use('/api/internal/ingestion', internalIngestionWorkerRoutes);
+app.use('/api/ingestion/webhooks', ingestionWebhookRoutes);
+app.use('/api/ingestion/gmail', ingestionGmailOAuthRoutes);
+app.use('/api/ingestion', ingestionRoutes);
 app.use('/api/admin', authenticate, requireAdmin, adminRoutes);
+app.use('/api/admin/ingestion', authenticate, requireAdmin, ingestionAdminRoutes);
 
 if (hasWebApp) {
   app.get(['/app', '/app/*', '/'], (_req, res) => {
@@ -255,6 +312,25 @@ if (hasWebApp) {
     res.sendFile(webIndexPath);
   });
 }
+
+app.use((err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  const status = Number(err?.statusCode ?? err?.status ?? 500);
+  const safeStatus = Number.isFinite(status) && status >= 400 && status <= 599 ? status : 500;
+  logError('[api] request failed', {
+    method: req.method,
+    path: req.originalUrl,
+    status: safeStatus,
+    name: err?.name,
+    message: err?.message,
+    stack: err?.stack,
+  });
+  if (res.headersSent) {
+    return;
+  }
+  res.status(safeStatus).json({
+    error: safeStatus >= 500 ? 'Internal server error.' : String(err?.message ?? 'Request failed.'),
+  });
+});
 
 app.use((req, res, _next) => {
   console.log(`Final handler: 404 for ${req.method} ${req.originalUrl}`);

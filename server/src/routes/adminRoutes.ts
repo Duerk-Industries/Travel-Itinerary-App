@@ -10,6 +10,9 @@ import {
 } from '../db';
 import { TokenPayload } from '../auth';
 import { logError } from '../logger';
+import { getApiLimitsConfig, normalizeApiLimitKeyPart, updateApiLimitProviderConfig } from '../config/apiLimits';
+import { getFeatureFlagSeeds } from '../config/featureFlags';
+import { getApiUsageSummary } from '../apis/usageLimiter';
 
 // Admin routes — all guarded by authenticate + requireAdmin in app.ts
 const router = Router();
@@ -26,9 +29,40 @@ const requireReason = (reason: unknown): string | null => {
 // Feature flags
 // ---------------------------------------------------------------------------
 
+const listAdminFeatureFlags = async () => {
+  const storedFlags = await listFeatureFlags();
+  const seeds = getFeatureFlagSeeds();
+  const now = new Date().toISOString();
+  const mergedByKey = new Map(
+    storedFlags.map((flag) => [
+      flag.key,
+      {
+        ...flag,
+        description: seeds[flag.key]?.description ?? null,
+      },
+    ])
+  );
+
+  for (const [key, seed] of Object.entries(seeds)) {
+    if (mergedByKey.has(key)) continue;
+    mergedByKey.set(key, {
+      id: key,
+      key,
+      enabled: seed.enabled,
+      scope: 'global' as const,
+      updatedBy: null,
+      updatedAt: now,
+      createdAt: now,
+      description: seed.description ?? null,
+    });
+  }
+
+  return [...mergedByKey.values()].sort((a, b) => a.key.localeCompare(b.key));
+};
+
 router.get('/features', async (_req, res) => {
   try {
-    const flags = await listFeatureFlags();
+    const flags = await listAdminFeatureFlags();
     res.json({ features: flags });
   } catch (err) {
     res.status(500).json({ error: 'Failed to list feature flags' });
@@ -49,7 +83,7 @@ router.patch('/features/:key/flag', async (req, res) => {
   }
   try {
     const actorId = getActorId(req);
-    const flags = await listFeatureFlags();
+    const flags = await listAdminFeatureFlags();
     const existing = flags.find(f => f.key === key);
     if (!existing) {
       res.status(404).json({ error: `Feature flag not found: ${key}` });
@@ -115,18 +149,20 @@ router.patch('/users/:userId/tier', async (req, res) => {
   try {
     const actorId = getActorId(req);
     const targetId = req.params.userId;
+    const targetRole = await getUserRole(targetId);
+    const resolvedTierKey = targetRole === 'admin' ? 'pro' : tierKey.trim();
     const before = await getCurrentUserTier(targetId);
-    await setUserTier(targetId, tierKey.trim(), 'admin', actorId, reasonStr);
+    await setUserTier(targetId, resolvedTierKey, 'admin', actorId, reasonStr);
     const after = await getCurrentUserTier(targetId);
     await writeAuditLog({
       actorUserId: actorId,
       targetUserId: targetId,
       action: 'USER_TIER_CHANGED',
-      beforeState: { tierKey: before?.tierKey ?? null },
+      beforeState: { tierKey: before?.tierKey ?? null, requestedTierKey: tierKey.trim() },
       afterState: { tierKey: after?.tierKey ?? null },
       reason: reasonStr,
     });
-    res.json({ userId: targetId, tierKey: after?.tierKey ?? null });
+    res.json({ userId: targetId, tierKey: after?.tierKey ?? null, lockedToPro: targetRole === 'admin' });
   } catch (err: any) {
     if (/not found/i.test(err?.message ?? '')) {
       res.status(404).json({ error: err.message });
@@ -157,6 +193,9 @@ router.patch('/users/:userId/role', async (req, res) => {
     }
     const previousRole = await getUserRole(targetId);
     await setUserRole(targetId, role);
+    if (role === 'admin') {
+      await setUserTier(targetId, 'pro', 'admin', actorId, 'Admin users are automatically assigned Pro tier');
+    }
     await writeAuditLog({
       actorUserId: actorId,
       targetUserId: targetId,
@@ -333,6 +372,131 @@ router.get('/audit-log', async (req, res) => {
   } catch (err) {
     logError('[admin] failed to list audit log', err);
     res.status(500).json({ error: 'Failed to list audit log' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// API Limits
+// ---------------------------------------------------------------------------
+
+router.get('/api-limits', async (_req, res) => {
+  try {
+    const config = getApiLimitsConfig();
+    const usage = getApiUsageSummary();
+    const providers = Object.entries(config.providers).map(([provider, providerConfig]) => ({
+      provider,
+      window: providerConfig.window ?? 'day',
+      windowHours: providerConfig.windowHours ?? 1,
+      overallLimit: providerConfig.overall ?? null,
+      callers: Object.entries(providerConfig.callers).map(([caller, limit]) => ({
+        caller,
+        limit,
+        currentUsage: usage.find((u) => u.provider === provider && u.caller === caller)?.used ?? 0,
+      })),
+      overallUsage: usage.find((u) => u.provider === provider && u.scope === 'overall')?.used ?? 0,
+    }));
+    res.json({ providers, caching: config.caching });
+  } catch (err) {
+    logError('[admin] failed to get api limits', err);
+    res.status(500).json({ error: 'Failed to get API limits' });
+  }
+});
+
+router.patch('/api-limits/:provider', async (req, res) => {
+  const { provider } = req.params;
+  const { window, windowHours, overallLimit, callers, reason } = req.body ?? {};
+  const reasonStr = requireReason(reason);
+  if (!reasonStr) {
+    res.status(400).json({ error: 'reason (min 3 chars) is required' });
+    return;
+  }
+  if (window !== 'hour' && window !== 'day') {
+    res.status(400).json({ error: 'window must be "hour" or "day"' });
+    return;
+  }
+  if (typeof windowHours !== 'number' || !Number.isFinite(windowHours) || windowHours <= 0) {
+    res.status(400).json({ error: 'windowHours must be a positive number' });
+    return;
+  }
+  if (overallLimit !== null && (typeof overallLimit !== 'number' || !Number.isFinite(overallLimit) || overallLimit <= 0)) {
+    res.status(400).json({ error: 'overallLimit must be null or a positive number' });
+    return;
+  }
+  if (typeof callers !== 'object' || callers === null || Array.isArray(callers)) {
+    res.status(400).json({ error: 'callers must be an object of positive numeric limits' });
+    return;
+  }
+
+  try {
+    const actorId = getActorId(req);
+    const config = getApiLimitsConfig();
+    const normalizedProvider = normalizeApiLimitKeyPart(provider);
+    const currentProvider = config.providers[normalizedProvider];
+    if (!currentProvider) {
+      res.status(404).json({ error: `API provider not found: ${provider}` });
+      return;
+    }
+
+    const normalizedCallers = Object.fromEntries(
+      Object.entries(callers as Record<string, unknown>).map(([callerKey, rawLimit]) => [
+        normalizeApiLimitKeyPart(callerKey),
+        Number(rawLimit),
+      ])
+    );
+    const unknownCallers = Object.keys(normalizedCallers).filter((callerKey) => !(callerKey in currentProvider.callers));
+    if (unknownCallers.length > 0) {
+      res.status(400).json({ error: `Unknown caller limits: ${unknownCallers.join(', ')}` });
+      return;
+    }
+    const invalidCallers = Object.entries(normalizedCallers).filter(([, limit]) => !Number.isFinite(limit) || limit <= 0);
+    if (invalidCallers.length > 0) {
+      res.status(400).json({ error: 'All caller limits must be positive numbers' });
+      return;
+    }
+
+    const nextProvider = {
+      window,
+      windowHours: Math.floor(windowHours),
+      overall: overallLimit === null ? null : Math.floor(overallLimit),
+      callers: Object.fromEntries(
+        Object.keys(currentProvider.callers).map((callerKey) => [
+          callerKey,
+          Math.floor(normalizedCallers[callerKey] ?? currentProvider.callers[callerKey]),
+        ])
+      ),
+    };
+
+    updateApiLimitProviderConfig(normalizedProvider, nextProvider);
+    await writeAuditLog({
+      actorUserId: actorId,
+      action: 'API_LIMITS_UPDATED',
+      beforeState: {
+        provider: normalizedProvider,
+        window: currentProvider.window ?? 'day',
+        windowHours: currentProvider.windowHours ?? 1,
+        overallLimit: currentProvider.overall ?? null,
+        callers: currentProvider.callers,
+      },
+      afterState: {
+        provider: normalizedProvider,
+        window: nextProvider.window,
+        windowHours: nextProvider.windowHours,
+        overallLimit: nextProvider.overall,
+        callers: nextProvider.callers,
+      },
+      reason: reasonStr,
+    });
+
+    res.json({
+      provider: normalizedProvider,
+      window: nextProvider.window,
+      windowHours: nextProvider.windowHours,
+      overallLimit: nextProvider.overall,
+      callers: nextProvider.callers,
+    });
+  } catch (err) {
+    logError('[admin] failed to update api limits', err);
+    res.status(500).json({ error: 'Failed to update API limits' });
   }
 });
 

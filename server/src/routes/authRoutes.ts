@@ -18,7 +18,7 @@ import {
 } from '../db';
 import { sendVerificationEmailBestEffort } from '../mailer';
 import { getAuthFlag } from '../config/authFlags';
-import { ensureAdminBootstrap } from '../services/entitlementService';
+import { ensureAdminBootstrap, getSeededTierForEmail } from '../services/entitlementService';
 import { ensureCurrentUserTier } from '../db';
 
 // Auth routes for device-based auth tokens (non-web).
@@ -45,7 +45,7 @@ router.post('/register', async (req, res) => {
 
   try {
     const user = await createWebUser(firstName.trim(), lastName.trim(), email.trim().toLowerCase(), password.trim());
-    await ensureCurrentUserTier(user.id, 'free');
+    await ensureCurrentUserTier(user.id, getSeededTierForEmail(user.email));
     if (user.emailVerified) {
       await ensureDefaultGroupForUser(user.id, user.email);
       await claimInvitesForUser(user.email, user.id);
@@ -58,7 +58,11 @@ router.post('/register', async (req, res) => {
     }
     const verification = await createEmailVerification(user.id);
     await sendVerificationEmailBestEffort(user.email, verification.token);
-    res.status(201).json({ message: 'Verification required. Check your email to confirm your account.', verificationRequired: true });
+    res.status(201).json({
+      message: 'Verification required. Check your email to confirm your account.',
+      verificationRequired: true,
+      verificationToken: process.env.NODE_ENV !== 'production' ? verification.token : undefined,
+    });
   } catch (err: any) {
     if (err?.code === 'USER_EXISTS') {
       res.status(409).json({ error: 'User already exists' });
@@ -142,7 +146,7 @@ router.post('/login', async (req, res) => {
       return;
     }
     await ensureDefaultGroupForUser(user.id, user.email);
-    await ensureCurrentUserTier(user.id, 'free');
+    await ensureCurrentUserTier(user.id, getSeededTierForEmail(user.email));
     await claimInvitesForUser(user.email, user.id);
     const { firstLogin } = await recordWebUserLogin(user.id);
     await ensureAdminBootstrap(user.id, user.email);
@@ -176,7 +180,7 @@ router.get('/confirm', async (req, res) => {
     await markUserEmailVerified(verification.userId);
     await markEmailVerificationUsed(verification.id);
     await ensureDefaultGroupForUser(verification.userId, verification.email);
-    await ensureCurrentUserTier(verification.userId, 'free');
+    await ensureCurrentUserTier(verification.userId, getSeededTierForEmail(verification.email));
     await claimInvitesForUser(verification.email, verification.userId);
     await ensureAdminBootstrap(verification.userId, verification.email);
     res.json({ message: 'Email confirmed. You can now log in.' });

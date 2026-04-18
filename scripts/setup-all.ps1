@@ -9,7 +9,7 @@ $ErrorActionPreference = 'Stop'
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..')
 
 function Usage {
-  Write-Error "Usage: $PSCommandPath [-SkipLogin] [path/to/.secrets|.env]"
+  Write-Error "Usage: $PSCommandPath [-SkipLogin] [path/to/.env|.secrets]"
   Write-Error "Runs configure-gcloud, enable-gcp-apis, configure-gcp-iam, and configure-run-env."
   exit 1
 }
@@ -119,7 +119,7 @@ if (-not $projectId) {
 }
 
 if (-not $projectId) {
-  Write-Error "GCLOUD_PROJECT_ID is required (set env or add to .secrets/.env)."
+  Write-Error "GCLOUD_PROJECT_ID is required (set env or add to server/.env; server/.secrets is still supported as a fallback)."
   exit 1
 }
 

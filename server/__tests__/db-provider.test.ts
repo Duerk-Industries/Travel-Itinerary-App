@@ -3,7 +3,7 @@ import path from 'path';
 // Helper to reload the db module with a fresh environment.
 const loadDb = async () => {
   jest.resetModules();
-  return import('../src/db');
+  return require('../src/db') as typeof import('../src/db');
 };
 
 const withEnv = async (env: Record<string, string | undefined>, fn: () => Promise<void>) => {

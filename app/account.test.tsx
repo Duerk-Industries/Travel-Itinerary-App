@@ -29,6 +29,7 @@ const styles = {
   mapOptionActiveText: {},
   divider: {},
   dangerButton: {},
+  dangerButtonText: {},
   modalOverlay: {},
   confirmModal: {},
 };

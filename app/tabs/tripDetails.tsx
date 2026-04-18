@@ -339,7 +339,7 @@ const TripDetailsTab: React.FC<TripDetailsTabProps> = ({
   };
 
   return (
-    <ScrollView style={styles.card} contentContainerStyle={{ gap: 12 }}>
+    <ScrollView style={[styles.card, { flex: 1, minHeight: 0 }]} contentContainerStyle={{ gap: 12, flexGrow: 1 }}>
       <View style={styles.row}>
         <Text style={styles.sectionTitle}>Trip Details</Text>
       </View>
@@ -452,9 +452,6 @@ const TripDetailsTab: React.FC<TripDetailsTabProps> = ({
         <TouchableOpacity style={[styles.button, { flex: 1 }]} onPress={() => onSetActive(trip.id)}>
           <Text style={styles.buttonText}>Set Active Trip</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.button, { flex: 1 }]} onPress={() => onOpenItinerary(trip.id)}>
-          <Text style={styles.buttonText}>Open Itinerary</Text>
-        </TouchableOpacity>
       </View>
 
       <Modal visible={shareOpen} transparent animationType="fade" onRequestClose={() => setShareOpen(false)}>
@@ -486,6 +483,10 @@ const TripDetailsTab: React.FC<TripDetailsTabProps> = ({
               style={[styles.input, { minHeight: 72, textAlignVertical: 'top' }]}
               multiline
               placeholder="Enter one or more emails (comma or new line separated)"
+              autoCapitalize="none"
+              autoComplete="email"
+              textContentType="emailAddress"
+              keyboardType="email-address"
               value={inviteInput}
               onChangeText={setInviteInput}
             />
@@ -523,7 +524,7 @@ const TripDetailsTab: React.FC<TripDetailsTabProps> = ({
                     </Text>
                     {invite.status === 'pending' ? (
                       <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => revokeInvite(invite.id)}>
-                        <Text style={styles.buttonText}>Revoke</Text>
+                        <Text style={styles.dangerButtonText}>Revoke</Text>
                       </TouchableOpacity>
                     ) : null}
                   </View>

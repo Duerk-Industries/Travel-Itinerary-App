@@ -2,12 +2,11 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import request from 'supertest';
-import { Pool } from 'pg';
 import { app } from '../src/app';
-import { closePool, createEmailVerification, initDb } from '../src/db';
+import { closePool, createEmailVerification, findUserByEmail, initDb } from '../src/db';
+import { cleanupTestUsersByEmail } from './helpers';
 
 describe('phase2 identifier login + multi-email account management', () => {
-  let pool: Pool;
   let tempDir = '';
   let configPath = '';
   const originalFlagsPath = process.env.AUTH_FLAGS_CONFIG_PATH;
@@ -40,15 +39,11 @@ describe('phase2 identifier login + multi-email account management', () => {
     process.env.AUTH_FLAGS_CONFIG_PATH = configPath;
     process.env.NODE_ENV = 'test';
     await initDb();
-    pool = new Pool({ connectionString: process.env.DATABASE_URL });
-    await pool.query('DELETE FROM users WHERE email IN ($1, $2)', [user.email, secondaryEmail]);
+    await cleanupTestUsersByEmail([user.email, secondaryEmail]);
   });
 
   afterAll(async () => {
-    if (pool) {
-      await pool.query('DELETE FROM users WHERE email IN ($1, $2)', [user.email, secondaryEmail]);
-      await pool.end();
-    }
+    await cleanupTestUsersByEmail([user.email, secondaryEmail]);
     await closePool();
     if (originalFlagsPath === undefined) {
       delete process.env.AUTH_FLAGS_CONFIG_PATH;
@@ -66,9 +61,9 @@ describe('phase2 identifier login + multi-email account management', () => {
       .send({ ...user, passwordConfirm: user.password })
       .expect(201);
 
-    const userRow = await pool.query<{ id: string; username: string }>('SELECT id, username FROM users WHERE email = $1', [user.email]);
-    const userId = String(userRow.rows[0]?.id ?? '');
-    const username = String(userRow.rows[0]?.username ?? '');
+    const found = await findUserByEmail(user.email);
+    const userId = found?.id ?? '';
+    const username = found?.username ?? '';
     expect(userId).toBeTruthy();
     expect(username).toBeTruthy();
 

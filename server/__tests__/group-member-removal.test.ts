@@ -1,13 +1,11 @@
 import request from 'supertest';
-import { Pool } from 'pg';
 import { app } from '../src/app';
-import { closePool, getPool, initDb } from '../src/db';
-import { registerAndLoginDeviceUser, registerDeviceUser } from './helpers';
+import { initDb, closePool } from '../src/db';
+import { registerAndLoginDeviceUser, registerDeviceUser, cleanupTestUsersByEmail } from './helpers';
 
 describe('Group member removal cleans related items', () => {
   const owner = { email: 'remove-owner@example.com', firstName: 'Remove', lastName: 'Owner', password: 'testtest' };
   const member = { email: 'remove-member@example.com', firstName: 'Remove', lastName: 'Member', password: 'testtest' };
-  let pool: Pool;
   let ownerToken: string;
   let groupId: string;
   let tripId: string;
@@ -15,11 +13,10 @@ describe('Group member removal cleans related items', () => {
   let memberId: string;
 
   beforeAll(async () => {
-    pool = getPool();
     await initDb();
-    await pool.query('DELETE FROM users WHERE email IN ($1, $2)', [owner.email, member.email]);
+    await cleanupTestUsersByEmail([owner.email, member.email]);
 
-    const ownerLogin = await registerAndLoginDeviceUser(pool, owner);
+    const ownerLogin = await registerAndLoginDeviceUser(owner);
     ownerToken = ownerLogin.token;
 
     await registerDeviceUser(member);
@@ -125,7 +122,7 @@ describe('Group member removal cleans related items', () => {
   });
 
   afterAll(async () => {
-    await pool.query('DELETE FROM users WHERE email IN ($1, $2)', [owner.email, member.email]);
+    await cleanupTestUsersByEmail([owner.email, member.email]);
     await closePool();
   });
 
@@ -160,4 +157,3 @@ describe('Group member removal cleans related items', () => {
     expect(tourPaidBy).toEqual([ownerMemberId]);
   });
 });
-

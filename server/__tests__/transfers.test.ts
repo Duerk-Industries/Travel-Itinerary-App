@@ -1,13 +1,12 @@
 import request from 'supertest';
-import { Pool } from 'pg';
 import { app } from '../src/app';
-import { initDb, closePool } from '../src/db';
-import { registerAndLoginWebUser, registerWebUser, seedTiersForTest, setUserTierInDb } from './helpers';
+import { initDb, closePool, findUserByEmail } from '../src/db';
+import { registerAndLoginWebUser, registerWebUser, seedTiersForTest, setUserTierInDb, cleanupTestUsersByEmail } from './helpers';
 
 describe('Flights API passenger validation', () => {
-  const user = { email: 'flight-user@example.com', firstName: 'Flight', lastName: 'Owner', password: 'testtest' };
-  const member = { email: 'flight-member@example.com', firstName: 'Second', lastName: 'User', password: 'testtest' };
-  let pool: Pool;
+  const uniq = Date.now();
+  const user = { email: `flight-user+${uniq}@example.com`, firstName: 'Flight', lastName: 'Owner', password: 'testtest' };
+  const member = { email: `flight-member+${uniq}@example.com`, firstName: 'Second', lastName: 'User', password: 'testtest' };
   let token: string;
   let tripId: string;
   let memberId: string;
@@ -15,12 +14,11 @@ describe('Flights API passenger validation', () => {
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
     await initDb();
-    pool = new Pool({ connectionString: process.env.DATABASE_URL });
-    await seedTiersForTest(pool);
-    await pool.query('DELETE FROM users WHERE email IN ($1, $2)', [user.email, member.email]);
-    const login = await registerAndLoginWebUser(pool, user);
+    await seedTiersForTest();
+    await cleanupTestUsersByEmail([user.email, member.email]);
+    const login = await registerAndLoginWebUser(user);
     token = login.token;
-    await setUserTierInDb(pool, login.userId, 'premium');
+    await setUserTierInDb(login.userId, 'premium');
 
     // Create the passenger as a real user so they can be added to the group.
     await registerWebUser(member);
@@ -47,10 +45,7 @@ describe('Flights API passenger validation', () => {
   });
 
   afterAll(async () => {
-    if (pool) {
-      await pool.query('DELETE FROM users WHERE email IN ($1, $2)', [user.email, member.email]);
-      await pool.end();
-    }
+    await cleanupTestUsersByEmail([user.email, member.email]);
     await closePool();
   });
 
@@ -124,6 +119,37 @@ describe('Flights API passenger validation', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({ passengerIds: [memberId], carrier: 'DL2' })
       .expect(200);
+  });
+
+  it('accepts legacy linked user ids when updating passengers and normalizes them to member ids', async () => {
+    const memberUser = await findUserByEmail(member.email);
+    expect(memberUser?.id).toBeTruthy();
+
+    const createRes = await request(app)
+      .post('/api/transfers')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        passengerIds: [memberId],
+        departureDate: '2025-01-02',
+        departureTime: '09:00',
+        arrivalTime: '11:00',
+        carrier: 'DL',
+        flightNumber: '201',
+        bookingReference: 'LEGACY1',
+        tripId,
+        cost: 200,
+      })
+      .expect(201);
+
+    const flightId = createRes.body.id as string;
+
+    const patchRes = await request(app)
+      .patch(`/api/transfers/${flightId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ passengerIds: [memberUser!.id], carrier: 'DL3' })
+      .expect(200);
+
+    expect(patchRes.body.passengerIds || patchRes.body.passenger_ids).toEqual([memberId]);
   });
 
   it('creates a flight with optional carrier, flight number, and booking reference', async () => {
@@ -289,7 +315,6 @@ describe('Pending passengers and payer rules', () => {
   const uniq = Date.now();
   const owner = { email: `flight-owner+${uniq}@example.com`, firstName: 'Owner', lastName: 'Pending', password: 'testtest' };
   const pendingEmail = `pending-passenger+${uniq}@example.com`;
-  let pool: Pool;
   let token: string;
   let tripId: string;
   let groupId: string;
@@ -299,13 +324,12 @@ describe('Pending passengers and payer rules', () => {
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
     await initDb();
-    pool = new Pool({ connectionString: process.env.DATABASE_URL });
-    await seedTiersForTest(pool);
-    await pool.query('DELETE FROM users WHERE email = $1', [owner.email]);
+    await seedTiersForTest();
+    await cleanupTestUsersByEmail([owner.email]);
 
-    const login = await registerAndLoginWebUser(pool, owner);
+    const login = await registerAndLoginWebUser(owner);
     token = login.token;
-    await setUserTierInDb(pool, login.userId, 'premium');
+    await setUserTierInDb(login.userId, 'premium');
 
     const groups = await request(app).get('/api/groups').set('Authorization', `Bearer ${token}`).expect(200);
     groupId = groups.body[0]?.id as string;
@@ -332,10 +356,7 @@ describe('Pending passengers and payer rules', () => {
   });
 
   afterAll(async () => {
-    if (pool) {
-      await pool.query('DELETE FROM users WHERE email = $1', [owner.email]);
-      await pool.end();
-    }
+    await cleanupTestUsersByEmail([owner.email]);
     await closePool();
   });
 
@@ -402,7 +423,6 @@ describe('Trip removal keeps passengers but strips payer status', () => {
   const uniq = Date.now() + 1;
   const owner = { email: `trip-owner+${uniq}@example.com`, firstName: 'Owner', lastName: 'Trip', password: 'testtest' };
   const member = { email: `trip-member+${uniq}@example.com`, firstName: 'Member', lastName: 'Trip', password: 'testtest' };
-  let pool: Pool;
   let ownerToken: string;
   let memberToken: string;
   let groupId: string;
@@ -414,17 +434,16 @@ describe('Trip removal keeps passengers but strips payer status', () => {
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
     await initDb();
-    pool = new Pool({ connectionString: process.env.DATABASE_URL });
-    await seedTiersForTest(pool);
-    await pool.query('DELETE FROM users WHERE email IN ($1, $2)', [owner.email, member.email]);
+    await seedTiersForTest();
+    await cleanupTestUsersByEmail([owner.email, member.email]);
 
-    const ownerLogin = await registerAndLoginWebUser(pool, owner);
+    const ownerLogin = await registerAndLoginWebUser(owner);
     ownerToken = ownerLogin.token;
-    await setUserTierInDb(pool, ownerLogin.userId, 'premium');
+    await setUserTierInDb(ownerLogin.userId, 'premium');
 
-    const memberLogin = await registerAndLoginWebUser(pool, member);
+    const memberLogin = await registerAndLoginWebUser(member);
     memberToken = memberLogin.token;
-    await setUserTierInDb(pool, memberLogin.userId, 'premium');
+    await setUserTierInDb(memberLogin.userId, 'premium');
 
     const groups = await request(app).get('/api/groups').set('Authorization', `Bearer ${ownerToken}`).expect(200);
     groupId = groups.body[0]?.id as string;
@@ -472,10 +491,7 @@ describe('Trip removal keeps passengers but strips payer status', () => {
   });
 
   afterAll(async () => {
-    if (pool) {
-      await pool.query('DELETE FROM users WHERE email IN ($1, $2)', [owner.email, member.email]);
-      await pool.end();
-    }
+    await cleanupTestUsersByEmail([owner.email, member.email]);
     await closePool();
   });
 

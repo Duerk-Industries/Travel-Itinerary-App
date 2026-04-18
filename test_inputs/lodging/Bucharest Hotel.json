@@ -1,0 +1,11 @@
+{
+  "itemType": "hotel",
+  "confirmationNumber": "2429967091",
+  "name": "Grand Hotel Bucharest",
+  "checkInDate": "2026-09-05",
+  "checkOutDate": "2026-09-07",
+  "address": "Bulevardul Nicolae Balcescu Bucharest RO",
+  "rooms": 1,
+  "totalCost": 420.35,
+  "currency": "USD"
+}

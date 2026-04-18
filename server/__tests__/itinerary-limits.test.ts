@@ -1,14 +1,20 @@
 import request from 'supertest';
-import { Pool } from 'pg';
 import { app } from '../src/app';
-import { closePool, initDb } from '../src/db';
-import { registerAndLoginWebUser, seedTiersForTest } from './helpers';
+import { closePool, initDb, getUsageCounter } from '../src/db';
+import { registerAndLoginWebUser, seedTiersForTest, cleanupTestUsersByEmail } from './helpers';
 import * as itineraryPromptPlanService from '../src/services/itineraryPromptPlanService';
 
 const TS = Date.now();
 
+/** Returns the current UTC monthly window key, e.g. "2026-03" */
+const getMonthWindowKey = (): string => {
+  const now = new Date();
+  const y = now.getUTCFullYear();
+  const m = String(now.getUTCMonth() + 1).padStart(2, '0');
+  return `${y}-${m}`;
+};
+
 describe('AI itinerary limits and idempotency', () => {
-  let pool: Pool;
   let token: string;
   let userId: string;
   let tripId: string;
@@ -17,10 +23,9 @@ describe('AI itinerary limits and idempotency', () => {
     process.env.NODE_ENV = 'test';
     process.env.OPENAI_API_KEY = 'test-openai-key';
     await initDb();
-    pool = new Pool({ connectionString: process.env.DATABASE_URL });
-    await seedTiersForTest(pool);
+    await seedTiersForTest();
 
-    const user = await registerAndLoginWebUser(pool, {
+    const user = await registerAndLoginWebUser({
       firstName: 'AI',
       lastName: 'Limits',
       email: `itinerary-limits-test+${TS}@example.com`,
@@ -46,8 +51,7 @@ describe('AI itinerary limits and idempotency', () => {
 
   afterAll(async () => {
     jest.restoreAllMocks();
-    await pool.query(`DELETE FROM users WHERE email LIKE 'itinerary-limits-test+%'`);
-    await pool.end();
+    await cleanupTestUsersByEmail([`itinerary-limits-test+${TS}@example.com`]);
     await closePool();
   });
 
@@ -87,13 +91,8 @@ describe('AI itinerary limits and idempotency', () => {
       profile: null,
     } as any);
 
-    const { rows: afterFailure } = await pool.query(
-      `SELECT count
-       FROM usage_counters
-       WHERE user_id = $1 AND metric_key = 'ai_itinerary_generations' AND window_key <> 'all-time'`,
-      [userId]
-    );
-    expect(afterFailure.length).toBe(0);
+    const monthlyCount = await getUsageCounter(userId, 'ai_itinerary_generations', getMonthWindowKey());
+    expect(monthlyCount).toBe(0);
 
     for (let i = 0; i < 5; i += 1) {
       await postGenerate(`success-${i}`).expect(200);
@@ -116,7 +115,7 @@ describe('AI itinerary limits and idempotency', () => {
     } as any);
 
     const uniqueEmail = `itinerary-limits-test+dedupe-${TS}@example.com`;
-    const dedupeUser = await registerAndLoginWebUser(pool, {
+    const dedupeUser = await registerAndLoginWebUser({
       firstName: 'AI',
       lastName: 'Dedupe',
       email: uniqueEmail,
@@ -154,13 +153,7 @@ describe('AI itinerary limits and idempotency', () => {
 
     expect(second.body.plan).toBe(first.body.plan);
 
-    const { rows } = await pool.query(
-      `SELECT count
-       FROM usage_counters
-       WHERE user_id = $1 AND metric_key = 'ai_itinerary_generations' AND window_key <> 'all-time'`,
-      [dedupeUser.userId]
-    );
-    expect(rows).toHaveLength(1);
-    expect(Number(rows[0].count)).toBe(1);
+    const monthlyCount = await getUsageCounter(dedupeUser.userId, 'ai_itinerary_generations', getMonthWindowKey());
+    expect(monthlyCount).toBe(1);
   });
 });
