@@ -1,5 +1,13 @@
 # Travel Itinerary App — Deployment Runbook (duerk.org)
 
+Back to the project home: [README](README.md)
+
+Related docs:
+
+- [Documentation Hub](docs/README.md)
+- [FAQ](FAQ.md)
+- [GCP Email Ingest Setup](docs/gcp-email-ingest-setup.md)
+
 This document provides a complete guide for deploying and maintaining the Travel Itinerary App on Google Cloud and Firebase.
 
 ## 1. System Architecture

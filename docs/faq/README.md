@@ -1,6 +1,10 @@
 # FAQ Index
 
-This folder contains the implementation FAQ split by topic.
+Back to the main docs hub: [Documentation Hub](../README.md)
+
+This folder contains the GitHub-friendly FAQ split by topic.
+
+## Core FAQ Topics
 
 - [Overview](overview.md)
 - [Authentication and Access](auth-and-access.md)
@@ -9,6 +13,11 @@ This folder contains the implementation FAQ split by topic.
 - [User Administration](user-administration.md)
 - [Look and Feel](look-and-feel.md)
 - [Operations and Constraints](operations-and-constraints.md)
+- [Voting on Items](voting-on-items.md)
 
-For the single-page version, see [`FAQ.md`](../../FAQ.md).
+## Related Pages
+
+- [Project FAQ](../../FAQ.md)
+- [Project README](../../README.md)
+- [Deployment Runbook](../../DEPLOYMENT-GCP-FIREBASE.md)
 
