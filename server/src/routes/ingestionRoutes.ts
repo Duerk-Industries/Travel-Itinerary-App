@@ -5,7 +5,7 @@ import { authenticate, type TokenPayload } from '../auth';
 import { listTrips } from '../db';
 import { resolveAndValidateRedirectUri } from '../redirects';
 import { isFeatureEnabled } from '../services/entitlementService';
-import { INGESTION_DEFAULT_FORWARDING_ADDRESS, INGESTION_DEFAULT_FORWARDING_PROVIDER, INGESTION_FEATURE_FLAGS, INGESTION_FORWARDING_SETTINGS_COPY, INGESTION_TIER_RULES, INGESTION_USAGE_KEYS } from '../ingestion/config';
+import { INGESTION_DEFAULT_FORWARDING_PROVIDER, INGESTION_FEATURE_FLAGS, INGESTION_FORWARDING_SETTINGS_COPY, INGESTION_TIER_RULES, INGESTION_USAGE_KEYS, getIngestionForwardingAddress } from '../ingestion/config';
 import { assignReviewItemToTrip, deleteReviewItem, getReviewItem, updateReviewItemEdits } from '../ingestion/assignment';
 import { manualUploadMiddleware, buildManualUploadPayloads, buildGmailConsentUrl, buildGmailDryRunEntries, buildGmailIngestionPayloads, fetchGmailProfile, GMAIL_READONLY_SCOPE_URL, refreshGmailAccessToken } from '../ingestion/intake';
 import { enqueueIngestionPipelineJob } from '../ingestion/orchestrator';
@@ -116,7 +116,7 @@ router.get('/config', async (req, res) => {
     quotas: rules,
     forwarding: {
       provider: INGESTION_DEFAULT_FORWARDING_PROVIDER,
-      currentAddress: INGESTION_DEFAULT_FORWARDING_ADDRESS,
+      currentAddress: getIngestionForwardingAddress(),
       instructions: INGESTION_FORWARDING_SETTINGS_COPY,
       adminManagedNote: 'Changing the destination inbox may require an admin update and provider redeploy.',
     },
@@ -329,7 +329,7 @@ router.get('/forwarding', async (_req, res) => {
   res.status(enabled ? 200 : 403).json({
     enabled,
     provider: INGESTION_DEFAULT_FORWARDING_PROVIDER,
-    currentAddress: INGESTION_DEFAULT_FORWARDING_ADDRESS,
+    currentAddress: getIngestionForwardingAddress(),
     instructions: INGESTION_FORWARDING_SETTINGS_COPY,
   });
 });

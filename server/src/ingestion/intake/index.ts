@@ -1,7 +1,7 @@
 import multer from 'multer';
 import { randomUUID } from 'crypto';
 import type { Request } from 'express';
-import { INGESTION_DEFAULT_FORWARDING_ADDRESS, INGESTION_MAX_FILE_BYTES } from '../config';
+import { INGESTION_MAX_FILE_BYTES, getIngestionForwardingAddress } from '../config';
 import type { IngestionPayload, IngestionSourceType } from '../contracts';
 import { sha256 } from '../shared/hashing';
 import { isSupportedMimeType, normalizeMimeType } from '../shared/parserSelection';
@@ -53,7 +53,7 @@ export const buildManualUploadPayloads = async (req: Request, userId: string): P
         metadata: {
           size: file.size,
           originalFieldName: file.fieldname,
-          forwardingAddress: INGESTION_DEFAULT_FORWARDING_ADDRESS,
+          forwardingAddress: getIngestionForwardingAddress(),
           virusScanProvider: scan.provider,
         },
         correlationId: randomUUID(),

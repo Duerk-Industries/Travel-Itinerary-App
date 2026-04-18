@@ -1,5 +1,7 @@
 import type { ParsedItemReviewState, ParsedItemType, UserVisibleFailureCode } from './contracts';
 
+import { getEnvValue } from '../env';
+
 export const INGESTION_LOGIC_VERSION = '2026.03.20.chase-flight-passengers';
 export const INGESTION_MAX_FILE_BYTES = 10 * 1024 * 1024;
 export const INGESTION_SIGNED_URL_TTL_SECONDS = 15 * 60;
@@ -19,6 +21,11 @@ export const INGESTION_RETRY_PROVIDER_GLOBAL = 'GLOBAL';
 export const INGESTION_VIRUS_SCAN_PROVIDER_DEFAULT = 'cloud_native';
 export const INGESTION_GMAIL_AUTH_EXPIRED_ALERT_THRESHOLD = 3;
 export const INGESTION_GMAIL_AUTH_EXPIRED_ALERT_WINDOW_MINUTES = 15;
+
+export const getIngestionForwardingAddress = (): string =>
+  getEnvValue('INGESTION_FORWARDING_ADDRESS', {
+    defaultValue: INGESTION_DEFAULT_FORWARDING_ADDRESS,
+  })!;
 
 export const INGESTION_SUPPORTED_MIME_TYPES = [
   'text/plain',

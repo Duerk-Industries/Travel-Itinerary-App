@@ -5,10 +5,10 @@ import { findUserByIdentifier } from '../../db';
 import { getEnvValue } from '../../env';
 import { logError } from '../../logger';
 import {
-  INGESTION_DEFAULT_FORWARDING_ADDRESS,
   INGESTION_DEFAULT_FORWARDING_PROVIDER,
   INGESTION_MAX_FILE_BYTES,
   INGESTION_WEBHOOK_MAX_AGE_MS,
+  getIngestionForwardingAddress,
 } from '../config';
 import type { IngestionPayload } from '../contracts';
 import { claimWebhookReplayToken } from '../shared/repository';
@@ -130,7 +130,7 @@ export const buildMailgunWebhookPayloads = async (req: Request, userId: string, 
   const body = (req.body ?? {}) as Record<string, unknown>;
   const files = ((req.files as Express.Multer.File[] | undefined) ?? []) as Express.Multer.File[];
   const subject = coerceString(body.subject) || 'Forwarded travel confirmation';
-  const recipient = extractEmailAddress(body.recipient) ?? INGESTION_DEFAULT_FORWARDING_ADDRESS;
+  const recipient = extractEmailAddress(body.recipient) ?? getIngestionForwardingAddress();
   const messageId =
     getHeaderValue(body, 'Message-Id') ??
     getHeaderValue(body, 'message-id') ??

@@ -64,6 +64,8 @@ These should normally live in `server/.secrets` so `deploy-api.ps1` maps them wi
   Use this if you want the Gmail callback URL pinned explicitly instead of derived from the request host.
 - `INGESTION_WORKER_BASE_URL`
   Use this if the worker should call a different base URL than `WEB_URL`.
+- `INGESTION_FORWARDING_ADDRESS`
+  Use this if you want the user-facing forwarding address and Mailgun fallback recipient to differ from the built-in default.
 - `INGESTION_JOB_QUEUE_MODE=cloud_run`
   Production already defaults to this, but setting it explicitly can make debugging easier.
 
@@ -175,6 +177,8 @@ Setup steps:
 Current default forwarding address in code:
 
 - `travel.docs@duerk.org`
+
+If you set `INGESTION_FORWARDING_ADDRESS`, that value overrides the built-in default shown above.
 
 Important behavior:
 
@@ -301,6 +305,7 @@ For the current `deploy-api.ps1` flow, this is the practical env checklist.
 - `USE_IN_MEMORY_DB`
 - `GOOGLE_GMAIL_CALLBACK_URL` if you want an explicit callback override
 - `INGESTION_WORKER_BASE_URL` if it should differ from `WEB_URL`
+- `INGESTION_FORWARDING_ADDRESS` if you want to override the default forwarding inbox address
 - `INGESTION_JOB_QUEUE_MODE` if you want it explicit
 
 ### Put these in `server/.secrets`
