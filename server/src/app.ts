@@ -26,7 +26,7 @@ import ingestionGmailOAuthRoutes from './routes/ingestionGmailOAuthRoutes';
 import internalIngestionWorkerRoutes from './routes/internalIngestionWorkerRoutes';
 
 import { loadEnv } from './env_loader';
-import { getEnvValue, hasRunLocalFlag, isLocalEnv } from './env';
+import { getBackendUrl, getEnvValue, hasRunLocalFlag, isLocalEnv } from './env';
 
 // Load env vars from server/.env as the primary local source, with server/.secrets
 // still supported as a backwards-compatible fallback (plus repo root fallbacks).
@@ -71,7 +71,7 @@ export const app = express();
 app.set('trust proxy', 1);
 
 const isRunningLocally = isLocalEnv();
-const webUrl = getEnvValue('WEB_URL', { defaultValue: 'https://duerk.org' }) || 'https://duerk.org';
+const webUrl = getBackendUrl('https://duerk.org') || 'https://duerk.org';
 const allowedOrigins = isRunningLocally
   ? [/^http:\/\/localhost(:\d+)?$/, /^http:\/\/127\.0\.0\.1(:\d+)?$/]
   : [webUrl];

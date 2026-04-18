@@ -1,4 +1,4 @@
-import { getEnvValue } from '../../env';
+import { getBackendUrl, getEnvValue } from '../../env';
 import { logError, logInfo } from '../../logger';
 import { INGESTION_JOB_QUEUE_MODE_DEFAULT } from '../config';
 
@@ -22,10 +22,10 @@ class InProcessJobQueue implements JobQueue {
 
 class CloudRunJobQueue implements JobQueue {
   async enqueue(jobId: string): Promise<void> {
-    const baseUrl = getEnvValue('INGESTION_WORKER_BASE_URL') ?? getEnvValue('WEB_URL');
+    const baseUrl = getEnvValue('INGESTION_WORKER_BASE_URL') ?? getBackendUrl();
     const sharedSecret = getEnvValue('INGESTION_WORKER_SHARED_SECRET', { required: true })!;
     if (!baseUrl) {
-      throw new Error('INGESTION_WORKER_BASE_URL or WEB_URL must be configured for cloud job queue mode.');
+      throw new Error('INGESTION_WORKER_BASE_URL or BACKEND_URL must be configured for cloud job queue mode.');
     }
     const url = new URL(`/api/internal/ingestion/jobs/${jobId}/run`, baseUrl).toString();
     logInfo(`[ingestion][queue] dispatching cloud-run job=${jobId} url=${url}`);

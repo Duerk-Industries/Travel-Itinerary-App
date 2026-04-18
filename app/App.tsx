@@ -270,10 +270,11 @@ const resolveBackendUrl = (): string => {
   const envConfigured =
     (typeof process !== 'undefined' &&
       (process.env.EXPO_PUBLIC_BACKEND_URL ??
+        process.env.BACKEND_URL ??
+        process.env.WEB_URL ??
         process.env.API_BASE_URL ??
         process.env.REACT_APP_BACKEND_URL ??
-        process.env.REACT_NATIVE_APP_BACKEND_URL ??
-        process.env.BACKEND_URL)) ||
+        process.env.REACT_NATIVE_APP_BACKEND_URL)) ||
     '';
   const appConfigured = Constants.expoConfig?.extra?.backendUrl;
   const configuredBackend = [appConfigured, envConfigured].find(

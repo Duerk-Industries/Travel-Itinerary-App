@@ -4,7 +4,7 @@
  */
 import type { Server as HttpServer } from 'http';
 import { Server } from 'socket.io';
-import { getEnvValue, isLocalEnv } from '../env';
+import { getBackendUrl, isLocalEnv } from '../env';
 import { logInfo } from '../logger';
 import { socketAuthMiddleware } from './authMiddleware';
 import { registerChatHandlers } from './chatHandler';
@@ -12,7 +12,7 @@ import { registerChatHandlers } from './chatHandler';
 let io: Server | null = null;
 
 export const createSocketServer = (httpServer: HttpServer): Server => {
-  const webUrl = getEnvValue('WEB_URL') ?? 'http://localhost:19006';
+  const webUrl = getBackendUrl('http://localhost:19006') ?? 'http://localhost:19006';
   const corsOrigins = isLocalEnv()
     ? [
         'http://localhost:3000',

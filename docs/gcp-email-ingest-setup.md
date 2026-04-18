@@ -23,7 +23,7 @@ Both paths enqueue ingestion jobs into the same backend pipeline, and in product
 Before setup, make sure you have:
 
 - a deployed Cloud Run service for the API
-- a working custom domain or service URL for `WEB_URL`
+- a working custom domain or service URL for `BACKEND_URL`
 - Firestore configured for the project
 - Secret Manager enabled
 - a runtime service account with the permissions your app already uses in production
@@ -41,7 +41,7 @@ The deploy script reads from:
 
 These should live in `server/.env` unless you intentionally override them another way:
 
-- `WEB_URL`
+- `BACKEND_URL`
 - `GCLOUD_PROJECT_ID`
 - `GOOGLE_CLOUD_PROJECT`
 - `FIRESTORE_DATABASE_ID`
@@ -63,7 +63,7 @@ These should normally live in `server/.secrets` so `deploy-api.ps1` maps them wi
 - `GOOGLE_GMAIL_CALLBACK_URL`
   Use this if you want the Gmail callback URL pinned explicitly instead of derived from the request host.
 - `INGESTION_WORKER_BASE_URL`
-  Use this if the worker should call a different base URL than `WEB_URL`.
+  Use this if the worker should call a different base URL than `BACKEND_URL`.
 - `INGESTION_FORWARDING_ADDRESS`
   Use this if you want the user-facing forwarding address and Mailgun fallback recipient to differ from the built-in default.
 - `INGESTION_JOB_QUEUE_MODE=cloud_run`
@@ -121,7 +121,7 @@ In production, ingestion jobs are dispatched to:
 The app calls that endpoint using:
 
 - `INGESTION_WORKER_BASE_URL`, or if unset
-- `WEB_URL`
+- `BACKEND_URL`
 
 The request must include a matching:
 
@@ -129,7 +129,7 @@ The request must include a matching:
 
 Checklist:
 
-- `WEB_URL` points to the deployed API domain
+- `BACKEND_URL` points to the deployed API domain
 - `INGESTION_WORKER_SHARED_SECRET` is configured in Cloud Run
 - the deployed service can reach its own public URL
 
@@ -258,7 +258,7 @@ Run this checklist after a production deploy:
 
 Check:
 
-- `WEB_URL`
+- `BACKEND_URL`
 - `INGESTION_WORKER_BASE_URL`
 - `INGESTION_WORKER_SHARED_SECRET`
 - Cloud Run logs for `/api/internal/ingestion/jobs/:jobId/run`
@@ -297,14 +297,14 @@ For the current `deploy-api.ps1` flow, this is the practical env checklist.
 
 ### Put these in `server/.env`
 
-- `WEB_URL`
+- `BACKEND_URL`
 - `GCLOUD_PROJECT_ID`
 - `GOOGLE_CLOUD_PROJECT`
 - `FIRESTORE_DATABASE_ID`
 - `DB_PROVIDER`
 - `USE_IN_MEMORY_DB`
 - `GOOGLE_GMAIL_CALLBACK_URL` if you want an explicit callback override
-- `INGESTION_WORKER_BASE_URL` if it should differ from `WEB_URL`
+- `INGESTION_WORKER_BASE_URL` if it should differ from `BACKEND_URL`
 - `INGESTION_FORWARDING_ADDRESS` if you want to override the default forwarding inbox address
 - `INGESTION_JOB_QUEUE_MODE` if you want it explicit
 

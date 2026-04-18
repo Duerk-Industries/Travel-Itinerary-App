@@ -12,7 +12,7 @@ import { enqueueIngestionPipelineJob } from '../ingestion/orchestrator';
 import { listReviewQueueItems, listImportJobsForUser, getReviewQueueSignedUrl, getProviderConnection, disconnectProviderConnections, upsertProviderConnection, updateProviderConnectionStatus, getIngestedDocumentById } from '../ingestion/shared/repository';
 import { assertAndConsumeMonthlyQuota, getTierIngestionRules } from '../ingestion/shared/quota';
 import { IngestionError } from '../ingestion/shared/userFailures';
-import { getEnvValue } from '../env';
+import { getBackendUrl, getEnvValue } from '../env';
 import { logError, logInfo } from '../logger';
 
 const router = Router();
@@ -353,7 +353,7 @@ router.get('/gmail/status', async (req, res) => {
 router.post('/gmail/connect', async (req, res) => {
   const userId = (req as any).user.userId as string;
   if (!(await ensureGmailFeatureAndTier(userId, res))) return;
-  const webUrl = getEnvValue('WEB_URL', { defaultValue: `${req.protocol}://${req.get('host')}` })!;
+  const webUrl = getBackendUrl(`${req.protocol}://${req.get('host')}`)!;
   const rawRedirectUri = typeof req.body?.redirectUri === 'string' ? req.body.redirectUri : undefined;
   const { redirectUri, error } = resolveAndValidateRedirectUri(rawRedirectUri, webUrl);
   if (error) {

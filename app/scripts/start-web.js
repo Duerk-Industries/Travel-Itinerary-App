@@ -11,8 +11,11 @@ loadEnv(path.join(__dirname, '..', '..', '.env'), true);
 loadEnv(path.join(__dirname, '..', '..', 'server', '.env'), true);
 loadEnv(path.join(__dirname, '..', '..', 'server', '.local_env'), true);
 
-if (!process.env.EXPO_PUBLIC_BACKEND_URL && process.env.API_BASE_URL) {
-  process.env.EXPO_PUBLIC_BACKEND_URL = process.env.API_BASE_URL;
+if (!process.env.EXPO_PUBLIC_BACKEND_URL) {
+  process.env.EXPO_PUBLIC_BACKEND_URL =
+    process.env.BACKEND_URL ||
+    process.env.WEB_URL ||
+    process.env.API_BASE_URL;
 }
 
 const useInMemory = process.env.USE_IN_MEMORY_DB === '1';
