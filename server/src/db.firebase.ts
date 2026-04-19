@@ -2557,14 +2557,40 @@ export const searchFlightLocations = async (_userId: string, query: string): Pro
   const db = getDb();
   const normalized = query.trim().toLowerCase();
   if (!normalized) return [];
-  const airports = await db
+  const exactMatches = await db
     .collection('airports')
     .where('search', 'array-contains', normalized)
-    .limit(10)
+    .limit(15)
     .get()
     .catch(() => null);
+  if (exactMatches && !exactMatches.empty) {
+    return exactMatches.docs.map((d) => d.data().label as string).filter(Boolean);
+  }
+
+  // Fallback for partial airport queries when Firestore only has exact search tokens.
+  const airports = await db.collection('airports').get().catch(() => null);
   if (!airports || airports.empty) return [];
-  return airports.docs.map((d) => d.data().label as string);
+
+  const matches = airports.docs
+    .map((doc) => doc.data() as any)
+    .map((data) => ({
+      label: String(data.label ?? '').trim(),
+      code: String(data.iata_code ?? '').trim().toLowerCase(),
+      city: String(data.city ?? '').trim().toLowerCase(),
+      name: String(data.name ?? '').trim().toLowerCase(),
+    }))
+    .filter((airport) =>
+      airport.label.toLowerCase().includes(normalized) ||
+      airport.code.includes(normalized) ||
+      airport.city.includes(normalized) ||
+      airport.name.includes(normalized)
+    )
+    .sort((left, right) => left.label.localeCompare(right.label))
+    .slice(0, 15)
+    .map((airport) => airport.label)
+    .filter(Boolean);
+
+  return Array.from(new Set(matches));
 };
 
 const toLocationRecord = (id: string, data: any): LocationRecord => ({

@@ -26,20 +26,53 @@ const emptyAddressForm = (): AddressForm => ({
   country: '',
 });
 
+const fallbackAirportOptions = [
+  'Atlanta (ATL)',
+  'Boston (BOS)',
+  'Chicago (ORD)',
+  'Dallas-Fort Worth (DFW)',
+  'Denver (DEN)',
+  'Los Angeles (LAX)',
+  'New York (JFK)',
+  'Newark (EWR)',
+  'San Francisco (SFO)',
+  'Seattle (SEA)',
+];
+
+const parseStatePostal = (value: string): { state: string; postalCode: string } => {
+  const trimmed = value.trim();
+  if (!trimmed) return { state: '', postalCode: '' };
+  const match = trimmed.match(/^(.*?)(?:\s+([A-Za-z0-9-]{3,12}))?$/);
+  return {
+    state: match?.[1]?.trim() ?? '',
+    postalCode: match?.[2]?.trim() ?? '',
+  };
+};
+
 const parseHomeAddress = (value: string | null | undefined): AddressForm => {
   const input = String(value ?? '').trim();
   if (!input) return emptyAddressForm();
   const parts = input.split(',').map((part) => part.trim()).filter(Boolean);
-  const [line1 = '', line2 = '', city = '', statePostal = '', country = ''] = parts;
-  const statePostalMatch = statePostal.match(/^(.*?)(?:\s+([A-Za-z0-9-]{3,12}))?$/);
-  return {
-    line1,
-    line2: parts.length > 4 ? line2 : '',
-    city: parts.length > 4 ? city : line2,
-    state: statePostalMatch?.[1]?.trim() ?? '',
-    postalCode: statePostalMatch?.[2]?.trim() ?? '',
-    country: parts.length > 4 ? country : parts[3] ?? '',
-  };
+  if (parts.length >= 5) {
+    const [line1 = '', line2 = '', city = '', statePostal = '', country = ''] = parts;
+    const { state, postalCode } = parseStatePostal(statePostal);
+    return { line1, line2, city, state, postalCode, country };
+  }
+  if (parts.length === 4) {
+    const [line1 = '', city = '', statePostal = '', country = ''] = parts;
+    const { state, postalCode } = parseStatePostal(statePostal);
+    return { line1, line2: '', city, state, postalCode, country };
+  }
+  if (parts.length === 3) {
+    const [line1 = '', city = '', statePostal = ''] = parts;
+    const { state, postalCode } = parseStatePostal(statePostal);
+    return { line1, line2: '', city, state, postalCode, country: '' };
+  }
+  if (parts.length === 2) {
+    const [line1 = '', city = ''] = parts;
+    return { line1, line2: '', city, state: '', postalCode: '', country: '' };
+  }
+  return { line1: parts[0] ?? '', line2: '', city: '', state: '', postalCode: '', country: '' };
 };
 
 const formatHomeAddress = (address: AddressForm): string =>
@@ -126,9 +159,10 @@ const AccountProfileManagement = ({
 
   const buildAirportSuggestions = (query: string): string[] => {
     const trimmed = query.trim();
-    if (!trimmed) return airportOptions.slice(0, 10);
+    const sourceOptions = airportOptions.length ? airportOptions : fallbackAirportOptions;
+    if (!trimmed) return sourceOptions.slice(0, 10);
     const lower = trimmed.toLowerCase();
-    return airportOptions
+    return sourceOptions
       .filter((opt) => {
         const normalized = opt.toLowerCase();
         const code = parsePreferredAirportCode(opt).toLowerCase();
