@@ -34,10 +34,12 @@ import {
   TripChatMessage,
   TripMessageRead,
 } from './types';
-import { logError } from './logger';
+import { logError, logInfo } from './logger';
 import { getEnvValue } from './env';
 import { downloadAirportDatasetForDailyRefresh } from './apis/airportDatasetCallers';
-import { normalizeAirportDataset } from './services/airportCatalog';
+import { normalizeAirportDataset, searchBundledAirportDataset } from './services/airportCatalog';
+import fs from 'fs';
+import path from 'path';
 import { getReservedUsernames } from './config/authFlags';
 import { getApiLimitsConfig } from './config/apiLimits';
 
@@ -6064,7 +6066,10 @@ export const searchFlightLocations = async (userId: string, query: string): Prom
      LIMIT 15`,
     [like]
   );
-  return rows.map((r) => r.label).filter(Boolean);
+  const dbResults = rows.map((r) => r.label).filter(Boolean);
+  if (dbResults.length >= 15) return dbResults;
+  const fallbackResults = searchBundledAirportDataset(query, 15);
+  return Array.from(new Set([...dbResults, ...fallbackResults])).slice(0, 15);
 };
 
 const toLocationRecord = (row: any): LocationRecord => {
@@ -6453,8 +6458,17 @@ export const refreshAirportsDaily = async (): Promise<void> => {
   try {
     data = await downloadAirportDatasetForDailyRefresh();
   } catch (err) {
-    logError('Failed to download airports dataset', err);
-    return;
+    logError('Failed to download airports dataset, falling back to local file', err);
+    try {
+      const localPath = path.resolve(__dirname, '../../data/airport_codes.json');
+      if (fs.existsSync(localPath)) {
+        data = JSON.parse(fs.readFileSync(localPath, 'utf8'));
+        logInfo(`[airports] Loaded ${Array.isArray(data) ? data.length : 0} airports from local fallback`);
+      }
+    } catch (localErr) {
+      logError('Failed to load local airports fallback', localErr);
+      return;
+    }
   }
 
   const filtered = normalizeAirportDataset(data).map((airport) => ({

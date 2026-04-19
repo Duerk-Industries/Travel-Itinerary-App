@@ -1,3 +1,6 @@
+import fs from 'fs';
+import path from 'path';
+
 export const AIRPORT_DATASET_URL = 'https://raw.githubusercontent.com/algolia/datasets/master/airports/airports.json';
 
 export type AirportCatalogRecord = {
@@ -73,4 +76,43 @@ export const downloadNormalizedAirportDataset = async (url = AIRPORT_DATASET_URL
   }
   const data = await response.json();
   return normalizeAirportDataset(data);
+};
+
+let bundledAirportDatasetCache: AirportCatalogRecord[] | null = null;
+
+export const loadBundledAirportDataset = (): AirportCatalogRecord[] => {
+  if (bundledAirportDatasetCache) return bundledAirportDatasetCache;
+  const bundledPath = path.resolve(__dirname, '../../data/airport_codes.json');
+  if (!fs.existsSync(bundledPath)) {
+    bundledAirportDatasetCache = [];
+    return bundledAirportDatasetCache;
+  }
+  try {
+    const raw = JSON.parse(fs.readFileSync(bundledPath, 'utf8'));
+    bundledAirportDatasetCache = normalizeAirportDataset(raw);
+  } catch {
+    bundledAirportDatasetCache = [];
+  }
+  return bundledAirportDatasetCache;
+};
+
+export const searchBundledAirportDataset = (query: string, limit = 15): string[] => {
+  const normalized = normalizeText(query).toLowerCase();
+  if (!normalized) return [];
+  return loadBundledAirportDataset()
+    .filter((airport) => {
+      const label = airport.label.toLowerCase();
+      const name = airport.name.toLowerCase();
+      const city = airport.city.toLowerCase();
+      const code = airport.iata_code.toLowerCase();
+      return label.includes(normalized) || name.includes(normalized) || city.includes(normalized) || code.includes(normalized);
+    })
+    .sort((left, right) => {
+      const leftStarts = left.iata_code.toLowerCase().startsWith(normalized) || left.city.toLowerCase().startsWith(normalized);
+      const rightStarts = right.iata_code.toLowerCase().startsWith(normalized) || right.city.toLowerCase().startsWith(normalized);
+      if (leftStarts !== rightStarts) return leftStarts ? -1 : 1;
+      return left.label.localeCompare(right.label);
+    })
+    .slice(0, limit)
+    .map((airport) => airport.label);
 };
