@@ -1861,11 +1861,11 @@ export const findParsedItemByFingerprint = async (
       .collection('parsed_items')
       .where('userId', '==', userId)
       .where('deduplicationFingerprint', '==', fingerprint)
-      .orderBy('updatedAt', 'desc')
-      .limit(1)
       .get();
     if (snap.empty) return null;
-    const doc = snap.docs[0];
+    const doc = [...snap.docs].sort((a, b) =>
+      String((b.data() as any).updatedAt ?? '').localeCompare(String((a.data() as any).updatedAt ?? ''))
+    )[0]!;
     const data = doc.data() as any;
     return mapParsedItemRow({
       id: doc.id,

@@ -32,7 +32,7 @@ flags:
     enabled: true
     description: "Phase 1 manual upload ingestion and review queue"
   feature_ingest_forwarded_mailbox:
-    enabled: false
+    enabled: true
     description: "Phase 2 forwarded mailbox ingestion"
   feature_ingest_gmail_import:
     enabled: false

@@ -113,6 +113,33 @@ function Get-DisplayEnvPair([string]$Pair) {
   return "$key=<redacted>"
 }
 
+function Get-UniqueStrings([string[]]$Values) {
+  $seen = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
+  $unique = @()
+  foreach ($value in $Values) {
+    if ([string]::IsNullOrWhiteSpace($value)) { continue }
+    if ($seen.Add($value)) {
+      $unique += $value
+    }
+  }
+  return $unique
+}
+
+function Invoke-LegacySecretCleanup([string]$ServiceName, [string]$Region, [string[]]$EnvKeys, [string]$Memory, [bool]$AllowClearSecretsFallback, [string]$PhaseLabel) {
+  if ($EnvKeys.Count -eq 0) { return $true }
+
+  Write-Host "$PhaseLabel legacy secret bindings for .env-managed keys..."
+  $removeCmd = @('run', 'services', 'update', $ServiceName, '--region', $Region, '--remove-secrets', ($EnvKeys -join ','), '--memory', $Memory)
+  & gcloud @removeCmd
+  if ($LASTEXITCODE -eq 0) { return $true }
+  if (-not $AllowClearSecretsFallback) { return $false }
+
+  Write-Warning "$PhaseLabel targeted secret cleanup failed; retrying with --clear-secrets to remove stale Cloud Run secret bindings."
+  $clearCmd = @('run', 'services', 'update', $ServiceName, '--region', $Region, '--clear-secrets', '--memory', $Memory)
+  & gcloud @clearCmd
+  return ($LASTEXITCODE -eq 0)
+}
+
 Write-Host "Deploying Cloud Run service source code..."
 Write-Host "  Service: $ServiceName"
 Write-Host "  Region: $Region"
@@ -190,7 +217,7 @@ if ($secretMap.Count -gt 0) {
     $envPairs = $envPairs | Where-Object { $_ -notmatch $pattern }
   }
 }
-$envKeys = $envPairs | ForEach-Object { ($_ -split '=', 2)[0] } | Where-Object { $_ }
+$envKeys = Get-UniqueStrings ($envPairs | ForEach-Object { ($_ -split '=', 2)[0] } | Where-Object { $_ })
 
 $envArg = ''
 if ($envPairs.Count -gt 0) {
@@ -220,6 +247,18 @@ foreach ($candidate in @('FIRESTORE_EMULATOR_HOST', 'GOOGLE_APPLICATION_CREDENTI
 }
 if ($removeEnvKeys.Count -gt 0) { $cmd += @('--remove-env-vars', ($removeEnvKeys -join ',')) }
 
+if ($envKeys.Count -gt 0) {
+  $describeCmd = @('run', 'services', 'describe', $ServiceName, '--region', $Region)
+  & gcloud @describeCmd *> $null
+  if ($LASTEXITCODE -eq 0) {
+    $allowClearSecretsFallback = $secretMap.Count -eq 0
+    if (-not (Invoke-LegacySecretCleanup -ServiceName $ServiceName -Region $Region -EnvKeys $envKeys -Memory $Memory -AllowClearSecretsFallback $allowClearSecretsFallback -PhaseLabel 'Removing pre-deploy')) {
+      Write-Error "Pre-deploy legacy secret removal failed with gcloud exit code $LASTEXITCODE."
+      exit $LASTEXITCODE
+    }
+  }
+}
+
 if (-not $SkipFirestoreIndexes) {
   $indexScript = Join-Path $PSScriptRoot 'deploy-firestore-indexes.ps1'
   if (-not (Test-Path -LiteralPath $indexScript)) {
@@ -243,10 +282,8 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 if ($envKeys.Count -gt 0) {
-  Write-Host "Removing legacy secret bindings for .env-managed keys..."
-  $migrateCmd = @('run', 'services', 'update', $ServiceName, '--region', $Region, '--remove-secrets', ($envKeys -join ','), '--memory', $Memory)
-  & gcloud @migrateCmd
-  if ($LASTEXITCODE -ne 0) {
+  $allowClearSecretsFallback = $secretMap.Count -eq 0
+  if (-not (Invoke-LegacySecretCleanup -ServiceName $ServiceName -Region $Region -EnvKeys $envKeys -Memory $Memory -AllowClearSecretsFallback $allowClearSecretsFallback -PhaseLabel 'Removing post-deploy')) {
     Write-Error "Legacy secret removal failed with gcloud exit code $LASTEXITCODE."
     exit $LASTEXITCODE
   }

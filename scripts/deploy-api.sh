@@ -121,6 +121,40 @@ display_env_pair() {
   fi
 }
 
+dedupe_preserve_order() {
+  declare -A seen=()
+  local value
+  for value in "$@"; do
+    [[ -z "$value" || -n "${seen[$value]:-}" ]] && continue
+    seen["$value"]=1
+    printf '%s\n' "$value"
+  done
+}
+
+cleanup_legacy_secrets() {
+  local phase_label="$1"
+  local allow_clear_fallback="$2"
+  if [[ -z "${remove_secrets_arg:-}" ]]; then
+    return 0
+  fi
+
+  echo "${phase_label} legacy secret bindings for .env-managed keys..."
+  if gcloud run services update "$SERVICE_NAME" \
+    --region "$REGION" \
+    --remove-secrets "$remove_secrets_arg"; then
+    return 0
+  fi
+
+  if [[ "$allow_clear_fallback" != "1" ]]; then
+    return 1
+  fi
+
+  echo "WARNING: ${phase_label} targeted secret cleanup failed; retrying with --clear-secrets to remove stale Cloud Run secret bindings." >&2
+  gcloud run services update "$SERVICE_NAME" \
+    --region "$REGION" \
+    --clear-secrets
+}
+
 env_pairs=()
 declare -A secret_map=()
 saw_google_application_credentials=0
@@ -212,6 +246,9 @@ env_keys=()
 for pair in "${env_pairs[@]}"; do
   env_keys+=("${pair%%=*}")
 done
+if [[ "${#env_keys[@]}" -gt 0 ]]; then
+  mapfile -t env_keys < <(dedupe_preserve_order "${env_keys[@]}")
+fi
 if [[ "${#env_pairs[@]}" -gt 0 ]]; then
   env_arg="$(IFS=,; echo "${env_pairs[*]}")"
   echo "Env vars to upload:"
@@ -251,10 +288,13 @@ if [[ "${#env_keys[@]}" -gt 0 ]]; then
 fi
 
 if [[ -n "$remove_secrets_arg" ]]; then
-  echo "Removing legacy secret bindings for .env-managed keys..."
-  gcloud run services update "$SERVICE_NAME" \
-    --region "$REGION" \
-    --remove-secrets "$remove_secrets_arg"
+  if gcloud run services describe "$SERVICE_NAME" --region "$REGION" >/dev/null 2>&1; then
+    allow_clear_fallback=0
+    if [[ "${#secret_map[@]}" -eq 0 ]]; then
+      allow_clear_fallback=1
+    fi
+    cleanup_legacy_secrets "Removing pre-deploy" "$allow_clear_fallback"
+  fi
 fi
 
 gcloud run deploy "$SERVICE_NAME" \
@@ -264,5 +304,13 @@ gcloud run deploy "$SERVICE_NAME" \
   ${secrets_arg:+--set-secrets "$secrets_arg"} \
   ${secret_keys_arg:+--remove-env-vars "$secret_keys_arg"} \
   ${remove_env_arg:+--remove-env-vars "$remove_env_arg"}
+
+if [[ -n "$remove_secrets_arg" ]]; then
+  allow_clear_fallback=0
+  if [[ "${#secret_map[@]}" -eq 0 ]]; then
+    allow_clear_fallback=1
+  fi
+  cleanup_legacy_secrets "Removing post-deploy" "$allow_clear_fallback"
+fi
 
 echo "API deployment completed."

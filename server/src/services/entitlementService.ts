@@ -10,6 +10,7 @@ import {
 } from '../db';
 import { UserRole, TierKey } from '../types';
 import { logInfo, logError } from '../logger';
+import { getEnvValue } from '../env';
 import { getFeatureFlagSeeds } from '../config/featureFlags';
 import { EntitlementError } from '../errors';
 
@@ -103,6 +104,31 @@ export const seedEntitlementDefaults = async (): Promise<void> => {
     const feature = featureByKey.get(featureKey);
     if (!tier || !feature) continue;
     await upsertTierEntitlement(tier.id, feature.id, isAllowed);
+  }
+};
+
+const parseStartupFeatureFlagOverrides = (): string[] => {
+  const raw = getEnvValue('STARTUP_FORCE_ENABLE_FEATURE_FLAGS', { defaultValue: '' }) || '';
+  return raw
+    .split(',')
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean);
+};
+
+export const applyStartupFeatureFlagOverrides = async (): Promise<void> => {
+  const flagsToEnable = parseStartupFeatureFlagOverrides();
+  if (flagsToEnable.length === 0) {
+    return;
+  }
+
+  for (const key of flagsToEnable) {
+    const current = await getFeatureFlag(key);
+    if (current?.enabled) {
+      logInfo(`[entitlement] Startup feature flag already enabled: ${key}`);
+      continue;
+    }
+    await setFeatureFlag(key, true, null);
+    logInfo(`[entitlement] Startup feature flag override enabled: ${key}`);
   }
 };
 

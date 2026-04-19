@@ -33,6 +33,7 @@ if (process.env.SHOW_TEST_LOGS !== '1') {
 process.env.NODE_ENV = process.env.NODE_ENV ?? 'test';
 process.env.DB_PROVIDER = process.env.DB_PROVIDER ?? 'firebase';
 process.env.GCLOUD_PROJECT_ID = process.env.GCLOUD_PROJECT_ID ?? 'jest-firebase-test-project';
+process.env.INGESTION_JOB_QUEUE_MODE = 'in_process';
 
 if (process.env.DB_PROVIDER === 'memory') {
   // pg-mem: mock the pg module with an in-memory implementation

@@ -11,7 +11,7 @@
  * then UI sections render conditionally based on the active page.
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Image, Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme, useWindowDimensions } from 'react-native';
+import { AppState, Image, Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme, useWindowDimensions } from 'react-native';
 import { NavigationContainer, createNavigationContainerRef, type LinkingOptions } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Constants from 'expo-constants';
@@ -337,6 +337,8 @@ const resolveRefreshIntervalMs = (): number => {
 
 const backendUrl = resolveBackendUrl();
 const refreshIntervalMs = resolveRefreshIntervalMs();
+const idleRefreshMultiplier = 5;
+const idleThresholdMs = 2 * 60 * 1000;
 const sessionKey = 'stp.session';
 const sessionDurationMs = 12 * 60 * 60 * 1000;
 
@@ -513,6 +515,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [isRefreshing, setIsRefreshing] = useState(false);
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const refreshInFlightRef = useRef(false);
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isAppIdle, setIsAppIdle] = useState(false);
   const autoRedeemedFollowCodeRef = useRef<string | null>(null);
   const [flights, setFlights] = useState<Flight[]>([]);
   const [externalFlightEditId, setExternalFlightEditId] = useState<string | null>(null);
@@ -1667,6 +1671,26 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     }
   }, [backendUrl, userToken]);
 
+  const fetchFollowedTrips = useCallback(async (tokenOverride?: string) => {
+    const authToken = tokenOverride ?? userToken;
+    if (!authToken) {
+      setFollowedTrips([]);
+      return [];
+    }
+    try {
+      const trips = await fetchFollowedTripsApi(backendUrl, { Authorization: `Bearer ${authToken}` });
+      setFollowedTrips(trips);
+      return trips;
+    } catch (err) {
+      if ((err as any).code === 'UNAUTHORIZED') {
+        logout();
+      } else {
+        setFollowedTrips([]);
+      }
+      return [];
+    }
+  }, [backendUrl, logout, userToken]);
+
   const fetchGroups = useCallback(async (sort?: 'created' | 'name') => {
     const res = await fetch(`${backendUrl}/api/groups?sort=${sort ?? groupSort}`, {
       headers: { Authorization: `Bearer ${userToken}` },
@@ -1840,7 +1864,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     fetchTrips();
   };
 
-  const refreshAllData = useCallback(async (tokenOverride?: string) => {
+  const refreshPageData = useCallback(async (tokenOverride?: string, pageOverride?: Page) => {
     const authToken = tokenOverride ?? userToken;
     if (!authToken || refreshInFlightRef.current || requirePasswordSetup) return;
     refreshInFlightRef.current = true;
@@ -1848,33 +1872,68 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     try {
       const ok = await loadAccountProfile(authToken);
       if (!ok) return;
-      await Promise.all([
-        fetchFlights(authToken),
-        fetchLodgings(authToken),
-        fetchTours(authToken),
-        fetchCarRentals(authToken),
-        fetchExpenses(authToken),
-        fetchInvites(authToken),
-        fetchGroups(),
-        fetchTrips(),
-        fetchTraits(),
-        fetchTraitProfile(),
-        fetchItineraries(authToken),
-        loadFamilyRelationships(authToken),
-        loadFellowTravelers(authToken),
-        (async () => {
-          try {
-            const trips = await fetchFollowedTripsApi(backendUrl, { Authorization: `Bearer ${authToken}` });
-            setFollowedTrips(trips);
-          } catch (err) {
-            if ((err as any).code === 'UNAUTHORIZED') {
-              logout();
-            } else {
-              setFollowedTrips([]);
-            }
-          }
-        })()
-      ]);
+      const currentPage = pageOverride ?? activePage;
+      switch (currentPage) {
+        case 'home':
+        case 'trips':
+          await Promise.all([fetchInvites(authToken), fetchGroups(), fetchTrips(authToken), fetchFollowedTrips(authToken)]);
+          break;
+        case 'overview':
+          await Promise.all([
+            fetchTrips(authToken),
+            fetchGroups(),
+            fetchFlights(authToken),
+            fetchLodgings(authToken),
+            fetchTours(authToken),
+            fetchCarRentals(authToken),
+            fetchExpenses(authToken),
+            fetchFollowedTrips(authToken),
+          ]);
+          break;
+        case 'flights':
+          await Promise.all([fetchFlights(authToken), fetchExpenses(authToken)]);
+          break;
+        case 'lodging':
+          await Promise.all([fetchLodgings(authToken), fetchExpenses(authToken)]);
+          break;
+        case 'car':
+          await Promise.all([fetchCarRentals(authToken), fetchExpenses(authToken)]);
+          break;
+        case 'tours':
+          await fetchTours(authToken);
+          break;
+        case 'expenses':
+        case 'ledger':
+        case 'cost':
+          await Promise.all([fetchTrips(authToken), fetchExpenses(authToken)]);
+          break;
+        case 'itinerary':
+          await Promise.all([fetchTrips(authToken), fetchItineraries(authToken), fetchTraits(), fetchTraitProfile()]);
+          break;
+        case 'ingest':
+          await Promise.all([fetchTrips(authToken), fetchGroups()]);
+          break;
+        case 'account':
+          await Promise.all([fetchTraits(), fetchTraitProfile(), loadFamilyRelationships(authToken), loadFellowTravelers(authToken)]);
+          break;
+        case 'follow':
+          await Promise.all([fetchTrips(authToken), fetchFollowedTrips(authToken)]);
+          break;
+        case 'following':
+          await fetchFollowedTrips(authToken);
+          break;
+        case 'trip-details':
+          await Promise.all([fetchTrips(authToken), fetchGroups()]);
+          break;
+        case 'create-trip':
+          await Promise.all([fetchGroups(), fetchTrips(authToken)]);
+          break;
+        case 'admin':
+          break;
+        default:
+          await Promise.all([fetchInvites(authToken), fetchGroups(), fetchTrips(authToken), fetchFollowedTrips(authToken)]);
+          break;
+      }
     } finally {
       refreshInFlightRef.current = false;
       setIsRefreshing(false);
@@ -1888,24 +1947,83 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     fetchTours,
     fetchCarRentals,
     fetchExpenses,
+    activePage,
     fetchInvites,
     fetchGroups,
     fetchTrips,
+    fetchFollowedTrips,
     fetchTraits,
     fetchTraitProfile,
     fetchItineraries,
     loadFamilyRelationships,
     loadFellowTravelers,
-    backendUrl,
-    logout,
     requirePasswordSetup
   ]);
 
   useEffect(() => {
     if (userToken && !requirePasswordSetup) {
-      refreshAllData();
+      refreshPageData();
     }
-  }, [userToken, requirePasswordSetup, refreshAllData]);
+  }, [userToken, requirePasswordSetup, refreshPageData]);
+
+  useEffect(() => {
+    const clearIdleTimer = () => {
+      if (idleTimerRef.current) {
+        clearTimeout(idleTimerRef.current);
+        idleTimerRef.current = null;
+      }
+    };
+
+    const scheduleIdleTimer = () => {
+      clearIdleTimer();
+      idleTimerRef.current = setTimeout(() => {
+        setIsAppIdle(true);
+      }, idleThresholdMs);
+    };
+
+    const markActive = () => {
+      setIsAppIdle(false);
+      scheduleIdleTimer();
+    };
+
+    markActive();
+
+    const appStateSubscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        markActive();
+        return;
+      }
+      setIsAppIdle(true);
+      clearIdleTimer();
+    });
+
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof document !== 'undefined') {
+      const onVisibilityChange = () => {
+        if (document.hidden) {
+          setIsAppIdle(true);
+          clearIdleTimer();
+          return;
+        }
+        markActive();
+      };
+
+      const activityEvents: Array<keyof WindowEventMap> = ['pointerdown', 'pointermove', 'keydown', 'scroll', 'focus'];
+      document.addEventListener('visibilitychange', onVisibilityChange);
+      activityEvents.forEach((eventName) => window.addEventListener(eventName, markActive, { passive: true }));
+
+      return () => {
+        clearIdleTimer();
+        appStateSubscription.remove();
+        document.removeEventListener('visibilitychange', onVisibilityChange);
+        activityEvents.forEach((eventName) => window.removeEventListener(eventName, markActive));
+      };
+    }
+
+    return () => {
+      clearIdleTimer();
+      appStateSubscription.remove();
+    };
+  }, []);
 
   // Socket.IO: join trip room when active trip changes
   useEffect(() => {
@@ -1985,7 +2103,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         setAsyncItineraryByTrip(nextState);
       }
       if (completedCount > 0) {
-        await refreshAllData();
+        await refreshPageData();
       }
     };
 
@@ -1995,7 +2113,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       cancelled = true;
       clearInterval(interval);
     };
-  }, [asyncItineraryByTrip, backendUrl, headers, refreshAllData, userToken]);
+  }, [asyncItineraryByTrip, backendUrl, headers, refreshPageData, userToken]);
 
   useEffect(() => {
     if (!userToken) {
@@ -2182,14 +2300,15 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   useEffect(() => {
     if (!userToken || requirePasswordSetup) return;
     if (!Number.isFinite(refreshIntervalMs) || refreshIntervalMs <= 0) return;
+    const effectiveRefreshIntervalMs = isAppIdle ? refreshIntervalMs * idleRefreshMultiplier : refreshIntervalMs;
     const now = Date.now();
     const last = lastRefreshAt ?? now;
-    const delay = Math.max(0, refreshIntervalMs - (now - last));
+    const delay = Math.max(0, effectiveRefreshIntervalMs - (now - last));
     if (refreshTimerRef.current) {
       clearTimeout(refreshTimerRef.current);
     }
     refreshTimerRef.current = setTimeout(() => {
-      refreshAllData();
+      refreshPageData();
     }, delay);
     return () => {
       if (refreshTimerRef.current) {
@@ -2197,23 +2316,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         refreshTimerRef.current = null;
       }
     };
-  }, [activeTripId, lastRefreshAt, userToken, requirePasswordSetup, refreshIntervalMs, refreshAllData]);
-
-  useEffect(() => {
-    if (userToken && !requirePasswordSetup) {
-      fetchFlights();
-      fetchLodgings();
-      fetchTours();
-      fetchExpenses();
-    }
-  }, [activeTripId, fetchFlights, fetchLodgings, fetchTours, fetchExpenses, userToken, requirePasswordSetup]);
-
-  useEffect(() => {
-    if (userToken && !requirePasswordSetup) {
-      loadFamilyRelationships();
-      loadFellowTravelers();
-    }
-  }, [loadFamilyRelationships, loadFellowTravelers, userToken, requirePasswordSetup]);
+  }, [activePage, activeTripId, isAppIdle, lastRefreshAt, userToken, requirePasswordSetup, refreshIntervalMs, refreshPageData]);
 
   useEffect(() => {
     if (!userToken || requirePasswordSetup || !pendingFollowCode) return;

@@ -35,8 +35,9 @@ let _socket: Socket | null = null;
 export const getSocket = (): Socket => {
   if (!_socket) {
     _socket = io(getServerUrl(), {
-      // React Native requires websocket transport
-      transports: Platform.OS === 'web' ? ['polling', 'websocket'] : ['websocket'],
+      // Prefer websocket-only transport so the web client does not fall back to
+      // repeated long-polling requests while the app is otherwise idle.
+      transports: ['websocket'],
       autoConnect: false,
     });
   }

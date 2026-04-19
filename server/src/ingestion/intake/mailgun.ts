@@ -87,7 +87,9 @@ export const mailgunWebhookMiddleware: RequestHandler = (req, res, next) => {
 };
 
 export const validateMailgunWebhookSignature = async (body: Record<string, unknown>): Promise<void> => {
-  const signingKey = getEnvValue('MAILGUN_WEBHOOK_SIGNING_KEY');
+  const signingKey =
+    getEnvValue('MAILGUN_WEBHOOK_SIGNING_KEY') ??
+    getEnvValue('MAILGUN_HTTP_WEBHOOK_SIGNING_KEY');
   if (!signingKey) {
     throw new Error('Mailgun webhook signing key is not configured');
   }
