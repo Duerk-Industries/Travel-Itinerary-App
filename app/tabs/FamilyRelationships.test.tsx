@@ -42,4 +42,13 @@ describe('FamilyRelationships', () => {
     expect(getByText('Fellow Travelers')).toBeTruthy();
     expect(getByText('Add Fellow Traveler')).toBeTruthy();
   });
+
+  it('can hide the family section while keeping fellow travelers visible', () => {
+    const { queryByText, getByText, getByPlaceholderText } = render(
+      <FamilyRelationships {...defaultProps} hideFamilySection />
+    );
+    expect(queryByText('Family & Relationships')).toBeNull();
+    expect(getByText('Fellow Travelers')).toBeTruthy();
+    expect(getByPlaceholderText('Email (optional)')).toBeTruthy();
+  });
 });

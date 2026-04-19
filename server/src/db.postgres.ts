@@ -437,9 +437,11 @@ export const initDb = async (): Promise<void> => {
       owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       first_name TEXT NOT NULL,
       last_name TEXT NOT NULL,
+      email TEXT,
       created_at TIMESTAMP DEFAULT NOW()
     );
   `);
+  await p.query(`ALTER TABLE fellow_travelers ADD COLUMN IF NOT EXISTS email TEXT`);
   await p.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_fellow_travelers_owner_name ON fellow_travelers(owner_id, LOWER(first_name), LOWER(last_name));`);
 
   await p.query(`
@@ -6903,7 +6905,7 @@ export const listFamilyRelationships = async (userId: string) => {
 export const listFellowTravelers = async (ownerId: string) => {
   const p = getPool();
   const { rows } = await p.query(
-    `SELECT id, first_name as "firstName", last_name as "lastName", created_at as "createdAt"
+    `SELECT id, first_name as "firstName", last_name as "lastName", email, created_at as "createdAt"
      FROM fellow_travelers
      WHERE owner_id = $1
      ORDER BY created_at DESC`,
@@ -6912,17 +6914,18 @@ export const listFellowTravelers = async (ownerId: string) => {
   return rows;
 };
 
-export const createFellowTraveler = async (ownerId: string, firstName: string, lastName: string) => {
+export const createFellowTraveler = async (ownerId: string, firstName: string, lastName: string, email?: string | null) => {
   const p = getPool();
   const given = firstName.trim();
   const family = lastName.trim();
+  const normalizedEmail = String(email ?? '').trim().toLowerCase() || null;
   if (!given || !family) throw new Error('firstName and lastName are required');
   const id = randomUUID();
   await p.query(
-    `INSERT INTO fellow_travelers (id, owner_id, first_name, last_name)
-     VALUES ($1, $2, $3, $4)
+    `INSERT INTO fellow_travelers (id, owner_id, first_name, last_name, email)
+     VALUES ($1, $2, $3, $4, $5)
      ON CONFLICT (owner_id, LOWER(first_name), LOWER(last_name)) DO NOTHING`,
-    [id, ownerId, given, family]
+    [id, ownerId, given, family, normalizedEmail]
   );
   return id;
 };
@@ -6931,17 +6934,19 @@ export const updateFellowTraveler = async (
   ownerId: string,
   travelerId: string,
   firstName: string,
-  lastName: string
+  lastName: string,
+  email?: string | null
 ) => {
   const p = getPool();
   const given = firstName.trim();
   const family = lastName.trim();
+  const normalizedEmail = String(email ?? '').trim().toLowerCase() || null;
   if (!given || !family) throw new Error('firstName and lastName are required');
   const { rowCount } = await p.query(
     `UPDATE fellow_travelers
-     SET first_name = $1, last_name = $2
-     WHERE id = $3 AND owner_id = $4`,
-    [given, family, travelerId, ownerId]
+     SET first_name = $1, last_name = $2, email = $3
+     WHERE id = $4 AND owner_id = $5`,
+    [given, family, normalizedEmail, travelerId, ownerId]
   );
   if (!rowCount) throw new Error('Fellow traveler not found');
 };

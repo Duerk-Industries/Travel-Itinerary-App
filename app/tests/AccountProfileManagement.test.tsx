@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import AccountProfileManagement from '../tabs/AccountProfileManagement';
 
 const styles = {
@@ -26,6 +26,7 @@ const styles = {
   dropdownList: {},
   dropdownOption: {},
   cellText: {},
+  placeholderText: {},
 };
 
 describe('AccountProfileManagement', () => {
@@ -62,9 +63,17 @@ describe('AccountProfileManagement', () => {
     const { getByText, getByPlaceholderText } = render(<AccountProfileManagement {...defaultProps} />);
     expect(getByText('Account')).toBeTruthy();
     expect(getByPlaceholderText('First name')).toBeTruthy();
-    expect(getByPlaceholderText('Home address (optional)')).toBeTruthy();
+    expect(getByText(/123 Main St, Austin/)).toBeTruthy();
     expect(getByPlaceholderText('Preferred airport (optional)')).toBeTruthy();
     expect(getByText('Save Profile')).toBeTruthy();
+  });
+
+  it('opens the home address editor dialog', () => {
+    const { getByText, getByPlaceholderText } = render(<AccountProfileManagement {...defaultProps} />);
+    fireEvent.press(getByText(/123 Main St, Austin/));
+    expect(getByText('Home Address')).toBeTruthy();
+    expect(getByPlaceholderText('Address line 1')).toBeTruthy();
+    expect(getByPlaceholderText('Country')).toBeTruthy();
   });
 
   it('shows password editor when "Change Password" is clicked', () => {
@@ -79,7 +88,7 @@ describe('AccountProfileManagement', () => {
     expect(getByText('Delete account?')).toBeTruthy();
   });
 
-  it('uses airport autocomplete suggestions for preferred airport', () => {
+  it('uses airport autocomplete suggestions for preferred airport', async () => {
     const onSearchAirports = jest.fn();
     const setAccountProfile = jest.fn();
     const { getByPlaceholderText, getByText } = render(
@@ -92,7 +101,7 @@ describe('AccountProfileManagement', () => {
     );
 
     fireEvent.changeText(getByPlaceholderText('Preferred airport (optional)'), 'aus');
-    expect(onSearchAirports).toHaveBeenCalledWith('aus');
+    await waitFor(() => expect(onSearchAirports).toHaveBeenCalledWith('AUS'));
     fireEvent.press(getByText('Austin, TX (AUS)'));
     expect(setAccountProfile).toHaveBeenCalled();
   });

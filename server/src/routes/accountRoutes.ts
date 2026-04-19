@@ -271,9 +271,9 @@ router.get('/fellow-travelers', async (req, res) => {
 
 router.post('/fellow-travelers', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const { firstName, lastName } = req.body ?? {};
+  const { firstName, lastName, email } = req.body ?? {};
   try {
-    await createFellowTraveler(userId, String(firstName ?? ''), String(lastName ?? ''));
+    await createFellowTraveler(userId, String(firstName ?? ''), String(lastName ?? ''), email == null ? null : String(email));
     const travelers = await listFellowTravelers(userId);
     res.status(201).json(travelers);
   } catch (err: any) {
@@ -283,9 +283,9 @@ router.post('/fellow-travelers', async (req, res) => {
 
 router.patch('/fellow-travelers/:id', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const { firstName, lastName } = req.body ?? {};
+  const { firstName, lastName, email } = req.body ?? {};
   try {
-    await updateFellowTraveler(userId, req.params.id, String(firstName ?? ''), String(lastName ?? ''));
+    await updateFellowTraveler(userId, req.params.id, String(firstName ?? ''), String(lastName ?? ''), email == null ? null : String(email));
     const travelers = await listFellowTravelers(userId);
     res.json(travelers);
   } catch (err: any) {

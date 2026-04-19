@@ -23,6 +23,7 @@ export interface FellowTraveler {
   id: string;
   firstName: string;
   lastName: string;
+  email?: string | null;
   createdAt: string;
 }
 
@@ -250,6 +251,7 @@ const AccountTab: React.FC<AccountTabProps> = ({
         setFellowTravelers={setFellowTravelers}
         showRelationshipDropdown={showRelationshipDropdown}
         setShowRelationshipDropdown={setShowRelationshipDropdown}
+        hideFamilySection
         styles={styles}
       />
       <AccountTraits

@@ -5325,8 +5325,8 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     backgroundColor: theme.colors.surface,
   },
   traitChipSelected: {
-    backgroundColor: theme.colors.link,
-    borderColor: theme.colors.link,
+    backgroundColor: theme.mode === 'dark' ? theme.colors.link : theme.colors.primary,
+    borderColor: theme.mode === 'dark' ? theme.colors.link : theme.colors.primary,
   },
   traitChipText: {
     color: theme.colors.text,
@@ -5440,8 +5440,8 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     backgroundColor: theme.colors.surface,
   },
   mapOptionActive: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.primary,
+    borderColor: theme.mode === 'dark' ? theme.colors.link : theme.colors.primary,
+    backgroundColor: theme.mode === 'dark' ? theme.colors.link : theme.colors.primary,
   },
   mapOptionText: {
     color: theme.colors.text,
@@ -5449,7 +5449,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     fontWeight: theme.typography.weightSemibold,
   },
   mapOptionActiveText: {
-    color: theme.colors.onPrimary,
+    color: '#FFFFFF',
   },
   payerOptions: {
     flexDirection: 'row',

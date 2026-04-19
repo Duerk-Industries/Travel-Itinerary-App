@@ -3813,9 +3813,9 @@ export const listFellowTravelers = async (ownerId: string) => {
   return docs.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
 };
 
-export const createFellowTraveler = async (ownerId: string, firstName: string, lastName: string) => {
+export const createFellowTraveler = async (ownerId: string, firstName: string, lastName: string, email?: string | null) => {
   const id = randomUUID();
-  const payload = { ownerId, firstName, lastName, createdAt: nowIso() };
+  const payload = { ownerId, firstName, lastName, email: String(email ?? '').trim().toLowerCase() || null, createdAt: nowIso() };
   await getDb().collection('fellow_travelers').doc(id).set(payload);
   return payload;
 };
@@ -3823,12 +3823,18 @@ export const createFellowTraveler = async (ownerId: string, firstName: string, l
 export const updateFellowTraveler = async (
   ownerId: string,
   travelerId: string,
-  updates: { firstName?: string; lastName?: string }
+  firstName: string,
+  lastName: string,
+  email?: string | null
 ) => {
   const doc = await getDb().collection('fellow_travelers').doc(travelerId).get();
   if (!doc.exists) throw new Error('Traveler not found');
   if ((doc.data() as any).ownerId !== ownerId) throw new Error('Not authorized');
-  await getDb().collection('fellow_travelers').doc(travelerId).update(updates);
+  await getDb().collection('fellow_travelers').doc(travelerId).update({
+    firstName,
+    lastName,
+    email: String(email ?? '').trim().toLowerCase() || null,
+  });
 };
 
 export const removeFellowTraveler = async (ownerId: string, travelerId: string) => {

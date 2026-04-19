@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import DropdownOptionButton from '../components/DropdownOptionButton';
 import { type MapApp, isMapApp, mapAppOptions } from '../utils/mapLinks';
 import { appearanceOptions, isAppearancePreference, type AppearancePreference } from '../utils/appearancePreference';
 import { AccountProfile } from './account';
@@ -7,6 +8,50 @@ import { AccountProfile } from './account';
 type Setter<T> = React.Dispatch<React.SetStateAction<T>>;
 type Styles = ReturnType<typeof StyleSheet.create>;
 type Headers = Record<string, string>;
+type AddressForm = {
+  line1: string;
+  line2: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+};
+
+const emptyAddressForm = (): AddressForm => ({
+  line1: '',
+  line2: '',
+  city: '',
+  state: '',
+  postalCode: '',
+  country: '',
+});
+
+const parseHomeAddress = (value: string | null | undefined): AddressForm => {
+  const input = String(value ?? '').trim();
+  if (!input) return emptyAddressForm();
+  const parts = input.split(',').map((part) => part.trim()).filter(Boolean);
+  const [line1 = '', line2 = '', city = '', statePostal = '', country = ''] = parts;
+  const statePostalMatch = statePostal.match(/^(.*?)(?:\s+([A-Za-z0-9-]{3,12}))?$/);
+  return {
+    line1,
+    line2: parts.length > 4 ? line2 : '',
+    city: parts.length > 4 ? city : line2,
+    state: statePostalMatch?.[1]?.trim() ?? '',
+    postalCode: statePostalMatch?.[2]?.trim() ?? '',
+    country: parts.length > 4 ? country : parts[3] ?? '',
+  };
+};
+
+const formatHomeAddress = (address: AddressForm): string =>
+  [
+    address.line1.trim(),
+    address.line2.trim(),
+    address.city.trim(),
+    [address.state.trim(), address.postalCode.trim()].filter(Boolean).join(' ').trim(),
+    address.country.trim(),
+  ]
+    .filter(Boolean)
+    .join(', ');
 
 interface AccountProfileManagementProps {
   backendUrl: string;
@@ -59,6 +104,8 @@ const AccountProfileManagement = ({
   });
   const [showPasswordEditor, setShowPasswordEditor] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showAddressEditor, setShowAddressEditor] = useState(false);
+  const [addressForm, setAddressForm] = useState<AddressForm>(() => parseHomeAddress(accountProfile.homeAddress));
   const [preferredAirportSuggestions, setPreferredAirportSuggestions] = useState<string[]>([]);
   const [showPreferredAirportSuggestions, setShowPreferredAirportSuggestions] = useState(false);
   const [multiEmailEnabled, setMultiEmailEnabled] = useState(false);
@@ -80,7 +127,14 @@ const AccountProfileManagement = ({
   const buildAirportSuggestions = (query: string): string[] => {
     const trimmed = query.trim();
     if (!trimmed) return airportOptions.slice(0, 10);
-    return airportOptions.filter((opt) => opt.toLowerCase().includes(trimmed.toLowerCase())).slice(0, 10);
+    const lower = trimmed.toLowerCase();
+    return airportOptions
+      .filter((opt) => {
+        const normalized = opt.toLowerCase();
+        const code = parsePreferredAirportCode(opt).toLowerCase();
+        return normalized.includes(lower) || code.startsWith(lower);
+      })
+      .slice(0, 10);
   };
 
   const handlePreferredAirportChange = (text: string) => {
@@ -88,19 +142,30 @@ const AccountProfileManagement = ({
     const next = buildAirportSuggestions(text);
     setPreferredAirportSuggestions(next);
     setShowPreferredAirportSuggestions(true);
-    if (text.trim()) {
-      try {
-        void onSearchAirports(text);
-      } catch {
-        // Ignore background airport lookup errors.
-      }
-    }
   };
 
   useEffect(() => {
     if (!showPreferredAirportSuggestions) return;
     setPreferredAirportSuggestions(buildAirportSuggestions(accountProfile.preferredAirport ?? ''));
   }, [airportOptions, accountProfile.preferredAirport, showPreferredAirportSuggestions]);
+
+  useEffect(() => {
+    if (!showPreferredAirportSuggestions) return;
+    const query = String(accountProfile.preferredAirport ?? '').trim();
+    if (query.length < 2) return;
+    const handle = setTimeout(() => {
+      void onSearchAirports(query);
+    }, 150);
+    return () => clearTimeout(handle);
+  }, [accountProfile.preferredAirport, onSearchAirports, showPreferredAirportSuggestions]);
+
+  useEffect(() => {
+    if (!showAddressEditor) {
+      setAddressForm(parseHomeAddress(accountProfile.homeAddress));
+    }
+  }, [accountProfile.homeAddress, showAddressEditor]);
+
+  const formattedHomeAddress = useMemo(() => formatHomeAddress(parseHomeAddress(accountProfile.homeAddress)), [accountProfile.homeAddress]);
 
   useEffect(() => {
     if (!userToken) return;
@@ -349,12 +414,14 @@ const AccountProfileManagement = ({
         <TextInput style={[styles.input, { flex: 1 }]} placeholder="Last name" autoComplete="family-name" textContentType="familyName" value={accountProfile.lastName} onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, lastName: text }))} />
       </View>
       <TextInput style={styles.input} placeholder="Email" autoCapitalize="none" autoComplete="email" textContentType="emailAddress" keyboardType="email-address" value={accountProfile.email} onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, email: text }))} />
-      <TextInput
-        style={styles.input}
-        placeholder="Home address (optional)"
-        value={accountProfile.homeAddress ?? ''}
-        onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, homeAddress: text }))}
-      />
+      <TouchableOpacity
+        style={[styles.input, { justifyContent: 'center' }]}
+        onPress={() => setShowAddressEditor(true)}
+      >
+        <Text style={formattedHomeAddress ? styles.cellText : styles.placeholderText}>
+          {formattedHomeAddress || 'Home address (optional)'}
+        </Text>
+      </TouchableOpacity>
       <View style={localStyles.airportFieldWrap}>
         <TextInput
           style={styles.input}
@@ -371,10 +438,10 @@ const AccountProfileManagement = ({
           <View style={[styles.dropdownList, localStyles.airportSuggestionList]}>
             {preferredAirportSuggestions.length ? (
               preferredAirportSuggestions.map((opt, idx) => (
-                <TouchableOpacity
+                <DropdownOptionButton
                   key={opt}
+                  styles={styles}
                   style={[
-                    styles.dropdownOption,
                     localStyles.airportSuggestionOption,
                     idx === preferredAirportSuggestions.length - 1 && { borderBottomWidth: 0 },
                   ]}
@@ -384,7 +451,7 @@ const AccountProfileManagement = ({
                   }}
                 >
                   <Text style={styles.cellText}>{opt}</Text>
-                </TouchableOpacity>
+                </DropdownOptionButton>
               ))
             ) : (
               <Text style={[styles.helperText, { paddingHorizontal: 12, paddingVertical: 10 }]}>
@@ -538,6 +605,75 @@ const AccountProfileManagement = ({
             </View>
           </View>
         </View>
+      ) : null}
+      {showAddressEditor ? (
+        <Modal transparent animationType="fade" visible={showAddressEditor} onRequestClose={() => setShowAddressEditor(false)}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.confirmModal}>
+              <Text style={styles.sectionTitle}>Home Address</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Address line 1"
+                value={addressForm.line1}
+                onChangeText={(text: string) => setAddressForm((prev) => ({ ...prev, line1: text }))}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Address line 2"
+                value={addressForm.line2}
+                onChangeText={(text: string) => setAddressForm((prev) => ({ ...prev, line2: text }))}
+              />
+              <View style={styles.row}>
+                <TextInput
+                  style={[styles.input, { flex: 1 }]}
+                  placeholder="City"
+                  value={addressForm.city}
+                  onChangeText={(text: string) => setAddressForm((prev) => ({ ...prev, city: text }))}
+                />
+                <TextInput
+                  style={[styles.input, { flex: 1 }]}
+                  placeholder="State / Province"
+                  value={addressForm.state}
+                  onChangeText={(text: string) => setAddressForm((prev) => ({ ...prev, state: text }))}
+                />
+              </View>
+              <View style={styles.row}>
+                <TextInput
+                  style={[styles.input, { flex: 1 }]}
+                  placeholder="Postal code"
+                  value={addressForm.postalCode}
+                  onChangeText={(text: string) => setAddressForm((prev) => ({ ...prev, postalCode: text }))}
+                />
+                <TextInput
+                  style={[styles.input, { flex: 1 }]}
+                  placeholder="Country"
+                  value={addressForm.country}
+                  onChangeText={(text: string) => setAddressForm((prev) => ({ ...prev, country: text }))}
+                />
+              </View>
+              <View style={styles.row}>
+                <TouchableOpacity
+                  style={[styles.button, styles.dangerButton, { flex: 1 }]}
+                  onPress={() => {
+                    setAddressForm(parseHomeAddress(accountProfile.homeAddress));
+                    setShowAddressEditor(false);
+                  }}
+                >
+                  <Text style={styles.dangerButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.button, { flex: 1 }]}
+                  onPress={() => {
+                    setAccountProfile((prev) => ({ ...prev, homeAddress: formatHomeAddress(addressForm) }));
+                    setShowAddressEditor(false);
+                  }}
+                >
+                  <Text style={styles.buttonText}>Save Address</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       ) : null}
     </View>
   );

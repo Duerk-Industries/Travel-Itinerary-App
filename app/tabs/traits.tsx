@@ -124,7 +124,7 @@ export function TraitsTab<T extends TraitRecord>({
   backendUrl,
   userToken,
   traits,
-  setTraits: _setTraits,
+  setTraits,
   selectedTraitNames: _selectedTraitNames,
   setSelectedTraitNames: _setSelectedTraitNames,
   traitAge,
@@ -212,6 +212,22 @@ export function TraitsTab<T extends TraitRecord>({
       alert(data?.error || 'Unable to save itinerary preference profile');
       return;
     }
+    const savedTrait = await profileRes.json().catch(() => null);
+    setTraits((prev) => {
+      const next = prev.filter((trait) => trait.name !== PROMPT_PROFILE_TRAIT_NAME);
+      if (savedTrait?.id || savedTrait?.name) {
+        next.push(savedTrait as T);
+      } else {
+        next.push({
+          id: storedPromptProfile.traitId,
+          name: PROMPT_PROFILE_TRAIT_NAME,
+          level: 5,
+          notes: serializePromptTraits(normalizedPromptTraits),
+        } as T);
+      }
+      return next;
+    });
+    setPromptTraits(normalizedPromptTraits);
 
     await fetch(`${backendUrl}/api/traits/profile/demographics`, {
       method: 'POST',
@@ -221,8 +237,8 @@ export function TraitsTab<T extends TraitRecord>({
         gender: traitGender,
       }),
     }).catch(() => undefined);
-    fetchTraitProfile();
-    fetchTraits();
+    await fetchTraitProfile();
+    await fetchTraits();
     alert('Traits saved');
   };
 
