@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import DropdownOptionButton from '../components/DropdownOptionButton';
 
 type Setter<T> = React.Dispatch<React.SetStateAction<T>>;
 
@@ -235,16 +236,16 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
           {showRelationshipDropdown ? (
             <View style={styles.dropdownList}>
               {relationshipOptions.map((opt) => (
-                <TouchableOpacity
+                <DropdownOptionButton
                   key={opt}
-                  style={styles.dropdownOption}
+                  styles={styles}
                   onPress={() => {
                     setFamilyForm((p) => ({ ...p, relationship: opt }));
                     setShowRelationshipDropdown(false);
                   }}
                 >
                   <Text style={styles.cellText}>{opt}</Text>
-                </TouchableOpacity>
+                </DropdownOptionButton>
               ))}
             </View>
           ) : null}

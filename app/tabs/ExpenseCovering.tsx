@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
+import DropdownOptionButton from '../components/DropdownOptionButton';
 
 type Setter<T> = React.Dispatch<React.SetStateAction<T>>;
 
@@ -52,13 +53,13 @@ const ExpenseCovering: React.FC<ExpenseCoveringProps> = ({
               </TouchableOpacity>
               {showCoveredByDropdown === member.id && (
                   <View style={styles.dropdownList}>
-                      <TouchableOpacity style={styles.dropdownOption} onPress={() => { setCoveredBy(p => { const n = {...p}; delete n[member.id]; return n; }); setShowCoveredByDropdown(null); }}>
+                      <DropdownOptionButton styles={styles} onPress={() => { setCoveredBy(p => { const n = {...p}; delete n[member.id]; return n; }); setShowCoveredByDropdown(null); }}>
                           <Text style={styles.cellText}>No one</Text>
-                      </TouchableOpacity>
+                      </DropdownOptionButton>
                       {reportableMembers.filter(m => m.id !== member.id).map(coveringMember => (
-                          <TouchableOpacity key={coveringMember.id} style={styles.dropdownOption} onPress={() => { setCoveredBy(p => ({...p, [member.id]: coveringMember.id})); setShowCoveredByDropdown(null); }}>
+                          <DropdownOptionButton key={coveringMember.id} styles={styles} onPress={() => { setCoveredBy(p => ({...p, [member.id]: coveringMember.id})); setShowCoveredByDropdown(null); }}>
                               <Text style={styles.cellText}>{formatMemberName(coveringMember)}</Text>
-                          </TouchableOpacity>
+                          </DropdownOptionButton>
                       ))}
                   </View>
               )}

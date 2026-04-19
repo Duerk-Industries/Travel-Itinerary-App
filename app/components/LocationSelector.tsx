@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { View, TextInput, Text, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
+import DropdownOptionButton from './DropdownOptionButton';
 
 export type LocationOption = {
   id: string;
@@ -285,9 +286,15 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
     return 'Country';
   };
 
+  const showCountryStateDropdown =
+    countryStateSuggestions.length > 0 || (countryStateQuery.trim().length > 0 && countryStateSuggestions.length === 0);
+  const showCityDropdown =
+    citySuggestions.length > 0 || (cityQuery.trim().length > 0 && citySuggestions.length === 0 && canSearchCities);
+  const activeDropdownZIndex = Platform.OS === 'web' && (showCountryStateDropdown || showCityDropdown) ? 800 : 1;
+
   return (
-    <View>
-      <View style={[styles.row, { alignItems: 'flex-start' }]}>
+    <View style={{ position: 'relative', zIndex: activeDropdownZIndex }}>
+      <View style={[styles.row, { alignItems: 'flex-start', zIndex: showCountryStateDropdown ? activeDropdownZIndex : 1 }]}>
         <View style={[styles.dropdown, { flex: 1 }]}>
           <TextInput
             ref={countryStateInputRef}
@@ -299,12 +306,12 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
             onSubmitEditing={handleCountryStateSubmit}
             accessibilityLabel={title}
           />
-          {(countryStateSuggestions.length > 0 || (countryStateQuery.trim().length > 0 && countryStateSuggestions.length === 0)) && (
+          {showCountryStateDropdown && (
             <View style={styles.dropdownList}>
               {countryStateSuggestions.map((location) => (
-                <TouchableOpacity
+                <DropdownOptionButton
                   key={`location-suggestion-${location.id}`}
-                  style={styles.dropdownOption}
+                  styles={styles}
                   onPress={() => handleAddCountryState(location)}
                   testID={`location-suggestion-${location.id}`}
                 >
@@ -312,12 +319,12 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
                     <Text style={styles.bodyText}>{location.name}</Text>
                     <Text style={styles.helperText}>{labelForType(location.sourceType)}</Text>
                   </View>
-                </TouchableOpacity>
+                </DropdownOptionButton>
               ))}
               {countryStateSuggestions.length === 0 && countryStateQuery.trim().length > 0 ? (
-                <TouchableOpacity
+                <DropdownOptionButton
                   key="manual-country-option"
-                  style={styles.dropdownOption}
+                  styles={styles}
                   onPress={handleCountryStateManualAdd}
                   testID="manual-country-option"
                 >
@@ -325,7 +332,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
                     <Text style={styles.bodyText}>Add "{countryStateQuery.trim()}"</Text>
                     <Text style={styles.helperText}>Manual Country</Text>
                   </View>
-                </TouchableOpacity>
+                </DropdownOptionButton>
               ) : null}
             </View>
           )}
@@ -344,7 +351,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
 
       {showCitySearch && (
         <>
-          <View style={[styles.row, { alignItems: 'flex-start', marginTop: 12 }]}>
+          <View style={[styles.row, { alignItems: 'flex-start', marginTop: 12, zIndex: showCityDropdown ? activeDropdownZIndex : 1 }]}>
             <View style={[styles.dropdown, { flex: 1 }]}>
               <TextInput
                 ref={cityInputRef}
@@ -357,12 +364,12 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
                 accessibilityLabel="Search cities"
                 editable={canSearchCities}
               />
-              {(citySuggestions.length > 0 || (cityQuery.trim().length > 0 && citySuggestions.length === 0 && canSearchCities)) && (
+              {showCityDropdown && (
                 <View style={styles.dropdownList}>
                   {citySuggestions.map((location) => (
-                    <TouchableOpacity
+                    <DropdownOptionButton
                       key={`city-suggestion-${location.id}`}
-                      style={styles.dropdownOption}
+                      styles={styles}
                       onPress={() => handleAddCity(location)}
                       testID={`city-suggestion-${location.id}`}
                     >
@@ -370,12 +377,12 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
                         <Text style={styles.bodyText}>{location.name}</Text>
                         <Text style={styles.helperText}>City</Text>
                       </View>
-                    </TouchableOpacity>
+                    </DropdownOptionButton>
                   ))}
                   {citySuggestions.length === 0 && cityQuery.trim().length > 0 && canSearchCities ? (
-                    <TouchableOpacity
+                    <DropdownOptionButton
                       key="manual-city-option"
-                      style={styles.dropdownOption}
+                      styles={styles}
                       onPress={handleCityManualAdd}
                       testID="manual-city-option"
                     >
@@ -383,7 +390,7 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
                         <Text style={styles.bodyText}>Add "{cityQuery.trim()}"</Text>
                         <Text style={styles.helperText}>Manual City</Text>
                       </View>
-                    </TouchableOpacity>
+                    </DropdownOptionButton>
                   ) : null}
                 </View>
               )}

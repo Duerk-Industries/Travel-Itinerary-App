@@ -57,6 +57,7 @@ import { Buffer } from 'buffer';
 import { loadSession, saveSession, clearSession } from './utils/session';
 import LodgingDetailsDialog from './components/LodgingDetailsDialog';
 import ConfirmDialog from './components/ConfirmDialog';
+import DropdownOptionButton from './components/DropdownOptionButton';
 import { toWebStyle } from './utils/webStyle';
 import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from './utils/votes';
 
@@ -2767,30 +2768,30 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   {showActiveTripDropdown && (
                     <View style={styles.dropdownList}>
                       {trips.map((trip) => (
-                        <TouchableOpacity
+                        <DropdownOptionButton
                           key={trip.id}
-                          style={styles.dropdownOption}
+                          styles={styles}
                           onPress={() => {
                             handleSelectOwnedTrip(trip.id);
                             setShowActiveTripDropdown(false);
                           }}
                         >
                           <Text style={styles.cellText}>{trip.name}</Text>
-                        </TouchableOpacity>
+                        </DropdownOptionButton>
                       ))}
                       {followedTrips.length ? (
                         <View>
                           <Text style={styles.modalLabelSmall}>Followed Trips</Text>
                           {followedTrips.map((trip) => (
-                            <TouchableOpacity
+                            <DropdownOptionButton
                               key={`followed-${trip.tripId}`}
-                              style={styles.dropdownOption}
+                              styles={styles}
                               onPress={() => {
                                 handleSelectFollowedTrip(trip.tripId);
                               }}
                             >
                               <Text style={styles.cellText}>{trip.tripName} (Following)</Text>
-                            </TouchableOpacity>
+                            </DropdownOptionButton>
                           ))}
                         </View>
                       ) : null}
@@ -3307,16 +3308,16 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                 {carPrepaidOpen ? (
                   <View style={[styles.dropdownList, styles.prepaidDropdownList]}>
                     {['Yes', 'No'].map((opt) => (
-                      <TouchableOpacity
+                      <DropdownOptionButton
                         key={opt}
-                        style={styles.dropdownOption}
+                        styles={styles}
                         onPress={() => {
                           setCarDraft((p) => ({ ...p, prepaid: opt }));
                           setCarPrepaidOpen(false);
                         }}
                       >
                         <Text style={styles.cellText}>{opt}</Text>
-                      </TouchableOpacity>
+                      </DropdownOptionButton>
                     ))}
                   </View>
                 ) : null}
@@ -3521,16 +3522,16 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   {showTripGroupDropdown && (
                     <View style={styles.dropdownList}>
                       {groups.map((g) => (
-                        <TouchableOpacity
+                        <DropdownOptionButton
                           key={g.id}
-                          style={styles.dropdownOption}
+                          styles={styles}
                           onPress={() => {
                             setNewTripGroupId(g.id);
                             setShowTripGroupDropdown(false);
                           }}
                         >
                           <Text style={styles.cellText}>{g.name}</Text>
-                        </TouchableOpacity>
+                        </DropdownOptionButton>
                       ))}
                     </View>
                   )}
@@ -3564,13 +3565,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                       {tripDropdownOpenId === trip.id && (
                         <View style={styles.dropdownList}>
                           {groups.map((g) => (
-                            <TouchableOpacity
+                            <DropdownOptionButton
                               key={g.id}
-                              style={styles.dropdownOption}
+                              styles={styles}
                               onPress={() => changeTripGroup(trip.id, g.id)}
                             >
                               <Text style={styles.cellText}>{g.name}</Text>
-                            </TouchableOpacity>
+                            </DropdownOptionButton>
                           ))}
                         </View>
                       )}
@@ -5011,7 +5012,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     left: 0,
     right: 0,
     marginTop: 8,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: theme.mode === 'dark' ? '#243647' : '#FFFFFF',
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: 10,
@@ -5020,13 +5021,23 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     overflow: 'hidden',
     maxHeight: 280,
     boxShadow: '0 10px 24px rgba(0,0,0,0.18)',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
   },
   dropdownOption: {
     paddingHorizontal: 12,
     paddingVertical: 11,
     borderBottomWidth: 1,
     borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: theme.mode === 'dark' ? '#243647' : '#FFFFFF',
+  },
+  dropdownOptionHover: {
+    backgroundColor: theme.mode === 'dark' ? '#2C4356' : '#F4F8FB',
+  },
+  dropdownOptionPressed: {
+    backgroundColor: theme.mode === 'dark' ? '#35516A' : '#E8F0F6',
   },
   prepaidSelectorButton: {
     marginBottom: 0,
@@ -5103,12 +5114,18 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
   },
   passengerOverlayList: {
     position: 'absolute',
-    backgroundColor: theme.colors.surface,
+    backgroundColor: theme.mode === 'dark' ? '#243647' : '#FFFFFF',
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: 6,
+    borderRadius: 10,
     zIndex: 13000,
     elevation: 32,
+    boxShadow: '0 10px 24px rgba(0,0,0,0.18)',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    overflow: 'hidden',
   },
   modalCard: {
     backgroundColor: theme.colors.surface,
@@ -5209,7 +5226,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     top: '100%',
     left: 0,
     right: 0,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: theme.mode === 'dark' ? '#243647' : '#FFFFFF',
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: 10,
@@ -5217,6 +5234,10 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     elevation: 40, // keep above other inputs on native
     overflow: 'hidden',
     boxShadow: '0 10px 24px rgba(0,0,0,0.18)',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
   },
   locationField: {
     position: 'relative',
@@ -5255,7 +5276,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(255,255,255,0.98)',
+    backgroundColor: 'transparent',
     zIndex: 40000,
     elevation: 40,
   },
@@ -5265,22 +5286,26 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.15)',
+    backgroundColor: theme.mode === 'dark' ? 'rgba(2,6,23,0.28)' : 'rgba(15,23,42,0.12)',
   },
   dropdownPortal: {
     position: 'absolute',
     top: 80,
     left: 16,
     right: 16,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: theme.mode === 'dark' ? '#243647' : '#FFFFFF',
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: 8,
+    borderRadius: 12,
     padding: 8,
     maxHeight: 360,
     zIndex: 41000,
-    boxShadow: '0 6px 10px rgba(0,0,0,0.2)',
+    boxShadow: '0 10px 24px rgba(0,0,0,0.18)',
     elevation: 60,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
   },
   dropdownScroll: {
     maxHeight: 300,

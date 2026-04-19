@@ -1,6 +1,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import DropdownOptionButton from '../components/DropdownOptionButton';
 import { formatDateLong } from '../utils/formatDateLong';
 import { renderRichTextBlocks } from '../utils/richText';
 import {
@@ -796,16 +797,16 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
           {showItineraryAirportDropdown && itineraryAirportOptions.length ? (
             <View style={[styles.dropdownList, styles.itineraryDropdown]}>
               {itineraryAirportOptions.map((opt) => (
-                <TouchableOpacity
+                <DropdownOptionButton
                   key={opt}
-                  style={styles.dropdownOption}
+                  styles={styles}
                   onPress={() => {
                     setItineraryAirport(opt);
                     setShowItineraryAirportDropdown(false);
                   }}
                 >
                   <Text style={styles.cellText}>{opt}</Text>
-                </TouchableOpacity>
+                </DropdownOptionButton>
               ))}
             </View>
           ) : null}
@@ -998,9 +999,9 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
             />
             <ScrollView style={styles.dropdownScroll}>
               {filteredCountries.map((name) => (
-                <TouchableOpacity
+                <DropdownOptionButton
                   key={name}
-                  style={styles.dropdownOption}
+                  styles={styles}
                   onPress={() => {
                     setItineraryCountry(name);
                     setItineraryRegion('');
@@ -1011,7 +1012,7 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
                   }}
                 >
                   <Text style={styles.cellText}>{name}</Text>
-                </TouchableOpacity>
+                </DropdownOptionButton>
               ))}
             </ScrollView>
           </View>
@@ -1033,9 +1034,9 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
             />
             <ScrollView style={styles.dropdownScroll}>
               {filteredRegions.map((name) => (
-                <TouchableOpacity
+                <DropdownOptionButton
                   key={name}
-                  style={styles.dropdownOption}
+                  styles={styles}
                   onPress={() => {
                     setItineraryRegion(name);
                     setRegionSearch('');
@@ -1043,7 +1044,7 @@ const ItinerariesTab: React.FC<ItinerariesTabProps> = ({
                   }}
                 >
                   <Text style={styles.cellText}>{name}</Text>
-                </TouchableOpacity>
+                </DropdownOptionButton>
               ))}
             </ScrollView>
           </View>

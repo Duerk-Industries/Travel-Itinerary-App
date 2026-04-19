@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme } from 'react-native';
 import { getAppTheme, type AppTheme } from '../theme/theme';
 
 // ---------------------------------------------------------------------------
@@ -521,10 +521,15 @@ const UserDetailSection: React.FC<{
         {tierDropdownOpen && !tierLocked ? (
           <View style={[localStyles.dropdownMenu, getCardStyle(theme)]}>
             {sortedTiers.map((tier) => (
-              <TouchableOpacity
+              <Pressable
                 key={tier.key}
                 testID={`user-tier-option-${tier.key}`}
-                style={[localStyles.dropdownOption, tierKey === tier.key && { backgroundColor: theme.colors.backgroundAlt }]}
+                style={({ hovered, pressed }) => [
+                  localStyles.dropdownOption,
+                  hovered && { backgroundColor: theme.mode === 'dark' ? '#2C4356' : '#F4F8FB' },
+                  pressed && { backgroundColor: theme.mode === 'dark' ? '#35516A' : '#E8F0F6' },
+                  tierKey === tier.key && { backgroundColor: theme.colors.backgroundAlt },
+                ]}
                 onPress={() => {
                   setTierKey(tier.key);
                   setTierDropdownOpen(false);
@@ -533,7 +538,7 @@ const UserDetailSection: React.FC<{
                 <Text style={[localStyles.dropdownOptionText, { color: theme.colors.text }]}>
                   {tier.displayName}
                 </Text>
-              </TouchableOpacity>
+              </Pressable>
             ))}
           </View>
         ) : null}
@@ -1994,6 +1999,11 @@ const localStyles = StyleSheet.create({
     borderWidth: 1,
     overflow: 'hidden',
     marginBottom: 8,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    elevation: 12,
   },
   dropdownOption: {
     paddingHorizontal: 12,

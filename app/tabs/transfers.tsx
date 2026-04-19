@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Modal } from 'react-native';
+import DropdownOptionButton from '../components/DropdownOptionButton';
 import { formatDateLong } from '../utils/formatDateLong';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { normalizeDateString } from '../utils/normalizeDateString';
@@ -1851,9 +1852,9 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
             />
             <ScrollView style={styles.dropdownScroll}>
               {locationSuggestions.map((loc) => (
-                <TouchableOpacity
+                <DropdownOptionButton
                   key={`overlay-${loc}`}
-                  style={styles.dropdownOption}
+                  styles={styles}
                   onPressIn={() => {
                     locationSelectInProgressRef.current = true;
                   }}
@@ -1869,7 +1870,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                   }}
                 >
                   <Text style={styles.cellText}>{loc}</Text>
-                </TouchableOpacity>
+                </DropdownOptionButton>
               ))}
               {!locationSuggestions.length ? <Text style={styles.helperText}>Type to search airports</Text> : null}
             </ScrollView>
@@ -1894,9 +1895,9 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
               const name = formatMemberName(member);
               const selected = newFlight.passengerIds.includes(member.id);
               return (
-                <TouchableOpacity
+                <DropdownOptionButton
                   key={member.id}
-                  style={styles.dropdownOption}
+                  styles={styles}
                   onPress={() => {
                     const next = selected
                       ? newFlight.passengerIds.filter((id) => id !== member.id)
@@ -1905,7 +1906,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                   }}
                 >
                   <Text style={styles.cellText}>{`${selected ? '[x] ' : ''}${name}`}</Text>
-                </TouchableOpacity>
+                </DropdownOptionButton>
               );
             })}
           </View>
@@ -1932,9 +1933,9 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
             ]}
           >
             {airportSuggestions.map((airport) => (
-              <TouchableOpacity
+              <DropdownOptionButton
                 key={`${airport.iata_code}-${airport.name}`}
-                style={styles.dropdownOption}
+                styles={styles}
                 onPressIn={() => {
                   airportSelectInProgressRef.current = true;
                 }}
@@ -1944,7 +1945,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                 }}
               >
                 <Text style={styles.cellText}>{formatAirportLabel(airport)}</Text>
-              </TouchableOpacity>
+              </DropdownOptionButton>
             ))}
           </View>
         </View>

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import DropdownOptionButton from '../components/DropdownOptionButton';
 import { formatDateLong } from '../utils/formatDateLong';
 import { renderRichTextBlocks } from '../utils/richText';
 import { formatMonthYear } from '../utils/tripDates';
@@ -376,9 +377,9 @@ const TripDetailsTab: React.FC<TripDetailsTabProps> = ({
         {showCurrencyDropdown ? (
           <View style={styles.dropdownList}>
             {currencyOptions.map((currency) => (
-              <TouchableOpacity
+              <DropdownOptionButton
                 key={currency}
-                style={styles.dropdownOption}
+                styles={styles}
                 onPress={() => {
                   setShowCurrencyDropdown(false);
                   if (currency !== currentCurrency) {
@@ -387,7 +388,7 @@ const TripDetailsTab: React.FC<TripDetailsTabProps> = ({
                 }}
               >
                 <Text style={styles.cellText}>{currency}</Text>
-              </TouchableOpacity>
+              </DropdownOptionButton>
             ))}
           </View>
         ) : null}

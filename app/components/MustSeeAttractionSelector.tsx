@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import type { LocationOption } from './LocationSelector';
+import DropdownOptionButton from './DropdownOptionButton';
 
 export type AttractionOption = {
   id: string;
@@ -177,9 +178,12 @@ export const MustSeeAttractionSelector: React.FC<MustSeeAttractionSelectorProps>
     return 'Attraction';
   };
 
+  const showDropdown = suggestions.length > 0 || (query.trim().length > 0 && suggestions.length === 0 && canSearch);
+  const activeDropdownZIndex = Platform.OS === 'web' && showDropdown ? 800 : 1;
+
   return (
-    <View style={{ marginTop: 12 }}>
-      <View style={[styles.row, { alignItems: 'flex-start' }]}>
+    <View style={{ marginTop: 12, position: 'relative', zIndex: activeDropdownZIndex }}>
+      <View style={[styles.row, { alignItems: 'flex-start', zIndex: activeDropdownZIndex }]}>
         <View style={[styles.dropdown, { flex: 1 }]}>
           <TextInput
             ref={inputRef}
@@ -192,12 +196,12 @@ export const MustSeeAttractionSelector: React.FC<MustSeeAttractionSelectorProps>
             accessibilityLabel={title}
             editable={canSearch}
           />
-          {(suggestions.length > 0 || (query.trim().length > 0 && suggestions.length === 0 && canSearch)) && (
+          {showDropdown && (
             <View style={styles.dropdownList}>
               {suggestions.map((item) => (
-                <TouchableOpacity
+                <DropdownOptionButton
                   key={`must-see-suggestion-${item.id}`}
-                  style={styles.dropdownOption}
+                  styles={styles}
                   onPress={() => handleAddSuggestion(item)}
                   testID={`must-see-suggestion-${item.id}`}
                 >
@@ -205,12 +209,12 @@ export const MustSeeAttractionSelector: React.FC<MustSeeAttractionSelectorProps>
                     <Text style={styles.bodyText}>{item.name}</Text>
                     <Text style={styles.helperText}>{helperLabel(item)}</Text>
                   </View>
-                </TouchableOpacity>
+                </DropdownOptionButton>
               ))}
               {suggestions.length === 0 && query.trim().length > 0 && canSearch ? (
-                <TouchableOpacity
+                <DropdownOptionButton
                   key="manual-must-see-option"
-                  style={styles.dropdownOption}
+                  styles={styles}
                   onPress={handleManualAdd}
                   testID="manual-must-see-option"
                 >
@@ -218,7 +222,7 @@ export const MustSeeAttractionSelector: React.FC<MustSeeAttractionSelectorProps>
                     <Text style={styles.bodyText}>Add "{query.trim()}"</Text>
                     <Text style={styles.helperText}>Manual Attraction</Text>
                   </View>
-                </TouchableOpacity>
+                </DropdownOptionButton>
               ) : null}
             </View>
           )}
