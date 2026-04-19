@@ -161,33 +161,26 @@ const coerceWeights = (raw: unknown): PromptInterestWeights => {
   };
 };
 
-const normalizeWeights = (weights: PromptInterestWeights): PromptInterestWeights => {
-  const safe: PromptInterestWeights = {
-    outdoors: Math.max(0, Math.round(Number(weights.outdoors) || 0)),
-    adventure: Math.max(0, Math.round(Number(weights.adventure) || 0)),
-    culture: Math.max(0, Math.round(Number(weights.culture) || 0)),
-    food: Math.max(0, Math.round(Number(weights.food) || 0)),
-    nightlife: Math.max(0, Math.round(Number(weights.nightlife) || 0)),
-    relax: Math.max(0, Math.round(Number(weights.relax) || 0)),
-    photography: Math.max(0, Math.round(Number(weights.photography) || 0)),
-    authentic_local: Math.max(0, Math.round(Number(weights.authentic_local) || 0)),
-    iconic_landmarks: Math.max(0, Math.round(Number(weights.iconic_landmarks) || 0)),
-  };
-  const sum = INTEREST_WEIGHT_KEYS.reduce((acc, key) => acc + safe[key], 0);
-  if (sum === 100) return safe;
-  if (sum <= 0) return { ...DEFAULT_PROMPT_TRAITS.tt.w };
-
-  const scaled = INTEREST_WEIGHT_KEYS.reduce((acc, key) => {
-    (acc as any)[key] = Math.round((safe[key] / sum) * 100);
-    return acc;
-  }, {} as PromptInterestWeights);
-  const total = INTEREST_WEIGHT_KEYS.reduce((acc, key) => acc + scaled[key], 0);
-  if (total === 100) return scaled;
-
-  const largest = [...INTEREST_WEIGHT_KEYS].sort((a, b) => scaled[b] - scaled[a])[0];
-  scaled[largest] += 100 - total;
-  return scaled;
+const clampWeight = (value: unknown): number => {
+  const n = Math.round(Number(value) || 0);
+  if (n <= 0) return 0;
+  if (n >= 100) return 100;
+  return n;
 };
+
+// Clamp each weight to [0, 100] but preserve the user's per-slider values.
+// The server normalizes to sum=100 at generation time in itineraryPromptPlanService.ts.
+const normalizeWeights = (weights: PromptInterestWeights): PromptInterestWeights => ({
+  outdoors: clampWeight(weights.outdoors),
+  adventure: clampWeight(weights.adventure),
+  culture: clampWeight(weights.culture),
+  food: clampWeight(weights.food),
+  nightlife: clampWeight(weights.nightlife),
+  relax: clampWeight(weights.relax),
+  photography: clampWeight(weights.photography),
+  authentic_local: clampWeight(weights.authentic_local),
+  iconic_landmarks: clampWeight(weights.iconic_landmarks),
+});
 
 export const normalizePromptTraits = (input: Partial<PromptTraitsPayload> | null | undefined): PromptTraitsPayload => {
   const ttRaw = input?.tt ?? {};

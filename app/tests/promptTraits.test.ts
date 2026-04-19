@@ -9,13 +9,35 @@ import {
 } from '../utils/promptTraits';
 
 describe('promptTraits utility', () => {
-  test('normalizes and rescales weights to sum to 100', () => {
+  test('preserves per-slider weights without rescaling to a fixed sum', () => {
     const normalized = normalizePromptTraits({
       tt: {
         ...DEFAULT_PROMPT_TRAITS.tt,
         w: {
-          outdoors: 50,
-          adventure: 50,
+          outdoors: 80,
+          adventure: 10,
+          culture: 15,
+          food: 15,
+          nightlife: 10,
+          relax: 10,
+          photography: 10,
+          authentic_local: 8,
+          iconic_landmarks: 7,
+        },
+      },
+    });
+    expect(normalized.tt.w.outdoors).toBe(80);
+    expect(normalized.tt.w.adventure).toBe(10);
+    expect(normalized.tt.w.iconic_landmarks).toBe(7);
+  });
+
+  test('clamps out-of-range slider values to [0, 100]', () => {
+    const normalized = normalizePromptTraits({
+      tt: {
+        ...DEFAULT_PROMPT_TRAITS.tt,
+        w: {
+          outdoors: 250,
+          adventure: -30,
           culture: 50,
           food: 50,
           nightlife: 50,
@@ -26,17 +48,9 @@ describe('promptTraits utility', () => {
         },
       },
     });
-    const sum =
-      normalized.tt.w.outdoors +
-      normalized.tt.w.adventure +
-      normalized.tt.w.culture +
-      normalized.tt.w.food +
-      normalized.tt.w.nightlife +
-      normalized.tt.w.relax +
-      normalized.tt.w.photography +
-      normalized.tt.w.authentic_local +
-      normalized.tt.w.iconic_landmarks;
-    expect(sum).toBe(100);
+    expect(normalized.tt.w.outdoors).toBe(100);
+    expect(normalized.tt.w.adventure).toBe(0);
+    expect(normalized.tt.w.culture).toBe(50);
   });
 
   test('serializes and parses prompt traits payload', () => {

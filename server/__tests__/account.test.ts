@@ -140,6 +140,34 @@ describe('Password validation', () => {
     expect(resp.body).toEqual({ age: null, gender: null });
   });
 
+  it('persists demographics after saving them', async () => {
+    const email = 'demographics-save-test@example.com';
+    await cleanupTestUsersByEmail([email]);
+
+    const { token } = await registerAndLoginWebUser({
+      firstName: 'Traits',
+      lastName: 'Saver',
+      email,
+      password: 'testtest',
+    });
+
+    await request(app)
+      .post('/api/traits/profile/demographics')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        age: 41,
+        gender: 'male',
+      })
+      .expect(204);
+
+    const resp = await request(app)
+      .get('/api/traits/profile/demographics')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(resp.body).toEqual({ age: 41, gender: 'male' });
+  });
+
   it('supports optional home address/preferred airport and persists map/appearance preferences on account profile', async () => {
     const email = 'profile-test+optional@example.com';
     await cleanupTestUsersByEmail([email]);

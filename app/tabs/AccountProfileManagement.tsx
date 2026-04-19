@@ -433,6 +433,9 @@ const AccountProfileManagement = ({
           }}
           onBlur={() => setTimeout(() => setShowPreferredAirportSuggestions(false), 120)}
           onChangeText={handlePreferredAirportChange}
+          autoComplete="off"
+          autoCorrect={false}
+          textContentType="none"
         />
         {showPreferredAirportSuggestions ? (
           <View style={[styles.dropdownList, localStyles.airportSuggestionList]}>

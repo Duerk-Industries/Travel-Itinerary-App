@@ -6577,10 +6577,10 @@ export const getUserDemographics = async (
 
 export const saveUserDemographics = async (
   userId: string,
-  age?: number | null,
-  gender?: string | null
+  data: { age?: number | null; gender?: string | null } = {}
 ): Promise<void> => {
   const p = getPool();
+  const { age = null, gender = null } = data;
   await p.query(
     `UPDATE web_users SET age = $1, gender = $2 WHERE id = $3`,
     [age ?? null, gender ?? null, userId]

@@ -60,6 +60,7 @@ import ConfirmDialog from './components/ConfirmDialog';
 import DropdownOptionButton from './components/DropdownOptionButton';
 import { toWebStyle } from './utils/webStyle';
 import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from './utils/votes';
+import { resolveBackendUrl as resolveConfiguredBackendUrl } from './utils/backendUrl';
 
 import LodgingTab from './tabs/LodgingTab';
 import AdminTab from './tabs/AdminTab';
@@ -266,68 +267,22 @@ const linking: LinkingOptions<RootStackParamList> = {
   },
 };
 
-// Resolve backend URL; keep Expo web on localhost hitting the local API over HTTP to avoid HTTPS upgrades/CORS issues.
-const resolveBackendUrl = (): string => {
-  const envConfigured =
-    (typeof process !== 'undefined' &&
-      (process.env.EXPO_PUBLIC_BACKEND_URL ??
-        process.env.BACKEND_URL ??
-        process.env.WEB_URL ??
-        process.env.API_BASE_URL ??
-        process.env.REACT_APP_BACKEND_URL ??
-        process.env.REACT_NATIVE_APP_BACKEND_URL)) ||
-    '';
-  const appConfigured = Constants.expoConfig?.extra?.backendUrl;
-  const configuredBackend = [appConfigured, envConfigured].find(
-    (val) => typeof val === 'string' && val.trim().length > 0
-  ) as string | undefined;
-  const isLocalHost = (value: string) => /^(localhost|127\.0\.0\.1)$/i.test(value);
-  const normalizeBackendUrl = (raw: string, defaultProtocol: 'http' | 'https'): string => {
-    const trimmed = raw.trim();
-    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
-      return trimmed;
-    }
-    return `${defaultProtocol}://${trimmed}`;
-  };
-  const remapLocalBackendHost = (raw: string, browserHostname: string): string => {
-    const normalized = normalizeBackendUrl(raw, 'http');
-    try {
-      const parsed = new URL(normalized);
-      if (!isLocalHost(parsed.hostname) || !isLocalHost(browserHostname)) {
-        return normalized;
-      }
-      parsed.hostname = browserHostname;
-      return parsed.toString().replace(/\/$/, '');
-    } catch {
-      return normalized;
-    }
-  };
-  if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    const { hostname, protocol, port, origin } = window.location;
-    if (isLocalHost(hostname)) {
-      if (port === '4000') {
-        return origin.replace(/\/$/, '');
-      }
-      if (configuredBackend) {
-        return remapLocalBackendHost(configuredBackend, hostname);
-      }
-      return `${protocol}//${hostname}:4000`;
-    }
-  }
-  if (process.env.NODE_ENV === 'development') {
-    if (configuredBackend) {
-      return normalizeBackendUrl(configuredBackend, 'http');
-    }
-  }
-  if (process.env.NODE_ENV === 'development') {
-    if (configuredBackend) {
-      return normalizeBackendUrl(configuredBackend, 'http');
-    }
-    return 'http://localhost:4000';
-  }
-  const raw = configuredBackend ?? 'https://duerk.org';
-  return normalizeBackendUrl(raw, 'https');
-};
+const resolveBackendUrl = (): string =>
+  resolveConfiguredBackendUrl({
+    appConfigured: Constants.expoConfig?.extra?.backendUrl,
+    envConfigured:
+      (typeof process !== 'undefined' &&
+        (process.env.EXPO_PUBLIC_BACKEND_URL ??
+          process.env.BACKEND_URL ??
+          process.env.WEB_URL ??
+          process.env.API_BASE_URL ??
+          process.env.REACT_APP_BACKEND_URL ??
+          process.env.REACT_NATIVE_APP_BACKEND_URL)) ||
+      '',
+    nodeEnv: typeof process !== 'undefined' ? process.env.NODE_ENV : undefined,
+    platformOs: Platform.OS,
+    browserLocation: Platform.OS === 'web' && typeof window !== 'undefined' ? window.location : undefined,
+  });
 
 const resolveRefreshIntervalMs = (): number => {
   const raw = Constants.expoConfig?.extra?.refreshIntervalMs;

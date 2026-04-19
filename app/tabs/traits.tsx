@@ -361,7 +361,7 @@ export function TraitsTab<T extends TraitRecord>({
 
         <Text style={styles.modalLabel}>Interest Weights</Text>
         <Text style={styles.helperText}>
-          Higher values make itinerary generation emphasize that style more. We rebalance totals automatically when saving.
+          Higher values make itinerary generation emphasize that style more. Each slider is set independently (0-100).
         </Text>
         {INTEREST_WEIGHT_FIELDS.map((field) => {
           const value = promptTraits.tt.w[field.key];
@@ -427,6 +427,9 @@ export function TraitsTab<T extends TraitRecord>({
             placeholder="Custom interest"
             value={customInterest}
             onChangeText={setCustomInterest}
+            autoComplete="off"
+            autoCorrect={false}
+            textContentType="none"
           />
           <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={addCustomInterest}>
             <Text style={styles.buttonText}>Add</Text>
