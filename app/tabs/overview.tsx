@@ -28,6 +28,7 @@ import {
   formatMonthYear,
   getEarliestTripEventDate,
 } from '../utils/tripDates';
+import { dedupeMembersByIdentity, formatMemberDisplayName } from '../utils/memberDisplay';
 import { normalizeDateString } from '../utils/normalizeDateString';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import {
@@ -203,48 +204,11 @@ type ModalDateField =
 export const dedupeAttendees = (
   attendees: OverviewTabProps['attendees']
 ): OverviewTabProps['attendees'] => {
-  const byKey = new Map<string, OverviewTabProps['attendees'][number]>();
-  const makeKey = (member: OverviewTabProps['attendees'][number]) => {
-    const rawEmail = (member.email ?? member.userEmail ?? '').trim().toLowerCase();
-    return rawEmail || member.id;
-  };
-  const merge = (base: OverviewTabProps['attendees'][number], incoming: OverviewTabProps['attendees'][number]) => {
-    const preferIncoming =
-      (base.status === 'pending' && incoming.status !== 'pending') ||
-      (base.status === 'removed' && incoming.status !== 'removed');
-    const keep = preferIncoming ? incoming : base;
-    const mergeFrom = preferIncoming ? base : incoming;
-    return {
-      ...keep,
-      firstName: keep.firstName ?? mergeFrom.firstName,
-      lastName: keep.lastName ?? mergeFrom.lastName,
-      email: keep.email ?? mergeFrom.email ?? keep.userEmail ?? mergeFrom.userEmail,
-      userEmail: keep.userEmail ?? mergeFrom.userEmail,
-      guestName: keep.guestName ?? mergeFrom.guestName,
-      status: keep.status ?? mergeFrom.status,
-      removedAt: keep.removedAt ?? mergeFrom.removedAt,
-    };
-  };
-  for (const member of attendees ?? []) {
-    const key = makeKey(member);
-    const existing = byKey.get(key);
-    if (existing) {
-      byKey.set(key, merge(existing, member));
-    } else {
-      byKey.set(key, member);
-    }
-  }
-  const deduped = Array.from(byKey.values());
-  return deduped;
+  return dedupeMembersByIdentity(attendees ?? []);
 };
 
 export const formatAttendeeLabel = (member: OverviewTabProps['attendees'][number]) => {
-  const first = member.firstName?.trim() ?? '';
-  const last = member.lastName?.trim() ?? '';
-  const combined = `${first} ${last}`.trim();
-  const email = member.email?.trim() || member.userEmail?.trim() || '';
-  const base = combined || member.guestName?.trim() || email || 'Traveler';
-  return email && base.toLowerCase() !== email.toLowerCase() ? `${base} (${email})` : base;
+  return formatMemberDisplayName(member);
 };
 
 export const formatUserDisplayName = (member: {
@@ -254,18 +218,7 @@ export const formatUserDisplayName = (member: {
   email?: string | null;
   userEmail?: string | null;
 }) => {
-  const first = member.firstName?.trim() ?? '';
-  const last = member.lastName?.trim() ?? '';
-  const combined = `${first} ${last}`.trim();
-  if (combined) return combined;
-
-  const guest = member.guestName?.trim();
-  if (guest) return guest;
-
-  const email = member.email?.trim() || member.userEmail?.trim();
-  if (email) return email;
-
-  return 'Traveler';
+  return formatMemberDisplayName(member);
 };
 
 type DayLocationInfo = {

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import bodyParser from 'body-parser';
 import { logError, logInfo } from '../logger';
 import { isFeatureEnabled } from '../services/entitlementService';
 import { INGESTION_DEFAULT_FORWARDING_PROVIDER, INGESTION_FEATURE_FLAGS, INGESTION_USAGE_KEYS } from '../ingestion/config';
@@ -8,6 +9,8 @@ import { getTierIngestionRules, assertAndConsumeMonthlyQuota } from '../ingestio
 import { IngestionError } from '../ingestion/shared/userFailures';
 
 const router = Router();
+router.use(bodyParser.json({ limit: '5mb' }));
+router.use(bodyParser.urlencoded({ extended: true, limit: '5mb' }));
 
 router.post('/mailgun', mailgunWebhookMiddleware, async (req, res) => {
   const body = (req.body ?? {}) as Record<string, unknown>;

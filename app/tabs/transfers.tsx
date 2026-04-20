@@ -6,6 +6,8 @@ import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { normalizeDateString } from '../utils/normalizeDateString';
 import { FlightEditingForm } from '../components/TransferEditingForm';
 import { toWebStyle } from '../utils/webStyle';
+import { formatMemberDisplayName } from '../utils/memberDisplay';
+import { normalizeTimeInput } from '../utils/normalizeTimeInput';
 import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from '../utils/votes';
 import {
   DEFAULT_NEW_ITINERARY_STATUS,
@@ -291,6 +293,8 @@ export const buildFlightPayload = (flight: FlightEditDraft, tripId?: string | nu
   const trim = (v: string | null | undefined) => (v ?? '').trim();
   const departureDate = normalizeDateString(trim(flight.departureDate)) || new Date().toISOString().slice(0, 10);
   const arrivalDate = normalizeDateString(trim((flight as any).arrivalDate)) || departureDate;
+  const departureTime = normalizeTimeInput(flight.departureTime);
+  const arrivalTime = normalizeTimeInput(flight.arrivalTime);
   const departureLocation = trim(flight.departureLocation) || trim(flight.departureAirportCode);
   const arrivalLocation = trim(flight.arrivalLocation) || trim(flight.arrivalAirportCode);
   const layoverLocation = trim(flight.layoverLocation);
@@ -304,14 +308,14 @@ export const buildFlightPayload = (flight: FlightEditDraft, tripId?: string | nu
     departureDate,
     departureLocation,
     departureAirportCode: trim(flight.departureAirportCode) || departureLocation,
-    departureTime: trim(flight.departureTime) || '00:00',
+    departureTime: departureTime || '00:00',
     arrivalLocation,
     arrivalAirportCode: trim(flight.arrivalAirportCode) || arrivalLocation,
     layoverLocation,
     layoverLocationCode,
     layoverDuration: trim(flight.layoverDuration),
     arrivalDate,
-    arrivalTime: trim(flight.arrivalTime) || '00:00',
+    arrivalTime: arrivalTime || '00:00',
     cost: Number(sanitizeCostInput(flight.cost)) || 0,
     carrier: trim(flight.carrier),
     flightNumber: trim(flight.flightNumber),
@@ -329,8 +333,8 @@ export const buildFlightPayloadForCreate = (
   if (!tripId) return { error: 'Select an active trip before adding a transfer.' };
   const status = normalizeItineraryStatus((draft as FlightEditDraft).status, DEFAULT_NEW_ITINERARY_STATUS);
   const departureDate = (draft as FlightEditDraft).departureDate?.trim();
-  const departureTime = (draft as FlightEditDraft).departureTime?.trim();
-  const arrivalTime = (draft as FlightEditDraft).arrivalTime?.trim();
+  const departureTime = normalizeTimeInput((draft as FlightEditDraft).departureTime);
+  const arrivalTime = normalizeTimeInput((draft as FlightEditDraft).arrivalTime);
   const relaxed = shouldRelaxRequiredFields(status);
   if (!relaxed && !departureDate) return { error: 'Departure date is required.' };
   if (!relaxed && (!departureTime || !arrivalTime)) return { error: 'Departure and arrival times are required.' };
@@ -414,8 +418,8 @@ export const normalizeFlightFromApi = (f: any): Flight => ({
   departure_airport_code: f.departure_airport_code ?? f.departureAirportCode ?? '',
   arrival_airport_code: f.arrival_airport_code ?? f.arrivalAirportCode ?? '',
   layover_airport_code: f.layover_airport_code ?? f.layoverAirportCode ?? '',
-  departure_time: f.departure_time ?? f.departureTime ?? '',
-  arrival_time: f.arrival_time ?? f.arrivalTime ?? '',
+  departure_time: normalizeTimeInput(f.departure_time ?? f.departureTime, String(f.departure_time ?? f.departureTime ?? '')),
+  arrival_time: normalizeTimeInput(f.arrival_time ?? f.arrivalTime, String(f.arrival_time ?? f.arrivalTime ?? '')),
   carrier: f.carrier ?? '',
   flight_number: f.flight_number ?? f.flightNumber ?? '',
   booking_reference: f.booking_reference ?? f.bookingReference ?? '',
@@ -552,13 +556,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   const isWizard = mode === 'wizard';
   const containerRef = useRef<React.ElementRef<typeof View> | null>(null);
   const formatPassengerLabel = (member: GroupMemberOption): string => {
-    const first = member.firstName?.trim() ?? '';
-    const last = member.lastName?.trim() ?? '';
-    const full = `${first} ${last}`.trim();
-    if (full) return full;
-    if (member.guestName?.trim()) return member.guestName.trim();
-    if (member.email?.trim()) return member.email.trim();
-    return member.id;
+    return formatMemberDisplayName(member);
   };
   const memberNames = useMemo(() => {
     const map = new Map<string, string>();
@@ -1020,13 +1018,13 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       arrivalDate: normalizeDateString(flight.arrival_date || (flight as any).arrivalDate || flight.departure_date),
       departureLocation: flight.departure_location ?? '',
       departureAirportCode: flight.departure_airport_code ?? '',
-      departureTime: flight.departure_time,
+      departureTime: normalizeTimeInput(flight.departure_time, flight.departure_time),
       arrivalLocation: flight.arrival_location ?? '',
       arrivalAirportCode: flight.arrival_airport_code ?? '',
       layoverLocation: flight.layover_location ?? '',
       layoverLocationCode: flight.layover_location_code ?? '',
       layoverDuration: flight.layover_duration ?? '',
-      arrivalTime: flight.arrival_time,
+      arrivalTime: normalizeTimeInput(flight.arrival_time, flight.arrival_time),
       cost: String(flight.cost ?? ''),
       carrier: flight.carrier,
       flightNumber: flight.flight_number,

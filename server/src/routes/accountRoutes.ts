@@ -657,6 +657,11 @@ groupsRouter.get('/:id/members', async (req, res) => {
     const members = await listGroupMembers(req.params.id, user.userId);
     res.json(members);
   } catch (err) {
+    logError('[groups] failed to list group members', {
+      groupId: req.params.id,
+      userId: user.userId,
+      error: (err as Error).message,
+    });
     res.status(400).json({ error: (err as Error).message });
   }
 });

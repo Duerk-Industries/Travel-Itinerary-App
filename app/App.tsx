@@ -19,6 +19,7 @@ import { formatDateLong } from './utils/formatDateLong';
 import { normalizeDateString } from './utils/normalizeDateString';
 import { sanitizeCostInput } from './utils/sanitizeCost';
 import { initializeAppCheck } from './utils/firebaseAppCheck';
+import { dedupeMembersByIdentity, formatMemberDisplayName } from './utils/memberDisplay';
 import { FlightsTab, type Flight, fetchFlightsForTrip } from './tabs/transfers';
 import { type Tour, ActivityTab, fetchActivitiesForTrip } from './tabs/activities';
 import { type Trait } from './tabs/traits';
@@ -54,7 +55,7 @@ import { getAppTheme, type AppTheme } from './theme/theme';
 import { FOLLOWED_TRIP_HIDDEN_PAGES, shouldAllowPageChange, shouldDisableTab } from './utils/wizardGuard';
 import * as WebBrowser from 'expo-web-browser';
 import { Buffer } from 'buffer';
-import { loadSession, saveSession, clearSession } from './utils/session';
+import { loadLastActiveTripId, loadSession, saveLastActiveTripId, saveSession, clearSession } from './utils/session';
 import LodgingDetailsDialog from './components/LodgingDetailsDialog';
 import ConfirmDialog from './components/ConfirmDialog';
 import DropdownOptionButton from './components/DropdownOptionButton';
@@ -105,11 +106,29 @@ interface GroupInvite {
   resolvedTripName?: string | null;
 }
 
+interface PendingTripShareInvite {
+  id: string;
+  tripId: string;
+  tripName: string;
+  destination?: string | null;
+  inviteeEmail?: string | null;
+  inviterEmail?: string | null;
+  inviterFirstName?: string | null;
+  inviterLastName?: string | null;
+  role: 'member' | 'follower';
+  status: 'pending';
+  createdAt?: string | null;
+  expiresAt?: string | null;
+}
+
 interface GroupMemberView {
   id: string;
   userId?: string;
   userEmail?: string;
+  email?: string;
   guestName?: string;
+  firstName?: string;
+  lastName?: string;
 }
 
 interface GroupView {
@@ -175,24 +194,10 @@ interface GroupMemberOption {
 }
 
 const formatMemberName = (member: GroupMemberOption): string => {
-  const norm = (val?: string | null) => {
-    const t = String(val ?? '').trim();
-    if (!t || t.toLowerCase() === 'unknown') return '';
-    return t;
-  };
-  const first = norm(member.firstName);
-  const last = norm(member.lastName);
-  const email = member.email?.trim();
-  const status = member.status;
-  if (first || last) return `${first ?? ''} ${last ?? ''}`.trim();
-  if (member.guestName) return member.guestName;
-  if (email) {
-    const local = email.split('@')[0] ?? '';
-    const parts = local.split(/[._-]+/).filter(Boolean);
-    const base = parts.length >= 2 ? `${parts[0]} ${parts.slice(1).join(' ')}`.trim() : email;
-    return status === 'pending' ? `${base} (pending)` : base;
-  }
-  return status === 'pending' ? 'Pending member' : 'Member';
+  const base = formatMemberDisplayName(member);
+  return member.status === 'pending' && !String(member.firstName ?? '').trim() && !String(member.lastName ?? '').trim()
+    ? `${base} (pending)`
+    : base;
 };
 
 type Page =
@@ -472,8 +477,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const refreshInFlightRef = useRef(false);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const suppressedGroupMemberFetchesRef = useRef<Map<string, string>>(new Map());
   const [isAppIdle, setIsAppIdle] = useState(false);
-  const autoRedeemedFollowCodeRef = useRef<string | null>(null);
   const [flights, setFlights] = useState<Flight[]>([]);
   const [externalFlightEditId, setExternalFlightEditId] = useState<string | null>(null);
   const [invites, setInvites] = useState<GroupInvite[]>([]);
@@ -497,6 +502,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [followCodeError, setFollowCodeError] = useState<string | null>(null);
   const [followCodePayloads, setFollowCodePayloads] = useState<Record<string, InvitePayload>>({});
   const [pendingFollowCode, setPendingFollowCode] = useState<string | null>(null);
+  const [pendingTripShareInvites, setPendingTripShareInvites] = useState<PendingTripShareInvite[]>([]);
   const [selectedFollowedTripId, setSelectedFollowedTripId] = useState<string | null>(null);
   const [selectedFollowedTripDetails, setSelectedFollowedTripDetails] = useState<Trip | null>(null);
   const [groupName, setGroupName] = useState('');
@@ -1101,6 +1107,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setFollowInviteCode('');
     setFollowError('');
     setFollowCodes({});
+    setPendingTripShareInvites([]);
     setSelectedFollowedTripId(null);
     setGroups([]);
     setGroupMembers([]);
@@ -1269,7 +1276,11 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       appearancePreference: 'auto',
     });
     const previousSession = loadSession();
-    const restoredTripId = previousSession?.tripId ?? activeTripId ?? null;
+    const restoredTripId =
+      previousSession?.tripId ??
+      loadLastActiveTripId(decoded?.email ?? null) ??
+      activeTripId ??
+      null;
     setActiveTripId(restoredTripId);
     const firstLogin = Boolean(firstLoginOverride);
     setIsFirstLogin(firstLogin);
@@ -1627,6 +1638,30 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     }
   }, [backendUrl, userToken]);
 
+  const fetchPendingTripShareInvites = useCallback(async (token?: string) => {
+    const authToken = token ?? userToken;
+    if (!authToken) {
+      setPendingTripShareInvites([]);
+      return [];
+    }
+    try {
+      const res = await fetch(`${backendUrl}/api/trips/share/invites/pending`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      if (!res.ok) {
+        setPendingTripShareInvites([]);
+        return [];
+      }
+      const data = await res.json().catch(() => ({}));
+      const invites = Array.isArray(data?.invites) ? data.invites : [];
+      setPendingTripShareInvites(invites);
+      return invites;
+    } catch {
+      setPendingTripShareInvites([]);
+      return [];
+    }
+  }, [backendUrl, userToken]);
+
   const fetchFollowedTrips = useCallback(async (tokenOverride?: string) => {
     const authToken = tokenOverride ?? userToken;
     if (!authToken) {
@@ -1660,6 +1695,17 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     const data = await res.json();
     const normalized = (Array.isArray(data) ? data : []).map((group: GroupView) => ({
       ...group,
+      members: Array.isArray(group.members)
+        ? dedupeMembersByIdentity(
+            group.members.map((member) => ({
+              ...member,
+              email: member.email ?? member.userEmail ?? undefined,
+              userEmail: member.userEmail ?? member.email ?? undefined,
+              firstName: member.firstName ?? undefined,
+              lastName: member.lastName ?? undefined,
+            }))
+          )
+        : [],
       invites: Array.isArray(group.invites) ? group.invites : [],
     }));
     setGroups(normalized);
@@ -1684,16 +1730,21 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       if (!res.ok) return [];
       const data = await res.json();
       setTrips(data);
-      if (!activeTripId && data.length) {
-        setActiveTripId(data[0].id);
-      } else if (activeTripId && !isFollowingMode && !data.find((t: Trip) => t.id === activeTripId)) {
-        setActiveTripId(data[0]?.id ?? null);
-      }
+      setActiveTripId((currentTripId) => {
+        const preferredTripId = currentTripId ?? loadLastActiveTripId(userEmail ?? null);
+        if (!preferredTripId && data.length) {
+          return data[0].id;
+        }
+        if (preferredTripId && !isFollowingMode && !data.find((t: Trip) => t.id === preferredTripId)) {
+          return data[0]?.id ?? null;
+        }
+        return currentTripId;
+      });
       return data;
     } catch {
       return [];
     }
-  }, [activeTripId, backendUrl, isFollowingMode, logout, userToken, requirePasswordSetup]);
+  }, [backendUrl, isFollowingMode, logout, userToken, requirePasswordSetup, userEmail]);
 
   const fetchGroupMembersForActiveTrip = useCallback(async () => {
     if (!userToken || !activeTripId) {
@@ -1706,29 +1757,44 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       setGroupMembers([]);
       return;
     }
+    if (suppressedGroupMemberFetchesRef.current.has(groupId)) {
+      setGroupMembers([]);
+      return;
+    }
     try {
       const res = await fetch(`${backendUrl}/api/groups/${groupId}/members`, {
         headers: { Authorization: `Bearer ${userToken}` },
       });
       if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        const message = String(data?.error ?? `status ${res.status}`);
+        suppressedGroupMemberFetchesRef.current.set(groupId, message);
+        console.warn(`[groups] suppressing repeated member fetch for group=${groupId}: ${message}`);
         setGroupMembers([]);
         return;
       }
+      suppressedGroupMemberFetchesRef.current.delete(groupId);
       const data = await res.json();
-      const normalized = (Array.isArray(data) ? data : []).map((m) => ({
+      const normalized = dedupeMembersByIdentity((Array.isArray(data) ? data : []).map((m) => ({
         id: m.id,
+        userId: m.userId ?? undefined,
         guestName: m.guestName ?? m.guest_name ?? undefined,
-        email: m.email ?? undefined,
+        email: m.email ?? m.userEmail ?? undefined,
+        userEmail: m.userEmail ?? m.email ?? undefined,
         firstName: m.firstName ?? m.first_name ?? undefined,
         lastName: m.lastName ?? m.last_name ?? undefined,
         status: m.status ?? undefined,
         removedAt: m.removedAt ?? undefined,
-      }));
+      })));
       setGroupMembers(normalized.filter((m) => m.status !== 'removed'));
     } catch {
       setGroupMembers([]);
     }
   }, [activeTripId, backendUrl, isFollowingMode, selectedFollowedTripDetails, trips, userToken]);
+
+  useEffect(() => {
+    suppressedGroupMemberFetchesRef.current.clear();
+  }, [activeTripId]);
 
   const fetchTraits = useCallback(async () => {
     if (!userToken) return;
@@ -1820,6 +1886,65 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     fetchTrips();
   };
 
+  const acceptPendingTripShareInvite = async (invite: PendingTripShareInvite) => {
+    if (!userToken) return;
+    const res = await fetch(`${backendUrl}/api/trips/share/invites/${invite.id}/accept`, {
+      method: 'POST',
+      headers,
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'Unable to accept invite');
+      return;
+    }
+    setPendingTripShareInvites((prev) => prev.filter((entry) => entry.id !== invite.id));
+    if (invite.tripId) {
+      setActiveTripId(invite.tripId);
+    }
+    if (isFirstLogin) {
+      setDeferFirstLoginRedirect(false);
+      setActivePage('account');
+    } else {
+      setActivePage('overview');
+    }
+    fetchPendingTripShareInvites();
+    fetchGroups();
+    fetchTrips();
+    fetchFollowedTrips();
+  };
+
+  const rejectPendingTripShareInvite = async (invite: PendingTripShareInvite) => {
+    if (!userToken) return;
+    const res = await fetch(`${backendUrl}/api/trips/share/invites/${invite.id}/reject`, {
+      method: 'POST',
+      headers,
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'Unable to reject invite');
+      return;
+    }
+    setPendingTripShareInvites((prev) => prev.filter((entry) => entry.id !== invite.id));
+    fetchPendingTripShareInvites();
+    fetchGroups();
+    fetchTrips();
+    fetchFollowedTrips();
+  };
+
+  const acceptPendingFollowCode = async () => {
+    if (!pendingFollowCode) return;
+    const error = await handleFollowTripByCode(pendingFollowCode);
+    if (!error) {
+      setPendingFollowCode(null);
+    }
+  };
+
+  const rejectPendingFollowCode = () => {
+    setPendingFollowCode(null);
+    setFollowInviteCode('');
+    setFollowError('');
+  };
+
   const refreshPageData = useCallback(async (tokenOverride?: string, pageOverride?: Page) => {
     const authToken = tokenOverride ?? userToken;
     if (!authToken || refreshInFlightRef.current || requirePasswordSetup) return;
@@ -1832,7 +1957,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       switch (currentPage) {
         case 'home':
         case 'trips':
-          await Promise.all([fetchInvites(authToken), fetchGroups(), fetchTrips(authToken), fetchFollowedTrips(authToken)]);
+          await Promise.all([
+            fetchInvites(authToken),
+            fetchPendingTripShareInvites(authToken),
+            fetchGroups(),
+            fetchTrips(authToken),
+            fetchFollowedTrips(authToken),
+          ]);
           break;
         case 'overview':
           await Promise.all([
@@ -1887,7 +2018,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         case 'admin':
           break;
         default:
-          await Promise.all([fetchInvites(authToken), fetchGroups(), fetchTrips(authToken), fetchFollowedTrips(authToken)]);
+          await Promise.all([
+            fetchInvites(authToken),
+            fetchPendingTripShareInvites(authToken),
+            fetchGroups(),
+            fetchTrips(authToken),
+            fetchFollowedTrips(authToken),
+          ]);
           break;
       }
     } finally {
@@ -1905,6 +2042,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     fetchExpenses,
     activePage,
     fetchInvites,
+    fetchPendingTripShareInvites,
     fetchGroups,
     fetchTrips,
     fetchFollowedTrips,
@@ -2077,13 +2215,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       setInvitesLoaded(false);
       return;
     }
-    setPendingInviteModalOpen(invites.length > 0);
-  }, [invites, userToken]);
+    setPendingInviteModalOpen(invites.length > 0 || pendingTripShareInvites.length > 0 || Boolean(pendingFollowCode));
+  }, [invites, pendingFollowCode, pendingTripShareInvites.length, userToken]);
 
   useEffect(() => {
     if (!userToken || !deferFirstLoginRedirect) return;
     if (!invitesLoaded) return;
-    if (pendingInviteModalOpen || invites.length) return;
+    if (pendingInviteModalOpen || invites.length || pendingTripShareInvites.length || pendingFollowCode) return;
     setDeferFirstLoginRedirect(false);
     setActivePage('account');
     saveSession(userToken, userName ?? 'Traveler', 'account', userEmail ?? undefined, activeTripId ?? null, pageHistory, userRole);
@@ -2093,7 +2231,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     invites.length,
     invitesLoaded,
     pageHistory,
+    pendingFollowCode,
     pendingInviteModalOpen,
+    pendingTripShareInvites.length,
     userEmail,
     userName,
     userRole,
@@ -2105,8 +2245,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       fetchTrips();
       fetchGroups();
       fetchInvites();
+      fetchPendingTripShareInvites();
     }
-  }, [userToken, requirePasswordSetup, fetchTrips, fetchGroups, fetchInvites]);
+  }, [userToken, requirePasswordSetup, fetchTrips, fetchGroups, fetchInvites, fetchPendingTripShareInvites]);
 
   useEffect(() => {
     if (userToken) return;
@@ -2273,27 +2414,6 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       }
     };
   }, [activePage, activeTripId, isAppIdle, lastRefreshAt, userToken, requirePasswordSetup, refreshIntervalMs, refreshPageData]);
-
-  useEffect(() => {
-    if (!userToken || requirePasswordSetup || !pendingFollowCode) return;
-    const redemptionKey = `${userToken}:${pendingFollowCode}`;
-    if (autoRedeemedFollowCodeRef.current === redemptionKey) return;
-    autoRedeemedFollowCodeRef.current = redemptionKey;
-
-    let cancelled = false;
-    const redeemFollowCode = async () => {
-      const error = await handleFollowTripByCode(pendingFollowCode);
-      if (cancelled) return;
-      if (!error) {
-        setPendingFollowCode(null);
-      }
-    };
-
-    void redeemFollowCode();
-    return () => {
-      cancelled = true;
-    };
-  }, [handleFollowTripByCode, pendingFollowCode, requirePasswordSetup, userToken]);
 
   useEffect(() => {
     if (userToken && !requirePasswordSetup) {
@@ -2547,6 +2667,11 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     if (!userToken) return;
     saveSession(userToken, userName ?? 'Traveler', activePage, userEmail, activeTripId, pageHistory, userRole);
   }, [userToken, userName, userEmail, activePage, activeTripId, pageHistory, userRole]);
+
+  useEffect(() => {
+    if (!userEmail) return;
+    saveLastActiveTripId(activeTripId, userEmail);
+  }, [activeTripId, userEmail]);
 
   const disabledPages = useMemo(() => {
     const pages: Page[] = [
@@ -3806,8 +3931,54 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   <Text style={styles.buttonText}>Close</Text>
                 </TouchableOpacity>
               </View>
-              <Text style={styles.helperText}>Choose which trips you want to join.</Text>
+              <Text style={styles.helperText}>Choose which pending trip access requests you want to accept.</Text>
               <ScrollView style={styles.inviteList} contentContainerStyle={styles.inviteListContent}>
+                {pendingFollowCode ? (
+                  <View style={styles.inviteCard}>
+                    <Text style={styles.bodyText}>Follow shared trip</Text>
+                    <Text style={styles.helperText}>A follow link was opened for this account. Accept to start following the trip, or decline to remove it.</Text>
+                    <View style={styles.row}>
+                      <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={acceptPendingFollowCode} testID="follow-link-accept">
+                        <Text style={styles.buttonText}>Accept</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.button, styles.smallButton, styles.dangerButton]}
+                        onPress={rejectPendingFollowCode}
+                        testID="follow-link-decline"
+                      >
+                        <Text style={styles.dangerButtonText}>Decline</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ) : null}
+                {pendingTripShareInvites.map((invite) => {
+                  const inviterName = `${invite.inviterFirstName ?? ''} ${invite.inviterLastName ?? ''}`.trim();
+                  const inviterLine = inviterName || invite.inviterEmail || 'Someone';
+                  const accessLabel = invite.role === 'member' ? 'member access' : 'follower access';
+                  return (
+                    <View key={invite.id} style={styles.inviteCard}>
+                      <Text style={styles.bodyText}>{invite.tripName || 'Shared Trip'}</Text>
+                      <Text style={styles.helperText}>Invited by {inviterLine}</Text>
+                      <Text style={styles.helperText}>Access: {accessLabel}</Text>
+                      <View style={styles.row}>
+                        <TouchableOpacity
+                          style={[styles.button, styles.smallButton]}
+                          onPress={() => acceptPendingTripShareInvite(invite)}
+                          testID={`share-invite-accept-${invite.id}`}
+                        >
+                          <Text style={styles.buttonText}>Accept</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={[styles.button, styles.smallButton, styles.dangerButton]}
+                          onPress={() => rejectPendingTripShareInvite(invite)}
+                          testID={`share-invite-decline-${invite.id}`}
+                        >
+                          <Text style={styles.dangerButtonText}>Decline</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  );
+                })}
                 {invites.map((invite) => {
                   const tripLabel = invite.resolvedTripName ?? invite.groupName ?? 'Upcoming Trip';
                   const inviterName = `${invite.inviterFirstName ?? ''} ${invite.inviterLastName ?? ''}`.trim();

@@ -62,11 +62,10 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
   const memberNameMap = useMemo(() => {
     const map = new Map<string, string>();
     activeMembers.forEach((m) => {
-      const name = `${m.firstName ?? ''} ${m.lastName ?? ''}`.trim();
-      map.set(m.id, name || m.guestName || m.email || 'Traveler');
+      map.set(m.id, formatMemberName(m));
     });
     return map;
-  }, [activeMembers]);
+  }, [activeMembers, formatMemberName]);
 
   const memberIds = useMemo(() => activeMembers.map((m) => m.id), [activeMembers]);
 

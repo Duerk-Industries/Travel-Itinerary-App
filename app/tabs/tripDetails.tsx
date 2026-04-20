@@ -24,7 +24,7 @@ type Trip = {
 type GroupView = {
   id: string;
   name: string;
-  members: Array<{ id: string; userEmail?: string; email?: string; guestName?: string }>;
+  members: Array<{ id: string; userEmail?: string; email?: string; guestName?: string; firstName?: string; lastName?: string }>;
   invites: Array<{ id: string; inviteeEmail: string; status: string }>;
 };
 
@@ -88,6 +88,14 @@ const TripDetailsTab: React.FC<TripDetailsTabProps> = ({
   const monthLabel = formatMonthYear(trip.startMonth ?? null, trip.startYear ?? null);
   const pendingInvites = group?.invites ?? [];
   const members = group?.members ?? [];
+  const formatParticipantName = (member: GroupView['members'][number]) => {
+    const first = member.firstName?.trim() ?? '';
+    const last = member.lastName?.trim() ?? '';
+    const combined = `${first} ${last}`.trim();
+    if (combined) return combined;
+    if (member.guestName?.trim()) return member.guestName.trim();
+    return member.userEmail ?? member.email ?? 'Traveler';
+  };
   const [locationNames, setLocationNames] = useState<string[]>([]);
   const [shareOpen, setShareOpen] = useState(false);
   const [shareLoading, setShareLoading] = useState(false);
@@ -424,7 +432,7 @@ const TripDetailsTab: React.FC<TripDetailsTabProps> = ({
       {members.length ? (
         members.map((m) => (
           <Text key={m.id} style={styles.bodyText}>
-            {m.userEmail ?? m.email ?? m.guestName ?? 'Traveler'}
+            {formatParticipantName(m)}
           </Text>
         ))
       ) : (

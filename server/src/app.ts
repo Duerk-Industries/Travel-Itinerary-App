@@ -70,6 +70,10 @@ export { envLoadedFrom };
 export const app = express();
 app.set('trust proxy', 1);
 
+// Mailgun may send larger multipart or urlencoded webhook payloads than the
+// app-wide default body parser limits, so mount webhook routes before them.
+app.use('/api/ingestion/webhooks', ingestionWebhookRoutes);
+
 const isRunningLocally = isLocalEnv();
 const webUrl = getBackendUrl('https://duerk.org') || 'https://duerk.org';
 const allowedOrigins = isRunningLocally
@@ -294,7 +298,6 @@ app.use('/api/car-rentals', carRentalRoutes);
 app.use('/api/account', accountRoutes);
 app.use('/api/expenses', expenseRoutes);
 app.use('/api/internal/ingestion', internalIngestionWorkerRoutes);
-app.use('/api/ingestion/webhooks', ingestionWebhookRoutes);
 app.use('/api/ingestion/gmail', ingestionGmailOAuthRoutes);
 app.use('/api/ingestion', ingestionRoutes);
 app.use('/api/admin', authenticate, requireAdmin, adminRoutes);

@@ -2933,50 +2933,10 @@ export const createTripShareInvite = async (
 
     const userRow = await client.query<{ id: string }>(`SELECT id FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1`, [email]);
     const userId = userRow.rows[0]?.id ?? null;
-
-    if (role === 'member' && userId) {
-      const activeMember = await client.query(
-        `SELECT 1
-         FROM group_members
-         WHERE group_id = $1 AND user_id = $2 AND removed_at IS NULL
-         LIMIT 1`,
-        [context.groupId, userId]
-      );
-      if (!activeMember.rowCount) {
-        await client.query(
-          `INSERT INTO group_members (id, group_id, user_id, added_by)
-           VALUES ($1, $2, $3, $4)
-           ON CONFLICT (group_id, user_id) DO UPDATE
-           SET removed_at = NULL`,
-          [randomUUID(), context.groupId, userId, inviterId]
-        );
-      }
-      await client.query(`DELETE FROM trip_followers WHERE trip_id = $1 AND follower_user_id = $2`, [tripId, userId]);
-    }
-
-    if (role === 'follower' && userId) {
-      const isMember = await client.query(
-        `SELECT 1
-         FROM group_members
-         WHERE group_id = $1 AND user_id = $2 AND removed_at IS NULL
-         LIMIT 1`,
-        [context.groupId, userId]
-      );
-      if (!isMember.rowCount) {
-        await client.query(
-          `INSERT INTO trip_followers (id, trip_id, follower_user_id, role)
-           VALUES ($1, $2, $3, 'follower')
-           ON CONFLICT (trip_id, follower_user_id) DO NOTHING`,
-          [randomUUID(), tripId, userId]
-        );
-      }
-    }
-
-    const autoApplied = Boolean(userId);
-    const token = autoApplied ? undefined : generateTripShareToken();
-    const tokenHash = token ? hashToken(token) : null;
-    const status: 'pending' | 'accepted' = autoApplied ? 'accepted' : 'pending';
-    const expiresAt = autoApplied ? null : new Date(Date.now() + Math.max(1, expiresInDays) * 24 * 60 * 60 * 1000);
+    const token = generateTripShareToken();
+    const tokenHash = hashToken(token);
+    const status: 'pending' = 'pending';
+    const expiresAt = new Date(Date.now() + Math.max(1, expiresInDays) * 24 * 60 * 60 * 1000);
 
     const { rows } = await client.query<{
       id: string;
@@ -2989,7 +2949,7 @@ export const createTripShareInvite = async (
     }>(
       `INSERT INTO trip_share_invites
        (id, trip_id, group_id, inviter_id, invitee_user_id, invitee_email, role, status, token_hash, expires_at, accepted_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CASE WHEN $8 = 'accepted' THEN NOW() ELSE NULL END, NOW())
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NULL, NOW())
        RETURNING id,
                  trip_id as "tripId",
                  invitee_email as "inviteeEmail",
@@ -3001,7 +2961,7 @@ export const createTripShareInvite = async (
     );
 
     await client.query('COMMIT');
-    return { invite: rows[0], token, autoApplied };
+    return { invite: rows[0], token, autoApplied: false };
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;
@@ -3103,6 +3063,182 @@ export const acceptTripShareInvite = async (
     throw err;
   } finally {
     client.release();
+  }
+};
+
+export const listPendingTripShareInvitesForUser = async (
+  userId: string,
+  emailRaw?: string | null
+): Promise<
+  Array<{
+    id: string;
+    tripId: string;
+    tripName: string;
+    destination?: string | null;
+    inviteeEmail: string;
+    role: 'member' | 'follower';
+    status: 'pending';
+    createdAt: string;
+    expiresAt: string | null;
+    inviterEmail?: string | null;
+    inviterFirstName?: string | null;
+    inviterLastName?: string | null;
+  }>
+> => {
+  const p = getPool();
+  const email = normalizeEmail(emailRaw ?? '');
+  const { rows } = await p.query(
+    `SELECT tsi.id,
+            tsi.trip_id as "tripId",
+            t.name as "tripName",
+            t.destination,
+            tsi.invitee_email as "inviteeEmail",
+            tsi.role,
+            tsi.status,
+            tsi.created_at as "createdAt",
+            tsi.expires_at as "expiresAt",
+            inviter.email as "inviterEmail",
+            wu.first_name as "inviterFirstName",
+            wu.last_name as "inviterLastName"
+     FROM trip_share_invites tsi
+     JOIN trips t ON t.id = tsi.trip_id
+     JOIN users inviter ON inviter.id = tsi.inviter_id
+     LEFT JOIN web_users wu ON wu.id = tsi.inviter_id
+     WHERE tsi.status = 'pending'
+       AND tsi.revoked_at IS NULL
+       AND (tsi.expires_at IS NULL OR tsi.expires_at > NOW()::timestamp)
+       AND (tsi.invitee_user_id = $1 OR ($2 <> '' AND LOWER(tsi.invitee_email) = $2))
+     ORDER BY tsi.created_at DESC`,
+    [userId, email]
+  );
+  return rows as Array<{
+    id: string;
+    tripId: string;
+    tripName: string;
+    destination?: string | null;
+    inviteeEmail: string;
+    role: 'member' | 'follower';
+    status: 'pending';
+    createdAt: string;
+    expiresAt: string | null;
+    inviterEmail?: string | null;
+    inviterFirstName?: string | null;
+    inviterLastName?: string | null;
+  }>;
+};
+
+export const acceptTripShareInviteById = async (
+  userId: string,
+  emailRaw: string,
+  inviteId: string
+): Promise<{ tripId: string; role: 'member' | 'follower' }> => {
+  const p = getPool();
+  const email = normalizeEmail(emailRaw);
+  const client = await p.connect();
+  try {
+    await client.query('BEGIN');
+    const inviteRows = await client.query<{
+      id: string;
+      tripId: string;
+      groupId: string;
+      inviteeEmail: string;
+      role: 'member' | 'follower';
+      status: 'pending' | 'accepted' | 'revoked' | 'expired';
+      expiresAt: string | null;
+    }>(
+      `SELECT id,
+              trip_id as "tripId",
+              group_id as "groupId",
+              invitee_email as "inviteeEmail",
+              role,
+              status,
+              expires_at as "expiresAt"
+       FROM trip_share_invites
+       WHERE id = $1
+         AND (invitee_user_id = $2 OR LOWER(invitee_email) = LOWER($3))
+       LIMIT 1`,
+      [inviteId, userId, email]
+    );
+    if (!inviteRows.rowCount) throw new Error('Invite not found');
+    const invite = inviteRows.rows[0];
+    if (invite.status !== 'pending') throw new Error('Invite is no longer pending');
+    if (invite.expiresAt && new Date(invite.expiresAt).getTime() <= Date.now()) {
+      await client.query(
+        `UPDATE trip_share_invites
+         SET status = 'expired', updated_at = NOW()
+         WHERE id = $1`,
+        [invite.id]
+      );
+      await client.query('COMMIT');
+      throw new Error('Invite has expired');
+    }
+    if (normalizeEmail(invite.inviteeEmail) !== email) throw new Error('Invite email does not match this account');
+
+    if (invite.role === 'member') {
+      await client.query(
+        `INSERT INTO group_members (id, group_id, user_id, added_by)
+         SELECT $1, $2, $3, inviter_id
+         FROM trip_share_invites
+         WHERE id = $4
+         ON CONFLICT (group_id, user_id) DO UPDATE
+         SET removed_at = NULL`,
+        [randomUUID(), invite.groupId, userId, invite.id]
+      );
+      await client.query(`DELETE FROM trip_followers WHERE trip_id = $1 AND follower_user_id = $2`, [invite.tripId, userId]);
+    } else {
+      const isMember = await client.query(
+        `SELECT 1
+         FROM group_members
+         WHERE group_id = $1 AND user_id = $2 AND removed_at IS NULL
+         LIMIT 1`,
+        [invite.groupId, userId]
+      );
+      if (!isMember.rowCount) {
+        await client.query(
+          `INSERT INTO trip_followers (id, trip_id, follower_user_id, role)
+           VALUES ($1, $2, $3, 'follower')
+           ON CONFLICT (trip_id, follower_user_id) DO NOTHING`,
+          [randomUUID(), invite.tripId, userId]
+        );
+      }
+    }
+
+    await client.query(
+      `UPDATE trip_share_invites
+       SET status = 'accepted',
+           invitee_user_id = $2,
+           accepted_at = NOW(),
+           updated_at = NOW()
+       WHERE id = $1`,
+      [invite.id, userId]
+    );
+
+    await client.query('COMMIT');
+    return { tripId: invite.tripId, role: invite.role };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
+export const rejectTripShareInvite = async (userId: string, emailRaw: string, inviteId: string): Promise<void> => {
+  const p = getPool();
+  const email = normalizeEmail(emailRaw);
+  const result = await p.query(
+    `UPDATE trip_share_invites
+     SET status = 'revoked',
+         revoked_at = NOW(),
+         updated_at = NOW()
+     WHERE id = $1
+       AND status = 'pending'
+       AND revoked_at IS NULL
+       AND (invitee_user_id = $2 OR LOWER(invitee_email) = LOWER($3))`,
+    [inviteId, userId, email]
+  );
+  if (!result.rowCount) {
+    throw new Error('Invite not found');
   }
 };
 
@@ -4706,11 +4842,17 @@ export const listGroupsForUser = async (
             gm.group_id as "groupId",
             gm.user_id as "userId",
             gm.guest_name as "guestName",
+            COALESCE(gm.first_name, wu.first_name, wu_pending.first_name, u.first_name, u_pending.first_name) as "firstName",
+            COALESCE(gm.last_name, wu.last_name, wu_pending.last_name, u.last_name, u_pending.last_name) as "lastName",
             gm.added_by as "addedBy",
             gm.created_at as "createdAt",
-            u.email as "userEmail"
+            COALESCE(wu.email, wu_pending.email, u.email, u_pending.email, gm.invite_email) as "userEmail",
+            COALESCE(wu.email, wu_pending.email, u.email, u_pending.email, gm.invite_email) as "email"
      FROM group_members gm
+     LEFT JOIN web_users wu ON gm.user_id = wu.id
      LEFT JOIN users u ON gm.user_id = u.id
+     LEFT JOIN users u_pending ON gm.user_id IS NULL AND LOWER(u_pending.email) = LOWER(gm.invite_email)
+     LEFT JOIN web_users wu_pending ON u_pending.id = wu_pending.id
      WHERE gm.group_id = ANY($1::uuid[])
      ORDER BY gm.created_at DESC`,
     [groupIds]
@@ -4746,6 +4888,8 @@ export const listGroupsForUser = async (
             groupId: g.id,
             userId: u.id,
             guestName: null,
+            firstName: null,
+            lastName: null,
             addedBy: g.ownerId,
             createdAt: new Date().toISOString(),
             userEmail: u.email,

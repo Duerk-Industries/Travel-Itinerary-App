@@ -50,6 +50,8 @@ const hashPassword = (password: string, salt: string) => scryptSync(password, sa
 const stripUndefined = <T extends Record<string, any>>(updates: T): Partial<T> =>
   Object.fromEntries(Object.entries(updates).filter(([, value]) => typeof value !== 'undefined')) as Partial<T>;
 const hashToken = (token: string): string => createHash('sha256').update(token).digest('hex');
+const TRIP_SHARE_TOKEN_BYTES = 24;
+const generateTripShareToken = (): string => randomBytes(TRIP_SHARE_TOKEN_BYTES).toString('base64url');
 const FOLLOW_CODE_LENGTH = 6;
 const FOLLOW_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const ADMIN_ANALYTICS_VERSION = 1;
@@ -2124,15 +2126,17 @@ export const getTripFollowCode = async (
   const existing = await db
     .collection('follow_codes')
     .where('tripId', '==', tripId)
-    .where('status', '==', 'active')
-    .orderBy('createdAt', 'desc')
-    .limit(1)
     .get();
-  if (!existing.empty) {
-    const doc = existing.docs[0];
-    const data = doc.data() as any;
+  const activeExisting = existing.docs
+    .map((doc) => ({ doc, data: doc.data() as any }))
+    .filter(({ data }) => data.status === 'active' && !data.revokedAt && (!data.expiresAt || new Date(data.expiresAt).getTime() > Date.now()))
+    .sort((left, right) => String(right.data.createdAt ?? '').localeCompare(String(left.data.createdAt ?? '')))[0];
+  if (activeExisting) {
+    const doc = activeExisting.doc;
+    const data = activeExisting.data;
+    const id = String(data.code ?? doc.id);
     return {
-      id: doc.id,
+      id,
       tripId: data.tripId,
       code: data.code,
       status: data.status,
@@ -2160,6 +2164,430 @@ export const getTripFollowCode = async (
   }
 
   throw new Error('Unable to create follow code. Try again.');
+};
+
+const getTripOwnerContextFirebase = async (
+  tripId: string,
+  userId: string
+): Promise<{ tripId: string; groupId: string; ownerId: string } | null> => {
+  const db = getDb();
+  const tripDoc = await db.collection('trips').doc(tripId).get();
+  if (!tripDoc.exists) return null;
+  const trip = tripDoc.data() as any;
+  const groupId = String(trip.groupId ?? '').trim();
+  if (!groupId) return null;
+  const groupDoc = await db.collection('groups').doc(groupId).get();
+  if (!groupDoc.exists) return null;
+  const ownerId = String((groupDoc.data() as any).ownerId ?? '').trim();
+  if (!ownerId || ownerId !== userId) return null;
+  return { tripId, groupId, ownerId };
+};
+
+export const listTripShareInvites = async (
+  userId: string,
+  tripId: string
+): Promise<
+  Array<{
+    id: string;
+    tripId: string;
+    inviteeEmail: string;
+    inviteeUserId: string | null;
+    role: 'member' | 'follower';
+    status: 'pending' | 'accepted' | 'revoked' | 'expired';
+    expiresAt: string | null;
+    acceptedAt: string | null;
+    createdAt: string;
+    updatedAt: string;
+  }>
+> => {
+  const db = getDb();
+  const context = await getTripOwnerContextFirebase(tripId, userId);
+  if (!context) throw new Error('Not authorized to manage trip sharing');
+  const rows = await db.collection('trip_share_invites').where('tripId', '==', tripId).get();
+  return rows.docs
+    .map((doc) => {
+      const data = doc.data() as any;
+      return {
+        id: doc.id,
+        tripId: String(data.tripId ?? tripId),
+        inviteeEmail: String(data.inviteeEmail ?? ''),
+        inviteeUserId: data.inviteeUserId ? String(data.inviteeUserId) : null,
+        role: (data.role === 'member' ? 'member' : 'follower') as 'member' | 'follower',
+        status: (data.status ?? 'pending') as 'pending' | 'accepted' | 'revoked' | 'expired',
+        expiresAt: data.expiresAt ? String(data.expiresAt) : null,
+        acceptedAt: data.acceptedAt ? String(data.acceptedAt) : null,
+        createdAt: String(data.createdAt ?? nowIso()),
+        updatedAt: String(data.updatedAt ?? data.createdAt ?? nowIso()),
+      };
+    })
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+};
+
+export const createTripShareInvite = async (
+  inviterId: string,
+  tripId: string,
+  inviteeEmailRaw: string,
+  role: 'member' | 'follower',
+  expiresInDays = 14
+): Promise<{
+  invite: {
+    id: string;
+    tripId: string;
+    inviteeEmail: string;
+    inviteeUserId: string | null;
+    role: 'member' | 'follower';
+    status: 'pending' | 'accepted';
+    createdAt: string;
+  };
+  token?: string;
+  autoApplied: boolean;
+}> => {
+  const db = getDb();
+  const context = await getTripOwnerContextFirebase(tripId, inviterId);
+  if (!context) throw new Error('Not authorized to manage trip sharing');
+  const email = normalizeEmail(inviteeEmailRaw);
+
+  const existingInvites = await db.collection('trip_share_invites').where('tripId', '==', tripId).get();
+  const duplicate = existingInvites.docs
+    .map((doc) => ({ id: doc.id, ...(doc.data() as any) }))
+    .find((invite) =>
+      normalizeEmail(String(invite.inviteeEmail ?? '')) === email &&
+      String(invite.role ?? 'follower') === role &&
+      String(invite.status ?? 'pending') === 'pending' &&
+      !invite.revokedAt
+    );
+  if (duplicate) {
+    return {
+      invite: {
+        id: duplicate.id,
+        tripId: String(duplicate.tripId ?? tripId),
+        inviteeEmail: String(duplicate.inviteeEmail ?? email),
+        inviteeUserId: duplicate.inviteeUserId ? String(duplicate.inviteeUserId) : null,
+        role,
+        status: 'pending',
+        createdAt: String(duplicate.createdAt ?? nowIso()),
+      },
+      autoApplied: false,
+    };
+  }
+
+  const matchedUser = await findUserByEmail(email);
+  const userId = matchedUser?.id ?? null;
+  const token = generateTripShareToken();
+  const inviteId = randomUUID();
+  const createdAt = nowIso();
+  const payload = {
+    tripId,
+    groupId: context.groupId,
+    inviterId,
+    inviteeUserId: userId,
+    inviteeEmail: email,
+    role,
+    status: 'pending',
+    tokenHash: hashToken(token),
+    expiresAt: new Date(Date.now() + Math.max(1, expiresInDays) * 24 * 60 * 60 * 1000).toISOString(),
+    acceptedAt: null,
+    revokedAt: null,
+    createdAt,
+    updatedAt: createdAt,
+  };
+  await db.collection('trip_share_invites').doc(inviteId).set(payload);
+  return {
+    invite: {
+      id: inviteId,
+      tripId,
+      inviteeEmail: email,
+      inviteeUserId: userId,
+      role,
+      status: 'pending',
+      createdAt,
+    },
+    token,
+    autoApplied: false,
+  };
+};
+
+export const acceptTripShareInvite = async (
+  userId: string,
+  emailRaw: string,
+  token: string
+): Promise<{ tripId: string; role: 'member' | 'follower' }> => {
+  const db = getDb();
+  const email = normalizeEmail(emailRaw);
+  const tokenHash = hashToken(token);
+  const matches = await db.collection('trip_share_invites').where('tokenHash', '==', tokenHash).limit(1).get();
+  if (matches.empty) throw new Error('Invite not found');
+  const inviteDoc = matches.docs[0]!;
+  const invite = inviteDoc.data() as any;
+  if (String(invite.status ?? 'pending') !== 'pending') throw new Error('Invite is no longer pending');
+  if (invite.expiresAt && new Date(invite.expiresAt).getTime() <= Date.now()) {
+    await inviteDoc.ref.set({ status: 'expired', updatedAt: nowIso() }, { merge: true });
+    throw new Error('Invite has expired');
+  }
+  if (normalizeEmail(String(invite.inviteeEmail ?? '')) !== email) throw new Error('Invite email does not match this account');
+
+  const tripId = String(invite.tripId ?? '').trim();
+  const groupId = String(invite.groupId ?? '').trim();
+  const role = (invite.role === 'member' ? 'member' : 'follower') as 'member' | 'follower';
+  if (!tripId || !groupId) throw new Error('Invite not found');
+
+  if (role === 'member') {
+    const activeMember = await db
+      .collection('group_members')
+      .where('groupId', '==', groupId)
+      .where('userId', '==', userId)
+      .limit(1)
+      .get();
+    if (activeMember.empty) {
+      await db.collection('group_members').doc(randomUUID()).set({
+        groupId,
+        userId,
+        addedBy: invite.inviterId ?? null,
+        createdAt: nowIso(),
+        removedAt: null,
+      });
+    } else {
+      await activeMember.docs[0]!.ref.set({ removedAt: null }, { merge: true });
+    }
+    const followers = await db
+      .collection('trip_followers')
+      .where('tripId', '==', tripId)
+      .where('followerUserId', '==', userId)
+      .get();
+    for (const doc of followers.docs) {
+      await doc.ref.delete();
+    }
+  } else {
+    const activeMember = await db
+      .collection('group_members')
+      .where('groupId', '==', groupId)
+      .where('userId', '==', userId)
+      .limit(1)
+      .get();
+    if (activeMember.empty) {
+      const follower = await db
+        .collection('trip_followers')
+        .where('tripId', '==', tripId)
+        .where('followerUserId', '==', userId)
+        .limit(1)
+        .get();
+      if (follower.empty) {
+        await db.collection('trip_followers').doc(randomUUID()).set({
+          tripId,
+          followerUserId: userId,
+          role: 'follower',
+          followCodeId: null,
+          createdAt: nowIso(),
+          lastViewedAt: null,
+        });
+      }
+    }
+  }
+
+  await inviteDoc.ref.set(
+    {
+      status: 'accepted',
+      inviteeUserId: userId,
+      acceptedAt: nowIso(),
+      updatedAt: nowIso(),
+    },
+    { merge: true }
+  );
+  return { tripId, role };
+};
+
+export const listPendingTripShareInvitesForUser = async (
+  userId: string,
+  emailRaw?: string | null
+): Promise<
+  Array<{
+    id: string;
+    tripId: string;
+    tripName: string;
+    destination?: string | null;
+    inviteeEmail: string;
+    role: 'member' | 'follower';
+    status: 'pending';
+    createdAt: string;
+    expiresAt: string | null;
+    inviterEmail?: string | null;
+    inviterFirstName?: string | null;
+    inviterLastName?: string | null;
+  }>
+> => {
+  const db = getDb();
+  const email = normalizeEmail(emailRaw ?? '');
+  const invites = await db.collection('trip_share_invites').get();
+  const results: Array<{
+    id: string;
+    tripId: string;
+    tripName: string;
+    destination?: string | null;
+    inviteeEmail: string;
+    role: 'member' | 'follower';
+    status: 'pending';
+    createdAt: string;
+    expiresAt: string | null;
+    inviterEmail?: string | null;
+    inviterFirstName?: string | null;
+    inviterLastName?: string | null;
+  }> = [];
+  for (const doc of invites.docs) {
+    const data = doc.data() as any;
+    const inviteeEmail = normalizeEmail(String(data.inviteeEmail ?? ''));
+    if (String(data.status ?? 'pending') !== 'pending' || data.revokedAt) continue;
+    if (data.expiresAt && new Date(data.expiresAt).getTime() <= Date.now()) continue;
+    if (String(data.inviteeUserId ?? '') !== userId && (!email || inviteeEmail !== email)) continue;
+    const tripId = String(data.tripId ?? '').trim();
+    if (!tripId) continue;
+    const tripDoc = await db.collection('trips').doc(tripId).get();
+    if (!tripDoc.exists) continue;
+    const tripData = tripDoc.data() as any;
+    const inviterId = String(data.inviterId ?? '').trim();
+    let inviterEmail: string | null = null;
+    let inviterFirstName: string | null = null;
+    let inviterLastName: string | null = null;
+    if (inviterId) {
+      const inviterUserDoc = await db.collection('users').doc(inviterId).get();
+      inviterEmail = inviterUserDoc.exists ? String((inviterUserDoc.data() as any)?.email ?? '') || null : null;
+      const inviterProfileDoc = await db.collection('web_users').doc(inviterId).get();
+      if (inviterProfileDoc.exists) {
+        const inviterProfile = inviterProfileDoc.data() as any;
+        inviterFirstName = inviterProfile.firstName ? String(inviterProfile.firstName) : null;
+        inviterLastName = inviterProfile.lastName ? String(inviterProfile.lastName) : null;
+      }
+    }
+    results.push({
+      id: doc.id,
+      tripId,
+      tripName: String(tripData.name ?? 'Trip'),
+      destination: tripData.destination ?? null,
+      inviteeEmail: String(data.inviteeEmail ?? ''),
+      role: data.role === 'member' ? 'member' : 'follower',
+      status: 'pending',
+      createdAt: String(data.createdAt ?? nowIso()),
+      expiresAt: data.expiresAt ? String(data.expiresAt) : null,
+      inviterEmail,
+      inviterFirstName,
+      inviterLastName,
+    });
+  }
+  return results.sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+};
+
+export const acceptTripShareInviteById = async (
+  userId: string,
+  emailRaw: string,
+  inviteId: string
+): Promise<{ tripId: string; role: 'member' | 'follower' }> => {
+  const db = getDb();
+  const email = normalizeEmail(emailRaw);
+  const inviteDoc = await db.collection('trip_share_invites').doc(inviteId).get();
+  if (!inviteDoc.exists) throw new Error('Invite not found');
+  const invite = inviteDoc.data() as any;
+  if (String(invite.status ?? 'pending') !== 'pending') throw new Error('Invite is no longer pending');
+  if (invite.revokedAt) throw new Error('Invite is no longer pending');
+  if (invite.expiresAt && new Date(invite.expiresAt).getTime() <= Date.now()) {
+    await inviteDoc.ref.set({ status: 'expired', updatedAt: nowIso() }, { merge: true });
+    throw new Error('Invite has expired');
+  }
+  if (String(invite.inviteeUserId ?? '') !== userId && normalizeEmail(String(invite.inviteeEmail ?? '')) !== email) {
+    throw new Error('Invite not found');
+  }
+  const tripId = String(invite.tripId ?? '').trim();
+  const groupId = String(invite.groupId ?? '').trim();
+  const role = (invite.role === 'member' ? 'member' : 'follower') as 'member' | 'follower';
+  if (!tripId || !groupId) throw new Error('Invite not found');
+  if (normalizeEmail(String(invite.inviteeEmail ?? '')) !== email) throw new Error('Invite email does not match this account');
+
+  if (role === 'member') {
+    const activeMember = await db
+      .collection('group_members')
+      .where('groupId', '==', groupId)
+      .where('userId', '==', userId)
+      .limit(1)
+      .get();
+    if (activeMember.empty) {
+      await db.collection('group_members').doc(randomUUID()).set({
+        groupId,
+        userId,
+        addedBy: invite.inviterId ?? null,
+        createdAt: nowIso(),
+        removedAt: null,
+      });
+    } else {
+      await activeMember.docs[0]!.ref.set({ removedAt: null }, { merge: true });
+    }
+    const followers = await db
+      .collection('trip_followers')
+      .where('tripId', '==', tripId)
+      .where('followerUserId', '==', userId)
+      .get();
+    for (const doc of followers.docs) {
+      await doc.ref.delete();
+    }
+  } else {
+    const activeMember = await db
+      .collection('group_members')
+      .where('groupId', '==', groupId)
+      .where('userId', '==', userId)
+      .limit(1)
+      .get();
+    if (activeMember.empty) {
+      const follower = await db
+        .collection('trip_followers')
+        .where('tripId', '==', tripId)
+        .where('followerUserId', '==', userId)
+        .limit(1)
+        .get();
+      if (follower.empty) {
+        await db.collection('trip_followers').doc(randomUUID()).set({
+          tripId,
+          followerUserId: userId,
+          role: 'follower',
+          followCodeId: null,
+          createdAt: nowIso(),
+          lastViewedAt: null,
+        });
+      }
+    }
+  }
+
+  await inviteDoc.ref.set(
+    {
+      status: 'accepted',
+      inviteeUserId: userId,
+      acceptedAt: nowIso(),
+      updatedAt: nowIso(),
+    },
+    { merge: true }
+  );
+  return { tripId, role };
+};
+
+export const rejectTripShareInvite = async (userId: string, emailRaw: string, inviteId: string): Promise<void> => {
+  const db = getDb();
+  const email = normalizeEmail(emailRaw);
+  const inviteDoc = await db.collection('trip_share_invites').doc(inviteId).get();
+  if (!inviteDoc.exists) throw new Error('Invite not found');
+  const invite = inviteDoc.data() as any;
+  if (String(invite.status ?? 'pending') !== 'pending' || invite.revokedAt) throw new Error('Invite not found');
+  if (String(invite.inviteeUserId ?? '') !== userId && normalizeEmail(String(invite.inviteeEmail ?? '')) !== email) {
+    throw new Error('Invite not found');
+  }
+  await inviteDoc.ref.set({ status: 'revoked', revokedAt: nowIso(), updatedAt: nowIso() }, { merge: true });
+};
+
+export const revokeTripShareInvite = async (userId: string, tripId: string, inviteId: string): Promise<void> => {
+  const db = getDb();
+  const context = await getTripOwnerContextFirebase(tripId, userId);
+  if (!context) throw new Error('Not authorized to manage trip sharing');
+  const inviteDoc = await db.collection('trip_share_invites').doc(inviteId).get();
+  if (!inviteDoc.exists) return;
+  const data = inviteDoc.data() as any;
+  if (String(data.tripId ?? '') !== tripId) return;
+  if (String(data.status ?? '') !== 'pending') return;
+  await inviteDoc.ref.set({ status: 'revoked', revokedAt: nowIso(), updatedAt: nowIso() }, { merge: true });
 };
 
 export const followTripByCode = async (

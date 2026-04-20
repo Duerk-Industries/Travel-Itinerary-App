@@ -63,17 +63,6 @@ const LodgingForm: React.FC<LodgingFormProps> = ({
     }));
   };
 
-  const resolveTravelerLabel = (member: MemberOption) => {
-    const first = member.firstName?.trim() ?? '';
-    const last = member.lastName?.trim() ?? '';
-    if (first || last) return `${first} ${last}`.trim();
-    const guest = member.guestName?.trim() ?? '';
-    if (guest) return guest;
-    const email = (member.email ?? '').trim();
-    if (email) return email;
-    return 'Traveler';
-  };
-
   const toggleBaseStyle = styles.toggleOption ?? {
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -222,7 +211,7 @@ const LodgingForm: React.FC<LodgingFormProps> = ({
       <View style={styles.payerChips}>
         {activeMembers.map((m) => {
           const selected = draft.travelerIds.includes(m.id);
-          const name = resolveTravelerLabel(m);
+          const name = formatMemberName(m);
           return (
             <TouchableOpacity
               key={`traveler-toggle-${m.id}`}
@@ -244,7 +233,7 @@ const LodgingForm: React.FC<LodgingFormProps> = ({
       <View style={styles.payerChips}>
         {activeMembers.map((m) => {
           const selected = draft.paidBy.includes(m.id);
-          const name = resolveTravelerLabel(m);
+          const name = formatMemberName(m);
           return (
             <TouchableOpacity
               key={`payer-toggle-${m.id}`}

@@ -188,8 +188,15 @@ export const listTripShareInvites = async (...args: Parameters<ReturnType<typeof
   adapter().listTripShareInvites(...args);
 export const createTripShareInvite = async (...args: Parameters<ReturnType<typeof adapter>['createTripShareInvite']>) =>
   adapter().createTripShareInvite(...args);
+export const listPendingTripShareInvitesForUser = async (
+  ...args: Parameters<ReturnType<typeof adapter>['listPendingTripShareInvitesForUser']>
+) => adapter().listPendingTripShareInvitesForUser(...args);
 export const acceptTripShareInvite = async (...args: Parameters<ReturnType<typeof adapter>['acceptTripShareInvite']>) =>
   adapter().acceptTripShareInvite(...args);
+export const acceptTripShareInviteById = async (...args: Parameters<ReturnType<typeof adapter>['acceptTripShareInviteById']>) =>
+  adapter().acceptTripShareInviteById(...args);
+export const rejectTripShareInvite = async (...args: Parameters<ReturnType<typeof adapter>['rejectTripShareInvite']>) =>
+  adapter().rejectTripShareInvite(...args);
 export const revokeTripShareInvite = async (...args: Parameters<ReturnType<typeof adapter>['revokeTripShareInvite']>) =>
   adapter().revokeTripShareInvite(...args);
 export const writeActivity = async (...args: Parameters<ReturnType<typeof adapter>['writeActivity']>) =>

@@ -15,10 +15,12 @@ import {
   getTripCovering,
   getTripFollowCode,
   listFollowedTrips,
+  listPendingTripShareInvitesForUser,
   listTripComments,
   listTripActivity,
   listTrips,
   listTripShareInvites,
+  rejectTripShareInvite,
   revokeTripShareInvite,
   searchTripContacts,
   unfollowTrip,
@@ -26,6 +28,7 @@ import {
   updateTripDetails,
   updateTripGroup,
   listTripMessages,
+  acceptTripShareInviteById,
 } from '../db';
 import { detectCoveringConflict, detectCycle } from '../utils/coveredBy';
 import { sendTripInviteEmailBestEffort } from '../mailer';
@@ -103,6 +106,57 @@ router.post('/follow', async (req, res) => {
       return;
     }
     res.status(400).json({ error: message });
+  }
+});
+
+router.get('/share/invites/pending', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const email = (req as any).user.email as string | undefined;
+  try {
+    const invites = await listPendingTripShareInvitesForUser(userId, email);
+    res.json({ invites });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message || 'Unable to load pending invites' });
+  }
+});
+
+router.post('/share/invites/:inviteId/accept', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const email = (req as any).user.email as string | undefined;
+  if (!email) {
+    res.status(400).json({ error: 'Authenticated email is required' });
+    return;
+  }
+  try {
+    const accepted = await acceptTripShareInviteById(userId, email, req.params.inviteId);
+    res.status(200).json(accepted);
+  } catch (err) {
+    const message = (err as Error).message;
+    if (/not found|expired|pending|match/i.test(message)) {
+      res.status(400).json({ error: message });
+      return;
+    }
+    res.status(500).json({ error: message || 'Unable to accept invite' });
+  }
+});
+
+router.post('/share/invites/:inviteId/reject', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const email = (req as any).user.email as string | undefined;
+  if (!email) {
+    res.status(400).json({ error: 'Authenticated email is required' });
+    return;
+  }
+  try {
+    await rejectTripShareInvite(userId, email, req.params.inviteId);
+    res.status(204).send();
+  } catch (err) {
+    const message = (err as Error).message;
+    if (/not found/i.test(message)) {
+      res.status(400).json({ error: message });
+      return;
+    }
+    res.status(500).json({ error: message || 'Unable to reject invite' });
   }
 });
 

@@ -76,17 +76,6 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
 }) => {
   if (!visible || !flight || !flightId) return null;
 
-  const resolveTravelerLabel = (member: GroupMemberOption) => {
-    const first = member.firstName?.trim() ?? '';
-    const last = member.lastName?.trim() ?? '';
-    if (first || last) return `${first} ${last}`.trim();
-    const guest = member.guestName?.trim() ?? '';
-    if (guest) return guest;
-    const email = (member.email ?? (member as any).userEmail ?? '').trim();
-    if (email) return email;
-    return 'Traveler';
-  };
-
   const toggleBaseStyle = styles.toggleOption ?? {
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -129,7 +118,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
           <View style={styles.payerChips}>
             {groupMembers.map((m) => {
               const selected = flight.passengerIds.includes(m.id);
-              const name = resolveTravelerLabel(m);
+              const name = formatMemberName(m);
               return (
                 <TouchableOpacity
                   key={m.id}
@@ -459,7 +448,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
           <View style={styles.payerChips}>
             {groupMembers.map((m) => {
               const selected = flight.paidBy.includes(m.id);
-              const name = resolveTravelerLabel(m);
+              const name = formatMemberName(m);
               return (
                 <TouchableOpacity
                   key={`payer-${m.id}`}

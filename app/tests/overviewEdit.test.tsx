@@ -198,7 +198,7 @@ describe('Overview edit controls', () => {
 
     const deduped = dedupeAttendees(attendees);
     expect(deduped.length).toBe(1);
-    expect(formatAttendeeLabel(deduped[0])).toBe('Vicky Duerk (vduerk@gmail.com)');
+    expect(formatAttendeeLabel(deduped[0])).toBe('Vicky Duerk');
   });
 
   test('add traveler sends guestName when email is provided', async () => {

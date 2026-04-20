@@ -8,6 +8,7 @@ import { logInfo } from '../../logger';
 import { getUserById } from '../../db';
 import { extractLabeledFieldValue, extractPhoneLikeValue, toTitleCaseWords } from './hotelFieldExtractors';
 import { extractSemanticFieldsForType } from './semanticFieldHelpers';
+import { sanitizeExtractionResult } from './fieldSanitizer';
 
 export interface ExtractionStrategy {
   canHandle(doc: NormalizedDocument): boolean;
@@ -1179,8 +1180,14 @@ export const extractCandidates = async (
         strategyName: 'none',
       },
     } satisfies ExtractionResult);
-  await saveExtractionCacheEntry(extractionConfig.userId, extractionConfig.contentHash, extractionConfig.logicVersion, finalResult as unknown as Record<string, unknown>);
-  return finalResult;
+  const sanitizedFinalResult = sanitizeExtractionResult(finalResult);
+  await saveExtractionCacheEntry(
+    extractionConfig.userId,
+    extractionConfig.contentHash,
+    extractionConfig.logicVersion,
+    sanitizedFinalResult as unknown as Record<string, unknown>
+  );
+  return sanitizedFinalResult;
 };
 
 // Exported for testing

@@ -3,6 +3,7 @@ import { Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } 
 import ConfirmDialog from '../components/ConfirmDialog';
 import { fetchExchangeRate, getLocalDateString } from '../utils/exchangeRates';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
+import { formatMemberDisplayName } from '../utils/memberDisplay';
 import { toWebStyle } from '../utils/webStyle';
 
 type Trip = {
@@ -105,8 +106,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   const memberNameMap = useMemo(() => {
     const map = new Map<string, string>();
     activeMembers.forEach((m) => {
-      const name = `${m.firstName ?? ''} ${m.lastName ?? ''}`.trim();
-      map.set(m.id, name || m.guestName || m.email || 'Traveler');
+      map.set(m.id, formatMemberDisplayName(m));
     });
     return map;
   }, [activeMembers]);
