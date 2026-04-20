@@ -2687,6 +2687,10 @@ export const listFollowedTrips = async (
         const full = `${profile.firstName ?? ''} ${profile.lastName ?? ''}`.trim();
         inviterName = full || null;
       }
+      if (!inviterName) {
+        const userDoc = await db.collection('users').doc(ownerId).get();
+        inviterName = userDoc.exists ? ((userDoc.data() as any).email ?? null) : null;
+      }
     }
     results.push({
       tripId,

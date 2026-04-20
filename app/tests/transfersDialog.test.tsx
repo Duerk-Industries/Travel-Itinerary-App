@@ -155,7 +155,7 @@ describe('Flights dialog', () => {
           groupMembers={[member, pendingMember, emailOnlyMember]}
           userMembers={[member, pendingMember, emailOnlyMember]}
           styles={styles}
-          formatMemberName={(m) => m.email ?? m.firstName ?? m.id}
+          formatMemberName={(m) => [m.firstName, m.lastName].filter(Boolean).join(' ') || m.email || m.id}
           payerName={() => member.email ?? 'Member'}
           airportTarget={null}
           getLocationInputValue={(raw) => raw}

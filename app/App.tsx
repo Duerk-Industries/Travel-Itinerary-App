@@ -1502,6 +1502,14 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
   const register = async () => {
     setAuthErrorMessage(null);
+    if (!authForm.firstName.trim() || !authForm.lastName.trim()) {
+      alert('First name and last name are required');
+      return;
+    }
+    if (!authForm.email.trim()) {
+      alert('Email is required');
+      return;
+    }
     if (authForm.password !== authForm.passwordConfirm) {
       alert('Passwords do not match');
       return;
