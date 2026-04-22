@@ -56,6 +56,19 @@ const FOLLOW_CODE_LENGTH = 6;
 const FOLLOW_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const ADMIN_ANALYTICS_VERSION = 1;
 type TripAccessRole = 'owner' | 'member' | 'follower';
+type GroupAccessRole = 'owner' | 'member';
+type GroupAccessRecord = {
+  groupId: string;
+  userId: string;
+  role: GroupAccessRole;
+  status: 'active';
+  canRead: true;
+  canWrite: boolean;
+  canManageMembers: boolean;
+  source: 'group_owner' | 'group_member';
+  createdAt: string;
+  updatedAt: string;
+};
 type TripAccessRecord = {
   tripId: string;
   groupId: string;
@@ -128,6 +141,31 @@ const generateUniqueUsername = async (
 };
 
 const getTripAccessDocId = (tripId: string, userId: string): string => `${tripId}_${userId}`;
+const getGroupAccessDocId = (groupId: string, userId: string): string => `${groupId}_${userId}`;
+
+const buildGroupAccessRecord = (
+  existing: Partial<GroupAccessRecord> | null | undefined,
+  params: {
+    groupId: string;
+    userId: string;
+    role: GroupAccessRole;
+    source: 'group_owner' | 'group_member';
+  }
+): GroupAccessRecord => {
+  const manageMembers = params.role === 'owner';
+  return {
+    groupId: params.groupId,
+    userId: params.userId,
+    role: params.role,
+    status: 'active',
+    canRead: true,
+    canWrite: true,
+    canManageMembers: manageMembers,
+    source: params.source,
+    createdAt: String(existing?.createdAt ?? nowIso()),
+    updatedAt: nowIso(),
+  };
+};
 
 const buildTripAccessRecord = (
   existing: Partial<TripAccessRecord> | null | undefined,
@@ -160,6 +198,98 @@ export const clearTripAccessForTrip = async (tripId: string): Promise<void> => {
   const db = getDb();
   const existing = await db.collection('trip_access').where('tripId', '==', tripId).get();
   await Promise.all(existing.docs.map((doc) => doc.ref.delete()));
+};
+
+export const clearGroupAccessForGroup = async (groupId: string): Promise<void> => {
+  const db = getDb();
+  const existing = await db.collection('group_access').where('groupId', '==', groupId).get();
+  await Promise.all(existing.docs.map((doc) => doc.ref.delete()));
+};
+
+export const rebuildGroupAccessForGroup = async (groupId: string): Promise<void> => {
+  const db = getDb();
+  const groupDoc = await db.collection('groups').doc(groupId).get();
+  if (!groupDoc.exists) {
+    await clearGroupAccessForGroup(groupId);
+    return;
+  }
+
+  const ownerId = String((groupDoc.data() as any)?.ownerId ?? '').trim();
+  const [membersSnap, existingSnap] = await Promise.all([
+    db.collection('group_members').where('groupId', '==', groupId).where('removedAt', '==', null).get(),
+    db.collection('group_access').where('groupId', '==', groupId).get(),
+  ]);
+
+  const desired = new Map<string, GroupAccessRecord>();
+  if (ownerId) {
+    desired.set(
+      ownerId,
+      buildGroupAccessRecord(null, {
+        groupId,
+        userId: ownerId,
+        role: 'owner',
+        source: 'group_owner',
+      })
+    );
+  }
+
+  for (const doc of membersSnap.docs) {
+    const data = doc.data() as any;
+    const memberUserId = String(data.userId ?? '').trim();
+    if (!memberUserId) continue;
+    if (!desired.has(memberUserId)) {
+      desired.set(
+        memberUserId,
+        buildGroupAccessRecord(null, {
+          groupId,
+          userId: memberUserId,
+          role: memberUserId === ownerId ? 'owner' : 'member',
+          source: memberUserId === ownerId ? 'group_owner' : 'group_member',
+        })
+      );
+    }
+  }
+
+  const existingByUserId = new Map(
+    existingSnap.docs.map((doc) => {
+      const data = doc.data() as any;
+      return [String(data.userId ?? '').trim(), { id: doc.id, data }];
+    })
+  );
+
+  await Promise.all(
+    Array.from(desired.entries()).map(async ([userId, record]) => {
+      const existing = existingByUserId.get(userId);
+      await db
+        .collection('group_access')
+        .doc(getGroupAccessDocId(groupId, userId))
+        .set(buildGroupAccessRecord(existing?.data, {
+          groupId,
+          userId,
+          role: record.role,
+          source: record.source,
+        }));
+    })
+  );
+
+  await Promise.all(
+    existingSnap.docs
+      .filter((doc) => {
+        const data = doc.data() as any;
+        const userId = String(data.userId ?? '').trim();
+        return !userId || !desired.has(userId);
+      })
+      .map((doc) => doc.ref.delete())
+  );
+};
+
+export const rebuildGroupAccessForAllGroups = async (): Promise<{ groupCount: number }> => {
+  const db = getDb();
+  const groupsSnap = await db.collection('groups').get();
+  for (const doc of groupsSnap.docs) {
+    await rebuildGroupAccessForGroup(doc.id);
+  }
+  return { groupCount: groupsSnap.docs.length };
 };
 
 export const rebuildTripAccessForTrip = async (tripId: string): Promise<void> => {
@@ -1276,6 +1406,13 @@ export const deleteAllUsers = async (userIds: string[]): Promise<void> => {
 // Helpers
 const ensureMembership = async (groupId: string, userId: string): Promise<boolean> => {
   const db = getDb();
+  const projected = await db.collection('group_access').doc(getGroupAccessDocId(groupId, userId)).get();
+  if (projected.exists) {
+    const access = projected.data() as any;
+    if (access.status === 'active' && access.canRead === true) {
+      return true;
+    }
+  }
   const member = await db
     .collection('group_members')
     .where('groupId', '==', groupId)
@@ -1550,6 +1687,7 @@ export const addGroupMember = async (
       status: 'pending',
       createdAt: nowIso(),
     });
+    await rebuildGroupAccessForGroup(groupId);
     if (user?.id) {
       await rebuildTripAccessForGroup(groupId);
     }
@@ -1566,6 +1704,7 @@ export const addGroupMember = async (
       createdAt: nowIso(),
       removedAt: null,
     });
+    await rebuildGroupAccessForGroup(groupId);
     return {};
   }
 
@@ -1645,6 +1784,7 @@ export const removeGroupMember = async (requesterId: string, groupId: string, me
       await doc.ref.update({ paidBy });
     }
   }
+  await rebuildGroupAccessForGroup(groupId);
   await rebuildTripAccessForGroup(groupId);
 };
 
@@ -1656,6 +1796,7 @@ export const removeGroupInvite = async (ownerId: string, inviteId: string): Prom
   const group = await db.collection('groups').doc(data.groupId).get();
   if (!group.exists || group.data()?.ownerId !== ownerId) throw new Error('Not authorized');
   await db.collection('group_invites').doc(inviteId).delete();
+  await rebuildGroupAccessForGroup(String(data.groupId ?? ''));
 };
 
 export const deleteGroup = async (ownerId: string, groupId: string): Promise<void> => {
@@ -1678,6 +1819,7 @@ export const deleteGroup = async (ownerId: string, groupId: string): Promise<voi
   const trips = await db.collection('trips').where('groupId', '==', groupId).get();
   trips.forEach((t) => batch.delete(t.ref));
   await batch.commit();
+  await clearGroupAccessForGroup(groupId);
   await Promise.all(
     Array.from(visibleTripCounts.entries())
       .filter(([, tripCount]) => tripCount > 0)
@@ -1890,6 +2032,8 @@ export const updateTripGroup = async (
     listActiveGroupUserIds(newGroupId),
   ]);
   await db.collection('trips').doc(tripId).update({ groupId: newGroupId });
+  await rebuildGroupAccessForGroup(String(data.groupId ?? ''));
+  await rebuildGroupAccessForGroup(newGroupId);
   await rebuildTripAccessForTrip(tripId);
   const oldSet = new Set(oldActiveUserIds);
   const newSet = new Set(newActiveUserIds);
@@ -1940,6 +2084,7 @@ export const createGroupWithMembers = async (
       removedAt: null,
     });
   }
+  await rebuildGroupAccessForGroup(groupId);
   return { groupId, invites };
 };
 
@@ -2165,6 +2310,7 @@ export const acceptGroupInvite = async (inviteId: string, userId: string, email?
     });
   }
   await db.collection('group_invites').doc(inviteId).update({ status: 'accepted', inviteeUserId: userId });
+  await rebuildGroupAccessForGroup(String(data.groupId ?? ''));
   await rebuildTripAccessForGroup(String(data.groupId ?? ''));
   const tripCount = await countVisibleTripsForUserInGroup(userId, data.groupId);
   if (tripCount > 0) {
@@ -2233,6 +2379,7 @@ export const rejectGroupInvite = async (inviteId: string, userId: string, email?
   }
 
   await db.collection('group_invites').doc(inviteId).delete();
+  await rebuildGroupAccessForGroup(String(groupId ?? ''));
   await rebuildTripAccessForGroup(String(groupId ?? ''));
 };
 

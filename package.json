@@ -29,6 +29,7 @@
     "locations:upload": "tsx scripts/update-location-jsons.ts",
     "emulators:start": "node scripts/select-latest-firebase-export.js && firebase emulators:start --import=./.firebase-data --export-on-exit=./.firebase-data",
     "images:migrate-cache": "tsx scripts/migrate-image-cache-to-storage.ts",
+    "firestore:group-access:backfill": "tsx scripts/backfill-group-access.ts",
     "firestore:trip-access:backfill": "tsx scripts/backfill-trip-access.ts",
     "list-users": "tsx scripts/list_users.ts",
     "list-trips": "tsx scripts/list_trips_and_users.ts",

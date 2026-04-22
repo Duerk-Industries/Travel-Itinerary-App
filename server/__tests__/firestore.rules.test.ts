@@ -131,6 +131,24 @@ const seedBaseDocuments = async (
       status: 'pending',
     }),
     db.collection('groups').doc('group-1').set({ ownerId: owner.uid, name: 'Group One', createdAt: '2026-04-22T00:00:00.000Z' }),
+    db.collection('group_access').doc(`group-1_${owner.uid}`).set({
+      groupId: 'group-1',
+      userId: owner.uid,
+      role: 'owner',
+      status: 'active',
+      canRead: true,
+      canWrite: true,
+      canManageMembers: true,
+    }),
+    db.collection('group_access').doc(`group-1_${other.uid}`).set({
+      groupId: 'group-1',
+      userId: other.uid,
+      role: 'member',
+      status: 'active',
+      canRead: true,
+      canWrite: true,
+      canManageMembers: false,
+    }),
     db.collection('group_members').doc('gm-owner').set({
       groupId: 'group-1',
       userId: owner.uid,
@@ -278,9 +296,15 @@ describe('firestore security rules', () => {
     await expectDenied(getDoc(doc(outsider.db, 'family_relationships', 'rel-1')));
   });
 
-  it('allows owner and member trip reads through trip_access', async () => {
+  it('allows owner and member group reads through group_access', async () => {
     if (!emulatorReady) return;
     await expect(getDoc(doc(owner.db, 'groups', 'group-1'))).resolves.toMatchObject({ id: 'group-1' });
+    await expect(getDoc(doc(other.db, 'groups', 'group-1'))).resolves.toMatchObject({ id: 'group-1' });
+    await expectDenied(getDoc(doc(outsider.db, 'groups', 'group-1')));
+  });
+
+  it('allows owner and member trip reads through trip_access', async () => {
+    if (!emulatorReady) return;
     await expect(getDoc(doc(owner.db, 'trips', 'trip-1'))).resolves.toMatchObject({ id: 'trip-1' });
     await expect(getDoc(doc(owner.db, 'flights', 'flight-1'))).resolves.toMatchObject({ id: 'flight-1' });
     await expect(getDoc(doc(other.db, 'trips', 'trip-1'))).resolves.toMatchObject({ id: 'trip-1' });
@@ -307,6 +331,12 @@ describe('firestore security rules', () => {
     await expect(getDoc(doc(other.db, 'group_invites', 'invite-1'))).resolves.toMatchObject({ id: 'invite-1' });
     await expectDenied(getDoc(doc(outsider.db, 'group_members', 'gm-other')));
     await expectDenied(getDoc(doc(outsider.db, 'group_invites', 'invite-1')));
+  });
+
+  it('allows users to read only their own group_access record', async () => {
+    if (!emulatorReady) return;
+    await expect(getDoc(doc(other.db, 'group_access', `group-1_${other.uid}`))).resolves.toMatchObject({ id: `group-1_${other.uid}` });
+    await expectDenied(getDoc(doc(outsider.db, 'group_access', `group-1_${other.uid}`)));
   });
 
   it('allows users to read only their own trip_access record', async () => {

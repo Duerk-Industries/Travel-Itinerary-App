@@ -19,10 +19,19 @@ service cloud.firestore {
     }
 
     function isGroupOwner(groupId) {
+      return hasGroupAccess(groupId)
+        && get(/databases/$(database)/documents/group_access/$(groupAccessDocId(groupId, authUid()))).data.role == "owner";
+    }
+
+    function groupAccessDocId(groupId, userId) {
+      return groupId + "_" + userId;
+    }
+
+    function hasGroupAccess(groupId) {
       return signedIn()
         && groupId != null
-        && exists(/databases/$(database)/documents/groups/$(groupId))
-        && get(/databases/$(database)/documents/groups/$(groupId)).data.ownerId == authUid();
+        && exists(/databases/$(database)/documents/group_access/$(groupAccessDocId(groupId, authUid())))
+        && get(/databases/$(database)/documents/group_access/$(groupAccessDocId(groupId, authUid()))).data.status == "active";
     }
 
     function canReadOwnMembership() {
@@ -100,17 +109,22 @@ service cloud.firestore {
     }
 
     match /groups/{groupId} {
-      allow read: if isGroupOwner(groupId);
+      allow read: if hasGroupAccess(groupId);
       allow write: if false;
     }
 
     match /group_members/{memberId} {
-      allow read: if canReadOwnMembership() || isGroupOwner(resource.data.groupId);
+      allow read: if canReadOwnMembership() || hasGroupAccess(resource.data.groupId);
       allow write: if false;
     }
 
     match /group_invites/{inviteId} {
-      allow read: if canReadOwnInvite() || isGroupOwner(resource.data.groupId);
+      allow read: if canReadOwnInvite() || hasGroupAccess(resource.data.groupId);
+      allow write: if false;
+    }
+
+    match /group_access/{docId} {
+      allow read: if signedIn() && resource.data.userId == authUid();
       allow write: if false;
     }
 
