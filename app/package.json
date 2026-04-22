@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "test": "jest -c jest.config.js",
+    "lint": "npm run typecheck",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "export:web": "expo export --platform web",
     "web": "node ./scripts/start-web.js"
