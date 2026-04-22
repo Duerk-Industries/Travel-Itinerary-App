@@ -31,6 +31,8 @@
     "images:migrate-cache": "tsx scripts/migrate-image-cache-to-storage.ts",
     "firestore:group-access:backfill": "tsx scripts/backfill-group-access.ts",
     "firestore:trip-access:backfill": "tsx scripts/backfill-trip-access.ts",
+    "firestore:acl:preflight": "tsx scripts/firestore-acl-backfill.ts --mode=preflight --scope=all",
+    "firestore:acl:apply": "tsx scripts/firestore-acl-backfill.ts --mode=apply --scope=all",
     "list-users": "tsx scripts/list_users.ts",
     "list-trips": "tsx scripts/list_trips_and_users.ts",
     "accounts:seed": "tsx scripts/create-test-accounts.ts",

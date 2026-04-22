@@ -514,16 +514,31 @@ const incrementAdminUserTripCount = async (userId: string, amount: number, updat
   }, { merge: true });
 };
 
+const deleteDocRefsInBatches = async (
+  refs: FirebaseFirestore.DocumentReference[],
+  batchSize = 400,
+): Promise<void> => {
+  const db = getDb();
+  for (let i = 0; i < refs.length; i += batchSize) {
+    const batch = db.batch();
+    for (const ref of refs.slice(i, i + batchSize)) {
+      batch.delete(ref);
+    }
+    await batch.commit();
+  }
+};
+
 const listActiveGroupUserIds = async (groupId: string): Promise<string[]> => {
   const db = getDb();
-  const membersSnap = await db.collection('group_members')
+  const accessSnap = await db.collection('group_access')
     .where('groupId', '==', groupId)
-    .where('removedAt', '==', null)
     .get();
   return Array.from(
     new Set(
-      membersSnap.docs
-        .map((doc) => String((doc.data() as any)?.userId ?? '').trim())
+      accessSnap.docs
+        .map((doc) => doc.data() as any)
+        .filter((data) => data.status === 'active' && data.canRead === true)
+        .map((data) => String(data.userId ?? '').trim())
         .filter((userId) => userId.length > 0)
     )
   );
@@ -531,16 +546,11 @@ const listActiveGroupUserIds = async (groupId: string): Promise<string[]> => {
 
 const countVisibleTripsForUserInGroup = async (userId: string, groupId: string): Promise<number> => {
   const db = getDb();
-  const [tripsSnap, removalsSnap] = await Promise.all([
-    db.collection('trips').where('groupId', '==', groupId).get(),
-    db.collection('trip_removals').where('userId', '==', userId).get(),
-  ]);
-  const removedTripIds = new Set(
-    removalsSnap.docs
-      .map((doc) => String((doc.data() as any)?.tripId ?? '').trim())
-      .filter((tripId) => tripId.length > 0)
-  );
-  return tripsSnap.docs.filter((doc) => !removedTripIds.has(doc.id)).length;
+  const accessSnap = await db.collection('trip_access').where('userId', '==', userId).get();
+  return accessSnap.docs
+    .map((doc) => doc.data() as any)
+    .filter((data) => data.groupId === groupId && data.status === 'active' && data.canRead === true)
+    .length;
 };
 
 const writeAdminUserAnalyticsBackfill = async (params: {
@@ -1387,14 +1397,35 @@ export const isPasswordSetupRequired = async (userId: string): Promise<boolean> 
 
 export const deleteWebUserAndCleanup = async (userId: string): Promise<void> => {
   const db = getDb();
-  const batch = db.batch();
-  batch.delete(db.collection('users').doc(userId));
-  batch.delete(db.collection('web_users').doc(userId));
-  const memberships = await db.collection('group_members').where('userId', '==', userId).get();
-  memberships.forEach((m) => batch.delete(m.ref));
-  const invites = await db.collection('group_invites').where('inviteeUserId', '==', userId).get();
-  invites.forEach((i) => batch.delete(i.ref));
-  await batch.commit();
+  const [
+    memberships,
+    invites,
+    groupAccess,
+    tripAccess,
+    tripFollowers,
+    tripRemovals,
+    userEmails,
+  ] = await Promise.all([
+    db.collection('group_members').where('userId', '==', userId).get(),
+    db.collection('group_invites').where('inviteeUserId', '==', userId).get(),
+    db.collection('group_access').where('userId', '==', userId).get(),
+    db.collection('trip_access').where('userId', '==', userId).get(),
+    db.collection('trip_followers').where('followerUserId', '==', userId).get(),
+    db.collection('trip_removals').where('userId', '==', userId).get(),
+    db.collection('user_emails').where('userId', '==', userId).get(),
+  ]);
+  const refs = [
+    db.collection('users').doc(userId),
+    db.collection('web_users').doc(userId),
+    ...memberships.docs.map((doc) => doc.ref),
+    ...invites.docs.map((doc) => doc.ref),
+    ...groupAccess.docs.map((doc) => doc.ref),
+    ...tripAccess.docs.map((doc) => doc.ref),
+    ...tripFollowers.docs.map((doc) => doc.ref),
+    ...tripRemovals.docs.map((doc) => doc.ref),
+    ...userEmails.docs.map((doc) => doc.ref),
+  ];
+  await deleteDocRefsInBatches(refs);
 };
 
 export const deleteAllUsers = async (userIds: string[]): Promise<void> => {
@@ -1434,6 +1465,20 @@ const listReadableTripIdsForUser = async (userId: string): Promise<string[]> => 
       snap.docs
         .map((doc) => doc.data() as any)
         .filter((data) => data.status === 'active' && data.canRead === true)
+        .map((data) => String(data.tripId ?? '').trim())
+        .filter(Boolean)
+    )
+  );
+};
+
+const listWritableTripIdsForUser = async (userId: string): Promise<string[]> => {
+  const db = getDb();
+  const snap = await db.collection('trip_access').where('userId', '==', userId).get();
+  return Array.from(
+    new Set(
+      snap.docs
+        .map((doc) => doc.data() as any)
+        .filter((data) => data.status === 'active' && data.canWrite === true)
         .map((data) => String(data.tripId ?? '').trim())
         .filter(Boolean)
     )
@@ -1822,16 +1867,17 @@ export const deleteGroup = async (ownerId: string, groupId: string): Promise<voi
       visibleTripCounts.set(userId, await countVisibleTripsForUserInGroup(userId, groupId));
     })
   );
-  const batch = db.batch();
-  batch.delete(group.ref);
   const members = await db.collection('group_members').where('groupId', '==', groupId).get();
-  members.forEach((m) => batch.delete(m.ref));
   const invites = await db.collection('group_invites').where('groupId', '==', groupId).get();
-  invites.forEach((i) => batch.delete(i.ref));
   const trips = await db.collection('trips').where('groupId', '==', groupId).get();
-  trips.forEach((t) => batch.delete(t.ref));
-  await batch.commit();
+  await deleteDocRefsInBatches([
+    group.ref,
+    ...members.docs.map((doc) => doc.ref),
+    ...invites.docs.map((doc) => doc.ref),
+    ...trips.docs.map((doc) => doc.ref),
+  ]);
   await clearGroupAccessForGroup(groupId);
+  await Promise.all(trips.docs.map((doc) => clearTripAccessForTrip(doc.id)));
   await Promise.all(
     Array.from(visibleTripCounts.entries())
       .filter(([, tripCount]) => tripCount > 0)
@@ -5703,22 +5749,23 @@ export const adminGetUserData = async (opts: {
 export const countActiveTripsForUser = async (userId: string): Promise<number> => {
   const db = getDb();
   const today = new Date().toISOString().slice(0, 10);
-  const groupsSnap = await db.collection('groups').where('ownerId', '==', userId).get();
-  const memberSnap = await db.collection('group_members')
-    .where('userId', '==', userId)
-    .where('removedAt', '==', null)
-    .get();
-  const groupIds = new Set<string>([
-    ...groupsSnap.docs.map(d => d.id),
-    ...memberSnap.docs.map(d => d.data().groupId as string),
-  ]);
-  if (groupIds.size === 0) return 0;
+  const tripIds = await listWritableTripIdsForUser(userId);
+  if (!tripIds.length) return 0;
+  const chunk = <T>(items: T[], size = 200): T[][] => {
+    const chunks: T[][] = [];
+    for (let i = 0; i < items.length; i += size) chunks.push(items.slice(i, i + size));
+    return chunks;
+  };
   let count = 0;
-  for (const groupId of groupIds) {
-    const tripsSnap = await db.collection('trips').where('groupId', '==', groupId).get();
-    for (const tripDoc of tripsSnap.docs) {
-      const endDate = tripDoc.data().endDate;
-      if (!endDate || endDate >= today) count++;
+  for (const tripIdChunk of chunk(tripIds)) {
+    const tripRefs = tripIdChunk.map((tripId) => db.collection('trips').doc(tripId));
+    const tripDocs = await db.getAll(...tripRefs);
+    for (const tripDoc of tripDocs) {
+      if (!tripDoc.exists) continue;
+      const endDate = (tripDoc.data() as any)?.endDate;
+      if (!endDate || endDate >= today) {
+        count += 1;
+      }
     }
   }
   return count;
