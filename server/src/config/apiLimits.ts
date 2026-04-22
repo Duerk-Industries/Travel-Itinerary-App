@@ -12,8 +12,20 @@ export type ProviderLimits = {
   callers: Record<string, number>;
 };
 
+export type ProviderModelPricing = {
+  inputCostPer1MTokensUsd: number;
+  outputCostPer1MTokensUsd: number;
+};
+
+export type ProviderBudgeting = {
+  monthlyBudgetUsd?: number;
+  alertThresholdPercent?: number;
+  models: Record<string, ProviderModelPricing>;
+};
+
 export type ApiLimitsConfig = {
   providers: Record<string, ProviderLimits>;
+  budgeting: Record<string, ProviderBudgeting>;
   caching: Record<string, Record<string, number>>;
 };
 
@@ -24,8 +36,20 @@ type RawProviderLimits = {
   callers?: Record<string, unknown>;
 };
 
+type RawProviderModelPricing = {
+  inputCostPer1MTokensUsd?: unknown;
+  outputCostPer1MTokensUsd?: unknown;
+};
+
+type RawProviderBudgeting = {
+  monthlyBudgetUsd?: unknown;
+  alertThresholdPercent?: unknown;
+  models?: Record<string, RawProviderModelPricing>;
+};
+
 type RawApiLimitsConfig = {
   providers?: Record<string, RawProviderLimits>;
+  budgeting?: Record<string, RawProviderBudgeting>;
   caching?: Record<string, Record<string, unknown>>;
 };
 
@@ -42,6 +66,12 @@ const parsePositiveInt = (raw: unknown): number | undefined => {
   const value = Number(raw);
   if (!Number.isFinite(value) || value <= 0) return undefined;
   return Math.floor(value);
+};
+
+const parsePositiveNumber = (raw: unknown): number | undefined => {
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value <= 0) return undefined;
+  return value;
 };
 
 const normalizeWindow = (raw: unknown): LimitWindow | undefined => {
@@ -66,6 +96,24 @@ const normalizeProviderLimits = (raw: RawProviderLimits | undefined): ProviderLi
     windowHours: parsePositiveInt(raw?.windowHours),
     overall: parsePositiveInt(raw?.overall),
     callers: normalizedCallers,
+  };
+};
+
+const normalizeProviderBudgeting = (raw: RawProviderBudgeting | undefined): ProviderBudgeting => {
+  const models: Record<string, ProviderModelPricing> = {};
+  for (const [model, pricing] of Object.entries(raw?.models ?? {})) {
+    const inputCostPer1MTokensUsd = parsePositiveNumber(pricing?.inputCostPer1MTokensUsd);
+    const outputCostPer1MTokensUsd = parsePositiveNumber(pricing?.outputCostPer1MTokensUsd);
+    if (inputCostPer1MTokensUsd === undefined || outputCostPer1MTokensUsd === undefined) continue;
+    models[normalizeApiLimitKeyPart(model)] = {
+      inputCostPer1MTokensUsd,
+      outputCostPer1MTokensUsd,
+    };
+  }
+  return {
+    monthlyBudgetUsd: parsePositiveNumber(raw?.monthlyBudgetUsd),
+    alertThresholdPercent: parsePositiveNumber(raw?.alertThresholdPercent),
+    models,
   };
 };
 
@@ -118,21 +166,21 @@ const invalidateConfigCache = (): void => {
 const loadRawConfigFromFile = (): RawApiLimitsConfig => {
   const configPath = resolveConfigPath();
   if (!fs.existsSync(configPath)) {
-    return { providers: {}, caching: {} };
+    return { providers: {}, budgeting: {}, caching: {} };
   }
   try {
     const rawText = fs.readFileSync(configPath, 'utf8');
     return (parse(rawText) ?? {}) as RawApiLimitsConfig;
   } catch (err) {
     logError(`[api-usage] Failed to load raw YAML config from ${configPath}`, err);
-    return { providers: {}, caching: {} };
+    return { providers: {}, budgeting: {}, caching: {} };
   }
 };
 
 const loadConfigFromFile = (): ApiLimitsConfig => {
   const configPath = resolveConfigPath();
   if (!fs.existsSync(configPath)) {
-    return { providers: {}, caching: {} };
+    return { providers: {}, budgeting: {}, caching: {} };
   }
   const stat = fs.statSync(configPath);
   if (
@@ -151,20 +199,29 @@ const loadConfigFromFile = (): ApiLimitsConfig => {
     for (const [provider, rawProvider] of Object.entries(parsed.providers ?? {})) {
       providers[normalizeApiLimitKeyPart(provider)] = normalizeProviderLimits(rawProvider);
     }
+    const budgeting: Record<string, ProviderBudgeting> = {};
+    for (const [provider, rawBudgeting] of Object.entries(parsed.budgeting ?? {})) {
+      budgeting[normalizeApiLimitKeyPart(provider)] = normalizeProviderBudgeting(rawBudgeting);
+    }
     const caching = normalizeCaching(parsed.caching);
-    cachedConfig = { providers, caching };
+    cachedConfig = { providers, budgeting, caching };
     cachedPath = configPath;
     cachedMtimeMs = stat.mtimeMs;
     return cachedConfig;
   } catch (err) {
     logError(`[api-usage] Failed to load YAML config from ${configPath}`, err);
-    return { providers: {}, caching: {} };
+    return { providers: {}, budgeting: {}, caching: {} };
   }
 };
 
 export const getApiLimitProviderConfig = (provider: string): ProviderLimits | undefined => {
   const config = loadConfigFromFile();
   return config.providers[normalizeApiLimitKeyPart(provider)];
+};
+
+export const getApiBudgetProviderConfig = (provider: string): ProviderBudgeting | undefined => {
+  const config = loadConfigFromFile();
+  return config.budgeting[normalizeApiLimitKeyPart(provider)];
 };
 
 export const getApiLimitsConfig = (): ApiLimitsConfig => loadConfigFromFile();
@@ -203,6 +260,7 @@ export const updateApiLimitProviderConfig = (
   rawProviders[normalizedProvider] = nextRawProvider;
   const nextRawConfig: RawApiLimitsConfig = {
     providers: Object.fromEntries(Object.entries(rawProviders).sort(([a], [b]) => String(a).localeCompare(String(b)))),
+    budgeting: rawConfig.budgeting ?? {},
     caching: rawConfig.caching ?? {},
   };
 

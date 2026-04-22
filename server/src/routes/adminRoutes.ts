@@ -13,6 +13,7 @@ import { logError } from '../logger';
 import { getApiLimitsConfig, normalizeApiLimitKeyPart, updateApiLimitProviderConfig } from '../config/apiLimits';
 import { getFeatureFlagSeeds } from '../config/featureFlags';
 import { getApiUsageSummary } from '../apis/usageLimiter';
+import { getApiBudgetSummary } from '../apis/providerBudgeting';
 
 // Admin routes — all guarded by authenticate + requireAdmin in app.ts
 const router = Router();
@@ -382,12 +383,18 @@ router.get('/audit-log', async (req, res) => {
 router.get('/api-limits', async (_req, res) => {
   try {
     const config = getApiLimitsConfig();
-    const usage = await getApiUsageSummary();
+    const [usage, budgets] = await Promise.all([getApiUsageSummary(), getApiBudgetSummary()]);
     const providers = Object.entries(config.providers).map(([provider, providerConfig]) => ({
       provider,
       window: providerConfig.window ?? 'day',
       windowHours: providerConfig.windowHours ?? 1,
       overallLimit: providerConfig.overall ?? null,
+      monthlyBudgetUsd: budgets.find((entry) => entry.provider === provider)?.monthlyBudgetUsd ?? null,
+      estimatedSpendUsd: budgets.find((entry) => entry.provider === provider)?.estimatedSpendUsd ?? 0,
+      budgetWindowKey: budgets.find((entry) => entry.provider === provider)?.windowKey ?? null,
+      budgetUsagePercent: budgets.find((entry) => entry.provider === provider)?.budgetUsagePercent ?? null,
+      budgetAlertThresholdPercent: budgets.find((entry) => entry.provider === provider)?.alertThresholdPercent ?? null,
+      isBudgetExceeded: budgets.find((entry) => entry.provider === provider)?.isOverBudget ?? false,
       callers: Object.entries(providerConfig.callers).map(([caller, limit]) => ({
         caller,
         limit,

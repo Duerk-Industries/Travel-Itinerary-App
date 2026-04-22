@@ -5269,6 +5269,37 @@ export const appendUsageEvent = async (
   await incrementAdminUserAnalyticsMetric(userId, metricKey, amount, createdAt);
 };
 
+export const getApiCostCounter = async (provider: string, windowKey: string): Promise<number> => {
+  const db = getDb();
+  const doc = await db.collection('api_cost_counters').doc(`${provider}_${windowKey}`).get();
+  return doc.exists ? Number(doc.data()!.amountMicros ?? 0) : 0;
+};
+
+export const incrementApiCostCounter = async (
+  provider: string,
+  windowKey: string,
+  amountMicros: number
+): Promise<number> => {
+  const db = getDb();
+  const ref = db.collection('api_cost_counters').doc(`${provider}_${windowKey}`);
+  return db.runTransaction(async (tx) => {
+    const doc = await tx.get(ref);
+    const current = doc.exists ? Number(doc.data()!.amountMicros ?? 0) : 0;
+    const nextAmountMicros = current + amountMicros;
+    tx.set(
+      ref,
+      {
+        provider,
+        windowKey,
+        amountMicros: nextAmountMicros,
+        updatedAt: nowIso(),
+      },
+      { merge: true }
+    );
+    return nextAmountMicros;
+  });
+};
+
 export const getApiUsageCount = async (
   provider: string,
   caller: string,
@@ -5340,6 +5371,34 @@ export const listApiUsageCounters = async (): Promise<
 export const resetApiUsageCounters = async (): Promise<void> => {
   const db = getDb();
   const snap = await db.collection('api_usage_counters').get();
+  if (snap.empty) return;
+  const batch = db.batch();
+  snap.docs.forEach((doc) => batch.delete(doc.ref));
+  await batch.commit();
+};
+
+export const listApiCostCounters = async (): Promise<
+  Array<{
+    provider: string;
+    windowKey: string;
+    amountMicros: number;
+  }>
+> => {
+  const db = getDb();
+  const snap = await db.collection('api_cost_counters').get();
+  return snap.docs.map((doc) => {
+    const data = doc.data() as any;
+    return {
+      provider: String(data.provider ?? ''),
+      windowKey: String(data.windowKey ?? ''),
+      amountMicros: Number(data.amountMicros ?? 0),
+    };
+  });
+};
+
+export const resetApiCostCounters = async (): Promise<void> => {
+  const db = getDb();
+  const snap = await db.collection('api_cost_counters').get();
   if (snap.empty) return;
   const batch = db.batch();
   snap.docs.forEach((doc) => batch.delete(doc.ref));

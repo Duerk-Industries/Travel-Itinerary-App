@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { reserveApiUsageOrThrow } from './usageLimiter';
 import { recordUsage } from '../services/entitlementService';
+import { estimateOpenAiCostMicros, getApiBudgetWindowKey, recordApiCost } from './providerBudgeting';
 
 type OpenAiMessage = {
   role: 'system' | 'user' | 'assistant';
@@ -57,16 +58,30 @@ export const postOpenAiChatCompletion = async (params: {
       },
     }
   );
+  const usage = response.data?.usage;
+  const estimatedCostMicrosUsd = estimateOpenAiCostMicros({
+    model: params.payload.model,
+    promptTokens: usage?.prompt_tokens ?? 0,
+    completionTokens: usage?.completion_tokens ?? 0,
+  });
+  if ((estimatedCostMicrosUsd ?? 0) > 0) {
+    await recordApiCost({
+      provider: 'OPENAI',
+      windowKey: getApiBudgetWindowKey(),
+      amountMicros: estimatedCostMicrosUsd ?? 0,
+    });
+  }
   if (params.usageContext?.userId) {
     const windowKey = params.usageContext.windowKey ?? getMonthWindowKey();
+    const budgetWindowKey = getApiBudgetWindowKey();
     const baseMetadata = {
       windowKey,
+      budgetWindowKey,
       provider: 'OPENAI',
       caller: params.caller,
       model: params.payload.model,
       ...(params.usageContext.metadata ?? {}),
     };
-    const usage = response.data?.usage;
     await recordUsage(params.usageContext.userId, 'api_calls_openai', 1, baseMetadata);
     if ((usage?.prompt_tokens ?? 0) > 0) {
       await recordUsage(params.usageContext.userId, 'openai_prompt_tokens', usage?.prompt_tokens ?? 0, baseMetadata);
@@ -81,6 +96,19 @@ export const postOpenAiChatCompletion = async (params: {
     }
     if ((usage?.total_tokens ?? 0) > 0) {
       await recordUsage(params.usageContext.userId, 'openai_tokens', usage?.total_tokens ?? 0, baseMetadata);
+    }
+    if ((estimatedCostMicrosUsd ?? 0) > 0) {
+      const costMetadata = {
+        ...baseMetadata,
+        estimatedCostMicrosUsd,
+        estimatedCostUsd: estimatedCostMicrosUsd! / 1_000_000,
+      };
+      await recordUsage(
+        params.usageContext.userId,
+        'openai_estimated_cost_micros_usd',
+        estimatedCostMicrosUsd ?? 0,
+        costMetadata
+      );
     }
   }
   return response.data;

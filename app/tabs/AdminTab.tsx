@@ -1559,6 +1559,12 @@ type ApiLimitProvider = {
   window: string;
   windowHours: number;
   overallLimit: number | null;
+  monthlyBudgetUsd?: number | null;
+  estimatedSpendUsd?: number;
+  budgetWindowKey?: string | null;
+  budgetUsagePercent?: number | null;
+  budgetAlertThresholdPercent?: number | null;
+  isBudgetExceeded?: boolean;
   callers: Array<{ caller: string; limit: number; currentUsage: number }>;
   overallUsage: number;
 };
@@ -1696,7 +1702,7 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
     <ScrollView style={[localStyles.section, localStyles.apiLimitsScroll]} contentContainerStyle={localStyles.apiLimitsScrollContent}>
       <Text style={[localStyles.sectionTitle, { color: theme.colors.text }]}>API Rate Limits</Text>
       <Text style={[localStyles.cardSub, { color: theme.colors.textMuted, marginBottom: 12 }]}>
-        Limits are configured in api-limits.yaml. Usage resets per window period and is backed by durable server-side counters.
+        Limits are configured in api-limits.yaml. Usage resets per window period, request counts are durable, and provider spend is estimated from recorded token usage.
       </Text>
       {message ? <Text style={[localStyles.saveMsg, { color: theme.colors.success }]}>{message}</Text> : null}
       {providers.map((provider) => (
@@ -1706,6 +1712,21 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
           </Text>
           <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
             Window: {provider.windowHours}h ({provider.window}) | Overall limit: {provider.overallLimit ?? 'none'} | Used: {provider.overallUsage}
+          </Text>
+          <Text
+            style={[
+              localStyles.cardSub,
+              {
+                color:
+                  provider.isBudgetExceeded ||
+                  ((provider.budgetUsagePercent ?? 0) >= (provider.budgetAlertThresholdPercent ?? Number.POSITIVE_INFINITY))
+                    ? theme.colors.error
+                    : theme.colors.textMuted,
+              },
+            ]}
+          >
+            Budget ({provider.budgetWindowKey ?? 'current'}): {provider.monthlyBudgetUsd == null ? 'not set' : `$${provider.monthlyBudgetUsd.toFixed(2)}`} | Estimated spend: ${(provider.estimatedSpendUsd ?? 0).toFixed(4)}
+            {provider.budgetUsagePercent != null ? ` (${Math.round(provider.budgetUsagePercent)}%)` : ''}
           </Text>
           <Text style={[localStyles.fieldLabel, { color: theme.colors.textMuted }]}>Window</Text>
           <View style={localStyles.tierButtons}>

@@ -6,6 +6,7 @@ import {
   listApiUsageCounters,
   resetApiUsageCounters as resetStoredApiUsageCounters,
 } from '../db';
+import { getCurrentApiBudgetStatus } from './providerBudgeting';
 
 type LimitScope = 'overall' | 'caller';
 type LimitWindow = 'hour' | 'day';
@@ -154,6 +155,34 @@ export class ApiLimitExceededError extends Error {
   }
 }
 
+export class ApiBudgetExceededError extends ApiLimitExceededError {
+  public readonly monthlyBudgetUsd: number;
+  public readonly estimatedSpendUsd: number;
+  public readonly budgetWindowKey: string;
+
+  constructor(params: {
+    provider: string;
+    monthlyBudgetUsd: number;
+    estimatedSpendUsd: number;
+    windowKey: string;
+  }) {
+    super({
+      provider: params.provider,
+      caller: '*',
+      scope: 'overall',
+      limit: Math.round(params.monthlyBudgetUsd * 1_000_000),
+      used: Math.round(params.estimatedSpendUsd * 1_000_000),
+    });
+    this.name = 'ApiBudgetExceededError';
+    this.message = `API budget reached for provider=${params.provider} window=${params.windowKey} ($${params.estimatedSpendUsd.toFixed(
+      4
+    )} / $${params.monthlyBudgetUsd.toFixed(2)})`;
+    this.monthlyBudgetUsd = params.monthlyBudgetUsd;
+    this.estimatedSpendUsd = params.estimatedSpendUsd;
+    this.budgetWindowKey = params.windowKey;
+  }
+}
+
 const reserveScopeUsageOrThrow = async (params: {
   provider: string;
   caller: string;
@@ -264,6 +293,15 @@ export const resetApiUsageSummaries = async (): Promise<void> => {
 export const reserveApiUsageOrThrow = async (params: { provider: string; caller: string }): Promise<void> => {
   const provider = normalizeKeyPart(params.provider);
   const caller = normalizeKeyPart(params.caller);
+  const budgetStatus = await getCurrentApiBudgetStatus(provider);
+  if (budgetStatus.monthlyBudgetUsd != null && budgetStatus.isOverBudget) {
+    throw new ApiBudgetExceededError({
+      provider,
+      monthlyBudgetUsd: budgetStatus.monthlyBudgetUsd,
+      estimatedSpendUsd: budgetStatus.estimatedSpendUsd,
+      windowKey: budgetStatus.windowKey,
+    });
+  }
   const providerConfig = getApiLimitProviderConfig(provider);
   const window = resolveLimitWindow(provider, providerConfig?.window);
   const hourWindowSize = resolveHourWindowSize(providerConfig?.windowHours);

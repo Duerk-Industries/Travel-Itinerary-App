@@ -1009,6 +1009,17 @@ export const initDb = async (): Promise<void> => {
   `);
   await p.query(`CREATE INDEX IF NOT EXISTS idx_api_usage_counters_lookup ON api_usage_counters(provider, scope, caller, window_key);`);
   await p.query(`
+    CREATE TABLE IF NOT EXISTS api_cost_counters (
+      id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      provider      TEXT NOT NULL,
+      window_key    TEXT NOT NULL,
+      amount_micros BIGINT NOT NULL DEFAULT 0,
+      updated_at    TIMESTAMP NOT NULL DEFAULT NOW(),
+      UNIQUE (provider, window_key)
+    );
+  `);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_api_cost_counters_lookup ON api_cost_counters(provider, window_key);`);
+  await p.query(`
     CREATE TABLE IF NOT EXISTS usage_events (
       id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       user_id    UUID REFERENCES users(id) ON DELETE CASCADE,
@@ -1065,6 +1076,7 @@ export const initDb = async (): Promise<void> => {
     // Clear data between test runs while keeping schema intact.
     await p.query(`DELETE FROM audit_log`);
     await p.query(`DELETE FROM generation_idempotency`);
+    await p.query(`DELETE FROM api_cost_counters`);
     await p.query(`DELETE FROM api_usage_counters`);
     await p.query(`DELETE FROM usage_events`);
     await p.query(`DELETE FROM usage_counters`);
@@ -7976,6 +7988,34 @@ export const appendUsageEvent = async (
   );
 };
 
+export const getApiCostCounter = async (provider: string, windowKey: string): Promise<number> => {
+  const p = getPool();
+  const { rows } = await p.query<{ amount_micros: string }>(
+    `SELECT amount_micros
+     FROM api_cost_counters
+     WHERE provider = $1 AND window_key = $2`,
+    [provider, windowKey]
+  );
+  return rows.length ? parseInt(rows[0].amount_micros, 10) : 0;
+};
+
+export const incrementApiCostCounter = async (
+  provider: string,
+  windowKey: string,
+  amountMicros: number
+): Promise<number> => {
+  const p = getPool();
+  const { rows } = await p.query<{ amount_micros: string }>(
+    `INSERT INTO api_cost_counters (id, provider, window_key, amount_micros, updated_at)
+     VALUES (uuid_generate_v4(), $1, $2, $3, NOW())
+     ON CONFLICT (provider, window_key)
+     DO UPDATE SET amount_micros = api_cost_counters.amount_micros + $3, updated_at = NOW()
+     RETURNING amount_micros`,
+    [provider, windowKey, amountMicros]
+  );
+  return parseInt(rows[0].amount_micros, 10);
+};
+
 export const getApiUsageCount = async (
   provider: string,
   caller: string,
@@ -8052,6 +8092,34 @@ export const listApiUsageCounters = async (): Promise<
 export const resetApiUsageCounters = async (): Promise<void> => {
   const p = getPool();
   await p.query(`DELETE FROM api_usage_counters`);
+};
+
+export const listApiCostCounters = async (): Promise<
+  Array<{
+    provider: string;
+    windowKey: string;
+    amountMicros: number;
+  }>
+> => {
+  const p = getPool();
+  const { rows } = await p.query<{
+    provider: string;
+    window_key: string;
+    amount_micros: string;
+  }>(
+    `SELECT provider, window_key, amount_micros
+     FROM api_cost_counters`
+  );
+  return rows.map((row) => ({
+    provider: row.provider,
+    windowKey: row.window_key,
+    amountMicros: parseInt(row.amount_micros, 10),
+  }));
+};
+
+export const resetApiCostCounters = async (): Promise<void> => {
+  const p = getPool();
+  await p.query(`DELETE FROM api_cost_counters`);
 };
 
 export const atomicIncrementIfUnderLimit = async (
