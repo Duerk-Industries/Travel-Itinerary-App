@@ -62,6 +62,7 @@ import DropdownOptionButton from './components/DropdownOptionButton';
 import { toWebStyle } from './utils/webStyle';
 import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from './utils/votes';
 import { resolveBackendUrl as resolveConfiguredBackendUrl } from './utils/backendUrl';
+import { type AsyncItineraryTracker, useAsyncItineraryPolling } from './hooks/useAsyncItineraryPolling';
 
 import LodgingTab from './tabs/LodgingTab';
 import AdminTab from './tabs/AdminTab';
@@ -176,12 +177,6 @@ interface Expense {
   notes?: string | null;
   createdAt: string;
 }
-
-type AsyncItineraryTracker = {
-  jobId: string;
-  status: 'pending' | 'failed';
-  error?: string;
-};
 
 interface GroupMemberOption {
   id: string;
@@ -2239,68 +2234,14 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     };
   }, [userToken, activeTripId]);
 
-  useEffect(() => {
-    if (!userToken) return;
-    const pendingEntries = Object.entries(asyncItineraryByTrip).filter(([, tracker]) => tracker.status === 'pending');
-    if (!pendingEntries.length) return;
-
-    let cancelled = false;
-    const poll = async () => {
-      const nextEntries = await Promise.all(
-        pendingEntries.map(async ([tripId, tracker]) => {
-          try {
-            const res = await fetch(`${backendUrl}/api/itinerary/async/${encodeURIComponent(tracker.jobId)}`, {
-              headers,
-              cache: 'no-store',
-            });
-            if (!res.ok) return [tripId, { ...tracker, status: 'failed', error: `status ${res.status}` }] as const;
-            const data = await res.json().catch(() => ({}));
-            const status = String((data as any).status ?? '').toLowerCase();
-            if (status === 'completed') return [tripId, null] as const;
-            if (status === 'failed') {
-              return [tripId, { ...tracker, status: 'failed', error: String((data as any).error ?? 'generation failed') }] as const;
-            }
-            return [tripId, tracker] as const;
-          } catch (err) {
-            return [tripId, { ...tracker, status: 'failed', error: (err as Error).message }] as const;
-          }
-        })
-      );
-      if (cancelled) return;
-
-      let changed = false;
-      let completedCount = 0;
-      const nextState = { ...asyncItineraryByTrip };
-      for (const [tripId, nextTracker] of nextEntries) {
-        if (nextTracker === null) {
-          if (nextState[tripId]) {
-            delete nextState[tripId];
-            changed = true;
-            completedCount += 1;
-          }
-          continue;
-        }
-        const prev = asyncItineraryByTrip[tripId];
-        if (!prev || prev.status !== nextTracker.status || prev.error !== nextTracker.error || prev.jobId !== nextTracker.jobId) {
-          nextState[tripId] = nextTracker;
-          changed = true;
-        }
-      }
-      if (changed) {
-        setAsyncItineraryByTrip(nextState);
-      }
-      if (completedCount > 0) {
-        await refreshPageData();
-      }
-    };
-
-    void poll();
-    const interval = setInterval(() => void poll(), 5000);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [asyncItineraryByTrip, backendUrl, headers, refreshPageData, userToken]);
+  useAsyncItineraryPolling({
+    asyncItineraryByTrip,
+    backendUrl,
+    headers,
+    refreshPageData,
+    setAsyncItineraryByTrip,
+    userToken,
+  });
 
   useEffect(() => {
     if (!userToken) {
