@@ -879,6 +879,23 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE expenses ADD COLUMN IF NOT EXISTS exchange_rate_to_trip_currency NUMERIC;`);
   await p.query(`ALTER TABLE expenses ADD COLUMN IF NOT EXISTS exchange_rate_date DATE;`);
 
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS trip_payments (
+      id UUID PRIMARY KEY,
+      trip_id UUID NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+      group_id UUID NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+      recorded_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      payer_id UUID NOT NULL,
+      receiver_id UUID NOT NULL,
+      payment_date DATE NOT NULL,
+      amount_cents BIGINT NOT NULL,
+      currency TEXT NOT NULL DEFAULT 'USD',
+      notes TEXT,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+  `);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_trip_payments_trip ON trip_payments(trip_id, payment_date);`);
+
   // ---- Entitlement system tables ----
 
   await p.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user';`);
@@ -4710,6 +4727,115 @@ export const deleteExpenseForSource = async (sourceType: string, sourceId: strin
     `,
     [sourceType, sourceId, userId]
   );
+};
+
+export const listTripPayments = async (userId: string, tripId: string): Promise<any[]> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `
+      SELECT tp.id,
+             tp.trip_id as "tripId",
+             tp.group_id as "groupId",
+             tp.recorded_by as "recordedBy",
+             tp.payer_id as "payerId",
+             tp.receiver_id as "receiverId",
+             to_char(tp.payment_date, 'YYYY-MM-DD') as "paymentDate",
+             tp.amount_cents as "amountCents",
+             tp.currency,
+             tp.notes,
+             tp.created_at as "createdAt"
+      FROM trip_payments tp
+      JOIN trips t ON tp.trip_id = t.id
+      WHERE tp.trip_id = $2
+        AND t.group_id IN (SELECT group_id FROM group_members WHERE user_id = $1)
+      ORDER BY tp.payment_date DESC, tp.created_at DESC
+    `,
+    [userId, tripId]
+  );
+  return rows.map((row: any) => ({
+    ...row,
+    amountCents: Number(row.amountCents) || 0,
+  }));
+};
+
+export const insertTripPayment = async (payment: {
+  tripId: string;
+  groupId: string;
+  recordedBy: string;
+  payerId: string;
+  receiverId: string;
+  paymentDate: string;
+  amountCents: number;
+  currency?: string | null;
+  notes?: string | null;
+}): Promise<any> => {
+  const p = getPool();
+  const id = randomUUID();
+  const tripCurrency = await resolveTripCurrency(payment.tripId);
+  const currency = payment.currency ?? tripCurrency ?? 'USD';
+  const { rows } = await p.query(
+    `
+      INSERT INTO trip_payments (
+        id, trip_id, group_id, recorded_by, payer_id, receiver_id, payment_date, amount_cents, currency, notes
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7::date, $8, $9, $10)
+      RETURNING
+        id,
+        trip_id as "tripId",
+        group_id as "groupId",
+        recorded_by as "recordedBy",
+        payer_id as "payerId",
+        receiver_id as "receiverId",
+        to_char(payment_date, 'YYYY-MM-DD') as "paymentDate",
+        amount_cents as "amountCents",
+        currency,
+        notes,
+        created_at as "createdAt"
+    `,
+    [
+      id,
+      payment.tripId,
+      payment.groupId,
+      payment.recordedBy,
+      payment.payerId,
+      payment.receiverId,
+      payment.paymentDate,
+      payment.amountCents,
+      currency,
+      payment.notes ?? null,
+    ]
+  );
+  const row = rows[0] as any;
+  return { ...row, amountCents: Number(row.amountCents) || 0 };
+};
+
+export const deleteTripPayment = async (paymentId: string, userId: string): Promise<void> => {
+  const p = getPool();
+  const useInMemory = process.env.USE_IN_MEMORY_DB === '1';
+  if (useInMemory) {
+    const { rows } = await p.query(
+      `SELECT tp.id FROM trip_payments tp
+       JOIN trips t ON tp.trip_id = t.id
+       WHERE tp.id = $1
+         AND t.group_id IN (SELECT group_id FROM group_members WHERE user_id = $2)`,
+      [paymentId, userId]
+    );
+    if (!rows.length) throw new Error('Payment not found');
+    await p.query(`DELETE FROM trip_payments WHERE id = $1`, [paymentId]);
+    return;
+  }
+  const { rowCount } = await p.query(
+    `
+      DELETE FROM trip_payments tp
+      USING trips t
+      WHERE tp.id = $1
+        AND t.id = tp.trip_id
+        AND EXISTS (
+          SELECT 1 FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $2
+        )
+    `,
+    [paymentId, userId]
+  );
+  if (!rowCount) throw new Error('Payment not found');
 };
 
 

@@ -533,6 +533,20 @@ export interface Expense {
   createdAt: string;
 }
 
+export interface TripPayment {
+  id: string;
+  tripId: string;
+  groupId: string;
+  recordedBy: string;
+  payerId: string;
+  receiverId: string;
+  paymentDate: string;
+  amountCents: number;
+  currency: string;
+  notes?: string | null;
+  createdAt: string;
+}
+
 export interface GroupInvite {
   id: string;
   groupId: string;

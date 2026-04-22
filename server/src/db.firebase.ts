@@ -3863,6 +3863,62 @@ export const deleteExpenseForSource = async (sourceType: string, sourceId: strin
   }
 };
 
+export const listTripPayments = async (userId: string, tripId: string): Promise<any[]> => {
+  const membership = await ensureUserInTrip(tripId, userId);
+  if (!membership) return [];
+  const db = getDb();
+  const snapshot = await db.collection('trip_payments').where('tripId', '==', tripId).get();
+  const rows = snapshot.docs.map((d) => d.data() as any);
+  rows.sort((a, b) => {
+    if (a.paymentDate !== b.paymentDate) return String(b.paymentDate).localeCompare(String(a.paymentDate));
+    return String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? ''));
+  });
+  return rows;
+};
+
+export const insertTripPayment = async (payment: {
+  tripId: string;
+  groupId: string;
+  recordedBy: string;
+  payerId: string;
+  receiverId: string;
+  paymentDate: string;
+  amountCents: number;
+  currency?: string | null;
+  notes?: string | null;
+}): Promise<any> => {
+  const db = getDb();
+  const tripDoc = await db.collection('trips').doc(payment.tripId).get();
+  const tripCurrency = (tripDoc.data() as any)?.currency ?? 'USD';
+  const currency = payment.currency ?? tripCurrency ?? 'USD';
+  const id = randomUUID();
+  const payload = {
+    id,
+    tripId: payment.tripId,
+    groupId: payment.groupId,
+    recordedBy: payment.recordedBy,
+    payerId: payment.payerId,
+    receiverId: payment.receiverId,
+    paymentDate: payment.paymentDate,
+    amountCents: payment.amountCents,
+    currency,
+    notes: payment.notes ?? null,
+    createdAt: nowIso(),
+  };
+  await db.collection('trip_payments').doc(id).set(payload);
+  return payload;
+};
+
+export const deleteTripPayment = async (paymentId: string, userId: string): Promise<void> => {
+  const db = getDb();
+  const doc = await db.collection('trip_payments').doc(paymentId).get();
+  if (!doc.exists) throw new Error('Payment not found');
+  const data = doc.data() as any;
+  const membership = await ensureUserInTrip(data.tripId, userId);
+  if (!membership) throw new Error('Payment not found');
+  await db.collection('trip_payments').doc(paymentId).delete();
+};
+
 // Traits
 export const listTraits = async (userId: string): Promise<Trait[]> => {
   const db = getDb();

@@ -538,6 +538,17 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
   const [tours, setTours] = useState<Tour[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [tripPayments, setTripPayments] = useState<Array<{
+    id: string;
+    tripId: string;
+    payerId: string;
+    receiverId: string;
+    paymentDate: string;
+    amountCents: number;
+    currency?: string;
+    notes?: string | null;
+    createdAt?: string;
+  }>>([]);
   const [carRentals, setCarRentals] = useState<CarRental[]>([]);
   const [carDraft, setCarDraft] = useState<CarRentalDraft>(createInitialCarRentalDraft());
   const [carDateField, setCarDateField] = useState<'pickup' | 'dropoff' | null>(null);
@@ -1102,6 +1113,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setFlights([]);
     setTours([]);
     setExpenses([]);
+    setTripPayments([]);
     setInvites([]);
     setFollowedTrips([]);
     setFollowInviteCode('');
@@ -1614,6 +1626,77 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     }
   }, [activeTripId, backendUrl, userToken]);
 
+  const fetchTripPayments = useCallback(async (token?: string) => {
+    const authToken = token ?? userToken;
+    if (!activeTripId || !authToken) {
+      setTripPayments([]);
+      return;
+    }
+    try {
+      const res = await fetch(`${backendUrl}/api/payments?tripId=${activeTripId}`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      if (!res.ok) {
+        setTripPayments([]);
+        return;
+      }
+      const data = await res.json();
+      setTripPayments(Array.isArray(data) ? data : []);
+    } catch {
+      setTripPayments([]);
+    }
+  }, [activeTripId, backendUrl, userToken]);
+
+  const addTripPayment = useCallback(async (draft: {
+    payerId: string;
+    receiverId: string;
+    paymentDate: string;
+    amountCents: number;
+  }) => {
+    if (!activeTripId || !userToken) throw new Error('Not signed in');
+    const res = await fetch(`${backendUrl}/api/payments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
+      body: JSON.stringify({
+        tripId: activeTripId,
+        payerId: draft.payerId,
+        receiverId: draft.receiverId,
+        paymentDate: draft.paymentDate,
+        amountCents: draft.amountCents,
+      }),
+    });
+    if (!res.ok) {
+      let message = 'Failed to record payment';
+      try {
+        const body = await res.json();
+        if (body?.error) message = body.error;
+      } catch {
+        // ignore json parse
+      }
+      throw new Error(message);
+    }
+    await fetchTripPayments();
+  }, [activeTripId, backendUrl, userToken, fetchTripPayments]);
+
+  const deleteTripPayment = useCallback(async (paymentId: string) => {
+    if (!userToken) throw new Error('Not signed in');
+    const res = await fetch(`${backendUrl}/api/payments/${paymentId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${userToken}` },
+    });
+    if (!res.ok && res.status !== 204) {
+      let message = 'Failed to delete payment';
+      try {
+        const body = await res.json();
+        if (body?.error) message = body.error;
+      } catch {
+        // ignore json parse
+      }
+      throw new Error(message);
+    }
+    await fetchTripPayments();
+  }, [backendUrl, userToken, fetchTripPayments]);
+
   // Fetch itineraries for the current user; ItinerariesTab also fetches within its own lifecycle,
   // but this keeps the call from blowing up when invoked from shared effects.
   const fetchItineraries = useCallback(async (token?: string) => {
@@ -1982,6 +2065,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             fetchTours(authToken),
             fetchCarRentals(authToken),
             fetchExpenses(authToken),
+            fetchTripPayments(authToken),
             fetchFollowedTrips(authToken),
           ]);
           break;
@@ -2000,7 +2084,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         case 'expenses':
         case 'ledger':
         case 'cost':
-          await Promise.all([fetchTrips(authToken), fetchExpenses(authToken)]);
+          await Promise.all([fetchTrips(authToken), fetchExpenses(authToken), fetchTripPayments(authToken)]);
           break;
         case 'itinerary':
           await Promise.all([fetchTrips(authToken), fetchItineraries(authToken), fetchTraits(), fetchTraitProfile()]);
@@ -2048,6 +2132,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     fetchTours,
     fetchCarRentals,
     fetchExpenses,
+    fetchTripPayments,
     activePage,
     fetchInvites,
     fetchPendingTripShareInvites,
@@ -3025,6 +3110,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   payerName={payerName}
                   saveCoveredBy={saveCoveredBy}
                   readOnly={isFollowingMode}
+                  payments={tripPayments}
+                  currentUserMemberId={currentUserMemberId}
+                  onAddPayment={addTripPayment}
+                  onDeletePayment={deleteTripPayment}
                 />
               )
             : null}
@@ -4828,10 +4917,10 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     gap: 6,
   },
   attendeeChipRemoving: {
-    backgroundColor: '#f8d7da',
+    backgroundColor: theme.mode === 'dark' ? '#5A2630' : '#F8D7DA',
   },
   attendeeChipPending: {
-    backgroundColor: '#fff3cd',
+    backgroundColor: theme.mode === 'dark' ? '#5B4A1F' : '#FFF3CD',
   },
   attendeeText: {
     fontWeight: theme.typography.weightSemibold,
