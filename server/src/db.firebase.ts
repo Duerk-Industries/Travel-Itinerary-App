@@ -5269,6 +5269,83 @@ export const appendUsageEvent = async (
   await incrementAdminUserAnalyticsMetric(userId, metricKey, amount, createdAt);
 };
 
+export const getApiUsageCount = async (
+  provider: string,
+  caller: string,
+  scope: 'overall' | 'caller',
+  windowKey: string
+): Promise<number> => {
+  const db = getDb();
+  const docId = `${scope}_${provider}_${caller}_${windowKey}`;
+  const doc = await db.collection('api_usage_counters').doc(docId).get();
+  return doc.exists ? Number(doc.data()!.count ?? 0) : 0;
+};
+
+export const atomicIncrementApiUsageIfUnderLimit = async (params: {
+  provider: string;
+  caller: string;
+  scope: 'overall' | 'caller';
+  windowKey: string;
+  limit: number;
+}): Promise<{ allowed: boolean; newCount: number }> => {
+  const db = getDb();
+  const docId = `${params.scope}_${params.provider}_${params.caller}_${params.windowKey}`;
+  const ref = db.collection('api_usage_counters').doc(docId);
+  return db.runTransaction(async (tx) => {
+    const doc = await tx.get(ref);
+    const current = doc.exists ? Number(doc.data()!.count ?? 0) : 0;
+    if (current >= params.limit) {
+      return { allowed: false, newCount: current };
+    }
+    const nextCount = current + 1;
+    tx.set(
+      ref,
+      {
+        provider: params.provider,
+        caller: params.caller,
+        scope: params.scope,
+        windowKey: params.windowKey,
+        count: nextCount,
+        updatedAt: nowIso(),
+      },
+      { merge: true }
+    );
+    return { allowed: true, newCount: nextCount };
+  });
+};
+
+export const listApiUsageCounters = async (): Promise<
+  Array<{
+    provider: string;
+    caller: string;
+    scope: 'overall' | 'caller';
+    windowKey: string;
+    count: number;
+  }>
+> => {
+  const db = getDb();
+  const snap = await db.collection('api_usage_counters').get();
+  return snap.docs.map((doc) => {
+    const data = doc.data() as any;
+    return {
+      provider: String(data.provider ?? ''),
+      caller: String(data.caller ?? ''),
+      scope: String(data.scope ?? 'caller') as 'overall' | 'caller',
+      windowKey: String(data.windowKey ?? ''),
+      count: Number(data.count ?? 0),
+    };
+  });
+};
+
+export const resetApiUsageCounters = async (): Promise<void> => {
+  const db = getDb();
+  const snap = await db.collection('api_usage_counters').get();
+  if (snap.empty) return;
+  const batch = db.batch();
+  snap.docs.forEach((doc) => batch.delete(doc.ref));
+  await batch.commit();
+};
+
 export const atomicIncrementIfUnderLimit = async (
   userId: string,
   metricKey: string,

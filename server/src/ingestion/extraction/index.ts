@@ -1021,7 +1021,7 @@ class NoopLlmExtractor implements ExtractionStrategy {
 
     // Reserve API usage through the shared rate limiter
     try {
-      reserveApiUsageOrThrow({ provider: 'OPENAI', caller: this.apiLimitCaller });
+      await reserveApiUsageOrThrow({ provider: 'OPENAI', caller: this.apiLimitCaller });
     } catch (error) {
       if (error instanceof ApiLimitExceededError) {
         return {

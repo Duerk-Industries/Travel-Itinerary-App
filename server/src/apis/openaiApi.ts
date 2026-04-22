@@ -46,7 +46,7 @@ export const postOpenAiChatCompletion = async (params: {
   payload: OpenAiChatCompletionRequest;
   usageContext?: OpenAiUsageContext;
 }): Promise<OpenAiChatCompletionResponse> => {
-  reserveApiUsageOrThrow({ provider: 'OPENAI', caller: params.caller });
+  await reserveApiUsageOrThrow({ provider: 'OPENAI', caller: params.caller });
   const response = await axios.post<OpenAiChatCompletionResponse>(
     'https://api.openai.com/v1/chat/completions',
     params.payload,

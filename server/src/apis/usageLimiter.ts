@@ -1,5 +1,11 @@
 import { logError, logInfo } from '../logger';
 import { getApiLimitProviderConfig } from '../config/apiLimits';
+import {
+  atomicIncrementApiUsageIfUnderLimit,
+  getApiUsageCount,
+  listApiUsageCounters,
+  resetApiUsageCounters as resetStoredApiUsageCounters,
+} from '../db';
 
 type LimitScope = 'overall' | 'caller';
 type LimitWindow = 'hour' | 'day';
@@ -148,53 +154,39 @@ export class ApiLimitExceededError extends Error {
   }
 }
 
-const reserveScopeUsageOrThrow = (params: {
+const reserveScopeUsageOrThrow = async (params: {
   provider: string;
   caller: string;
   scope: LimitScope;
-  key: string;
   limit: number;
   window: LimitWindow;
   windowKey: string;
-}): void => {
-  const bucket = getBucket(params.key);
+}): Promise<void> => {
+  const bucketKey =
+    params.scope === 'overall' ? `overall:${params.provider}` : `caller:${params.provider}:${params.caller}`;
+  const bucket = getBucket(bucketKey);
   resetBucketForWindowIfNeeded(bucket, params.windowKey);
 
-  // Block once a scope is already at limit.
-  if (bucket.used >= params.limit) {
-    if (!bucket.loggedThresholds.has(100)) {
-      bucket.loggedThresholds.add(100);
-      logThreshold({
-        provider: params.provider,
-        caller: params.caller,
-        scope: params.scope,
-        threshold: 100,
-        used: bucket.used,
-        limit: params.limit,
-        window: params.window,
-        windowKey: params.windowKey,
-      });
-    }
-    const err = new ApiLimitExceededError({
-      provider: params.provider,
-      caller: params.caller,
-      scope: params.scope,
-      limit: params.limit,
-      used: bucket.used,
-    });
-    logBlockedCallWithCooldown({
-      provider: params.provider,
-      caller: params.caller,
-      scope: params.scope,
-      windowKey: params.windowKey,
-      message: err.message,
-      atLimit: false,
-    });
-    throw err;
-  }
+  const result = await atomicIncrementApiUsageIfUnderLimit({
+    provider: params.provider,
+    caller: params.scope === 'overall' ? '*' : params.caller,
+    scope: params.scope,
+    windowKey: params.windowKey,
+    limit: params.limit,
+  });
 
-  bucket.used += 1;
-  const pct = (bucket.used / params.limit) * 100;
+  const storedCount =
+    result.allowed
+      ? await getApiUsageCount(
+          params.provider,
+          params.scope === 'overall' ? '*' : params.caller,
+          params.scope,
+          params.windowKey
+        )
+      : result.newCount;
+
+  bucket.used = storedCount;
+  const pct = (storedCount / params.limit) * 100;
   for (const threshold of THRESHOLDS) {
     if (pct >= threshold && !bucket.loggedThresholds.has(threshold)) {
       bucket.loggedThresholds.add(threshold);
@@ -203,7 +195,7 @@ const reserveScopeUsageOrThrow = (params: {
         caller: params.caller,
         scope: params.scope,
         threshold,
-        used: bucket.used,
+        used: storedCount,
         limit: params.limit,
         window: params.window,
         windowKey: params.windowKey,
@@ -211,14 +203,13 @@ const reserveScopeUsageOrThrow = (params: {
     }
   }
 
-  // Stop the call once it reaches 100%.
-  if (bucket.used >= params.limit) {
+  if (!result.allowed) {
     const err = new ApiLimitExceededError({
       provider: params.provider,
       caller: params.caller,
       scope: params.scope,
       limit: params.limit,
-      used: bucket.used,
+      used: storedCount,
     });
     logBlockedCallWithCooldown({
       provider: params.provider,
@@ -226,7 +217,7 @@ const reserveScopeUsageOrThrow = (params: {
       scope: params.scope,
       windowKey: params.windowKey,
       message: err.message,
-      atLimit: true,
+      atLimit: storedCount >= params.limit,
     });
     throw err;
   }
@@ -241,35 +232,36 @@ export type ApiUsageSummaryEntry = {
   windowKey: string | null;
 };
 
-export const getApiUsageSummary = (): ApiUsageSummaryEntry[] => {
+export const getApiUsageSummary = async (): Promise<ApiUsageSummaryEntry[]> => {
+  const counters = await listApiUsageCounters();
   const entries: ApiUsageSummaryEntry[] = [];
-  for (const [key, bucket] of usageBuckets.entries()) {
-    const parts = key.split(':');
-    const scope = parts[0] as LimitScope;
-    const provider = parts[1] ?? '';
-    const caller = parts[2] ?? '';
-    const providerConfig = getApiLimitProviderConfig(provider);
-    const limit = scope === 'overall'
-      ? (providerConfig?.overall ?? null)
-      : (providerConfig?.callers?.[caller] ?? null);
+  for (const counter of counters) {
+    const providerConfig = getApiLimitProviderConfig(counter.provider);
+    const window = resolveLimitWindow(counter.provider, providerConfig?.window);
+    const hourWindowSize = resolveHourWindowSize(providerConfig?.windowHours);
+    const currentWindowKey = formatWindowKey(window, hourWindowSize);
+    if (counter.windowKey !== currentWindowKey) continue;
+    const limit =
+      counter.scope === 'overall' ? (providerConfig?.overall ?? null) : (providerConfig?.callers?.[counter.caller] ?? null);
     entries.push({
-      provider,
-      caller: scope === 'overall' ? '*' : caller,
-      scope,
-      used: bucket.used,
+      provider: counter.provider,
+      caller: counter.scope === 'overall' ? '*' : counter.caller,
+      scope: counter.scope,
+      used: counter.count,
       limit: limit ?? null,
-      windowKey: bucket.windowKey,
+      windowKey: counter.windowKey,
     });
   }
   return entries;
 };
 
-export const resetApiUsageSummaries = (): void => {
+export const resetApiUsageSummaries = async (): Promise<void> => {
+  await resetStoredApiUsageCounters();
   usageBuckets.clear();
   blockedLogStates.clear();
 };
 
-export const reserveApiUsageOrThrow = (params: { provider: string; caller: string }): void => {
+export const reserveApiUsageOrThrow = async (params: { provider: string; caller: string }): Promise<void> => {
   const provider = normalizeKeyPart(params.provider);
   const caller = normalizeKeyPart(params.caller);
   const providerConfig = getApiLimitProviderConfig(provider);
@@ -283,11 +275,10 @@ export const reserveApiUsageOrThrow = (params: { provider: string; caller: strin
   );
 
   if (overallLimit !== null) {
-    reserveScopeUsageOrThrow({
+    await reserveScopeUsageOrThrow({
       provider,
       caller,
       scope: 'overall',
-      key: `overall:${provider}`,
       limit: overallLimit,
       window,
       windowKey,
@@ -295,11 +286,10 @@ export const reserveApiUsageOrThrow = (params: { provider: string; caller: strin
   }
 
   if (callerLimit !== null) {
-    reserveScopeUsageOrThrow({
+    await reserveScopeUsageOrThrow({
       provider,
       caller,
       scope: 'caller',
-      key: `caller:${provider}:${caller}`,
       limit: callerLimit,
       window,
       windowKey,

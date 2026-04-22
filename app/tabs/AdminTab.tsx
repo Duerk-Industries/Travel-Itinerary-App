@@ -1696,7 +1696,7 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
     <ScrollView style={[localStyles.section, localStyles.apiLimitsScroll]} contentContainerStyle={localStyles.apiLimitsScrollContent}>
       <Text style={[localStyles.sectionTitle, { color: theme.colors.text }]}>API Rate Limits</Text>
       <Text style={[localStyles.cardSub, { color: theme.colors.textMuted, marginBottom: 12 }]}>
-        Limits are configured in api-limits.yaml. Usage resets per window period. Current usage shown is from in-memory counters (resets on restart).
+        Limits are configured in api-limits.yaml. Usage resets per window period and is backed by durable server-side counters.
       </Text>
       {message ? <Text style={[localStyles.saveMsg, { color: theme.colors.success }]}>{message}</Text> : null}
       {providers.map((provider) => (

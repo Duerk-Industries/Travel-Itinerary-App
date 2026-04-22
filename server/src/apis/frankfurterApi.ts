@@ -39,7 +39,7 @@ export const fetchFrankfurterExchangeRate = async (params: {
     return cached.value;
   }
 
-  reserveApiUsageOrThrow({ provider: 'FRANKFURTER', caller: params.caller });
+  await reserveApiUsageOrThrow({ provider: 'FRANKFURTER', caller: params.caller });
 
   const url = `https://api.frankfurter.dev/v1/${encodeURIComponent(date)}?base=${encodeURIComponent(from)}&symbols=${encodeURIComponent(to)}`;
   const res = await fetch(url, {

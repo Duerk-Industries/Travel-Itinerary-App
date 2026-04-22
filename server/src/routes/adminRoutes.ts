@@ -382,7 +382,7 @@ router.get('/audit-log', async (req, res) => {
 router.get('/api-limits', async (_req, res) => {
   try {
     const config = getApiLimitsConfig();
-    const usage = getApiUsageSummary();
+    const usage = await getApiUsageSummary();
     const providers = Object.entries(config.providers).map(([provider, providerConfig]) => ({
       provider,
       window: providerConfig.window ?? 'day',

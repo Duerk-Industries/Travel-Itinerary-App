@@ -376,6 +376,15 @@ export const incrementUsageCounter = async (...args: Parameters<ReturnType<typeo
   adapter().incrementUsageCounter(...args);
 export const appendUsageEvent = async (...args: Parameters<ReturnType<typeof adapter>['appendUsageEvent']>) =>
   adapter().appendUsageEvent(...args);
+export const getApiUsageCount = async (...args: Parameters<ReturnType<typeof adapter>['getApiUsageCount']>) =>
+  adapter().getApiUsageCount(...args);
+export const atomicIncrementApiUsageIfUnderLimit = async (
+  ...args: Parameters<ReturnType<typeof adapter>['atomicIncrementApiUsageIfUnderLimit']>
+) => adapter().atomicIncrementApiUsageIfUnderLimit(...args);
+export const listApiUsageCounters = async (...args: Parameters<ReturnType<typeof adapter>['listApiUsageCounters']>) =>
+  adapter().listApiUsageCounters(...args);
+export const resetApiUsageCounters = async (...args: Parameters<ReturnType<typeof adapter>['resetApiUsageCounters']>) =>
+  adapter().resetApiUsageCounters(...args);
 export const atomicIncrementIfUnderLimit = async (...args: Parameters<ReturnType<typeof adapter>['atomicIncrementIfUnderLimit']>) =>
   adapter().atomicIncrementIfUnderLimit(...args);
 export const getGenerationIdempotency = async (

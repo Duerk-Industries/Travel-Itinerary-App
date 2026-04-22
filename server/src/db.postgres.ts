@@ -996,6 +996,19 @@ export const initDb = async (): Promise<void> => {
   `);
   await p.query(`CREATE INDEX IF NOT EXISTS idx_usage_counters_user_metric ON usage_counters(user_id, metric_key, window_key);`);
   await p.query(`
+    CREATE TABLE IF NOT EXISTS api_usage_counters (
+      id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      provider   TEXT NOT NULL,
+      caller     TEXT NOT NULL,
+      scope      TEXT NOT NULL,
+      window_key TEXT NOT NULL,
+      count      BIGINT NOT NULL DEFAULT 0,
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      UNIQUE (scope, provider, caller, window_key)
+    );
+  `);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_api_usage_counters_lookup ON api_usage_counters(provider, scope, caller, window_key);`);
+  await p.query(`
     CREATE TABLE IF NOT EXISTS usage_events (
       id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       user_id    UUID REFERENCES users(id) ON DELETE CASCADE,
@@ -1052,6 +1065,7 @@ export const initDb = async (): Promise<void> => {
     // Clear data between test runs while keeping schema intact.
     await p.query(`DELETE FROM audit_log`);
     await p.query(`DELETE FROM generation_idempotency`);
+    await p.query(`DELETE FROM api_usage_counters`);
     await p.query(`DELETE FROM usage_events`);
     await p.query(`DELETE FROM usage_counters`);
     await p.query(`DELETE FROM user_tiers`);
@@ -7960,6 +7974,84 @@ export const appendUsageEvent = async (
      VALUES ($1, $2, $3, $4, $5)`,
     [randomUUID(), userId, metricKey, amount, metadata ? JSON.stringify(metadata) : null]
   );
+};
+
+export const getApiUsageCount = async (
+  provider: string,
+  caller: string,
+  scope: 'overall' | 'caller',
+  windowKey: string
+): Promise<number> => {
+  const p = getPool();
+  const { rows } = await p.query<{ count: string }>(
+    `SELECT count
+     FROM api_usage_counters
+     WHERE provider = $1 AND caller = $2 AND scope = $3 AND window_key = $4`,
+    [provider, caller, scope, windowKey]
+  );
+  return rows.length ? parseInt(rows[0].count, 10) : 0;
+};
+
+export const atomicIncrementApiUsageIfUnderLimit = async (params: {
+  provider: string;
+  caller: string;
+  scope: 'overall' | 'caller';
+  windowKey: string;
+  limit: number;
+}): Promise<{ allowed: boolean; newCount: number }> => {
+  const p = getPool();
+  await p.query(
+    `INSERT INTO api_usage_counters (id, provider, caller, scope, window_key, count, updated_at)
+     VALUES (uuid_generate_v4(), $1, $2, $3, $4, 0, NOW())
+     ON CONFLICT (scope, provider, caller, window_key) DO NOTHING`,
+    [params.provider, params.caller, params.scope, params.windowKey]
+  );
+  const { rows } = await p.query<{ count: string }>(
+    `UPDATE api_usage_counters
+     SET count = count + 1, updated_at = NOW()
+     WHERE provider = $1 AND caller = $2 AND scope = $3 AND window_key = $4 AND count < $5
+     RETURNING count`,
+    [params.provider, params.caller, params.scope, params.windowKey, params.limit]
+  );
+  if (rows.length) {
+    return { allowed: true, newCount: parseInt(rows[0].count, 10) };
+  }
+  const current = await getApiUsageCount(params.provider, params.caller, params.scope, params.windowKey);
+  return { allowed: false, newCount: current };
+};
+
+export const listApiUsageCounters = async (): Promise<
+  Array<{
+    provider: string;
+    caller: string;
+    scope: 'overall' | 'caller';
+    windowKey: string;
+    count: number;
+  }>
+> => {
+  const p = getPool();
+  const { rows } = await p.query<{
+    provider: string;
+    caller: string;
+    scope: 'overall' | 'caller';
+    window_key: string;
+    count: string;
+  }>(
+    `SELECT provider, caller, scope, window_key, count
+     FROM api_usage_counters`
+  );
+  return rows.map((row) => ({
+    provider: row.provider,
+    caller: row.caller,
+    scope: row.scope,
+    windowKey: row.window_key,
+    count: parseInt(row.count, 10),
+  }));
+};
+
+export const resetApiUsageCounters = async (): Promise<void> => {
+  const p = getPool();
+  await p.query(`DELETE FROM api_usage_counters`);
 };
 
 export const atomicIncrementIfUnderLimit = async (
