@@ -524,7 +524,7 @@ const UserDetailSection: React.FC<{
               <Pressable
                 key={tier.key}
                 testID={`user-tier-option-${tier.key}`}
-                style={({ hovered, pressed }) => [
+                style={({ hovered, pressed }: { hovered?: boolean; pressed: boolean }) => [
                   localStyles.dropdownOption,
                   hovered && { backgroundColor: theme.mode === 'dark' ? '#2C4356' : '#F4F8FB' },
                   pressed && { backgroundColor: theme.mode === 'dark' ? '#35516A' : '#E8F0F6' },

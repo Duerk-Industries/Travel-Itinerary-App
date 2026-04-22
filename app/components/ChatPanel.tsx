@@ -218,7 +218,7 @@ const ChatPanel: React.FC<Props> = ({
         <FlatList
           ref={flatListRef}
           data={messages}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item: ChatMessage) => item.id}
           renderItem={renderMessage}
           contentContainerStyle={themedStyles.messageList}
           onContentSizeChange={() =>

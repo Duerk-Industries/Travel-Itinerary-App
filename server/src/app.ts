@@ -165,11 +165,14 @@ app.use(express.static(publicDir));
 
 import passport from 'passport';
 import { initPassport, createToken, createOAuthState, decodeOAuthState, authenticate } from './auth';
+import { assertSafeAuthSecretConfig } from './authConfig';
 import { ensureCurrentUserTier, ensureDefaultGroupForUser, ensureWebPasswordAccountForOAuth, getUserRole } from './db';
 import { ensureAdminBootstrap, getSeededTierForEmail } from './services/entitlementService';
 import { requireAdmin } from './middleware/requireAdmin';
 import { appendTokenToRedirect, isRedirectUriAllowed, resolveAndValidateRedirectUri } from './redirects';
 import { logError } from './logger';
+
+assertSafeAuthSecretConfig();
 
 initPassport();
 app.use(passport.initialize());
@@ -186,10 +189,6 @@ const redirectToLoginWithError = (req: express.Request, res: express.Response, w
   nextUrl.searchParams.set('auth_error', code);
   res.redirect(nextUrl.toString());
 };
-
-if (!isLocalEnv() && getEnvValue('AUTH_SECRET') === 'development-secret') {
-    logError('[WARNING] AUTH_SECRET is not set or is using the default value in a non-local environment. This is a security risk and will cause authentication to fail.');
-}
 
 app.get('/api/auth/google', (req, res, next) => {
   if (!googleOAuthConfigured) {
@@ -265,8 +264,7 @@ app.get(
           res.redirect(next.toString());
           return;
         }
-        const suffix = requiresPasswordSetup ? `&require_password_setup=1` : '';
-        res.redirect(`/login?token=${encodeURIComponent(token)}${suffix}`);
+        res.redirect(`/login#token=${encodeURIComponent(token)}${requiresPasswordSetup ? '&require_password_setup=1' : ''}`);
       } catch (callbackErr: any) {
         logError('[auth] Google OAuth post-login setup failed', {
           name: callbackErr?.name,

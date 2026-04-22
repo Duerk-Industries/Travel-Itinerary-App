@@ -25,7 +25,7 @@ const DropdownOptionButton: React.FC<DropdownOptionButtonProps> = ({
     disabled={disabled}
     onPress={onPress}
     onPressIn={onPressIn}
-    style={({ hovered, pressed }) => [
+    style={({ hovered, pressed }: { hovered?: boolean; pressed: boolean }) => [
       styles.dropdownOption,
       hovered ? styles.dropdownOptionHover : null,
       pressed ? styles.dropdownOptionPressed : null,

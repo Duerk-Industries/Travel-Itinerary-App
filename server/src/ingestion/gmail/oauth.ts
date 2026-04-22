@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
-import { getEnvValue } from '../../env';
+import { getAuthSecret } from '../../authConfig';
 
 type GmailOAuthStatePayload = {
   userId: string;
@@ -9,7 +9,6 @@ type GmailOAuthStatePayload = {
   purpose: 'ingestion_gmail';
 };
 
-const secret = getEnvValue('AUTH_SECRET', { defaultValue: 'development-secret' })!;
 const GMAIL_OAUTH_STATE_ISSUER = 'travel-itinerary-app-gmail';
 const GMAIL_OAUTH_STATE_TTL = '10m';
 
@@ -20,12 +19,12 @@ export const createGmailOAuthState = (payload: { userId: string; redirectUri?: s
     nonce: crypto.randomUUID(),
     purpose: 'ingestion_gmail',
   };
-  return jwt.sign(state, secret, { expiresIn: GMAIL_OAUTH_STATE_TTL, issuer: GMAIL_OAUTH_STATE_ISSUER });
+  return jwt.sign(state, getAuthSecret(), { expiresIn: GMAIL_OAUTH_STATE_TTL, issuer: GMAIL_OAUTH_STATE_ISSUER });
 };
 
 export const decodeGmailOAuthState = (state: string): GmailOAuthStatePayload | null => {
   try {
-    return jwt.verify(state, secret, { issuer: GMAIL_OAUTH_STATE_ISSUER }) as GmailOAuthStatePayload;
+    return jwt.verify(state, getAuthSecret(), { issuer: GMAIL_OAUTH_STATE_ISSUER }) as GmailOAuthStatePayload;
   } catch {
     return null;
   }
