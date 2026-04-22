@@ -130,6 +130,15 @@ describe('firebase flight membership updates/deletes', () => {
 
     await fakeDb.collection('trips').doc(tripId).set({ id: tripId, groupId });
     await fakeDb.collection('group_members').doc('member-1').set({ groupId, userId: memberId, removedAt: null });
+    await fakeDb.collection('trip_access').doc(`${tripId}_${memberId}`).set({
+      tripId,
+      groupId,
+      userId: memberId,
+      role: 'member',
+      status: 'active',
+      canRead: true,
+      canWrite: true,
+    });
     await fakeDb.collection('flights').doc(flightId).set({
       id: flightId,
       userId: ownerId,

@@ -1407,20 +1407,37 @@ export const deleteAllUsers = async (userIds: string[]): Promise<void> => {
 const ensureMembership = async (groupId: string, userId: string): Promise<boolean> => {
   const db = getDb();
   const projected = await db.collection('group_access').doc(getGroupAccessDocId(groupId, userId)).get();
-  if (projected.exists) {
-    const access = projected.data() as any;
-    if (access.status === 'active' && access.canRead === true) {
-      return true;
-    }
-  }
-  const member = await db
-    .collection('group_members')
-    .where('groupId', '==', groupId)
-    .where('userId', '==', userId)
-    .where('removedAt', '==', null)
-    .limit(1)
-    .get();
-  return !member.empty;
+  if (!projected.exists) return false;
+  const access = projected.data() as any;
+  return access.status === 'active' && access.canRead === true;
+};
+
+const listReadableGroupIdsForUser = async (userId: string): Promise<string[]> => {
+  const db = getDb();
+  const snap = await db.collection('group_access').where('userId', '==', userId).get();
+  return Array.from(
+    new Set(
+      snap.docs
+        .map((doc) => doc.data() as any)
+        .filter((data) => data.status === 'active' && data.canRead === true)
+        .map((data) => String(data.groupId ?? '').trim())
+        .filter(Boolean)
+    )
+  );
+};
+
+const listReadableTripIdsForUser = async (userId: string): Promise<string[]> => {
+  const db = getDb();
+  const snap = await db.collection('trip_access').where('userId', '==', userId).get();
+  return Array.from(
+    new Set(
+      snap.docs
+        .map((doc) => doc.data() as any)
+        .filter((data) => data.status === 'active' && data.canRead === true)
+        .map((data) => String(data.tripId ?? '').trim())
+        .filter(Boolean)
+    )
+  );
 };
 
 // Groups
@@ -1577,12 +1594,7 @@ export const listGroupMembers = async (
 
 export const listGroupsForUser = async (userId: string): Promise<Group[]> => {
   const db = getDb();
-  const memberships = await db
-    .collection('group_members')
-    .where('userId', '==', userId)
-    .where('removedAt', '==', null)
-    .get();
-  const groupIds = memberships.docs.map((d) => d.data().groupId as string);
+  const groupIds = await listReadableGroupIdsForUser(userId);
   if (!groupIds.length) return [];
   const groupsSnap = await db.collection('groups').where(FieldPath.documentId(), 'in', groupIds).get();
   const groups = await Promise.all(groupsSnap.docs.map(async (g) => {
@@ -1829,22 +1841,22 @@ export const deleteGroup = async (ownerId: string, groupId: string): Promise<voi
 
 export const listTrips = async (userId: string): Promise<Array<Trip & { groupName: string }>> => {
   const db = getDb();
-  const removalsSnap = await db.collection('trip_removals').where('userId', '==', userId).get();
-  const removedTripIds = new Set(
-    removalsSnap.docs.map((doc) => (doc.data() as any)?.tripId).filter((id) => typeof id === 'string' && id.length)
-  );
-  const memberships = await db
-    .collection('group_members')
-    .where('userId', '==', userId)
-    .where('removedAt', '==', null)
-    .get();
-  const groupIds = memberships.docs.map((d) => d.data().groupId as string);
-  if (!groupIds.length) return [];
-  const trips = await db.collection('trips').where('groupId', 'in', groupIds).get();
-  const groups = await db.collection('groups').where(FieldPath.documentId(), 'in', groupIds).get();
+  const tripIds = await listReadableTripIdsForUser(userId);
+  if (!tripIds.length) return [];
+  const chunk = <T>(items: T[], size = 10): T[][] => {
+    const chunks: T[][] = [];
+    for (let i = 0; i < items.length; i += size) chunks.push(items.slice(i, i + size));
+    return chunks;
+  };
+  const tripDocs: FirebaseFirestore.QueryDocumentSnapshot[] = [];
+  for (const ids of chunk(tripIds)) {
+    const trips = await db.collection('trips').where(FieldPath.documentId(), 'in', ids).get();
+    tripDocs.push(...trips.docs);
+  }
+  const groupIds = Array.from(new Set(tripDocs.map((doc) => String((doc.data() as any).groupId ?? '').trim()).filter(Boolean)));
+  const groups = groupIds.length ? await db.collection('groups').where(FieldPath.documentId(), 'in', groupIds).get() : { docs: [] as any[] };
   const groupNames = Object.fromEntries(groups.docs.map((g) => [g.id, g.data().name]));
-  return trips.docs
-    .filter((t) => !removedTripIds.has(t.id))
+  return tripDocs
     .map((t) => {
       const data = t.data() as any;
       return {
@@ -2399,21 +2411,12 @@ export const claimInvitesForUser = async (email: string, userId: string): Promis
 export const ensureUserInTrip = async (tripId: string, userId: string): Promise<{ groupId: string } | null> => {
   const db = getDb();
   const projected = await db.collection('trip_access').doc(getTripAccessDocId(tripId, userId)).get();
-  if (projected.exists) {
-    const access = projected.data() as any;
-    if (access.status === 'active' && access.canWrite === true) {
-      return { groupId: String(access.groupId ?? '') };
-    }
+  if (!projected.exists) return null;
+  const access = projected.data() as any;
+  if (access.status === 'active' && access.canWrite === true) {
+    return { groupId: String(access.groupId ?? '') };
   }
-  const trip = await db.collection('trips').doc(tripId).get();
-  if (!trip.exists) return null;
-  const data = trip.data() as any;
-  const member = await ensureMembership(data.groupId, userId);
-  if (!member) return null;
-  const removals = await db.collection('trip_removals').where('userId', '==', userId).get();
-  const removed = removals.docs.some((doc) => (doc.data() as any)?.tripId === tripId);
-  if (removed) return null;
-  return { groupId: data.groupId };
+  return null;
 };
 
 export const ensureUserCanReadTrip = async (
@@ -2422,28 +2425,15 @@ export const ensureUserCanReadTrip = async (
 ): Promise<{ groupId: string; access: 'member' | 'follower' } | null> => {
   const db = getDb();
   const projected = await db.collection('trip_access').doc(getTripAccessDocId(tripId, userId)).get();
-  if (projected.exists) {
-    const access = projected.data() as any;
-    if (access.status === 'active' && access.canRead === true) {
-      return {
-        groupId: String(access.groupId ?? ''),
-        access: access.canWrite === true ? 'member' : 'follower',
-      };
-    }
+  if (!projected.exists) return null;
+  const access = projected.data() as any;
+  if (access.status === 'active' && access.canRead === true) {
+    return {
+      groupId: String(access.groupId ?? ''),
+      access: access.canWrite === true ? 'member' : 'follower',
+    };
   }
-  const membership = await ensureUserInTrip(tripId, userId);
-  if (membership) return { groupId: membership.groupId, access: 'member' };
-  const follower = await db
-    .collection('trip_followers')
-    .where('tripId', '==', tripId)
-    .where('followerUserId', '==', userId)
-    .limit(1)
-    .get();
-  if (follower.empty) return null;
-  const trip = await db.collection('trips').doc(tripId).get();
-  if (!trip.exists) return null;
-  const data = trip.data() as any;
-  return { groupId: data.groupId, access: 'follower' };
+  return null;
 };
 
 export const getTripFollowCode = async (
@@ -3269,20 +3259,7 @@ export const listFlights = async (userId: string, tripId?: string): Promise<Flig
   if (tripId) {
     allowedTripIds = [tripId];
   } else {
-    const memberSnap = await db.collection('group_members').where('userId', '==', userId).where('removedAt', '==', null).get();
-    const memberGroupIds = memberSnap.docs.map((d) => (d.data() as any).groupId).filter(Boolean);
-    if (memberGroupIds.length) {
-      const tripSnaps = await Promise.all(
-        Array.from(new Set(memberGroupIds)).map((groupId) => db.collection('trips').where('groupId', '==', groupId).get())
-      );
-      tripSnaps.forEach((snap) => snap.docs.forEach((doc) => allowedTripIds.push(doc.id)));
-    }
-    const followSnap = await db.collection('trip_followers').where('followerUserId', '==', userId).get();
-    followSnap.docs.forEach((doc) => {
-      const data = doc.data() as any;
-      if (data.tripId) allowedTripIds.push(String(data.tripId));
-    });
-    allowedTripIds = Array.from(new Set(allowedTripIds));
+    allowedTripIds = await listReadableTripIdsForUser(userId);
   }
   if (!allowedTripIds.length) return [];
   const docs: FirebaseFirestore.QueryDocumentSnapshot[] = [];
@@ -3709,26 +3686,16 @@ export const listLodgings = async (userId: string, tripId?: string | null): Prom
   }
 
   const memberSnap = await db
-    .collection('group_members')
+    .collection('trip_access')
     .where('userId', '==', userId)
-    .where('removedAt', '==', null)
     .get();
-  const groupIds = memberSnap.docs.map((doc) => (doc.data() as any).groupId).filter(Boolean);
-
-  const tripIds: string[] = [];
-  for (const groupChunk of chunk(groupIds)) {
-    const tripsSnap = await db.collection('trips').where('groupId', 'in', groupChunk).get();
-    tripsSnap.docs.forEach((doc) => {
-      tripIds.push(doc.id);
-    });
-  }
-
-  const followedSnap = await db.collection('trip_followers').where('followerUserId', '==', userId).get();
-  followedSnap.docs.forEach((doc) => {
-    const data = doc.data() as any;
-    if (data.tripId) tripIds.push(String(data.tripId));
-  });
-  const uniqueTripIds = Array.from(new Set(tripIds));
+  const uniqueTripIds = Array.from(new Set(
+    memberSnap.docs
+      .map((doc) => doc.data() as any)
+      .filter((data) => data.status === 'active' && data.canRead === true)
+      .map((data) => String(data.tripId ?? '').trim())
+      .filter(Boolean)
+  ));
   if (!uniqueTripIds.length) return [];
 
   const lodgings: Lodging[] = [];
@@ -3832,19 +3799,7 @@ export const listActivities = async (userId: string, tripId?: string): Promise<A
     const snapshot = await db.collection('tours').where('tripId', '==', tripId).get();
     return snapshot.docs.map((d) => normalizeActivityRecord(d.data()) as Activity);
   }
-  const memberSnap = await db.collection('group_members').where('userId', '==', userId).where('removedAt', '==', null).get();
-  const groupIds = memberSnap.docs.map((d) => (d.data() as any).groupId).filter(Boolean);
-  const tripIds: string[] = [];
-  for (const groupId of Array.from(new Set(groupIds))) {
-    const trips = await db.collection('trips').where('groupId', '==', groupId).get();
-    trips.docs.forEach((doc) => tripIds.push(doc.id));
-  }
-  const followed = await db.collection('trip_followers').where('followerUserId', '==', userId).get();
-  followed.docs.forEach((doc) => {
-    const data = doc.data() as any;
-    if (data.tripId) tripIds.push(String(data.tripId));
-  });
-  const uniqueTripIds = Array.from(new Set(tripIds));
+  const uniqueTripIds = await listReadableTripIdsForUser(userId);
   if (!uniqueTripIds.length) return [];
   const activities: Activity[] = [];
   for (const ids of chunk(uniqueTripIds)) {
@@ -3914,19 +3869,7 @@ export const listCarRentals = async (userId: string, tripId?: string): Promise<C
     return snapshot.docs.map((d) => ({ ...(d.data() as CarRental), status: normalizeItineraryStatus((d.data() as any).status) }));
   }
 
-  const memberSnap = await db.collection('group_members').where('userId', '==', userId).where('removedAt', '==', null).get();
-  const groupIds = memberSnap.docs.map((d) => (d.data() as any).groupId).filter(Boolean);
-  const tripIds: string[] = [];
-  for (const groupId of Array.from(new Set(groupIds))) {
-    const trips = await db.collection('trips').where('groupId', '==', groupId).get();
-    trips.docs.forEach((doc) => tripIds.push(doc.id));
-  }
-  const followed = await db.collection('trip_followers').where('followerUserId', '==', userId).get();
-  followed.docs.forEach((doc) => {
-    const data = doc.data() as any;
-    if (data.tripId) tripIds.push(String(data.tripId));
-  });
-  const uniqueTripIds = Array.from(new Set(tripIds));
+  const uniqueTripIds = await listReadableTripIdsForUser(userId);
   if (!uniqueTripIds.length) return [];
   const rentals: CarRental[] = [];
   for (const ids of chunk(uniqueTripIds)) {
