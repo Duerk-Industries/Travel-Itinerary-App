@@ -268,6 +268,12 @@ export const deleteExpense = async (...args: Parameters<ReturnType<typeof adapte
   adapter().deleteExpense(...args);
 export const deleteExpenseForSource = async (...args: Parameters<ReturnType<typeof adapter>['deleteExpenseForSource']>) =>
   adapter().deleteExpenseForSource(...args);
+export const listTripPayments = async (...args: Parameters<ReturnType<typeof adapter>['listTripPayments']>) =>
+  adapter().listTripPayments(...args);
+export const insertTripPayment = async (...args: Parameters<ReturnType<typeof adapter>['insertTripPayment']>) =>
+  adapter().insertTripPayment(...args);
+export const deleteTripPayment = async (...args: Parameters<ReturnType<typeof adapter>['deleteTripPayment']>) =>
+  adapter().deleteTripPayment(...args);
 export const saveUserDemographics = async (...args: Parameters<ReturnType<typeof adapter>['saveUserDemographics']>) =>
   adapter().saveUserDemographics(...args);
 export const listItineraries = async (

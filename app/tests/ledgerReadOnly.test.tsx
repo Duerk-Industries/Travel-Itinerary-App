@@ -62,6 +62,10 @@ describe('LedgerTab read-only mode', () => {
         payerName={() => 'Bryan Traveler'}
         saveCoveredBy={jest.fn().mockResolvedValue(undefined)}
         readOnly
+        payments={[]}
+        currentUserMemberId={null}
+        onAddPayment={async () => {}}
+        onDeletePayment={async () => {}}
       />
     );
 
