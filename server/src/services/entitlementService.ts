@@ -440,13 +440,9 @@ export const finalizeGenerationUsage = async (params: {
   windowKey: string;
   idempotencyKey: string;
   responseBody: Record<string, unknown>;
-  tokensUsed?: number;
 }): Promise<void> => {
   await completeGenerationIdempotency(params.idempotencyKey, params.responseBody);
   await recordUsage(params.userId, 'ai_itinerary_generations', 1, { windowKey: params.windowKey });
-  if ((params.tokensUsed ?? 0) > 0) {
-    await recordUsage(params.userId, 'openai_tokens', params.tokensUsed ?? 0, { windowKey: params.windowKey });
-  }
 };
 
 export const failGenerationUsage = async (idempotencyKey: string, errorMessage: string): Promise<void> => {

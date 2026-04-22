@@ -286,6 +286,7 @@ router.post('/', async (req, res) => {
     const result = await generateItineraryViaPromptPlan({
       apiKey,
       userId,
+      usageWindowKey: getMonthWindowKey(),
       destinations: selectedLocations.length ? selectedLocations : [destinationSummary],
       mustSeeAttractions: selectedMustSeeAttractions,
       days: daysNum,
@@ -333,7 +334,6 @@ router.post('/', async (req, res) => {
       windowKey: getMonthWindowKey(),
       idempotencyKey,
       responseBody,
-      tokensUsed: result.tokenUsage.totalTokens,
     });
     res.json(responseBody);
   } catch (err: any) {

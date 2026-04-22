@@ -649,7 +649,6 @@ const runJob = async (jobId: string, input: QueueInput): Promise<void> => {
           status: 'completed',
           result: job.result,
         },
-        tokensUsed: result.tokenUsage.totalTokens,
       });
     }
     logInfo(
