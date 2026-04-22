@@ -45,11 +45,20 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/trips/$(tripId)).data.groupId;
     }
 
-    function canReadTripById(tripId) {
+    function tripAccessDocId(tripId, userId) {
+      return tripId + "_" + userId;
+    }
+
+    function hasTripAccess(tripId) {
       return signedIn()
         && tripId != null
-        && exists(/databases/$(database)/documents/trips/$(tripId))
-        && isGroupOwner(tripGroupIdFromTrip(tripId));
+        && exists(/databases/$(database)/documents/trip_access/$(tripAccessDocId(tripId, authUid())))
+        && get(/databases/$(database)/documents/trip_access/$(tripAccessDocId(tripId, authUid()))).data.status == "active";
+    }
+
+    function canReadTripById(tripId) {
+      return hasTripAccess(tripId)
+        && get(/databases/$(database)/documents/trip_access/$(tripAccessDocId(tripId, authUid()))).data.canRead == true;
     }
 
     function canReadItineraryById(itineraryId) {
@@ -111,6 +120,11 @@ service cloud.firestore {
     }
 
     match /trip_removals/{removalId} {
+      allow read: if signedIn() && resource.data.userId == authUid();
+      allow write: if false;
+    }
+
+    match /trip_access/{docId} {
       allow read: if signedIn() && resource.data.userId == authUid();
       allow write: if false;
     }

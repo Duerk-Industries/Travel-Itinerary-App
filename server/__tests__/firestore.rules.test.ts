@@ -111,13 +111,17 @@ const seedBaseDocuments = async (
   db: AdminFirestore,
   owner: ClientContext,
   other: ClientContext,
-  outsider: ClientContext
+  outsider: ClientContext,
+  follower: ClientContext,
+  removed: ClientContext
 ) => {
   await Promise.all([
     db.collection('locations').doc('public-location').set({ name: 'Paris', sourceFile: 'seed.json' }),
     db.collection('users').doc(owner.uid).set({ email: owner.email, firstName: 'Owner' }),
     db.collection('users').doc(other.uid).set({ email: other.email, firstName: 'Other' }),
     db.collection('users').doc(outsider.uid).set({ email: outsider.email, firstName: 'Outsider' }),
+    db.collection('users').doc(follower.uid).set({ email: follower.email, firstName: 'Follower' }),
+    db.collection('users').doc(removed.uid).set({ email: removed.email, firstName: 'Removed' }),
     db.collection('web_users').doc(owner.uid).set({ email: owner.email, preferredAirport: 'BOS' }),
     db.collection('web_users').doc(other.uid).set({ email: other.email, preferredAirport: 'JFK' }),
     db.collection('fellow_travelers').doc('traveler-1').set({ ownerId: owner.uid, name: 'Traveler One' }),
@@ -137,6 +141,11 @@ const seedBaseDocuments = async (
       userId: other.uid,
       removedAt: null,
     }),
+    db.collection('group_members').doc('gm-removed').set({
+      groupId: 'group-1',
+      userId: removed.uid,
+      removedAt: null,
+    }),
     db.collection('group_invites').doc('invite-1').set({
       groupId: 'group-1',
       inviteeUserId: other.uid,
@@ -152,6 +161,44 @@ const seedBaseDocuments = async (
       tripId: 'trip-1',
       createdAt: '2026-04-22T00:00:00.000Z',
     }),
+    db.collection('trip_access').doc(`trip-1_${owner.uid}`).set({
+      tripId: 'trip-1',
+      groupId: 'group-1',
+      userId: owner.uid,
+      role: 'owner',
+      status: 'active',
+      canRead: true,
+      canWrite: true,
+    }),
+    db.collection('trip_access').doc(`trip-1_${other.uid}`).set({
+      tripId: 'trip-1',
+      groupId: 'group-1',
+      userId: other.uid,
+      role: 'member',
+      status: 'active',
+      canRead: true,
+      canWrite: true,
+    }),
+    db.collection('trip_access').doc(`trip-1_${follower.uid}`).set({
+      tripId: 'trip-1',
+      groupId: 'group-1',
+      userId: follower.uid,
+      role: 'follower',
+      status: 'active',
+      canRead: true,
+      canWrite: false,
+    }),
+    db.collection('trip_followers').doc('tf-1').set({
+      tripId: 'trip-1',
+      followerUserId: follower.uid,
+      role: 'follower',
+      createdAt: '2026-04-22T00:00:00.000Z',
+    }),
+    db.collection('trip_removals').doc('tr-1').set({
+      tripId: 'trip-1',
+      userId: removed.uid,
+      createdAt: '2026-04-22T00:00:00.000Z',
+    }),
     db.collection('audit_log').doc('audit-1').set({
       actorUserId: owner.uid,
       createdAt: '2026-04-22T00:00:00.000Z',
@@ -165,6 +212,8 @@ describe('firestore security rules', () => {
   let owner: ClientContext;
   let other: ClientContext;
   let outsider: ClientContext;
+  let follower: ClientContext;
+  let removed: ClientContext;
 
   beforeAll(async () => {
     const [firestoreHost, firestorePortRaw] = FIRESTORE_HOST.split(':');
@@ -181,7 +230,9 @@ describe('firestore security rules', () => {
     owner = await createAuthedClient('owner');
     other = await createAuthedClient('other');
     outsider = await createAuthedClient('outsider');
-    await seedBaseDocuments(db, owner, other, outsider);
+    follower = await createAuthedClient('follower');
+    removed = await createAuthedClient('removed');
+    await seedBaseDocuments(db, owner, other, outsider, follower, removed);
   });
 
   afterAll(async () => {
@@ -227,15 +278,27 @@ describe('firestore security rules', () => {
     await expectDenied(getDoc(doc(outsider.db, 'family_relationships', 'rel-1')));
   });
 
-  it('allows group owner access to group and trip data but blocks non-owners', async () => {
+  it('allows owner and member trip reads through trip_access', async () => {
     if (!emulatorReady) return;
     await expect(getDoc(doc(owner.db, 'groups', 'group-1'))).resolves.toMatchObject({ id: 'group-1' });
     await expect(getDoc(doc(owner.db, 'trips', 'trip-1'))).resolves.toMatchObject({ id: 'trip-1' });
     await expect(getDoc(doc(owner.db, 'flights', 'flight-1'))).resolves.toMatchObject({ id: 'flight-1' });
+    await expect(getDoc(doc(other.db, 'trips', 'trip-1'))).resolves.toMatchObject({ id: 'trip-1' });
+    await expect(getDoc(doc(other.db, 'flights', 'flight-1'))).resolves.toMatchObject({ id: 'flight-1' });
+  });
 
-    await expectDenied(getDoc(doc(other.db, 'groups', 'group-1')));
-    await expectDenied(getDoc(doc(other.db, 'trips', 'trip-1')));
-    await expectDenied(getDoc(doc(other.db, 'flights', 'flight-1')));
+  it('allows follower read-only access through trip_access', async () => {
+    if (!emulatorReady) return;
+    await expect(getDoc(doc(follower.db, 'trips', 'trip-1'))).resolves.toMatchObject({ id: 'trip-1' });
+    await expect(getDoc(doc(follower.db, 'flights', 'flight-1'))).resolves.toMatchObject({ id: 'flight-1' });
+    await expectDenied(setDoc(doc(follower.db, 'trips', 'trip-1'), { name: 'blocked overwrite' }));
+  });
+
+  it('denies removed users and outsiders when no active trip_access grant exists', async () => {
+    if (!emulatorReady) return;
+    await expectDenied(getDoc(doc(removed.db, 'trips', 'trip-1')));
+    await expectDenied(getDoc(doc(outsider.db, 'trips', 'trip-1')));
+    await expectDenied(getDoc(doc(outsider.db, 'flights', 'flight-1')));
   });
 
   it('allows users to read only their own membership and invite records', async () => {
@@ -244,6 +307,12 @@ describe('firestore security rules', () => {
     await expect(getDoc(doc(other.db, 'group_invites', 'invite-1'))).resolves.toMatchObject({ id: 'invite-1' });
     await expectDenied(getDoc(doc(outsider.db, 'group_members', 'gm-other')));
     await expectDenied(getDoc(doc(outsider.db, 'group_invites', 'invite-1')));
+  });
+
+  it('allows users to read only their own trip_access record', async () => {
+    if (!emulatorReady) return;
+    await expect(getDoc(doc(other.db, 'trip_access', `trip-1_${other.uid}`))).resolves.toMatchObject({ id: `trip-1_${other.uid}` });
+    await expectDenied(getDoc(doc(outsider.db, 'trip_access', `trip-1_${other.uid}`)));
   });
 
   it('denies direct access to audit and system collections', async () => {

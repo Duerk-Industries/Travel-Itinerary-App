@@ -55,6 +55,21 @@ const generateTripShareToken = (): string => randomBytes(TRIP_SHARE_TOKEN_BYTES)
 const FOLLOW_CODE_LENGTH = 6;
 const FOLLOW_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const ADMIN_ANALYTICS_VERSION = 1;
+type TripAccessRole = 'owner' | 'member' | 'follower';
+type TripAccessRecord = {
+  tripId: string;
+  groupId: string;
+  userId: string;
+  role: TripAccessRole;
+  status: 'active';
+  canRead: true;
+  canWrite: boolean;
+  canComment: boolean;
+  canVote: boolean;
+  source: 'group_membership' | 'trip_follower';
+  createdAt: string;
+  updatedAt: string;
+};
 
 const normalizeUsername = (value: string): string =>
   value
@@ -110,6 +125,153 @@ const generateUniqueUsername = async (
     }
   }
   return candidate;
+};
+
+const getTripAccessDocId = (tripId: string, userId: string): string => `${tripId}_${userId}`;
+
+const buildTripAccessRecord = (
+  existing: Partial<TripAccessRecord> | null | undefined,
+  params: {
+    tripId: string;
+    groupId: string;
+    userId: string;
+    role: TripAccessRole;
+    source: 'group_membership' | 'trip_follower';
+  }
+): TripAccessRecord => {
+  const writeEnabled = params.role !== 'follower';
+  return {
+    tripId: params.tripId,
+    groupId: params.groupId,
+    userId: params.userId,
+    role: params.role,
+    status: 'active',
+    canRead: true,
+    canWrite: writeEnabled,
+    canComment: true,
+    canVote: writeEnabled,
+    source: params.source,
+    createdAt: String(existing?.createdAt ?? nowIso()),
+    updatedAt: nowIso(),
+  };
+};
+
+export const clearTripAccessForTrip = async (tripId: string): Promise<void> => {
+  const db = getDb();
+  const existing = await db.collection('trip_access').where('tripId', '==', tripId).get();
+  await Promise.all(existing.docs.map((doc) => doc.ref.delete()));
+};
+
+export const rebuildTripAccessForTrip = async (tripId: string): Promise<void> => {
+  const db = getDb();
+  const tripDoc = await db.collection('trips').doc(tripId).get();
+  if (!tripDoc.exists) {
+    await clearTripAccessForTrip(tripId);
+    return;
+  }
+
+  const tripData = tripDoc.data() as any;
+  const groupId = String(tripData.groupId ?? '').trim();
+  if (!groupId) {
+    await clearTripAccessForTrip(tripId);
+    return;
+  }
+
+  const groupDoc = await db.collection('groups').doc(groupId).get();
+  const ownerId = groupDoc.exists ? String((groupDoc.data() as any)?.ownerId ?? '').trim() : '';
+  const [membersSnap, removalsSnap, followersSnap, existingSnap] = await Promise.all([
+    db.collection('group_members').where('groupId', '==', groupId).where('removedAt', '==', null).get(),
+    db.collection('trip_removals').where('tripId', '==', tripId).get(),
+    db.collection('trip_followers').where('tripId', '==', tripId).get(),
+    db.collection('trip_access').where('tripId', '==', tripId).get(),
+  ]);
+
+  const removedUserIds = new Set(
+    removalsSnap.docs
+      .map((doc) => String((doc.data() as any)?.userId ?? '').trim())
+      .filter(Boolean)
+  );
+
+  const desired = new Map<string, TripAccessRecord>();
+  for (const doc of membersSnap.docs) {
+    const data = doc.data() as any;
+    const memberUserId = String(data.userId ?? '').trim();
+    if (!memberUserId || removedUserIds.has(memberUserId)) continue;
+    desired.set(
+      memberUserId,
+      buildTripAccessRecord(null, {
+        tripId,
+        groupId,
+        userId: memberUserId,
+        role: ownerId && memberUserId === ownerId ? 'owner' : 'member',
+        source: 'group_membership',
+      })
+    );
+  }
+
+  for (const doc of followersSnap.docs) {
+    const data = doc.data() as any;
+    const followerUserId = String(data.followerUserId ?? '').trim();
+    if (!followerUserId || removedUserIds.has(followerUserId) || desired.has(followerUserId)) continue;
+    desired.set(
+      followerUserId,
+      buildTripAccessRecord(null, {
+        tripId,
+        groupId,
+        userId: followerUserId,
+        role: 'follower',
+        source: 'trip_follower',
+      })
+    );
+  }
+
+  const existingByUserId = new Map(
+    existingSnap.docs.map((doc) => {
+      const data = doc.data() as any;
+      return [String(data.userId ?? '').trim(), { id: doc.id, data }];
+    })
+  );
+
+  await Promise.all(
+    Array.from(desired.entries()).map(async ([userId, record]) => {
+      const existing = existingByUserId.get(userId);
+      await db
+        .collection('trip_access')
+        .doc(getTripAccessDocId(tripId, userId))
+        .set(buildTripAccessRecord(existing?.data, {
+          tripId,
+          groupId,
+          userId,
+          role: record.role,
+          source: record.source,
+        }));
+    })
+  );
+
+  await Promise.all(
+    existingSnap.docs
+      .filter((doc) => {
+        const data = doc.data() as any;
+        const userId = String(data.userId ?? '').trim();
+        return !userId || !desired.has(userId);
+      })
+      .map((doc) => doc.ref.delete())
+  );
+};
+
+const rebuildTripAccessForGroup = async (groupId: string): Promise<void> => {
+  const db = getDb();
+  const tripsSnap = await db.collection('trips').where('groupId', '==', groupId).get();
+  await Promise.all(tripsSnap.docs.map((doc) => rebuildTripAccessForTrip(doc.id)));
+};
+
+export const rebuildTripAccessForAllTrips = async (): Promise<{ tripCount: number }> => {
+  const db = getDb();
+  const tripsSnap = await db.collection('trips').get();
+  for (const doc of tripsSnap.docs) {
+    await rebuildTripAccessForTrip(doc.id);
+  }
+  return { tripCount: tripsSnap.docs.length };
 };
 
 const getUserEmailDocRef = (email: string) => getDb().collection('user_emails').doc(normalizeEmail(email));
@@ -1388,6 +1550,9 @@ export const addGroupMember = async (
       status: 'pending',
       createdAt: nowIso(),
     });
+    if (user?.id) {
+      await rebuildTripAccessForGroup(groupId);
+    }
     return { inviteId, email };
   }
 
@@ -1480,6 +1645,7 @@ export const removeGroupMember = async (requesterId: string, groupId: string, me
       await doc.ref.update({ paidBy });
     }
   }
+  await rebuildTripAccessForGroup(groupId);
 };
 
 export const removeGroupInvite = async (ownerId: string, inviteId: string): Promise<void> => {
@@ -1593,6 +1759,7 @@ export const createTrip = async (
     createdAt: nowIso(),
   };
   await db.collection('trips').doc(id).set(payload);
+  await rebuildTripAccessForTrip(id);
   const activeUserIds = await listActiveGroupUserIds(groupId);
   await Promise.all(activeUserIds.map((memberUserId) => incrementAdminUserTripCount(memberUserId, 1, payload.createdAt)));
   return { id, ...payload } as any;
@@ -1686,6 +1853,7 @@ export const deleteTrip = async (userId: string, tripId: string): Promise<void> 
     expenses.forEach((doc) => batch.delete(doc.ref));
     batch.delete(trip.ref);
     await batch.commit();
+    await clearTripAccessForTrip(tripId);
     await incrementAdminUserTripCount(userId, -1);
     return;
   }
@@ -1701,6 +1869,7 @@ export const deleteTrip = async (userId: string, tripId: string): Promise<void> 
   }
 
   await removeMemberFromTripData(tripId, memberDoc.id);
+  await rebuildTripAccessForTrip(tripId);
 };
 
 export const updateTripGroup = async (
@@ -1721,6 +1890,7 @@ export const updateTripGroup = async (
     listActiveGroupUserIds(newGroupId),
   ]);
   await db.collection('trips').doc(tripId).update({ groupId: newGroupId });
+  await rebuildTripAccessForTrip(tripId);
   const oldSet = new Set(oldActiveUserIds);
   const newSet = new Set(newActiveUserIds);
   await Promise.all([
@@ -1995,6 +2165,7 @@ export const acceptGroupInvite = async (inviteId: string, userId: string, email?
     });
   }
   await db.collection('group_invites').doc(inviteId).update({ status: 'accepted', inviteeUserId: userId });
+  await rebuildTripAccessForGroup(String(data.groupId ?? ''));
   const tripCount = await countVisibleTripsForUserInGroup(userId, data.groupId);
   if (tripCount > 0) {
     await incrementAdminUserTripCount(userId, tripCount);
@@ -2062,6 +2233,7 @@ export const rejectGroupInvite = async (inviteId: string, userId: string, email?
   }
 
   await db.collection('group_invites').doc(inviteId).delete();
+  await rebuildTripAccessForGroup(String(groupId ?? ''));
 };
 
 export const claimInvitesForUser = async (email: string, userId: string): Promise<void> => {
@@ -2079,6 +2251,13 @@ export const claimInvitesForUser = async (email: string, userId: string): Promis
 // Trip membership helper
 export const ensureUserInTrip = async (tripId: string, userId: string): Promise<{ groupId: string } | null> => {
   const db = getDb();
+  const projected = await db.collection('trip_access').doc(getTripAccessDocId(tripId, userId)).get();
+  if (projected.exists) {
+    const access = projected.data() as any;
+    if (access.status === 'active' && access.canWrite === true) {
+      return { groupId: String(access.groupId ?? '') };
+    }
+  }
   const trip = await db.collection('trips').doc(tripId).get();
   if (!trip.exists) return null;
   const data = trip.data() as any;
@@ -2094,9 +2273,19 @@ export const ensureUserCanReadTrip = async (
   tripId: string,
   userId: string
 ): Promise<{ groupId: string; access: 'member' | 'follower' } | null> => {
+  const db = getDb();
+  const projected = await db.collection('trip_access').doc(getTripAccessDocId(tripId, userId)).get();
+  if (projected.exists) {
+    const access = projected.data() as any;
+    if (access.status === 'active' && access.canRead === true) {
+      return {
+        groupId: String(access.groupId ?? ''),
+        access: access.canWrite === true ? 'member' : 'follower',
+      };
+    }
+  }
   const membership = await ensureUserInTrip(tripId, userId);
   if (membership) return { groupId: membership.groupId, access: 'member' };
-  const db = getDb();
   const follower = await db
     .collection('trip_followers')
     .where('tripId', '==', tripId)
@@ -2393,6 +2582,7 @@ export const acceptTripShareInvite = async (
     },
     { merge: true }
   );
+  await rebuildTripAccessForTrip(tripId);
   return { tripId, role };
 };
 
@@ -2562,6 +2752,7 @@ export const acceptTripShareInviteById = async (
     },
     { merge: true }
   );
+  await rebuildTripAccessForTrip(tripId);
   return { tripId, role };
 };
 
@@ -2633,6 +2824,7 @@ export const followTripByCode = async (
       inviteCode: code,
       followerUserId: userId,
     });
+    await rebuildTripAccessForTrip(tripId);
   }
 
   const tripDoc = await db.collection('trips').doc(tripId).get();
@@ -2711,6 +2903,9 @@ export const unfollowTrip = async (userId: string, tripId: string): Promise<void
     .get();
   for (const doc of followers.docs) {
     await doc.ref.delete();
+  }
+  if (!followers.empty) {
+    await rebuildTripAccessForTrip(tripId);
   }
   if (!followers.empty) {
     await writeActivity(tripId, userId, 'FOLLOW_REMOVED', 'Follower left', 'A user unfollowed this trip.', {
@@ -4436,6 +4631,7 @@ export const removeTravelerFromTrip = async (userId: string, tripId: string, tra
     if (inviteDoc.exists) {
       await inviteDoc.ref.delete();
     }
+    await rebuildTripAccessForTrip(tripId);
     return; // Nothing more to do.
   }
   const memberToRemove = memberToRemoveDoc.data() as GroupMember;
@@ -4529,6 +4725,7 @@ export const removeTravelerFromTrip = async (userId: string, tripId: string, tra
   batch.update(memberToRemoveDoc.ref, { removedAt: nowIso() });
 
   await batch.commit();
+  await rebuildTripAccessForTrip(tripId);
 };
 
 
