@@ -1,4 +1,4 @@
-import { resolveAndValidateRedirectUri } from '../src/redirects';
+import { appendTokenToRedirect, resolveAndValidateRedirectUri } from '../src/redirects';
 
 describe('resolveAndValidateRedirectUri', () => {
   const originalAllowlist = process.env.AUTH_REDIRECT_URI_ALLOWLIST;
@@ -59,5 +59,17 @@ describe('resolveAndValidateRedirectUri', () => {
     const result = resolveAndValidateRedirectUri('http://localhost:4000/login', 'https://duerk.org');
     expect(result.error).toBeUndefined();
     expect(result.redirectUri).toBe('http://localhost:4000/login');
+  });
+});
+
+describe('appendTokenToRedirect', () => {
+  it('stores tokens in the URL hash for web redirects', () => {
+    const next = appendTokenToRedirect('https://duerk.org/login?foo=bar', 'abc123');
+    expect(next).toBe('https://duerk.org/login?foo=bar#token=abc123');
+  });
+
+  it('preserves native-scheme redirects with query tokens', () => {
+    const next = appendTokenToRedirect('travel-itinerary://login', 'abc123');
+    expect(next).toBe('travel-itinerary://login?token=abc123');
   });
 });

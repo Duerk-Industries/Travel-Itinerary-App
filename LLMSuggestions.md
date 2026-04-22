@@ -28,7 +28,34 @@ It is intentionally written for execution, not just review. Each item includes:
 - Logging and errors are actionable and do not leak secrets.
 - Existing tests for the touched area still pass.
 
+## Processed Repo Snapshot
+
+Status legend:
+- `Not started`: little or no implementation evidence found
+- `Partial`: groundwork exists, but the backlog item is not complete
+- `Substantial`: meaningful implementation exists, but hardening or follow-through is still needed
+
+Quick repo observations from this pass:
+- `firestore.rules` still allows any authenticated user to read and write every document, so Firestore hardening remains urgent.
+- `server/src/auth.ts` still defaults `AUTH_SECRET` to `development-secret`, and `server/src/app.ts` only logs a warning instead of failing closed.
+- OAuth login still appends a durable auth token to the redirect URL via `appendTokenToRedirect`.
+- `app/App.tsx` is still very large and owns broad app state, async flows, and modal orchestration.
+- Durable idempotency already exists for itinerary generation in both Firebase and Postgres paths, so that part of reliability work is underway.
+- API usage limiting exists in `server/src/apis/usageLimiter.ts`, but it appears process-local rather than database-backed.
+- Root `package.json` still has a placeholder `lint` script and no real top-level typecheck workflow.
+
+## Ready-To-Execute First PR Slices
+
+If an LLM agent is picking work from this file, prefer these smallest high-value slices first:
+1. Fail startup outside local development when `AUTH_SECRET` is missing or defaulted.
+2. Replace the blanket Firestore authenticated-user rule with collection-scoped rules plus emulator tests.
+3. Extract async itinerary polling from `app/App.tsx` into a tested hook with in-flight suppression.
+4. Add durable token usage accounting for OpenAI on top of the current request-count limiter.
+5. Add real root/workspace `typecheck` and `lint` scripts so targeted validation is predictable.
+
 ## Priority 1: Durable API Usage Limiting, Budgeting, And Cost Governance
+
+Status: `Partial`
 
 ### Goal
 Make provider limits and spend controls reliable across process restarts and multiple server instances.
@@ -71,6 +98,8 @@ Make provider limits and spend controls reliable across process restarts and mul
 
 ## Priority 2: Authentication, Authorization, And Secret Handling
 
+Status: `Partial`
+
 ### Goal
 Fail closed on insecure auth config and enforce server-side authorization consistently.
 
@@ -106,6 +135,8 @@ Fail closed on insecure auth config and enforce server-side authorization consis
 
 ## Priority 3: Firestore Security Rules Hardening
 
+Status: `Not started`
+
 ### Goal
 Replace blanket authenticated-user access with collection- and ownership-aware rules.
 
@@ -134,6 +165,8 @@ Replace blanket authenticated-user access with collection- and ownership-aware r
 - Unauthorized access tests fail correctly for each protected collection class.
 
 ## Priority 4: Break Up `app/App.tsx` And Introduce A Shared Client Data Layer
+
+Status: `Not started`
 
 ### Goal
 Turn `app/App.tsx` into top-level composition only and standardize data-fetching logic across the app.
@@ -172,6 +205,8 @@ Turn `app/App.tsx` into top-level composition only and standardize data-fetching
 
 ## Priority 5: Polling, Request Dedupe, And Async Flow Cleanup
 
+Status: `Partial`
+
 ### Goal
 Reduce unnecessary polling and eliminate duplicate concurrent requests.
 
@@ -199,6 +234,8 @@ Reduce unnecessary polling and eliminate duplicate concurrent requests.
 - Polling slows down or pauses when the view is inactive.
 
 ## Priority 6: Caching And Dedupe For Expensive External Calls
+
+Status: `Partial`
 
 ### Goal
 Reduce cost and latency for AI, image, and third-party lookup flows.
@@ -240,6 +277,8 @@ Reduce cost and latency for AI, image, and third-party lookup flows.
 
 ## Priority 7: Web Performance, Code Splitting, And Lazy Loading
 
+Status: `Not started`
+
 ### Goal
 Reduce initial web bundle weight and improve time-to-interactive for less-frequently used tabs.
 
@@ -264,6 +303,8 @@ Reduce initial web bundle weight and improve time-to-interactive for less-freque
 - Navigation to the tab remains stable and test-covered.
 
 ## Priority 8: UI Scalability, Responsive Layouts, And Perceived Performance
+
+Status: `Partial`
 
 ### Goal
 Make large datasets usable on mobile and improve perceived speed.
@@ -295,6 +336,8 @@ Make large datasets usable on mobile and improve perceived speed.
 
 ## Priority 9: Chat Scalability And Read-State Correctness
 
+Status: `Partial`
+
 ### Goal
 Make trip chat behavior scale cleanly as message history grows.
 
@@ -324,6 +367,8 @@ Make trip chat behavior scale cleanly as message history grows.
 
 ## Priority 10: Formalize Schema Migrations And Reduce Runtime Bootstrap
 
+Status: `Not started`
+
 ### Goal
 Move schema ownership out of large runtime bootstrap code.
 
@@ -348,6 +393,8 @@ Move schema ownership out of large runtime bootstrap code.
 - Clean environments can reach current schema through migrations alone.
 
 ## Priority 11: Consolidate Shared Domain Logic And Reduce `any`
+
+Status: `Partial`
 
 ### Goal
 Reduce logic drift and improve refactor safety.
@@ -377,6 +424,8 @@ Reduce logic drift and improve refactor safety.
 
 ## Priority 12: Logging, Observability, And Operational Auditability
 
+Status: `Partial`
+
 ### Goal
 Make logs production-appropriate, machine-parseable, and useful for incident response.
 
@@ -403,6 +452,8 @@ Make logs production-appropriate, machine-parseable, and useful for incident res
 - Sensitive admin actions emit structured, auditable events.
 
 ## Priority 13: Reliability, Idempotency, And Background Job Safety
+
+Status: `Substantial`
 
 ### Goal
 Make async workflows safer under retries, duplicates, deploys, and partial failures.
@@ -433,6 +484,8 @@ Make async workflows safer under retries, duplicates, deploys, and partial failu
 
 ## Priority 14: Accessibility, Keyboard Support, And Inclusive UI
 
+Status: `Partial`
+
 ### Goal
 Improve usability for keyboard, screen reader, and lower-friction navigation scenarios.
 
@@ -459,6 +512,8 @@ Improve usability for keyboard, screen reader, and lower-friction navigation sce
 - Dialogs and forms have accessible labels and focus behavior.
 
 ## Priority 15: Data Privacy, Retention, Export, And Deletion Capabilities
+
+Status: `Not started`
 
 ### Goal
 Treat user data lifecycle as a product capability, not just a storage concern.
@@ -490,6 +545,8 @@ Treat user data lifecycle as a product capability, not just a storage concern.
 
 ## Priority 16: Analytics, Product Instrumentation, And Feature Rollout Ability
 
+Status: `Partial`
+
 ### Goal
 Improve the team’s ability to measure feature health and roll out risky changes safely.
 
@@ -518,6 +575,8 @@ Improve the team’s ability to measure feature health and roll out risky change
 
 ## Priority 17: Developer Experience, CI Guardrails, And Static Quality Checks
 
+Status: `Partial`
+
 ### Goal
 Reduce regression risk by improving automated feedback for contributors and agents.
 
@@ -544,6 +603,8 @@ Reduce regression risk by improving automated feedback for contributors and agen
 - An LLM agent can run targeted validation for the area it changed.
 
 ## Priority 18: Mobile Resilience And Offline-Tolerant Behavior
+
+Status: `Partial`
 
 ### Goal
 Improve the app’s behavior when connectivity is weak or intermittent.
@@ -573,6 +634,8 @@ Improve the app’s behavior when connectivity is weak or intermittent.
 
 ## Priority 19: Search, Filter, Sort, And Admin Operability
 
+Status: `Partial`
+
 ### Goal
 Improve operator and power-user workflows, especially for admin and ingestion review surfaces.
 
@@ -601,6 +664,8 @@ Improve operator and power-user workflows, especially for admin and ingestion re
 - Filter and sort behavior is deterministic and test-covered.
 
 ## Priority 20: Ingestion Backlog Items Should Become Implemented, Tested Capabilities
+
+Status: `Partial`
 
 ### Goal
 Convert the highest-value ingestion debt from documentation into tested behavior.
@@ -670,3 +735,10 @@ Convert the highest-value ingestion debt from documentation into tested behavior
 - Add token-based OpenAI accounting alongside request counts.
 - Extract a reusable autocomplete/query hook and migrate two selectors.
 - Lazily load one heavy web-only or low-frequency tab behind a tested suspense fallback.
+
+## Notes For The Next Agent
+
+- Treat Priorities 2 and 3 as security work and keep the PRs small enough to review carefully.
+- Treat Priorities 4, 5, and 7 as stabilization refactors: add tests before moving code.
+- For Priorities 1 and 13, avoid parallel durable-tracking systems; extend the existing idempotency and usage primitives instead.
+- For Priority 10, do not add more schema evolution directly to `server/src/db.postgres.ts` unless it is required to unblock a migration PR.

@@ -115,6 +115,12 @@ export const resolveAndValidateRedirectUri = (
 
 export const appendTokenToRedirect = (redirectUri: string, token: string): string => {
   const url = new URL(redirectUri);
+  if (isHttpProtocol(url.protocol)) {
+    const hashParams = new URLSearchParams(url.hash.startsWith('#') ? url.hash.slice(1) : url.hash);
+    hashParams.set('token', token);
+    url.hash = hashParams.toString();
+    return url.toString();
+  }
   url.searchParams.set('token', token);
   return url.toString();
 };

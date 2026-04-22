@@ -2090,7 +2090,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
     markActive();
 
-    const appStateSubscription = AppState.addEventListener('change', (nextState) => {
+    const appStateSubscription = AppState.addEventListener('change', (nextState: string) => {
       if (nextState === 'active') {
         markActive();
         return;

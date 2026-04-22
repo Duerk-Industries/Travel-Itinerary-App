@@ -19,7 +19,7 @@ jest.mock('react-native', () => {
     TouchableOpacity: make('TouchableOpacity'),
     KeyboardAvoidingView: make('KeyboardAvoidingView'),
     ActivityIndicator: make('ActivityIndicator'),
-    FlatList: React.forwardRef(({ data = [], renderItem, testID, ...props }: any, _ref) =>
+    FlatList: React.forwardRef(({ data = [], renderItem, testID, ...props }: any, _ref: any) =>
       React.createElement(
         'FlatList',
         { testID, ...props },
