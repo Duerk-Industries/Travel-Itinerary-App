@@ -9,6 +9,7 @@ import { doesFeatureFlagsConfigExist, getResolvedFeatureFlagsConfigPath } from '
 import { applyStartupFeatureFlagOverrides, seedEntitlementDefaults } from './services/entitlementService';
 import { syncAttractionsCatalogFromCsvToDbOnStartup } from './services/attractionsCatalogService';
 import { prewarmAutocompleteCache } from './services/destinationAttractionAutocompleteService';
+import { logMissingApiPricingConfigurationWarnings } from './apis/providerBudgeting';
 import { createSocketServer } from './socket';
 
 const defaultPort = Number(process.env.PORT) || 4000;
@@ -50,6 +51,7 @@ export const startServer = async (portOverride?: number): Promise<Server> => {
   const featureFlagsConfigExists = doesFeatureFlagsConfigExist();
   logInfo(`[startup] resolved storage bucket: ${resolvedStorageBucket || '(not set)'} (source: ${bucketSource})`);
   logInfo(`[startup] API limits config path: ${apiLimitsConfigPath} (exists: ${apiLimitsConfigExists})`);
+  logMissingApiPricingConfigurationWarnings();
   logInfo(`[startup] auth flags config path: ${authFlagsConfigPath} (exists: ${authFlagsConfigExists})`);
   logInfo(`[startup] feature flags config path: ${featureFlagsConfigPath} (exists: ${featureFlagsConfigExists})`);
   if (envLoadedFrom) {

@@ -5,6 +5,7 @@ import {
   listApiCostCounters,
   resetApiCostCounters as resetStoredApiCostCounters,
 } from '../db';
+import { logInfo } from '../logger';
 
 const MICROS_PER_USD = 1_000_000;
 
@@ -15,6 +16,7 @@ const formatMonthWindowKey = (now = new Date()): string => {
 };
 
 const toUsdMicros = (usd: number): number => Math.round(usd * MICROS_PER_USD);
+const TRACKED_OPENAI_MODELS = ['gpt-4o-mini'] as const;
 
 export const getApiBudgetWindowKey = (now = new Date()): string => formatMonthWindowKey(now);
 
@@ -125,4 +127,24 @@ export const getApiBudgetSummary = async (): Promise<
 
 export const resetApiBudgetSummaries = async (): Promise<void> => {
   await resetStoredApiCostCounters();
+};
+
+export const logMissingApiPricingConfigurationWarnings = (): void => {
+  const openAiBudgeting = getApiBudgetProviderConfig('OPENAI');
+  for (const model of TRACKED_OPENAI_MODELS) {
+    const normalizedModel = normalizeApiLimitKeyPart(model);
+    if (!openAiBudgeting?.models?.[normalizedModel]) {
+      logInfo(
+        `[startup] Warning: missing OPENAI pricing config for model=${normalizedModel} in api-limits.yaml budgeting.OPENAI.models`
+      );
+    }
+  }
+
+  for (const [provider, budgeting] of Object.entries(getApiLimitsConfig().budgeting ?? {})) {
+    if (budgeting.monthlyBudgetUsd != null && Object.keys(budgeting.models ?? {}).length === 0) {
+      logInfo(
+        `[startup] Warning: provider=${provider} has a monthly budget configured but no model pricing entries in api-limits.yaml`
+      );
+    }
+  }
 };

@@ -1565,6 +1565,11 @@ type ApiLimitProvider = {
   budgetUsagePercent?: number | null;
   budgetAlertThresholdPercent?: number | null;
   isBudgetExceeded?: boolean;
+  budgetingModels?: Array<{
+    model: string;
+    inputCostPer1MTokensUsd: number;
+    outputCostPer1MTokensUsd: number;
+  }>;
   callers: Array<{ caller: string; limit: number; currentUsage: number }>;
   overallUsage: number;
 };
@@ -1573,7 +1578,10 @@ type ApiLimitProviderForm = {
   window: 'hour' | 'day';
   windowHours: string;
   overallLimit: string;
+  monthlyBudgetUsd: string;
+  alertThresholdPercent: string;
   reason: string;
+  budgetingModels: Record<string, { inputCostPer1MTokensUsd: string; outputCostPer1MTokensUsd: string }>;
   callers: Record<string, string>;
 };
 
@@ -1605,7 +1613,19 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
               window: provider.window === 'hour' ? 'hour' : 'day',
               windowHours: String(provider.windowHours),
               overallLimit: provider.overallLimit === null ? '' : String(provider.overallLimit),
+              monthlyBudgetUsd: provider.monthlyBudgetUsd == null ? '' : String(provider.monthlyBudgetUsd),
+              alertThresholdPercent:
+                provider.budgetAlertThresholdPercent == null ? '' : String(provider.budgetAlertThresholdPercent),
               reason: '',
+              budgetingModels: Object.fromEntries(
+                (provider.budgetingModels ?? []).map((model) => [
+                  model.model,
+                  {
+                    inputCostPer1MTokensUsd: String(model.inputCostPer1MTokensUsd),
+                    outputCostPer1MTokensUsd: String(model.outputCostPer1MTokensUsd),
+                  },
+                ])
+              ),
               callers: Object.fromEntries(provider.callers.map((caller) => [caller.caller, String(caller.limit)])),
             },
           ])
@@ -1643,6 +1663,30 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
     }));
   };
 
+  const updateBudgetingModel = (
+    providerKey: string,
+    modelKey: string,
+    field: 'inputCostPer1MTokensUsd' | 'outputCostPer1MTokensUsd',
+    value: string
+  ) => {
+    setProviderForms((current) => ({
+      ...current,
+      [providerKey]: {
+        ...current[providerKey],
+        budgetingModels: {
+          ...(current[providerKey]?.budgetingModels ?? {}),
+          [modelKey]: {
+            ...(current[providerKey]?.budgetingModels?.[modelKey] ?? {
+              inputCostPer1MTokensUsd: '',
+              outputCostPer1MTokensUsd: '',
+            }),
+            [field]: value,
+          },
+        },
+      },
+    }));
+  };
+
   const saveProvider = async (provider: ApiLimitProvider) => {
     const form = providerForms[provider.provider];
     if (!form) return;
@@ -1653,8 +1697,19 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
 
     const parsedWindowHours = Number(form.windowHours);
     const parsedOverallLimit = form.overallLimit.trim() ? Number(form.overallLimit) : null;
+    const parsedMonthlyBudgetUsd = form.monthlyBudgetUsd.trim() ? Number(form.monthlyBudgetUsd) : null;
+    const parsedAlertThresholdPercent = form.alertThresholdPercent.trim() ? Number(form.alertThresholdPercent) : null;
     const parsedCallers = Object.fromEntries(
       provider.callers.map((caller) => [caller.caller, Number(form.callers[caller.caller] ?? '')])
+    );
+    const parsedBudgetingModels = Object.fromEntries(
+      (provider.budgetingModels ?? []).map((model) => [
+        model.model,
+        {
+          inputCostPer1MTokensUsd: Number(form.budgetingModels?.[model.model]?.inputCostPer1MTokensUsd ?? ''),
+          outputCostPer1MTokensUsd: Number(form.budgetingModels?.[model.model]?.outputCostPer1MTokensUsd ?? ''),
+        },
+      ])
     );
 
     if (!Number.isFinite(parsedWindowHours) || parsedWindowHours <= 0) {
@@ -1665,9 +1720,31 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
       setError(`Overall limit for ${provider.provider} must be blank or a positive number.`);
       return;
     }
+    if (parsedMonthlyBudgetUsd !== null && (!Number.isFinite(parsedMonthlyBudgetUsd) || parsedMonthlyBudgetUsd <= 0)) {
+      setError(`Monthly budget for ${provider.provider} must be blank or a positive number.`);
+      return;
+    }
+    if (
+      parsedAlertThresholdPercent !== null &&
+      (!Number.isFinite(parsedAlertThresholdPercent) || parsedAlertThresholdPercent <= 0 || parsedAlertThresholdPercent > 100)
+    ) {
+      setError(`Budget alert threshold for ${provider.provider} must be blank or between 1 and 100.`);
+      return;
+    }
     const invalidCaller = Object.entries(parsedCallers).find(([, value]) => !Number.isFinite(value) || value <= 0);
     if (invalidCaller) {
       setError(`Caller limit ${invalidCaller[0]} must be a positive number.`);
+      return;
+    }
+    const invalidModel = Object.entries(parsedBudgetingModels).find(
+      ([, pricing]) =>
+        !Number.isFinite(pricing.inputCostPer1MTokensUsd) ||
+        pricing.inputCostPer1MTokensUsd <= 0 ||
+        !Number.isFinite(pricing.outputCostPer1MTokensUsd) ||
+        pricing.outputCostPer1MTokensUsd <= 0
+    );
+    if (invalidModel) {
+      setError(`Model pricing for ${invalidModel[0]} must use positive numeric values.`);
       return;
     }
 
@@ -1682,6 +1759,9 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
           window: form.window,
           windowHours: parsedWindowHours,
           overallLimit: parsedOverallLimit,
+          monthlyBudgetUsd: parsedMonthlyBudgetUsd,
+          alertThresholdPercent: parsedAlertThresholdPercent,
+          budgetingModels: parsedBudgetingModels,
           callers: parsedCallers,
           reason: form.reason.trim(),
         }),
@@ -1758,6 +1838,50 @@ const ApiLimitsSection: React.FC<{ backendUrl: string; headers: Record<string, s
             value={providerForms[provider.provider]?.overallLimit ?? ''}
             onChangeText={(value: string) => updateProviderForm(provider.provider, { overallLimit: value })}
           />
+          <TextInput
+            style={[localStyles.smallInput, getInputStyle(theme)]}
+            placeholder="Monthly budget USD (blank for none)"
+            placeholderTextColor={theme.colors.textMuted}
+            keyboardType="numeric"
+            value={providerForms[provider.provider]?.monthlyBudgetUsd ?? ''}
+            onChangeText={(value: string) => updateProviderForm(provider.provider, { monthlyBudgetUsd: value })}
+          />
+          <TextInput
+            style={[localStyles.smallInput, getInputStyle(theme)]}
+            placeholder="Budget alert threshold %"
+            placeholderTextColor={theme.colors.textMuted}
+            keyboardType="numeric"
+            value={providerForms[provider.provider]?.alertThresholdPercent ?? ''}
+            onChangeText={(value: string) => updateProviderForm(provider.provider, { alertThresholdPercent: value })}
+          />
+          {(provider.budgetingModels ?? []).map((model) => (
+            <View key={`${provider.provider}-${model.model}`} style={localStyles.apiLimitCallerRow}>
+              <View style={localStyles.flex}>
+                <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>{model.model}</Text>
+                <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>USD / 1M tokens</Text>
+              </View>
+              <TextInput
+                style={[localStyles.apiLimitInput, getInputStyle(theme)]}
+                placeholder="Input"
+                placeholderTextColor={theme.colors.textMuted}
+                keyboardType="numeric"
+                value={providerForms[provider.provider]?.budgetingModels?.[model.model]?.inputCostPer1MTokensUsd ?? ''}
+                onChangeText={(value: string) =>
+                  updateBudgetingModel(provider.provider, model.model, 'inputCostPer1MTokensUsd', value)
+                }
+              />
+              <TextInput
+                style={[localStyles.apiLimitInput, getInputStyle(theme)]}
+                placeholder="Output"
+                placeholderTextColor={theme.colors.textMuted}
+                keyboardType="numeric"
+                value={providerForms[provider.provider]?.budgetingModels?.[model.model]?.outputCostPer1MTokensUsd ?? ''}
+                onChangeText={(value: string) =>
+                  updateBudgetingModel(provider.provider, model.model, 'outputCostPer1MTokensUsd', value)
+                }
+              />
+            </View>
+          ))}
           {provider.callers.map((caller) => {
             const pct = caller.limit > 0 ? Math.round((caller.currentUsage / caller.limit) * 100) : 0;
             const isHigh = pct >= 75;

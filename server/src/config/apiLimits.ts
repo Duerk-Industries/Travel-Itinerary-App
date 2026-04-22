@@ -268,3 +268,53 @@ export const updateApiLimitProviderConfig = (
   invalidateConfigCache();
   return loadConfigFromFile();
 };
+
+export const updateApiBudgetProviderConfig = (
+  provider: string,
+  nextBudgeting: {
+    monthlyBudgetUsd: number | null;
+    alertThresholdPercent: number | null;
+    models: Record<
+      string,
+      {
+        inputCostPer1MTokensUsd: number;
+        outputCostPer1MTokensUsd: number;
+      }
+    >;
+  }
+): ApiLimitsConfig => {
+  const configPath = resolveConfigPath();
+  const rawConfig = loadRawConfigFromFile();
+  const normalizedProvider = normalizeApiLimitKeyPart(provider);
+  const rawBudgeting = { ...(rawConfig.budgeting ?? {}) };
+  const nextRawBudgeting: RawProviderBudgeting = {
+    models: Object.fromEntries(
+      Object.entries(nextBudgeting.models)
+        .map(([model, pricing]) => [
+          normalizeApiLimitKeyPart(model),
+          {
+            inputCostPer1MTokensUsd: pricing.inputCostPer1MTokensUsd,
+            outputCostPer1MTokensUsd: pricing.outputCostPer1MTokensUsd,
+          },
+        ])
+        .sort(([a], [b]) => String(a).localeCompare(String(b)))
+    ),
+  };
+  if (nextBudgeting.monthlyBudgetUsd !== null) {
+    nextRawBudgeting.monthlyBudgetUsd = nextBudgeting.monthlyBudgetUsd;
+  }
+  if (nextBudgeting.alertThresholdPercent !== null) {
+    nextRawBudgeting.alertThresholdPercent = nextBudgeting.alertThresholdPercent;
+  }
+
+  rawBudgeting[normalizedProvider] = nextRawBudgeting;
+  const nextRawConfig: RawApiLimitsConfig = {
+    providers: rawConfig.providers ?? {},
+    budgeting: Object.fromEntries(Object.entries(rawBudgeting).sort(([a], [b]) => String(a).localeCompare(String(b)))),
+    caching: rawConfig.caching ?? {},
+  };
+
+  fs.writeFileSync(configPath, stringify(nextRawConfig), 'utf8');
+  invalidateConfigCache();
+  return loadConfigFromFile();
+};

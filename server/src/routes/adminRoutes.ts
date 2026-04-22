@@ -10,7 +10,13 @@ import {
 } from '../db';
 import { TokenPayload } from '../auth';
 import { logError } from '../logger';
-import { getApiLimitsConfig, normalizeApiLimitKeyPart, updateApiLimitProviderConfig } from '../config/apiLimits';
+import {
+  getApiBudgetProviderConfig,
+  getApiLimitsConfig,
+  normalizeApiLimitKeyPart,
+  updateApiBudgetProviderConfig,
+  updateApiLimitProviderConfig,
+} from '../config/apiLimits';
 import { getFeatureFlagSeeds } from '../config/featureFlags';
 import { getApiUsageSummary } from '../apis/usageLimiter';
 import { getApiBudgetSummary } from '../apis/providerBudgeting';
@@ -385,6 +391,11 @@ router.get('/api-limits', async (_req, res) => {
     const config = getApiLimitsConfig();
     const [usage, budgets] = await Promise.all([getApiUsageSummary(), getApiBudgetSummary()]);
     const providers = Object.entries(config.providers).map(([provider, providerConfig]) => ({
+      budgetingModels: Object.entries(getApiBudgetProviderConfig(provider)?.models ?? {}).map(([model, pricing]) => ({
+        model,
+        inputCostPer1MTokensUsd: pricing.inputCostPer1MTokensUsd,
+        outputCostPer1MTokensUsd: pricing.outputCostPer1MTokensUsd,
+      })),
       provider,
       window: providerConfig.window ?? 'day',
       windowHours: providerConfig.windowHours ?? 1,
@@ -411,7 +422,7 @@ router.get('/api-limits', async (_req, res) => {
 
 router.patch('/api-limits/:provider', async (req, res) => {
   const { provider } = req.params;
-  const { window, windowHours, overallLimit, callers, reason } = req.body ?? {};
+  const { window, windowHours, overallLimit, callers, monthlyBudgetUsd, alertThresholdPercent, budgetingModels, reason } = req.body ?? {};
   const reasonStr = requireReason(reason);
   if (!reasonStr) {
     res.status(400).json({ error: 'reason (min 3 chars) is required' });
@@ -431,6 +442,29 @@ router.patch('/api-limits/:provider', async (req, res) => {
   }
   if (typeof callers !== 'object' || callers === null || Array.isArray(callers)) {
     res.status(400).json({ error: 'callers must be an object of positive numeric limits' });
+    return;
+  }
+  if (
+    monthlyBudgetUsd !== null &&
+    typeof monthlyBudgetUsd !== 'undefined' &&
+    (!Number.isFinite(Number(monthlyBudgetUsd)) || Number(monthlyBudgetUsd) <= 0)
+  ) {
+    res.status(400).json({ error: 'monthlyBudgetUsd must be null or a positive number' });
+    return;
+  }
+  if (
+    alertThresholdPercent !== null &&
+    typeof alertThresholdPercent !== 'undefined' &&
+    (!Number.isFinite(Number(alertThresholdPercent)) || Number(alertThresholdPercent) <= 0 || Number(alertThresholdPercent) > 100)
+  ) {
+    res.status(400).json({ error: 'alertThresholdPercent must be null or a number between 0 and 100' });
+    return;
+  }
+  if (
+    typeof budgetingModels !== 'undefined' &&
+    (typeof budgetingModels !== 'object' || budgetingModels === null || Array.isArray(budgetingModels))
+  ) {
+    res.status(400).json({ error: 'budgetingModels must be an object keyed by model name' });
     return;
   }
 
@@ -460,6 +494,43 @@ router.patch('/api-limits/:provider', async (req, res) => {
       res.status(400).json({ error: 'All caller limits must be positive numbers' });
       return;
     }
+    const currentBudgeting = getApiBudgetProviderConfig(normalizedProvider);
+    const normalizedBudgetingModels = Object.fromEntries(
+      Object.entries((budgetingModels as Record<string, any> | undefined) ?? {}).map(([modelKey, rawPricing]) => [
+        normalizeApiLimitKeyPart(modelKey),
+        {
+          inputCostPer1MTokensUsd: Number(rawPricing?.inputCostPer1MTokensUsd),
+          outputCostPer1MTokensUsd: Number(rawPricing?.outputCostPer1MTokensUsd),
+        },
+      ])
+    );
+    const mergedBudgetingModels = Object.fromEntries(
+      Object.entries(currentBudgeting?.models ?? {}).map(([modelKey, pricing]) => [
+        modelKey,
+        {
+          inputCostPer1MTokensUsd:
+            normalizedBudgetingModels[modelKey]?.inputCostPer1MTokensUsd ?? pricing.inputCostPer1MTokensUsd,
+          outputCostPer1MTokensUsd:
+            normalizedBudgetingModels[modelKey]?.outputCostPer1MTokensUsd ?? pricing.outputCostPer1MTokensUsd,
+        },
+      ])
+    );
+    for (const [modelKey, pricing] of Object.entries(normalizedBudgetingModels)) {
+      if (!(modelKey in mergedBudgetingModels)) {
+        mergedBudgetingModels[modelKey] = pricing;
+      }
+    }
+    const invalidBudgetingModel = Object.entries(mergedBudgetingModels).find(
+      ([, pricing]) =>
+        !Number.isFinite(pricing.inputCostPer1MTokensUsd) ||
+        pricing.inputCostPer1MTokensUsd <= 0 ||
+        !Number.isFinite(pricing.outputCostPer1MTokensUsd) ||
+        pricing.outputCostPer1MTokensUsd <= 0
+    );
+    if (invalidBudgetingModel) {
+      res.status(400).json({ error: `All model pricing values must be positive numbers (${invalidBudgetingModel[0]})` });
+      return;
+    }
 
     const nextProvider = {
       window,
@@ -472,8 +543,24 @@ router.patch('/api-limits/:provider', async (req, res) => {
         ])
       ),
     };
+    const nextBudgeting = {
+      monthlyBudgetUsd:
+        monthlyBudgetUsd === null
+          ? null
+          : typeof monthlyBudgetUsd === 'undefined'
+            ? (currentBudgeting?.monthlyBudgetUsd ?? null)
+            : Number(monthlyBudgetUsd),
+      alertThresholdPercent:
+        alertThresholdPercent === null
+          ? null
+          : typeof alertThresholdPercent === 'undefined'
+            ? (currentBudgeting?.alertThresholdPercent ?? null)
+            : Number(alertThresholdPercent),
+      models: mergedBudgetingModels,
+    };
 
     updateApiLimitProviderConfig(normalizedProvider, nextProvider);
+    updateApiBudgetProviderConfig(normalizedProvider, nextBudgeting);
     await writeAuditLog({
       actorUserId: actorId,
       action: 'API_LIMITS_UPDATED',
@@ -483,6 +570,11 @@ router.patch('/api-limits/:provider', async (req, res) => {
         windowHours: currentProvider.windowHours ?? 1,
         overallLimit: currentProvider.overall ?? null,
         callers: currentProvider.callers,
+        budgeting: {
+          monthlyBudgetUsd: currentBudgeting?.monthlyBudgetUsd ?? null,
+          alertThresholdPercent: currentBudgeting?.alertThresholdPercent ?? null,
+          models: currentBudgeting?.models ?? {},
+        },
       },
       afterState: {
         provider: normalizedProvider,
@@ -490,6 +582,7 @@ router.patch('/api-limits/:provider', async (req, res) => {
         windowHours: nextProvider.windowHours,
         overallLimit: nextProvider.overall,
         callers: nextProvider.callers,
+        budgeting: nextBudgeting,
       },
       reason: reasonStr,
     });
@@ -500,6 +593,9 @@ router.patch('/api-limits/:provider', async (req, res) => {
       windowHours: nextProvider.windowHours,
       overallLimit: nextProvider.overall,
       callers: nextProvider.callers,
+      monthlyBudgetUsd: nextBudgeting.monthlyBudgetUsd,
+      alertThresholdPercent: nextBudgeting.alertThresholdPercent,
+      budgetingModels: nextBudgeting.models,
     });
   } catch (err) {
     logError('[admin] failed to update api limits', err);

@@ -567,6 +567,19 @@ describe('Admin routes', () => {
           openAiProvider.callers.map((caller: any) => [caller.caller, caller.limit])
         );
         callers.ITINERARY_GENERATE_PLAN = 75;
+        const budgetingModels = Object.fromEntries(
+          (openAiProvider.budgetingModels ?? []).map((model: any) => [
+            model.model,
+            {
+              inputCostPer1MTokensUsd: model.inputCostPer1MTokensUsd,
+              outputCostPer1MTokensUsd: model.outputCostPer1MTokensUsd,
+            },
+          ])
+        );
+        budgetingModels.GPT_4O_MINI = {
+          inputCostPer1MTokensUsd: 0.2,
+          outputCostPer1MTokensUsd: 0.8,
+        };
 
         await request(app)
           .patch('/api/admin/api-limits/OPENAI')
@@ -575,6 +588,9 @@ describe('Admin routes', () => {
             window: 'day',
             windowHours: 48,
             overallLimit: 1500,
+            monthlyBudgetUsd: 125,
+            alertThresholdPercent: 85,
+            budgetingModels,
             callers,
             reason: 'Increase OpenAI plan throughput for launch prep',
           })
@@ -584,6 +600,10 @@ describe('Admin routes', () => {
         expect(updatedYaml).toContain('windowHours: 48');
         expect(updatedYaml).toContain('overall: 1500');
         expect(updatedYaml).toContain('ITINERARY_GENERATE_PLAN: 75');
+        expect(updatedYaml).toContain('monthlyBudgetUsd: 125');
+        expect(updatedYaml).toContain('alertThresholdPercent: 85');
+        expect(updatedYaml).toContain('inputCostPer1MTokensUsd: 0.2');
+        expect(updatedYaml).toContain('outputCostPer1MTokensUsd: 0.8');
 
         const auditResult = await listAuditLog({ action: 'API_LIMITS_UPDATED' as any });
         expect(auditResult.entries.length).toBeGreaterThanOrEqual(1);
