@@ -316,6 +316,7 @@ const mapAuthErrorToMessage = (authError: string | null): string | null => {
 // Mutable so it can be consumed once and cleared.
 let _capturedInitialAuthParams: {
   token: string | null;
+  authCode: string | null;
   authError: string | null;
   requirePasswordSetup: boolean;
   isConfirm: boolean;
@@ -326,10 +327,12 @@ let _capturedInitialAuthParams: {
   try {
     const url = new URL(window.location.href);
     const token = url.searchParams.get('token');
+    const authCode = url.searchParams.get('auth_code');
     const authError = url.searchParams.get('auth_error');
-    if (!token && !authError) return null;
+    if (!token && !authCode && !authError) return null;
     return {
       token,
+      authCode,
       authError,
       requirePasswordSetup: url.searchParams.get('require_password_setup') === '1',
       isConfirm: url.pathname.endsWith('/confirm'),
@@ -362,28 +365,32 @@ const extractTokenFromUrl = (rawUrl: string) => {
   try {
     const url = new URL(rawUrl);
     const token = url.searchParams.get('token');
+    const authCode = url.searchParams.get('auth_code');
     const authError = url.searchParams.get('auth_error');
     const requirePasswordSetup = url.searchParams.get('require_password_setup') === '1';
     const isConfirm = url.pathname.endsWith('/confirm');
     const isSecondaryConfirm = url.pathname.endsWith('/confirm-email');
     if (token) {
-      return { token, authError, url, source: 'query' as const, isConfirm, isSecondaryConfirm, requirePasswordSetup };
+      return { token, authCode: null, authError, url, source: 'query' as const, isConfirm, isSecondaryConfirm, requirePasswordSetup };
+    }
+    if (authCode) {
+      return { token: null, authCode, authError, url, source: 'query' as const, isConfirm, isSecondaryConfirm, requirePasswordSetup };
     }
     if (authError) {
-      return { token: null, authError, url, source: 'query' as const, isConfirm, isSecondaryConfirm, requirePasswordSetup };
+      return { token: null, authCode: null, authError, url, source: 'query' as const, isConfirm, isSecondaryConfirm, requirePasswordSetup };
     }
     const hash = url.hash.startsWith('#') ? url.hash.slice(1) : url.hash;
     if (hash) {
       const hashParams = new URLSearchParams(hash);
       const hashToken = hashParams.get('token');
       if (hashToken) {
-        return { token: hashToken, authError: null, url, source: 'hash' as const, isConfirm, isSecondaryConfirm, requirePasswordSetup };
+        return { token: hashToken, authCode: null, authError: null, url, source: 'hash' as const, isConfirm, isSecondaryConfirm, requirePasswordSetup };
       }
     }
   } catch (e) {
     // ignore invalid URLs
   }
-  return { token: null, authError: null, url: null, source: null, isConfirm: false, isSecondaryConfirm: false, requirePasswordSetup: false } as const;
+  return { token: null, authCode: null, authError: null, url: null, source: null, isConfirm: false, isSecondaryConfirm: false, requirePasswordSetup: false } as const;
 };
 
 const decodeTokenClaims = (
@@ -1377,6 +1384,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       _capturedInitialAuthParams = null;
       const source = captured ?? extractTokenFromUrl(window.location.href);
       const token = 'token' in source ? source.token : null;
+      const authCode = 'authCode' in source ? source.authCode : null;
       const authError = 'authError' in source ? source.authError : null;
       const requirePasswordSetup = source.requirePasswordSetup;
       const isConfirm = source.isConfirm;
@@ -1400,6 +1408,32 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           }
           window.history.replaceState({}, '', cleanUrl.toString());
         } catch { /* ignore */ }
+      } else if (authCode) {
+        void (async () => {
+          try {
+            const exchangeRes = await fetch(`${backendUrl}/api/auth/exchange`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ code: authCode }),
+            });
+            const exchangeData = await exchangeRes.json().catch(() => ({}));
+            if (!exchangeRes.ok || !exchangeData?.token) {
+              throw new Error(exchangeData?.error || 'Sign-in could not be completed.');
+            }
+            handleAuthSuccess(String(exchangeData.token), undefined, {
+              requirePasswordSetup: Boolean(exchangeData.requirePasswordSetup),
+            });
+          } catch (error) {
+            setAuthErrorMessage((error as Error).message || 'Sign-in could not be completed.');
+          } finally {
+            try {
+              const cleanUrl = new URL(rawUrl);
+              cleanUrl.searchParams.delete('auth_code');
+              cleanUrl.searchParams.delete('require_password_setup');
+              window.history.replaceState({}, '', cleanUrl.toString());
+            } catch { /* ignore */ }
+          }
+        })();
       } else if (authError) {
         const message = mapAuthErrorToMessage(authError);
         if (message) {

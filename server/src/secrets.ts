@@ -4,6 +4,19 @@ import path from 'path';
 import { isLocalEnv, getEnvValue } from './env';
 
 const secretsFilePath = path.resolve(__dirname, '../../.secrets');
+const PUBLIC_ENV_PREFIXES = ['EXPO_PUBLIC_', 'REACT_APP_', 'VITE_', 'NEXT_PUBLIC_'] as const;
+const BACKEND_ONLY_SECRET_KEYS = [
+  'AUTH_SECRET',
+  'GOOGLE_CLIENT_SECRET',
+  'OPENAI_API_KEY',
+  'OPEN_API_KEY',
+  'SMTP_PASS',
+  'MAILGUN_WEBHOOK_SIGNING_KEY',
+  'MAILGUN_HTTP_WEBHOOK_SIGNING_KEY',
+  'INGESTION_WORKER_SHARED_SECRET',
+  'INGESTION_ENCRYPTION_SECRET',
+  'FIREBASE_PRIVATE_KEY',
+] as const;
 
 async function getSecretFromLocalFile(secretName: string): Promise<string | undefined> {
   if (!fs.existsSync(secretsFilePath)) {
@@ -66,3 +79,24 @@ export async function getSecret(secretName: string): Promise<string | undefined>
 export async function getOpenApiKey(): Promise<string | undefined> {
   return getSecret('OPEN_API_KEY');
 }
+
+export const findPubliclyExposedServerSecretEnvVars = (): string[] => {
+  const exposed: string[] = [];
+  for (const prefix of PUBLIC_ENV_PREFIXES) {
+    for (const key of BACKEND_ONLY_SECRET_KEYS) {
+      const envKey = `${prefix}${key}`;
+      if (String(process.env[envKey] ?? '').trim()) {
+        exposed.push(envKey);
+      }
+    }
+  }
+  return exposed;
+};
+
+export const assertNoPubliclyExposedServerSecrets = (): void => {
+  const exposed = findPubliclyExposedServerSecretEnvVars();
+  if (!exposed.length) {
+    return;
+  }
+  throw new Error(`Backend-only secrets must not use public env prefixes: ${exposed.join(', ')}`);
+};

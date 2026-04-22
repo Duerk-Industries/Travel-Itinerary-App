@@ -1,4 +1,18 @@
+import { randomBytes } from 'crypto';
 import { getEnvValue, isLocalEnv } from './env';
+
+type RedirectTokenExchangePayload = {
+  token: string;
+  requirePasswordSetup: boolean;
+};
+
+type RedirectTokenExchangeRecord = RedirectTokenExchangePayload & {
+  expiresAt: number;
+};
+
+const REDIRECT_EXCHANGE_CODE_BYTES = 24;
+const REDIRECT_EXCHANGE_TTL_MS = 2 * 60 * 1000;
+const redirectTokenExchangeStore = new Map<string, RedirectTokenExchangeRecord>();
 
 const isHttpProtocol = (protocol: string): boolean => protocol === 'http:' || protocol === 'https:';
 
@@ -113,14 +127,43 @@ export const resolveAndValidateRedirectUri = (
   return { redirectUri: normalized };
 };
 
-export const appendTokenToRedirect = (redirectUri: string, token: string): string => {
-  const url = new URL(redirectUri);
-  if (isHttpProtocol(url.protocol)) {
-    const hashParams = new URLSearchParams(url.hash.startsWith('#') ? url.hash.slice(1) : url.hash);
-    hashParams.set('token', token);
-    url.hash = hashParams.toString();
-    return url.toString();
+const pruneExpiredRedirectTokenExchanges = (): void => {
+  const now = Date.now();
+  for (const [code, record] of redirectTokenExchangeStore.entries()) {
+    if (record.expiresAt <= now) {
+      redirectTokenExchangeStore.delete(code);
+    }
   }
-  url.searchParams.set('token', token);
+};
+
+export const createRedirectTokenExchangeCode = (payload: RedirectTokenExchangePayload): string => {
+  pruneExpiredRedirectTokenExchanges();
+  const code = randomBytes(REDIRECT_EXCHANGE_CODE_BYTES).toString('base64url');
+  redirectTokenExchangeStore.set(code, {
+    ...payload,
+    expiresAt: Date.now() + REDIRECT_EXCHANGE_TTL_MS,
+  });
+  return code;
+};
+
+export const consumeRedirectTokenExchangeCode = (code: string): RedirectTokenExchangePayload | null => {
+  pruneExpiredRedirectTokenExchanges();
+  const record = redirectTokenExchangeStore.get(code);
+  if (!record) {
+    return null;
+  }
+  redirectTokenExchangeStore.delete(code);
+  if (record.expiresAt <= Date.now()) {
+    return null;
+  }
+  return {
+    token: record.token,
+    requirePasswordSetup: record.requirePasswordSetup,
+  };
+};
+
+export const appendAuthCodeToRedirect = (redirectUri: string, code: string): string => {
+  const url = new URL(redirectUri);
+  url.searchParams.set('auth_code', code);
   return url.toString();
 };

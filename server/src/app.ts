@@ -169,10 +169,18 @@ import { assertSafeAuthSecretConfig } from './authConfig';
 import { ensureCurrentUserTier, ensureDefaultGroupForUser, ensureWebPasswordAccountForOAuth, getUserRole } from './db';
 import { ensureAdminBootstrap, getSeededTierForEmail } from './services/entitlementService';
 import { requireAdmin } from './middleware/requireAdmin';
-import { appendTokenToRedirect, isRedirectUriAllowed, resolveAndValidateRedirectUri } from './redirects';
+import {
+  appendAuthCodeToRedirect,
+  consumeRedirectTokenExchangeCode,
+  createRedirectTokenExchangeCode,
+  isRedirectUriAllowed,
+  resolveAndValidateRedirectUri,
+} from './redirects';
 import { logError } from './logger';
+import { assertNoPubliclyExposedServerSecrets } from './secrets';
 
 assertSafeAuthSecretConfig();
+assertNoPubliclyExposedServerSecrets();
 
 initPassport();
 app.use(passport.initialize());
@@ -204,6 +212,20 @@ app.get('/api/auth/google', (req, res, next) => {
   const state = redirectUri ? createOAuthState({ redirectUri }) : undefined;
   const handler = passport.authenticate('google', { scope: ['profile', 'email'], state });
   handler(req, res, next);
+});
+
+app.post('/api/auth/exchange', express.json(), (req, res) => {
+  const code = String(req.body?.code ?? '').trim();
+  if (!code) {
+    res.status(400).json({ error: 'code is required' });
+    return;
+  }
+  const exchanged = consumeRedirectTokenExchangeCode(code);
+  if (!exchanged) {
+    res.status(400).json({ error: 'Invalid or expired auth exchange code.' });
+    return;
+  }
+  res.json(exchanged);
 });
 
 app.get(
@@ -256,15 +278,16 @@ app.get(
         if (redirectUri && !isRedirectUriAllowed(redirectUri, webUrl)) {
           redirectUri = undefined;
         }
+        const authCode = createRedirectTokenExchangeCode({
+          token,
+          requirePasswordSetup: requiresPasswordSetup,
+        });
         if (redirectUri) {
-          const next = new URL(appendTokenToRedirect(redirectUri, token));
-          if (requiresPasswordSetup) {
-            next.searchParams.set('require_password_setup', '1');
-          }
+          const next = new URL(appendAuthCodeToRedirect(redirectUri, authCode));
           res.redirect(next.toString());
           return;
         }
-        res.redirect(`/login#token=${encodeURIComponent(token)}${requiresPasswordSetup ? '&require_password_setup=1' : ''}`);
+        res.redirect(`/login?auth_code=${encodeURIComponent(authCode)}`);
       } catch (callbackErr: any) {
         logError('[auth] Google OAuth post-login setup failed', {
           name: callbackErr?.name,

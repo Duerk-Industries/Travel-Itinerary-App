@@ -1,9 +1,17 @@
 import { getEnvValue, isLocalEnv } from './env';
 
 export const DEFAULT_AUTH_SECRET = 'development-secret';
+export const DEFAULT_AUTH_ISSUER = 'travel-itinerary-app';
+export const DEFAULT_AUTH_AUDIENCE = 'travel-itinerary-app-clients';
 
 export const getAuthSecret = (): string =>
   getEnvValue('AUTH_SECRET', { defaultValue: DEFAULT_AUTH_SECRET })!;
+
+export const getAuthIssuer = (): string =>
+  getEnvValue('AUTH_ISSUER', { defaultValue: DEFAULT_AUTH_ISSUER })!;
+
+export const getAuthAudience = (): string =>
+  getEnvValue('AUTH_AUDIENCE', { defaultValue: DEFAULT_AUTH_AUDIENCE })!;
 
 export const isUnsafeAuthSecret = (value: string | undefined | null): boolean => {
   const normalized = String(value ?? '').trim();

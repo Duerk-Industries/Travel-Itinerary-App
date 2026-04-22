@@ -8,7 +8,7 @@ import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import crypto from 'crypto';
 import { getSeededTierForEmail } from './services/entitlementService';
 import { getEnvValue } from './env';
-import { getAuthSecret } from './authConfig';
+import { getAuthAudience, getAuthIssuer, getAuthSecret } from './authConfig';
 
 export const initPassport = () => {
     const googleClientId = getEnvValue('GOOGLE_CLIENT_ID');
@@ -44,15 +44,26 @@ export interface TokenPayload {
 }
 
 export const createToken = (payload: TokenPayload): string => {
-  return jwt.sign(payload, getAuthSecret(), { expiresIn: '7d' });
+  return jwt.sign(payload, getAuthSecret(), {
+    expiresIn: '7d',
+    issuer: getAuthIssuer(),
+    audience: getAuthAudience(),
+  });
 };
 
 export const verifyToken = (token: string): TokenPayload => {
-  return jwt.verify(token, getAuthSecret()) as TokenPayload;
+  return jwt.verify(token, getAuthSecret(), {
+    issuer: getAuthIssuer(),
+    audience: getAuthAudience(),
+  }) as TokenPayload;
 };
 
 export const createWebUserToken = (payload: { userId: string; username: string }): string => {
-  return jwt.sign(payload, getAuthSecret(), { expiresIn: '7d' });
+  return jwt.sign(payload, getAuthSecret(), {
+    expiresIn: '7d',
+    issuer: getAuthIssuer(),
+    audience: getAuthAudience(),
+  });
 };
 
 type OAuthStatePayload = {
@@ -99,7 +110,7 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
   }
   const [, token] = authHeader.split(' ');
   try {
-    const decoded = jwt.verify(token, getAuthSecret()) as TokenPayload;
+    const decoded = verifyToken(token);
     const mustSetupPassword = await isPasswordSetupRequired(decoded.userId);
     if (mustSetupPassword && !isPasswordSetupAllowlistedRequest(req)) {
       res.status(403).json({ error: 'Password setup required before accessing this endpoint.' });

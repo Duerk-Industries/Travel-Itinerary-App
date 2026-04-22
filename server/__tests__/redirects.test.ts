@@ -1,4 +1,9 @@
-import { appendTokenToRedirect, resolveAndValidateRedirectUri } from '../src/redirects';
+import {
+  appendAuthCodeToRedirect,
+  consumeRedirectTokenExchangeCode,
+  createRedirectTokenExchangeCode,
+  resolveAndValidateRedirectUri,
+} from '../src/redirects';
 
 describe('resolveAndValidateRedirectUri', () => {
   const originalAllowlist = process.env.AUTH_REDIRECT_URI_ALLOWLIST;
@@ -62,14 +67,22 @@ describe('resolveAndValidateRedirectUri', () => {
   });
 });
 
-describe('appendTokenToRedirect', () => {
-  it('stores tokens in the URL hash for web redirects', () => {
-    const next = appendTokenToRedirect('https://duerk.org/login?foo=bar', 'abc123');
-    expect(next).toBe('https://duerk.org/login?foo=bar#token=abc123');
+describe('redirect auth exchange', () => {
+  it('stores a short-lived auth code in the redirect URL instead of a token', () => {
+    const next = appendAuthCodeToRedirect('https://duerk.org/login?foo=bar', 'abc123');
+    expect(next).toBe('https://duerk.org/login?foo=bar&auth_code=abc123');
   });
 
-  it('preserves native-scheme redirects with query tokens', () => {
-    const next = appendTokenToRedirect('travel-itinerary://login', 'abc123');
-    expect(next).toBe('travel-itinerary://login?token=abc123');
+  it('supports one-time auth code exchange', () => {
+    const code = createRedirectTokenExchangeCode({
+      token: 'signed-jwt',
+      requirePasswordSetup: true,
+    });
+
+    expect(consumeRedirectTokenExchangeCode(code)).toEqual({
+      token: 'signed-jwt',
+      requirePasswordSetup: true,
+    });
+    expect(consumeRedirectTokenExchangeCode(code)).toBeNull();
   });
 });

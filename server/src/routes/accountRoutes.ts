@@ -51,6 +51,11 @@ const router = Router();
 router.use(bodyParser.json());
 router.use(authenticate);
 
+const ensureUserInGroup = async (groupId: string, userId: string): Promise<boolean> => {
+  const groups = await listGroupsForUser(userId);
+  return groups.some((group: any) => String(group.id) === String(groupId));
+};
+
 router.get('/', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const profile = await getWebUserProfile(userId);
@@ -605,6 +610,10 @@ groupsRouter.post('/', async (req, res) => {
 
 groupsRouter.post('/:id/members', async (req, res) => {
   const user = (req as any).user as TokenPayload & { userId: string; email: string };
+  if (!(await ensureUserInGroup(req.params.id, user.userId))) {
+    res.status(403).json({ error: 'Not authorized to add members to this group' });
+    return;
+  }
   const { email, guestName, firstName, lastName } = req.body as { email?: string; guestName?: string; firstName?: string; lastName?: string };
   const given = typeof firstName === 'string' ? firstName.trim() : '';
   const family = typeof lastName === 'string' ? lastName.trim() : '';
@@ -638,6 +647,10 @@ groupsRouter.post('/:id/members', async (req, res) => {
 
 groupsRouter.delete('/:groupId/members/:memberId', async (req, res) => {
   const user = (req as any).user as { userId: string };
+  if (!(await ensureUserInGroup(req.params.groupId, user.userId))) {
+    res.status(403).json({ error: 'Not authorized to remove members from this group' });
+    return;
+  }
   try {
     await removeGroupMember(user.userId, req.params.groupId, req.params.memberId);
     res.status(204).send();
@@ -653,6 +666,10 @@ groupsRouter.delete('/:groupId/members/:memberId', async (req, res) => {
 
 groupsRouter.get('/:id/members', async (req, res) => {
   const user = (req as any).user as { userId: string };
+  if (!(await ensureUserInGroup(req.params.id, user.userId))) {
+    res.status(403).json({ error: 'Not authorized to view members for this group' });
+    return;
+  }
   try {
     const members = await listGroupMembers(req.params.id, user.userId);
     res.json(members);
@@ -678,6 +695,10 @@ groupsRouter.delete('/invites/:id', async (req, res) => {
 
 groupsRouter.delete('/:id', async (req, res) => {
   const user = (req as any).user as { userId: string };
+  if (!(await ensureUserInGroup(req.params.id, user.userId))) {
+    res.status(403).json({ error: 'Not authorized to delete this group' });
+    return;
+  }
   try {
     await deleteGroup(user.userId, req.params.id);
     res.status(204).send();
