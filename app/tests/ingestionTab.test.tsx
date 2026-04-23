@@ -25,6 +25,10 @@ jest.mock('react-native', () => {
     Modal: 'Modal',
     SafeAreaView: 'SafeAreaView',
     ActivityIndicator: 'ActivityIndicator',
+    AppState: {
+      currentState: 'active',
+      addEventListener: () => ({ remove: () => {} }),
+    },
     StyleSheet: {
       create: <T extends Record<string, unknown>>(styles: T) => styles,
       flatten: (style: unknown) => style,
@@ -105,7 +109,11 @@ describe('IngestionTab', () => {
         })
       )
       .mockImplementationOnce(() => createJsonResponse({ trips: [] }))
-      .mockImplementationOnce(() => createJsonResponse(initialConfig))
+      .mockImplementationOnce(() =>
+        createJsonResponse({
+          jobs: [{ id: 'job-1', state: 'COMPLETED', originalFilename: 'Boston to Los Angeles.pdf', createdAt: '2026-03-18T00:00:00.000Z' }],
+        })
+      )
       .mockImplementationOnce(() =>
         createJsonResponse({
           items: [
@@ -123,13 +131,7 @@ describe('IngestionTab', () => {
             },
           ],
         })
-      )
-      .mockImplementationOnce(() =>
-        createJsonResponse({
-          jobs: [{ id: 'job-1', state: 'COMPLETED', originalFilename: 'Boston to Los Angeles.pdf', createdAt: '2026-03-18T00:00:00.000Z' }],
-        })
-      )
-      .mockImplementationOnce(() => createJsonResponse({ trips: [] }));
+      );
 
     const { findByText, queryByText } = render(
       <IngestionTab backendUrl={backendUrl} headers={headers} styles={styles} onNavigate={jest.fn()} />
@@ -146,7 +148,13 @@ describe('IngestionTab', () => {
     });
     expect(await findByText(/COMPLETED/)).toBeTruthy();
     expect(await findByText('flight • American Airlines')).toBeTruthy();
-    expect(fetchMock).toHaveBeenCalledTimes(8);
+    expect(fetchMock).toHaveBeenCalledTimes(6);
+
+    const polledUrls = fetchMock.mock.calls.slice(4).map((call) => String(call[0]));
+    expect(polledUrls).toEqual([
+      `${backendUrl}/api/ingestion/jobs`,
+      `${backendUrl}/api/ingestion/review-items`,
+    ]);
   });
 
   it('invokes the assignment refresh hook after assigning a hotel review item', async () => {

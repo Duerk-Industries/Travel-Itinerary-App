@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Linking, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { usePolling } from '../hooks/usePolling';
 
 type ReviewItem = {
   id: string;
@@ -168,15 +169,42 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
     void load();
   }, []);
 
-  useEffect(() => {
-    if (!jobs.some((job) => ACTIVE_JOB_STATES.has(job.state))) {
-      return;
+  const jobsRef = useRef<ImportJob[]>(jobs);
+  jobsRef.current = jobs;
+
+  const hasActiveJobs = jobs.some((job) => ACTIVE_JOB_STATES.has(job.state));
+
+  const pollJobs = useCallback(async () => {
+    const jobsRes = await fetch(`${backendUrl}/api/ingestion/jobs`, { headers });
+    if (!jobsRes.ok) return { done: false };
+    const jobsData = await jobsRes.json().catch(() => ({}));
+    const nextJobs: ImportJob[] = (jobsData as any).jobs ?? [];
+
+    const prevJobs = jobsRef.current;
+    const anyTransitionedOut = prevJobs.some((prev) => {
+      const next = nextJobs.find((j) => j.id === prev.id);
+      return ACTIVE_JOB_STATES.has(prev.state) && (!next || !ACTIVE_JOB_STATES.has(next.state));
+    });
+
+    setJobs(nextJobs);
+
+    if (anyTransitionedOut) {
+      const itemsRes = await fetch(`${backendUrl}/api/ingestion/review-items`, { headers });
+      if (itemsRes.ok) {
+        const itemsData = await itemsRes.json().catch(() => ({}));
+        setItems((itemsData as any).items ?? []);
+      }
     }
-    const intervalId = setInterval(() => {
-      void load();
-    }, 3000);
-    return () => clearInterval(intervalId);
-  }, [jobs]);
+
+    return { done: !nextJobs.some((job) => ACTIVE_JOB_STATES.has(job.state)) };
+  }, [backendUrl, headers]);
+
+  usePolling({
+    enabled: hasActiveJobs,
+    intervalMs: 3000,
+    poll: pollJobs,
+    immediate: false,
+  });
 
   const filteredItems = useMemo(() => {
     const minConf = confidenceFilter ? Number(confidenceFilter) : null;

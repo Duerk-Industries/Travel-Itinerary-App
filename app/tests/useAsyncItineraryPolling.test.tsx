@@ -4,6 +4,18 @@
 
 import React, { useState } from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react-native';
+
+jest.mock('react-native', () => ({
+  Platform: { OS: 'ios' },
+  AppState: {
+    currentState: 'active',
+    addEventListener: () => ({ remove: () => {} }),
+  },
+  StyleSheet: { create: (s: unknown) => s, flatten: (s: unknown) => s },
+  useWindowDimensions: () => ({ width: 800, height: 600 }),
+  useColorScheme: () => 'light',
+}));
+
 import { AsyncItineraryTracker, useAsyncItineraryPolling } from '../hooks/useAsyncItineraryPolling';
 
 type HarnessProps = {

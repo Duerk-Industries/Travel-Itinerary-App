@@ -205,7 +205,7 @@ Turn `app/App.tsx` into top-level composition only and standardize data-fetching
 
 ## Priority 5: Polling, Request Dedupe, And Async Flow Cleanup
 
-Status: `Partial`
+Status: `Substantial`
 
 ### Goal
 Reduce unnecessary polling and eliminate duplicate concurrent requests.
