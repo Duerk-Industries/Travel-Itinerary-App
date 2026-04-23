@@ -86,20 +86,21 @@ const HomeTab: React.FC<HomeTabProps> = ({
     return active ? [active, ...noStart, ...withStart] : [...noStart, ...withStart];
   }, [trips, activeTripId]);
 
+  const heroFetchKey = activeTrip
+    ? `${activeTrip.id}:${activeTrip.destination ?? ''}:${activeTrip.name ?? ''}`
+    : null;
+
   useEffect(() => {
     let isMounted = true;
     const loadHero = async () => {
-      if (!activeTrip) {
+      if (!heroFetchKey || !activeTrip) {
         if (isMounted) {
           setHeroImage(null);
           setHeroLoading(false);
         }
         return;
       }
-      if (isMounted) {
-        setHeroImage(null);
-        setHeroLoading(true);
-      }
+      if (isMounted) setHeroLoading(true);
       const location = activeTrip.destination || activeTrip.name || 'travel';
       try {
         const res = await fetch(
@@ -107,22 +108,27 @@ const HomeTab: React.FC<HomeTabProps> = ({
           { headers }
         );
         if (!res.ok) {
-          if (isMounted) setHeroImage(null);
+          if (isMounted) setHeroLoading(false);
           return;
         }
         const data = await res.json();
-        if (isMounted) setHeroImage(data?.url ?? null);
+        if (isMounted) {
+          setHeroImage(data?.url ?? null);
+          setHeroLoading(false);
+        }
       } catch {
-        if (isMounted) setHeroImage(null);
-      } finally {
-        if (isMounted) setHeroLoading(false);
+        if (isMounted) {
+          setHeroImage(null);
+          setHeroLoading(false);
+        }
       }
     };
     loadHero();
     return () => {
       isMounted = false;
     };
-  }, [activeTrip, backendUrl, headers]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [heroFetchKey, backendUrl]);
 
   const heroSubtitle = formatTripDuration(activeTrip);
   const heroTitle = activeTrip?.destination || activeTrip?.name || 'Select a trip';
