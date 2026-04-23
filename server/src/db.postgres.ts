@@ -8884,3 +8884,92 @@ export const countUnreadMessages = async (
   );
   return parseInt(rows[0]?.count ?? '0', 10);
 };
+
+// ---------------------------------------------------------------------------
+// User-authored item aggregation (for account data export)
+// ---------------------------------------------------------------------------
+
+/**
+ * Return every row whose `user_id` column equals the exporting user. This is
+ * the read-side companion to the user-deletion cascade: if deletion removes
+ * a row based on user_id, export surfaces it. Trip membership-scoped reads
+ * (visible-to-user) live in their own list functions elsewhere — this one
+ * answers "what did *this user* author".
+ */
+export const listUserAuthoredItems = async (
+  userId: string,
+): Promise<{
+  flights: any[];
+  lodgings: any[];
+  tours: any[];
+  carRentals: any[];
+  expenses: any[];
+  tripMessages: any[];
+}> => {
+  const p = getPool();
+  const [flights, lodgings, tours, carRentals, expenses, tripMessages] = await Promise.all([
+    p.query(
+      `SELECT id, user_id as "userId", trip_id as "tripId", status, transfer_type as "transferType",
+              passenger_name as "passengerName", departure_date as "departureDate",
+              arrival_date as "arrivalDate", departure_time as "departureTime",
+              arrival_time as "arrivalTime", carrier, flight_number as "flightNumber",
+              booking_reference as "bookingReference", cost
+       FROM flights
+       WHERE user_id = $1
+       ORDER BY departure_date ASC NULLS LAST`,
+      [userId],
+    ),
+    p.query(
+      `SELECT id, user_id as "userId", trip_id as "tripId", status, name,
+              check_in_date as "checkInDate", check_out_date as "checkOutDate",
+              rooms, total_cost as "totalCost", address, created_at as "createdAt"
+       FROM lodgings
+       WHERE user_id = $1
+       ORDER BY check_in_date ASC NULLS LAST`,
+      [userId],
+    ),
+    p.query(
+      `SELECT id, user_id as "userId", trip_id as "tripId", status, name, cost,
+              date as "date", start_time as "startTime", duration,
+              created_at as "createdAt"
+       FROM tours
+       WHERE user_id = $1
+       ORDER BY date ASC NULLS LAST`,
+      [userId],
+    ),
+    p.query(
+      `SELECT id, user_id as "userId", trip_id as "tripId", status, vendor, model, cost,
+              pickup_date as "pickupDate", dropoff_date as "dropoffDate",
+              pickup_location as "pickupLocation", dropoff_location as "dropoffLocation",
+              created_at as "createdAt"
+       FROM car_rentals
+       WHERE user_id = $1
+       ORDER BY pickup_date ASC NULLS LAST`,
+      [userId],
+    ),
+    p.query(
+      `SELECT id, user_id as "userId", trip_id as "tripId", group_id as "groupId",
+              category, amount, currency, notes,
+              expense_date as "expenseDate", created_at as "createdAt"
+       FROM expenses
+       WHERE user_id = $1
+       ORDER BY expense_date ASC NULLS LAST`,
+      [userId],
+    ),
+    p.query(
+      `SELECT id, trip_id as "tripId", body, created_at as "createdAt"
+       FROM trip_messages
+       WHERE sender_id = $1
+       ORDER BY created_at ASC`,
+      [userId],
+    ),
+  ]);
+  return {
+    flights: flights.rows,
+    lodgings: lodgings.rows,
+    tours: tours.rows,
+    carRentals: carRentals.rows,
+    expenses: expenses.rows,
+    tripMessages: tripMessages.rows,
+  };
+};

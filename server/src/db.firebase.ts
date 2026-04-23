@@ -6055,4 +6055,35 @@ export const countUnreadMessages = async (
   }
   return count;
 };
+
+/**
+ * Firestore companion to the Postgres export aggregator. Same contract: return
+ * every user-authored row across the item collections. Runs queries in
+ * parallel; returns plain objects safe for JSON serialization.
+ */
+export const listUserAuthoredItems = async (
+  userId: string,
+): Promise<{
+  flights: any[];
+  lodgings: any[];
+  tours: any[];
+  carRentals: any[];
+  expenses: any[];
+  tripMessages: any[];
+}> => {
+  const db = getDb();
+  const fetchCollection = async (name: string, field: string) => {
+    const snap = await db.collection(name).where(field, '==', userId).get();
+    return snap.docs.map((d: any) => ({ id: d.id, ...(d.data() as any) }));
+  };
+  const [flights, lodgings, tours, carRentals, expenses, tripMessages] = await Promise.all([
+    fetchCollection('flights', 'userId'),
+    fetchCollection('lodgings', 'userId'),
+    fetchCollection('tours', 'userId'),
+    fetchCollection('car_rentals', 'userId'),
+    fetchCollection('expenses', 'userId'),
+    fetchCollection('trip_messages', 'senderId'),
+  ]);
+  return { flights, lodgings, tours, carRentals, expenses, tripMessages };
+};
 import { searchBundledAirportDataset } from './services/airportCatalog';

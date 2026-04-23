@@ -520,7 +520,7 @@ Improve usability for keyboard, screen reader, and lower-friction navigation sce
 
 ## Priority 15: Data Privacy, Retention, Export, And Deletion Capabilities
 
-Status: `Partial` (`DELETE /api/account` endpoint cascades ingestion data, owned groups/trips, memberships, invites, flights/lodgings/tours/expenses, traits, family relationships; integration-tested in `accountDelete.test.ts`. Export capability and background retention jobs still outstanding.)
+Status: `Substantial` (`DELETE /api/account` cascades ingestion data, owned groups/trips, memberships, invites, flights/lodgings/tours/expenses, traits, family relationships — integration-tested in `accountDelete.test.ts`. Companion `GET /api/account/export` now delivers the user's data as a JSON bundle with `schemaVersion`/`exportedAt`, profile + emails, traits, family relationships, fellow travelers, groups, trips, and a new `authoredItems` section (flights/lodgings/tours/carRentals/expenses/tripMessages filtered by `user_id = requester`) via a new `listUserAuthoredItems` adapter function implemented on both Postgres and Firebase. `buildUserDataExport` service composes these with soft-fail per collection so a single failing source never breaks the download. Integration tests in `accountExport.test.ts` cover: unauthenticated → 401, empty-account defaults, populated export includes seeded lodging/flight/traits/trip, ownership filter excludes other users' rows. Still outstanding: background retention jobs, Gmail/imported-source deletion automation, scheduled per-row retention windows.)
 
 ### Goal
 Treat user data lifecycle as a product capability, not just a storage concern.

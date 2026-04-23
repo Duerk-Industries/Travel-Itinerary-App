@@ -439,3 +439,5 @@ export const markMessagesRead = async (...args: Parameters<ReturnType<typeof ada
   adapter().markMessagesRead(...args);
 export const countUnreadMessages = async (...args: Parameters<ReturnType<typeof adapter>['countUnreadMessages']>) =>
   adapter().countUnreadMessages(...args);
+export const listUserAuthoredItems = async (...args: Parameters<ReturnType<typeof adapter>['listUserAuthoredItems']>) =>
+  adapter().listUserAuthoredItems(...args);

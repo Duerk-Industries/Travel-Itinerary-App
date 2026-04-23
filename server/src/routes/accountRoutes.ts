@@ -45,6 +45,7 @@ import { assertUnderTravelerLimit } from '../services/entitlementService';
 import { EntitlementError } from '../errors';
 import { TokenPayload } from '../auth';
 import { deleteUserIngestionData } from '../ingestion/shared/repository';
+import { buildUserDataExport } from '../services/userDataExport';
 
 // Account management (profile, password, deletion) for authenticated web users.
 const router = Router();
@@ -64,6 +65,26 @@ router.get('/', async (req, res) => {
     return;
   }
   res.json(profile);
+});
+
+router.get('/export', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const profile = await getWebUserProfile(userId);
+  if (!profile) {
+    res.status(401).json({ error: 'User not found' });
+    return;
+  }
+  try {
+    const exportBody = await buildUserDataExport(userId);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="wanderbunnies-export-${userId}.json"`,
+    );
+    res.json(exportBody);
+  } catch (err) {
+    logError('[account] export failed', err);
+    res.status(500).json({ error: 'Failed to generate export.' });
+  }
 });
 
 router.patch('/profile', async (req, res) => {
