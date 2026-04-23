@@ -38,22 +38,46 @@ const LodgingDialog: React.FC<LodgingDialogProps> = (props) => {
 
   return (
     <Modal transparent visible={props.visible} animationType="fade" onRequestClose={props.onCancel}>
-      <View style={[props.styles.modalOverlay, { justifyContent: 'center' }]} testID={props.testID}>
+      <View
+        style={[props.styles.modalOverlay, { justifyContent: 'center' }]}
+        testID={props.testID}
+        accessible
+        accessibilityRole="none"
+        accessibilityViewIsModal
+        accessibilityLabel={props.title}
+      >
         <View style={[props.styles.modalCard, { marginTop: 0 }, isCompact && { width: '100%', maxHeight: '90%' }]}>
-          <Text style={props.styles.sectionTitle}>{props.title}</Text>
+          <Text style={props.styles.sectionTitle} accessibilityRole="header">
+            {props.title}
+          </Text>
           <ScrollView style={{ maxHeight: isCompact ? 520 : 440 }} contentContainerStyle={{ paddingRight: 12 }}>
             <LodgingForm {...props} isCompact={isCompact} />
           </ScrollView>
           <View style={props.styles.row}>
-            <TouchableOpacity style={[props.styles.button, props.styles.dangerButton]} onPress={props.onCancel}>
+            <TouchableOpacity
+              style={[props.styles.button, props.styles.dangerButton]}
+              onPress={props.onCancel}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel"
+            >
               <Text style={props.styles.dangerButtonText}>Cancel</Text>
             </TouchableOpacity>
             {props.onSaveAndAddAnother ? (
-              <TouchableOpacity style={props.styles.button} onPress={props.onSaveAndAddAnother}>
+              <TouchableOpacity
+                style={props.styles.button}
+                onPress={props.onSaveAndAddAnother}
+                accessibilityRole="button"
+                accessibilityLabel="Save and add another"
+              >
                 <Text style={props.styles.buttonText}>Save &amp; Add Another</Text>
               </TouchableOpacity>
             ) : null}
-            <TouchableOpacity style={props.styles.button} onPress={props.onSave}>
+            <TouchableOpacity
+              style={props.styles.button}
+              onPress={props.onSave}
+              accessibilityRole="button"
+              accessibilityLabel="Save"
+            >
               <Text style={props.styles.buttonText}>Save</Text>
             </TouchableOpacity>
           </View>

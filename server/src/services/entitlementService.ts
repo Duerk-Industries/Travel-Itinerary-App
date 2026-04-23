@@ -10,6 +10,7 @@ import {
 } from '../db';
 import { UserRole, TierKey } from '../types';
 import { logInfo, logError } from '../logger';
+import { incrementMetric } from '../metrics';
 import { getEnvValue } from '../env';
 import { getFeatureFlagSeeds } from '../config/featureFlags';
 import { EntitlementError } from '../errors';
@@ -246,6 +247,7 @@ export const assertCanUseFeature = async (
   // 1. Feature flag — no bypass, even for admins.
   const flagEnabled = await isFeatureEnabled(featureKey);
   if (!flagEnabled) {
+    incrementMetric('feature_access_denied', { featureKey, reason: 'flag_disabled' });
     throw new EntitlementError('FEATURE_DISABLED', `Feature '${featureKey}' is currently disabled`, { featureKey });
   }
 
@@ -279,6 +281,7 @@ export const assertCanUseFeature = async (
   }
 
   if (resolvedAllowance === false) {
+    incrementMetric('feature_access_denied', { featureKey, reason: 'tier_not_entitled' });
     throw new EntitlementError(
       'FEATURE_NOT_ENTITLED',
       `Your current plan does not include access to '${featureKey}'`,

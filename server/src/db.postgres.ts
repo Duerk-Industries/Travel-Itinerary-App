@@ -8197,12 +8197,13 @@ export const reserveGenerationIdempotency = async (params: {
 }): Promise<{ created: boolean; record: Awaited<ReturnType<typeof getGenerationIdempotency>> }> => {
   const p = getPool();
   const ttlSeconds = Math.max(60, params.ttlSeconds ?? 3600);
+  const expiresAt = new Date(Date.now() + ttlSeconds * 1000).toISOString();
   await p.query(
     `INSERT INTO generation_idempotency
        (key, user_id, trip_id, usage_key, window_key, status, expires_at)
-     VALUES ($1, $2, $3, $4, $5, 'pending', NOW() + ($6 || ' seconds')::interval)
+     VALUES ($1, $2, $3, $4, $5, 'pending', $6)
      ON CONFLICT (key) DO NOTHING`,
-    [params.key, params.userId, params.tripId, params.usageKey, params.windowKey, String(ttlSeconds)]
+    [params.key, params.userId, params.tripId, params.usageKey, params.windowKey, expiresAt]
   );
   const record = await getGenerationIdempotency(params.key);
   return { created: Boolean(record && record.userId === params.userId && record.status === 'pending' && record.tripId === params.tripId), record };

@@ -1,5 +1,5 @@
 import { getApiCacheSetting } from '../config/apiLimits';
-import { createInflightDedupe } from '../utils/inflightDedupe';
+import { createTtlCache } from '../utils/ttlCache';
 import { reserveApiUsageOrThrow } from './usageLimiter';
 
 type ExchangeRateResult = {
@@ -7,31 +7,18 @@ type ExchangeRateResult = {
   date: string;
 };
 
-type CacheEntry = {
-  value: ExchangeRateResult;
-  expiresAtMs: number;
-};
-
-const rateCache = new Map<string, CacheEntry>();
-const { dedupe: dedupeRateFetch } = createInflightDedupe();
-
 const getCacheTtlMs = (): number => {
   const minutes = getApiCacheSetting('frankfurter', 'rateCacheTtlMinutes') ?? 60 * 24;
   return Math.max(1, minutes) * 60 * 1000;
 };
 
+const rateCache = createTtlCache<ExchangeRateResult>({
+  defaultTtlMs: getCacheTtlMs(),
+  metricName: 'frankfurter',
+});
+
 const buildKey = (fromCurrency: string, toCurrency: string, date: string): string =>
   `${fromCurrency.toUpperCase()}-${toCurrency.toUpperCase()}-${date}`;
-
-const readFromRateCache = (key: string): ExchangeRateResult | undefined => {
-  const entry = rateCache.get(key);
-  if (!entry) return undefined;
-  if (entry.expiresAtMs <= Date.now()) {
-    rateCache.delete(key);
-    return undefined;
-  }
-  return entry.value;
-};
 
 export const clearFrankfurterRateCache = (): void => {
   rateCache.clear();
@@ -50,30 +37,36 @@ export const fetchFrankfurterExchangeRate = async (params: {
   if (from === to) return { rate: 1, date };
 
   const key = buildKey(from, to, date);
-  const cached = readFromRateCache(key);
-  if (cached) return cached;
+  // Use getOrFetch so concurrent lookups share one network call and cached
+  // hits short-circuit. Errors are NOT cached (retry allowed next call).
+  const result = await rateCache
+    .getOrFetch(
+      key,
+      async () => {
+        await reserveApiUsageOrThrow({ provider: 'FRANKFURTER', caller: params.caller });
 
-  return dedupeRateFetch(key, async () => {
-    const cachedAfterWait = readFromRateCache(key);
-    if (cachedAfterWait) return cachedAfterWait;
+        const url = `https://api.frankfurter.dev/v1/${encodeURIComponent(date)}?base=${encodeURIComponent(from)}&symbols=${encodeURIComponent(to)}`;
+        const res = await fetch(url, {
+          method: 'GET',
+          headers: { Accept: 'application/json' },
+        });
+        if (!res.ok) {
+          // Signal miss-without-caching by throwing; catch below returns null.
+          throw new Error(`frankfurter http ${res.status}`);
+        }
+        const data = (await res.json()) as { rates?: Record<string, number>; date?: string };
+        const rate = Number(data?.rates?.[to]);
+        if (!Number.isFinite(rate) || rate <= 0) {
+          throw new Error('frankfurter invalid rate');
+        }
+        return {
+          rate,
+          date: String(data?.date ?? date),
+        };
+      },
+      getCacheTtlMs()
+    )
+    .catch(() => null);
 
-    await reserveApiUsageOrThrow({ provider: 'FRANKFURTER', caller: params.caller });
-
-    const url = `https://api.frankfurter.dev/v1/${encodeURIComponent(date)}?base=${encodeURIComponent(from)}&symbols=${encodeURIComponent(to)}`;
-    const res = await fetch(url, {
-      method: 'GET',
-      headers: { Accept: 'application/json' },
-    });
-    if (!res.ok) return null;
-    const data = (await res.json()) as { rates?: Record<string, number>; date?: string };
-    const rate = Number(data?.rates?.[to]);
-    if (!Number.isFinite(rate) || rate <= 0) return null;
-
-    const result = {
-      rate,
-      date: String(data?.date ?? date),
-    };
-    rateCache.set(key, { value: result, expiresAtMs: Date.now() + getCacheTtlMs() });
-    return result;
-  });
+  return result;
 };

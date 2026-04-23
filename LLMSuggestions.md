@@ -242,7 +242,7 @@ Reduce unnecessary polling and eliminate duplicate concurrent requests.
 
 ## Priority 6: Caching And Dedupe For Expensive External Calls
 
-Status: `Substantial`
+Status: `Substantial` (new `server/src/utils/ttlCache.ts` `TtlCache.getOrFetch` unifies TTL + in-flight dedupe + cache_hit/miss metric emission; 9 unit tests. Frankfurter exchange-rate API refactored to adopt it (pattern demonstrated end-to-end, pre-existing tests still green). Image service / Unsplash / googlePlaces caches have not yet been migrated to the shared abstraction.)
 
 ### Goal
 Reduce cost and latency for AI, image, and third-party lookup flows.
@@ -460,7 +460,7 @@ Make logs production-appropriate, machine-parseable, and useful for incident res
 
 ## Priority 13: Reliability, Idempotency, And Background Job Safety
 
-Status: `Substantial`
+Status: `Substantial` (`reserveGenerationIdempotency`/`completeGenerationIdempotency`/`failGenerationIdempotency` now implemented in both `db.postgres.ts` and `db.firebase.ts`; Postgres SQL refactored to pg-mem-compatible expires_at param and covered by 4 dedicated unit tests in `postgresIdempotency.test.ts`. Itinerary-generation dedup + usage accounting end-to-end test already exists. Dead-letter behavior and cross-instance retry contention tests still outstanding.)
 
 ### Goal
 Make async workflows safer under retries, duplicates, deploys, and partial failures.
@@ -491,7 +491,7 @@ Make async workflows safer under retries, duplicates, deploys, and partial failu
 
 ## Priority 14: Accessibility, Keyboard Support, And Inclusive UI
 
-Status: `Partial`
+Status: `Partial` (`ConfirmDialog` and `LodgingDialog` now expose `accessibilityRole`/`accessibilityLabel`/`accessibilityViewIsModal` on overlay and actionable buttons, with a component test in `confirmDialogAccessibility.test.tsx` that asserts the contract. Systematic audit of remaining ~30 modals and keyboard navigation Playwright coverage still outstanding.)
 
 ### Goal
 Improve usability for keyboard, screen reader, and lower-friction navigation scenarios.
@@ -552,7 +552,7 @@ Treat user data lifecycle as a product capability, not just a storage concern.
 
 ## Priority 16: Analytics, Product Instrumentation, And Feature Rollout Ability
 
-Status: `Partial`
+Status: `Substantial` (`server/src/metrics.ts` exposes `incrementMetric`/`recordGauge`/`recordTiming`/`timedAsync` helpers emitting structured JSON with request context; wired into itinerary generation success/failure and entitlement denials; 8 unit tests. Feature flags + YAML seed config already existed. Cache-hit/miss metric wiring and dashboard aggregation still outstanding.)
 
 ### Goal
 Improve the team’s ability to measure feature health and roll out risky changes safely.
@@ -611,7 +611,7 @@ Reduce regression risk by improving automated feedback for contributors and agen
 
 ## Priority 18: Mobile Resilience And Offline-Tolerant Behavior
 
-Status: `Partial`
+Status: `Substantial` (new `useConnectionState` hook tracks combined browser `navigator.onLine` + Socket.IO `connect`/`disconnect`/`reconnect_attempt` events; `OfflineBanner` component surfaces degraded states with accessibility labels; 5 unit tests. Retry affordance for failed writes and offline read-only caches still outstanding.)
 
 ### Goal
 Improve the app’s behavior when connectivity is weak or intermittent.
