@@ -8675,22 +8675,113 @@ export const adminGetUserData = async (opts: {
 // Chat / Messaging
 // ---------------------------------------------------------------------------
 
+type TripMessageRow = {
+  id: string;
+  appId: string;
+  tripId: string;
+  senderId: string;
+  senderName: string;
+  senderInitials: string;
+  body: string;
+  createdAt: string;
+};
+
+const attachReadByForTrip = async (
+  tripId: string,
+  messageIds: string[],
+): Promise<Map<string, string[]>> => {
+  const readMap = new Map<string, string[]>();
+  if (messageIds.length === 0) return readMap;
+  const p = getPool();
+  // Scope by trip via subquery; intersect with the page ids in-memory.
+  const { rows: reads } = await p.query<{ messageId: string; userId: string }>(
+    `SELECT message_id AS "messageId", user_id AS "userId"
+     FROM message_reads
+     WHERE message_id IN (
+       SELECT id FROM trip_messages WHERE trip_id = $1
+     )`,
+    [tripId],
+  );
+  const pageIds = new Set(messageIds);
+  for (const read of reads) {
+    if (!pageIds.has(read.messageId)) continue;
+    if (!readMap.has(read.messageId)) readMap.set(read.messageId, []);
+    readMap.get(read.messageId)!.push(read.userId);
+  }
+  return readMap;
+};
+
+/**
+ * Fetch a page of messages for a trip, newest-first via cursor.
+ *
+ * - `beforeId` (optional): returns messages strictly older than the referenced
+ *   message. When omitted, returns the most recent `limit` messages.
+ * - Returned `messages` are in ascending chronological order for rendering.
+ * - `hasMore` indicates whether more messages exist before the oldest returned.
+ */
+export const listTripMessagesPage = async (
+  tripId: string,
+  options: { limit?: number; beforeId?: string } = {},
+): Promise<{ messages: TripChatMessage[]; hasMore: boolean }> => {
+  const p = getPool();
+  const limit = Math.max(1, Math.min(options.limit ?? 50, 200));
+
+  let cursorCreatedAt: string | null = null;
+  let cursorId: string | null = null;
+  if (options.beforeId) {
+    const { rows: cursorRows } = await p.query<{ createdAt: string; id: string }>(
+      `SELECT created_at AS "createdAt", id FROM trip_messages WHERE id = $1 LIMIT 1`,
+      [options.beforeId],
+    );
+    if (cursorRows.length) {
+      cursorCreatedAt = cursorRows[0].createdAt;
+      cursorId = cursorRows[0].id;
+    } else {
+      return { messages: [], hasMore: false };
+    }
+  }
+
+  const params: unknown[] = [tripId];
+  let cursorClause = '';
+  if (cursorCreatedAt && cursorId) {
+    params.push(cursorCreatedAt, cursorId);
+    cursorClause = ` AND (created_at < $${params.length - 1} OR (created_at = $${params.length - 1} AND id < $${params.length}))`;
+  }
+  params.push(limit + 1);
+  const limitIdx = params.length;
+
+  const { rows } = await p.query<TripMessageRow>(
+    `SELECT id,
+            app_id          AS "appId",
+            trip_id         AS "tripId",
+            sender_id       AS "senderId",
+            sender_name     AS "senderName",
+            sender_initials AS "senderInitials",
+            body,
+            created_at      AS "createdAt"
+     FROM trip_messages
+     WHERE trip_id = $1${cursorClause}
+     ORDER BY created_at DESC, id DESC
+     LIMIT $${limitIdx}`,
+    params,
+  );
+
+  const hasMore = rows.length > limit;
+  const page = hasMore ? rows.slice(0, limit) : rows;
+  const ascending = page.slice().reverse();
+
+  const readMap = await attachReadByForTrip(tripId, ascending.map((r) => r.id));
+  const messages = ascending.map((r) => ({ ...r, readBy: readMap.get(r.id) ?? [] }));
+  return { messages, hasMore };
+};
+
 /** Fetch messages for a trip, oldest-first, with their read-by lists. */
 export const listTripMessages = async (
   tripId: string,
   limit = 200,
 ): Promise<TripChatMessage[]> => {
   const p = getPool();
-  const { rows } = await p.query<{
-    id: string;
-    appId: string;
-    tripId: string;
-    senderId: string;
-    senderName: string;
-    senderInitials: string;
-    body: string;
-    createdAt: string;
-  }>(
+  const { rows } = await p.query<TripMessageRow>(
     `SELECT id,
             app_id          AS "appId",
             trip_id         AS "tripId",
@@ -8707,22 +8798,7 @@ export const listTripMessages = async (
   );
 
   if (rows.length === 0) return [];
-
-  // Fetch read receipts for this trip using a sub-select (pg-mem compatible)
-  const { rows: reads } = await p.query<{ messageId: string; userId: string }>(
-    `SELECT message_id AS "messageId", user_id AS "userId"
-     FROM message_reads
-     WHERE message_id IN (
-       SELECT id FROM trip_messages WHERE trip_id = $1
-     )`,
-    [tripId],
-  );
-  const readMap = new Map<string, string[]>();
-  for (const read of reads) {
-    if (!readMap.has(read.messageId)) readMap.set(read.messageId, []);
-    readMap.get(read.messageId)!.push(read.userId);
-  }
-
+  const readMap = await attachReadByForTrip(tripId, rows.map((r) => r.id));
   return rows.map((r) => ({ ...r, readBy: readMap.get(r.id) ?? [] }));
 };
 
@@ -8739,15 +8815,24 @@ export const addTripMessage = async (msg: {
   const text = String(msg.body ?? '').trim();
   if (!text) throw new Error('Message body is required');
   const id = randomUUID();
-  await p.query(
+  const { rows } = await p.query<{ createdAt: string }>(
     `INSERT INTO trip_messages (id, app_id, trip_id, sender_id, sender_name, sender_initials, body)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     RETURNING created_at AS "createdAt"`,
     [id, msg.appId, msg.tripId, msg.senderId, msg.senderName, msg.senderInitials, text],
   );
-  const msgs = await listTripMessages(msg.tripId, 1000);
-  const saved = msgs.find((m) => m.id === id);
-  if (!saved) throw new Error('Failed to retrieve saved message');
-  return saved;
+  const createdAt = rows[0]?.createdAt ?? new Date().toISOString();
+  return {
+    id,
+    appId: msg.appId,
+    tripId: msg.tripId,
+    senderId: msg.senderId,
+    senderName: msg.senderName,
+    senderInitials: msg.senderInitials,
+    body: text,
+    createdAt,
+    readBy: [],
+  };
 };
 
 /** Mark messages in a trip as read by a user up to and including upToMessageId. */

@@ -343,7 +343,7 @@ Make large datasets usable on mobile and improve perceived speed.
 
 ## Priority 9: Chat Scalability And Read-State Correctness
 
-Status: `Partial`
+Status: `Substantial` (cursor-based pagination via new `listTripMessagesPage(tripId, {limit, beforeId})` in both Postgres and Firebase adapters, returning `{ messages, hasMore }` in ascending chronological order; `addTripMessage` no longer re-reads the full message list to return the saved row. Socket handler sends the newest 50 messages on `JOIN_TRIP` and responds to a new `CLIENT_EVENTS.LOAD_OLDER` cursor request with `SERVER_EVENTS.MESSAGE_HISTORY_PAGE`. ChatPanel consumes the paginated stream, shows a "Load older messages" affordance when `hasMore`, and gates `MARK_READ` emissions by a watermark ref so the same message id is never re-reported. Tests cover newest-N default, older-page cursor, exact-remainder `hasMore`, unknown cursor, empty trip, plus ChatPanel empty/load-older/watermark behavior. Remaining: surface a visible unread-separator and migrate `markMessagesRead` to a per-user watermark row instead of per-message receipt writes.)
 
 ### Goal
 Make trip chat behavior scale cleanly as message history grows.

@@ -5916,6 +5916,21 @@ export const countActiveTripsForUser = async (userId: string): Promise<number> =
 // Chat / Messaging
 // ---------------------------------------------------------------------------
 
+const docToChatMessage = (doc: any): TripChatMessage => {
+  const d = doc.data() as any;
+  return {
+    id: doc.id,
+    appId: d.appId ?? 'WanderBunnies',
+    tripId: d.tripId,
+    senderId: d.senderId,
+    senderName: d.senderName ?? '',
+    senderInitials: d.senderInitials ?? '',
+    body: d.body ?? '',
+    createdAt: d.createdAt ?? nowIso(),
+    readBy: d.readBy ?? [],
+  };
+};
+
 export const listTripMessages = async (
   tripId: string,
   limit = 200,
@@ -5927,23 +5942,41 @@ export const listTripMessages = async (
     .orderBy('createdAt', 'asc')
     .limit(limit)
     .get();
+  return snap.docs.map(docToChatMessage);
+};
 
-  const messages: TripChatMessage[] = snap.docs.map((doc) => {
-    const d = doc.data() as any;
-    return {
-      id: doc.id,
-      appId: d.appId ?? 'WanderBunnies',
-      tripId: d.tripId,
-      senderId: d.senderId,
-      senderName: d.senderName ?? '',
-      senderInitials: d.senderInitials ?? '',
-      body: d.body ?? '',
-      createdAt: d.createdAt ?? nowIso(),
-      readBy: d.readBy ?? [],
-    };
-  });
+/**
+ * Fetch a page of messages newest-first via a `beforeId` cursor; returns page
+ * in ascending chronological order with `hasMore` for older-page availability.
+ */
+export const listTripMessagesPage = async (
+  tripId: string,
+  options: { limit?: number; beforeId?: string } = {},
+): Promise<{ messages: TripChatMessage[]; hasMore: boolean }> => {
+  const db = getDb();
+  const limit = Math.max(1, Math.min(options.limit ?? 50, 200));
 
-  return messages;
+  let cursorCreatedAt: string | null = null;
+  if (options.beforeId) {
+    const cursorDoc = await db.collection('trip_messages').doc(options.beforeId).get();
+    if (!cursorDoc.exists) return { messages: [], hasMore: false };
+    cursorCreatedAt = (cursorDoc.data() as any)?.createdAt ?? null;
+    if (!cursorCreatedAt) return { messages: [], hasMore: false };
+  }
+
+  let query = db
+    .collection('trip_messages')
+    .where('tripId', '==', tripId)
+    .orderBy('createdAt', 'desc');
+  if (cursorCreatedAt) {
+    query = query.where('createdAt', '<', cursorCreatedAt);
+  }
+
+  const snap = await query.limit(limit + 1).get();
+  const rows = snap.docs.map(docToChatMessage);
+  const hasMore = rows.length > limit;
+  const page = hasMore ? rows.slice(0, limit) : rows;
+  return { messages: page.slice().reverse(), hasMore };
 };
 
 export const addTripMessage = async (msg: {

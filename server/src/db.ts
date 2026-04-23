@@ -431,6 +431,8 @@ export const adminGetUserData = async (...args: Parameters<ReturnType<typeof ada
 
 export const listTripMessages = async (...args: Parameters<ReturnType<typeof adapter>['listTripMessages']>) =>
   adapter().listTripMessages(...args);
+export const listTripMessagesPage = async (...args: Parameters<ReturnType<typeof adapter>['listTripMessagesPage']>) =>
+  adapter().listTripMessagesPage(...args);
 export const addTripMessage = async (...args: Parameters<ReturnType<typeof adapter>['addTripMessage']>) =>
   adapter().addTripMessage(...args);
 export const markMessagesRead = async (...args: Parameters<ReturnType<typeof adapter>['markMessagesRead']>) =>

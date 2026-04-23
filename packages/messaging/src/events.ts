@@ -17,6 +17,8 @@ export const CLIENT_EVENTS = {
   SEND_MESSAGE: 'chat:send_message',
   /** Client marks all messages up to `messageId` as read */
   MARK_READ: 'chat:mark_read',
+  /** Client requests an older page of history via a cursor message id */
+  LOAD_OLDER: 'chat:load_older',
   /** Client explicitly updates their presence heartbeat */
   HEARTBEAT: 'presence:heartbeat',
 } as const;
@@ -36,6 +38,8 @@ export const SERVER_EVENTS = {
   PRESENCE_UPDATE: 'presence:update',
   /** Sent to a single socket after JOIN_TRIP with message history */
   MESSAGE_HISTORY: 'chat:message_history',
+  /** Response to LOAD_OLDER — paginated older messages with `hasMore` flag */
+  MESSAGE_HISTORY_PAGE: 'chat:message_history_page',
   /** Generic error back to the emitting client */
   ERROR: 'chat:error',
 } as const;

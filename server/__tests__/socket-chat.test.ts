@@ -230,6 +230,96 @@ describe('Trip messages DB + REST', () => {
   });
 
   // -------------------------------------------------------------------------
+  // listTripMessagesPage — cursor-based pagination
+  // -------------------------------------------------------------------------
+  describe('listTripMessagesPage', () => {
+    let pageTripId: string;
+
+    beforeAll(async () => {
+      const groups = await request(app).get('/api/groups').set('Authorization', `Bearer ${token}`).expect(200);
+      const groupId = groups.body[0]?.id as string;
+      const tripRes = await request(app)
+        .post('/api/trips')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ name: `Page Trip ${uniq}`, groupId })
+        .expect(201);
+      pageTripId = tripRes.body.id as string;
+
+      // Seed 5 messages in order. Sleep between inserts so each message has a
+      // strictly newer timestamp — the ORDER BY tiebreaker is the (random)
+      // UUID id, which would otherwise make the order nondeterministic.
+      for (let i = 0; i < 5; i++) {
+        await db.addTripMessage({
+          appId: 'WanderBunnies',
+          tripId: pageTripId,
+          senderId: userId,
+          senderName: 'Chat Tester',
+          senderInitials: 'CT',
+          body: `m${i}`,
+        });
+        await new Promise((r) => setTimeout(r, 15));
+      }
+    });
+
+    afterAll(async () => {
+      if (pageTripId) {
+        await request(app)
+          .delete(`/api/trips/${pageTripId}`)
+          .set('Authorization', `Bearer ${token}`);
+      }
+    });
+
+    it('returns the newest N messages without a cursor, ascending', async () => {
+      const page = await db.listTripMessagesPage(pageTripId, { limit: 3 });
+      expect(page.messages).toHaveLength(3);
+      expect(page.hasMore).toBe(true);
+      expect(page.messages.map((m) => m.body)).toEqual(['m2', 'm3', 'm4']);
+    });
+
+    it('returns older messages before the cursor', async () => {
+      const newest = await db.listTripMessagesPage(pageTripId, { limit: 3 });
+      const cursor = newest.messages[0]; // oldest in the page (m2)
+      const older = await db.listTripMessagesPage(pageTripId, {
+        limit: 3,
+        beforeId: cursor.id,
+      });
+      expect(older.messages.map((m) => m.body)).toEqual(['m0', 'm1']);
+      expect(older.hasMore).toBe(false);
+    });
+
+    it('returns hasMore=false when the page exactly covers the remainder', async () => {
+      const all = await db.listTripMessagesPage(pageTripId, { limit: 10 });
+      expect(all.messages).toHaveLength(5);
+      expect(all.hasMore).toBe(false);
+    });
+
+    it('returns empty page for an unknown beforeId cursor', async () => {
+      const ghost = await db.listTripMessagesPage(pageTripId, {
+        beforeId: '00000000-0000-0000-0000-000000000000',
+      });
+      expect(ghost.messages).toEqual([]);
+      expect(ghost.hasMore).toBe(false);
+    });
+
+    it('returns empty page for a trip with no messages', async () => {
+      const groups = await request(app).get('/api/groups').set('Authorization', `Bearer ${token}`).expect(200);
+      const groupId = groups.body[0]?.id as string;
+      const emptyRes = await request(app)
+        .post('/api/trips')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ name: `Empty Trip ${uniq}`, groupId })
+        .expect(201);
+      const emptyTripId = emptyRes.body.id as string;
+      const page = await db.listTripMessagesPage(emptyTripId);
+      expect(page.messages).toEqual([]);
+      expect(page.hasMore).toBe(false);
+      await request(app)
+        .delete(`/api/trips/${emptyTripId}`)
+        .set('Authorization', `Bearer ${token}`);
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // REST endpoint: GET /api/trips/:id/messages
   // -------------------------------------------------------------------------
   it('GET /api/trips/:id/messages returns 200 with messages array', async () => {
