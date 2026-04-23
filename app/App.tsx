@@ -63,6 +63,8 @@ import { toWebStyle } from './utils/webStyle';
 import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from './utils/votes';
 import { resolveBackendUrl as resolveConfiguredBackendUrl } from './utils/backendUrl';
 import { type AsyncItineraryTracker, useAsyncItineraryPolling } from './hooks/useAsyncItineraryPolling';
+import { useTripsData } from './hooks/useTripsData';
+import type { GroupMemberOption, Trip } from './types/trips';
 
 import LodgingTab from './tabs/LodgingTab';
 import AdminTab from './tabs/AdminTab';
@@ -122,42 +124,6 @@ interface PendingTripShareInvite {
   expiresAt?: string | null;
 }
 
-interface GroupMemberView {
-  id: string;
-  userId?: string;
-  userEmail?: string;
-  email?: string;
-  guestName?: string;
-  firstName?: string;
-  lastName?: string;
-}
-
-interface GroupView {
-  id: string;
-  name: string;
-  ownerId: string;
-  createdAt: string;
-  members: GroupMemberView[];
-  invites: { id: string; inviteeEmail: string; status: string }[];
-}
-
-interface Trip {
-  id: string;
-  groupId: string;
-  groupName: string;
-  name: string;
-  description?: string | null;
-  destination?: string | null;
-  locationIds?: string[];
-  startDate?: string | null;
-  endDate?: string | null;
-  startMonth?: number | null;
-  startYear?: number | null;
-  durationDays?: number | null;
-  currency?: string | null;
-  createdAt: string;
-}
-
 interface Expense {
   id: string;
   tripId: string;
@@ -176,16 +142,6 @@ interface Expense {
   sourceId?: string | null;
   notes?: string | null;
   createdAt: string;
-}
-
-interface GroupMemberOption {
-  id: string;
-  guestName?: string;
-  email?: string;
-  firstName?: string;
-  lastName?: string;
-  status?: 'active' | 'pending' | 'removed';
-  removedAt?: string | null;
 }
 
 const formatMemberName = (member: GroupMemberOption): string => {
@@ -479,7 +435,6 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const refreshInFlightRef = useRef(false);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const suppressedGroupMemberFetchesRef = useRef<Map<string, string>>(new Map());
   const [isAppIdle, setIsAppIdle] = useState(false);
   const [flights, setFlights] = useState<Flight[]>([]);
   const [externalFlightEditId, setExternalFlightEditId] = useState<string | null>(null);
@@ -507,14 +462,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [pendingTripShareInvites, setPendingTripShareInvites] = useState<PendingTripShareInvite[]>([]);
   const [selectedFollowedTripId, setSelectedFollowedTripId] = useState<string | null>(null);
   const [selectedFollowedTripDetails, setSelectedFollowedTripDetails] = useState<Trip | null>(null);
+  const isFollowingMode = Boolean(selectedFollowedTripId);
   const [groupName, setGroupName] = useState('');
   const [groupUserEmails, setGroupUserEmails] = useState('');
   const [groupGuestNames, setGroupGuestNames] = useState('');
   const [groupAddEmail, setGroupAddEmail] = useState<Record<string, string>>({});
   const [groupAddRelationship, setGroupAddRelationship] = useState<Record<string, string>>({});
-  const [groups, setGroups] = useState<GroupView[]>([]);
   const [groupSort, setGroupSort] = useState<'created' | 'name'>('created');
-  const [trips, setTrips] = useState<Trip[]>([]);
   const [newTripName, setNewTripName] = useState('');
   const [newTripGroupId, setNewTripGroupId] = useState<string | null>(null);
   const [showTripGroupDropdown, setShowTripGroupDropdown] = useState(false);
@@ -525,7 +479,6 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [userRole, setUserRole] = useState<'user' | 'admin'>('user');
   const [showActiveTripDropdown, setShowActiveTripDropdown] = useState(false);
   const [openShareFromHeaderSignal, setOpenShareFromHeaderSignal] = useState(0);
-  const [groupMembers, setGroupMembers] = useState<GroupMemberOption[]>([]);
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
   const [lodgings, setLodgings] = useState<Lodging[]>([]);
   const [selectedLodging, setSelectedLodging] = useState<Lodging | null>(null);
@@ -588,6 +541,31 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [appearancePreference, setAppearancePreference] = useState<AppearancePreference>(() =>
     loadStoredAppearancePreference('auto')
   );
+  const logoutRef = useRef<() => void>(() => undefined);
+  const {
+    addMemberToGroup: addGroupMemberRequest,
+    cancelInvite: cancelGroupInviteRequest,
+    clearTripsData,
+    createTrip: createTripRequest,
+    fetchGroups,
+    fetchGroupMembersForActiveTrip,
+    fetchTrips,
+    groupMembers,
+    groups,
+    removeMemberFromGroup: removeGroupMemberRequest,
+    trips,
+  } = useTripsData({
+    activeTripId,
+    backendUrl,
+    groupSort,
+    isFollowingMode,
+    onUnauthorized: () => logoutRef.current(),
+    requirePasswordSetup,
+    selectedFollowedTripDetails,
+    setActiveTripId,
+    userEmail,
+    userToken,
+  });
   const theme = useMemo(() => getAppTheme(appearancePreference, systemColorScheme), [appearancePreference, systemColorScheme]);
   const styles = useMemo(() => buildStyles(theme), [theme]);
   const [familyRelationships, setFamilyRelationships] = useState<any[]>([]);
@@ -712,7 +690,6 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     () => (selectedFollowedTripId ? followedTripById.get(selectedFollowedTripId) ?? null : null),
     [followedTripById, selectedFollowedTripId]
   );
-  const isFollowingMode = Boolean(selectedFollowedTripId);
   const followedTripFallback = useMemo<Trip | null>(
     () =>
       selectedFollowedTrip
@@ -1110,7 +1087,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setUserEmail(null);
     setUserId(null);
     setUserRole('user');
-    setTrips([]);
+    clearTripsData();
     setActiveTripId(null);
     setFlights([]);
     setTours([]);
@@ -1123,8 +1100,6 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setFollowCodes({});
     setPendingTripShareInvites([]);
     setSelectedFollowedTripId(null);
-    setGroups([]);
-    setGroupMembers([]);
     setGroupAddEmail({});
     setGroupAddRelationship({});
     setTraits([]);
@@ -1148,7 +1123,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setChatOpen(false);
     setChatUnread(0);
     clearSession();
-  }, []);
+  }, [clearTripsData]);
+  logoutRef.current = logout;
 
   const handleFollowTripByCode = useCallback(async (inviteCode: string): Promise<string | null> => {
     if (!userToken) return 'You need to be logged in';
@@ -1802,119 +1778,15 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     }
   }, [backendUrl, logout, userToken]);
 
-  const fetchGroups = useCallback(async (sort?: 'created' | 'name') => {
-    const res = await fetch(`${backendUrl}/api/groups?sort=${sort ?? groupSort}`, {
-      headers: { Authorization: `Bearer ${userToken}` },
-    });
-    if (res.status === 401 || (res.status === 403 && !requirePasswordSetup)) {
-      logout();
-      return;
-    }
-    if (res.status === 403) return;
-    if (!res.ok) return;
-    const data = await res.json();
-    const normalized = (Array.isArray(data) ? data : []).map((group: GroupView) => ({
-      ...group,
-      members: Array.isArray(group.members)
-        ? dedupeMembersByIdentity(
-            group.members.map((member) => ({
-              ...member,
-              email: member.email ?? member.userEmail ?? undefined,
-              userEmail: member.userEmail ?? member.email ?? undefined,
-              firstName: member.firstName ?? undefined,
-              lastName: member.lastName ?? undefined,
-            }))
-          )
-        : [],
-      invites: Array.isArray(group.invites) ? group.invites : [],
-    }));
-    setGroups(normalized);
-    if (!newTripGroupId && normalized.length) {
-      setNewTripGroupId(normalized[0].id);
-    }
-  }, [backendUrl, groupSort, newTripGroupId, userToken, logout, requirePasswordSetup]);
-
-  const fetchTrips = useCallback(async (tokenOverride?: string): Promise<Trip[]> => {
-    const authToken = tokenOverride ?? userToken;
-    if (!authToken) {
-      setTrips([]);
-      return [];
-    }
-    try {
-      const res = await fetch(`${backendUrl}/api/trips`, { headers: { Authorization: `Bearer ${authToken}` } });
-      if (res.status === 401 || (res.status === 403 && !requirePasswordSetup)) {
-        logout();
-        return [];
-      }
-      if (res.status === 403) return [];
-      if (!res.ok) return [];
-      const data = await res.json();
-      setTrips(data);
-      setActiveTripId((currentTripId) => {
-        const preferredTripId = currentTripId ?? loadLastActiveTripId(userEmail ?? null);
-        if (!preferredTripId && data.length) {
-          return data[0].id;
-        }
-        if (preferredTripId && !isFollowingMode && !data.find((t: Trip) => t.id === preferredTripId)) {
-          return data[0]?.id ?? null;
-        }
-        return currentTripId;
-      });
-      return data;
-    } catch {
-      return [];
-    }
-  }, [backendUrl, isFollowingMode, logout, userToken, requirePasswordSetup, userEmail]);
-
-  const fetchGroupMembersForActiveTrip = useCallback(async () => {
-    if (!userToken || !activeTripId) {
-      setGroupMembers([]);
-      return;
-    }
-    const trip = isFollowingMode ? selectedFollowedTripDetails : trips.find((t) => t.id === activeTripId);
-    const groupId = trip?.groupId;
-    if (!groupId) {
-      setGroupMembers([]);
-      return;
-    }
-    if (suppressedGroupMemberFetchesRef.current.has(groupId)) {
-      setGroupMembers([]);
-      return;
-    }
-    try {
-      const res = await fetch(`${backendUrl}/api/groups/${groupId}/members`, {
-        headers: { Authorization: `Bearer ${userToken}` },
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        const message = String(data?.error ?? `status ${res.status}`);
-        suppressedGroupMemberFetchesRef.current.set(groupId, message);
-        console.warn(`[groups] suppressing repeated member fetch for group=${groupId}: ${message}`);
-        setGroupMembers([]);
-        return;
-      }
-      suppressedGroupMemberFetchesRef.current.delete(groupId);
-      const data = await res.json();
-      const normalized = dedupeMembersByIdentity((Array.isArray(data) ? data : []).map((m) => ({
-        id: m.id,
-        userId: m.userId ?? undefined,
-        guestName: m.guestName ?? m.guest_name ?? undefined,
-        email: m.email ?? m.userEmail ?? undefined,
-        userEmail: m.userEmail ?? m.email ?? undefined,
-        firstName: m.firstName ?? m.first_name ?? undefined,
-        lastName: m.lastName ?? m.last_name ?? undefined,
-        status: m.status ?? undefined,
-        removedAt: m.removedAt ?? undefined,
-      })));
-      setGroupMembers(normalized.filter((m) => m.status !== 'removed'));
-    } catch {
-      setGroupMembers([]);
-    }
-  }, [activeTripId, backendUrl, isFollowingMode, selectedFollowedTripDetails, trips, userToken]);
-
   useEffect(() => {
-    suppressedGroupMemberFetchesRef.current.clear();
-  }, [activeTripId]);
+    if (!newTripGroupId && groups.length) {
+      setNewTripGroupId(groups[0].id);
+      return;
+    }
+    if (newTripGroupId && !groups.some((group) => group.id === newTripGroupId)) {
+      setNewTripGroupId(groups[0]?.id ?? null);
+    }
+  }, [groups, newTripGroupId]);
 
   const fetchTraits = useCallback(async () => {
     if (!userToken) return;
@@ -2484,12 +2356,6 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   }, [activePage, activeTripId, isAppIdle, lastRefreshAt, userToken, requirePasswordSetup, refreshIntervalMs, refreshPageData]);
 
   useEffect(() => {
-    if (userToken && !requirePasswordSetup) {
-      fetchGroupMembersForActiveTrip();
-    }
-  }, [userToken, requirePasswordSetup, activeTripId, trips, fetchGroupMembersForActiveTrip]);
-
-  useEffect(() => {
     if (!userToken || !activeTripId) {
       setCoveredBy({});
       return;
@@ -2541,48 +2407,30 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       payload = relEmail ? { email: relEmail } : { guestName: relName || 'Relationship' };
     }
 
-    const res = await fetch(`${backendUrl}/api/groups/${groupId}/members`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...headers },
-      body: JSON.stringify(payload),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      alert(data.error || 'Unable to add member');
+    const result = await addGroupMemberRequest(groupId, payload);
+    if (!result.ok) {
+      alert(result.error || 'Unable to add member');
       return;
     }
     setGroupAddEmail((prev) => ({ ...prev, [groupId]: '' }));
     setGroupAddRelationship((prev) => ({ ...prev, [groupId]: '' }));
-    fetchGroups();
     fetchInvites();
   };
 
   const removeMemberFromGroup = async (groupId: string, memberId: string) => {
-    if (!userToken) return;
-    const res = await fetch(`${backendUrl}/api/groups/${groupId}/members/${memberId}`, {
-      method: 'DELETE',
-      headers,
-    });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      alert(data.error || 'Unable to remove member');
+    const result = await removeGroupMemberRequest(groupId, memberId);
+    if (!result.ok) {
+      alert(result.error || 'Unable to remove member');
       return;
     }
-    fetchGroups();
   };
 
   const cancelInvite = async (inviteId: string) => {
-    if (!userToken) return;
-    const res = await fetch(`${backendUrl}/api/groups/invites/${inviteId}`, {
-      method: 'DELETE',
-      headers,
-    });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      alert(data.error || 'Unable to cancel invite');
+    const result = await cancelGroupInviteRequest(inviteId);
+    if (!result.ok) {
+      alert(result.error || 'Unable to cancel invite');
       return;
     }
-    fetchGroups();
   };
 
   const createTrip = async () => {
@@ -2590,23 +2438,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       alert('Enter a trip name and choose a group');
       return;
     }
-    const res = await fetch(`${backendUrl}/api/trips`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...headers },
-      body: JSON.stringify({ name: newTripName.trim(), groupId: newTripGroupId }),
-    });
-    if (res.status === 401 || res.status === 403) {
-      logout();
-      return;
-    }
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      alert(data.error || 'Unable to create trip');
+    const result = await createTripRequest({ name: newTripName.trim(), groupId: newTripGroupId });
+    if (!result.ok) {
+      alert(result.error || 'Unable to create trip');
       return;
     }
     setNewTripName('');
-    if (data?.id) setActiveTripId(data.id as string);
-    fetchTrips();
   };
 
   const onTripCreated = (tripId: string) => {
@@ -3594,7 +3431,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               headers={headers}
               jsonHeaders={jsonHeaders}
               findActiveTrip={getActiveTrip}
-              fetchGroupMembersForActiveTrip={fetchGroupMembersForActiveTrip}
+              fetchGroupMembersForActiveTrip={async () => {
+                await fetchGroupMembersForActiveTrip();
+              }}
               styles={styles}
               airportOptions={flightAirportOptions}
               onSearchAirports={fetchFlightAirports}
@@ -3620,7 +3459,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           headers={headers}
           jsonHeaders={jsonHeaders}
           findActiveTrip={getActiveTrip}
-          fetchGroupMembersForActiveTrip={fetchGroupMembersForActiveTrip}
+          fetchGroupMembersForActiveTrip={async () => {
+            await fetchGroupMembersForActiveTrip();
+          }}
           styles={styles}
           airportOptions={flightAirportOptions}
           onSearchAirports={fetchFlightAirports}
@@ -3771,7 +3612,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   onOpenAddress={openMaps}
                   onRefreshTrips={fetchTrips}
                   onRefreshGroups={fetchGroups}
-                  onRefreshGroupMembers={fetchGroupMembersForActiveTrip}
+                  onRefreshGroupMembers={async () => {
+                    await fetchGroupMembersForActiveTrip();
+                  }}
                   onFlightDataChanged={handleFlightsDataChanged}
                   onLodgingDataChanged={handleLodgingsDataChanged}
                   onTourDataChanged={handleToursDataChanged}
