@@ -35,7 +35,7 @@ import CreateTripWizard from './tabs/createTripWizard';
 import { buildAllExpenses, calculateAllTotals, type UnifiedExpense, computePayerTotals } from './utils/costs';
 import { rollUpTotals, validateCoveringRules } from './utils/coveredBy';
 import TripDetailsTab from './tabs/tripDetails';
-import AccountTab, { fetchAccountProfile, fetchFamilyRelationships, fetchFellowTravelers, type FellowTraveler } from './tabs/account';
+import AccountTab, { fetchAccountProfile } from './tabs/account';
 import { CarRental, CarRentalDraft, buildCarRentalFromDraft, createInitialCarRentalDraft, fetchCarRentalsForTrip } from './tabs/carRentals';
 import {
   DEFAULT_NEW_ITINERARY_STATUS,
@@ -58,6 +58,7 @@ import { Buffer } from 'buffer';
 import { loadLastActiveTripId, loadSession, saveLastActiveTripId, saveSession, clearSession } from './utils/session';
 import LodgingDetailsDialog from './components/LodgingDetailsDialog';
 import ConfirmDialog from './components/ConfirmDialog';
+import PendingInvitesModal from './components/PendingInvitesModal';
 import DropdownOptionButton from './components/DropdownOptionButton';
 import { toWebStyle } from './utils/webStyle';
 import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from './utils/votes';
@@ -73,6 +74,8 @@ import { useCreateTripWizard } from './hooks/useCreateTripWizard';
 import { useChatState } from './hooks/useChatState';
 import { useAuthSession } from './hooks/useAuthSession';
 import { useTraits } from './hooks/useTraits';
+import { useAccountSidecars } from './hooks/useAccountSidecars';
+import { useAuthForm } from './hooks/useAuthForm';
 import type { GroupInvite, PendingTripShareInvite } from './types/invites';
 import type { GroupMemberOption, Trip } from './types/trips';
 
@@ -522,14 +525,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [pageForwardHistory, setPageForwardHistory] = useState<Page[]>([]);
   const [flightAirportOptions, setFlightAirportOptions] = useState<string[]>([]);
   // traitAge / traitGender / showGenderDropdown are owned by useTraits (declared above).
-  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
-  const [authForm, setAuthForm] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    password: '',
-    passwordConfirm: '',
-  });
+  const {
+    authMode,
+    authForm,
+    setAuthMode,
+    setAuthForm,
+  } = useAuthForm();
   const {
     accountProfile,
     mapApp,
@@ -633,9 +634,16 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
   const theme = useMemo(() => getAppTheme(appearancePreference, systemColorScheme), [appearancePreference, systemColorScheme]);
   const styles = useMemo(() => buildStyles(theme), [theme]);
-  const [familyRelationships, setFamilyRelationships] = useState<any[]>([]);
+  const {
+    familyRelationships,
+    fellowTravelers,
+    setFamilyRelationships,
+    setFellowTravelers,
+    loadFamilyRelationships,
+    loadFellowTravelers,
+    clearAccountSidecars,
+  } = useAccountSidecars({ backendUrl, userToken });
   const [coveredBy, setCoveredBy] = useState<Record<string, string>>({});
-  const [fellowTravelers, setFellowTravelers] = useState<FellowTraveler[]>([]);
   const [showRelationshipDropdown, setShowRelationshipDropdown] = useState(false);
   const [asyncItineraryByTrip, setAsyncItineraryByTrip] = useState<Record<string, AsyncItineraryTracker>>({});
 
@@ -1140,8 +1148,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setGroupAddRelationship({});
     clearTraitsState();
     clearAccountProfile();
-    setFamilyRelationships([]);
-    setFellowTravelers([]);
+    clearAccountSidecars();
     setRequirePasswordSetup(false);
     setPasswordSetupLoading(false);
     setPasswordSetupForm({ newPassword: '', newPasswordConfirm: '' });
@@ -1174,25 +1181,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     [backendUrl, logout, setAccountProfile, setUserEmail, setUserName, updateAppearancePreference, updateMapPreference, userToken]
   );
 
-  const loadFamilyRelationships = useCallback(
-    (token?: string) =>
-      fetchFamilyRelationships({
-        backendUrl,
-        token: token ?? userToken,
-        setFamilyRelationships,
-      }),
-    [backendUrl, setFamilyRelationships, userToken]
-  );
-
-  const loadFellowTravelers = useCallback(
-    (token?: string) =>
-      fetchFellowTravelers({
-        backendUrl,
-        token: token ?? userToken,
-        setFellowTravelers,
-      }),
-    [backendUrl, setFellowTravelers, userToken]
-  );
+  // loadFamilyRelationships + loadFellowTravelers are now provided by useAccountSidecars.
 
   const buildLoginRedirectUrl = () => {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -3584,94 +3573,21 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           </View>
         </View>
       ) : null}
-      {userToken && pendingInviteModalOpen ? (
-        <View style={styles.wizardOverlay}>
-          <View style={[styles.wizardModal, styles.pendingInviteModal]} testID="invite-modal">
-            <View style={styles.card}>
-              <View style={styles.sectionHeaderRow}>
-                <Text style={styles.sectionTitle}>Trip Invites</Text>
-                <TouchableOpacity
-                  style={[styles.button, styles.smallButton]}
-                  onPress={() => setPendingInviteModalOpen(false)}
-                >
-                  <Text style={styles.buttonText}>Close</Text>
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.helperText}>Choose which pending trip access requests you want to accept.</Text>
-              <ScrollView style={styles.inviteList} contentContainerStyle={styles.inviteListContent}>
-                {pendingFollowCode ? (
-                  <View style={styles.inviteCard}>
-                    <Text style={styles.bodyText}>Follow shared trip</Text>
-                    <Text style={styles.helperText}>A follow link was opened for this account. Accept to start following the trip, or decline to remove it.</Text>
-                    <View style={styles.row}>
-                      <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={acceptPendingFollowCode} testID="follow-link-accept">
-                        <Text style={styles.buttonText}>Accept</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.button, styles.smallButton, styles.dangerButton]}
-                        onPress={rejectPendingFollowCode}
-                        testID="follow-link-decline"
-                      >
-                        <Text style={styles.dangerButtonText}>Decline</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                ) : null}
-                {pendingTripShareInvites.map((invite) => {
-                  const inviterName = `${invite.inviterFirstName ?? ''} ${invite.inviterLastName ?? ''}`.trim();
-                  const inviterLine = inviterName || invite.inviterEmail || 'Someone';
-                  const accessLabel = invite.role === 'member' ? 'member access' : 'follower access';
-                  return (
-                    <View key={invite.id} style={styles.inviteCard}>
-                      <Text style={styles.bodyText}>{invite.tripName || 'Shared Trip'}</Text>
-                      <Text style={styles.helperText}>Invited by {inviterLine}</Text>
-                      <Text style={styles.helperText}>Access: {accessLabel}</Text>
-                      <View style={styles.row}>
-                        <TouchableOpacity
-                          style={[styles.button, styles.smallButton]}
-                          onPress={() => acceptPendingTripShareInvite(invite)}
-                          testID={`share-invite-accept-${invite.id}`}
-                        >
-                          <Text style={styles.buttonText}>Accept</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[styles.button, styles.smallButton, styles.dangerButton]}
-                          onPress={() => rejectPendingTripShareInvite(invite)}
-                          testID={`share-invite-decline-${invite.id}`}
-                        >
-                          <Text style={styles.dangerButtonText}>Decline</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  );
-                })}
-                {invites.map((invite) => {
-                  const tripLabel = invite.resolvedTripName ?? invite.groupName ?? 'Upcoming Trip';
-                  const inviterName = `${invite.inviterFirstName ?? ''} ${invite.inviterLastName ?? ''}`.trim();
-                  const inviterLine = inviterName || invite.inviterEmail || 'Someone';
-                  return (
-                    <View key={invite.id} style={styles.inviteCard}>
-                      <Text style={styles.bodyText}>{tripLabel}</Text>
-                      <Text style={styles.helperText}>Invited by {inviterLine}</Text>
-                      <View style={styles.row}>
-                        <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => acceptInvite(invite)} testID={`invite-join-${invite.id}`}>
-                          <Text style={styles.buttonText}>Join</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[styles.button, styles.smallButton, styles.dangerButton]}
-                          onPress={() => rejectInvite(invite)}
-                          testID={`invite-decline-${invite.id}`}
-                        >
-                          <Text style={styles.dangerButtonText}>Decline</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  );
-                })}
-              </ScrollView>
-            </View>
-          </View>
-        </View>
+      {userToken ? (
+        <PendingInvitesModal
+          visible={pendingInviteModalOpen}
+          onClose={() => setPendingInviteModalOpen(false)}
+          invites={invites}
+          pendingTripShareInvites={pendingTripShareInvites}
+          pendingFollowCode={pendingFollowCode}
+          acceptInvite={acceptInvite}
+          rejectInvite={rejectInvite}
+          acceptPendingTripShareInvite={acceptPendingTripShareInvite}
+          rejectPendingTripShareInvite={rejectPendingTripShareInvite}
+          acceptPendingFollowCode={acceptPendingFollowCode}
+          rejectPendingFollowCode={rejectPendingFollowCode}
+          styles={styles}
+        />
       ) : null}
       {userToken && isTripWizardOpen ? (
         <View style={styles.wizardOverlay}>
