@@ -10,7 +10,7 @@
  * State is grouped near the top; data fetchers and helpers are defined next;
  * then UI sections render conditionally based on the active page.
  */
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, Image, Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme, useWindowDimensions } from 'react-native';
 import { NavigationContainer, createNavigationContainerRef, type LinkingOptions } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -29,7 +29,7 @@ import ItinerariesTab from './tabs/itineraries';
 import HomeTab from './tabs/HomeTab';
 import DailyExpensesTab from './tabs/dailyExpenses';
 import LedgerTab from './tabs/ledger';
-import IngestionTab from './tabs/ingestion';
+const IngestionTab = lazy(() => import('./tabs/ingestion'));
 import OverviewTab from './tabs/overview';
 import CreateTripWizard from './tabs/createTripWizard';
 import { buildAllExpenses, calculateAllTotals, type UnifiedExpense, computePayerTotals } from './utils/costs';
@@ -67,8 +67,9 @@ import { useTripsData } from './hooks/useTripsData';
 import type { GroupMemberOption, Trip } from './types/trips';
 
 import LodgingTab from './tabs/LodgingTab';
-import AdminTab from './tabs/AdminTab';
+const AdminTab = lazy(() => import('./tabs/AdminTab'));
 import PresenceAvatars from './components/PresenceAvatars';
+import LazyTabFallback from './components/LazyTabFallback';
 import ChatButton from './components/ChatButton';
 import ChatPanel from './components/ChatPanel';
 import {
@@ -2932,13 +2933,15 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
           {activePage === 'ingest'
             ? renderSharedPageScroll(
-                <IngestionTab
-                  backendUrl={backendUrl}
-                  headers={headers}
-                  styles={styles}
-                  onNavigate={handleHomeNavigate}
-                  onAssignmentApplied={handleIngestionAssignmentApplied}
-                />
+                <Suspense fallback={<LazyTabFallback label="Loading ingestion…" testID="lazy-ingestion-fallback" />}>
+                  <IngestionTab
+                    backendUrl={backendUrl}
+                    headers={headers}
+                    styles={styles}
+                    onNavigate={handleHomeNavigate}
+                    onAssignmentApplied={handleIngestionAssignmentApplied}
+                  />
+                </Suspense>
               )
             : null}
 
@@ -4015,15 +4018,17 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   );
 
   const renderAdminScreen = (section: AdminSectionRoute) => (
-    <AdminTab
-      backendUrl={backendUrl}
-      headers={headers}
-      initialSection={section}
-      onSectionChange={(nextSection) => {
-        if (nextSection === 'user-detail') return;
-        openAdminSection(nextSection as AdminSectionRoute);
-      }}
-    />
+    <Suspense fallback={<LazyTabFallback label="Loading admin…" testID="lazy-admin-fallback" />}>
+      <AdminTab
+        backendUrl={backendUrl}
+        headers={headers}
+        initialSection={section}
+        onSectionChange={(nextSection) => {
+          if (nextSection === 'user-detail') return;
+          openAdminSection(nextSection as AdminSectionRoute);
+        }}
+      />
+    </Suspense>
   );
 
   return (
