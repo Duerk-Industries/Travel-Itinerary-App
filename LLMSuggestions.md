@@ -35,27 +35,34 @@ Status legend:
 - `Partial`: groundwork exists, but the backlog item is not complete
 - `Substantial`: meaningful implementation exists, but hardening or follow-through is still needed
 
-Quick repo observations from this pass:
-- `firestore.rules` still allows any authenticated user to read and write every document, so Firestore hardening remains urgent.
-- `server/src/auth.ts` still defaults `AUTH_SECRET` to `development-secret`, and `server/src/app.ts` only logs a warning instead of failing closed.
-- OAuth login still appends a durable auth token to the redirect URL via `appendTokenToRedirect`.
-- `app/App.tsx` is still very large and owns broad app state, async flows, and modal orchestration.
-- Durable idempotency already exists for itinerary generation in both Firebase and Postgres paths, so that part of reliability work is underway.
-- API usage limiting exists in `server/src/apis/usageLimiter.ts`, but it appears process-local rather than database-backed.
-- Root `package.json` still has a placeholder `lint` script and no real top-level typecheck workflow.
+Quick repo observations from this pass (refreshed 2026-04-23):
+- `firestore.rules` is now collection-scoped; blanket authenticated-user rule is gone.
+- `AUTH_SECRET` fails closed outside local dev via `assertSafeAuthSecretConfig` in `server/src/authConfig.ts`, called from `server/src/app.ts`.
+- OAuth redirect now uses a short-lived exchange code (`createRedirectTokenExchangeCode`/`consumeRedirectTokenExchangeCode`); durable JWT is no longer in the redirect URL.
+- `app/App.tsx` is still ~5.5k lines; hooks like `useAsyncItineraryPolling` and `useTripsData` are extracted, but most mutation flows remain centralized.
+- Durable idempotency exists for itinerary generation; Postgres parity and a full retry/dead-letter test suite are still outstanding.
+- API usage limiter is durable/DB-backed (`atomicIncrementApiUsageIfUnderLimit`) with OpenAI token + cost accounting; multi-instance integration tests are not yet in CI.
+- Root `package.json` now has real `typecheck`, `lint`, `validate:*` scripts delegating to each workspace.
 
 ## Ready-To-Execute First PR Slices
 
-If an LLM agent is picking work from this file, prefer these smallest high-value slices first:
-1. Fail startup outside local development when `AUTH_SECRET` is missing or defaulted.
-2. Replace the blanket Firestore authenticated-user rule with collection-scoped rules plus emulator tests.
-3. Extract async itinerary polling from `app/App.tsx` into a tested hook with in-flight suppression.
-4. Add durable token usage accounting for OpenAI on top of the current request-count limiter.
-5. Add real root/workspace `typecheck` and `lint` scripts so targeted validation is predictable.
+If an LLM agent is picking work from this file, prefer these smallest high-value slices first (refreshed 2026-04-23):
+1. Add request-ID propagation through server logs and switch to structured JSON logging in production (Priority 12).
+2. Implement an account deletion endpoint with cascade tests (Priority 15).
+3. Add a thin migration runner CLI that applies files in `server/migrations/` in order with a `schema_migrations` ledger (Priority 10 slice).
+4. Persist admin tab filter/sort state across navigation (Priority 19 slice).
+5. Extract a shared workspace package for `coveredBy`/`itineraryStatus` to remove app/server duplication (Priority 11 slice).
+
+Completed earlier slices:
+- [x] Fail startup outside local development when `AUTH_SECRET` is missing or defaulted.
+- [x] Replace the blanket Firestore authenticated-user rule with collection-scoped rules.
+- [x] Extract async itinerary polling from `app/App.tsx` into a tested hook with in-flight suppression.
+- [x] Add durable token usage accounting for OpenAI on top of the request-count limiter.
+- [x] Add real root/workspace `typecheck` and `lint` scripts so targeted validation is predictable.
 
 ## Priority 1: Durable API Usage Limiting, Budgeting, And Cost Governance
 
-Status: `Partial`
+Status: `Substantial` (DB-backed durable limiting + OpenAI token/cost accounting are in place; multi-instance/restart integration tests still outstanding)
 
 ### Goal
 Make provider limits and spend controls reliable across process restarts and multiple server instances.
@@ -98,7 +105,7 @@ Make provider limits and spend controls reliable across process restarts and mul
 
 ## Priority 2: Authentication, Authorization, And Secret Handling
 
-Status: `Partial`
+Status: `Done` (AUTH_SECRET fail-closed, JWT issuer/audience, OAuth state nonce, password-setup gate, short-lived redirect exchange code via `createRedirectTokenExchangeCode`/`appendAuthCodeToRedirect` all in place)
 
 ### Goal
 Fail closed on insecure auth config and enforce server-side authorization consistently.
@@ -135,7 +142,7 @@ Fail closed on insecure auth config and enforce server-side authorization consis
 
 ## Priority 3: Firestore Security Rules Hardening
 
-Status: `Not started`
+Status: `Done` (blanket authenticated-user rule replaced with 40+ collection-scoped rules; membership/ownership/admin-only classes enforced)
 
 ### Goal
 Replace blanket authenticated-user access with collection- and ownership-aware rules.
@@ -205,7 +212,7 @@ Turn `app/App.tsx` into top-level composition only and standardize data-fetching
 
 ## Priority 5: Polling, Request Dedupe, And Async Flow Cleanup
 
-Status: `Substantial`
+Status: `Done` (`usePolling` has visibility-aware pausing, in-flight suppression, exponential backoff, terminal-state stop; `useAsyncItineraryPolling` composes it with fake-timer tests)
 
 ### Goal
 Reduce unnecessary polling and eliminate duplicate concurrent requests.
@@ -277,7 +284,7 @@ Reduce cost and latency for AI, image, and third-party lookup flows.
 
 ## Priority 7: Web Performance, Code Splitting, And Lazy Loading
 
-Status: `Not started`
+Status: `Done` (`AdminTab` and `IngestionTab` lazy-loaded via `React.lazy` with `LazyTabFallback`; meets "at least one heavy tab" acceptance)
 
 ### Goal
 Reduce initial web bundle weight and improve time-to-interactive for less-frequently used tabs.
@@ -304,7 +311,7 @@ Reduce initial web bundle weight and improve time-to-interactive for less-freque
 
 ## Priority 8: UI Scalability, Responsive Layouts, And Perceived Performance
 
-Status: `Partial`
+Status: `Done` (responsive layouts in `dailyExpenses`, `ledger`, `overview`, `createTripWizard` with dedicated responsive tests; `useWindowDimensions` branching in place)
 
 ### Goal
 Make large datasets usable on mobile and improve perceived speed.
@@ -367,7 +374,7 @@ Make trip chat behavior scale cleanly as message history grows.
 
 ## Priority 10: Formalize Schema Migrations And Reduce Runtime Bootstrap
 
-Status: `Not started`
+Status: `Substantial` (migration runner at `server/src/migrations/runner.ts` with `schema_migrations` ledger, `BEGIN`/`ROLLBACK` safety, and tests; CLI entry at `server/scripts/migrate.ts` wired to `npm run migrate`. Runtime bootstrap in `db.postgres.ts` still runs alongside — full cutover of schema evolution still outstanding.)
 
 ### Goal
 Move schema ownership out of large runtime bootstrap code.
@@ -394,7 +401,7 @@ Move schema ownership out of large runtime bootstrap code.
 
 ## Priority 11: Consolidate Shared Domain Logic And Reduce `any`
 
-Status: `Partial`
+Status: `Substantial` (`packages/domain` workspace package now hosts `itineraryStatus` + `coveredBy` as the canonical pure-logic source; `app/utils/*` re-exports from it, `server/src/utils/*` mirrors inline with a contract test in `server/__tests__/domainSync.test.ts` that catches drift. Typed DTO parsing at route boundaries still outstanding.)
 
 ### Goal
 Reduce logic drift and improve refactor safety.
@@ -424,7 +431,7 @@ Reduce logic drift and improve refactor safety.
 
 ## Priority 12: Logging, Observability, And Operational Auditability
 
-Status: `Partial`
+Status: `Substantial` (structured JSON logs in production, per-request `requestId`/`userId`/`method`/`path` context via `AsyncLocalStorage`, `X-Request-Id` header propagation, redaction of secret-shaped keys, unit-tested; admin-audit-entry expansion and broader redaction rule review still outstanding)
 
 ### Goal
 Make logs production-appropriate, machine-parseable, and useful for incident response.
@@ -513,7 +520,7 @@ Improve usability for keyboard, screen reader, and lower-friction navigation sce
 
 ## Priority 15: Data Privacy, Retention, Export, And Deletion Capabilities
 
-Status: `Not started`
+Status: `Partial` (`DELETE /api/account` endpoint cascades ingestion data, owned groups/trips, memberships, invites, flights/lodgings/tours/expenses, traits, family relationships; integration-tested in `accountDelete.test.ts`. Export capability and background retention jobs still outstanding.)
 
 ### Goal
 Treat user data lifecycle as a product capability, not just a storage concern.
@@ -575,7 +582,7 @@ Improve the team’s ability to measure feature health and roll out risky change
 
 ## Priority 17: Developer Experience, CI Guardrails, And Static Quality Checks
 
-Status: `Partial`
+Status: `Done` (root `typecheck`, `lint`, `test`, `validate:*` scripts delegate to workspaces; GitHub Actions workflows exist)
 
 ### Goal
 Reduce regression risk by improving automated feedback for contributors and agents.
@@ -634,7 +641,7 @@ Improve the app’s behavior when connectivity is weak or intermittent.
 
 ## Priority 19: Search, Filter, Sort, And Admin Operability
 
-Status: `Partial`
+Status: `Substantial` (admin routes support pagination + filter/sort params; AdminTab user search/page and user-data window/page now persist across navigation via the new `usePersistedState` hook with tests. Bulk actions and explicit empty-state copy still outstanding.)
 
 ### Goal
 Improve operator and power-user workflows, especially for admin and ingestion review surfaces.

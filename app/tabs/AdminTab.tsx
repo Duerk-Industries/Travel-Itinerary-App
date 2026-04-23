@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme } from 'react-native';
 import { getAppTheme, type AppTheme } from '../theme/theme';
+import { usePersistedState } from '../hooks/usePersistedState';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -301,8 +302,8 @@ const UsersSection: React.FC<{
 } & ThemedSectionProps> = ({ backendUrl, headers, onViewUser, theme }) => {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [total, setTotal] = useState(0);
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
+  const [search, setSearch] = usePersistedState<string>('admin.users.search', '');
+  const [page, setPage] = usePersistedState<number>('admin.users.page', 1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const limit = 20;
@@ -1154,8 +1155,11 @@ const UserDataSection: React.FC<{ backendUrl: string; headers: Record<string, st
 }) => {
   const [rows, setRows] = useState<UserDataRow[]>([]);
   const [total, setTotal] = useState(0);
-  const [window, setWindow] = useState<'7d' | '30d' | 'all-time'>('30d');
-  const [page, setPage] = useState(1);
+  const [window, setWindow] = usePersistedState<'7d' | '30d' | 'all-time'>(
+    'admin.userData.window',
+    '30d'
+  );
+  const [page, setPage] = usePersistedState<number>('admin.userData.page', 1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const limit = 20;

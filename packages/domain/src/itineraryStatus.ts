@@ -1,9 +1,3 @@
-// Mirror of packages/domain/src/itineraryStatus.ts.
-// Kept inline because server tsconfig restricts cross-workspace source imports.
-// If you change this file, also update packages/domain/src/itineraryStatus.ts
-// (or vice versa) — a contract test in server/__tests__/domainSync.test.ts
-// catches drift between the two.
-
 export const ITINERARY_STATUSES = ['Needed', 'Proposed', 'Booked', 'Cancelled', 'Completed'] as const;
 
 export type ItineraryStatus = (typeof ITINERARY_STATUSES)[number];

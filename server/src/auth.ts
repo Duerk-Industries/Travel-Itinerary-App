@@ -9,6 +9,7 @@ import crypto from 'crypto';
 import { getSeededTierForEmail } from './services/entitlementService';
 import { getEnvValue } from './env';
 import { getAuthAudience, getAuthIssuer, getAuthSecret } from './authConfig';
+import { setRequestContextUserId } from './requestContext';
 
 export const initPassport = () => {
     const googleClientId = getEnvValue('GOOGLE_CLIENT_ID');
@@ -117,6 +118,7 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
       return;
     }
     (req as Request & { user?: TokenPayload }).user = decoded;
+    setRequestContextUserId(decoded.userId);
     next();
   } catch (err) {
     res.status(401).json({ error: 'Invalid token' });
