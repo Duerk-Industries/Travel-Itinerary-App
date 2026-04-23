@@ -173,7 +173,7 @@ Replace blanket authenticated-user access with collection- and ownership-aware r
 
 ## Priority 4: Break Up `app/App.tsx` And Introduce A Shared Client Data Layer
 
-Status: `Not started`
+Status: `Substantial` (shared client data layer in `app/utils/apiClient.ts` — `requestJson` + `ApiClientError` — used by `useTripsData` and `useGroupInvites`. Extracted hooks: `useTripsData`, `useAsyncItineraryPolling`, `usePolling`, `useGroupInvites` (new — owns group invites + trip-share invites state + 6 mutations), `usePersistedState`, `useConnectionState`. Types split into `app/types/invites.ts`. `App.tsx` shrank 5507 → 5420 lines. More extraction passes needed before it's top-level-composition only.)
 
 ### Goal
 Turn `app/App.tsx` into top-level composition only and standardize data-fetching logic across the app.

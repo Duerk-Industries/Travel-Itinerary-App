@@ -64,6 +64,8 @@ import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from '
 import { resolveBackendUrl as resolveConfiguredBackendUrl } from './utils/backendUrl';
 import { type AsyncItineraryTracker, useAsyncItineraryPolling } from './hooks/useAsyncItineraryPolling';
 import { useTripsData } from './hooks/useTripsData';
+import { useGroupInvites } from './hooks/useGroupInvites';
+import type { GroupInvite, PendingTripShareInvite } from './types/invites';
 import type { GroupMemberOption, Trip } from './types/trips';
 
 import LodgingTab from './tabs/LodgingTab';
@@ -95,35 +97,8 @@ if (Platform.OS !== 'web') {
   }
 }
 
-interface GroupInvite {
-  id: string;
-  groupId: string;
-  groupName?: string | null;
-  inviterEmail?: string | null;
-  inviterFirstName?: string | null;
-  inviterLastName?: string | null;
-  inviteeEmail?: string | null;
-  status?: 'pending' | 'accepted';
-  createdAt?: string;
-  tripId?: string | null;
-  resolvedTripId?: string | null;
-  resolvedTripName?: string | null;
-}
-
-interface PendingTripShareInvite {
-  id: string;
-  tripId: string;
-  tripName: string;
-  destination?: string | null;
-  inviteeEmail?: string | null;
-  inviterEmail?: string | null;
-  inviterFirstName?: string | null;
-  inviterLastName?: string | null;
-  role: 'member' | 'follower';
-  status: 'pending';
-  createdAt?: string | null;
-  expiresAt?: string | null;
-}
+// GroupInvite + PendingTripShareInvite now live in app/types/invites.ts so
+// the useGroupInvites hook can consume them without a circular import.
 
 interface Expense {
   id: string;
@@ -439,9 +414,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [isAppIdle, setIsAppIdle] = useState(false);
   const [flights, setFlights] = useState<Flight[]>([]);
   const [externalFlightEditId, setExternalFlightEditId] = useState<string | null>(null);
-  const [invites, setInvites] = useState<GroupInvite[]>([]);
   const [pendingInviteModalOpen, setPendingInviteModalOpen] = useState(false);
-  const [invitesLoaded, setInvitesLoaded] = useState(false);
   const [deferFirstLoginRedirect, setDeferFirstLoginRedirect] = useState(false);
   const [showResendConfirmation, setShowResendConfirmation] = useState(false);
   const [resendConfirmationLoading, setResendConfirmationLoading] = useState(false);
@@ -460,7 +433,6 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [followCodeError, setFollowCodeError] = useState<string | null>(null);
   const [followCodePayloads, setFollowCodePayloads] = useState<Record<string, InvitePayload>>({});
   const [pendingFollowCode, setPendingFollowCode] = useState<string | null>(null);
-  const [pendingTripShareInvites, setPendingTripShareInvites] = useState<PendingTripShareInvite[]>([]);
   const [selectedFollowedTripId, setSelectedFollowedTripId] = useState<string | null>(null);
   const [selectedFollowedTripDetails, setSelectedFollowedTripDetails] = useState<Trip | null>(null);
   const isFollowingMode = Boolean(selectedFollowedTripId);
@@ -567,6 +539,21 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     userEmail,
     userToken,
   });
+  const {
+    invites,
+    invitesLoaded,
+    pendingTripShareInvites,
+    fetchInvites,
+    fetchPendingTripShareInvites,
+    acceptInvite: acceptInviteRequest,
+    rejectInvite: rejectInviteRequest,
+    acceptPendingTripShareInvite: acceptPendingTripShareInviteRequest,
+    rejectPendingTripShareInvite: rejectPendingTripShareInviteRequest,
+    clearInvites,
+    setInvitesLoaded,
+    setPendingTripShareInvites,
+  } = useGroupInvites({ backendUrl, userToken });
+
   const theme = useMemo(() => getAppTheme(appearancePreference, systemColorScheme), [appearancePreference, systemColorScheme]);
   const styles = useMemo(() => buildStyles(theme), [theme]);
   const [familyRelationships, setFamilyRelationships] = useState<any[]>([]);
@@ -1094,12 +1081,11 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setTours([]);
     setExpenses([]);
     setTripPayments([]);
-    setInvites([]);
+    clearInvites();
     setFollowedTrips([]);
     setFollowInviteCode('');
     setFollowError('');
     setFollowCodes({});
-    setPendingTripShareInvites([]);
     setSelectedFollowedTripId(null);
     setGroupAddEmail({});
     setGroupAddRelationship({});
@@ -1711,53 +1697,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     await fetch(`${backendUrl}/api/itineraries`, { headers }).catch(() => undefined);
   }, [backendUrl, headers, userToken]);
 
-  const fetchInvites = useCallback(async (token?: string) => {
-    const authToken = token ?? userToken;
-    if (!authToken) {
-      setInvites([]);
-      setInvitesLoaded(true);
-      return;
-    }
-    try {
-      const res = await fetch(`${backendUrl}/api/groups/invites`, {
-        headers: { Authorization: `Bearer ${authToken}` },
-      });
-      if (!res.ok) {
-        setInvites([]);
-        return;
-      }
-      const data = await res.json();
-      setInvites(data);
-    } catch {
-      setInvites([]);
-    } finally {
-      setInvitesLoaded(true);
-    }
-  }, [backendUrl, userToken]);
-
-  const fetchPendingTripShareInvites = useCallback(async (token?: string) => {
-    const authToken = token ?? userToken;
-    if (!authToken) {
-      setPendingTripShareInvites([]);
-      return [];
-    }
-    try {
-      const res = await fetch(`${backendUrl}/api/trips/share/invites/pending`, {
-        headers: { Authorization: `Bearer ${authToken}` },
-      });
-      if (!res.ok) {
-        setPendingTripShareInvites([]);
-        return [];
-      }
-      const data = await res.json().catch(() => ({}));
-      const invites = Array.isArray(data?.invites) ? data.invites : [];
-      setPendingTripShareInvites(invites);
-      return invites;
-    } catch {
-      setPendingTripShareInvites([]);
-      return [];
-    }
-  }, [backendUrl, userToken]);
+  // fetchInvites and fetchPendingTripShareInvites are now owned by useGroupInvites.
 
   const fetchFollowedTrips = useCallback(async (tokenOverride?: string) => {
     const authToken = tokenOverride ?? userToken;
@@ -1838,19 +1778,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   }, [backendUrl, userToken]);
 
   const acceptInvite = async (invite: GroupInvite) => {
-    if (!userToken) return;
-    const res = await fetch(`${backendUrl}/api/groups/invites/${invite.id}/accept`, {
-      method: 'POST',
-      headers: headers,
-    });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      alert(data.error || 'Unable to accept invite');
+    const result = await acceptInviteRequest(invite);
+    if (!result.ok) {
+      alert(result.error || 'Unable to accept invite');
       return;
     }
-    const nextTripId = invite.tripId ?? invite.resolvedTripId ?? null;
-    if (nextTripId) {
-      setActiveTripId(nextTripId);
+    if (result.nextTripId) {
+      setActiveTripId(result.nextTripId);
     }
     if (isFirstLogin) {
       setDeferFirstLoginRedirect(false);
@@ -1858,41 +1792,28 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     } else {
       setActivePage('overview');
     }
-    fetchInvites();
     fetchGroups();
     fetchTrips();
   };
 
   const rejectInvite = async (invite: GroupInvite) => {
-    if (!userToken) return;
-    const res = await fetch(`${backendUrl}/api/groups/invites/${invite.id}/reject`, {
-      method: 'POST',
-      headers: headers,
-    });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      alert(data.error || 'Unable to reject invite');
+    const result = await rejectInviteRequest(invite);
+    if (!result.ok) {
+      alert(result.error || 'Unable to reject invite');
       return;
     }
-    fetchInvites();
     fetchGroups();
     fetchTrips();
   };
 
   const acceptPendingTripShareInvite = async (invite: PendingTripShareInvite) => {
-    if (!userToken) return;
-    const res = await fetch(`${backendUrl}/api/trips/share/invites/${invite.id}/accept`, {
-      method: 'POST',
-      headers,
-    });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      alert(data.error || 'Unable to accept invite');
+    const result = await acceptPendingTripShareInviteRequest(invite);
+    if (!result.ok) {
+      alert(result.error || 'Unable to accept invite');
       return;
     }
-    setPendingTripShareInvites((prev) => prev.filter((entry) => entry.id !== invite.id));
-    if (invite.tripId) {
-      setActiveTripId(invite.tripId);
+    if (result.nextTripId) {
+      setActiveTripId(result.nextTripId);
     }
     if (isFirstLogin) {
       setDeferFirstLoginRedirect(false);
@@ -1900,25 +1821,17 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     } else {
       setActivePage('overview');
     }
-    fetchPendingTripShareInvites();
     fetchGroups();
     fetchTrips();
     fetchFollowedTrips();
   };
 
   const rejectPendingTripShareInvite = async (invite: PendingTripShareInvite) => {
-    if (!userToken) return;
-    const res = await fetch(`${backendUrl}/api/trips/share/invites/${invite.id}/reject`, {
-      method: 'POST',
-      headers,
-    });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      alert(data.error || 'Unable to reject invite');
+    const result = await rejectPendingTripShareInviteRequest(invite);
+    if (!result.ok) {
+      alert(result.error || 'Unable to reject invite');
       return;
     }
-    setPendingTripShareInvites((prev) => prev.filter((entry) => entry.id !== invite.id));
-    fetchPendingTripShareInvites();
     fetchGroups();
     fetchTrips();
     fetchFollowedTrips();
