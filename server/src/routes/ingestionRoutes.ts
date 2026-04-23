@@ -6,7 +6,7 @@ import { listTrips } from '../db';
 import { resolveAndValidateRedirectUri } from '../redirects';
 import { isFeatureEnabled } from '../services/entitlementService';
 import { INGESTION_DEFAULT_FORWARDING_PROVIDER, INGESTION_FEATURE_FLAGS, INGESTION_FORWARDING_SETTINGS_COPY, INGESTION_TIER_RULES, INGESTION_USAGE_KEYS, getIngestionForwardingAddress } from '../ingestion/config';
-import { assignReviewItemToTrip, deleteReviewItem, getReviewItem, updateReviewItemEdits } from '../ingestion/assignment';
+import { assignReviewItemToTrip, bulkAssignReviewItemsToTrip, bulkDeleteReviewItems, deleteReviewItem, getReviewItem, updateReviewItemEdits } from '../ingestion/assignment';
 import { manualUploadMiddleware, buildManualUploadPayloads, buildGmailConsentUrl, buildGmailDryRunEntries, buildGmailIngestionPayloads, fetchGmailProfile, GMAIL_READONLY_SCOPE_URL, refreshGmailAccessToken } from '../ingestion/intake';
 import { enqueueIngestionPipelineJob } from '../ingestion/orchestrator';
 import { listReviewQueueItems, listImportJobsForUser, getReviewQueueSignedUrl, getProviderConnection, disconnectProviderConnections, deleteUserIngestionDataForProvider, upsertProviderConnection, updateProviderConnectionStatus, getIngestedDocumentById } from '../ingestion/shared/repository';
@@ -14,6 +14,13 @@ import { assertAndConsumeMonthlyQuota, getTierIngestionRules } from '../ingestio
 import { IngestionError } from '../ingestion/shared/userFailures';
 import { getBackendUrl, getEnvValue } from '../env';
 import { logError, logInfo } from '../logger';
+import { readDto } from '../utils/dtoParse';
+import {
+  assignReviewItemDto,
+  bulkAssignReviewItemsDto,
+  bulkDeleteReviewItemsDto,
+  updateReviewItemDto,
+} from './ingestionDtos';
 
 const router = Router();
 router.use(bodyParser.json({ limit: '2mb' }));
@@ -283,26 +290,24 @@ router.post('/upload', (req, res, next) => {
 router.patch('/review-items/:id', async (req, res) => {
   const userId = (req as any).user.userId as string;
   if (!(await requireTierAccess(userId, res))) return;
-  const editedFields = (req.body?.editedFields ?? {}) as Record<string, unknown>;
-  const updated = await updateReviewItemEdits(userId, req.params.id, editedFields);
+  const dto = readDto(updateReviewItemDto, req.body, res);
+  if (!dto) return;
+  const updated = await updateReviewItemEdits(userId, req.params.id, dto.editedFields);
   res.json(updated);
 });
 
 router.post('/review-items/:id/assign', async (req, res) => {
   const user = (req as any).user as TokenPayload;
   if (!(await requireTierAccess(user.userId, res))) return;
-  const tripId = String(req.body?.tripId ?? '').trim();
-  if (!tripId) {
-    res.status(400).json({ error: 'tripId is required.' });
-    return;
-  }
+  const dto = readDto(assignReviewItemDto, req.body, res);
+  if (!dto) return;
   try {
     const result = await assignReviewItemToTrip({
       userId: user.userId,
       parsedItemId: req.params.id,
-      tripId,
+      tripId: dto.tripId,
       assignedByUserId: user.userId,
-      editedFields: (req.body?.editedFields ?? {}) as Record<string, unknown>,
+      editedFields: dto.editedFields,
     });
     res.status(201).json(result);
   } catch (error) {
@@ -315,6 +320,35 @@ router.delete('/review-items/:id', async (req, res) => {
   if (!(await requireTierAccess(userId, res))) return;
   const updated = await deleteReviewItem(userId, req.params.id);
   res.json(updated);
+});
+
+router.post('/review-items/bulk-delete', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  if (!(await requireTierAccess(userId, res))) return;
+  const dto = readDto(bulkDeleteReviewItemsDto, req.body, res);
+  if (!dto) return;
+  const outcome = await bulkDeleteReviewItems(userId, dto.ids);
+  res.status(outcome.failed.length > 0 ? 207 : 200).json({
+    deletedIds: outcome.succeeded.map((entry) => entry.id),
+    failed: outcome.failed,
+  });
+});
+
+router.post('/review-items/bulk-assign', async (req, res) => {
+  const user = (req as any).user as TokenPayload;
+  if (!(await requireTierAccess(user.userId, res))) return;
+  const dto = readDto(bulkAssignReviewItemsDto, req.body, res);
+  if (!dto) return;
+  const outcome = await bulkAssignReviewItemsToTrip({
+    userId: user.userId,
+    ids: dto.ids,
+    tripId: dto.tripId,
+    assignedByUserId: user.userId,
+  });
+  res.status(outcome.failed.length > 0 ? 207 : 200).json({
+    assigned: outcome.succeeded.map((entry) => entry.result),
+    failed: outcome.failed,
+  });
 });
 
 router.get('/assignment/trips', async (req, res) => {

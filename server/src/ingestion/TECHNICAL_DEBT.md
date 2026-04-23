@@ -50,6 +50,11 @@ This file records conservative assumptions and known rollout gaps for the ingest
 ### Gmail token refresh failure handling (resolved)
 - Token refresh failures now mark `provider_connection.status = AUTH_EXPIRED`, stop further authenticated reuse of that connection, and surface reconnect messaging in the UI.
 
+### Bulk review actions (resolved)
+- Multi-select checkboxes and a bulk action bar are now exposed on the ingestion review queue.
+- `POST /api/ingestion/review-items/bulk-delete` and `POST /api/ingestion/review-items/bulk-assign` accept up to 100 ids per call, dedupe input, and report per-id failure reasons in a 207 response when any items fail without aborting the rest of the batch.
+- Cross-user isolation, partial-failure reporting, validation rejection, free-tier denial, and idempotency-on-resubmit are integration-tested in `ingestion.bulk-actions.test.ts`.
+
 ### Gmail data deletion on disconnect (resolved)
 - `POST /api/ingestion/gmail/disconnect` now cascades: `deleteUserIngestionDataForProvider(userId, 'gmail')` removes every `ingestion_source`, `import_job`, `import_job_payload`, `ingested_document`, and `parsed_item` scoped to `source_type = 'GMAIL_IMPORT'` before the `provider_connection` row is removed. The cascade runs first so a mid-flight failure leaves the connection intact and retryable.
 - Manual-upload and forwarded-mailbox records are untouched — scoping is by `(user_id, source_type)`.
@@ -107,12 +112,6 @@ This file records conservative assumptions and known rollout gaps for the ingest
 - Gmail import lookback is capped at 90 days (Pro) / 30 days (Premium). No support for deeper historical import.
 
 ## Deferred UX items
-
-### Bulk actions
-- **Capability name:** bulk review actions
-- **Why deferred:** correctness and atomic single-item assignment/delete took precedence over multi-select workflow complexity.
-- **Current constraint:** the data model supports this later, but the current UI only acts on one parsed item at a time.
-- **Rough effort estimate:** medium.
 
 ### Duplicate conflict detail (side-by-side diff)
 - **Capability name:** duplicate diff view
