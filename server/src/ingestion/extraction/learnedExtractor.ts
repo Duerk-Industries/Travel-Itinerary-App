@@ -772,7 +772,9 @@ const extractBuiltInSourceResult = async (
     const departureTime = normalizeOutputTime(text.match(/Departure time\s*-\s*(\d{1,2}:\d{2})/i)?.[1] ?? null);
     const arrivalTime = normalizeOutputTime(text.match(/Arrival time\s*-\s*(\d{1,2}:\d{2})/i)?.[1] ?? null);
     const flightNumber = text.match(/\b(FR\s*\d{1,4})\b/i)?.[1]?.replace(/\s+/g, '') ?? null;
-    const { amount, currency } = parseTrailingCurrencyAmount(text.match(/Receipt:\s*[\s\S]{0,200}/i)?.[0] ?? text);
+    const receiptSegment = (text.match(/Receipt:\s*[\s\S]{0,200}/i)?.[0] ?? text)
+      .replace(/(ending in:?\s*)\d{3,4}(?=\d*\.\d{2}\b)/gi, '$1');
+    const { amount, currency } = parseTrailingCurrencyAmount(receiptSegment);
     const travelerNames = extractRyanairTravelerNames(text);
 
     if (confirmationNumber && routeMatch && departureDate) {

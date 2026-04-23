@@ -235,7 +235,7 @@ Reduce unnecessary polling and eliminate duplicate concurrent requests.
 
 ## Priority 6: Caching And Dedupe For Expensive External Calls
 
-Status: `Partial`
+Status: `Substantial`
 
 ### Goal
 Reduce cost and latency for AI, image, and third-party lookup flows.

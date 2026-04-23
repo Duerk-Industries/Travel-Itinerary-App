@@ -867,7 +867,10 @@ export const findOrCreateUser = async (email: string, provider: User['provider']
 export const ensureDefaultGroupForUser = async (userId: string, email: string): Promise<void> => {
   const db = getDb();
   const groups = await db.collection('groups').where('ownerId', '==', userId).where('name', '==', 'My Trips').limit(1).get();
-  if (!groups.empty) return;
+  if (!groups.empty) {
+    await rebuildGroupAccessForGroup(groups.docs[0].id);
+    return;
+  }
   const groupId = randomUUID();
   await db.collection('groups').doc(groupId).set({ ownerId: userId, name: 'My Trips', createdAt: nowIso() });
   await db.collection('group_members').doc(randomUUID()).set({
@@ -877,6 +880,7 @@ export const ensureDefaultGroupForUser = async (userId: string, email: string): 
     createdAt: nowIso(),
     removedAt: null,
   });
+  await rebuildGroupAccessForGroup(groupId);
 };
 
 export const findUserByEmail = async (email: string): Promise<User | null> => {
