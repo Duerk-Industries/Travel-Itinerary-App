@@ -66,6 +66,11 @@ import { type AsyncItineraryTracker, useAsyncItineraryPolling } from './hooks/us
 import { useTripsData } from './hooks/useTripsData';
 import { useGroupInvites } from './hooks/useGroupInvites';
 import { useFollowedTrips } from './hooks/useFollowedTrips';
+import { useAuthFlowState } from './hooks/useAuthFlowState';
+import { useAccountProfile } from './hooks/useAccountProfile';
+import { useSelectedFollowedTripDetails } from './hooks/useSelectedFollowedTripDetails';
+import { useCreateTripWizard } from './hooks/useCreateTripWizard';
+import { useChatState } from './hooks/useChatState';
 import type { GroupInvite, PendingTripShareInvite } from './types/invites';
 import type { GroupMemberOption, Trip } from './types/trips';
 
@@ -414,17 +419,28 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [flights, setFlights] = useState<Flight[]>([]);
   const [externalFlightEditId, setExternalFlightEditId] = useState<string | null>(null);
   const [pendingInviteModalOpen, setPendingInviteModalOpen] = useState(false);
-  const [deferFirstLoginRedirect, setDeferFirstLoginRedirect] = useState(false);
-  const [showResendConfirmation, setShowResendConfirmation] = useState(false);
-  const [resendConfirmationLoading, setResendConfirmationLoading] = useState(false);
-  const [requirePasswordSetup, setRequirePasswordSetup] = useState(false);
-  const [passwordSetupLoading, setPasswordSetupLoading] = useState(false);
-  const [passwordSetupForm, setPasswordSetupForm] = useState({ newPassword: '', newPasswordConfirm: '' });
-  const [isFirstLogin, setIsFirstLogin] = useState(false);
-  const [emailConfirmationMessage, setEmailConfirmationMessage] = useState<string | null>(null);
-  const [authErrorMessage, setAuthErrorMessage] = useState<string | null>(null);
+  const {
+    deferFirstLoginRedirect,
+    showResendConfirmation,
+    resendConfirmationLoading,
+    requirePasswordSetup,
+    passwordSetupLoading,
+    passwordSetupForm,
+    isFirstLogin,
+    emailConfirmationMessage,
+    authErrorMessage,
+    setDeferFirstLoginRedirect,
+    setShowResendConfirmation,
+    setResendConfirmationLoading,
+    setRequirePasswordSetup,
+    setPasswordSetupLoading,
+    setPasswordSetupForm,
+    setIsFirstLogin,
+    setEmailConfirmationMessage,
+    setAuthErrorMessage,
+  } = useAuthFlowState();
   const [selectedFollowedTripId, setSelectedFollowedTripId] = useState<string | null>(null);
-  const [selectedFollowedTripDetails, setSelectedFollowedTripDetails] = useState<Trip | null>(null);
+  // selectedFollowedTripDetails is now owned by useSelectedFollowedTripDetails (declared below once selectedFollowedTrip is derived).
   const isFollowingMode = Boolean(selectedFollowedTripId);
   const [groupName, setGroupName] = useState('');
   const [groupUserEmails, setGroupUserEmails] = useState('');
@@ -432,8 +448,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [groupAddEmail, setGroupAddEmail] = useState<Record<string, string>>({});
   const [groupAddRelationship, setGroupAddRelationship] = useState<Record<string, string>>({});
   const [groupSort, setGroupSort] = useState<'created' | 'name'>('created');
-  const [newTripName, setNewTripName] = useState('');
-  const [newTripGroupId, setNewTripGroupId] = useState<string | null>(null);
+  // newTripName + newTripGroupId are now owned by useCreateTripWizard (declared below after useTripsData).
   const [showTripGroupDropdown, setShowTripGroupDropdown] = useState(false);
   const [tripDropdownOpenId, setTripDropdownOpenId] = useState<string | null>(null);
   const [activeTripId, setActiveTripId] = useState<string | null>(null);
@@ -449,10 +464,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [lodgingToDelete, setLodgingToDelete] = useState<Lodging | null>(null);
 
   // Socket.IO / presence / chat
-  const [presenceUsers, setPresenceUsers] = useState<PresenceUser[]>([]);
-  const [chatOpen, setChatOpen] = useState(false);
-  const [chatMinimized, setChatMinimized] = useState(false);
-  const [chatUnread, setChatUnread] = useState(0);
+  // chat state is owned by useChatState, wired up after activeTripId is in scope.
 
   const [tours, setTours] = useState<Tour[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -492,43 +504,19 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     password: '',
     passwordConfirm: '',
   });
-  const [accountProfile, setAccountProfile] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    homeAddress: '',
-    preferredAirport: '',
-    appearancePreference: 'auto' as AppearancePreference,
-  });
-  const [mapApp, setMapApp] = useState<MapApp>(() => loadStoredMapPreference('google'));
-  const [appearancePreference, setAppearancePreference] = useState<AppearancePreference>(() =>
-    loadStoredAppearancePreference('auto')
-  );
-  const logoutRef = useRef<() => void>(() => undefined);
   const {
-    addMemberToGroup: addGroupMemberRequest,
-    cancelInvite: cancelGroupInviteRequest,
-    clearTripsData,
-    createTrip: createTripRequest,
-    fetchGroups,
-    fetchGroupMembersForActiveTrip,
-    fetchTrips,
-    groupMembers,
-    groups,
-    removeMemberFromGroup: removeGroupMemberRequest,
-    trips,
-  } = useTripsData({
-    activeTripId,
-    backendUrl,
-    groupSort,
-    isFollowingMode,
-    onUnauthorized: () => logoutRef.current(),
-    requirePasswordSetup,
-    selectedFollowedTripDetails,
-    setActiveTripId,
-    userEmail,
-    userToken,
-  });
+    accountProfile,
+    mapApp,
+    appearancePreference,
+    setAccountProfile,
+    setMapApp,
+    setAppearancePreference,
+    updateMapPreference,
+    updateAppearancePreference,
+    clearAccountProfile,
+  } = useAccountProfile();
+  const logoutRef = useRef<() => void>(() => undefined);
+
   const {
     invites,
     invitesLoaded,
@@ -567,6 +555,55 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     handleFollowTripByCode,
     clearFollowedTripsData,
   } = useFollowedTrips({ backendUrl, userToken, onUnauthorized: () => logoutRef.current() });
+
+  const followedTripById = useMemo(
+    () => new Map(followedTrips.map((trip) => [trip.tripId, trip] as const)),
+    [followedTrips]
+  );
+  const selectedFollowedTrip = useMemo(
+    () => (selectedFollowedTripId ? followedTripById.get(selectedFollowedTripId) ?? null : null),
+    [followedTripById, selectedFollowedTripId]
+  );
+
+  const { selectedFollowedTripDetails, setSelectedFollowedTripDetails } = useSelectedFollowedTripDetails({
+    backendUrl,
+    selectedFollowedTrip,
+    selectedFollowedTripId,
+    userToken,
+  });
+
+  const {
+    addMemberToGroup: addGroupMemberRequest,
+    cancelInvite: cancelGroupInviteRequest,
+    clearTripsData,
+    createTrip: createTripRequest,
+    fetchGroups,
+    fetchGroupMembersForActiveTrip,
+    fetchTrips,
+    groupMembers,
+    groups,
+    removeMemberFromGroup: removeGroupMemberRequest,
+    trips,
+  } = useTripsData({
+    activeTripId,
+    backendUrl,
+    groupSort,
+    isFollowingMode,
+    onUnauthorized: () => logoutRef.current(),
+    requirePasswordSetup,
+    selectedFollowedTripDetails,
+    setActiveTripId,
+    userEmail,
+    userToken,
+  });
+
+  const {
+    newTripName,
+    newTripGroupId,
+    setNewTripName,
+    setNewTripGroupId,
+    submit: submitCreateTripWizard,
+  } = useCreateTripWizard({ groups, createTrip: createTripRequest, userToken });
 
   const theme = useMemo(() => getAppTheme(appearancePreference, systemColorScheme), [appearancePreference, systemColorScheme]);
   const styles = useMemo(() => buildStyles(theme), [theme]);
@@ -651,31 +688,11 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     [carRentals]
   );
 
-  const updateMapPreference = useCallback(
-    (pref: MapApp) => {
-      setMapApp(pref);
-      persistMapPreference(pref);
-      setAccountProfile((prev) => ({ ...prev, mapPreference: pref }));
-    },
-    [setAccountProfile]
-  );
-
-  const updateAppearancePreference = useCallback(
-    (pref: AppearancePreference) => {
-      setAppearancePreference(pref);
-      persistAppearancePreference(pref);
-      setAccountProfile((prev) => ({ ...prev, appearancePreference: pref }));
-    },
-    [setAccountProfile]
-  );
+  // updateMapPreference + updateAppearancePreference are now provided by useAccountProfile.
 
   const activeTrip = useMemo(() => trips.find((t) => t.id === activeTripId) ?? null, [trips, activeTripId]);
   const tripById = useMemo(() => new Map(trips.map((trip) => [trip.id, trip] as const)), [trips]);
   const groupById = useMemo(() => new Map(groups.map((group) => [group.id, group] as const)), [groups]);
-  const followedTripById = useMemo(
-    () => new Map(followedTrips.map((trip) => [trip.tripId, trip] as const)),
-    [followedTrips]
-  );
   const activeGroup = useMemo(
     () => (activeTrip?.groupId ? groupById.get(activeTrip.groupId) ?? null : null),
     [activeTrip?.groupId, groupById]
@@ -688,10 +705,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     () => (selectedTrip?.groupId ? groupById.get(selectedTrip.groupId) ?? null : null),
     [selectedTrip?.groupId, groupById]
   );
-  const selectedFollowedTrip = useMemo(
-    () => (selectedFollowedTripId ? followedTripById.get(selectedFollowedTripId) ?? null : null),
-    [followedTripById, selectedFollowedTripId]
-  );
+  // followedTripById + selectedFollowedTrip were moved above useTripsData so
+  // that useSelectedFollowedTripDetails can run before useTripsData consumes
+  // selectedFollowedTripDetails.
   const followedTripFallback = useMemo<Trip | null>(
     () =>
       selectedFollowedTrip
@@ -1104,7 +1120,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setSelectedTraitNames(new Set());
     setTraitAge('');
     setTraitGender('prefer-not');
-    setAccountProfile({ firstName: '', lastName: '', email: '', homeAddress: '', preferredAirport: '', appearancePreference: 'auto' });
+    clearAccountProfile();
     setFamilyRelationships([]);
     setFellowTravelers([]);
     setRequirePasswordSetup(false);
@@ -1117,9 +1133,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setIsRefreshing(false);
     refreshInFlightRef.current = false;
     disconnectSocket();
-    setPresenceUsers([]);
-    setChatOpen(false);
-    setChatUnread(0);
+    clearChatState();
     clearSession();
   }, [clearTripsData]);
   logoutRef.current = logout;
@@ -1674,15 +1688,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
   // fetchFollowedTrips is now provided by useFollowedTrips.
 
-  useEffect(() => {
-    if (!newTripGroupId && groups.length) {
-      setNewTripGroupId(groups[0].id);
-      return;
-    }
-    if (newTripGroupId && !groups.some((group) => group.id === newTripGroupId)) {
-      setNewTripGroupId(groups[0]?.id ?? null);
-    }
-  }, [groups, newTripGroupId]);
+  // The auto-select-first-group effect is now owned by useCreateTripWizard.
 
   const fetchTraits = useCallback(async () => {
     if (!userToken) return;
@@ -1982,32 +1988,19 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     };
   }, []);
 
-  // Socket.IO: join trip room when active trip changes
-  useEffect(() => {
-    if (!userToken || !activeTripId) return;
-    const socket = getSocket();
-
-    const onPresence = (list: PresenceUser[]) => setPresenceUsers(list);
-    const onUnread = (data: { tripId: string; count: number }) => {
-      if (data.tripId === activeTripId) setChatUnread(data.count);
-    };
-
-    socket.on(SERVER_EVENTS.PRESENCE_UPDATE, onPresence);
-    socket.on(SERVER_EVENTS.UNREAD_COUNT, onUnread);
-
-    if (socket.connected) {
-      socket.emit(CLIENT_EVENTS.JOIN_TRIP, activeTripId);
-    } else {
-      socket.once('connect', () => {
-        socket.emit(CLIENT_EVENTS.JOIN_TRIP, activeTripId);
-      });
-    }
-
-    return () => {
-      socket.off(SERVER_EVENTS.PRESENCE_UPDATE, onPresence);
-      socket.off(SERVER_EVENTS.UNREAD_COUNT, onUnread);
-    };
-  }, [userToken, activeTripId]);
+  // Socket.IO presence + unread subscriptions plus chat UI state are owned by useChatState.
+  const {
+    presenceUsers,
+    chatOpen,
+    chatMinimized,
+    chatUnread,
+    setChatUnread,
+    openChat,
+    closeChat,
+    minimizeChat,
+    restoreChat,
+    clearChatState,
+  } = useChatState({ activeTripId, userToken });
 
   useAsyncItineraryPolling({
     asyncItineraryByTrip,
@@ -2136,48 +2129,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     }
   }, [followedTrips, selectedFollowedTripId]);
 
-  useEffect(() => {
-    if (!selectedFollowedTripId || !userToken) {
-      setSelectedFollowedTripDetails(null);
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch(`${backendUrl}/api/trips/${selectedFollowedTripId}`, {
-          headers: { Authorization: `Bearer ${userToken}` },
-        });
-        if (!res.ok) {
-          if (!cancelled) setSelectedFollowedTripDetails(null);
-          return;
-        }
-        const data = await res.json().catch(() => null);
-        if (!cancelled && data?.id) {
-          setSelectedFollowedTripDetails({
-            id: data.id,
-            groupId: data.groupId ?? '',
-            groupName: data.groupName ?? '',
-            name: data.name ?? selectedFollowedTrip?.tripName ?? 'Trip',
-            description: data.description ?? null,
-            destination: data.destination ?? selectedFollowedTrip?.destination ?? null,
-            locationIds: Array.isArray(data.locationIds) ? data.locationIds : [],
-            startDate: data.startDate ?? null,
-            endDate: data.endDate ?? null,
-            startMonth: data.startMonth ?? null,
-            startYear: data.startYear ?? null,
-            durationDays: data.durationDays ?? null,
-            currency: data.currency ?? null,
-            createdAt: data.createdAt ?? '',
-          });
-        }
-      } catch {
-        if (!cancelled) setSelectedFollowedTripDetails(null);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [backendUrl, selectedFollowedTrip?.destination, selectedFollowedTrip?.tripName, selectedFollowedTripId, userToken]);
+  // The selectedFollowedTripDetails fetch effect is now owned by useSelectedFollowedTripDetails.
 
   useEffect(() => {
     if (!userToken || requirePasswordSetup) return;
@@ -2279,16 +2231,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   };
 
   const createTrip = async () => {
-    if (!userToken || !newTripName.trim() || !newTripGroupId) {
-      alert('Enter a trip name and choose a group');
-      return;
-    }
-    const result = await createTripRequest({ name: newTripName.trim(), groupId: newTripGroupId });
+    const result = await submitCreateTripWizard();
     if (!result.ok) {
       alert(result.error || 'Unable to create trip');
-      return;
     }
-    setNewTripName('');
   };
 
   const onTripCreated = (tripId: string) => {
@@ -3833,7 +3779,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       {/* Chat FAB — only when logged in and a trip is active */}
       {userToken && activeTripId && !chatOpen && (
         <ChatButton
-          onPress={() => { setChatOpen(true); setChatMinimized(false); }}
+          onPress={openChat}
           unreadCount={chatUnread}
         />
       )}
@@ -3844,8 +3790,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           tripId={activeTripId}
           currentUserId={userId ?? ''}
           currentUserName={userName ?? 'Traveler'}
-          onClose={() => setChatOpen(false)}
-          onMinimize={() => setChatMinimized(true)}
+          onClose={closeChat}
+          onMinimize={minimizeChat}
           unreadCount={chatUnread}
           onUnreadChange={setChatUnread}
           theme={theme}
@@ -3854,7 +3800,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       {/* Minimized chat badge */}
       {userToken && activeTripId && chatOpen && chatMinimized && (
         <ChatButton
-          onPress={() => setChatMinimized(false)}
+          onPress={restoreChat}
           unreadCount={chatUnread}
         />
       )}
