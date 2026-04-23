@@ -71,6 +71,7 @@ import { useAccountProfile } from './hooks/useAccountProfile';
 import { useSelectedFollowedTripDetails } from './hooks/useSelectedFollowedTripDetails';
 import { useCreateTripWizard } from './hooks/useCreateTripWizard';
 import { useChatState } from './hooks/useChatState';
+import { useAuthSession } from './hooks/useAuthSession';
 import type { GroupInvite, PendingTripShareInvite } from './types/invites';
 import type { GroupMemberOption, Trip } from './types/trips';
 
@@ -408,8 +409,20 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     [isWebIOSSafari]
   );
 
-  const [userToken, setUserToken] = useState<string | null>(null);
-  const [userName, setUserName] = useState<string | null>(null);
+  const {
+    userToken,
+    userName,
+    userEmail,
+    userId,
+    userRole,
+    setUserToken,
+    setUserName,
+    setUserEmail,
+    setUserId,
+    setUserRole,
+    applySession,
+    clearSessionState,
+  } = useAuthSession();
   const [lastRefreshAt, setLastRefreshAt] = useState<number | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -452,9 +465,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [showTripGroupDropdown, setShowTripGroupDropdown] = useState(false);
   const [tripDropdownOpenId, setTripDropdownOpenId] = useState<string | null>(null);
   const [activeTripId, setActiveTripId] = useState<string | null>(null);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [userRole, setUserRole] = useState<'user' | 'admin'>('user');
+  // userEmail / userId / userRole are owned by useAuthSession (declared above).
   const [showActiveTripDropdown, setShowActiveTripDropdown] = useState(false);
   const [openShareFromHeaderSignal, setOpenShareFromHeaderSignal] = useState(0);
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
@@ -1100,11 +1111,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   };
 
   const logout = useCallback(() => {
-    setUserToken(null);
-    setUserName(null);
-    setUserEmail(null);
-    setUserId(null);
-    setUserRole('user');
+    clearSessionState();
     clearTripsData();
     setActiveTripId(null);
     setFlights([]);
@@ -1135,7 +1142,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     disconnectSocket();
     clearChatState();
     clearSession();
-  }, [clearTripsData]);
+  }, [clearSessionState, clearTripsData]);
   logoutRef.current = logout;
 
   // handleFollowTripByCode is now provided by useFollowedTrips.
@@ -1222,15 +1229,15 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       `${decoded?.firstName ?? ''} ${decoded?.lastName ?? ''}`.trim() || decoded?.email || 'Traveler';
     const decodedRole: 'user' | 'admin' = decoded?.role === 'admin' ? 'admin' : 'user';
     const decodedUserId = (decoded as any)?.userId ?? null;
-    setUserToken(token);
-    setUserName(name);
-    setUserRole(decodedRole);
-    setUserId(decodedUserId);
+    applySession({
+      token,
+      name,
+      email: decoded?.email ?? null,
+      userId: decodedUserId,
+      role: decodedRole,
+    });
     setInvitesLoaded(false);
     connectSocket(token);
-    if (decoded?.email) {
-      setUserEmail(decoded.email);
-    }
     setAccountProfile({
       firstName: decoded?.firstName ?? '',
       lastName: decoded?.lastName ?? '',
@@ -2058,10 +2065,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       const decoded = decodeTokenClaims(session.token);
       const restoredRole: 'user' | 'admin' =
         session.role === 'admin' || decoded?.role === 'admin' ? 'admin' : 'user';
-      setUserToken(session.token);
-      setUserName(session.name);
-      setUserEmail(session.email ?? null);
-      setUserRole(restoredRole);
+      applySession({
+        token: session.token,
+        name: session.name,
+        email: session.email ?? null,
+        userId: (decoded as any)?.userId ?? null,
+        role: restoredRole,
+      });
       const sessionHistory = Array.isArray(session.pageHistory)
         ? session.pageHistory.filter((p) => typeof p === 'string') as Page[]
         : [];
