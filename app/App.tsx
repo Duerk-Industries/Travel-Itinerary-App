@@ -72,6 +72,7 @@ import { useSelectedFollowedTripDetails } from './hooks/useSelectedFollowedTripD
 import { useCreateTripWizard } from './hooks/useCreateTripWizard';
 import { useChatState } from './hooks/useChatState';
 import { useAuthSession } from './hooks/useAuthSession';
+import { useTraits } from './hooks/useTraits';
 import type { GroupInvite, PendingTripShareInvite } from './types/invites';
 import type { GroupMemberOption, Trip } from './types/trips';
 
@@ -451,7 +452,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setIsFirstLogin,
     setEmailConfirmationMessage,
     setAuthErrorMessage,
-  } = useAuthFlowState();
+    completeInitialPasswordSetup: submitInitialPasswordSetup,
+    resendConfirmationEmail: submitResendConfirmation,
+  } = useAuthFlowState({ backendUrl, userToken });
   const [selectedFollowedTripId, setSelectedFollowedTripId] = useState<string | null>(null);
   // selectedFollowedTripDetails is now owned by useSelectedFollowedTripDetails (declared below once selectedFollowedTrip is derived).
   const isFollowingMode = Boolean(selectedFollowedTripId);
@@ -497,16 +500,28 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [carPrepaidOpen, setCarPrepaidOpen] = useState(false);
   const carPickupDateRef = useRef<HTMLInputElement | null>(null);
   const carDropoffDateRef = useRef<HTMLInputElement | null>(null);
-  const [traits, setTraits] = useState<Trait[]>([]);
-  const [newTraitName, setNewTraitName] = useState('');
-  const [selectedTraitNames, setSelectedTraitNames] = useState<Set<string>>(new Set());
+  const {
+    traits,
+    newTraitName,
+    selectedTraitNames,
+    traitAge,
+    traitGender,
+    showGenderDropdown,
+    setTraits,
+    setNewTraitName,
+    setSelectedTraitNames,
+    setTraitAge,
+    setTraitGender,
+    setShowGenderDropdown,
+    fetchTraits,
+    fetchTraitProfile,
+    clearTraitsState,
+  } = useTraits({ backendUrl, userToken });
   const [activePage, setActivePage] = useState<Page>('home');
   const [pageHistory, setPageHistory] = useState<Page[]>([]);
   const [pageForwardHistory, setPageForwardHistory] = useState<Page[]>([]);
   const [flightAirportOptions, setFlightAirportOptions] = useState<string[]>([]);
-  const [traitAge, setTraitAge] = useState('');
-  const [traitGender, setTraitGender] = useState<'female' | 'male' | 'nonbinary' | 'prefer-not'>('prefer-not');
-  const [showGenderDropdown, setShowGenderDropdown] = useState(false);
+  // traitAge / traitGender / showGenderDropdown are owned by useTraits (declared above).
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [authForm, setAuthForm] = useState({
     firstName: '',
@@ -1123,10 +1138,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setSelectedFollowedTripId(null);
     setGroupAddEmail({});
     setGroupAddRelationship({});
-    setTraits([]);
-    setSelectedTraitNames(new Set());
-    setTraitAge('');
-    setTraitGender('prefer-not');
+    clearTraitsState();
     clearAccountProfile();
     setFamilyRelationships([]);
     setFellowTravelers([]);
@@ -1409,38 +1421,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   }, [handleAuthSuccess]);
 
   const completeInitialPasswordSetup = async () => {
-    if (!userToken) return;
-    if (passwordSetupForm.newPassword !== passwordSetupForm.newPasswordConfirm) {
-      alert('Passwords do not match');
+    const result = await submitInitialPasswordSetup();
+    if (!result.ok) {
+      alert(result.error);
       return;
     }
-    if (passwordSetupForm.newPassword.trim().length < 6) {
-      alert('New password must be at least 6 characters');
-      return;
-    }
-    try {
-      setPasswordSetupLoading(true);
-      const res = await fetch(`${backendUrl}/api/account/password`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
-        body: JSON.stringify({
-          newPassword: passwordSetupForm.newPassword,
-          newPasswordConfirm: passwordSetupForm.newPasswordConfirm,
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        alert(data.error || 'Unable to set password');
-        return;
-      }
-      setRequirePasswordSetup(false);
-      setPasswordSetupForm({ newPassword: '', newPasswordConfirm: '' });
-      alert('Password set. You can now sign in with email/password too.');
-    } catch (err) {
-      alert((err as Error).message || 'Unable to set password');
-    } finally {
-      setPasswordSetupLoading(false);
-    }
+    alert('Password set. You can now sign in with email/password too.');
   };
 
   const loginWithPassword = async () => {
@@ -1473,29 +1459,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   };
 
   const resendConfirmationEmail = async () => {
-    const email = authForm.email.trim();
-    if (!email) {
-      alert('Enter your email or username first.');
+    const result = await submitResendConfirmation(authForm.email);
+    if (!result.ok) {
+      alert(result.error);
       return;
     }
-    try {
-      setResendConfirmationLoading(true);
-      const res = await fetch(`${backendUrl}/api/web-auth/resend-confirmation`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identifier: email }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        alert(data.error || 'Failed to resend confirmation email.');
-        return;
-      }
-      alert(data.message || 'If an account exists for this email, a confirmation link has been sent.');
-    } catch (err) {
-      alert((err as Error).message || 'Failed to resend confirmation email.');
-    } finally {
-      setResendConfirmationLoading(false);
-    }
+    alert(result.message);
   };
 
   const register = async () => {
@@ -1697,28 +1666,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
   // The auto-select-first-group effect is now owned by useCreateTripWizard.
 
-  const fetchTraits = useCallback(async () => {
-    if (!userToken) return;
-    const res = await fetch(`${backendUrl}/api/traits`, { headers: { Authorization: `Bearer ${userToken}` } });
-    if (!res.ok) return;
-    const data = (await res.json()) as Trait[];
-    setTraits(data);
-    setSelectedTraitNames(new Set(data.map((t) => t.name)));
-  }, [backendUrl, userToken]);
-
-  const fetchTraitProfile = useCallback(async () => {
-    if (!userToken) return;
-    const res = await fetch(`${backendUrl}/api/traits/profile/demographics`, { headers });
-    if (!res.ok) return;
-    const raw = await res.json().catch(() => ({}));
-    const data = raw ?? {};
-    if (data.age != null) setTraitAge(String(data.age));
-    if (data.gender) {
-      if (data.gender === 'female' || data.gender === 'male' || data.gender === 'nonbinary' || data.gender === 'prefer-not') {
-        setTraitGender(data.gender);
-      }
-    }
-  }, [backendUrl, headers, userToken]);
+  // fetchTraits and fetchTraitProfile are now provided by useTraits.
 
   const fetchFlightAirports = useCallback(async (q: string) => {
     if (!userToken || !q.trim()) {
