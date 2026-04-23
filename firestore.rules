@@ -50,6 +50,13 @@ service cloud.firestore {
         );
     }
 
+    function canReadTripOwnerManagedInvite() {
+      return signedIn()
+        && resource.data.tripId != null
+        && exists(/databases/$(database)/documents/trips/$(resource.data.tripId))
+        && isGroupOwner(get(/databases/$(database)/documents/trips/$(resource.data.tripId)).data.groupId);
+    }
+
     function tripGroupIdFromTrip(tripId) {
       return get(/databases/$(database)/documents/trips/$(tripId)).data.groupId;
     }
@@ -82,6 +89,11 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /airports/{airportId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     match /users/{userId} {
       allow read: if isSelf(userId);
       allow write: if false;
@@ -99,6 +111,16 @@ service cloud.firestore {
 
     match /fellow_travelers/{travelerId} {
       allow read: if signedIn() && resource.data.ownerId == authUid();
+      allow write: if false;
+    }
+
+    match /traits/{traitId} {
+      allow read: if signedIn() && resource.data.userId == authUid();
+      allow write: if false;
+    }
+
+    match /user_demographics/{userId} {
+      allow read: if isSelf(userId);
       allow write: if false;
     }
 
@@ -130,6 +152,19 @@ service cloud.firestore {
 
     match /trips/{tripId} {
       allow read: if canReadTripById(tripId);
+      allow write: if false;
+    }
+
+    match /follow_codes/{codeId} {
+      allow read: if signedIn()
+        && resource.data.tripId != null
+        && exists(/databases/$(database)/documents/trips/$(resource.data.tripId))
+        && isGroupOwner(get(/databases/$(database)/documents/trips/$(resource.data.tripId)).data.groupId);
+      allow write: if false;
+    }
+
+    match /trip_share_invites/{inviteId} {
+      allow read: if canReadTripOwnerManagedInvite() || canReadOwnInvite();
       allow write: if false;
     }
 
@@ -168,7 +203,22 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /trip_payments/{paymentId} {
+      allow read: if canReadTripById(resource.data.tripId);
+      allow write: if false;
+    }
+
     match /item_votes/{voteId} {
+      allow read: if canReadTripById(resource.data.tripId);
+      allow write: if false;
+    }
+
+    match /trip_activity/{activityId} {
+      allow read: if canReadTripById(resource.data.tripId);
+      allow write: if false;
+    }
+
+    match /trip_comments/{commentId} {
       allow read: if canReadTripById(resource.data.tripId);
       allow write: if false;
     }
@@ -188,6 +238,11 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /flight_shares/{shareId} {
+      allow read: if signedIn() && resource.data.userId == authUid();
+      allow write: if false;
+    }
+
     match /message_reads/{readId} {
       allow read: if signedIn() && resource.data.userId == authUid();
       allow write: if false;
@@ -201,6 +256,14 @@ service cloud.firestore {
     match /provider_connections/{connectionId} {
       allow read: if signedIn() && resource.data.userId == authUid();
       allow write: if false;
+    }
+
+    match /email_verifications/{verificationId} {
+      allow read, write: if false;
+    }
+
+    match /user_email_verifications/{verificationId} {
+      allow read, write: if false;
     }
 
     match /ingestion_sources/{sourceId} {

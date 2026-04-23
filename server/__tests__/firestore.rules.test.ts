@@ -117,6 +117,7 @@ const seedBaseDocuments = async (
 ) => {
   await Promise.all([
     db.collection('locations').doc('public-location').set({ name: 'Paris', sourceFile: 'seed.json' }),
+    db.collection('airports').doc('BOS').set({ name: 'Boston Logan', city: 'Boston', country: 'US' }),
     db.collection('users').doc(owner.uid).set({ email: owner.email, firstName: 'Owner' }),
     db.collection('users').doc(other.uid).set({ email: other.email, firstName: 'Other' }),
     db.collection('users').doc(outsider.uid).set({ email: outsider.email, firstName: 'Outsider' }),
@@ -125,6 +126,8 @@ const seedBaseDocuments = async (
     db.collection('web_users').doc(owner.uid).set({ email: owner.email, preferredAirport: 'BOS' }),
     db.collection('web_users').doc(other.uid).set({ email: other.email, preferredAirport: 'JFK' }),
     db.collection('fellow_travelers').doc('traveler-1').set({ ownerId: owner.uid, name: 'Traveler One' }),
+    db.collection('traits').doc('trait-1').set({ userId: owner.uid, name: 'Outdoorsy', level: 3 }),
+    db.collection('user_demographics').doc(owner.uid).set({ age: 34, gender: 'female' }),
     db.collection('family_relationships').doc('rel-1').set({
       requesterId: owner.uid,
       relativeId: other.uid,
@@ -212,6 +215,53 @@ const seedBaseDocuments = async (
       role: 'follower',
       createdAt: '2026-04-22T00:00:00.000Z',
     }),
+    db.collection('follow_codes').doc('FOLLOW1').set({
+      tripId: 'trip-1',
+      code: 'FOLLOW1',
+      status: 'active',
+      createdBy: owner.uid,
+      createdAt: '2026-04-22T00:00:00.000Z',
+    }),
+    db.collection('trip_share_invites').doc('tsi-1').set({
+      tripId: 'trip-1',
+      groupId: 'group-1',
+      inviterId: owner.uid,
+      inviteeUserId: other.uid,
+      inviteeEmail: other.email,
+      role: 'member',
+      status: 'pending',
+      createdAt: '2026-04-22T00:00:00.000Z',
+      updatedAt: '2026-04-22T00:00:00.000Z',
+    }),
+    db.collection('trip_activity').doc('activity-1').set({
+      tripId: 'trip-1',
+      actorUserId: owner.uid,
+      type: 'trip_updated',
+      title: 'Trip updated',
+      summary: 'Trip details changed',
+      createdAt: '2026-04-22T00:00:00.000Z',
+    }),
+    db.collection('trip_comments').doc('comment-1').set({
+      tripId: 'trip-1',
+      actorUserId: owner.uid,
+      body: 'Looks great',
+      createdAt: '2026-04-22T00:00:00.000Z',
+    }),
+    db.collection('trip_payments').doc('payment-1').set({
+      tripId: 'trip-1',
+      groupId: 'group-1',
+      recordedBy: owner.uid,
+      payerId: 'gm-owner',
+      receiverId: 'gm-other',
+      amountCents: 1200,
+      paymentDate: '2026-04-22',
+      createdAt: '2026-04-22T00:00:00.000Z',
+    }),
+    db.collection('flight_shares').doc('share-1').set({
+      flightId: 'flight-1',
+      userId: other.uid,
+      createdAt: '2026-04-22T00:00:00.000Z',
+    }),
     db.collection('trip_removals').doc('tr-1').set({
       tripId: 'trip-1',
       userId: removed.uid,
@@ -275,6 +325,13 @@ describe('firestore security rules', () => {
     await expectDenied(setDoc(doc(anon.db, 'locations', 'public-write'), { name: 'Blocked' }));
   });
 
+  it('allows public reads of airport reference data and denies writes', async () => {
+    if (!emulatorReady) return;
+    const anon = await createAnonClient('airports');
+    await expect(getDoc(doc(anon.db, 'airports', 'BOS'))).resolves.toMatchObject({ id: 'BOS' });
+    await expectDenied(setDoc(doc(anon.db, 'airports', 'JFK'), { name: 'Blocked' }));
+  });
+
   it('allows users to read only their own profile documents', async () => {
     if (!emulatorReady) return;
     await expect(getDoc(doc(owner.db, 'users', owner.uid))).resolves.toMatchObject({ id: owner.uid });
@@ -286,7 +343,11 @@ describe('firestore security rules', () => {
   it('allows owner-scoped personal documents and blocks outsiders', async () => {
     if (!emulatorReady) return;
     await expect(getDoc(doc(owner.db, 'fellow_travelers', 'traveler-1'))).resolves.toMatchObject({ id: 'traveler-1' });
+    await expect(getDoc(doc(owner.db, 'traits', 'trait-1'))).resolves.toMatchObject({ id: 'trait-1' });
+    await expect(getDoc(doc(owner.db, 'user_demographics', owner.uid))).resolves.toMatchObject({ id: owner.uid });
     await expectDenied(getDoc(doc(other.db, 'fellow_travelers', 'traveler-1')));
+    await expectDenied(getDoc(doc(other.db, 'traits', 'trait-1')));
+    await expectDenied(getDoc(doc(other.db, 'user_demographics', owner.uid)));
   });
 
   it('allows family relationship reads only to the involved users', async () => {
@@ -307,15 +368,30 @@ describe('firestore security rules', () => {
     if (!emulatorReady) return;
     await expect(getDoc(doc(owner.db, 'trips', 'trip-1'))).resolves.toMatchObject({ id: 'trip-1' });
     await expect(getDoc(doc(owner.db, 'flights', 'flight-1'))).resolves.toMatchObject({ id: 'flight-1' });
+    await expect(getDoc(doc(owner.db, 'trip_activity', 'activity-1'))).resolves.toMatchObject({ id: 'activity-1' });
+    await expect(getDoc(doc(owner.db, 'trip_comments', 'comment-1'))).resolves.toMatchObject({ id: 'comment-1' });
+    await expect(getDoc(doc(owner.db, 'trip_payments', 'payment-1'))).resolves.toMatchObject({ id: 'payment-1' });
+    await expect(getDoc(doc(owner.db, 'follow_codes', 'FOLLOW1'))).resolves.toMatchObject({ id: 'FOLLOW1' });
+    await expect(getDoc(doc(owner.db, 'trip_share_invites', 'tsi-1'))).resolves.toMatchObject({ id: 'tsi-1' });
     await expect(getDoc(doc(other.db, 'trips', 'trip-1'))).resolves.toMatchObject({ id: 'trip-1' });
     await expect(getDoc(doc(other.db, 'flights', 'flight-1'))).resolves.toMatchObject({ id: 'flight-1' });
+    await expect(getDoc(doc(other.db, 'trip_activity', 'activity-1'))).resolves.toMatchObject({ id: 'activity-1' });
+    await expect(getDoc(doc(other.db, 'trip_comments', 'comment-1'))).resolves.toMatchObject({ id: 'comment-1' });
+    await expect(getDoc(doc(other.db, 'trip_payments', 'payment-1'))).resolves.toMatchObject({ id: 'payment-1' });
+    await expect(getDoc(doc(other.db, 'trip_share_invites', 'tsi-1'))).resolves.toMatchObject({ id: 'tsi-1' });
+    await expectDenied(getDoc(doc(other.db, 'follow_codes', 'FOLLOW1')));
   });
 
   it('allows follower read-only access through trip_access', async () => {
     if (!emulatorReady) return;
     await expect(getDoc(doc(follower.db, 'trips', 'trip-1'))).resolves.toMatchObject({ id: 'trip-1' });
     await expect(getDoc(doc(follower.db, 'flights', 'flight-1'))).resolves.toMatchObject({ id: 'flight-1' });
+    await expect(getDoc(doc(follower.db, 'trip_activity', 'activity-1'))).resolves.toMatchObject({ id: 'activity-1' });
+    await expect(getDoc(doc(follower.db, 'trip_comments', 'comment-1'))).resolves.toMatchObject({ id: 'comment-1' });
+    await expect(getDoc(doc(follower.db, 'trip_payments', 'payment-1'))).resolves.toMatchObject({ id: 'payment-1' });
     await expectDenied(setDoc(doc(follower.db, 'trips', 'trip-1'), { name: 'blocked overwrite' }));
+    await expectDenied(getDoc(doc(follower.db, 'follow_codes', 'FOLLOW1')));
+    await expectDenied(getDoc(doc(follower.db, 'trip_share_invites', 'tsi-1')));
   });
 
   it('denies removed users and outsiders when no active trip_access grant exists', async () => {
@@ -323,6 +399,11 @@ describe('firestore security rules', () => {
     await expectDenied(getDoc(doc(removed.db, 'trips', 'trip-1')));
     await expectDenied(getDoc(doc(outsider.db, 'trips', 'trip-1')));
     await expectDenied(getDoc(doc(outsider.db, 'flights', 'flight-1')));
+    await expectDenied(getDoc(doc(outsider.db, 'trip_activity', 'activity-1')));
+    await expectDenied(getDoc(doc(outsider.db, 'trip_comments', 'comment-1')));
+    await expectDenied(getDoc(doc(outsider.db, 'trip_payments', 'payment-1')));
+    await expectDenied(getDoc(doc(outsider.db, 'trip_share_invites', 'tsi-1')));
+    await expectDenied(getDoc(doc(outsider.db, 'follow_codes', 'FOLLOW1')));
   });
 
   it('allows users to read only their own membership and invite records', async () => {
@@ -348,6 +429,10 @@ describe('firestore security rules', () => {
   it('denies direct access to audit and system collections', async () => {
     if (!emulatorReady) return;
     await expectDenied(getDoc(doc(owner.db, 'audit_log', 'audit-1')));
+    await expect(getDoc(doc(other.db, 'flight_shares', 'share-1'))).resolves.toMatchObject({ id: 'share-1' });
+    await expectDenied(getDoc(doc(owner.db, 'flight_shares', 'share-1')));
+    await expectDenied(getDoc(doc(owner.db, 'email_verifications', 'verification-1')));
+    await expectDenied(getDoc(doc(owner.db, 'user_email_verifications', 'verification-1')));
     await expectDenied(setDoc(doc(owner.db, 'trips', 'trip-2'), { groupId: 'group-1', name: 'Direct write' }));
   });
 });
