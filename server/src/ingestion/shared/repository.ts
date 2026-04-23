@@ -2839,6 +2839,103 @@ export const disconnectProviderConnections = async (userId: string, provider?: s
   await getPg().query(`DELETE FROM provider_connections WHERE user_id = $1`, [userId]);
 };
 
+/**
+ * Provider → ingestion source_type mapping. Used to cascade ingestion data
+ * removal when a provider is disconnected. If the provider isn't mapped here
+ * (e.g. manual uploads, forwarded mailbox), there is nothing to cascade.
+ */
+const PROVIDER_TO_INGESTION_SOURCE_TYPE: Record<string, IngestionSourceType> = {
+  gmail: 'GMAIL_IMPORT',
+};
+
+export interface IngestionProviderCascadeCounts {
+  parsedItemsDeleted: number;
+  documentsDeleted: number;
+  jobsDeleted: number;
+  sourcesDeleted: number;
+}
+
+/**
+ * Delete every ingestion record originating from a given provider for a user.
+ *
+ * Scoped by `(user_id, source_type)` so only the requesting user's data for
+ * that provider is removed. Downstream rows (ingested_documents, parsed_items,
+ * import_job_payloads) are removed explicitly rather than relying on FK
+ * cascade so the same path works under pg-mem and Firestore.
+ */
+export const deleteUserIngestionDataForProvider = async (
+  userId: string,
+  provider: string,
+): Promise<IngestionProviderCascadeCounts> => {
+  await ensureIngestionRepositoryReady();
+  const sourceType = PROVIDER_TO_INGESTION_SOURCE_TYPE[provider];
+  if (!sourceType) {
+    return { parsedItemsDeleted: 0, documentsDeleted: 0, jobsDeleted: 0, sourcesDeleted: 0 };
+  }
+
+  if (getCurrentDbProvider() === 'firebase') {
+    const db = getFirebaseDb();
+    const deleteWhere = async (collection: string, field: string): Promise<number> => {
+      const snap = await db
+        .collection(collection)
+        .where('userId', '==', userId)
+        .where(field, '==', sourceType)
+        .get()
+        .catch(() => null);
+      if (!snap) return 0;
+      const batch = db.batch();
+      snap.docs.forEach((doc) => batch.delete(doc.ref));
+      await batch.commit();
+      return snap.docs.length;
+    };
+    const parsedItemsDeleted = await deleteWhere('parsed_items', 'sourceType');
+    const documentsDeleted = await deleteWhere('ingested_documents', 'sourceType');
+    await deleteWhere('import_job_payloads', 'sourceType');
+    const jobsDeleted = await deleteWhere('import_jobs', 'sourceType');
+    const sourcesDeleted = await deleteWhere('ingestion_sources', 'sourceType');
+    return { parsedItemsDeleted, documentsDeleted, jobsDeleted, sourcesDeleted };
+  }
+
+  const p = getPg();
+  const countQuery = async (table: string): Promise<number> => {
+    const { rows } = await p.query<{ count: string }>(
+      `SELECT COUNT(*)::text AS count FROM ${table} WHERE user_id = $1 AND source_type = $2`,
+      [userId, sourceType],
+    );
+    return parseInt(rows[0]?.count ?? '0', 10);
+  };
+
+  const [parsedItemsDeleted, documentsDeleted, jobsDeleted, sourcesDeleted] = await Promise.all([
+    countQuery('parsed_items'),
+    countQuery('ingested_documents'),
+    countQuery('import_jobs'),
+    countQuery('ingestion_sources'),
+  ]);
+
+  await p.query(
+    `DELETE FROM parsed_items WHERE user_id = $1 AND source_type = $2`,
+    [userId, sourceType],
+  );
+  await p.query(
+    `DELETE FROM ingested_documents WHERE user_id = $1 AND source_type = $2`,
+    [userId, sourceType],
+  );
+  await p.query(
+    `DELETE FROM import_job_payloads WHERE user_id = $1 AND source_type = $2`,
+    [userId, sourceType],
+  );
+  await p.query(
+    `DELETE FROM import_jobs WHERE user_id = $1 AND source_type = $2`,
+    [userId, sourceType],
+  );
+  await p.query(
+    `DELETE FROM ingestion_sources WHERE user_id = $1 AND source_type = $2`,
+    [userId, sourceType],
+  );
+
+  return { parsedItemsDeleted, documentsDeleted, jobsDeleted, sourcesDeleted };
+};
+
 // ── Learned source parsers ──────────────────────────────────────────────────
 
 export interface LearnedParserRecord {

@@ -50,6 +50,13 @@ This file records conservative assumptions and known rollout gaps for the ingest
 ### Gmail token refresh failure handling (resolved)
 - Token refresh failures now mark `provider_connection.status = AUTH_EXPIRED`, stop further authenticated reuse of that connection, and surface reconnect messaging in the UI.
 
+### Gmail data deletion on disconnect (resolved)
+- `POST /api/ingestion/gmail/disconnect` now cascades: `deleteUserIngestionDataForProvider(userId, 'gmail')` removes every `ingestion_source`, `import_job`, `import_job_payload`, `ingested_document`, and `parsed_item` scoped to `source_type = 'GMAIL_IMPORT'` before the `provider_connection` row is removed. The cascade runs first so a mid-flight failure leaves the connection intact and retryable.
+- Manual-upload and forwarded-mailbox records are untouched — scoping is by `(user_id, source_type)`.
+- Response body includes `deletion: { parsedItemsDeleted, documentsDeleted, jobsDeleted, sourcesDeleted }` for audit.
+- Integration tested in `ingestion.gmail-disconnect-cascade.test.ts`.
+- Full queued background deletion job flow (for very large inboxes where synchronous delete would time out) is still future scope but the synchronous path covers ordinary inbox volumes.
+
 ## Known gaps
 
 ### Worker adapter extensibility
@@ -62,9 +69,9 @@ This file records conservative assumptions and known rollout gaps for the ingest
 - Scheduled inbox polling every 4 hours (Pro) / daily (Premium) is still not implemented as a production scheduler-backed sync loop.
 - Currently Gmail import is manual-trigger only. A production scheduler must be implemented before Phase 3 is marked complete.
 
-### Gmail data deletion automation
-- Full queued mailbox data-deletion automation for Gmail disconnect/account deletion still needs a dedicated deletion job flow and admin observability.
-- Currently, disconnect removes the `provider_connection` but does not cascade to remove all `import_job` and `ingested_document` records sourced from Gmail.
+### Gmail data deletion automation — queue/observability layer
+- Synchronous cascade on disconnect is now implemented (see "resolved" section above).
+- Still outstanding: a queued background deletion flow for very large mailboxes where synchronous delete would exceed HTTP timeouts, plus admin observability for in-progress/failed cascades.
 
 ### Auth-expiry spike alerting
 - Auth-expiry is visible operationally through status counts, but there is not yet a standalone admin alert object/workflow for rolling-window thresholds.

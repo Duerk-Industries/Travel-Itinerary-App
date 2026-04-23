@@ -9,7 +9,7 @@ import { INGESTION_DEFAULT_FORWARDING_PROVIDER, INGESTION_FEATURE_FLAGS, INGESTI
 import { assignReviewItemToTrip, deleteReviewItem, getReviewItem, updateReviewItemEdits } from '../ingestion/assignment';
 import { manualUploadMiddleware, buildManualUploadPayloads, buildGmailConsentUrl, buildGmailDryRunEntries, buildGmailIngestionPayloads, fetchGmailProfile, GMAIL_READONLY_SCOPE_URL, refreshGmailAccessToken } from '../ingestion/intake';
 import { enqueueIngestionPipelineJob } from '../ingestion/orchestrator';
-import { listReviewQueueItems, listImportJobsForUser, getReviewQueueSignedUrl, getProviderConnection, disconnectProviderConnections, upsertProviderConnection, updateProviderConnectionStatus, getIngestedDocumentById } from '../ingestion/shared/repository';
+import { listReviewQueueItems, listImportJobsForUser, getReviewQueueSignedUrl, getProviderConnection, disconnectProviderConnections, deleteUserIngestionDataForProvider, upsertProviderConnection, updateProviderConnectionStatus, getIngestedDocumentById } from '../ingestion/shared/repository';
 import { assertAndConsumeMonthlyQuota, getTierIngestionRules } from '../ingestion/shared/quota';
 import { IngestionError } from '../ingestion/shared/userFailures';
 import { getBackendUrl, getEnvValue } from '../env';
@@ -447,8 +447,11 @@ router.post('/gmail/import', async (req, res) => {
 router.post('/gmail/disconnect', async (req, res) => {
   const userId = (req as any).user.userId as string;
   if (!(await ensureGmailFeatureAndTier(userId, res))) return;
+  // Cascade ingestion data sourced from Gmail before removing the token row,
+  // so a failure in the cascade leaves the connection in place and retryable.
+  const deletion = await deleteUserIngestionDataForProvider(userId, 'gmail');
   await disconnectProviderConnections(userId, 'gmail');
-  res.json({ disconnected: true });
+  res.json({ disconnected: true, deletion });
 });
 
 export default router;

@@ -672,7 +672,7 @@ Improve operator and power-user workflows, especially for admin and ingestion re
 
 ## Priority 20: Ingestion Backlog Items Should Become Implemented, Tested Capabilities
 
-Status: `Partial`
+Status: `Partial` (Gmail-source deletion automation moved from debt doc to implemented, tested behavior: new `deleteUserIngestionDataForProvider(userId, provider)` in `server/src/ingestion/shared/repository.ts` cascades removal of `parsed_items`/`ingested_documents`/`import_job_payloads`/`import_jobs`/`ingestion_sources` scoped by `(user_id, source_type=GMAIL_IMPORT)` across both Postgres and Firestore adapters. `POST /api/ingestion/gmail/disconnect` calls the cascade before dropping the token so a mid-flight failure keeps the connection retryable, and returns per-table deletion counts. New `ingestion.gmail-disconnect-cascade.test.ts` verifies: Gmail rows removed, MANUAL_UPLOAD rows preserved, provider connection removed, second call is idempotent (zeroed counts), providers without an ingestion mapping short-circuit to zero counts. `server/src/ingestion/TECHNICAL_DEBT.md` updated to move this item into the "resolved" section with the remaining gap narrowed to a queued/background deletion job for very large mailboxes. Still outstanding in Priority 20: Gmail scheduled polling, production-grade PDF structural extraction, production malware scanning provider.)
 
 ### Goal
 Convert the highest-value ingestion debt from documentation into tested behavior.
