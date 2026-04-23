@@ -507,8 +507,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     } else if (typeof node?.getBoundingClientRect === 'function') {
       const rect = node.getBoundingClientRect();
       setItineraryAirportAnchor({
-        x: rect.left + (typeof window !== 'undefined' ? window.scrollX : 0),
-        y: rect.top + (typeof window !== 'undefined' ? window.scrollY : 0),
+        x: rect.left,
+        y: rect.top,
         width: rect.width,
         height: rect.height,
       });
@@ -1897,7 +1897,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     <Text style={[styles.traitChipText, wizardPromptTraits.ut.no && styles.traitChipTextSelected]}>Night Owl</Text>
                   </TouchableOpacity>
                 </View>
-                <View style={{ position: 'relative' }}>
+                <View style={{ position: 'relative', marginTop: 16 }}>
                   <TextInput
                     ref={itineraryAirportRef}
                     style={styles.input}
