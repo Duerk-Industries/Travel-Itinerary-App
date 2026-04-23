@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { ScrollView, Text, View, TouchableOpacity } from 'react-native';
+import { ScrollView, Text, View, TouchableOpacity, useWindowDimensions } from 'react-native';
 import ExpenseCovering from './ExpenseCovering';
 import PaymentDialog from '../components/PaymentDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -65,6 +65,189 @@ type LedgerTabProps = {
   onDeletePayment: (paymentId: string) => Promise<void>;
 };
 
+type LedgerRenderParams = {
+  memberIds: string[];
+  memberNameMap: Map<string, string>;
+  paidTotals: Record<string, number>;
+  usedTotals: Record<string, number>;
+  overallPaid: number;
+  overallUsed: number;
+  overallTotal: number;
+  formatMoney: (value: number) => string;
+  styles: Record<string, any>;
+};
+
+const renderLedgerTable = ({
+  memberIds,
+  memberNameMap,
+  paidTotals,
+  usedTotals,
+  overallPaid,
+  overallUsed,
+  overallTotal,
+  formatMoney,
+  styles,
+}: LedgerRenderParams) => (
+  <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
+    <View style={styles.table} testID="ledger-table">
+      <View style={[styles.tableRow, styles.tableHeader]}>
+        {['Person', 'Paid', 'Used', 'Total'].map((header, idx, arr) => (
+          <View
+            key={header}
+            style={[
+              styles.cell,
+              { minWidth: idx === 0 ? 160 : 140, flex: 1 },
+              idx === arr.length - 1 && styles.lastCell,
+            ]}
+          >
+            <Text style={styles.headerText}>{header}</Text>
+          </View>
+        ))}
+      </View>
+      {memberIds.map((memberId, idx) => (
+        <View
+          key={memberId}
+          style={[styles.tableRow, idx === memberIds.length - 1 && styles.lastRow]}
+          testID={`ledger-row-${memberId}`}
+        >
+          <View style={[styles.cell, { minWidth: 160, flex: 1 }]}>
+            <Text style={styles.cellText}>{memberNameMap.get(memberId) ?? 'Traveler'}</Text>
+          </View>
+          <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+            <Text style={styles.cellText}>{formatMoney(paidTotals[memberId] ?? 0)}</Text>
+          </View>
+          <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+            <Text style={styles.cellText}>{formatMoney(usedTotals[memberId] ?? 0)}</Text>
+          </View>
+          <View style={[styles.cell, styles.lastCell, { minWidth: 140, flex: 1 }]}>
+            <Text style={styles.cellText}>-</Text>
+          </View>
+        </View>
+      ))}
+      {memberIds.length ? (
+        <View style={[styles.tableRow, styles.tableHeader]} testID="ledger-overall-row">
+          <View style={[styles.cell, { minWidth: 160, flex: 1 }]}>
+            <Text style={styles.headerText}>Overall</Text>
+          </View>
+          <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+            <Text style={styles.headerText}>{formatMoney(overallPaid)}</Text>
+          </View>
+          <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+            <Text style={styles.headerText}>{formatMoney(overallUsed)}</Text>
+          </View>
+          <View style={[styles.cell, styles.lastCell, { minWidth: 140, flex: 1 }]}>
+            <Text style={styles.headerText}>{formatMoney(overallTotal)}</Text>
+          </View>
+        </View>
+      ) : null}
+      {!memberIds.length ? (
+        <View style={[styles.tableRow, styles.lastRow]}>
+          <View style={[styles.cell, styles.lastCell, { minWidth: 160, flex: 1 }]}>
+            <Text style={styles.helperText}>No travelers available.</Text>
+          </View>
+        </View>
+      ) : null}
+    </View>
+  </ScrollView>
+);
+
+const ledgerCardStyles = {
+  card: {
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+    backgroundColor: '#ffffff',
+  } as const,
+  overallCard: {
+    borderWidth: 1,
+    borderColor: '#9ca3af',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+    backgroundColor: '#f3f4f6',
+  } as const,
+  nameRow: {
+    marginBottom: 6,
+  } as const,
+  statsRow: {
+    flexDirection: 'row' as const,
+    flexWrap: 'wrap' as const,
+    columnGap: 12,
+    rowGap: 4,
+  } as const,
+  statLabel: {
+    fontWeight: '600' as const,
+  } as const,
+};
+
+const renderLedgerCards = ({
+  memberIds,
+  memberNameMap,
+  paidTotals,
+  usedTotals,
+  overallPaid,
+  overallUsed,
+  overallTotal,
+  formatMoney,
+  styles,
+}: LedgerRenderParams) => {
+  if (!memberIds.length) {
+    return (
+      <View style={ledgerCardStyles.card} testID="ledger-empty">
+        <Text style={styles.helperText}>No travelers available.</Text>
+      </View>
+    );
+  }
+  return (
+    <View testID="ledger-cards">
+      {memberIds.map((memberId) => (
+        <View
+          key={memberId}
+          style={ledgerCardStyles.card}
+          testID={`ledger-row-${memberId}`}
+        >
+          <View style={ledgerCardStyles.nameRow}>
+            <Text style={[styles.cellText, ledgerCardStyles.statLabel]}>
+              {memberNameMap.get(memberId) ?? 'Traveler'}
+            </Text>
+          </View>
+          <View style={ledgerCardStyles.statsRow}>
+            <Text style={styles.cellText}>
+              <Text style={ledgerCardStyles.statLabel}>Paid: </Text>
+              {formatMoney(paidTotals[memberId] ?? 0)}
+            </Text>
+            <Text style={styles.cellText}>
+              <Text style={ledgerCardStyles.statLabel}>Used: </Text>
+              {formatMoney(usedTotals[memberId] ?? 0)}
+            </Text>
+          </View>
+        </View>
+      ))}
+      <View style={ledgerCardStyles.overallCard} testID="ledger-overall-row">
+        <View style={ledgerCardStyles.nameRow}>
+          <Text style={[styles.headerText, ledgerCardStyles.statLabel]}>Overall</Text>
+        </View>
+        <View style={ledgerCardStyles.statsRow}>
+          <Text style={styles.headerText}>
+            <Text style={ledgerCardStyles.statLabel}>Paid: </Text>
+            {formatMoney(overallPaid)}
+          </Text>
+          <Text style={styles.headerText}>
+            <Text style={ledgerCardStyles.statLabel}>Used: </Text>
+            {formatMoney(overallUsed)}
+          </Text>
+          <Text style={styles.headerText}>
+            <Text style={ledgerCardStyles.statLabel}>Total: </Text>
+            {formatMoney(overallTotal)}
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+};
+
 const LedgerTab: React.FC<LedgerTabProps> = ({
   trip,
   groupMembers,
@@ -86,6 +269,8 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
   onAddPayment,
   onDeletePayment,
 }) => {
+  const { width: viewportWidth } = useWindowDimensions();
+  const isNarrowLayout = viewportWidth < 700;
   const tripCurrency = (trip?.currency ?? 'USD').toUpperCase();
 
   const activeMembers = useMemo(
@@ -376,67 +561,29 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
           </TouchableOpacity>
         </View>
         <Text style={styles.helperText}>Paid vs. used costs across all trip expenses.</Text>
-        <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
-          <View style={styles.table} testID="ledger-table">
-            <View style={[styles.tableRow, styles.tableHeader]}>
-              {['Person', 'Paid', 'Used', 'Total'].map((header, idx, arr) => (
-                <View
-                  key={header}
-                  style={[
-                    styles.cell,
-                    { minWidth: idx === 0 ? 160 : 140, flex: 1 },
-                    idx === arr.length - 1 && styles.lastCell,
-                  ]}
-                >
-                  <Text style={styles.headerText}>{header}</Text>
-                </View>
-              ))}
-            </View>
-            {memberIds.map((memberId, idx) => (
-              <View
-                key={memberId}
-                style={[styles.tableRow, idx === memberIds.length - 1 && styles.lastRow]}
-                testID={`ledger-row-${memberId}`}
-              >
-                <View style={[styles.cell, { minWidth: 160, flex: 1 }]}>
-                  <Text style={styles.cellText}>{memberNameMap.get(memberId) ?? 'Traveler'}</Text>
-                </View>
-                <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                  <Text style={styles.cellText}>{formatMoney(paidTotals[memberId] ?? 0)}</Text>
-                </View>
-                <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                  <Text style={styles.cellText}>{formatMoney(usedTotals[memberId] ?? 0)}</Text>
-                </View>
-                <View style={[styles.cell, styles.lastCell, { minWidth: 140, flex: 1 }]}>
-                  <Text style={styles.cellText}>-</Text>
-                </View>
-              </View>
-            ))}
-            {memberIds.length ? (
-              <View style={[styles.tableRow, styles.tableHeader]} testID="ledger-overall-row">
-                <View style={[styles.cell, { minWidth: 160, flex: 1 }]}>
-                  <Text style={styles.headerText}>Overall</Text>
-                </View>
-                <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                  <Text style={styles.headerText}>{formatMoney(overallPaid)}</Text>
-                </View>
-                <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                  <Text style={styles.headerText}>{formatMoney(overallUsed)}</Text>
-                </View>
-                <View style={[styles.cell, styles.lastCell, { minWidth: 140, flex: 1 }]}>
-                  <Text style={styles.headerText}>{formatMoney(overallTotal)}</Text>
-                </View>
-              </View>
-            ) : null}
-            {!memberIds.length ? (
-              <View style={[styles.tableRow, styles.lastRow]}>
-                <View style={[styles.cell, styles.lastCell, { minWidth: 160, flex: 1 }]}>
-                  <Text style={styles.helperText}>No travelers available.</Text>
-                </View>
-              </View>
-            ) : null}
-          </View>
-        </ScrollView>
+        {isNarrowLayout
+          ? renderLedgerCards({
+              memberIds,
+              memberNameMap,
+              paidTotals,
+              usedTotals,
+              overallPaid,
+              overallUsed,
+              overallTotal,
+              formatMoney,
+              styles,
+            })
+          : renderLedgerTable({
+              memberIds,
+              memberNameMap,
+              paidTotals,
+              usedTotals,
+              overallPaid,
+              overallUsed,
+              overallTotal,
+              formatMoney,
+              styles,
+            })}
       </View>
 
       <View style={styles.card}>

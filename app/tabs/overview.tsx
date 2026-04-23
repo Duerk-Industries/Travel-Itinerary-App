@@ -61,6 +61,13 @@ import {
   type CarRentalDraft,
 } from '../tabs/carRentals';
 import { buildRentalDraftFromRow, buildTourDraftFromRow, getOverviewSaveFlags } from '../utils/overviewEditing';
+import {
+  buildDayEventsMap,
+  flightMatchesDay,
+  lodgingCoversDay,
+  rentalMatchesDay,
+  tourMatchesDay,
+} from '../utils/overviewDayEvents';
 import { FlightEditingForm } from '../components/TransferEditingForm';
 import ConfirmDialog from '../components/ConfirmDialog';
 import LodgingDialog from '../components/LodgingDialog';
@@ -776,21 +783,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     const buildDayCards = () => {
       const cards: DayCard[] = allDates.map((date, idx) => {
         const items: string[] = [];
-        const flightsForDay = flights.filter((f) => f.departure_date === date || f.arrival_date === date);
+        const flightsForDay = flights.filter((f) => flightMatchesDay(f, date));
         flightsForDay.forEach((f) =>
           items.push(`Transfer ${f.departure_location || f.departure_airport_code || 'DEP'} -> ${f.arrival_location || f.arrival_airport_code || 'ARR'} dep ${f.departure_time || '?'} arr ${f.arrival_time || '?'}`)
         );
-        const lodgingsForDay = lodgings.filter((l) => {
-          const ci = l.checkInDate;
-          const co = l.checkOutDate;
-          if (!ci || !co) return false;
-          const d = new Date(date).getTime();
-          return d >= new Date(ci).getTime() && d <= new Date(co).getTime();
-        });
+        const lodgingsForDay = lodgings.filter((l) => lodgingCoversDay(l, date));
         lodgingsForDay.forEach((l) => items.push(`Lodging at ${l.name} (${l.checkInDate} - ${l.checkOutDate})`));
-        const toursForDay = tours.filter((t) => t.date === date);
+        const toursForDay = tours.filter((t) => tourMatchesDay(t, date));
         toursForDay.forEach((t) => items.push(`Activity: ${t.name} at ${t.startTime || 'time TBD'}`));
-        const rentalsForDay = carRentals.filter((r) => r.pickupDate === date || r.dropoffDate === date);
+        const rentalsForDay = carRentals.filter((r) => rentalMatchesDay(r, date));
         rentalsForDay.forEach((r) => items.push(`Rental car (${r.vendor || 'vendor'}) ${r.pickupDate} -> ${r.dropoffDate}`));
         const label = `Day ${idx + 1}`;
         if (!items.length) items.push('Free Day');
@@ -1595,60 +1596,18 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     });
   }, [isEditing, normalizedAttendees]);
 
-  const dayDataByDate = useMemo(() => {
-    const map = new Map<
-      string,
-      {
-        index: number;
-        date: string;
-        flights: Flight[];
-        lodgings: Lodging[];
-        tours: Tour[];
-        rentals: CarRental[];
-        details: ItineraryDetail[];
-      }
-    >();
-    dayCards.forEach((card, idx) => {
-      const dayNumber = idx + 1;
-      const flightsForDay = flights.filter((f) => f.departure_date === card.date || f.arrival_date === card.date);
-      const lodgingsForDay = lodgings.filter((l) => {
-        const ci = l.checkInDate;
-        const co = l.checkOutDate;
-        if (!ci) return false;
-        const dayMs = normalizeDateString(card.date);
-        const checkInMs = normalizeDateString(ci);
-        if (!dayMs || !checkInMs) return false;
-        const dayTime = new Date(dayMs).getTime();
-        const checkInTime = new Date(checkInMs).getTime();
-        if (Number.isNaN(dayTime) || Number.isNaN(checkInTime)) return false;
-        if (!co) {
-          return dayTime >= checkInTime;
-        }
-        const checkOutMs = normalizeDateString(co);
-        if (!checkOutMs) {
-          return dayTime >= checkInTime;
-        }
-        const checkOutTime = new Date(checkOutMs).getTime();
-        if (Number.isNaN(checkOutTime)) {
-          return dayTime >= checkInTime;
-        }
-        return dayTime >= checkInTime && dayTime < checkOutTime;
-      });
-      const toursForDay = tours.filter((t) => t.date === card.date);
-      const rentalsForDay = carRentals.filter((r) => r.pickupDate === card.date || r.dropoffDate === card.date);
-      const detailsForDay = sortedItineraryDetails.filter((d) => Number(d.day) === dayNumber);
-      map.set(card.date, {
-        index: dayNumber,
-        date: card.date,
-        flights: flightsForDay,
-        lodgings: lodgingsForDay,
-        tours: toursForDay,
-        rentals: rentalsForDay,
-        details: detailsForDay,
-      });
-    });
-    return map;
-  }, [dayCards, flights, lodgings, tours, carRentals, sortedItineraryDetails]);
+  const dayDataByDate = useMemo(
+    () =>
+      buildDayEventsMap<Flight, Lodging, Tour, CarRental, ItineraryDetail>({
+        dayCards,
+        flights,
+        lodgings,
+        tours,
+        rentals: carRentals,
+        details: sortedItineraryDetails,
+      }),
+    [dayCards, flights, lodgings, tours, carRentals, sortedItineraryDetails],
+  );
 
   const formatTravelerNames = (ids: string[]) =>
     ids
