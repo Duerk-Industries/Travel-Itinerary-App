@@ -3,6 +3,7 @@ import { Image, Modal, Pressable, ScrollView, Text, TextInput, View } from 'reac
 import { computeTripDays } from '../utils/createTripWizard';
 import { formatDateLong } from '../utils/formatDateLong';
 import { FollowedTrip } from './follow';
+import Skeleton from '../components/Skeleton';
 
 type Trip = {
   id: string;
@@ -57,6 +58,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
   hiddenPages,
 }) => {
   const [heroImage, setHeroImage] = useState<string | null>(null);
+  const [heroLoading, setHeroLoading] = useState<boolean>(false);
   const [showTripPicker, setShowTripPicker] = useState(false);
   const [showNoTripsDialog, setShowNoTripsDialog] = useState(false);
   const [showFollowDialog, setShowFollowDialog] = useState(false);
@@ -88,8 +90,15 @@ const HomeTab: React.FC<HomeTabProps> = ({
     let isMounted = true;
     const loadHero = async () => {
       if (!activeTrip) {
-        if (isMounted) setHeroImage(null);
+        if (isMounted) {
+          setHeroImage(null);
+          setHeroLoading(false);
+        }
         return;
+      }
+      if (isMounted) {
+        setHeroImage(null);
+        setHeroLoading(true);
       }
       const location = activeTrip.destination || activeTrip.name || 'travel';
       try {
@@ -105,6 +114,8 @@ const HomeTab: React.FC<HomeTabProps> = ({
         if (isMounted) setHeroImage(data?.url ?? null);
       } catch {
         if (isMounted) setHeroImage(null);
+      } finally {
+        if (isMounted) setHeroLoading(false);
       }
     };
     loadHero();
@@ -203,6 +214,8 @@ const HomeTab: React.FC<HomeTabProps> = ({
         >
           {heroImage ? (
             <Image style={styles.homeHeroImage} source={{ uri: heroImage }} resizeMode="cover" />
+          ) : heroLoading ? (
+            <Skeleton style={styles.homeHeroImage} testID="home-hero-skeleton" />
           ) : (
             <View style={styles.homeHeroFallback} />
           )}

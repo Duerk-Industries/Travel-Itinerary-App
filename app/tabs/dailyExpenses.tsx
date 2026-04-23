@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { FlatList, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { fetchExchangeRate, getLocalDateString } from '../utils/exchangeRates';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
@@ -56,6 +56,36 @@ type DailyExpensesTabProps = {
 const categoryOptions = ['Breakfast', 'Lunch', 'Dinner', 'Other Food', 'Rides', 'Souvenirs', 'Other'] as const;
 type CategoryOption = typeof categoryOptions[number];
 
+const dayCardStyles = {
+  card: {
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+    backgroundColor: '#ffffff',
+  } as const,
+  headerRow: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    marginBottom: 6,
+  } as const,
+  dateLabel: {
+    fontWeight: '600' as const,
+  } as const,
+  dayTotal: {
+    fontWeight: '600' as const,
+  } as const,
+  categoryRow: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    paddingVertical: 4,
+  } as const,
+  emptyNote: {
+    fontStyle: 'italic' as const,
+  } as const,
+};
+
 const formatDateLabel = (iso: string): string => {
   const date = new Date(iso);
   if (Number.isNaN(date.valueOf())) return iso;
@@ -99,6 +129,8 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   defaultPayerId,
   styles,
 }) => {
+  const { width: viewportWidth } = useWindowDimensions();
+  const isNarrowLayout = viewportWidth < 700;
   const activeMembers = useMemo(
     () => groupMembers.filter((m) => m.status !== 'removed'),
     [groupMembers]
@@ -461,42 +493,100 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
       ) : null}
 
       <View style={styles.divider} />
-      <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
-        <View style={styles.table}>
-          <View style={[styles.tableRow, styles.tableHeader]}>
-            {['Date', ...categoryOptions, 'Total'].map((header, index) => (
-              <View key={header} style={[styles.cell, { minWidth: index === 0 ? 120 : 110, flex: 1 }, index === categoryOptions.length + 1 && styles.lastCell]}>
-                <Text style={styles.headerText}>{header}</Text>
+      {isNarrowLayout ? (
+        <FlatList<string>
+          testID="daily-expenses-cards"
+          data={tripDates}
+          keyExtractor={(date: string) => date}
+          // Nested inside App.tsx's outer ScrollView; disable our own scroll so the
+          // parent handles it, but keep row windowing so huge trips don't mount
+          // every day up-front.
+          scrollEnabled={false}
+          initialNumToRender={10}
+          windowSize={5}
+          removeClippedSubviews
+          renderItem={({ item: date }: { item: string }) => {
+            const dayTotal = dailyTotalsByDay[date] ?? 0;
+            const nonZeroCategories = categoryOptions.filter(
+              (category) => (dailyTotals[date]?.[category] ?? 0) > 0,
+            );
+            return (
+              <View
+                style={dayCardStyles.card}
+                testID={`daily-expenses-card-${date}`}
+              >
+                <View style={dayCardStyles.headerRow}>
+                  <Text style={[styles.cellText, dayCardStyles.dateLabel]}>
+                    {formatDateLabel(date)}
+                  </Text>
+                  <Text style={[styles.cellText, dayCardStyles.dayTotal]}>
+                    ${dayTotal.toFixed(2)}
+                  </Text>
+                </View>
+                {nonZeroCategories.length ? (
+                  nonZeroCategories.map((category) => {
+                    const value = dailyTotals[date]?.[category] ?? 0;
+                    return (
+                      <TouchableOpacity
+                        key={`${date}-${category}`}
+                        style={dayCardStyles.categoryRow}
+                        onPress={() => setDetailTarget({ date, category })}
+                        testID={`expense-cell-${date}-${category}`}
+                      >
+                        <Text style={styles.cellText}>{category}</Text>
+                        <Text style={[styles.cellText, styles.linkText]}>
+                          ${value.toFixed(2)}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })
+                ) : (
+                  <Text style={[styles.helperText, dayCardStyles.emptyNote]}>
+                    No expenses recorded.
+                  </Text>
+                )}
+              </View>
+            );
+          }}
+        />
+      ) : (
+        <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
+          <View style={styles.table} testID="daily-expenses-table">
+            <View style={[styles.tableRow, styles.tableHeader]}>
+              {['Date', ...categoryOptions, 'Total'].map((header, index) => (
+                <View key={header} style={[styles.cell, { minWidth: index === 0 ? 120 : 110, flex: 1 }, index === categoryOptions.length + 1 && styles.lastCell]}>
+                  <Text style={styles.headerText}>{header}</Text>
+                </View>
+              ))}
+            </View>
+            {tripDates.map((date, idx) => (
+              <View key={date} style={[styles.tableRow, idx === tripDates.length - 1 && styles.lastRow]}>
+                <View style={[styles.cell, { minWidth: 120, flex: 1 }]}>
+                  <Text style={styles.cellText}>{formatDateLabel(date)}</Text>
+                </View>
+                {categoryOptions.map((category) => {
+                  const value = dailyTotals[date]?.[category] ?? 0;
+                  const content = value ? `$${value.toFixed(2)}` : '-';
+                  return (
+                    <View key={`${date}-${category}`} style={[styles.cell, { minWidth: 110, flex: 1 }]}>
+                      {value ? (
+                        <TouchableOpacity onPress={() => setDetailTarget({ date, category })} testID={`expense-cell-${date}-${category}`}>
+                          <Text style={[styles.cellText, styles.linkText]}>{content}</Text>
+                        </TouchableOpacity>
+                      ) : (
+                        <Text style={styles.cellText}>{content}</Text>
+                      )}
+                    </View>
+                  );
+                })}
+                <View style={[styles.cell, styles.lastCell, { minWidth: 110, flex: 1 }]}>
+                  <Text style={styles.cellText}>${(dailyTotalsByDay[date] ?? 0).toFixed(2)}</Text>
+                </View>
               </View>
             ))}
           </View>
-          {tripDates.map((date, idx) => (
-            <View key={date} style={[styles.tableRow, idx === tripDates.length - 1 && styles.lastRow]}>
-              <View style={[styles.cell, { minWidth: 120, flex: 1 }]}>
-                <Text style={styles.cellText}>{formatDateLabel(date)}</Text>
-              </View>
-              {categoryOptions.map((category) => {
-                const value = dailyTotals[date]?.[category] ?? 0;
-                const content = value ? `$${value.toFixed(2)}` : '-';
-                return (
-                  <View key={`${date}-${category}`} style={[styles.cell, { minWidth: 110, flex: 1 }]}>
-                    {value ? (
-                      <TouchableOpacity onPress={() => setDetailTarget({ date, category })} testID={`expense-cell-${date}-${category}`}>
-                        <Text style={[styles.cellText, styles.linkText]}>{content}</Text>
-                      </TouchableOpacity>
-                    ) : (
-                      <Text style={styles.cellText}>{content}</Text>
-                    )}
-                  </View>
-                );
-              })}
-              <View style={[styles.cell, styles.lastCell, { minWidth: 110, flex: 1 }]}>
-                <Text style={styles.cellText}>${(dailyTotalsByDay[date] ?? 0).toFixed(2)}</Text>
-              </View>
-            </View>
-          ))}
-        </View>
-      </ScrollView>
+        </ScrollView>
+      )}
 
       {Platform.OS !== 'web' && datePickerVisible && NativeDateTimePicker ? (
         <NativeDateTimePicker
