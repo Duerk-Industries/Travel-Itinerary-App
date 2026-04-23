@@ -5,6 +5,7 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import ConfirmDialog from '../components/ConfirmDialog';
+import ChatButton from '../components/ChatButton';
 
 const styles: Record<string, any> = {
   modalOverlay: {},
@@ -72,5 +73,66 @@ describe('ConfirmDialog accessibility', () => {
       />
     );
     expect(queryByTestId('confirm-dialog')).toBeNull();
+  });
+
+  it('closes on Escape keypress when visible on web', () => {
+    const onCancel = jest.fn();
+    render(
+      <ConfirmDialog
+        visible
+        title="Escape me"
+        onConfirm={() => {}}
+        onCancel={onCancel}
+        styles={styles}
+      />
+    );
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not call onCancel on Escape when the dialog is not visible', () => {
+    const onCancel = jest.fn();
+    render(
+      <ConfirmDialog
+        visible={false}
+        title="Hidden"
+        onConfirm={() => {}}
+        onCancel={onCancel}
+        styles={styles}
+      />
+    );
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(onCancel).not.toHaveBeenCalled();
+  });
+
+  it('stops listening after unmount', () => {
+    const onCancel = jest.fn();
+    const { unmount } = render(
+      <ConfirmDialog
+        visible
+        title="Gone"
+        onConfirm={() => {}}
+        onCancel={onCancel}
+        styles={styles}
+      />
+    );
+    unmount();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(onCancel).not.toHaveBeenCalled();
+  });
+});
+
+describe('ChatButton accessibility', () => {
+  it('labels the FAB with its purpose and includes unread count in the label', () => {
+    const { getByTestId, rerender } = render(<ChatButton onPress={() => {}} unreadCount={0} />);
+    const fab = getByTestId('chat-fab');
+    expect(fab.props.accessibilityRole).toBe('button');
+    expect(fab.props.accessibilityLabel).toBe('Open trip chat');
+
+    rerender(<ChatButton onPress={() => {}} unreadCount={3} />);
+    expect(getByTestId('chat-fab').props.accessibilityLabel).toBe('Open trip chat, 3 unread');
+
+    rerender(<ChatButton onPress={() => {}} unreadCount={250} />);
+    expect(getByTestId('chat-fab').props.accessibilityLabel).toBe('Open trip chat, over 99 unread');
   });
 });

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
+import { useEscapeToClose } from '../hooks/useEscapeToClose';
 
 type ConfirmDialogProps = {
   visible: boolean;
@@ -24,6 +25,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   styles,
   testID,
 }) => {
+  useEscapeToClose(visible, onCancel);
   if (!visible) return null;
   return (
     <View

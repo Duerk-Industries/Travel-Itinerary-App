@@ -1,5 +1,6 @@
 import React from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { useEscapeToClose } from '../hooks/useEscapeToClose';
 import type { GroupInvite, PendingTripShareInvite } from '../types/invites';
 
 type PendingInvitesModalProps = {
@@ -37,6 +38,7 @@ const PendingInvitesModal: React.FC<PendingInvitesModalProps> = ({
   rejectPendingFollowCode,
   styles,
 }) => {
+  useEscapeToClose(visible, onClose);
   if (!visible) return null;
   return (
     <View style={styles.wizardOverlay}>
@@ -77,6 +79,8 @@ const PendingInvitesModal: React.FC<PendingInvitesModalProps> = ({
                     style={[styles.button, styles.smallButton]}
                     onPress={acceptPendingFollowCode}
                     testID="follow-link-accept"
+                    accessibilityRole="button"
+                    accessibilityLabel="Accept follow link"
                   >
                     <Text style={styles.buttonText}>Accept</Text>
                   </TouchableOpacity>
@@ -84,6 +88,8 @@ const PendingInvitesModal: React.FC<PendingInvitesModalProps> = ({
                     style={[styles.button, styles.smallButton, styles.dangerButton]}
                     onPress={rejectPendingFollowCode}
                     testID="follow-link-decline"
+                    accessibilityRole="button"
+                    accessibilityLabel="Decline follow link"
                   >
                     <Text style={styles.dangerButtonText}>Decline</Text>
                   </TouchableOpacity>
@@ -104,6 +110,8 @@ const PendingInvitesModal: React.FC<PendingInvitesModalProps> = ({
                       style={[styles.button, styles.smallButton]}
                       onPress={() => acceptPendingTripShareInvite(invite)}
                       testID={`share-invite-accept-${invite.id}`}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Accept share invite to ${invite.tripName || 'shared trip'}`}
                     >
                       <Text style={styles.buttonText}>Accept</Text>
                     </TouchableOpacity>
@@ -111,6 +119,8 @@ const PendingInvitesModal: React.FC<PendingInvitesModalProps> = ({
                       style={[styles.button, styles.smallButton, styles.dangerButton]}
                       onPress={() => rejectPendingTripShareInvite(invite)}
                       testID={`share-invite-decline-${invite.id}`}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Decline share invite to ${invite.tripName || 'shared trip'}`}
                     >
                       <Text style={styles.dangerButtonText}>Decline</Text>
                     </TouchableOpacity>
@@ -131,6 +141,8 @@ const PendingInvitesModal: React.FC<PendingInvitesModalProps> = ({
                       style={[styles.button, styles.smallButton]}
                       onPress={() => acceptInvite(invite)}
                       testID={`invite-join-${invite.id}`}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Join ${tripLabel}`}
                     >
                       <Text style={styles.buttonText}>Join</Text>
                     </TouchableOpacity>
@@ -138,6 +150,8 @@ const PendingInvitesModal: React.FC<PendingInvitesModalProps> = ({
                       style={[styles.button, styles.smallButton, styles.dangerButton]}
                       onPress={() => rejectInvite(invite)}
                       testID={`invite-decline-${invite.id}`}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Decline ${tripLabel}`}
                     >
                       <Text style={styles.dangerButtonText}>Decline</Text>
                     </TouchableOpacity>

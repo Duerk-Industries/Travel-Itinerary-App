@@ -4,6 +4,7 @@ import { type Lodging, fetchPlaceDetailsApi, type PlaceDetailsPayload } from '..
 import { formatDateLong } from '../utils/formatDateLong';
 import { buildStaticMapUrl } from '../utils/googleMaps';
 import { LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from '../utils/itineraryStatus';
+import { useEscapeToClose } from '../hooks/useEscapeToClose';
 import type { AppTheme } from '../theme/theme';
 
 type DetailRow = {
@@ -58,6 +59,8 @@ const LodgingDetailsDialog: React.FC<LodgingDetailsDialogProps> = ({
   const { width } = useWindowDimensions();
   const isCompact = width < 520;
   const detailStyles = useMemo(() => buildDetailStyles(theme), [theme]);
+
+  useEscapeToClose(visible, onClose);
 
   const [placeDetails, setPlaceDetails] = useState<PlaceDetailsPayload | null>(null);
   const [placeDetailsStatus, setPlaceDetailsStatus] = useState<'idle' | 'loading' | 'done'>('idle');
@@ -147,7 +150,13 @@ const LodgingDetailsDialog: React.FC<LodgingDetailsDialogProps> = ({
   }, [placeDetails]);
 
   return (
-    <View style={styles.modalOverlay} testID={testID}>
+    <View
+      style={styles.modalOverlay}
+      testID={testID}
+      accessible
+      accessibilityRole="none"
+      accessibilityLabel={`Lodging details: ${lodging.name || 'lodging'}`}
+    >
       <View style={[styles.modalCard, detailStyles.detailCard, isCompact && { width: '100%', maxHeight: '95%' }]}>
         <ScrollView>
           <View style={detailStyles.imageWrap}>
@@ -158,13 +167,18 @@ const LodgingDetailsDialog: React.FC<LodgingDetailsDialogProps> = ({
                 <Text style={styles.helperText}>No photo available</Text>
               </View>
             )}
-            <TouchableOpacity style={detailStyles.closeButton} onPress={onClose}>
+            <TouchableOpacity
+              style={detailStyles.closeButton}
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel="Close lodging details"
+            >
               <Text style={detailStyles.closeText}>✕</Text>
             </TouchableOpacity>
           </View>
           <View style={detailStyles.headerRow}>
             <View style={detailStyles.headerMeta}>
-              <Text style={detailStyles.title}>{lodging.name}</Text>
+              <Text style={detailStyles.title} accessibilityRole="header">{lodging.name}</Text>
               <Text style={[styles.helperText, { marginTop: 2 }]} numberOfLines={2}>
                 {lodging.address || 'Address not available'}
               </Text>
@@ -239,16 +253,31 @@ const LodgingDetailsDialog: React.FC<LodgingDetailsDialogProps> = ({
         </ScrollView>
         <View style={[styles.row, styles.detailActionsRow]}>
           <View style={detailStyles.actionGroup}>
-            <TouchableOpacity style={styles.button} onPress={onClose}>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel="Close"
+            >
               <Text style={styles.buttonText}>Close</Text>
             </TouchableOpacity>
           </View>
           {!readOnly ? (
             <View style={detailStyles.actionGroup}>
-              <TouchableOpacity style={styles.button} onPress={() => onEdit(lodging)}>
+              <TouchableOpacity
+                style={styles.button}
+                onPress={() => onEdit(lodging)}
+                accessibilityRole="button"
+                accessibilityLabel={`Edit ${lodging.name || 'lodging'}`}
+              >
                 <Text style={styles.buttonText}>Edit</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={() => onDelete(lodging)}>
+              <TouchableOpacity
+                style={[styles.button, styles.dangerButton]}
+                onPress={() => onDelete(lodging)}
+                accessibilityRole="button"
+                accessibilityLabel={`Delete ${lodging.name || 'lodging'}`}
+              >
                 <Text style={styles.dangerButtonText}>Delete</Text>
               </TouchableOpacity>
             </View>
