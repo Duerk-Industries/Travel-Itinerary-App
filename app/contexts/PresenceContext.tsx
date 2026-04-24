@@ -1,0 +1,52 @@
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { CLIENT_EVENTS, SERVER_EVENTS } from '../../packages/messaging/src/events';
+import type { PresenceUser } from '../../packages/messaging/src/types';
+import { getSocket } from '../utils/socket';
+
+type PresenceContextValue = {
+  presenceUsers: PresenceUser[];
+};
+
+const PresenceContext = createContext<PresenceContextValue>({ presenceUsers: [] });
+
+type PresenceProviderProps = {
+  activeTripId: string | null;
+  userToken: string | null;
+  children: React.ReactNode;
+};
+
+/**
+ * Owns the live presence list for the active trip. Isolates the socket
+ * PRESENCE_UPDATE subscription so that frequent heartbeat updates only
+ * re-render components that actually consume `usePresenceUsers()` — not
+ * every descendant of the provider.
+ */
+export const PresenceProvider: React.FC<PresenceProviderProps> = ({ activeTripId, userToken, children }) => {
+  const [presenceUsers, setPresenceUsers] = useState<PresenceUser[]>([]);
+
+  useEffect(() => {
+    if (!userToken || !activeTripId) {
+      setPresenceUsers([]);
+      return;
+    }
+    const socket = getSocket();
+    const onPresence = (list: PresenceUser[]) => setPresenceUsers(list);
+    socket.on(SERVER_EVENTS.PRESENCE_UPDATE, onPresence);
+    if (socket.connected) {
+      socket.emit(CLIENT_EVENTS.JOIN_TRIP, activeTripId);
+    } else {
+      socket.once('connect', () => {
+        socket.emit(CLIENT_EVENTS.JOIN_TRIP, activeTripId);
+      });
+    }
+    return () => {
+      socket.off(SERVER_EVENTS.PRESENCE_UPDATE, onPresence);
+    };
+  }, [activeTripId, userToken]);
+
+  const value = useMemo<PresenceContextValue>(() => ({ presenceUsers }), [presenceUsers]);
+
+  return <PresenceContext.Provider value={value}>{children}</PresenceContext.Provider>;
+};
+
+export const usePresenceUsers = (): PresenceUser[] => useContext(PresenceContext).presenceUsers;

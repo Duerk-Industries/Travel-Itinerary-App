@@ -78,7 +78,8 @@ import { useAuthFlowState } from './hooks/useAuthFlowState';
 import { useAccountProfile } from './hooks/useAccountProfile';
 import { useSelectedFollowedTripDetails } from './hooks/useSelectedFollowedTripDetails';
 import { useCreateTripWizard } from './hooks/useCreateTripWizard';
-import { useChatState } from './hooks/useChatState';
+import { PresenceProvider } from './contexts/PresenceContext';
+import { ChatProvider } from './contexts/ChatContext';
 import { useAuthSession } from './hooks/useAuthSession';
 import { useTraits } from './hooks/useTraits';
 import { useAccountSidecars } from './hooks/useAccountSidecars';
@@ -88,17 +89,10 @@ import type { GroupMemberOption, Trip } from './types/trips';
 
 import LodgingTab from './tabs/LodgingTab';
 const AdminTab = lazy(() => import('./tabs/AdminTab'));
-import PresenceAvatars from './components/PresenceAvatars';
+import PresenceAvatarsContainer from './components/PresenceAvatarsContainer';
 import LazyTabFallback from './components/LazyTabFallback';
-import ChatButton from './components/ChatButton';
-import ChatPanel from './components/ChatPanel';
-import {
-  connectSocket,
-  disconnectSocket,
-  getSocket,
-  CLIENT_EVENTS,
-  SERVER_EVENTS,
-} from './utils/socket';
+import ChatOverlay from './components/ChatOverlay';
+import { connectSocket, disconnectSocket } from './utils/socket';
 import type { PresenceUser } from '../packages/messaging/src/types';
 
 const TOP_BANNER_ICON = require('./assets/wanderbunnies-reference.png');
@@ -484,9 +478,6 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [selectedLodging, setSelectedLodging] = useState<Lodging | null>(null);
   const [showLodgingDetails, setShowLodgingDetails] = useState(false);
   const [lodgingToDelete, setLodgingToDelete] = useState<Lodging | null>(null);
-
-  // Socket.IO / presence / chat
-  // chat state is owned by useChatState, wired up after activeTripId is in scope.
 
   const [tours, setTours] = useState<Tour[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -1160,7 +1151,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setIsRefreshing(false);
     refreshInFlightRef.current = false;
     disconnectSocket();
-    clearChatState();
+    // PresenceProvider and ChatProvider reset their state automatically when
+    // userToken or activeTripId becomes null after clearSession().
     clearSession();
   }, [clearSessionState, clearTripsData]);
   logoutRef.current = logout;
@@ -1933,19 +1925,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     };
   }, []);
 
-  // Socket.IO presence + unread subscriptions plus chat UI state are owned by useChatState.
-  const {
-    presenceUsers,
-    chatOpen,
-    chatMinimized,
-    chatUnread,
-    setChatUnread,
-    openChat,
-    closeChat,
-    minimizeChat,
-    restoreChat,
-    clearChatState,
-  } = useChatState({ activeTripId, userToken });
+  // Socket.IO presence + chat UI state live in PresenceProvider / ChatProvider
+  // (wrapped around the AppShell render tree), so AppShell itself does not
+  // re-render on every presence heartbeat.
 
   useAsyncItineraryPolling({
     asyncItineraryByTrip,
@@ -2437,6 +2419,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   );
 
   const mainWorkspace = (
+    <PresenceProvider activeTripId={activeTripId} userToken={userToken}>
+      <ChatProvider activeTripId={activeTripId} userToken={userToken}>
     <SafeAreaView style={[styles.container, iosSafariSafeAreaStyle]}>
       <View style={[styles.topBar, isNarrowLayout && styles.topBarStacked]}>
         <View style={[styles.topBarLeft, isNarrowLayout && styles.topBarLeftNarrow]}>
@@ -2549,9 +2533,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               {!isPhoneLayout ? (
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   {activeTripId && (
-                    <PresenceAvatars
+                    <PresenceAvatarsContainer
                       currentUserId={userId ?? ''}
-                      presenceUsers={presenceUsers}
                       theme={theme}
                     />
                   )}
@@ -3325,35 +3308,16 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           onOpenMap={openMaps}
         />
       ) : null}
-      {/* Chat FAB — only when logged in and a trip is active */}
-      {userToken && activeTripId && !chatOpen && (
-        <ChatButton
-          onPress={openChat}
-          unreadCount={chatUnread}
-        />
-      )}
-      {/* Chat Panel */}
-      {userToken && activeTripId && chatOpen && !chatMinimized && (
-        <ChatPanel
-          socket={getSocket()}
-          tripId={activeTripId}
-          currentUserId={userId ?? ''}
-          currentUserName={userName ?? 'Traveler'}
-          onClose={closeChat}
-          onMinimize={minimizeChat}
-          unreadCount={chatUnread}
-          onUnreadChange={setChatUnread}
-          theme={theme}
-        />
-      )}
-      {/* Minimized chat badge */}
-      {userToken && activeTripId && chatOpen && chatMinimized && (
-        <ChatButton
-          onPress={restoreChat}
-          unreadCount={chatUnread}
-        />
-      )}
+      <ChatOverlay
+        userToken={userToken}
+        activeTripId={activeTripId}
+        userId={userId ?? null}
+        userName={userName ?? null}
+        theme={theme}
+      />
     </SafeAreaView>
+      </ChatProvider>
+    </PresenceProvider>
   );
 
   const renderAdminScreen = (section: AdminSectionRoute) => (

@@ -4,6 +4,7 @@ import { computeTripDays } from '../utils/createTripWizard';
 import { formatDateLong } from '../utils/formatDateLong';
 import { FollowedTrip } from './follow';
 import Skeleton from '../components/Skeleton';
+import { useImageSource } from '../utils/imageSource';
 
 type Trip = {
   id: string;
@@ -97,7 +98,6 @@ const HomeTab: React.FC<HomeTabProps> = ({
         return;
       }
       if (isMounted) {
-        setHeroImage(null);
         setHeroLoading(true);
       }
       const location = activeTrip.destination || activeTrip.name || 'travel';
@@ -123,6 +123,8 @@ const HomeTab: React.FC<HomeTabProps> = ({
       isMounted = false;
     };
   }, [activeTrip, backendUrl, headers]);
+
+  const heroImageSource = useImageSource(heroImage);
 
   const heroSubtitle = formatTripDuration(activeTrip);
   const heroTitle = activeTrip?.destination || activeTrip?.name || 'Select a trip';
@@ -213,7 +215,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
           }}
         >
           {heroImage ? (
-            <Image style={styles.homeHeroImage} source={{ uri: heroImage }} resizeMode="cover" />
+            <Image style={styles.homeHeroImage} source={heroImageSource} resizeMode="cover" />
           ) : heroLoading ? (
             <Skeleton style={styles.homeHeroImage} testID="home-hero-skeleton" />
           ) : (

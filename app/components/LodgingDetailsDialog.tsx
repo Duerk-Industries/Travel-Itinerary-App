@@ -5,6 +5,7 @@ import { formatDateLong } from '../utils/formatDateLong';
 import { buildStaticMapUrl } from '../utils/googleMaps';
 import { LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from '../utils/itineraryStatus';
 import { useEscapeToClose } from '../hooks/useEscapeToClose';
+import { useImageSource } from '../utils/imageSource';
 import type { AppTheme } from '../theme/theme';
 
 type DetailRow = {
@@ -89,11 +90,13 @@ const LodgingDetailsDialog: React.FC<LodgingDetailsDialogProps> = ({
     };
   }, [backendUrl, lodging?.placeId, requestHeaders, visible]);
 
-  if (!visible || !lodging) return null;
-
-  const mapImageUrl = lodging.address ? buildStaticMapUrl(lodging.address) : '';
   const photoUrl = placeDetails?.details?.photos?.[0]?.photoUri;
-  const imageUrl = lodging.imageUrl || photoUrl;
+  const imageUrl = lodging?.imageUrl || photoUrl;
+  const mapImageUrl = lodging?.address ? buildStaticMapUrl(lodging.address) : '';
+  const imageSource = useImageSource(imageUrl);
+  const mapImageSource = useImageSource(mapImageUrl);
+
+  if (!visible || !lodging) return null;
   const dateRange = `${lodging.checkInDate ? formatDateLong(lodging.checkInDate) : 'TBD'}${lodging.checkOutDate ? ` – ${formatDateLong(lodging.checkOutDate)}` : ''}`;
   const travelerIds =
     Array.isArray(lodging.travelerIds) && lodging.travelerIds.length
@@ -102,20 +105,6 @@ const LodgingDetailsDialog: React.FC<LodgingDetailsDialogProps> = ({
         ? lodging.paidBy
         : [];
 
-  useEffect(() => {
-    if (!visible || !lodging) return;
-    travelerIds.forEach((id) => {
-      const attendee = attendees.find((a) => a.id === id);
-      const firstName = attendee?.firstName ?? '';
-      const lastName = attendee?.lastName ?? '';
-      const displayName = `${firstName} ${lastName}`.trim();
-      const email = attendee?.email ?? attendee?.userEmail ?? '';
-      const pending = attendee?.status === 'pending';
-      console.debug(
-        `[overview][debug] traveler read (lodging details) id=${id} name="${displayName}" email=${email || 'n/a'} pending=${pending}`
-      );
-    });
-  }, [attendees, lodging, travelerIds, visible]);
   const resolveTravelerName = travelerName ?? payerName;
   const travelersLabel = travelerIds.length
     ? travelerIds
@@ -161,7 +150,7 @@ const LodgingDetailsDialog: React.FC<LodgingDetailsDialogProps> = ({
         <ScrollView>
           <View style={detailStyles.imageWrap}>
             {imageUrl ? (
-              <Image source={{ uri: imageUrl }} style={detailStyles.image} resizeMode="cover" />
+              <Image source={imageSource} style={detailStyles.image} resizeMode="cover" />
             ) : (
               <View style={detailStyles.imageFallback}>
                 <Text style={styles.helperText}>No photo available</Text>
@@ -238,7 +227,7 @@ const LodgingDetailsDialog: React.FC<LodgingDetailsDialogProps> = ({
           </View>
           {mapImageUrl ? (
             <View style={detailStyles.mapCard}>
-              <Image style={detailStyles.mapImage} source={{ uri: mapImageUrl }} resizeMode="cover" />
+              <Image style={detailStyles.mapImage} source={mapImageSource} resizeMode="cover" />
               <View style={detailStyles.mapMeta}>
                 <Text style={detailStyles.summaryLabel}>Location preview</Text>
                 <Text style={detailStyles.summaryValue} numberOfLines={2}>

@@ -1169,9 +1169,6 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
         onWizardCarRentals?.(wizardCarRentals);
       }
 
-      console.info(
-        `${wizardDebugPrefix} post-trip-created tripId=${tripId} itineraryEnabled=${itineraryEnabled} generateItinerary=${generateItinerary} manualItems=${itineraryItems.length}`
-      );
       if (itineraryEnabled && (itineraryItems.length || generateItinerary)) {
         const rangeDays = computeDurationFromRange(dates.startDate, dates.endDate);
         const days =
@@ -1204,7 +1201,6 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               )}"`
             );
           } else {
-            console.info(`${wizardDebugPrefix} itinerary-record-created tripId=${tripId} itineraryId=${itineraryId}`);
             if (itineraryItems.length) {
               await Promise.all(
                 itineraryItems.map((item) => {
@@ -1227,7 +1223,6 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               );
             }
             if (generateItinerary) {
-              console.info(`${wizardDebugPrefix} ai-generation-enqueue-start tripId=${tripId} days=${days} destination="${destination}"`);
               const idempotencyKey = createIdempotencyKey(`wizard-${tripId}`);
               const aiRes = await fetchWithTimeout(
                 `${backendUrl}/api/itinerary/async`,
@@ -1261,22 +1256,13 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                 );
               } else {
                 onAiItineraryQueued?.(tripId, String(aiData.jobId));
-                console.info(`${wizardDebugPrefix} ai-generation-enqueue-success tripId=${tripId} jobId=${String(aiData.jobId)}`);
               }
-            } else {
-              console.info(`${wizardDebugPrefix} ai-generation-skipped tripId=${tripId} reason=generateItinerary_false`);
             }
           }
         } catch (err) {
           setWizardError((err as Error).message || 'Trip created, but itinerary setup failed.');
           console.warn(`${wizardDebugPrefix} itinerary-setup-exception tripId=${tripId} message="${(err as Error).message}"`);
         }
-      } else {
-        console.info(
-          `${wizardDebugPrefix} itinerary-setup-skipped tripId=${tripId} reason=${
-            !itineraryEnabled ? 'itinerary_disabled' : 'no_manual_items_and_ai_disabled'
-          }`
-        );
       }
 
       setCreatedTripId(tripId);
