@@ -43,18 +43,16 @@ Quick repo observations from this pass (refreshed 2026-04-23):
 - Durable idempotency exists for itinerary generation; Postgres parity and a full retry/dead-letter test suite are still outstanding.
 - API usage limiter is durable/DB-backed (`atomicIncrementApiUsageIfUnderLimit`) with OpenAI token + cost accounting; multi-instance integration tests are not yet in CI.
 - Root `package.json` now has real `typecheck`, `lint`, `validate:*` scripts delegating to each workspace.
-- Unsplash URL-lookup cache now flows through the shared `TtlCache` abstraction (cache_hit/miss metrics for free); `image-service` GCS bytes cache and `googlePlaces` DB cache remain on their original code paths.
+- Unsplash URL-lookup, `image-service` GCS signed URL cache, and `googlePlaces` DB read cache now flow through the shared `TtlCache` abstraction (cache_hit/miss metrics for free).
 - Ingestion review queue exposes bulk delete + bulk assign (capped at 100 ids/call, 207 partial-success response); deferred-UX bulk-actions item moved into `TECHNICAL_DEBT.md` resolved section.
-- Ingestion routes now consume zod-validated DTOs via a shared `parseDto`/`readDto` helper (`server/src/utils/dtoParse.ts`); validation errors return `{ error, details: [{ path, message }] }` with HTTP 400.
+- Ingestion and expense routes now consume zod-validated DTOs via a shared `parseDto`/`readDto` helper (`server/src/utils/dtoParse.ts`); validation errors return `{ error, details: [{ path, message }] }` with HTTP 400.
 
 ## Ready-To-Execute First PR Slices
 
 If an LLM agent is picking work from this file, prefer these smallest high-value slices first (refreshed 2026-04-23):
-1. Migrate `image-service.ts` GCS bytes cache and `googlePlaces.ts` DB cache onto the shared `TtlCache` abstraction so cache_hit/miss metrics are emitted consistently (Priority 6 slice).
-2. Apply the new `parseDto`/`readDto` DTO pattern to a second route family (recommend `expenseRoutes` or `tripRoutes`) so typed boundaries spread beyond ingestion (Priority 11 slice).
-3. Add a queued background deletion flow + admin observability for in-progress/failed Gmail data deletion cascades — synchronous path is in place but very large mailboxes will need it (Priority 15 / Priority 20 slice).
-4. Implement Gmail scheduled polling (every 4h Pro / daily Premium) as a real scheduler-backed sync loop (Priority 20).
-5. Add bulk-action support to the AdminTab user list mirroring the ingestion review queue pattern (Priority 19 slice).
+1. Add a queued background deletion flow + admin observability for in-progress/failed Gmail data deletion cascades — synchronous path is in place but very large mailboxes will need it (Priority 15 / Priority 20 slice).
+2. Implement Gmail scheduled polling (every 4h Pro / daily Premium) as a real scheduler-backed sync loop (Priority 20).
+3. Add bulk-action support to the AdminTab user list mirroring the ingestion review queue pattern (Priority 19 slice).
 
 Completed earlier slices:
 - [x] Fail startup outside local development when `AUTH_SECRET` is missing or defaulted.
@@ -63,8 +61,10 @@ Completed earlier slices:
 - [x] Add durable token usage accounting for OpenAI on top of the request-count limiter.
 - [x] Add real root/workspace `typecheck` and `lint` scripts so targeted validation is predictable.
 - [x] Migrate Unsplash URL-lookup caller onto the shared `TtlCache` abstraction with cache_hit/miss metrics.
+- [x] Migrate `image-service` GCS signed URL cache and `googlePlaces` DB read cache onto the shared `TtlCache` abstraction with cache_hit/miss metrics.
 - [x] Add bulk delete + bulk assign endpoints (with multi-select UI) for the ingestion review queue.
 - [x] Introduce a shared `parseDto`/`readDto` DTO helper and apply it to the ingestion route family.
+- [x] Apply the shared `parseDto`/`readDto` DTO pattern to the expense route family.
 
 ## Priority 1: Durable API Usage Limiting, Budgeting, And Cost Governance
 
@@ -248,7 +248,7 @@ Reduce unnecessary polling and eliminate duplicate concurrent requests.
 
 ## Priority 6: Caching And Dedupe For Expensive External Calls
 
-Status: `Substantial` (new `server/src/utils/ttlCache.ts` `TtlCache.getOrFetch` unifies TTL + in-flight dedupe + cache_hit/miss metric emission; 9 unit tests. Frankfurter exchange-rate and Unsplash URL-lookup callers now both use it (`unsplashCallers.ts` migrated 2026-04-23 — replaces the bespoke map+inflightDedupe with a single `TtlCache<string | null>` and emits `unsplash.url_lookup.cache_hit`/`.cache_miss`; the existing 5-test suite covers concurrent dedupe, sequential cache hit, TTL expiry, per-caller key isolation, and empty-query short-circuit). Still outstanding: `image-service.ts` GCS-bytes cache and `googlePlaces.ts` DB cache.)
+Status: `Done` (new `server/src/utils/ttlCache.ts` `TtlCache.getOrFetch` unifies TTL + in-flight dedupe + cache_hit/miss metric emission; 9 unit tests. Frankfurter exchange-rate, Unsplash URL lookup, `image-service.ts` GCS signed URL reads, and `googlePlaces.ts` DB place-details reads now use it. Cache metric namespaces include `unsplash.url_lookup`, `image.gcs_bytes`, and `google_places.details_db`; focused tests cover sequential hits, TTL behavior, concurrent dedupe, and empty-query handling.)
 
 ### Goal
 Reduce cost and latency for AI, image, and third-party lookup flows.
@@ -407,7 +407,7 @@ Move schema ownership out of large runtime bootstrap code.
 
 ## Priority 11: Consolidate Shared Domain Logic And Reduce `any`
 
-Status: `Substantial` (`packages/domain` workspace package now hosts `itineraryStatus` + `coveredBy` as the canonical pure-logic source; `app/utils/*` re-exports from it, `server/src/utils/*` mirrors inline with a contract test in `server/__tests__/domainSync.test.ts` that catches drift. Typed DTO parsing now starts at the ingestion route family: `server/src/utils/dtoParse.ts` exposes `parseDto`/`readDto`+`DtoValidationError` (5 unit tests), `server/src/routes/ingestionDtos.ts` defines zod schemas for `assignReviewItemDto`, `updateReviewItemDto`, `bulkDeleteReviewItemsDto`, `bulkAssignReviewItemsDto`, all wired into `ingestionRoutes.ts`. Validation failures return `{ error: 'Request validation failed', details: [{ path, message }] }` with 400. Other route families still use ad-hoc `String(req.body?.field ?? '').trim()` parsing.)
+Status: `Substantial` (`packages/domain` workspace package now hosts `itineraryStatus` + `coveredBy` as the canonical pure-logic source; `app/utils/*` re-exports from it, `server/src/utils/*` mirrors inline with a contract test in `server/__tests__/domainSync.test.ts` that catches drift. Typed DTO parsing now covers the ingestion and expense route families: `server/src/utils/dtoParse.ts` exposes `parseDto`/`readDto`+`DtoValidationError` (5 unit tests), `server/src/routes/ingestionDtos.ts` defines zod schemas for review-item actions, and `server/src/routes/expenseDtos.ts` defines zod schemas for listing/creating expenses. Validation failures return `{ error: 'Request validation failed', details: [{ path, message }] }` with 400. Many other route families still use ad-hoc `String(req.body?.field ?? '').trim()` parsing.)
 
 ### Goal
 Reduce logic drift and improve refactor safety.

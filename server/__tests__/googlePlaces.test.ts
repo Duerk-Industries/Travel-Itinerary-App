@@ -1,4 +1,4 @@
-import { findPlacePhoto, getPlaceDetails } from '../src/googlePlaces';
+import { clearGooglePlacesCachesForTests, findPlacePhoto, getPlaceDetails } from '../src/googlePlaces';
 import * as db from '../src/db';
 
 jest.mock('../src/db', () => ({
@@ -8,6 +8,10 @@ jest.mock('../src/db', () => ({
 const mockedDb = db as jest.Mocked<typeof db>;
 
 describe('googlePlaces (disabled/network-free mode)', () => {
+  beforeEach(() => {
+    clearGooglePlacesCachesForTests();
+  });
+
   afterEach(() => {
     jest.clearAllMocks();
   });
@@ -34,6 +38,30 @@ describe('googlePlaces (disabled/network-free mode)', () => {
       details: { websiteUri: 'https://example.com' },
       cached: true,
     });
+    nowSpy.mockRestore();
+  });
+
+  it('serves repeated fresh place details from the shared TTL cache', async () => {
+    const now = new Date('2026-02-01T12:00:00.000Z').getTime();
+    const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
+    mockedDb.getPlaceDetailsCache.mockResolvedValue({
+      placeId: 'place-789',
+      name: 'Cached Place',
+      details: { rating: 4.8 },
+      fetchedAt: new Date(now - 1000 * 60).toISOString(),
+    } as any);
+
+    const first = await getPlaceDetails(' place-789 ');
+    const second = await getPlaceDetails('place-789');
+
+    expect(first).toEqual({
+      placeId: 'place-789',
+      name: 'Cached Place',
+      details: { rating: 4.8 },
+      cached: true,
+    });
+    expect(second).toEqual(first);
+    expect(mockedDb.getPlaceDetailsCache).toHaveBeenCalledTimes(1);
     nowSpy.mockRestore();
   });
 
