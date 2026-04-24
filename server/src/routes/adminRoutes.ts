@@ -21,6 +21,7 @@ import { getFeatureFlagSeeds } from '../config/featureFlags';
 import { getApiUsageSummary } from '../apis/usageLimiter';
 import { getApiBudgetSummary } from '../apis/providerBudgeting';
 import {
+  countImportJobsByState,
   listDataDeletionJobs,
   type DataDeletionJobState,
 } from '../ingestion/shared/repository';
@@ -722,6 +723,41 @@ router.get('/metrics', (_req, res) => {
   // Per-instance best-effort aggregation — if the deployment has multiple
   // instances each returns its own counters. Client should label accordingly.
   res.json(getMetricCounterSnapshot());
+});
+
+// ---------------------------------------------------------------------------
+// Ingestion queue depth — import_jobs grouped by state (live, not a cache)
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns `{ countsByState: { PENDING: N, PROCESSING: N, FAILED: N, ... },
+ * totalActive: N, totalTerminal: N, snapshotAtIso }`. Powers the AdminTab
+ * queue-depth card and gives operators an at-a-glance view of how many
+ * imports are stuck in retriable vs terminal states without having to shell
+ * into Prometheus.
+ */
+router.get('/ingestion-queue-depth', async (_req, res) => {
+  try {
+    const countsByState = await countImportJobsByState();
+    const ACTIVE = new Set(['PENDING', 'QUEUED', 'NORMALIZING', 'PARSING', 'AWAITING_REVIEW', 'PROCESSING']);
+    const TERMINAL = new Set(['COMPLETED', 'DEAD_LETTERED', 'CANCELLED']);
+    let totalActive = 0;
+    let totalTerminal = 0;
+    for (const [state, count] of Object.entries(countsByState)) {
+      if (ACTIVE.has(state)) totalActive += count;
+      else if (TERMINAL.has(state)) totalTerminal += count;
+    }
+    res.json({
+      countsByState,
+      totalActive,
+      totalTerminal,
+      failedRetriable: countsByState.FAILED ?? 0,
+      snapshotAtIso: new Date().toISOString(),
+    });
+  } catch (err) {
+    logError('[admin] failed to compute ingestion queue depth', err);
+    res.status(500).json({ error: 'Failed to compute queue depth' });
+  }
 });
 
 // ---------------------------------------------------------------------------

@@ -17,6 +17,14 @@ type MetricsSnapshot = {
   snapshotAtIso: string;
 };
 
+type QueueDepthSnapshot = {
+  countsByState: Record<string, number>;
+  totalActive: number;
+  totalTerminal: number;
+  failedRetriable: number;
+  snapshotAtIso: string;
+};
+
 type FeatureFlag = { key: string; enabled: boolean; description?: string | null };
 
 type TierLimit = { limitKey: string; limitValue: number };
@@ -1411,6 +1419,7 @@ const MetricsSection: React.FC<{ backendUrl: string; headers: Record<string, str
   theme,
 }) => {
   const [snapshot, setSnapshot] = useState<MetricsSnapshot | null>(null);
+  const [queueDepth, setQueueDepth] = useState<QueueDepthSnapshot | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -1418,8 +1427,15 @@ const MetricsSection: React.FC<{ backendUrl: string; headers: Record<string, str
     setLoading(true);
     setError(null);
     try {
-      const data = (await apiFetch(backendUrl, headers, '/metrics')) as MetricsSnapshot;
-      setSnapshot(data);
+      const [metricsData, queueData] = await Promise.all([
+        apiFetch(backendUrl, headers, '/metrics') as Promise<MetricsSnapshot>,
+        // Queue depth is a nice-to-have — if the sub-query fails we still want
+        // the counters/cache snapshot to render rather than showing a
+        // full-section error.
+        (apiFetch(backendUrl, headers, '/ingestion-queue-depth') as Promise<QueueDepthSnapshot>).catch(() => null),
+      ]);
+      setSnapshot(metricsData);
+      setQueueDepth(queueData);
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -1453,6 +1469,52 @@ const MetricsSection: React.FC<{ backendUrl: string; headers: Record<string, str
       </TouchableOpacity>
       {error ? <Text style={[localStyles.errorText, { color: theme.colors.error }]}>{error}</Text> : null}
       {loading && !snapshot ? <Text style={[localStyles.loading, { color: theme.colors.textMuted }]}>Loading...</Text> : null}
+
+      {queueDepth ? (
+        <View
+          style={[localStyles.card, getCardStyle(theme), { marginBottom: 12 }]}
+          testID="admin-metrics-queue-depth"
+        >
+          <Text style={[localStyles.cardTitle, { color: theme.colors.text, marginBottom: 4 }]}>
+            Ingestion queue depth
+          </Text>
+          <View style={localStyles.row}>
+            <Text style={[localStyles.cardSub, localStyles.flex, { color: theme.colors.text }]}>Active</Text>
+            <Text
+              style={[localStyles.cardTitle, { color: theme.colors.text }]}
+              testID="admin-metrics-queue-active"
+            >
+              {queueDepth.totalActive}
+            </Text>
+          </View>
+          <View style={localStyles.row}>
+            <Text style={[localStyles.cardSub, localStyles.flex, { color: theme.colors.text }]}>Failed (retriable)</Text>
+            <Text
+              style={[localStyles.cardTitle, { color: theme.colors.text }]}
+              testID="admin-metrics-queue-failed"
+            >
+              {queueDepth.failedRetriable}
+            </Text>
+          </View>
+          <View style={localStyles.row}>
+            <Text style={[localStyles.cardSub, localStyles.flex, { color: theme.colors.textMuted }]}>Terminal</Text>
+            <Text
+              style={[localStyles.cardSub, { color: theme.colors.textMuted }]}
+              testID="admin-metrics-queue-terminal"
+            >
+              {queueDepth.totalTerminal}
+            </Text>
+          </View>
+          {Object.entries(queueDepth.countsByState).length > 0 ? (
+            <Text style={[localStyles.cardSub, { color: theme.colors.textMuted, marginTop: 6 }]}>
+              {Object.entries(queueDepth.countsByState)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([state, n]) => `${state}:${n}`)
+                .join(' • ')}
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
 
       {snapshot ? (
         <>

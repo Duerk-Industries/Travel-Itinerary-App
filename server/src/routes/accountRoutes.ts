@@ -773,6 +773,39 @@ groupsRouter.delete('/invites/:id', async (req, res) => {
   }
 });
 
+/**
+ * Bulk-cancel pending invites the caller owns. Each invite is processed
+ * independently so one bad id (already-accepted, not-owned, etc.) does not
+ * block the others. Returns `{ cancelled, failed }` so the client can show
+ * which ones couldn't be removed without re-reading the full invite list.
+ */
+groupsRouter.post('/invites/bulk-cancel', async (req, res) => {
+  const user = (req as any).user as { userId: string };
+  const rawIds = req.body?.inviteIds;
+  if (!Array.isArray(rawIds) || rawIds.length === 0) {
+    res.status(400).json({ error: 'inviteIds must be a non-empty array.' });
+    return;
+  }
+  const inviteIds = rawIds
+    .map((id) => (typeof id === 'string' ? id.trim() : ''))
+    .filter((id) => id.length > 0);
+  if (inviteIds.length === 0) {
+    res.status(400).json({ error: 'inviteIds must contain at least one non-empty string.' });
+    return;
+  }
+  const cancelled: string[] = [];
+  const failed: Array<{ id: string; error: string }> = [];
+  for (const id of inviteIds) {
+    try {
+      await removeGroupInvite(user.userId, id);
+      cancelled.push(id);
+    } catch (err) {
+      failed.push({ id, error: (err as Error).message });
+    }
+  }
+  res.json({ cancelled: cancelled.length, failed: failed.length, cancelledIds: cancelled, failedIds: failed });
+});
+
 groupsRouter.delete('/:id', async (req, res) => {
   const user = (req as any).user as { userId: string };
   if (!(await ensureUserInGroup(req.params.id, user.userId))) {

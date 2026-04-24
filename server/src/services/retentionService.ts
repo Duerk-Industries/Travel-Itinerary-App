@@ -6,6 +6,7 @@ import {
   deletePayloadsForDeadLetteredJobsOlderThan,
   tombstoneNormalizedTextForTerminalJobsOlderThan,
 } from '../ingestion/shared/repository';
+import { writeAuditLog } from '../db';
 import { logError, logInfo } from '../logger';
 import { getEnvFlag, getEnvValue } from '../env';
 
@@ -54,6 +55,27 @@ export const runRetentionTick = async (opts: { now?: Date; retentionDays?: numbe
     }
   } catch (err) {
     logError('[retention] normalized-text tombstone sweep failed', err);
+  }
+
+  // Persist an audit entry for every tick so admins can see the scheduler
+  // running (including no-op ticks — they confirm the sweep is alive and
+  // cut off at the expected window).
+  try {
+    await writeAuditLog({
+      actorUserId: null,
+      targetUserId: null,
+      action: 'RETENTION_TICK_RUN',
+      beforeState: null,
+      afterState: {
+        cutoffIso,
+        retentionDays: days,
+        deadLetterPayloadsDeleted,
+        normalizedTextTombstoned,
+      },
+      reason: null,
+    });
+  } catch (err) {
+    logError('[retention] audit log write failed', err);
   }
 
   return { cutoffIso, deadLetterPayloadsDeleted, normalizedTextTombstoned };

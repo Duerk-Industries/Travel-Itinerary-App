@@ -3158,6 +3158,79 @@ export const deletePayloadsForDeadLetteredJobsOlderThan = async (
 };
 
 /**
+ * Returns FAILED import_jobs whose `next_retry_at` has passed and whose
+ * `retry_count` is still under the configured max. Used by the internal
+ * retry-worker endpoint to pick the next batch of jobs to requeue. The
+ * `next_retry_at <= now` filter means the caller needs no external
+ * scheduler — they can poll whenever cheap.
+ */
+export const listFailedJobsReadyForRetry = async (params: {
+  maxAttempts: number;
+  now?: Date;
+  limit?: number;
+}): Promise<PersistedImportJob[]> => {
+  await ensureIngestionRepositoryReady();
+  const nowIsoStr = (params.now ?? new Date()).toISOString();
+  const limit = Math.min(Math.max(params.limit ?? 100, 1), 500);
+
+  if (getCurrentDbProvider() === 'firebase') {
+    const snap = await getFirebaseDb()
+      .collection('import_jobs')
+      .where('state', '==', 'FAILED')
+      .get();
+    return snap.docs
+      .map((doc) => {
+        const data = doc.data() as any;
+        return {
+          id: doc.id,
+          userId: data.userId,
+          ingestionSourceId: data.ingestionSourceId,
+          sourceType: data.sourceType,
+          state: data.state,
+          idempotencyKey: data.idempotencyKey,
+          contentHash: data.contentHash,
+          normalizedContentHash: data.normalizedContentHash ?? null,
+          externalMessageId: data.externalMessageId,
+          originalFilename: data.originalFilename,
+          mimeType: data.mimeType,
+          failureCode: data.failureCode ?? null,
+          failureReason: data.failureReason ?? null,
+          correlationId: data.correlationId,
+          dryRun: Boolean(data.dryRun),
+          retryCount: data.retryCount ?? 0,
+          lastErrorCode: data.lastErrorCode ?? null,
+          createdAt: data.createdAt,
+          updatedAt: data.updatedAt,
+          stateChangedAt: data.stateChangedAt,
+          startedAt: data.startedAt ?? null,
+          completedAt: data.completedAt ?? null,
+          nextRetryAt: data.nextRetryAt ?? null,
+        } satisfies PersistedImportJob;
+      })
+      .filter(
+        (job) =>
+          job.retryCount < params.maxAttempts &&
+          !!job.nextRetryAt &&
+          String(job.nextRetryAt) <= nowIsoStr,
+      )
+      .slice(0, limit);
+  }
+
+  // The `<=` comparison already excludes NULL rows (NULL <= X is NULL, not
+  // true), so no explicit `IS NOT NULL` — pg-mem chokes on the combination.
+  const { rows } = await getPg().query<ImportJobRow>(
+    `SELECT * FROM import_jobs
+     WHERE state = 'FAILED'
+       AND next_retry_at <= $1::timestamp
+       AND retry_count < $2
+     ORDER BY next_retry_at ASC
+     LIMIT $3`,
+    [nowIsoStr, params.maxAttempts, limit],
+  );
+  return rows.map(mapImportJobRow);
+};
+
+/**
  * Returns the count of `import_jobs` grouped by `state`. Used by the
  * metrics-service tick to emit `ingestion_jobs_by_state` gauges for
  * per-instance queue-depth visibility in the `/metrics` scrape output.

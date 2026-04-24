@@ -32,7 +32,8 @@ const EXPECTED_INLINE_TABLES: ReadonlySet<string> = new Set([
   'api_usage_counters',
   'audit_log',
   'car_rentals',
-  'chat_read_watermarks',
+  // 'chat_read_watermarks' — moved to server/migrations/20260425_add_chat_read_watermarks.sql
+  // (Priority 10 pilot). Auto-applied by the runtime migration runner.
   'email_verifications',
   'expenses',
   'family_relationships',

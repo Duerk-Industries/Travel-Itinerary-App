@@ -120,7 +120,8 @@ export type AuditAction =
   | 'TIER_LIMIT_UPDATED'
   | 'TIER_ENTITLEMENT_UPDATED'
   | 'FEATURE_FLAG_UPDATED'
-  | 'API_LIMITS_UPDATED';
+  | 'API_LIMITS_UPDATED'
+  | 'RETENTION_TICK_RUN';
 
 export interface AuditLogEntry {
   id: string;

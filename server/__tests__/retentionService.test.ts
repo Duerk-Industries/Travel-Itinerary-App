@@ -345,4 +345,55 @@ describe('retentionService', () => {
     const second = await service.runRetentionTick({ now, retentionDays: 90 });
     expect(second.normalizedTextTombstoned).toBe(0);
   });
+
+  // ─── Audit log entry per tick (Priority 15) ──────────────────────────────
+
+  it('writes a RETENTION_TICK_RUN audit entry on every tick — even no-op ticks — with the cutoff + counts in after_state', async () => {
+    const { poolClient } = require('../src/db') as typeof import('../src/db');
+    const service = require('../src/services/retentionService') as typeof import('../src/services/retentionService');
+
+    const pool = poolClient();
+    const now = new Date('2026-04-23T12:00:00Z');
+    const result = await service.runRetentionTick({ now, retentionDays: 90 });
+    expect(result.deadLetterPayloadsDeleted).toBe(0);
+    expect(result.normalizedTextTombstoned).toBe(0);
+
+    const { rows } = await pool.query<{ action: string; after_state: string | null; actor_user_id: string | null }>(
+      `SELECT action, after_state, actor_user_id FROM audit_log WHERE action = 'RETENTION_TICK_RUN' ORDER BY created_at DESC`,
+    );
+    expect(rows.length).toBe(1);
+    expect(rows[0].actor_user_id).toBeNull();
+    const payload = typeof rows[0].after_state === 'string' ? JSON.parse(rows[0].after_state) : rows[0].after_state;
+    expect(payload).toMatchObject({
+      cutoffIso: expect.any(String),
+      retentionDays: 90,
+      deadLetterPayloadsDeleted: 0,
+      normalizedTextTombstoned: 0,
+    });
+  });
+
+  it('captures non-zero counts in the audit entry when the sweep actually removed rows', async () => {
+    const { poolClient } = require('../src/db') as typeof import('../src/db');
+    const repo = require('../src/ingestion/shared/repository') as typeof import('../src/ingestion/shared/repository');
+    const service = require('../src/services/retentionService') as typeof import('../src/services/retentionService');
+
+    const userId = await mkUser('audit-counts');
+    const sourceId = await repo.getOrCreateIngestionSource(userId, 'MANUAL_UPLOAD');
+    const pool = poolClient();
+
+    const now = new Date('2026-04-23T12:00:00Z');
+    const oldIso = new Date(now.getTime() - 200 * 24 * 60 * 60 * 1000).toISOString();
+    await seedImportJobWithPayload(pool, {
+      jobId: 'dddddddd-dddd-dddd-dddd-dddddddddddd', userId, ingestionSourceId: sourceId,
+      state: 'DEAD_LETTERED', completedAtIso: oldIso, idempotencyKey: 'audit-counts',
+    });
+
+    await service.runRetentionTick({ now, retentionDays: 90 });
+
+    const { rows } = await pool.query<{ after_state: string | null }>(
+      `SELECT after_state FROM audit_log WHERE action = 'RETENTION_TICK_RUN' ORDER BY created_at DESC LIMIT 1`,
+    );
+    const payload = typeof rows[0].after_state === 'string' ? JSON.parse(rows[0].after_state) : rows[0].after_state;
+    expect(payload.deadLetterPayloadsDeleted).toBe(1);
+  });
 });

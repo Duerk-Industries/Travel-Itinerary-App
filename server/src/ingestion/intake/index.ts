@@ -7,7 +7,7 @@ import { sha256 } from '../shared/hashing';
 import { isSupportedMimeType, normalizeMimeType } from '../shared/parserSelection';
 import { writeTempBytes } from '../shared/tempStorage';
 import { IngestionError } from '../shared/userFailures';
-import { scanDocumentOrStub } from '../shared/virusScan';
+import { recordVirusScanResult, scanDocumentOrStub } from '../shared/virusScan';
 import { getVirusScanner } from '../virusScanProviders';
 
 const memoryStorage = multer.memoryStorage();
@@ -53,6 +53,7 @@ export const buildManualUploadPayloads = async (req: Request, userId: string): P
       const perFileScan = scanner.scanBuffer
         ? await scanner.scanBuffer(file.buffer, file.originalname)
         : null;
+      if (perFileScan) recordVirusScanResult('buffer', perFileScan);
       if (perFileScan?.status === 'FAILED') {
         // Reject infected / unscannable files with the same user-visible
         // failure code as the batch path.
@@ -106,6 +107,7 @@ export const buildWebhookPayload = async (params: {
   const perFileScan = scanner.scanBuffer
     ? await scanner.scanBuffer(params.bytes, params.filename)
     : null;
+  if (perFileScan) recordVirusScanResult('buffer', perFileScan);
   if (perFileScan?.status === 'FAILED') {
     throw new IngestionError('virus_scan_failed', 400);
   }

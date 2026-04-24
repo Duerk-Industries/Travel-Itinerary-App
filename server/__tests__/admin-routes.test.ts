@@ -55,6 +55,7 @@ describe('Admin routes', () => {
       ['GET',   '/api/admin/user-data'],
       ['GET',   '/api/admin/audit-log'],
       ['GET',   '/api/admin/metrics'],
+      ['GET',   '/api/admin/ingestion-queue-depth'],
       ['POST',  '/api/admin/users/bulk-role'],
     ] as const;
 
@@ -915,5 +916,30 @@ describe('Admin routes', () => {
       expect(typeof res.body.startedAtIso).toBe('string');
       expect(typeof res.body.snapshotAtIso).toBe('string');
     });
+  });
+
+  // ---------------------------------------------------------------------------
+  // GET /api/admin/ingestion-queue-depth
+  // ---------------------------------------------------------------------------
+
+  describe('GET /api/admin/ingestion-queue-depth', () => {
+    it('returns countsByState + active/terminal/failedRetriable totals sourced from import_jobs', async () => {
+      const res = await request(app)
+        .get('/api/admin/ingestion-queue-depth')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      // On a clean test DB with no ingestion rows seeded, the totals are 0
+      // and countsByState is empty — the endpoint still returns shape.
+      expect(res.body).toMatchObject({
+        countsByState: expect.any(Object),
+        totalActive: expect.any(Number),
+        totalTerminal: expect.any(Number),
+        failedRetriable: expect.any(Number),
+        snapshotAtIso: expect.any(String),
+      });
+    });
+
+    // 401/403 admin-guard is covered by the `authentication required` suite.
   });
 });

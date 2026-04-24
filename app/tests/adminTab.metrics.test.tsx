@@ -66,6 +66,15 @@ describe('AdminTab metrics section', () => {
           snapshotAtIso: '2026-04-24T11:00:00Z',
         });
       }
+      if (url.endsWith('/api/admin/ingestion-queue-depth')) {
+        return createJsonResponse({
+          countsByState: { PENDING: 3, AWAITING_REVIEW: 1, FAILED: 2, COMPLETED: 14, DEAD_LETTERED: 0 },
+          totalActive: 4,
+          totalTerminal: 14,
+          failedRetriable: 2,
+          snapshotAtIso: '2026-04-24T11:00:00Z',
+        });
+      }
       throw new Error(`Unhandled fetch: ${url}`);
     });
   });
@@ -107,6 +116,15 @@ describe('AdminTab metrics section', () => {
           snapshotAtIso: '2026-04-24T11:00:00Z',
         });
       }
+      if (url.endsWith('/api/admin/ingestion-queue-depth')) {
+        return createJsonResponse({
+          countsByState: {},
+          totalActive: 0,
+          totalTerminal: 0,
+          failedRetriable: 0,
+          snapshotAtIso: '2026-04-24T11:00:00Z',
+        });
+      }
       throw new Error(`Unhandled fetch: ${url}`);
     });
 
@@ -116,5 +134,42 @@ describe('AdminTab metrics section', () => {
 
     await findByText('No cache traffic observed yet on this instance.');
     await findByText('No counter activity on this instance.');
+  });
+
+  test('renders the ingestion queue-depth card with Active / Failed / Terminal totals', async () => {
+    const { findByTestId, getByTestId } = render(
+      <AdminTab backendUrl={backendUrl} headers={headers} initialSection="metrics" />
+    );
+
+    await findByTestId('admin-metrics-queue-depth');
+    expect(getByTestId('admin-metrics-queue-active').props.children).toBe(4);
+    expect(getByTestId('admin-metrics-queue-failed').props.children).toBe(2);
+    expect(getByTestId('admin-metrics-queue-terminal').props.children).toBe(14);
+  });
+
+  test('omits the queue-depth card when the endpoint fails', async () => {
+    (global as any).fetch = jest.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith('/api/admin/metrics')) {
+        return createJsonResponse({
+          counters: {},
+          cacheRatios: [],
+          startedAtIso: '2026-04-24T10:00:00Z',
+          snapshotAtIso: '2026-04-24T11:00:00Z',
+        });
+      }
+      if (url.endsWith('/api/admin/ingestion-queue-depth')) {
+        return Promise.resolve({ ok: false, status: 500, json: async () => ({ error: 'boom' }) } as Response);
+      }
+      throw new Error(`Unhandled fetch: ${url}`);
+    });
+
+    const { findByText, queryByTestId } = render(
+      <AdminTab backendUrl={backendUrl} headers={headers} initialSection="metrics" />
+    );
+
+    // Cache section still renders — the metrics endpoint succeeded.
+    await findByText('No cache traffic observed yet on this instance.');
+    expect(queryByTestId('admin-metrics-queue-depth')).toBeNull();
   });
 });

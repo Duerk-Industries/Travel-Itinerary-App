@@ -618,24 +618,10 @@ export const initDb = async (): Promise<void> => {
     );
   `);
 
-  // Per-user watermark for chat read-state. One row per (user_id, trip_id)
-  // capturing the `created_at` of the most-recently-read message. Introduced
-  // to eventually replace the per-message `message_reads` rows; during the
-  // transition both are written and `countUnreadMessages` prefers the
-  // watermark when a row exists.
-  await p.query(`
-    CREATE TABLE IF NOT EXISTS chat_read_watermarks (
-      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      trip_id UUID NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
-      last_read_message_id UUID NOT NULL,
-      last_read_created_at TIMESTAMP NOT NULL,
-      updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-      PRIMARY KEY (user_id, trip_id)
-    );
-  `);
-  await p.query(
-    `CREATE INDEX IF NOT EXISTS idx_chat_read_watermarks_trip ON chat_read_watermarks(trip_id);`,
-  );
+  // `chat_read_watermarks` now lives in
+  // server/migrations/20260425_add_chat_read_watermarks.sql — first proof
+  // of the Priority 10 inline→migrations cutover pattern. Auto-applied by
+  // the runner invoked at the end of initDb.
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS locations (

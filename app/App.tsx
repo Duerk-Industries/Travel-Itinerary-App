@@ -11,7 +11,7 @@
  * then UI sections render conditionally based on the active page.
  */
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AppState, Image, Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme, useWindowDimensions } from 'react-native';
+import { AppState, Image, Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme } from 'react-native';
 import { NavigationContainer, createNavigationContainerRef, type LinkingOptions } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Constants from 'expo-constants';
@@ -68,6 +68,7 @@ import { resolveBackendUrl as resolveConfiguredBackendUrl } from './utils/backen
 import { type AsyncItineraryTracker, useAsyncItineraryPolling } from './hooks/useAsyncItineraryPolling';
 import { useTripsData } from './hooks/useTripsData';
 import { useTripMembers } from './hooks/useTripMembers';
+import { useLayoutBreakpoints } from './hooks/useLayoutBreakpoints';
 import { useRetryableMutation } from './hooks/useRetryableMutation';
 import RetryableErrorBanner from './components/RetryableErrorBanner';
 import { requestJson } from './utils/apiClient';
@@ -360,10 +361,8 @@ type AppShellProps = {
 };
 
 const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', onOpenAdminSection }) => {
-  const { width: viewportWidth } = useWindowDimensions();
+  const { viewportWidth, isNarrowLayout, isPhoneLayout } = useLayoutBreakpoints();
   const systemColorScheme = useColorScheme();
-  const isNarrowLayout = viewportWidth < 980;
-  const isPhoneLayout = viewportWidth < 680;
   const isWebIOSSafari = useMemo(() => {
     if (Platform.OS !== 'web' || typeof navigator === 'undefined') return false;
     const ua = navigator.userAgent || '';
@@ -2247,18 +2246,25 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     fetchTrips();
   };
 
-  const updateTripCurrency = async (tripId: string, currency: string) => {
-    if (!userToken) return;
-    const res = await fetch(`${backendUrl}/api/trips/${tripId}`, {
+  // PATCH /api/trips/:id setting `currency` is naturally idempotent (replaces
+  // the trip's currency with a fixed value), so a transient network failure
+  // surfaces through the red banner and the user can retry without re-
+  // selecting the new currency from the dropdown.
+  const tripCurrencyMutation = useRetryableMutation<
+    { tripId: string; currency: string },
+    unknown
+  >(async ({ tripId, currency }) => {
+    return requestJson<unknown>(`${backendUrl}/api/trips/${tripId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', ...headers },
-      body: JSON.stringify({ currency }),
+      body: { currency },
     });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      alert(data.error || 'Unable to update currency');
-      return;
-    }
+  });
+
+  const updateTripCurrency = async (tripId: string, currency: string) => {
+    if (!userToken) return;
+    const result = await tripCurrencyMutation.run({ tripId, currency });
+    if (result === null) return;
     fetchTrips();
     fetchExpenses();
   };
@@ -2696,6 +2702,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             onRetry={tripGroupMutation.retry}
             onDismiss={tripGroupMutation.reset}
             actionLabel="Move trip to group"
+          />
+          <RetryableErrorBanner
+            state={tripCurrencyMutation.state}
+            error={tripCurrencyMutation.error}
+            onRetry={tripCurrencyMutation.retry}
+            onDismiss={tripCurrencyMutation.reset}
+            actionLabel="Update trip currency"
           />
 
           {activePage === 'ingest'

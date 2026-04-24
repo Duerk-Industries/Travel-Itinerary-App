@@ -1,0 +1,24 @@
+-- Up
+--
+-- Retire the legacy per-message `message_reads` table.
+--
+-- Precondition: `CHAT_LEGACY_READS_ENABLED` is set to `false` across every
+-- running instance for at least one full release cycle, and
+-- `chat_read_watermarks` has been proven to be the sole source of truth
+-- for unread-count queries. `countUnreadMessages` already prefers the
+-- watermark when it exists; after the flag flip, every active user will
+-- have a watermark row on their first MARK_READ and the fallback LEFT
+-- JOIN path in `countUnreadMessages` becomes unreachable.
+--
+-- STATUS: **pending** — this file uses the `.sql.pending` extension so the
+-- runtime auto-apply migration runner skips it. When the team is ready to
+-- execute the cutover, rename the file to `.sql` in a separate PR so the
+-- change lands deliberately and reviewers can confirm the preconditions.
+--
+-- Rollback note: dropping this table is destructive. There is no "Down"
+-- path — the per-message read history is not reconstructible from the
+-- watermark alone. If this is a concern, snapshot the table into cold
+-- storage before enabling the migration.
+
+DROP INDEX IF EXISTS idx_message_reads_user;
+DROP TABLE IF EXISTS message_reads;
