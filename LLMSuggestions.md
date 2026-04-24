@@ -69,7 +69,7 @@ Completed earlier slices:
 
 ## Priority 1: Durable API Usage Limiting, Budgeting, And Cost Governance
 
-Status: `Substantial` (DB-backed durable limiting + OpenAI token/cost accounting are in place; multi-instance/restart integration tests still outstanding)
+Status: `Done` (DB-backed durable limiting + OpenAI token/cost accounting have been in place for a while; multi-instance/restart integration coverage now closed with two new tests in `usage-limiter-durable.test.ts`. The "under high concurrency" test fires 80 concurrent `reserveApiUsageOrThrow` calls against a 50-limit caller and asserts exactly 50 fulfilled / 30 rejected with `ApiLimitExceededError` and a durable counter of exactly 50 — this exercises the `UPDATE ... WHERE count < $limit` atomic-conditional-increment primitive that also provides cross-instance coordination when multiple processes share the same DB. The "preserves durable counters across simulated process restart" test consumes 40/50 of the limit, calls a new test-only helper `__resetInProcessUsageCachesForTests()` in `usageLimiter.ts` that clears the in-memory `usageBuckets` + `blockedLogStates` maps without touching the `api_usage_counters` table, then confirms the next 10 calls succeed and the 51st throws — proving an instance restart cannot reset the effective budget. Note: pg-mem serializes queries so the concurrency test validates the reservation *logic* (ON CONFLICT + conditional UPDATE) rather than true write contention; a live-Postgres stress test would be needed to exercise row-level locking directly, but that is a testcontainers/infra slice rather than correctness work.)
 
 ### Goal
 Make provider limits and spend controls reliable across process restarts and multiple server instances.
