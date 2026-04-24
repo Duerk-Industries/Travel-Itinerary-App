@@ -61,6 +61,8 @@ import {
 import LodgingDialog from '../components/LodgingDialog';
 import { LocationSelector, type LocationOption } from '../components/LocationSelector';
 import { MustSeeAttractionSelector, type AttractionOption } from '../components/MustSeeAttractionSelector';
+import SelectField, { type SelectFieldOption } from '../components/SelectField';
+import ConfirmDialog from '../components/ConfirmDialog';
   
 const createIdempotencyKey = (prefix: string): string => {
   const cryptoApi = globalThis.crypto as { randomUUID?: () => string } | undefined;
@@ -264,7 +266,6 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   const [wizardCarDraft, setWizardCarDraft] = useState<CarRentalDraft>(createInitialCarRentalDraft());
   const [wizardCarDateField, setWizardCarDateField] = useState<'pickup' | 'dropoff' | null>(null);
   const [wizardCarDateValue, setWizardCarDateValue] = useState<Date>(new Date());
-  const [wizardCarPrepaidOpen, setWizardCarPrepaidOpen] = useState(false);
   const [editingWizardLodgingId, setEditingWizardLodgingId] = useState<string | null>(null);
   const [editingWizardLodging, setEditingWizardLodging] = useState<LodgingDraft | null>(null);
   const [wizardLodgingDateField, setWizardLodgingDateField] = useState<'checkIn' | 'checkOut' | 'refund' | null>(null);
@@ -293,9 +294,6 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   const [createdTripId, setCreatedTripId] = useState<string | null>(null);
   const [dateField, setDateField] = useState<'start' | 'end' | 'itinerary' | null>(null);
   const [dateValue, setDateValue] = useState<Date>(new Date());
-  const [showMonthDropdown, setShowMonthDropdown] = useState(false);
-  const [showYearDropdown, setShowYearDropdown] = useState(false);
-  const [showDaysDropdown, setShowDaysDropdown] = useState(false);
   const startDateRef = useRef<any>(null);
   const endDateRef = useRef<any>(null);
   const itineraryDateRef = useRef<any>(null);
@@ -340,7 +338,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     [dates.startMonth, dates.startYear]
   );
   const monthOptions = useMemo(
-    () => [
+    (): SelectFieldOption[] => [
       { label: 'January', value: '1' },
       { label: 'February', value: '2' },
       { label: 'March', value: '3' },
@@ -356,11 +354,27 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     ],
     []
   );
-  const yearOptions = useMemo(() => {
+  const yearOptions = useMemo<SelectFieldOption[]>(() => {
     const start = new Date().getFullYear();
-    return Array.from({ length: 11 }, (_, i) => start + i);
+    return Array.from({ length: 11 }, (_, i) => {
+      const year = String(start + i);
+      return { label: year, value: year };
+    });
   }, []);
-  const dayOptions = useMemo(() => Array.from({ length: 90 }, (_, i) => i + 1), []);
+  const dayOptions = useMemo<SelectFieldOption[]>(
+    () => Array.from({ length: 90 }, (_, i) => {
+      const day = String(i + 1);
+      return { label: day, value: day };
+    }),
+    []
+  );
+  const prepaidOptions = useMemo<SelectFieldOption[]>(
+    () => [
+      { label: 'Yes', value: 'Yes' },
+      { label: 'No', value: 'No' },
+    ],
+    []
+  );
   const webInputStyle = useMemo(() => toWebStyle(styles.input), [styles]);
   const webInputStyleFlex = useMemo(() => ({ ...webInputStyle, flex: 1 }), [webInputStyle]);
   const webDateInputStyle = useMemo(
@@ -555,7 +569,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     }
   }, [editingWizardLodging?.checkInDate, editingWizardLodging?.checkOutDate, editingWizardLodging?.totalCost]);
   const manualDayList = useMemo(() => Array.from({ length: tripDayCount }, (_, i) => i + 1), [tripDayCount]);
-  const buildDateForDay = (day: number): string => {
+  const buildDateForDay = useCallback((day: number): string => {
     if (dates.mode === 'range' && dates.startDate) {
       const start = new Date(dates.startDate);
       if (!Number.isNaN(start.valueOf())) {
@@ -572,13 +586,13 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
       }
     }
     return `Day ${day}`;
-  };
+  }, [dates.mode, dates.startDate, dates.startMonth, dates.startYear]);
   const formatManualDayLabel = (day: number): string => {
     const dateLabel = buildDateForDay(day);
     if (dateLabel.startsWith('Day ')) return dateLabel;
     return `Day ${day} · ${dateLabel}`;
   };
-  const getItemDayIndex = (item: ItineraryItemInput): number => {
+  const getItemDayIndex = useCallback((item: ItineraryItemInput): number => {
     const raw = item.date?.trim();
     if (raw) {
       const match = /^Day\\s+(\\d+)/i.exec(raw);
@@ -607,7 +621,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
       }
     }
     return 1;
-  };
+  }, [dates.mode, dates.startDate, dates.startMonth, dates.startYear]);
   const manualItemsByDay = useMemo(() => {
     const map = new Map<number, Array<{ item: ItineraryItemInput; index: number }>>();
     itineraryItems.forEach((item, index) => {
@@ -665,25 +679,25 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     setWizardError('');
   };
 
-  const addLocation = (location: LocationOption) => {
+  const addLocation = useCallback((location: LocationOption) => {
     if (!location?.id) return;
     if (selectedLocations.some((entry) => entry.id === location.id)) return;
     setSelectedLocations((prev) => [...prev, location]);
-  };
+  }, [selectedLocations]);
 
-  const removeLocation = (locationId: string) => {
+  const removeLocation = useCallback((locationId: string) => {
     setSelectedLocations((prev) => prev.filter((location) => location.id !== locationId));
-  };
+  }, []);
 
-  const addMustSeeAttraction = (attraction: AttractionOption) => {
+  const addMustSeeAttraction = useCallback((attraction: AttractionOption) => {
     if (!attraction?.id || !attraction?.name) return;
     if (selectedMustSeeAttractions.some((entry) => entry.id === attraction.id)) return;
     setSelectedMustSeeAttractions((prev) => [...prev, attraction]);
-  };
+  }, [selectedMustSeeAttractions]);
 
-  const removeMustSeeAttraction = (attractionId: string) => {
+  const removeMustSeeAttraction = useCallback((attractionId: string) => {
     setSelectedMustSeeAttractions((prev) => prev.filter((item) => item.id !== attractionId));
-  };
+  }, []);
 
   const addItineraryItem = () => {
     if (!itineraryDraft.activity.trim()) {
@@ -714,7 +728,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     setWizardError('');
   };
 
-  const setStartDateWithRangeGuard = (value: string) => {
+  const setStartDateWithRangeGuard = useCallback((value: string) => {
     const normalized = normalizeDateString(value);
     setDates((prev) => {
       if (prev.mode !== 'range') {
@@ -723,7 +737,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
       const nextEnd = ensureRangeEndDate(normalized, prev.endDate);
       return { ...prev, startDate: normalized, endDate: nextEnd };
     });
-  };
+  }, []);
   const primeRangeDates = () => {
     if (dates.mode !== 'range') return;
     const defaults = getDefaultTripRangeDates({ startDate: dates.startDate, endDate: dates.endDate });
@@ -1442,154 +1456,36 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             ) : (
               <>
                 <View style={styles.row}>
-                  {Platform.OS === 'web' ? (
-                    <select
-                      style={webDateInputStyleFlex}
-                      title="Select month"
-                      value={dates.startMonth}
-                      onChange={(e) => setDates((prev) => ({ ...prev, startMonth: e.target.value }))}
-                    >
-                      <option value="">Month</option>
-                      {monthOptions.map((month) => (
-                        <option key={month.value} value={month.value}>
-                          {month.label}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <View style={[styles.input, styles.dropdown, { flex: 1 }]}>
-                      <TouchableOpacity
-                        style={styles.selectButton}
-                        onPress={() => {
-                          setShowMonthDropdown((prev) => !prev);
-                          setShowYearDropdown(false);
-                          setShowDaysDropdown(false);
-                        }}
-                      >
-                        <View style={styles.selectButtonRow}>
-                          <Text style={[styles.cellText, !dates.startMonth && styles.placeholderText]}>
-                            {monthOptions.find((m) => m.value === dates.startMonth)?.label ?? 'Month'}
-                          </Text>
-                          <Text style={styles.selectCaret}>v</Text>
-                        </View>
-                      </TouchableOpacity>
-                      {showMonthDropdown ? (
-                        <View style={styles.dropdownList}>
-                          {monthOptions.map((month) => (
-                            <TouchableOpacity
-                              key={month.value}
-                              style={styles.dropdownOption}
-                              onPress={() => {
-                                setDates((prev) => ({ ...prev, startMonth: month.value }));
-                                setShowMonthDropdown(false);
-                              }}
-                            >
-                              <Text style={styles.cellText}>{month.label}</Text>
-                            </TouchableOpacity>
-                          ))}
-                        </View>
-                      ) : null}
-                    </View>
-                  )}
-                  {Platform.OS === 'web' ? (
-                    <select
-                      style={webDateInputStyleFlex}
-                      title="Select year"
-                      value={dates.startYear}
-                      onChange={(e) => setDates((prev) => ({ ...prev, startYear: e.target.value }))}
-                    >
-                      <option value="">Year</option>
-                      {yearOptions.map((year) => (
-                        <option key={year} value={String(year)}>
-                          {year}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <View style={[styles.input, styles.dropdown, { flex: 1 }]}>
-                      <TouchableOpacity
-                        style={styles.selectButton}
-                        onPress={() => {
-                          setShowYearDropdown((prev) => !prev);
-                          setShowMonthDropdown(false);
-                          setShowDaysDropdown(false);
-                        }}
-                      >
-                        <View style={styles.selectButtonRow}>
-                          <Text style={[styles.cellText, !dates.startYear && styles.placeholderText]}>
-                            {dates.startYear || 'Year'}
-                          </Text>
-                          <Text style={styles.selectCaret}>v</Text>
-                        </View>
-                      </TouchableOpacity>
-                      {showYearDropdown ? (
-                        <View style={styles.dropdownList}>
-                          {yearOptions.map((year) => (
-                            <TouchableOpacity
-                              key={year}
-                              style={styles.dropdownOption}
-                              onPress={() => {
-                                setDates((prev) => ({ ...prev, startYear: String(year) }));
-                                setShowYearDropdown(false);
-                              }}
-                            >
-                              <Text style={styles.cellText}>{year}</Text>
-                            </TouchableOpacity>
-                          ))}
-                        </View>
-                      ) : null}
-                    </View>
-                  )}
+                  <SelectField
+                    styles={styles}
+                    options={monthOptions}
+                    value={dates.startMonth}
+                    placeholder="Month"
+                    title="Select month"
+                    style={{ flex: 1 }}
+                    webStyle={webDateInputStyleFlex}
+                    onChange={(value) => setDates((prev) => ({ ...prev, startMonth: value }))}
+                  />
+                  <SelectField
+                    styles={styles}
+                    options={yearOptions}
+                    value={dates.startYear}
+                    placeholder="Year"
+                    title="Select year"
+                    style={{ flex: 1 }}
+                    webStyle={webDateInputStyleFlex}
+                    onChange={(value) => setDates((prev) => ({ ...prev, startYear: value }))}
+                  />
                 </View>
-                {Platform.OS === 'web' ? (
-                  <select
-                    style={webDateInputStyle}
-                    title="Select number of days"
-                    value={dates.durationDays}
-                    onChange={(e) => setDates((prev) => ({ ...prev, durationDays: e.target.value }))}
-                  >
-                    <option value="">Days</option>
-                    {dayOptions.map((day) => (
-                      <option key={day} value={String(day)}>
-                        {day}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <View style={[styles.input, styles.dropdown]}>
-                    <TouchableOpacity
-                      style={styles.selectButton}
-                      onPress={() => {
-                        setShowDaysDropdown((prev) => !prev);
-                        setShowMonthDropdown(false);
-                        setShowYearDropdown(false);
-                      }}
-                    >
-                      <View style={styles.selectButtonRow}>
-                        <Text style={[styles.cellText, !dates.durationDays && styles.placeholderText]}>
-                          {dates.durationDays || 'Days'}
-                        </Text>
-                        <Text style={styles.selectCaret}>v</Text>
-                      </View>
-                    </TouchableOpacity>
-                    {showDaysDropdown ? (
-                      <View style={styles.dropdownList}>
-                        {dayOptions.map((day) => (
-                          <TouchableOpacity
-                            key={day}
-                            style={styles.dropdownOption}
-                            onPress={() => {
-                              setDates((prev) => ({ ...prev, durationDays: String(day) }));
-                              setShowDaysDropdown(false);
-                            }}
-                          >
-                            <Text style={styles.cellText}>{day}</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    ) : null}
-                  </View>
-                )}
+                <SelectField
+                  styles={styles}
+                  options={dayOptions}
+                  value={dates.durationDays}
+                  placeholder="Days"
+                  title="Select number of days"
+                  webStyle={webDateInputStyle}
+                  onChange={(value) => setDates((prev) => ({ ...prev, durationDays: value }))}
+                />
                 {monthLabel && dates.durationDays ? (
                   <Text style={styles.helperText}>
                     {monthLabel} · {dates.durationDays} day(s)
@@ -2381,32 +2277,17 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     />
                   </View>
                   <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                    <View style={[styles.dropdown, { width: '100%' }]}>
-                      <TouchableOpacity
-                        style={[styles.input, styles.selectButtonRow]}
-                        title="Prepaid status"
-                        onPress={() => setWizardCarPrepaidOpen((s) => !s)}
-                      >
-                        <Text style={styles.cellText}>{wizardCarDraft.prepaid || 'Select Yes/No'}</Text>
-                        <Text style={styles.selectCaret}></Text>
-                      </TouchableOpacity>
-                      {wizardCarPrepaidOpen ? (
-                        <View style={[styles.dropdownList, { position: 'relative', top: 0 }]}>
-                          {['Yes', 'No'].map((opt) => (
-                            <TouchableOpacity
-                              key={opt}
-                              style={styles.dropdownOption}
-                              onPress={() => {
-                                setWizardCarDraft((p) => ({ ...p, prepaid: opt }));
-                                setWizardCarPrepaidOpen(false);
-                              }}
-                            >
-                              <Text style={styles.cellText}>{opt}</Text>
-                            </TouchableOpacity>
-                          ))}
-                        </View>
-                      ) : null}
-                    </View>
+                    <SelectField
+                      styles={styles}
+                      options={prepaidOptions}
+                      value={wizardCarDraft.prepaid}
+                      placeholder="Select Yes/No"
+                      title="Prepaid status"
+                      style={{ width: '100%' }}
+                      webStyle={webDateInputStyle}
+                      listStyle={{ position: 'relative', top: 0 }}
+                      onChange={(value) => setWizardCarDraft((p) => ({ ...p, prepaid: value }))}
+                    />
                   </View>
                   <View style={[styles.cell, { minWidth: 120, flex: 1 }]}>
                     <TextInput
@@ -2933,28 +2814,19 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           </View>
         </View>
       ) : null}
-      {showExitConfirm ? (
-        <View style={styles.modalOverlay}>
-          <View style={styles.confirmModal}>
-            <Text style={styles.sectionTitle}>Exit trip wizard?</Text>
-            <Text style={styles.helperText}>Your progress will not be saved.</Text>
-            <View style={styles.row}>
-              <TouchableOpacity
-                style={[styles.button, styles.dangerButton, { flex: 1 }]}
-                onPress={() => {
-                  setShowExitConfirm(false);
-                  onCancel();
-                }}
-              >
-                <Text style={styles.dangerButtonText}>Exit</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.button, { flex: 1 }]} onPress={() => setShowExitConfirm(false)}>
-                <Text style={styles.buttonText}>Stay</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      ) : null}
+      <ConfirmDialog
+        visible={showExitConfirm}
+        title="Exit trip wizard?"
+        message="Your progress will not be saved."
+        confirmLabel="Exit"
+        cancelLabel="Stay"
+        onConfirm={() => {
+          setShowExitConfirm(false);
+          onCancel();
+        }}
+        onCancel={() => setShowExitConfirm(false)}
+        styles={styles}
+      />
     </View>
   );
 };

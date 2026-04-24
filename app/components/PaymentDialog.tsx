@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { toWebStyle } from '../utils/webStyle';
+import DialogShell from './DialogShell';
+import DraftTextInput from './DraftTextInput';
 
 type Participant = {
   id: string;
@@ -172,18 +174,17 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
   };
 
   return (
-    <Modal transparent visible animationType="fade" onRequestClose={onCancel}>
-      <View
-        style={styles.modalOverlay}
-        testID={testID ?? 'payment-dialog'}
-        accessible
-        accessibilityRole="none"
-        accessibilityViewIsModal
-        accessibilityLabel="Record Payment"
-      >
-        <View style={[styles.modalCard, styles.expenseModalCard]}>
+    <DialogShell
+      visible={visible}
+      title="Record Payment"
+      styles={styles}
+      onClose={onCancel}
+      testID={testID ?? 'payment-dialog'}
+      useNativeModal
+      overlayStyle={{ justifyContent: 'center' }}
+      cardStyle={[styles.modalCard, styles.expenseModalCard]}
+    >
           <View style={styles.row}>
-            <Text style={styles.sectionTitle} accessibilityRole="header">Record Payment</Text>
             <TouchableOpacity
               style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
               onPress={onCancel}
@@ -212,7 +213,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
                   aria-label="Payment date"
                 />
               ) : (
-                <TextInput
+                <DraftTextInput
                   style={styles.input}
                   placeholder="YYYY-MM-DD"
                   value={paymentDate}
@@ -227,7 +228,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
 
             <View style={{ gap: 4 }}>
               <Text style={styles.headerText}>Amount</Text>
-              <TextInput
+              <DraftTextInput
                 style={styles.input}
                 placeholder="0.00"
                 keyboardType="numeric"
@@ -264,9 +265,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
               </TouchableOpacity>
             </View>
           </ScrollView>
-        </View>
-      </View>
-    </Modal>
+    </DialogShell>
   );
 };
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
-import { useEscapeToClose } from '../hooks/useEscapeToClose';
+import DialogShell from './DialogShell';
 
 type ConfirmDialogProps = {
   visible: boolean;
@@ -25,43 +25,35 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   styles,
   testID,
 }) => {
-  useEscapeToClose(visible, onCancel);
-  if (!visible) return null;
   return (
-    <View
-      style={styles.modalOverlay}
+    <DialogShell
+      visible={visible}
+      title={title}
+      message={message}
+      styles={styles}
+      onClose={onCancel}
       testID={testID || 'confirm-dialog'}
-      accessible
       accessibilityRole="alert"
-      accessibilityViewIsModal
-      accessibilityLabel={title}
-      accessibilityHint={message}
     >
-      <View style={styles.confirmModal}>
-        <Text style={styles.sectionTitle} accessibilityRole="header">
-          {title}
-        </Text>
-        {message ? <Text style={styles.helperText}>{message}</Text> : null}
-        <View style={styles.row}>
-          <TouchableOpacity
-            style={[styles.button, styles.dangerButton, { flex: 1 }]}
-            onPress={onConfirm}
-            accessibilityRole="button"
-            accessibilityLabel={confirmLabel}
-          >
-            <Text style={styles.dangerButtonText}>{confirmLabel}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.button, { flex: 1 }]}
-            onPress={onCancel}
-            accessibilityRole="button"
-            accessibilityLabel={cancelLabel}
-          >
-            <Text style={styles.buttonText}>{cancelLabel}</Text>
-          </TouchableOpacity>
-        </View>
+      <View style={styles.row}>
+        <TouchableOpacity
+          style={[styles.button, styles.dangerButton, { flex: 1 }]}
+          onPress={onConfirm}
+          accessibilityRole="button"
+          accessibilityLabel={confirmLabel}
+        >
+          <Text style={styles.dangerButtonText}>{confirmLabel}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.button, { flex: 1 }]}
+          onPress={onCancel}
+          accessibilityRole="button"
+          accessibilityLabel={cancelLabel}
+        >
+          <Text style={styles.buttonText}>{cancelLabel}</Text>
+        </TouchableOpacity>
       </View>
-    </View>
+    </DialogShell>
   );
 };
 

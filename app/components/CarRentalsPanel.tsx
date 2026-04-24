@@ -1,5 +1,5 @@
 import React from 'react';
-import { Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Platform, Text, TouchableOpacity, View } from 'react-native';
 import type { CarRental, CarRentalDraft } from '../tabs/carRentals';
 import type { GroupMemberOption } from '../tabs/transfers';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
@@ -11,7 +11,8 @@ import {
   normalizeItineraryStatus,
 } from '../utils/itineraryStatus';
 import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from '../utils/votes';
-import DropdownOptionButton from './DropdownOptionButton';
+import DraftTextInput from './DraftTextInput';
+import SelectField, { type SelectFieldOption } from './SelectField';
 
 export type CarRentalsPanelProps = {
   /** Committed car-rental rows rendered in the table. */
@@ -61,8 +62,8 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
   carRentals,
   carDraft,
   setCarDraft,
-  carPrepaidOpen,
-  setCarPrepaidOpen,
+  carPrepaidOpen: _carPrepaidOpen,
+  setCarPrepaidOpen: _setCarPrepaidOpen,
   carPickupDateRef,
   carDropoffDateRef,
   isFollowingMode,
@@ -76,6 +77,11 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
   onRateCarRental,
   onOpenCarDatePicker,
 }) => {
+  const prepaidOptions: SelectFieldOption[] = [
+    { label: 'Yes', value: 'Yes' },
+    { label: 'No', value: 'No' },
+  ];
+
   return (
     <View style={styles.card} testID="car-rentals-panel">
       <View style={styles.sectionHeaderRow}>
@@ -178,7 +184,7 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
         <View style={styles.carFormSection}>
           <Text style={styles.helperText}>Add Car Rental</Text>
           <View style={styles.carFormGrid}>
-            <TextInput
+            <DraftTextInput
               style={[styles.input, styles.carFormField]}
               placeholder="Pick up location"
               value={carDraft.pickupLocation}
@@ -205,7 +211,7 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
                 <Text style={styles.selectCaret}>📅</Text>
               </TouchableOpacity>
             </View>
-            <TextInput
+            <DraftTextInput
               style={[styles.input, styles.carFormField]}
               placeholder="Drop off location"
               value={carDraft.dropoffLocation}
@@ -247,64 +253,43 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
             ) : (
               <Text style={styles.cellText}>{normalizeItineraryStatus(carDraft.status, DEFAULT_NEW_ITINERARY_STATUS)}</Text>
             )}
-            <TextInput
+            <DraftTextInput
               style={[styles.input, styles.carFormField]}
               placeholder="Reference"
               value={carDraft.reference}
               onChangeText={(text: string) => setCarDraft((p) => ({ ...p, reference: text }))}
             />
-            <TextInput
+            <DraftTextInput
               style={[styles.input, styles.carFormField]}
               placeholder="Vendor"
               value={carDraft.vendor}
               onChangeText={(text: string) => setCarDraft((p) => ({ ...p, vendor: text }))}
             />
-            <View style={[styles.dropdown, styles.carFormField]}>
-              <TouchableOpacity
-                style={[
-                  styles.input,
-                  styles.selectButtonRow,
-                  styles.prepaidSelectorButton,
-                  carDraft.prepaid ? styles.prepaidSelectorButtonSelected : null,
-                ]}
-                onPress={() => setCarPrepaidOpen((s) => !s)}
-              >
-                <Text style={[styles.cellText, styles.prepaidSelectorText]}>
-                  {carDraft.prepaid ? `Prepaid: ${carDraft.prepaid}` : 'Prepaid? Select Yes or No'}
-                </Text>
-                <Text style={styles.selectCaret}>▾</Text>
-              </TouchableOpacity>
-              {carPrepaidOpen ? (
-                <View style={[styles.dropdownList, styles.prepaidDropdownList]}>
-                  {['Yes', 'No'].map((opt) => (
-                    <DropdownOptionButton
-                      key={opt}
-                      styles={styles}
-                      onPress={() => {
-                        setCarDraft((p) => ({ ...p, prepaid: opt }));
-                        setCarPrepaidOpen(false);
-                      }}
-                    >
-                      <Text style={styles.cellText}>{opt}</Text>
-                    </DropdownOptionButton>
-                  ))}
-                </View>
-              ) : null}
-            </View>
-            <TextInput
+            <SelectField
+              styles={styles}
+              options={prepaidOptions}
+              value={carDraft.prepaid}
+              placeholder="Prepaid? Select Yes or No"
+              title="Prepaid status"
+              style={styles.carFormField}
+              webStyle={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box', marginBottom: 0 })}
+              listStyle={styles.prepaidDropdownList}
+              onChange={(value) => setCarDraft((p) => ({ ...p, prepaid: value }))}
+            />
+            <DraftTextInput
               style={[styles.input, styles.carFormField]}
               placeholder="Cost"
               keyboardType="numeric"
               value={carDraft.cost}
               onChangeText={(text: string) => setCarDraft((p) => ({ ...p, cost: sanitizeCostInput(text) }))}
             />
-            <TextInput
+            <DraftTextInput
               style={[styles.input, styles.carFormField]}
               placeholder="Car model"
               value={carDraft.model}
               onChangeText={(text: string) => setCarDraft((p) => ({ ...p, model: text }))}
             />
-            <TextInput
+            <DraftTextInput
               style={[styles.input, styles.carFormWideField, styles.cellTextWrap]}
               placeholder="Notes"
               value={carDraft.notes}

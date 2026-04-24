@@ -4,9 +4,9 @@ import { type Lodging, fetchPlaceDetailsApi, type PlaceDetailsPayload } from '..
 import { formatDateLong } from '../utils/formatDateLong';
 import { buildStaticMapUrl } from '../utils/googleMaps';
 import { LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from '../utils/itineraryStatus';
-import { useEscapeToClose } from '../hooks/useEscapeToClose';
 import { useImageSource } from '../utils/imageSource';
 import type { AppTheme } from '../theme/theme';
+import DialogShell from './DialogShell';
 
 type DetailRow = {
   label: string;
@@ -60,8 +60,6 @@ const LodgingDetailsDialog: React.FC<LodgingDetailsDialogProps> = ({
   const { width } = useWindowDimensions();
   const isCompact = width < 520;
   const detailStyles = useMemo(() => buildDetailStyles(theme), [theme]);
-
-  useEscapeToClose(visible, onClose);
 
   const [placeDetails, setPlaceDetails] = useState<PlaceDetailsPayload | null>(null);
   const [placeDetailsStatus, setPlaceDetailsStatus] = useState<'idle' | 'loading' | 'done'>('idle');
@@ -139,14 +137,15 @@ const LodgingDetailsDialog: React.FC<LodgingDetailsDialogProps> = ({
   }, [placeDetails]);
 
   return (
-    <View
-      style={styles.modalOverlay}
+    <DialogShell
+      visible={visible}
+      title={`Lodging details: ${lodging.name || 'lodging'}`}
+      styles={styles}
+      onClose={onClose}
       testID={testID}
-      accessible
-      accessibilityRole="none"
-      accessibilityLabel={`Lodging details: ${lodging.name || 'lodging'}`}
+      cardStyle={[styles.modalCard, detailStyles.detailCard, isCompact && { width: '100%', maxHeight: '95%' }]}
+      showTitle={false}
     >
-      <View style={[styles.modalCard, detailStyles.detailCard, isCompact && { width: '100%', maxHeight: '95%' }]}>
         <ScrollView>
           <View style={detailStyles.imageWrap}>
             {imageUrl ? (
@@ -272,8 +271,7 @@ const LodgingDetailsDialog: React.FC<LodgingDetailsDialogProps> = ({
             </View>
           ) : null}
         </View>
-      </View>
-    </View>
+    </DialogShell>
   );
 };
 

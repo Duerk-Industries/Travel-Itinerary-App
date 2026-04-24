@@ -50,19 +50,10 @@ type MetricEntry = {
   userId?: string;
 };
 
-const emit = (entry: MetricEntry): void => {
-  if (isStructuredOutput()) {
-    console.log(JSON.stringify(entry));
-    return;
-  }
-  const labels = entry.labels
-    ? ' ' + Object.entries(entry.labels).map(([k, v]) => `${k}=${v}`).join(' ')
-    : '';
-  const ctxSuffix = entry.requestId ? ` [req=${entry.requestId}]` : '';
-  // eslint-disable-next-line no-console
-  console.log(
-    `[metric]${ctxSuffix} ${entry.kind}:${entry.name}=${entry.value}${labels}`
-  );
+const emit = (_entry: MetricEntry): void => {
+  // Metrics are retained in-process for admin/Prometheus endpoints. Do not
+  // print every metric event; high-volume console output can make local runs
+  // and hosted logs noisy without improving the counters we expose.
 };
 
 const baseEntry = (
