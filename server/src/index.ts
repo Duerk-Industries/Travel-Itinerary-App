@@ -12,6 +12,7 @@ import { prewarmAutocompleteCache } from './services/destinationAttractionAutoco
 import { logMissingApiPricingConfigurationWarnings } from './apis/providerBudgeting';
 import { createSocketServer } from './socket';
 import { startGmailPollingScheduler } from './services/gmailPollingService';
+import { startRetentionScheduler } from './services/retentionService';
 
 const defaultPort = Number(process.env.PORT) || 4000;
 const isCloudRunRuntime = Boolean(process.env.K_SERVICE);
@@ -106,6 +107,7 @@ export const startServer = async (portOverride?: number): Promise<Server> => {
   }
 
   startGmailPollingScheduler();
+  startRetentionScheduler();
 
   return server;
 };

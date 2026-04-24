@@ -3026,6 +3026,62 @@ export const deleteUserIngestionDataForProvider = async (
   return { parsedItemsDeleted, documentsDeleted, jobsDeleted, sourcesDeleted };
 };
 
+/**
+ * Retention sweep: drop `import_job_payloads` rows whose parent job has been
+ * in `DEAD_LETTERED` terminal state and completed before the given cutoff.
+ * The parent `import_jobs` row is preserved (and so are `ingested_documents`
+ * and `parsed_items` — those are user-visible artifacts). Only the raw
+ * payload bytes, which are unreachable and unreusable past the retention
+ * window, are removed.
+ *
+ * Returns the number of payload rows deleted.
+ */
+export const deletePayloadsForDeadLetteredJobsOlderThan = async (
+  cutoffIso: string,
+): Promise<number> => {
+  await ensureIngestionRepositoryReady();
+
+  if (getCurrentDbProvider() === 'firebase') {
+    const db = getFirebaseDb();
+    const snap = await db
+      .collection('import_jobs')
+      .where('state', '==', 'DEAD_LETTERED')
+      .get();
+    const eligibleIds = snap.docs
+      .filter((doc) => {
+        const data = doc.data() as any;
+        const completedAt = data.completedAt ?? null;
+        if (!completedAt) return false;
+        return String(completedAt) < cutoffIso;
+      })
+      .map((doc) => doc.id);
+    let deleted = 0;
+    for (const jobId of eligibleIds) {
+      const ref = db.collection('import_job_payloads').doc(jobId);
+      const existing = await ref.get();
+      if (!existing.exists) continue;
+      await ref.delete();
+      deleted += 1;
+    }
+    return deleted;
+  }
+
+  const p = getPg();
+  // pg-mem is fine with `IN (subselect)` but struggles with `NOT EXISTS`, so
+  // we phrase the eligibility filter as a plain IN subselect.
+  const { rowCount } = await p.query(
+    `DELETE FROM import_job_payloads
+     WHERE job_id IN (
+       SELECT id FROM import_jobs
+       WHERE state = 'DEAD_LETTERED'
+         AND completed_at IS NOT NULL
+         AND completed_at < $1
+     )`,
+    [cutoffIso],
+  );
+  return rowCount ?? 0;
+};
+
 // ── Data-deletion jobs ──────────────────────────────────────────────────────
 
 export type DataDeletionJobState = 'pending' | 'running' | 'succeeded' | 'failed';

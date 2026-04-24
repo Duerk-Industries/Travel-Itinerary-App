@@ -75,6 +75,21 @@ export const INGESTION_TIER_RULES = {
  */
 export const GMAIL_POLLING_TICK_INTERVAL_MS_DEFAULT = 15 * 60 * 1000;
 
+/**
+ * Days to keep raw `import_job_payloads` content for jobs that finished in
+ * the terminal `DEAD_LETTERED` state. After this window the payload bytes
+ * (which are not user-visible and cannot be reprocessed) are deleted by the
+ * retention scheduler. The parent `import_jobs` row is preserved so admin
+ * history and dead-letter counts remain accurate.
+ */
+export const INGESTION_RETENTION_DEAD_LETTER_DAYS = 90;
+
+/**
+ * Default interval between retention scheduler ticks. Retention is idempotent
+ * and cheap to skip, so once a day is sufficient.
+ */
+export const RETENTION_TICK_INTERVAL_MS_DEFAULT = 24 * 60 * 60 * 1000;
+
 export const INGESTION_FEATURE_FLAGS = {
   manualUpload: 'feature_ingest_manual_upload',
   forwardedMailbox: 'feature_ingest_forwarded_mailbox',
