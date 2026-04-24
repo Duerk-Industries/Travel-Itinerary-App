@@ -38,6 +38,7 @@ import { EntitlementError } from '../errors';
 import { TokenPayload } from '../auth';
 import { readDto } from '../utils/dtoParse';
 import {
+  bulkDeleteShareInvitesDto,
   createShareInvitesDto,
   createTripCommentDto,
   followTripDto,
@@ -286,6 +287,51 @@ router.delete('/:id/share/invites/:inviteId', async (req, res) => {
     }
     res.status(400).json({ error: message });
   }
+});
+
+/**
+ * Bulk revoke share invites. Mirrors the ingestion bulk-action pattern:
+ * 100-id cap, dedupe, per-id try/catch, 207 Multi-Status when any id fails.
+ * If the caller isn't authorized on the trip at all, the underlying
+ * `revokeTripShareInvite` throws "not authorized" for every id and we
+ * surface that as 403 without writing the 207 mixed response.
+ */
+router.post('/:id/share/invites/bulk-delete', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const dto = readDto(bulkDeleteShareInvitesDto, req.body, res);
+  if (!dto) return;
+
+  const revoked: Array<{ id: string }> = [];
+  const failed: Array<{ id: string; reason: string }> = [];
+  let anyAuthorized = false;
+
+  for (const inviteId of dto.ids) {
+    try {
+      await revokeTripShareInvite(userId, req.params.id, inviteId);
+      revoked.push({ id: inviteId });
+      anyAuthorized = true;
+    } catch (err) {
+      const message = String((err as Error).message ?? 'Invite revocation failed');
+      failed.push({ id: inviteId, reason: message });
+      if (!/not authorized/i.test(message)) {
+        anyAuthorized = true;
+      }
+    }
+  }
+
+  // If every id failed with "not authorized", fold into a single 403 — the
+  // caller isn't allowed on this trip at all and a 207 mix would be
+  // misleading.
+  if (!anyAuthorized && failed.length && revoked.length === 0) {
+    res.status(403).json({ error: failed[0].reason });
+    return;
+  }
+
+  res.status(failed.length > 0 ? 207 : 200).json({
+    tripId: req.params.id,
+    revokedIds: revoked.map((r) => r.id),
+    failed,
+  });
 });
 
 router.get('/', async (req, res) => {

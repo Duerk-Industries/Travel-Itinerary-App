@@ -13,6 +13,7 @@ import { logMissingApiPricingConfigurationWarnings } from './apis/providerBudget
 import { createSocketServer } from './socket';
 import { startGmailPollingScheduler } from './services/gmailPollingService';
 import { startRetentionScheduler } from './services/retentionService';
+import { startIngestionMetricsScheduler } from './services/ingestionMetricsService';
 
 const defaultPort = Number(process.env.PORT) || 4000;
 const isCloudRunRuntime = Boolean(process.env.K_SERVICE);
@@ -108,6 +109,7 @@ export const startServer = async (portOverride?: number): Promise<Server> => {
 
   startGmailPollingScheduler();
   startRetentionScheduler();
+  startIngestionMetricsScheduler();
 
   return server;
 };

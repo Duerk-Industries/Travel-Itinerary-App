@@ -17,6 +17,8 @@ import {
 import { normalizeItineraryStatus, shouldRelaxRequiredFields } from '../utils/itineraryStatus';
 import { applyVoteSummary } from '../services/itemVoteService';
 import type { ActivityType } from '../types';
+import { readDto } from '../utils/dtoParse';
+import { createActivityDto, updateActivityDto, voteOrRatingDto } from './activityDtos';
 
 const ACTIVITY_TYPES: ActivityType[] = [
   'Class',
@@ -73,51 +75,51 @@ router.get('/', async (req, res) => {
 
 router.post('/', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const { tripId, date, name, startLocation, startTime, duration, cost, freeCancelBy, bookedOn, reference, paidBy, travelerIds, activityType: incomingActivityType, status: incomingStatus } = req.body;
-  const activityType = normalizeActivityType(incomingActivityType) ?? 'Tour';
-  const status = normalizeItineraryStatus(incomingStatus);
+  const dto = readDto(createActivityDto, req.body, res);
+  if (!dto) return;
+  const activityType = normalizeActivityType(dto.activityType) ?? 'Tour';
+  const status = normalizeItineraryStatus(dto.status);
   const relaxed = shouldRelaxRequiredFields(status);
-  if (!tripId || (!relaxed && (!date || !name))) {
+  const dateVal = dto.date ?? '';
+  const nameVal = dto.name ?? '';
+  if (!relaxed && (!dateVal || !nameVal)) {
     res.status(400).json({ error: 'Missing required fields' });
     return;
   }
-  const tripGroup = await ensureUserInTrip(tripId, userId);
+  const tripGroup = await ensureUserInTrip(dto.tripId, userId);
   if (!tripGroup) {
     res.status(403).json({ error: 'You must be in the group for this trip' });
     return;
   }
   const activity = await insertActivity({
     userId,
-    tripId,
+    tripId: dto.tripId,
     status,
     activityType,
-    date: date || new Date().toISOString().slice(0, 10),
-    name,
-    startLocation: startLocation ?? '',
-    startTime: startTime ?? '',
-    duration: duration ?? '',
-    cost: Number(cost) || 0,
-    freeCancelBy: freeCancelBy || null,
-    bookedOn: bookedOn ?? '',
-    reference: reference ?? '',
-    paidBy: Array.isArray(paidBy) ? paidBy : [],
-    travelerIds: Array.isArray(travelerIds) ? travelerIds.map((id: any) => String(id)).filter(Boolean) : [],
+    date: dateVal || new Date().toISOString().slice(0, 10),
+    name: nameVal,
+    startLocation: dto.startLocation ?? '',
+    startTime: dto.startTime ?? '',
+    duration: dto.duration ?? '',
+    cost: Number(dto.cost) || 0,
+    freeCancelBy: (dto.freeCancelBy ?? null) || null,
+    bookedOn: dto.bookedOn ?? '',
+    reference: dto.reference ?? '',
+    paidBy: dto.paidBy,
+    travelerIds: dto.travelerIds,
   });
   const members = await listGroupMembers(tripGroup.groupId, userId).catch(() => []);
   const defaultTravelers = members.map((m) => String((m as any).id));
-  const normalizedTravelers = Array.isArray(travelerIds)
-    ? travelerIds.map((id: any) => String(id)).filter(Boolean)
-    : [];
-  const forIds = normalizedTravelers.length ? normalizedTravelers : defaultTravelers;
+  const forIds = dto.travelerIds.length ? dto.travelerIds : defaultTravelers;
   await upsertExpenseForSource({
     userId,
-    tripId,
+    tripId: dto.tripId,
     groupId: tripGroup.groupId,
-    expenseDate: date || new Date().toISOString().slice(0, 10),
+    expenseDate: dateVal || new Date().toISOString().slice(0, 10),
     category: 'Activities',
-    amount: Number(cost) || 0,
+    amount: Number(dto.cost) || 0,
     currency: undefined,
-    payerIds: Array.isArray(paidBy) ? paidBy : [],
+    payerIds: dto.paidBy,
     forIds,
     sourceType: 'activity',
     sourceId: activity.id,
@@ -128,32 +130,39 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const id = req.params.id;
-  const { date, name, startLocation, startTime, duration, cost, freeCancelBy, bookedOn, reference, paidBy, travelerIds, activityType: incomingActivityType, status: incomingStatus } = req.body;
-  const normalizedPaidBy = Array.isArray(paidBy) ? (paidBy.length ? paidBy : undefined) : undefined;
+  const dto = readDto(updateActivityDto, req.body ?? {}, res);
+  if (!dto) return;
+
+  const normalizedPaidBy = Array.isArray(dto.paidBy)
+    ? (dto.paidBy.length ? dto.paidBy.map((p) => String(p)) : undefined)
+    : undefined;
   let finalActivityType: ActivityType | undefined;
-  if (typeof incomingActivityType !== 'undefined') {
-    const normalizedActivityType = normalizeActivityType(incomingActivityType);
+  if (dto.activityType != null) {
+    const normalizedActivityType = normalizeActivityType(dto.activityType);
     if (!normalizedActivityType) {
       res.status(400).json({ error: 'Invalid activityType' });
       return;
     }
     finalActivityType = normalizedActivityType;
   }
-  const finalStatus = typeof incomingStatus === 'undefined' ? undefined : normalizeItineraryStatus(incomingStatus);
+  const finalStatus = dto.status == null ? undefined : normalizeItineraryStatus(String(dto.status));
+  const normalizedTravelers = Array.isArray(dto.travelerIds)
+    ? dto.travelerIds.map((id: any) => String(id)).filter(Boolean)
+    : undefined;
   const updated = await updateActivity(id, userId, {
     activityType: finalActivityType,
     status: finalStatus,
-    date,
-    name,
-    startLocation,
-    startTime,
-    duration,
-    cost: typeof cost === 'undefined' ? undefined : Number(cost),
-    freeCancelBy,
-    bookedOn,
-    reference,
+    date: dto.date ?? undefined,
+    name: dto.name ?? undefined,
+    startLocation: dto.startLocation ?? undefined,
+    startTime: dto.startTime ?? undefined,
+    duration: dto.duration ?? undefined,
+    cost: dto.cost == null ? undefined : Number(dto.cost),
+    freeCancelBy: dto.freeCancelBy ?? undefined,
+    bookedOn: dto.bookedOn ?? undefined,
+    reference: dto.reference ?? undefined,
     paidBy: normalizedPaidBy,
-    travelerIds: Array.isArray(travelerIds) ? travelerIds.map((id: any) => String(id)).filter(Boolean) : undefined,
+    travelerIds: normalizedTravelers,
   });
   if (!updated) {
     res.status(404).json({ error: 'Activity not found' });
@@ -163,10 +172,7 @@ router.put('/:id', async (req, res) => {
   if (membership) {
     const members = await listGroupMembers(membership.groupId, userId).catch(() => []);
     const defaultTravelers = members.map((m) => String((m as any).id));
-    const normalizedTravelers = Array.isArray(travelerIds)
-      ? travelerIds.map((id: any) => String(id)).filter(Boolean)
-      : [];
-    const forIds = normalizedTravelers.length ? normalizedTravelers : defaultTravelers;
+    const forIds = normalizedTravelers && normalizedTravelers.length ? normalizedTravelers : defaultTravelers;
     await upsertExpenseForSource({
       userId,
       tripId: updated.tripId,
@@ -188,32 +194,39 @@ router.put('/:id', async (req, res) => {
 router.patch('/:id', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const id = req.params.id;
-  const { date, name, startLocation, startTime, duration, cost, freeCancelBy, bookedOn, reference, paidBy, travelerIds, activityType: incomingActivityType, status: incomingStatus } = req.body;
-  const normalizedPaidBy = Array.isArray(paidBy) ? (paidBy.length ? paidBy : undefined) : undefined;
+  const dto = readDto(updateActivityDto, req.body ?? {}, res);
+  if (!dto) return;
+
+  const normalizedPaidBy = Array.isArray(dto.paidBy)
+    ? (dto.paidBy.length ? dto.paidBy.map((p) => String(p)) : undefined)
+    : undefined;
   let finalActivityType: ActivityType | undefined;
-  if (typeof incomingActivityType !== 'undefined') {
-    const normalizedActivityType = normalizeActivityType(incomingActivityType);
+  if (dto.activityType != null) {
+    const normalizedActivityType = normalizeActivityType(dto.activityType);
     if (!normalizedActivityType) {
       res.status(400).json({ error: 'Invalid activityType' });
       return;
     }
     finalActivityType = normalizedActivityType;
   }
-  const finalStatus = typeof incomingStatus === 'undefined' ? undefined : normalizeItineraryStatus(incomingStatus);
+  const finalStatus = dto.status == null ? undefined : normalizeItineraryStatus(String(dto.status));
+  const normalizedTravelers = Array.isArray(dto.travelerIds)
+    ? dto.travelerIds.map((id: any) => String(id)).filter(Boolean)
+    : undefined;
   const updated = await updateActivity(id, userId, {
     activityType: finalActivityType,
     status: finalStatus,
-    date,
-    name,
-    startLocation,
-    startTime,
-    duration,
-    cost: typeof cost === 'undefined' ? undefined : Number(cost),
-    freeCancelBy,
-    bookedOn,
-    reference,
+    date: dto.date ?? undefined,
+    name: dto.name ?? undefined,
+    startLocation: dto.startLocation ?? undefined,
+    startTime: dto.startTime ?? undefined,
+    duration: dto.duration ?? undefined,
+    cost: dto.cost == null ? undefined : Number(dto.cost),
+    freeCancelBy: dto.freeCancelBy ?? undefined,
+    bookedOn: dto.bookedOn ?? undefined,
+    reference: dto.reference ?? undefined,
     paidBy: normalizedPaidBy,
-    travelerIds: Array.isArray(travelerIds) ? travelerIds.map((id: any) => String(id)).filter(Boolean) : undefined,
+    travelerIds: normalizedTravelers,
   });
   if (!updated) {
     res.status(404).json({ error: 'Activity not found' });
@@ -223,10 +236,7 @@ router.patch('/:id', async (req, res) => {
   if (membership) {
     const members = await listGroupMembers(membership.groupId, userId).catch(() => []);
     const defaultTravelers = members.map((m) => String((m as any).id));
-    const normalizedTravelers = Array.isArray(travelerIds)
-      ? travelerIds.map((id: any) => String(id)).filter(Boolean)
-      : [];
-    const forIds = normalizedTravelers.length ? normalizedTravelers : defaultTravelers;
+    const forIds = normalizedTravelers && normalizedTravelers.length ? normalizedTravelers : defaultTravelers;
     await upsertExpenseForSource({
       userId,
       tripId: updated.tripId,
@@ -253,12 +263,9 @@ router.delete('/:id', async (req, res) => {
 
 router.post('/:id/vote', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const valueRaw = Number(req.body?.value);
-  const value = valueRaw === 1 ? 1 : valueRaw === -1 ? -1 : null;
-  if (value == null) {
-    res.status(400).json({ error: 'value must be 1 or -1' });
-    return;
-  }
+  const dto = readDto(voteOrRatingDto, req.body, res);
+  if (!dto) return;
+  const value = dto.value;
   const activity = await getActivityById(req.params.id);
   if (!activity) {
     res.status(404).json({ error: 'Activity not found' });
@@ -290,12 +297,9 @@ router.post('/:id/vote', async (req, res) => {
 
 router.post('/:id/rating', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const valueRaw = Number(req.body?.value);
-  const value = valueRaw === 1 ? 1 : valueRaw === -1 ? -1 : null;
-  if (value == null) {
-    res.status(400).json({ error: 'value must be 1 or -1' });
-    return;
-  }
+  const dto = readDto(voteOrRatingDto, req.body, res);
+  if (!dto) return;
+  const value = dto.value;
   const activity = await getActivityById(req.params.id);
   if (!activity) {
     res.status(404).json({ error: 'Activity not found' });

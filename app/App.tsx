@@ -61,6 +61,7 @@ import ConfirmDialog from './components/ConfirmDialog';
 import PendingInvitesModal from './components/PendingInvitesModal';
 import DropdownOptionButton from './components/DropdownOptionButton';
 import CarRentalsPanel from './components/CarRentalsPanel';
+import AuthForm from './components/AuthForm';
 import { toWebStyle } from './utils/webStyle';
 import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from './utils/votes';
 import { resolveBackendUrl as resolveConfiguredBackendUrl } from './utils/backendUrl';
@@ -2219,16 +2220,27 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     fetchTrips();
   };
 
-  const changeTripGroup = async (tripId: string, groupId: string) => {
-    if (!userToken) return;
-    const res = await fetch(`${backendUrl}/api/trips/${tripId}/group`, {
+  // PATCH /api/trips/:id/group is naturally idempotent (replaces the trip's
+  // group with a fixed value). Wrapping in useRetryableMutation so a
+  // transient network failure surfaces through the red banner below instead
+  // of an alert() — the user can retry without re-opening the dropdown.
+  const tripGroupMutation = useRetryableMutation<
+    { tripId: string; groupId: string },
+    unknown
+  >(async ({ tripId, groupId }) => {
+    return requestJson<unknown>(`${backendUrl}/api/trips/${tripId}/group`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', ...headers },
-      body: JSON.stringify({ groupId }),
+      body: { groupId },
     });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      alert(data.error || 'Unable to change trip group');
+  });
+
+  const changeTripGroup = async (tripId: string, groupId: string) => {
+    if (!userToken) return;
+    const result = await tripGroupMutation.run({ tripId, groupId });
+    if (result === null) {
+      // Failure is surfaced by <RetryableErrorBanner> in the top bar area —
+      // no alert() so the user can retry in place.
       return;
     }
     setTripDropdownOpenId(null);
@@ -2678,6 +2690,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               actionLabel="Save covering rules"
             />
           ) : null}
+          <RetryableErrorBanner
+            state={tripGroupMutation.state}
+            error={tripGroupMutation.error}
+            onRetry={tripGroupMutation.retry}
+            onDismiss={tripGroupMutation.reset}
+            actionLabel="Move trip to group"
+          />
 
           {activePage === 'ingest'
             ? renderSharedPageScroll(
@@ -3161,109 +3180,22 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
         </View>
       ) : (
-        <View style={styles.auth}>
-          <View style={styles.toggleRow}>
-            <TouchableOpacity
-              style={[styles.toggleButton, authMode === 'login' && styles.toggleActive]}
-              onPress={() => setAuthMode('login')}
-            >
-              <Text style={styles.toggleText}>Login</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.toggleButton, authMode === 'register' && styles.toggleActive]}
-              onPress={() => setAuthMode('register')}
-            >
-              <Text style={styles.toggleText}>Create</Text>
-            </TouchableOpacity>
-          </View>
-
-          {authMode === 'register' ? (
-            <>
-              <TextInput
-                style={styles.input}
-                placeholder="First name"
-                autoComplete="given-name"
-                textContentType="givenName"
-                value={authForm.firstName}
-                onChangeText={(text: string) => setAuthForm((p) => ({ ...p, firstName: text }))}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Last name"
-                autoComplete="family-name"
-                textContentType="familyName"
-                value={authForm.lastName}
-                onChangeText={(text: string) => setAuthForm((p) => ({ ...p, lastName: text }))}
-              />
-            </>
-          ) : null}
-
-          <TextInput
-            style={styles.input}
-            placeholder="Email or Username"
-            autoCapitalize="none"
-            autoComplete={authMode === 'register' ? 'email' : 'username'}
-            textContentType={authMode === 'register' ? 'emailAddress' : 'username'}
-            inputMode="email"
-            nativeID="email"
-            value={authForm.email}
-            onChangeText={(text: string) => setAuthForm((p) => ({ ...p, email: text }))}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            secureTextEntry
-            autoComplete={authMode === 'register' ? 'new-password' : 'current-password'}
-            textContentType={authMode === 'register' ? 'newPassword' : 'password'}
-            nativeID="password"
-            value={authForm.password}
-            onChangeText={(text: string) => setAuthForm((p) => ({ ...p, password: text }))}
-          />
-          {authMode === 'register' ? (
-            <TextInput
-              style={styles.input}
-              placeholder="Confirm password"
-              secureTextEntry
-              autoComplete="new-password"
-              textContentType="newPassword"
-              nativeID="password-confirm"
-              value={authForm.passwordConfirm}
-              onChangeText={(text: string) => setAuthForm((p) => ({ ...p, passwordConfirm: text }))}
-            />
-          ) : null}
-          {authMode === 'login' && showResendConfirmation ? (
-            <View style={styles.row}>
-              <TouchableOpacity
-                style={[styles.button, styles.smallButton, resendConfirmationLoading && styles.buttonDisabled]}
-                onPress={resendConfirmationEmail}
-                disabled={resendConfirmationLoading}
-              >
-                <Text style={styles.buttonText}>{resendConfirmationLoading ? 'Resending...' : 'Resend confirmation'}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.button, styles.smallButton]}
-                onPress={() => setShowResendConfirmation(false)}
-              >
-                <Text style={styles.buttonText}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
-          ) : null}
-          {authErrorMessage ? (
-            <View style={styles.authErrorBanner}>
-              <Text style={styles.authErrorBannerText}>{authErrorMessage}</Text>
-            </View>
-          ) : null}
-                      <TouchableOpacity
-                        style={styles.button}
-                        onPress={authMode === 'login' ? loginWithPassword : register}
-                      >
-                        <Text style={styles.buttonText}>{authMode === 'login' ? 'Login' : 'Create account'}</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={[styles.button, { marginTop: 12, backgroundColor: '#4285F4' }]} onPress={loginWithGoogle}>
-                        <Text style={styles.buttonText}>Sign in with Google</Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
+        <AuthForm
+          authMode={authMode}
+          setAuthMode={setAuthMode}
+          authForm={authForm}
+          setAuthForm={setAuthForm}
+          showResendConfirmation={showResendConfirmation}
+          setShowResendConfirmation={setShowResendConfirmation}
+          resendConfirmationLoading={resendConfirmationLoading}
+          resendConfirmationEmail={resendConfirmationEmail}
+          authErrorMessage={authErrorMessage}
+          loginWithPassword={loginWithPassword}
+          register={register}
+          loginWithGoogle={loginWithGoogle}
+          styles={styles}
+        />
+      )}
       {userToken && requirePasswordSetup ? (
         <View style={styles.wizardOverlay}>
           <View style={[styles.wizardModal, styles.pendingInviteModal]}>

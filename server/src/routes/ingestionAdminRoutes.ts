@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { clearExtractionCache, getIngestionObservabilitySnapshot, getRetryPolicyConfig, listDeadLetterImportJobs, upsertRetryPolicyConfig } from '../ingestion/shared/repository';
+import { clearExtractionCache, countRetentionEligibleRows, getIngestionObservabilitySnapshot, getRetryPolicyConfig, listDeadLetterImportJobs, upsertRetryPolicyConfig } from '../ingestion/shared/repository';
 import { isFeatureEnabled } from '../services/entitlementService';
-import { INGESTION_FEATURE_FLAGS } from '../ingestion/config';
+import { INGESTION_FEATURE_FLAGS, INGESTION_RETENTION_DEAD_LETTER_DAYS } from '../ingestion/config';
 import { requeueDeadLetterImportJob } from '../ingestion/orchestrator';
 import { writeAuditLog } from '../db';
 import { logError } from '../logger';
@@ -75,6 +75,28 @@ router.post('/dead-letter/re-drive', async (req, res) => {
     provider,
     matched: jobs.length,
     retried: retried.length,
+  });
+});
+
+/**
+ * Retention preview. Dry-run count of how many rows would be cleaned up if
+ * the retention sweep ran NOW, with an optional `?days=N` override so an
+ * operator can preview a proposed retention-window change before applying
+ * it. Does not mutate any row.
+ */
+router.get('/retention-preview', async (req, res) => {
+  if (!(await ensureEnabled(res))) return;
+  const daysParam = req.query.days ? parseInt(String(req.query.days), 10) : undefined;
+  const days = Number.isFinite(daysParam) && (daysParam as number) > 0
+    ? (daysParam as number)
+    : INGESTION_RETENTION_DEAD_LETTER_DAYS;
+  const cutoffIso = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+  const counts = await countRetentionEligibleRows(cutoffIso);
+  res.json({
+    cutoffIso,
+    retentionDays: days,
+    deadLetterPayloadsEligible: counts.deadLetterPayloadsEligible,
+    normalizedTextEligible: counts.normalizedTextEligible,
   });
 });
 

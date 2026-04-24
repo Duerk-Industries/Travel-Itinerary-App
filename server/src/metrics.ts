@@ -57,13 +57,22 @@ const baseEntry = (
   return entry;
 };
 
-// ── In-process counter storage ───────────────────────────────────────────────
+// ── In-process counter + gauge storage ──────────────────────────────────────
 // Best-effort per-process aggregation, used by `GET /api/admin/metrics` so
 // operators can see cache hit-rates without a full metrics backend. Multi-
 // instance deployments will see per-instance numbers — that's documented on
 // the admin endpoint.
 const counterTotals: Map<string, number> = new Map();
+// Gauges keep the most recent value per (name, label-set) key. Used for
+// point-in-time queue-depth readings emitted by the ingestion metrics tick.
+const gaugeValues: Map<string, { name: string; value: number; labels?: MetricLabels }> = new Map();
 let countersStartedAtIso = new Date().toISOString();
+
+const gaugeKey = (name: string, labels?: MetricLabels): string => {
+  if (!labels) return name;
+  const entries = Object.entries(labels).sort(([a], [b]) => a.localeCompare(b));
+  return `${name}{${entries.map(([k, v]) => `${k}=${String(v)}`).join(',')}}`;
+};
 
 /** Increment a counter by `amount` (default 1). */
 export const incrementMetric = (
@@ -88,9 +97,17 @@ export interface CacheRatioEntry {
   hitRate: number;
 }
 
+export interface MetricGaugeEntry {
+  name: string;
+  labels?: MetricLabels;
+  value: number;
+}
+
 export interface MetricCounterSnapshot {
   /** Monotonic-since-start counts of every `incrementMetric` name. */
   counters: Record<string, number>;
+  /** Most-recent value per (name, label-set) for every `recordGauge` call. */
+  gauges: MetricGaugeEntry[];
   /** Cache-namespace rollups derived from `*.cache_hit` / `*.cache_miss` entries. */
   cacheRatios: CacheRatioEntry[];
   /** ISO time when this counter window began — i.e. process boot or last reset. */
@@ -131,17 +148,22 @@ export const getMetricCounterSnapshot = (): MetricCounterSnapshot => {
   for (const [name, value] of counterTotals.entries()) {
     counters[name] = value;
   }
+  const gauges = Array.from(gaugeValues.values())
+    .map((entry) => ({ name: entry.name, labels: entry.labels, value: entry.value }))
+    .sort((a, b) => a.name.localeCompare(b.name));
   return {
     counters,
+    gauges,
     cacheRatios: buildCacheRatios(counterTotals),
     startedAtIso: countersStartedAtIso,
     snapshotAtIso: new Date().toISOString(),
   };
 };
 
-/** Test-only: zero every counter and reset the window start timestamp. */
+/** Test-only: zero every counter + gauge and reset the window start timestamp. */
 export const resetMetricCountersForTests = (): void => {
   counterTotals.clear();
+  gaugeValues.clear();
   countersStartedAtIso = new Date().toISOString();
 };
 
@@ -151,6 +173,7 @@ export const recordGauge = (
   value: number,
   labels?: MetricLabels
 ): void => {
+  gaugeValues.set(gaugeKey(name, labels), { name, value, labels });
   emit(baseEntry(name, 'gauge', value, labels));
 };
 

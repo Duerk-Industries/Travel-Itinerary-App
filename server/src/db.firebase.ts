@@ -35,7 +35,7 @@ import {
   TripChatMessage,
 } from './types';
 import { logError, logInfo } from './logger';
-import { getEnvValue, isLocalEnv } from './env';
+import { getEnvFlag, getEnvValue, isLocalEnv } from './env';
 import { normalizeItineraryStatus } from './utils/itineraryStatus';
 import { getApiLimitsConfig } from './config/apiLimits';
 
@@ -6018,25 +6018,30 @@ export const markMessagesRead = async (
   if (!upToDoc.exists) return;
   const upToCreatedAt = (upToDoc.data() as any).createdAt ?? '';
 
-  const snap = await db
-    .collection('trip_messages')
-    .where('tripId', '==', tripId)
-    .where('createdAt', '<=', upToCreatedAt)
-    .get();
+  // Legacy per-message reads (readBy array + message_reads docs) are behind
+  // the same soak-window env flag as the Postgres adapter. Default ON.
+  const legacyReadsEnabled = getEnvFlag('CHAT_LEGACY_READS_ENABLED', { defaultValue: true });
+  if (legacyReadsEnabled) {
+    const snap = await db
+      .collection('trip_messages')
+      .where('tripId', '==', tripId)
+      .where('createdAt', '<=', upToCreatedAt)
+      .get();
 
-  const batch = db.batch();
-  for (const doc of snap.docs) {
-    const readBy: string[] = (doc.data() as any).readBy ?? [];
-    if (!readBy.includes(userId)) {
-      batch.update(doc.ref, { readBy: FieldValue.arrayUnion(userId) });
+    const batch = db.batch();
+    for (const doc of snap.docs) {
+      const readBy: string[] = (doc.data() as any).readBy ?? [];
+      if (!readBy.includes(userId)) {
+        batch.update(doc.ref, { readBy: FieldValue.arrayUnion(userId) });
+      }
+      // Also write to message_reads sub-collection for cross-referencing
+      const readRef = db
+        .collection('message_reads')
+        .doc(`${doc.id}_${userId}`);
+      batch.set(readRef, { messageId: doc.id, userId, readAt: nowIso() }, { merge: true });
     }
-    // Also write to message_reads sub-collection for cross-referencing
-    const readRef = db
-      .collection('message_reads')
-      .doc(`${doc.id}_${userId}`);
-    batch.set(readRef, { messageId: doc.id, userId, readAt: nowIso() }, { merge: true });
+    await batch.commit();
   }
-  await batch.commit();
 
   // Dual-write the per-user watermark. Only advance forward so a stale
   // MARK_READ (re-opened panel scrolling back) can't regress the watermark.

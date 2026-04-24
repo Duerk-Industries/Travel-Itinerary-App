@@ -35,7 +35,7 @@ import {
   TripMessageRead,
 } from './types';
 import { logError, logInfo } from './logger';
-import { getEnvValue } from './env';
+import { getEnvFlag, getEnvValue } from './env';
 import { downloadAirportDatasetForDailyRefresh } from './apis/airportDatasetCallers';
 import { normalizeAirportDataset, searchBundledAirportDataset } from './services/airportCatalog';
 import fs from 'fs';
@@ -1298,6 +1298,28 @@ export const initDb = async (): Promise<void> => {
       isVerified: Boolean(user.emailVerified ?? true),
       verifiedAt: user.emailVerifiedAt ? new Date(user.emailVerifiedAt) : null,
     });
+  }
+
+  // Run any pending SQL migration files AFTER inline bootstrap so the
+  // schema_migrations ledger stays separate from the legacy CREATE TABLE
+  // IF NOT EXISTS path. Idempotent — runner skips anything already applied.
+  // Disable via INGESTION_MIGRATIONS_ON_BOOT=false when running against a
+  // DB where migrations are applied out-of-band (e.g. a prod migration job).
+  if (getEnvFlag('INGESTION_MIGRATIONS_ON_BOOT', { defaultValue: true })) {
+    try {
+      // Local import to avoid cyclic-import risk with db.ts surface area.
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { runMigrations } = require('./migrations/runner') as typeof import('./migrations/runner');
+      const path = require('node:path') as typeof import('node:path');
+      const migrationsDir = path.join(__dirname, '..', 'migrations');
+      const client = { query: (sql: string, params?: unknown[]) => p.query(sql, params as any) };
+      await runMigrations({ client, dir: migrationsDir });
+    } catch (err) {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { logError } = require('./logger') as typeof import('./logger');
+      logError('[migrations] auto-apply on initDb failed', err);
+      throw err;
+    }
   }
 };
 
@@ -8869,20 +8891,29 @@ export const markMessagesRead = async (
   if (!cutoffRows.length) return;
   const cutoff = cutoffRows[0].createdAt;
 
-  // Fetch messages to mark (read separately to avoid INSERT ... SELECT + ON CONFLICT in pg-mem)
-  const { rows: toMark } = await p.query<{ id: string }>(
-    `SELECT id FROM trip_messages WHERE trip_id = $1 AND created_at <= $2`,
-    [tripId, cutoff],
-  );
+  // Legacy per-message reads are behind a soak-window env flag. Default ON
+  // so current deployments keep writing both. Flip to "false" to drop the
+  // legacy path and run watermark-only; once confident, the fallback read in
+  // `countUnreadMessages` and the `message_reads` table itself can be
+  // retired together in a follow-up slice.
+  const legacyReadsEnabled = getEnvFlag('CHAT_LEGACY_READS_ENABLED', { defaultValue: true });
+  if (legacyReadsEnabled) {
+    // Fetch messages to mark (read separately to avoid INSERT ... SELECT +
+    // ON CONFLICT in pg-mem)
+    const { rows: toMark } = await p.query<{ id: string }>(
+      `SELECT id FROM trip_messages WHERE trip_id = $1 AND created_at <= $2`,
+      [tripId, cutoff],
+    );
 
-  for (const row of toMark) {
-    try {
-      await p.query(
-        `INSERT INTO message_reads (message_id, user_id) VALUES ($1, $2)`,
-        [row.id, userId],
-      );
-    } catch {
-      // Already exists (duplicate primary key) — skip
+    for (const row of toMark) {
+      try {
+        await p.query(
+          `INSERT INTO message_reads (message_id, user_id) VALUES ($1, $2)`,
+          [row.id, userId],
+        );
+      } catch {
+        // Already exists (duplicate primary key) — skip
+      }
     }
   }
 

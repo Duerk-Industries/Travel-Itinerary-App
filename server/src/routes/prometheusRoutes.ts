@@ -26,6 +26,13 @@ const toPromName = (name: string): string =>
  *   - Output is deterministic (alphabetical) so diff-based tooling stays
  *     stable across requests.
  */
+const formatLabels = (labels?: Record<string, string | number | boolean>): string => {
+  if (!labels) return '';
+  const entries = Object.entries(labels).sort(([a], [b]) => a.localeCompare(b));
+  if (!entries.length) return '';
+  return `{${entries.map(([k, v]) => `${k}="${escapeLabelValue(String(v))}"`).join(',')}}`;
+};
+
 export const renderPrometheusSnapshot = (): string => {
   const snapshot = getMetricCounterSnapshot();
   const lines: string[] = [];
@@ -36,6 +43,24 @@ export const renderPrometheusSnapshot = (): string => {
     const promName = toPromName(rawName);
     lines.push(`# TYPE ${promName} counter`);
     lines.push(`${promName} ${snapshot.counters[rawName]}`);
+  }
+
+  // Explicit gauges (ingestion_jobs_by_state, ingestion_pending_depth, etc.).
+  // Group by name so we only emit one `# TYPE` line per gauge name even when
+  // multiple label-sets exist.
+  const gaugesByName = new Map<string, typeof snapshot.gauges>();
+  for (const g of snapshot.gauges) {
+    const list = gaugesByName.get(g.name) ?? [];
+    list.push(g);
+    gaugesByName.set(g.name, list);
+  }
+  const gaugeNames = Array.from(gaugesByName.keys()).sort();
+  for (const rawName of gaugeNames) {
+    const promName = toPromName(rawName);
+    lines.push(`# TYPE ${promName} gauge`);
+    for (const g of gaugesByName.get(rawName)!) {
+      lines.push(`${promName}${formatLabels(g.labels as Record<string, string | number | boolean> | undefined)} ${g.value}`);
+    }
   }
 
   // Cache-hit-rate gauges, keyed by namespace label.

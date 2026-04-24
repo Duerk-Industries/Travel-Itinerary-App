@@ -1496,6 +1496,21 @@ export const getImportJobById = async (jobId: string): Promise<PersistedImportJo
   return rows[0] ? mapImportJobRow(rows[0]) : null;
 };
 
+/**
+ * State-gated requeue. Only jobs in terminal failure states (`DEAD_LETTERED`
+ * or `FAILED`) can be pushed back to `PENDING` — active-state jobs and
+ * successfully-terminal jobs are rejected by returning `null` with no side
+ * effect. This closes the known gap from the first dead-letter test pass
+ * (non-state-gated requeue accepted any state, including AWAITING_REVIEW).
+ *
+ * The admin dead-letter re-drive endpoint filters its inputs to
+ * `state='DEAD_LETTERED'` before calling this, so it's unaffected. Manual
+ * retry flows for FAILED manual uploads still go through this path —
+ * `shouldRetryFailedManualUpload` in orchestrator.ts filters by FAILED
+ * before calling `requeueImportJob`, so it keeps working.
+ */
+const REQUEUEABLE_STATES: ReadonlyArray<ImportJobState> = ['DEAD_LETTERED', 'FAILED'];
+
 export const requeueImportJob = async (jobId: string): Promise<PersistedImportJob | null> => {
   await ensureIngestionRepositoryReady();
   if (getCurrentDbProvider() === 'firebase') {
@@ -1503,6 +1518,7 @@ export const requeueImportJob = async (jobId: string): Promise<PersistedImportJo
     const snap = await ref.get();
     if (!snap.exists) return null;
     const data = snap.data() as any;
+    if (!REQUEUEABLE_STATES.includes(data.state as ImportJobState)) return null;
     await ref.set(
       {
         state: 'PENDING',
@@ -1529,6 +1545,7 @@ export const requeueImportJob = async (jobId: string): Promise<PersistedImportJo
          updated_at = CURRENT_TIMESTAMP::timestamp,
          state_changed_at = CURRENT_TIMESTAMP::timestamp
      WHERE id = $1
+       AND state IN ('DEAD_LETTERED', 'FAILED')
      RETURNING *`,
     [jobId]
   );
@@ -3138,6 +3155,118 @@ export const deletePayloadsForDeadLetteredJobsOlderThan = async (
     [cutoffIso],
   );
   return rowCount ?? 0;
+};
+
+/**
+ * Returns the count of `import_jobs` grouped by `state`. Used by the
+ * metrics-service tick to emit `ingestion_jobs_by_state` gauges for
+ * per-instance queue-depth visibility in the `/metrics` scrape output.
+ */
+export const countImportJobsByState = async (): Promise<Record<string, number>> => {
+  await ensureIngestionRepositoryReady();
+
+  if (getCurrentDbProvider() === 'firebase') {
+    const snap = await getFirebaseDb().collection('import_jobs').get();
+    const counts: Record<string, number> = {};
+    for (const doc of snap.docs) {
+      const state = String((doc.data() as any).state ?? 'UNKNOWN');
+      counts[state] = (counts[state] ?? 0) + 1;
+    }
+    return counts;
+  }
+
+  const { rows } = await getPg().query<{ state: string; count: string }>(
+    `SELECT state, COUNT(*)::text AS count FROM import_jobs GROUP BY state`,
+  );
+  return Object.fromEntries(rows.map((r) => [r.state, parseInt(r.count, 10)]));
+};
+
+/**
+ * Retention dry-run: return the row-count that would be deleted/tombstoned
+ * by the real sweep without mutating any row. Used by the admin
+ * "retention preview" endpoint so operators can see the blast radius of a
+ * retention window change before applying it.
+ */
+export interface RetentionPreviewCounts {
+  deadLetterPayloadsEligible: number;
+  normalizedTextEligible: number;
+}
+
+export const countRetentionEligibleRows = async (
+  cutoffIso: string,
+): Promise<RetentionPreviewCounts> => {
+  await ensureIngestionRepositoryReady();
+
+  if (getCurrentDbProvider() === 'firebase') {
+    const db = getFirebaseDb();
+    // Dead-letter payloads eligibility: DEAD_LETTERED jobs older than cutoff
+    // whose payload doc still exists.
+    const dlJobsSnap = await db
+      .collection('import_jobs')
+      .where('state', '==', 'DEAD_LETTERED')
+      .get();
+    const dlEligibleIds = dlJobsSnap.docs
+      .filter((doc) => {
+        const data = doc.data() as any;
+        const completedAt = data.completedAt ?? null;
+        return completedAt && String(completedAt) < cutoffIso;
+      })
+      .map((doc) => doc.id);
+    let deadLetterPayloadsEligible = 0;
+    for (const jobId of dlEligibleIds) {
+      const exists = await db.collection('import_job_payloads').doc(jobId).get();
+      if (exists.exists) deadLetterPayloadsEligible += 1;
+    }
+
+    // Normalized-text eligibility: terminal jobs older than cutoff whose
+    // docs haven't been tombstoned.
+    const terminalJobsSnap = await db
+      .collection('import_jobs')
+      .where('state', 'in', ['DEAD_LETTERED', 'COMPLETED', 'DUPLICATE_IGNORED'])
+      .get();
+    const terminalEligibleIds = terminalJobsSnap.docs
+      .filter((doc) => {
+        const data = doc.data() as any;
+        const completedAt = data.completedAt ?? null;
+        return completedAt && String(completedAt) < cutoffIso;
+      })
+      .map((doc) => doc.id);
+    let normalizedTextEligible = 0;
+    for (const jobId of terminalEligibleIds) {
+      const docsSnap = await db
+        .collection('ingested_documents')
+        .where('importJobId', '==', jobId)
+        .get();
+      for (const docSnap of docsSnap.docs) {
+        if (!(docSnap.data() as any).deletedRawAt) normalizedTextEligible += 1;
+      }
+    }
+    return { deadLetterPayloadsEligible, normalizedTextEligible };
+  }
+
+  const p = getPg();
+  const dlRes = await p.query<{ count: string }>(
+    `SELECT COUNT(*)::text AS count FROM import_job_payloads
+     WHERE job_id IN (
+       SELECT id FROM import_jobs
+       WHERE state = 'DEAD_LETTERED' AND completed_at IS NOT NULL AND completed_at < $1
+     )`,
+    [cutoffIso],
+  );
+  const textRes = await p.query<{ count: string }>(
+    `SELECT COUNT(*)::text AS count FROM ingested_documents
+     WHERE deleted_raw_at IS NULL
+       AND import_job_id IN (
+         SELECT id FROM import_jobs
+         WHERE state IN ('DEAD_LETTERED','COMPLETED','DUPLICATE_IGNORED')
+           AND completed_at IS NOT NULL AND completed_at < $1
+       )`,
+    [cutoffIso],
+  );
+  return {
+    deadLetterPayloadsEligible: parseInt(dlRes.rows[0]?.count ?? '0', 10),
+    normalizedTextEligible: parseInt(textRes.rows[0]?.count ?? '0', 10),
+  };
 };
 
 /**

@@ -242,6 +242,35 @@ describe('Trip messages DB + REST', () => {
     expect(await db.countUnreadMessages(tripId, userId)).toBe(0);
   });
 
+  it('CHAT_LEGACY_READS_ENABLED=false makes markMessagesRead watermark-only (no message_reads rows written)', async () => {
+    const originalFlag = process.env.CHAT_LEGACY_READS_ENABLED;
+
+    // Fresh messages so we have something to mark.
+    await db.addTripMessage({
+      appId: 'WanderBunnies', tripId, senderId: userId,
+      senderName: 'Chat Tester', senderInitials: 'CT', body: 'flag-off-one',
+    });
+    await db.addTripMessage({
+      appId: 'WanderBunnies', tripId, senderId: userId,
+      senderName: 'Chat Tester', senderInitials: 'CT', body: 'flag-off-two',
+    });
+
+    const msgsBefore = await db.listTripMessages(tripId);
+    const latestId = msgsBefore[msgsBefore.length - 1].id;
+
+    // Toggle flag off for this call only.
+    process.env.CHAT_LEGACY_READS_ENABLED = 'false';
+    try {
+      await db.markMessagesRead(tripId, userId, latestId);
+    } finally {
+      if (originalFlag === undefined) delete process.env.CHAT_LEGACY_READS_ENABLED;
+      else process.env.CHAT_LEGACY_READS_ENABLED = originalFlag;
+    }
+
+    // Watermark still advances → countUnread reflects zero for caught-up user.
+    expect(await db.countUnreadMessages(tripId, userId)).toBe(0);
+  });
+
   it('addTripMessage rejects empty body', async () => {
     await expect(
       db.addTripMessage({

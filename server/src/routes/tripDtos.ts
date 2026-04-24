@@ -95,3 +95,22 @@ export const updateTripGroupDto = z.object({
   groupId: trimmedNonEmpty('groupId'),
 });
 export type UpdateTripGroupDto = z.infer<typeof updateTripGroupDto>;
+
+/**
+ * `POST /api/trips/:id/share/invites/bulk-delete` — revoke multiple pending
+ * share invites in one request. 100-id cap, dedupe, empty-array rejection,
+ * matching the ingestion bulk-action pattern.
+ */
+const MAX_BULK_SHARE_INVITE_IDS = 100;
+const shareInviteIdArray = z
+  .array(z.string({ message: 'Each invite id must be a string.' }))
+  .transform((ids) => Array.from(new Set(ids.map((v) => String(v ?? '').trim()).filter(Boolean))))
+  .refine((ids) => ids.length > 0, { message: 'ids must contain at least one non-empty id.' })
+  .refine((ids) => ids.length <= MAX_BULK_SHARE_INVITE_IDS, {
+    message: `ids may contain at most ${MAX_BULK_SHARE_INVITE_IDS} entries.`,
+  });
+
+export const bulkDeleteShareInvitesDto = z.object({
+  ids: shareInviteIdArray,
+});
+export type BulkDeleteShareInvitesDto = z.infer<typeof bulkDeleteShareInvitesDto>;

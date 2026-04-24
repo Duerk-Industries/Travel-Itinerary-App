@@ -152,42 +152,72 @@ describe('ingestion dead-letter behavior', () => {
     expect(result).toBeNull();
   });
 
-  // ─── Known current gap: no optimistic state-check in requeueImportJob ───────
-  // The current implementation accepts any state as input. This is documented
-  // behavior — a future "retry-with-backoff" slice (Priority 13 option (a))
-  // would add `WHERE state IN ('DEAD_LETTERED','FAILED')` guarding. Locking
-  // this as a test so that change becomes visible in diff.
-  it('requeueImportJob is NOT state-gated — will re-drive a FAILED or even AWAITING_REVIEW job (current behavior)', async () => {
+  // ─── State-gated requeue (Priority 13 correctness gate) ─────────────────────
+  // `requeueImportJob` now only accepts jobs in terminal failure states
+  // (DEAD_LETTERED or FAILED). Active-state and successful-terminal jobs
+  // return null with no side effects.
+  it('requeueImportJob accepts FAILED jobs (state gate allows the manual-retry path)', async () => {
     const { poolClient } = require('../src/db') as typeof import('../src/db');
     const repo = require('../src/ingestion/shared/repository') as typeof import('../src/ingestion/shared/repository');
 
-    const userId = await mkUser('state-gap');
+    const userId = await mkUser('state-gate-failed');
     const sourceId = await repo.getOrCreateIngestionSource(userId, 'MANUAL_UPLOAD');
     const pool = poolClient();
 
     const failedJobId = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
     await seedImportJob(pool, {
-      jobId: failedJobId,
-      userId,
-      ingestionSourceId: sourceId,
-      state: 'FAILED',
-      retryCount: 1,
-      idempotencyKey: 'state-gap-failed',
+      jobId: failedJobId, userId, ingestionSourceId: sourceId,
+      state: 'FAILED', retryCount: 1, idempotencyKey: 'state-gate-failed',
     });
-    const viaFailed = await repo.requeueImportJob(failedJobId);
-    expect(viaFailed?.state).toBe('PENDING');
-    expect(viaFailed?.retryCount).toBe(2);
+    const updated = await repo.requeueImportJob(failedJobId);
+    expect(updated?.state).toBe('PENDING');
+    expect(updated?.retryCount).toBe(2);
+  });
+
+  it('requeueImportJob rejects active-state jobs (AWAITING_REVIEW) without mutating them', async () => {
+    const { poolClient } = require('../src/db') as typeof import('../src/db');
+    const repo = require('../src/ingestion/shared/repository') as typeof import('../src/ingestion/shared/repository');
+
+    const userId = await mkUser('state-gate-active');
+    const sourceId = await repo.getOrCreateIngestionSource(userId, 'MANUAL_UPLOAD');
+    const pool = poolClient();
 
     const activeJobId = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
     await seedImportJob(pool, {
-      jobId: activeJobId,
-      userId,
-      ingestionSourceId: sourceId,
-      state: 'AWAITING_REVIEW',
-      idempotencyKey: 'state-gap-active',
+      jobId: activeJobId, userId, ingestionSourceId: sourceId,
+      state: 'AWAITING_REVIEW', retryCount: 0, idempotencyKey: 'state-gate-active',
     });
-    const viaActive = await repo.requeueImportJob(activeJobId);
-    expect(viaActive?.state).toBe('PENDING');
+    const result = await repo.requeueImportJob(activeJobId);
+    expect(result).toBeNull();
+
+    // Row must be untouched.
+    const { rows } = await pool.query<{ state: string; retry_count: number }>(
+      `SELECT state, retry_count FROM import_jobs WHERE id = $1`, [activeJobId],
+    );
+    expect(rows[0].state).toBe('AWAITING_REVIEW');
+    expect(Number(rows[0].retry_count)).toBe(0);
+  });
+
+  it('requeueImportJob rejects COMPLETED jobs (successful-terminal) without mutating them', async () => {
+    const { poolClient } = require('../src/db') as typeof import('../src/db');
+    const repo = require('../src/ingestion/shared/repository') as typeof import('../src/ingestion/shared/repository');
+
+    const userId = await mkUser('state-gate-completed');
+    const sourceId = await repo.getOrCreateIngestionSource(userId, 'MANUAL_UPLOAD');
+    const pool = poolClient();
+
+    const completedJobId = 'dddddddd-dddd-dddd-dddd-dddddddddccc';
+    await seedImportJob(pool, {
+      jobId: completedJobId, userId, ingestionSourceId: sourceId,
+      state: 'COMPLETED', retryCount: 0, idempotencyKey: 'state-gate-completed',
+    });
+    const result = await repo.requeueImportJob(completedJobId);
+    expect(result).toBeNull();
+
+    const { rows } = await pool.query<{ state: string }>(
+      `SELECT state FROM import_jobs WHERE id = $1`, [completedJobId],
+    );
+    expect(rows[0].state).toBe('COMPLETED');
   });
 
   // ─── Contract: requeueDeadLetterImportJob enqueues via the configured queue ─
