@@ -52,18 +52,28 @@ export const INGESTION_TIER_RULES = {
     monthlyUploads: 0,
     gmailLookbackDays: 0,
     llmEscalations: 'NONE',
+    gmailPollIntervalHours: null,
   },
   premium: {
     monthlyUploads: 50,
     gmailLookbackDays: 30,
     llmEscalations: 'SMALL_ONLY',
+    gmailPollIntervalHours: 24,
   },
   pro: {
     monthlyUploads: 500,
     gmailLookbackDays: 90,
     llmEscalations: 'LARGE_ALLOWED',
+    gmailPollIntervalHours: 4,
   },
 } as const;
+
+/**
+ * Default interval between Gmail polling scheduler ticks. Each tick picks
+ * connections whose `metadata.lastPolledAt` is older than the tier's
+ * `gmailPollIntervalHours` and kicks off an ingestion pipeline for them.
+ */
+export const GMAIL_POLLING_TICK_INTERVAL_MS_DEFAULT = 15 * 60 * 1000;
 
 export const INGESTION_FEATURE_FLAGS = {
   manualUpload: 'feature_ingest_manual_upload',

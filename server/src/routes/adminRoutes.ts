@@ -20,6 +20,12 @@ import {
 import { getFeatureFlagSeeds } from '../config/featureFlags';
 import { getApiUsageSummary } from '../apis/usageLimiter';
 import { getApiBudgetSummary } from '../apis/providerBudgeting';
+import {
+  listDataDeletionJobs,
+  type DataDeletionJobState,
+} from '../ingestion/shared/repository';
+import { readDto } from '../utils/dtoParse';
+import { bulkSetUserTierDto } from './adminDtos';
 
 // Admin routes — all guarded by authenticate + requireAdmin in app.ts
 const router = Router();
@@ -178,6 +184,58 @@ router.patch('/users/:userId/tier', async (req, res) => {
     logError('[admin] failed to change user tier', err);
     res.status(500).json({ error: 'Failed to change user tier' });
   }
+});
+
+/**
+ * Bulk set the tier for up to 100 users in a single request. Mirrors the
+ * ingestion bulk-action convention: per-id try/catch, dedupe + empty-id strip
+ * in the DTO, and 207 Multi-Status when any id fails so partial success is
+ * first-class. Admin-role targets are resolved to 'pro' server-side (matching
+ * the single-user PATCH); this is surfaced in the response as `lockedToPro`
+ * and does not count as a failure.
+ */
+router.post('/users/bulk-tier', async (req, res) => {
+  const dto = readDto(bulkSetUserTierDto, req.body, res);
+  if (!dto) return;
+  const actorId = getActorId(req);
+  const tierKey = dto.tierKey;
+  const reason = dto.reason;
+
+  const updated: Array<{ id: string; tierKey: string; lockedToPro: boolean }> = [];
+  const failed: Array<{ id: string; reason: string }> = [];
+
+  for (const targetId of dto.ids) {
+    try {
+      const targetUser = await adminGetUser(targetId);
+      if (!targetUser) {
+        failed.push({ id: targetId, reason: 'User not found' });
+        continue;
+      }
+      const resolvedTierKey = targetUser.role === 'admin' ? 'pro' : tierKey;
+      const before = await getCurrentUserTier(targetId);
+      await setUserTier(targetId, resolvedTierKey, 'admin', actorId, reason);
+      const after = await getCurrentUserTier(targetId);
+      await writeAuditLog({
+        actorUserId: actorId,
+        targetUserId: targetId,
+        action: 'USER_TIER_CHANGED',
+        beforeState: { tierKey: before?.tierKey ?? null, requestedTierKey: tierKey },
+        afterState: { tierKey: after?.tierKey ?? null, bulk: true },
+        reason,
+      });
+      updated.push({
+        id: targetId,
+        tierKey: after?.tierKey ?? resolvedTierKey,
+        lockedToPro: targetUser.role === 'admin',
+      });
+    } catch (err: any) {
+      const message = String(err?.message ?? 'Tier change failed');
+      logError('[admin] bulk tier change: per-id failure', { targetId, err: message });
+      failed.push({ id: targetId, reason: message });
+    }
+  }
+
+  res.status(failed.length > 0 ? 207 : 200).json({ updated, failed });
 });
 
 router.patch('/users/:userId/role', async (req, res) => {
@@ -600,6 +658,33 @@ router.patch('/api-limits/:provider', async (req, res) => {
   } catch (err) {
     logError('[admin] failed to update api limits', err);
     res.status(500).json({ error: 'Failed to update API limits' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Data deletion jobs (Gmail/ingestion provider disconnect observability)
+// ---------------------------------------------------------------------------
+
+const VALID_DELETION_STATES: readonly DataDeletionJobState[] = ['pending', 'running', 'succeeded', 'failed'];
+
+router.get('/data-deletion-jobs', async (req, res) => {
+  const stateParam = typeof req.query.state === 'string' ? req.query.state : undefined;
+  const state = stateParam && VALID_DELETION_STATES.includes(stateParam as DataDeletionJobState)
+    ? (stateParam as DataDeletionJobState)
+    : undefined;
+  if (stateParam && !state) {
+    res.status(400).json({ error: `state must be one of: ${VALID_DELETION_STATES.join(', ')}` });
+    return;
+  }
+  const userId = typeof req.query.userId === 'string' && req.query.userId.trim() ? req.query.userId.trim() : undefined;
+  const limitParam = req.query.limit ? parseInt(String(req.query.limit), 10) : undefined;
+  const limit = Number.isFinite(limitParam) && (limitParam as number) > 0 ? (limitParam as number) : undefined;
+  try {
+    const jobs = await listDataDeletionJobs({ state, userId, limit });
+    res.json({ jobs });
+  } catch (err) {
+    logError('[admin] failed to list data deletion jobs', err);
+    res.status(500).json({ error: 'Failed to list data deletion jobs' });
   }
 });
 

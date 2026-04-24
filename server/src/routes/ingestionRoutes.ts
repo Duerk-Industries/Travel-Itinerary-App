@@ -9,7 +9,22 @@ import { INGESTION_DEFAULT_FORWARDING_PROVIDER, INGESTION_FEATURE_FLAGS, INGESTI
 import { assignReviewItemToTrip, bulkAssignReviewItemsToTrip, bulkDeleteReviewItems, deleteReviewItem, getReviewItem, updateReviewItemEdits } from '../ingestion/assignment';
 import { manualUploadMiddleware, buildManualUploadPayloads, buildGmailConsentUrl, buildGmailDryRunEntries, buildGmailIngestionPayloads, fetchGmailProfile, GMAIL_READONLY_SCOPE_URL, refreshGmailAccessToken } from '../ingestion/intake';
 import { enqueueIngestionPipelineJob } from '../ingestion/orchestrator';
-import { listReviewQueueItems, listImportJobsForUser, getReviewQueueSignedUrl, getProviderConnection, disconnectProviderConnections, deleteUserIngestionDataForProvider, upsertProviderConnection, updateProviderConnectionStatus, getIngestedDocumentById } from '../ingestion/shared/repository';
+import {
+  listReviewQueueItems,
+  listImportJobsForUser,
+  getReviewQueueSignedUrl,
+  getProviderConnection,
+  disconnectProviderConnections,
+  deleteUserIngestionDataForProvider,
+  upsertProviderConnection,
+  updateProviderConnectionStatus,
+  getIngestedDocumentById,
+  createDataDeletionJob,
+  markDataDeletionJobRunning,
+  markDataDeletionJobSucceeded,
+  markDataDeletionJobFailed,
+  listDataDeletionJobsForUser,
+} from '../ingestion/shared/repository';
 import { assertAndConsumeMonthlyQuota, getTierIngestionRules } from '../ingestion/shared/quota';
 import { IngestionError } from '../ingestion/shared/userFailures';
 import { getBackendUrl, getEnvValue } from '../env';
@@ -478,14 +493,62 @@ router.post('/gmail/import', async (req, res) => {
   }
 });
 
+const runGmailDeletionCascade = async (userId: string, jobId: string): Promise<void> => {
+  try {
+    await markDataDeletionJobRunning(jobId);
+    const deletion = await deleteUserIngestionDataForProvider(userId, 'gmail');
+    await disconnectProviderConnections(userId, 'gmail');
+    await markDataDeletionJobSucceeded(jobId, deletion);
+  } catch (err: any) {
+    const reason = String(err?.message ?? 'Gmail data deletion failed');
+    logError('[ingestion] gmail deletion cascade failed', { userId, jobId, reason });
+    await markDataDeletionJobFailed(jobId, reason).catch(() => undefined);
+    throw err;
+  }
+};
+
+const isAsyncDisconnectRequested = (req: any): boolean => {
+  if (req?.query && (req.query.async === '1' || req.query.async === 'true')) return true;
+  if (req?.body && (req.body.async === true || req.body.async === 1)) return true;
+  return false;
+};
+
 router.post('/gmail/disconnect', async (req, res) => {
   const userId = (req as any).user.userId as string;
   if (!(await ensureGmailFeatureAndTier(userId, res))) return;
-  // Cascade ingestion data sourced from Gmail before removing the token row,
-  // so a failure in the cascade leaves the connection in place and retryable.
-  const deletion = await deleteUserIngestionDataForProvider(userId, 'gmail');
-  await disconnectProviderConnections(userId, 'gmail');
-  res.json({ disconnected: true, deletion });
+  const job = await createDataDeletionJob(userId, 'gmail');
+
+  if (isAsyncDisconnectRequested(req)) {
+    // Queued mode: return 202 immediately, run cascade in background. Provider
+    // connection is NOT removed if the cascade fails — the job row records the
+    // failure reason for admin/user retry.
+    setImmediate(() => {
+      runGmailDeletionCascade(userId, job.id).catch(() => undefined);
+    });
+    res.status(202).json({ queued: true, jobId: job.id, state: 'pending' });
+    return;
+  }
+
+  // Synchronous mode (default): cascade before removing the token row so a
+  // failure leaves the connection intact and retryable.
+  try {
+    await markDataDeletionJobRunning(job.id);
+    const deletion = await deleteUserIngestionDataForProvider(userId, 'gmail');
+    await disconnectProviderConnections(userId, 'gmail');
+    await markDataDeletionJobSucceeded(job.id, deletion);
+    res.json({ disconnected: true, deletion, jobId: job.id });
+  } catch (err: any) {
+    const reason = String(err?.message ?? 'Gmail data deletion failed');
+    logError('[ingestion] gmail deletion cascade failed', { userId, jobId: job.id, reason });
+    await markDataDeletionJobFailed(job.id, reason).catch(() => undefined);
+    res.status(500).json({ error: 'Gmail data deletion failed', jobId: job.id });
+  }
+});
+
+router.get('/data-deletion-jobs', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const jobs = await listDataDeletionJobsForUser(userId);
+  res.json({ jobs });
 });
 
 export default router;

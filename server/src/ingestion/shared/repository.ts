@@ -627,6 +627,23 @@ const ensurePgSchema = async (): Promise<void> => {
       UNIQUE (provider, token_hash)
     );
   `);
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS data_deletion_jobs (
+      id UUID PRIMARY KEY,
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      provider TEXT NOT NULL,
+      state TEXT NOT NULL,
+      counts JSONB NOT NULL DEFAULT '{}'::jsonb,
+      failure_reason TEXT,
+      requested_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      started_at TIMESTAMP,
+      completed_at TIMESTAMP,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+  `);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_data_deletion_jobs_user ON data_deletion_jobs(user_id);`);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_data_deletion_jobs_state ON data_deletion_jobs(state);`);
   schemaReady.add('postgres');
 };
 
@@ -640,6 +657,7 @@ const ensureFirestoreCollections = async (): Promise<void> => {
     db.collection('ingested_documents').limit(1).get(),
     db.collection('ingestion_retry_config').limit(1).get(),
     db.collection('ingestion_webhook_replay_tokens').limit(1).get(),
+    db.collection('data_deletion_jobs').limit(1).get(),
   ]);
   schemaReady.add('firebase');
 };
@@ -2819,6 +2837,78 @@ export const updateProviderConnectionStatus = async (params: {
   return rows[0] ? mapProviderConnectionRow(rows[0]) : null;
 };
 
+/**
+ * Returns the subset of provider_connections for a given provider across all
+ * users. Used by the scheduled-polling service to discover connections that
+ * may be due for a sync tick. Status filtering (connected vs AUTH_EXPIRED)
+ * is left to the caller because the polling service wants to both skip and
+ * surface expired connections.
+ */
+export const listProviderConnectionsByProvider = async (provider: string): Promise<ProviderConnectionRecord[]> => {
+  await ensureIngestionRepositoryReady();
+  if (getCurrentDbProvider() === 'firebase') {
+    const snap = await getFirebaseDb()
+      .collection('provider_connections')
+      .where('provider', '==', provider)
+      .get();
+    return snap.docs.map((doc) => {
+      const data = doc.data() as any;
+      return {
+        id: doc.id,
+        userId: data.userId,
+        provider: data.provider,
+        status: data.status ?? 'connected',
+        accessToken: data.encryptedAccessToken ? decryptToken(String(data.encryptedAccessToken)) : null,
+        refreshToken: data.encryptedRefreshToken ? decryptToken(String(data.encryptedRefreshToken)) : null,
+        tokenExpiry: data.tokenExpiry ?? null,
+        scopes: Array.isArray(data.scopes) ? data.scopes.map((entry: unknown) => String(entry)) : [],
+        metadata: data.metadata ?? {},
+        createdAt: data.createdAt,
+        updatedAt: data.updatedAt,
+      } satisfies ProviderConnectionRecord;
+    });
+  }
+  const { rows } = await getPg().query<ProviderConnectionRow>(
+    `SELECT * FROM provider_connections WHERE provider = $1 ORDER BY updated_at ASC`,
+    [provider]
+  );
+  return rows.map(mapProviderConnectionRow);
+};
+
+/**
+ * Writes a merged metadata patch onto a provider_connections row without
+ * changing `status`. Used by the polling service to advance `lastPolledAt`
+ * and record tick outcomes without touching auth fields.
+ */
+export const mergeProviderConnectionMetadata = async (
+  connectionId: string,
+  patch: Record<string, unknown>,
+): Promise<void> => {
+  await ensureIngestionRepositoryReady();
+  if (getCurrentDbProvider() === 'firebase') {
+    const docRef = getFirebaseDb().collection('provider_connections').doc(connectionId);
+    const snap = await docRef.get();
+    if (!snap.exists) return;
+    const current = (snap.data() as any)?.metadata ?? {};
+    await docRef.set(
+      { metadata: { ...current, ...patch }, updatedAt: nowIso() },
+      { merge: true },
+    );
+    return;
+  }
+  const { rows } = await getPg().query<ProviderConnectionRow>(
+    `SELECT * FROM provider_connections WHERE id = $1`,
+    [connectionId]
+  );
+  if (!rows[0]) return;
+  const current = (rows[0] as any).metadata ?? {};
+  const merged = { ...current, ...patch };
+  await getPg().query(
+    `UPDATE provider_connections SET metadata = $2, updated_at = CURRENT_TIMESTAMP::timestamp WHERE id = $1`,
+    [connectionId, JSON.stringify(merged)]
+  );
+};
+
 export const disconnectProviderConnections = async (userId: string, provider?: string): Promise<void> => {
   await ensureIngestionRepositoryReady();
   if (getCurrentDbProvider() === 'firebase') {
@@ -2934,6 +3024,204 @@ export const deleteUserIngestionDataForProvider = async (
   );
 
   return { parsedItemsDeleted, documentsDeleted, jobsDeleted, sourcesDeleted };
+};
+
+// ── Data-deletion jobs ──────────────────────────────────────────────────────
+
+export type DataDeletionJobState = 'pending' | 'running' | 'succeeded' | 'failed';
+
+export interface DataDeletionJobRecord {
+  id: string;
+  userId: string;
+  provider: string;
+  state: DataDeletionJobState;
+  counts: IngestionProviderCascadeCounts | null;
+  failureReason: string | null;
+  requestedAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+const mapDataDeletionRow = (row: any): DataDeletionJobRecord => ({
+  id: String(row.id),
+  userId: String(row.user_id),
+  provider: String(row.provider),
+  state: row.state as DataDeletionJobState,
+  counts: row.counts && typeof row.counts === 'object' && Object.keys(row.counts).length ? (row.counts as IngestionProviderCascadeCounts) : null,
+  failureReason: row.failure_reason ?? null,
+  requestedAt: parseDate(row.requested_at) ?? nowIso(),
+  startedAt: parseDate(row.started_at),
+  completedAt: parseDate(row.completed_at),
+  createdAt: parseDate(row.created_at) ?? nowIso(),
+  updatedAt: parseDate(row.updated_at) ?? nowIso(),
+});
+
+const mapDataDeletionDoc = (id: string, data: any): DataDeletionJobRecord => ({
+  id,
+  userId: String(data.userId ?? ''),
+  provider: String(data.provider ?? ''),
+  state: (data.state ?? 'pending') as DataDeletionJobState,
+  counts: data.counts && typeof data.counts === 'object' && Object.keys(data.counts).length ? (data.counts as IngestionProviderCascadeCounts) : null,
+  failureReason: data.failureReason ?? null,
+  requestedAt: data.requestedAt ?? data.createdAt ?? nowIso(),
+  startedAt: data.startedAt ?? null,
+  completedAt: data.completedAt ?? null,
+  createdAt: data.createdAt ?? nowIso(),
+  updatedAt: data.updatedAt ?? nowIso(),
+});
+
+export const createDataDeletionJob = async (userId: string, provider: string): Promise<DataDeletionJobRecord> => {
+  await ensureIngestionRepositoryReady();
+  const id = randomUUID();
+  const now = nowIso();
+  if (getCurrentDbProvider() === 'firebase') {
+    const payload = {
+      userId,
+      provider,
+      state: 'pending' as DataDeletionJobState,
+      counts: {},
+      failureReason: null,
+      requestedAt: now,
+      startedAt: null,
+      completedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    await getFirebaseDb().collection('data_deletion_jobs').doc(id).set(payload);
+    return mapDataDeletionDoc(id, payload);
+  }
+  const { rows } = await getPg().query(
+    `INSERT INTO data_deletion_jobs (id, user_id, provider, state, counts, requested_at, created_at, updated_at)
+     VALUES ($1, $2, $3, 'pending', '{}'::jsonb, NOW(), NOW(), NOW())
+     RETURNING *`,
+    [id, userId, provider]
+  );
+  return mapDataDeletionRow(rows[0]);
+};
+
+export const markDataDeletionJobRunning = async (jobId: string): Promise<void> => {
+  await ensureIngestionRepositoryReady();
+  if (getCurrentDbProvider() === 'firebase') {
+    const now = nowIso();
+    await getFirebaseDb().collection('data_deletion_jobs').doc(jobId).update({
+      state: 'running',
+      startedAt: now,
+      updatedAt: now,
+    });
+    return;
+  }
+  await getPg().query(
+    `UPDATE data_deletion_jobs SET state = 'running', started_at = COALESCE(started_at, NOW()), updated_at = NOW() WHERE id = $1`,
+    [jobId]
+  );
+};
+
+export const markDataDeletionJobSucceeded = async (
+  jobId: string,
+  counts: IngestionProviderCascadeCounts,
+): Promise<void> => {
+  await ensureIngestionRepositoryReady();
+  if (getCurrentDbProvider() === 'firebase') {
+    const now = nowIso();
+    await getFirebaseDb().collection('data_deletion_jobs').doc(jobId).update({
+      state: 'succeeded',
+      counts,
+      completedAt: now,
+      updatedAt: now,
+    });
+    return;
+  }
+  await getPg().query(
+    `UPDATE data_deletion_jobs SET state = 'succeeded', counts = $2::jsonb, completed_at = NOW(), updated_at = NOW() WHERE id = $1`,
+    [jobId, JSON.stringify(counts)]
+  );
+};
+
+export const markDataDeletionJobFailed = async (jobId: string, reason: string): Promise<void> => {
+  await ensureIngestionRepositoryReady();
+  const truncatedReason = reason.length > 500 ? reason.slice(0, 500) : reason;
+  if (getCurrentDbProvider() === 'firebase') {
+    const now = nowIso();
+    await getFirebaseDb().collection('data_deletion_jobs').doc(jobId).update({
+      state: 'failed',
+      failureReason: truncatedReason,
+      completedAt: now,
+      updatedAt: now,
+    });
+    return;
+  }
+  await getPg().query(
+    `UPDATE data_deletion_jobs SET state = 'failed', failure_reason = $2, completed_at = NOW(), updated_at = NOW() WHERE id = $1`,
+    [jobId, truncatedReason]
+  );
+};
+
+export const getDataDeletionJob = async (jobId: string): Promise<DataDeletionJobRecord | null> => {
+  await ensureIngestionRepositoryReady();
+  if (getCurrentDbProvider() === 'firebase') {
+    const snap = await getFirebaseDb().collection('data_deletion_jobs').doc(jobId).get();
+    if (!snap.exists) return null;
+    return mapDataDeletionDoc(snap.id, snap.data());
+  }
+  const { rows } = await getPg().query(`SELECT * FROM data_deletion_jobs WHERE id = $1`, [jobId]);
+  if (!rows[0]) return null;
+  return mapDataDeletionRow(rows[0]);
+};
+
+export const listDataDeletionJobsForUser = async (userId: string): Promise<DataDeletionJobRecord[]> => {
+  await ensureIngestionRepositoryReady();
+  if (getCurrentDbProvider() === 'firebase') {
+    const snap = await getFirebaseDb()
+      .collection('data_deletion_jobs')
+      .where('userId', '==', userId)
+      .get();
+    return snap.docs
+      .map((doc) => mapDataDeletionDoc(doc.id, doc.data()))
+      .sort((a, b) => b.requestedAt.localeCompare(a.requestedAt));
+  }
+  const { rows } = await getPg().query(
+    `SELECT * FROM data_deletion_jobs WHERE user_id = $1 ORDER BY requested_at DESC`,
+    [userId]
+  );
+  return rows.map(mapDataDeletionRow);
+};
+
+export const listDataDeletionJobs = async (filters: {
+  state?: DataDeletionJobState;
+  userId?: string;
+  limit?: number;
+}): Promise<DataDeletionJobRecord[]> => {
+  await ensureIngestionRepositoryReady();
+  const limit = Math.min(Math.max(filters.limit ?? 50, 1), 200);
+  if (getCurrentDbProvider() === 'firebase') {
+    let query: FirebaseFirestore.Query = getFirebaseDb().collection('data_deletion_jobs');
+    if (filters.state) query = query.where('state', '==', filters.state);
+    if (filters.userId) query = query.where('userId', '==', filters.userId);
+    const snap = await query.get();
+    return snap.docs
+      .map((doc) => mapDataDeletionDoc(doc.id, doc.data()))
+      .sort((a, b) => b.requestedAt.localeCompare(a.requestedAt))
+      .slice(0, limit);
+  }
+  const where: string[] = [];
+  const params: any[] = [];
+  if (filters.state) {
+    params.push(filters.state);
+    where.push(`state = $${params.length}`);
+  }
+  if (filters.userId) {
+    params.push(filters.userId);
+    where.push(`user_id = $${params.length}`);
+  }
+  const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+  params.push(limit);
+  const { rows } = await getPg().query(
+    `SELECT * FROM data_deletion_jobs ${whereSql} ORDER BY requested_at DESC LIMIT $${params.length}`,
+    params
+  );
+  return rows.map(mapDataDeletionRow);
 };
 
 // ── Learned source parsers ──────────────────────────────────────────────────

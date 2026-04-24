@@ -11,6 +11,7 @@ import { syncAttractionsCatalogFromCsvToDbOnStartup } from './services/attractio
 import { prewarmAutocompleteCache } from './services/destinationAttractionAutocompleteService';
 import { logMissingApiPricingConfigurationWarnings } from './apis/providerBudgeting';
 import { createSocketServer } from './socket';
+import { startGmailPollingScheduler } from './services/gmailPollingService';
 
 const defaultPort = Number(process.env.PORT) || 4000;
 const isCloudRunRuntime = Boolean(process.env.K_SERVICE);
@@ -103,6 +104,8 @@ export const startServer = async (portOverride?: number): Promise<Server> => {
   if (process.env.NODE_ENV !== 'test') {
     refreshAirportsDaily().catch((err: any) => logError('Airport refresh failed', err));
   }
+
+  startGmailPollingScheduler();
 
   return server;
 };

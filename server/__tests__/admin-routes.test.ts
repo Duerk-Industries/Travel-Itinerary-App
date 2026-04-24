@@ -249,6 +249,145 @@ describe('Admin routes', () => {
   });
 
   // ---------------------------------------------------------------------------
+  // POST /api/admin/users/bulk-tier
+  // ---------------------------------------------------------------------------
+
+  describe('POST /api/admin/users/bulk-tier', () => {
+    let bulkUserAId: string;
+    let bulkUserBId: string;
+    const bulkA = { firstName: 'Bulk', lastName: 'Alpha', email: `bulk-tier-a+${Date.now()}@example.com`, password: 'BulkPass1!' };
+    const bulkB = { firstName: 'Bulk', lastName: 'Bravo', email: `bulk-tier-b+${Date.now()}@example.com`, password: 'BulkPass1!' };
+
+    beforeAll(async () => {
+      const a = await registerAndLoginWebUser(bulkA);
+      const b = await registerAndLoginWebUser(bulkB);
+      bulkUserAId = a.userId;
+      bulkUserBId = b.userId;
+      testEmails.push(bulkA.email, bulkB.email);
+    });
+
+    beforeEach(async () => {
+      await setUserRole(bulkUserAId, 'user');
+      await setUserRole(bulkUserBId, 'user');
+      await setUserTier(bulkUserAId, 'free', 'admin', adminUserId, 'bulk test reset');
+      await setUserTier(bulkUserBId, 'free', 'admin', adminUserId, 'bulk test reset');
+    });
+
+    it('rejects empty ids array with 400', async () => {
+      const res = await request(app)
+        .post('/api/admin/users/bulk-tier')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ ids: [], tierKey: 'premium', reason: 'bulk test' })
+        .expect(400);
+      expect(res.body.error).toBeDefined();
+      expect(Array.isArray(res.body.details)).toBe(true);
+    });
+
+    it('rejects more than 100 ids with 400', async () => {
+      const ids = Array.from({ length: 101 }, (_, i) => `id-${i}`);
+      await request(app)
+        .post('/api/admin/users/bulk-tier')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ ids, tierKey: 'premium', reason: 'bulk test' })
+        .expect(400);
+    });
+
+    it('rejects missing or short reason with 400', async () => {
+      await request(app)
+        .post('/api/admin/users/bulk-tier')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ ids: [bulkUserAId], tierKey: 'premium', reason: 'hi' })
+        .expect(400);
+      await request(app)
+        .post('/api/admin/users/bulk-tier')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ ids: [bulkUserAId], tierKey: 'premium' })
+        .expect(400);
+    });
+
+    it('forbids non-admin callers (403 via requireAdmin)', async () => {
+      await request(app)
+        .post('/api/admin/users/bulk-tier')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send({ ids: [bulkUserAId], tierKey: 'premium', reason: 'bulk test' })
+        .expect(403);
+    });
+
+    it('returns 200 and applies tier change to all users on full success', async () => {
+      const res = await request(app)
+        .post('/api/admin/users/bulk-tier')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ ids: [bulkUserAId, bulkUserBId], tierKey: 'premium', reason: 'bulk success' })
+        .expect(200);
+
+      expect(res.body.failed).toEqual([]);
+      expect(res.body.updated).toHaveLength(2);
+      const updatedIds = (res.body.updated as Array<{ id: string }>).map((u) => u.id);
+      expect(updatedIds).toEqual(expect.arrayContaining([bulkUserAId, bulkUserBId]));
+
+      const tierA = await getCurrentUserTier(bulkUserAId);
+      const tierB = await getCurrentUserTier(bulkUserBId);
+      expect(tierA?.tierKey).toBe('premium');
+      expect(tierB?.tierKey).toBe('premium');
+
+      const audit = await listAuditLog({ action: 'USER_TIER_CHANGED' });
+      const bulkEntries = audit.entries.filter(
+        (e) => (e.targetUserId === bulkUserAId || e.targetUserId === bulkUserBId) && e.reason === 'bulk success',
+      );
+      expect(bulkEntries.length).toBe(2);
+    });
+
+    it('returns 207 with per-id failures when some ids cannot be resolved', async () => {
+      const res = await request(app)
+        .post('/api/admin/users/bulk-tier')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          ids: [bulkUserAId, '00000000-0000-0000-0000-000000000000'],
+          tierKey: 'premium',
+          reason: 'bulk partial',
+        })
+        .expect(207);
+
+      expect(res.body.updated).toHaveLength(1);
+      expect(res.body.updated[0].id).toBe(bulkUserAId);
+      expect(res.body.failed).toHaveLength(1);
+      expect(res.body.failed[0].id).toBe('00000000-0000-0000-0000-000000000000');
+      expect(res.body.failed[0].reason).toMatch(/not found/i);
+    });
+
+    it('dedupes repeated ids before applying', async () => {
+      const res = await request(app)
+        .post('/api/admin/users/bulk-tier')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          ids: [bulkUserAId, bulkUserAId, bulkUserAId],
+          tierKey: 'premium',
+          reason: 'dedup test',
+        })
+        .expect(200);
+      expect(res.body.updated).toHaveLength(1);
+    });
+
+    it('locks admin-role targets to pro and flags lockedToPro in the response', async () => {
+      await setUserRole(bulkUserAId, 'admin');
+      const res = await request(app)
+        .post('/api/admin/users/bulk-tier')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ ids: [bulkUserAId, bulkUserBId], tierKey: 'free', reason: 'lock test' })
+        .expect(200);
+
+      const updatedA = (res.body.updated as Array<{ id: string; tierKey: string; lockedToPro: boolean }>).find(
+        (u) => u.id === bulkUserAId,
+      );
+      const updatedB = (res.body.updated as Array<{ id: string; tierKey: string; lockedToPro: boolean }>).find(
+        (u) => u.id === bulkUserBId,
+      );
+      expect(updatedA).toEqual(expect.objectContaining({ tierKey: 'pro', lockedToPro: true }));
+      expect(updatedB).toEqual(expect.objectContaining({ tierKey: 'free', lockedToPro: false }));
+    });
+  });
+
+  // ---------------------------------------------------------------------------
   // PATCH /api/admin/users/:userId/role
   // ---------------------------------------------------------------------------
 
