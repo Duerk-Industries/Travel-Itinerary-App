@@ -2,7 +2,10 @@ import {
   INGESTION_RETENTION_DEAD_LETTER_DAYS,
   RETENTION_TICK_INTERVAL_MS_DEFAULT,
 } from '../ingestion/config';
-import { deletePayloadsForDeadLetteredJobsOlderThan } from '../ingestion/shared/repository';
+import {
+  deletePayloadsForDeadLetteredJobsOlderThan,
+  tombstoneNormalizedTextForTerminalJobsOlderThan,
+} from '../ingestion/shared/repository';
 import { logError, logInfo } from '../logger';
 import { getEnvFlag, getEnvValue } from '../env';
 
@@ -11,6 +14,8 @@ export interface RetentionTickResult {
   cutoffIso: string;
   /** Number of `import_job_payloads` rows removed for DEAD_LETTERED jobs past the retention window. */
   deadLetterPayloadsDeleted: number;
+  /** Number of `ingested_documents` rows whose normalized_text/html was tombstoned. */
+  normalizedTextTombstoned: number;
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -41,7 +46,17 @@ export const runRetentionTick = async (opts: { now?: Date; retentionDays?: numbe
     logError('[retention] dead-letter payload sweep failed', err);
   }
 
-  return { cutoffIso, deadLetterPayloadsDeleted };
+  let normalizedTextTombstoned = 0;
+  try {
+    normalizedTextTombstoned = await tombstoneNormalizedTextForTerminalJobsOlderThan(cutoffIso);
+    if (normalizedTextTombstoned > 0) {
+      logInfo(`[retention] tombstoned ${normalizedTextTombstoned} ingested_documents.normalized_text older than ${cutoffIso}`);
+    }
+  } catch (err) {
+    logError('[retention] normalized-text tombstone sweep failed', err);
+  }
+
+  return { cutoffIso, deadLetterPayloadsDeleted, normalizedTextTombstoned };
 };
 
 let schedulerHandle: ReturnType<typeof setInterval> | null = null;

@@ -216,6 +216,32 @@ describe('Trip messages DB + REST', () => {
     expect(after).toBe(0);
   });
 
+  it('markMessagesRead does not regress when a later call targets an older message id', async () => {
+    // Add two fresh messages so we have a "latest" cursor.
+    await db.addTripMessage({
+      appId: 'WanderBunnies', tripId, senderId: userId,
+      senderName: 'Chat Tester', senderInitials: 'CT', body: 'wm-one',
+    });
+    await db.addTripMessage({
+      appId: 'WanderBunnies', tripId, senderId: userId,
+      senderName: 'Chat Tester', senderInitials: 'CT', body: 'wm-two',
+    });
+
+    const msgs = await db.listTripMessages(tripId);
+    const latest = msgs[msgs.length - 1].id;
+    const earliest = msgs[0].id;
+
+    // Read everything.
+    await db.markMessagesRead(tripId, userId, latest);
+    expect(await db.countUnreadMessages(tripId, userId)).toBe(0);
+
+    // Now submit an older id — the watermark must NOT walk backwards, so
+    // unread stays at 0. If the watermark regressed, older messages would
+    // re-appear as unread.
+    await db.markMessagesRead(tripId, userId, earliest);
+    expect(await db.countUnreadMessages(tripId, userId)).toBe(0);
+  });
+
   it('addTripMessage rejects empty body', async () => {
     await expect(
       db.addTripMessage({

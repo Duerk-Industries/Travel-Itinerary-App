@@ -25,6 +25,7 @@ import ingestionAdminRoutes from './routes/ingestionAdminRoutes';
 import ingestionWebhookRoutes from './routes/ingestionWebhookRoutes';
 import ingestionGmailOAuthRoutes from './routes/ingestionGmailOAuthRoutes';
 import internalIngestionWorkerRoutes from './routes/internalIngestionWorkerRoutes';
+import prometheusRoutes from './routes/prometheusRoutes';
 
 import { loadEnv } from './env_loader';
 import { getBackendUrl, getEnvValue, hasRunLocalFlag, isLocalEnv } from './env';
@@ -352,6 +353,10 @@ app.use('/api/ingestion/gmail', ingestionGmailOAuthRoutes);
 app.use('/api/ingestion', ingestionRoutes);
 app.use('/api/admin', authenticate, requireAdmin, adminRoutes);
 app.use('/api/admin/ingestion', authenticate, requireAdmin, ingestionAdminRoutes);
+// Prometheus scrape endpoint. Unauthenticated, text-only, per-instance.
+// Mounted at the root (`/metrics`) since that's the conventional path most
+// scrapers assume.
+app.use('/metrics', prometheusRoutes);
 
 if (hasWebApp) {
   app.get(['/app', '/app/*', '/'], (_req, res) => {

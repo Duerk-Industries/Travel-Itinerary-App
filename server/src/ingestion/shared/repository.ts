@@ -85,6 +85,7 @@ type ImportJobRow = {
   state_changed_at: string;
   started_at: string | null;
   completed_at: string | null;
+  next_retry_at: string | null;
 };
 
 type IngestedDocumentRecord = {
@@ -258,7 +259,29 @@ const mapImportJobRow = (row: ImportJobRow): PersistedImportJob => ({
   stateChangedAt: row.state_changed_at,
   startedAt: row.started_at,
   completedAt: row.completed_at,
+  nextRetryAt: row.next_retry_at,
 });
+
+/**
+ * Compute the earliest-retry timestamp after a failed run. Pure exponential
+ * backoff capped at `maxDelaySeconds` — deterministic (no jitter) in this
+ * first slice so tests stay trivial to write; jitter can be layered on when
+ * the scheduler ships.
+ *
+ * @param retryCount Count AFTER the failure (i.e. this is the attempt that
+ *   just failed, numbered 1 for the first attempt).
+ */
+export const computeNextRetryAt = (
+  retryCount: number,
+  opts: { baseDelaySeconds: number; maxDelaySeconds: number; now?: Date },
+): string => {
+  const { baseDelaySeconds, maxDelaySeconds } = opts;
+  const now = opts.now ?? new Date();
+  const attempt = Math.max(1, Math.floor(retryCount));
+  const rawSeconds = baseDelaySeconds * Math.pow(2, attempt - 1);
+  const bounded = Math.min(Math.max(baseDelaySeconds, rawSeconds), maxDelaySeconds);
+  return new Date(now.getTime() + bounded * 1000).toISOString();
+};
 
 const mapParsedItemRow = (row: ParsedItemRow): PersistedParsedItem => ({
   id: row.id,
@@ -400,10 +423,16 @@ const ensurePgSchema = async (): Promise<void> => {
       updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
       state_changed_at TIMESTAMP NOT NULL DEFAULT NOW(),
       started_at TIMESTAMP,
-      completed_at TIMESTAMP
+      completed_at TIMESTAMP,
+      next_retry_at TIMESTAMP
     );
   `);
   await p.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_import_jobs_user_idempotency ON import_jobs(user_id, idempotency_key);`);
+  // Supports the future retry-with-backoff scheduler: fetch rows where
+  // state='FAILED' AND next_retry_at <= NOW() AND retry_count < max_attempts.
+  // Column + index shipped separately from the scheduler so the data
+  // structure evolves independently.
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_import_jobs_next_retry ON import_jobs(next_retry_at);`);
   await p.query(`
     CREATE TABLE IF NOT EXISTS import_job_payloads (
       job_id UUID PRIMARY KEY REFERENCES import_jobs(id) ON DELETE CASCADE,
@@ -1515,6 +1544,24 @@ export const updateImportJobState = async (params: {
   lastErrorCode?: string | null;
 }): Promise<void> => {
   await ensureIngestionRepositoryReady();
+
+  // On a FAILED transition, compute the earliest-retry timestamp from the
+  // current retry_count. DEAD_LETTERED is terminal, so it clears next_retry_at.
+  // Any other state leaves next_retry_at alone.
+  let nextRetryAt: string | null | undefined = undefined;
+  if (params.state === 'FAILED') {
+    // Need current retry_count to compute backoff. Read it; fallback to 1.
+    const existing = await getImportJobById(params.jobId);
+    const retryCount = (existing?.retryCount ?? 0) + 1; // +1 because this failure is the N+1st attempt
+    const policy = await getRetryPolicyConfig();
+    nextRetryAt = computeNextRetryAt(retryCount, {
+      baseDelaySeconds: policy.baseDelaySeconds,
+      maxDelaySeconds: policy.maxDelaySeconds,
+    });
+  } else if (params.state === 'DEAD_LETTERED' || params.state === 'COMPLETED' || params.state === 'DUPLICATE_IGNORED') {
+    nextRetryAt = null;
+  }
+
   if (getCurrentDbProvider() === 'firebase') {
     await getFirebaseDb().collection('import_jobs').doc(params.jobId).set(
       omitUndefinedFields({
@@ -1529,12 +1576,14 @@ export const updateImportJobState = async (params: {
           ? nowIso()
           : undefined,
         completedAt: ['COMPLETED', 'FAILED', 'DEAD_LETTERED', 'DUPLICATE_IGNORED'].includes(params.state) ? nowIso() : undefined,
+        nextRetryAt,
       }),
       { merge: true }
     );
     return;
   }
-  await getPg().query(
+  const p = getPg();
+  await p.query(
     `UPDATE import_jobs
      SET state = $2,
          normalized_content_hash = COALESCE($3, normalized_content_hash),
@@ -1556,6 +1605,15 @@ export const updateImportJobState = async (params: {
      WHERE id = $1`,
     [params.jobId, params.state, params.normalizedContentHash ?? null, params.failureCode ?? null, params.failureReason ?? null, params.lastErrorCode ?? null]
   );
+
+  // Write next_retry_at only when this transition either stamps or clears
+  // it. Undefined means "don't touch the column" — we issue no UPDATE.
+  if (typeof nextRetryAt !== 'undefined') {
+    await p.query(
+      `UPDATE import_jobs SET next_retry_at = $2 WHERE id = $1`,
+      [params.jobId, nextRetryAt],
+    );
+  }
 };
 
 export const listImportJobsForUser = async (userId: string): Promise<PersistedImportJob[]> => {
@@ -3077,6 +3135,82 @@ export const deletePayloadsForDeadLetteredJobsOlderThan = async (
          AND completed_at IS NOT NULL
          AND completed_at < $1
      )`,
+    [cutoffIso],
+  );
+  return rowCount ?? 0;
+};
+
+/**
+ * Retention step 2: tombstone `ingested_documents.normalized_text` (+
+ * `normalized_html`) for jobs that reached a terminal state more than the
+ * retention window ago. The document row itself stays so that user-visible
+ * artifacts (parsed_items references) still resolve, but the large normalized
+ * text/html blobs — which are no longer needed after the parse has already
+ * produced items — are emptied. `deleted_raw_at` is stamped so a second
+ * tombstone pass over the same rows is a no-op.
+ *
+ * Returns the number of ingested_documents rows updated.
+ */
+export const tombstoneNormalizedTextForTerminalJobsOlderThan = async (
+  cutoffIso: string,
+): Promise<number> => {
+  await ensureIngestionRepositoryReady();
+
+  if (getCurrentDbProvider() === 'firebase') {
+    const db = getFirebaseDb();
+    const snap = await db
+      .collection('import_jobs')
+      .where('state', 'in', ['DEAD_LETTERED', 'COMPLETED', 'DUPLICATE_IGNORED'])
+      .get();
+    const eligibleJobIds = snap.docs
+      .filter((doc) => {
+        const data = doc.data() as any;
+        const completedAt = data.completedAt ?? null;
+        if (!completedAt) return false;
+        return String(completedAt) < cutoffIso;
+      })
+      .map((doc) => doc.id);
+
+    let tombstoned = 0;
+    for (const jobId of eligibleJobIds) {
+      const docsSnap = await db
+        .collection('ingested_documents')
+        .where('importJobId', '==', jobId)
+        .get();
+      for (const docSnap of docsSnap.docs) {
+        const data = docSnap.data() as any;
+        if (data.deletedRawAt) continue; // already tombstoned
+        await docSnap.ref.set(
+          {
+            normalizedText: '',
+            normalizedHtml: null,
+            deletedRawAt: nowIso(),
+            updatedAt: nowIso(),
+          },
+          { merge: true },
+        );
+        tombstoned += 1;
+      }
+    }
+    return tombstoned;
+  }
+
+  const p = getPg();
+  // pg-mem IN-subselect works; the join would also work but keep IN for parity
+  // with Priority 15 step 1.
+  const { rowCount } = await p.query(
+    `UPDATE ingested_documents
+     SET normalized_text = '',
+         normalized_html = NULL,
+         deleted_raw_at = NOW(),
+         updated_at = CURRENT_TIMESTAMP::timestamp
+     WHERE deleted_raw_at IS NULL
+       AND import_job_id IN (
+         SELECT id FROM import_jobs
+         WHERE state IN ('DEAD_LETTERED','COMPLETED','DUPLICATE_IGNORED')
+           AND completed_at IS NOT NULL
+           AND completed_at < $1
+       )`,
     [cutoffIso],
   );
   return rowCount ?? 0;

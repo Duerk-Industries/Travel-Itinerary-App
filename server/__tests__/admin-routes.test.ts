@@ -55,6 +55,7 @@ describe('Admin routes', () => {
       ['GET',   '/api/admin/user-data'],
       ['GET',   '/api/admin/audit-log'],
       ['GET',   '/api/admin/metrics'],
+      ['POST',  '/api/admin/users/bulk-role'],
     ] as const;
 
     for (const [method, path] of adminPaths) {
@@ -385,6 +386,127 @@ describe('Admin routes', () => {
       );
       expect(updatedA).toEqual(expect.objectContaining({ tierKey: 'pro', lockedToPro: true }));
       expect(updatedB).toEqual(expect.objectContaining({ tierKey: 'free', lockedToPro: false }));
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // POST /api/admin/users/bulk-role
+  // ---------------------------------------------------------------------------
+
+  describe('POST /api/admin/users/bulk-role', () => {
+    let bulkRoleAId: string;
+    let bulkRoleBId: string;
+    const bulkRoleA = { firstName: 'Bulk', lastName: 'Roler', email: `bulk-role-a+${Date.now()}@example.com`, password: 'BulkPass1!' };
+    const bulkRoleB = { firstName: 'Bulk', lastName: 'Roler', email: `bulk-role-b+${Date.now()}@example.com`, password: 'BulkPass1!' };
+
+    beforeAll(async () => {
+      const a = await registerAndLoginWebUser(bulkRoleA);
+      const b = await registerAndLoginWebUser(bulkRoleB);
+      bulkRoleAId = a.userId;
+      bulkRoleBId = b.userId;
+      testEmails.push(bulkRoleA.email, bulkRoleB.email);
+    });
+
+    beforeEach(async () => {
+      await setUserRole(bulkRoleAId, 'user');
+      await setUserRole(bulkRoleBId, 'user');
+    });
+
+    it('rejects non-admin callers with 403', async () => {
+      await request(app)
+        .post('/api/admin/users/bulk-role')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send({ ids: [bulkRoleAId], role: 'admin', reason: 'bulk test' })
+        .expect(403);
+    });
+
+    it('rejects an unknown role with 400', async () => {
+      await request(app)
+        .post('/api/admin/users/bulk-role')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ ids: [bulkRoleAId], role: 'superuser', reason: 'bad role' })
+        .expect(400);
+    });
+
+    it('rejects a missing reason / short reason with 400', async () => {
+      await request(app)
+        .post('/api/admin/users/bulk-role')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ ids: [bulkRoleAId], role: 'admin' })
+        .expect(400);
+      await request(app)
+        .post('/api/admin/users/bulk-role')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ ids: [bulkRoleAId], role: 'admin', reason: 'hi' })
+        .expect(400);
+    });
+
+    it('grants admin to all users on success and auto-assigns Pro tier', async () => {
+      const res = await request(app)
+        .post('/api/admin/users/bulk-role')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ ids: [bulkRoleAId, bulkRoleBId], role: 'admin', reason: 'bulk grant' })
+        .expect(200);
+
+      expect(res.body.failed).toEqual([]);
+      expect(res.body.updated).toHaveLength(2);
+      const updated = res.body.updated as Array<{ id: string; role: string; previousRole: string | null }>;
+      expect(updated.every((u) => u.role === 'admin')).toBe(true);
+      expect(updated.every((u) => u.previousRole === 'user')).toBe(true);
+
+      // Auto-tier-to-pro side effect.
+      const tierA = await getCurrentUserTier(bulkRoleAId);
+      const tierB = await getCurrentUserTier(bulkRoleBId);
+      expect(tierA?.tierKey).toBe('pro');
+      expect(tierB?.tierKey).toBe('pro');
+
+      // Per-id audit entries land.
+      const audit = await listAuditLog({ action: 'USER_ROLE_GRANTED' });
+      const reasoned = audit.entries.filter((e) => e.reason === 'bulk grant');
+      expect(reasoned.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('refuses to demote the acting admin (self-protection) while still demoting the rest', async () => {
+      // Pre-grant A admin so we can attempt to demote the acting admin AND A
+      // in the same bulk call.
+      await setUserRole(bulkRoleAId, 'admin');
+
+      const res = await request(app)
+        .post('/api/admin/users/bulk-role')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ ids: [adminUserId, bulkRoleAId], role: 'user', reason: 'bulk demote' })
+        .expect(207);
+
+      const failedIds = (res.body.failed as Array<{ id: string; reason: string }>).map((f) => f.id);
+      expect(failedIds).toContain(adminUserId);
+      expect(res.body.failed[0].reason).toMatch(/revoke their own admin role/i);
+
+      const updatedIds = (res.body.updated as Array<{ id: string; role: string }>).map((u) => u.id);
+      expect(updatedIds).toContain(bulkRoleAId);
+    });
+
+    it('dedupes repeated ids in the payload', async () => {
+      const res = await request(app)
+        .post('/api/admin/users/bulk-role')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ ids: [bulkRoleAId, bulkRoleAId, bulkRoleAId], role: 'admin', reason: 'dedup' })
+        .expect(200);
+      expect(res.body.updated).toHaveLength(1);
+    });
+
+    it('rejects >100 ids and empty ids at the DTO level', async () => {
+      await request(app)
+        .post('/api/admin/users/bulk-role')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ ids: [], role: 'admin', reason: 'empty' })
+        .expect(400);
+
+      const tooMany = Array.from({ length: 101 }, (_, i) => `id-${i}`);
+      await request(app)
+        .post('/api/admin/users/bulk-role')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ ids: tooMany, role: 'admin', reason: 'too many' })
+        .expect(400);
     });
   });
 

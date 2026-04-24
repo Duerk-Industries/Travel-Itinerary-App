@@ -28,4 +28,11 @@ export const bulkSetUserTierDto = z.object({
 });
 export type BulkSetUserTierDto = z.infer<typeof bulkSetUserTierDto>;
 
+export const bulkSetUserRoleDto = z.object({
+  ids: idArray,
+  role: z.enum(['admin', 'user'], { message: 'role must be "admin" or "user"' }),
+  reason: reasonField,
+});
+export type BulkSetUserRoleDto = z.infer<typeof bulkSetUserRoleDto>;
+
 export const BULK_ADMIN_USER_ID_CAP = MAX_BULK_ADMIN_USER_IDS;

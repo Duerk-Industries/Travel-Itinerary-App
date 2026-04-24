@@ -6037,6 +6037,24 @@ export const markMessagesRead = async (
     batch.set(readRef, { messageId: doc.id, userId, readAt: nowIso() }, { merge: true });
   }
   await batch.commit();
+
+  // Dual-write the per-user watermark. Only advance forward so a stale
+  // MARK_READ (re-opened panel scrolling back) can't regress the watermark.
+  const watermarkRef = db.collection('chat_read_watermarks').doc(`${userId}_${tripId}`);
+  const existing = await watermarkRef.get();
+  const existingCutoff = existing.exists ? ((existing.data() as any).lastReadCreatedAt ?? '') : '';
+  if (!existing.exists || String(upToCreatedAt) > String(existingCutoff)) {
+    await watermarkRef.set(
+      {
+        userId,
+        tripId,
+        lastReadMessageId: upToMessageId,
+        lastReadCreatedAt: upToCreatedAt,
+        updatedAt: nowIso(),
+      },
+      { merge: true },
+    );
+  }
 };
 
 export const countUnreadMessages = async (
@@ -6044,6 +6062,23 @@ export const countUnreadMessages = async (
   userId: string,
 ): Promise<number> => {
   const db = getDb();
+
+  // Prefer the per-user watermark when one exists.
+  const watermarkDoc = await db
+    .collection('chat_read_watermarks')
+    .doc(`${userId}_${tripId}`)
+    .get();
+  if (watermarkDoc.exists) {
+    const cutoff = (watermarkDoc.data() as any).lastReadCreatedAt ?? '';
+    const newerSnap = await db
+      .collection('trip_messages')
+      .where('tripId', '==', tripId)
+      .where('createdAt', '>', cutoff)
+      .get();
+    return newerSnap.size;
+  }
+
+  // Fall back to the legacy readBy array count.
   const snap = await db
     .collection('trip_messages')
     .where('tripId', '==', tripId)

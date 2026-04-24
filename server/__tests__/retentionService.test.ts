@@ -233,4 +233,116 @@ describe('retentionService', () => {
     const tightRun = await service.runRetentionTick({ now, retentionDays: 5 });
     expect(tightRun.deadLetterPayloadsDeleted).toBe(1);
   });
+
+  // ─── Normalized-text tombstone rule (Priority 15 step 2) ─────────────────
+
+  const seedIngestedDocument = async (
+    pool: import('pg').Pool,
+    opts: {
+      docId: string;
+      jobId: string;
+      userId: string;
+      normalizedText: string;
+      normalizedHtml?: string | null;
+    },
+  ): Promise<void> => {
+    await pool.query(
+      `INSERT INTO ingested_documents (
+        id, import_job_id, user_id, source_type, content_hash, normalized_content_hash,
+        mime_type, original_filename, raw_source_reference, content_bytes_ref,
+        normalized_text, normalized_html, virus_scan_status
+      ) VALUES ($1,$2,$3,'MANUAL_UPLOAD',$4,$5,'application/pdf',$6,$7,$8,$9,$10,'CLEAN')`,
+      [
+        opts.docId,
+        opts.jobId,
+        opts.userId,
+        `ch-${opts.docId}`,
+        `nch-${opts.docId}`,
+        `file-${opts.docId}.pdf`,
+        `ref-${opts.docId}`,
+        `gs://bucket/${opts.docId}`,
+        opts.normalizedText,
+        opts.normalizedHtml ?? null,
+      ],
+    );
+  };
+
+  it('tombstones normalized_text/html for COMPLETED jobs past the retention window, preserving rows + stamping deleted_raw_at', async () => {
+    const { poolClient } = require('../src/db') as typeof import('../src/db');
+    const repo = require('../src/ingestion/shared/repository') as typeof import('../src/ingestion/shared/repository');
+    const service = require('../src/services/retentionService') as typeof import('../src/services/retentionService');
+
+    const userId = await mkUser('tombstone');
+    const sourceId = await repo.getOrCreateIngestionSource(userId, 'MANUAL_UPLOAD');
+    const pool = poolClient();
+
+    const now = new Date('2026-04-23T12:00:00Z');
+    const oldIso = new Date(now.getTime() - 120 * 24 * 60 * 60 * 1000).toISOString();
+    const recentIso = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000).toISOString();
+
+    // Completed + old → eligible
+    await seedImportJobWithPayload(pool, {
+      jobId: '88888888-8888-8888-8888-888888888888', userId, ingestionSourceId: sourceId,
+      state: 'COMPLETED', completedAtIso: oldIso, idempotencyKey: 'tb-old',
+    });
+    await seedIngestedDocument(pool, {
+      docId: 'aa000000-0000-0000-0000-000000000001',
+      jobId: '88888888-8888-8888-8888-888888888888',
+      userId, normalizedText: 'LARGE BODY TEXT', normalizedHtml: '<p>LARGE</p>',
+    });
+
+    // Completed + recent → NOT eligible
+    await seedImportJobWithPayload(pool, {
+      jobId: '99999999-9999-9999-9999-999999999999', userId, ingestionSourceId: sourceId,
+      state: 'COMPLETED', completedAtIso: recentIso, idempotencyKey: 'tb-recent',
+    });
+    await seedIngestedDocument(pool, {
+      docId: 'aa000000-0000-0000-0000-000000000002',
+      jobId: '99999999-9999-9999-9999-999999999999',
+      userId, normalizedText: 'RECENT BODY', normalizedHtml: '<p>RECENT</p>',
+    });
+
+    const result = await service.runRetentionTick({ now, retentionDays: 90 });
+    expect(result.normalizedTextTombstoned).toBe(1);
+
+    const { rows } = await pool.query<{ id: string; normalized_text: string; normalized_html: string | null; deleted_raw_at: string | null }>(
+      `SELECT id, normalized_text, normalized_html, deleted_raw_at FROM ingested_documents ORDER BY id`,
+    );
+    const byId = Object.fromEntries(rows.map((r) => [r.id, r]));
+    expect(byId['aa000000-0000-0000-0000-000000000001'].normalized_text).toBe('');
+    expect(byId['aa000000-0000-0000-0000-000000000001'].normalized_html).toBeNull();
+    expect(byId['aa000000-0000-0000-0000-000000000001'].deleted_raw_at).not.toBeNull();
+    // Recent one untouched.
+    expect(byId['aa000000-0000-0000-0000-000000000002'].normalized_text).toBe('RECENT BODY');
+    expect(byId['aa000000-0000-0000-0000-000000000002'].deleted_raw_at).toBeNull();
+  });
+
+  it('skips documents already tombstoned (deleted_raw_at set) so the sweep is idempotent', async () => {
+    const { poolClient } = require('../src/db') as typeof import('../src/db');
+    const repo = require('../src/ingestion/shared/repository') as typeof import('../src/ingestion/shared/repository');
+    const service = require('../src/services/retentionService') as typeof import('../src/services/retentionService');
+
+    const userId = await mkUser('tombstone-idempotent');
+    const sourceId = await repo.getOrCreateIngestionSource(userId, 'MANUAL_UPLOAD');
+    const pool = poolClient();
+
+    const now = new Date('2026-04-23T12:00:00Z');
+    const oldIso = new Date(now.getTime() - 200 * 24 * 60 * 60 * 1000).toISOString();
+
+    await seedImportJobWithPayload(pool, {
+      jobId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', userId, ingestionSourceId: sourceId,
+      state: 'DEAD_LETTERED', completedAtIso: oldIso, idempotencyKey: 'tb-idem',
+    });
+    await seedIngestedDocument(pool, {
+      docId: 'cc000000-0000-0000-0000-000000000001',
+      jobId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+      userId, normalizedText: 'BODY', normalizedHtml: null,
+    });
+
+    const first = await service.runRetentionTick({ now, retentionDays: 90 });
+    expect(first.normalizedTextTombstoned).toBe(1);
+
+    const second = await service.runRetentionTick({ now, retentionDays: 90 });
+    expect(second.normalizedTextTombstoned).toBe(0);
+  });
 });

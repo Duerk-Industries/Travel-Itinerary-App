@@ -66,6 +66,10 @@ import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from '
 import { resolveBackendUrl as resolveConfiguredBackendUrl } from './utils/backendUrl';
 import { type AsyncItineraryTracker, useAsyncItineraryPolling } from './hooks/useAsyncItineraryPolling';
 import { useTripsData } from './hooks/useTripsData';
+import { useTripMembers } from './hooks/useTripMembers';
+import { useRetryableMutation } from './hooks/useRetryableMutation';
+import RetryableErrorBanner from './components/RetryableErrorBanner';
+import { requestJson } from './utils/apiClient';
 import { useGroupInvites } from './hooks/useGroupInvites';
 import { useFollowedTrips } from './hooks/useFollowedTrips';
 import { useAuthFlowState } from './hooks/useAuthFlowState';
@@ -657,24 +661,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     [userToken]
   );
 
-  const userMembers = useMemo(
-    () => groupMembers.filter((m) => !m.guestName && m.status !== 'removed'),
-    [groupMembers]
+  const { userMembers, memberIds, currentUserMemberId, defaultPayerId } = useTripMembers(
+    groupMembers,
+    userEmail,
   );
-
-  const memberIds = useMemo(() => userMembers.map((m) => m.id), [userMembers]);
-
-  const currentUserMemberId = useMemo(() => {
-    if (!userEmail) return null;
-    const match = userMembers.find((m) => m.email && m.email.toLowerCase() === userEmail.toLowerCase());
-    return match?.id ?? null;
-  }, [userMembers, userEmail]);
-
-  const defaultPayerId = useMemo(() => {
-    if (currentUserMemberId) return currentUserMemberId;
-    if (userMembers.length) return userMembers[0].id;
-    return null;
-  }, [currentUserMemberId, userMembers]);
 
   const flightsTotal = useMemo(
     () => flights.reduce((sum, f) => sum + (Number(f.cost) || 0), 0),
@@ -990,6 +980,21 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     return memberNameById.get(id) ?? 'Unknown';
   }, [memberNameById]);
 
+  // Covered-by is naturally idempotent (PUT replaces the entire map), so it's
+  // a safe candidate for retry-on-failure. Wrapped in useRetryableMutation so
+  // transient network failures can be retried via the red banner instead of
+  // an alert() that forces the user to re-open the ledger.
+  const coveredByMutation = useRetryableMutation<
+    { tripId: string; rules: Record<string, string> },
+    void
+  >(async ({ tripId, rules }) => {
+    await requestJson<unknown>(`${backendUrl}/api/trips/${tripId}/covered-by`, {
+      method: 'PUT',
+      headers: jsonHeaders,
+      body: rules,
+    });
+  });
+
   const saveCoveredBy = useCallback(async () => {
     if (!activeTrip?.id) {
       alert('An active trip is required.');
@@ -1002,18 +1007,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       return;
     }
 
-    try {
-      const res = await fetch(`${backendUrl}/api/trips/${activeTrip.id}/covered-by`, {
-        method: 'PUT',
-        headers: jsonHeaders,
-        body: JSON.stringify(coveredBy),
-      });
-      if (!res.ok) throw new Error('Failed to save covering rules.');
+    const result = await coveredByMutation.run({ tripId: activeTrip.id, rules: coveredBy });
+    if (result !== null) {
       alert('Covering rules saved.');
-    } catch (err) {
-      alert((err as Error).message);
     }
-  }, [activeTrip?.id, backendUrl, coveredBy, jsonHeaders]);
+    // Failure surfaces through <RetryableErrorBanner> rendered in the ledger
+    // branch below — no alert() so the user can retry in place.
+  }, [activeTrip?.id, coveredBy, coveredByMutation]);
 
   const coveredTravelerIds = useMemo(() => new Set(Object.keys(coveredBy)), [coveredBy]);
 
@@ -2668,6 +2668,16 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                 />
               )
             : null}
+
+          {activePage === 'ledger' ? (
+            <RetryableErrorBanner
+              state={coveredByMutation.state}
+              error={coveredByMutation.error}
+              onRetry={coveredByMutation.retry}
+              onDismiss={coveredByMutation.reset}
+              actionLabel="Save covering rules"
+            />
+          ) : null}
 
           {activePage === 'ingest'
             ? renderSharedPageScroll(

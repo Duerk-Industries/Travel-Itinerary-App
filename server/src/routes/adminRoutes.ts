@@ -25,7 +25,7 @@ import {
   type DataDeletionJobState,
 } from '../ingestion/shared/repository';
 import { readDto } from '../utils/dtoParse';
-import { bulkSetUserTierDto } from './adminDtos';
+import { bulkSetUserTierDto, bulkSetUserRoleDto } from './adminDtos';
 import { getMetricCounterSnapshot } from '../metrics';
 
 // Admin routes — all guarded by authenticate + requireAdmin in app.ts
@@ -232,6 +232,58 @@ router.post('/users/bulk-tier', async (req, res) => {
     } catch (err: any) {
       const message = String(err?.message ?? 'Tier change failed');
       logError('[admin] bulk tier change: per-id failure', { targetId, err: message });
+      failed.push({ id: targetId, reason: message });
+    }
+  }
+
+  res.status(failed.length > 0 ? 207 : 200).json({ updated, failed });
+});
+
+/**
+ * Bulk change the role for up to 100 users. Mirrors the bulk-tier pattern
+ * (100-id cap, per-id try/catch, 207 Multi-Status when any id fails, per-id
+ * audit log entries). Critical guardrail: the acting admin cannot demote
+ * THEIR OWN account in a bulk update — self-demotion would lock an admin
+ * out of follow-up recovery. That single id is surfaced in `failed` with a
+ * clear reason; the rest of the batch still proceeds.
+ *
+ * Granting admin also auto-assigns Pro tier (parity with the single-user
+ * PATCH at `/users/:userId/role`). The tier change writes its own audit
+ * entry via `setUserTier`.
+ */
+router.post('/users/bulk-role', async (req, res) => {
+  const dto = readDto(bulkSetUserRoleDto, req.body, res);
+  if (!dto) return;
+  const actorId = getActorId(req);
+  const role = dto.role;
+  const reason = dto.reason;
+
+  const updated: Array<{ id: string; role: 'admin' | 'user'; previousRole: string | null }> = [];
+  const failed: Array<{ id: string; reason: string }> = [];
+
+  for (const targetId of dto.ids) {
+    try {
+      if (actorId === targetId && role !== 'admin') {
+        failed.push({ id: targetId, reason: 'Admins cannot revoke their own admin role' });
+        continue;
+      }
+      const previousRole = await getUserRole(targetId);
+      await setUserRole(targetId, role);
+      if (role === 'admin') {
+        await setUserTier(targetId, 'pro', 'admin', actorId, 'Admin users are automatically assigned Pro tier');
+      }
+      await writeAuditLog({
+        actorUserId: actorId,
+        targetUserId: targetId,
+        action: role === 'admin' ? 'USER_ROLE_GRANTED' : 'USER_ROLE_REVOKED',
+        beforeState: { role: previousRole },
+        afterState: { role, bulk: true },
+        reason,
+      });
+      updated.push({ id: targetId, role, previousRole });
+    } catch (err: any) {
+      const message = String(err?.message ?? 'Role change failed');
+      logError('[admin] bulk role change: per-id failure', { targetId, err: message });
       failed.push({ id: targetId, reason: message });
     }
   }

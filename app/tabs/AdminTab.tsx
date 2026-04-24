@@ -322,6 +322,8 @@ const UsersSection: React.FC<{
   const [bulkTierDropdownOpen, setBulkTierDropdownOpen] = useState(false);
   const [bulkReason, setBulkReason] = useState<string>('');
   const [bulkApplying, setBulkApplying] = useState(false);
+  const [bulkRole, setBulkRole] = useState<'admin' | 'user' | null>(null);
+  const [bulkRoleApplying, setBulkRoleApplying] = useState(false);
   const limit = 20;
 
   const load = useCallback(async (q: string, p: number) => {
@@ -393,6 +395,39 @@ const UsersSection: React.FC<{
       setError(e.message ?? 'Bulk tier change failed.');
     } finally {
       setBulkApplying(false);
+    }
+  };
+
+  const applyBulkRole = async () => {
+    const ids = Array.from(selectedIds);
+    if (!ids.length || !bulkRole || bulkReason.trim().length < 3) return;
+    setBulkRoleApplying(true);
+    setError(null);
+    try {
+      const response = await fetch(`${backendUrl}/api/admin/users/bulk-role`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids, role: bulkRole, reason: bulkReason.trim() }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok && response.status !== 207) {
+        setError((body as any)?.error ?? 'Bulk role change failed.');
+        return;
+      }
+      const failed = ((body as any)?.failed ?? []) as Array<{ id: string; reason: string }>;
+      if (failed.length) {
+        const summary = failed.slice(0, 3).map((f) => `${f.id.slice(0, 8)}: ${f.reason}`).join('; ');
+        const overflow = failed.length > 3 ? ` (+${failed.length - 3} more)` : '';
+        setError(`Some users could not be updated: ${summary}${overflow}`);
+      }
+      clearSelection();
+      setBulkReason('');
+      setBulkRole(null);
+      await load(search, page);
+    } catch (e: any) {
+      setError(e.message ?? 'Bulk role change failed.');
+    } finally {
+      setBulkRoleApplying(false);
     }
   };
 
@@ -480,6 +515,72 @@ const UsersSection: React.FC<{
               testID="admin-users-bulk-clear"
             >
               <Text style={[localStyles.smallButtonText, { color: theme.colors.text }]}>Clear</Text>
+            </TouchableOpacity>
+          </View>
+          <View
+            style={[localStyles.row, { flexWrap: 'wrap', gap: 8, marginTop: 8 }]}
+            testID="admin-users-bulk-role-row"
+          >
+            <TouchableOpacity
+              style={[
+                localStyles.smallButton,
+                bulkRole === 'admin'
+                  ? { backgroundColor: theme.colors.primary }
+                  : { backgroundColor: theme.colors.surfaceMuted },
+              ]}
+              onPress={() => setBulkRole((r) => (r === 'admin' ? null : 'admin'))}
+              accessibilityRole="button"
+              accessibilityLabel="Select role: admin"
+              accessibilityState={{ selected: bulkRole === 'admin' }}
+              testID="admin-users-bulk-role-admin"
+            >
+              <Text
+                style={[
+                  localStyles.smallButtonText,
+                  { color: bulkRole === 'admin' ? theme.colors.onPrimary : theme.colors.text },
+                ]}
+              >
+                Admin
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                localStyles.smallButton,
+                bulkRole === 'user'
+                  ? { backgroundColor: theme.colors.primary }
+                  : { backgroundColor: theme.colors.surfaceMuted },
+              ]}
+              onPress={() => setBulkRole((r) => (r === 'user' ? null : 'user'))}
+              accessibilityRole="button"
+              accessibilityLabel="Select role: user"
+              accessibilityState={{ selected: bulkRole === 'user' }}
+              testID="admin-users-bulk-role-user"
+            >
+              <Text
+                style={[
+                  localStyles.smallButtonText,
+                  { color: bulkRole === 'user' ? theme.colors.onPrimary : theme.colors.text },
+                ]}
+              >
+                User
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                localStyles.smallButton,
+                { backgroundColor: theme.colors.primary },
+                (!bulkRole || bulkReason.trim().length < 3 || bulkRoleApplying) && localStyles.buttonDisabled,
+              ]}
+              disabled={!bulkRole || bulkReason.trim().length < 3 || bulkRoleApplying}
+              onPress={applyBulkRole}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !bulkRole || bulkReason.trim().length < 3 || bulkRoleApplying }}
+              accessibilityLabel={`Apply ${bulkRole ?? 'role'} to ${selectedIds.size} selected user${selectedIds.size === 1 ? '' : 's'}`}
+              testID="admin-users-bulk-role-apply"
+            >
+              <Text style={[localStyles.smallButtonText, { color: theme.colors.onPrimary }]}>
+                {bulkRoleApplying ? 'Applying…' : 'Apply role'}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>

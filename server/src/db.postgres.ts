@@ -618,6 +618,25 @@ export const initDb = async (): Promise<void> => {
     );
   `);
 
+  // Per-user watermark for chat read-state. One row per (user_id, trip_id)
+  // capturing the `created_at` of the most-recently-read message. Introduced
+  // to eventually replace the per-message `message_reads` rows; during the
+  // transition both are written and `countUnreadMessages` prefers the
+  // watermark when a row exists.
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS chat_read_watermarks (
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      trip_id UUID NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+      last_read_message_id UUID NOT NULL,
+      last_read_created_at TIMESTAMP NOT NULL,
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (user_id, trip_id)
+    );
+  `);
+  await p.query(
+    `CREATE INDEX IF NOT EXISTS idx_chat_read_watermarks_trip ON chat_read_watermarks(trip_id);`,
+  );
+
   await p.query(`
     CREATE TABLE IF NOT EXISTS locations (
       id TEXT PRIMARY KEY,
@@ -8866,15 +8885,59 @@ export const markMessagesRead = async (
       // Already exists (duplicate primary key) — skip
     }
   }
+
+  // Dual-write: upsert the per-user watermark. Only advance forward — if the
+  // stored cutoff is already newer, leave it alone (prevents a stale
+  // MARK_READ from a re-opened panel from walking the read-state backwards).
+  await p.query(
+    `INSERT INTO chat_read_watermarks (user_id, trip_id, last_read_message_id, last_read_created_at, updated_at)
+     VALUES ($1, $2, $3, $4, NOW())
+     ON CONFLICT (user_id, trip_id) DO UPDATE
+     SET last_read_message_id = CASE
+           WHEN EXCLUDED.last_read_created_at > chat_read_watermarks.last_read_created_at
+             THEN EXCLUDED.last_read_message_id
+           ELSE chat_read_watermarks.last_read_message_id
+         END,
+         last_read_created_at = CASE
+           WHEN EXCLUDED.last_read_created_at > chat_read_watermarks.last_read_created_at
+             THEN EXCLUDED.last_read_created_at
+           ELSE chat_read_watermarks.last_read_created_at
+         END,
+         updated_at = NOW()`,
+    [userId, tripId, upToMessageId, cutoff],
+  );
 };
 
-/** Count unread messages for a user in a trip. */
+/**
+ * Count unread messages for a user in a trip. Prefers the per-user watermark
+ * when one exists (single indexed lookup); falls back to the legacy
+ * `message_reads` LEFT JOIN for users who have never emitted a MARK_READ
+ * since the watermark table was introduced.
+ */
 export const countUnreadMessages = async (
   tripId: string,
   userId: string,
 ): Promise<number> => {
   const p = getPool();
-  // Use LEFT JOIN instead of NOT EXISTS for pg-mem compatibility
+
+  const { rows: watermarkRows } = await p.query<{ cutoff: string }>(
+    `SELECT last_read_created_at AS "cutoff"
+     FROM chat_read_watermarks
+     WHERE user_id = $1 AND trip_id = $2`,
+    [userId, tripId],
+  );
+  if (watermarkRows.length) {
+    const cutoff = watermarkRows[0].cutoff;
+    const { rows } = await p.query<{ count: string }>(
+      `SELECT COUNT(id)::text AS count
+       FROM trip_messages
+       WHERE trip_id = $1 AND created_at > $2`,
+      [tripId, cutoff],
+    );
+    return parseInt(rows[0]?.count ?? '0', 10);
+  }
+
+  // Fall back to per-message reads (legacy path).
   const { rows } = await p.query<{ count: string }>(
     `SELECT COUNT(m.id)::text AS count
      FROM trip_messages m
