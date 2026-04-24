@@ -56,6 +56,12 @@ const ChatPanel: React.FC<Props> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
+  // firstUnreadId marks the oldest unread message at the moment the panel
+  // opened. It is set once (when the initial history page arrives) and never
+  // moves afterwards — the "New messages" separator is an at-open snapshot,
+  // not a live cursor.
+  const [firstUnreadId, setFirstUnreadId] = useState<string | null>(null);
+  const initialUnreadCountRef = useRef(unreadCount);
   const flatListRef = useRef<any>(null);
   const lastMarkedReadIdRef = useRef<string | null>(null);
   const isWeb = Platform.OS === 'web';
@@ -96,6 +102,16 @@ const ChatPanel: React.FC<Props> = ({
         setHasMore(payload.hasMore);
         setErrorMessage(null);
         setLoading(false);
+        // Pin the separator to the oldest unread message at open time. If the
+        // unread count exceeds the loaded tail (possible when unread > page
+        // size), anchor to the oldest loaded message so the user still sees
+        // "New messages" — loading older pages prepends above, which is the
+        // desired visual.
+        const initialUnread = initialUnreadCountRef.current;
+        if (initialUnread > 0 && payload.messages.length > 0) {
+          const idx = Math.max(0, payload.messages.length - initialUnread);
+          setFirstUnreadId(payload.messages[idx]?.id ?? null);
+        }
         const tail = payload.messages[payload.messages.length - 1];
         if (tail) markRead(tail.id);
         setTimeout(() => flatListRef.current?.scrollToEnd({ animated: false }), 100);
@@ -185,24 +201,39 @@ const ChatPanel: React.FC<Props> = ({
   // -------------------------------------------------------------------------
   const renderMessage = ({ item }: { item: ChatMessage }) => {
     const isOwn = item.senderId === currentUserId;
+    const showUnreadSeparator = firstUnreadId !== null && item.id === firstUnreadId;
     return (
-      <View
-        style={[themedStyles.messageRow, isOwn ? themedStyles.ownRow : themedStyles.otherRow]}
-        testID={`chat-message-${item.id}`}
-      >
-        {!isOwn && (
-          <View style={[themedStyles.avatarSmall, { backgroundColor: theme?.colors.textMuted ?? '#9e9e9e' }]}>
-            <Text style={themedStyles.avatarText}>{item.senderInitials}</Text>
+      <View>
+        {showUnreadSeparator && (
+          <View
+            style={themedStyles.unreadSeparator}
+            testID="chat-unread-separator"
+            accessibilityRole={Platform.OS === 'web' ? ('separator' as any) : undefined}
+            accessibilityLabel="New messages below"
+          >
+            <View style={themedStyles.unreadSeparatorLine} />
+            <Text style={themedStyles.unreadSeparatorLabel}>New messages</Text>
+            <View style={themedStyles.unreadSeparatorLine} />
           </View>
         )}
-        <View style={[themedStyles.bubble, isOwn ? themedStyles.ownBubble : themedStyles.otherBubble]}>
+        <View
+          style={[themedStyles.messageRow, isOwn ? themedStyles.ownRow : themedStyles.otherRow]}
+          testID={`chat-message-${item.id}`}
+        >
           {!isOwn && (
-            <Text style={themedStyles.senderName}>{item.senderName}</Text>
+            <View style={[themedStyles.avatarSmall, { backgroundColor: theme?.colors.textMuted ?? '#9e9e9e' }]}>
+              <Text style={themedStyles.avatarText}>{item.senderInitials}</Text>
+            </View>
           )}
-          <Text style={isOwn ? themedStyles.ownText : themedStyles.otherText}>{item.body}</Text>
-          <Text style={themedStyles.timestamp}>
-            {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </Text>
+          <View style={[themedStyles.bubble, isOwn ? themedStyles.ownBubble : themedStyles.otherBubble]}>
+            {!isOwn && (
+              <Text style={themedStyles.senderName}>{item.senderName}</Text>
+            )}
+            <Text style={isOwn ? themedStyles.ownText : themedStyles.otherText}>{item.body}</Text>
+            <Text style={themedStyles.timestamp}>
+              {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </Text>
+          </View>
         </View>
       </View>
     );
@@ -404,6 +435,25 @@ const buildStyles = (theme?: AppTheme) => StyleSheet.create({
     color: theme?.colors.textMuted ?? '#555',
     fontSize: 12,
     fontWeight: '600',
+  },
+  unreadSeparator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 10,
+    gap: 8,
+  },
+  unreadSeparatorLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: theme?.colors.error ?? '#d32f2f',
+    opacity: 0.4,
+  },
+  unreadSeparatorLabel: {
+    color: theme?.colors.error ?? '#d32f2f',
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
   messageRow: {
     flexDirection: 'row',

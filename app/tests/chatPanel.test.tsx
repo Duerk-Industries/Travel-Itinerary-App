@@ -237,6 +237,146 @@ describe('ChatPanel', () => {
     expect(findText(tree.root, 'Unable to connect to chat right now.').length).toBeGreaterThan(0);
   });
 
+  test('renders unread separator anchored to oldest-unread message when unreadCount > 0 at mount', () => {
+    const socket = createSocketMock();
+    let tree: any;
+
+    act(() => {
+      tree = renderer.create(
+        <ChatPanel socket={socket} {...baseProps} unreadCount={3} />,
+      );
+    });
+
+    // 5 messages total; unreadCount=3 at mount → last 3 are unread, separator
+    // sits above message at index 5-3=2 (id m3).
+    const mk = (id: string, body: string) => ({
+      id,
+      tripId: baseProps.tripId,
+      senderId: 'user-2',
+      senderName: 'Alice',
+      senderInitials: 'AA',
+      body,
+      createdAt: `2026-04-23T12:00:${id.slice(1).padStart(2, '0')}Z`,
+      appId: 'WanderBunnies',
+    });
+    const history = [mk('m1', 'one'), mk('m2', 'two'), mk('m3', 'three'), mk('m4', 'four'), mk('m5', 'five')];
+
+    act(() => {
+      socket.trigger(SERVER_EVENTS.MESSAGE_HISTORY_PAGE, {
+        tripId: baseProps.tripId,
+        messages: history,
+        hasMore: false,
+        initial: true,
+      });
+    });
+
+    // The separator should be rendered exactly once (anchored to the oldest
+    // unread message m3) and sit inside the same wrapper as m3's row. Count
+    // the number of distinct message ids that precede/follow the separator in
+    // the FlatList's rendered children to verify placement without needing
+    // to reason about composite-vs-host fiber duplication.
+    const separator = tree.root.findByProps({ testID: 'chat-unread-separator' });
+    expect(separator).toBeTruthy();
+
+    const m3Row = tree.root.findByProps({ testID: 'chat-message-m3' });
+    // The separator and m3Row are siblings inside the wrapper View emitted by
+    // renderMessage. Walking up to the shared wrapper and listing its message
+    // descendants should give exactly ['m3'].
+    const wrapper = m3Row.parent;
+    const messagesInsideWrapper = wrapper.findAllByType('View' as any)
+      .map((v: any) => v.props.testID as string | undefined)
+      .filter((id?: string) => id?.startsWith('chat-message-'));
+    expect(messagesInsideWrapper).toEqual(['chat-message-m3']);
+  });
+
+  test('does not render unread separator when unreadCount is 0 at mount', () => {
+    const socket = createSocketMock();
+    let tree: any;
+
+    act(() => {
+      tree = renderer.create(<ChatPanel socket={socket} {...baseProps} unreadCount={0} />);
+    });
+
+    const msg = {
+      id: 'm1',
+      tripId: baseProps.tripId,
+      senderId: 'user-2',
+      senderName: 'Alice',
+      senderInitials: 'AA',
+      body: 'hi',
+      createdAt: '2026-04-23T12:00:00Z',
+      appId: 'WanderBunnies',
+    };
+
+    act(() => {
+      socket.trigger(SERVER_EVENTS.MESSAGE_HISTORY_PAGE, {
+        tripId: baseProps.tripId,
+        messages: [msg],
+        hasMore: false,
+        initial: true,
+      });
+    });
+
+    expect(tree.root.findAllByProps({ testID: 'chat-unread-separator' })).toHaveLength(0);
+  });
+
+  test('unread separator stays pinned when a new message arrives (does not drift)', () => {
+    const socket = createSocketMock();
+    let tree: any;
+
+    act(() => {
+      tree = renderer.create(<ChatPanel socket={socket} {...baseProps} unreadCount={2} />);
+    });
+
+    const mk = (id: string) => ({
+      id,
+      tripId: baseProps.tripId,
+      senderId: 'user-2',
+      senderName: 'Alice',
+      senderInitials: 'AA',
+      body: `body ${id}`,
+      createdAt: `2026-04-23T12:00:${id.slice(1).padStart(2, '0')}Z`,
+      appId: 'WanderBunnies',
+    });
+
+    act(() => {
+      socket.trigger(SERVER_EVENTS.MESSAGE_HISTORY_PAGE, {
+        tripId: baseProps.tripId,
+        messages: [mk('m1'), mk('m2'), mk('m3')],
+        hasMore: false,
+        initial: true,
+      });
+    });
+
+    // Separator anchored above m2 (index 3-2=1).
+    const m2Row = tree.root.findByProps({ testID: 'chat-message-m2' });
+    const sep = tree.root.findByProps({ testID: 'chat-unread-separator' });
+    expect(sep.parent).toBe(m2Row.parent);
+
+    // A brand-new message arrives live.
+    act(() => {
+      socket.trigger(SERVER_EVENTS.NEW_MESSAGE, mk('m4'));
+    });
+
+    // Separator must still be anchored to m2, not to a newer message. Walk
+    // up to m2's wrapper and list the message ids it contains — it should be
+    // exactly ['m2'], which would not be true if the separator had drifted.
+    const m2RowAfter = tree.root.findByProps({ testID: 'chat-message-m2' });
+    const wrapper = m2RowAfter.parent;
+    const messagesInsideWrapper = wrapper.findAllByType('View' as any)
+      .map((v: any) => v.props.testID as string | undefined)
+      .filter((id?: string) => id?.startsWith('chat-message-'));
+    expect(messagesInsideWrapper).toEqual(['chat-message-m2']);
+
+    // And m4's wrapper should NOT contain the separator.
+    const m4Row = tree.root.findByProps({ testID: 'chat-message-m4' });
+    const m4Wrapper = m4Row.parent;
+    const sepsInM4Wrapper = m4Wrapper
+      .findAllByProps({ testID: 'chat-unread-separator' })
+      .filter((el: any) => el.type === 'View');
+    expect(sepsInM4Wrapper).toHaveLength(0);
+  });
+
   test('falls back to error state if history never arrives', () => {
     const socket = createSocketMock();
     let tree: any;
