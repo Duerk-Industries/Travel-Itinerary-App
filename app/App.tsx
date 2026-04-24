@@ -60,6 +60,7 @@ import LodgingDetailsDialog from './components/LodgingDetailsDialog';
 import ConfirmDialog from './components/ConfirmDialog';
 import PendingInvitesModal from './components/PendingInvitesModal';
 import DropdownOptionButton from './components/DropdownOptionButton';
+import CarRentalsPanel from './components/CarRentalsPanel';
 import { toWebStyle } from './utils/webStyle';
 import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from './utils/votes';
 import { resolveBackendUrl as resolveConfiguredBackendUrl } from './utils/backendUrl';
@@ -2837,306 +2838,25 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         : null}
 
       {activePage === 'car' ? renderSharedPageScroll(
-        <View style={styles.card}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>Car Rentals</Text>
-          </View>
-          <View style={styles.table}>
-            <View style={[styles.tableRow, styles.tableHeaderRow]}>
-              <View style={[styles.tableHeaderCell, { flex: 2, minWidth: 240 }]}>
-                <Text style={styles.headerText}>Route</Text>
-              </View>
-              <View style={[styles.tableHeaderCell, { minWidth: 120 }]}>
-                <Text style={styles.headerText}>Pick-up</Text>
-              </View>
-              <View style={[styles.tableHeaderCell, { minWidth: 120 }]}>
-                <Text style={styles.headerText}>Drop-off</Text>
-              </View>
-              <View style={[styles.tableHeaderCell, { minWidth: 110 }]}>
-                <Text style={styles.headerText}>Status</Text>
-              </View>
-              <View style={[styles.tableHeaderCell, { minWidth: 110 }]}>
-                <Text style={styles.headerText}>Votes</Text>
-              </View>
-              <View style={[styles.tableHeaderCell, { minWidth: 110 }]}>
-                <Text style={styles.headerText}>Rating</Text>
-              </View>
-              <View style={[styles.tableHeaderCell, { minWidth: 180 }, styles.lastCell]}>
-                <Text style={styles.headerText}>Actions</Text>
-              </View>
-            </View>
-
-            {carRentals.map((car, idx, arr) => (
-              <View key={car.id} style={[styles.tableRow, idx === arr.length - 1 && styles.lastRow]}>
-                <View style={[styles.tableCell, { flex: 2, minWidth: 240 }]}>
-                  <Text style={styles.cellText}>
-                    {`${car.pickupLocation || 'Pickup'} → ${car.dropoffLocation || 'Drop-off'}`}
-                  </Text>
-                  {(car.vendor || car.model || car.reference) ? (
-                    <Text style={styles.helperText}>
-                      {[car.vendor, car.model, car.reference].filter(Boolean).join(' • ')}
-                    </Text>
-                  ) : null}
-                </View>
-                <View style={[styles.tableCell, { minWidth: 120 }]}>
-                  <Text style={styles.cellText}>{car.pickupDate || '-'}</Text>
-                </View>
-                <View style={[styles.tableCell, { minWidth: 120 }]}>
-                  <Text style={styles.cellText}>{car.dropoffDate || '-'}</Text>
-                </View>
-                <View style={[styles.tableCell, { minWidth: 110 }]}>
-                  <Text style={styles.cellText}>
-                    {normalizeItineraryStatus((car as any).status, LEGACY_ITINERARY_STATUS)}
-                  </Text>
-                </View>
-                <View style={[styles.tableCell, { minWidth: 110 }]}>
-                  <Text style={styles.cellText}>{formatNetVotes((car as any).netVotes ?? 0)}</Text>
-                </View>
-                <View style={[styles.tableCell, { minWidth: 110 }]}>
-                  {normalizeItineraryStatus((car as any).status, LEGACY_ITINERARY_STATUS) === 'Completed' ? (
-                    <Text style={styles.cellText}>{formatNetVotes((car as any).netRating ?? 0)}</Text>
-                  ) : (
-                    <Text style={styles.cellText}>-</Text>
-                  )}
-                </View>
-                <View style={[styles.tableCell, { minWidth: 180 }, styles.lastCell]}>
-                  <View style={styles.actionCell}>
-                    {!isFollowingMode && shouldShowVoteButtons((car as any).status, (car as any).userVote) ? (
-                      <>
-                        <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => voteOnCarRental(car.id, 1)}>
-                          <Text style={styles.buttonText}>👍</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => voteOnCarRental(car.id, -1)}>
-                          <Text style={styles.buttonText}>👎</Text>
-                        </TouchableOpacity>
-                      </>
-                    ) : null}
-                    {!isFollowingMode && shouldShowRatingButtons((car as any).status, (car as any).userRating) ? (
-                      <>
-                        <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => rateOnCarRental(car.id, 1)}>
-                          <Text style={styles.buttonText}>⭐</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => rateOnCarRental(car.id, -1)}>
-                          <Text style={styles.buttonText}>✖</Text>
-                        </TouchableOpacity>
-                      </>
-                    ) : null}
-                    {!isFollowingMode ? (
-                      <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => removeCarRental(car.id)} testID={`car-rental-delete-${car.id}`}>
-                        <Text style={styles.dangerButtonText}>Delete</Text>
-                      </TouchableOpacity>
-                    ) : (
-                      <Text style={styles.cellText}>View only</Text>
-                    )}
-                  </View>
-                </View>
-              </View>
-            ))}
-          </View>
-
-          {!isFollowingMode ? (
-            <View style={styles.carFormSection}>
-              <Text style={styles.helperText}>Add Car Rental</Text>
-              <View style={styles.carFormGrid}>
-              <TextInput
-                style={[styles.input, styles.carFormField]}
-                placeholder="Pick up location"
-                value={carDraft.pickupLocation}
-                onChangeText={(text: string) => setCarDraft((p) => ({ ...p, pickupLocation: text }))}
-              />
-              <View style={[styles.dateInputWrap, styles.carFormField]}>
-                {Platform.OS === 'web' ? (
-                  <input
-                    ref={carPickupDateRef as any}
-                    type="date"
-                    value={carDraft.pickupDate}
-                    onChange={(e) => setCarDraft((p) => ({ ...p, pickupDate: e.target.value }))}
-                    style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box', marginBottom: 0 })}
-                  />
-                ) : (
-                  <TouchableOpacity
-                    style={[styles.input, styles.dateTouchable, { marginBottom: 0 }]}
-                    onPress={() => openCarDatePicker('pickup')}
-                  >
-                    <Text style={styles.cellText}>{carDraft.pickupDate || 'YYYY-MM-DD'}</Text>
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity style={styles.dateIcon} onPress={() => openCarDatePicker('pickup')}>
-                  <Text style={styles.selectCaret}>📅</Text>
-                </TouchableOpacity>
-              </View>
-              <TextInput
-                style={[styles.input, styles.carFormField]}
-                placeholder="Drop off location"
-                value={carDraft.dropoffLocation}
-                onChangeText={(text: string) => setCarDraft((p) => ({ ...p, dropoffLocation: text }))}
-              />
-              <View style={[styles.dateInputWrap, styles.carFormField]}>
-                {Platform.OS === 'web' ? (
-                  <input
-                    ref={carDropoffDateRef as any}
-                    type="date"
-                    value={carDraft.dropoffDate}
-                    onChange={(e) => setCarDraft((p) => ({ ...p, dropoffDate: e.target.value }))}
-                    style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box', marginBottom: 0 })}
-                  />
-                ) : (
-                  <TouchableOpacity
-                    style={[styles.input, styles.dateTouchable, { marginBottom: 0 }]}
-                    onPress={() => openCarDatePicker('dropoff')}
-                  >
-                    <Text style={styles.cellText}>{carDraft.dropoffDate || 'YYYY-MM-DD'}</Text>
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity style={styles.dateIcon} onPress={() => openCarDatePicker('dropoff')}>
-                  <Text style={styles.selectCaret}>📅</Text>
-                </TouchableOpacity>
-              </View>
-              {Platform.OS === 'web' ? (
-                <select
-                  value={normalizeItineraryStatus(carDraft.status, DEFAULT_NEW_ITINERARY_STATUS)}
-                  onChange={(e) => setCarDraft((p) => ({ ...p, status: normalizeItineraryStatus(e.target.value, DEFAULT_NEW_ITINERARY_STATUS) }))}
-                  style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box', marginBottom: 0 })}
-                >
-                  {ITINERARY_STATUSES.map((opt) => (
-                    <option key={`car-status-${opt}`} value={opt}>
-                      {opt}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <Text style={styles.cellText}>{normalizeItineraryStatus(carDraft.status, DEFAULT_NEW_ITINERARY_STATUS)}</Text>
-              )}
-              <TextInput
-                style={[styles.input, styles.carFormField]}
-                placeholder="Reference"
-                value={carDraft.reference}
-                onChangeText={(text: string) => setCarDraft((p) => ({ ...p, reference: text }))}
-              />
-              <TextInput
-                style={[styles.input, styles.carFormField]}
-                placeholder="Vendor"
-                value={carDraft.vendor}
-                onChangeText={(text: string) => setCarDraft((p) => ({ ...p, vendor: text }))}
-              />
-              <View style={[styles.dropdown, styles.carFormField]}>
-                <TouchableOpacity
-                  style={[
-                    styles.input,
-                    styles.selectButtonRow,
-                    styles.prepaidSelectorButton,
-                    carDraft.prepaid ? styles.prepaidSelectorButtonSelected : null,
-                  ]}
-                  onPress={() => setCarPrepaidOpen((s) => !s)}
-                >
-                  <Text style={[styles.cellText, styles.prepaidSelectorText]}>
-                    {carDraft.prepaid ? `Prepaid: ${carDraft.prepaid}` : 'Prepaid? Select Yes or No'}
-                  </Text>
-                  <Text style={styles.selectCaret}>▾</Text>
-                </TouchableOpacity>
-                {carPrepaidOpen ? (
-                  <View style={[styles.dropdownList, styles.prepaidDropdownList]}>
-                    {['Yes', 'No'].map((opt) => (
-                      <DropdownOptionButton
-                        key={opt}
-                        styles={styles}
-                        onPress={() => {
-                          setCarDraft((p) => ({ ...p, prepaid: opt }));
-                          setCarPrepaidOpen(false);
-                        }}
-                      >
-                        <Text style={styles.cellText}>{opt}</Text>
-                      </DropdownOptionButton>
-                    ))}
-                  </View>
-                ) : null}
-              </View>
-              <TextInput
-                style={[styles.input, styles.carFormField]}
-                placeholder="Cost"
-                keyboardType="numeric"
-                value={carDraft.cost}
-                onChangeText={(text: string) => setCarDraft((p) => ({ ...p, cost: sanitizeCostInput(text) }))}
-              />
-              <TextInput
-                style={[styles.input, styles.carFormField]}
-                placeholder="Car model"
-                value={carDraft.model}
-                onChangeText={(text: string) => setCarDraft((p) => ({ ...p, model: text }))}
-              />
-              <TextInput
-                style={[styles.input, styles.carFormWideField, styles.cellTextWrap]}
-                placeholder="Notes"
-                value={carDraft.notes}
-                onChangeText={(text: string) => setCarDraft((p) => ({ ...p, notes: text }))}
-                multiline
-              />
-              </View>
-              <View style={styles.carMemberRow}>
-                <View style={[styles.carMemberField, { flex: 1 }]}>
-                  <Text style={styles.modalLabelSmall}>For</Text>
-                  <View style={styles.payerChips}>
-                    {carDraft.travelerIds.map((id) => (
-                      <View key={`car-traveler-${id}`} style={styles.payerChip}>
-                        <Text style={styles.cellText}>{payerName(id)}</Text>
-                        <TouchableOpacity onPress={() => setCarDraft((prev) => ({ ...prev, travelerIds: prev.travelerIds.filter((x) => x !== id) }))}>
-                          <Text style={styles.removeText}>x</Text>
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                  </View>
-                  <View style={styles.payerOptions}>
-                    {userMembers
-                      .filter((m) => !carDraft.travelerIds.includes(m.id))
-                      .map((m) => (
-                        <TouchableOpacity
-                          key={`car-traveler-add-${m.id}`}
-                          style={styles.smallButton}
-                          onPress={() =>
-                            setCarDraft((prev) => ({
-                              ...prev,
-                              travelerIds: [...prev.travelerIds, m.id],
-                            }))
-                          }
-                        >
-                          <Text style={styles.buttonText}>Add {formatMemberName(m)}</Text>
-                        </TouchableOpacity>
-                      ))}
-                  </View>
-                </View>
-                <View style={[styles.carMemberField, { flex: 1 }]}>
-                  <Text style={styles.modalLabelSmall}>Paid By</Text>
-                  <View style={styles.payerChips}>
-                    {carDraft.paidBy.map((id) => (
-                      <View key={id} style={styles.payerChip}>
-                        <Text style={styles.cellText}>{payerName(id)}</Text>
-                        <TouchableOpacity onPress={() => setCarDraft((prev) => ({ ...prev, paidBy: prev.paidBy.filter((x) => x !== id) }))}>
-                          <Text style={styles.removeText}>x</Text>
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                  </View>
-                  <View style={styles.payerOptions}>
-                    {userMembers
-                      .filter((m) => !carDraft.paidBy.includes(m.id))
-                      .map((m) => (
-                        <TouchableOpacity
-                          key={m.id}
-                          style={styles.smallButton}
-                          onPress={() => setCarDraft((prev) => ({ ...prev, paidBy: [...prev.paidBy, m.id] }))}
-                        >
-                          <Text style={styles.buttonText}>Add {formatMemberName(m)}</Text>
-                        </TouchableOpacity>
-                      ))}
-                  </View>
-                </View>
-                <TouchableOpacity style={[styles.button, styles.carAddButton]} onPress={addCarRental} testID="car-rental-add">
-                  <Text style={styles.buttonText}>Add</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          ) : null}
-        </View>
+        <CarRentalsPanel
+          carRentals={carRentals}
+          carDraft={carDraft}
+          setCarDraft={setCarDraft}
+          carPrepaidOpen={carPrepaidOpen}
+          setCarPrepaidOpen={setCarPrepaidOpen}
+          carPickupDateRef={carPickupDateRef}
+          carDropoffDateRef={carDropoffDateRef}
+          isFollowingMode={isFollowingMode}
+          userMembers={userMembers}
+          styles={styles}
+          payerName={payerName}
+          formatMemberName={formatMemberName}
+          onAddCarRental={addCarRental}
+          onRemoveCarRental={removeCarRental}
+          onVoteCarRental={voteOnCarRental}
+          onRateCarRental={rateOnCarRental}
+          onOpenCarDatePicker={openCarDatePicker}
+        />
       ) : null}
 
       {Platform.OS !== 'web' && carDateField && NativeDateTimePicker ? (

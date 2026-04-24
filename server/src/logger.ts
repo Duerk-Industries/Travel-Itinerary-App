@@ -31,9 +31,13 @@ const isStructuredOutput = (): boolean => {
 };
 
 // Keys whose values should be redacted even if embedded in error metadata.
+// The matcher is substring-based after lower-casing and stripping `-_`, so
+// `password`, `newPassword`, `currentPassword`, `newPasswordConfirm` all
+// collapse to the `password` entry.
 const REDACT_KEYS = [
   'password',
   'passwordhash',
+  'pwd',
   'authsecret',
   'auth_secret',
   'secret',
@@ -42,11 +46,21 @@ const REDACT_KEYS = [
   'access_token',
   'refreshtoken',
   'refresh_token',
+  'idtoken',
+  'id_token',
+  'bearer',
+  'jwt',
+  'session',
+  'sessionid',
   'authorization',
   'cookie',
   'set-cookie',
   'apikey',
   'api_key',
+  'credential',
+  'credentials',
+  'privatekey',
+  'private_key',
 ];
 
 const shouldRedactKey = (key: string): boolean => {

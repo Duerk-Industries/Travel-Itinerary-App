@@ -36,6 +36,14 @@ import { aggregateTripActivity } from '../services/activityFeed';
 import { assertCanUseFeature, assertUnderActiveTripLimit, getLimit, recordUsage } from '../services/entitlementService';
 import { EntitlementError } from '../errors';
 import { TokenPayload } from '../auth';
+import { readDto } from '../utils/dtoParse';
+import {
+  createShareInvitesDto,
+  createTripCommentDto,
+  followTripDto,
+  updateCoveredByDto,
+  updateTripGroupDto,
+} from './tripDtos';
 
 const normalizeLocationIds = (value: unknown): string[] => {
   if (!Array.isArray(value)) return [];
@@ -60,9 +68,6 @@ const parseGroupParam = (raw: unknown): boolean => {
   return true;
 };
 
-const normalizeEmail = (value: unknown): string => String(value ?? '').trim().toLowerCase();
-
-const isValidEmail = (value: string): boolean => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 const getTodayUtcDate = (): string => new Date().toISOString().slice(0, 10);
 const isPastUtcDate = (value?: string | null): boolean => Boolean(value && value < getTodayUtcDate());
 
@@ -81,14 +86,11 @@ router.get('/followed', async (req, res) => {
 router.post('/follow', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const role = ((req as any).user as TokenPayload).role;
-  const inviteCode = String(req.body?.inviteCode ?? req.body?.code ?? '').trim();
-  if (!inviteCode) {
-    res.status(400).json({ error: 'inviteCode is required' });
-    return;
-  }
+  const dto = readDto(followTripDto, req.body, res);
+  if (!dto) return;
   try {
     await assertCanUseFeature(userId, 'trip_following', role);
-    const result = await followTripByCode(userId, inviteCode);
+    const result = await followTripByCode(userId, dto.inviteCode);
     res.status(result.alreadyFollowing ? 200 : 201).json({
       trip: result.trip,
       inviterName: result.inviterName,
@@ -239,43 +241,14 @@ router.get('/:id/share/invites', async (req, res) => {
 router.post('/:id/share/invites', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const role = ((req as any).user as TokenPayload).role;
-  const rawInvites = Array.isArray(req.body?.invites) ? req.body.invites : [];
-  if (!rawInvites.length) {
-    res.status(400).json({ error: 'invites is required and must be a non-empty array' });
-    return;
-  }
-
-  const normalized: Array<{ email: string; role: 'member' | 'follower' | null }> = rawInvites.map((entry: any) => ({
-    email: normalizeEmail(entry?.email),
-    role: entry?.role === 'member' ? 'member' : entry?.role === 'follower' ? 'follower' : null,
-  }));
-
-  for (const invite of normalized) {
-    if (!invite.role) {
-      res.status(400).json({ error: 'Each invite role must be either member or follower' });
-      return;
-    }
-    if (!invite.email || !isValidEmail(invite.email)) {
-      res.status(400).json({ error: `Invalid email: ${invite.email || '(blank)'}` });
-      return;
-    }
-  }
-
-  const seen = new Set<string>();
-  for (const invite of normalized) {
-    const key = `${invite.email}|${invite.role}`;
-    if (seen.has(key)) {
-      res.status(400).json({ error: `Duplicate invite in payload: ${invite.email} (${invite.role})` });
-      return;
-    }
-    seen.add(key);
-  }
+  const dto = readDto(createShareInvitesDto, req.body, res);
+  if (!dto) return;
 
   try {
     await assertCanUseFeature(userId, 'trip_sharing', role);
     const created = await Promise.all(
-      normalized.map((invite) =>
-        createTripShareInvite(userId, req.params.id, invite.email, invite.role as 'member' | 'follower')
+      dto.invites.map((invite) =>
+        createTripShareInvite(userId, req.params.id, invite.email, invite.role)
       )
     );
     res.status(201).json({
@@ -392,17 +365,10 @@ router.post('/:id/comments', async (req, res) => {
     res.status(403).json({ error: 'Not authorized to comment on this trip' });
     return;
   }
-  const body = String(req.body?.body ?? '').trim();
-  if (!body) {
-    res.status(400).json({ error: 'Comment body is required' });
-    return;
-  }
-  if (body.length > 4000) {
-    res.status(400).json({ error: 'Comment is too long (max 4000 chars)' });
-    return;
-  }
+  const dto = readDto(createTripCommentDto, req.body, res);
+  if (!dto) return;
   try {
-    const comment = await addTripComment(req.params.id, userId, body);
+    const comment = await addTripComment(req.params.id, userId, dto.body);
     res.status(201).json(comment);
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });
@@ -433,7 +399,8 @@ router.get('/:id/covered-by', async (req, res) => {
 
 router.put('/:id/covered-by', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const coveredBy = (req.body ?? {}) as Record<string, string>;
+  const coveredBy = readDto(updateCoveredByDto, req.body ?? {}, res);
+  if (!coveredBy) return;
   if (detectCycle(coveredBy)) {
     res.status(400).json({ error: 'Invalid covering rules: circular dependency detected.' });
     return;
@@ -619,13 +586,10 @@ router.delete('/:id/follow', async (req, res) => {
 
 router.patch('/:id/group', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const { groupId } = req.body ?? {};
-  if (!groupId) {
-    res.status(400).json({ error: 'groupId is required' });
-    return;
-  }
+  const dto = readDto(updateTripGroupDto, req.body, res);
+  if (!dto) return;
   try {
-    const updated = await updateTripGroup(userId, req.params.id, groupId);
+    const updated = await updateTripGroup(userId, req.params.id, dto.groupId);
     res.json(updated);
   } catch (err) {
     const message = (err as Error).message;

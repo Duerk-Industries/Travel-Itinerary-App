@@ -88,6 +88,38 @@ describe('logger', () => {
     expect((payload.nested as Record<string, unknown>).api_key).toBe('[REDACTED]');
   });
 
+  it('redacts the expanded set of sensitive key patterns', () => {
+    process.env.LOG_FORMAT = 'json';
+    const { logError } = require('../src/logger');
+    logError('failed', {
+      payload: {
+        newPassword: 'super-secret',
+        currentPwd: 'old-secret',
+        idToken: 'eyJ...',
+        bearerToken: 'Bearer xyz',
+        jwt: 'a.b.c',
+        sessionId: 'sess-1',
+        credential: { user: 'u', password: 'p' },
+        privateKey: '-----BEGIN----',
+        userId: 'user-123',
+        email: 'alice@example.com',
+      },
+    });
+    const parsed = JSON.parse(errorSpy.mock.calls[0][0] as string);
+    const payload = (parsed.error as any).payload as Record<string, unknown>;
+    expect(payload.newPassword).toBe('[REDACTED]');
+    expect(payload.currentPwd).toBe('[REDACTED]');
+    expect(payload.idToken).toBe('[REDACTED]');
+    expect(payload.bearerToken).toBe('[REDACTED]');
+    expect(payload.jwt).toBe('[REDACTED]');
+    expect(payload.sessionId).toBe('[REDACTED]');
+    expect(payload.credential).toBe('[REDACTED]');
+    expect(payload.privateKey).toBe('[REDACTED]');
+    // Non-sensitive keys remain visible.
+    expect(payload.userId).toBe('user-123');
+    expect(payload.email).toBe('alice@example.com');
+  });
+
   it('formats Error objects with name/message/stack in JSON mode', () => {
     process.env.LOG_FORMAT = 'json';
     const { logError } = require('../src/logger');

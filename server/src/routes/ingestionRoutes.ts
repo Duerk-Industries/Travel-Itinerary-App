@@ -2,7 +2,7 @@ import { Router } from 'express';
 import bodyParser from 'body-parser';
 import multer from 'multer';
 import { authenticate, type TokenPayload } from '../auth';
-import { listTrips } from '../db';
+import { listTrips, writeAuditLog } from '../db';
 import { resolveAndValidateRedirectUri } from '../redirects';
 import { isFeatureEnabled } from '../services/entitlementService';
 import { INGESTION_DEFAULT_FORWARDING_PROVIDER, INGESTION_FEATURE_FLAGS, INGESTION_FORWARDING_SETTINGS_COPY, INGESTION_TIER_RULES, INGESTION_USAGE_KEYS, getIngestionForwardingAddress } from '../ingestion/config';
@@ -493,16 +493,44 @@ router.post('/gmail/import', async (req, res) => {
   }
 });
 
-const runGmailDeletionCascade = async (userId: string, jobId: string): Promise<void> => {
+/**
+ * Audit helper for Gmail disconnect outcomes. Async-cascade failures happen
+ * in the background so the audit entry is the only durable record that an
+ * operator/admin can correlate to the deletion-job id.
+ */
+const auditGmailDisconnect = async (
+  userId: string,
+  jobId: string,
+  mode: 'sync' | 'async',
+  outcome: 'succeeded' | 'failed',
+  detail: Record<string, unknown>,
+): Promise<void> => {
+  try {
+    await writeAuditLog({
+      actorUserId: userId,
+      targetUserId: userId,
+      action: (outcome === 'succeeded' ? 'GMAIL_DATA_DISCONNECTED' : 'GMAIL_DATA_DISCONNECT_FAILED') as any,
+      beforeState: { jobId, mode },
+      afterState: { jobId, mode, ...detail },
+      reason: `Gmail disconnect ${outcome} (${mode})`,
+    });
+  } catch (err) {
+    logError('[ingestion] gmail disconnect audit write failed', err);
+  }
+};
+
+const runGmailDeletionCascade = async (userId: string, jobId: string, mode: 'sync' | 'async'): Promise<void> => {
   try {
     await markDataDeletionJobRunning(jobId);
     const deletion = await deleteUserIngestionDataForProvider(userId, 'gmail');
     await disconnectProviderConnections(userId, 'gmail');
     await markDataDeletionJobSucceeded(jobId, deletion);
+    await auditGmailDisconnect(userId, jobId, mode, 'succeeded', { deletion });
   } catch (err: any) {
     const reason = String(err?.message ?? 'Gmail data deletion failed');
     logError('[ingestion] gmail deletion cascade failed', { userId, jobId, reason });
     await markDataDeletionJobFailed(jobId, reason).catch(() => undefined);
+    await auditGmailDisconnect(userId, jobId, mode, 'failed', { failureReason: reason.slice(0, 500) });
     throw err;
   }
 };
@@ -523,24 +551,28 @@ router.post('/gmail/disconnect', async (req, res) => {
     // connection is NOT removed if the cascade fails — the job row records the
     // failure reason for admin/user retry.
     setImmediate(() => {
-      runGmailDeletionCascade(userId, job.id).catch(() => undefined);
+      runGmailDeletionCascade(userId, job.id, 'async').catch(() => undefined);
     });
     res.status(202).json({ queued: true, jobId: job.id, state: 'pending' });
     return;
   }
 
   // Synchronous mode (default): cascade before removing the token row so a
-  // failure leaves the connection intact and retryable.
+  // failure leaves the connection intact and retryable. We inline the
+  // cascade steps (instead of calling runGmailDeletionCascade) so the sync
+  // response can return the exact deletion counts as before.
   try {
     await markDataDeletionJobRunning(job.id);
     const deletion = await deleteUserIngestionDataForProvider(userId, 'gmail');
     await disconnectProviderConnections(userId, 'gmail');
     await markDataDeletionJobSucceeded(job.id, deletion);
+    await auditGmailDisconnect(userId, job.id, 'sync', 'succeeded', { deletion });
     res.json({ disconnected: true, deletion, jobId: job.id });
   } catch (err: any) {
     const reason = String(err?.message ?? 'Gmail data deletion failed');
     logError('[ingestion] gmail deletion cascade failed', { userId, jobId: job.id, reason });
     await markDataDeletionJobFailed(job.id, reason).catch(() => undefined);
+    await auditGmailDisconnect(userId, job.id, 'sync', 'failed', { failureReason: reason.slice(0, 500) });
     res.status(500).json({ error: 'Gmail data deletion failed', jobId: job.id });
   }
 });
