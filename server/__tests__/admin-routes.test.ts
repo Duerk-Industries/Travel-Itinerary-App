@@ -54,6 +54,7 @@ describe('Admin routes', () => {
       ['GET',   '/api/admin/tiers'],
       ['GET',   '/api/admin/user-data'],
       ['GET',   '/api/admin/audit-log'],
+      ['GET',   '/api/admin/metrics'],
     ] as const;
 
     for (const [method, path] of adminPaths) {
@@ -755,6 +756,42 @@ describe('Admin routes', () => {
         }
         fs.rmSync(tempDir, { recursive: true, force: true });
       }
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // GET /api/admin/metrics
+  // ---------------------------------------------------------------------------
+
+  describe('GET /api/admin/metrics', () => {
+    it('returns the in-process counter snapshot with cache-ratio rollups', async () => {
+      const { incrementMetric, resetMetricCountersForTests } = require('../src/metrics') as typeof import('../src/metrics');
+      resetMetricCountersForTests();
+      incrementMetric('unsplash.url_lookup.cache_hit');
+      incrementMetric('unsplash.url_lookup.cache_hit');
+      incrementMetric('unsplash.url_lookup.cache_miss');
+      incrementMetric('itinerary.generation.success');
+
+      const res = await request(app)
+        .get('/api/admin/metrics')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(res.body.counters['unsplash.url_lookup.cache_hit']).toBe(2);
+      expect(res.body.counters['unsplash.url_lookup.cache_miss']).toBe(1);
+      expect(res.body.counters['itinerary.generation.success']).toBe(1);
+
+      const cacheRow = res.body.cacheRatios.find((r: any) => r.namespace === 'unsplash.url_lookup');
+      expect(cacheRow).toEqual({
+        namespace: 'unsplash.url_lookup',
+        hits: 2,
+        misses: 1,
+        total: 3,
+        hitRate: expect.closeTo(2 / 3, 5),
+      });
+
+      expect(typeof res.body.startedAtIso).toBe('string');
+      expect(typeof res.body.snapshotAtIso).toBe('string');
     });
   });
 });

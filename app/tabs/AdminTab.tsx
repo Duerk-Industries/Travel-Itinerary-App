@@ -7,7 +7,15 @@ import { usePersistedState } from '../hooks/usePersistedState';
 // Types
 // ---------------------------------------------------------------------------
 
-type AdminSection = 'overview' | 'users' | 'user-detail' | 'tiers' | 'features' | 'user-data' | 'audit-log' | 'ingestion' | 'api-limits';
+type AdminSection = 'overview' | 'users' | 'user-detail' | 'tiers' | 'features' | 'user-data' | 'audit-log' | 'ingestion' | 'api-limits' | 'metrics';
+
+type CacheRatioRow = { namespace: string; hits: number; misses: number; total: number; hitRate: number };
+type MetricsSnapshot = {
+  counters: Record<string, number>;
+  cacheRatios: CacheRatioRow[];
+  startedAtIso: string;
+  snapshotAtIso: string;
+};
 
 type FeatureFlag = { key: string; enabled: boolean; description?: string | null };
 
@@ -181,6 +189,7 @@ const OverviewSection: React.FC<{ onNav: (s: AdminSection) => void } & ThemedSec
         { label: 'Audit Log', section: 'audit-log' as AdminSection, desc: 'History of admin actions' },
         { label: 'API Limits', section: 'api-limits' as AdminSection, desc: 'View API rate limits and current usage' },
         { label: 'Ingestion Ops', section: 'ingestion' as AdminSection, desc: 'Review import throughput, duplicates, and cost' },
+        { label: 'Metrics', section: 'metrics' as AdminSection, desc: 'In-process counters and cache hit rates' },
       ] as { label: string; section: AdminSection; desc: string }[]
     ).map((item) => (
       <TouchableOpacity key={item.section} style={[localStyles.navCard, getCardStyle(theme)]} onPress={() => onNav(item.section)}>
@@ -1294,6 +1303,104 @@ const TiersSection: React.FC<{
   );
 };
 
+// --- Metrics (in-process counters + cache hit-rates) ---
+const MetricsSection: React.FC<{ backendUrl: string; headers: Record<string, string> } & ThemedSectionProps> = ({
+  backendUrl,
+  headers,
+  theme,
+}) => {
+  const [snapshot, setSnapshot] = useState<MetricsSnapshot | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = (await apiFetch(backendUrl, headers, '/metrics')) as MetricsSnapshot;
+      setSnapshot(data);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [backendUrl, headers]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const fmtPct = (r: number) => `${(r * 100).toFixed(1)}%`;
+  const nonCacheCounters = snapshot
+    ? Object.entries(snapshot.counters)
+        .filter(([name]) => !name.endsWith('.cache_hit') && !name.endsWith('.cache_miss'))
+        .sort(([a], [b]) => a.localeCompare(b))
+    : [];
+
+  return (
+    <View style={localStyles.section} testID="admin-metrics-section">
+      <Text style={[localStyles.sectionTitle, { color: theme.colors.text }]}>Metrics</Text>
+      <Text style={[localStyles.cardSub, { color: theme.colors.textMuted, marginBottom: 8 }]}>
+        Per-instance in-process counters since process start. Multi-instance deployments will see per-instance numbers.
+      </Text>
+      <TouchableOpacity
+        style={[localStyles.smallButton, { backgroundColor: theme.colors.primary, alignSelf: 'flex-start', marginBottom: 12 }]}
+        onPress={load}
+        accessibilityRole="button"
+        accessibilityLabel="Refresh metrics"
+        testID="admin-metrics-refresh"
+      >
+        <Text style={[localStyles.smallButtonText, { color: theme.colors.onPrimary }]}>Refresh</Text>
+      </TouchableOpacity>
+      {error ? <Text style={[localStyles.errorText, { color: theme.colors.error }]}>{error}</Text> : null}
+      {loading && !snapshot ? <Text style={[localStyles.loading, { color: theme.colors.textMuted }]}>Loading...</Text> : null}
+
+      {snapshot ? (
+        <>
+          <Text style={[localStyles.cardTitle, { color: theme.colors.text, marginBottom: 4 }]}>Cache hit rates</Text>
+          {snapshot.cacheRatios.length === 0 ? (
+            <Text style={[localStyles.emptyText, { color: theme.colors.textMuted }]}>
+              No cache traffic observed yet on this instance.
+            </Text>
+          ) : (
+            snapshot.cacheRatios.map((row) => (
+              <View
+                key={row.namespace}
+                style={[localStyles.card, getCardStyle(theme)]}
+                testID={`admin-metrics-cache-row-${row.namespace}`}
+              >
+                <View style={localStyles.row}>
+                  <Text style={[localStyles.cardTitle, localStyles.flex, { color: theme.colors.text }]}>{row.namespace}</Text>
+                  <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>{fmtPct(row.hitRate)}</Text>
+                </View>
+                <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+                  {row.hits} hits / {row.misses} misses ({row.total} total)
+                </Text>
+              </View>
+            ))
+          )}
+
+          <Text style={[localStyles.cardTitle, { color: theme.colors.text, marginTop: 16, marginBottom: 4 }]}>Counters</Text>
+          {nonCacheCounters.length === 0 ? (
+            <Text style={[localStyles.emptyText, { color: theme.colors.textMuted }]}>No counter activity on this instance.</Text>
+          ) : (
+            nonCacheCounters.map(([name, value]) => (
+              <View key={name} style={[localStyles.card, getCardStyle(theme)]} testID={`admin-metrics-counter-${name}`}>
+                <View style={localStyles.row}>
+                  <Text style={[localStyles.cardSub, localStyles.flex, { color: theme.colors.text }]}>{name}</Text>
+                  <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>{value}</Text>
+                </View>
+              </View>
+            ))
+          )}
+
+          <Text style={[localStyles.cardSub, { color: theme.colors.textMuted, marginTop: 12 }]}>
+            Accumulating since {new Date(snapshot.startedAtIso).toLocaleString()}
+          </Text>
+        </>
+      ) : null}
+    </View>
+  );
+};
+
 // --- User Data ---
 const UserDataSection: React.FC<{ backendUrl: string; headers: Record<string, string> } & ThemedSectionProps> = ({
   backendUrl,
@@ -2134,6 +2241,8 @@ const AdminTab: React.FC<AdminTabProps> = ({ backendUrl, headers, initialSection
         return <IngestionSection backendUrl={backendUrl} headers={headers} theme={theme} />;
       case 'api-limits':
         return <ApiLimitsSection backendUrl={backendUrl} headers={headers} theme={theme} />;
+      case 'metrics':
+        return <MetricsSection backendUrl={backendUrl} headers={headers} theme={theme} />;
       default:
         return null;
     }
@@ -2149,6 +2258,7 @@ const AdminTab: React.FC<AdminTabProps> = ({ backendUrl, headers, initialSection
     'audit-log': 'Audit Log',
     ingestion: 'Ingestion Ops',
     'api-limits': 'API Limits',
+    metrics: 'Metrics',
   };
 
   return (

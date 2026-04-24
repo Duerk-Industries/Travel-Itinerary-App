@@ -26,6 +26,7 @@ import {
 } from '../ingestion/shared/repository';
 import { readDto } from '../utils/dtoParse';
 import { bulkSetUserTierDto } from './adminDtos';
+import { getMetricCounterSnapshot } from '../metrics';
 
 // Admin routes — all guarded by authenticate + requireAdmin in app.ts
 const router = Router();
@@ -659,6 +660,16 @@ router.patch('/api-limits/:provider', async (req, res) => {
     logError('[admin] failed to update api limits', err);
     res.status(500).json({ error: 'Failed to update API limits' });
   }
+});
+
+// ---------------------------------------------------------------------------
+// Metrics snapshot (in-process counters + cache hit-rate)
+// ---------------------------------------------------------------------------
+
+router.get('/metrics', (_req, res) => {
+  // Per-instance best-effort aggregation — if the deployment has multiple
+  // instances each returns its own counters. Client should label accordingly.
+  res.json(getMetricCounterSnapshot());
 });
 
 // ---------------------------------------------------------------------------
