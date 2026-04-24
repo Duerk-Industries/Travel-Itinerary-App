@@ -14,6 +14,7 @@ import { createSocketServer } from './socket';
 import { startGmailPollingScheduler } from './services/gmailPollingService';
 import { startRetentionScheduler } from './services/retentionService';
 import { startIngestionMetricsScheduler } from './services/ingestionMetricsService';
+import { startFailedRetryScheduler } from './services/failedRetryScheduler';
 
 const defaultPort = Number(process.env.PORT) || 4000;
 const isCloudRunRuntime = Boolean(process.env.K_SERVICE);
@@ -110,6 +111,7 @@ export const startServer = async (portOverride?: number): Promise<Server> => {
   startGmailPollingScheduler();
   startRetentionScheduler();
   startIngestionMetricsScheduler();
+  startFailedRetryScheduler();
 
   return server;
 };

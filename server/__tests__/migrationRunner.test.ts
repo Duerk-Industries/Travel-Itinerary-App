@@ -90,6 +90,23 @@ describe('migrations/runner', () => {
     expect(result.alreadyApplied).toEqual([]);
   });
 
+  it('skips `.rollback.sql` companion files — they are manual-only', async () => {
+    const { runMigrations } = require('../src/migrations/runner');
+    const client = createPgMemClient();
+    const dir = createTempMigrationsDir([
+      { name: '20260101_a.sql', sql: 'CREATE TABLE alpha (id INT PRIMARY KEY);' },
+      { name: '20260101_a.rollback.sql', sql: 'DROP TABLE IF EXISTS alpha;' },
+    ]);
+
+    const result = await runMigrations({ client, dir });
+    expect(result.applied).toEqual(['20260101_a.sql']);
+    // If the rollback file had run, alpha would be gone — a subsequent
+    // INSERT would throw. A successful INSERT confirms it survived.
+    await expect(
+      client.query(`INSERT INTO alpha (id) VALUES (1)`),
+    ).resolves.toBeDefined();
+  });
+
   it('emits a log line for each applied migration', async () => {
     const { runMigrations } = require('../src/migrations/runner');
     const client = createPgMemClient();

@@ -34,12 +34,12 @@ const EXPECTED_INLINE_TABLES: ReadonlySet<string> = new Set([
   'car_rentals',
   // 'chat_read_watermarks' — moved to server/migrations/20260425_add_chat_read_watermarks.sql
   // (Priority 10 pilot). Auto-applied by the runtime migration runner.
-  'email_verifications',
+  // 'email_verifications' — moved to server/migrations/20260426_add_email_verifications.sql
   'expenses',
   'family_relationships',
   'feature_flags',
   'features',
-  'fellow_travelers',
+  // 'fellow_travelers' — moved to server/migrations/20260426_add_fellow_travelers.sql
   'flight_shares',
   'flights',
   'follow_codes',
@@ -53,7 +53,7 @@ const EXPECTED_INLINE_TABLES: ReadonlySet<string> = new Set([
   'locations',
   'lodgings',
   'message_reads',
-  'place_details_cache',
+  // 'place_details_cache' — moved to server/migrations/20260426_add_place_details_cache.sql
   'place_lookup_cache',
   'tier_entitlements',
   'tier_limits',

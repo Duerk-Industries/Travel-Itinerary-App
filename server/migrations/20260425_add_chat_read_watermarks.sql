@@ -1,4 +1,3 @@
--- Up
 --
 -- Per-user watermark for chat read-state. One row per (user_id, trip_id)
 -- capturing the `created_at` of the most-recently-read message.
@@ -9,6 +8,11 @@
 -- The migration runner auto-applies it on boot (see db.postgres.ts initDb);
 -- the drift guard's EXPECTED_INLINE_TABLES has been trimmed to reflect that
 -- the table no longer lives inline.
+--
+-- NOTE: migration files are Up-only. The runner executes the entire file as
+-- a single multi-statement pg query, so any rollback DDL placed below the
+-- CREATE blocks would immediately destroy the table on first apply. Rollback
+-- lives in a separate .rollback.sql companion when needed.
 CREATE TABLE IF NOT EXISTS chat_read_watermarks (
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   trip_id UUID NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
@@ -20,7 +24,3 @@ CREATE TABLE IF NOT EXISTS chat_read_watermarks (
 
 CREATE INDEX IF NOT EXISTS idx_chat_read_watermarks_trip
   ON chat_read_watermarks(trip_id);
-
--- Down
-DROP INDEX IF EXISTS idx_chat_read_watermarks_trip;
-DROP TABLE IF EXISTS chat_read_watermarks;

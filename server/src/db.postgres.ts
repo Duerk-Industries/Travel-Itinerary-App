@@ -308,16 +308,10 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS gender TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS password_setup_required BOOLEAN NOT NULL DEFAULT FALSE;`);
 
-  await p.query(`
-    CREATE TABLE IF NOT EXISTS email_verifications (
-      id UUID PRIMARY KEY,
-      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      token_hash TEXT NOT NULL,
-      expires_at TIMESTAMP NOT NULL,
-      created_at TIMESTAMP DEFAULT NOW(),
-      used_at TIMESTAMP
-    );
-  `);
+  // `email_verifications` now lives in
+  // server/migrations/20260426_add_email_verifications.sql — auto-applied by
+  // the runtime migration runner on boot. The drift-guard snapshot no longer
+  // lists this table.
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS user_emails (
@@ -433,18 +427,12 @@ export const initDb = async (): Promise<void> => {
     );
   `);
 
-  await p.query(`
-    CREATE TABLE IF NOT EXISTS fellow_travelers (
-      id UUID PRIMARY KEY,
-      owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      first_name TEXT NOT NULL,
-      last_name TEXT NOT NULL,
-      email TEXT,
-      created_at TIMESTAMP DEFAULT NOW()
-    );
-  `);
-  await p.query(`ALTER TABLE fellow_travelers ADD COLUMN IF NOT EXISTS email TEXT`);
-  await p.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_fellow_travelers_owner_name ON fellow_travelers(owner_id, LOWER(first_name), LOWER(last_name));`);
+  // `fellow_travelers` now lives in
+  // server/migrations/20260426_add_fellow_travelers.sql — auto-applied by
+  // the runtime migration runner on boot. The previously-required
+  // `ADD COLUMN IF NOT EXISTS email` ALTER is folded into the migration's
+  // CREATE TABLE since the table is now born with the column on first
+  // apply. The drift-guard snapshot no longer lists this table.
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS trips (
@@ -814,15 +802,10 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE airports ADD COLUMN IF NOT EXISTS iata_code TEXT;`);
   await p.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_airports_iata_code ON airports(iata_code);`);
 
-  await p.query(`
-    CREATE TABLE IF NOT EXISTS place_details_cache (
-      place_id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      details JSONB NOT NULL DEFAULT '{}'::jsonb,
-      fetched_at TIMESTAMP NOT NULL DEFAULT NOW(),
-      created_at TIMESTAMP DEFAULT NOW()
-    );
-  `);
+  // `place_details_cache` now lives in
+  // server/migrations/20260426_add_place_details_cache.sql — auto-applied by
+  // the runtime migration runner on boot. The drift-guard snapshot no
+  // longer lists this table.
   await p.query(`
     CREATE TABLE IF NOT EXISTS place_lookup_cache (
       query_key TEXT PRIMARY KEY,
@@ -1077,46 +1060,69 @@ export const initDb = async (): Promise<void> => {
   await p.query(`CREATE INDEX IF NOT EXISTS idx_audit_log_action  ON audit_log(action, created_at DESC);`);
   await p.query(`CREATE INDEX IF NOT EXISTS idx_audit_log_created ON audit_log(created_at DESC);`);
 
+  // Run pending migrations BEFORE the USE_IN_MEMORY_DB cleanup block below
+  // so migration-backed tables (cut over from inline CREATE TABLE) exist in
+  // time for the DELETE-ALL test-isolation sweep to touch them.
+  if (getEnvFlag('INGESTION_MIGRATIONS_ON_BOOT', { defaultValue: true })) {
+    try {
+      const { runMigrations } = require('./migrations/runner') as typeof import('./migrations/runner');
+      const pathMod = require('node:path') as typeof import('node:path');
+      const migrationsDir = pathMod.join(__dirname, '..', 'migrations');
+      const client = { query: (sql: string, params?: unknown[]) => p.query(sql, params as any) };
+      await runMigrations({ client, dir: migrationsDir });
+    } catch (err) {
+      const { logError } = require('./logger') as typeof import('./logger');
+      logError('[migrations] auto-apply on initDb failed', err);
+      throw err;
+    }
+  }
+
   if (process.env.USE_IN_MEMORY_DB === '1') {
-    // Clear data between test runs while keeping schema intact.
-    await p.query(`DELETE FROM audit_log`);
-    await p.query(`DELETE FROM generation_idempotency`);
-    await p.query(`DELETE FROM api_cost_counters`);
-    await p.query(`DELETE FROM api_usage_counters`);
-    await p.query(`DELETE FROM usage_events`);
-    await p.query(`DELETE FROM usage_counters`);
-    await p.query(`DELETE FROM user_tiers`);
-    await p.query(`DELETE FROM tier_entitlements`);
-    await p.query(`DELETE FROM tier_limits`);
-    await p.query(`DELETE FROM feature_flags`);
-    await p.query(`DELETE FROM tiers`);
-    await p.query(`DELETE FROM features`);
-    await p.query(`DELETE FROM message_reads`);
-    await p.query(`DELETE FROM trip_messages`);
-    await p.query(`DELETE FROM trip_comments`);
-    await p.query(`DELETE FROM trip_activity`);
-    await p.query(`DELETE FROM itinerary_details`);
-    await p.query(`DELETE FROM itineraries`);
-    await p.query(`DELETE FROM tours`);
-    await p.query(`DELETE FROM car_rentals`);
-    await p.query(`DELETE FROM item_votes`);
-    await p.query(`DELETE FROM lodgings`);
-    await p.query(`DELETE FROM flight_shares`);
-    await p.query(`DELETE FROM flights`);
-    await p.query(`DELETE FROM expenses`);
-    await p.query(`DELETE FROM trips`);
-    await p.query(`DELETE FROM place_details_cache`);
-    await p.query(`DELETE FROM place_lookup_cache`);
-    await p.query(`DELETE FROM group_invites`);
-    await p.query(`DELETE FROM group_members`);
-    await p.query(`DELETE FROM groups`);
-    await p.query(`DELETE FROM traits`);
-    await p.query(`DELETE FROM family_relationships`);
-    await p.query(`DELETE FROM fellow_travelers`);
-    await p.query(`DELETE FROM user_email_verifications`);
-    await p.query(`DELETE FROM user_emails`);
-    await p.query(`DELETE FROM web_users`);
-    await p.query(`DELETE FROM users`);
+    // Clear data between test runs while keeping schema intact. Each DELETE
+    // is best-effort: tables that haven't been created yet (e.g. because a
+    // migration is disabled via INGESTION_MIGRATIONS_ON_BOOT=false) are
+    // ignored so the init path stays composable across test modes.
+    const del = async (tbl: string): Promise<void> => {
+      try { await p.query(`DELETE FROM ${tbl}`); } catch { /* table absent, skip */ }
+    };
+    await del('audit_log');
+    await del('generation_idempotency');
+    await del('api_cost_counters');
+    await del('api_usage_counters');
+    await del('usage_events');
+    await del('usage_counters');
+    await del('user_tiers');
+    await del('tier_entitlements');
+    await del('tier_limits');
+    await del('feature_flags');
+    await del('tiers');
+    await del('features');
+    await del('message_reads');
+    await del('trip_messages');
+    await del('trip_comments');
+    await del('trip_activity');
+    await del('itinerary_details');
+    await del('itineraries');
+    await del('tours');
+    await del('car_rentals');
+    await del('item_votes');
+    await del('lodgings');
+    await del('flight_shares');
+    await del('flights');
+    await del('expenses');
+    await del('trips');
+    await del('place_details_cache');
+    await del('place_lookup_cache');
+    await del('group_invites');
+    await del('group_members');
+    await del('groups');
+    await del('traits');
+    await del('family_relationships');
+    await del('fellow_travelers');
+    await del('user_email_verifications');
+    await del('user_emails');
+    await del('web_users');
+    await del('users');
   }
 
   // Seed tiers (individual parameterized inserts to avoid pg-mem uuid evaluation issues)
@@ -1286,27 +1292,13 @@ export const initDb = async (): Promise<void> => {
     });
   }
 
-  // Run any pending SQL migration files AFTER inline bootstrap so the
-  // schema_migrations ledger stays separate from the legacy CREATE TABLE
-  // IF NOT EXISTS path. Idempotent — runner skips anything already applied.
-  // Disable via INGESTION_MIGRATIONS_ON_BOOT=false when running against a
-  // DB where migrations are applied out-of-band (e.g. a prod migration job).
-  if (getEnvFlag('INGESTION_MIGRATIONS_ON_BOOT', { defaultValue: true })) {
-    try {
-      // Local import to avoid cyclic-import risk with db.ts surface area.
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const { runMigrations } = require('./migrations/runner') as typeof import('./migrations/runner');
-      const path = require('node:path') as typeof import('node:path');
-      const migrationsDir = path.join(__dirname, '..', 'migrations');
-      const client = { query: (sql: string, params?: unknown[]) => p.query(sql, params as any) };
-      await runMigrations({ client, dir: migrationsDir });
-    } catch (err) {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const { logError } = require('./logger') as typeof import('./logger');
-      logError('[migrations] auto-apply on initDb failed', err);
-      throw err;
-    }
-  }
+  // Migration runner already fired above (right after inline bootstrap,
+  // before the USE_IN_MEMORY_DB cleanup). This kept-legacy comment block
+  // documents the rationale: run migrations AFTER the inline CREATE TABLE
+  // IF NOT EXISTS path so the `schema_migrations` ledger stays separate
+  // from the historical bootstrap. Disable via
+  // INGESTION_MIGRATIONS_ON_BOOT=false when running against a DB where
+  // migrations are applied out-of-band (e.g. a prod migration job).
 };
 
 

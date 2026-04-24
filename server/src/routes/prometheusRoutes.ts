@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getMetricCounterSnapshot } from '../metrics';
+import { INSTANCE_ID, getMetricCounterSnapshot } from '../metrics';
 
 const router = Router();
 
@@ -36,13 +36,18 @@ const formatLabels = (labels?: Record<string, string | number | boolean>): strin
 export const renderPrometheusSnapshot = (): string => {
   const snapshot = getMetricCounterSnapshot();
   const lines: string[] = [];
+  // Every line emits the resolved instance id so a multi-instance scrape
+  // target can be disambiguated with `sum(...) by (instance)`. The in-
+  // process counter snapshot is keyed by name only (one-bucket-per-process),
+  // so the label is always this instance's id.
+  const instanceLabel = `instance="${escapeLabelValue(INSTANCE_ID)}"`;
 
   // Counters (one TYPE line per distinct metric name).
   const counterNames = Object.keys(snapshot.counters).sort();
   for (const rawName of counterNames) {
     const promName = toPromName(rawName);
     lines.push(`# TYPE ${promName} counter`);
-    lines.push(`${promName} ${snapshot.counters[rawName]}`);
+    lines.push(`${promName}{${instanceLabel}} ${snapshot.counters[rawName]}`);
   }
 
   // Explicit gauges (ingestion_jobs_by_state, ingestion_pending_depth, etc.).
@@ -59,7 +64,8 @@ export const renderPrometheusSnapshot = (): string => {
     const promName = toPromName(rawName);
     lines.push(`# TYPE ${promName} gauge`);
     for (const g of gaugesByName.get(rawName)!) {
-      lines.push(`${promName}${formatLabels(g.labels as Record<string, string | number | boolean> | undefined)} ${g.value}`);
+      const mergedLabels = { instance: INSTANCE_ID, ...(g.labels ?? {}) };
+      lines.push(`${promName}${formatLabels(mergedLabels as Record<string, string | number | boolean>)} ${g.value}`);
     }
   }
 
@@ -68,13 +74,13 @@ export const renderPrometheusSnapshot = (): string => {
     lines.push(`# TYPE cache_hit_rate gauge`);
     for (const row of snapshot.cacheRatios) {
       lines.push(
-        `cache_hit_rate{namespace="${escapeLabelValue(row.namespace)}"} ${row.hitRate.toFixed(6)}`,
+        `cache_hit_rate{${instanceLabel},namespace="${escapeLabelValue(row.namespace)}"} ${row.hitRate.toFixed(6)}`,
       );
     }
     lines.push(`# TYPE cache_total counter`);
     for (const row of snapshot.cacheRatios) {
       lines.push(
-        `cache_total{namespace="${escapeLabelValue(row.namespace)}"} ${row.total}`,
+        `cache_total{${instanceLabel},namespace="${escapeLabelValue(row.namespace)}"} ${row.total}`,
       );
     }
   }
@@ -82,7 +88,7 @@ export const renderPrometheusSnapshot = (): string => {
   // Process-snapshot gauges.
   lines.push(`# TYPE counters_started_timestamp_seconds gauge`);
   lines.push(
-    `counters_started_timestamp_seconds ${Math.floor(new Date(snapshot.startedAtIso).getTime() / 1000)}`,
+    `counters_started_timestamp_seconds{${instanceLabel}} ${Math.floor(new Date(snapshot.startedAtIso).getTime() / 1000)}`,
   );
 
   return `${lines.join('\n')}\n`;

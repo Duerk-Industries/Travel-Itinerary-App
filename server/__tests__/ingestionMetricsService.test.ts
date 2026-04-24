@@ -107,11 +107,13 @@ describe('ingestionMetricsService', () => {
 
     const res = await request(app).get('/metrics').expect(200);
     expect(res.text).toMatch(/# TYPE ingestion_jobs_by_state gauge/);
-    expect(res.text).toMatch(/ingestion_jobs_by_state\{state="DEAD_LETTERED"\} 1/);
-    expect(res.text).toMatch(/ingestion_jobs_by_state\{state="PENDING"\} 1/);
+    // Every gauge line carries an `instance` label merged in by the Prom
+    // renderer before the caller-supplied labels.
+    expect(res.text).toMatch(/ingestion_jobs_by_state\{instance="[^"]+",state="DEAD_LETTERED"\} 1/);
+    expect(res.text).toMatch(/ingestion_jobs_by_state\{instance="[^"]+",state="PENDING"\} 1/);
     expect(res.text).toMatch(/# TYPE ingestion_dead_letter_depth gauge/);
-    expect(res.text).toMatch(/ingestion_dead_letter_depth 1/);
-    expect(res.text).toMatch(/ingestion_pending_depth 1/);
+    expect(res.text).toMatch(/ingestion_dead_letter_depth\{instance="[^"]+"\} 1/);
+    expect(res.text).toMatch(/ingestion_pending_depth\{instance="[^"]+"\} 1/);
   });
 
   it('a later tick overwrites the previous gauge value (not cumulative)', async () => {

@@ -36,7 +36,12 @@ describe('initDb auto-applies migrations', () => {
     const fs = require('node:fs') as typeof import('node:fs');
     const path = require('node:path') as typeof import('node:path');
     const migDir = path.join(__dirname, '..', 'migrations');
-    const sqlFiles = fs.readdirSync(migDir).filter((f) => f.endsWith('.sql')).sort();
+    // Mirror the runner's filter — `.rollback.sql` companions are manual-
+    // only and intentionally NOT auto-applied.
+    const sqlFiles = fs
+      .readdirSync(migDir)
+      .filter((f) => f.endsWith('.sql') && !f.endsWith('.rollback.sql'))
+      .sort();
 
     const { rows: appliedRows } = await pool.query<{ name: string }>(
       `SELECT name FROM schema_migrations ORDER BY name ASC`,

@@ -1,6 +1,35 @@
+import os from 'node:os';
 import { getRequestContext } from './requestContext';
 
 export type MetricLabels = Record<string, string | number | boolean>;
+
+/**
+ * Identifier for *this* process, injected as the `instance` label on every
+ * emitted metric so multi-instance Cloud Run / Kubernetes deployments can
+ * `sum(...) by (instance)` in Prometheus. Prefer Cloud Run's `K_REVISION`
+ * when set (uniqueness is per-revision + the Cloud Run platform appends an
+ * instance suffix inside the container); fall back to the OS hostname for
+ * bare-metal / Docker hosts; fall back to `local` for dev machines without
+ * either.
+ */
+const resolveInstanceId = (): string => {
+  const k = process.env.K_REVISION;
+  if (k && k.trim()) return k.trim();
+  try {
+    const host = os.hostname();
+    if (host && host.trim()) return host.trim();
+  } catch { /* ignore */ }
+  return 'local';
+};
+
+/**
+ * Resolved once at module load. Overridable via METRICS_INSTANCE_ID for
+ * tests or synthetic multi-instance simulations.
+ */
+export const INSTANCE_ID: string =
+  (process.env.METRICS_INSTANCE_ID && process.env.METRICS_INSTANCE_ID.trim())
+    ? process.env.METRICS_INSTANCE_ID.trim()
+    : resolveInstanceId();
 
 const isStructuredOutput = (): boolean => {
   const explicit = process.env.LOG_FORMAT;
@@ -51,7 +80,12 @@ const baseEntry = (
     kind,
     value,
   };
-  if (labels && Object.keys(labels).length > 0) entry.labels = labels;
+  // Always tag emitted metrics with the resolved instance id so Prometheus
+  // `sum(...) by (instance)` works across Cloud Run revisions. Caller-supplied
+  // labels win on key collision — they can opt out by passing their own
+  // `instance` value if they really want to.
+  const merged: MetricLabels = { instance: INSTANCE_ID, ...(labels ?? {}) };
+  entry.labels = merged;
   if (ctx?.requestId) entry.requestId = ctx.requestId;
   if (ctx?.userId) entry.userId = ctx.userId;
   return entry;

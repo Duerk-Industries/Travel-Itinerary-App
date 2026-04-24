@@ -90,6 +90,16 @@ export const INGESTION_RETENTION_DEAD_LETTER_DAYS = 90;
  */
 export const RETENTION_TICK_INTERVAL_MS_DEFAULT = 24 * 60 * 60 * 1000;
 
+/**
+ * Default interval between failed-retry scheduler ticks. The scheduler polls
+ * `listFailedJobsReadyForRetry` and requeues any row whose `next_retry_at`
+ * has passed. Five minutes is a compromise between responsiveness (shorter
+ * => jobs retry sooner) and wasted DB load (longer => fewer empty polls on
+ * idle clusters). Override per-environment via
+ * INGESTION_FAILED_RETRY_TICK_MS.
+ */
+export const FAILED_RETRY_SCHEDULER_TICK_INTERVAL_MS_DEFAULT = 5 * 60 * 1000;
+
 export const INGESTION_FEATURE_FLAGS = {
   manualUpload: 'feature_ingest_manual_upload',
   forwardedMailbox: 'feature_ingest_forwarded_mailbox',

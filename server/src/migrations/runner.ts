@@ -36,8 +36,17 @@ export const listMigrationFiles = (dir: string): MigrationFile[] => {
   if (!fs.existsSync(dir)) return [];
   const entries = fs.readdirSync(dir, { withFileTypes: true });
   const files = entries
-    .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith('.sql'))
+    .filter((entry) => entry.isFile())
     .map((entry) => entry.name)
+    // Skip disabled `.sql.pending` files and rollback companions
+    // (`.rollback.sql`) — only true, forward-only `.sql` migrations are
+    // applied on boot.
+    .filter((name) => {
+      const lower = name.toLowerCase();
+      if (!lower.endsWith('.sql')) return false;
+      if (lower.endsWith('.rollback.sql')) return false;
+      return true;
+    })
     .sort();
   return files.map((name) => ({
     name,
