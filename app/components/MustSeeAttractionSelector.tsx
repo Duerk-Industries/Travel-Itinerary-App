@@ -27,7 +27,7 @@ type MustSeeAttractionSelectorProps = {
   title?: string;
 };
 
-export const MustSeeAttractionSelector: React.FC<MustSeeAttractionSelectorProps> = ({
+const MustSeeAttractionSelectorComponent: React.FC<MustSeeAttractionSelectorProps> = ({
   backendUrl,
   headers,
   selectedLocations,
@@ -259,3 +259,5 @@ export const MustSeeAttractionSelector: React.FC<MustSeeAttractionSelectorProps>
     </View>
   );
 };
+
+export const MustSeeAttractionSelector = React.memo(MustSeeAttractionSelectorComponent);

@@ -688,9 +688,10 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
 
   const addLocation = useCallback((location: LocationOption) => {
     if (!location?.id) return;
-    if (selectedLocations.some((entry) => entry.id === location.id)) return;
-    setSelectedLocations((prev) => [...prev, location]);
-  }, [selectedLocations]);
+    setSelectedLocations((prev) =>
+      prev.some((entry) => entry.id === location.id) ? prev : [...prev, location]
+    );
+  }, []);
 
   const removeLocation = useCallback((locationId: string) => {
     setSelectedLocations((prev) => prev.filter((location) => location.id !== locationId));
@@ -698,12 +699,17 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
 
   const addMustSeeAttraction = useCallback((attraction: AttractionOption) => {
     if (!attraction?.id || !attraction?.name) return;
-    if (selectedMustSeeAttractions.some((entry) => entry.id === attraction.id)) return;
-    setSelectedMustSeeAttractions((prev) => [...prev, attraction]);
-  }, [selectedMustSeeAttractions]);
+    setSelectedMustSeeAttractions((prev) =>
+      prev.some((entry) => entry.id === attraction.id) ? prev : [...prev, attraction]
+    );
+  }, []);
 
   const removeMustSeeAttraction = useCallback((attractionId: string) => {
     setSelectedMustSeeAttractions((prev) => prev.filter((item) => item.id !== attractionId));
+  }, []);
+
+  const focusDescriptionField = useCallback(() => {
+    descriptionRef.current?.focus();
   }, []);
 
   const addItineraryItem = () => {
@@ -1315,7 +1321,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               selectedLocations={selectedLocations}
               onAddLocation={addLocation}
               onRemoveLocation={removeLocation}
-              onNext={() => descriptionRef.current?.focus()}
+              onNext={focusDescriptionField}
               styles={styles}
               placeholder={
                 destinationAttractionWizardEnabled
