@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import bodyParser from 'body-parser';
 import { authenticate, createToken } from '../auth';
-import { getUserRole } from '../db';
+import { getUserRole, writeAuditLog } from '../db';
 import {
   deleteWebUserAndCleanup,
   acceptFamilyRelationship,
@@ -45,6 +45,7 @@ import { assertUnderTravelerLimit } from '../services/entitlementService';
 import { EntitlementError } from '../errors';
 import { TokenPayload } from '../auth';
 import { deleteUserIngestionData } from '../ingestion/shared/repository';
+import { buildUserDataExport } from '../services/userDataExport';
 
 // Account management (profile, password, deletion) for authenticated web users.
 const router = Router();
@@ -56,6 +57,31 @@ const ensureUserInGroup = async (groupId: string, userId: string): Promise<boole
   return groups.some((group: any) => String(group.id) === String(groupId));
 };
 
+/**
+ * Fire-and-forget audit write for account self-service mutations. Never
+ * throws — a failed audit write must not fail the underlying mutation.
+ */
+const auditAccountAction = async (params: {
+  userId: string;
+  action: string;
+  afterState?: Record<string, unknown>;
+  beforeState?: Record<string, unknown>;
+  reason: string;
+}): Promise<void> => {
+  try {
+    await writeAuditLog({
+      actorUserId: params.userId,
+      targetUserId: params.userId,
+      action: params.action as any,
+      beforeState: params.beforeState,
+      afterState: params.afterState,
+      reason: params.reason,
+    });
+  } catch (err) {
+    logError('[account] audit write failed', err);
+  }
+};
+
 router.get('/', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const profile = await getWebUserProfile(userId);
@@ -64,6 +90,26 @@ router.get('/', async (req, res) => {
     return;
   }
   res.json(profile);
+});
+
+router.get('/export', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const profile = await getWebUserProfile(userId);
+  if (!profile) {
+    res.status(401).json({ error: 'User not found' });
+    return;
+  }
+  try {
+    const exportBody = await buildUserDataExport(userId);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="wanderbunnies-export-${userId}.json"`,
+    );
+    res.json(exportBody);
+  } catch (err) {
+    logError('[account] export failed', err);
+    res.status(500).json({ error: 'Failed to generate export.' });
+  }
 });
 
 router.patch('/profile', async (req, res) => {
@@ -132,6 +178,12 @@ router.post('/emails', async (req, res) => {
       subject: 'Confirm your added WanderBunnies email',
       intro: 'Please confirm this email address to use it for sign-in on your WanderBunnies account.',
     });
+    await auditAccountAction({
+      userId,
+      action: 'ACCOUNT_EMAIL_ADDED',
+      afterState: { email: added.email, verified: Boolean(added.verifiedAt) },
+      reason: 'User added a secondary email',
+    });
     res.status(201).json({ email: added, verificationRequired: true, verificationToken: process.env.NODE_ENV === 'test' ? verification.token : undefined });
   } catch (err: any) {
     if (err?.code === 'EMAIL_TAKEN') {
@@ -186,6 +238,12 @@ router.patch('/emails/primary', async (req, res) => {
     const profile = await getWebUserProfile(userId);
     const role = profile ? await getUserRole(profile.id) : null;
     const token = profile && role ? createToken({ userId: profile.id, email: profile.email, provider: 'email', role }) : null;
+    await auditAccountAction({
+      userId,
+      action: 'ACCOUNT_EMAIL_PRIMARY_CHANGED',
+      afterState: { primaryEmail: email },
+      reason: 'User changed primary email',
+    });
     res.json({ emails, token });
   } catch (err: any) {
     if (err?.code === 'EMAIL_NOT_VERIFIED') {
@@ -209,6 +267,12 @@ router.delete('/emails/:email', async (req, res) => {
   }
   try {
     const emails = await removeUserEmail(userId, email);
+    await auditAccountAction({
+      userId,
+      action: 'ACCOUNT_EMAIL_REMOVED',
+      afterState: { removedEmail: email, remainingCount: emails.length },
+      reason: 'User removed a secondary email',
+    });
     res.json({ emails });
   } catch (err: any) {
     if (err?.code === 'PRIMARY_EMAIL_IMMUTABLE') {
@@ -243,11 +307,18 @@ router.patch('/password', async (req, res) => {
     return;
   }
   try {
-    if (typeof currentPassword === 'string' && currentPassword.trim().length > 0) {
+    const mode = typeof currentPassword === 'string' && currentPassword.trim().length > 0 ? 'change' : 'initial_setup';
+    if (mode === 'change') {
       await updateWebUserPassword(userId, currentPassword, newPassword);
     } else {
       await setInitialWebUserPassword(userId, newPassword);
     }
+    await auditAccountAction({
+      userId,
+      action: 'ACCOUNT_PASSWORD_CHANGED',
+      afterState: { mode },
+      reason: mode === 'change' ? 'User rotated their password' : 'User set initial password',
+    });
     res.json({ message: 'Password updated' });
   } catch (err: any) {
     if (err?.code === 'INVALID_PASSWORD') {
@@ -373,6 +444,15 @@ router.delete('/family/:id', async (req, res) => {
 router.delete('/', async (req, res) => {
   const userId = (req as any).user.userId as string;
   try {
+    // Audit BEFORE the cascade so we keep a durable record of the request
+    // even if the delete aborts. `ON DELETE SET NULL` on the FK means a
+    // successful cascade will null out actor/target while preserving the
+    // action + reason text.
+    await auditAccountAction({
+      userId,
+      action: 'ACCOUNT_DELETED',
+      reason: 'User initiated account deletion',
+    });
     await deleteUserIngestionData(userId).catch(() => undefined);
     if (process.env.USE_IN_MEMORY_DB === '1') {
       const p = require('../db').poolClient();
@@ -691,6 +771,39 @@ groupsRouter.delete('/invites/:id', async (req, res) => {
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });
   }
+});
+
+/**
+ * Bulk-cancel pending invites the caller owns. Each invite is processed
+ * independently so one bad id (already-accepted, not-owned, etc.) does not
+ * block the others. Returns `{ cancelled, failed }` so the client can show
+ * which ones couldn't be removed without re-reading the full invite list.
+ */
+groupsRouter.post('/invites/bulk-cancel', async (req, res) => {
+  const user = (req as any).user as { userId: string };
+  const rawIds = req.body?.inviteIds;
+  if (!Array.isArray(rawIds) || rawIds.length === 0) {
+    res.status(400).json({ error: 'inviteIds must be a non-empty array.' });
+    return;
+  }
+  const inviteIds = rawIds
+    .map((id) => (typeof id === 'string' ? id.trim() : ''))
+    .filter((id) => id.length > 0);
+  if (inviteIds.length === 0) {
+    res.status(400).json({ error: 'inviteIds must contain at least one non-empty string.' });
+    return;
+  }
+  const cancelled: string[] = [];
+  const failed: Array<{ id: string; error: string }> = [];
+  for (const id of inviteIds) {
+    try {
+      await removeGroupInvite(user.userId, id);
+      cancelled.push(id);
+    } catch (err) {
+      failed.push({ id, error: (err as Error).message });
+    }
+  }
+  res.json({ cancelled: cancelled.length, failed: failed.length, cancelledIds: cancelled, failedIds: failed });
 });
 
 groupsRouter.delete('/:id', async (req, res) => {

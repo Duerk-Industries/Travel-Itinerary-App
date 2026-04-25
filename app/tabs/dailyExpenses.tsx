@@ -1,6 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FlatList, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { FlatList, Platform, ScrollView, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import ConfirmDialog from '../components/ConfirmDialog';
+import DialogShell from '../components/DialogShell';
+import DraftTextInput from '../components/DraftTextInput';
+import SelectField, { type SelectFieldOption } from '../components/SelectField';
 import { fetchExchangeRate, getLocalDateString } from '../utils/exchangeRates';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { formatMemberDisplayName } from '../utils/memberDisplay';
@@ -54,6 +57,11 @@ type DailyExpensesTabProps = {
 };
 
 const categoryOptions = ['Breakfast', 'Lunch', 'Dinner', 'Other Food', 'Rides', 'Souvenirs', 'Other'] as const;
+const categorySelectOptions: SelectFieldOption[] = categoryOptions.map((category) => ({ label: category, value: category }));
+const currencySelectOptions: SelectFieldOption[] = ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY', 'INR', 'MXN'].map((currency) => ({
+  label: currency,
+  value: currency,
+}));
 type CategoryOption = typeof categoryOptions[number];
 
 const dayCardStyles = {
@@ -149,8 +157,6 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   const [draftAmount, setDraftAmount] = useState<string>('');
   const [draftForIds, setDraftForIds] = useState<string[]>([]);
   const [draftPayerIds, setDraftPayerIds] = useState<string[]>([]);
-  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
-  const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
   const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [addExpenseVisible, setAddExpenseVisible] = useState(false);
   const [detailTarget, setDetailTarget] = useState<{ date: string; category: CategoryOption } | null>(null);
@@ -210,8 +216,6 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
 
   const closeAddExpenseModal = () => {
     setAddExpenseVisible(false);
-    setShowCategoryDropdown(false);
-    setShowCurrencyDropdown(false);
     setDatePickerVisible(false);
   };
 
@@ -337,11 +341,16 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
         </TouchableOpacity>
       </View>
       {addExpenseVisible ? (
-        <Modal transparent visible animationType="fade">
-          <View style={styles.modalOverlay} testID="expense-add-modal">
-            <View style={[styles.modalCard, styles.expenseModalCard]}>
+        <DialogShell
+          visible
+          title="Add Expense"
+          styles={styles}
+          onClose={closeAddExpenseModal}
+          testID="expense-add-modal"
+          useNativeModal
+          cardStyle={[styles.modalCard, styles.expenseModalCard]}
+        >
               <View style={styles.row}>
-                <Text style={styles.sectionTitle}>Add Expense</Text>
                 <TouchableOpacity
                   style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
                   onPress={closeAddExpenseModal}
@@ -380,62 +389,31 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                       </View>
                     )}
                   </View>
-                  <View style={[styles.input, styles.dropdown, styles.expenseFieldCategory]}>
-                    <TouchableOpacity
-                      style={styles.selectButtonRow}
-                      onPress={() => setShowCategoryDropdown((prev) => !prev)}
-                    >
-                      <Text style={styles.cellText}>{draftCategory}</Text>
-                      <Text style={styles.selectCaret}>▾</Text>
-                    </TouchableOpacity>
-                    {showCategoryDropdown ? (
-                      <View style={styles.dropdownList}>
-                        {categoryOptions.map((category) => (
-                          <TouchableOpacity
-                            key={category}
-                            style={styles.dropdownOption}
-                            onPress={() => {
-                              setDraftCategory(category);
-                              setShowCategoryDropdown(false);
-                            }}
-                          >
-                            <Text style={styles.cellText}>{category}</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    ) : null}
-                  </View>
-                  <View style={[styles.input, styles.dropdown, styles.expenseFieldCurrency]}>
-                    <TouchableOpacity
-                      style={styles.selectButtonRow}
-                      onPress={() => setShowCurrencyDropdown((prev) => !prev)}
-                    >
-                      <Text style={styles.cellText}>{draftCurrency}</Text>
-                      <Text style={styles.selectCaret}>▾</Text>
-                    </TouchableOpacity>
-                    {showCurrencyDropdown ? (
-                      <View style={styles.dropdownList}>
-                        {['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY', 'INR', 'MXN'].map((currency) => (
-                          <TouchableOpacity
-                            key={currency}
-                            style={styles.dropdownOption}
-                            onPress={() => {
-                              setDraftCurrency(currency);
-                              setShowCurrencyDropdown(false);
-                            }}
-                          >
-                            <Text style={styles.cellText}>{currency}</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    ) : null}
-                  </View>
-                  <TextInput
+                  <SelectField
+                    styles={styles}
+                    value={draftCategory}
+                    options={categorySelectOptions}
+                    placeholder="Category"
+                    title="Expense category"
+                    style={styles.expenseFieldCategory}
+                    onChange={(value) => setDraftCategory((value || 'Other') as CategoryOption)}
+                  />
+                  <SelectField
+                    styles={styles}
+                    value={draftCurrency}
+                    options={currencySelectOptions}
+                    placeholder="Currency"
+                    title="Expense currency"
+                    style={styles.expenseFieldCurrency}
+                    onChange={setDraftCurrency}
+                  />
+                  <DraftTextInput
                     style={[styles.input, styles.expenseFieldAmount]}
                     placeholder="Amount"
                     keyboardType="numeric"
                     value={draftAmount}
                     onChangeText={(value: string) => setDraftAmount(sanitizeCostInput(value))}
+                    commitOnBlur={false}
                   />
                 </View>
 
@@ -487,9 +465,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                   </TouchableOpacity>
                 </View>
               </ScrollView>
-            </View>
-          </View>
-        </Modal>
+        </DialogShell>
       ) : null}
 
       <View style={styles.divider} />
@@ -604,13 +580,16 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
       ) : null}
 
       {detailTarget ? (
-        <Modal transparent visible animationType="fade">
-          <View style={styles.modalOverlay} testID="expense-detail-modal">
-            <View style={[styles.modalCard, styles.detailModal]}>
+        <DialogShell
+          visible
+          title={detailTarget ? `${detailTarget.category} · ${formatDateLabel(detailTarget.date)}` : 'Details'}
+          styles={styles}
+          onClose={() => setDetailTarget(null)}
+          testID="expense-detail-modal"
+          useNativeModal
+          cardStyle={[styles.modalCard, styles.detailModal]}
+        >
               <View style={styles.row}>
-                <Text style={styles.sectionTitle}>
-                  {detailTarget ? `${detailTarget.category} · ${formatDateLabel(detailTarget.date)}` : 'Details'}
-                </Text>
                 <TouchableOpacity style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]} onPress={() => setDetailTarget(null)}>
                   <Text style={styles.buttonText}>Close</Text>
                 </TouchableOpacity>
@@ -663,9 +642,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                   ) : null}
                 </View>
               </ScrollView>
-            </View>
-          </View>
-        </Modal>
+        </DialogShell>
       ) : null}
 
       {pendingDeleteExpense ? (

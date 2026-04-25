@@ -25,6 +25,7 @@ import ingestionAdminRoutes from './routes/ingestionAdminRoutes';
 import ingestionWebhookRoutes from './routes/ingestionWebhookRoutes';
 import ingestionGmailOAuthRoutes from './routes/ingestionGmailOAuthRoutes';
 import internalIngestionWorkerRoutes from './routes/internalIngestionWorkerRoutes';
+import prometheusRoutes from './routes/prometheusRoutes';
 
 import { loadEnv } from './env_loader';
 import { getBackendUrl, getEnvValue, hasRunLocalFlag, isLocalEnv } from './env';
@@ -100,7 +101,8 @@ app.use(cors({
     return callback(new Error(msg));
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id'],
+  exposedHeaders: ['X-Request-Id'],
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -118,18 +120,44 @@ try {
   accessLogStream = null;
 }
 
+import { generateRequestId, runWithRequestContext } from './requestContext';
+
+const REQUEST_ID_HEADER = 'x-request-id';
+const isStructuredOutput =
+  process.env.LOG_FORMAT === 'json' ||
+  (process.env.LOG_FORMAT !== 'text' &&
+    (process.env.NODE_ENV === 'production' || Boolean(process.env.K_SERVICE)));
+
 app.use((req, res, next) => {
+  const inbound = req.header(REQUEST_ID_HEADER);
+  const requestId = inbound && inbound.trim().length > 0 ? inbound.trim() : generateRequestId();
+  res.setHeader('X-Request-Id', requestId);
   const start = Date.now();
   res.on('finish', () => {
     const ms = Date.now() - start;
-    const line = `[api] ${new Date().toISOString()} ${req.method} ${req.originalUrl} ${res.statusCode} ${ms}ms\n`;
+    const timestamp = new Date().toISOString();
+    const line = isStructuredOutput
+      ? JSON.stringify({
+          level: 'info',
+          time: timestamp,
+          channel: 'api',
+          requestId,
+          method: req.method,
+          path: req.originalUrl,
+          status: res.statusCode,
+          durationMs: ms,
+        })
+      : `[api] ${timestamp} [req=${requestId}] ${req.method} ${req.originalUrl} ${res.statusCode} ${ms}ms`;
     if (accessLogStream) {
-      accessLogStream.write(line);
+      accessLogStream.write(`${line}\n`);
     } else {
-      console.info(line.trim());
+      console.info(line);
     }
   });
-  next();
+  runWithRequestContext(
+    { requestId, method: req.method, path: req.originalUrl },
+    () => next()
+  );
 });
 
 const publicDir = path.join(__dirname, '..', 'public');
@@ -325,6 +353,10 @@ app.use('/api/ingestion/gmail', ingestionGmailOAuthRoutes);
 app.use('/api/ingestion', ingestionRoutes);
 app.use('/api/admin', authenticate, requireAdmin, adminRoutes);
 app.use('/api/admin/ingestion', authenticate, requireAdmin, ingestionAdminRoutes);
+// Prometheus scrape endpoint. Unauthenticated, text-only, per-instance.
+// Mounted at the root (`/metrics`) since that's the conventional path most
+// scrapers assume.
+app.use('/metrics', prometheusRoutes);
 
 if (hasWebApp) {
   app.get(['/app', '/app/*', '/'], (_req, res) => {

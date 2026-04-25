@@ -1,10 +1,11 @@
-import React, { useMemo } from 'react';
-import { Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { memo, useMemo } from 'react';
+import { Platform, Text, TouchableOpacity, View } from 'react-native';
 import type { LodgingDraft } from '../tabs/lodging';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { toWebStyle } from '../utils/webStyle';
 import { DEFAULT_NEW_ITINERARY_STATUS, ITINERARY_STATUSES, normalizeItineraryStatus } from '../utils/itineraryStatus';
 import type { AppTheme } from '../theme/theme';
+import DraftTextInput from './DraftTextInput';
 
 type MemberOption = {
   id: string;
@@ -29,7 +30,7 @@ type LodgingFormProps = {
   isCompact: boolean;
 };
 
-const LodgingForm: React.FC<LodgingFormProps> = ({
+const LodgingFormComponent: React.FC<LodgingFormProps> = ({
   draft,
   setDraft,
   groupMembers,
@@ -144,21 +145,23 @@ const LodgingForm: React.FC<LodgingFormProps> = ({
       <View style={[styles.modalRow, isCompact && { flexDirection: 'column' }]}>
         <View style={[styles.modalField, isCompact && { minWidth: '100%' }]}>
           <Text style={styles.modalLabel}>Name</Text>
-          <TextInput
+          <DraftTextInput
             style={styles.input}
             placeholder="Hotel name"
             value={draft.name}
             onChangeText={(text: string) => setDraft((prev) => ({ ...prev, name: text }))}
+            commitOnBlur={false}
           />
         </View>
         <View style={[styles.modalField, isCompact && { minWidth: '100%' }]}>
           <Text style={styles.modalLabel}>Rooms</Text>
-          <TextInput
+          <DraftTextInput
             style={styles.input}
             placeholder="1"
             keyboardType="numeric"
             value={draft.rooms}
             onChangeText={(text: string) => setDraft((prev) => ({ ...prev, rooms: text }))}
+            commitOnBlur={false}
           />
         </View>
       </View>
@@ -192,7 +195,7 @@ const LodgingForm: React.FC<LodgingFormProps> = ({
         </View>
         <View style={[styles.modalField, isCompact && { minWidth: '100%' }]}>
           <Text style={styles.modalLabel}>Total cost</Text>
-          <TextInput
+          <DraftTextInput
             style={styles.input}
             placeholder="0.00"
             keyboardType="numeric"
@@ -200,6 +203,7 @@ const LodgingForm: React.FC<LodgingFormProps> = ({
             onChangeText={(text: string) =>
               setDraft((prev) => ({ ...prev, totalCost: sanitizeCostInput(text) }))
             }
+            commitOnBlur={false}
           />
           <Text style={styles.helperText}>
             Per night: {draft.costPerNight ? `$${draft.costPerNight}` : '-'}
@@ -252,14 +256,17 @@ const LodgingForm: React.FC<LodgingFormProps> = ({
       </View>
 
       <Text style={styles.modalLabel}>Address</Text>
-      <TextInput
+      <DraftTextInput
         style={styles.input}
         placeholder="Address"
         value={draft.address}
         onChangeText={(text: string) => setDraft((prev) => ({ ...prev, address: text }))}
+        commitOnBlur={false}
       />
     </>
   );
 };
+
+const LodgingForm = memo(LodgingFormComponent);
 
 export default LodgingForm;

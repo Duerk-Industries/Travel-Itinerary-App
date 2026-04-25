@@ -1,14 +1,25 @@
 import axios from 'axios';
-import { getGooglePlaceImage } from '../src/image-service';
+import {
+  clearImageServiceCachesForTests,
+  getGooglePlaceImage,
+  getUnsplashImage,
+} from '../src/image-service';
+
+let mockBucket: jest.Mock;
 
 jest.mock('@google-cloud/storage', () => ({
-  Storage: jest.fn(() => ({ bucket: jest.fn() })),
+  Storage: jest.fn(() => ({ bucket: mockBucket })),
 }));
 jest.mock('axios');
+jest.mock('../src/apis/usageLimiter', () => ({
+  reserveApiUsageOrThrow: jest.fn(),
+}));
 
 describe('image-service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    clearImageServiceCachesForTests();
+    mockBucket = jest.fn();
     process.env.UNSPLASH_ACCESS_KEY = 'test-unsplash-key';
   });
 
@@ -28,5 +39,29 @@ describe('image-service', () => {
         headers: expect.objectContaining({ Authorization: expect.stringContaining('Client-ID') }),
       })
     );
+  });
+
+  it('serves repeated GCS image cache reads from the shared TTL cache', async () => {
+    const exists = jest.fn().mockResolvedValue([true]);
+    const getMetadata = jest.fn().mockResolvedValue([
+      { timeCreated: new Date(Date.now() - 1000).toISOString() },
+    ]);
+    const getSignedUrl = jest
+      .fn()
+      .mockResolvedValueOnce(['https://storage.example/paris-signed-1.jpg'])
+      .mockResolvedValueOnce(['https://storage.example/paris-signed-2.jpg']);
+    mockBucket.mockReturnValue({
+      file: jest.fn(() => ({ exists, getMetadata, getSignedUrl })),
+    });
+
+    const first = await getUnsplashImage('Paris');
+    const second = await getUnsplashImage('paris');
+
+    expect(first).toBe('https://storage.example/paris-signed-1.jpg');
+    expect(second).toBe('https://storage.example/paris-signed-1.jpg');
+    expect(exists).toHaveBeenCalledTimes(1);
+    expect(getMetadata).toHaveBeenCalledTimes(1);
+    expect(getSignedUrl).toHaveBeenCalledTimes(1);
+    expect(axios.get).not.toHaveBeenCalled();
   });
 });

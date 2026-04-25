@@ -54,8 +54,27 @@ const ChatPanel: React.FC<Props> = ({
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  // firstUnreadId marks the oldest unread message at the moment the panel
+  // opened. It is set once (when the initial history page arrives) and never
+  // moves afterwards — the "New messages" separator is an at-open snapshot,
+  // not a live cursor.
+  const [firstUnreadId, setFirstUnreadId] = useState<string | null>(null);
+  const initialUnreadCountRef = useRef(unreadCount);
   const flatListRef = useRef<any>(null);
+  const lastMarkedReadIdRef = useRef<string | null>(null);
   const isWeb = Platform.OS === 'web';
+
+  const markRead = useCallback(
+    (messageId: string | undefined) => {
+      if (!messageId) return;
+      if (lastMarkedReadIdRef.current === messageId) return;
+      lastMarkedReadIdRef.current = messageId;
+      socket.emit(CLIENT_EVENTS.MARK_READ, { tripId, messageId });
+    },
+    [socket, tripId],
+  );
 
   // -------------------------------------------------------------------------
   // Join trip room and wire up events
@@ -63,24 +82,52 @@ const ChatPanel: React.FC<Props> = ({
   useEffect(() => {
     setLoading(true);
     setErrorMessage(null);
+    setHasMore(false);
+    setLoadingOlder(false);
+    lastMarkedReadIdRef.current = null;
 
     const joinAndListen = () => {
       socket.emit(CLIENT_EVENTS.JOIN_TRIP, tripId);
     };
 
-    const onHistory = (history: ChatMessage[]) => {
-      setMessages(history);
-      setErrorMessage(null);
-      setLoading(false);
-      // Scroll to bottom
-      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: false }), 100);
+    const onHistoryPage = (payload: {
+      tripId: string;
+      messages: ChatMessage[];
+      hasMore: boolean;
+      initial?: boolean;
+    }) => {
+      if (payload.tripId !== tripId) return;
+      if (payload.initial) {
+        setMessages(payload.messages);
+        setHasMore(payload.hasMore);
+        setErrorMessage(null);
+        setLoading(false);
+        // Pin the separator to the oldest unread message at open time. If the
+        // unread count exceeds the loaded tail (possible when unread > page
+        // size), anchor to the oldest loaded message so the user still sees
+        // "New messages" — loading older pages prepends above, which is the
+        // desired visual.
+        const initialUnread = initialUnreadCountRef.current;
+        if (initialUnread > 0 && payload.messages.length > 0) {
+          const idx = Math.max(0, payload.messages.length - initialUnread);
+          setFirstUnreadId(payload.messages[idx]?.id ?? null);
+        }
+        const tail = payload.messages[payload.messages.length - 1];
+        if (tail) markRead(tail.id);
+        setTimeout(() => flatListRef.current?.scrollToEnd({ animated: false }), 100);
+      } else {
+        // Older page: prepend without scrolling
+        setMessages((prev) => [...payload.messages, ...prev]);
+        setHasMore(payload.hasMore);
+        setLoadingOlder(false);
+      }
     };
 
     const onNewMessage = (msg: ChatMessage) => {
       setMessages((prev) => [...prev, msg]);
       setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 50);
-      // Auto-mark as read when panel is open
-      socket.emit(CLIENT_EVENTS.MARK_READ, { tripId, messageId: msg.id });
+      // Watermark-gated: only emit MARK_READ when the visible tail advances.
+      markRead(msg.id);
     };
 
     const onUnreadCount = (data: { tripId: string; count: number }) => {
@@ -105,7 +152,7 @@ const ChatPanel: React.FC<Props> = ({
       setLoading(false);
     }, 5000);
 
-    socket.on(SERVER_EVENTS.MESSAGE_HISTORY, onHistory);
+    socket.on(SERVER_EVENTS.MESSAGE_HISTORY_PAGE, onHistoryPage);
     socket.on(SERVER_EVENTS.NEW_MESSAGE, onNewMessage);
     socket.on(SERVER_EVENTS.UNREAD_COUNT, onUnreadCount);
     socket.on(SERVER_EVENTS.ERROR, onChatError);
@@ -119,14 +166,25 @@ const ChatPanel: React.FC<Props> = ({
 
     return () => {
       clearTimeout(historyTimeout);
-      socket.off(SERVER_EVENTS.MESSAGE_HISTORY, onHistory);
+      socket.off(SERVER_EVENTS.MESSAGE_HISTORY_PAGE, onHistoryPage);
       socket.off(SERVER_EVENTS.NEW_MESSAGE, onNewMessage);
       socket.off(SERVER_EVENTS.UNREAD_COUNT, onUnreadCount);
       socket.off(SERVER_EVENTS.ERROR, onChatError);
       socket.off('connect', joinAndListen);
       socket.off('connect_error', onConnectError);
     };
-  }, [socket, tripId, onUnreadChange]);
+  }, [socket, tripId, onUnreadChange, markRead]);
+
+  // -------------------------------------------------------------------------
+  // Load older page on demand
+  // -------------------------------------------------------------------------
+  const loadOlder = useCallback(() => {
+    if (!hasMore || loadingOlder) return;
+    const oldest = messages[0];
+    if (!oldest) return;
+    setLoadingOlder(true);
+    socket.emit(CLIENT_EVENTS.LOAD_OLDER, { tripId, beforeId: oldest.id });
+  }, [hasMore, loadingOlder, messages, socket, tripId]);
 
   // -------------------------------------------------------------------------
   // Send message
@@ -143,24 +201,39 @@ const ChatPanel: React.FC<Props> = ({
   // -------------------------------------------------------------------------
   const renderMessage = ({ item }: { item: ChatMessage }) => {
     const isOwn = item.senderId === currentUserId;
+    const showUnreadSeparator = firstUnreadId !== null && item.id === firstUnreadId;
     return (
-      <View
-        style={[themedStyles.messageRow, isOwn ? themedStyles.ownRow : themedStyles.otherRow]}
-        testID={`chat-message-${item.id}`}
-      >
-        {!isOwn && (
-          <View style={[themedStyles.avatarSmall, { backgroundColor: theme?.colors.textMuted ?? '#9e9e9e' }]}>
-            <Text style={themedStyles.avatarText}>{item.senderInitials}</Text>
+      <View>
+        {showUnreadSeparator && (
+          <View
+            style={themedStyles.unreadSeparator}
+            testID="chat-unread-separator"
+            accessibilityRole={Platform.OS === 'web' ? ('separator' as any) : undefined}
+            accessibilityLabel="New messages below"
+          >
+            <View style={themedStyles.unreadSeparatorLine} />
+            <Text style={themedStyles.unreadSeparatorLabel}>New messages</Text>
+            <View style={themedStyles.unreadSeparatorLine} />
           </View>
         )}
-        <View style={[themedStyles.bubble, isOwn ? themedStyles.ownBubble : themedStyles.otherBubble]}>
+        <View
+          style={[themedStyles.messageRow, isOwn ? themedStyles.ownRow : themedStyles.otherRow]}
+          testID={`chat-message-${item.id}`}
+        >
           {!isOwn && (
-            <Text style={themedStyles.senderName}>{item.senderName}</Text>
+            <View style={[themedStyles.avatarSmall, { backgroundColor: theme?.colors.textMuted ?? '#9e9e9e' }]}>
+              <Text style={themedStyles.avatarText}>{item.senderInitials}</Text>
+            </View>
           )}
-          <Text style={isOwn ? themedStyles.ownText : themedStyles.otherText}>{item.body}</Text>
-          <Text style={themedStyles.timestamp}>
-            {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </Text>
+          <View style={[themedStyles.bubble, isOwn ? themedStyles.ownBubble : themedStyles.otherBubble]}>
+            {!isOwn && (
+              <Text style={themedStyles.senderName}>{item.senderName}</Text>
+            )}
+            <Text style={isOwn ? themedStyles.ownText : themedStyles.otherText}>{item.body}</Text>
+            <Text style={themedStyles.timestamp}>
+              {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </Text>
+          </View>
         </View>
       </View>
     );
@@ -221,8 +294,23 @@ const ChatPanel: React.FC<Props> = ({
           keyExtractor={(item: ChatMessage) => item.id}
           renderItem={renderMessage}
           contentContainerStyle={themedStyles.messageList}
-          onContentSizeChange={() =>
-            flatListRef.current?.scrollToEnd({ animated: false })
+          ListHeaderComponent={
+            hasMore ? (
+              <TouchableOpacity
+                onPress={loadOlder}
+                disabled={loadingOlder}
+                style={themedStyles.loadOlderBtn}
+                testID="chat-load-older"
+                accessibilityRole="button"
+                accessibilityLabel="Load older messages"
+              >
+                {loadingOlder ? (
+                  <ActivityIndicator size="small" />
+                ) : (
+                  <Text style={themedStyles.loadOlderText}>Load older messages</Text>
+                )}
+              </TouchableOpacity>
+            ) : null
           }
           testID="chat-message-list"
         />
@@ -334,6 +422,38 @@ const buildStyles = (theme?: AppTheme) => StyleSheet.create({
     padding: 10,
     paddingBottom: 4,
     flexGrow: 1,
+  },
+  loadOlderBtn: {
+    alignSelf: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    marginBottom: 8,
+    borderRadius: 12,
+    backgroundColor: theme?.colors.surfaceMuted ?? '#ececec',
+  },
+  loadOlderText: {
+    color: theme?.colors.textMuted ?? '#555',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  unreadSeparator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 10,
+    gap: 8,
+  },
+  unreadSeparatorLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: theme?.colors.error ?? '#d32f2f',
+    opacity: 0.4,
+  },
+  unreadSeparatorLabel: {
+    color: theme?.colors.error ?? '#d32f2f',
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
   messageRow: {
     flexDirection: 'row',

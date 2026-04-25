@@ -290,6 +290,16 @@ export const resetApiUsageSummaries = async (): Promise<void> => {
   blockedLogStates.clear();
 };
 
+/**
+ * Test-only: simulate a process restart by dropping the in-memory caches
+ * without touching the durable DB counters. Used to verify that reservations
+ * survive process restart by re-reading from the stored counter table.
+ */
+export const __resetInProcessUsageCachesForTests = (): void => {
+  usageBuckets.clear();
+  blockedLogStates.clear();
+};
+
 export const reserveApiUsageOrThrow = async (params: { provider: string; caller: string }): Promise<void> => {
   const provider = normalizeKeyPart(params.provider);
   const caller = normalizeKeyPart(params.caller);

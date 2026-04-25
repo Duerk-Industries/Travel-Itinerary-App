@@ -35,7 +35,7 @@ import {
   TripMessageRead,
 } from './types';
 import { logError, logInfo } from './logger';
-import { getEnvValue } from './env';
+import { getEnvFlag, getEnvValue } from './env';
 import { downloadAirportDatasetForDailyRefresh } from './apis/airportDatasetCallers';
 import { normalizeAirportDataset, searchBundledAirportDataset } from './services/airportCatalog';
 import fs from 'fs';
@@ -308,16 +308,10 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS gender TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS password_setup_required BOOLEAN NOT NULL DEFAULT FALSE;`);
 
-  await p.query(`
-    CREATE TABLE IF NOT EXISTS email_verifications (
-      id UUID PRIMARY KEY,
-      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      token_hash TEXT NOT NULL,
-      expires_at TIMESTAMP NOT NULL,
-      created_at TIMESTAMP DEFAULT NOW(),
-      used_at TIMESTAMP
-    );
-  `);
+  // `email_verifications` now lives in
+  // server/migrations/20260426_add_email_verifications.sql — auto-applied by
+  // the runtime migration runner on boot. The drift-guard snapshot no longer
+  // lists this table.
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS user_emails (
@@ -433,18 +427,12 @@ export const initDb = async (): Promise<void> => {
     );
   `);
 
-  await p.query(`
-    CREATE TABLE IF NOT EXISTS fellow_travelers (
-      id UUID PRIMARY KEY,
-      owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      first_name TEXT NOT NULL,
-      last_name TEXT NOT NULL,
-      email TEXT,
-      created_at TIMESTAMP DEFAULT NOW()
-    );
-  `);
-  await p.query(`ALTER TABLE fellow_travelers ADD COLUMN IF NOT EXISTS email TEXT`);
-  await p.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_fellow_travelers_owner_name ON fellow_travelers(owner_id, LOWER(first_name), LOWER(last_name));`);
+  // `fellow_travelers` now lives in
+  // server/migrations/20260426_add_fellow_travelers.sql — auto-applied by
+  // the runtime migration runner on boot. The previously-required
+  // `ADD COLUMN IF NOT EXISTS email` ALTER is folded into the migration's
+  // CREATE TABLE since the table is now born with the column on first
+  // apply. The drift-guard snapshot no longer lists this table.
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS trips (
@@ -617,6 +605,11 @@ export const initDb = async (): Promise<void> => {
       PRIMARY KEY (message_id, user_id)
     );
   `);
+
+  // `chat_read_watermarks` now lives in
+  // server/migrations/20260425_add_chat_read_watermarks.sql — first proof
+  // of the Priority 10 inline→migrations cutover pattern. Auto-applied by
+  // the runner invoked at the end of initDb.
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS locations (
@@ -809,15 +802,10 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE airports ADD COLUMN IF NOT EXISTS iata_code TEXT;`);
   await p.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_airports_iata_code ON airports(iata_code);`);
 
-  await p.query(`
-    CREATE TABLE IF NOT EXISTS place_details_cache (
-      place_id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      details JSONB NOT NULL DEFAULT '{}'::jsonb,
-      fetched_at TIMESTAMP NOT NULL DEFAULT NOW(),
-      created_at TIMESTAMP DEFAULT NOW()
-    );
-  `);
+  // `place_details_cache` now lives in
+  // server/migrations/20260426_add_place_details_cache.sql — auto-applied by
+  // the runtime migration runner on boot. The drift-guard snapshot no
+  // longer lists this table.
   await p.query(`
     CREATE TABLE IF NOT EXISTS place_lookup_cache (
       query_key TEXT PRIMARY KEY,
@@ -1072,46 +1060,69 @@ export const initDb = async (): Promise<void> => {
   await p.query(`CREATE INDEX IF NOT EXISTS idx_audit_log_action  ON audit_log(action, created_at DESC);`);
   await p.query(`CREATE INDEX IF NOT EXISTS idx_audit_log_created ON audit_log(created_at DESC);`);
 
+  // Run pending migrations BEFORE the USE_IN_MEMORY_DB cleanup block below
+  // so migration-backed tables (cut over from inline CREATE TABLE) exist in
+  // time for the DELETE-ALL test-isolation sweep to touch them.
+  if (getEnvFlag('INGESTION_MIGRATIONS_ON_BOOT', { defaultValue: true })) {
+    try {
+      const { runMigrations } = require('./migrations/runner') as typeof import('./migrations/runner');
+      const pathMod = require('node:path') as typeof import('node:path');
+      const migrationsDir = pathMod.join(__dirname, '..', 'migrations');
+      const client = { query: (sql: string, params?: unknown[]) => p.query(sql, params as any) };
+      await runMigrations({ client, dir: migrationsDir });
+    } catch (err) {
+      const { logError } = require('./logger') as typeof import('./logger');
+      logError('[migrations] auto-apply on initDb failed', err);
+      throw err;
+    }
+  }
+
   if (process.env.USE_IN_MEMORY_DB === '1') {
-    // Clear data between test runs while keeping schema intact.
-    await p.query(`DELETE FROM audit_log`);
-    await p.query(`DELETE FROM generation_idempotency`);
-    await p.query(`DELETE FROM api_cost_counters`);
-    await p.query(`DELETE FROM api_usage_counters`);
-    await p.query(`DELETE FROM usage_events`);
-    await p.query(`DELETE FROM usage_counters`);
-    await p.query(`DELETE FROM user_tiers`);
-    await p.query(`DELETE FROM tier_entitlements`);
-    await p.query(`DELETE FROM tier_limits`);
-    await p.query(`DELETE FROM feature_flags`);
-    await p.query(`DELETE FROM tiers`);
-    await p.query(`DELETE FROM features`);
-    await p.query(`DELETE FROM message_reads`);
-    await p.query(`DELETE FROM trip_messages`);
-    await p.query(`DELETE FROM trip_comments`);
-    await p.query(`DELETE FROM trip_activity`);
-    await p.query(`DELETE FROM itinerary_details`);
-    await p.query(`DELETE FROM itineraries`);
-    await p.query(`DELETE FROM tours`);
-    await p.query(`DELETE FROM car_rentals`);
-    await p.query(`DELETE FROM item_votes`);
-    await p.query(`DELETE FROM lodgings`);
-    await p.query(`DELETE FROM flight_shares`);
-    await p.query(`DELETE FROM flights`);
-    await p.query(`DELETE FROM expenses`);
-    await p.query(`DELETE FROM trips`);
-    await p.query(`DELETE FROM place_details_cache`);
-    await p.query(`DELETE FROM place_lookup_cache`);
-    await p.query(`DELETE FROM group_invites`);
-    await p.query(`DELETE FROM group_members`);
-    await p.query(`DELETE FROM groups`);
-    await p.query(`DELETE FROM traits`);
-    await p.query(`DELETE FROM family_relationships`);
-    await p.query(`DELETE FROM fellow_travelers`);
-    await p.query(`DELETE FROM user_email_verifications`);
-    await p.query(`DELETE FROM user_emails`);
-    await p.query(`DELETE FROM web_users`);
-    await p.query(`DELETE FROM users`);
+    // Clear data between test runs while keeping schema intact. Each DELETE
+    // is best-effort: tables that haven't been created yet (e.g. because a
+    // migration is disabled via INGESTION_MIGRATIONS_ON_BOOT=false) are
+    // ignored so the init path stays composable across test modes.
+    const del = async (tbl: string): Promise<void> => {
+      try { await p.query(`DELETE FROM ${tbl}`); } catch { /* table absent, skip */ }
+    };
+    await del('audit_log');
+    await del('generation_idempotency');
+    await del('api_cost_counters');
+    await del('api_usage_counters');
+    await del('usage_events');
+    await del('usage_counters');
+    await del('user_tiers');
+    await del('tier_entitlements');
+    await del('tier_limits');
+    await del('feature_flags');
+    await del('tiers');
+    await del('features');
+    await del('message_reads');
+    await del('trip_messages');
+    await del('trip_comments');
+    await del('trip_activity');
+    await del('itinerary_details');
+    await del('itineraries');
+    await del('tours');
+    await del('car_rentals');
+    await del('item_votes');
+    await del('lodgings');
+    await del('flight_shares');
+    await del('flights');
+    await del('expenses');
+    await del('trips');
+    await del('place_details_cache');
+    await del('place_lookup_cache');
+    await del('group_invites');
+    await del('group_members');
+    await del('groups');
+    await del('traits');
+    await del('family_relationships');
+    await del('fellow_travelers');
+    await del('user_email_verifications');
+    await del('user_emails');
+    await del('web_users');
+    await del('users');
   }
 
   // Seed tiers (individual parameterized inserts to avoid pg-mem uuid evaluation issues)
@@ -1280,6 +1291,14 @@ export const initDb = async (): Promise<void> => {
       verifiedAt: user.emailVerifiedAt ? new Date(user.emailVerifiedAt) : null,
     });
   }
+
+  // Migration runner already fired above (right after inline bootstrap,
+  // before the USE_IN_MEMORY_DB cleanup). This kept-legacy comment block
+  // documents the rationale: run migrations AFTER the inline CREATE TABLE
+  // IF NOT EXISTS path so the `schema_migrations` ledger stays separate
+  // from the historical bootstrap. Disable via
+  // INGESTION_MIGRATIONS_ON_BOOT=false when running against a DB where
+  // migrations are applied out-of-band (e.g. a prod migration job).
 };
 
 
@@ -8197,12 +8216,13 @@ export const reserveGenerationIdempotency = async (params: {
 }): Promise<{ created: boolean; record: Awaited<ReturnType<typeof getGenerationIdempotency>> }> => {
   const p = getPool();
   const ttlSeconds = Math.max(60, params.ttlSeconds ?? 3600);
+  const expiresAt = new Date(Date.now() + ttlSeconds * 1000).toISOString();
   await p.query(
     `INSERT INTO generation_idempotency
        (key, user_id, trip_id, usage_key, window_key, status, expires_at)
-     VALUES ($1, $2, $3, $4, $5, 'pending', NOW() + ($6 || ' seconds')::interval)
+     VALUES ($1, $2, $3, $4, $5, 'pending', $6)
      ON CONFLICT (key) DO NOTHING`,
-    [params.key, params.userId, params.tripId, params.usageKey, params.windowKey, String(ttlSeconds)]
+    [params.key, params.userId, params.tripId, params.usageKey, params.windowKey, expiresAt]
   );
   const record = await getGenerationIdempotency(params.key);
   return { created: Boolean(record && record.userId === params.userId && record.status === 'pending' && record.tripId === params.tripId), record };
@@ -8674,22 +8694,113 @@ export const adminGetUserData = async (opts: {
 // Chat / Messaging
 // ---------------------------------------------------------------------------
 
+type TripMessageRow = {
+  id: string;
+  appId: string;
+  tripId: string;
+  senderId: string;
+  senderName: string;
+  senderInitials: string;
+  body: string;
+  createdAt: string;
+};
+
+const attachReadByForTrip = async (
+  tripId: string,
+  messageIds: string[],
+): Promise<Map<string, string[]>> => {
+  const readMap = new Map<string, string[]>();
+  if (messageIds.length === 0) return readMap;
+  const p = getPool();
+  // Scope by trip via subquery; intersect with the page ids in-memory.
+  const { rows: reads } = await p.query<{ messageId: string; userId: string }>(
+    `SELECT message_id AS "messageId", user_id AS "userId"
+     FROM message_reads
+     WHERE message_id IN (
+       SELECT id FROM trip_messages WHERE trip_id = $1
+     )`,
+    [tripId],
+  );
+  const pageIds = new Set(messageIds);
+  for (const read of reads) {
+    if (!pageIds.has(read.messageId)) continue;
+    if (!readMap.has(read.messageId)) readMap.set(read.messageId, []);
+    readMap.get(read.messageId)!.push(read.userId);
+  }
+  return readMap;
+};
+
+/**
+ * Fetch a page of messages for a trip, newest-first via cursor.
+ *
+ * - `beforeId` (optional): returns messages strictly older than the referenced
+ *   message. When omitted, returns the most recent `limit` messages.
+ * - Returned `messages` are in ascending chronological order for rendering.
+ * - `hasMore` indicates whether more messages exist before the oldest returned.
+ */
+export const listTripMessagesPage = async (
+  tripId: string,
+  options: { limit?: number; beforeId?: string } = {},
+): Promise<{ messages: TripChatMessage[]; hasMore: boolean }> => {
+  const p = getPool();
+  const limit = Math.max(1, Math.min(options.limit ?? 50, 200));
+
+  let cursorCreatedAt: string | null = null;
+  let cursorId: string | null = null;
+  if (options.beforeId) {
+    const { rows: cursorRows } = await p.query<{ createdAt: string; id: string }>(
+      `SELECT created_at AS "createdAt", id FROM trip_messages WHERE id = $1 LIMIT 1`,
+      [options.beforeId],
+    );
+    if (cursorRows.length) {
+      cursorCreatedAt = cursorRows[0].createdAt;
+      cursorId = cursorRows[0].id;
+    } else {
+      return { messages: [], hasMore: false };
+    }
+  }
+
+  const params: unknown[] = [tripId];
+  let cursorClause = '';
+  if (cursorCreatedAt && cursorId) {
+    params.push(cursorCreatedAt, cursorId);
+    cursorClause = ` AND (created_at < $${params.length - 1} OR (created_at = $${params.length - 1} AND id < $${params.length}))`;
+  }
+  params.push(limit + 1);
+  const limitIdx = params.length;
+
+  const { rows } = await p.query<TripMessageRow>(
+    `SELECT id,
+            app_id          AS "appId",
+            trip_id         AS "tripId",
+            sender_id       AS "senderId",
+            sender_name     AS "senderName",
+            sender_initials AS "senderInitials",
+            body,
+            created_at      AS "createdAt"
+     FROM trip_messages
+     WHERE trip_id = $1${cursorClause}
+     ORDER BY created_at DESC, id DESC
+     LIMIT $${limitIdx}`,
+    params,
+  );
+
+  const hasMore = rows.length > limit;
+  const page = hasMore ? rows.slice(0, limit) : rows;
+  const ascending = page.slice().reverse();
+
+  const readMap = await attachReadByForTrip(tripId, ascending.map((r) => r.id));
+  const messages = ascending.map((r) => ({ ...r, readBy: readMap.get(r.id) ?? [] }));
+  return { messages, hasMore };
+};
+
 /** Fetch messages for a trip, oldest-first, with their read-by lists. */
 export const listTripMessages = async (
   tripId: string,
   limit = 200,
 ): Promise<TripChatMessage[]> => {
   const p = getPool();
-  const { rows } = await p.query<{
-    id: string;
-    appId: string;
-    tripId: string;
-    senderId: string;
-    senderName: string;
-    senderInitials: string;
-    body: string;
-    createdAt: string;
-  }>(
+  const { rows } = await p.query<TripMessageRow>(
     `SELECT id,
             app_id          AS "appId",
             trip_id         AS "tripId",
@@ -8706,22 +8817,7 @@ export const listTripMessages = async (
   );
 
   if (rows.length === 0) return [];
-
-  // Fetch read receipts for this trip using a sub-select (pg-mem compatible)
-  const { rows: reads } = await p.query<{ messageId: string; userId: string }>(
-    `SELECT message_id AS "messageId", user_id AS "userId"
-     FROM message_reads
-     WHERE message_id IN (
-       SELECT id FROM trip_messages WHERE trip_id = $1
-     )`,
-    [tripId],
-  );
-  const readMap = new Map<string, string[]>();
-  for (const read of reads) {
-    if (!readMap.has(read.messageId)) readMap.set(read.messageId, []);
-    readMap.get(read.messageId)!.push(read.userId);
-  }
-
+  const readMap = await attachReadByForTrip(tripId, rows.map((r) => r.id));
   return rows.map((r) => ({ ...r, readBy: readMap.get(r.id) ?? [] }));
 };
 
@@ -8738,15 +8834,24 @@ export const addTripMessage = async (msg: {
   const text = String(msg.body ?? '').trim();
   if (!text) throw new Error('Message body is required');
   const id = randomUUID();
-  await p.query(
+  const { rows } = await p.query<{ createdAt: string }>(
     `INSERT INTO trip_messages (id, app_id, trip_id, sender_id, sender_name, sender_initials, body)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     RETURNING created_at AS "createdAt"`,
     [id, msg.appId, msg.tripId, msg.senderId, msg.senderName, msg.senderInitials, text],
   );
-  const msgs = await listTripMessages(msg.tripId, 1000);
-  const saved = msgs.find((m) => m.id === id);
-  if (!saved) throw new Error('Failed to retrieve saved message');
-  return saved;
+  const createdAt = rows[0]?.createdAt ?? new Date().toISOString();
+  return {
+    id,
+    appId: msg.appId,
+    tripId: msg.tripId,
+    senderId: msg.senderId,
+    senderName: msg.senderName,
+    senderInitials: msg.senderInitials,
+    body: text,
+    createdAt,
+    readBy: [],
+  };
 };
 
 /** Mark messages in a trip as read by a user up to and including upToMessageId. */
@@ -8764,31 +8869,84 @@ export const markMessagesRead = async (
   if (!cutoffRows.length) return;
   const cutoff = cutoffRows[0].createdAt;
 
-  // Fetch messages to mark (read separately to avoid INSERT ... SELECT + ON CONFLICT in pg-mem)
-  const { rows: toMark } = await p.query<{ id: string }>(
-    `SELECT id FROM trip_messages WHERE trip_id = $1 AND created_at <= $2`,
-    [tripId, cutoff],
-  );
+  // Legacy per-message reads are behind a soak-window env flag. Default ON
+  // so current deployments keep writing both. Flip to "false" to drop the
+  // legacy path and run watermark-only; once confident, the fallback read in
+  // `countUnreadMessages` and the `message_reads` table itself can be
+  // retired together in a follow-up slice.
+  const legacyReadsEnabled = getEnvFlag('CHAT_LEGACY_READS_ENABLED', { defaultValue: true });
+  if (legacyReadsEnabled) {
+    // Fetch messages to mark (read separately to avoid INSERT ... SELECT +
+    // ON CONFLICT in pg-mem)
+    const { rows: toMark } = await p.query<{ id: string }>(
+      `SELECT id FROM trip_messages WHERE trip_id = $1 AND created_at <= $2`,
+      [tripId, cutoff],
+    );
 
-  for (const row of toMark) {
-    try {
-      await p.query(
-        `INSERT INTO message_reads (message_id, user_id) VALUES ($1, $2)`,
-        [row.id, userId],
-      );
-    } catch {
-      // Already exists (duplicate primary key) — skip
+    for (const row of toMark) {
+      try {
+        await p.query(
+          `INSERT INTO message_reads (message_id, user_id) VALUES ($1, $2)`,
+          [row.id, userId],
+        );
+      } catch {
+        // Already exists (duplicate primary key) — skip
+      }
     }
   }
+
+  // Dual-write: upsert the per-user watermark. Only advance forward — if the
+  // stored cutoff is already newer, leave it alone (prevents a stale
+  // MARK_READ from a re-opened panel from walking the read-state backwards).
+  await p.query(
+    `INSERT INTO chat_read_watermarks (user_id, trip_id, last_read_message_id, last_read_created_at, updated_at)
+     VALUES ($1, $2, $3, $4, NOW())
+     ON CONFLICT (user_id, trip_id) DO UPDATE
+     SET last_read_message_id = CASE
+           WHEN EXCLUDED.last_read_created_at > chat_read_watermarks.last_read_created_at
+             THEN EXCLUDED.last_read_message_id
+           ELSE chat_read_watermarks.last_read_message_id
+         END,
+         last_read_created_at = CASE
+           WHEN EXCLUDED.last_read_created_at > chat_read_watermarks.last_read_created_at
+             THEN EXCLUDED.last_read_created_at
+           ELSE chat_read_watermarks.last_read_created_at
+         END,
+         updated_at = NOW()`,
+    [userId, tripId, upToMessageId, cutoff],
+  );
 };
 
-/** Count unread messages for a user in a trip. */
+/**
+ * Count unread messages for a user in a trip. Prefers the per-user watermark
+ * when one exists (single indexed lookup); falls back to the legacy
+ * `message_reads` LEFT JOIN for users who have never emitted a MARK_READ
+ * since the watermark table was introduced.
+ */
 export const countUnreadMessages = async (
   tripId: string,
   userId: string,
 ): Promise<number> => {
   const p = getPool();
-  // Use LEFT JOIN instead of NOT EXISTS for pg-mem compatibility
+
+  const { rows: watermarkRows } = await p.query<{ cutoff: string }>(
+    `SELECT last_read_created_at AS "cutoff"
+     FROM chat_read_watermarks
+     WHERE user_id = $1 AND trip_id = $2`,
+    [userId, tripId],
+  );
+  if (watermarkRows.length) {
+    const cutoff = watermarkRows[0].cutoff;
+    const { rows } = await p.query<{ count: string }>(
+      `SELECT COUNT(id)::text AS count
+       FROM trip_messages
+       WHERE trip_id = $1 AND created_at > $2`,
+      [tripId, cutoff],
+    );
+    return parseInt(rows[0]?.count ?? '0', 10);
+  }
+
+  // Fall back to per-message reads (legacy path).
   const { rows } = await p.query<{ count: string }>(
     `SELECT COUNT(m.id)::text AS count
      FROM trip_messages m
@@ -8797,4 +8955,93 @@ export const countUnreadMessages = async (
     [tripId, userId],
   );
   return parseInt(rows[0]?.count ?? '0', 10);
+};
+
+// ---------------------------------------------------------------------------
+// User-authored item aggregation (for account data export)
+// ---------------------------------------------------------------------------
+
+/**
+ * Return every row whose `user_id` column equals the exporting user. This is
+ * the read-side companion to the user-deletion cascade: if deletion removes
+ * a row based on user_id, export surfaces it. Trip membership-scoped reads
+ * (visible-to-user) live in their own list functions elsewhere — this one
+ * answers "what did *this user* author".
+ */
+export const listUserAuthoredItems = async (
+  userId: string,
+): Promise<{
+  flights: any[];
+  lodgings: any[];
+  tours: any[];
+  carRentals: any[];
+  expenses: any[];
+  tripMessages: any[];
+}> => {
+  const p = getPool();
+  const [flights, lodgings, tours, carRentals, expenses, tripMessages] = await Promise.all([
+    p.query(
+      `SELECT id, user_id as "userId", trip_id as "tripId", status, transfer_type as "transferType",
+              passenger_name as "passengerName", departure_date as "departureDate",
+              arrival_date as "arrivalDate", departure_time as "departureTime",
+              arrival_time as "arrivalTime", carrier, flight_number as "flightNumber",
+              booking_reference as "bookingReference", cost
+       FROM flights
+       WHERE user_id = $1
+       ORDER BY departure_date ASC NULLS LAST`,
+      [userId],
+    ),
+    p.query(
+      `SELECT id, user_id as "userId", trip_id as "tripId", status, name,
+              check_in_date as "checkInDate", check_out_date as "checkOutDate",
+              rooms, total_cost as "totalCost", address, created_at as "createdAt"
+       FROM lodgings
+       WHERE user_id = $1
+       ORDER BY check_in_date ASC NULLS LAST`,
+      [userId],
+    ),
+    p.query(
+      `SELECT id, user_id as "userId", trip_id as "tripId", status, name, cost,
+              date as "date", start_time as "startTime", duration,
+              created_at as "createdAt"
+       FROM tours
+       WHERE user_id = $1
+       ORDER BY date ASC NULLS LAST`,
+      [userId],
+    ),
+    p.query(
+      `SELECT id, user_id as "userId", trip_id as "tripId", status, vendor, model, cost,
+              pickup_date as "pickupDate", dropoff_date as "dropoffDate",
+              pickup_location as "pickupLocation", dropoff_location as "dropoffLocation",
+              created_at as "createdAt"
+       FROM car_rentals
+       WHERE user_id = $1
+       ORDER BY pickup_date ASC NULLS LAST`,
+      [userId],
+    ),
+    p.query(
+      `SELECT id, user_id as "userId", trip_id as "tripId", group_id as "groupId",
+              category, amount, currency, notes,
+              expense_date as "expenseDate", created_at as "createdAt"
+       FROM expenses
+       WHERE user_id = $1
+       ORDER BY expense_date ASC NULLS LAST`,
+      [userId],
+    ),
+    p.query(
+      `SELECT id, trip_id as "tripId", body, created_at as "createdAt"
+       FROM trip_messages
+       WHERE sender_id = $1
+       ORDER BY created_at ASC`,
+      [userId],
+    ),
+  ]);
+  return {
+    flights: flights.rows,
+    lodgings: lodgings.rows,
+    tours: tours.rows,
+    carRentals: carRentals.rows,
+    expenses: expenses.rows,
+    tripMessages: tripMessages.rows,
+  };
 };

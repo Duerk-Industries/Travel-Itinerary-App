@@ -165,6 +165,13 @@ export interface PersistedImportJob {
   stateChangedAt: string;
   startedAt?: string | null;
   completedAt?: string | null;
+  /**
+   * Scheduled earliest-retry timestamp populated on FAILED-state transitions.
+   * A future scheduler will pick up rows where `state='FAILED' AND
+   * next_retry_at <= NOW() AND retry_count < max_attempts`. Column is written
+   * today so the data is already there when the scheduler ships.
+   */
+  nextRetryAt?: string | null;
 }
 
 export interface QueuedImportProcessorConfig {

@@ -1,7 +1,8 @@
 import React from 'react';
-import { Modal, ScrollView, Text, View, useWindowDimensions, TouchableOpacity } from 'react-native';
+import { ScrollView, Text, View, useWindowDimensions, TouchableOpacity } from 'react-native';
 import type { LodgingDraft } from '../tabs/lodging';
 import LodgingForm from './LodgingForm'; // Assuming we extract the form fields into this component
+import DialogShell from './DialogShell';
 
 type MemberOption = {
   id: string;
@@ -37,29 +38,48 @@ const LodgingDialog: React.FC<LodgingDialogProps> = (props) => {
   if (!props.visible) return null;
 
   return (
-    <Modal transparent visible={props.visible} animationType="fade" onRequestClose={props.onCancel}>
-      <View style={[props.styles.modalOverlay, { justifyContent: 'center' }]} testID={props.testID}>
-        <View style={[props.styles.modalCard, { marginTop: 0 }, isCompact && { width: '100%', maxHeight: '90%' }]}>
-          <Text style={props.styles.sectionTitle}>{props.title}</Text>
+    <DialogShell
+      visible={props.visible}
+      title={props.title}
+      styles={props.styles}
+      onClose={props.onCancel}
+      testID={props.testID}
+      useNativeModal
+      overlayStyle={{ justifyContent: 'center' }}
+      cardStyle={[props.styles.modalCard, { marginTop: 0 }, isCompact && { width: '100%', maxHeight: '90%' }]}
+    >
           <ScrollView style={{ maxHeight: isCompact ? 520 : 440 }} contentContainerStyle={{ paddingRight: 12 }}>
             <LodgingForm {...props} isCompact={isCompact} />
           </ScrollView>
           <View style={props.styles.row}>
-            <TouchableOpacity style={[props.styles.button, props.styles.dangerButton]} onPress={props.onCancel}>
+            <TouchableOpacity
+              style={[props.styles.button, props.styles.dangerButton]}
+              onPress={props.onCancel}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel"
+            >
               <Text style={props.styles.dangerButtonText}>Cancel</Text>
             </TouchableOpacity>
             {props.onSaveAndAddAnother ? (
-              <TouchableOpacity style={props.styles.button} onPress={props.onSaveAndAddAnother}>
+              <TouchableOpacity
+                style={props.styles.button}
+                onPress={props.onSaveAndAddAnother}
+                accessibilityRole="button"
+                accessibilityLabel="Save and add another"
+              >
                 <Text style={props.styles.buttonText}>Save &amp; Add Another</Text>
               </TouchableOpacity>
             ) : null}
-            <TouchableOpacity style={props.styles.button} onPress={props.onSave}>
+            <TouchableOpacity
+              style={props.styles.button}
+              onPress={props.onSave}
+              accessibilityRole="button"
+              accessibilityLabel="Save"
+            >
               <Text style={props.styles.buttonText}>Save</Text>
             </TouchableOpacity>
           </View>
-        </View>
-      </View>
-    </Modal>
+    </DialogShell>
   );
 };
 

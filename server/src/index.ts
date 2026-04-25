@@ -11,6 +11,10 @@ import { syncAttractionsCatalogFromCsvToDbOnStartup } from './services/attractio
 import { prewarmAutocompleteCache } from './services/destinationAttractionAutocompleteService';
 import { logMissingApiPricingConfigurationWarnings } from './apis/providerBudgeting';
 import { createSocketServer } from './socket';
+import { startGmailPollingScheduler } from './services/gmailPollingService';
+import { startRetentionScheduler } from './services/retentionService';
+import { startIngestionMetricsScheduler } from './services/ingestionMetricsService';
+import { startFailedRetryScheduler } from './services/failedRetryScheduler';
 
 const defaultPort = Number(process.env.PORT) || 4000;
 const isCloudRunRuntime = Boolean(process.env.K_SERVICE);
@@ -103,6 +107,11 @@ export const startServer = async (portOverride?: number): Promise<Server> => {
   if (process.env.NODE_ENV !== 'test') {
     refreshAirportsDaily().catch((err: any) => logError('Airport refresh failed', err));
   }
+
+  startGmailPollingScheduler();
+  startRetentionScheduler();
+  startIngestionMetricsScheduler();
+  startFailedRetryScheduler();
 
   return server;
 };

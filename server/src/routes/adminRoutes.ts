@@ -20,6 +20,14 @@ import {
 import { getFeatureFlagSeeds } from '../config/featureFlags';
 import { getApiUsageSummary } from '../apis/usageLimiter';
 import { getApiBudgetSummary } from '../apis/providerBudgeting';
+import {
+  countImportJobsByState,
+  listDataDeletionJobs,
+  type DataDeletionJobState,
+} from '../ingestion/shared/repository';
+import { readDto } from '../utils/dtoParse';
+import { bulkSetUserTierDto, bulkSetUserRoleDto } from './adminDtos';
+import { getMetricCounterSnapshot } from '../metrics';
 
 // Admin routes — all guarded by authenticate + requireAdmin in app.ts
 const router = Router();
@@ -178,6 +186,110 @@ router.patch('/users/:userId/tier', async (req, res) => {
     logError('[admin] failed to change user tier', err);
     res.status(500).json({ error: 'Failed to change user tier' });
   }
+});
+
+/**
+ * Bulk set the tier for up to 100 users in a single request. Mirrors the
+ * ingestion bulk-action convention: per-id try/catch, dedupe + empty-id strip
+ * in the DTO, and 207 Multi-Status when any id fails so partial success is
+ * first-class. Admin-role targets are resolved to 'pro' server-side (matching
+ * the single-user PATCH); this is surfaced in the response as `lockedToPro`
+ * and does not count as a failure.
+ */
+router.post('/users/bulk-tier', async (req, res) => {
+  const dto = readDto(bulkSetUserTierDto, req.body, res);
+  if (!dto) return;
+  const actorId = getActorId(req);
+  const tierKey = dto.tierKey;
+  const reason = dto.reason;
+
+  const updated: Array<{ id: string; tierKey: string; lockedToPro: boolean }> = [];
+  const failed: Array<{ id: string; reason: string }> = [];
+
+  for (const targetId of dto.ids) {
+    try {
+      const targetUser = await adminGetUser(targetId);
+      if (!targetUser) {
+        failed.push({ id: targetId, reason: 'User not found' });
+        continue;
+      }
+      const resolvedTierKey = targetUser.role === 'admin' ? 'pro' : tierKey;
+      const before = await getCurrentUserTier(targetId);
+      await setUserTier(targetId, resolvedTierKey, 'admin', actorId, reason);
+      const after = await getCurrentUserTier(targetId);
+      await writeAuditLog({
+        actorUserId: actorId,
+        targetUserId: targetId,
+        action: 'USER_TIER_CHANGED',
+        beforeState: { tierKey: before?.tierKey ?? null, requestedTierKey: tierKey },
+        afterState: { tierKey: after?.tierKey ?? null, bulk: true },
+        reason,
+      });
+      updated.push({
+        id: targetId,
+        tierKey: after?.tierKey ?? resolvedTierKey,
+        lockedToPro: targetUser.role === 'admin',
+      });
+    } catch (err: any) {
+      const message = String(err?.message ?? 'Tier change failed');
+      logError('[admin] bulk tier change: per-id failure', { targetId, err: message });
+      failed.push({ id: targetId, reason: message });
+    }
+  }
+
+  res.status(failed.length > 0 ? 207 : 200).json({ updated, failed });
+});
+
+/**
+ * Bulk change the role for up to 100 users. Mirrors the bulk-tier pattern
+ * (100-id cap, per-id try/catch, 207 Multi-Status when any id fails, per-id
+ * audit log entries). Critical guardrail: the acting admin cannot demote
+ * THEIR OWN account in a bulk update — self-demotion would lock an admin
+ * out of follow-up recovery. That single id is surfaced in `failed` with a
+ * clear reason; the rest of the batch still proceeds.
+ *
+ * Granting admin also auto-assigns Pro tier (parity with the single-user
+ * PATCH at `/users/:userId/role`). The tier change writes its own audit
+ * entry via `setUserTier`.
+ */
+router.post('/users/bulk-role', async (req, res) => {
+  const dto = readDto(bulkSetUserRoleDto, req.body, res);
+  if (!dto) return;
+  const actorId = getActorId(req);
+  const role = dto.role;
+  const reason = dto.reason;
+
+  const updated: Array<{ id: string; role: 'admin' | 'user'; previousRole: string | null }> = [];
+  const failed: Array<{ id: string; reason: string }> = [];
+
+  for (const targetId of dto.ids) {
+    try {
+      if (actorId === targetId && role !== 'admin') {
+        failed.push({ id: targetId, reason: 'Admins cannot revoke their own admin role' });
+        continue;
+      }
+      const previousRole = await getUserRole(targetId);
+      await setUserRole(targetId, role);
+      if (role === 'admin') {
+        await setUserTier(targetId, 'pro', 'admin', actorId, 'Admin users are automatically assigned Pro tier');
+      }
+      await writeAuditLog({
+        actorUserId: actorId,
+        targetUserId: targetId,
+        action: role === 'admin' ? 'USER_ROLE_GRANTED' : 'USER_ROLE_REVOKED',
+        beforeState: { role: previousRole },
+        afterState: { role, bulk: true },
+        reason,
+      });
+      updated.push({ id: targetId, role, previousRole });
+    } catch (err: any) {
+      const message = String(err?.message ?? 'Role change failed');
+      logError('[admin] bulk role change: per-id failure', { targetId, err: message });
+      failed.push({ id: targetId, reason: message });
+    }
+  }
+
+  res.status(failed.length > 0 ? 207 : 200).json({ updated, failed });
 });
 
 router.patch('/users/:userId/role', async (req, res) => {
@@ -600,6 +712,78 @@ router.patch('/api-limits/:provider', async (req, res) => {
   } catch (err) {
     logError('[admin] failed to update api limits', err);
     res.status(500).json({ error: 'Failed to update API limits' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Metrics snapshot (in-process counters + cache hit-rate)
+// ---------------------------------------------------------------------------
+
+router.get('/metrics', (_req, res) => {
+  // Per-instance best-effort aggregation — if the deployment has multiple
+  // instances each returns its own counters. Client should label accordingly.
+  res.json(getMetricCounterSnapshot());
+});
+
+// ---------------------------------------------------------------------------
+// Ingestion queue depth — import_jobs grouped by state (live, not a cache)
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns `{ countsByState: { PENDING: N, PROCESSING: N, FAILED: N, ... },
+ * totalActive: N, totalTerminal: N, snapshotAtIso }`. Powers the AdminTab
+ * queue-depth card and gives operators an at-a-glance view of how many
+ * imports are stuck in retriable vs terminal states without having to shell
+ * into Prometheus.
+ */
+router.get('/ingestion-queue-depth', async (_req, res) => {
+  try {
+    const countsByState = await countImportJobsByState();
+    const ACTIVE = new Set(['PENDING', 'QUEUED', 'NORMALIZING', 'PARSING', 'AWAITING_REVIEW', 'PROCESSING']);
+    const TERMINAL = new Set(['COMPLETED', 'DEAD_LETTERED', 'CANCELLED']);
+    let totalActive = 0;
+    let totalTerminal = 0;
+    for (const [state, count] of Object.entries(countsByState)) {
+      if (ACTIVE.has(state)) totalActive += count;
+      else if (TERMINAL.has(state)) totalTerminal += count;
+    }
+    res.json({
+      countsByState,
+      totalActive,
+      totalTerminal,
+      failedRetriable: countsByState.FAILED ?? 0,
+      snapshotAtIso: new Date().toISOString(),
+    });
+  } catch (err) {
+    logError('[admin] failed to compute ingestion queue depth', err);
+    res.status(500).json({ error: 'Failed to compute queue depth' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Data deletion jobs (Gmail/ingestion provider disconnect observability)
+// ---------------------------------------------------------------------------
+
+const VALID_DELETION_STATES: readonly DataDeletionJobState[] = ['pending', 'running', 'succeeded', 'failed'];
+
+router.get('/data-deletion-jobs', async (req, res) => {
+  const stateParam = typeof req.query.state === 'string' ? req.query.state : undefined;
+  const state = stateParam && VALID_DELETION_STATES.includes(stateParam as DataDeletionJobState)
+    ? (stateParam as DataDeletionJobState)
+    : undefined;
+  if (stateParam && !state) {
+    res.status(400).json({ error: `state must be one of: ${VALID_DELETION_STATES.join(', ')}` });
+    return;
+  }
+  const userId = typeof req.query.userId === 'string' && req.query.userId.trim() ? req.query.userId.trim() : undefined;
+  const limitParam = req.query.limit ? parseInt(String(req.query.limit), 10) : undefined;
+  const limit = Number.isFinite(limitParam) && (limitParam as number) > 0 ? (limitParam as number) : undefined;
+  try {
+    const jobs = await listDataDeletionJobs({ state, userId, limit });
+    res.json({ jobs });
+  } catch (err) {
+    logError('[admin] failed to list data deletion jobs', err);
+    res.status(500).json({ error: 'Failed to list data deletion jobs' });
   }
 });
 

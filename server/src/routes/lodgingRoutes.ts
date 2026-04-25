@@ -16,6 +16,8 @@ import {
 import { getGooglePlaceImage } from '../image-service';
 import { normalizeItineraryStatus, shouldRelaxRequiredFields } from '../utils/itineraryStatus';
 import { applyVoteSummary } from '../services/itemVoteService';
+import { readDto } from '../utils/dtoParse';
+import { createLodgingDto, updateLodgingDto, voteOrRatingDto } from './lodgingDtos';
 
 // Lodgings API: CRUD for lodgings scoped to the authenticated user / their group trips.
 const router = Router();
@@ -49,65 +51,59 @@ router.get('/', async (req, res) => {
 
 router.post('/', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const {
-    name,
-    checkInDate,
-    checkOutDate,
-    rooms,
-    refundBy,
-    totalCost,
-    costPerNight,
-    address,
-    placeId,
-    tripId,
-    paidBy,
-    travelerIds,
-    status: incomingStatus,
-  } = req.body;
-  const status = normalizeItineraryStatus(incomingStatus);
+  const dto = readDto(createLodgingDto, req.body, res);
+  if (!dto) return;
+
+  const status = normalizeItineraryStatus(dto.status);
   const relaxed = shouldRelaxRequiredFields(status);
-  if ((!relaxed && (!name || !checkInDate || !checkOutDate)) || !tripId) {
+  const nameVal = dto.name ?? '';
+  const checkInDate = dto.checkInDate ?? '';
+  const checkOutDate = dto.checkOutDate ?? '';
+  if (!relaxed && (!nameVal || !checkInDate || !checkOutDate)) {
     res.status(400).json({ error: 'Missing required fields' });
     return;
   }
-  const tripGroup = await ensureUserInTrip(tripId, userId);
+  const tripGroup = await ensureUserInTrip(dto.tripId, userId);
   if (!tripGroup) {
     res.status(403).json({ error: 'You must be in the group for this trip' });
     return;
   }
+  const addressVal = dto.address ?? '';
   let imageUrl: string | null = null;
   try {
-    imageUrl = await getGooglePlaceImage(address ? `${name}, ${address}` : name);
+    imageUrl = await getGooglePlaceImage(addressVal ? `${nameVal}, ${addressVal}` : nameVal);
   } catch (error) {
     console.error('Failed to fetch image for lodging:', error);
   }
+  // Preserve legacy fallback: when traveler ids are omitted, inherit paidBy.
+  const travelerIds = dto.travelerIds.length ? dto.travelerIds : dto.paidBy;
   const lodging = await insertLodging({
     userId,
-    tripId,
+    tripId: dto.tripId,
     status,
-    name,
+    name: nameVal,
     checkInDate: checkInDate || new Date().toISOString().slice(0, 10),
     checkOutDate: checkOutDate || checkInDate || new Date().toISOString().slice(0, 10),
-    rooms: Number(rooms) || 1,
-    refundBy: refundBy || null,
-    totalCost: Number(totalCost) || 0,
-    costPerNight: Number(costPerNight) || 0,
-    address,
-    place_id: placeId || null,
-    paid_by: Array.isArray(paidBy) ? paidBy : [],
-    traveler_ids: Array.isArray(travelerIds) ? travelerIds : Array.isArray(paidBy) ? paidBy : [],
+    rooms: Number(dto.rooms) || 1,
+    refundBy: dto.refundBy ?? null,
+    totalCost: Number(dto.totalCost) || 0,
+    costPerNight: Number(dto.costPerNight) || 0,
+    address: addressVal,
+    place_id: dto.placeId ?? undefined,
+    paid_by: dto.paidBy,
+    traveler_ids: travelerIds,
     imageUrl,
   });
   await upsertExpenseForSource({
     userId,
-    tripId,
+    tripId: dto.tripId,
     groupId: tripGroup.groupId,
-      expenseDate: checkInDate || new Date().toISOString().slice(0, 10),
+    expenseDate: checkInDate || new Date().toISOString().slice(0, 10),
     category: 'Lodging',
-    amount: Number(totalCost) || 0,
+    amount: Number(dto.totalCost) || 0,
     currency: undefined,
-    payerIds: Array.isArray(paidBy) ? paidBy : [],
-    forIds: Array.isArray(travelerIds) ? travelerIds : Array.isArray(paidBy) ? paidBy : [],
+    payerIds: dto.paidBy,
+    forIds: travelerIds,
     sourceType: 'lodging',
     sourceId: lodging.id,
   });
@@ -117,24 +113,20 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const userId = (req as any).user.userId as string;
-    const {
-      name,
-      checkInDate,
-      checkOutDate,
-      rooms,
-      refundBy,
-      totalCost,
-      costPerNight,
-      address,
-      placeId,
-      tripId,
-      paidBy,
-      travelerIds,
-      status: incomingStatus,
-    } = req.body;
-    const normalizedPaidBy = Array.isArray(paidBy) ? (paidBy.length ? paidBy : undefined) : undefined;
-    const normalizedTravelerIds = Array.isArray(travelerIds) ? (travelerIds.length ? travelerIds : []) : undefined;
-    
+    const dto = readDto(updateLodgingDto, req.body ?? {}, res);
+    if (!dto) return;
+    const name = dto.name ?? undefined;
+    const checkInDate = dto.checkInDate ?? undefined;
+    const checkOutDate = dto.checkOutDate ?? undefined;
+    const address = dto.address ?? undefined;
+    const tripId = dto.tripId ?? undefined;
+    const normalizedPaidBy = Array.isArray(dto.paidBy)
+      ? (dto.paidBy.length ? dto.paidBy.map((p) => String(p)) : undefined)
+      : undefined;
+    const normalizedTravelerIds = Array.isArray(dto.travelerIds)
+      ? (dto.travelerIds.length ? dto.travelerIds.map((p) => String(p)) : [])
+      : undefined;
+
     let imageUrl: string | null = null;
     if (name || address) {
       const currentLodging = (await listLodgings(userId, tripId)).find((l) => l.id === req.params.id);
@@ -157,16 +149,16 @@ router.put('/:id', async (req, res) => {
       name,
       check_in_date: checkInDate,
       check_out_date: checkOutDate,
-      rooms: rooms ? Number(rooms) : undefined,
-      refund_by: typeof refundBy === 'undefined' ? undefined : refundBy || null,
-      total_cost: typeof totalCost === 'undefined' ? undefined : Number(totalCost) || 0,
-      cost_per_night: typeof costPerNight === 'undefined' ? undefined : Number(costPerNight) || 0,
+      rooms: dto.rooms == null ? undefined : Number(dto.rooms),
+      refund_by: dto.refundBy == null ? undefined : dto.refundBy || undefined,
+      total_cost: dto.totalCost == null ? undefined : Number(dto.totalCost) || 0,
+      cost_per_night: dto.costPerNight == null ? undefined : Number(dto.costPerNight) || 0,
       address,
-      place_id: typeof placeId === 'undefined' ? undefined : placeId || null,
+      place_id: dto.placeId == null ? undefined : dto.placeId || undefined,
       paid_by: normalizedPaidBy,
-      traveler_ids: typeof normalizedTravelerIds === 'undefined' ? undefined : normalizedTravelerIds,
+      traveler_ids: normalizedTravelerIds,
       trip_id: tripId,
-      status: typeof incomingStatus === 'undefined' ? undefined : normalizeItineraryStatus(incomingStatus),
+      status: dto.status == null ? undefined : normalizeItineraryStatus(String(dto.status)),
       imageUrl: imageUrl ?? undefined,
     });
     if (!updated) {
@@ -207,23 +199,19 @@ router.put('/:id', async (req, res) => {
 router.patch('/:id', async (req, res) => {
   try {
     const userId = (req as any).user.userId as string;
-    const {
-      name,
-      checkInDate,
-      checkOutDate,
-      rooms,
-      refundBy,
-      totalCost,
-      costPerNight,
-      address,
-      placeId,
-      tripId,
-      paidBy,
-      travelerIds,
-      status: incomingStatus,
-    } = req.body;
-    const normalizedPaidBy = Array.isArray(paidBy) ? (paidBy.length ? paidBy : undefined) : undefined;
-    const normalizedTravelerIds = Array.isArray(travelerIds) ? (travelerIds.length ? travelerIds : []) : undefined;
+    const dto = readDto(updateLodgingDto, req.body ?? {}, res);
+    if (!dto) return;
+    const name = dto.name ?? undefined;
+    const checkInDate = dto.checkInDate ?? undefined;
+    const checkOutDate = dto.checkOutDate ?? undefined;
+    const address = dto.address ?? undefined;
+    const tripId = dto.tripId ?? undefined;
+    const normalizedPaidBy = Array.isArray(dto.paidBy)
+      ? (dto.paidBy.length ? dto.paidBy.map((p) => String(p)) : undefined)
+      : undefined;
+    const normalizedTravelerIds = Array.isArray(dto.travelerIds)
+      ? (dto.travelerIds.length ? dto.travelerIds.map((p) => String(p)) : [])
+      : undefined;
 
     let imageUrl: string | null = null;
     if (name || address) {
@@ -247,16 +235,16 @@ router.patch('/:id', async (req, res) => {
       name,
       check_in_date: checkInDate,
       check_out_date: checkOutDate,
-      rooms: rooms ? Number(rooms) : undefined,
-      refund_by: typeof refundBy === 'undefined' ? undefined : refundBy || null,
-      total_cost: typeof totalCost === 'undefined' ? undefined : Number(totalCost) || 0,
-      cost_per_night: typeof costPerNight === 'undefined' ? undefined : Number(costPerNight) || 0,
+      rooms: dto.rooms == null ? undefined : Number(dto.rooms),
+      refund_by: dto.refundBy == null ? undefined : dto.refundBy || undefined,
+      total_cost: dto.totalCost == null ? undefined : Number(dto.totalCost) || 0,
+      cost_per_night: dto.costPerNight == null ? undefined : Number(dto.costPerNight) || 0,
       address,
-      place_id: typeof placeId === 'undefined' ? undefined : placeId || null,
+      place_id: dto.placeId == null ? undefined : dto.placeId || undefined,
       paid_by: normalizedPaidBy,
-      traveler_ids: typeof normalizedTravelerIds === 'undefined' ? undefined : normalizedTravelerIds,
+      traveler_ids: normalizedTravelerIds,
       trip_id: tripId,
-      status: typeof incomingStatus === 'undefined' ? undefined : normalizeItineraryStatus(incomingStatus),
+      status: dto.status == null ? undefined : normalizeItineraryStatus(String(dto.status)),
       imageUrl: imageUrl ?? undefined,
     });
     if (!updated) {
@@ -311,12 +299,9 @@ router.delete('/:id', async (req, res) => {
 
 router.post('/:id/vote', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const valueRaw = Number(req.body?.value);
-  const value = valueRaw === 1 ? 1 : valueRaw === -1 ? -1 : null;
-  if (value == null) {
-    res.status(400).json({ error: 'value must be 1 or -1' });
-    return;
-  }
+  const dto = readDto(voteOrRatingDto, req.body, res);
+  if (!dto) return;
+  const value = dto.value;
   const lodging = await getLodgingById(req.params.id);
   if (!lodging) {
     res.status(404).json({ error: 'Lodging not found' });
@@ -348,12 +333,9 @@ router.post('/:id/vote', async (req, res) => {
 
 router.post('/:id/rating', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const valueRaw = Number(req.body?.value);
-  const value = valueRaw === 1 ? 1 : valueRaw === -1 ? -1 : null;
-  if (value == null) {
-    res.status(400).json({ error: 'value must be 1 or -1' });
-    return;
-  }
+  const dto = readDto(voteOrRatingDto, req.body, res);
+  if (!dto) return;
+  const value = dto.value;
   const lodging = await getLodgingById(req.params.id);
   if (!lodging) {
     res.status(404).json({ error: 'Lodging not found' });

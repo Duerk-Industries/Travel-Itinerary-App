@@ -44,6 +44,7 @@ export const CLIENT_EVENTS = {
   LEAVE_TRIP: 'chat:leave_trip',
   SEND_MESSAGE: 'chat:send_message',
   MARK_READ: 'chat:mark_read',
+  LOAD_OLDER: 'chat:load_older',
   HEARTBEAT: 'presence:heartbeat',
 } as const;
 
@@ -53,6 +54,7 @@ export const SERVER_EVENTS = {
   READ_RECEIPT: 'chat:read_receipt',
   PRESENCE_UPDATE: 'presence:update',
   MESSAGE_HISTORY: 'chat:message_history',
+  MESSAGE_HISTORY_PAGE: 'chat:message_history_page',
   ERROR: 'chat:error',
 } as const;
 

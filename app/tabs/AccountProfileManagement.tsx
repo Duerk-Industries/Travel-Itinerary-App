@@ -1,6 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import DropdownOptionButton from '../components/DropdownOptionButton';
+import ConfirmDialog from '../components/ConfirmDialog';
+import DialogShell from '../components/DialogShell';
+import DraftTextInput from '../components/DraftTextInput';
 import { type MapApp, isMapApp, mapAppOptions } from '../utils/mapLinks';
 import { appearanceOptions, isAppearancePreference, type AppearancePreference } from '../utils/appearancePreference';
 import { AccountProfile } from './account';
@@ -444,10 +447,10 @@ const AccountProfileManagement = ({
         </View>
       ) : null}
       <View style={styles.row}>
-        <TextInput style={[styles.input, { flex: 1 }]} placeholder="First name" autoComplete="given-name" textContentType="givenName" value={accountProfile.firstName} onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, firstName: text }))} />
-        <TextInput style={[styles.input, { flex: 1 }]} placeholder="Last name" autoComplete="family-name" textContentType="familyName" value={accountProfile.lastName} onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, lastName: text }))} />
+        <DraftTextInput style={[styles.input, { flex: 1 }]} placeholder="First name" autoComplete="given-name" textContentType="givenName" value={accountProfile.firstName} onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, firstName: text }))} commitOnBlur={false} />
+        <DraftTextInput style={[styles.input, { flex: 1 }]} placeholder="Last name" autoComplete="family-name" textContentType="familyName" value={accountProfile.lastName} onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, lastName: text }))} commitOnBlur={false} />
       </View>
-      <TextInput style={styles.input} placeholder="Email" autoCapitalize="none" autoComplete="email" textContentType="emailAddress" keyboardType="email-address" value={accountProfile.email} onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, email: text }))} />
+      <DraftTextInput style={styles.input} placeholder="Email" autoCapitalize="none" autoComplete="email" textContentType="emailAddress" keyboardType="email-address" value={accountProfile.email} onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, email: text }))} commitOnBlur={false} />
       <TouchableOpacity
         style={[styles.input, { justifyContent: 'center' }]}
         onPress={() => setShowAddressEditor(true)}
@@ -580,13 +583,14 @@ const AccountProfileManagement = ({
             </View>
           ))}
           <View style={styles.row}>
-            <TextInput
+            <DraftTextInput
               style={[styles.input, { flex: 1 }]}
               placeholder="Add email"
               autoCapitalize="none"
               keyboardType="email-address"
               value={newEmail}
               onChangeText={setNewEmail}
+              commitOnBlur={false}
             />
             <TouchableOpacity style={[styles.button, emailActionBusy && styles.buttonDisabled]} disabled={emailActionBusy} onPress={handleAddEmail}>
               <Text style={styles.buttonText}>Add</Text>
@@ -603,9 +607,9 @@ const AccountProfileManagement = ({
       ) : (
         <>
           <Text style={styles.modalLabel}>Change password</Text>
-          <TextInput style={styles.input} placeholder="Current password" secureTextEntry value={passwordForm.currentPassword} onChangeText={(text: string) => setPasswordForm(p => ({ ...p, currentPassword: text }))} />
-          <TextInput style={styles.input} placeholder="New password" secureTextEntry value={passwordForm.newPassword} onChangeText={(text: string) => setPasswordForm(p => ({ ...p, newPassword: text }))} />
-          <TextInput style={styles.input} placeholder="Confirm new password" secureTextEntry value={passwordForm.newPasswordConfirm} onChangeText={(text: string) => setPasswordForm(p => ({ ...p, newPasswordConfirm: text }))} />
+          <DraftTextInput style={styles.input} placeholder="Current password" secureTextEntry value={passwordForm.currentPassword} onChangeText={(text: string) => setPasswordForm(p => ({ ...p, currentPassword: text }))} commitOnBlur={false} />
+          <DraftTextInput style={styles.input} placeholder="New password" secureTextEntry value={passwordForm.newPassword} onChangeText={(text: string) => setPasswordForm(p => ({ ...p, newPassword: text }))} commitOnBlur={false} />
+          <DraftTextInput style={styles.input} placeholder="Confirm new password" secureTextEntry value={passwordForm.newPasswordConfirm} onChangeText={(text: string) => setPasswordForm(p => ({ ...p, newPasswordConfirm: text }))} commitOnBlur={false} />
           <View style={styles.row}>
             <TouchableOpacity
               style={[styles.button, styles.dangerButton, { flex: 1 }]}
@@ -627,65 +631,68 @@ const AccountProfileManagement = ({
       <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={() => setShowDeleteConfirm(true)}>
         <Text style={styles.dangerButtonText}>Delete Account</Text>
       </TouchableOpacity>
-      {showDeleteConfirm ? (
-        <View style={styles.modalOverlay}>
-          <View style={styles.confirmModal}>
-            <Text style={styles.sectionTitle}>Delete account?</Text>
-            <Text style={styles.helperText}>This cannot be undone. All solo trips and data will be removed.</Text>
-            <View style={styles.row}>
-              <TouchableOpacity style={[styles.button, { flex: 1 }]} onPress={() => setShowDeleteConfirm(false)}>
-                <Text style={styles.buttonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.button, styles.dangerButton, { flex: 1 }]} onPress={handleDeleteAccount}>
-                <Text style={styles.dangerButtonText}>Delete</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      ) : null}
+      <ConfirmDialog
+        visible={showDeleteConfirm}
+        title="Delete account?"
+        message="This cannot be undone. All solo trips and data will be removed."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        onConfirm={handleDeleteAccount}
+        onCancel={() => setShowDeleteConfirm(false)}
+        styles={styles}
+      />
       {showAddressEditor ? (
-        <Modal transparent animationType="fade" visible={showAddressEditor} onRequestClose={() => setShowAddressEditor(false)}>
-          <View style={styles.modalOverlay}>
-            <View style={styles.confirmModal}>
-              <Text style={styles.sectionTitle}>Home Address</Text>
-              <TextInput
+        <DialogShell
+          visible={showAddressEditor}
+          title="Home Address"
+          styles={styles}
+          onClose={() => setShowAddressEditor(false)}
+          useNativeModal
+        >
+              <DraftTextInput
                 style={styles.input}
                 placeholder="Address line 1"
                 value={addressForm.line1}
                 onChangeText={(text: string) => setAddressForm((prev) => ({ ...prev, line1: text }))}
+                commitOnBlur={false}
               />
-              <TextInput
+              <DraftTextInput
                 style={styles.input}
                 placeholder="Address line 2"
                 value={addressForm.line2}
                 onChangeText={(text: string) => setAddressForm((prev) => ({ ...prev, line2: text }))}
+                commitOnBlur={false}
               />
               <View style={styles.row}>
-                <TextInput
+                <DraftTextInput
                   style={[styles.input, { flex: 1 }]}
                   placeholder="City"
                   value={addressForm.city}
                   onChangeText={(text: string) => setAddressForm((prev) => ({ ...prev, city: text }))}
+                  commitOnBlur={false}
                 />
-                <TextInput
+                <DraftTextInput
                   style={[styles.input, { flex: 1 }]}
                   placeholder="State / Province"
                   value={addressForm.state}
                   onChangeText={(text: string) => setAddressForm((prev) => ({ ...prev, state: text }))}
+                  commitOnBlur={false}
                 />
               </View>
               <View style={styles.row}>
-                <TextInput
+                <DraftTextInput
                   style={[styles.input, { flex: 1 }]}
                   placeholder="Postal code"
                   value={addressForm.postalCode}
                   onChangeText={(text: string) => setAddressForm((prev) => ({ ...prev, postalCode: text }))}
+                  commitOnBlur={false}
                 />
-                <TextInput
+                <DraftTextInput
                   style={[styles.input, { flex: 1 }]}
                   placeholder="Country"
                   value={addressForm.country}
                   onChangeText={(text: string) => setAddressForm((prev) => ({ ...prev, country: text }))}
+                  commitOnBlur={false}
                 />
               </View>
               <View style={styles.row}>
@@ -708,9 +715,7 @@ const AccountProfileManagement = ({
                   <Text style={styles.buttonText}>Save Address</Text>
                 </TouchableOpacity>
               </View>
-            </View>
-          </View>
-        </Modal>
+        </DialogShell>
       ) : null}
     </View>
   );

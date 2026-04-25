@@ -10,6 +10,7 @@
     "start": "NODE_ENV=production node dist/index.js",
     "dev": "tsx watch src/index.ts",
     "lint": "npm run typecheck",
+    "migrate": "tsx scripts/migrate.ts",
     "test": "node --experimental-vm-modules ../node_modules/jest/bin/jest.js --config jest.projects.js",
     "typecheck": "tsc --noEmit -p ."
   },

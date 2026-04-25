@@ -52,18 +52,53 @@ export const INGESTION_TIER_RULES = {
     monthlyUploads: 0,
     gmailLookbackDays: 0,
     llmEscalations: 'NONE',
+    gmailPollIntervalHours: null,
   },
   premium: {
     monthlyUploads: 50,
     gmailLookbackDays: 30,
     llmEscalations: 'SMALL_ONLY',
+    gmailPollIntervalHours: 24,
   },
   pro: {
     monthlyUploads: 500,
     gmailLookbackDays: 90,
     llmEscalations: 'LARGE_ALLOWED',
+    gmailPollIntervalHours: 4,
   },
 } as const;
+
+/**
+ * Default interval between Gmail polling scheduler ticks. Each tick picks
+ * connections whose `metadata.lastPolledAt` is older than the tier's
+ * `gmailPollIntervalHours` and kicks off an ingestion pipeline for them.
+ */
+export const GMAIL_POLLING_TICK_INTERVAL_MS_DEFAULT = 15 * 60 * 1000;
+
+/**
+ * Days to keep raw `import_job_payloads` content for jobs that finished in
+ * the terminal `DEAD_LETTERED` state. After this window the payload bytes
+ * (which are not user-visible and cannot be reprocessed) are deleted by the
+ * retention scheduler. The parent `import_jobs` row is preserved so admin
+ * history and dead-letter counts remain accurate.
+ */
+export const INGESTION_RETENTION_DEAD_LETTER_DAYS = 90;
+
+/**
+ * Default interval between retention scheduler ticks. Retention is idempotent
+ * and cheap to skip, so once a day is sufficient.
+ */
+export const RETENTION_TICK_INTERVAL_MS_DEFAULT = 24 * 60 * 60 * 1000;
+
+/**
+ * Default interval between failed-retry scheduler ticks. The scheduler polls
+ * `listFailedJobsReadyForRetry` and requeues any row whose `next_retry_at`
+ * has passed. Five minutes is a compromise between responsiveness (shorter
+ * => jobs retry sooner) and wasted DB load (longer => fewer empty polls on
+ * idle clusters). Override per-environment via
+ * INGESTION_FAILED_RETRY_TICK_MS.
+ */
+export const FAILED_RETRY_SCHEDULER_TICK_INTERVAL_MS_DEFAULT = 5 * 60 * 1000;
 
 export const INGESTION_FEATURE_FLAGS = {
   manualUpload: 'feature_ingest_manual_upload',

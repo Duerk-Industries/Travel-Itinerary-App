@@ -5,6 +5,8 @@ import { deleteExpense, ensureUserInTrip, insertExpense, listExpenses, listGroup
 import { assertCanUseFeature } from '../services/entitlementService';
 import { EntitlementError } from '../errors';
 import { TokenPayload } from '../auth';
+import { readDto } from '../utils/dtoParse';
+import { createExpenseDto, listExpensesQueryDto } from './expenseDtos';
 
 const router = Router();
 router.use(bodyParser.json());
@@ -27,14 +29,11 @@ const allowedCategories = new Set([
 router.get('/', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const role = ((req as any).user as TokenPayload).role;
-  const tripId = req.query.tripId as string | undefined;
-  if (!tripId) {
-    res.status(400).json({ error: 'tripId is required' });
-    return;
-  }
+  const dto = readDto(listExpensesQueryDto, req.query, res);
+  if (!dto) return;
   try {
     await assertCanUseFeature(userId, 'cost_tracking', role);
-    const expenses = await listExpenses(userId, tripId);
+    const expenses = await listExpenses(userId, dto.tripId);
     res.json(expenses);
   } catch (err) {
     if (err instanceof EntitlementError) {
@@ -48,24 +47,8 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const role = ((req as any).user as TokenPayload).role;
-  const {
-    tripId,
-    expenseDate,
-    category,
-    amount,
-    currency,
-    amountInTripCurrency,
-    exchangeRateToTripCurrency,
-    exchangeRateDate,
-    payerIds,
-    forIds,
-    notes,
-  } = req.body ?? {};
-
-  if (!tripId || !expenseDate || !category) {
-    res.status(400).json({ error: 'tripId, expenseDate, and category are required' });
-    return;
-  }
+  const dto = readDto(createExpenseDto, req.body, res);
+  if (!dto) return;
   try {
     await assertCanUseFeature(userId, 'cost_tracking', role);
   } catch (err) {
@@ -75,53 +58,45 @@ router.post('/', async (req, res) => {
     }
     throw err;
   }
-  const normalizedCategory = String(category).trim();
-  if (!allowedCategories.has(normalizedCategory)) {
+  if (!allowedCategories.has(dto.category)) {
     res.status(400).json({ error: 'Invalid category' });
     return;
   }
-  const membership = await ensureUserInTrip(tripId, userId);
+  const membership = await ensureUserInTrip(dto.tripId, userId);
   if (!membership) {
     res.status(403).json({ error: 'You must be in the group for this trip' });
     return;
   }
   const members = await listGroupMembers(membership.groupId, userId);
   const memberIdSet = new Set(members.map((m) => String(m.id)));
-  const normalizedPayers = Array.isArray(payerIds) ? payerIds.map((id: any) => String(id)).filter(Boolean) : [];
-  const normalizedFor = Array.isArray(forIds) ? forIds.map((id: any) => String(id)).filter(Boolean) : [];
-  const normalizedAmountInTripCurrency =
-    amountInTripCurrency == null ? null : Number(amountInTripCurrency) || 0;
-  const normalizedExchangeRate =
-    exchangeRateToTripCurrency == null ? null : Number(exchangeRateToTripCurrency) || 0;
-  const normalizedRateDate = typeof exchangeRateDate === 'string' ? exchangeRateDate.trim() || null : null;
 
-  if (!normalizedPayers.length || !normalizedFor.length) {
+  if (!dto.payerIds.length || !dto.forIds.length) {
     res.status(400).json({ error: 'At least one payer and one traveler are required' });
     return;
   }
-  if (normalizedPayers.some((id) => !memberIdSet.has(id))) {
+  if (dto.payerIds.some((id) => !memberIdSet.has(id))) {
     res.status(400).json({ error: 'Payers must be trip members' });
     return;
   }
-  if (normalizedFor.some((id) => !memberIdSet.has(id))) {
+  if (dto.forIds.some((id) => !memberIdSet.has(id))) {
     res.status(400).json({ error: 'Travelers must be trip members' });
     return;
   }
 
   const created = await insertExpense({
     userId,
-    tripId,
+    tripId: dto.tripId,
     groupId: membership.groupId,
-    expenseDate: String(expenseDate),
-    category: normalizedCategory,
-    amount: Number(amount) || 0,
-    currency: typeof currency === 'string' && currency.trim() ? currency.trim().toUpperCase() : undefined,
-    amountInTripCurrency: normalizedAmountInTripCurrency,
-    exchangeRateToTripCurrency: normalizedExchangeRate,
-    exchangeRateDate: normalizedRateDate,
-    payerIds: normalizedPayers,
-    forIds: normalizedFor,
-    notes: typeof notes === 'string' ? notes.trim() || null : null,
+    expenseDate: dto.expenseDate,
+    category: dto.category,
+    amount: dto.amount,
+    currency: dto.currency,
+    amountInTripCurrency: dto.amountInTripCurrency,
+    exchangeRateToTripCurrency: dto.exchangeRateToTripCurrency,
+    exchangeRateDate: dto.exchangeRateDate,
+    payerIds: dto.payerIds,
+    forIds: dto.forIds,
+    notes: dto.notes,
   });
   res.status(201).json(created);
 });

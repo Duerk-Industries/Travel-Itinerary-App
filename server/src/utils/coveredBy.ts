@@ -1,3 +1,7 @@
+// Mirror of packages/domain/src/coveredBy.ts (detectCycle + detectCoveringConflict subset).
+// Kept inline because server tsconfig restricts cross-workspace source imports.
+// A contract test in server/__tests__/domainSync.test.ts catches drift.
+
 export const detectCycle = (coveredBy: Record<string, string>): boolean => {
   const path = new Set<string>();
   const visited = new Set<string>();

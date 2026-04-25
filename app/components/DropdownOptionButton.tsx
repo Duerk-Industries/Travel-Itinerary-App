@@ -9,6 +9,7 @@ type DropdownOptionButtonProps = {
   testID?: string;
   disabled?: boolean;
   style?: any;
+  accessibilityLabel?: string;
 };
 
 const DropdownOptionButton: React.FC<DropdownOptionButtonProps> = ({
@@ -19,12 +20,16 @@ const DropdownOptionButton: React.FC<DropdownOptionButtonProps> = ({
   testID,
   disabled,
   style,
+  accessibilityLabel,
 }) => (
   <Pressable
     testID={testID}
     disabled={disabled}
     onPress={onPress}
     onPressIn={onPressIn}
+    accessibilityRole="menuitem"
+    accessibilityLabel={accessibilityLabel}
+    accessibilityState={{ disabled: !!disabled }}
     style={({ hovered, pressed }: { hovered?: boolean; pressed: boolean }) => [
       styles.dropdownOption,
       hovered ? styles.dropdownOptionHover : null,

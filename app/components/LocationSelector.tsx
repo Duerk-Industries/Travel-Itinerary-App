@@ -26,7 +26,7 @@ type LocationSelectorProps = {
   showCitySearch?: boolean;
 };
 
-export const LocationSelector: React.FC<LocationSelectorProps> = ({
+const LocationSelectorComponent: React.FC<LocationSelectorProps> = ({
   backendUrl,
   headers,
   selectedLocations,
@@ -429,3 +429,5 @@ export const LocationSelector: React.FC<LocationSelectorProps> = ({
     </View>
   );
 };
+
+export const LocationSelector = React.memo(LocationSelectorComponent);

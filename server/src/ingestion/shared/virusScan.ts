@@ -1,7 +1,6 @@
-import { getEnvValue } from '../../env';
-import { isFeatureEnabled } from '../../services/entitlementService';
-import { INGESTION_FEATURE_FLAGS, INGESTION_VIRUS_SCAN_PROVIDER_DEFAULT } from '../config';
 import type { VirusScanStatus } from '../contracts';
+import { incrementMetric } from '../../metrics';
+import { getVirusScanner } from '../virusScanProviders';
 
 export interface VirusScanResult {
   status: VirusScanStatus;
@@ -9,41 +8,30 @@ export interface VirusScanResult {
   provider: string | null;
 }
 
-const getConfiguredProvider = (): string =>
-  (getEnvValue('INGESTION_VIRUS_SCAN_PROVIDER', { defaultValue: INGESTION_VIRUS_SCAN_PROVIDER_DEFAULT }) || INGESTION_VIRUS_SCAN_PROVIDER_DEFAULT)
-    .trim()
-    .toLowerCase();
+/**
+ * Record a `virus_scan_total` counter for every scan outcome so Prometheus
+ * scrapes and the AdminTab counter card can see the PASSED / FAILED /
+ * SKIPPED distribution per method. Labels: `method` (batch | buffer) plus
+ * the scan `status` and `provider`.
+ */
+export const recordVirusScanResult = (
+  method: 'batch' | 'buffer',
+  result: VirusScanResult,
+): void => {
+  incrementMetric('virus_scan_total', {
+    method,
+    status: String(result.status ?? 'UNKNOWN'),
+    provider: String(result.provider ?? 'unknown'),
+  });
+};
 
+/**
+ * Legacy entry point — delegates to the configured virus-scan adapter. New
+ * callers should pull the adapter from `ingestion/virusScanProviders` so
+ * they can invoke `scanBuffer` when bytes are available.
+ */
 export const scanDocumentOrStub = async (): Promise<VirusScanResult> => {
-  const appEnv = (getEnvValue('APP_ENV', { defaultValue: process.env.NODE_ENV || 'development' }) || 'development').toLowerCase();
-  const stubEnabled = await isFeatureEnabled(INGESTION_FEATURE_FLAGS.localVirusScanStub).catch(() => false);
-  if (stubEnabled) {
-    if (appEnv === 'production') {
-      return {
-        status: 'FAILED',
-        scannedAt: new Date().toISOString(),
-        provider: 'stub_blocked_in_production',
-      };
-    }
-    return {
-      status: 'SKIPPED',
-      scannedAt: new Date().toISOString(),
-      provider: 'stub',
-    };
-  }
-
-  if (process.env.NODE_ENV === 'test' || process.env.NODE_ENV === 'development') {
-    return {
-      status: 'SKIPPED',
-      scannedAt: new Date().toISOString(),
-      provider: 'stub',
-    };
-  }
-
-  const provider = getConfiguredProvider();
-  return {
-    status: 'PASSED',
-    scannedAt: new Date().toISOString(),
-    provider: provider === 'clamav' ? 'clamav_sidecar' : 'cloud_native',
-  };
+  const result = await getVirusScanner().scanBatch();
+  recordVirusScanResult('batch', result);
+  return result;
 };

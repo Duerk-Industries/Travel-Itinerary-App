@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { toWebStyle } from '../utils/webStyle';
+import DialogShell from './DialogShell';
+import DraftTextInput from './DraftTextInput';
 
 type Participant = {
   id: string;
@@ -130,6 +132,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
               boxSizing: 'border-box',
             }}
             data-testid={`${testIdPrefix}-select`}
+            aria-label={label}
           >
             {options.map((id) => (
               <option key={id} value={id}>
@@ -155,6 +158,9 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
                 ]}
                 onPress={() => setValue(id)}
                 testID={`${testIdPrefix}-${id}`}
+                accessibilityRole="button"
+                accessibilityLabel={`${label}: ${participantLabel(id)}`}
+                accessibilityState={{ selected }}
               >
                 <Text style={[styles.expenseToggleText, selected && styles.expenseToggleTextSelected]}>
                   {participantLabel(id)}
@@ -168,12 +174,23 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
   };
 
   return (
-    <Modal transparent visible animationType="fade" onRequestClose={onCancel}>
-      <View style={styles.modalOverlay} testID={testID ?? 'payment-dialog'}>
-        <View style={[styles.modalCard, styles.expenseModalCard]}>
+    <DialogShell
+      visible={visible}
+      title="Record Payment"
+      styles={styles}
+      onClose={onCancel}
+      testID={testID ?? 'payment-dialog'}
+      useNativeModal
+      overlayStyle={{ justifyContent: 'center' }}
+      cardStyle={[styles.modalCard, styles.expenseModalCard]}
+    >
           <View style={styles.row}>
-            <Text style={styles.sectionTitle}>Record Payment</Text>
-            <TouchableOpacity style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]} onPress={onCancel}>
+            <TouchableOpacity
+              style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
+              onPress={onCancel}
+              accessibilityRole="button"
+              accessibilityLabel="Close payment dialog"
+            >
               <Text style={styles.buttonText}>Close</Text>
             </TouchableOpacity>
           </View>
@@ -193,13 +210,16 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
                     boxSizing: 'border-box',
                   }}
                   data-testid="payment-date-input"
+                  aria-label="Payment date"
                 />
               ) : (
-                <TextInput
+                <DraftTextInput
                   style={styles.input}
                   placeholder="YYYY-MM-DD"
                   value={paymentDate}
                   onChangeText={setPaymentDate}
+                  commitOnBlur={false}
+                  accessibilityLabel="Payment date"
                 />
               )}
             </View>
@@ -209,13 +229,15 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
 
             <View style={{ gap: 4 }}>
               <Text style={styles.headerText}>Amount</Text>
-              <TextInput
+              <DraftTextInput
                 style={styles.input}
                 placeholder="0.00"
                 keyboardType="numeric"
                 value={amount}
                 onChangeText={(text: string) => setAmount(sanitizeCostInput(text))}
+                commitOnBlur={false}
                 testID="payment-amount-input"
+                accessibilityLabel="Payment amount"
               />
             </View>
 
@@ -227,6 +249,9 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
                 onPress={handleSave}
                 disabled={saving}
                 testID="payment-save"
+                accessibilityRole="button"
+                accessibilityLabel={saving ? 'Saving payment' : 'Save payment'}
+                accessibilityState={{ disabled: saving }}
               >
                 <Text style={styles.buttonText}>{saving ? 'Saving…' : 'Save Payment'}</Text>
               </TouchableOpacity>
@@ -234,14 +259,15 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
                 style={[styles.button, styles.smallButton, styles.dangerButton]}
                 onPress={onCancel}
                 disabled={saving}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel"
+                accessibilityState={{ disabled: saving }}
               >
                 <Text style={styles.dangerButtonText}>Cancel</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
-        </View>
-      </View>
-    </Modal>
+    </DialogShell>
   );
 };
 

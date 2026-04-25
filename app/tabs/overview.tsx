@@ -74,6 +74,7 @@ import LodgingDialog from '../components/LodgingDialog';
 import LodgingDetailsDialog from '../components/LodgingDetailsDialog';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from '../utils/itineraryStatus';
+import { useImageSourceGetter } from '../utils/imageSource';
 
 type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
 let NativeDateTimePicker: NativeDateTimePickerType | null = null;
@@ -345,6 +346,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   }, []);
   const dayHeroImageStyle = useMemo(() => stripResizeMode(styles.dayHeroImage), [stripResizeMode, styles.dayHeroImage]);
   const lodgingImageStyle = useMemo(() => stripResizeMode(styles.lodgingImage), [stripResizeMode, styles.lodgingImage]);
+  const getImageSource = useImageSourceGetter();
   const responsiveCardStyle = useMemo(
     () => ({
       padding: isPhoneLayout ? 12 : 16,
@@ -697,17 +699,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     () => formatMonthYear(trip?.startMonth ?? null, trip?.startYear ?? null),
     [trip?.startMonth, trip?.startYear]
   );
-
-  const logTravelerInfo = (member: OverviewTabProps['attendees'][number], context: string) => {
-    const first = member.firstName?.trim() ?? '';
-    const last = member.lastName?.trim() ?? '';
-    const name = `${first} ${last}`.trim();
-    const email = member.email?.trim() || member.userEmail?.trim() || '';
-    const pending = member.status === 'pending';
-    console.debug(
-      `[overview][debug] traveler read (${context}) id=${member.id} name="${name}" email=${email || 'n/a'} pending=${pending}`
-    );
-  };
 
   const tripLength = useMemo(() => {
     if (trip?.startDate || trip?.endDate) {
@@ -1589,13 +1580,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   const allMemberIds = useMemo(() => groupMembers.map((m) => m.id), [groupMembers]);
 
-  useEffect(() => {
-    if (!isEditing) return;
-    normalizedAttendees.forEach((member) => {
-      logTravelerInfo(member, 'overview edit');
-    });
-  }, [isEditing, normalizedAttendees]);
-
   const dayDataByDate = useMemo(
     () =>
       buildDayEventsMap<Flight, Lodging, Tour, CarRental, ItineraryDetail>({
@@ -1721,7 +1705,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             disabled={!onPress}
           >
             {img ? (
-              <Image style={dayHeroImageStyle} source={{ uri: img }} resizeMode="cover" />
+              <Image style={dayHeroImageStyle} source={getImageSource(img)} resizeMode="cover" />
             ) : (
               <View style={styles.dayHeroImageFallback} />
             )}
@@ -1945,13 +1929,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                         key={lodging.id}
                         testID={`day-details-lodging-${lodging.id}`}
                         style={styles.dayInfoRow}
-                        onPress={() => {
-                          console.debug(`[overview][debug] accommodation pressed id=${lodging.id} name="${lodging.name}"`);
-                          openLodgingDetails(lodging);
-                        }}
+                        onPress={() => openLodgingDetails(lodging)}
                       >
                         {lodging.imageUrl ? (
-                          <Image style={lodgingImageStyle} source={{ uri: lodging.imageUrl }} resizeMode="cover" />
+                          <Image style={lodgingImageStyle} source={getImageSource(lodging.imageUrl)} resizeMode="cover" />
                         ) : (
                           <View style={styles.lodgingImageFallback} />
                         )}

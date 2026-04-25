@@ -1,12 +1,29 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme } from 'react-native';
 import { getAppTheme, type AppTheme } from '../theme/theme';
+import { usePersistedState } from '../hooks/usePersistedState';
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-type AdminSection = 'overview' | 'users' | 'user-detail' | 'tiers' | 'features' | 'user-data' | 'audit-log' | 'ingestion' | 'api-limits';
+type AdminSection = 'overview' | 'users' | 'user-detail' | 'tiers' | 'features' | 'user-data' | 'audit-log' | 'ingestion' | 'api-limits' | 'metrics';
+
+type CacheRatioRow = { namespace: string; hits: number; misses: number; total: number; hitRate: number };
+type MetricsSnapshot = {
+  counters: Record<string, number>;
+  cacheRatios: CacheRatioRow[];
+  startedAtIso: string;
+  snapshotAtIso: string;
+};
+
+type QueueDepthSnapshot = {
+  countsByState: Record<string, number>;
+  totalActive: number;
+  totalTerminal: number;
+  failedRetriable: number;
+  snapshotAtIso: string;
+};
 
 type FeatureFlag = { key: string; enabled: boolean; description?: string | null };
 
@@ -180,6 +197,7 @@ const OverviewSection: React.FC<{ onNav: (s: AdminSection) => void } & ThemedSec
         { label: 'Audit Log', section: 'audit-log' as AdminSection, desc: 'History of admin actions' },
         { label: 'API Limits', section: 'api-limits' as AdminSection, desc: 'View API rate limits and current usage' },
         { label: 'Ingestion Ops', section: 'ingestion' as AdminSection, desc: 'Review import throughput, duplicates, and cost' },
+        { label: 'Metrics', section: 'metrics' as AdminSection, desc: 'In-process counters and cache hit rates' },
       ] as { label: string; section: AdminSection; desc: string }[]
     ).map((item) => (
       <TouchableOpacity key={item.section} style={[localStyles.navCard, getCardStyle(theme)]} onPress={() => onNav(item.section)}>
@@ -297,14 +315,23 @@ const FeaturesSection: React.FC<{ backendUrl: string; headers: Record<string, st
 const UsersSection: React.FC<{
   backendUrl: string;
   headers: Record<string, string>;
+  tiers: Tier[];
   onViewUser: (user: AdminUser) => void;
-} & ThemedSectionProps> = ({ backendUrl, headers, onViewUser, theme }) => {
+} & ThemedSectionProps> = ({ backendUrl, headers, tiers, onViewUser, theme }) => {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [total, setTotal] = useState(0);
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
+  const [search, setSearch] = usePersistedState<string>('admin.users.search', '');
+  const [page, setPage] = usePersistedState<number>('admin.users.page', 1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [availableTiers, setAvailableTiers] = useState<Tier[]>(tiers);
+  const [bulkTierKey, setBulkTierKey] = useState<string>('');
+  const [bulkTierDropdownOpen, setBulkTierDropdownOpen] = useState(false);
+  const [bulkReason, setBulkReason] = useState<string>('');
+  const [bulkApplying, setBulkApplying] = useState(false);
+  const [bulkRole, setBulkRole] = useState<'admin' | 'user' | null>(null);
+  const [bulkRoleApplying, setBulkRoleApplying] = useState(false);
   const limit = 20;
 
   const load = useCallback(async (q: string, p: number) => {
@@ -325,7 +352,92 @@ const UsersSection: React.FC<{
 
   useEffect(() => { load(search, page); }, [load, search, page]);
 
+  useEffect(() => {
+    if (availableTiers.length) return;
+    if (tiers.length) { setAvailableTiers(tiers); return; }
+    apiFetch(backendUrl, headers, '/tiers')
+      .then((data: any) => setAvailableTiers(data?.tiers ?? []))
+      .catch(() => undefined);
+  }, [availableTiers.length, backendUrl, headers, tiers]);
+
   const totalPages = Math.max(1, Math.ceil(total / limit));
+  const sortedBulkTiers = [...availableTiers].sort((a, b) => a.rank - b.rank);
+  const selectedTier = sortedBulkTiers.find((t) => t.key === bulkTierKey);
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const applyBulkTier = async () => {
+    const ids = Array.from(selectedIds);
+    if (!ids.length || !bulkTierKey || bulkReason.trim().length < 3) return;
+    setBulkApplying(true);
+    setError(null);
+    try {
+      const response = await fetch(`${backendUrl}/api/admin/users/bulk-tier`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids, tierKey: bulkTierKey, reason: bulkReason.trim() }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok && response.status !== 207) {
+        setError((body as any)?.error ?? 'Bulk tier change failed.');
+        return;
+      }
+      const failed = ((body as any)?.failed ?? []) as Array<{ id: string; reason: string }>;
+      if (failed.length) {
+        const summary = failed.slice(0, 3).map((f) => `${f.id.slice(0, 8)}: ${f.reason}`).join('; ');
+        const overflow = failed.length > 3 ? ` (+${failed.length - 3} more)` : '';
+        setError(`Some users could not be updated: ${summary}${overflow}`);
+      }
+      clearSelection();
+      setBulkReason('');
+      await load(search, page);
+    } catch (e: any) {
+      setError(e.message ?? 'Bulk tier change failed.');
+    } finally {
+      setBulkApplying(false);
+    }
+  };
+
+  const applyBulkRole = async () => {
+    const ids = Array.from(selectedIds);
+    if (!ids.length || !bulkRole || bulkReason.trim().length < 3) return;
+    setBulkRoleApplying(true);
+    setError(null);
+    try {
+      const response = await fetch(`${backendUrl}/api/admin/users/bulk-role`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids, role: bulkRole, reason: bulkReason.trim() }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok && response.status !== 207) {
+        setError((body as any)?.error ?? 'Bulk role change failed.');
+        return;
+      }
+      const failed = ((body as any)?.failed ?? []) as Array<{ id: string; reason: string }>;
+      if (failed.length) {
+        const summary = failed.slice(0, 3).map((f) => `${f.id.slice(0, 8)}: ${f.reason}`).join('; ');
+        const overflow = failed.length > 3 ? ` (+${failed.length - 3} more)` : '';
+        setError(`Some users could not be updated: ${summary}${overflow}`);
+      }
+      clearSelection();
+      setBulkReason('');
+      setBulkRole(null);
+      await load(search, page);
+    } catch (e: any) {
+      setError(e.message ?? 'Bulk role change failed.');
+    } finally {
+      setBulkRoleApplying(false);
+    }
+  };
 
   return (
     <View style={localStyles.section}>
@@ -340,32 +452,186 @@ const UsersSection: React.FC<{
       {error ? <Text style={[localStyles.errorText, { color: theme.colors.error }]}>{error}</Text> : null}
       {loading ? <Text style={[localStyles.loading, { color: theme.colors.textMuted }]}>Loading...</Text> : null}
       {!loading && users.length === 0 ? <Text style={[localStyles.emptyText, { color: theme.colors.textMuted }]}>No users found.</Text> : null}
-      {users.map((u) => (
-        <TouchableOpacity key={u.id} style={[localStyles.card, getCardStyle(theme)]} onPress={() => onViewUser(u)}>
-          <View style={localStyles.row}>
-            <View style={localStyles.flex}>
-              <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>{u.email ?? u.id}</Text>
-              {(u.firstName || u.lastName) ? (
-                <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
-                  {[u.firstName, u.lastName].filter(Boolean).join(' ')}
-                </Text>
-              ) : null}
-            </View>
-            <View style={localStyles.tagRow}>
-              {u.role === 'admin' ? (
-                <View style={[localStyles.tagAdmin, { backgroundColor: theme.colors.primary }]}>
-                  <Text style={localStyles.tagText}>admin</Text>
-                </View>
-              ) : null}
-              {u.tierKey ? (
-                <View style={[localStyles.tagTier, { backgroundColor: theme.colors.premium }]}>
-                  <Text style={localStyles.tagText}>{u.tierKey}</Text>
-                </View>
-              ) : null}
+      {selectedIds.size > 0 ? (
+        <View
+          style={[localStyles.card, getCardStyle(theme)]}
+          accessibilityLabel={`Bulk actions for ${selectedIds.size} selected user${selectedIds.size === 1 ? '' : 's'}`}
+          testID="admin-users-bulk-action-bar"
+        >
+          <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>{selectedIds.size} selected</Text>
+          <View style={[localStyles.row, { flexWrap: 'wrap', gap: 8, marginTop: 8 }]}>
+            <TouchableOpacity
+              style={[localStyles.smallButton, { backgroundColor: theme.colors.surfaceMuted }]}
+              onPress={() => setBulkTierDropdownOpen((v) => !v)}
+              accessibilityRole="button"
+              accessibilityLabel="Choose target tier"
+              testID="admin-users-bulk-tier-dropdown-toggle"
+            >
+              <Text style={[localStyles.smallButtonText, { color: theme.colors.text }]}>
+                {selectedTier?.displayName ?? selectedTier?.key ?? 'Select tier'}
+              </Text>
+            </TouchableOpacity>
+            {bulkTierDropdownOpen ? (
+              <View style={[localStyles.card, getCardStyle(theme), { padding: 8 }]}>
+                {sortedBulkTiers.length === 0 ? (
+                  <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>No tiers loaded.</Text>
+                ) : null}
+                {sortedBulkTiers.map((t) => (
+                  <TouchableOpacity
+                    key={t.id}
+                    style={[localStyles.smallButton, { backgroundColor: theme.colors.surfaceMuted, marginBottom: 4 }]}
+                    onPress={() => { setBulkTierKey(t.key); setBulkTierDropdownOpen(false); }}
+                    accessibilityRole="menuitem"
+                    testID={`admin-users-bulk-tier-option-${t.key}`}
+                  >
+                    <Text style={[localStyles.smallButtonText, { color: theme.colors.text }]}>{t.displayName}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ) : null}
+            <TextInput
+              style={[localStyles.input, getInputStyle(theme), { flex: 1, minWidth: 200 }]}
+              placeholder="Reason (min 3 chars)"
+              placeholderTextColor={theme.colors.textMuted}
+              value={bulkReason}
+              onChangeText={setBulkReason}
+              accessibilityLabel="Reason for bulk tier change"
+              testID="admin-users-bulk-reason"
+            />
+            <TouchableOpacity
+              style={[
+                localStyles.smallButton,
+                { backgroundColor: theme.colors.primary },
+                (!bulkTierKey || bulkReason.trim().length < 3 || bulkApplying) && localStyles.buttonDisabled,
+              ]}
+              disabled={!bulkTierKey || bulkReason.trim().length < 3 || bulkApplying}
+              onPress={applyBulkTier}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !bulkTierKey || bulkReason.trim().length < 3 || bulkApplying }}
+              accessibilityLabel={`Apply ${selectedTier?.displayName ?? bulkTierKey} tier to ${selectedIds.size} selected user${selectedIds.size === 1 ? '' : 's'}`}
+              testID="admin-users-bulk-apply"
+            >
+              <Text style={[localStyles.smallButtonText, { color: theme.colors.onPrimary }]}>
+                {bulkApplying ? 'Applying…' : 'Apply tier'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[localStyles.smallButton, { backgroundColor: theme.colors.surfaceMuted }]}
+              onPress={clearSelection}
+              accessibilityRole="button"
+              accessibilityLabel="Clear user selection"
+              testID="admin-users-bulk-clear"
+            >
+              <Text style={[localStyles.smallButtonText, { color: theme.colors.text }]}>Clear</Text>
+            </TouchableOpacity>
+          </View>
+          <View
+            style={[localStyles.row, { flexWrap: 'wrap', gap: 8, marginTop: 8 }]}
+            testID="admin-users-bulk-role-row"
+          >
+            <TouchableOpacity
+              style={[
+                localStyles.smallButton,
+                bulkRole === 'admin'
+                  ? { backgroundColor: theme.colors.primary }
+                  : { backgroundColor: theme.colors.surfaceMuted },
+              ]}
+              onPress={() => setBulkRole((r) => (r === 'admin' ? null : 'admin'))}
+              accessibilityRole="button"
+              accessibilityLabel="Select role: admin"
+              accessibilityState={{ selected: bulkRole === 'admin' }}
+              testID="admin-users-bulk-role-admin"
+            >
+              <Text
+                style={[
+                  localStyles.smallButtonText,
+                  { color: bulkRole === 'admin' ? theme.colors.onPrimary : theme.colors.text },
+                ]}
+              >
+                Admin
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                localStyles.smallButton,
+                bulkRole === 'user'
+                  ? { backgroundColor: theme.colors.primary }
+                  : { backgroundColor: theme.colors.surfaceMuted },
+              ]}
+              onPress={() => setBulkRole((r) => (r === 'user' ? null : 'user'))}
+              accessibilityRole="button"
+              accessibilityLabel="Select role: user"
+              accessibilityState={{ selected: bulkRole === 'user' }}
+              testID="admin-users-bulk-role-user"
+            >
+              <Text
+                style={[
+                  localStyles.smallButtonText,
+                  { color: bulkRole === 'user' ? theme.colors.onPrimary : theme.colors.text },
+                ]}
+              >
+                User
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                localStyles.smallButton,
+                { backgroundColor: theme.colors.primary },
+                (!bulkRole || bulkReason.trim().length < 3 || bulkRoleApplying) && localStyles.buttonDisabled,
+              ]}
+              disabled={!bulkRole || bulkReason.trim().length < 3 || bulkRoleApplying}
+              onPress={applyBulkRole}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !bulkRole || bulkReason.trim().length < 3 || bulkRoleApplying }}
+              accessibilityLabel={`Apply ${bulkRole ?? 'role'} to ${selectedIds.size} selected user${selectedIds.size === 1 ? '' : 's'}`}
+              testID="admin-users-bulk-role-apply"
+            >
+              <Text style={[localStyles.smallButtonText, { color: theme.colors.onPrimary }]}>
+                {bulkRoleApplying ? 'Applying…' : 'Apply role'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : null}
+      {users.map((u) => {
+        const checked = selectedIds.has(u.id);
+        return (
+          <View key={u.id} style={[localStyles.card, getCardStyle(theme)]}>
+            <View style={localStyles.row}>
+              <TouchableOpacity
+                onPress={() => toggleSelected(u.id)}
+                style={{ paddingRight: 10, paddingVertical: 4 }}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked }}
+                accessibilityLabel={`${checked ? 'Deselect' : 'Select'} ${u.email ?? u.id}`}
+                testID={`admin-users-row-select-${u.id}`}
+              >
+                <Text style={{ fontSize: 18, color: theme.colors.text }}>{checked ? '☑' : '☐'}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={localStyles.flex} onPress={() => onViewUser(u)}>
+                <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>{u.email ?? u.id}</Text>
+                {(u.firstName || u.lastName) ? (
+                  <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+                    {[u.firstName, u.lastName].filter(Boolean).join(' ')}
+                  </Text>
+                ) : null}
+              </TouchableOpacity>
+              <View style={localStyles.tagRow}>
+                {u.role === 'admin' ? (
+                  <View style={[localStyles.tagAdmin, { backgroundColor: theme.colors.primary }]}>
+                    <Text style={localStyles.tagText}>admin</Text>
+                  </View>
+                ) : null}
+                {u.tierKey ? (
+                  <View style={[localStyles.tagTier, { backgroundColor: theme.colors.premium }]}>
+                    <Text style={localStyles.tagText}>{u.tierKey}</Text>
+                  </View>
+                ) : null}
+              </View>
             </View>
           </View>
-        </TouchableOpacity>
-      ))}
+        );
+      })}
       {totalPages > 1 ? (
         <View style={localStyles.pagination}>
           <TouchableOpacity
@@ -1146,6 +1412,158 @@ const TiersSection: React.FC<{
   );
 };
 
+// --- Metrics (in-process counters + cache hit-rates) ---
+const MetricsSection: React.FC<{ backendUrl: string; headers: Record<string, string> } & ThemedSectionProps> = ({
+  backendUrl,
+  headers,
+  theme,
+}) => {
+  const [snapshot, setSnapshot] = useState<MetricsSnapshot | null>(null);
+  const [queueDepth, setQueueDepth] = useState<QueueDepthSnapshot | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [metricsData, queueData] = await Promise.all([
+        apiFetch(backendUrl, headers, '/metrics') as Promise<MetricsSnapshot>,
+        // Queue depth is a nice-to-have — if the sub-query fails we still want
+        // the counters/cache snapshot to render rather than showing a
+        // full-section error.
+        (apiFetch(backendUrl, headers, '/ingestion-queue-depth') as Promise<QueueDepthSnapshot>).catch(() => null),
+      ]);
+      setSnapshot(metricsData);
+      setQueueDepth(queueData);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [backendUrl, headers]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const fmtPct = (r: number) => `${(r * 100).toFixed(1)}%`;
+  const nonCacheCounters = snapshot
+    ? Object.entries(snapshot.counters)
+        .filter(([name]) => !name.endsWith('.cache_hit') && !name.endsWith('.cache_miss'))
+        .sort(([a], [b]) => a.localeCompare(b))
+    : [];
+
+  return (
+    <View style={localStyles.section} testID="admin-metrics-section">
+      <Text style={[localStyles.sectionTitle, { color: theme.colors.text }]}>Metrics</Text>
+      <Text style={[localStyles.cardSub, { color: theme.colors.textMuted, marginBottom: 8 }]}>
+        Per-instance in-process counters since process start. Multi-instance deployments will see per-instance numbers.
+      </Text>
+      <TouchableOpacity
+        style={[localStyles.smallButton, { backgroundColor: theme.colors.primary, alignSelf: 'flex-start', marginBottom: 12 }]}
+        onPress={load}
+        accessibilityRole="button"
+        accessibilityLabel="Refresh metrics"
+        testID="admin-metrics-refresh"
+      >
+        <Text style={[localStyles.smallButtonText, { color: theme.colors.onPrimary }]}>Refresh</Text>
+      </TouchableOpacity>
+      {error ? <Text style={[localStyles.errorText, { color: theme.colors.error }]}>{error}</Text> : null}
+      {loading && !snapshot ? <Text style={[localStyles.loading, { color: theme.colors.textMuted }]}>Loading...</Text> : null}
+
+      {queueDepth ? (
+        <View
+          style={[localStyles.card, getCardStyle(theme), { marginBottom: 12 }]}
+          testID="admin-metrics-queue-depth"
+        >
+          <Text style={[localStyles.cardTitle, { color: theme.colors.text, marginBottom: 4 }]}>
+            Ingestion queue depth
+          </Text>
+          <View style={localStyles.row}>
+            <Text style={[localStyles.cardSub, localStyles.flex, { color: theme.colors.text }]}>Active</Text>
+            <Text
+              style={[localStyles.cardTitle, { color: theme.colors.text }]}
+              testID="admin-metrics-queue-active"
+            >
+              {queueDepth.totalActive}
+            </Text>
+          </View>
+          <View style={localStyles.row}>
+            <Text style={[localStyles.cardSub, localStyles.flex, { color: theme.colors.text }]}>Failed (retriable)</Text>
+            <Text
+              style={[localStyles.cardTitle, { color: theme.colors.text }]}
+              testID="admin-metrics-queue-failed"
+            >
+              {queueDepth.failedRetriable}
+            </Text>
+          </View>
+          <View style={localStyles.row}>
+            <Text style={[localStyles.cardSub, localStyles.flex, { color: theme.colors.textMuted }]}>Terminal</Text>
+            <Text
+              style={[localStyles.cardSub, { color: theme.colors.textMuted }]}
+              testID="admin-metrics-queue-terminal"
+            >
+              {queueDepth.totalTerminal}
+            </Text>
+          </View>
+          {Object.entries(queueDepth.countsByState).length > 0 ? (
+            <Text style={[localStyles.cardSub, { color: theme.colors.textMuted, marginTop: 6 }]}>
+              {Object.entries(queueDepth.countsByState)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([state, n]) => `${state}:${n}`)
+                .join(' • ')}
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
+
+      {snapshot ? (
+        <>
+          <Text style={[localStyles.cardTitle, { color: theme.colors.text, marginBottom: 4 }]}>Cache hit rates</Text>
+          {snapshot.cacheRatios.length === 0 ? (
+            <Text style={[localStyles.emptyText, { color: theme.colors.textMuted }]}>
+              No cache traffic observed yet on this instance.
+            </Text>
+          ) : (
+            snapshot.cacheRatios.map((row) => (
+              <View
+                key={row.namespace}
+                style={[localStyles.card, getCardStyle(theme)]}
+                testID={`admin-metrics-cache-row-${row.namespace}`}
+              >
+                <View style={localStyles.row}>
+                  <Text style={[localStyles.cardTitle, localStyles.flex, { color: theme.colors.text }]}>{row.namespace}</Text>
+                  <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>{fmtPct(row.hitRate)}</Text>
+                </View>
+                <Text style={[localStyles.cardSub, { color: theme.colors.textMuted }]}>
+                  {row.hits} hits / {row.misses} misses ({row.total} total)
+                </Text>
+              </View>
+            ))
+          )}
+
+          <Text style={[localStyles.cardTitle, { color: theme.colors.text, marginTop: 16, marginBottom: 4 }]}>Counters</Text>
+          {nonCacheCounters.length === 0 ? (
+            <Text style={[localStyles.emptyText, { color: theme.colors.textMuted }]}>No counter activity on this instance.</Text>
+          ) : (
+            nonCacheCounters.map(([name, value]) => (
+              <View key={name} style={[localStyles.card, getCardStyle(theme)]} testID={`admin-metrics-counter-${name}`}>
+                <View style={localStyles.row}>
+                  <Text style={[localStyles.cardSub, localStyles.flex, { color: theme.colors.text }]}>{name}</Text>
+                  <Text style={[localStyles.cardTitle, { color: theme.colors.text }]}>{value}</Text>
+                </View>
+              </View>
+            ))
+          )}
+
+          <Text style={[localStyles.cardSub, { color: theme.colors.textMuted, marginTop: 12 }]}>
+            Accumulating since {new Date(snapshot.startedAtIso).toLocaleString()}
+          </Text>
+        </>
+      ) : null}
+    </View>
+  );
+};
+
 // --- User Data ---
 const UserDataSection: React.FC<{ backendUrl: string; headers: Record<string, string> } & ThemedSectionProps> = ({
   backendUrl,
@@ -1154,8 +1572,11 @@ const UserDataSection: React.FC<{ backendUrl: string; headers: Record<string, st
 }) => {
   const [rows, setRows] = useState<UserDataRow[]>([]);
   const [total, setTotal] = useState(0);
-  const [window, setWindow] = useState<'7d' | '30d' | 'all-time'>('30d');
-  const [page, setPage] = useState(1);
+  const [window, setWindow] = usePersistedState<'7d' | '30d' | 'all-time'>(
+    'admin.userData.window',
+    '30d'
+  );
+  const [page, setPage] = usePersistedState<number>('admin.userData.page', 1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const limit = 20;
@@ -1961,7 +2382,7 @@ const AdminTab: React.FC<AdminTabProps> = ({ backendUrl, headers, initialSection
       case 'features':
         return <FeaturesSection backendUrl={backendUrl} headers={headers} theme={theme} />;
       case 'users':
-        return <UsersSection backendUrl={backendUrl} headers={headers} onViewUser={handleViewUser} theme={theme} />;
+        return <UsersSection backendUrl={backendUrl} headers={headers} tiers={loadedTiers} onViewUser={handleViewUser} theme={theme} />;
       case 'user-detail':
         return selectedUser ? (
           <UserDetailSection
@@ -1983,6 +2404,8 @@ const AdminTab: React.FC<AdminTabProps> = ({ backendUrl, headers, initialSection
         return <IngestionSection backendUrl={backendUrl} headers={headers} theme={theme} />;
       case 'api-limits':
         return <ApiLimitsSection backendUrl={backendUrl} headers={headers} theme={theme} />;
+      case 'metrics':
+        return <MetricsSection backendUrl={backendUrl} headers={headers} theme={theme} />;
       default:
         return null;
     }
@@ -1998,6 +2421,7 @@ const AdminTab: React.FC<AdminTabProps> = ({ backendUrl, headers, initialSection
     'audit-log': 'Audit Log',
     ingestion: 'Ingestion Ops',
     'api-limits': 'API Limits',
+    metrics: 'Metrics',
   };
 
   return (

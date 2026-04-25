@@ -35,7 +35,7 @@ import {
   TripChatMessage,
 } from './types';
 import { logError, logInfo } from './logger';
-import { getEnvValue, isLocalEnv } from './env';
+import { getEnvFlag, getEnvValue, isLocalEnv } from './env';
 import { normalizeItineraryStatus } from './utils/itineraryStatus';
 import { getApiLimitsConfig } from './config/apiLimits';
 
@@ -5916,6 +5916,21 @@ export const countActiveTripsForUser = async (userId: string): Promise<number> =
 // Chat / Messaging
 // ---------------------------------------------------------------------------
 
+const docToChatMessage = (doc: any): TripChatMessage => {
+  const d = doc.data() as any;
+  return {
+    id: doc.id,
+    appId: d.appId ?? 'WanderBunnies',
+    tripId: d.tripId,
+    senderId: d.senderId,
+    senderName: d.senderName ?? '',
+    senderInitials: d.senderInitials ?? '',
+    body: d.body ?? '',
+    createdAt: d.createdAt ?? nowIso(),
+    readBy: d.readBy ?? [],
+  };
+};
+
 export const listTripMessages = async (
   tripId: string,
   limit = 200,
@@ -5927,23 +5942,41 @@ export const listTripMessages = async (
     .orderBy('createdAt', 'asc')
     .limit(limit)
     .get();
+  return snap.docs.map(docToChatMessage);
+};
 
-  const messages: TripChatMessage[] = snap.docs.map((doc) => {
-    const d = doc.data() as any;
-    return {
-      id: doc.id,
-      appId: d.appId ?? 'WanderBunnies',
-      tripId: d.tripId,
-      senderId: d.senderId,
-      senderName: d.senderName ?? '',
-      senderInitials: d.senderInitials ?? '',
-      body: d.body ?? '',
-      createdAt: d.createdAt ?? nowIso(),
-      readBy: d.readBy ?? [],
-    };
-  });
+/**
+ * Fetch a page of messages newest-first via a `beforeId` cursor; returns page
+ * in ascending chronological order with `hasMore` for older-page availability.
+ */
+export const listTripMessagesPage = async (
+  tripId: string,
+  options: { limit?: number; beforeId?: string } = {},
+): Promise<{ messages: TripChatMessage[]; hasMore: boolean }> => {
+  const db = getDb();
+  const limit = Math.max(1, Math.min(options.limit ?? 50, 200));
 
-  return messages;
+  let cursorCreatedAt: string | null = null;
+  if (options.beforeId) {
+    const cursorDoc = await db.collection('trip_messages').doc(options.beforeId).get();
+    if (!cursorDoc.exists) return { messages: [], hasMore: false };
+    cursorCreatedAt = (cursorDoc.data() as any)?.createdAt ?? null;
+    if (!cursorCreatedAt) return { messages: [], hasMore: false };
+  }
+
+  let query = db
+    .collection('trip_messages')
+    .where('tripId', '==', tripId)
+    .orderBy('createdAt', 'desc');
+  if (cursorCreatedAt) {
+    query = query.where('createdAt', '<', cursorCreatedAt);
+  }
+
+  const snap = await query.limit(limit + 1).get();
+  const rows = snap.docs.map(docToChatMessage);
+  const hasMore = rows.length > limit;
+  const page = hasMore ? rows.slice(0, limit) : rows;
+  return { messages: page.slice().reverse(), hasMore };
 };
 
 export const addTripMessage = async (msg: {
@@ -5985,25 +6018,48 @@ export const markMessagesRead = async (
   if (!upToDoc.exists) return;
   const upToCreatedAt = (upToDoc.data() as any).createdAt ?? '';
 
-  const snap = await db
-    .collection('trip_messages')
-    .where('tripId', '==', tripId)
-    .where('createdAt', '<=', upToCreatedAt)
-    .get();
+  // Legacy per-message reads (readBy array + message_reads docs) are behind
+  // the same soak-window env flag as the Postgres adapter. Default ON.
+  const legacyReadsEnabled = getEnvFlag('CHAT_LEGACY_READS_ENABLED', { defaultValue: true });
+  if (legacyReadsEnabled) {
+    const snap = await db
+      .collection('trip_messages')
+      .where('tripId', '==', tripId)
+      .where('createdAt', '<=', upToCreatedAt)
+      .get();
 
-  const batch = db.batch();
-  for (const doc of snap.docs) {
-    const readBy: string[] = (doc.data() as any).readBy ?? [];
-    if (!readBy.includes(userId)) {
-      batch.update(doc.ref, { readBy: FieldValue.arrayUnion(userId) });
+    const batch = db.batch();
+    for (const doc of snap.docs) {
+      const readBy: string[] = (doc.data() as any).readBy ?? [];
+      if (!readBy.includes(userId)) {
+        batch.update(doc.ref, { readBy: FieldValue.arrayUnion(userId) });
+      }
+      // Also write to message_reads sub-collection for cross-referencing
+      const readRef = db
+        .collection('message_reads')
+        .doc(`${doc.id}_${userId}`);
+      batch.set(readRef, { messageId: doc.id, userId, readAt: nowIso() }, { merge: true });
     }
-    // Also write to message_reads sub-collection for cross-referencing
-    const readRef = db
-      .collection('message_reads')
-      .doc(`${doc.id}_${userId}`);
-    batch.set(readRef, { messageId: doc.id, userId, readAt: nowIso() }, { merge: true });
+    await batch.commit();
   }
-  await batch.commit();
+
+  // Dual-write the per-user watermark. Only advance forward so a stale
+  // MARK_READ (re-opened panel scrolling back) can't regress the watermark.
+  const watermarkRef = db.collection('chat_read_watermarks').doc(`${userId}_${tripId}`);
+  const existing = await watermarkRef.get();
+  const existingCutoff = existing.exists ? ((existing.data() as any).lastReadCreatedAt ?? '') : '';
+  if (!existing.exists || String(upToCreatedAt) > String(existingCutoff)) {
+    await watermarkRef.set(
+      {
+        userId,
+        tripId,
+        lastReadMessageId: upToMessageId,
+        lastReadCreatedAt: upToCreatedAt,
+        updatedAt: nowIso(),
+      },
+      { merge: true },
+    );
+  }
 };
 
 export const countUnreadMessages = async (
@@ -6011,6 +6067,23 @@ export const countUnreadMessages = async (
   userId: string,
 ): Promise<number> => {
   const db = getDb();
+
+  // Prefer the per-user watermark when one exists.
+  const watermarkDoc = await db
+    .collection('chat_read_watermarks')
+    .doc(`${userId}_${tripId}`)
+    .get();
+  if (watermarkDoc.exists) {
+    const cutoff = (watermarkDoc.data() as any).lastReadCreatedAt ?? '';
+    const newerSnap = await db
+      .collection('trip_messages')
+      .where('tripId', '==', tripId)
+      .where('createdAt', '>', cutoff)
+      .get();
+    return newerSnap.size;
+  }
+
+  // Fall back to the legacy readBy array count.
   const snap = await db
     .collection('trip_messages')
     .where('tripId', '==', tripId)
@@ -6021,5 +6094,36 @@ export const countUnreadMessages = async (
     if (!readBy.includes(userId)) count++;
   }
   return count;
+};
+
+/**
+ * Firestore companion to the Postgres export aggregator. Same contract: return
+ * every user-authored row across the item collections. Runs queries in
+ * parallel; returns plain objects safe for JSON serialization.
+ */
+export const listUserAuthoredItems = async (
+  userId: string,
+): Promise<{
+  flights: any[];
+  lodgings: any[];
+  tours: any[];
+  carRentals: any[];
+  expenses: any[];
+  tripMessages: any[];
+}> => {
+  const db = getDb();
+  const fetchCollection = async (name: string, field: string) => {
+    const snap = await db.collection(name).where(field, '==', userId).get();
+    return snap.docs.map((d: any) => ({ id: d.id, ...(d.data() as any) }));
+  };
+  const [flights, lodgings, tours, carRentals, expenses, tripMessages] = await Promise.all([
+    fetchCollection('flights', 'userId'),
+    fetchCollection('lodgings', 'userId'),
+    fetchCollection('tours', 'userId'),
+    fetchCollection('car_rentals', 'userId'),
+    fetchCollection('expenses', 'userId'),
+    fetchCollection('trip_messages', 'senderId'),
+  ]);
+  return { flights, lodgings, tours, carRentals, expenses, tripMessages };
 };
 import { searchBundledAirportDataset } from './services/airportCatalog';

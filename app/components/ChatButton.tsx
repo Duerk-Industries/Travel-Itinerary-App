@@ -10,21 +10,28 @@ interface Props {
   unreadCount: number;
 }
 
-const ChatButton: React.FC<Props> = ({ onPress, unreadCount }) => (
-  <TouchableOpacity
-    onPress={onPress}
-    style={styles.fab}
-    testID="chat-fab"
-    accessibilityLabel="Open trip chat"
-  >
-    <Text style={styles.icon}>💬</Text>
-    {unreadCount > 0 && (
-      <View style={styles.badge} testID="chat-unread-badge">
-        <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
-      </View>
-    )}
-  </TouchableOpacity>
-);
+const ChatButton: React.FC<Props> = ({ onPress, unreadCount }) => {
+  const accessibilityLabel =
+    unreadCount > 0
+      ? `Open trip chat, ${unreadCount > 99 ? 'over 99' : unreadCount} unread`
+      : 'Open trip chat';
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      style={styles.fab}
+      testID="chat-fab"
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+    >
+      <Text style={styles.icon} accessibilityElementsHidden importantForAccessibility="no">💬</Text>
+      {unreadCount > 0 && (
+        <View style={styles.badge} testID="chat-unread-badge" accessibilityElementsHidden importantForAccessibility="no">
+          <Text style={styles.badgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+};
 
 const styles = StyleSheet.create({
   fab: {

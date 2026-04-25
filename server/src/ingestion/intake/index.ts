@@ -7,7 +7,8 @@ import { sha256 } from '../shared/hashing';
 import { isSupportedMimeType, normalizeMimeType } from '../shared/parserSelection';
 import { writeTempBytes } from '../shared/tempStorage';
 import { IngestionError } from '../shared/userFailures';
-import { scanDocumentOrStub } from '../shared/virusScan';
+import { recordVirusScanResult, scanDocumentOrStub } from '../shared/virusScan';
+import { getVirusScanner } from '../virusScanProviders';
 
 const memoryStorage = multer.memoryStorage();
 
@@ -26,10 +27,19 @@ const ensureFiles = (req: Request): Express.Multer.File[] => {
 
 export const buildManualUploadPayloads = async (req: Request, userId: string): Promise<IngestionPayload[]> => {
   const files = ensureFiles(req);
-  const scan = await scanDocumentOrStub();
-  if (scan.status === 'FAILED') {
+
+  // Batch-level decision: the stub adapter's `scanBatch` is still the short-
+  // circuit for environments that opt out of real per-file scanning. If the
+  // batch-level scan returns FAILED we reject the entire upload up-front.
+  const batchScan = await scanDocumentOrStub();
+  if (batchScan.status === 'FAILED') {
     throw new IngestionError('virus_scan_failed', 400);
   }
+
+  // Per-file scan when the adapter implements it (e.g. the ClamAV HTTP
+  // adapter). The stub adapter has no `scanBuffer` method so the optional
+  // chain returns undefined and we fall through to the batch-scan result.
+  const scanner = getVirusScanner();
   return Promise.all(
     files.map(async (file) => {
       if (!file.buffer || file.size > INGESTION_MAX_FILE_BYTES) {
@@ -39,6 +49,18 @@ export const buildManualUploadPayloads = async (req: Request, userId: string): P
       if (!isSupportedMimeType(mimeType)) {
         throw new IngestionError('unsupported_file_type', 400, undefined, `Unsupported file type: ${file.originalname}`);
       }
+
+      const perFileScan = scanner.scanBuffer
+        ? await scanner.scanBuffer(file.buffer, file.originalname)
+        : null;
+      if (perFileScan) recordVirusScanResult('buffer', perFileScan);
+      if (perFileScan?.status === 'FAILED') {
+        // Reject infected / unscannable files with the same user-visible
+        // failure code as the batch path.
+        throw new IngestionError('virus_scan_failed', 400);
+      }
+      const effectiveScan = perFileScan ?? batchScan;
+
       const contentBytesRef = await writeTempBytes(file.originalname, file.buffer);
       return {
         sourceType: 'MANUAL_UPLOAD' as IngestionSourceType,
@@ -54,11 +76,11 @@ export const buildManualUploadPayloads = async (req: Request, userId: string): P
           size: file.size,
           originalFieldName: file.fieldname,
           forwardingAddress: getIngestionForwardingAddress(),
-          virusScanProvider: scan.provider,
+          virusScanProvider: effectiveScan.provider,
         },
         correlationId: randomUUID(),
         dryRun: false,
-        virusScanStatus: scan.status,
+        virusScanStatus: effectiveScan.status,
       };
     })
   );
@@ -74,10 +96,23 @@ export const buildWebhookPayload = async (params: {
   metadata?: Record<string, unknown>;
   dryRun?: boolean;
 }): Promise<IngestionPayload> => {
-  const scan = await scanDocumentOrStub();
-  if (scan.status === 'FAILED') {
+  const batchScan = await scanDocumentOrStub();
+  if (batchScan.status === 'FAILED') {
     throw new IngestionError('virus_scan_failed', 400);
   }
+  // Per-file scan when the adapter provides it (ClamAV HTTP adapter).
+  // Mailgun + Gmail attachments flow through here with real bytes, so this
+  // is where real-provider scanning actually kicks in for email sources.
+  const scanner = getVirusScanner();
+  const perFileScan = scanner.scanBuffer
+    ? await scanner.scanBuffer(params.bytes, params.filename)
+    : null;
+  if (perFileScan) recordVirusScanResult('buffer', perFileScan);
+  if (perFileScan?.status === 'FAILED') {
+    throw new IngestionError('virus_scan_failed', 400);
+  }
+  const effectiveScan = perFileScan ?? batchScan;
+
   const contentBytesRef = await writeTempBytes(params.filename, params.bytes);
   return {
     sourceType: params.sourceType,
@@ -91,11 +126,11 @@ export const buildWebhookPayload = async (params: {
     contentHash: sha256(params.bytes.toString('base64')),
     metadata: {
       ...(params.metadata ?? {}),
-      virusScanProvider: scan.provider,
+      virusScanProvider: effectiveScan.provider,
     },
     correlationId: randomUUID(),
     dryRun: Boolean(params.dryRun),
-    virusScanStatus: scan.status,
+    virusScanStatus: effectiveScan.status,
   };
 };
 
