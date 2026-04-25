@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import DialogShell from './DialogShell';
 
@@ -14,7 +14,7 @@ type ConfirmDialogProps = {
   testID?: string;
 };
 
-const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
+const ConfirmDialogComponent: React.FC<ConfirmDialogProps> = ({
   visible,
   title,
   message,
@@ -56,5 +56,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     </DialogShell>
   );
 };
+
+const ConfirmDialog = memo(ConfirmDialogComponent);
 
 export default ConfirmDialog;

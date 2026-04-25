@@ -35,7 +35,7 @@ const calculateRetryDelayMs = (retryCount: number, baseDelaySeconds: number, max
 router.post('/jobs/:jobId/run', authenticateWorker, (req, res) => {
   const jobId = String(req.params.jobId);
   logInfo(`[ingestion][worker] accepted job=${jobId}`);
-  res.status(202).json({ accepted: true, jobId });
+  res.status(202).json({ accepted: true, jobId, mode: 'async-detached' });
 
   setImmediate(() => {
     void processImportJob(jobId)

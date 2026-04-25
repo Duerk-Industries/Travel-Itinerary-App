@@ -790,7 +790,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     ref?.focus();
   };
 
-  const canMoveNext = () => {
+  const canMoveNext = useMemo(() => {
     if (stepIndex === 0) return !validateTripDetails(details);
     if (stepIndex === 1) {
       if (!dateModeSelected) return false;
@@ -804,9 +804,9 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     if (stepIndex === 2) return !validateParticipants(participants);
     if (stepIndex === 3) return canProceedFromItineraryStep(itineraryMode);
     return true;
-  };
+  }, [dateModeSelected, dates, details, itineraryMode, participants, stepIndex]);
 
-  const goNext = () => {
+  const goNext = useCallback(() => {
     let error: string | null = null;
     if (stepIndex === 0) error = validateTripDetails(details);
     if (stepIndex === 1 && !dateModeSelected) {
@@ -830,12 +830,12 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     }
     setWizardError('');
     setStepIndex((prev) => Math.min(prev + 1, totalSteps - 1));
-  };
+  }, [dateModeSelected, dates, details, itineraryMode, participants, stepIndex, totalSteps]);
 
-  const goBack = () => {
+  const goBack = useCallback(() => {
     setWizardError('');
     setStepIndex((prev) => Math.max(prev - 1, 0));
-  };
+  }, []);
 
   const insertDescriptionSnippet = (snippet: string) => {
     setDetails((prev) => ({
@@ -2532,17 +2532,17 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           {stepIndex < totalSteps - 1 ? (
             <>
               <TouchableOpacity
-                style={[styles.button, { flex: 1 }, !canMoveNext() && { opacity: 0.6 }]}
+                style={[styles.button, { flex: 1 }, !canMoveNext && { opacity: 0.6 }]}
                 onPress={goNext}
-                disabled={!canMoveNext()}
+                disabled={!canMoveNext}
               >
                 <Text style={styles.buttonText}>Next</Text>
               </TouchableOpacity>
               {stepIndex >= 3 ? (
                 <TouchableOpacity
-                  style={[styles.button, { flex: 1 }, !canMoveNext() && { opacity: 0.6 }]}
+                  style={[styles.button, { flex: 1 }, !canMoveNext && { opacity: 0.6 }]}
                   onPress={submitWizard}
-                  disabled={!canMoveNext() || isSubmitting}
+                  disabled={!canMoveNext || isSubmitting}
                 >
                   <Text style={styles.buttonText}>{isSubmitting ? 'Creating...' : 'Finish Trip'}</Text>
                 </TouchableOpacity>
@@ -2844,5 +2844,5 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   );
 };
 
-export default CreateTripWizard;
+export default React.memo(CreateTripWizard);
 

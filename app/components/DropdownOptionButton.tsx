@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Pressable } from 'react-native';
 
 type DropdownOptionButtonProps = {
@@ -12,7 +12,7 @@ type DropdownOptionButtonProps = {
   accessibilityLabel?: string;
 };
 
-const DropdownOptionButton: React.FC<DropdownOptionButtonProps> = ({
+const DropdownOptionButtonComponent: React.FC<DropdownOptionButtonProps> = ({
   styles,
   children,
   onPress,
@@ -40,5 +40,7 @@ const DropdownOptionButton: React.FC<DropdownOptionButtonProps> = ({
     {children}
   </Pressable>
 );
+
+const DropdownOptionButton = memo(DropdownOptionButtonComponent);
 
 export default DropdownOptionButton;

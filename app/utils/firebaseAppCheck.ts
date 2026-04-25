@@ -1,7 +1,24 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
+let appCheckInitialization: Promise<void> | null = null;
+let appCheckInitialized = false;
+
+const APP_CHECK_INITIALIZED_KEY = '__travelItineraryAppCheckInitialized';
+const getAppCheckGlobals = () => globalThis as Record<string, unknown>;
+
 export const initializeAppCheck = async () => {
+  const globals = getAppCheckGlobals();
+  if (appCheckInitialized || globals[APP_CHECK_INITIALIZED_KEY] === true) return;
+  if (appCheckInitialization) return appCheckInitialization;
+
+  appCheckInitialization = initializeAppCheckOnce().finally(() => {
+    appCheckInitialization = null;
+  });
+  return appCheckInitialization;
+};
+
+const initializeAppCheckOnce = async () => {
   if (Platform.OS === 'web') {
     // --- WEB IMPLEMENTATION (reCAPTCHA v3) ---
     try {
@@ -25,16 +42,16 @@ export const initializeAppCheck = async () => {
       const recaptchaSiteKey = process.env.EXPO_PUBLIC_RECAPTCHA_SITE_KEY || process.env.RECAPTCHA_SITE_KEY || extra.recaptchaSiteKey;
 
       if (!apiKey || !authDomain || !projectId || !appId || !recaptchaSiteKey) {
-        console.error('Firebase App Check: Missing required configuration. Please set FIREBASE_API_KEY, FIREBASE_AUTH_DOMAIN, FIREBASE_PROJECT_ID, FIREBASE_APP_ID, and RECAPTCHA_SITE_KEY in your .env file or app.json.');
+        return;
       }
 
       const firebaseConfig = {
-        apiKey: apiKey || '',
-        authDomain: authDomain || '',
-        projectId: projectId || '',
+        apiKey,
+        authDomain,
+        projectId,
         storageBucket: storageBucket || '',
         messagingSenderId: messagingSenderId || '',
-        appId: appId || ''
+        appId
       };
 
       // Initialize Firebase Web App if not already initialized
@@ -49,13 +66,14 @@ export const initializeAppCheck = async () => {
       // Initialize App Check
       // Set isTokenAutoRefreshEnabled to true so the SDK handles token rotation
       initAppCheck(app, {
-        provider: new ReCaptchaV3Provider(recaptchaSiteKey || ''),
+        provider: new ReCaptchaV3Provider(recaptchaSiteKey),
         isTokenAutoRefreshEnabled: true,
       });
 
-      console.log('Firebase App Check (Web) initialized.');
-    } catch (error) {
-      console.error('Failed to initialize Web App Check:', error);
+      appCheckInitialized = true;
+      getAppCheckGlobals()[APP_CHECK_INITIALIZED_KEY] = true;
+    } catch {
+      appCheckInitialized = false;
     }
 
   } else {
@@ -82,10 +100,11 @@ export const initializeAppCheck = async () => {
         provider: provider,
         isTokenAutoRefreshEnabled: true,
       });
-      
-      console.log('Firebase App Check (Native) initialized.');
-    } catch (error) {
-      console.error('Failed to initialize Native App Check:', error);
+
+      appCheckInitialized = true;
+      getAppCheckGlobals()[APP_CHECK_INITIALIZED_KEY] = true;
+    } catch {
+      appCheckInitialized = false;
     }
   }
 };

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 
 type Member = {
@@ -25,7 +25,7 @@ type CostReportTableProps = {
   formatMemberName: (member: Member) => string;
 };
 
-const CostReportTable: React.FC<CostReportTableProps> = ({
+const CostReportTableComponent: React.FC<CostReportTableProps> = ({
   rows,
   members,
   overallShares,
@@ -85,5 +85,7 @@ const CostReportTable: React.FC<CostReportTableProps> = ({
     </View>
   </ScrollView>
 );
+
+const CostReportTable = memo(CostReportTableComponent);
 
 export default CostReportTable;

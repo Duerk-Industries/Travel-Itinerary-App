@@ -429,4 +429,8 @@ const HomeTab: React.FC<HomeTabProps> = ({
   );
 };
 
-export default HomeTab;
+// Memoized so AppShell re-renders (presence-driven, polling-driven, etc.)
+// don't cascade into a full HomeTab re-render. All props from AppShell are
+// already stable (useState arrays, useCallback handlers, useMemo for
+// disabledPages/hiddenPages), so a default shallow compare is enough.
+export default React.memo(HomeTab);

@@ -49,9 +49,17 @@ export const resolveBackendUrl = ({
   platformOs,
   browserLocation,
 }: ResolveBackendUrlParams): string => {
-  const configuredBackend = [envConfigured, appConfigured].find(
-    (value): value is string => typeof value === 'string' && value.trim().length > 0
-  );
+  // Guard against `process.env.X = undefined` being coerced to the literal
+  // string "undefined" (a Node.js quirk) and inlined into the bundle by Expo.
+  const isUsable = (value: string | null | undefined): value is string => {
+    if (typeof value !== 'string') return false;
+    const trimmed = value.trim();
+    if (trimmed.length === 0) return false;
+    const lower = trimmed.toLowerCase();
+    return lower !== 'undefined' && lower !== 'null';
+  };
+
+  const configuredBackend = [envConfigured, appConfigured].find(isUsable);
 
   if (platformOs === 'web' && browserLocation) {
     const { hostname, protocol, port, origin } = browserLocation;
