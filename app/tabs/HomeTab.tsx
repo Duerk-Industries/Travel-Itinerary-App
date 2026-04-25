@@ -130,7 +130,8 @@ const HomeTab: React.FC<HomeTabProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [activeTrip, backendUrl, headers]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [heroFetchKey, backendUrl]);
 
   const heroImageSource = useImageSource(heroImage);
 
