@@ -29,6 +29,13 @@ describe('resolveAndValidateRedirectUri', () => {
     expect(result.redirectUri).toBe('https://duerk.org/login');
   });
 
+  it('accepts the www companion of the configured web URL', () => {
+    process.env.AUTH_REDIRECT_URI_ALLOWLIST = '';
+    const result = resolveAndValidateRedirectUri('https://www.duerk.org/login', 'https://duerk.org');
+    expect(result.error).toBeUndefined();
+    expect(result.redirectUri).toBe('https://www.duerk.org/login');
+  });
+
   it('rejects a web redirect when origin is not allow-listed', () => {
     process.env.AUTH_REDIRECT_URI_ALLOWLIST = 'https://staging.duerk.org';
     const result = resolveAndValidateRedirectUri('https://duerk.org/login', 'https://example.com');

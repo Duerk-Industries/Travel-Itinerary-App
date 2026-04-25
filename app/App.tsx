@@ -65,6 +65,7 @@ import AuthForm from './components/AuthForm';
 import { toWebStyle } from './utils/webStyle';
 import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from './utils/votes';
 import { resolveBackendUrl as resolveConfiguredBackendUrl } from './utils/backendUrl';
+import { buildWebOAuthRedirectUrl } from './utils/oauthRedirect';
 import { type AsyncItineraryTracker, useAsyncItineraryPolling } from './hooks/useAsyncItineraryPolling';
 import { useTripsData } from './hooks/useTripsData';
 import { useTripMembers } from './hooks/useTripMembers';
@@ -1201,7 +1202,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
   const buildLoginRedirectUrl = () => {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      return `${window.location.origin}/login`;
+      return buildWebOAuthRedirectUrl({
+        currentOrigin: window.location.origin,
+        backendUrl,
+      });
     }
 
     if (typeof Linking?.createURL !== 'function') {

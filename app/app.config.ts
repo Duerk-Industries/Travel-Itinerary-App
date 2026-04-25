@@ -8,10 +8,14 @@ dotenv.config({ path: path.join(__dirname, '..', 'server', '.env'), override: tr
 dotenv.config({ path: path.join(__dirname, '..', 'server', '.local_env'), override: true });
 
 if (!process.env.EXPO_PUBLIC_BACKEND_URL) {
-  process.env.EXPO_PUBLIC_BACKEND_URL =
+  // Avoid `process.env.X = undefined`, which Node coerces to the string "undefined".
+  const fallback =
     process.env.BACKEND_URL ??
     process.env.WEB_URL ??
     process.env.API_BASE_URL;
+  if (fallback) {
+    process.env.EXPO_PUBLIC_BACKEND_URL = fallback;
+  }
 }
 
 const config: ExpoConfig = {
