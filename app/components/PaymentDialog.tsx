@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { memo, useEffect, useMemo, useState } from 'react';
 import { Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { toWebStyle } from '../utils/webStyle';
@@ -33,7 +33,7 @@ const todayIsoDate = (): string => {
   return `${year}-${month}-${day}`;
 };
 
-const PaymentDialog: React.FC<PaymentDialogProps> = ({
+const PaymentDialogComponent: React.FC<PaymentDialogProps> = ({
   visible,
   onCancel,
   onSave,
@@ -270,5 +270,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
     </DialogShell>
   );
 };
+
+const PaymentDialog = memo(PaymentDialogComponent);
 
 export default PaymentDialog;

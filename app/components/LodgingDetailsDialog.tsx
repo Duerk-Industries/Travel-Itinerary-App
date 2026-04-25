@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { memo, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, ScrollView, Text, View, TouchableOpacity, useWindowDimensions, Image } from 'react-native';
 import { type Lodging, fetchPlaceDetailsApi, type PlaceDetailsPayload } from '../tabs/lodging';
 import { formatDateLong } from '../utils/formatDateLong';
@@ -40,7 +40,7 @@ type LodgingDetailsDialogProps = {
   testID?: string;
 };
 
-const LodgingDetailsDialog: React.FC<LodgingDetailsDialogProps> = ({
+const LodgingDetailsDialogComponent: React.FC<LodgingDetailsDialogProps> = ({
   visible,
   lodging,
   attendees = [],
@@ -274,6 +274,8 @@ const LodgingDetailsDialog: React.FC<LodgingDetailsDialogProps> = ({
     </DialogShell>
   );
 };
+
+const LodgingDetailsDialog = memo(LodgingDetailsDialogComponent);
 
 export default LodgingDetailsDialog;
 

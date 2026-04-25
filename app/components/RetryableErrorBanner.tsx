@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import type { RetryableMutationState } from '../hooks/useRetryableMutation';
 
@@ -55,7 +55,7 @@ const defaultButtonText: Record<string, unknown> = {
  * user presses Retry and we're waiting) so the user can't enqueue duplicate
  * writes.
  */
-const RetryableErrorBanner: React.FC<RetryableErrorBannerProps> = ({
+const RetryableErrorBannerComponent: React.FC<RetryableErrorBannerProps> = ({
   state,
   error,
   onRetry,
@@ -110,5 +110,7 @@ const RetryableErrorBanner: React.FC<RetryableErrorBannerProps> = ({
     </View>
   );
 };
+
+const RetryableErrorBanner = memo(RetryableErrorBannerComponent);
 
 export default RetryableErrorBanner;

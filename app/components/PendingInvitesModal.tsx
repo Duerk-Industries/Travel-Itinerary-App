@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useEscapeToClose } from '../hooks/useEscapeToClose';
 import type { GroupInvite, PendingTripShareInvite } from '../types/invites';
@@ -24,7 +24,7 @@ type PendingInvitesModalProps = {
  * verbatim from App.tsx — behavior unchanged, just moved into its own file
  * so App.tsx's JSX is smaller.
  */
-const PendingInvitesModal: React.FC<PendingInvitesModalProps> = ({
+const PendingInvitesModalComponent: React.FC<PendingInvitesModalProps> = ({
   visible,
   onClose,
   invites,
@@ -165,5 +165,7 @@ const PendingInvitesModal: React.FC<PendingInvitesModalProps> = ({
     </View>
   );
 };
+
+const PendingInvitesModal = memo(PendingInvitesModalComponent);
 
 export default PendingInvitesModal;

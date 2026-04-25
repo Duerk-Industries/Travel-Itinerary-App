@@ -43,7 +43,7 @@ describe('POST /api/internal/ingestion/jobs/:jobId/run', () => {
       .send({ jobId: 'job-1' })
       .expect(202);
 
-    expect(res.body).toEqual({ accepted: true, jobId: 'job-1' });
+    expect(res.body).toEqual({ accepted: true, jobId: 'job-1', mode: 'async-detached' });
     expect(processImportJob).not.toHaveBeenCalled();
 
     jest.runOnlyPendingTimers();
