@@ -19,9 +19,9 @@ const pages: PageKey[] = [
 ];
 
 describe('Trip wizard navigation lock', () => {
-  test('blocks switching away from create-trip', () => {
+  test('blocks switching away from create-trip except Home', () => {
     pages.forEach((page) => {
-      if (page === 'create-trip') {
+      if (page === 'create-trip' || page === 'home') {
         expect(shouldAllowPageChange('create-trip', page)).toBe(true);
       } else {
         expect(shouldAllowPageChange('create-trip', page)).toBe(false);
@@ -38,9 +38,9 @@ describe('Trip wizard navigation lock', () => {
     });
   });
 
-  test('disables all tabs except create-trip when wizard is open', () => {
+  test('disables all tabs except create-trip and Home when wizard is open', () => {
     pages.forEach((page) => {
-      if (page === 'create-trip') {
+      if (page === 'create-trip' || page === 'home') {
         expect(shouldDisableTab('create-trip', page)).toBe(false);
       } else {
         expect(shouldDisableTab('create-trip', page)).toBe(true);

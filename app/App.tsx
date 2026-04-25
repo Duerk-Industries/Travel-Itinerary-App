@@ -2167,7 +2167,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     }
   };
 
-  const onTripCreated = (tripId: string) => {
+  const onTripCreated = useCallback((tripId: string) => {
     setActiveTripId(tripId);
     fetchTrips();
     fetchGroups();
@@ -2175,7 +2175,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setPageForwardHistory([]);
     setPageHistory((prev) => prev.slice(-25));
     setActivePage('overview');
-  };
+  }, [fetchTrips, fetchGroups, fetchInvites]);
 
   const onAiItineraryQueued = useCallback((tripId: string, jobId: string) => {
     setAsyncItineraryByTrip((prev) => ({

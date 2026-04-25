@@ -2844,5 +2844,5 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   );
 };
 
-export default CreateTripWizard;
+export default React.memo(CreateTripWizard);
 

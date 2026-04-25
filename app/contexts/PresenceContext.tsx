@@ -31,16 +31,20 @@ export const PresenceProvider: React.FC<PresenceProviderProps> = ({ activeTripId
     }
     const socket = getSocket();
     const onPresence = (list: PresenceUser[]) => setPresenceUsers(list);
+    const joinOnConnect = () => {
+      socket.emit(CLIENT_EVENTS.JOIN_TRIP, activeTripId);
+    };
     socket.on(SERVER_EVENTS.PRESENCE_UPDATE, onPresence);
     if (socket.connected) {
       socket.emit(CLIENT_EVENTS.JOIN_TRIP, activeTripId);
     } else {
-      socket.once('connect', () => {
-        socket.emit(CLIENT_EVENTS.JOIN_TRIP, activeTripId);
-      });
+      socket.once('connect', joinOnConnect);
     }
     return () => {
       socket.off(SERVER_EVENTS.PRESENCE_UPDATE, onPresence);
+      // socket.io stores .once handlers in the same listener list as .on,
+      // so .off removes them whether or not 'connect' has already fired.
+      socket.off('connect', joinOnConnect);
     };
   }, [activeTripId, userToken]);
 
