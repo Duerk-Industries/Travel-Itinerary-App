@@ -939,8 +939,20 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     return { startDate: min, endDate: max };
   }, [flights, lodgings, tours, carRentals]);
 
-  const overviewStartDate = eventDateBounds?.startDate ?? displayStartDate;
-  const overviewEndDate = eventDateBounds?.endDate ?? displayEndDate;
+  const compareIsoDate = (left?: string | null, right?: string | null): number => {
+    const a = normalizeDateString(left ?? '');
+    const b = normalizeDateString(right ?? '');
+    if (!a && !b) return 0;
+    if (!a) return 1;
+    if (!b) return -1;
+    return a.localeCompare(b);
+  };
+  const overviewStartDate = displayStartDate && eventDateBounds?.startDate
+    ? (compareIsoDate(eventDateBounds.startDate, displayStartDate) < 0 ? eventDateBounds.startDate : displayStartDate)
+    : eventDateBounds?.startDate ?? displayStartDate;
+  const overviewEndDate = displayEndDate && eventDateBounds?.endDate
+    ? (compareIsoDate(eventDateBounds.endDate, displayEndDate) > 0 ? eventDateBounds.endDate : displayEndDate)
+    : eventDateBounds?.endDate ?? displayEndDate;
   const monthLabel = useMemo(
     () => formatMonthYear(trip?.startMonth ?? null, trip?.startYear ?? null),
     [trip?.startMonth, trip?.startYear]

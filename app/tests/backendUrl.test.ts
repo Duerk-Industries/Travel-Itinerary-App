@@ -88,4 +88,20 @@ describe('resolveBackendUrl', () => {
       })
     ).toBe('http://127.0.0.1:4000');
   });
+
+  it('falls back to the browser origin when env values are the literal string "undefined"', () => {
+    expect(
+      resolveBackendUrl({
+        appConfigured: 'undefined',
+        envConfigured: 'undefined',
+        platformOs: 'web',
+        browserLocation: {
+          hostname: 'duerk.org',
+          protocol: 'https:',
+          port: '',
+          origin: 'https://duerk.org',
+        },
+      })
+    ).toBe('https://duerk.org');
+  });
 });

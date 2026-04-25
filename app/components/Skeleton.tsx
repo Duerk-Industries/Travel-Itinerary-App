@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 type SkeletonProps = {
@@ -6,7 +6,7 @@ type SkeletonProps = {
   testID?: string;
 };
 
-const Skeleton: React.FC<SkeletonProps> = ({ style, testID }) => (
+const SkeletonComponent: React.FC<SkeletonProps> = ({ style, testID }) => (
   <View
     accessibilityRole="progressbar"
     accessibilityLabel="Loading"
@@ -14,6 +14,8 @@ const Skeleton: React.FC<SkeletonProps> = ({ style, testID }) => (
     style={[styles.base, style]}
   />
 );
+
+const Skeleton = memo(SkeletonComponent);
 
 const styles = StyleSheet.create({
   base: {

@@ -235,25 +235,29 @@ describe('ingestion repository firebase writes', () => {
     expect(result?.metadata.emailAddress).toBe('latest@example.com');
   });
 
-  it('loads Firebase review queue items with a user filter only and sorts active items in memory', async () => {
+  it('loads Firebase review queue items via a server-side filtered, sorted, and limited query', async () => {
+    // The repository now relies on Firestore to filter (reviewStatus IN active
+    // states) and sort (updatedAt DESC) using the composite index declared in
+    // firestore.indexes.json. The mock just verifies that those calls happen
+    // on the chain and returns docs in the order Firestore would.
     const getMock = jest.fn().mockResolvedValue({
       docs: [
         {
-          id: 'inactive',
+          id: 'latest-active',
           data: () => ({
             userId: 'user-123',
-            importJobId: 'job-inactive',
-            rawDocId: 'doc-inactive',
-            itemType: 'flight',
-            sourceType: 'MANUAL_UPLOAD',
-            rawSourceReference: 'inactive.pdf',
-            confidenceScore: 0.1,
-            reviewStatus: 'ASSIGNED',
-            deduplicationFingerprint: 'inactive',
+            importJobId: 'job-latest',
+            rawDocId: 'doc-latest',
+            itemType: 'hotel',
+            sourceType: 'GMAIL',
+            rawSourceReference: 'latest.pdf',
+            confidenceScore: 0.9,
+            reviewStatus: 'LOW_CONFIDENCE',
+            deduplicationFingerprint: 'latest',
             extractedFields: {},
             travelerNames: [],
-            updatedAt: '2026-03-01T10:00:00.000Z',
-            createdAt: '2026-03-01T09:00:00.000Z',
+            updatedAt: '2026-03-03T10:00:00.000Z',
+            createdAt: '2026-03-03T09:00:00.000Z',
           }),
         },
         {
@@ -274,29 +278,15 @@ describe('ingestion repository firebase writes', () => {
             createdAt: '2026-03-01T09:00:00.000Z',
           }),
         },
-        {
-          id: 'latest-active',
-          data: () => ({
-            userId: 'user-123',
-            importJobId: 'job-latest',
-            rawDocId: 'doc-latest',
-            itemType: 'hotel',
-            sourceType: 'GMAIL',
-            rawSourceReference: 'latest.pdf',
-            confidenceScore: 0.9,
-            reviewStatus: 'LOW_CONFIDENCE',
-            deduplicationFingerprint: 'latest',
-            extractedFields: {},
-            travelerNames: [],
-            updatedAt: '2026-03-03T10:00:00.000Z',
-            createdAt: '2026-03-03T09:00:00.000Z',
-          }),
-        },
       ],
     });
-    const userWhereMock = jest.fn(() => ({ get: getMock }));
     const limitMock = jest.fn(() => ({ get: getMock }));
-    const collectionMock = jest.fn(() => ({ where: userWhereMock, limit: limitMock }));
+    const orderByMock = jest.fn(() => ({ limit: limitMock }));
+    const userWhereMock = jest.fn(() => ({ orderBy: orderByMock }));
+    const statusWhereMock = jest.fn(() => ({ where: userWhereMock }));
+    // The collection mock also handles ensureFirestoreCollections's
+    // `.limit(1).get()` probes from ensureIngestionRepositoryReady.
+    const collectionMock = jest.fn(() => ({ where: statusWhereMock, limit: limitMock }));
     const firestoreMock = { collection: collectionMock } as any;
 
     jest.doMock('../src/db', () => ({
@@ -322,7 +312,14 @@ describe('ingestion repository firebase writes', () => {
     const items = await listReviewQueueItems('user-123');
 
     expect(collectionMock).toHaveBeenCalledWith('parsed_items');
+    expect(statusWhereMock).toHaveBeenCalledWith(
+      'reviewStatus',
+      'in',
+      expect.arrayContaining(['LOW_CONFIDENCE', 'READY_FOR_REVIEW', 'DUPLICATE_FLAGGED'])
+    );
     expect(userWhereMock).toHaveBeenCalledWith('userId', '==', 'user-123');
+    expect(orderByMock).toHaveBeenCalledWith('updatedAt', 'desc');
+    expect(limitMock).toHaveBeenCalledWith(expect.any(Number));
     expect(items.map((item) => item.id)).toEqual(['latest-active', 'older-active']);
   });
 

@@ -64,7 +64,28 @@ const ChatPanel: React.FC<Props> = ({
   const initialUnreadCountRef = useRef(unreadCount);
   const flatListRef = useRef<any>(null);
   const lastMarkedReadIdRef = useRef<string | null>(null);
+  const scrollTimersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
   const isWeb = Platform.OS === 'web';
+
+  const scheduleScrollToEnd = useCallback(
+    (delayMs: number, animated: boolean) => {
+      const id = setTimeout(() => {
+        scrollTimersRef.current.delete(id);
+        flatListRef.current?.scrollToEnd({ animated });
+      }, delayMs);
+      scrollTimersRef.current.add(id);
+    },
+    [],
+  );
+
+  // Clear any pending scroll timers when the panel unmounts so they don't
+  // fire after the FlatList ref has been torn down.
+  useEffect(() => {
+    return () => {
+      scrollTimersRef.current.forEach(clearTimeout);
+      scrollTimersRef.current.clear();
+    };
+  }, []);
 
   const markRead = useCallback(
     (messageId: string | undefined) => {
@@ -114,7 +135,7 @@ const ChatPanel: React.FC<Props> = ({
         }
         const tail = payload.messages[payload.messages.length - 1];
         if (tail) markRead(tail.id);
-        setTimeout(() => flatListRef.current?.scrollToEnd({ animated: false }), 100);
+        scheduleScrollToEnd(100, false);
       } else {
         // Older page: prepend without scrolling
         setMessages((prev) => [...payload.messages, ...prev]);
@@ -125,7 +146,7 @@ const ChatPanel: React.FC<Props> = ({
 
     const onNewMessage = (msg: ChatMessage) => {
       setMessages((prev) => [...prev, msg]);
-      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 50);
+      scheduleScrollToEnd(50, true);
       // Watermark-gated: only emit MARK_READ when the visible tail advances.
       markRead(msg.id);
     };
@@ -173,7 +194,7 @@ const ChatPanel: React.FC<Props> = ({
       socket.off('connect', joinAndListen);
       socket.off('connect_error', onConnectError);
     };
-  }, [socket, tripId, onUnreadChange, markRead]);
+  }, [socket, tripId, onUnreadChange, markRead, scheduleScrollToEnd]);
 
   // -------------------------------------------------------------------------
   // Load older page on demand

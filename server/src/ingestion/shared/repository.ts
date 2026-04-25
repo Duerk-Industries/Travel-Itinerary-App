@@ -2121,14 +2121,21 @@ export const createParsedItem = async (params: {
 export const listReviewQueueItems = async (userId: string): Promise<PersistedParsedItem[]> => {
   await ensureIngestionRepositoryReady();
   if (getCurrentDbProvider() === 'firebase') {
+    // Server-side filter on (reviewStatus, userId) with sort+limit, backed by
+    // the composite index `parsed_items: (reviewStatus, userId, updatedAt DESC)`
+    // declared in firestore.indexes.json. The previous implementation fetched
+    // every parsed_items doc for the user and filtered/sorted in-memory,
+    // which made the ingest tab take ~1 minute to load once the per-user
+    // doc count grew into the hundreds. The 250 cap is well above any
+    // realistic active review queue.
     const snap = await getFirebaseDb()
       .collection('parsed_items')
+      .where('reviewStatus', 'in', INGESTION_REVIEW_QUEUE_ACTIVE_STATES)
       .where('userId', '==', userId)
+      .orderBy('updatedAt', 'desc')
+      .limit(250)
       .get();
-    return snap.docs
-      .filter((doc) => INGESTION_REVIEW_QUEUE_ACTIVE_STATES.includes(String((doc.data() as any).reviewStatus ?? '') as any))
-      .sort((a, b) => String((b.data() as any).updatedAt ?? '').localeCompare(String((a.data() as any).updatedAt ?? '')))
-      .map((doc) => {
+    return snap.docs.map((doc) => {
         const data = doc.data() as any;
         return mapParsedItemRow({
           id: doc.id,

@@ -280,6 +280,35 @@ describe('Overview UI (nested itinerary)', () => {
     await findByTestId('overview-day-card-1');
   });
 
+  test('keeps the full trip range even when events only exist on the first day', async () => {
+    const flight = {
+      id: 'flight-1',
+      passenger_name: 'Traveler',
+      passenger_ids: ['member-1'],
+      trip_id: 'trip1',
+      departure_date: '2026-01-29',
+      departure_location: 'BOS',
+      departure_airport_code: 'BOS',
+      departure_time: '20:00',
+      arrival_date: '2026-01-29',
+      arrival_location: 'CAI',
+      arrival_airport_code: 'CAI',
+      arrival_time: '23:55',
+      cost: 0,
+      carrier: 'Delta',
+      flight_number: 'DL100',
+      booking_reference: 'ABC123',
+    };
+
+    const { findByTestId, findByText } = await renderOverview(
+      <OverviewTab {...baseProps} flights={[flight] as any} />
+    );
+
+    expect(await findByText('Trip length: 2 day(s)')).toBeTruthy();
+    expect(await findByTestId('overview-day-card-1')).toBeTruthy();
+    expect(await findByTestId('overview-day-card-2')).toBeTruthy();
+  });
+
   test('navigates to day details and back', async () => {
     const { findByTestId } = await renderOverview(<OverviewTab {...baseProps} />);
     const dayCard = await findByTestId('overview-day-card-1');
@@ -394,7 +423,7 @@ describe('Overview UI (nested itinerary)', () => {
     expect(await findByText(/Travelers: Bryan Duerk/i)).toBeTruthy();
   });
 
-  test('uses event date bounds for overview range when trip range is stale', async () => {
+  test('expands the overview range when events fall outside the saved trip dates', async () => {
     const staleTripProps = {
       ...baseProps,
       trip: {
@@ -432,9 +461,11 @@ describe('Overview UI (nested itinerary)', () => {
       ] as any[],
     };
 
-    const { findByText } = await renderOverview(<OverviewTab {...staleTripProps} />);
-    expect(await findByText(/Dates: .*March.*2026/i)).toBeTruthy();
-    expect(await findByText('Tue. 3')).toBeTruthy();
+    const { findByTestId, findByText } = await renderOverview(<OverviewTab {...staleTripProps} />);
+    expect(await findByText(/Dates: .*November.*2025.*March.*2026/i)).toBeTruthy();
+    expect(await findByText('Trip length: 117 day(s)')).toBeTruthy();
+    expect(await findByTestId('overview-day-card-1')).toBeTruthy();
+    expect(await findByTestId('overview-day-card-117')).toBeTruthy();
   });
 
   test('shows weather badges on overview cards when the trip starts within 7 days', async () => {

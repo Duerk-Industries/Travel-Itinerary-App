@@ -64,6 +64,7 @@ import AuthForm from './components/AuthForm';
 import { toWebStyle } from './utils/webStyle';
 import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from './utils/votes';
 import { resolveBackendUrl as resolveConfiguredBackendUrl } from './utils/backendUrl';
+import { buildWebOAuthRedirectUrl } from './utils/oauthRedirect';
 import { type AsyncItineraryTracker, useAsyncItineraryPolling } from './hooks/useAsyncItineraryPolling';
 import { useTripsData } from './hooks/useTripsData';
 import { useTripMembers } from './hooks/useTripMembers';
@@ -370,6 +371,28 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     initializeAppCheck();
   }, []);
 
+  // React DevTools (and a few dev-tooling libraries) emit `performance.mark`
+  // on every component render in development. Browsers keep those entries
+  // forever — Firefox in particular won't reclaim them, and after a long
+  // session the User Timing buffer (and the React fibers each mark
+  // references) can hold gigabytes. Periodically clear the buffer so the
+  // tab can stay open all day without ballooning memory.
+  useEffect(() => {
+    if (typeof performance === 'undefined' || typeof performance.clearMarks !== 'function') {
+      return;
+    }
+    const clearAll = () => {
+      try {
+        performance.clearMarks();
+        performance.clearMeasures();
+      } catch {
+        // browsers without User Timing — nothing to clear
+      }
+    };
+    const intervalId = setInterval(clearAll, 30_000);
+    return () => clearInterval(intervalId);
+  }, []);
+
   useEffect(() => {
     if (!isWebIOSSafari || typeof window === 'undefined') return;
     const updateViewport = () => {
@@ -537,6 +560,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     clearAccountProfile,
   } = useAccountProfile();
   const logoutRef = useRef<() => void>(() => undefined);
+  const handleUnauthorized = useCallback(() => logoutRef.current(), []);
 
   const {
     invites,
@@ -575,7 +599,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     fetchFollowedTrips,
     handleFollowTripByCode,
     clearFollowedTripsData,
-  } = useFollowedTrips({ backendUrl, userToken, onUnauthorized: () => logoutRef.current() });
+  } = useFollowedTrips({ backendUrl, userToken, onUnauthorized: handleUnauthorized });
 
   const followedTripById = useMemo(
     () => new Map(followedTrips.map((trip) => [trip.tripId, trip] as const)),
@@ -610,7 +634,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     backendUrl,
     groupSort,
     isFollowingMode,
-    onUnauthorized: () => logoutRef.current(),
+    onUnauthorized: handleUnauthorized,
     requirePasswordSetup,
     selectedFollowedTripDetails,
     setActiveTripId,
@@ -1176,7 +1200,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
   const buildLoginRedirectUrl = () => {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      return `${window.location.origin}/login`;
+      return buildWebOAuthRedirectUrl({
+        currentOrigin: window.location.origin,
+        backendUrl,
+      });
     }
 
     if (typeof Linking?.createURL !== 'function') {
@@ -1956,6 +1983,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   ]);
 
   useEffect(() => {
+    if (userToken) {
+      connectSocket(userToken);
+    }
+  }, [userToken]);
+
+  useEffect(() => {
     if (userToken && !requirePasswordSetup) {
       fetchTrips();
       fetchGroups();
@@ -2152,7 +2185,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     }
   };
 
-  const onTripCreated = (tripId: string) => {
+  const onTripCreated = useCallback((tripId: string) => {
     setActiveTripId(tripId);
     fetchTrips();
     fetchGroups();
@@ -2160,7 +2193,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setPageForwardHistory([]);
     setPageHistory((prev) => prev.slice(-25));
     setActivePage('overview');
-  };
+  }, [fetchTrips, fetchGroups, fetchInvites]);
 
   const onAiItineraryQueued = useCallback((tripId: string, jobId: string) => {
     setAsyncItineraryByTrip((prev) => ({
