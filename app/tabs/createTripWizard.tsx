@@ -383,8 +383,9 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
         maxWidth: '100%',
         minWidth: 0,
         boxSizing: 'border-box',
+        colorScheme: theme?.mode === 'dark' ? 'dark' : 'light',
       }),
-    [styles]
+    [styles, theme?.mode]
   );
   const webDateInputStyleFlex = useMemo(() => ({ ...webDateInputStyle, flex: 1 }), [webDateInputStyle]);
   const hasKnownInfo = useMemo(
