@@ -392,6 +392,7 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
           textContentType="givenName"
           value={fellowForm.firstName}
           onChangeText={(text: string) => setFellowForm((p) => ({ ...p, firstName: text }))}
+          commitOnBlur={false}
         />
         <DraftTextInput
           style={[styles.input, { flex: 1 }]}
@@ -400,6 +401,7 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
           textContentType="familyName"
           value={fellowForm.lastName}
           onChangeText={(text: string) => setFellowForm((p) => ({ ...p, lastName: text }))}
+          commitOnBlur={false}
         />
       </View>
         <DraftTextInput
@@ -411,6 +413,7 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
         keyboardType="email-address"
         value={fellowForm.email}
         onChangeText={(text: string) => setFellowForm((p) => ({ ...p, email: text }))}
+        commitOnBlur={false}
       />
       <TouchableOpacity style={styles.button} onPress={addFellowTraveler}>
         <Text style={styles.buttonText}>Add Fellow Traveler</Text>
@@ -454,6 +457,7 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
                         textContentType="givenName"
                         value={editingFellowDraft.firstName}
                         onChangeText={(text: string) => setEditingFellowDraft((p) => (p ? { ...p, firstName: text } : p))}
+                        commitOnBlur={false}
                       />
                       <TextInput
                         style={[styles.input, { flex: 1 }]}

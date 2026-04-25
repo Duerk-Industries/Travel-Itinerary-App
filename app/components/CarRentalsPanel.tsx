@@ -189,6 +189,7 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
               placeholder="Pick up location"
               value={carDraft.pickupLocation}
               onChangeText={(text: string) => setCarDraft((p) => ({ ...p, pickupLocation: text }))}
+              commitOnBlur={false}
             />
             <View style={[styles.dateInputWrap, styles.carFormField]}>
               {Platform.OS === 'web' ? (
@@ -216,6 +217,7 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
               placeholder="Drop off location"
               value={carDraft.dropoffLocation}
               onChangeText={(text: string) => setCarDraft((p) => ({ ...p, dropoffLocation: text }))}
+              commitOnBlur={false}
             />
             <View style={[styles.dateInputWrap, styles.carFormField]}>
               {Platform.OS === 'web' ? (
@@ -258,12 +260,14 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
               placeholder="Reference"
               value={carDraft.reference}
               onChangeText={(text: string) => setCarDraft((p) => ({ ...p, reference: text }))}
+              commitOnBlur={false}
             />
             <DraftTextInput
               style={[styles.input, styles.carFormField]}
               placeholder="Vendor"
               value={carDraft.vendor}
               onChangeText={(text: string) => setCarDraft((p) => ({ ...p, vendor: text }))}
+              commitOnBlur={false}
             />
             <SelectField
               styles={styles}
@@ -282,18 +286,21 @@ const CarRentalsPanel: React.FC<CarRentalsPanelProps> = ({
               keyboardType="numeric"
               value={carDraft.cost}
               onChangeText={(text: string) => setCarDraft((p) => ({ ...p, cost: sanitizeCostInput(text) }))}
+              commitOnBlur={false}
             />
             <DraftTextInput
               style={[styles.input, styles.carFormField]}
               placeholder="Car model"
               value={carDraft.model}
               onChangeText={(text: string) => setCarDraft((p) => ({ ...p, model: text }))}
+              commitOnBlur={false}
             />
             <DraftTextInput
               style={[styles.input, styles.carFormWideField, styles.cellTextWrap]}
               placeholder="Notes"
               value={carDraft.notes}
               onChangeText={(text: string) => setCarDraft((p) => ({ ...p, notes: text }))}
+              commitOnBlur={false}
               multiline
             />
           </View>

@@ -150,6 +150,7 @@ const LodgingFormComponent: React.FC<LodgingFormProps> = ({
             placeholder="Hotel name"
             value={draft.name}
             onChangeText={(text: string) => setDraft((prev) => ({ ...prev, name: text }))}
+            commitOnBlur={false}
           />
         </View>
         <View style={[styles.modalField, isCompact && { minWidth: '100%' }]}>
@@ -160,6 +161,7 @@ const LodgingFormComponent: React.FC<LodgingFormProps> = ({
             keyboardType="numeric"
             value={draft.rooms}
             onChangeText={(text: string) => setDraft((prev) => ({ ...prev, rooms: text }))}
+            commitOnBlur={false}
           />
         </View>
       </View>
@@ -201,6 +203,7 @@ const LodgingFormComponent: React.FC<LodgingFormProps> = ({
             onChangeText={(text: string) =>
               setDraft((prev) => ({ ...prev, totalCost: sanitizeCostInput(text) }))
             }
+            commitOnBlur={false}
           />
           <Text style={styles.helperText}>
             Per night: {draft.costPerNight ? `$${draft.costPerNight}` : '-'}
@@ -258,6 +261,7 @@ const LodgingFormComponent: React.FC<LodgingFormProps> = ({
         placeholder="Address"
         value={draft.address}
         onChangeText={(text: string) => setDraft((prev) => ({ ...prev, address: text }))}
+        commitOnBlur={false}
       />
     </>
   );

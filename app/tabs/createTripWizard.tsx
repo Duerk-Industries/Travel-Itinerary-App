@@ -279,7 +279,6 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
   const defaultPromptTraitsDigest = useMemo(() => serializePromptTraits(defaultPromptTraits), [defaultPromptTraits]);
   const [wizardPromptTraits, setWizardPromptTraits] = useState(() => normalizePromptTraits(defaultPromptTraits));
   const [itineraryDepartureAirport, setItineraryDepartureAirport] = useState('');
-  const [itineraryAirportSuggestions, setItineraryAirportSuggestions] = useState<string[]>([]);
   const [showItineraryAirportSuggestions, setShowItineraryAirportSuggestions] = useState(false);
   const itineraryAirportRef = useRef<any>(null);
   const [itineraryAirportAnchor, setItineraryAirportAnchor] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
@@ -504,14 +503,29 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     setWizardPromptTraits(normalizePromptTraits(defaultPromptTraits));
   }, [defaultPromptTraitsDigest]);
 
-  const buildItineraryAirportSuggestions = (query: string): string[] => {
-    const trimmed = query.trim();
+  const itineraryAirportSuggestions = useMemo<string[]>(() => {
+    const trimmed = itineraryDepartureAirport.trim().toLowerCase();
     if (!trimmed) return [];
-    return airportOptions.filter((opt) => opt.toLowerCase().includes(trimmed.toLowerCase())).slice(0, 10);
-  };
+    return airportOptions.filter((opt) => opt.toLowerCase().includes(trimmed)).slice(0, 10);
+  }, [airportOptions, itineraryDepartureAirport]);
 
-  const showItineraryAirportDropdown = (query: string) => {
-    setItineraryAirportSuggestions(buildItineraryAirportSuggestions(query));
+  // Debounce the server-side airport search so we don't fire a request per
+  // keystroke. The dropdown still updates instantly via the useMemo above
+  // by filtering whatever airportOptions snapshot is in memory.
+  useEffect(() => {
+    const trimmed = itineraryDepartureAirport.trim();
+    if (!trimmed) return;
+    const handle = setTimeout(() => {
+      try {
+        void onSearchAirports(trimmed);
+      } catch {
+        // ignore background errors
+      }
+    }, 220);
+    return () => clearTimeout(handle);
+  }, [itineraryDepartureAirport, onSearchAirports]);
+
+  const showItineraryAirportDropdown = () => {
     setShowItineraryAirportSuggestions(true);
     const node = itineraryAirportRef.current as any;
     if (node?.measureInWindow) {
@@ -526,13 +540,6 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
         width: rect.width,
         height: rect.height,
       });
-    }
-    if (query.trim()) {
-      try {
-        void onSearchAirports(query);
-      } catch {
-        // ignore background errors
-      }
     }
   };
 
@@ -1786,15 +1793,15 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     placeholder="Departure airport (optional)"
                     title="Departure airport"
                     value={itineraryDepartureAirport}
-                    onFocus={() => showItineraryAirportDropdown(itineraryDepartureAirport)}
+                    onFocus={showItineraryAirportDropdown}
                     onChangeText={(text: string) => {
                       setItineraryDepartureAirport(text);
-                      showItineraryAirportDropdown(text);
+                      setShowItineraryAirportSuggestions(true);
                     }}
                   />
                   <TouchableOpacity
                     style={{ position: 'absolute', right: 8, top: 10, padding: 6 }}
-                    onPress={() => showItineraryAirportDropdown(itineraryDepartureAirport)}
+                    onPress={showItineraryAirportDropdown}
                   >
                     <Text style={styles.selectCaret}></Text>
                   </TouchableOpacity>

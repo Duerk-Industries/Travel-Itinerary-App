@@ -32,16 +32,20 @@ const calculateRetryDelayMs = (retryCount: number, baseDelaySeconds: number, max
   return (exponential + jitter) * 1000;
 };
 
-router.post('/jobs/:jobId/run', authenticateWorker, async (req, res) => {
-  try {
-    logInfo(`[ingestion][worker] starting job=${req.params.jobId}`);
-    const job = await processImportJob(req.params.jobId);
-    logInfo(`[ingestion][worker] finished job=${job.id} state=${job.state}`);
-    res.status(202).json({ accepted: true, jobId: job.id, state: job.state });
-  } catch (error) {
-    logError(`[ingestion][worker] failed job=${req.params.jobId}`, error);
-    res.status(500).json({ error: 'Worker failed to process import job.' });
-  }
+router.post('/jobs/:jobId/run', authenticateWorker, (req, res) => {
+  const jobId = String(req.params.jobId);
+  logInfo(`[ingestion][worker] accepted job=${jobId}`);
+  res.status(202).json({ accepted: true, jobId });
+
+  setImmediate(() => {
+    void processImportJob(jobId)
+      .then((job) => {
+        logInfo(`[ingestion][worker] finished job=${job.id} state=${job.state}`);
+      })
+      .catch((error) => {
+        logError(`[ingestion][worker] failed job=${jobId}`, error);
+      });
+  });
 });
 
 /**

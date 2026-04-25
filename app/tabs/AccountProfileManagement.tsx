@@ -447,10 +447,10 @@ const AccountProfileManagement = ({
         </View>
       ) : null}
       <View style={styles.row}>
-        <DraftTextInput style={[styles.input, { flex: 1 }]} placeholder="First name" autoComplete="given-name" textContentType="givenName" value={accountProfile.firstName} onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, firstName: text }))} />
-        <DraftTextInput style={[styles.input, { flex: 1 }]} placeholder="Last name" autoComplete="family-name" textContentType="familyName" value={accountProfile.lastName} onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, lastName: text }))} />
+        <DraftTextInput style={[styles.input, { flex: 1 }]} placeholder="First name" autoComplete="given-name" textContentType="givenName" value={accountProfile.firstName} onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, firstName: text }))} commitOnBlur={false} />
+        <DraftTextInput style={[styles.input, { flex: 1 }]} placeholder="Last name" autoComplete="family-name" textContentType="familyName" value={accountProfile.lastName} onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, lastName: text }))} commitOnBlur={false} />
       </View>
-      <DraftTextInput style={styles.input} placeholder="Email" autoCapitalize="none" autoComplete="email" textContentType="emailAddress" keyboardType="email-address" value={accountProfile.email} onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, email: text }))} />
+      <DraftTextInput style={styles.input} placeholder="Email" autoCapitalize="none" autoComplete="email" textContentType="emailAddress" keyboardType="email-address" value={accountProfile.email} onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, email: text }))} commitOnBlur={false} />
       <TouchableOpacity
         style={[styles.input, { justifyContent: 'center' }]}
         onPress={() => setShowAddressEditor(true)}
@@ -590,6 +590,7 @@ const AccountProfileManagement = ({
               keyboardType="email-address"
               value={newEmail}
               onChangeText={setNewEmail}
+              commitOnBlur={false}
             />
             <TouchableOpacity style={[styles.button, emailActionBusy && styles.buttonDisabled]} disabled={emailActionBusy} onPress={handleAddEmail}>
               <Text style={styles.buttonText}>Add</Text>
@@ -606,9 +607,9 @@ const AccountProfileManagement = ({
       ) : (
         <>
           <Text style={styles.modalLabel}>Change password</Text>
-          <DraftTextInput style={styles.input} placeholder="Current password" secureTextEntry value={passwordForm.currentPassword} onChangeText={(text: string) => setPasswordForm(p => ({ ...p, currentPassword: text }))} />
-          <DraftTextInput style={styles.input} placeholder="New password" secureTextEntry value={passwordForm.newPassword} onChangeText={(text: string) => setPasswordForm(p => ({ ...p, newPassword: text }))} />
-          <DraftTextInput style={styles.input} placeholder="Confirm new password" secureTextEntry value={passwordForm.newPasswordConfirm} onChangeText={(text: string) => setPasswordForm(p => ({ ...p, newPasswordConfirm: text }))} />
+          <DraftTextInput style={styles.input} placeholder="Current password" secureTextEntry value={passwordForm.currentPassword} onChangeText={(text: string) => setPasswordForm(p => ({ ...p, currentPassword: text }))} commitOnBlur={false} />
+          <DraftTextInput style={styles.input} placeholder="New password" secureTextEntry value={passwordForm.newPassword} onChangeText={(text: string) => setPasswordForm(p => ({ ...p, newPassword: text }))} commitOnBlur={false} />
+          <DraftTextInput style={styles.input} placeholder="Confirm new password" secureTextEntry value={passwordForm.newPasswordConfirm} onChangeText={(text: string) => setPasswordForm(p => ({ ...p, newPasswordConfirm: text }))} commitOnBlur={false} />
           <View style={styles.row}>
             <TouchableOpacity
               style={[styles.button, styles.dangerButton, { flex: 1 }]}
@@ -653,12 +654,14 @@ const AccountProfileManagement = ({
                 placeholder="Address line 1"
                 value={addressForm.line1}
                 onChangeText={(text: string) => setAddressForm((prev) => ({ ...prev, line1: text }))}
+                commitOnBlur={false}
               />
               <DraftTextInput
                 style={styles.input}
                 placeholder="Address line 2"
                 value={addressForm.line2}
                 onChangeText={(text: string) => setAddressForm((prev) => ({ ...prev, line2: text }))}
+                commitOnBlur={false}
               />
               <View style={styles.row}>
                 <DraftTextInput
@@ -666,12 +669,14 @@ const AccountProfileManagement = ({
                   placeholder="City"
                   value={addressForm.city}
                   onChangeText={(text: string) => setAddressForm((prev) => ({ ...prev, city: text }))}
+                  commitOnBlur={false}
                 />
                 <DraftTextInput
                   style={[styles.input, { flex: 1 }]}
                   placeholder="State / Province"
                   value={addressForm.state}
                   onChangeText={(text: string) => setAddressForm((prev) => ({ ...prev, state: text }))}
+                  commitOnBlur={false}
                 />
               </View>
               <View style={styles.row}>
@@ -680,12 +685,14 @@ const AccountProfileManagement = ({
                   placeholder="Postal code"
                   value={addressForm.postalCode}
                   onChangeText={(text: string) => setAddressForm((prev) => ({ ...prev, postalCode: text }))}
+                  commitOnBlur={false}
                 />
                 <DraftTextInput
                   style={[styles.input, { flex: 1 }]}
                   placeholder="Country"
                   value={addressForm.country}
                   onChangeText={(text: string) => setAddressForm((prev) => ({ ...prev, country: text }))}
+                  commitOnBlur={false}
                 />
               </View>
               <View style={styles.row}>

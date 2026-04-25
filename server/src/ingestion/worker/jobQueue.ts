@@ -38,7 +38,9 @@ class CloudRunJobQueue implements JobQueue {
       body: JSON.stringify({ jobId }),
     });
     if (!response.ok) {
-      throw new Error(`Cloud worker enqueue failed with HTTP ${response.status}`);
+      const body = await response.text().catch(() => '');
+      const detail = body ? `: ${body.slice(0, 500)}` : '';
+      throw new Error(`Cloud worker enqueue failed with HTTP ${response.status}${detail}`);
     }
     logInfo(`[ingestion][queue] accepted cloud-run job=${jobId} status=${response.status}`);
   }

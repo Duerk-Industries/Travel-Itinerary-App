@@ -413,6 +413,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                     keyboardType="numeric"
                     value={draftAmount}
                     onChangeText={(value: string) => setDraftAmount(sanitizeCostInput(value))}
+                    commitOnBlur={false}
                   />
                 </View>
 

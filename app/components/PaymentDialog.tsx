@@ -218,6 +218,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
                   placeholder="YYYY-MM-DD"
                   value={paymentDate}
                   onChangeText={setPaymentDate}
+                  commitOnBlur={false}
                   accessibilityLabel="Payment date"
                 />
               )}
@@ -234,6 +235,7 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
                 keyboardType="numeric"
                 value={amount}
                 onChangeText={(text: string) => setAmount(sanitizeCostInput(text))}
+                commitOnBlur={false}
                 testID="payment-amount-input"
                 accessibilityLabel="Payment amount"
               />
