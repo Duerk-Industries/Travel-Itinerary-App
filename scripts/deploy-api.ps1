@@ -165,6 +165,7 @@ $secretMap = @{}
 $envPairs = @()
 $envKeys = @()
 $sawGoogleApplicationCredentials = $false
+$authSecretFromEnv = $null
 if ($EnvFile) {
   if ([System.IO.Path]::GetFileName($EnvFile) -eq '.local_env') {
     Write-Error "Refusing to read .local_env for Cloud Run env vars."
@@ -177,6 +178,9 @@ if ($EnvFile) {
   foreach ($pair in (Parse-DotEnv $EnvFile)) {
     if ($pair.Key -eq 'GOOGLE_APPLICATION_CREDENTIALS') {
       $sawGoogleApplicationCredentials = $true
+    }
+    if ($pair.Key -eq 'AUTH_SECRET') {
+      $authSecretFromEnv = $pair.Value
     }
     if (Should-IgnoreKey $pair.Key $IgnoreKeys) { continue }
     $value = $pair.Value
@@ -210,6 +214,14 @@ if ($SecretsFile -and (Test-Path -LiteralPath $SecretsFile)) {
     }
   }
 }
+
+$hasAuthSecretMapping = $secretMap.ContainsKey('AUTH_SECRET')
+$hasSafeAuthSecretEnv = -not [string]::IsNullOrWhiteSpace($authSecretFromEnv) -and $authSecretFromEnv.Trim() -ne 'development-secret'
+if (-not $hasAuthSecretMapping -and -not $hasSafeAuthSecretEnv) {
+  Write-Error "AUTH_SECRET is required for Cloud Run deploy. Add AUTH_SECRET to server/.secrets and create a matching Secret Manager secret, or set a non-default AUTH_SECRET in the deploy env file."
+  exit 1
+}
+
 if ($secretMap.Count -gt 0) {
   $secretKeys = @($secretMap.Keys)
   foreach ($key in $secretKeys) {
@@ -251,10 +263,14 @@ if ($envKeys.Count -gt 0) {
   $describeCmd = @('run', 'services', 'describe', $ServiceName, '--region', $Region)
   & gcloud @describeCmd *> $null
   if ($LASTEXITCODE -eq 0) {
-    $allowClearSecretsFallback = $secretMap.Count -eq 0
-    if (-not (Invoke-LegacySecretCleanup -ServiceName $ServiceName -Region $Region -EnvKeys $envKeys -Memory $Memory -AllowClearSecretsFallback $allowClearSecretsFallback -PhaseLabel 'Removing pre-deploy')) {
-      Write-Error "Pre-deploy legacy secret removal failed with gcloud exit code $LASTEXITCODE."
-      exit $LASTEXITCODE
+    if ($secretMap.Count -gt 0) {
+      Write-Host "Skipping pre-deploy legacy secret cleanup because secret mappings must be applied with the source deploy."
+    } else {
+      $allowClearSecretsFallback = $true
+      if (-not (Invoke-LegacySecretCleanup -ServiceName $ServiceName -Region $Region -EnvKeys $envKeys -Memory $Memory -AllowClearSecretsFallback $allowClearSecretsFallback -PhaseLabel 'Removing pre-deploy')) {
+        Write-Error "Pre-deploy legacy secret removal failed with gcloud exit code $LASTEXITCODE."
+        exit $LASTEXITCODE
+      }
     }
   }
 }

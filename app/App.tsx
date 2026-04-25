@@ -561,6 +561,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     clearAccountProfile,
   } = useAccountProfile();
   const logoutRef = useRef<() => void>(() => undefined);
+  const handleUnauthorized = useCallback(() => logoutRef.current(), []);
 
   const {
     invites,
@@ -599,7 +600,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     fetchFollowedTrips,
     handleFollowTripByCode,
     clearFollowedTripsData,
-  } = useFollowedTrips({ backendUrl, userToken, onUnauthorized: () => logoutRef.current() });
+  } = useFollowedTrips({ backendUrl, userToken, onUnauthorized: handleUnauthorized });
 
   const followedTripById = useMemo(
     () => new Map(followedTrips.map((trip) => [trip.tripId, trip] as const)),
@@ -634,7 +635,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     backendUrl,
     groupSort,
     isFollowingMode,
-    onUnauthorized: () => logoutRef.current(),
+    onUnauthorized: handleUnauthorized,
     requirePasswordSetup,
     selectedFollowedTripDetails,
     setActiveTripId,

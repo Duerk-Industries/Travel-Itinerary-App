@@ -27,8 +27,11 @@ const getMonthWindowKey = (): string => {
   return `${y}-${m}`;
 };
 
+// Inline SVG so the fallback never depends on an external host that might
+// 404 (the previous Unsplash URL was deleted upstream and broke every
+// itinerary that landed on the fallback).
 const PLACEHOLDER_IMAGE =
-  'https://images.unsplash.com/photo-1502920917128-1aa500764b0e?auto=format&fit=crop&w=1200&q=80';
+  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 800'><rect width='1200' height='800' fill='%23e5e7eb'/><text x='50%25' y='50%25' font-family='system-ui,sans-serif' font-size='40' fill='%239ca3af' text-anchor='middle' dominant-baseline='middle'>Image unavailable</text></svg>";
 
 const generationRateLimitState = new Map<string, { count: number; startedAt: number }>();
 const RATE_LIMIT_WINDOW_MS = Number(process.env.ITINERARY_RATE_LIMIT_WINDOW_MS ?? 10 * 60 * 1000);
