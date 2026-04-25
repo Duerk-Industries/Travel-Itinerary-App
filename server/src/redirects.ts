@@ -28,6 +28,23 @@ const parseHttpOrigin = (value: string): string | null => {
   }
 };
 
+const getWwwCompanionOrigin = (value: string): string | null => {
+  try {
+    const url = new URL(value);
+    if (!isHttpProtocol(url.protocol) || isLoopbackHostname(url.hostname)) {
+      return null;
+    }
+    if (url.hostname.startsWith('www.')) {
+      url.hostname = url.hostname.slice(4);
+      return url.origin;
+    }
+    url.hostname = `www.${url.hostname}`;
+    return url.origin;
+  } catch {
+    return null;
+  }
+};
+
 const getRedirectAllowlist = (webUrl: string): string[] => {
   const raw = getEnvValue('AUTH_REDIRECT_URI_ALLOWLIST', { defaultValue: '' }) ?? '';
   const entries = raw
@@ -36,6 +53,10 @@ const getRedirectAllowlist = (webUrl: string): string[] => {
     .filter((entry) => entry.length > 0);
   if (webUrl) {
     entries.push(webUrl);
+    const wwwCompanion = getWwwCompanionOrigin(webUrl);
+    if (wwwCompanion) {
+      entries.push(wwwCompanion);
+    }
   }
   return entries;
 };
@@ -54,10 +75,10 @@ const normalizeRedirectUri = (raw: string, webUrl: string): string | null => {
   return raw;
 };
 
-const isLoopbackHostname = (hostname: string): boolean => {
+function isLoopbackHostname(hostname: string): boolean {
   const normalized = hostname.trim().toLowerCase();
   return normalized === 'localhost' || normalized === '127.0.0.1' || normalized === '::1';
-};
+}
 
 const isForbiddenProductionLoopbackRedirect = (redirectUri: string): boolean => {
   if (isLocalEnv()) {
