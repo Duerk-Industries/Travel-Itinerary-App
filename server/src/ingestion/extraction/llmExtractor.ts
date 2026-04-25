@@ -83,6 +83,13 @@ const emptyResult = (config: ExtractionConfig, strategyName: string): Extraction
   metadata: { logicVersion: config.logicVersion, extractedAt: new Date().toISOString(), strategyName },
 });
 
+const getMonthWindowKey = (): string => {
+  const now = new Date();
+  const y = now.getUTCFullYear();
+  const m = String(now.getUTCMonth() + 1).padStart(2, '0');
+  return `${y}-${m}`;
+};
+
 export class LlmExtractor implements ExtractionStrategy {
   constructor(
     readonly strategyName: string,
@@ -122,6 +129,14 @@ export class LlmExtractor implements ExtractionStrategy {
           ],
           temperature: 0.1,
           max_tokens: 1200,
+        },
+        usageContext: {
+          userId: config.userId,
+          windowKey: getMonthWindowKey(),
+          metadata: {
+            pipeline: 'ingestion_llm_extract',
+            strategyName: this.strategyName,
+          },
         },
       });
 

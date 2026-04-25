@@ -84,7 +84,7 @@ router.post('/profile/demographics', async (req, res) => {
     gender === 'female' || gender === 'male' || gender === 'nonbinary' || gender === 'prefer-not'
       ? gender
       : null;
-  await saveUserDemographics(userId, safeAge, safeGender);
+  await saveUserDemographics(userId, { age: safeAge, gender: safeGender });
   res.status(204).send();
 });
 

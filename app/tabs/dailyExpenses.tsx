@@ -1,8 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { FlatList, Platform, ScrollView, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import ConfirmDialog from '../components/ConfirmDialog';
+import DialogShell from '../components/DialogShell';
+import DraftTextInput from '../components/DraftTextInput';
+import SelectField, { type SelectFieldOption } from '../components/SelectField';
 import { fetchExchangeRate, getLocalDateString } from '../utils/exchangeRates';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
+import { formatMemberDisplayName } from '../utils/memberDisplay';
 import { toWebStyle } from '../utils/webStyle';
 
 type Trip = {
@@ -53,7 +57,42 @@ type DailyExpensesTabProps = {
 };
 
 const categoryOptions = ['Breakfast', 'Lunch', 'Dinner', 'Other Food', 'Rides', 'Souvenirs', 'Other'] as const;
+const categorySelectOptions: SelectFieldOption[] = categoryOptions.map((category) => ({ label: category, value: category }));
+const currencySelectOptions: SelectFieldOption[] = ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY', 'INR', 'MXN'].map((currency) => ({
+  label: currency,
+  value: currency,
+}));
 type CategoryOption = typeof categoryOptions[number];
+
+const dayCardStyles = {
+  card: {
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+    backgroundColor: '#ffffff',
+  } as const,
+  headerRow: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    marginBottom: 6,
+  } as const,
+  dateLabel: {
+    fontWeight: '600' as const,
+  } as const,
+  dayTotal: {
+    fontWeight: '600' as const,
+  } as const,
+  categoryRow: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    paddingVertical: 4,
+  } as const,
+  emptyNote: {
+    fontStyle: 'italic' as const,
+  } as const,
+};
 
 const formatDateLabel = (iso: string): string => {
   const date = new Date(iso);
@@ -98,6 +137,8 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   defaultPayerId,
   styles,
 }) => {
+  const { width: viewportWidth } = useWindowDimensions();
+  const isNarrowLayout = viewportWidth < 700;
   const activeMembers = useMemo(
     () => groupMembers.filter((m) => m.status !== 'removed'),
     [groupMembers]
@@ -105,8 +146,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   const memberNameMap = useMemo(() => {
     const map = new Map<string, string>();
     activeMembers.forEach((m) => {
-      const name = `${m.firstName ?? ''} ${m.lastName ?? ''}`.trim();
-      map.set(m.id, name || m.guestName || m.email || 'Traveler');
+      map.set(m.id, formatMemberDisplayName(m));
     });
     return map;
   }, [activeMembers]);
@@ -117,8 +157,6 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   const [draftAmount, setDraftAmount] = useState<string>('');
   const [draftForIds, setDraftForIds] = useState<string[]>([]);
   const [draftPayerIds, setDraftPayerIds] = useState<string[]>([]);
-  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
-  const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
   const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [addExpenseVisible, setAddExpenseVisible] = useState(false);
   const [detailTarget, setDetailTarget] = useState<{ date: string; category: CategoryOption } | null>(null);
@@ -178,8 +216,6 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
 
   const closeAddExpenseModal = () => {
     setAddExpenseVisible(false);
-    setShowCategoryDropdown(false);
-    setShowCurrencyDropdown(false);
     setDatePickerVisible(false);
   };
 
@@ -305,11 +341,16 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
         </TouchableOpacity>
       </View>
       {addExpenseVisible ? (
-        <Modal transparent visible animationType="fade">
-          <View style={styles.modalOverlay} testID="expense-add-modal">
-            <View style={[styles.modalCard, styles.expenseModalCard]}>
+        <DialogShell
+          visible
+          title="Add Expense"
+          styles={styles}
+          onClose={closeAddExpenseModal}
+          testID="expense-add-modal"
+          useNativeModal
+          cardStyle={[styles.modalCard, styles.expenseModalCard]}
+        >
               <View style={styles.row}>
-                <Text style={styles.sectionTitle}>Add Expense</Text>
                 <TouchableOpacity
                   style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]}
                   onPress={closeAddExpenseModal}
@@ -348,62 +389,31 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                       </View>
                     )}
                   </View>
-                  <View style={[styles.input, styles.dropdown, styles.expenseFieldCategory]}>
-                    <TouchableOpacity
-                      style={styles.selectButtonRow}
-                      onPress={() => setShowCategoryDropdown((prev) => !prev)}
-                    >
-                      <Text style={styles.cellText}>{draftCategory}</Text>
-                      <Text style={styles.selectCaret}>▾</Text>
-                    </TouchableOpacity>
-                    {showCategoryDropdown ? (
-                      <View style={styles.dropdownList}>
-                        {categoryOptions.map((category) => (
-                          <TouchableOpacity
-                            key={category}
-                            style={styles.dropdownOption}
-                            onPress={() => {
-                              setDraftCategory(category);
-                              setShowCategoryDropdown(false);
-                            }}
-                          >
-                            <Text style={styles.cellText}>{category}</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    ) : null}
-                  </View>
-                  <View style={[styles.input, styles.dropdown, styles.expenseFieldCurrency]}>
-                    <TouchableOpacity
-                      style={styles.selectButtonRow}
-                      onPress={() => setShowCurrencyDropdown((prev) => !prev)}
-                    >
-                      <Text style={styles.cellText}>{draftCurrency}</Text>
-                      <Text style={styles.selectCaret}>▾</Text>
-                    </TouchableOpacity>
-                    {showCurrencyDropdown ? (
-                      <View style={styles.dropdownList}>
-                        {['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY', 'INR', 'MXN'].map((currency) => (
-                          <TouchableOpacity
-                            key={currency}
-                            style={styles.dropdownOption}
-                            onPress={() => {
-                              setDraftCurrency(currency);
-                              setShowCurrencyDropdown(false);
-                            }}
-                          >
-                            <Text style={styles.cellText}>{currency}</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    ) : null}
-                  </View>
-                  <TextInput
+                  <SelectField
+                    styles={styles}
+                    value={draftCategory}
+                    options={categorySelectOptions}
+                    placeholder="Category"
+                    title="Expense category"
+                    style={styles.expenseFieldCategory}
+                    onChange={(value) => setDraftCategory((value || 'Other') as CategoryOption)}
+                  />
+                  <SelectField
+                    styles={styles}
+                    value={draftCurrency}
+                    options={currencySelectOptions}
+                    placeholder="Currency"
+                    title="Expense currency"
+                    style={styles.expenseFieldCurrency}
+                    onChange={setDraftCurrency}
+                  />
+                  <DraftTextInput
                     style={[styles.input, styles.expenseFieldAmount]}
                     placeholder="Amount"
                     keyboardType="numeric"
                     value={draftAmount}
                     onChangeText={(value: string) => setDraftAmount(sanitizeCostInput(value))}
+                    commitOnBlur={false}
                   />
                 </View>
 
@@ -455,48 +465,104 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                   </TouchableOpacity>
                 </View>
               </ScrollView>
-            </View>
-          </View>
-        </Modal>
+        </DialogShell>
       ) : null}
 
       <View style={styles.divider} />
-      <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
-        <View style={styles.table}>
-          <View style={[styles.tableRow, styles.tableHeader]}>
-            {['Date', ...categoryOptions, 'Total'].map((header, index) => (
-              <View key={header} style={[styles.cell, { minWidth: index === 0 ? 120 : 110, flex: 1 }, index === categoryOptions.length + 1 && styles.lastCell]}>
-                <Text style={styles.headerText}>{header}</Text>
+      {isNarrowLayout ? (
+        <FlatList<string>
+          testID="daily-expenses-cards"
+          data={tripDates}
+          keyExtractor={(date: string) => date}
+          // Nested inside App.tsx's outer ScrollView; disable our own scroll so the
+          // parent handles it, but keep row windowing so huge trips don't mount
+          // every day up-front.
+          scrollEnabled={false}
+          initialNumToRender={10}
+          windowSize={5}
+          removeClippedSubviews
+          renderItem={({ item: date }: { item: string }) => {
+            const dayTotal = dailyTotalsByDay[date] ?? 0;
+            const nonZeroCategories = categoryOptions.filter(
+              (category) => (dailyTotals[date]?.[category] ?? 0) > 0,
+            );
+            return (
+              <View
+                style={dayCardStyles.card}
+                testID={`daily-expenses-card-${date}`}
+              >
+                <View style={dayCardStyles.headerRow}>
+                  <Text style={[styles.cellText, dayCardStyles.dateLabel]}>
+                    {formatDateLabel(date)}
+                  </Text>
+                  <Text style={[styles.cellText, dayCardStyles.dayTotal]}>
+                    ${dayTotal.toFixed(2)}
+                  </Text>
+                </View>
+                {nonZeroCategories.length ? (
+                  nonZeroCategories.map((category) => {
+                    const value = dailyTotals[date]?.[category] ?? 0;
+                    return (
+                      <TouchableOpacity
+                        key={`${date}-${category}`}
+                        style={dayCardStyles.categoryRow}
+                        onPress={() => setDetailTarget({ date, category })}
+                        testID={`expense-cell-${date}-${category}`}
+                      >
+                        <Text style={styles.cellText}>{category}</Text>
+                        <Text style={[styles.cellText, styles.linkText]}>
+                          ${value.toFixed(2)}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })
+                ) : (
+                  <Text style={[styles.helperText, dayCardStyles.emptyNote]}>
+                    No expenses recorded.
+                  </Text>
+                )}
+              </View>
+            );
+          }}
+        />
+      ) : (
+        <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
+          <View style={styles.table} testID="daily-expenses-table">
+            <View style={[styles.tableRow, styles.tableHeader]}>
+              {['Date', ...categoryOptions, 'Total'].map((header, index) => (
+                <View key={header} style={[styles.cell, { minWidth: index === 0 ? 120 : 110, flex: 1 }, index === categoryOptions.length + 1 && styles.lastCell]}>
+                  <Text style={styles.headerText}>{header}</Text>
+                </View>
+              ))}
+            </View>
+            {tripDates.map((date, idx) => (
+              <View key={date} style={[styles.tableRow, idx === tripDates.length - 1 && styles.lastRow]}>
+                <View style={[styles.cell, { minWidth: 120, flex: 1 }]}>
+                  <Text style={styles.cellText}>{formatDateLabel(date)}</Text>
+                </View>
+                {categoryOptions.map((category) => {
+                  const value = dailyTotals[date]?.[category] ?? 0;
+                  const content = value ? `$${value.toFixed(2)}` : '-';
+                  return (
+                    <View key={`${date}-${category}`} style={[styles.cell, { minWidth: 110, flex: 1 }]}>
+                      {value ? (
+                        <TouchableOpacity onPress={() => setDetailTarget({ date, category })} testID={`expense-cell-${date}-${category}`}>
+                          <Text style={[styles.cellText, styles.linkText]}>{content}</Text>
+                        </TouchableOpacity>
+                      ) : (
+                        <Text style={styles.cellText}>{content}</Text>
+                      )}
+                    </View>
+                  );
+                })}
+                <View style={[styles.cell, styles.lastCell, { minWidth: 110, flex: 1 }]}>
+                  <Text style={styles.cellText}>${(dailyTotalsByDay[date] ?? 0).toFixed(2)}</Text>
+                </View>
               </View>
             ))}
           </View>
-          {tripDates.map((date, idx) => (
-            <View key={date} style={[styles.tableRow, idx === tripDates.length - 1 && styles.lastRow]}>
-              <View style={[styles.cell, { minWidth: 120, flex: 1 }]}>
-                <Text style={styles.cellText}>{formatDateLabel(date)}</Text>
-              </View>
-              {categoryOptions.map((category) => {
-                const value = dailyTotals[date]?.[category] ?? 0;
-                const content = value ? `$${value.toFixed(2)}` : '-';
-                return (
-                  <View key={`${date}-${category}`} style={[styles.cell, { minWidth: 110, flex: 1 }]}>
-                    {value ? (
-                      <TouchableOpacity onPress={() => setDetailTarget({ date, category })} testID={`expense-cell-${date}-${category}`}>
-                        <Text style={[styles.cellText, styles.linkText]}>{content}</Text>
-                      </TouchableOpacity>
-                    ) : (
-                      <Text style={styles.cellText}>{content}</Text>
-                    )}
-                  </View>
-                );
-              })}
-              <View style={[styles.cell, styles.lastCell, { minWidth: 110, flex: 1 }]}>
-                <Text style={styles.cellText}>${(dailyTotalsByDay[date] ?? 0).toFixed(2)}</Text>
-              </View>
-            </View>
-          ))}
-        </View>
-      </ScrollView>
+        </ScrollView>
+      )}
 
       {Platform.OS !== 'web' && datePickerVisible && NativeDateTimePicker ? (
         <NativeDateTimePicker
@@ -514,13 +580,16 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
       ) : null}
 
       {detailTarget ? (
-        <Modal transparent visible animationType="fade">
-          <View style={styles.modalOverlay} testID="expense-detail-modal">
-            <View style={[styles.modalCard, styles.detailModal]}>
+        <DialogShell
+          visible
+          title={detailTarget ? `${detailTarget.category} · ${formatDateLabel(detailTarget.date)}` : 'Details'}
+          styles={styles}
+          onClose={() => setDetailTarget(null)}
+          testID="expense-detail-modal"
+          useNativeModal
+          cardStyle={[styles.modalCard, styles.detailModal]}
+        >
               <View style={styles.row}>
-                <Text style={styles.sectionTitle}>
-                  {detailTarget ? `${detailTarget.category} · ${formatDateLabel(detailTarget.date)}` : 'Details'}
-                </Text>
                 <TouchableOpacity style={[styles.button, styles.smallButton, { marginLeft: 'auto' }]} onPress={() => setDetailTarget(null)}>
                   <Text style={styles.buttonText}>Close</Text>
                 </TouchableOpacity>
@@ -573,9 +642,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                   ) : null}
                 </View>
               </ScrollView>
-            </View>
-          </View>
-        </Modal>
+        </DialogShell>
       ) : null}
 
       {pendingDeleteExpense ? (

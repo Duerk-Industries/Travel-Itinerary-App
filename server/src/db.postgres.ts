@@ -34,10 +34,12 @@ import {
   TripChatMessage,
   TripMessageRead,
 } from './types';
-import { logError } from './logger';
-import { getEnvValue } from './env';
+import { logError, logInfo } from './logger';
+import { getEnvFlag, getEnvValue } from './env';
 import { downloadAirportDatasetForDailyRefresh } from './apis/airportDatasetCallers';
-import { normalizeAirportDataset } from './services/airportCatalog';
+import { normalizeAirportDataset, searchBundledAirportDataset } from './services/airportCatalog';
+import fs from 'fs';
+import path from 'path';
 import { getReservedUsernames } from './config/authFlags';
 import { getApiLimitsConfig } from './config/apiLimits';
 
@@ -306,16 +308,10 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS gender TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS password_setup_required BOOLEAN NOT NULL DEFAULT FALSE;`);
 
-  await p.query(`
-    CREATE TABLE IF NOT EXISTS email_verifications (
-      id UUID PRIMARY KEY,
-      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      token_hash TEXT NOT NULL,
-      expires_at TIMESTAMP NOT NULL,
-      created_at TIMESTAMP DEFAULT NOW(),
-      used_at TIMESTAMP
-    );
-  `);
+  // `email_verifications` now lives in
+  // server/migrations/20260426_add_email_verifications.sql — auto-applied by
+  // the runtime migration runner on boot. The drift-guard snapshot no longer
+  // lists this table.
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS user_emails (
@@ -431,16 +427,12 @@ export const initDb = async (): Promise<void> => {
     );
   `);
 
-  await p.query(`
-    CREATE TABLE IF NOT EXISTS fellow_travelers (
-      id UUID PRIMARY KEY,
-      owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      first_name TEXT NOT NULL,
-      last_name TEXT NOT NULL,
-      created_at TIMESTAMP DEFAULT NOW()
-    );
-  `);
-  await p.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_fellow_travelers_owner_name ON fellow_travelers(owner_id, LOWER(first_name), LOWER(last_name));`);
+  // `fellow_travelers` now lives in
+  // server/migrations/20260426_add_fellow_travelers.sql — auto-applied by
+  // the runtime migration runner on boot. The previously-required
+  // `ADD COLUMN IF NOT EXISTS email` ALTER is folded into the migration's
+  // CREATE TABLE since the table is now born with the column on first
+  // apply. The drift-guard snapshot no longer lists this table.
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS trips (
@@ -613,6 +605,11 @@ export const initDb = async (): Promise<void> => {
       PRIMARY KEY (message_id, user_id)
     );
   `);
+
+  // `chat_read_watermarks` now lives in
+  // server/migrations/20260425_add_chat_read_watermarks.sql — first proof
+  // of the Priority 10 inline→migrations cutover pattern. Auto-applied by
+  // the runner invoked at the end of initDb.
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS locations (
@@ -805,15 +802,10 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE airports ADD COLUMN IF NOT EXISTS iata_code TEXT;`);
   await p.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_airports_iata_code ON airports(iata_code);`);
 
-  await p.query(`
-    CREATE TABLE IF NOT EXISTS place_details_cache (
-      place_id TEXT PRIMARY KEY,
-      name TEXT NOT NULL,
-      details JSONB NOT NULL DEFAULT '{}'::jsonb,
-      fetched_at TIMESTAMP NOT NULL DEFAULT NOW(),
-      created_at TIMESTAMP DEFAULT NOW()
-    );
-  `);
+  // `place_details_cache` now lives in
+  // server/migrations/20260426_add_place_details_cache.sql — auto-applied by
+  // the runtime migration runner on boot. The drift-guard snapshot no
+  // longer lists this table.
   await p.query(`
     CREATE TABLE IF NOT EXISTS place_lookup_cache (
       query_key TEXT PRIMARY KEY,
@@ -874,6 +866,23 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE expenses ADD COLUMN IF NOT EXISTS amount_in_trip_currency NUMERIC;`);
   await p.query(`ALTER TABLE expenses ADD COLUMN IF NOT EXISTS exchange_rate_to_trip_currency NUMERIC;`);
   await p.query(`ALTER TABLE expenses ADD COLUMN IF NOT EXISTS exchange_rate_date DATE;`);
+
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS trip_payments (
+      id UUID PRIMARY KEY,
+      trip_id UUID NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+      group_id UUID NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+      recorded_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      payer_id UUID NOT NULL,
+      receiver_id UUID NOT NULL,
+      payment_date DATE NOT NULL,
+      amount_cents BIGINT NOT NULL,
+      currency TEXT NOT NULL DEFAULT 'USD',
+      notes TEXT,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+  `);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_trip_payments_trip ON trip_payments(trip_id, payment_date);`);
 
   // ---- Entitlement system tables ----
 
@@ -975,6 +984,30 @@ export const initDb = async (): Promise<void> => {
   `);
   await p.query(`CREATE INDEX IF NOT EXISTS idx_usage_counters_user_metric ON usage_counters(user_id, metric_key, window_key);`);
   await p.query(`
+    CREATE TABLE IF NOT EXISTS api_usage_counters (
+      id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      provider   TEXT NOT NULL,
+      caller     TEXT NOT NULL,
+      scope      TEXT NOT NULL,
+      window_key TEXT NOT NULL,
+      count      BIGINT NOT NULL DEFAULT 0,
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      UNIQUE (scope, provider, caller, window_key)
+    );
+  `);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_api_usage_counters_lookup ON api_usage_counters(provider, scope, caller, window_key);`);
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS api_cost_counters (
+      id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      provider      TEXT NOT NULL,
+      window_key    TEXT NOT NULL,
+      amount_micros BIGINT NOT NULL DEFAULT 0,
+      updated_at    TIMESTAMP NOT NULL DEFAULT NOW(),
+      UNIQUE (provider, window_key)
+    );
+  `);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_api_cost_counters_lookup ON api_cost_counters(provider, window_key);`);
+  await p.query(`
     CREATE TABLE IF NOT EXISTS usage_events (
       id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       user_id    UUID REFERENCES users(id) ON DELETE CASCADE,
@@ -1027,44 +1060,69 @@ export const initDb = async (): Promise<void> => {
   await p.query(`CREATE INDEX IF NOT EXISTS idx_audit_log_action  ON audit_log(action, created_at DESC);`);
   await p.query(`CREATE INDEX IF NOT EXISTS idx_audit_log_created ON audit_log(created_at DESC);`);
 
+  // Run pending migrations BEFORE the USE_IN_MEMORY_DB cleanup block below
+  // so migration-backed tables (cut over from inline CREATE TABLE) exist in
+  // time for the DELETE-ALL test-isolation sweep to touch them.
+  if (getEnvFlag('INGESTION_MIGRATIONS_ON_BOOT', { defaultValue: true })) {
+    try {
+      const { runMigrations } = require('./migrations/runner') as typeof import('./migrations/runner');
+      const pathMod = require('node:path') as typeof import('node:path');
+      const migrationsDir = pathMod.join(__dirname, '..', 'migrations');
+      const client = { query: (sql: string, params?: unknown[]) => p.query(sql, params as any) };
+      await runMigrations({ client, dir: migrationsDir });
+    } catch (err) {
+      const { logError } = require('./logger') as typeof import('./logger');
+      logError('[migrations] auto-apply on initDb failed', err);
+      throw err;
+    }
+  }
+
   if (process.env.USE_IN_MEMORY_DB === '1') {
-    // Clear data between test runs while keeping schema intact.
-    await p.query(`DELETE FROM audit_log`);
-    await p.query(`DELETE FROM generation_idempotency`);
-    await p.query(`DELETE FROM usage_events`);
-    await p.query(`DELETE FROM usage_counters`);
-    await p.query(`DELETE FROM user_tiers`);
-    await p.query(`DELETE FROM tier_entitlements`);
-    await p.query(`DELETE FROM tier_limits`);
-    await p.query(`DELETE FROM feature_flags`);
-    await p.query(`DELETE FROM tiers`);
-    await p.query(`DELETE FROM features`);
-    await p.query(`DELETE FROM message_reads`);
-    await p.query(`DELETE FROM trip_messages`);
-    await p.query(`DELETE FROM trip_comments`);
-    await p.query(`DELETE FROM trip_activity`);
-    await p.query(`DELETE FROM itinerary_details`);
-    await p.query(`DELETE FROM itineraries`);
-    await p.query(`DELETE FROM tours`);
-    await p.query(`DELETE FROM car_rentals`);
-    await p.query(`DELETE FROM item_votes`);
-    await p.query(`DELETE FROM lodgings`);
-    await p.query(`DELETE FROM flight_shares`);
-    await p.query(`DELETE FROM flights`);
-    await p.query(`DELETE FROM expenses`);
-    await p.query(`DELETE FROM trips`);
-    await p.query(`DELETE FROM place_details_cache`);
-    await p.query(`DELETE FROM place_lookup_cache`);
-    await p.query(`DELETE FROM group_invites`);
-    await p.query(`DELETE FROM group_members`);
-    await p.query(`DELETE FROM groups`);
-    await p.query(`DELETE FROM traits`);
-    await p.query(`DELETE FROM family_relationships`);
-    await p.query(`DELETE FROM fellow_travelers`);
-    await p.query(`DELETE FROM user_email_verifications`);
-    await p.query(`DELETE FROM user_emails`);
-    await p.query(`DELETE FROM web_users`);
-    await p.query(`DELETE FROM users`);
+    // Clear data between test runs while keeping schema intact. Each DELETE
+    // is best-effort: tables that haven't been created yet (e.g. because a
+    // migration is disabled via INGESTION_MIGRATIONS_ON_BOOT=false) are
+    // ignored so the init path stays composable across test modes.
+    const del = async (tbl: string): Promise<void> => {
+      try { await p.query(`DELETE FROM ${tbl}`); } catch { /* table absent, skip */ }
+    };
+    await del('audit_log');
+    await del('generation_idempotency');
+    await del('api_cost_counters');
+    await del('api_usage_counters');
+    await del('usage_events');
+    await del('usage_counters');
+    await del('user_tiers');
+    await del('tier_entitlements');
+    await del('tier_limits');
+    await del('feature_flags');
+    await del('tiers');
+    await del('features');
+    await del('message_reads');
+    await del('trip_messages');
+    await del('trip_comments');
+    await del('trip_activity');
+    await del('itinerary_details');
+    await del('itineraries');
+    await del('tours');
+    await del('car_rentals');
+    await del('item_votes');
+    await del('lodgings');
+    await del('flight_shares');
+    await del('flights');
+    await del('expenses');
+    await del('trips');
+    await del('place_details_cache');
+    await del('place_lookup_cache');
+    await del('group_invites');
+    await del('group_members');
+    await del('groups');
+    await del('traits');
+    await del('family_relationships');
+    await del('fellow_travelers');
+    await del('user_email_verifications');
+    await del('user_emails');
+    await del('web_users');
+    await del('users');
   }
 
   // Seed tiers (individual parameterized inserts to avoid pg-mem uuid evaluation issues)
@@ -1233,6 +1291,14 @@ export const initDb = async (): Promise<void> => {
       verifiedAt: user.emailVerifiedAt ? new Date(user.emailVerifiedAt) : null,
     });
   }
+
+  // Migration runner already fired above (right after inline bootstrap,
+  // before the USE_IN_MEMORY_DB cleanup). This kept-legacy comment block
+  // documents the rationale: run migrations AFTER the inline CREATE TABLE
+  // IF NOT EXISTS path so the `schema_migrations` ledger stays separate
+  // from the historical bootstrap. Disable via
+  // INGESTION_MIGRATIONS_ON_BOOT=false when running against a DB where
+  // migrations are applied out-of-band (e.g. a prod migration job).
 };
 
 
@@ -2929,50 +2995,10 @@ export const createTripShareInvite = async (
 
     const userRow = await client.query<{ id: string }>(`SELECT id FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1`, [email]);
     const userId = userRow.rows[0]?.id ?? null;
-
-    if (role === 'member' && userId) {
-      const activeMember = await client.query(
-        `SELECT 1
-         FROM group_members
-         WHERE group_id = $1 AND user_id = $2 AND removed_at IS NULL
-         LIMIT 1`,
-        [context.groupId, userId]
-      );
-      if (!activeMember.rowCount) {
-        await client.query(
-          `INSERT INTO group_members (id, group_id, user_id, added_by)
-           VALUES ($1, $2, $3, $4)
-           ON CONFLICT (group_id, user_id) DO UPDATE
-           SET removed_at = NULL`,
-          [randomUUID(), context.groupId, userId, inviterId]
-        );
-      }
-      await client.query(`DELETE FROM trip_followers WHERE trip_id = $1 AND follower_user_id = $2`, [tripId, userId]);
-    }
-
-    if (role === 'follower' && userId) {
-      const isMember = await client.query(
-        `SELECT 1
-         FROM group_members
-         WHERE group_id = $1 AND user_id = $2 AND removed_at IS NULL
-         LIMIT 1`,
-        [context.groupId, userId]
-      );
-      if (!isMember.rowCount) {
-        await client.query(
-          `INSERT INTO trip_followers (id, trip_id, follower_user_id, role)
-           VALUES ($1, $2, $3, 'follower')
-           ON CONFLICT (trip_id, follower_user_id) DO NOTHING`,
-          [randomUUID(), tripId, userId]
-        );
-      }
-    }
-
-    const autoApplied = Boolean(userId);
-    const token = autoApplied ? undefined : generateTripShareToken();
-    const tokenHash = token ? hashToken(token) : null;
-    const status: 'pending' | 'accepted' = autoApplied ? 'accepted' : 'pending';
-    const expiresAt = autoApplied ? null : new Date(Date.now() + Math.max(1, expiresInDays) * 24 * 60 * 60 * 1000);
+    const token = generateTripShareToken();
+    const tokenHash = hashToken(token);
+    const status: 'pending' = 'pending';
+    const expiresAt = new Date(Date.now() + Math.max(1, expiresInDays) * 24 * 60 * 60 * 1000);
 
     const { rows } = await client.query<{
       id: string;
@@ -2985,7 +3011,7 @@ export const createTripShareInvite = async (
     }>(
       `INSERT INTO trip_share_invites
        (id, trip_id, group_id, inviter_id, invitee_user_id, invitee_email, role, status, token_hash, expires_at, accepted_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CASE WHEN $8 = 'accepted' THEN NOW() ELSE NULL END, NOW())
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NULL, NOW())
        RETURNING id,
                  trip_id as "tripId",
                  invitee_email as "inviteeEmail",
@@ -2997,7 +3023,7 @@ export const createTripShareInvite = async (
     );
 
     await client.query('COMMIT');
-    return { invite: rows[0], token, autoApplied };
+    return { invite: rows[0], token, autoApplied: false };
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;
@@ -3099,6 +3125,182 @@ export const acceptTripShareInvite = async (
     throw err;
   } finally {
     client.release();
+  }
+};
+
+export const listPendingTripShareInvitesForUser = async (
+  userId: string,
+  emailRaw?: string | null
+): Promise<
+  Array<{
+    id: string;
+    tripId: string;
+    tripName: string;
+    destination?: string | null;
+    inviteeEmail: string;
+    role: 'member' | 'follower';
+    status: 'pending';
+    createdAt: string;
+    expiresAt: string | null;
+    inviterEmail?: string | null;
+    inviterFirstName?: string | null;
+    inviterLastName?: string | null;
+  }>
+> => {
+  const p = getPool();
+  const email = normalizeEmail(emailRaw ?? '');
+  const { rows } = await p.query(
+    `SELECT tsi.id,
+            tsi.trip_id as "tripId",
+            t.name as "tripName",
+            t.destination,
+            tsi.invitee_email as "inviteeEmail",
+            tsi.role,
+            tsi.status,
+            tsi.created_at as "createdAt",
+            tsi.expires_at as "expiresAt",
+            inviter.email as "inviterEmail",
+            wu.first_name as "inviterFirstName",
+            wu.last_name as "inviterLastName"
+     FROM trip_share_invites tsi
+     JOIN trips t ON t.id = tsi.trip_id
+     JOIN users inviter ON inviter.id = tsi.inviter_id
+     LEFT JOIN web_users wu ON wu.id = tsi.inviter_id
+     WHERE tsi.status = 'pending'
+       AND tsi.revoked_at IS NULL
+       AND (tsi.expires_at IS NULL OR tsi.expires_at > NOW()::timestamp)
+       AND (tsi.invitee_user_id = $1 OR ($2 <> '' AND LOWER(tsi.invitee_email) = $2))
+     ORDER BY tsi.created_at DESC`,
+    [userId, email]
+  );
+  return rows as Array<{
+    id: string;
+    tripId: string;
+    tripName: string;
+    destination?: string | null;
+    inviteeEmail: string;
+    role: 'member' | 'follower';
+    status: 'pending';
+    createdAt: string;
+    expiresAt: string | null;
+    inviterEmail?: string | null;
+    inviterFirstName?: string | null;
+    inviterLastName?: string | null;
+  }>;
+};
+
+export const acceptTripShareInviteById = async (
+  userId: string,
+  emailRaw: string,
+  inviteId: string
+): Promise<{ tripId: string; role: 'member' | 'follower' }> => {
+  const p = getPool();
+  const email = normalizeEmail(emailRaw);
+  const client = await p.connect();
+  try {
+    await client.query('BEGIN');
+    const inviteRows = await client.query<{
+      id: string;
+      tripId: string;
+      groupId: string;
+      inviteeEmail: string;
+      role: 'member' | 'follower';
+      status: 'pending' | 'accepted' | 'revoked' | 'expired';
+      expiresAt: string | null;
+    }>(
+      `SELECT id,
+              trip_id as "tripId",
+              group_id as "groupId",
+              invitee_email as "inviteeEmail",
+              role,
+              status,
+              expires_at as "expiresAt"
+       FROM trip_share_invites
+       WHERE id = $1
+         AND (invitee_user_id = $2 OR LOWER(invitee_email) = LOWER($3))
+       LIMIT 1`,
+      [inviteId, userId, email]
+    );
+    if (!inviteRows.rowCount) throw new Error('Invite not found');
+    const invite = inviteRows.rows[0];
+    if (invite.status !== 'pending') throw new Error('Invite is no longer pending');
+    if (invite.expiresAt && new Date(invite.expiresAt).getTime() <= Date.now()) {
+      await client.query(
+        `UPDATE trip_share_invites
+         SET status = 'expired', updated_at = NOW()
+         WHERE id = $1`,
+        [invite.id]
+      );
+      await client.query('COMMIT');
+      throw new Error('Invite has expired');
+    }
+    if (normalizeEmail(invite.inviteeEmail) !== email) throw new Error('Invite email does not match this account');
+
+    if (invite.role === 'member') {
+      await client.query(
+        `INSERT INTO group_members (id, group_id, user_id, added_by)
+         SELECT $1, $2, $3, inviter_id
+         FROM trip_share_invites
+         WHERE id = $4
+         ON CONFLICT (group_id, user_id) DO UPDATE
+         SET removed_at = NULL`,
+        [randomUUID(), invite.groupId, userId, invite.id]
+      );
+      await client.query(`DELETE FROM trip_followers WHERE trip_id = $1 AND follower_user_id = $2`, [invite.tripId, userId]);
+    } else {
+      const isMember = await client.query(
+        `SELECT 1
+         FROM group_members
+         WHERE group_id = $1 AND user_id = $2 AND removed_at IS NULL
+         LIMIT 1`,
+        [invite.groupId, userId]
+      );
+      if (!isMember.rowCount) {
+        await client.query(
+          `INSERT INTO trip_followers (id, trip_id, follower_user_id, role)
+           VALUES ($1, $2, $3, 'follower')
+           ON CONFLICT (trip_id, follower_user_id) DO NOTHING`,
+          [randomUUID(), invite.tripId, userId]
+        );
+      }
+    }
+
+    await client.query(
+      `UPDATE trip_share_invites
+       SET status = 'accepted',
+           invitee_user_id = $2,
+           accepted_at = NOW(),
+           updated_at = NOW()
+       WHERE id = $1`,
+      [invite.id, userId]
+    );
+
+    await client.query('COMMIT');
+    return { tripId: invite.tripId, role: invite.role };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
+export const rejectTripShareInvite = async (userId: string, emailRaw: string, inviteId: string): Promise<void> => {
+  const p = getPool();
+  const email = normalizeEmail(emailRaw);
+  const result = await p.query(
+    `UPDATE trip_share_invites
+     SET status = 'revoked',
+         revoked_at = NOW(),
+         updated_at = NOW()
+     WHERE id = $1
+       AND status = 'pending'
+       AND revoked_at IS NULL
+       AND (invitee_user_id = $2 OR LOWER(invitee_email) = LOWER($3))`,
+    [inviteId, userId, email]
+  );
+  if (!result.rowCount) {
+    throw new Error('Invite not found');
   }
 };
 
@@ -4572,6 +4774,115 @@ export const deleteExpenseForSource = async (sourceType: string, sourceId: strin
   );
 };
 
+export const listTripPayments = async (userId: string, tripId: string): Promise<any[]> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `
+      SELECT tp.id,
+             tp.trip_id as "tripId",
+             tp.group_id as "groupId",
+             tp.recorded_by as "recordedBy",
+             tp.payer_id as "payerId",
+             tp.receiver_id as "receiverId",
+             to_char(tp.payment_date, 'YYYY-MM-DD') as "paymentDate",
+             tp.amount_cents as "amountCents",
+             tp.currency,
+             tp.notes,
+             tp.created_at as "createdAt"
+      FROM trip_payments tp
+      JOIN trips t ON tp.trip_id = t.id
+      WHERE tp.trip_id = $2
+        AND t.group_id IN (SELECT group_id FROM group_members WHERE user_id = $1)
+      ORDER BY tp.payment_date DESC, tp.created_at DESC
+    `,
+    [userId, tripId]
+  );
+  return rows.map((row: any) => ({
+    ...row,
+    amountCents: Number(row.amountCents) || 0,
+  }));
+};
+
+export const insertTripPayment = async (payment: {
+  tripId: string;
+  groupId: string;
+  recordedBy: string;
+  payerId: string;
+  receiverId: string;
+  paymentDate: string;
+  amountCents: number;
+  currency?: string | null;
+  notes?: string | null;
+}): Promise<any> => {
+  const p = getPool();
+  const id = randomUUID();
+  const tripCurrency = await resolveTripCurrency(payment.tripId);
+  const currency = payment.currency ?? tripCurrency ?? 'USD';
+  const { rows } = await p.query(
+    `
+      INSERT INTO trip_payments (
+        id, trip_id, group_id, recorded_by, payer_id, receiver_id, payment_date, amount_cents, currency, notes
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7::date, $8, $9, $10)
+      RETURNING
+        id,
+        trip_id as "tripId",
+        group_id as "groupId",
+        recorded_by as "recordedBy",
+        payer_id as "payerId",
+        receiver_id as "receiverId",
+        to_char(payment_date, 'YYYY-MM-DD') as "paymentDate",
+        amount_cents as "amountCents",
+        currency,
+        notes,
+        created_at as "createdAt"
+    `,
+    [
+      id,
+      payment.tripId,
+      payment.groupId,
+      payment.recordedBy,
+      payment.payerId,
+      payment.receiverId,
+      payment.paymentDate,
+      payment.amountCents,
+      currency,
+      payment.notes ?? null,
+    ]
+  );
+  const row = rows[0] as any;
+  return { ...row, amountCents: Number(row.amountCents) || 0 };
+};
+
+export const deleteTripPayment = async (paymentId: string, userId: string): Promise<void> => {
+  const p = getPool();
+  const useInMemory = process.env.USE_IN_MEMORY_DB === '1';
+  if (useInMemory) {
+    const { rows } = await p.query(
+      `SELECT tp.id FROM trip_payments tp
+       JOIN trips t ON tp.trip_id = t.id
+       WHERE tp.id = $1
+         AND t.group_id IN (SELECT group_id FROM group_members WHERE user_id = $2)`,
+      [paymentId, userId]
+    );
+    if (!rows.length) throw new Error('Payment not found');
+    await p.query(`DELETE FROM trip_payments WHERE id = $1`, [paymentId]);
+    return;
+  }
+  const { rowCount } = await p.query(
+    `
+      DELETE FROM trip_payments tp
+      USING trips t
+      WHERE tp.id = $1
+        AND t.id = tp.trip_id
+        AND EXISTS (
+          SELECT 1 FROM group_members gm WHERE gm.group_id = t.group_id AND gm.user_id = $2
+        )
+    `,
+    [paymentId, userId]
+  );
+  if (!rowCount) throw new Error('Payment not found');
+};
+
 
 export const shareFlight = async (
   flightId: string,
@@ -4702,11 +5013,17 @@ export const listGroupsForUser = async (
             gm.group_id as "groupId",
             gm.user_id as "userId",
             gm.guest_name as "guestName",
+            COALESCE(gm.first_name, wu.first_name, wu_pending.first_name, u.first_name, u_pending.first_name) as "firstName",
+            COALESCE(gm.last_name, wu.last_name, wu_pending.last_name, u.last_name, u_pending.last_name) as "lastName",
             gm.added_by as "addedBy",
             gm.created_at as "createdAt",
-            u.email as "userEmail"
+            COALESCE(wu.email, wu_pending.email, u.email, u_pending.email, gm.invite_email) as "userEmail",
+            COALESCE(wu.email, wu_pending.email, u.email, u_pending.email, gm.invite_email) as "email"
      FROM group_members gm
+     LEFT JOIN web_users wu ON gm.user_id = wu.id
      LEFT JOIN users u ON gm.user_id = u.id
+     LEFT JOIN users u_pending ON gm.user_id IS NULL AND LOWER(u_pending.email) = LOWER(gm.invite_email)
+     LEFT JOIN web_users wu_pending ON u_pending.id = wu_pending.id
      WHERE gm.group_id = ANY($1::uuid[])
      ORDER BY gm.created_at DESC`,
     [groupIds]
@@ -4742,6 +5059,8 @@ export const listGroupsForUser = async (
             groupId: g.id,
             userId: u.id,
             guestName: null,
+            firstName: null,
+            lastName: null,
             addedBy: g.ownerId,
             createdAt: new Date().toISOString(),
             userEmail: u.email,
@@ -6062,7 +6381,10 @@ export const searchFlightLocations = async (userId: string, query: string): Prom
      LIMIT 15`,
     [like]
   );
-  return rows.map((r) => r.label).filter(Boolean);
+  const dbResults = rows.map((r) => r.label).filter(Boolean);
+  if (dbResults.length >= 15) return dbResults;
+  const fallbackResults = searchBundledAirportDataset(query, 15);
+  return Array.from(new Set([...dbResults, ...fallbackResults])).slice(0, 15);
 };
 
 const toLocationRecord = (row: any): LocationRecord => {
@@ -6451,8 +6773,17 @@ export const refreshAirportsDaily = async (): Promise<void> => {
   try {
     data = await downloadAirportDatasetForDailyRefresh();
   } catch (err) {
-    logError('Failed to download airports dataset', err);
-    return;
+    logError('Failed to download airports dataset, falling back to local file', err);
+    try {
+      const localPath = path.resolve(__dirname, '../../data/airport_codes.json');
+      if (fs.existsSync(localPath)) {
+        data = JSON.parse(fs.readFileSync(localPath, 'utf8'));
+        logInfo(`[airports] Loaded ${Array.isArray(data) ? data.length : 0} airports from local fallback`);
+      }
+    } catch (localErr) {
+      logError('Failed to load local airports fallback', localErr);
+      return;
+    }
   }
 
   const filtered = normalizeAirportDataset(data).map((airport) => ({
@@ -6575,10 +6906,10 @@ export const getUserDemographics = async (
 
 export const saveUserDemographics = async (
   userId: string,
-  age?: number | null,
-  gender?: string | null
+  data: { age?: number | null; gender?: string | null } = {}
 ): Promise<void> => {
   const p = getPool();
+  const { age = null, gender = null } = data;
   await p.query(
     `UPDATE web_users SET age = $1, gender = $2 WHERE id = $3`,
     [age ?? null, gender ?? null, userId]
@@ -6903,7 +7234,7 @@ export const listFamilyRelationships = async (userId: string) => {
 export const listFellowTravelers = async (ownerId: string) => {
   const p = getPool();
   const { rows } = await p.query(
-    `SELECT id, first_name as "firstName", last_name as "lastName", created_at as "createdAt"
+    `SELECT id, first_name as "firstName", last_name as "lastName", email, created_at as "createdAt"
      FROM fellow_travelers
      WHERE owner_id = $1
      ORDER BY created_at DESC`,
@@ -6912,17 +7243,18 @@ export const listFellowTravelers = async (ownerId: string) => {
   return rows;
 };
 
-export const createFellowTraveler = async (ownerId: string, firstName: string, lastName: string) => {
+export const createFellowTraveler = async (ownerId: string, firstName: string, lastName: string, email?: string | null) => {
   const p = getPool();
   const given = firstName.trim();
   const family = lastName.trim();
+  const normalizedEmail = String(email ?? '').trim().toLowerCase() || null;
   if (!given || !family) throw new Error('firstName and lastName are required');
   const id = randomUUID();
   await p.query(
-    `INSERT INTO fellow_travelers (id, owner_id, first_name, last_name)
-     VALUES ($1, $2, $3, $4)
+    `INSERT INTO fellow_travelers (id, owner_id, first_name, last_name, email)
+     VALUES ($1, $2, $3, $4, $5)
      ON CONFLICT (owner_id, LOWER(first_name), LOWER(last_name)) DO NOTHING`,
-    [id, ownerId, given, family]
+    [id, ownerId, given, family, normalizedEmail]
   );
   return id;
 };
@@ -6931,17 +7263,19 @@ export const updateFellowTraveler = async (
   ownerId: string,
   travelerId: string,
   firstName: string,
-  lastName: string
+  lastName: string,
+  email?: string | null
 ) => {
   const p = getPool();
   const given = firstName.trim();
   const family = lastName.trim();
+  const normalizedEmail = String(email ?? '').trim().toLowerCase() || null;
   if (!given || !family) throw new Error('firstName and lastName are required');
   const { rowCount } = await p.query(
     `UPDATE fellow_travelers
-     SET first_name = $1, last_name = $2
-     WHERE id = $3 AND owner_id = $4`,
-    [given, family, travelerId, ownerId]
+     SET first_name = $1, last_name = $2, email = $3
+     WHERE id = $4 AND owner_id = $5`,
+    [given, family, normalizedEmail, travelerId, ownerId]
   );
   if (!rowCount) throw new Error('Fellow traveler not found');
 };
@@ -7673,6 +8007,140 @@ export const appendUsageEvent = async (
   );
 };
 
+export const getApiCostCounter = async (provider: string, windowKey: string): Promise<number> => {
+  const p = getPool();
+  const { rows } = await p.query<{ amount_micros: string }>(
+    `SELECT amount_micros
+     FROM api_cost_counters
+     WHERE provider = $1 AND window_key = $2`,
+    [provider, windowKey]
+  );
+  return rows.length ? parseInt(rows[0].amount_micros, 10) : 0;
+};
+
+export const incrementApiCostCounter = async (
+  provider: string,
+  windowKey: string,
+  amountMicros: number
+): Promise<number> => {
+  const p = getPool();
+  const { rows } = await p.query<{ amount_micros: string }>(
+    `INSERT INTO api_cost_counters (id, provider, window_key, amount_micros, updated_at)
+     VALUES (uuid_generate_v4(), $1, $2, $3, NOW())
+     ON CONFLICT (provider, window_key)
+     DO UPDATE SET amount_micros = api_cost_counters.amount_micros + $3, updated_at = NOW()
+     RETURNING amount_micros`,
+    [provider, windowKey, amountMicros]
+  );
+  return parseInt(rows[0].amount_micros, 10);
+};
+
+export const getApiUsageCount = async (
+  provider: string,
+  caller: string,
+  scope: 'overall' | 'caller',
+  windowKey: string
+): Promise<number> => {
+  const p = getPool();
+  const { rows } = await p.query<{ count: string }>(
+    `SELECT count
+     FROM api_usage_counters
+     WHERE provider = $1 AND caller = $2 AND scope = $3 AND window_key = $4`,
+    [provider, caller, scope, windowKey]
+  );
+  return rows.length ? parseInt(rows[0].count, 10) : 0;
+};
+
+export const atomicIncrementApiUsageIfUnderLimit = async (params: {
+  provider: string;
+  caller: string;
+  scope: 'overall' | 'caller';
+  windowKey: string;
+  limit: number;
+}): Promise<{ allowed: boolean; newCount: number }> => {
+  const p = getPool();
+  await p.query(
+    `INSERT INTO api_usage_counters (id, provider, caller, scope, window_key, count, updated_at)
+     VALUES (uuid_generate_v4(), $1, $2, $3, $4, 0, NOW())
+     ON CONFLICT (scope, provider, caller, window_key) DO NOTHING`,
+    [params.provider, params.caller, params.scope, params.windowKey]
+  );
+  const { rows } = await p.query<{ count: string }>(
+    `UPDATE api_usage_counters
+     SET count = count + 1, updated_at = NOW()
+     WHERE provider = $1 AND caller = $2 AND scope = $3 AND window_key = $4 AND count < $5
+     RETURNING count`,
+    [params.provider, params.caller, params.scope, params.windowKey, params.limit]
+  );
+  if (rows.length) {
+    return { allowed: true, newCount: parseInt(rows[0].count, 10) };
+  }
+  const current = await getApiUsageCount(params.provider, params.caller, params.scope, params.windowKey);
+  return { allowed: false, newCount: current };
+};
+
+export const listApiUsageCounters = async (): Promise<
+  Array<{
+    provider: string;
+    caller: string;
+    scope: 'overall' | 'caller';
+    windowKey: string;
+    count: number;
+  }>
+> => {
+  const p = getPool();
+  const { rows } = await p.query<{
+    provider: string;
+    caller: string;
+    scope: 'overall' | 'caller';
+    window_key: string;
+    count: string;
+  }>(
+    `SELECT provider, caller, scope, window_key, count
+     FROM api_usage_counters`
+  );
+  return rows.map((row) => ({
+    provider: row.provider,
+    caller: row.caller,
+    scope: row.scope,
+    windowKey: row.window_key,
+    count: parseInt(row.count, 10),
+  }));
+};
+
+export const resetApiUsageCounters = async (): Promise<void> => {
+  const p = getPool();
+  await p.query(`DELETE FROM api_usage_counters`);
+};
+
+export const listApiCostCounters = async (): Promise<
+  Array<{
+    provider: string;
+    windowKey: string;
+    amountMicros: number;
+  }>
+> => {
+  const p = getPool();
+  const { rows } = await p.query<{
+    provider: string;
+    window_key: string;
+    amount_micros: string;
+  }>(
+    `SELECT provider, window_key, amount_micros
+     FROM api_cost_counters`
+  );
+  return rows.map((row) => ({
+    provider: row.provider,
+    windowKey: row.window_key,
+    amountMicros: parseInt(row.amount_micros, 10),
+  }));
+};
+
+export const resetApiCostCounters = async (): Promise<void> => {
+  const p = getPool();
+  await p.query(`DELETE FROM api_cost_counters`);
+};
+
 export const atomicIncrementIfUnderLimit = async (
   userId: string,
   metricKey: string,
@@ -7748,12 +8216,13 @@ export const reserveGenerationIdempotency = async (params: {
 }): Promise<{ created: boolean; record: Awaited<ReturnType<typeof getGenerationIdempotency>> }> => {
   const p = getPool();
   const ttlSeconds = Math.max(60, params.ttlSeconds ?? 3600);
+  const expiresAt = new Date(Date.now() + ttlSeconds * 1000).toISOString();
   await p.query(
     `INSERT INTO generation_idempotency
        (key, user_id, trip_id, usage_key, window_key, status, expires_at)
-     VALUES ($1, $2, $3, $4, $5, 'pending', NOW() + ($6 || ' seconds')::interval)
+     VALUES ($1, $2, $3, $4, $5, 'pending', $6)
      ON CONFLICT (key) DO NOTHING`,
-    [params.key, params.userId, params.tripId, params.usageKey, params.windowKey, String(ttlSeconds)]
+    [params.key, params.userId, params.tripId, params.usageKey, params.windowKey, expiresAt]
   );
   const record = await getGenerationIdempotency(params.key);
   return { created: Boolean(record && record.userId === params.userId && record.status === 'pending' && record.tripId === params.tripId), record };
@@ -8225,22 +8694,113 @@ export const adminGetUserData = async (opts: {
 // Chat / Messaging
 // ---------------------------------------------------------------------------
 
+type TripMessageRow = {
+  id: string;
+  appId: string;
+  tripId: string;
+  senderId: string;
+  senderName: string;
+  senderInitials: string;
+  body: string;
+  createdAt: string;
+};
+
+const attachReadByForTrip = async (
+  tripId: string,
+  messageIds: string[],
+): Promise<Map<string, string[]>> => {
+  const readMap = new Map<string, string[]>();
+  if (messageIds.length === 0) return readMap;
+  const p = getPool();
+  // Scope by trip via subquery; intersect with the page ids in-memory.
+  const { rows: reads } = await p.query<{ messageId: string; userId: string }>(
+    `SELECT message_id AS "messageId", user_id AS "userId"
+     FROM message_reads
+     WHERE message_id IN (
+       SELECT id FROM trip_messages WHERE trip_id = $1
+     )`,
+    [tripId],
+  );
+  const pageIds = new Set(messageIds);
+  for (const read of reads) {
+    if (!pageIds.has(read.messageId)) continue;
+    if (!readMap.has(read.messageId)) readMap.set(read.messageId, []);
+    readMap.get(read.messageId)!.push(read.userId);
+  }
+  return readMap;
+};
+
+/**
+ * Fetch a page of messages for a trip, newest-first via cursor.
+ *
+ * - `beforeId` (optional): returns messages strictly older than the referenced
+ *   message. When omitted, returns the most recent `limit` messages.
+ * - Returned `messages` are in ascending chronological order for rendering.
+ * - `hasMore` indicates whether more messages exist before the oldest returned.
+ */
+export const listTripMessagesPage = async (
+  tripId: string,
+  options: { limit?: number; beforeId?: string } = {},
+): Promise<{ messages: TripChatMessage[]; hasMore: boolean }> => {
+  const p = getPool();
+  const limit = Math.max(1, Math.min(options.limit ?? 50, 200));
+
+  let cursorCreatedAt: string | null = null;
+  let cursorId: string | null = null;
+  if (options.beforeId) {
+    const { rows: cursorRows } = await p.query<{ createdAt: string; id: string }>(
+      `SELECT created_at AS "createdAt", id FROM trip_messages WHERE id = $1 LIMIT 1`,
+      [options.beforeId],
+    );
+    if (cursorRows.length) {
+      cursorCreatedAt = cursorRows[0].createdAt;
+      cursorId = cursorRows[0].id;
+    } else {
+      return { messages: [], hasMore: false };
+    }
+  }
+
+  const params: unknown[] = [tripId];
+  let cursorClause = '';
+  if (cursorCreatedAt && cursorId) {
+    params.push(cursorCreatedAt, cursorId);
+    cursorClause = ` AND (created_at < $${params.length - 1} OR (created_at = $${params.length - 1} AND id < $${params.length}))`;
+  }
+  params.push(limit + 1);
+  const limitIdx = params.length;
+
+  const { rows } = await p.query<TripMessageRow>(
+    `SELECT id,
+            app_id          AS "appId",
+            trip_id         AS "tripId",
+            sender_id       AS "senderId",
+            sender_name     AS "senderName",
+            sender_initials AS "senderInitials",
+            body,
+            created_at      AS "createdAt"
+     FROM trip_messages
+     WHERE trip_id = $1${cursorClause}
+     ORDER BY created_at DESC, id DESC
+     LIMIT $${limitIdx}`,
+    params,
+  );
+
+  const hasMore = rows.length > limit;
+  const page = hasMore ? rows.slice(0, limit) : rows;
+  const ascending = page.slice().reverse();
+
+  const readMap = await attachReadByForTrip(tripId, ascending.map((r) => r.id));
+  const messages = ascending.map((r) => ({ ...r, readBy: readMap.get(r.id) ?? [] }));
+  return { messages, hasMore };
+};
+
 /** Fetch messages for a trip, oldest-first, with their read-by lists. */
 export const listTripMessages = async (
   tripId: string,
   limit = 200,
 ): Promise<TripChatMessage[]> => {
   const p = getPool();
-  const { rows } = await p.query<{
-    id: string;
-    appId: string;
-    tripId: string;
-    senderId: string;
-    senderName: string;
-    senderInitials: string;
-    body: string;
-    createdAt: string;
-  }>(
+  const { rows } = await p.query<TripMessageRow>(
     `SELECT id,
             app_id          AS "appId",
             trip_id         AS "tripId",
@@ -8257,22 +8817,7 @@ export const listTripMessages = async (
   );
 
   if (rows.length === 0) return [];
-
-  // Fetch read receipts for this trip using a sub-select (pg-mem compatible)
-  const { rows: reads } = await p.query<{ messageId: string; userId: string }>(
-    `SELECT message_id AS "messageId", user_id AS "userId"
-     FROM message_reads
-     WHERE message_id IN (
-       SELECT id FROM trip_messages WHERE trip_id = $1
-     )`,
-    [tripId],
-  );
-  const readMap = new Map<string, string[]>();
-  for (const read of reads) {
-    if (!readMap.has(read.messageId)) readMap.set(read.messageId, []);
-    readMap.get(read.messageId)!.push(read.userId);
-  }
-
+  const readMap = await attachReadByForTrip(tripId, rows.map((r) => r.id));
   return rows.map((r) => ({ ...r, readBy: readMap.get(r.id) ?? [] }));
 };
 
@@ -8289,15 +8834,24 @@ export const addTripMessage = async (msg: {
   const text = String(msg.body ?? '').trim();
   if (!text) throw new Error('Message body is required');
   const id = randomUUID();
-  await p.query(
+  const { rows } = await p.query<{ createdAt: string }>(
     `INSERT INTO trip_messages (id, app_id, trip_id, sender_id, sender_name, sender_initials, body)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     RETURNING created_at AS "createdAt"`,
     [id, msg.appId, msg.tripId, msg.senderId, msg.senderName, msg.senderInitials, text],
   );
-  const msgs = await listTripMessages(msg.tripId, 1000);
-  const saved = msgs.find((m) => m.id === id);
-  if (!saved) throw new Error('Failed to retrieve saved message');
-  return saved;
+  const createdAt = rows[0]?.createdAt ?? new Date().toISOString();
+  return {
+    id,
+    appId: msg.appId,
+    tripId: msg.tripId,
+    senderId: msg.senderId,
+    senderName: msg.senderName,
+    senderInitials: msg.senderInitials,
+    body: text,
+    createdAt,
+    readBy: [],
+  };
 };
 
 /** Mark messages in a trip as read by a user up to and including upToMessageId. */
@@ -8315,31 +8869,84 @@ export const markMessagesRead = async (
   if (!cutoffRows.length) return;
   const cutoff = cutoffRows[0].createdAt;
 
-  // Fetch messages to mark (read separately to avoid INSERT ... SELECT + ON CONFLICT in pg-mem)
-  const { rows: toMark } = await p.query<{ id: string }>(
-    `SELECT id FROM trip_messages WHERE trip_id = $1 AND created_at <= $2`,
-    [tripId, cutoff],
-  );
+  // Legacy per-message reads are behind a soak-window env flag. Default ON
+  // so current deployments keep writing both. Flip to "false" to drop the
+  // legacy path and run watermark-only; once confident, the fallback read in
+  // `countUnreadMessages` and the `message_reads` table itself can be
+  // retired together in a follow-up slice.
+  const legacyReadsEnabled = getEnvFlag('CHAT_LEGACY_READS_ENABLED', { defaultValue: true });
+  if (legacyReadsEnabled) {
+    // Fetch messages to mark (read separately to avoid INSERT ... SELECT +
+    // ON CONFLICT in pg-mem)
+    const { rows: toMark } = await p.query<{ id: string }>(
+      `SELECT id FROM trip_messages WHERE trip_id = $1 AND created_at <= $2`,
+      [tripId, cutoff],
+    );
 
-  for (const row of toMark) {
-    try {
-      await p.query(
-        `INSERT INTO message_reads (message_id, user_id) VALUES ($1, $2)`,
-        [row.id, userId],
-      );
-    } catch {
-      // Already exists (duplicate primary key) — skip
+    for (const row of toMark) {
+      try {
+        await p.query(
+          `INSERT INTO message_reads (message_id, user_id) VALUES ($1, $2)`,
+          [row.id, userId],
+        );
+      } catch {
+        // Already exists (duplicate primary key) — skip
+      }
     }
   }
+
+  // Dual-write: upsert the per-user watermark. Only advance forward — if the
+  // stored cutoff is already newer, leave it alone (prevents a stale
+  // MARK_READ from a re-opened panel from walking the read-state backwards).
+  await p.query(
+    `INSERT INTO chat_read_watermarks (user_id, trip_id, last_read_message_id, last_read_created_at, updated_at)
+     VALUES ($1, $2, $3, $4, NOW())
+     ON CONFLICT (user_id, trip_id) DO UPDATE
+     SET last_read_message_id = CASE
+           WHEN EXCLUDED.last_read_created_at > chat_read_watermarks.last_read_created_at
+             THEN EXCLUDED.last_read_message_id
+           ELSE chat_read_watermarks.last_read_message_id
+         END,
+         last_read_created_at = CASE
+           WHEN EXCLUDED.last_read_created_at > chat_read_watermarks.last_read_created_at
+             THEN EXCLUDED.last_read_created_at
+           ELSE chat_read_watermarks.last_read_created_at
+         END,
+         updated_at = NOW()`,
+    [userId, tripId, upToMessageId, cutoff],
+  );
 };
 
-/** Count unread messages for a user in a trip. */
+/**
+ * Count unread messages for a user in a trip. Prefers the per-user watermark
+ * when one exists (single indexed lookup); falls back to the legacy
+ * `message_reads` LEFT JOIN for users who have never emitted a MARK_READ
+ * since the watermark table was introduced.
+ */
 export const countUnreadMessages = async (
   tripId: string,
   userId: string,
 ): Promise<number> => {
   const p = getPool();
-  // Use LEFT JOIN instead of NOT EXISTS for pg-mem compatibility
+
+  const { rows: watermarkRows } = await p.query<{ cutoff: string }>(
+    `SELECT last_read_created_at AS "cutoff"
+     FROM chat_read_watermarks
+     WHERE user_id = $1 AND trip_id = $2`,
+    [userId, tripId],
+  );
+  if (watermarkRows.length) {
+    const cutoff = watermarkRows[0].cutoff;
+    const { rows } = await p.query<{ count: string }>(
+      `SELECT COUNT(id)::text AS count
+       FROM trip_messages
+       WHERE trip_id = $1 AND created_at > $2`,
+      [tripId, cutoff],
+    );
+    return parseInt(rows[0]?.count ?? '0', 10);
+  }
+
+  // Fall back to per-message reads (legacy path).
   const { rows } = await p.query<{ count: string }>(
     `SELECT COUNT(m.id)::text AS count
      FROM trip_messages m
@@ -8348,4 +8955,93 @@ export const countUnreadMessages = async (
     [tripId, userId],
   );
   return parseInt(rows[0]?.count ?? '0', 10);
+};
+
+// ---------------------------------------------------------------------------
+// User-authored item aggregation (for account data export)
+// ---------------------------------------------------------------------------
+
+/**
+ * Return every row whose `user_id` column equals the exporting user. This is
+ * the read-side companion to the user-deletion cascade: if deletion removes
+ * a row based on user_id, export surfaces it. Trip membership-scoped reads
+ * (visible-to-user) live in their own list functions elsewhere — this one
+ * answers "what did *this user* author".
+ */
+export const listUserAuthoredItems = async (
+  userId: string,
+): Promise<{
+  flights: any[];
+  lodgings: any[];
+  tours: any[];
+  carRentals: any[];
+  expenses: any[];
+  tripMessages: any[];
+}> => {
+  const p = getPool();
+  const [flights, lodgings, tours, carRentals, expenses, tripMessages] = await Promise.all([
+    p.query(
+      `SELECT id, user_id as "userId", trip_id as "tripId", status, transfer_type as "transferType",
+              passenger_name as "passengerName", departure_date as "departureDate",
+              arrival_date as "arrivalDate", departure_time as "departureTime",
+              arrival_time as "arrivalTime", carrier, flight_number as "flightNumber",
+              booking_reference as "bookingReference", cost
+       FROM flights
+       WHERE user_id = $1
+       ORDER BY departure_date ASC NULLS LAST`,
+      [userId],
+    ),
+    p.query(
+      `SELECT id, user_id as "userId", trip_id as "tripId", status, name,
+              check_in_date as "checkInDate", check_out_date as "checkOutDate",
+              rooms, total_cost as "totalCost", address, created_at as "createdAt"
+       FROM lodgings
+       WHERE user_id = $1
+       ORDER BY check_in_date ASC NULLS LAST`,
+      [userId],
+    ),
+    p.query(
+      `SELECT id, user_id as "userId", trip_id as "tripId", status, name, cost,
+              date as "date", start_time as "startTime", duration,
+              created_at as "createdAt"
+       FROM tours
+       WHERE user_id = $1
+       ORDER BY date ASC NULLS LAST`,
+      [userId],
+    ),
+    p.query(
+      `SELECT id, user_id as "userId", trip_id as "tripId", status, vendor, model, cost,
+              pickup_date as "pickupDate", dropoff_date as "dropoffDate",
+              pickup_location as "pickupLocation", dropoff_location as "dropoffLocation",
+              created_at as "createdAt"
+       FROM car_rentals
+       WHERE user_id = $1
+       ORDER BY pickup_date ASC NULLS LAST`,
+      [userId],
+    ),
+    p.query(
+      `SELECT id, user_id as "userId", trip_id as "tripId", group_id as "groupId",
+              category, amount, currency, notes,
+              expense_date as "expenseDate", created_at as "createdAt"
+       FROM expenses
+       WHERE user_id = $1
+       ORDER BY expense_date ASC NULLS LAST`,
+      [userId],
+    ),
+    p.query(
+      `SELECT id, trip_id as "tripId", body, created_at as "createdAt"
+       FROM trip_messages
+       WHERE sender_id = $1
+       ORDER BY created_at ASC`,
+      [userId],
+    ),
+  ]);
+  return {
+    flights: flights.rows,
+    lodgings: lodgings.rows,
+    tours: tours.rows,
+    carRentals: carRentals.rows,
+    expenses: expenses.rows,
+    tripMessages: tripMessages.rows,
+  };
 };

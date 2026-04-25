@@ -67,6 +67,10 @@ describe('LedgerTab with expense covering', () => {
         formatMemberName={(member) => `${member.firstName ?? ''} ${member.lastName ?? ''}`.trim()}
         payerName={(id) => id}
         saveCoveredBy={async () => {}}
+        payments={[]}
+        currentUserMemberId={null}
+        onAddPayment={async () => {}}
+        onDeletePayment={async () => {}}
       />
     );
 

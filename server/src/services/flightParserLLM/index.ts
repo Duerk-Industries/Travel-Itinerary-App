@@ -16,3 +16,4 @@ export class FlightParserConfigurator {
 }
 
 export * from './strategy';
+export * from './types';

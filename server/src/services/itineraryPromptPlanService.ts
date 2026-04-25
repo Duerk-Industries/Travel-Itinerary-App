@@ -216,6 +216,7 @@ export type ItineraryPromptPlanResult = {
 type ServiceInput = {
   apiKey: string;
   userId?: string;
+  usageWindowKey?: string;
   destinations: string[];
   days: number;
   budgetMin: number;
@@ -1430,6 +1431,11 @@ const runJsonStage = async <T>(params: {
   maxTokens: number;
   fallbackValue: T;
   acc?: { promptTokens: number; completionTokens: number };
+  usageContext?: {
+    userId: string;
+    windowKey?: string | null;
+    metadata?: Record<string, unknown>;
+  };
 }): Promise<T> => {
   const sys = applyTemplate(params.template.sys, params.replacements);
   const usr = applyTemplate(params.template.usr, params.replacements);
@@ -1440,6 +1446,7 @@ const runJsonStage = async <T>(params: {
     systemPrompt: sys,
     userPrompt: usr,
     maxTokens: params.maxTokens,
+    usageContext: params.usageContext,
   });
   if (params.acc) {
     params.acc.promptTokens += result.promptTokens;
@@ -1467,6 +1474,11 @@ const runRenderStage = async (params: {
   template: PromptTemplate;
   replacements: Record<string, string>;
   acc?: { promptTokens: number; completionTokens: number };
+  usageContext?: {
+    userId: string;
+    windowKey?: string | null;
+    metadata?: Record<string, unknown>;
+  };
 }): Promise<string | null> => {
   const sys = applyTemplate(params.template.sys, params.replacements);
   const usr = applyTemplate(params.template.usr, params.replacements);
@@ -1477,6 +1489,7 @@ const runRenderStage = async (params: {
     systemPrompt: sys,
     userPrompt: usr,
     maxTokens: 900,
+    usageContext: params.usageContext,
   });
   if (params.acc) {
     params.acc.promptTokens += result.promptTokens;
@@ -1495,6 +1508,16 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
   );
 
   const tokenAcc = { promptTokens: 0, completionTokens: 0 };
+  const usageContext = input.userId
+    ? {
+        userId: input.userId,
+        windowKey: input.usageWindowKey,
+        metadata: {
+          tripId: input.tripIdSeed ?? null,
+          pipeline: 'itinerary_prompt_plan',
+        },
+      }
+    : undefined;
 
   const normRaw = await runJsonStage<unknown>({
     apiKey: input.apiKey,
@@ -1507,6 +1530,7 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
     maxTokens: 700,
     fallbackValue: {},
     acc: tokenAcc,
+    usageContext,
   });
   const normalized = sanitizeNorm(normRaw, promptRequest);
   logInfo(
@@ -1560,6 +1584,7 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
     maxTokens: 1200,
     fallbackValue: {},
     acc: tokenAcc,
+    usageContext,
   });
   const route = sanitizeRoute(routeRaw, normalized, promptRequest);
   logInfo(
@@ -1579,6 +1604,7 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
     maxTokens: Math.max(1100, Math.min(3500, Math.round(promptRequest.dur ?? 1) * 280)),
     fallbackValue: {},
     acc: tokenAcc,
+    usageContext,
   });
   const dayItinerary = sanitizeItinerary(dayRaw, route, normalized, promptRequest);
   logInfo(
@@ -1596,6 +1622,7 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
     maxTokens: 1400,
     fallbackValue: dayItinerary,
     acc: tokenAcc,
+    usageContext,
   });
   const itinerary = enforceShortlistGrounding(
     sanitizeItinerary(validatedRaw, route, normalized, promptRequest),
@@ -1628,6 +1655,7 @@ export const generateItineraryViaPromptPlan = async (input: ServiceInput): Promi
       FINAL_JSON: JSON.stringify(itineraryWithMustSee),
     },
     acc: tokenAcc,
+    usageContext,
   });
   const renderedMarkdown = String(render ?? '')
     .replace(/[\u200B-\u200D\uFEFF]/g, '')

@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import DraftTextInput from '../components/DraftTextInput';
+import SelectField, { type SelectFieldOption } from '../components/SelectField';
 
 type Setter<T> = React.Dispatch<React.SetStateAction<T>>;
 
@@ -7,10 +9,11 @@ export interface FellowTraveler {
   id: string;
   firstName: string;
   lastName: string;
+  email?: string | null;
   createdAt: string;
 }
 type FamilyForm = { givenName: string; middleName: string; familyName: string; email: string; relationship: string };
-type FellowTravelerForm = { firstName: string; lastName: string };
+type FellowTravelerForm = { firstName: string; lastName: string; email: string };
 
 type Styles = ReturnType<typeof StyleSheet.create>;
 type Headers = Record<string, string>;
@@ -26,6 +29,7 @@ interface FamilyRelationshipsProps {
   setFellowTravelers: Setter<FellowTraveler[]>;
   showRelationshipDropdown: boolean;
   setShowRelationshipDropdown: Setter<boolean>;
+  hideFamilySection?: boolean;
   styles: Styles;
 }
 
@@ -42,6 +46,10 @@ const relationshipOptions = [
   'Cousin',
   'Friend',
 ];
+const relationshipSelectOptions: SelectFieldOption[] = relationshipOptions.map((option) => ({
+  label: option,
+  value: option,
+}));
 
 const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
   backendUrl,
@@ -52,20 +60,20 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
   setFamilyRelationships,
   fellowTravelers,
   setFellowTravelers,
-  showRelationshipDropdown,
   setShowRelationshipDropdown,
+  hideFamilySection = false,
   styles,
 }) => {
   const [familyForm, setFamilyForm] = useState<FamilyForm>({ givenName: '', middleName: '', familyName: '', email: '', relationship: 'Not Applicable' });
   const [editingFamilyId, setEditingFamilyId] = useState<string | null>(null);
   const [editingFamilyDraft, setEditingFamilyDraft] = useState<FamilyForm | null>(null);
-  const [fellowForm, setFellowForm] = useState<FellowTravelerForm>({ firstName: '', lastName: '' });
+  const [fellowForm, setFellowForm] = useState<FellowTravelerForm>({ firstName: '', lastName: '', email: '' });
   const [editingFellowId, setEditingFellowId] = useState<string | null>(null);
   const [editingFellowDraft, setEditingFellowDraft] = useState<FellowTravelerForm | null>(null);
 
   const addFellowTraveler = async () => {
     if (!userToken) return;
-    const { firstName, lastName } = fellowForm;
+    const { firstName, lastName, email } = fellowForm;
     if (!firstName.trim() || !lastName.trim()) {
       alert('Enter first and last name');
       return;
@@ -73,7 +81,7 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
     const res = await fetch(`${backendUrl}/api/account/fellow-travelers`, {
       method: 'POST',
       headers: jsonHeaders,
-      body: JSON.stringify({ firstName: firstName.trim(), lastName: lastName.trim() }),
+      body: JSON.stringify({ firstName: firstName.trim(), lastName: lastName.trim(), email: email.trim() || null }),
     });
     const data = await res.json().catch(() => ([]));
     if (!res.ok) {
@@ -81,7 +89,7 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
       return;
     }
     setFellowTravelers(data);
-    setFellowForm({ firstName: '', lastName: '' });
+    setFellowForm({ firstName: '', lastName: '', email: '' });
   };
 
   const saveFellowTraveler = async () => {
@@ -92,6 +100,7 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
       body: JSON.stringify({
         firstName: editingFellowDraft.firstName.trim(),
         lastName: editingFellowDraft.lastName.trim(),
+        email: editingFellowDraft.email.trim() || null,
       }),
     });
     const data = await res.json().catch(() => ([]));
@@ -200,6 +209,8 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
 
   return (
     <View style={styles.card}>
+      {!hideFamilySection ? (
+        <>
       <Text style={styles.sectionTitle}>Family & Relationships</Text>
       <Text style={styles.helperText}>Add relatives, accept invites, and manage non-user profiles.</Text>
       <View style={styles.row}>
@@ -223,32 +234,18 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
           value={familyForm.familyName}
           onChangeText={(text: string) => setFamilyForm((p) => ({ ...p, familyName: text }))}
         />
-        <View style={[styles.input, styles.dropdown, { flex: 1 }]}>
-          <TouchableOpacity onPress={() => setShowRelationshipDropdown((s) => !s)}>
-            <View style={styles.selectButtonRow}>
-              <Text style={familyForm.relationship ? styles.cellText : styles.placeholderText}>
-                {familyForm.relationship || 'Not Applicable'}
-              </Text>
-              <Text style={styles.selectCaret}>v</Text>
-            </View>
-          </TouchableOpacity>
-          {showRelationshipDropdown ? (
-            <View style={styles.dropdownList}>
-              {relationshipOptions.map((opt) => (
-                <TouchableOpacity
-                  key={opt}
-                  style={styles.dropdownOption}
-                  onPress={() => {
-                    setFamilyForm((p) => ({ ...p, relationship: opt }));
-                    setShowRelationshipDropdown(false);
-                  }}
-                >
-                  <Text style={styles.cellText}>{opt}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          ) : null}
-        </View>
+        <SelectField
+          styles={styles}
+          value={familyForm.relationship}
+          options={relationshipSelectOptions}
+          placeholder="Not Applicable"
+          title="Relationship"
+          style={{ flex: 1 }}
+          onChange={(value) => {
+            setFamilyForm((p) => ({ ...p, relationship: value || 'Not Applicable' }));
+            setShowRelationshipDropdown(false);
+          }}
+        />
       </View>
       <TextInput
         style={styles.input}
@@ -382,28 +379,42 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
       ) : (
         <Text style={styles.helperText}>No family members added yet.</Text>
       )}
-
       <View style={styles.divider} />
+        </>
+      ) : null}
       <Text style={styles.sectionTitle}>Fellow Travelers</Text>
-      <Text style={styles.helperText}>Manage travelers without email addresses from your past trips.</Text>
+      <Text style={styles.helperText}>Manage travelers from your past trips. Email is optional.</Text>
       <View style={styles.row}>
-        <TextInput
+        <DraftTextInput
           style={[styles.input, { flex: 1 }]}
           placeholder="First name"
           autoComplete="given-name"
           textContentType="givenName"
           value={fellowForm.firstName}
           onChangeText={(text: string) => setFellowForm((p) => ({ ...p, firstName: text }))}
+          commitOnBlur={false}
         />
-        <TextInput
+        <DraftTextInput
           style={[styles.input, { flex: 1 }]}
           placeholder="Last name"
           autoComplete="family-name"
           textContentType="familyName"
           value={fellowForm.lastName}
           onChangeText={(text: string) => setFellowForm((p) => ({ ...p, lastName: text }))}
+          commitOnBlur={false}
         />
       </View>
+        <DraftTextInput
+        style={styles.input}
+        placeholder="Email (optional)"
+        autoCapitalize="none"
+        autoComplete="email"
+        textContentType="emailAddress"
+        keyboardType="email-address"
+        value={fellowForm.email}
+        onChangeText={(text: string) => setFellowForm((p) => ({ ...p, email: text }))}
+        commitOnBlur={false}
+      />
       <TouchableOpacity style={styles.button} onPress={addFellowTraveler}>
         <Text style={styles.buttonText}>Add Fellow Traveler</Text>
       </TouchableOpacity>
@@ -415,6 +426,7 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
             return (
               <View key={traveler.id} style={styles.familyRow}>
                 <Text style={styles.bodyText}>{`${traveler.firstName} ${traveler.lastName}`.trim()}</Text>
+                {traveler.email ? <Text style={styles.helperText}>{traveler.email}</Text> : null}
                 <View style={styles.row}>
                   <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => deleteFellowTraveler(traveler.id)}>
                     <Text style={styles.buttonText}>Remove</Text>
@@ -424,7 +436,11 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
                       style={[styles.button, styles.smallButton]}
                       onPress={() => {
                         setEditingFellowId(traveler.id);
-                        setEditingFellowDraft({ firstName: traveler.firstName, lastName: traveler.lastName });
+                        setEditingFellowDraft({
+                          firstName: traveler.firstName,
+                          lastName: traveler.lastName,
+                          email: traveler.email ?? '',
+                        });
                       }}
                     >
                       <Text style={styles.buttonText}>Edit</Text>
@@ -434,13 +450,14 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
                 {isEditing && editingFellowDraft ? (
                   <View style={{ marginTop: 8 }}>
                     <View style={styles.row}>
-                      <TextInput
+      <DraftTextInput
                         style={[styles.input, { flex: 1 }]}
                         placeholder="First name"
                         autoComplete="given-name"
                         textContentType="givenName"
                         value={editingFellowDraft.firstName}
                         onChangeText={(text: string) => setEditingFellowDraft((p) => (p ? { ...p, firstName: text } : p))}
+                        commitOnBlur={false}
                       />
                       <TextInput
                         style={[styles.input, { flex: 1 }]}
@@ -451,6 +468,16 @@ const FamilyRelationships: React.FC<FamilyRelationshipsProps> = ({
                         onChangeText={(text: string) => setEditingFellowDraft((p) => (p ? { ...p, lastName: text } : p))}
                       />
                     </View>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Email (optional)"
+                      autoCapitalize="none"
+                      autoComplete="email"
+                      textContentType="emailAddress"
+                      keyboardType="email-address"
+                      value={editingFellowDraft.email}
+                      onChangeText={(text: string) => setEditingFellowDraft((p) => (p ? { ...p, email: text } : p))}
+                    />
                     <View style={styles.row}>
                       <TouchableOpacity style={[styles.button, { flex: 1 }]} onPress={saveFellowTraveler}>
                         <Text style={styles.buttonText}>Save</Text>

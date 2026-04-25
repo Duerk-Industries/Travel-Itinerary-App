@@ -19,6 +19,8 @@ import {
   adminGetUserData,
   closePool,
   deleteGroup,
+  rebuildGroupAccessForGroup,
+  rebuildTripAccessForTrip,
   rejectGroupInvite,
   updateTripGroup,
 } from '../src/db.firebase';
@@ -303,6 +305,8 @@ describe('firebase admin analytics mutations', () => {
       backfilledAt: '2026-03-04T00:00:00.000Z',
       analyticsVersion: 1,
     });
+    await rebuildGroupAccessForGroup('group-2');
+    await rebuildTripAccessForTrip('trip-2');
 
     await rejectGroupInvite('invite-2', 'member-2', 'member2@example.com');
 
@@ -326,6 +330,9 @@ describe('firebase admin analytics mutations', () => {
     await fakeDb.collection('admin_user_analytics').doc('actor-1').set({ userId: 'actor-1', tripCount: 1, backfilledAt: '2026-03-04T00:00:00.000Z' });
     await fakeDb.collection('admin_user_analytics').doc('old-only-1').set({ userId: 'old-only-1', tripCount: 1, backfilledAt: '2026-03-04T00:00:00.000Z' });
     await fakeDb.collection('admin_user_analytics').doc('new-only-1').set({ userId: 'new-only-1', tripCount: 0, backfilledAt: '2026-03-04T00:00:00.000Z' });
+    await rebuildGroupAccessForGroup('group-old');
+    await rebuildGroupAccessForGroup('group-new');
+    await rebuildTripAccessForTrip('trip-move');
 
     await updateTripGroup('actor-1', 'trip-move', 'group-new');
 
@@ -346,6 +353,9 @@ describe('firebase admin analytics mutations', () => {
     await fakeDb.collection('trip_removals').doc('tr-member').set({ tripId: 'trip-b', userId: 'member-3', createdAt: '2026-03-05T00:00:00.000Z' });
     await fakeDb.collection('admin_user_analytics').doc('owner-3').set({ userId: 'owner-3', tripCount: 2, backfilledAt: '2026-03-05T00:00:00.000Z' });
     await fakeDb.collection('admin_user_analytics').doc('member-3').set({ userId: 'member-3', tripCount: 1, backfilledAt: '2026-03-05T00:00:00.000Z' });
+    await rebuildGroupAccessForGroup('group-delete');
+    await rebuildTripAccessForTrip('trip-a');
+    await rebuildTripAccessForTrip('trip-b');
 
     await deleteGroup('owner-3', 'group-delete');
 

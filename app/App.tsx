@@ -10,8 +10,8 @@
  * State is grouped near the top; data fetchers and helpers are defined next;
  * then UI sections render conditionally based on the active page.
  */
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Image, Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme, useWindowDimensions } from 'react-native';
+import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AppState, Image, Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme } from 'react-native';
 import { NavigationContainer, createNavigationContainerRef, type LinkingOptions } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Constants from 'expo-constants';
@@ -19,22 +19,23 @@ import { formatDateLong } from './utils/formatDateLong';
 import { normalizeDateString } from './utils/normalizeDateString';
 import { sanitizeCostInput } from './utils/sanitizeCost';
 import { initializeAppCheck } from './utils/firebaseAppCheck';
+import { dedupeMembersByIdentity, formatMemberDisplayName } from './utils/memberDisplay';
 import { FlightsTab, type Flight, fetchFlightsForTrip } from './tabs/transfers';
 import { type Tour, ActivityTab, fetchActivitiesForTrip } from './tabs/activities';
 import { type Trait } from './tabs/traits';
-import { FollowTab, fetchFollowedTripsApi, loadFollowCodes, loadFollowPayloads, saveFollowCodes, saveFollowPayloads, type FollowedTrip } from './tabs/follow';
+import { FollowTab, type FollowedTrip } from './tabs/follow';
 import FollowingTab from './tabs/following';
 import ItinerariesTab from './tabs/itineraries';
 import HomeTab from './tabs/HomeTab';
 import DailyExpensesTab from './tabs/dailyExpenses';
 import LedgerTab from './tabs/ledger';
-import IngestionTab from './tabs/ingestion';
+const IngestionTab = lazy(() => import('./tabs/ingestion'));
 import OverviewTab from './tabs/overview';
 import CreateTripWizard from './tabs/createTripWizard';
 import { buildAllExpenses, calculateAllTotals, type UnifiedExpense, computePayerTotals } from './utils/costs';
 import { rollUpTotals, validateCoveringRules } from './utils/coveredBy';
 import TripDetailsTab from './tabs/tripDetails';
-import AccountTab, { fetchAccountProfile, fetchFamilyRelationships, fetchFellowTravelers, type FellowTraveler } from './tabs/account';
+import AccountTab, { fetchAccountProfile } from './tabs/account';
 import { CarRental, CarRentalDraft, buildCarRentalFromDraft, createInitialCarRentalDraft, fetchCarRentalsForTrip } from './tabs/carRentals';
 import {
   DEFAULT_NEW_ITINERARY_STATUS,
@@ -54,24 +55,44 @@ import { getAppTheme, type AppTheme } from './theme/theme';
 import { FOLLOWED_TRIP_HIDDEN_PAGES, shouldAllowPageChange, shouldDisableTab } from './utils/wizardGuard';
 import * as WebBrowser from 'expo-web-browser';
 import { Buffer } from 'buffer';
-import { loadSession, saveSession, clearSession } from './utils/session';
+import { loadLastActiveTripId, loadSession, saveLastActiveTripId, saveSession, clearSession } from './utils/session';
 import LodgingDetailsDialog from './components/LodgingDetailsDialog';
 import ConfirmDialog from './components/ConfirmDialog';
+import PendingInvitesModal from './components/PendingInvitesModal';
+import DropdownOptionButton from './components/DropdownOptionButton';
+import CarRentalsPanel from './components/CarRentalsPanel';
+import AuthForm from './components/AuthForm';
 import { toWebStyle } from './utils/webStyle';
 import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from './utils/votes';
+import { resolveBackendUrl as resolveConfiguredBackendUrl } from './utils/backendUrl';
+import { type AsyncItineraryTracker, useAsyncItineraryPolling } from './hooks/useAsyncItineraryPolling';
+import { useTripsData } from './hooks/useTripsData';
+import { useTripMembers } from './hooks/useTripMembers';
+import { useLayoutBreakpoints } from './hooks/useLayoutBreakpoints';
+import { useRetryableMutation } from './hooks/useRetryableMutation';
+import RetryableErrorBanner from './components/RetryableErrorBanner';
+import { requestJson } from './utils/apiClient';
+import { useGroupInvites } from './hooks/useGroupInvites';
+import { useFollowedTrips } from './hooks/useFollowedTrips';
+import { useAuthFlowState } from './hooks/useAuthFlowState';
+import { useAccountProfile } from './hooks/useAccountProfile';
+import { useSelectedFollowedTripDetails } from './hooks/useSelectedFollowedTripDetails';
+import { useCreateTripWizard } from './hooks/useCreateTripWizard';
+import { PresenceProvider } from './contexts/PresenceContext';
+import { ChatProvider } from './contexts/ChatContext';
+import { useAuthSession } from './hooks/useAuthSession';
+import { useTraits } from './hooks/useTraits';
+import { useAccountSidecars } from './hooks/useAccountSidecars';
+import { useAuthForm } from './hooks/useAuthForm';
+import type { GroupInvite, PendingTripShareInvite } from './types/invites';
+import type { GroupMemberOption, Trip } from './types/trips';
 
 import LodgingTab from './tabs/LodgingTab';
-import AdminTab from './tabs/AdminTab';
-import PresenceAvatars from './components/PresenceAvatars';
-import ChatButton from './components/ChatButton';
-import ChatPanel from './components/ChatPanel';
-import {
-  connectSocket,
-  disconnectSocket,
-  getSocket,
-  CLIENT_EVENTS,
-  SERVER_EVENTS,
-} from './utils/socket';
+const AdminTab = lazy(() => import('./tabs/AdminTab'));
+import PresenceAvatarsContainer from './components/PresenceAvatarsContainer';
+import LazyTabFallback from './components/LazyTabFallback';
+import ChatOverlay from './components/ChatOverlay';
+import { connectSocket, disconnectSocket } from './utils/socket';
 import type { PresenceUser } from '../packages/messaging/src/types';
 
 const TOP_BANNER_ICON = require('./assets/wanderbunnies-reference.png');
@@ -88,53 +109,8 @@ if (Platform.OS !== 'web') {
   }
 }
 
-interface GroupInvite {
-  id: string;
-  groupId: string;
-  groupName?: string | null;
-  inviterEmail?: string | null;
-  inviterFirstName?: string | null;
-  inviterLastName?: string | null;
-  inviteeEmail?: string | null;
-  status?: 'pending' | 'accepted';
-  createdAt?: string;
-  tripId?: string | null;
-  resolvedTripId?: string | null;
-  resolvedTripName?: string | null;
-}
-
-interface GroupMemberView {
-  id: string;
-  userId?: string;
-  userEmail?: string;
-  guestName?: string;
-}
-
-interface GroupView {
-  id: string;
-  name: string;
-  ownerId: string;
-  createdAt: string;
-  members: GroupMemberView[];
-  invites: { id: string; inviteeEmail: string; status: string }[];
-}
-
-interface Trip {
-  id: string;
-  groupId: string;
-  groupName: string;
-  name: string;
-  description?: string | null;
-  destination?: string | null;
-  locationIds?: string[];
-  startDate?: string | null;
-  endDate?: string | null;
-  startMonth?: number | null;
-  startYear?: number | null;
-  durationDays?: number | null;
-  currency?: string | null;
-  createdAt: string;
-}
+// GroupInvite + PendingTripShareInvite now live in app/types/invites.ts so
+// the useGroupInvites hook can consume them without a circular import.
 
 interface Expense {
   id: string;
@@ -156,41 +132,11 @@ interface Expense {
   createdAt: string;
 }
 
-type AsyncItineraryTracker = {
-  jobId: string;
-  status: 'pending' | 'failed';
-  error?: string;
-};
-
-interface GroupMemberOption {
-  id: string;
-  guestName?: string;
-  email?: string;
-  firstName?: string;
-  lastName?: string;
-  status?: 'active' | 'pending' | 'removed';
-  removedAt?: string | null;
-}
-
 const formatMemberName = (member: GroupMemberOption): string => {
-  const norm = (val?: string | null) => {
-    const t = String(val ?? '').trim();
-    if (!t || t.toLowerCase() === 'unknown') return '';
-    return t;
-  };
-  const first = norm(member.firstName);
-  const last = norm(member.lastName);
-  const email = member.email?.trim();
-  const status = member.status;
-  if (first || last) return `${first ?? ''} ${last ?? ''}`.trim();
-  if (member.guestName) return member.guestName;
-  if (email) {
-    const local = email.split('@')[0] ?? '';
-    const parts = local.split(/[._-]+/).filter(Boolean);
-    const base = parts.length >= 2 ? `${parts[0]} ${parts.slice(1).join(' ')}`.trim() : email;
-    return status === 'pending' ? `${base} (pending)` : base;
-  }
-  return status === 'pending' ? 'Pending member' : 'Member';
+  const base = formatMemberDisplayName(member);
+  return member.status === 'pending' && !String(member.firstName ?? '').trim() && !String(member.lastName ?? '').trim()
+    ? `${base} (pending)`
+    : base;
 };
 
 type Page =
@@ -265,67 +211,22 @@ const linking: LinkingOptions<RootStackParamList> = {
   },
 };
 
-// Resolve backend URL; keep Expo web on localhost hitting the local API over HTTP to avoid HTTPS upgrades/CORS issues.
-const resolveBackendUrl = (): string => {
-  const envConfigured =
-    (typeof process !== 'undefined' &&
-      (process.env.EXPO_PUBLIC_BACKEND_URL ??
-        process.env.API_BASE_URL ??
-        process.env.REACT_APP_BACKEND_URL ??
-        process.env.REACT_NATIVE_APP_BACKEND_URL ??
-        process.env.BACKEND_URL)) ||
-    '';
-  const appConfigured = Constants.expoConfig?.extra?.backendUrl;
-  const configuredBackend = [appConfigured, envConfigured].find(
-    (val) => typeof val === 'string' && val.trim().length > 0
-  ) as string | undefined;
-  const isLocalHost = (value: string) => /^(localhost|127\.0\.0\.1)$/i.test(value);
-  const normalizeBackendUrl = (raw: string, defaultProtocol: 'http' | 'https'): string => {
-    const trimmed = raw.trim();
-    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
-      return trimmed;
-    }
-    return `${defaultProtocol}://${trimmed}`;
-  };
-  const remapLocalBackendHost = (raw: string, browserHostname: string): string => {
-    const normalized = normalizeBackendUrl(raw, 'http');
-    try {
-      const parsed = new URL(normalized);
-      if (!isLocalHost(parsed.hostname) || !isLocalHost(browserHostname)) {
-        return normalized;
-      }
-      parsed.hostname = browserHostname;
-      return parsed.toString().replace(/\/$/, '');
-    } catch {
-      return normalized;
-    }
-  };
-  if (Platform.OS === 'web' && typeof window !== 'undefined') {
-    const { hostname, protocol, port, origin } = window.location;
-    if (isLocalHost(hostname)) {
-      if (port === '4000') {
-        return origin.replace(/\/$/, '');
-      }
-      if (configuredBackend) {
-        return remapLocalBackendHost(configuredBackend, hostname);
-      }
-      return `${protocol}//${hostname}:4000`;
-    }
-  }
-  if (process.env.NODE_ENV === 'development') {
-    if (configuredBackend) {
-      return normalizeBackendUrl(configuredBackend, 'http');
-    }
-  }
-  if (process.env.NODE_ENV === 'development') {
-    if (configuredBackend) {
-      return normalizeBackendUrl(configuredBackend, 'http');
-    }
-    return 'http://localhost:4000';
-  }
-  const raw = configuredBackend ?? 'https://duerk.org';
-  return normalizeBackendUrl(raw, 'https');
-};
+const resolveBackendUrl = (): string =>
+  resolveConfiguredBackendUrl({
+    appConfigured: Constants.expoConfig?.extra?.backendUrl,
+    envConfigured:
+      (typeof process !== 'undefined' &&
+        (process.env.EXPO_PUBLIC_BACKEND_URL ??
+          process.env.BACKEND_URL ??
+          process.env.WEB_URL ??
+          process.env.API_BASE_URL ??
+          process.env.REACT_APP_BACKEND_URL ??
+          process.env.REACT_NATIVE_APP_BACKEND_URL)) ||
+      '',
+    nodeEnv: typeof process !== 'undefined' ? process.env.NODE_ENV : undefined,
+    platformOs: Platform.OS,
+    browserLocation: Platform.OS === 'web' && typeof window !== 'undefined' ? window.location : undefined,
+  });
 
 const resolveRefreshIntervalMs = (): number => {
   const raw = Constants.expoConfig?.extra?.refreshIntervalMs;
@@ -336,6 +237,8 @@ const resolveRefreshIntervalMs = (): number => {
 
 const backendUrl = resolveBackendUrl();
 const refreshIntervalMs = resolveRefreshIntervalMs();
+const idleRefreshMultiplier = 5;
+const idleThresholdMs = 2 * 60 * 1000;
 const sessionKey = 'stp.session';
 const sessionDurationMs = 12 * 60 * 60 * 1000;
 
@@ -357,6 +260,7 @@ const mapAuthErrorToMessage = (authError: string | null): string | null => {
 // Mutable so it can be consumed once and cleared.
 let _capturedInitialAuthParams: {
   token: string | null;
+  authCode: string | null;
   authError: string | null;
   requirePasswordSetup: boolean;
   isConfirm: boolean;
@@ -367,10 +271,12 @@ let _capturedInitialAuthParams: {
   try {
     const url = new URL(window.location.href);
     const token = url.searchParams.get('token');
+    const authCode = url.searchParams.get('auth_code');
     const authError = url.searchParams.get('auth_error');
-    if (!token && !authError) return null;
+    if (!token && !authCode && !authError) return null;
     return {
       token,
+      authCode,
       authError,
       requirePasswordSetup: url.searchParams.get('require_password_setup') === '1',
       isConfirm: url.pathname.endsWith('/confirm'),
@@ -381,8 +287,6 @@ let _capturedInitialAuthParams: {
     return null;
   }
 })();
-
-const pendingFollowCodeStorageKey = 'stp.pendingFollowCode';
 
 const extractFollowCodeFromUrl = (rawUrl: string): string | null => {
   try {
@@ -403,28 +307,32 @@ const extractTokenFromUrl = (rawUrl: string) => {
   try {
     const url = new URL(rawUrl);
     const token = url.searchParams.get('token');
+    const authCode = url.searchParams.get('auth_code');
     const authError = url.searchParams.get('auth_error');
     const requirePasswordSetup = url.searchParams.get('require_password_setup') === '1';
     const isConfirm = url.pathname.endsWith('/confirm');
     const isSecondaryConfirm = url.pathname.endsWith('/confirm-email');
     if (token) {
-      return { token, authError, url, source: 'query' as const, isConfirm, isSecondaryConfirm, requirePasswordSetup };
+      return { token, authCode: null, authError, url, source: 'query' as const, isConfirm, isSecondaryConfirm, requirePasswordSetup };
+    }
+    if (authCode) {
+      return { token: null, authCode, authError, url, source: 'query' as const, isConfirm, isSecondaryConfirm, requirePasswordSetup };
     }
     if (authError) {
-      return { token: null, authError, url, source: 'query' as const, isConfirm, isSecondaryConfirm, requirePasswordSetup };
+      return { token: null, authCode: null, authError, url, source: 'query' as const, isConfirm, isSecondaryConfirm, requirePasswordSetup };
     }
     const hash = url.hash.startsWith('#') ? url.hash.slice(1) : url.hash;
     if (hash) {
       const hashParams = new URLSearchParams(hash);
       const hashToken = hashParams.get('token');
       if (hashToken) {
-        return { token: hashToken, authError: null, url, source: 'hash' as const, isConfirm, isSecondaryConfirm, requirePasswordSetup };
+        return { token: hashToken, authCode: null, authError: null, url, source: 'hash' as const, isConfirm, isSecondaryConfirm, requirePasswordSetup };
       }
     }
   } catch (e) {
     // ignore invalid URLs
   }
-  return { token: null, authError: null, url: null, source: null, isConfirm: false, isSecondaryConfirm: false, requirePasswordSetup: false } as const;
+  return { token: null, authCode: null, authError: null, url: null, source: null, isConfirm: false, isSecondaryConfirm: false, requirePasswordSetup: false } as const;
 };
 
 const decodeTokenClaims = (
@@ -447,10 +355,8 @@ type AppShellProps = {
 };
 
 const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', onOpenAdminSection }) => {
-  const { width: viewportWidth } = useWindowDimensions();
+  const { viewportWidth, isNarrowLayout, isPhoneLayout } = useLayoutBreakpoints();
   const systemColorScheme = useColorScheme();
-  const isNarrowLayout = viewportWidth < 980;
-  const isPhoneLayout = viewportWidth < 680;
   const isWebIOSSafari = useMemo(() => {
     if (Platform.OS !== 'web' || typeof navigator === 'undefined') return false;
     const ua = navigator.userAgent || '';
@@ -464,6 +370,28 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
   useEffect(() => {
     initializeAppCheck();
+  }, []);
+
+  // React DevTools (and a few dev-tooling libraries) emit `performance.mark`
+  // on every component render in development. Browsers keep those entries
+  // forever — Firefox in particular won't reclaim them, and after a long
+  // session the User Timing buffer (and the React fibers each mark
+  // references) can hold gigabytes. Periodically clear the buffer so the
+  // tab can stay open all day without ballooning memory.
+  useEffect(() => {
+    if (typeof performance === 'undefined' || typeof performance.clearMarks !== 'function') {
+      return;
+    }
+    const clearAll = () => {
+      try {
+        performance.clearMarks();
+        performance.clearMeasures();
+      } catch {
+        // browsers without User Timing — nothing to clear
+      }
+    };
+    const intervalId = setInterval(clearAll, 30_000);
+    return () => clearInterval(intervalId);
   }, []);
 
   useEffect(() => {
@@ -506,71 +434,86 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     [isWebIOSSafari]
   );
 
-  const [userToken, setUserToken] = useState<string | null>(null);
-  const [userName, setUserName] = useState<string | null>(null);
+  const {
+    userToken,
+    userName,
+    userEmail,
+    userId,
+    userRole,
+    setUserToken,
+    setUserName,
+    setUserEmail,
+    setUserId,
+    setUserRole,
+    applySession,
+    clearSessionState,
+  } = useAuthSession();
   const [lastRefreshAt, setLastRefreshAt] = useState<number | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const refreshInFlightRef = useRef(false);
-  const autoRedeemedFollowCodeRef = useRef<string | null>(null);
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isAppIdle, setIsAppIdle] = useState(false);
   const [flights, setFlights] = useState<Flight[]>([]);
   const [externalFlightEditId, setExternalFlightEditId] = useState<string | null>(null);
-  const [invites, setInvites] = useState<GroupInvite[]>([]);
   const [pendingInviteModalOpen, setPendingInviteModalOpen] = useState(false);
-  const [invitesLoaded, setInvitesLoaded] = useState(false);
-  const [deferFirstLoginRedirect, setDeferFirstLoginRedirect] = useState(false);
-  const [showResendConfirmation, setShowResendConfirmation] = useState(false);
-  const [resendConfirmationLoading, setResendConfirmationLoading] = useState(false);
-  const [requirePasswordSetup, setRequirePasswordSetup] = useState(false);
-  const [passwordSetupLoading, setPasswordSetupLoading] = useState(false);
-  const [passwordSetupForm, setPasswordSetupForm] = useState({ newPassword: '', newPasswordConfirm: '' });
-  const [isFirstLogin, setIsFirstLogin] = useState(false);
-  const [emailConfirmationMessage, setEmailConfirmationMessage] = useState<string | null>(null);
-  const [authErrorMessage, setAuthErrorMessage] = useState<string | null>(null);
-  const [followInviteCode, setFollowInviteCode] = useState('');
-  const [followLoading, setFollowLoading] = useState(false);
-  const [followError, setFollowError] = useState('');
-  const [followedTrips, setFollowedTrips] = useState<FollowedTrip[]>([]);
-  const [followCodes, setFollowCodes] = useState<Record<string, string>>({});
-  const [followCodeLoading, setFollowCodeLoading] = useState<Record<string, boolean>>({});
-  const [followCodeError, setFollowCodeError] = useState<string | null>(null);
-  const [followCodePayloads, setFollowCodePayloads] = useState<Record<string, InvitePayload>>({});
-  const [pendingFollowCode, setPendingFollowCode] = useState<string | null>(null);
+  const {
+    deferFirstLoginRedirect,
+    showResendConfirmation,
+    resendConfirmationLoading,
+    requirePasswordSetup,
+    passwordSetupLoading,
+    passwordSetupForm,
+    isFirstLogin,
+    emailConfirmationMessage,
+    authErrorMessage,
+    setDeferFirstLoginRedirect,
+    setShowResendConfirmation,
+    setResendConfirmationLoading,
+    setRequirePasswordSetup,
+    setPasswordSetupLoading,
+    setPasswordSetupForm,
+    setIsFirstLogin,
+    setEmailConfirmationMessage,
+    setAuthErrorMessage,
+    completeInitialPasswordSetup: submitInitialPasswordSetup,
+    resendConfirmationEmail: submitResendConfirmation,
+  } = useAuthFlowState({ backendUrl, userToken });
   const [selectedFollowedTripId, setSelectedFollowedTripId] = useState<string | null>(null);
-  const [selectedFollowedTripDetails, setSelectedFollowedTripDetails] = useState<Trip | null>(null);
+  // selectedFollowedTripDetails is now owned by useSelectedFollowedTripDetails (declared below once selectedFollowedTrip is derived).
+  const isFollowingMode = Boolean(selectedFollowedTripId);
   const [groupName, setGroupName] = useState('');
   const [groupUserEmails, setGroupUserEmails] = useState('');
   const [groupGuestNames, setGroupGuestNames] = useState('');
   const [groupAddEmail, setGroupAddEmail] = useState<Record<string, string>>({});
   const [groupAddRelationship, setGroupAddRelationship] = useState<Record<string, string>>({});
-  const [groups, setGroups] = useState<GroupView[]>([]);
   const [groupSort, setGroupSort] = useState<'created' | 'name'>('created');
-  const [trips, setTrips] = useState<Trip[]>([]);
-  const [newTripName, setNewTripName] = useState('');
-  const [newTripGroupId, setNewTripGroupId] = useState<string | null>(null);
+  // newTripName + newTripGroupId are now owned by useCreateTripWizard (declared below after useTripsData).
   const [showTripGroupDropdown, setShowTripGroupDropdown] = useState(false);
   const [tripDropdownOpenId, setTripDropdownOpenId] = useState<string | null>(null);
   const [activeTripId, setActiveTripId] = useState<string | null>(null);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [userRole, setUserRole] = useState<'user' | 'admin'>('user');
+  // userEmail / userId / userRole are owned by useAuthSession (declared above).
   const [showActiveTripDropdown, setShowActiveTripDropdown] = useState(false);
   const [openShareFromHeaderSignal, setOpenShareFromHeaderSignal] = useState(0);
-  const [groupMembers, setGroupMembers] = useState<GroupMemberOption[]>([]);
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
   const [lodgings, setLodgings] = useState<Lodging[]>([]);
   const [selectedLodging, setSelectedLodging] = useState<Lodging | null>(null);
   const [showLodgingDetails, setShowLodgingDetails] = useState(false);
   const [lodgingToDelete, setLodgingToDelete] = useState<Lodging | null>(null);
 
-  // Socket.IO / presence / chat
-  const [presenceUsers, setPresenceUsers] = useState<PresenceUser[]>([]);
-  const [chatOpen, setChatOpen] = useState(false);
-  const [chatMinimized, setChatMinimized] = useState(false);
-  const [chatUnread, setChatUnread] = useState(0);
-
   const [tours, setTours] = useState<Tour[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [tripPayments, setTripPayments] = useState<Array<{
+    id: string;
+    tripId: string;
+    payerId: string;
+    receiverId: string;
+    paymentDate: string;
+    amountCents: number;
+    currency?: string;
+    notes?: string | null;
+    createdAt?: string;
+  }>>([]);
   const [carRentals, setCarRentals] = useState<CarRental[]>([]);
   const [carDraft, setCarDraft] = useState<CarRentalDraft>(createInitialCarRentalDraft());
   const [carDateField, setCarDateField] = useState<'pickup' | 'dropoff' | null>(null);
@@ -578,41 +521,148 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [carPrepaidOpen, setCarPrepaidOpen] = useState(false);
   const carPickupDateRef = useRef<HTMLInputElement | null>(null);
   const carDropoffDateRef = useRef<HTMLInputElement | null>(null);
-  const [traits, setTraits] = useState<Trait[]>([]);
-  const [newTraitName, setNewTraitName] = useState('');
-  const [selectedTraitNames, setSelectedTraitNames] = useState<Set<string>>(new Set());
+  const {
+    traits,
+    newTraitName,
+    selectedTraitNames,
+    traitAge,
+    traitGender,
+    showGenderDropdown,
+    setTraits,
+    setNewTraitName,
+    setSelectedTraitNames,
+    setTraitAge,
+    setTraitGender,
+    setShowGenderDropdown,
+    fetchTraits,
+    fetchTraitProfile,
+    clearTraitsState,
+  } = useTraits({ backendUrl, userToken });
   const [activePage, setActivePage] = useState<Page>('home');
   const [pageHistory, setPageHistory] = useState<Page[]>([]);
   const [pageForwardHistory, setPageForwardHistory] = useState<Page[]>([]);
   const [flightAirportOptions, setFlightAirportOptions] = useState<string[]>([]);
-  const [traitAge, setTraitAge] = useState('');
-  const [traitGender, setTraitGender] = useState<'female' | 'male' | 'nonbinary' | 'prefer-not'>('prefer-not');
-  const [showGenderDropdown, setShowGenderDropdown] = useState(false);
-  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
-  const [authForm, setAuthForm] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    password: '',
-    passwordConfirm: '',
-  });
-  const [accountProfile, setAccountProfile] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    homeAddress: '',
-    preferredAirport: '',
-    appearancePreference: 'auto' as AppearancePreference,
-  });
-  const [mapApp, setMapApp] = useState<MapApp>(() => loadStoredMapPreference('google'));
-  const [appearancePreference, setAppearancePreference] = useState<AppearancePreference>(() =>
-    loadStoredAppearancePreference('auto')
+  // traitAge / traitGender / showGenderDropdown are owned by useTraits (declared above).
+  const {
+    authMode,
+    authForm,
+    setAuthMode,
+    setAuthForm,
+  } = useAuthForm();
+  const {
+    accountProfile,
+    mapApp,
+    appearancePreference,
+    setAccountProfile,
+    setMapApp,
+    setAppearancePreference,
+    updateMapPreference,
+    updateAppearancePreference,
+    clearAccountProfile,
+  } = useAccountProfile();
+  const logoutRef = useRef<() => void>(() => undefined);
+  const handleUnauthorized = useCallback(() => logoutRef.current(), []);
+
+  const {
+    invites,
+    invitesLoaded,
+    pendingTripShareInvites,
+    fetchInvites,
+    fetchPendingTripShareInvites,
+    acceptInvite: acceptInviteRequest,
+    rejectInvite: rejectInviteRequest,
+    acceptPendingTripShareInvite: acceptPendingTripShareInviteRequest,
+    rejectPendingTripShareInvite: rejectPendingTripShareInviteRequest,
+    clearInvites,
+    setInvitesLoaded,
+    setPendingTripShareInvites,
+  } = useGroupInvites({ backendUrl, userToken });
+
+  const {
+    followedTrips,
+    followInviteCode,
+    followLoading,
+    followError,
+    followCodes,
+    followCodeLoading,
+    followCodeError,
+    followCodePayloads,
+    pendingFollowCode,
+    setFollowedTrips,
+    setFollowInviteCode,
+    setFollowLoading,
+    setFollowError,
+    setFollowCodes,
+    setFollowCodeLoading,
+    setFollowCodeError,
+    setFollowCodePayloads,
+    setPendingFollowCode,
+    fetchFollowedTrips,
+    handleFollowTripByCode,
+    clearFollowedTripsData,
+  } = useFollowedTrips({ backendUrl, userToken, onUnauthorized: handleUnauthorized });
+
+  const followedTripById = useMemo(
+    () => new Map(followedTrips.map((trip) => [trip.tripId, trip] as const)),
+    [followedTrips]
   );
+  const selectedFollowedTrip = useMemo(
+    () => (selectedFollowedTripId ? followedTripById.get(selectedFollowedTripId) ?? null : null),
+    [followedTripById, selectedFollowedTripId]
+  );
+
+  const { selectedFollowedTripDetails, setSelectedFollowedTripDetails } = useSelectedFollowedTripDetails({
+    backendUrl,
+    selectedFollowedTrip,
+    selectedFollowedTripId,
+    userToken,
+  });
+
+  const {
+    addMemberToGroup: addGroupMemberRequest,
+    cancelInvite: cancelGroupInviteRequest,
+    clearTripsData,
+    createTrip: createTripRequest,
+    fetchGroups,
+    fetchGroupMembersForActiveTrip,
+    fetchTrips,
+    groupMembers,
+    groups,
+    removeMemberFromGroup: removeGroupMemberRequest,
+    trips,
+  } = useTripsData({
+    activeTripId,
+    backendUrl,
+    groupSort,
+    isFollowingMode,
+    onUnauthorized: handleUnauthorized,
+    requirePasswordSetup,
+    selectedFollowedTripDetails,
+    setActiveTripId,
+    userEmail,
+    userToken,
+  });
+
+  const {
+    newTripName,
+    newTripGroupId,
+    setNewTripName,
+    setNewTripGroupId,
+    submit: submitCreateTripWizard,
+  } = useCreateTripWizard({ groups, createTrip: createTripRequest, userToken });
+
   const theme = useMemo(() => getAppTheme(appearancePreference, systemColorScheme), [appearancePreference, systemColorScheme]);
   const styles = useMemo(() => buildStyles(theme), [theme]);
-  const [familyRelationships, setFamilyRelationships] = useState<any[]>([]);
+  const {
+    familyRelationships,
+    fellowTravelers,
+    setFamilyRelationships,
+    setFellowTravelers,
+    loadFamilyRelationships,
+    loadFellowTravelers,
+    clearAccountSidecars,
+  } = useAccountSidecars({ backendUrl, userToken });
   const [coveredBy, setCoveredBy] = useState<Record<string, string>>({});
-  const [fellowTravelers, setFellowTravelers] = useState<FellowTraveler[]>([]);
   const [showRelationshipDropdown, setShowRelationshipDropdown] = useState(false);
   const [asyncItineraryByTrip, setAsyncItineraryByTrip] = useState<Record<string, AsyncItineraryTracker>>({});
 
@@ -625,24 +675,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     [userToken]
   );
 
-  const userMembers = useMemo(
-    () => groupMembers.filter((m) => !m.guestName && m.status !== 'removed'),
-    [groupMembers]
+  const { userMembers, memberIds, currentUserMemberId, defaultPayerId } = useTripMembers(
+    groupMembers,
+    userEmail,
   );
-
-  const memberIds = useMemo(() => userMembers.map((m) => m.id), [userMembers]);
-
-  const currentUserMemberId = useMemo(() => {
-    if (!userEmail) return null;
-    const match = userMembers.find((m) => m.email && m.email.toLowerCase() === userEmail.toLowerCase());
-    return match?.id ?? null;
-  }, [userMembers, userEmail]);
-
-  const defaultPayerId = useMemo(() => {
-    if (currentUserMemberId) return currentUserMemberId;
-    if (userMembers.length) return userMembers[0].id;
-    return null;
-  }, [currentUserMemberId, userMembers]);
 
   const flightsTotal = useMemo(
     () => flights.reduce((sum, f) => sum + (Number(f.cost) || 0), 0),
@@ -691,31 +727,11 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     [carRentals]
   );
 
-  const updateMapPreference = useCallback(
-    (pref: MapApp) => {
-      setMapApp(pref);
-      persistMapPreference(pref);
-      setAccountProfile((prev) => ({ ...prev, mapPreference: pref }));
-    },
-    [setAccountProfile]
-  );
-
-  const updateAppearancePreference = useCallback(
-    (pref: AppearancePreference) => {
-      setAppearancePreference(pref);
-      persistAppearancePreference(pref);
-      setAccountProfile((prev) => ({ ...prev, appearancePreference: pref }));
-    },
-    [setAccountProfile]
-  );
+  // updateMapPreference + updateAppearancePreference are now provided by useAccountProfile.
 
   const activeTrip = useMemo(() => trips.find((t) => t.id === activeTripId) ?? null, [trips, activeTripId]);
   const tripById = useMemo(() => new Map(trips.map((trip) => [trip.id, trip] as const)), [trips]);
   const groupById = useMemo(() => new Map(groups.map((group) => [group.id, group] as const)), [groups]);
-  const followedTripById = useMemo(
-    () => new Map(followedTrips.map((trip) => [trip.tripId, trip] as const)),
-    [followedTrips]
-  );
   const activeGroup = useMemo(
     () => (activeTrip?.groupId ? groupById.get(activeTrip.groupId) ?? null : null),
     [activeTrip?.groupId, groupById]
@@ -728,11 +744,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     () => (selectedTrip?.groupId ? groupById.get(selectedTrip.groupId) ?? null : null),
     [selectedTrip?.groupId, groupById]
   );
-  const selectedFollowedTrip = useMemo(
-    () => (selectedFollowedTripId ? followedTripById.get(selectedFollowedTripId) ?? null : null),
-    [followedTripById, selectedFollowedTripId]
-  );
-  const isFollowingMode = Boolean(selectedFollowedTripId);
+  // followedTripById + selectedFollowedTrip were moved above useTripsData so
+  // that useSelectedFollowedTripDetails can run before useTripsData consumes
+  // selectedFollowedTripDetails.
   const followedTripFallback = useMemo<Trip | null>(
     () =>
       selectedFollowedTrip
@@ -980,6 +994,21 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     return memberNameById.get(id) ?? 'Unknown';
   }, [memberNameById]);
 
+  // Covered-by is naturally idempotent (PUT replaces the entire map), so it's
+  // a safe candidate for retry-on-failure. Wrapped in useRetryableMutation so
+  // transient network failures can be retried via the red banner instead of
+  // an alert() that forces the user to re-open the ledger.
+  const coveredByMutation = useRetryableMutation<
+    { tripId: string; rules: Record<string, string> },
+    void
+  >(async ({ tripId, rules }) => {
+    await requestJson<unknown>(`${backendUrl}/api/trips/${tripId}/covered-by`, {
+      method: 'PUT',
+      headers: jsonHeaders,
+      body: rules,
+    });
+  });
+
   const saveCoveredBy = useCallback(async () => {
     if (!activeTrip?.id) {
       alert('An active trip is required.');
@@ -992,18 +1021,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       return;
     }
 
-    try {
-      const res = await fetch(`${backendUrl}/api/trips/${activeTrip.id}/covered-by`, {
-        method: 'PUT',
-        headers: jsonHeaders,
-        body: JSON.stringify(coveredBy),
-      });
-      if (!res.ok) throw new Error('Failed to save covering rules.');
+    const result = await coveredByMutation.run({ tripId: activeTrip.id, rules: coveredBy });
+    if (result !== null) {
       alert('Covering rules saved.');
-    } catch (err) {
-      alert((err as Error).message);
     }
-  }, [activeTrip?.id, backendUrl, coveredBy, jsonHeaders]);
+    // Failure surfaces through <RetryableErrorBanner> rendered in the ledger
+    // branch below — no alert() so the user can retry in place.
+  }, [activeTrip?.id, coveredBy, coveredByMutation]);
 
   const coveredTravelerIds = useMemo(() => new Set(Object.keys(coveredBy)), [coveredBy]);
 
@@ -1125,33 +1149,21 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   };
 
   const logout = useCallback(() => {
-    setUserToken(null);
-    setUserName(null);
-    setUserEmail(null);
-    setUserId(null);
-    setUserRole('user');
-    setTrips([]);
+    clearSessionState();
+    clearTripsData();
     setActiveTripId(null);
     setFlights([]);
     setTours([]);
     setExpenses([]);
-    setInvites([]);
-    setFollowedTrips([]);
-    setFollowInviteCode('');
-    setFollowError('');
-    setFollowCodes({});
+    setTripPayments([]);
+    clearInvites();
+    clearFollowedTripsData();
     setSelectedFollowedTripId(null);
-    setGroups([]);
-    setGroupMembers([]);
     setGroupAddEmail({});
     setGroupAddRelationship({});
-    setTraits([]);
-    setSelectedTraitNames(new Set());
-    setTraitAge('');
-    setTraitGender('prefer-not');
-    setAccountProfile({ firstName: '', lastName: '', email: '', homeAddress: '', preferredAirport: '', appearancePreference: 'auto' });
-    setFamilyRelationships([]);
-    setFellowTravelers([]);
+    clearTraitsState();
+    clearAccountProfile();
+    clearAccountSidecars();
     setRequirePasswordSetup(false);
     setPasswordSetupLoading(false);
     setPasswordSetupForm({ newPassword: '', newPasswordConfirm: '' });
@@ -1162,51 +1174,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setIsRefreshing(false);
     refreshInFlightRef.current = false;
     disconnectSocket();
-    setPresenceUsers([]);
-    setChatOpen(false);
-    setChatUnread(0);
+    // PresenceProvider and ChatProvider reset their state automatically when
+    // userToken or activeTripId becomes null after clearSession().
     clearSession();
-  }, []);
+  }, [clearSessionState, clearTripsData]);
+  logoutRef.current = logout;
 
-  const handleFollowTripByCode = useCallback(async (inviteCode: string): Promise<string | null> => {
-    if (!userToken) return 'You need to be logged in';
-    const code = inviteCode.trim();
-    if (!code) return 'Enter a follow code';
-    setFollowLoading(true);
-    setFollowError('');
-    try {
-      const res = await fetch(`${backendUrl}/api/trips/follow`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
-        body: JSON.stringify({ inviteCode: code }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (res.status === 401 || res.status === 403) {
-        logout();
-        return 'Unauthorized';
-      }
-      if (!res.ok) {
-        const message = data.error || 'Unable to follow trip';
-        setFollowError(message);
-        return message;
-      }
-      try {
-        const trips = await fetchFollowedTripsApi(backendUrl, { Authorization: `Bearer ${userToken}` });
-        setFollowedTrips(trips);
-      } catch {
-        // Ignore refresh failures after a successful follow.
-      }
-      setFollowInviteCode('');
-      setFollowError('');
-      return null;
-    } catch (err) {
-      const message = (err as Error).message || 'Unable to follow trip';
-      setFollowError(message);
-      return message;
-    } finally {
-      setFollowLoading(false);
-    }
-  }, [backendUrl, logout, userToken]);
+  // handleFollowTripByCode is now provided by useFollowedTrips.
 
   const loadAccountProfile = useCallback(
     (token?: string) =>
@@ -1223,25 +1197,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     [backendUrl, logout, setAccountProfile, setUserEmail, setUserName, updateAppearancePreference, updateMapPreference, userToken]
   );
 
-  const loadFamilyRelationships = useCallback(
-    (token?: string) =>
-      fetchFamilyRelationships({
-        backendUrl,
-        token: token ?? userToken,
-        setFamilyRelationships,
-      }),
-    [backendUrl, setFamilyRelationships, userToken]
-  );
-
-  const loadFellowTravelers = useCallback(
-    (token?: string) =>
-      fetchFellowTravelers({
-        backendUrl,
-        token: token ?? userToken,
-        setFellowTravelers,
-      }),
-    [backendUrl, setFellowTravelers, userToken]
-  );
+  // loadFamilyRelationships + loadFellowTravelers are now provided by useAccountSidecars.
 
   const buildLoginRedirectUrl = () => {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -1290,15 +1246,15 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       `${decoded?.firstName ?? ''} ${decoded?.lastName ?? ''}`.trim() || decoded?.email || 'Traveler';
     const decodedRole: 'user' | 'admin' = decoded?.role === 'admin' ? 'admin' : 'user';
     const decodedUserId = (decoded as any)?.userId ?? null;
-    setUserToken(token);
-    setUserName(name);
-    setUserRole(decodedRole);
-    setUserId(decodedUserId);
+    applySession({
+      token,
+      name,
+      email: decoded?.email ?? null,
+      userId: decodedUserId,
+      role: decodedRole,
+    });
     setInvitesLoaded(false);
     connectSocket(token);
-    if (decoded?.email) {
-      setUserEmail(decoded.email);
-    }
     setAccountProfile({
       firstName: decoded?.firstName ?? '',
       lastName: decoded?.lastName ?? '',
@@ -1308,7 +1264,11 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       appearancePreference: 'auto',
     });
     const previousSession = loadSession();
-    const restoredTripId = previousSession?.tripId ?? activeTripId ?? null;
+    const restoredTripId =
+      previousSession?.tripId ??
+      loadLastActiveTripId(decoded?.email ?? null) ??
+      activeTripId ??
+      null;
     setActiveTripId(restoredTripId);
     const firstLogin = Boolean(firstLoginOverride);
     setIsFirstLogin(firstLogin);
@@ -1398,6 +1358,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       _capturedInitialAuthParams = null;
       const source = captured ?? extractTokenFromUrl(window.location.href);
       const token = 'token' in source ? source.token : null;
+      const authCode = 'authCode' in source ? source.authCode : null;
       const authError = 'authError' in source ? source.authError : null;
       const requirePasswordSetup = source.requirePasswordSetup;
       const isConfirm = source.isConfirm;
@@ -1421,6 +1382,32 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           }
           window.history.replaceState({}, '', cleanUrl.toString());
         } catch { /* ignore */ }
+      } else if (authCode) {
+        void (async () => {
+          try {
+            const exchangeRes = await fetch(`${backendUrl}/api/auth/exchange`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ code: authCode }),
+            });
+            const exchangeData = await exchangeRes.json().catch(() => ({}));
+            if (!exchangeRes.ok || !exchangeData?.token) {
+              throw new Error(exchangeData?.error || 'Sign-in could not be completed.');
+            }
+            handleAuthSuccess(String(exchangeData.token), undefined, {
+              requirePasswordSetup: Boolean(exchangeData.requirePasswordSetup),
+            });
+          } catch (error) {
+            setAuthErrorMessage((error as Error).message || 'Sign-in could not be completed.');
+          } finally {
+            try {
+              const cleanUrl = new URL(rawUrl);
+              cleanUrl.searchParams.delete('auth_code');
+              cleanUrl.searchParams.delete('require_password_setup');
+              window.history.replaceState({}, '', cleanUrl.toString());
+            } catch { /* ignore */ }
+          }
+        })();
       } else if (authError) {
         const message = mapAuthErrorToMessage(authError);
         if (message) {
@@ -1439,38 +1426,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   }, [handleAuthSuccess]);
 
   const completeInitialPasswordSetup = async () => {
-    if (!userToken) return;
-    if (passwordSetupForm.newPassword !== passwordSetupForm.newPasswordConfirm) {
-      alert('Passwords do not match');
+    const result = await submitInitialPasswordSetup();
+    if (!result.ok) {
+      alert(result.error);
       return;
     }
-    if (passwordSetupForm.newPassword.trim().length < 6) {
-      alert('New password must be at least 6 characters');
-      return;
-    }
-    try {
-      setPasswordSetupLoading(true);
-      const res = await fetch(`${backendUrl}/api/account/password`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
-        body: JSON.stringify({
-          newPassword: passwordSetupForm.newPassword,
-          newPasswordConfirm: passwordSetupForm.newPasswordConfirm,
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        alert(data.error || 'Unable to set password');
-        return;
-      }
-      setRequirePasswordSetup(false);
-      setPasswordSetupForm({ newPassword: '', newPasswordConfirm: '' });
-      alert('Password set. You can now sign in with email/password too.');
-    } catch (err) {
-      alert((err as Error).message || 'Unable to set password');
-    } finally {
-      setPasswordSetupLoading(false);
-    }
+    alert('Password set. You can now sign in with email/password too.');
   };
 
   const loginWithPassword = async () => {
@@ -1503,33 +1464,24 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   };
 
   const resendConfirmationEmail = async () => {
-    const email = authForm.email.trim();
-    if (!email) {
-      alert('Enter your email or username first.');
+    const result = await submitResendConfirmation(authForm.email);
+    if (!result.ok) {
+      alert(result.error);
       return;
     }
-    try {
-      setResendConfirmationLoading(true);
-      const res = await fetch(`${backendUrl}/api/web-auth/resend-confirmation`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identifier: email }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        alert(data.error || 'Failed to resend confirmation email.');
-        return;
-      }
-      alert(data.message || 'If an account exists for this email, a confirmation link has been sent.');
-    } catch (err) {
-      alert((err as Error).message || 'Failed to resend confirmation email.');
-    } finally {
-      setResendConfirmationLoading(false);
-    }
+    alert(result.message);
   };
 
   const register = async () => {
     setAuthErrorMessage(null);
+    if (!authForm.firstName.trim() || !authForm.lastName.trim()) {
+      alert('First name and last name are required');
+      return;
+    }
+    if (!authForm.email.trim()) {
+      alert('Email is required');
+      return;
+    }
     if (authForm.password !== authForm.passwordConfirm) {
       alert('Passwords do not match');
       return;
@@ -1634,6 +1586,77 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     }
   }, [activeTripId, backendUrl, userToken]);
 
+  const fetchTripPayments = useCallback(async (token?: string) => {
+    const authToken = token ?? userToken;
+    if (!activeTripId || !authToken) {
+      setTripPayments([]);
+      return;
+    }
+    try {
+      const res = await fetch(`${backendUrl}/api/payments?tripId=${activeTripId}`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      if (!res.ok) {
+        setTripPayments([]);
+        return;
+      }
+      const data = await res.json();
+      setTripPayments(Array.isArray(data) ? data : []);
+    } catch {
+      setTripPayments([]);
+    }
+  }, [activeTripId, backendUrl, userToken]);
+
+  const addTripPayment = useCallback(async (draft: {
+    payerId: string;
+    receiverId: string;
+    paymentDate: string;
+    amountCents: number;
+  }) => {
+    if (!activeTripId || !userToken) throw new Error('Not signed in');
+    const res = await fetch(`${backendUrl}/api/payments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
+      body: JSON.stringify({
+        tripId: activeTripId,
+        payerId: draft.payerId,
+        receiverId: draft.receiverId,
+        paymentDate: draft.paymentDate,
+        amountCents: draft.amountCents,
+      }),
+    });
+    if (!res.ok) {
+      let message = 'Failed to record payment';
+      try {
+        const body = await res.json();
+        if (body?.error) message = body.error;
+      } catch {
+        // ignore json parse
+      }
+      throw new Error(message);
+    }
+    await fetchTripPayments();
+  }, [activeTripId, backendUrl, userToken, fetchTripPayments]);
+
+  const deleteTripPayment = useCallback(async (paymentId: string) => {
+    if (!userToken) throw new Error('Not signed in');
+    const res = await fetch(`${backendUrl}/api/payments/${paymentId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${userToken}` },
+    });
+    if (!res.ok && res.status !== 204) {
+      let message = 'Failed to delete payment';
+      try {
+        const body = await res.json();
+        if (body?.error) message = body.error;
+      } catch {
+        // ignore json parse
+      }
+      throw new Error(message);
+    }
+    await fetchTripPayments();
+  }, [backendUrl, userToken, fetchTripPayments]);
+
   // Fetch itineraries for the current user; ItinerariesTab also fetches within its own lifecycle,
   // but this keeps the call from blowing up when invoked from shared effects.
   const fetchItineraries = useCallback(async (token?: string) => {
@@ -1642,135 +1665,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     await fetch(`${backendUrl}/api/itineraries`, { headers }).catch(() => undefined);
   }, [backendUrl, headers, userToken]);
 
-  const fetchInvites = useCallback(async (token?: string) => {
-    const authToken = token ?? userToken;
-    if (!authToken) {
-      setInvites([]);
-      setInvitesLoaded(true);
-      return;
-    }
-    try {
-      const res = await fetch(`${backendUrl}/api/groups/invites`, {
-        headers: { Authorization: `Bearer ${authToken}` },
-      });
-      if (!res.ok) {
-        setInvites([]);
-        return;
-      }
-      const data = await res.json();
-      setInvites(data);
-    } catch {
-      setInvites([]);
-    } finally {
-      setInvitesLoaded(true);
-    }
-  }, [backendUrl, userToken]);
+  // fetchInvites and fetchPendingTripShareInvites are now owned by useGroupInvites.
 
-  const fetchGroups = useCallback(async (sort?: 'created' | 'name') => {
-    const res = await fetch(`${backendUrl}/api/groups?sort=${sort ?? groupSort}`, {
-      headers: { Authorization: `Bearer ${userToken}` },
-    });
-    if (res.status === 401 || (res.status === 403 && !requirePasswordSetup)) {
-      logout();
-      return;
-    }
-    if (res.status === 403) return;
-    if (!res.ok) return;
-    const data = await res.json();
-    const normalized = (Array.isArray(data) ? data : []).map((group: GroupView) => ({
-      ...group,
-      invites: Array.isArray(group.invites) ? group.invites : [],
-    }));
-    setGroups(normalized);
-    if (!newTripGroupId && normalized.length) {
-      setNewTripGroupId(normalized[0].id);
-    }
-  }, [backendUrl, groupSort, newTripGroupId, userToken, logout, requirePasswordSetup]);
+  // fetchFollowedTrips is now provided by useFollowedTrips.
 
-  const fetchTrips = useCallback(async (tokenOverride?: string): Promise<Trip[]> => {
-    const authToken = tokenOverride ?? userToken;
-    if (!authToken) {
-      setTrips([]);
-      return [];
-    }
-    try {
-      const res = await fetch(`${backendUrl}/api/trips`, { headers: { Authorization: `Bearer ${authToken}` } });
-      if (res.status === 401 || (res.status === 403 && !requirePasswordSetup)) {
-        logout();
-        return [];
-      }
-      if (res.status === 403) return [];
-      if (!res.ok) return [];
-      const data = await res.json();
-      setTrips(data);
-      if (!activeTripId && data.length) {
-        setActiveTripId(data[0].id);
-      } else if (activeTripId && !isFollowingMode && !data.find((t: Trip) => t.id === activeTripId)) {
-        setActiveTripId(data[0]?.id ?? null);
-      }
-      return data;
-    } catch {
-      return [];
-    }
-  }, [activeTripId, backendUrl, isFollowingMode, logout, userToken, requirePasswordSetup]);
+  // The auto-select-first-group effect is now owned by useCreateTripWizard.
 
-  const fetchGroupMembersForActiveTrip = useCallback(async () => {
-    if (!userToken || !activeTripId) {
-      setGroupMembers([]);
-      return;
-    }
-    const trip = isFollowingMode ? selectedFollowedTripDetails : trips.find((t) => t.id === activeTripId);
-    const groupId = trip?.groupId;
-    if (!groupId) {
-      setGroupMembers([]);
-      return;
-    }
-    try {
-      const res = await fetch(`${backendUrl}/api/groups/${groupId}/members`, {
-        headers: { Authorization: `Bearer ${userToken}` },
-      });
-      if (!res.ok) {
-        setGroupMembers([]);
-        return;
-      }
-      const data = await res.json();
-      const normalized = (Array.isArray(data) ? data : []).map((m) => ({
-        id: m.id,
-        guestName: m.guestName ?? m.guest_name ?? undefined,
-        email: m.email ?? undefined,
-        firstName: m.firstName ?? m.first_name ?? undefined,
-        lastName: m.lastName ?? m.last_name ?? undefined,
-        status: m.status ?? undefined,
-        removedAt: m.removedAt ?? undefined,
-      }));
-      setGroupMembers(normalized.filter((m) => m.status !== 'removed'));
-    } catch {
-      setGroupMembers([]);
-    }
-  }, [activeTripId, backendUrl, isFollowingMode, selectedFollowedTripDetails, trips, userToken]);
-
-  const fetchTraits = useCallback(async () => {
-    if (!userToken) return;
-    const res = await fetch(`${backendUrl}/api/traits`, { headers: { Authorization: `Bearer ${userToken}` } });
-    if (!res.ok) return;
-    const data = (await res.json()) as Trait[];
-    setTraits(data);
-    setSelectedTraitNames(new Set(data.map((t) => t.name)));
-  }, [backendUrl, userToken]);
-
-  const fetchTraitProfile = useCallback(async () => {
-    if (!userToken) return;
-    const res = await fetch(`${backendUrl}/api/traits/profile/demographics`, { headers });
-    if (!res.ok) return;
-    const raw = await res.json().catch(() => ({}));
-    const data = raw ?? {};
-    if (data.age != null) setTraitAge(String(data.age));
-    if (data.gender) {
-      if (data.gender === 'female' || data.gender === 'male' || data.gender === 'nonbinary' || data.gender === 'prefer-not') {
-        setTraitGender(data.gender);
-      }
-    }
-  }, [backendUrl, headers, userToken]);
+  // fetchTraits and fetchTraitProfile are now provided by useTraits.
 
   const fetchFlightAirports = useCallback(async (q: string) => {
     if (!userToken || !q.trim()) {
@@ -1798,19 +1699,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   }, [backendUrl, userToken]);
 
   const acceptInvite = async (invite: GroupInvite) => {
-    if (!userToken) return;
-    const res = await fetch(`${backendUrl}/api/groups/invites/${invite.id}/accept`, {
-      method: 'POST',
-      headers: headers,
-    });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      alert(data.error || 'Unable to accept invite');
+    const result = await acceptInviteRequest(invite);
+    if (!result.ok) {
+      alert(result.error || 'Unable to accept invite');
       return;
     }
-    const nextTripId = invite.tripId ?? invite.resolvedTripId ?? null;
-    if (nextTripId) {
-      setActiveTripId(nextTripId);
+    if (result.nextTripId) {
+      setActiveTripId(result.nextTripId);
     }
     if (isFirstLogin) {
       setDeferFirstLoginRedirect(false);
@@ -1818,28 +1713,66 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     } else {
       setActivePage('overview');
     }
-    fetchInvites();
     fetchGroups();
     fetchTrips();
   };
 
   const rejectInvite = async (invite: GroupInvite) => {
-    if (!userToken) return;
-    const res = await fetch(`${backendUrl}/api/groups/invites/${invite.id}/reject`, {
-      method: 'POST',
-      headers: headers,
-    });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      alert(data.error || 'Unable to reject invite');
+    const result = await rejectInviteRequest(invite);
+    if (!result.ok) {
+      alert(result.error || 'Unable to reject invite');
       return;
     }
-    fetchInvites();
     fetchGroups();
     fetchTrips();
   };
 
-  const refreshAllData = useCallback(async (tokenOverride?: string) => {
+  const acceptPendingTripShareInvite = async (invite: PendingTripShareInvite) => {
+    const result = await acceptPendingTripShareInviteRequest(invite);
+    if (!result.ok) {
+      alert(result.error || 'Unable to accept invite');
+      return;
+    }
+    if (result.nextTripId) {
+      setActiveTripId(result.nextTripId);
+    }
+    if (isFirstLogin) {
+      setDeferFirstLoginRedirect(false);
+      setActivePage('account');
+    } else {
+      setActivePage('overview');
+    }
+    fetchGroups();
+    fetchTrips();
+    fetchFollowedTrips();
+  };
+
+  const rejectPendingTripShareInvite = async (invite: PendingTripShareInvite) => {
+    const result = await rejectPendingTripShareInviteRequest(invite);
+    if (!result.ok) {
+      alert(result.error || 'Unable to reject invite');
+      return;
+    }
+    fetchGroups();
+    fetchTrips();
+    fetchFollowedTrips();
+  };
+
+  const acceptPendingFollowCode = async () => {
+    if (!pendingFollowCode) return;
+    const error = await handleFollowTripByCode(pendingFollowCode);
+    if (!error) {
+      setPendingFollowCode(null);
+    }
+  };
+
+  const rejectPendingFollowCode = () => {
+    setPendingFollowCode(null);
+    setFollowInviteCode('');
+    setFollowError('');
+  };
+
+  const refreshPageData = useCallback(async (tokenOverride?: string, pageOverride?: Page) => {
     const authToken = tokenOverride ?? userToken;
     if (!authToken || refreshInFlightRef.current || requirePasswordSetup) return;
     refreshInFlightRef.current = true;
@@ -1847,33 +1780,81 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     try {
       const ok = await loadAccountProfile(authToken);
       if (!ok) return;
-      await Promise.all([
-        fetchFlights(authToken),
-        fetchLodgings(authToken),
-        fetchTours(authToken),
-        fetchCarRentals(authToken),
-        fetchExpenses(authToken),
-        fetchInvites(authToken),
-        fetchGroups(),
-        fetchTrips(),
-        fetchTraits(),
-        fetchTraitProfile(),
-        fetchItineraries(authToken),
-        loadFamilyRelationships(authToken),
-        loadFellowTravelers(authToken),
-        (async () => {
-          try {
-            const trips = await fetchFollowedTripsApi(backendUrl, { Authorization: `Bearer ${authToken}` });
-            setFollowedTrips(trips);
-          } catch (err) {
-            if ((err as any).code === 'UNAUTHORIZED') {
-              logout();
-            } else {
-              setFollowedTrips([]);
-            }
-          }
-        })()
-      ]);
+      const currentPage = pageOverride ?? activePage;
+      switch (currentPage) {
+        case 'home':
+        case 'trips':
+          await Promise.all([
+            fetchInvites(authToken),
+            fetchPendingTripShareInvites(authToken),
+            fetchGroups(),
+            fetchTrips(authToken),
+            fetchFollowedTrips(authToken),
+          ]);
+          break;
+        case 'overview':
+          await Promise.all([
+            fetchTrips(authToken),
+            fetchGroups(),
+            fetchFlights(authToken),
+            fetchLodgings(authToken),
+            fetchTours(authToken),
+            fetchCarRentals(authToken),
+            fetchExpenses(authToken),
+            fetchTripPayments(authToken),
+            fetchFollowedTrips(authToken),
+          ]);
+          break;
+        case 'flights':
+          await Promise.all([fetchFlights(authToken), fetchExpenses(authToken)]);
+          break;
+        case 'lodging':
+          await Promise.all([fetchLodgings(authToken), fetchExpenses(authToken)]);
+          break;
+        case 'car':
+          await Promise.all([fetchCarRentals(authToken), fetchExpenses(authToken)]);
+          break;
+        case 'tours':
+          await fetchTours(authToken);
+          break;
+        case 'expenses':
+        case 'ledger':
+        case 'cost':
+          await Promise.all([fetchTrips(authToken), fetchExpenses(authToken), fetchTripPayments(authToken)]);
+          break;
+        case 'itinerary':
+          await Promise.all([fetchTrips(authToken), fetchItineraries(authToken), fetchTraits(), fetchTraitProfile()]);
+          break;
+        case 'ingest':
+          await Promise.all([fetchTrips(authToken), fetchGroups()]);
+          break;
+        case 'account':
+          await Promise.all([fetchTraits(), fetchTraitProfile(), loadFamilyRelationships(authToken), loadFellowTravelers(authToken)]);
+          break;
+        case 'follow':
+          await Promise.all([fetchTrips(authToken), fetchFollowedTrips(authToken)]);
+          break;
+        case 'following':
+          await fetchFollowedTrips(authToken);
+          break;
+        case 'trip-details':
+          await Promise.all([fetchTrips(authToken), fetchGroups()]);
+          break;
+        case 'create-trip':
+          await Promise.all([fetchGroups(), fetchTrips(authToken)]);
+          break;
+        case 'admin':
+          break;
+        default:
+          await Promise.all([
+            fetchInvites(authToken),
+            fetchPendingTripShareInvites(authToken),
+            fetchGroups(),
+            fetchTrips(authToken),
+            fetchFollowedTrips(authToken),
+          ]);
+          break;
+      }
     } finally {
       refreshInFlightRef.current = false;
       setIsRefreshing(false);
@@ -1887,114 +1868,98 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     fetchTours,
     fetchCarRentals,
     fetchExpenses,
+    fetchTripPayments,
+    activePage,
     fetchInvites,
+    fetchPendingTripShareInvites,
     fetchGroups,
     fetchTrips,
+    fetchFollowedTrips,
     fetchTraits,
     fetchTraitProfile,
     fetchItineraries,
     loadFamilyRelationships,
     loadFellowTravelers,
-    backendUrl,
-    logout,
     requirePasswordSetup
   ]);
 
   useEffect(() => {
     if (userToken && !requirePasswordSetup) {
-      refreshAllData();
+      refreshPageData();
     }
-  }, [userToken, requirePasswordSetup, refreshAllData]);
+  }, [userToken, requirePasswordSetup, refreshPageData]);
 
-  // Socket.IO: join trip room when active trip changes
   useEffect(() => {
-    if (!userToken || !activeTripId) return;
-    const socket = getSocket();
-
-    const onPresence = (list: PresenceUser[]) => setPresenceUsers(list);
-    const onUnread = (data: { tripId: string; count: number }) => {
-      if (data.tripId === activeTripId) setChatUnread(data.count);
+    const clearIdleTimer = () => {
+      if (idleTimerRef.current) {
+        clearTimeout(idleTimerRef.current);
+        idleTimerRef.current = null;
+      }
     };
 
-    socket.on(SERVER_EVENTS.PRESENCE_UPDATE, onPresence);
-    socket.on(SERVER_EVENTS.UNREAD_COUNT, onUnread);
+    const scheduleIdleTimer = () => {
+      clearIdleTimer();
+      idleTimerRef.current = setTimeout(() => {
+        setIsAppIdle(true);
+      }, idleThresholdMs);
+    };
 
-    if (socket.connected) {
-      socket.emit(CLIENT_EVENTS.JOIN_TRIP, activeTripId);
-    } else {
-      socket.once('connect', () => {
-        socket.emit(CLIENT_EVENTS.JOIN_TRIP, activeTripId);
-      });
+    const markActive = () => {
+      setIsAppIdle(false);
+      scheduleIdleTimer();
+    };
+
+    markActive();
+
+    const appStateSubscription = AppState.addEventListener('change', (nextState: string) => {
+      if (nextState === 'active') {
+        markActive();
+        return;
+      }
+      setIsAppIdle(true);
+      clearIdleTimer();
+    });
+
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof document !== 'undefined') {
+      const onVisibilityChange = () => {
+        if (document.hidden) {
+          setIsAppIdle(true);
+          clearIdleTimer();
+          return;
+        }
+        markActive();
+      };
+
+      const activityEvents: Array<keyof WindowEventMap> = ['pointerdown', 'pointermove', 'keydown', 'scroll', 'focus'];
+      document.addEventListener('visibilitychange', onVisibilityChange);
+      activityEvents.forEach((eventName) => window.addEventListener(eventName, markActive, { passive: true }));
+
+      return () => {
+        clearIdleTimer();
+        appStateSubscription.remove();
+        document.removeEventListener('visibilitychange', onVisibilityChange);
+        activityEvents.forEach((eventName) => window.removeEventListener(eventName, markActive));
+      };
     }
 
     return () => {
-      socket.off(SERVER_EVENTS.PRESENCE_UPDATE, onPresence);
-      socket.off(SERVER_EVENTS.UNREAD_COUNT, onUnread);
+      clearIdleTimer();
+      appStateSubscription.remove();
     };
-  }, [userToken, activeTripId]);
+  }, []);
 
-  useEffect(() => {
-    if (!userToken) return;
-    const pendingEntries = Object.entries(asyncItineraryByTrip).filter(([, tracker]) => tracker.status === 'pending');
-    if (!pendingEntries.length) return;
+  // Socket.IO presence + chat UI state live in PresenceProvider / ChatProvider
+  // (wrapped around the AppShell render tree), so AppShell itself does not
+  // re-render on every presence heartbeat.
 
-    let cancelled = false;
-    const poll = async () => {
-      const nextEntries = await Promise.all(
-        pendingEntries.map(async ([tripId, tracker]) => {
-          try {
-            const res = await fetch(`${backendUrl}/api/itinerary/async/${encodeURIComponent(tracker.jobId)}`, {
-              headers,
-              cache: 'no-store',
-            });
-            if (!res.ok) return [tripId, { ...tracker, status: 'failed', error: `status ${res.status}` }] as const;
-            const data = await res.json().catch(() => ({}));
-            const status = String((data as any).status ?? '').toLowerCase();
-            if (status === 'completed') return [tripId, null] as const;
-            if (status === 'failed') {
-              return [tripId, { ...tracker, status: 'failed', error: String((data as any).error ?? 'generation failed') }] as const;
-            }
-            return [tripId, tracker] as const;
-          } catch (err) {
-            return [tripId, { ...tracker, status: 'failed', error: (err as Error).message }] as const;
-          }
-        })
-      );
-      if (cancelled) return;
-
-      let changed = false;
-      let completedCount = 0;
-      const nextState = { ...asyncItineraryByTrip };
-      for (const [tripId, nextTracker] of nextEntries) {
-        if (nextTracker === null) {
-          if (nextState[tripId]) {
-            delete nextState[tripId];
-            changed = true;
-            completedCount += 1;
-          }
-          continue;
-        }
-        const prev = asyncItineraryByTrip[tripId];
-        if (!prev || prev.status !== nextTracker.status || prev.error !== nextTracker.error || prev.jobId !== nextTracker.jobId) {
-          nextState[tripId] = nextTracker;
-          changed = true;
-        }
-      }
-      if (changed) {
-        setAsyncItineraryByTrip(nextState);
-      }
-      if (completedCount > 0) {
-        await refreshAllData();
-      }
-    };
-
-    void poll();
-    const interval = setInterval(() => void poll(), 5000);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [asyncItineraryByTrip, backendUrl, headers, refreshAllData, userToken]);
+  useAsyncItineraryPolling({
+    asyncItineraryByTrip,
+    backendUrl,
+    headers,
+    refreshPageData,
+    setAsyncItineraryByTrip,
+    userToken,
+  });
 
   useEffect(() => {
     if (!userToken) {
@@ -2002,13 +1967,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       setInvitesLoaded(false);
       return;
     }
-    setPendingInviteModalOpen(invites.length > 0);
-  }, [invites, userToken]);
+    setPendingInviteModalOpen(invites.length > 0 || pendingTripShareInvites.length > 0 || Boolean(pendingFollowCode));
+  }, [invites, pendingFollowCode, pendingTripShareInvites.length, userToken]);
 
   useEffect(() => {
     if (!userToken || !deferFirstLoginRedirect) return;
     if (!invitesLoaded) return;
-    if (pendingInviteModalOpen || invites.length) return;
+    if (pendingInviteModalOpen || invites.length || pendingTripShareInvites.length || pendingFollowCode) return;
     setDeferFirstLoginRedirect(false);
     setActivePage('account');
     saveSession(userToken, userName ?? 'Traveler', 'account', userEmail ?? undefined, activeTripId ?? null, pageHistory, userRole);
@@ -2018,7 +1983,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     invites.length,
     invitesLoaded,
     pageHistory,
+    pendingFollowCode,
     pendingInviteModalOpen,
+    pendingTripShareInvites.length,
     userEmail,
     userName,
     userRole,
@@ -2026,12 +1993,19 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   ]);
 
   useEffect(() => {
+    if (userToken) {
+      connectSocket(userToken);
+    }
+  }, [userToken]);
+
+  useEffect(() => {
     if (userToken && !requirePasswordSetup) {
       fetchTrips();
       fetchGroups();
       fetchInvites();
+      fetchPendingTripShareInvites();
     }
-  }, [userToken, requirePasswordSetup, fetchTrips, fetchGroups, fetchInvites]);
+  }, [userToken, requirePasswordSetup, fetchTrips, fetchGroups, fetchInvites, fetchPendingTripShareInvites]);
 
   useEffect(() => {
     if (userToken) return;
@@ -2040,10 +2014,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       const decoded = decodeTokenClaims(session.token);
       const restoredRole: 'user' | 'admin' =
         session.role === 'admin' || decoded?.role === 'admin' ? 'admin' : 'user';
-      setUserToken(session.token);
-      setUserName(session.name);
-      setUserEmail(session.email ?? null);
-      setUserRole(restoredRole);
+      applySession({
+        token: session.token,
+        name: session.name,
+        email: session.email ?? null,
+        userId: (decoded as any)?.userId ?? null,
+        role: restoredRole,
+      });
       const sessionHistory = Array.isArray(session.pageHistory)
         ? session.pageHistory.filter((p) => typeof p === 'string') as Page[]
         : [];
@@ -2084,49 +2061,25 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     }
   }, [userToken]);
 
-  useEffect(() => {
-    const stored = loadFollowCodes();
-    if (Object.keys(stored).length) {
-      setFollowCodes(stored);
-    }
-    const storedPayloads = loadFollowPayloads();
-    if (Object.keys(storedPayloads).length) {
-      setFollowCodePayloads(storedPayloads);
-    }
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      const storedPending = window.localStorage.getItem(pendingFollowCodeStorageKey)?.trim() || null;
-      const initialFollowCode = _capturedInitialFollowCode ?? extractFollowCodeFromUrl(window.location.href) ?? storedPending;
-      _capturedInitialFollowCode = null;
-      if (initialFollowCode) {
-        setPendingFollowCode(initialFollowCode);
-        setFollowInviteCode(initialFollowCode);
-        try {
-          const cleanUrl = new URL(window.location.href);
-          cleanUrl.searchParams.delete('followCode');
-          window.history.replaceState({}, '', cleanUrl.toString());
-        } catch {
-          // ignore cleanup failures
-        }
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    saveFollowCodes(followCodes);
-  }, [followCodes]);
-
-  useEffect(() => {
-    saveFollowPayloads(followCodePayloads);
-  }, [followCodePayloads]);
-
+  // useFollowedTrips owns localStorage persistence for follow codes/payloads and
+  // pendingFollowCode. This effect only handles the URL-query-param capture
+  // on first load (?followCode=...) which is App.tsx-specific bootstrap.
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof window === 'undefined') return;
-    if (pendingFollowCode) {
-      window.localStorage.setItem(pendingFollowCodeStorageKey, pendingFollowCode);
-    } else {
-      window.localStorage.removeItem(pendingFollowCodeStorageKey);
+    const initialFollowCode = _capturedInitialFollowCode ?? extractFollowCodeFromUrl(window.location.href);
+    _capturedInitialFollowCode = null;
+    if (initialFollowCode) {
+      setPendingFollowCode(initialFollowCode);
+      setFollowInviteCode(initialFollowCode);
+      try {
+        const cleanUrl = new URL(window.location.href);
+        cleanUrl.searchParams.delete('followCode');
+        window.history.replaceState({}, '', cleanUrl.toString());
+      } catch {
+        // ignore cleanup failures
+      }
     }
-  }, [pendingFollowCode]);
+  }, [setFollowInviteCode, setPendingFollowCode]);
 
   useEffect(() => {
     if (!selectedFollowedTripId) return;
@@ -2135,60 +2088,20 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     }
   }, [followedTrips, selectedFollowedTripId]);
 
-  useEffect(() => {
-    if (!selectedFollowedTripId || !userToken) {
-      setSelectedFollowedTripDetails(null);
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch(`${backendUrl}/api/trips/${selectedFollowedTripId}`, {
-          headers: { Authorization: `Bearer ${userToken}` },
-        });
-        if (!res.ok) {
-          if (!cancelled) setSelectedFollowedTripDetails(null);
-          return;
-        }
-        const data = await res.json().catch(() => null);
-        if (!cancelled && data?.id) {
-          setSelectedFollowedTripDetails({
-            id: data.id,
-            groupId: data.groupId ?? '',
-            groupName: data.groupName ?? '',
-            name: data.name ?? selectedFollowedTrip?.tripName ?? 'Trip',
-            description: data.description ?? null,
-            destination: data.destination ?? selectedFollowedTrip?.destination ?? null,
-            locationIds: Array.isArray(data.locationIds) ? data.locationIds : [],
-            startDate: data.startDate ?? null,
-            endDate: data.endDate ?? null,
-            startMonth: data.startMonth ?? null,
-            startYear: data.startYear ?? null,
-            durationDays: data.durationDays ?? null,
-            currency: data.currency ?? null,
-            createdAt: data.createdAt ?? '',
-          });
-        }
-      } catch {
-        if (!cancelled) setSelectedFollowedTripDetails(null);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [backendUrl, selectedFollowedTrip?.destination, selectedFollowedTrip?.tripName, selectedFollowedTripId, userToken]);
+  // The selectedFollowedTripDetails fetch effect is now owned by useSelectedFollowedTripDetails.
 
   useEffect(() => {
     if (!userToken || requirePasswordSetup) return;
     if (!Number.isFinite(refreshIntervalMs) || refreshIntervalMs <= 0) return;
+    const effectiveRefreshIntervalMs = isAppIdle ? refreshIntervalMs * idleRefreshMultiplier : refreshIntervalMs;
     const now = Date.now();
     const last = lastRefreshAt ?? now;
-    const delay = Math.max(0, refreshIntervalMs - (now - last));
+    const delay = Math.max(0, effectiveRefreshIntervalMs - (now - last));
     if (refreshTimerRef.current) {
       clearTimeout(refreshTimerRef.current);
     }
     refreshTimerRef.current = setTimeout(() => {
-      refreshAllData();
+      refreshPageData();
     }, delay);
     return () => {
       if (refreshTimerRef.current) {
@@ -2196,50 +2109,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         refreshTimerRef.current = null;
       }
     };
-  }, [activeTripId, lastRefreshAt, userToken, requirePasswordSetup, refreshIntervalMs, refreshAllData]);
-
-  useEffect(() => {
-    if (userToken && !requirePasswordSetup) {
-      fetchFlights();
-      fetchLodgings();
-      fetchTours();
-      fetchExpenses();
-    }
-  }, [activeTripId, fetchFlights, fetchLodgings, fetchTours, fetchExpenses, userToken, requirePasswordSetup]);
-
-  useEffect(() => {
-    if (userToken && !requirePasswordSetup) {
-      loadFamilyRelationships();
-      loadFellowTravelers();
-    }
-  }, [loadFamilyRelationships, loadFellowTravelers, userToken, requirePasswordSetup]);
-
-  useEffect(() => {
-    if (!userToken || requirePasswordSetup || !pendingFollowCode) return;
-    const redemptionKey = `${userToken}:${pendingFollowCode}`;
-    if (autoRedeemedFollowCodeRef.current === redemptionKey) return;
-    autoRedeemedFollowCodeRef.current = redemptionKey;
-
-    let cancelled = false;
-    const redeemFollowCode = async () => {
-      const error = await handleFollowTripByCode(pendingFollowCode);
-      if (cancelled) return;
-      if (!error) {
-        setPendingFollowCode(null);
-      }
-    };
-
-    void redeemFollowCode();
-    return () => {
-      cancelled = true;
-    };
-  }, [handleFollowTripByCode, pendingFollowCode, requirePasswordSetup, userToken]);
-
-  useEffect(() => {
-    if (userToken && !requirePasswordSetup) {
-      fetchGroupMembersForActiveTrip();
-    }
-  }, [userToken, requirePasswordSetup, activeTripId, trips, fetchGroupMembersForActiveTrip]);
+  }, [activePage, activeTripId, isAppIdle, lastRefreshAt, userToken, requirePasswordSetup, refreshIntervalMs, refreshPageData]);
 
   useEffect(() => {
     if (!userToken || !activeTripId) {
@@ -2293,75 +2163,40 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       payload = relEmail ? { email: relEmail } : { guestName: relName || 'Relationship' };
     }
 
-    const res = await fetch(`${backendUrl}/api/groups/${groupId}/members`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...headers },
-      body: JSON.stringify(payload),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      alert(data.error || 'Unable to add member');
+    const result = await addGroupMemberRequest(groupId, payload);
+    if (!result.ok) {
+      alert(result.error || 'Unable to add member');
       return;
     }
     setGroupAddEmail((prev) => ({ ...prev, [groupId]: '' }));
     setGroupAddRelationship((prev) => ({ ...prev, [groupId]: '' }));
-    fetchGroups();
     fetchInvites();
   };
 
   const removeMemberFromGroup = async (groupId: string, memberId: string) => {
-    if (!userToken) return;
-    const res = await fetch(`${backendUrl}/api/groups/${groupId}/members/${memberId}`, {
-      method: 'DELETE',
-      headers,
-    });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      alert(data.error || 'Unable to remove member');
+    const result = await removeGroupMemberRequest(groupId, memberId);
+    if (!result.ok) {
+      alert(result.error || 'Unable to remove member');
       return;
     }
-    fetchGroups();
   };
 
   const cancelInvite = async (inviteId: string) => {
-    if (!userToken) return;
-    const res = await fetch(`${backendUrl}/api/groups/invites/${inviteId}`, {
-      method: 'DELETE',
-      headers,
-    });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      alert(data.error || 'Unable to cancel invite');
+    const result = await cancelGroupInviteRequest(inviteId);
+    if (!result.ok) {
+      alert(result.error || 'Unable to cancel invite');
       return;
     }
-    fetchGroups();
   };
 
   const createTrip = async () => {
-    if (!userToken || !newTripName.trim() || !newTripGroupId) {
-      alert('Enter a trip name and choose a group');
-      return;
+    const result = await submitCreateTripWizard();
+    if (!result.ok) {
+      alert(result.error || 'Unable to create trip');
     }
-    const res = await fetch(`${backendUrl}/api/trips`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...headers },
-      body: JSON.stringify({ name: newTripName.trim(), groupId: newTripGroupId }),
-    });
-    if (res.status === 401 || res.status === 403) {
-      logout();
-      return;
-    }
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      alert(data.error || 'Unable to create trip');
-      return;
-    }
-    setNewTripName('');
-    if (data?.id) setActiveTripId(data.id as string);
-    fetchTrips();
   };
 
-  const onTripCreated = (tripId: string) => {
+  const onTripCreated = useCallback((tripId: string) => {
     setActiveTripId(tripId);
     fetchTrips();
     fetchGroups();
@@ -2369,7 +2204,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setPageForwardHistory([]);
     setPageHistory((prev) => prev.slice(-25));
     setActivePage('overview');
-  };
+  }, [fetchTrips, fetchGroups, fetchInvites]);
 
   const onAiItineraryQueued = useCallback((tripId: string, jobId: string) => {
     setAsyncItineraryByTrip((prev) => ({
@@ -2395,34 +2230,52 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     fetchTrips();
   };
 
-  const changeTripGroup = async (tripId: string, groupId: string) => {
-    if (!userToken) return;
-    const res = await fetch(`${backendUrl}/api/trips/${tripId}/group`, {
+  // PATCH /api/trips/:id/group is naturally idempotent (replaces the trip's
+  // group with a fixed value). Wrapping in useRetryableMutation so a
+  // transient network failure surfaces through the red banner below instead
+  // of an alert() — the user can retry without re-opening the dropdown.
+  const tripGroupMutation = useRetryableMutation<
+    { tripId: string; groupId: string },
+    unknown
+  >(async ({ tripId, groupId }) => {
+    return requestJson<unknown>(`${backendUrl}/api/trips/${tripId}/group`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', ...headers },
-      body: JSON.stringify({ groupId }),
+      body: { groupId },
     });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      alert(data.error || 'Unable to change trip group');
+  });
+
+  const changeTripGroup = async (tripId: string, groupId: string) => {
+    if (!userToken) return;
+    const result = await tripGroupMutation.run({ tripId, groupId });
+    if (result === null) {
+      // Failure is surfaced by <RetryableErrorBanner> in the top bar area —
+      // no alert() so the user can retry in place.
       return;
     }
     setTripDropdownOpenId(null);
     fetchTrips();
   };
 
-  const updateTripCurrency = async (tripId: string, currency: string) => {
-    if (!userToken) return;
-    const res = await fetch(`${backendUrl}/api/trips/${tripId}`, {
+  // PATCH /api/trips/:id setting `currency` is naturally idempotent (replaces
+  // the trip's currency with a fixed value), so a transient network failure
+  // surfaces through the red banner and the user can retry without re-
+  // selecting the new currency from the dropdown.
+  const tripCurrencyMutation = useRetryableMutation<
+    { tripId: string; currency: string },
+    unknown
+  >(async ({ tripId, currency }) => {
+    return requestJson<unknown>(`${backendUrl}/api/trips/${tripId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', ...headers },
-      body: JSON.stringify({ currency }),
+      body: { currency },
     });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      alert(data.error || 'Unable to update currency');
-      return;
-    }
+  });
+
+  const updateTripCurrency = async (tripId: string, currency: string) => {
+    if (!userToken) return;
+    const result = await tripCurrencyMutation.run({ tripId, currency });
+    if (result === null) return;
     fetchTrips();
     fetchExpenses();
   };
@@ -2487,6 +2340,11 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     if (!userToken) return;
     saveSession(userToken, userName ?? 'Traveler', activePage, userEmail, activeTripId, pageHistory, userRole);
   }, [userToken, userName, userEmail, activePage, activeTripId, pageHistory, userRole]);
+
+  useEffect(() => {
+    if (!userEmail) return;
+    saveLastActiveTripId(activeTripId, userEmail);
+  }, [activeTripId, userEmail]);
 
   const disabledPages = useMemo(() => {
     const pages: Page[] = [
@@ -2590,6 +2448,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   );
 
   const mainWorkspace = (
+    <PresenceProvider activeTripId={activeTripId} userToken={userToken}>
+      <ChatProvider activeTripId={activeTripId} userToken={userToken}>
     <SafeAreaView style={[styles.container, iosSafariSafeAreaStyle]}>
       <View style={[styles.topBar, isNarrowLayout && styles.topBarStacked]}>
         <View style={[styles.topBarLeft, isNarrowLayout && styles.topBarLeftNarrow]}>
@@ -2663,30 +2523,30 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   {showActiveTripDropdown && (
                     <View style={styles.dropdownList}>
                       {trips.map((trip) => (
-                        <TouchableOpacity
+                        <DropdownOptionButton
                           key={trip.id}
-                          style={styles.dropdownOption}
+                          styles={styles}
                           onPress={() => {
                             handleSelectOwnedTrip(trip.id);
                             setShowActiveTripDropdown(false);
                           }}
                         >
                           <Text style={styles.cellText}>{trip.name}</Text>
-                        </TouchableOpacity>
+                        </DropdownOptionButton>
                       ))}
                       {followedTrips.length ? (
                         <View>
                           <Text style={styles.modalLabelSmall}>Followed Trips</Text>
                           {followedTrips.map((trip) => (
-                            <TouchableOpacity
+                            <DropdownOptionButton
                               key={`followed-${trip.tripId}`}
-                              style={styles.dropdownOption}
+                              styles={styles}
                               onPress={() => {
                                 handleSelectFollowedTrip(trip.tripId);
                               }}
                             >
                               <Text style={styles.cellText}>{trip.tripName} (Following)</Text>
-                            </TouchableOpacity>
+                            </DropdownOptionButton>
                           ))}
                         </View>
                       ) : null}
@@ -2702,9 +2562,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               {!isPhoneLayout ? (
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   {activeTripId && (
-                    <PresenceAvatars
+                    <PresenceAvatarsContainer
                       currentUserId={userId ?? ''}
-                      presenceUsers={presenceUsers}
                       theme={theme}
                     />
                   )}
@@ -2832,19 +2691,49 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   payerName={payerName}
                   saveCoveredBy={saveCoveredBy}
                   readOnly={isFollowingMode}
+                  payments={tripPayments}
+                  currentUserMemberId={currentUserMemberId}
+                  onAddPayment={addTripPayment}
+                  onDeletePayment={deleteTripPayment}
                 />
               )
             : null}
 
+          {activePage === 'ledger' ? (
+            <RetryableErrorBanner
+              state={coveredByMutation.state}
+              error={coveredByMutation.error}
+              onRetry={coveredByMutation.retry}
+              onDismiss={coveredByMutation.reset}
+              actionLabel="Save covering rules"
+            />
+          ) : null}
+          <RetryableErrorBanner
+            state={tripGroupMutation.state}
+            error={tripGroupMutation.error}
+            onRetry={tripGroupMutation.retry}
+            onDismiss={tripGroupMutation.reset}
+            actionLabel="Move trip to group"
+          />
+          <RetryableErrorBanner
+            state={tripCurrencyMutation.state}
+            error={tripCurrencyMutation.error}
+            onRetry={tripCurrencyMutation.retry}
+            onDismiss={tripCurrencyMutation.reset}
+            actionLabel="Update trip currency"
+          />
+
           {activePage === 'ingest'
             ? renderSharedPageScroll(
-                <IngestionTab
-                  backendUrl={backendUrl}
-                  headers={headers}
-                  styles={styles}
-                  onNavigate={handleHomeNavigate}
-                  onAssignmentApplied={handleIngestionAssignmentApplied}
-                />
+                <Suspense fallback={<LazyTabFallback label="Loading ingestion…" testID="lazy-ingestion-fallback" />}>
+                  <IngestionTab
+                    backendUrl={backendUrl}
+                    headers={headers}
+                    styles={styles}
+                    onNavigate={handleHomeNavigate}
+                    onAssignmentApplied={handleIngestionAssignmentApplied}
+                  />
+                </Suspense>
               )
             : null}
 
@@ -3003,306 +2892,25 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         : null}
 
       {activePage === 'car' ? renderSharedPageScroll(
-        <View style={styles.card}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>Car Rentals</Text>
-          </View>
-          <View style={styles.table}>
-            <View style={[styles.tableRow, styles.tableHeaderRow]}>
-              <View style={[styles.tableHeaderCell, { flex: 2, minWidth: 240 }]}>
-                <Text style={styles.headerText}>Route</Text>
-              </View>
-              <View style={[styles.tableHeaderCell, { minWidth: 120 }]}>
-                <Text style={styles.headerText}>Pick-up</Text>
-              </View>
-              <View style={[styles.tableHeaderCell, { minWidth: 120 }]}>
-                <Text style={styles.headerText}>Drop-off</Text>
-              </View>
-              <View style={[styles.tableHeaderCell, { minWidth: 110 }]}>
-                <Text style={styles.headerText}>Status</Text>
-              </View>
-              <View style={[styles.tableHeaderCell, { minWidth: 110 }]}>
-                <Text style={styles.headerText}>Votes</Text>
-              </View>
-              <View style={[styles.tableHeaderCell, { minWidth: 110 }]}>
-                <Text style={styles.headerText}>Rating</Text>
-              </View>
-              <View style={[styles.tableHeaderCell, { minWidth: 180 }, styles.lastCell]}>
-                <Text style={styles.headerText}>Actions</Text>
-              </View>
-            </View>
-
-            {carRentals.map((car, idx, arr) => (
-              <View key={car.id} style={[styles.tableRow, idx === arr.length - 1 && styles.lastRow]}>
-                <View style={[styles.tableCell, { flex: 2, minWidth: 240 }]}>
-                  <Text style={styles.cellText}>
-                    {`${car.pickupLocation || 'Pickup'} → ${car.dropoffLocation || 'Drop-off'}`}
-                  </Text>
-                  {(car.vendor || car.model || car.reference) ? (
-                    <Text style={styles.helperText}>
-                      {[car.vendor, car.model, car.reference].filter(Boolean).join(' • ')}
-                    </Text>
-                  ) : null}
-                </View>
-                <View style={[styles.tableCell, { minWidth: 120 }]}>
-                  <Text style={styles.cellText}>{car.pickupDate || '-'}</Text>
-                </View>
-                <View style={[styles.tableCell, { minWidth: 120 }]}>
-                  <Text style={styles.cellText}>{car.dropoffDate || '-'}</Text>
-                </View>
-                <View style={[styles.tableCell, { minWidth: 110 }]}>
-                  <Text style={styles.cellText}>
-                    {normalizeItineraryStatus((car as any).status, LEGACY_ITINERARY_STATUS)}
-                  </Text>
-                </View>
-                <View style={[styles.tableCell, { minWidth: 110 }]}>
-                  <Text style={styles.cellText}>{formatNetVotes((car as any).netVotes ?? 0)}</Text>
-                </View>
-                <View style={[styles.tableCell, { minWidth: 110 }]}>
-                  {normalizeItineraryStatus((car as any).status, LEGACY_ITINERARY_STATUS) === 'Completed' ? (
-                    <Text style={styles.cellText}>{formatNetVotes((car as any).netRating ?? 0)}</Text>
-                  ) : (
-                    <Text style={styles.cellText}>-</Text>
-                  )}
-                </View>
-                <View style={[styles.tableCell, { minWidth: 180 }, styles.lastCell]}>
-                  <View style={styles.actionCell}>
-                    {!isFollowingMode && shouldShowVoteButtons((car as any).status, (car as any).userVote) ? (
-                      <>
-                        <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => voteOnCarRental(car.id, 1)}>
-                          <Text style={styles.buttonText}>👍</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => voteOnCarRental(car.id, -1)}>
-                          <Text style={styles.buttonText}>👎</Text>
-                        </TouchableOpacity>
-                      </>
-                    ) : null}
-                    {!isFollowingMode && shouldShowRatingButtons((car as any).status, (car as any).userRating) ? (
-                      <>
-                        <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => rateOnCarRental(car.id, 1)}>
-                          <Text style={styles.buttonText}>⭐</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => rateOnCarRental(car.id, -1)}>
-                          <Text style={styles.buttonText}>✖</Text>
-                        </TouchableOpacity>
-                      </>
-                    ) : null}
-                    {!isFollowingMode ? (
-                      <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => removeCarRental(car.id)} testID={`car-rental-delete-${car.id}`}>
-                        <Text style={styles.dangerButtonText}>Delete</Text>
-                      </TouchableOpacity>
-                    ) : (
-                      <Text style={styles.cellText}>View only</Text>
-                    )}
-                  </View>
-                </View>
-              </View>
-            ))}
-          </View>
-
-          {!isFollowingMode ? (
-            <View style={styles.carFormSection}>
-              <Text style={styles.helperText}>Add Car Rental</Text>
-              <View style={styles.carFormGrid}>
-              <TextInput
-                style={[styles.input, styles.carFormField]}
-                placeholder="Pick up location"
-                value={carDraft.pickupLocation}
-                onChangeText={(text: string) => setCarDraft((p) => ({ ...p, pickupLocation: text }))}
-              />
-              <View style={[styles.dateInputWrap, styles.carFormField]}>
-                {Platform.OS === 'web' ? (
-                  <input
-                    ref={carPickupDateRef as any}
-                    type="date"
-                    value={carDraft.pickupDate}
-                    onChange={(e) => setCarDraft((p) => ({ ...p, pickupDate: e.target.value }))}
-                    style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box', marginBottom: 0 })}
-                  />
-                ) : (
-                  <TouchableOpacity
-                    style={[styles.input, styles.dateTouchable, { marginBottom: 0 }]}
-                    onPress={() => openCarDatePicker('pickup')}
-                  >
-                    <Text style={styles.cellText}>{carDraft.pickupDate || 'YYYY-MM-DD'}</Text>
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity style={styles.dateIcon} onPress={() => openCarDatePicker('pickup')}>
-                  <Text style={styles.selectCaret}>📅</Text>
-                </TouchableOpacity>
-              </View>
-              <TextInput
-                style={[styles.input, styles.carFormField]}
-                placeholder="Drop off location"
-                value={carDraft.dropoffLocation}
-                onChangeText={(text: string) => setCarDraft((p) => ({ ...p, dropoffLocation: text }))}
-              />
-              <View style={[styles.dateInputWrap, styles.carFormField]}>
-                {Platform.OS === 'web' ? (
-                  <input
-                    ref={carDropoffDateRef as any}
-                    type="date"
-                    value={carDraft.dropoffDate}
-                    onChange={(e) => setCarDraft((p) => ({ ...p, dropoffDate: e.target.value }))}
-                    style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box', marginBottom: 0 })}
-                  />
-                ) : (
-                  <TouchableOpacity
-                    style={[styles.input, styles.dateTouchable, { marginBottom: 0 }]}
-                    onPress={() => openCarDatePicker('dropoff')}
-                  >
-                    <Text style={styles.cellText}>{carDraft.dropoffDate || 'YYYY-MM-DD'}</Text>
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity style={styles.dateIcon} onPress={() => openCarDatePicker('dropoff')}>
-                  <Text style={styles.selectCaret}>📅</Text>
-                </TouchableOpacity>
-              </View>
-              {Platform.OS === 'web' ? (
-                <select
-                  value={normalizeItineraryStatus(carDraft.status, DEFAULT_NEW_ITINERARY_STATUS)}
-                  onChange={(e) => setCarDraft((p) => ({ ...p, status: normalizeItineraryStatus(e.target.value, DEFAULT_NEW_ITINERARY_STATUS) }))}
-                  style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box', marginBottom: 0 })}
-                >
-                  {ITINERARY_STATUSES.map((opt) => (
-                    <option key={`car-status-${opt}`} value={opt}>
-                      {opt}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <Text style={styles.cellText}>{normalizeItineraryStatus(carDraft.status, DEFAULT_NEW_ITINERARY_STATUS)}</Text>
-              )}
-              <TextInput
-                style={[styles.input, styles.carFormField]}
-                placeholder="Reference"
-                value={carDraft.reference}
-                onChangeText={(text: string) => setCarDraft((p) => ({ ...p, reference: text }))}
-              />
-              <TextInput
-                style={[styles.input, styles.carFormField]}
-                placeholder="Vendor"
-                value={carDraft.vendor}
-                onChangeText={(text: string) => setCarDraft((p) => ({ ...p, vendor: text }))}
-              />
-              <View style={[styles.dropdown, styles.carFormField]}>
-                <TouchableOpacity
-                  style={[
-                    styles.input,
-                    styles.selectButtonRow,
-                    styles.prepaidSelectorButton,
-                    carDraft.prepaid ? styles.prepaidSelectorButtonSelected : null,
-                  ]}
-                  onPress={() => setCarPrepaidOpen((s) => !s)}
-                >
-                  <Text style={[styles.cellText, styles.prepaidSelectorText]}>
-                    {carDraft.prepaid ? `Prepaid: ${carDraft.prepaid}` : 'Prepaid? Select Yes or No'}
-                  </Text>
-                  <Text style={styles.selectCaret}>▾</Text>
-                </TouchableOpacity>
-                {carPrepaidOpen ? (
-                  <View style={[styles.dropdownList, styles.prepaidDropdownList]}>
-                    {['Yes', 'No'].map((opt) => (
-                      <TouchableOpacity
-                        key={opt}
-                        style={styles.dropdownOption}
-                        onPress={() => {
-                          setCarDraft((p) => ({ ...p, prepaid: opt }));
-                          setCarPrepaidOpen(false);
-                        }}
-                      >
-                        <Text style={styles.cellText}>{opt}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                ) : null}
-              </View>
-              <TextInput
-                style={[styles.input, styles.carFormField]}
-                placeholder="Cost"
-                keyboardType="numeric"
-                value={carDraft.cost}
-                onChangeText={(text: string) => setCarDraft((p) => ({ ...p, cost: sanitizeCostInput(text) }))}
-              />
-              <TextInput
-                style={[styles.input, styles.carFormField]}
-                placeholder="Car model"
-                value={carDraft.model}
-                onChangeText={(text: string) => setCarDraft((p) => ({ ...p, model: text }))}
-              />
-              <TextInput
-                style={[styles.input, styles.carFormWideField, styles.cellTextWrap]}
-                placeholder="Notes"
-                value={carDraft.notes}
-                onChangeText={(text: string) => setCarDraft((p) => ({ ...p, notes: text }))}
-                multiline
-              />
-              </View>
-              <View style={styles.carMemberRow}>
-                <View style={[styles.carMemberField, { flex: 1 }]}>
-                  <Text style={styles.modalLabelSmall}>For</Text>
-                  <View style={styles.payerChips}>
-                    {carDraft.travelerIds.map((id) => (
-                      <View key={`car-traveler-${id}`} style={styles.payerChip}>
-                        <Text style={styles.cellText}>{payerName(id)}</Text>
-                        <TouchableOpacity onPress={() => setCarDraft((prev) => ({ ...prev, travelerIds: prev.travelerIds.filter((x) => x !== id) }))}>
-                          <Text style={styles.removeText}>x</Text>
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                  </View>
-                  <View style={styles.payerOptions}>
-                    {userMembers
-                      .filter((m) => !carDraft.travelerIds.includes(m.id))
-                      .map((m) => (
-                        <TouchableOpacity
-                          key={`car-traveler-add-${m.id}`}
-                          style={styles.smallButton}
-                          onPress={() =>
-                            setCarDraft((prev) => ({
-                              ...prev,
-                              travelerIds: [...prev.travelerIds, m.id],
-                            }))
-                          }
-                        >
-                          <Text style={styles.buttonText}>Add {formatMemberName(m)}</Text>
-                        </TouchableOpacity>
-                      ))}
-                  </View>
-                </View>
-                <View style={[styles.carMemberField, { flex: 1 }]}>
-                  <Text style={styles.modalLabelSmall}>Paid By</Text>
-                  <View style={styles.payerChips}>
-                    {carDraft.paidBy.map((id) => (
-                      <View key={id} style={styles.payerChip}>
-                        <Text style={styles.cellText}>{payerName(id)}</Text>
-                        <TouchableOpacity onPress={() => setCarDraft((prev) => ({ ...prev, paidBy: prev.paidBy.filter((x) => x !== id) }))}>
-                          <Text style={styles.removeText}>x</Text>
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                  </View>
-                  <View style={styles.payerOptions}>
-                    {userMembers
-                      .filter((m) => !carDraft.paidBy.includes(m.id))
-                      .map((m) => (
-                        <TouchableOpacity
-                          key={m.id}
-                          style={styles.smallButton}
-                          onPress={() => setCarDraft((prev) => ({ ...prev, paidBy: [...prev.paidBy, m.id] }))}
-                        >
-                          <Text style={styles.buttonText}>Add {formatMemberName(m)}</Text>
-                        </TouchableOpacity>
-                      ))}
-                  </View>
-                </View>
-                <TouchableOpacity style={[styles.button, styles.carAddButton]} onPress={addCarRental} testID="car-rental-add">
-                  <Text style={styles.buttonText}>Add</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          ) : null}
-        </View>
+        <CarRentalsPanel
+          carRentals={carRentals}
+          carDraft={carDraft}
+          setCarDraft={setCarDraft}
+          carPrepaidOpen={carPrepaidOpen}
+          setCarPrepaidOpen={setCarPrepaidOpen}
+          carPickupDateRef={carPickupDateRef}
+          carDropoffDateRef={carDropoffDateRef}
+          isFollowingMode={isFollowingMode}
+          userMembers={userMembers}
+          styles={styles}
+          payerName={payerName}
+          formatMemberName={formatMemberName}
+          onAddCarRental={addCarRental}
+          onRemoveCarRental={removeCarRental}
+          onVoteCarRental={voteOnCarRental}
+          onRateCarRental={rateOnCarRental}
+          onOpenCarDatePicker={openCarDatePicker}
+        />
       ) : null}
 
       {Platform.OS !== 'web' && carDateField && NativeDateTimePicker ? (
@@ -3337,7 +2945,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               headers={headers}
               jsonHeaders={jsonHeaders}
               findActiveTrip={getActiveTrip}
-              fetchGroupMembersForActiveTrip={fetchGroupMembersForActiveTrip}
+              fetchGroupMembersForActiveTrip={async () => {
+                await fetchGroupMembersForActiveTrip();
+              }}
               styles={styles}
               airportOptions={flightAirportOptions}
               onSearchAirports={fetchFlightAirports}
@@ -3363,7 +2973,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           headers={headers}
           jsonHeaders={jsonHeaders}
           findActiveTrip={getActiveTrip}
-          fetchGroupMembersForActiveTrip={fetchGroupMembersForActiveTrip}
+          fetchGroupMembersForActiveTrip={async () => {
+            await fetchGroupMembersForActiveTrip();
+          }}
           styles={styles}
           airportOptions={flightAirportOptions}
           onSearchAirports={fetchFlightAirports}
@@ -3417,16 +3029,16 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   {showTripGroupDropdown && (
                     <View style={styles.dropdownList}>
                       {groups.map((g) => (
-                        <TouchableOpacity
+                        <DropdownOptionButton
                           key={g.id}
-                          style={styles.dropdownOption}
+                          styles={styles}
                           onPress={() => {
                             setNewTripGroupId(g.id);
                             setShowTripGroupDropdown(false);
                           }}
                         >
                           <Text style={styles.cellText}>{g.name}</Text>
-                        </TouchableOpacity>
+                        </DropdownOptionButton>
                       ))}
                     </View>
                   )}
@@ -3460,13 +3072,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                       {tripDropdownOpenId === trip.id && (
                         <View style={styles.dropdownList}>
                           {groups.map((g) => (
-                            <TouchableOpacity
+                            <DropdownOptionButton
                               key={g.id}
-                              style={styles.dropdownOption}
+                              styles={styles}
                               onPress={() => changeTripGroup(trip.id, g.id)}
                             >
                               <Text style={styles.cellText}>{g.name}</Text>
-                            </TouchableOpacity>
+                            </DropdownOptionButton>
                           ))}
                         </View>
                       )}
@@ -3514,7 +3126,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   onOpenAddress={openMaps}
                   onRefreshTrips={fetchTrips}
                   onRefreshGroups={fetchGroups}
-                  onRefreshGroupMembers={fetchGroupMembersForActiveTrip}
+                  onRefreshGroupMembers={async () => {
+                    await fetchGroupMembersForActiveTrip();
+                  }}
                   onFlightDataChanged={handleFlightsDataChanged}
                   onLodgingDataChanged={handleLodgingsDataChanged}
                   onTourDataChanged={handleToursDataChanged}
@@ -3591,109 +3205,22 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
         </View>
       ) : (
-        <View style={styles.auth}>
-          <View style={styles.toggleRow}>
-            <TouchableOpacity
-              style={[styles.toggleButton, authMode === 'login' && styles.toggleActive]}
-              onPress={() => setAuthMode('login')}
-            >
-              <Text style={styles.toggleText}>Login</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.toggleButton, authMode === 'register' && styles.toggleActive]}
-              onPress={() => setAuthMode('register')}
-            >
-              <Text style={styles.toggleText}>Create</Text>
-            </TouchableOpacity>
-          </View>
-
-          {authMode === 'register' ? (
-            <>
-              <TextInput
-                style={styles.input}
-                placeholder="First name"
-                autoComplete="given-name"
-                textContentType="givenName"
-                value={authForm.firstName}
-                onChangeText={(text: string) => setAuthForm((p) => ({ ...p, firstName: text }))}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Last name"
-                autoComplete="family-name"
-                textContentType="familyName"
-                value={authForm.lastName}
-                onChangeText={(text: string) => setAuthForm((p) => ({ ...p, lastName: text }))}
-              />
-            </>
-          ) : null}
-
-          <TextInput
-            style={styles.input}
-            placeholder="Email or Username"
-            autoCapitalize="none"
-            autoComplete={authMode === 'register' ? 'email' : 'username'}
-            textContentType={authMode === 'register' ? 'emailAddress' : 'username'}
-            inputMode="email"
-            nativeID="email"
-            value={authForm.email}
-            onChangeText={(text: string) => setAuthForm((p) => ({ ...p, email: text }))}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            secureTextEntry
-            autoComplete={authMode === 'register' ? 'new-password' : 'current-password'}
-            textContentType={authMode === 'register' ? 'newPassword' : 'password'}
-            nativeID="password"
-            value={authForm.password}
-            onChangeText={(text: string) => setAuthForm((p) => ({ ...p, password: text }))}
-          />
-          {authMode === 'register' ? (
-            <TextInput
-              style={styles.input}
-              placeholder="Confirm password"
-              secureTextEntry
-              autoComplete="new-password"
-              textContentType="newPassword"
-              nativeID="password-confirm"
-              value={authForm.passwordConfirm}
-              onChangeText={(text: string) => setAuthForm((p) => ({ ...p, passwordConfirm: text }))}
-            />
-          ) : null}
-          {authMode === 'login' && showResendConfirmation ? (
-            <View style={styles.row}>
-              <TouchableOpacity
-                style={[styles.button, styles.smallButton, resendConfirmationLoading && styles.buttonDisabled]}
-                onPress={resendConfirmationEmail}
-                disabled={resendConfirmationLoading}
-              >
-                <Text style={styles.buttonText}>{resendConfirmationLoading ? 'Resending...' : 'Resend confirmation'}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.button, styles.smallButton]}
-                onPress={() => setShowResendConfirmation(false)}
-              >
-                <Text style={styles.buttonText}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
-          ) : null}
-          {authErrorMessage ? (
-            <View style={styles.authErrorBanner}>
-              <Text style={styles.authErrorBannerText}>{authErrorMessage}</Text>
-            </View>
-          ) : null}
-                      <TouchableOpacity
-                        style={styles.button}
-                        onPress={authMode === 'login' ? loginWithPassword : register}
-                      >
-                        <Text style={styles.buttonText}>{authMode === 'login' ? 'Login' : 'Create account'}</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={[styles.button, { marginTop: 12, backgroundColor: '#4285F4' }]} onPress={loginWithGoogle}>
-                        <Text style={styles.buttonText}>Sign in with Google</Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
+        <AuthForm
+          authMode={authMode}
+          setAuthMode={setAuthMode}
+          authForm={authForm}
+          setAuthForm={setAuthForm}
+          showResendConfirmation={showResendConfirmation}
+          setShowResendConfirmation={setShowResendConfirmation}
+          resendConfirmationLoading={resendConfirmationLoading}
+          resendConfirmationEmail={resendConfirmationEmail}
+          authErrorMessage={authErrorMessage}
+          loginWithPassword={loginWithPassword}
+          register={register}
+          loginWithGoogle={loginWithGoogle}
+          styles={styles}
+        />
+      )}
       {userToken && requirePasswordSetup ? (
         <View style={styles.wizardOverlay}>
           <View style={[styles.wizardModal, styles.pendingInviteModal]}>
@@ -3733,48 +3260,21 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           </View>
         </View>
       ) : null}
-      {userToken && pendingInviteModalOpen ? (
-        <View style={styles.wizardOverlay}>
-          <View style={[styles.wizardModal, styles.pendingInviteModal]} testID="invite-modal">
-            <View style={styles.card}>
-              <View style={styles.sectionHeaderRow}>
-                <Text style={styles.sectionTitle}>Trip Invites</Text>
-                <TouchableOpacity
-                  style={[styles.button, styles.smallButton]}
-                  onPress={() => setPendingInviteModalOpen(false)}
-                >
-                  <Text style={styles.buttonText}>Close</Text>
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.helperText}>Choose which trips you want to join.</Text>
-              <ScrollView style={styles.inviteList} contentContainerStyle={styles.inviteListContent}>
-                {invites.map((invite) => {
-                  const tripLabel = invite.resolvedTripName ?? invite.groupName ?? 'Upcoming Trip';
-                  const inviterName = `${invite.inviterFirstName ?? ''} ${invite.inviterLastName ?? ''}`.trim();
-                  const inviterLine = inviterName || invite.inviterEmail || 'Someone';
-                  return (
-                    <View key={invite.id} style={styles.inviteCard}>
-                      <Text style={styles.bodyText}>{tripLabel}</Text>
-                      <Text style={styles.helperText}>Invited by {inviterLine}</Text>
-                      <View style={styles.row}>
-                        <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => acceptInvite(invite)} testID={`invite-join-${invite.id}`}>
-                          <Text style={styles.buttonText}>Join</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[styles.button, styles.smallButton, styles.dangerButton]}
-                          onPress={() => rejectInvite(invite)}
-                          testID={`invite-decline-${invite.id}`}
-                        >
-                          <Text style={styles.dangerButtonText}>Decline</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  );
-                })}
-              </ScrollView>
-            </View>
-          </View>
-        </View>
+      {userToken ? (
+        <PendingInvitesModal
+          visible={pendingInviteModalOpen}
+          onClose={() => setPendingInviteModalOpen(false)}
+          invites={invites}
+          pendingTripShareInvites={pendingTripShareInvites}
+          pendingFollowCode={pendingFollowCode}
+          acceptInvite={acceptInvite}
+          rejectInvite={rejectInvite}
+          acceptPendingTripShareInvite={acceptPendingTripShareInvite}
+          rejectPendingTripShareInvite={rejectPendingTripShareInvite}
+          acceptPendingFollowCode={acceptPendingFollowCode}
+          rejectPendingFollowCode={rejectPendingFollowCode}
+          styles={styles}
+        />
       ) : null}
       {userToken && isTripWizardOpen ? (
         <View style={styles.wizardOverlay}>
@@ -3837,47 +3337,30 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           onOpenMap={openMaps}
         />
       ) : null}
-      {/* Chat FAB — only when logged in and a trip is active */}
-      {userToken && activeTripId && !chatOpen && (
-        <ChatButton
-          onPress={() => { setChatOpen(true); setChatMinimized(false); }}
-          unreadCount={chatUnread}
-        />
-      )}
-      {/* Chat Panel */}
-      {userToken && activeTripId && chatOpen && !chatMinimized && (
-        <ChatPanel
-          socket={getSocket()}
-          tripId={activeTripId}
-          currentUserId={userId ?? ''}
-          currentUserName={userName ?? 'Traveler'}
-          onClose={() => setChatOpen(false)}
-          onMinimize={() => setChatMinimized(true)}
-          unreadCount={chatUnread}
-          onUnreadChange={setChatUnread}
-          theme={theme}
-        />
-      )}
-      {/* Minimized chat badge */}
-      {userToken && activeTripId && chatOpen && chatMinimized && (
-        <ChatButton
-          onPress={() => setChatMinimized(false)}
-          unreadCount={chatUnread}
-        />
-      )}
+      <ChatOverlay
+        userToken={userToken}
+        activeTripId={activeTripId}
+        userId={userId ?? null}
+        userName={userName ?? null}
+        theme={theme}
+      />
     </SafeAreaView>
+      </ChatProvider>
+    </PresenceProvider>
   );
 
   const renderAdminScreen = (section: AdminSectionRoute) => (
-    <AdminTab
-      backendUrl={backendUrl}
-      headers={headers}
-      initialSection={section}
-      onSectionChange={(nextSection) => {
-        if (nextSection === 'user-detail') return;
-        openAdminSection(nextSection as AdminSectionRoute);
-      }}
-    />
+    <Suspense fallback={<LazyTabFallback label="Loading admin…" testID="lazy-admin-fallback" />}>
+      <AdminTab
+        backendUrl={backendUrl}
+        headers={headers}
+        initialSection={section}
+        onSectionChange={(nextSection) => {
+          if (nextSection === 'user-detail') return;
+          openAdminSection(nextSection as AdminSectionRoute);
+        }}
+      />
+    </Suspense>
   );
 
   return (
@@ -4589,10 +4072,10 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     gap: 6,
   },
   attendeeChipRemoving: {
-    backgroundColor: '#f8d7da',
+    backgroundColor: theme.mode === 'dark' ? '#5A2630' : '#F8D7DA',
   },
   attendeeChipPending: {
-    backgroundColor: '#fff3cd',
+    backgroundColor: theme.mode === 'dark' ? '#5B4A1F' : '#FFF3CD',
   },
   attendeeText: {
     fontWeight: theme.typography.weightSemibold,
@@ -4907,7 +4390,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     left: 0,
     right: 0,
     marginTop: 8,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: theme.mode === 'dark' ? '#243647' : '#FFFFFF',
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: 10,
@@ -4916,13 +4399,23 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     overflow: 'hidden',
     maxHeight: 280,
     boxShadow: '0 10px 24px rgba(0,0,0,0.18)',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
   },
   dropdownOption: {
     paddingHorizontal: 12,
     paddingVertical: 11,
     borderBottomWidth: 1,
     borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: theme.mode === 'dark' ? '#243647' : '#FFFFFF',
+  },
+  dropdownOptionHover: {
+    backgroundColor: theme.mode === 'dark' ? '#2C4356' : '#F4F8FB',
+  },
+  dropdownOptionPressed: {
+    backgroundColor: theme.mode === 'dark' ? '#35516A' : '#E8F0F6',
   },
   prepaidSelectorButton: {
     marginBottom: 0,
@@ -4999,12 +4492,18 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
   },
   passengerOverlayList: {
     position: 'absolute',
-    backgroundColor: theme.colors.surface,
+    backgroundColor: theme.mode === 'dark' ? '#243647' : '#FFFFFF',
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: 6,
+    borderRadius: 10,
     zIndex: 13000,
     elevation: 32,
+    boxShadow: '0 10px 24px rgba(0,0,0,0.18)',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    overflow: 'hidden',
   },
   modalCard: {
     backgroundColor: theme.colors.surface,
@@ -5105,7 +4604,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     top: '100%',
     left: 0,
     right: 0,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: theme.mode === 'dark' ? '#243647' : '#FFFFFF',
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: 10,
@@ -5113,6 +4612,10 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     elevation: 40, // keep above other inputs on native
     overflow: 'hidden',
     boxShadow: '0 10px 24px rgba(0,0,0,0.18)',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
   },
   locationField: {
     position: 'relative',
@@ -5151,7 +4654,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(255,255,255,0.98)',
+    backgroundColor: 'transparent',
     zIndex: 40000,
     elevation: 40,
   },
@@ -5161,22 +4664,26 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.15)',
+    backgroundColor: theme.mode === 'dark' ? 'rgba(2,6,23,0.28)' : 'rgba(15,23,42,0.12)',
   },
   dropdownPortal: {
     position: 'absolute',
     top: 80,
     left: 16,
     right: 16,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: theme.mode === 'dark' ? '#243647' : '#FFFFFF',
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: 8,
+    borderRadius: 12,
     padding: 8,
     maxHeight: 360,
     zIndex: 41000,
-    boxShadow: '0 6px 10px rgba(0,0,0,0.2)',
+    boxShadow: '0 10px 24px rgba(0,0,0,0.18)',
     elevation: 60,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
   },
   dropdownScroll: {
     maxHeight: 300,
@@ -5196,8 +4703,8 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     backgroundColor: theme.colors.surface,
   },
   traitChipSelected: {
-    backgroundColor: theme.colors.link,
-    borderColor: theme.colors.link,
+    backgroundColor: theme.mode === 'dark' ? theme.colors.link : theme.colors.primary,
+    borderColor: theme.mode === 'dark' ? theme.colors.link : theme.colors.primary,
   },
   traitChipText: {
     color: theme.colors.text,
@@ -5311,8 +4818,8 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     backgroundColor: theme.colors.surface,
   },
   mapOptionActive: {
-    borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.primary,
+    borderColor: theme.mode === 'dark' ? theme.colors.link : theme.colors.primary,
+    backgroundColor: theme.mode === 'dark' ? theme.colors.link : theme.colors.primary,
   },
   mapOptionText: {
     color: theme.colors.text,
@@ -5320,7 +4827,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     fontWeight: theme.typography.weightSemibold,
   },
   mapOptionActiveText: {
-    color: theme.colors.onPrimary,
+    color: '#FFFFFF',
   },
   payerOptions: {
     flexDirection: 'row',

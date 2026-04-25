@@ -28,6 +28,7 @@ import {
   formatMonthYear,
   getEarliestTripEventDate,
 } from '../utils/tripDates';
+import { dedupeMembersByIdentity, formatMemberDisplayName } from '../utils/memberDisplay';
 import { normalizeDateString } from '../utils/normalizeDateString';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import {
@@ -60,12 +61,20 @@ import {
   type CarRentalDraft,
 } from '../tabs/carRentals';
 import { buildRentalDraftFromRow, buildTourDraftFromRow, getOverviewSaveFlags } from '../utils/overviewEditing';
+import {
+  buildDayEventsMap,
+  flightMatchesDay,
+  lodgingCoversDay,
+  rentalMatchesDay,
+  tourMatchesDay,
+} from '../utils/overviewDayEvents';
 import { FlightEditingForm } from '../components/TransferEditingForm';
 import ConfirmDialog from '../components/ConfirmDialog';
 import LodgingDialog from '../components/LodgingDialog';
 import LodgingDetailsDialog from '../components/LodgingDetailsDialog';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from '../utils/itineraryStatus';
+import { useImageSourceGetter } from '../utils/imageSource';
 
 type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
 let NativeDateTimePicker: NativeDateTimePickerType | null = null;
@@ -203,48 +212,11 @@ type ModalDateField =
 export const dedupeAttendees = (
   attendees: OverviewTabProps['attendees']
 ): OverviewTabProps['attendees'] => {
-  const byKey = new Map<string, OverviewTabProps['attendees'][number]>();
-  const makeKey = (member: OverviewTabProps['attendees'][number]) => {
-    const rawEmail = (member.email ?? member.userEmail ?? '').trim().toLowerCase();
-    return rawEmail || member.id;
-  };
-  const merge = (base: OverviewTabProps['attendees'][number], incoming: OverviewTabProps['attendees'][number]) => {
-    const preferIncoming =
-      (base.status === 'pending' && incoming.status !== 'pending') ||
-      (base.status === 'removed' && incoming.status !== 'removed');
-    const keep = preferIncoming ? incoming : base;
-    const mergeFrom = preferIncoming ? base : incoming;
-    return {
-      ...keep,
-      firstName: keep.firstName ?? mergeFrom.firstName,
-      lastName: keep.lastName ?? mergeFrom.lastName,
-      email: keep.email ?? mergeFrom.email ?? keep.userEmail ?? mergeFrom.userEmail,
-      userEmail: keep.userEmail ?? mergeFrom.userEmail,
-      guestName: keep.guestName ?? mergeFrom.guestName,
-      status: keep.status ?? mergeFrom.status,
-      removedAt: keep.removedAt ?? mergeFrom.removedAt,
-    };
-  };
-  for (const member of attendees ?? []) {
-    const key = makeKey(member);
-    const existing = byKey.get(key);
-    if (existing) {
-      byKey.set(key, merge(existing, member));
-    } else {
-      byKey.set(key, member);
-    }
-  }
-  const deduped = Array.from(byKey.values());
-  return deduped;
+  return dedupeMembersByIdentity(attendees ?? []);
 };
 
 export const formatAttendeeLabel = (member: OverviewTabProps['attendees'][number]) => {
-  const first = member.firstName?.trim() ?? '';
-  const last = member.lastName?.trim() ?? '';
-  const combined = `${first} ${last}`.trim();
-  const email = member.email?.trim() || member.userEmail?.trim() || '';
-  const base = combined || member.guestName?.trim() || email || 'Traveler';
-  return email && base.toLowerCase() !== email.toLowerCase() ? `${base} (${email})` : base;
+  return formatMemberDisplayName(member);
 };
 
 export const formatUserDisplayName = (member: {
@@ -254,18 +226,7 @@ export const formatUserDisplayName = (member: {
   email?: string | null;
   userEmail?: string | null;
 }) => {
-  const first = member.firstName?.trim() ?? '';
-  const last = member.lastName?.trim() ?? '';
-  const combined = `${first} ${last}`.trim();
-  if (combined) return combined;
-
-  const guest = member.guestName?.trim();
-  if (guest) return guest;
-
-  const email = member.email?.trim() || member.userEmail?.trim();
-  if (email) return email;
-
-  return 'Traveler';
+  return formatMemberDisplayName(member);
 };
 
 type DayLocationInfo = {
@@ -385,6 +346,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   }, []);
   const dayHeroImageStyle = useMemo(() => stripResizeMode(styles.dayHeroImage), [stripResizeMode, styles.dayHeroImage]);
   const lodgingImageStyle = useMemo(() => stripResizeMode(styles.lodgingImage), [stripResizeMode, styles.lodgingImage]);
+  const getImageSource = useImageSourceGetter();
   const responsiveCardStyle = useMemo(
     () => ({
       padding: isPhoneLayout ? 12 : 16,
@@ -731,23 +693,24 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     return { startDate: min, endDate: max };
   }, [flights, lodgings, tours, carRentals]);
 
-  const overviewStartDate = eventDateBounds?.startDate ?? displayStartDate;
-  const overviewEndDate = eventDateBounds?.endDate ?? displayEndDate;
+  const compareIsoDate = (left?: string | null, right?: string | null): number => {
+    const a = normalizeDateString(left ?? '');
+    const b = normalizeDateString(right ?? '');
+    if (!a && !b) return 0;
+    if (!a) return 1;
+    if (!b) return -1;
+    return a.localeCompare(b);
+  };
+  const overviewStartDate = displayStartDate && eventDateBounds?.startDate
+    ? (compareIsoDate(eventDateBounds.startDate, displayStartDate) < 0 ? eventDateBounds.startDate : displayStartDate)
+    : eventDateBounds?.startDate ?? displayStartDate;
+  const overviewEndDate = displayEndDate && eventDateBounds?.endDate
+    ? (compareIsoDate(eventDateBounds.endDate, displayEndDate) > 0 ? eventDateBounds.endDate : displayEndDate)
+    : eventDateBounds?.endDate ?? displayEndDate;
   const monthLabel = useMemo(
     () => formatMonthYear(trip?.startMonth ?? null, trip?.startYear ?? null),
     [trip?.startMonth, trip?.startYear]
   );
-
-  const logTravelerInfo = (member: OverviewTabProps['attendees'][number], context: string) => {
-    const first = member.firstName?.trim() ?? '';
-    const last = member.lastName?.trim() ?? '';
-    const name = `${first} ${last}`.trim();
-    const email = member.email?.trim() || member.userEmail?.trim() || '';
-    const pending = member.status === 'pending';
-    console.debug(
-      `[overview][debug] traveler read (${context}) id=${member.id} name="${name}" email=${email || 'n/a'} pending=${pending}`
-    );
-  };
 
   const tripLength = useMemo(() => {
     if (trip?.startDate || trip?.endDate) {
@@ -823,21 +786,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     const buildDayCards = () => {
       const cards: DayCard[] = allDates.map((date, idx) => {
         const items: string[] = [];
-        const flightsForDay = flights.filter((f) => f.departure_date === date || f.arrival_date === date);
+        const flightsForDay = flights.filter((f) => flightMatchesDay(f, date));
         flightsForDay.forEach((f) =>
           items.push(`Transfer ${f.departure_location || f.departure_airport_code || 'DEP'} -> ${f.arrival_location || f.arrival_airport_code || 'ARR'} dep ${f.departure_time || '?'} arr ${f.arrival_time || '?'}`)
         );
-        const lodgingsForDay = lodgings.filter((l) => {
-          const ci = l.checkInDate;
-          const co = l.checkOutDate;
-          if (!ci || !co) return false;
-          const d = new Date(date).getTime();
-          return d >= new Date(ci).getTime() && d <= new Date(co).getTime();
-        });
+        const lodgingsForDay = lodgings.filter((l) => lodgingCoversDay(l, date));
         lodgingsForDay.forEach((l) => items.push(`Lodging at ${l.name} (${l.checkInDate} - ${l.checkOutDate})`));
-        const toursForDay = tours.filter((t) => t.date === date);
+        const toursForDay = tours.filter((t) => tourMatchesDay(t, date));
         toursForDay.forEach((t) => items.push(`Activity: ${t.name} at ${t.startTime || 'time TBD'}`));
-        const rentalsForDay = carRentals.filter((r) => r.pickupDate === date || r.dropoffDate === date);
+        const rentalsForDay = carRentals.filter((r) => rentalMatchesDay(r, date));
         rentalsForDay.forEach((r) => items.push(`Rental car (${r.vendor || 'vendor'}) ${r.pickupDate} -> ${r.dropoffDate}`));
         const label = `Day ${idx + 1}`;
         if (!items.length) items.push('Free Day');
@@ -1635,67 +1592,18 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   const allMemberIds = useMemo(() => groupMembers.map((m) => m.id), [groupMembers]);
 
-  useEffect(() => {
-    if (!isEditing) return;
-    normalizedAttendees.forEach((member) => {
-      logTravelerInfo(member, 'overview edit');
-    });
-  }, [isEditing, normalizedAttendees]);
-
-  const dayDataByDate = useMemo(() => {
-    const map = new Map<
-      string,
-      {
-        index: number;
-        date: string;
-        flights: Flight[];
-        lodgings: Lodging[];
-        tours: Tour[];
-        rentals: CarRental[];
-        details: ItineraryDetail[];
-      }
-    >();
-    dayCards.forEach((card, idx) => {
-      const dayNumber = idx + 1;
-      const flightsForDay = flights.filter((f) => f.departure_date === card.date || f.arrival_date === card.date);
-      const lodgingsForDay = lodgings.filter((l) => {
-        const ci = l.checkInDate;
-        const co = l.checkOutDate;
-        if (!ci) return false;
-        const dayMs = normalizeDateString(card.date);
-        const checkInMs = normalizeDateString(ci);
-        if (!dayMs || !checkInMs) return false;
-        const dayTime = new Date(dayMs).getTime();
-        const checkInTime = new Date(checkInMs).getTime();
-        if (Number.isNaN(dayTime) || Number.isNaN(checkInTime)) return false;
-        if (!co) {
-          return dayTime >= checkInTime;
-        }
-        const checkOutMs = normalizeDateString(co);
-        if (!checkOutMs) {
-          return dayTime >= checkInTime;
-        }
-        const checkOutTime = new Date(checkOutMs).getTime();
-        if (Number.isNaN(checkOutTime)) {
-          return dayTime >= checkInTime;
-        }
-        return dayTime >= checkInTime && dayTime < checkOutTime;
-      });
-      const toursForDay = tours.filter((t) => t.date === card.date);
-      const rentalsForDay = carRentals.filter((r) => r.pickupDate === card.date || r.dropoffDate === card.date);
-      const detailsForDay = sortedItineraryDetails.filter((d) => Number(d.day) === dayNumber);
-      map.set(card.date, {
-        index: dayNumber,
-        date: card.date,
-        flights: flightsForDay,
-        lodgings: lodgingsForDay,
-        tours: toursForDay,
-        rentals: rentalsForDay,
-        details: detailsForDay,
-      });
-    });
-    return map;
-  }, [dayCards, flights, lodgings, tours, carRentals, sortedItineraryDetails]);
+  const dayDataByDate = useMemo(
+    () =>
+      buildDayEventsMap<Flight, Lodging, Tour, CarRental, ItineraryDetail>({
+        dayCards,
+        flights,
+        lodgings,
+        tours,
+        rentals: carRentals,
+        details: sortedItineraryDetails,
+      }),
+    [dayCards, flights, lodgings, tours, carRentals, sortedItineraryDetails],
+  );
 
   const formatTravelerNames = (ids: string[]) =>
     ids
@@ -1809,7 +1717,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             disabled={!onPress}
           >
             {img ? (
-              <Image style={dayHeroImageStyle} source={{ uri: img }} resizeMode="cover" />
+              <Image style={dayHeroImageStyle} source={getImageSource(img)} resizeMode="cover" />
             ) : (
               <View style={styles.dayHeroImageFallback} />
             )}
@@ -2033,13 +1941,10 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                         key={lodging.id}
                         testID={`day-details-lodging-${lodging.id}`}
                         style={styles.dayInfoRow}
-                        onPress={() => {
-                          console.debug(`[overview][debug] accommodation pressed id=${lodging.id} name="${lodging.name}"`);
-                          openLodgingDetails(lodging);
-                        }}
+                        onPress={() => openLodgingDetails(lodging)}
                       >
                         {lodging.imageUrl ? (
-                          <Image style={lodgingImageStyle} source={{ uri: lodging.imageUrl }} resizeMode="cover" />
+                          <Image style={lodgingImageStyle} source={getImageSource(lodging.imageUrl)} resizeMode="cover" />
                         ) : (
                           <View style={styles.lodgingImageFallback} />
                         )}

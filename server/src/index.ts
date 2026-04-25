@@ -6,10 +6,15 @@ import { logError, logInfo } from './logger';
 import { doesApiLimitsConfigExist, getResolvedApiLimitsConfigPath } from './config/apiLimits';
 import { doesAuthFlagsConfigExist, getResolvedAuthFlagsConfigPath } from './config/authFlags';
 import { doesFeatureFlagsConfigExist, getResolvedFeatureFlagsConfigPath } from './config/featureFlags';
-import { seedEntitlementDefaults } from './services/entitlementService';
+import { applyStartupFeatureFlagOverrides, seedEntitlementDefaults } from './services/entitlementService';
 import { syncAttractionsCatalogFromCsvToDbOnStartup } from './services/attractionsCatalogService';
 import { prewarmAutocompleteCache } from './services/destinationAttractionAutocompleteService';
+import { logMissingApiPricingConfigurationWarnings } from './apis/providerBudgeting';
 import { createSocketServer } from './socket';
+import { startGmailPollingScheduler } from './services/gmailPollingService';
+import { startRetentionScheduler } from './services/retentionService';
+import { startIngestionMetricsScheduler } from './services/ingestionMetricsService';
+import { startFailedRetryScheduler } from './services/failedRetryScheduler';
 
 const defaultPort = Number(process.env.PORT) || 4000;
 const isCloudRunRuntime = Boolean(process.env.K_SERVICE);
@@ -50,6 +55,7 @@ export const startServer = async (portOverride?: number): Promise<Server> => {
   const featureFlagsConfigExists = doesFeatureFlagsConfigExist();
   logInfo(`[startup] resolved storage bucket: ${resolvedStorageBucket || '(not set)'} (source: ${bucketSource})`);
   logInfo(`[startup] API limits config path: ${apiLimitsConfigPath} (exists: ${apiLimitsConfigExists})`);
+  logMissingApiPricingConfigurationWarnings();
   logInfo(`[startup] auth flags config path: ${authFlagsConfigPath} (exists: ${authFlagsConfigExists})`);
   logInfo(`[startup] feature flags config path: ${featureFlagsConfigPath} (exists: ${featureFlagsConfigExists})`);
   if (envLoadedFrom) {
@@ -70,6 +76,7 @@ export const startServer = async (portOverride?: number): Promise<Server> => {
   try {
     await initDb();
     await seedEntitlementDefaults();
+    await applyStartupFeatureFlagOverrides();
   } catch (err) {
     logError('[startup] initialization failed after binding port', err);
     server.close(() => process.exit(1));
@@ -100,6 +107,11 @@ export const startServer = async (portOverride?: number): Promise<Server> => {
   if (process.env.NODE_ENV !== 'test') {
     refreshAirportsDaily().catch((err: any) => logError('Airport refresh failed', err));
   }
+
+  startGmailPollingScheduler();
+  startRetentionScheduler();
+  startIngestionMetricsScheduler();
+  startFailedRetryScheduler();
 
   return server;
 };

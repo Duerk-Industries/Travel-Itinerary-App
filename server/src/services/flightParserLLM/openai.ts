@@ -1,7 +1,7 @@
-import { ParsedFlight } from '../../../../app/utils/parsers/transferParser';
 import { FlightParserStrategy } from './strategy';
 import { logError } from '../../logger';
 import { OpenAI } from 'openai';
+import { ParsedFlight } from './types';
 
 export class OpenAIFlightParser implements FlightParserStrategy {
   private openai: OpenAI;

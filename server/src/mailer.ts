@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer';
-import { getEnvValue } from './env';
+import { getBackendUrl, getEnvValue } from './env';
 import { logError, logInfo } from './logger';
 import {
   sendShareEmailViaSmtpApi,
@@ -116,7 +116,7 @@ export const sendVerificationEmail = async (to: string, token: string): Promise<
   if (!transporter) {
     throw new Error('Email is not configured; set SMTP_HOST, SMTP_PORT, and SMTP_FROM');
   }
-  const rawWebUrl = String(getEnvValue('WEB_URL', { defaultValue: 'https://duerk.org' }) ?? 'https://duerk.org').trim();
+  const rawWebUrl = String(getBackendUrl('https://duerk.org') ?? 'https://duerk.org').trim();
   const webUrl = rawWebUrl.endsWith('/') ? rawWebUrl.slice(0, -1) : rawWebUrl;
   const link = `${webUrl}/confirm?token=${encodeURIComponent(token)}`;
   const subject = 'Confirm your Shared Trip Planner account';
@@ -151,7 +151,7 @@ export const sendVerificationEmailBestEffort = async (
     if (!transporter) {
       throw new Error('Email is not configured; set SMTP_HOST, SMTP_PORT, and SMTP_FROM');
     }
-    const rawWebUrl = String(getEnvValue('WEB_URL', { defaultValue: 'https://duerk.org' }) ?? 'https://duerk.org').trim();
+    const rawWebUrl = String(getBackendUrl('https://duerk.org') ?? 'https://duerk.org').trim();
     const webUrl = rawWebUrl.endsWith('/') ? rawWebUrl.slice(0, -1) : rawWebUrl;
     const path = options.path ?? '/confirm';
     const normalizedPath = path.startsWith('/') ? path : `/${path}`;
@@ -175,7 +175,8 @@ export const sendTripInviteEmail = async (to: string, tripName: string, inviterE
   if (!transporter) {
     throw new Error('Email is not configured; set SMTP_HOST, SMTP_PORT, and SMTP_FROM');
   }
-  const link = `https://duerk.org`;
+  const rawWebUrl = String(getBackendUrl('https://duerk.org') ?? 'https://duerk.org').trim();
+  const link = rawWebUrl.endsWith('/') ? rawWebUrl.slice(0, -1) : rawWebUrl;
   const subject = inviterEmail
     ? `${inviterEmail} added you to a trip: ${tripName}`
     : `You've been added to a trip: ${tripName}`;

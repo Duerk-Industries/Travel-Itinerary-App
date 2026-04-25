@@ -23,6 +23,7 @@ export interface FellowTraveler {
   id: string;
   firstName: string;
   lastName: string;
+  email?: string | null;
   createdAt: string;
 }
 
@@ -65,7 +66,7 @@ export const fetchAccountProfile = async ({
     }
     if (!res.ok) return false;
     const data = await res.json();
-    const fullName = `${data.firstName ?? ''} ${data.lastName ?? ''}`.trim() || 'Traveler';
+    const fullName = `${data.firstName ?? ''} ${data.lastName ?? ''}`.trim() || data.email || 'Traveler';
     const mapPreference = isMapApp(data.mapPreference) ? data.mapPreference : undefined;
     const appearancePreference = isAppearancePreference(data.appearancePreference) ? data.appearancePreference : undefined;
     if (mapPreference && setMapPreference) setMapPreference(mapPreference);
@@ -250,6 +251,7 @@ const AccountTab: React.FC<AccountTabProps> = ({
         setFellowTravelers={setFellowTravelers}
         showRelationshipDropdown={showRelationshipDropdown}
         setShowRelationshipDropdown={setShowRelationshipDropdown}
+        hideFamilySection
         styles={styles}
       />
       <AccountTraits

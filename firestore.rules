@@ -2,8 +2,383 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function authUid() {
+      return request.auth.uid;
+    }
+
+    function authEmail() {
+      return signedIn() ? request.auth.token.email : null;
+    }
+
+    function isSelf(userId) {
+      return signedIn() && authUid() == userId;
+    }
+
+    function isGroupOwner(groupId) {
+      return hasGroupAccess(groupId)
+        && get(/databases/$(database)/documents/group_access/$(groupAccessDocId(groupId, authUid()))).data.role == "owner";
+    }
+
+    function groupAccessDocId(groupId, userId) {
+      return groupId + "_" + userId;
+    }
+
+    function hasGroupAccess(groupId) {
+      return signedIn()
+        && groupId != null
+        && exists(/databases/$(database)/documents/group_access/$(groupAccessDocId(groupId, authUid())))
+        && get(/databases/$(database)/documents/group_access/$(groupAccessDocId(groupId, authUid()))).data.status == "active";
+    }
+
+    function canReadOwnMembership() {
+      return signedIn()
+        && (
+          resource.data.userId == authUid()
+          || (authEmail() != null && resource.data.inviteEmail == authEmail())
+        );
+    }
+
+    function canReadOwnInvite() {
+      return signedIn()
+        && (
+          resource.data.inviteeUserId == authUid()
+          || (authEmail() != null && resource.data.inviteeEmail == authEmail())
+        );
+    }
+
+    function canReadTripOwnerManagedInvite() {
+      return signedIn()
+        && resource.data.tripId != null
+        && exists(/databases/$(database)/documents/trips/$(resource.data.tripId))
+        && isGroupOwner(get(/databases/$(database)/documents/trips/$(resource.data.tripId)).data.groupId);
+    }
+
+    function tripGroupIdFromTrip(tripId) {
+      return get(/databases/$(database)/documents/trips/$(tripId)).data.groupId;
+    }
+
+    function tripAccessDocId(tripId, userId) {
+      return tripId + "_" + userId;
+    }
+
+    function hasTripAccess(tripId) {
+      return signedIn()
+        && tripId != null
+        && exists(/databases/$(database)/documents/trip_access/$(tripAccessDocId(tripId, authUid())))
+        && get(/databases/$(database)/documents/trip_access/$(tripAccessDocId(tripId, authUid()))).data.status == "active";
+    }
+
+    function canReadTripById(tripId) {
+      return hasTripAccess(tripId)
+        && get(/databases/$(database)/documents/trip_access/$(tripAccessDocId(tripId, authUid()))).data.canRead == true;
+    }
+
+    function canReadItineraryById(itineraryId) {
+      return signedIn()
+        && itineraryId != null
+        && exists(/databases/$(database)/documents/itineraries/$(itineraryId))
+        && canReadTripById(get(/databases/$(database)/documents/itineraries/$(itineraryId)).data.tripId);
+    }
+
+    match /locations/{locationId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /airports/{airportId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /users/{userId} {
+      allow read: if isSelf(userId);
+      allow write: if false;
+    }
+
+    match /web_users/{userId} {
+      allow read: if isSelf(userId);
+      allow write: if false;
+    }
+
+    match /user_emails/{emailId} {
+      allow read: if signedIn() && resource.data.userId == authUid();
+      allow write: if false;
+    }
+
+    match /fellow_travelers/{travelerId} {
+      allow read: if signedIn() && resource.data.ownerId == authUid();
+      allow write: if false;
+    }
+
+    match /traits/{traitId} {
+      allow read: if signedIn() && resource.data.userId == authUid();
+      allow write: if false;
+    }
+
+    match /user_demographics/{userId} {
+      allow read: if isSelf(userId);
+      allow write: if false;
+    }
+
+    match /family_relationships/{relationshipId} {
+      allow read: if signedIn()
+        && (resource.data.requesterId == authUid() || resource.data.relativeId == authUid());
+      allow write: if false;
+    }
+
+    match /groups/{groupId} {
+      allow read: if hasGroupAccess(groupId);
+      allow write: if false;
+    }
+
+    match /group_members/{memberId} {
+      allow read: if canReadOwnMembership() || hasGroupAccess(resource.data.groupId);
+      allow write: if false;
+    }
+
+    match /group_invites/{inviteId} {
+      allow read: if canReadOwnInvite() || hasGroupAccess(resource.data.groupId);
+      allow write: if false;
+    }
+
+    match /group_access/{docId} {
+      allow read: if signedIn() && resource.data.userId == authUid();
+      allow write: if false;
+    }
+
+    match /trips/{tripId} {
+      allow read: if canReadTripById(tripId);
+      allow write: if false;
+    }
+
+    match /follow_codes/{codeId} {
+      allow read: if signedIn()
+        && resource.data.tripId != null
+        && exists(/databases/$(database)/documents/trips/$(resource.data.tripId))
+        && isGroupOwner(get(/databases/$(database)/documents/trips/$(resource.data.tripId)).data.groupId);
+      allow write: if false;
+    }
+
+    match /trip_share_invites/{inviteId} {
+      allow read: if canReadTripOwnerManagedInvite() || canReadOwnInvite();
+      allow write: if false;
+    }
+
+    match /trip_removals/{removalId} {
+      allow read: if signedIn() && resource.data.userId == authUid();
+      allow write: if false;
+    }
+
+    match /trip_access/{docId} {
+      allow read: if signedIn() && resource.data.userId == authUid();
+      allow write: if false;
+    }
+
+    match /flights/{flightId} {
+      allow read: if canReadTripById(resource.data.tripId);
+      allow write: if false;
+    }
+
+    match /lodgings/{lodgingId} {
+      allow read: if canReadTripById(resource.data.trip_id != null ? resource.data.trip_id : resource.data.tripId);
+      allow write: if false;
+    }
+
+    match /tours/{tourId} {
+      allow read: if canReadTripById(resource.data.tripId);
+      allow write: if false;
+    }
+
+    match /car_rentals/{rentalId} {
+      allow read: if canReadTripById(resource.data.tripId);
+      allow write: if false;
+    }
+
+    match /expenses/{expenseId} {
+      allow read: if canReadTripById(resource.data.tripId);
+      allow write: if false;
+    }
+
+    match /trip_payments/{paymentId} {
+      allow read: if canReadTripById(resource.data.tripId);
+      allow write: if false;
+    }
+
+    match /item_votes/{voteId} {
+      allow read: if canReadTripById(resource.data.tripId);
+      allow write: if false;
+    }
+
+    match /trip_activity/{activityId} {
+      allow read: if canReadTripById(resource.data.tripId);
+      allow write: if false;
+    }
+
+    match /trip_comments/{commentId} {
+      allow read: if canReadTripById(resource.data.tripId);
+      allow write: if false;
+    }
+
+    match /itineraries/{itineraryId} {
+      allow read: if canReadTripById(resource.data.tripId);
+      allow write: if false;
+    }
+
+    match /itinerary_details/{detailId} {
+      allow read: if canReadItineraryById(resource.data.itineraryId);
+      allow write: if false;
+    }
+
+    match /trip_messages/{messageId} {
+      allow read: if canReadTripById(resource.data.tripId);
+      allow write: if false;
+    }
+
+    match /flight_shares/{shareId} {
+      allow read: if signedIn() && resource.data.userId == authUid();
+      allow write: if false;
+    }
+
+    match /message_reads/{readId} {
+      allow read: if signedIn() && resource.data.userId == authUid();
+      allow write: if false;
+    }
+
+    match /trip_followers/{followerId} {
+      allow read: if signedIn() && resource.data.followerUserId == authUid();
+      allow write: if false;
+    }
+
+    match /provider_connections/{connectionId} {
+      allow read: if signedIn() && resource.data.userId == authUid();
+      allow write: if false;
+    }
+
+    match /email_verifications/{verificationId} {
+      allow read, write: if false;
+    }
+
+    match /user_email_verifications/{verificationId} {
+      allow read, write: if false;
+    }
+
+    match /ingestion_sources/{sourceId} {
+      allow read: if signedIn() && resource.data.userId == authUid();
+      allow write: if false;
+    }
+
+    match /import_jobs/{jobId} {
+      allow read: if signedIn() && resource.data.userId == authUid();
+      allow write: if false;
+    }
+
+    match /import_job_payloads/{jobId} {
+      allow read, write: if false;
+    }
+
+    match /ingested_documents/{documentId} {
+      allow read, write: if false;
+    }
+
+    match /parsed_items/{itemId} {
+      allow read: if signedIn() && resource.data.userId == authUid();
+      allow write: if false;
+    }
+
+    match /parsed_item_assignments/{assignmentId} {
+      allow read, write: if false;
+    }
+
+    match /parse_attempts/{attemptId} {
+      allow read, write: if false;
+    }
+
+    match /parse_stage_logs/{logId} {
+      allow read, write: if false;
+    }
+
+    match /usage_metering/{meteringId} {
+      allow read, write: if false;
+    }
+
+    match /extraction_cache/{cacheId} {
+      allow read, write: if false;
+    }
+
+    match /ingestion_retry_config/{configId} {
+      allow read, write: if false;
+    }
+
+    match /ingestion_webhook_replay_tokens/{tokenId} {
+      allow read, write: if false;
+    }
+
+    match /learned_source_parsers/{parserId} {
+      allow read, write: if false;
+    }
+
+    match /tiers/{tierId} {
+      allow read, write: if false;
+    }
+
+    match /features/{featureId} {
+      allow read, write: if false;
+    }
+
+    match /tier_entitlements/{docId} {
+      allow read, write: if false;
+    }
+
+    match /tier_limits/{docId} {
+      allow read, write: if false;
+    }
+
+    match /user_tiers/{docId} {
+      allow read, write: if false;
+    }
+
+    match /feature_flags/{flagId} {
+      allow read, write: if false;
+    }
+
+    match /usage_counters/{docId} {
+      allow read, write: if false;
+    }
+
+    match /usage_events/{eventId} {
+      allow read, write: if false;
+    }
+
+    match /generation_idempotency/{key} {
+      allow read, write: if false;
+    }
+
+    match /audit_log/{logId} {
+      allow read, write: if false;
+    }
+
+    match /admin_user_analytics/{docId} {
+      allow read, write: if false;
+    }
+
+    match /admin_user_analytics_daily/{docId} {
+      allow read, write: if false;
+    }
+
+    match /place_details_cache/{placeId} {
+      allow read, write: if false;
+    }
+
+    match /place_lookup_cache/{docId} {
+      allow read, write: if false;
+    }
+
     match /{document=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if false;
     }
   }
 }

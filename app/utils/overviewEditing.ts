@@ -2,6 +2,7 @@ import { type CarRental, type CarRentalDraft } from '../tabs/carRentals';
 import { type Flight, type FlightCreateDraft } from '../tabs/transfers';
 import { type Tour, type TourDraft } from '../tabs/activities';
 import { DEFAULT_NEW_ITINERARY_STATUS, LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from './itineraryStatus';
+import { normalizeTimeInput } from './normalizeTimeInput';
 
 type TripSnapshot = {
   description?: string | null;
@@ -56,9 +57,9 @@ export const buildFlightDraftFromRow = (flight: Flight): FlightCreateDraft & { p
   passengerIds: Array.isArray(flight.passenger_ids) ? flight.passenger_ids : Array.isArray((flight as any).passengerIds) ? (flight as any).passengerIds : [],
   departureDate: flight.departure_date,
   departureAirportCode: flight.departure_airport_code ?? '',
-  departureTime: flight.departure_time,
+  departureTime: normalizeTimeInput(flight.departure_time, flight.departure_time),
   arrivalAirportCode: flight.arrival_airport_code ?? '',
-  arrivalTime: flight.arrival_time,
+  arrivalTime: normalizeTimeInput(flight.arrival_time, flight.arrival_time),
   layoverLocation: flight.layover_location ?? '',
   layoverLocationCode: flight.layover_location_code ?? '',
   layoverDuration: flight.layover_duration ?? '',

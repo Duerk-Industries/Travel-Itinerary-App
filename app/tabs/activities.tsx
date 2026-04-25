@@ -3,6 +3,7 @@ import { Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpac
 import { formatDateLong } from '../utils/formatDateLong';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { toWebStyle } from '../utils/webStyle';
+import { formatMemberDisplayName } from '../utils/memberDisplay';
 import type { AppTheme } from '../theme/theme';
 import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from '../utils/votes';
 import {
@@ -256,14 +257,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   );
 
   const resolveTravelerLabel = (member: GroupMemberOption) => {
-    const first = member.firstName?.trim() ?? '';
-    const last = member.lastName?.trim() ?? '';
-    if (first || last) return `${first} ${last}`.trim();
-    const guest = member.guestName?.trim() ?? '';
-    if (guest) return guest;
-    const email = (member.email ?? '').trim();
-    if (email) return email;
-    return 'Traveler';
+    return formatMemberDisplayName(member);
   };
 
   const toggleBaseStyle = styles.toggleOption ?? {

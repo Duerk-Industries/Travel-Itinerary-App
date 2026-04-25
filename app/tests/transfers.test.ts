@@ -50,6 +50,24 @@ describe('Flights helpers', () => {
     expect(result.payload?.paidBy).toEqual(['payer-1']);
   });
 
+  test('normalizes am/pm ingestion times for web flight editing and saves', () => {
+    const draft = {
+      ...createInitialFlightCreateDraft(),
+      status: 'Booked' as const,
+      passengerIds: ['p1'],
+      paidBy: [],
+      departureDate: '2026-09-05',
+      departureTime: '10:55 AM',
+      arrivalTime: '02:05 PM',
+      departureAirportCode: 'BGY',
+      arrivalAirportCode: 'OTP',
+    };
+    const result = buildFlightPayloadForCreate(draft, 'trip-1', null);
+    expect(result.error).toBeUndefined();
+    expect(result.payload?.departureTime).toBe('10:55');
+    expect(result.payload?.arrivalTime).toBe('14:05');
+  });
+
   test('fails when no passengers selected', () => {
     const draft = {
       ...createInitialFlightCreateDraft(),
@@ -117,6 +135,18 @@ describe('Flights helpers', () => {
       arrivalTime: '10:00',
     });
     expect(normalized.status).toBe('Booked');
+  });
+
+  test('normalizes api flights with am/pm times into 24-hour values', () => {
+    const normalized = normalizeFlightFromApi({
+      id: 'f-ampm',
+      departureDate: '2026-09-05',
+      arrivalDate: '2026-09-05',
+      departureTime: '10:55 AM',
+      arrivalTime: '02:05 PM',
+    });
+    expect(normalized.departure_time).toBe('10:55');
+    expect(normalized.arrival_time).toBe('14:05');
   });
 
   test('filters airport labels by query for transfer autocomplete', () => {

@@ -61,6 +61,14 @@ providers:
       OVERVIEW_DAY_WEATHER_GEOCODE: 1000
       OVERVIEW_DAY_WEATHER_FORECAST: 1000
 
+budgeting:
+  OPENAI:
+    alertThresholdPercent: 80
+    models:
+      GPT_4O_MINI:
+        inputCostPer1MTokensUsd: 0.15
+        outputCostPer1MTokensUsd: 0.60
+
 caching:
   attractions:
     refreshDays: 365

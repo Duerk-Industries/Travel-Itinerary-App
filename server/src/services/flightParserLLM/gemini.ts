@@ -1,6 +1,6 @@
-import { ParsedFlight } from '../../../../app/utils/parsers/transferParser';
 import { FlightParserStrategy } from './strategy';
 import { logError } from '../../logger';
+import { ParsedFlight } from './types';
 
 export class GeminiFlightParser implements FlightParserStrategy {
   async parse(text: string): Promise<{ primary: Partial<ParsedFlight>; bulk: ParsedFlight[] }> {

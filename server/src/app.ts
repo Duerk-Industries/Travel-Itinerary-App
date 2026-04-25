@@ -18,20 +18,28 @@ import carRentalRoutes from './routes/carRentalRoutes';
 import accountRoutes, { groupsRouter } from './routes/accountRoutes';
 import placeRoutes from './routes/placeRoutes';
 import expenseRoutes from './routes/expenseRoutes';
+import paymentRoutes from './routes/paymentRoutes';
 import adminRoutes from './routes/adminRoutes';
 import ingestionRoutes from './routes/ingestionRoutes';
 import ingestionAdminRoutes from './routes/ingestionAdminRoutes';
 import ingestionWebhookRoutes from './routes/ingestionWebhookRoutes';
 import ingestionGmailOAuthRoutes from './routes/ingestionGmailOAuthRoutes';
 import internalIngestionWorkerRoutes from './routes/internalIngestionWorkerRoutes';
+import prometheusRoutes from './routes/prometheusRoutes';
 
 import { loadEnv } from './env_loader';
-import { getEnvValue, hasRunLocalFlag, isLocalEnv } from './env';
+import { getBackendUrl, getEnvValue, hasRunLocalFlag, isLocalEnv } from './env';
 
 // Load env vars from server/.env as the primary local source, with server/.secrets
 // still supported as a backwards-compatible fallback (plus repo root fallbacks).
 // .local_env files load only when RUN_LOCAL=1 is set inside that file.
-// Later files override earlier ones to make local overrides and secrets take precedence.
+//
+// Precedence (highest to lowest): shell env > .local_env > .env > .secrets.
+// Achieved by loading .local_env FIRST with `override: false`, so its keys
+// take precedence over the .env/.secrets values loaded afterward (which
+// also use `override: false` and so leave already-set keys alone). Shell
+// env vars are set before any of this runs and are preserved by
+// `override: false` throughout.
 const localEnvPaths = [
   path.resolve(__dirname, '../.local_env'),
   path.resolve(__dirname, '../../.local_env'),
@@ -44,16 +52,15 @@ const envPaths = [
   path.resolve(__dirname, '../../.secrets'),
 ];
 const loadedEnvPaths: string[] = [];
-const shouldOverride = false;
-for (const envPath of envPaths) {
-  if (fs.existsSync(envPath)) {
-    dotenv.config({ path: envPath, override: shouldOverride });
+for (const envPath of localEnvPaths) {
+  if (hasRunLocalFlag(envPath)) {
+    dotenv.config({ path: envPath, override: false });
     loadedEnvPaths.push(envPath);
   }
 }
-for (const envPath of localEnvPaths) {
-  if (hasRunLocalFlag(envPath)) {
-    dotenv.config({ path: envPath, override: shouldOverride });
+for (const envPath of envPaths) {
+  if (fs.existsSync(envPath)) {
+    dotenv.config({ path: envPath, override: false });
     loadedEnvPaths.push(envPath);
   }
 }
@@ -70,8 +77,12 @@ export { envLoadedFrom };
 export const app = express();
 app.set('trust proxy', 1);
 
+// Mailgun may send larger multipart or urlencoded webhook payloads than the
+// app-wide default body parser limits, so mount webhook routes before them.
+app.use('/api/ingestion/webhooks', ingestionWebhookRoutes);
+
 const isRunningLocally = isLocalEnv();
-const webUrl = getEnvValue('WEB_URL', { defaultValue: 'https://duerk.org' }) || 'https://duerk.org';
+const webUrl = getBackendUrl('https://duerk.org') || 'https://duerk.org';
 const allowedOrigins = isRunningLocally
   ? [/^http:\/\/localhost(:\d+)?$/, /^http:\/\/127\.0\.0\.1(:\d+)?$/]
   : [webUrl];
@@ -95,7 +106,8 @@ app.use(cors({
     return callback(new Error(msg));
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id'],
+  exposedHeaders: ['X-Request-Id'],
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -113,18 +125,44 @@ try {
   accessLogStream = null;
 }
 
+import { generateRequestId, runWithRequestContext } from './requestContext';
+
+const REQUEST_ID_HEADER = 'x-request-id';
+const isStructuredOutput =
+  process.env.LOG_FORMAT === 'json' ||
+  (process.env.LOG_FORMAT !== 'text' &&
+    (process.env.NODE_ENV === 'production' || Boolean(process.env.K_SERVICE)));
+
 app.use((req, res, next) => {
+  const inbound = req.header(REQUEST_ID_HEADER);
+  const requestId = inbound && inbound.trim().length > 0 ? inbound.trim() : generateRequestId();
+  res.setHeader('X-Request-Id', requestId);
   const start = Date.now();
   res.on('finish', () => {
     const ms = Date.now() - start;
-    const line = `[api] ${new Date().toISOString()} ${req.method} ${req.originalUrl} ${res.statusCode} ${ms}ms\n`;
+    const timestamp = new Date().toISOString();
+    const line = isStructuredOutput
+      ? JSON.stringify({
+          level: 'info',
+          time: timestamp,
+          channel: 'api',
+          requestId,
+          method: req.method,
+          path: req.originalUrl,
+          status: res.statusCode,
+          durationMs: ms,
+        })
+      : `[api] ${timestamp} [req=${requestId}] ${req.method} ${req.originalUrl} ${res.statusCode} ${ms}ms`;
     if (accessLogStream) {
-      accessLogStream.write(line);
+      accessLogStream.write(`${line}\n`);
     } else {
-      console.info(line.trim());
+      console.info(line);
     }
   });
-  next();
+  runWithRequestContext(
+    { requestId, method: req.method, path: req.originalUrl },
+    () => next()
+  );
 });
 
 const publicDir = path.join(__dirname, '..', 'public');
@@ -160,11 +198,22 @@ app.use(express.static(publicDir));
 
 import passport from 'passport';
 import { initPassport, createToken, createOAuthState, decodeOAuthState, authenticate } from './auth';
+import { assertSafeAuthSecretConfig } from './authConfig';
 import { ensureCurrentUserTier, ensureDefaultGroupForUser, ensureWebPasswordAccountForOAuth, getUserRole } from './db';
 import { ensureAdminBootstrap, getSeededTierForEmail } from './services/entitlementService';
 import { requireAdmin } from './middleware/requireAdmin';
-import { appendTokenToRedirect, isRedirectUriAllowed, resolveAndValidateRedirectUri } from './redirects';
+import {
+  appendAuthCodeToRedirect,
+  consumeRedirectTokenExchangeCode,
+  createRedirectTokenExchangeCode,
+  isRedirectUriAllowed,
+  resolveAndValidateRedirectUri,
+} from './redirects';
 import { logError } from './logger';
+import { assertNoPubliclyExposedServerSecrets } from './secrets';
+
+assertSafeAuthSecretConfig();
+assertNoPubliclyExposedServerSecrets();
 
 initPassport();
 app.use(passport.initialize());
@@ -182,10 +231,6 @@ const redirectToLoginWithError = (req: express.Request, res: express.Response, w
   res.redirect(nextUrl.toString());
 };
 
-if (!isLocalEnv() && getEnvValue('AUTH_SECRET') === 'development-secret') {
-    logError('[WARNING] AUTH_SECRET is not set or is using the default value in a non-local environment. This is a security risk and will cause authentication to fail.');
-}
-
 app.get('/api/auth/google', (req, res, next) => {
   if (!googleOAuthConfigured) {
     res.status(503).json({ error: 'Google OAuth is not configured on the server.' });
@@ -200,6 +245,20 @@ app.get('/api/auth/google', (req, res, next) => {
   const state = redirectUri ? createOAuthState({ redirectUri }) : undefined;
   const handler = passport.authenticate('google', { scope: ['profile', 'email'], state });
   handler(req, res, next);
+});
+
+app.post('/api/auth/exchange', express.json(), (req, res) => {
+  const code = String(req.body?.code ?? '').trim();
+  if (!code) {
+    res.status(400).json({ error: 'code is required' });
+    return;
+  }
+  const exchanged = consumeRedirectTokenExchangeCode(code);
+  if (!exchanged) {
+    res.status(400).json({ error: 'Invalid or expired auth exchange code.' });
+    return;
+  }
+  res.json(exchanged);
 });
 
 app.get(
@@ -252,16 +311,16 @@ app.get(
         if (redirectUri && !isRedirectUriAllowed(redirectUri, webUrl)) {
           redirectUri = undefined;
         }
+        const authCode = createRedirectTokenExchangeCode({
+          token,
+          requirePasswordSetup: requiresPasswordSetup,
+        });
         if (redirectUri) {
-          const next = new URL(appendTokenToRedirect(redirectUri, token));
-          if (requiresPasswordSetup) {
-            next.searchParams.set('require_password_setup', '1');
-          }
+          const next = new URL(appendAuthCodeToRedirect(redirectUri, authCode));
           res.redirect(next.toString());
           return;
         }
-        const suffix = requiresPasswordSetup ? `&require_password_setup=1` : '';
-        res.redirect(`/login?token=${encodeURIComponent(token)}${suffix}`);
+        res.redirect(`/login?auth_code=${encodeURIComponent(authCode)}`);
       } catch (callbackErr: any) {
         logError('[auth] Google OAuth post-login setup failed', {
           name: callbackErr?.name,
@@ -293,12 +352,16 @@ app.use('/api/activities', activityRoutes);
 app.use('/api/car-rentals', carRentalRoutes);
 app.use('/api/account', accountRoutes);
 app.use('/api/expenses', expenseRoutes);
+app.use('/api/payments', paymentRoutes);
 app.use('/api/internal/ingestion', internalIngestionWorkerRoutes);
-app.use('/api/ingestion/webhooks', ingestionWebhookRoutes);
 app.use('/api/ingestion/gmail', ingestionGmailOAuthRoutes);
 app.use('/api/ingestion', ingestionRoutes);
 app.use('/api/admin', authenticate, requireAdmin, adminRoutes);
 app.use('/api/admin/ingestion', authenticate, requireAdmin, ingestionAdminRoutes);
+// Prometheus scrape endpoint. Unauthenticated, text-only, per-instance.
+// Mounted at the root (`/metrics`) since that's the conventional path most
+// scrapers assume.
+app.use('/metrics', prometheusRoutes);
 
 if (hasWebApp) {
   app.get(['/app', '/app/*', '/'], (_req, res) => {

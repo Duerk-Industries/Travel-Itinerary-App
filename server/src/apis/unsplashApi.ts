@@ -23,7 +23,7 @@ export const searchUnsplashPhotos = async (params: {
   orientation?: 'landscape' | 'portrait' | 'squarish';
   timeoutMs?: number;
 }): Promise<UnsplashSearchResponse> => {
-  reserveApiUsageOrThrow({ provider: 'UNSPLASH', caller: params.caller });
+  await reserveApiUsageOrThrow({ provider: 'UNSPLASH', caller: params.caller });
   const url =
     `https://api.unsplash.com/search/photos?query=${encodeURIComponent(params.query)}` +
     `&per_page=${params.perPage ?? 1}&orientation=${params.orientation ?? 'landscape'}`;
@@ -40,7 +40,7 @@ export const getUnsplashRandomPhoto = async (params: {
   timeoutMs?: number;
   validateStatus?: (status: number) => boolean;
 }): Promise<AxiosResponse<UnsplashRandomResponse>> => {
-  reserveApiUsageOrThrow({ provider: 'UNSPLASH', caller: params.caller });
+  await reserveApiUsageOrThrow({ provider: 'UNSPLASH', caller: params.caller });
   return axios.get<UnsplashRandomResponse>(
     'https://api.unsplash.com/photos/random?orientation=landscape&content_filter=high&query=travel',
     {

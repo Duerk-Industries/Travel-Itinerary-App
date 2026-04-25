@@ -20,6 +20,10 @@ export const AsyncStorage = {
   setItem: jest.fn(async () => undefined),
   removeItem: jest.fn(async () => undefined),
 };
+export const AppState = {
+  currentState: 'active',
+  addEventListener: jest.fn(() => ({ remove: jest.fn() })),
+};
 export const StyleSheet = {
   create: <T extends Record<string, any>>(styles: T) => styles,
   flatten: (style: any) => style,
@@ -49,6 +53,7 @@ export default {
   SafeAreaView,
   ActivityIndicator,
   AsyncStorage,
+  AppState,
   StyleSheet,
   useWindowDimensions,
   useColorScheme,

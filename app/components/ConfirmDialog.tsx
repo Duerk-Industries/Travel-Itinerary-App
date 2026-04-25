@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
+import DialogShell from './DialogShell';
 
 type ConfirmDialogProps = {
   visible: boolean;
@@ -13,7 +14,7 @@ type ConfirmDialogProps = {
   testID?: string;
 };
 
-const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
+const ConfirmDialogComponent: React.FC<ConfirmDialogProps> = ({
   visible,
   title,
   message,
@@ -24,23 +25,38 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   styles,
   testID,
 }) => {
-  if (!visible) return null;
   return (
-    <View style={styles.modalOverlay} testID={testID || 'confirm-dialog'}>
-      <View style={styles.confirmModal}>
-        <Text style={styles.sectionTitle}>{title}</Text>
-        {message ? <Text style={styles.helperText}>{message}</Text> : null}
-        <View style={styles.row}>
-          <TouchableOpacity style={[styles.button, styles.dangerButton, { flex: 1 }]} onPress={onConfirm}>
-            <Text style={styles.dangerButtonText}>{confirmLabel}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.button, { flex: 1 }]} onPress={onCancel}>
-            <Text style={styles.buttonText}>{cancelLabel}</Text>
-          </TouchableOpacity>
-        </View>
+    <DialogShell
+      visible={visible}
+      title={title}
+      message={message}
+      styles={styles}
+      onClose={onCancel}
+      testID={testID || 'confirm-dialog'}
+      accessibilityRole="alert"
+    >
+      <View style={styles.row}>
+        <TouchableOpacity
+          style={[styles.button, styles.dangerButton, { flex: 1 }]}
+          onPress={onConfirm}
+          accessibilityRole="button"
+          accessibilityLabel={confirmLabel}
+        >
+          <Text style={styles.dangerButtonText}>{confirmLabel}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.button, { flex: 1 }]}
+          onPress={onCancel}
+          accessibilityRole="button"
+          accessibilityLabel={cancelLabel}
+        >
+          <Text style={styles.buttonText}>{cancelLabel}</Text>
+        </TouchableOpacity>
       </View>
-    </View>
+    </DialogShell>
   );
 };
+
+const ConfirmDialog = memo(ConfirmDialogComponent);
 
 export default ConfirmDialog;

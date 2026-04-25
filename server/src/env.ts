@@ -35,6 +35,11 @@ export const getEnvValue = (key: string, options: EnvOptions = {}): string | und
   return undefined;
 };
 
+export const getBackendUrl = (defaultValue?: string): string | undefined =>
+  getEnvValue('BACKEND_URL') ??
+  getEnvValue('WEB_URL') ??
+  defaultValue;
+
 type EnvFlagOptions = {
   defaultValue?: boolean;
 };

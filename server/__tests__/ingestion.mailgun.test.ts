@@ -111,6 +111,49 @@ describe('ingestion Mailgun webhook', () => {
     expect(reviewRes.body.items[0].itemType).toBe('hotel');
   });
 
+  it('suppresses repeated low-confidence generic note duplicates from the same Mailgun message', async () => {
+    const request = require('supertest') as typeof import('supertest');
+    const { app } = require('../src/app') as typeof import('../src/app');
+    const helpers = require('./helpers') as typeof import('./helpers');
+    const user = { firstName: 'Mail', lastName: 'Duplicate', email: 'mailgun-duplicate@example.com', password: 'secret123' };
+    const { token: authToken, userId } = await helpers.registerAndLoginWebUser(user);
+    await helpers.setUserTierInDb(userId, 'premium');
+
+    const timestamp = String(Math.floor(Date.now() / 1000));
+    const token = 'mailgun-token-duplicate-generic-note';
+    const signature = signMailgunWebhook(timestamp, token);
+    const noteText = 'FYI this thread also includes a few screenshots and no structured travel details.';
+
+    await request(app)
+      .post('/api/ingestion/webhooks/mailgun')
+      .field('timestamp', timestamp)
+      .field('token', token)
+      .field('signature', signature)
+      .field('sender', user.email)
+      .field('from', `Mail Duplicate <${user.email}>`)
+      .field('recipient', 'travel.docs@inbound.duerk.org')
+      .field('subject', 'Forwarded mixed-content message')
+      .field('Message-Id', '<mailgun-duplicate-generic-note-1@example.com>')
+      .field('body-plain', noteText)
+      .attach('attachment-1', Buffer.from(noteText, 'utf8'), { filename: 'note-copy-1.txt', contentType: 'text/plain' })
+      .attach('attachment-2', Buffer.from(noteText, 'utf8'), { filename: 'note-copy-2.txt', contentType: 'text/plain' })
+      .expect(202);
+
+    await helpers.waitFor(async () => {
+      const review = await request(app).get('/api/ingestion/review-items').set({ Authorization: `Bearer ${authToken}` });
+      return (review.body.items ?? []).length === 1;
+    });
+
+    const reviewRes = await request(app)
+      .get('/api/ingestion/review-items')
+      .set({ Authorization: `Bearer ${authToken}` })
+      .expect(200);
+
+    expect(reviewRes.body.items).toHaveLength(1);
+    expect(reviewRes.body.items[0].itemType).toBe('generic_note');
+    expect(reviewRes.body.items[0].status).toBe('LOW_CONFIDENCE');
+  });
+
   it('rejects invalid Mailgun signatures', async () => {
     const request = require('supertest') as typeof import('supertest');
     const { app } = require('../src/app') as typeof import('../src/app');

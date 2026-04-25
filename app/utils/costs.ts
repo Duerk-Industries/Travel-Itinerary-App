@@ -1,5 +1,18 @@
 import { rollUpTotals } from './coveredBy';
 
+const splitAmountIntoCents = (amount: number, parts: number): number[] => {
+  if (!parts) return [];
+  const cents = Math.round(amount * 100);
+  const base = cents < 0 ? Math.ceil(cents / parts) : Math.floor(cents / parts);
+  let remainder = cents - base * parts;
+
+  return Array.from({ length: parts }, () => {
+    const adjustment = remainder === 0 ? 0 : remainder > 0 ? 1 : -1;
+    remainder -= adjustment;
+    return (base + adjustment) / 100;
+  });
+};
+
 // (This would be moved from app/tabs/costReport.ts)
 export const computePayerTotals = <T>(
   items: T[],
@@ -24,13 +37,10 @@ export const computePayerTotals = <T>(
     }
     if (!payers.length) return;
 
-    const share = amount / payers.length;
-
+    const shares = splitAmountIntoCents(amount, payers.length);
     payers.forEach((payerId, index) => {
       if (totals[payerId] !== undefined) {
-        // Distribute remainder to the first payer to avoid floating point issues
-        const amountToAdd = index === 0 ? amount - (share * (payers.length -1)) : share;
-        totals[payerId] += amountToAdd;
+        totals[payerId] += shares[index] ?? 0;
       }
     });
   });

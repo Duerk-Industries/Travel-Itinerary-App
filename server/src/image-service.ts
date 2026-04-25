@@ -2,6 +2,7 @@ import axios from 'axios';
 import { Storage } from '@google-cloud/storage';
 import { getEnvValue } from './env';
 import { getApiCacheSetting } from './config/apiLimits';
+import { createTtlCache } from './utils/ttlCache';
 import {
   fetchUnsplashImageForGooglePlaceFallback,
   fetchUnsplashImageForItinerary,
@@ -17,6 +18,18 @@ const SIGNED_URL_TTL_MS = Number(getApiCacheSetting('images', 'signedUrlTtlMs'))
 let storage: Storage | null = null;
 let imageCacheDisabledReason: string | null = null;
 let imageCacheDisableLogged = false;
+
+const gcsSignedUrlCache = createTtlCache<string | null>({
+  defaultTtlMs: SIGNED_URL_TTL_MS,
+  metricName: 'image.gcs_bytes',
+});
+
+export const clearImageServiceCachesForTests = (): void => {
+  gcsSignedUrlCache.clear();
+  storage = null;
+  imageCacheDisabledReason = null;
+  imageCacheDisableLogged = false;
+};
 
 function sanitizeFilename(name: string): string {
   return name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
@@ -88,7 +101,7 @@ const getBucket = () => {
   return storage.bucket(bucketName);
 };
 
-async function getCachedImageUrl(filepath: string): Promise<string | null> {
+async function readCachedImageUrlFromGcs(filepath: string): Promise<string | null> {
   const bucket = getBucket();
   if (!bucket) return null;
   try {
@@ -115,6 +128,14 @@ async function getCachedImageUrl(filepath: string): Promise<string | null> {
     console.error('Error checking cache:', error);
     return null;
   }
+}
+
+async function getCachedImageUrl(filepath: string): Promise<string | null> {
+  return gcsSignedUrlCache.getOrFetch(
+    filepath,
+    () => readCachedImageUrlFromGcs(filepath),
+    SIGNED_URL_TTL_MS
+  );
 }
 
 async function cacheImage(filepath: string, imageUrl: string): Promise<string> {
@@ -163,6 +184,11 @@ const fetchAndCache = async (cachePath: string, fetcher: () => Promise<string>):
   if (cachedUrl) return { url: cachedUrl, cached: true };
   const imageUrl = await fetcher();
   const cached = await cacheImage(cachePath, imageUrl);
+  if (cached && cached !== imageUrl) {
+    gcsSignedUrlCache.set(cachePath, cached, SIGNED_URL_TTL_MS);
+  } else {
+    gcsSignedUrlCache.delete(cachePath);
+  }
   return { url: cached, cached: false };
 };
 

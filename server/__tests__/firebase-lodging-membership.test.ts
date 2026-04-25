@@ -130,6 +130,15 @@ describe('firebase lodging membership updates/deletes', () => {
 
     await fakeDb.collection('trips').doc(tripId).set({ id: tripId, groupId });
     await fakeDb.collection('group_members').doc('member-1').set({ groupId, userId: memberId, removedAt: null });
+    await fakeDb.collection('trip_access').doc(`${tripId}_${memberId}`).set({
+      tripId,
+      groupId,
+      userId: memberId,
+      role: 'member',
+      status: 'active',
+      canRead: true,
+      canWrite: true,
+    });
     await fakeDb.collection('lodgings').doc(lodgingId).set({
       id: lodgingId,
       user_id: ownerId,
@@ -178,6 +187,15 @@ describe('firebase lodging membership updates/deletes', () => {
     await fakeDb.collection('trips').doc(tripId).set({ id: tripId, groupId });
     await fakeDb.collection('group_members').doc('member-1').set({ groupId, userId: memberId, removedAt: null });
     await fakeDb.collection('group_members').doc('member-2').set({ groupId, userId: otherMemberId, removedAt: null });
+    await fakeDb.collection('trip_access').doc(`${tripId}_${memberId}`).set({
+      tripId,
+      groupId,
+      userId: memberId,
+      role: 'member',
+      status: 'active',
+      canRead: true,
+      canWrite: true,
+    });
 
     await fakeDb.collection('lodgings').doc('lodging-a').set({
       id: 'lodging-a',

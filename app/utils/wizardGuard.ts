@@ -41,7 +41,7 @@ export const shouldAllowPageChange = (
   options: PageGuardOptions = {}
 ): boolean => {
   if (currentPage === 'create-trip' && nextPage !== 'create-trip') {
-    return false;
+    return nextPage === 'home';
   }
   if (options.isFollowedTrip && followedTripHiddenPageSet.has(nextPage)) {
     return false;
@@ -55,7 +55,7 @@ export const shouldDisableTab = (
   options: PageGuardOptions = {}
 ): boolean => {
   if (currentPage === 'create-trip' && tabPage !== 'create-trip') {
-    return true;
+    return tabPage !== 'home';
   }
   if (options.isFollowedTrip && followedTripHiddenPageSet.has(tabPage)) {
     return true;

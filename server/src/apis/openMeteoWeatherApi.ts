@@ -156,7 +156,7 @@ const geocodeLocation = async (
     return { location: cached.value, apiCalls: 0 };
   }
 
-  reserveApiUsageOrThrow({ provider: 'OPEN_METEO', caller: 'OVERVIEW_DAY_WEATHER_GEOCODE' });
+  await reserveApiUsageOrThrow({ provider: 'OPEN_METEO', caller: 'OVERVIEW_DAY_WEATHER_GEOCODE' });
   const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=1&language=en&format=json`;
   const res = await fetch(url, { method: 'GET', headers: { Accept: 'application/json' } });
   if (!res.ok) {
@@ -196,7 +196,7 @@ const fetchForecastRange = async (params: {
     return { days: cached.value, apiCalls: 0 };
   }
 
-  reserveApiUsageOrThrow({ provider: 'OPEN_METEO', caller: 'OVERVIEW_DAY_WEATHER_FORECAST' });
+  await reserveApiUsageOrThrow({ provider: 'OPEN_METEO', caller: 'OVERVIEW_DAY_WEATHER_FORECAST' });
   const url =
     `https://api.open-meteo.com/v1/forecast?latitude=${encodeURIComponent(String(params.latitude))}` +
     `&longitude=${encodeURIComponent(String(params.longitude))}` +

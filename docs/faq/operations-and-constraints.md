@@ -12,7 +12,7 @@
 
 ## What notable runtime constraints should be known?
 
-- CORS is strict: localhost patterns in local mode, otherwise `WEB_URL`.
+- CORS is strict: localhost patterns in local mode, otherwise `BACKEND_URL` (with `WEB_URL` still accepted as a compatibility fallback).
 - If `server/public/index.html` is missing, `/` falls back to login page handling.
 - Web-auth routes are exposed via both `/api/auth/*` and `/api/web-auth/*` for compatibility.
 

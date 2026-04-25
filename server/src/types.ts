@@ -120,7 +120,8 @@ export type AuditAction =
   | 'TIER_LIMIT_UPDATED'
   | 'TIER_ENTITLEMENT_UPDATED'
   | 'FEATURE_FLAG_UPDATED'
-  | 'API_LIMITS_UPDATED';
+  | 'API_LIMITS_UPDATED'
+  | 'RETENTION_TICK_RUN';
 
 export interface AuditLogEntry {
   id: string;
@@ -207,6 +208,9 @@ export interface GroupMember {
   groupId: string;
   userId?: string;
   guestName?: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
   addedBy: string;
   createdAt: string;
   userEmail?: string;
@@ -526,6 +530,20 @@ export interface Expense {
   forIds: string[];
   sourceType?: string | null;
   sourceId?: string | null;
+  notes?: string | null;
+  createdAt: string;
+}
+
+export interface TripPayment {
+  id: string;
+  tripId: string;
+  groupId: string;
+  recordedBy: string;
+  payerId: string;
+  receiverId: string;
+  paymentDate: string;
+  amountCents: number;
+  currency: string;
   notes?: string | null;
   createdAt: string;
 }

@@ -14,6 +14,7 @@ import {
   upsertExpenseForSource,
 } from '../db';
 import { logError, logInfo } from '../logger';
+import { incrementMetric, recordTiming } from '../metrics';
 import { failGenerationUsage, finalizeGenerationUsage } from './entitlementService';
 import {
   generateItineraryViaPromptPlan,
@@ -585,6 +586,7 @@ const runJob = async (jobId: string, input: QueueInput): Promise<void> => {
   job.updatedAt = nowIso();
   jobs.set(jobId, job);
 
+  const jobStart = Date.now();
   try {
     let fallbackAirport = safeString(input.departureAirport);
     if (!fallbackAirport) {
@@ -649,12 +651,13 @@ const runJob = async (jobId: string, input: QueueInput): Promise<void> => {
           status: 'completed',
           result: job.result,
         },
-        tokensUsed: result.tokenUsage.totalTokens,
       });
     }
     logInfo(
       `[itinerary][async] completed job=${jobId} trip=${input.tripId} itinerary=${itineraryId} details=${persisted.detailsCount} transfers=${persisted.transfersCount} lodgings=${persisted.lodgingsCount} activities=${persisted.activitiesCount} carRentals=${persisted.carRentalsCount}`
     );
+    incrementMetric('itinerary_generation_success', { destination: input.destinationSummary || 'unknown' });
+    recordTiming('itinerary_generation_duration_ms', Date.now() - jobStart, { success: true });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     job.status = 'failed';
@@ -665,6 +668,11 @@ const runJob = async (jobId: string, input: QueueInput): Promise<void> => {
       await failGenerationUsage(input.idempotencyKey, message);
     }
     logError(`[itinerary][async] failed job=${jobId} trip=${input.tripId}`, err);
+    incrementMetric('itinerary_generation_failure', {
+      destination: input.destinationSummary || 'unknown',
+      reason: message.slice(0, 80),
+    });
+    recordTiming('itinerary_generation_duration_ms', Date.now() - jobStart, { success: false });
   }
 };
 

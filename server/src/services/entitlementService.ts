@@ -10,6 +10,8 @@ import {
 } from '../db';
 import { UserRole, TierKey } from '../types';
 import { logInfo, logError } from '../logger';
+import { incrementMetric } from '../metrics';
+import { getEnvValue } from '../env';
 import { getFeatureFlagSeeds } from '../config/featureFlags';
 import { EntitlementError } from '../errors';
 
@@ -103,6 +105,31 @@ export const seedEntitlementDefaults = async (): Promise<void> => {
     const feature = featureByKey.get(featureKey);
     if (!tier || !feature) continue;
     await upsertTierEntitlement(tier.id, feature.id, isAllowed);
+  }
+};
+
+const parseStartupFeatureFlagOverrides = (): string[] => {
+  const raw = getEnvValue('STARTUP_FORCE_ENABLE_FEATURE_FLAGS', { defaultValue: '' }) || '';
+  return raw
+    .split(',')
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean);
+};
+
+export const applyStartupFeatureFlagOverrides = async (): Promise<void> => {
+  const flagsToEnable = parseStartupFeatureFlagOverrides();
+  if (flagsToEnable.length === 0) {
+    return;
+  }
+
+  for (const key of flagsToEnable) {
+    const current = await getFeatureFlag(key);
+    if (current?.enabled) {
+      logInfo(`[entitlement] Startup feature flag already enabled: ${key}`);
+      continue;
+    }
+    await setFeatureFlag(key, true, null);
+    logInfo(`[entitlement] Startup feature flag override enabled: ${key}`);
   }
 };
 
@@ -220,6 +247,7 @@ export const assertCanUseFeature = async (
   // 1. Feature flag — no bypass, even for admins.
   const flagEnabled = await isFeatureEnabled(featureKey);
   if (!flagEnabled) {
+    incrementMetric('feature_access_denied', { featureKey, reason: 'flag_disabled' });
     throw new EntitlementError('FEATURE_DISABLED', `Feature '${featureKey}' is currently disabled`, { featureKey });
   }
 
@@ -253,6 +281,7 @@ export const assertCanUseFeature = async (
   }
 
   if (resolvedAllowance === false) {
+    incrementMetric('feature_access_denied', { featureKey, reason: 'tier_not_entitled' });
     throw new EntitlementError(
       'FEATURE_NOT_ENTITLED',
       `Your current plan does not include access to '${featureKey}'`,
@@ -414,13 +443,9 @@ export const finalizeGenerationUsage = async (params: {
   windowKey: string;
   idempotencyKey: string;
   responseBody: Record<string, unknown>;
-  tokensUsed?: number;
 }): Promise<void> => {
   await completeGenerationIdempotency(params.idempotencyKey, params.responseBody);
   await recordUsage(params.userId, 'ai_itinerary_generations', 1, { windowKey: params.windowKey });
-  if ((params.tokensUsed ?? 0) > 0) {
-    await recordUsage(params.userId, 'openai_tokens', params.tokensUsed ?? 0, { windowKey: params.windowKey });
-  }
 };
 
 export const failGenerationUsage = async (idempotencyKey: string, errorMessage: string): Promise<void> => {

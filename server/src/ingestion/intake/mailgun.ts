@@ -5,10 +5,10 @@ import { findUserByIdentifier } from '../../db';
 import { getEnvValue } from '../../env';
 import { logError } from '../../logger';
 import {
-  INGESTION_DEFAULT_FORWARDING_ADDRESS,
   INGESTION_DEFAULT_FORWARDING_PROVIDER,
   INGESTION_MAX_FILE_BYTES,
   INGESTION_WEBHOOK_MAX_AGE_MS,
+  getIngestionForwardingAddress,
 } from '../config';
 import type { IngestionPayload } from '../contracts';
 import { claimWebhookReplayToken } from '../shared/repository';
@@ -87,7 +87,9 @@ export const mailgunWebhookMiddleware: RequestHandler = (req, res, next) => {
 };
 
 export const validateMailgunWebhookSignature = async (body: Record<string, unknown>): Promise<void> => {
-  const signingKey = getEnvValue('MAILGUN_WEBHOOK_SIGNING_KEY');
+  const signingKey =
+    getEnvValue('MAILGUN_WEBHOOK_SIGNING_KEY') ??
+    getEnvValue('MAILGUN_HTTP_WEBHOOK_SIGNING_KEY');
   if (!signingKey) {
     throw new Error('Mailgun webhook signing key is not configured');
   }
@@ -130,7 +132,7 @@ export const buildMailgunWebhookPayloads = async (req: Request, userId: string, 
   const body = (req.body ?? {}) as Record<string, unknown>;
   const files = ((req.files as Express.Multer.File[] | undefined) ?? []) as Express.Multer.File[];
   const subject = coerceString(body.subject) || 'Forwarded travel confirmation';
-  const recipient = extractEmailAddress(body.recipient) ?? INGESTION_DEFAULT_FORWARDING_ADDRESS;
+  const recipient = extractEmailAddress(body.recipient) ?? getIngestionForwardingAddress();
   const messageId =
     getHeaderValue(body, 'Message-Id') ??
     getHeaderValue(body, 'message-id') ??

@@ -54,6 +54,9 @@ describe('Admin routes', () => {
       ['GET',   '/api/admin/tiers'],
       ['GET',   '/api/admin/user-data'],
       ['GET',   '/api/admin/audit-log'],
+      ['GET',   '/api/admin/metrics'],
+      ['GET',   '/api/admin/ingestion-queue-depth'],
+      ['POST',  '/api/admin/users/bulk-role'],
     ] as const;
 
     for (const [method, path] of adminPaths) {
@@ -245,6 +248,266 @@ describe('Admin routes', () => {
 
       const currentTier = await getCurrentUserTier(userId);
       expect(currentTier?.tierKey).toBe('pro');
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // POST /api/admin/users/bulk-tier
+  // ---------------------------------------------------------------------------
+
+  describe('POST /api/admin/users/bulk-tier', () => {
+    let bulkUserAId: string;
+    let bulkUserBId: string;
+    const bulkA = { firstName: 'Bulk', lastName: 'Alpha', email: `bulk-tier-a+${Date.now()}@example.com`, password: 'BulkPass1!' };
+    const bulkB = { firstName: 'Bulk', lastName: 'Bravo', email: `bulk-tier-b+${Date.now()}@example.com`, password: 'BulkPass1!' };
+
+    beforeAll(async () => {
+      const a = await registerAndLoginWebUser(bulkA);
+      const b = await registerAndLoginWebUser(bulkB);
+      bulkUserAId = a.userId;
+      bulkUserBId = b.userId;
+      testEmails.push(bulkA.email, bulkB.email);
+    });
+
+    beforeEach(async () => {
+      await setUserRole(bulkUserAId, 'user');
+      await setUserRole(bulkUserBId, 'user');
+      await setUserTier(bulkUserAId, 'free', 'admin', adminUserId, 'bulk test reset');
+      await setUserTier(bulkUserBId, 'free', 'admin', adminUserId, 'bulk test reset');
+    });
+
+    it('rejects empty ids array with 400', async () => {
+      const res = await request(app)
+        .post('/api/admin/users/bulk-tier')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ ids: [], tierKey: 'premium', reason: 'bulk test' })
+        .expect(400);
+      expect(res.body.error).toBeDefined();
+      expect(Array.isArray(res.body.details)).toBe(true);
+    });
+
+    it('rejects more than 100 ids with 400', async () => {
+      const ids = Array.from({ length: 101 }, (_, i) => `id-${i}`);
+      await request(app)
+        .post('/api/admin/users/bulk-tier')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ ids, tierKey: 'premium', reason: 'bulk test' })
+        .expect(400);
+    });
+
+    it('rejects missing or short reason with 400', async () => {
+      await request(app)
+        .post('/api/admin/users/bulk-tier')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ ids: [bulkUserAId], tierKey: 'premium', reason: 'hi' })
+        .expect(400);
+      await request(app)
+        .post('/api/admin/users/bulk-tier')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ ids: [bulkUserAId], tierKey: 'premium' })
+        .expect(400);
+    });
+
+    it('forbids non-admin callers (403 via requireAdmin)', async () => {
+      await request(app)
+        .post('/api/admin/users/bulk-tier')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send({ ids: [bulkUserAId], tierKey: 'premium', reason: 'bulk test' })
+        .expect(403);
+    });
+
+    it('returns 200 and applies tier change to all users on full success', async () => {
+      const res = await request(app)
+        .post('/api/admin/users/bulk-tier')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ ids: [bulkUserAId, bulkUserBId], tierKey: 'premium', reason: 'bulk success' })
+        .expect(200);
+
+      expect(res.body.failed).toEqual([]);
+      expect(res.body.updated).toHaveLength(2);
+      const updatedIds = (res.body.updated as Array<{ id: string }>).map((u) => u.id);
+      expect(updatedIds).toEqual(expect.arrayContaining([bulkUserAId, bulkUserBId]));
+
+      const tierA = await getCurrentUserTier(bulkUserAId);
+      const tierB = await getCurrentUserTier(bulkUserBId);
+      expect(tierA?.tierKey).toBe('premium');
+      expect(tierB?.tierKey).toBe('premium');
+
+      const audit = await listAuditLog({ action: 'USER_TIER_CHANGED' });
+      const bulkEntries = audit.entries.filter(
+        (e) => (e.targetUserId === bulkUserAId || e.targetUserId === bulkUserBId) && e.reason === 'bulk success',
+      );
+      expect(bulkEntries.length).toBe(2);
+    });
+
+    it('returns 207 with per-id failures when some ids cannot be resolved', async () => {
+      const res = await request(app)
+        .post('/api/admin/users/bulk-tier')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          ids: [bulkUserAId, '00000000-0000-0000-0000-000000000000'],
+          tierKey: 'premium',
+          reason: 'bulk partial',
+        })
+        .expect(207);
+
+      expect(res.body.updated).toHaveLength(1);
+      expect(res.body.updated[0].id).toBe(bulkUserAId);
+      expect(res.body.failed).toHaveLength(1);
+      expect(res.body.failed[0].id).toBe('00000000-0000-0000-0000-000000000000');
+      expect(res.body.failed[0].reason).toMatch(/not found/i);
+    });
+
+    it('dedupes repeated ids before applying', async () => {
+      const res = await request(app)
+        .post('/api/admin/users/bulk-tier')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          ids: [bulkUserAId, bulkUserAId, bulkUserAId],
+          tierKey: 'premium',
+          reason: 'dedup test',
+        })
+        .expect(200);
+      expect(res.body.updated).toHaveLength(1);
+    });
+
+    it('locks admin-role targets to pro and flags lockedToPro in the response', async () => {
+      await setUserRole(bulkUserAId, 'admin');
+      const res = await request(app)
+        .post('/api/admin/users/bulk-tier')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ ids: [bulkUserAId, bulkUserBId], tierKey: 'free', reason: 'lock test' })
+        .expect(200);
+
+      const updatedA = (res.body.updated as Array<{ id: string; tierKey: string; lockedToPro: boolean }>).find(
+        (u) => u.id === bulkUserAId,
+      );
+      const updatedB = (res.body.updated as Array<{ id: string; tierKey: string; lockedToPro: boolean }>).find(
+        (u) => u.id === bulkUserBId,
+      );
+      expect(updatedA).toEqual(expect.objectContaining({ tierKey: 'pro', lockedToPro: true }));
+      expect(updatedB).toEqual(expect.objectContaining({ tierKey: 'free', lockedToPro: false }));
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // POST /api/admin/users/bulk-role
+  // ---------------------------------------------------------------------------
+
+  describe('POST /api/admin/users/bulk-role', () => {
+    let bulkRoleAId: string;
+    let bulkRoleBId: string;
+    const bulkRoleA = { firstName: 'Bulk', lastName: 'Roler', email: `bulk-role-a+${Date.now()}@example.com`, password: 'BulkPass1!' };
+    const bulkRoleB = { firstName: 'Bulk', lastName: 'Roler', email: `bulk-role-b+${Date.now()}@example.com`, password: 'BulkPass1!' };
+
+    beforeAll(async () => {
+      const a = await registerAndLoginWebUser(bulkRoleA);
+      const b = await registerAndLoginWebUser(bulkRoleB);
+      bulkRoleAId = a.userId;
+      bulkRoleBId = b.userId;
+      testEmails.push(bulkRoleA.email, bulkRoleB.email);
+    });
+
+    beforeEach(async () => {
+      await setUserRole(bulkRoleAId, 'user');
+      await setUserRole(bulkRoleBId, 'user');
+    });
+
+    it('rejects non-admin callers with 403', async () => {
+      await request(app)
+        .post('/api/admin/users/bulk-role')
+        .set('Authorization', `Bearer ${userToken}`)
+        .send({ ids: [bulkRoleAId], role: 'admin', reason: 'bulk test' })
+        .expect(403);
+    });
+
+    it('rejects an unknown role with 400', async () => {
+      await request(app)
+        .post('/api/admin/users/bulk-role')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ ids: [bulkRoleAId], role: 'superuser', reason: 'bad role' })
+        .expect(400);
+    });
+
+    it('rejects a missing reason / short reason with 400', async () => {
+      await request(app)
+        .post('/api/admin/users/bulk-role')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ ids: [bulkRoleAId], role: 'admin' })
+        .expect(400);
+      await request(app)
+        .post('/api/admin/users/bulk-role')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ ids: [bulkRoleAId], role: 'admin', reason: 'hi' })
+        .expect(400);
+    });
+
+    it('grants admin to all users on success and auto-assigns Pro tier', async () => {
+      const res = await request(app)
+        .post('/api/admin/users/bulk-role')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ ids: [bulkRoleAId, bulkRoleBId], role: 'admin', reason: 'bulk grant' })
+        .expect(200);
+
+      expect(res.body.failed).toEqual([]);
+      expect(res.body.updated).toHaveLength(2);
+      const updated = res.body.updated as Array<{ id: string; role: string; previousRole: string | null }>;
+      expect(updated.every((u) => u.role === 'admin')).toBe(true);
+      expect(updated.every((u) => u.previousRole === 'user')).toBe(true);
+
+      // Auto-tier-to-pro side effect.
+      const tierA = await getCurrentUserTier(bulkRoleAId);
+      const tierB = await getCurrentUserTier(bulkRoleBId);
+      expect(tierA?.tierKey).toBe('pro');
+      expect(tierB?.tierKey).toBe('pro');
+
+      // Per-id audit entries land.
+      const audit = await listAuditLog({ action: 'USER_ROLE_GRANTED' });
+      const reasoned = audit.entries.filter((e) => e.reason === 'bulk grant');
+      expect(reasoned.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('refuses to demote the acting admin (self-protection) while still demoting the rest', async () => {
+      // Pre-grant A admin so we can attempt to demote the acting admin AND A
+      // in the same bulk call.
+      await setUserRole(bulkRoleAId, 'admin');
+
+      const res = await request(app)
+        .post('/api/admin/users/bulk-role')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ ids: [adminUserId, bulkRoleAId], role: 'user', reason: 'bulk demote' })
+        .expect(207);
+
+      const failedIds = (res.body.failed as Array<{ id: string; reason: string }>).map((f) => f.id);
+      expect(failedIds).toContain(adminUserId);
+      expect(res.body.failed[0].reason).toMatch(/revoke their own admin role/i);
+
+      const updatedIds = (res.body.updated as Array<{ id: string; role: string }>).map((u) => u.id);
+      expect(updatedIds).toContain(bulkRoleAId);
+    });
+
+    it('dedupes repeated ids in the payload', async () => {
+      const res = await request(app)
+        .post('/api/admin/users/bulk-role')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ ids: [bulkRoleAId, bulkRoleAId, bulkRoleAId], role: 'admin', reason: 'dedup' })
+        .expect(200);
+      expect(res.body.updated).toHaveLength(1);
+    });
+
+    it('rejects >100 ids and empty ids at the DTO level', async () => {
+      await request(app)
+        .post('/api/admin/users/bulk-role')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ ids: [], role: 'admin', reason: 'empty' })
+        .expect(400);
+
+      const tooMany = Array.from({ length: 101 }, (_, i) => `id-${i}`);
+      await request(app)
+        .post('/api/admin/users/bulk-role')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ ids: tooMany, role: 'admin', reason: 'too many' })
+        .expect(400);
     });
   });
 
@@ -567,6 +830,19 @@ describe('Admin routes', () => {
           openAiProvider.callers.map((caller: any) => [caller.caller, caller.limit])
         );
         callers.ITINERARY_GENERATE_PLAN = 75;
+        const budgetingModels = Object.fromEntries(
+          (openAiProvider.budgetingModels ?? []).map((model: any) => [
+            model.model,
+            {
+              inputCostPer1MTokensUsd: model.inputCostPer1MTokensUsd,
+              outputCostPer1MTokensUsd: model.outputCostPer1MTokensUsd,
+            },
+          ])
+        );
+        budgetingModels.GPT_4O_MINI = {
+          inputCostPer1MTokensUsd: 0.2,
+          outputCostPer1MTokensUsd: 0.8,
+        };
 
         await request(app)
           .patch('/api/admin/api-limits/OPENAI')
@@ -575,6 +851,9 @@ describe('Admin routes', () => {
             window: 'day',
             windowHours: 48,
             overallLimit: 1500,
+            monthlyBudgetUsd: 125,
+            alertThresholdPercent: 85,
+            budgetingModels,
             callers,
             reason: 'Increase OpenAI plan throughput for launch prep',
           })
@@ -584,6 +863,10 @@ describe('Admin routes', () => {
         expect(updatedYaml).toContain('windowHours: 48');
         expect(updatedYaml).toContain('overall: 1500');
         expect(updatedYaml).toContain('ITINERARY_GENERATE_PLAN: 75');
+        expect(updatedYaml).toContain('monthlyBudgetUsd: 125');
+        expect(updatedYaml).toContain('alertThresholdPercent: 85');
+        expect(updatedYaml).toContain('inputCostPer1MTokensUsd: 0.2');
+        expect(updatedYaml).toContain('outputCostPer1MTokensUsd: 0.8');
 
         const auditResult = await listAuditLog({ action: 'API_LIMITS_UPDATED' as any });
         expect(auditResult.entries.length).toBeGreaterThanOrEqual(1);
@@ -597,5 +880,66 @@ describe('Admin routes', () => {
         fs.rmSync(tempDir, { recursive: true, force: true });
       }
     });
+  });
+
+  // ---------------------------------------------------------------------------
+  // GET /api/admin/metrics
+  // ---------------------------------------------------------------------------
+
+  describe('GET /api/admin/metrics', () => {
+    it('returns the in-process counter snapshot with cache-ratio rollups', async () => {
+      const { incrementMetric, resetMetricCountersForTests } = require('../src/metrics') as typeof import('../src/metrics');
+      resetMetricCountersForTests();
+      incrementMetric('unsplash.url_lookup.cache_hit');
+      incrementMetric('unsplash.url_lookup.cache_hit');
+      incrementMetric('unsplash.url_lookup.cache_miss');
+      incrementMetric('itinerary.generation.success');
+
+      const res = await request(app)
+        .get('/api/admin/metrics')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(res.body.counters['unsplash.url_lookup.cache_hit']).toBe(2);
+      expect(res.body.counters['unsplash.url_lookup.cache_miss']).toBe(1);
+      expect(res.body.counters['itinerary.generation.success']).toBe(1);
+
+      const cacheRow = res.body.cacheRatios.find((r: any) => r.namespace === 'unsplash.url_lookup');
+      expect(cacheRow).toEqual({
+        namespace: 'unsplash.url_lookup',
+        hits: 2,
+        misses: 1,
+        total: 3,
+        hitRate: expect.closeTo(2 / 3, 5),
+      });
+
+      expect(typeof res.body.startedAtIso).toBe('string');
+      expect(typeof res.body.snapshotAtIso).toBe('string');
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // GET /api/admin/ingestion-queue-depth
+  // ---------------------------------------------------------------------------
+
+  describe('GET /api/admin/ingestion-queue-depth', () => {
+    it('returns countsByState + active/terminal/failedRetriable totals sourced from import_jobs', async () => {
+      const res = await request(app)
+        .get('/api/admin/ingestion-queue-depth')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      // On a clean test DB with no ingestion rows seeded, the totals are 0
+      // and countsByState is empty — the endpoint still returns shape.
+      expect(res.body).toMatchObject({
+        countsByState: expect.any(Object),
+        totalActive: expect.any(Number),
+        totalTerminal: expect.any(Number),
+        failedRetriable: expect.any(Number),
+        snapshotAtIso: expect.any(String),
+      });
+    });
+
+    // 401/403 admin-guard is covered by the `authentication required` suite.
   });
 });

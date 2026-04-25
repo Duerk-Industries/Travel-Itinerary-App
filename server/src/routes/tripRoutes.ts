@@ -15,10 +15,12 @@ import {
   getTripCovering,
   getTripFollowCode,
   listFollowedTrips,
+  listPendingTripShareInvitesForUser,
   listTripComments,
   listTripActivity,
   listTrips,
   listTripShareInvites,
+  rejectTripShareInvite,
   revokeTripShareInvite,
   searchTripContacts,
   unfollowTrip,
@@ -26,6 +28,7 @@ import {
   updateTripDetails,
   updateTripGroup,
   listTripMessages,
+  acceptTripShareInviteById,
 } from '../db';
 import { detectCoveringConflict, detectCycle } from '../utils/coveredBy';
 import { sendTripInviteEmailBestEffort } from '../mailer';
@@ -33,6 +36,15 @@ import { aggregateTripActivity } from '../services/activityFeed';
 import { assertCanUseFeature, assertUnderActiveTripLimit, getLimit, recordUsage } from '../services/entitlementService';
 import { EntitlementError } from '../errors';
 import { TokenPayload } from '../auth';
+import { readDto } from '../utils/dtoParse';
+import {
+  bulkDeleteShareInvitesDto,
+  createShareInvitesDto,
+  createTripCommentDto,
+  followTripDto,
+  updateCoveredByDto,
+  updateTripGroupDto,
+} from './tripDtos';
 
 const normalizeLocationIds = (value: unknown): string[] => {
   if (!Array.isArray(value)) return [];
@@ -57,9 +69,6 @@ const parseGroupParam = (raw: unknown): boolean => {
   return true;
 };
 
-const normalizeEmail = (value: unknown): string => String(value ?? '').trim().toLowerCase();
-
-const isValidEmail = (value: string): boolean => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 const getTodayUtcDate = (): string => new Date().toISOString().slice(0, 10);
 const isPastUtcDate = (value?: string | null): boolean => Boolean(value && value < getTodayUtcDate());
 
@@ -78,14 +87,11 @@ router.get('/followed', async (req, res) => {
 router.post('/follow', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const role = ((req as any).user as TokenPayload).role;
-  const inviteCode = String(req.body?.inviteCode ?? req.body?.code ?? '').trim();
-  if (!inviteCode) {
-    res.status(400).json({ error: 'inviteCode is required' });
-    return;
-  }
+  const dto = readDto(followTripDto, req.body, res);
+  if (!dto) return;
   try {
     await assertCanUseFeature(userId, 'trip_following', role);
-    const result = await followTripByCode(userId, inviteCode);
+    const result = await followTripByCode(userId, dto.inviteCode);
     res.status(result.alreadyFollowing ? 200 : 201).json({
       trip: result.trip,
       inviterName: result.inviterName,
@@ -103,6 +109,57 @@ router.post('/follow', async (req, res) => {
       return;
     }
     res.status(400).json({ error: message });
+  }
+});
+
+router.get('/share/invites/pending', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const email = (req as any).user.email as string | undefined;
+  try {
+    const invites = await listPendingTripShareInvitesForUser(userId, email);
+    res.json({ invites });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message || 'Unable to load pending invites' });
+  }
+});
+
+router.post('/share/invites/:inviteId/accept', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const email = (req as any).user.email as string | undefined;
+  if (!email) {
+    res.status(400).json({ error: 'Authenticated email is required' });
+    return;
+  }
+  try {
+    const accepted = await acceptTripShareInviteById(userId, email, req.params.inviteId);
+    res.status(200).json(accepted);
+  } catch (err) {
+    const message = (err as Error).message;
+    if (/not found|expired|pending|match/i.test(message)) {
+      res.status(400).json({ error: message });
+      return;
+    }
+    res.status(500).json({ error: message || 'Unable to accept invite' });
+  }
+});
+
+router.post('/share/invites/:inviteId/reject', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const email = (req as any).user.email as string | undefined;
+  if (!email) {
+    res.status(400).json({ error: 'Authenticated email is required' });
+    return;
+  }
+  try {
+    await rejectTripShareInvite(userId, email, req.params.inviteId);
+    res.status(204).send();
+  } catch (err) {
+    const message = (err as Error).message;
+    if (/not found/i.test(message)) {
+      res.status(400).json({ error: message });
+      return;
+    }
+    res.status(500).json({ error: message || 'Unable to reject invite' });
   }
 });
 
@@ -185,43 +242,14 @@ router.get('/:id/share/invites', async (req, res) => {
 router.post('/:id/share/invites', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const role = ((req as any).user as TokenPayload).role;
-  const rawInvites = Array.isArray(req.body?.invites) ? req.body.invites : [];
-  if (!rawInvites.length) {
-    res.status(400).json({ error: 'invites is required and must be a non-empty array' });
-    return;
-  }
-
-  const normalized: Array<{ email: string; role: 'member' | 'follower' | null }> = rawInvites.map((entry: any) => ({
-    email: normalizeEmail(entry?.email),
-    role: entry?.role === 'member' ? 'member' : entry?.role === 'follower' ? 'follower' : null,
-  }));
-
-  for (const invite of normalized) {
-    if (!invite.role) {
-      res.status(400).json({ error: 'Each invite role must be either member or follower' });
-      return;
-    }
-    if (!invite.email || !isValidEmail(invite.email)) {
-      res.status(400).json({ error: `Invalid email: ${invite.email || '(blank)'}` });
-      return;
-    }
-  }
-
-  const seen = new Set<string>();
-  for (const invite of normalized) {
-    const key = `${invite.email}|${invite.role}`;
-    if (seen.has(key)) {
-      res.status(400).json({ error: `Duplicate invite in payload: ${invite.email} (${invite.role})` });
-      return;
-    }
-    seen.add(key);
-  }
+  const dto = readDto(createShareInvitesDto, req.body, res);
+  if (!dto) return;
 
   try {
     await assertCanUseFeature(userId, 'trip_sharing', role);
     const created = await Promise.all(
-      normalized.map((invite) =>
-        createTripShareInvite(userId, req.params.id, invite.email, invite.role as 'member' | 'follower')
+      dto.invites.map((invite) =>
+        createTripShareInvite(userId, req.params.id, invite.email, invite.role)
       )
     );
     res.status(201).json({
@@ -259,6 +287,51 @@ router.delete('/:id/share/invites/:inviteId', async (req, res) => {
     }
     res.status(400).json({ error: message });
   }
+});
+
+/**
+ * Bulk revoke share invites. Mirrors the ingestion bulk-action pattern:
+ * 100-id cap, dedupe, per-id try/catch, 207 Multi-Status when any id fails.
+ * If the caller isn't authorized on the trip at all, the underlying
+ * `revokeTripShareInvite` throws "not authorized" for every id and we
+ * surface that as 403 without writing the 207 mixed response.
+ */
+router.post('/:id/share/invites/bulk-delete', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const dto = readDto(bulkDeleteShareInvitesDto, req.body, res);
+  if (!dto) return;
+
+  const revoked: Array<{ id: string }> = [];
+  const failed: Array<{ id: string; reason: string }> = [];
+  let anyAuthorized = false;
+
+  for (const inviteId of dto.ids) {
+    try {
+      await revokeTripShareInvite(userId, req.params.id, inviteId);
+      revoked.push({ id: inviteId });
+      anyAuthorized = true;
+    } catch (err) {
+      const message = String((err as Error).message ?? 'Invite revocation failed');
+      failed.push({ id: inviteId, reason: message });
+      if (!/not authorized/i.test(message)) {
+        anyAuthorized = true;
+      }
+    }
+  }
+
+  // If every id failed with "not authorized", fold into a single 403 — the
+  // caller isn't allowed on this trip at all and a 207 mix would be
+  // misleading.
+  if (!anyAuthorized && failed.length && revoked.length === 0) {
+    res.status(403).json({ error: failed[0].reason });
+    return;
+  }
+
+  res.status(failed.length > 0 ? 207 : 200).json({
+    tripId: req.params.id,
+    revokedIds: revoked.map((r) => r.id),
+    failed,
+  });
 });
 
 router.get('/', async (req, res) => {
@@ -338,17 +411,10 @@ router.post('/:id/comments', async (req, res) => {
     res.status(403).json({ error: 'Not authorized to comment on this trip' });
     return;
   }
-  const body = String(req.body?.body ?? '').trim();
-  if (!body) {
-    res.status(400).json({ error: 'Comment body is required' });
-    return;
-  }
-  if (body.length > 4000) {
-    res.status(400).json({ error: 'Comment is too long (max 4000 chars)' });
-    return;
-  }
+  const dto = readDto(createTripCommentDto, req.body, res);
+  if (!dto) return;
   try {
-    const comment = await addTripComment(req.params.id, userId, body);
+    const comment = await addTripComment(req.params.id, userId, dto.body);
     res.status(201).json(comment);
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });
@@ -379,7 +445,8 @@ router.get('/:id/covered-by', async (req, res) => {
 
 router.put('/:id/covered-by', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const coveredBy = (req.body ?? {}) as Record<string, string>;
+  const coveredBy = readDto(updateCoveredByDto, req.body ?? {}, res);
+  if (!coveredBy) return;
   if (detectCycle(coveredBy)) {
     res.status(400).json({ error: 'Invalid covering rules: circular dependency detected.' });
     return;
@@ -565,13 +632,10 @@ router.delete('/:id/follow', async (req, res) => {
 
 router.patch('/:id/group', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const { groupId } = req.body ?? {};
-  if (!groupId) {
-    res.status(400).json({ error: 'groupId is required' });
-    return;
-  }
+  const dto = readDto(updateTripGroupDto, req.body, res);
+  if (!dto) return;
   try {
-    const updated = await updateTripGroup(userId, req.params.id, groupId);
+    const updated = await updateTripGroup(userId, req.params.id, dto.groupId);
     res.json(updated);
   } catch (err) {
     const message = (err as Error).message;

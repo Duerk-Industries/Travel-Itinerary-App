@@ -3,6 +3,8 @@ import { Image, Modal, Pressable, ScrollView, Text, TextInput, View } from 'reac
 import { computeTripDays } from '../utils/createTripWizard';
 import { formatDateLong } from '../utils/formatDateLong';
 import { FollowedTrip } from './follow';
+import Skeleton from '../components/Skeleton';
+import { useImageSource } from '../utils/imageSource';
 
 type Trip = {
   id: string;
@@ -57,6 +59,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
   hiddenPages,
 }) => {
   const [heroImage, setHeroImage] = useState<string | null>(null);
+  const [heroLoading, setHeroLoading] = useState<boolean>(false);
   const [showTripPicker, setShowTripPicker] = useState(false);
   const [showNoTripsDialog, setShowNoTripsDialog] = useState(false);
   const [showFollowDialog, setShowFollowDialog] = useState(false);
@@ -88,8 +91,14 @@ const HomeTab: React.FC<HomeTabProps> = ({
     let isMounted = true;
     const loadHero = async () => {
       if (!activeTrip) {
-        if (isMounted) setHeroImage(null);
+        if (isMounted) {
+          setHeroImage(null);
+          setHeroLoading(false);
+        }
         return;
+      }
+      if (isMounted) {
+        setHeroLoading(true);
       }
       const location = activeTrip.destination || activeTrip.name || 'travel';
       try {
@@ -105,6 +114,8 @@ const HomeTab: React.FC<HomeTabProps> = ({
         if (isMounted) setHeroImage(data?.url ?? null);
       } catch {
         if (isMounted) setHeroImage(null);
+      } finally {
+        if (isMounted) setHeroLoading(false);
       }
     };
     loadHero();
@@ -112,6 +123,8 @@ const HomeTab: React.FC<HomeTabProps> = ({
       isMounted = false;
     };
   }, [activeTrip, backendUrl, headers]);
+
+  const heroImageSource = useImageSource(heroImage);
 
   const heroSubtitle = formatTripDuration(activeTrip);
   const heroTitle = activeTrip?.destination || activeTrip?.name || 'Select a trip';
@@ -202,7 +215,9 @@ const HomeTab: React.FC<HomeTabProps> = ({
           }}
         >
           {heroImage ? (
-            <Image style={styles.homeHeroImage} source={{ uri: heroImage }} resizeMode="cover" />
+            <Image style={styles.homeHeroImage} source={heroImageSource} resizeMode="cover" />
+          ) : heroLoading ? (
+            <Skeleton style={styles.homeHeroImage} testID="home-hero-skeleton" />
           ) : (
             <View style={styles.homeHeroFallback} />
           )}
@@ -406,4 +421,8 @@ const HomeTab: React.FC<HomeTabProps> = ({
   );
 };
 
-export default HomeTab;
+// Memoized so AppShell re-renders (presence-driven, polling-driven, etc.)
+// don't cascade into a full HomeTab re-render. All props from AppShell are
+// already stable (useState arrays, useCallback handlers, useMemo for
+// disabledPages/hiddenPages), so a default shallow compare is enough.
+export default React.memo(HomeTab);

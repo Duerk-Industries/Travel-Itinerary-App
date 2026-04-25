@@ -85,6 +85,7 @@ type ImportJobRow = {
   state_changed_at: string;
   started_at: string | null;
   completed_at: string | null;
+  next_retry_at: string | null;
 };
 
 type IngestedDocumentRecord = {
@@ -258,7 +259,29 @@ const mapImportJobRow = (row: ImportJobRow): PersistedImportJob => ({
   stateChangedAt: row.state_changed_at,
   startedAt: row.started_at,
   completedAt: row.completed_at,
+  nextRetryAt: row.next_retry_at,
 });
+
+/**
+ * Compute the earliest-retry timestamp after a failed run. Pure exponential
+ * backoff capped at `maxDelaySeconds` — deterministic (no jitter) in this
+ * first slice so tests stay trivial to write; jitter can be layered on when
+ * the scheduler ships.
+ *
+ * @param retryCount Count AFTER the failure (i.e. this is the attempt that
+ *   just failed, numbered 1 for the first attempt).
+ */
+export const computeNextRetryAt = (
+  retryCount: number,
+  opts: { baseDelaySeconds: number; maxDelaySeconds: number; now?: Date },
+): string => {
+  const { baseDelaySeconds, maxDelaySeconds } = opts;
+  const now = opts.now ?? new Date();
+  const attempt = Math.max(1, Math.floor(retryCount));
+  const rawSeconds = baseDelaySeconds * Math.pow(2, attempt - 1);
+  const bounded = Math.min(Math.max(baseDelaySeconds, rawSeconds), maxDelaySeconds);
+  return new Date(now.getTime() + bounded * 1000).toISOString();
+};
 
 const mapParsedItemRow = (row: ParsedItemRow): PersistedParsedItem => ({
   id: row.id,
@@ -400,10 +423,16 @@ const ensurePgSchema = async (): Promise<void> => {
       updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
       state_changed_at TIMESTAMP NOT NULL DEFAULT NOW(),
       started_at TIMESTAMP,
-      completed_at TIMESTAMP
+      completed_at TIMESTAMP,
+      next_retry_at TIMESTAMP
     );
   `);
   await p.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_import_jobs_user_idempotency ON import_jobs(user_id, idempotency_key);`);
+  // Supports the future retry-with-backoff scheduler: fetch rows where
+  // state='FAILED' AND next_retry_at <= NOW() AND retry_count < max_attempts.
+  // Column + index shipped separately from the scheduler so the data
+  // structure evolves independently.
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_import_jobs_next_retry ON import_jobs(next_retry_at);`);
   await p.query(`
     CREATE TABLE IF NOT EXISTS import_job_payloads (
       job_id UUID PRIMARY KEY REFERENCES import_jobs(id) ON DELETE CASCADE,
@@ -627,6 +656,23 @@ const ensurePgSchema = async (): Promise<void> => {
       UNIQUE (provider, token_hash)
     );
   `);
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS data_deletion_jobs (
+      id UUID PRIMARY KEY,
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      provider TEXT NOT NULL,
+      state TEXT NOT NULL,
+      counts JSONB NOT NULL DEFAULT '{}'::jsonb,
+      failure_reason TEXT,
+      requested_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      started_at TIMESTAMP,
+      completed_at TIMESTAMP,
+      created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+  `);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_data_deletion_jobs_user ON data_deletion_jobs(user_id);`);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_data_deletion_jobs_state ON data_deletion_jobs(state);`);
   schemaReady.add('postgres');
 };
 
@@ -640,6 +686,7 @@ const ensureFirestoreCollections = async (): Promise<void> => {
     db.collection('ingested_documents').limit(1).get(),
     db.collection('ingestion_retry_config').limit(1).get(),
     db.collection('ingestion_webhook_replay_tokens').limit(1).get(),
+    db.collection('data_deletion_jobs').limit(1).get(),
   ]);
   schemaReady.add('firebase');
 };
@@ -1449,6 +1496,21 @@ export const getImportJobById = async (jobId: string): Promise<PersistedImportJo
   return rows[0] ? mapImportJobRow(rows[0]) : null;
 };
 
+/**
+ * State-gated requeue. Only jobs in terminal failure states (`DEAD_LETTERED`
+ * or `FAILED`) can be pushed back to `PENDING` — active-state jobs and
+ * successfully-terminal jobs are rejected by returning `null` with no side
+ * effect. This closes the known gap from the first dead-letter test pass
+ * (non-state-gated requeue accepted any state, including AWAITING_REVIEW).
+ *
+ * The admin dead-letter re-drive endpoint filters its inputs to
+ * `state='DEAD_LETTERED'` before calling this, so it's unaffected. Manual
+ * retry flows for FAILED manual uploads still go through this path —
+ * `shouldRetryFailedManualUpload` in orchestrator.ts filters by FAILED
+ * before calling `requeueImportJob`, so it keeps working.
+ */
+const REQUEUEABLE_STATES: ReadonlyArray<ImportJobState> = ['DEAD_LETTERED', 'FAILED'];
+
 export const requeueImportJob = async (jobId: string): Promise<PersistedImportJob | null> => {
   await ensureIngestionRepositoryReady();
   if (getCurrentDbProvider() === 'firebase') {
@@ -1456,6 +1518,7 @@ export const requeueImportJob = async (jobId: string): Promise<PersistedImportJo
     const snap = await ref.get();
     if (!snap.exists) return null;
     const data = snap.data() as any;
+    if (!REQUEUEABLE_STATES.includes(data.state as ImportJobState)) return null;
     await ref.set(
       {
         state: 'PENDING',
@@ -1482,6 +1545,7 @@ export const requeueImportJob = async (jobId: string): Promise<PersistedImportJo
          updated_at = CURRENT_TIMESTAMP::timestamp,
          state_changed_at = CURRENT_TIMESTAMP::timestamp
      WHERE id = $1
+       AND state IN ('DEAD_LETTERED', 'FAILED')
      RETURNING *`,
     [jobId]
   );
@@ -1497,6 +1561,24 @@ export const updateImportJobState = async (params: {
   lastErrorCode?: string | null;
 }): Promise<void> => {
   await ensureIngestionRepositoryReady();
+
+  // On a FAILED transition, compute the earliest-retry timestamp from the
+  // current retry_count. DEAD_LETTERED is terminal, so it clears next_retry_at.
+  // Any other state leaves next_retry_at alone.
+  let nextRetryAt: string | null | undefined = undefined;
+  if (params.state === 'FAILED') {
+    // Need current retry_count to compute backoff. Read it; fallback to 1.
+    const existing = await getImportJobById(params.jobId);
+    const retryCount = (existing?.retryCount ?? 0) + 1; // +1 because this failure is the N+1st attempt
+    const policy = await getRetryPolicyConfig();
+    nextRetryAt = computeNextRetryAt(retryCount, {
+      baseDelaySeconds: policy.baseDelaySeconds,
+      maxDelaySeconds: policy.maxDelaySeconds,
+    });
+  } else if (params.state === 'DEAD_LETTERED' || params.state === 'COMPLETED' || params.state === 'DUPLICATE_IGNORED') {
+    nextRetryAt = null;
+  }
+
   if (getCurrentDbProvider() === 'firebase') {
     await getFirebaseDb().collection('import_jobs').doc(params.jobId).set(
       omitUndefinedFields({
@@ -1511,12 +1593,14 @@ export const updateImportJobState = async (params: {
           ? nowIso()
           : undefined,
         completedAt: ['COMPLETED', 'FAILED', 'DEAD_LETTERED', 'DUPLICATE_IGNORED'].includes(params.state) ? nowIso() : undefined,
+        nextRetryAt,
       }),
       { merge: true }
     );
     return;
   }
-  await getPg().query(
+  const p = getPg();
+  await p.query(
     `UPDATE import_jobs
      SET state = $2,
          normalized_content_hash = COALESCE($3, normalized_content_hash),
@@ -1538,6 +1622,15 @@ export const updateImportJobState = async (params: {
      WHERE id = $1`,
     [params.jobId, params.state, params.normalizedContentHash ?? null, params.failureCode ?? null, params.failureReason ?? null, params.lastErrorCode ?? null]
   );
+
+  // Write next_retry_at only when this transition either stamps or clears
+  // it. Undefined means "don't touch the column" — we issue no UPDATE.
+  if (typeof nextRetryAt !== 'undefined') {
+    await p.query(
+      `UPDATE import_jobs SET next_retry_at = $2 WHERE id = $1`,
+      [params.jobId, nextRetryAt],
+    );
+  }
 };
 
 export const listImportJobsForUser = async (userId: string): Promise<PersistedImportJob[]> => {
@@ -1861,11 +1954,11 @@ export const findParsedItemByFingerprint = async (
       .collection('parsed_items')
       .where('userId', '==', userId)
       .where('deduplicationFingerprint', '==', fingerprint)
-      .orderBy('updatedAt', 'desc')
-      .limit(1)
       .get();
     if (snap.empty) return null;
-    const doc = snap.docs[0];
+    const doc = [...snap.docs].sort((a, b) =>
+      String((b.data() as any).updatedAt ?? '').localeCompare(String((a.data() as any).updatedAt ?? ''))
+    )[0]!;
     const data = doc.data() as any;
     return mapParsedItemRow({
       id: doc.id,
@@ -2028,14 +2121,21 @@ export const createParsedItem = async (params: {
 export const listReviewQueueItems = async (userId: string): Promise<PersistedParsedItem[]> => {
   await ensureIngestionRepositoryReady();
   if (getCurrentDbProvider() === 'firebase') {
+    // Server-side filter on (reviewStatus, userId) with sort+limit, backed by
+    // the composite index `parsed_items: (reviewStatus, userId, updatedAt DESC)`
+    // declared in firestore.indexes.json. The previous implementation fetched
+    // every parsed_items doc for the user and filtered/sorted in-memory,
+    // which made the ingest tab take ~1 minute to load once the per-user
+    // doc count grew into the hundreds. The 250 cap is well above any
+    // realistic active review queue.
     const snap = await getFirebaseDb()
       .collection('parsed_items')
+      .where('reviewStatus', 'in', INGESTION_REVIEW_QUEUE_ACTIVE_STATES)
       .where('userId', '==', userId)
+      .orderBy('updatedAt', 'desc')
+      .limit(250)
       .get();
-    return snap.docs
-      .filter((doc) => INGESTION_REVIEW_QUEUE_ACTIVE_STATES.includes(String((doc.data() as any).reviewStatus ?? '') as any))
-      .sort((a, b) => String((b.data() as any).updatedAt ?? '').localeCompare(String((a.data() as any).updatedAt ?? '')))
-      .map((doc) => {
+    return snap.docs.map((doc) => {
         const data = doc.data() as any;
         return mapParsedItemRow({
           id: doc.id,
@@ -2819,6 +2919,78 @@ export const updateProviderConnectionStatus = async (params: {
   return rows[0] ? mapProviderConnectionRow(rows[0]) : null;
 };
 
+/**
+ * Returns the subset of provider_connections for a given provider across all
+ * users. Used by the scheduled-polling service to discover connections that
+ * may be due for a sync tick. Status filtering (connected vs AUTH_EXPIRED)
+ * is left to the caller because the polling service wants to both skip and
+ * surface expired connections.
+ */
+export const listProviderConnectionsByProvider = async (provider: string): Promise<ProviderConnectionRecord[]> => {
+  await ensureIngestionRepositoryReady();
+  if (getCurrentDbProvider() === 'firebase') {
+    const snap = await getFirebaseDb()
+      .collection('provider_connections')
+      .where('provider', '==', provider)
+      .get();
+    return snap.docs.map((doc) => {
+      const data = doc.data() as any;
+      return {
+        id: doc.id,
+        userId: data.userId,
+        provider: data.provider,
+        status: data.status ?? 'connected',
+        accessToken: data.encryptedAccessToken ? decryptToken(String(data.encryptedAccessToken)) : null,
+        refreshToken: data.encryptedRefreshToken ? decryptToken(String(data.encryptedRefreshToken)) : null,
+        tokenExpiry: data.tokenExpiry ?? null,
+        scopes: Array.isArray(data.scopes) ? data.scopes.map((entry: unknown) => String(entry)) : [],
+        metadata: data.metadata ?? {},
+        createdAt: data.createdAt,
+        updatedAt: data.updatedAt,
+      } satisfies ProviderConnectionRecord;
+    });
+  }
+  const { rows } = await getPg().query<ProviderConnectionRow>(
+    `SELECT * FROM provider_connections WHERE provider = $1 ORDER BY updated_at ASC`,
+    [provider]
+  );
+  return rows.map(mapProviderConnectionRow);
+};
+
+/**
+ * Writes a merged metadata patch onto a provider_connections row without
+ * changing `status`. Used by the polling service to advance `lastPolledAt`
+ * and record tick outcomes without touching auth fields.
+ */
+export const mergeProviderConnectionMetadata = async (
+  connectionId: string,
+  patch: Record<string, unknown>,
+): Promise<void> => {
+  await ensureIngestionRepositoryReady();
+  if (getCurrentDbProvider() === 'firebase') {
+    const docRef = getFirebaseDb().collection('provider_connections').doc(connectionId);
+    const snap = await docRef.get();
+    if (!snap.exists) return;
+    const current = (snap.data() as any)?.metadata ?? {};
+    await docRef.set(
+      { metadata: { ...current, ...patch }, updatedAt: nowIso() },
+      { merge: true },
+    );
+    return;
+  }
+  const { rows } = await getPg().query<ProviderConnectionRow>(
+    `SELECT * FROM provider_connections WHERE id = $1`,
+    [connectionId]
+  );
+  if (!rows[0]) return;
+  const current = (rows[0] as any).metadata ?? {};
+  const merged = { ...current, ...patch };
+  await getPg().query(
+    `UPDATE provider_connections SET metadata = $2, updated_at = CURRENT_TIMESTAMP::timestamp WHERE id = $1`,
+    [connectionId, JSON.stringify(merged)]
+  );
+};
+
 export const disconnectProviderConnections = async (userId: string, provider?: string): Promise<void> => {
   await ensureIngestionRepositoryReady();
   if (getCurrentDbProvider() === 'firebase') {
@@ -2837,6 +3009,618 @@ export const disconnectProviderConnections = async (userId: string, provider?: s
     return;
   }
   await getPg().query(`DELETE FROM provider_connections WHERE user_id = $1`, [userId]);
+};
+
+/**
+ * Provider → ingestion source_type mapping. Used to cascade ingestion data
+ * removal when a provider is disconnected. If the provider isn't mapped here
+ * (e.g. manual uploads, forwarded mailbox), there is nothing to cascade.
+ */
+const PROVIDER_TO_INGESTION_SOURCE_TYPE: Record<string, IngestionSourceType> = {
+  gmail: 'GMAIL_IMPORT',
+};
+
+export interface IngestionProviderCascadeCounts {
+  parsedItemsDeleted: number;
+  documentsDeleted: number;
+  jobsDeleted: number;
+  sourcesDeleted: number;
+}
+
+/**
+ * Delete every ingestion record originating from a given provider for a user.
+ *
+ * Scoped by `(user_id, source_type)` so only the requesting user's data for
+ * that provider is removed. Downstream rows (ingested_documents, parsed_items,
+ * import_job_payloads) are removed explicitly rather than relying on FK
+ * cascade so the same path works under pg-mem and Firestore.
+ */
+export const deleteUserIngestionDataForProvider = async (
+  userId: string,
+  provider: string,
+): Promise<IngestionProviderCascadeCounts> => {
+  await ensureIngestionRepositoryReady();
+  const sourceType = PROVIDER_TO_INGESTION_SOURCE_TYPE[provider];
+  if (!sourceType) {
+    return { parsedItemsDeleted: 0, documentsDeleted: 0, jobsDeleted: 0, sourcesDeleted: 0 };
+  }
+
+  if (getCurrentDbProvider() === 'firebase') {
+    const db = getFirebaseDb();
+    const deleteWhere = async (collection: string, field: string): Promise<number> => {
+      const snap = await db
+        .collection(collection)
+        .where('userId', '==', userId)
+        .where(field, '==', sourceType)
+        .get()
+        .catch(() => null);
+      if (!snap) return 0;
+      const batch = db.batch();
+      snap.docs.forEach((doc) => batch.delete(doc.ref));
+      await batch.commit();
+      return snap.docs.length;
+    };
+    const parsedItemsDeleted = await deleteWhere('parsed_items', 'sourceType');
+    const documentsDeleted = await deleteWhere('ingested_documents', 'sourceType');
+    await deleteWhere('import_job_payloads', 'sourceType');
+    const jobsDeleted = await deleteWhere('import_jobs', 'sourceType');
+    const sourcesDeleted = await deleteWhere('ingestion_sources', 'sourceType');
+    return { parsedItemsDeleted, documentsDeleted, jobsDeleted, sourcesDeleted };
+  }
+
+  const p = getPg();
+  const countQuery = async (table: string): Promise<number> => {
+    const { rows } = await p.query<{ count: string }>(
+      `SELECT COUNT(*)::text AS count FROM ${table} WHERE user_id = $1 AND source_type = $2`,
+      [userId, sourceType],
+    );
+    return parseInt(rows[0]?.count ?? '0', 10);
+  };
+
+  const [parsedItemsDeleted, documentsDeleted, jobsDeleted, sourcesDeleted] = await Promise.all([
+    countQuery('parsed_items'),
+    countQuery('ingested_documents'),
+    countQuery('import_jobs'),
+    countQuery('ingestion_sources'),
+  ]);
+
+  await p.query(
+    `DELETE FROM parsed_items WHERE user_id = $1 AND source_type = $2`,
+    [userId, sourceType],
+  );
+  await p.query(
+    `DELETE FROM ingested_documents WHERE user_id = $1 AND source_type = $2`,
+    [userId, sourceType],
+  );
+  await p.query(
+    `DELETE FROM import_job_payloads WHERE user_id = $1 AND source_type = $2`,
+    [userId, sourceType],
+  );
+  await p.query(
+    `DELETE FROM import_jobs WHERE user_id = $1 AND source_type = $2`,
+    [userId, sourceType],
+  );
+  await p.query(
+    `DELETE FROM ingestion_sources WHERE user_id = $1 AND source_type = $2`,
+    [userId, sourceType],
+  );
+
+  return { parsedItemsDeleted, documentsDeleted, jobsDeleted, sourcesDeleted };
+};
+
+/**
+ * Retention sweep: drop `import_job_payloads` rows whose parent job has been
+ * in `DEAD_LETTERED` terminal state and completed before the given cutoff.
+ * The parent `import_jobs` row is preserved (and so are `ingested_documents`
+ * and `parsed_items` — those are user-visible artifacts). Only the raw
+ * payload bytes, which are unreachable and unreusable past the retention
+ * window, are removed.
+ *
+ * Returns the number of payload rows deleted.
+ */
+export const deletePayloadsForDeadLetteredJobsOlderThan = async (
+  cutoffIso: string,
+): Promise<number> => {
+  await ensureIngestionRepositoryReady();
+
+  if (getCurrentDbProvider() === 'firebase') {
+    const db = getFirebaseDb();
+    const snap = await db
+      .collection('import_jobs')
+      .where('state', '==', 'DEAD_LETTERED')
+      .get();
+    const eligibleIds = snap.docs
+      .filter((doc) => {
+        const data = doc.data() as any;
+        const completedAt = data.completedAt ?? null;
+        if (!completedAt) return false;
+        return String(completedAt) < cutoffIso;
+      })
+      .map((doc) => doc.id);
+    let deleted = 0;
+    for (const jobId of eligibleIds) {
+      const ref = db.collection('import_job_payloads').doc(jobId);
+      const existing = await ref.get();
+      if (!existing.exists) continue;
+      await ref.delete();
+      deleted += 1;
+    }
+    return deleted;
+  }
+
+  const p = getPg();
+  // pg-mem is fine with `IN (subselect)` but struggles with `NOT EXISTS`, so
+  // we phrase the eligibility filter as a plain IN subselect.
+  const { rowCount } = await p.query(
+    `DELETE FROM import_job_payloads
+     WHERE job_id IN (
+       SELECT id FROM import_jobs
+       WHERE state = 'DEAD_LETTERED'
+         AND completed_at IS NOT NULL
+         AND completed_at < $1
+     )`,
+    [cutoffIso],
+  );
+  return rowCount ?? 0;
+};
+
+/**
+ * Returns FAILED import_jobs whose `next_retry_at` has passed and whose
+ * `retry_count` is still under the configured max. Used by the internal
+ * retry-worker endpoint to pick the next batch of jobs to requeue. The
+ * `next_retry_at <= now` filter means the caller needs no external
+ * scheduler — they can poll whenever cheap.
+ */
+export const listFailedJobsReadyForRetry = async (params: {
+  maxAttempts: number;
+  now?: Date;
+  limit?: number;
+}): Promise<PersistedImportJob[]> => {
+  await ensureIngestionRepositoryReady();
+  const nowIsoStr = (params.now ?? new Date()).toISOString();
+  const limit = Math.min(Math.max(params.limit ?? 100, 1), 500);
+
+  if (getCurrentDbProvider() === 'firebase') {
+    const snap = await getFirebaseDb()
+      .collection('import_jobs')
+      .where('state', '==', 'FAILED')
+      .get();
+    return snap.docs
+      .map((doc) => {
+        const data = doc.data() as any;
+        return {
+          id: doc.id,
+          userId: data.userId,
+          ingestionSourceId: data.ingestionSourceId,
+          sourceType: data.sourceType,
+          state: data.state,
+          idempotencyKey: data.idempotencyKey,
+          contentHash: data.contentHash,
+          normalizedContentHash: data.normalizedContentHash ?? null,
+          externalMessageId: data.externalMessageId,
+          originalFilename: data.originalFilename,
+          mimeType: data.mimeType,
+          failureCode: data.failureCode ?? null,
+          failureReason: data.failureReason ?? null,
+          correlationId: data.correlationId,
+          dryRun: Boolean(data.dryRun),
+          retryCount: data.retryCount ?? 0,
+          lastErrorCode: data.lastErrorCode ?? null,
+          createdAt: data.createdAt,
+          updatedAt: data.updatedAt,
+          stateChangedAt: data.stateChangedAt,
+          startedAt: data.startedAt ?? null,
+          completedAt: data.completedAt ?? null,
+          nextRetryAt: data.nextRetryAt ?? null,
+        } satisfies PersistedImportJob;
+      })
+      .filter(
+        (job) =>
+          job.retryCount < params.maxAttempts &&
+          !!job.nextRetryAt &&
+          String(job.nextRetryAt) <= nowIsoStr,
+      )
+      .slice(0, limit);
+  }
+
+  // The `<=` comparison already excludes NULL rows (NULL <= X is NULL, not
+  // true), so no explicit `IS NOT NULL` — pg-mem chokes on the combination.
+  const { rows } = await getPg().query<ImportJobRow>(
+    `SELECT * FROM import_jobs
+     WHERE state = 'FAILED'
+       AND next_retry_at <= $1::timestamp
+       AND retry_count < $2
+     ORDER BY next_retry_at ASC
+     LIMIT $3`,
+    [nowIsoStr, params.maxAttempts, limit],
+  );
+  return rows.map(mapImportJobRow);
+};
+
+/**
+ * Returns the count of `import_jobs` grouped by `state`. Used by the
+ * metrics-service tick to emit `ingestion_jobs_by_state` gauges for
+ * per-instance queue-depth visibility in the `/metrics` scrape output.
+ */
+export const countImportJobsByState = async (): Promise<Record<string, number>> => {
+  await ensureIngestionRepositoryReady();
+
+  if (getCurrentDbProvider() === 'firebase') {
+    const snap = await getFirebaseDb().collection('import_jobs').get();
+    const counts: Record<string, number> = {};
+    for (const doc of snap.docs) {
+      const state = String((doc.data() as any).state ?? 'UNKNOWN');
+      counts[state] = (counts[state] ?? 0) + 1;
+    }
+    return counts;
+  }
+
+  const { rows } = await getPg().query<{ state: string; count: string }>(
+    `SELECT state, COUNT(*)::text AS count FROM import_jobs GROUP BY state`,
+  );
+  return Object.fromEntries(rows.map((r) => [r.state, parseInt(r.count, 10)]));
+};
+
+/**
+ * Retention dry-run: return the row-count that would be deleted/tombstoned
+ * by the real sweep without mutating any row. Used by the admin
+ * "retention preview" endpoint so operators can see the blast radius of a
+ * retention window change before applying it.
+ */
+export interface RetentionPreviewCounts {
+  deadLetterPayloadsEligible: number;
+  normalizedTextEligible: number;
+}
+
+export const countRetentionEligibleRows = async (
+  cutoffIso: string,
+): Promise<RetentionPreviewCounts> => {
+  await ensureIngestionRepositoryReady();
+
+  if (getCurrentDbProvider() === 'firebase') {
+    const db = getFirebaseDb();
+    // Dead-letter payloads eligibility: DEAD_LETTERED jobs older than cutoff
+    // whose payload doc still exists.
+    const dlJobsSnap = await db
+      .collection('import_jobs')
+      .where('state', '==', 'DEAD_LETTERED')
+      .get();
+    const dlEligibleIds = dlJobsSnap.docs
+      .filter((doc) => {
+        const data = doc.data() as any;
+        const completedAt = data.completedAt ?? null;
+        return completedAt && String(completedAt) < cutoffIso;
+      })
+      .map((doc) => doc.id);
+    let deadLetterPayloadsEligible = 0;
+    for (const jobId of dlEligibleIds) {
+      const exists = await db.collection('import_job_payloads').doc(jobId).get();
+      if (exists.exists) deadLetterPayloadsEligible += 1;
+    }
+
+    // Normalized-text eligibility: terminal jobs older than cutoff whose
+    // docs haven't been tombstoned.
+    const terminalJobsSnap = await db
+      .collection('import_jobs')
+      .where('state', 'in', ['DEAD_LETTERED', 'COMPLETED', 'DUPLICATE_IGNORED'])
+      .get();
+    const terminalEligibleIds = terminalJobsSnap.docs
+      .filter((doc) => {
+        const data = doc.data() as any;
+        const completedAt = data.completedAt ?? null;
+        return completedAt && String(completedAt) < cutoffIso;
+      })
+      .map((doc) => doc.id);
+    let normalizedTextEligible = 0;
+    for (const jobId of terminalEligibleIds) {
+      const docsSnap = await db
+        .collection('ingested_documents')
+        .where('importJobId', '==', jobId)
+        .get();
+      for (const docSnap of docsSnap.docs) {
+        if (!(docSnap.data() as any).deletedRawAt) normalizedTextEligible += 1;
+      }
+    }
+    return { deadLetterPayloadsEligible, normalizedTextEligible };
+  }
+
+  const p = getPg();
+  const dlRes = await p.query<{ count: string }>(
+    `SELECT COUNT(*)::text AS count FROM import_job_payloads
+     WHERE job_id IN (
+       SELECT id FROM import_jobs
+       WHERE state = 'DEAD_LETTERED' AND completed_at IS NOT NULL AND completed_at < $1
+     )`,
+    [cutoffIso],
+  );
+  const textRes = await p.query<{ count: string }>(
+    `SELECT COUNT(*)::text AS count FROM ingested_documents
+     WHERE deleted_raw_at IS NULL
+       AND import_job_id IN (
+         SELECT id FROM import_jobs
+         WHERE state IN ('DEAD_LETTERED','COMPLETED','DUPLICATE_IGNORED')
+           AND completed_at IS NOT NULL AND completed_at < $1
+       )`,
+    [cutoffIso],
+  );
+  return {
+    deadLetterPayloadsEligible: parseInt(dlRes.rows[0]?.count ?? '0', 10),
+    normalizedTextEligible: parseInt(textRes.rows[0]?.count ?? '0', 10),
+  };
+};
+
+/**
+ * Retention step 2: tombstone `ingested_documents.normalized_text` (+
+ * `normalized_html`) for jobs that reached a terminal state more than the
+ * retention window ago. The document row itself stays so that user-visible
+ * artifacts (parsed_items references) still resolve, but the large normalized
+ * text/html blobs — which are no longer needed after the parse has already
+ * produced items — are emptied. `deleted_raw_at` is stamped so a second
+ * tombstone pass over the same rows is a no-op.
+ *
+ * Returns the number of ingested_documents rows updated.
+ */
+export const tombstoneNormalizedTextForTerminalJobsOlderThan = async (
+  cutoffIso: string,
+): Promise<number> => {
+  await ensureIngestionRepositoryReady();
+
+  if (getCurrentDbProvider() === 'firebase') {
+    const db = getFirebaseDb();
+    const snap = await db
+      .collection('import_jobs')
+      .where('state', 'in', ['DEAD_LETTERED', 'COMPLETED', 'DUPLICATE_IGNORED'])
+      .get();
+    const eligibleJobIds = snap.docs
+      .filter((doc) => {
+        const data = doc.data() as any;
+        const completedAt = data.completedAt ?? null;
+        if (!completedAt) return false;
+        return String(completedAt) < cutoffIso;
+      })
+      .map((doc) => doc.id);
+
+    let tombstoned = 0;
+    for (const jobId of eligibleJobIds) {
+      const docsSnap = await db
+        .collection('ingested_documents')
+        .where('importJobId', '==', jobId)
+        .get();
+      for (const docSnap of docsSnap.docs) {
+        const data = docSnap.data() as any;
+        if (data.deletedRawAt) continue; // already tombstoned
+        await docSnap.ref.set(
+          {
+            normalizedText: '',
+            normalizedHtml: null,
+            deletedRawAt: nowIso(),
+            updatedAt: nowIso(),
+          },
+          { merge: true },
+        );
+        tombstoned += 1;
+      }
+    }
+    return tombstoned;
+  }
+
+  const p = getPg();
+  // pg-mem IN-subselect works; the join would also work but keep IN for parity
+  // with Priority 15 step 1.
+  const { rowCount } = await p.query(
+    `UPDATE ingested_documents
+     SET normalized_text = '',
+         normalized_html = NULL,
+         deleted_raw_at = NOW(),
+         updated_at = CURRENT_TIMESTAMP::timestamp
+     WHERE deleted_raw_at IS NULL
+       AND import_job_id IN (
+         SELECT id FROM import_jobs
+         WHERE state IN ('DEAD_LETTERED','COMPLETED','DUPLICATE_IGNORED')
+           AND completed_at IS NOT NULL
+           AND completed_at < $1
+       )`,
+    [cutoffIso],
+  );
+  return rowCount ?? 0;
+};
+
+// ── Data-deletion jobs ──────────────────────────────────────────────────────
+
+export type DataDeletionJobState = 'pending' | 'running' | 'succeeded' | 'failed';
+
+export interface DataDeletionJobRecord {
+  id: string;
+  userId: string;
+  provider: string;
+  state: DataDeletionJobState;
+  counts: IngestionProviderCascadeCounts | null;
+  failureReason: string | null;
+  requestedAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+const mapDataDeletionRow = (row: any): DataDeletionJobRecord => ({
+  id: String(row.id),
+  userId: String(row.user_id),
+  provider: String(row.provider),
+  state: row.state as DataDeletionJobState,
+  counts: row.counts && typeof row.counts === 'object' && Object.keys(row.counts).length ? (row.counts as IngestionProviderCascadeCounts) : null,
+  failureReason: row.failure_reason ?? null,
+  requestedAt: parseDate(row.requested_at) ?? nowIso(),
+  startedAt: parseDate(row.started_at),
+  completedAt: parseDate(row.completed_at),
+  createdAt: parseDate(row.created_at) ?? nowIso(),
+  updatedAt: parseDate(row.updated_at) ?? nowIso(),
+});
+
+const mapDataDeletionDoc = (id: string, data: any): DataDeletionJobRecord => ({
+  id,
+  userId: String(data.userId ?? ''),
+  provider: String(data.provider ?? ''),
+  state: (data.state ?? 'pending') as DataDeletionJobState,
+  counts: data.counts && typeof data.counts === 'object' && Object.keys(data.counts).length ? (data.counts as IngestionProviderCascadeCounts) : null,
+  failureReason: data.failureReason ?? null,
+  requestedAt: data.requestedAt ?? data.createdAt ?? nowIso(),
+  startedAt: data.startedAt ?? null,
+  completedAt: data.completedAt ?? null,
+  createdAt: data.createdAt ?? nowIso(),
+  updatedAt: data.updatedAt ?? nowIso(),
+});
+
+export const createDataDeletionJob = async (userId: string, provider: string): Promise<DataDeletionJobRecord> => {
+  await ensureIngestionRepositoryReady();
+  const id = randomUUID();
+  const now = nowIso();
+  if (getCurrentDbProvider() === 'firebase') {
+    const payload = {
+      userId,
+      provider,
+      state: 'pending' as DataDeletionJobState,
+      counts: {},
+      failureReason: null,
+      requestedAt: now,
+      startedAt: null,
+      completedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    await getFirebaseDb().collection('data_deletion_jobs').doc(id).set(payload);
+    return mapDataDeletionDoc(id, payload);
+  }
+  const { rows } = await getPg().query(
+    `INSERT INTO data_deletion_jobs (id, user_id, provider, state, counts, requested_at, created_at, updated_at)
+     VALUES ($1, $2, $3, 'pending', '{}'::jsonb, NOW(), NOW(), NOW())
+     RETURNING *`,
+    [id, userId, provider]
+  );
+  return mapDataDeletionRow(rows[0]);
+};
+
+export const markDataDeletionJobRunning = async (jobId: string): Promise<void> => {
+  await ensureIngestionRepositoryReady();
+  if (getCurrentDbProvider() === 'firebase') {
+    const now = nowIso();
+    await getFirebaseDb().collection('data_deletion_jobs').doc(jobId).update({
+      state: 'running',
+      startedAt: now,
+      updatedAt: now,
+    });
+    return;
+  }
+  await getPg().query(
+    `UPDATE data_deletion_jobs SET state = 'running', started_at = COALESCE(started_at, NOW()), updated_at = NOW() WHERE id = $1`,
+    [jobId]
+  );
+};
+
+export const markDataDeletionJobSucceeded = async (
+  jobId: string,
+  counts: IngestionProviderCascadeCounts,
+): Promise<void> => {
+  await ensureIngestionRepositoryReady();
+  if (getCurrentDbProvider() === 'firebase') {
+    const now = nowIso();
+    await getFirebaseDb().collection('data_deletion_jobs').doc(jobId).update({
+      state: 'succeeded',
+      counts,
+      completedAt: now,
+      updatedAt: now,
+    });
+    return;
+  }
+  await getPg().query(
+    `UPDATE data_deletion_jobs SET state = 'succeeded', counts = $2::jsonb, completed_at = NOW(), updated_at = NOW() WHERE id = $1`,
+    [jobId, JSON.stringify(counts)]
+  );
+};
+
+export const markDataDeletionJobFailed = async (jobId: string, reason: string): Promise<void> => {
+  await ensureIngestionRepositoryReady();
+  const truncatedReason = reason.length > 500 ? reason.slice(0, 500) : reason;
+  if (getCurrentDbProvider() === 'firebase') {
+    const now = nowIso();
+    await getFirebaseDb().collection('data_deletion_jobs').doc(jobId).update({
+      state: 'failed',
+      failureReason: truncatedReason,
+      completedAt: now,
+      updatedAt: now,
+    });
+    return;
+  }
+  await getPg().query(
+    `UPDATE data_deletion_jobs SET state = 'failed', failure_reason = $2, completed_at = NOW(), updated_at = NOW() WHERE id = $1`,
+    [jobId, truncatedReason]
+  );
+};
+
+export const getDataDeletionJob = async (jobId: string): Promise<DataDeletionJobRecord | null> => {
+  await ensureIngestionRepositoryReady();
+  if (getCurrentDbProvider() === 'firebase') {
+    const snap = await getFirebaseDb().collection('data_deletion_jobs').doc(jobId).get();
+    if (!snap.exists) return null;
+    return mapDataDeletionDoc(snap.id, snap.data());
+  }
+  const { rows } = await getPg().query(`SELECT * FROM data_deletion_jobs WHERE id = $1`, [jobId]);
+  if (!rows[0]) return null;
+  return mapDataDeletionRow(rows[0]);
+};
+
+export const listDataDeletionJobsForUser = async (userId: string): Promise<DataDeletionJobRecord[]> => {
+  await ensureIngestionRepositoryReady();
+  if (getCurrentDbProvider() === 'firebase') {
+    const snap = await getFirebaseDb()
+      .collection('data_deletion_jobs')
+      .where('userId', '==', userId)
+      .get();
+    return snap.docs
+      .map((doc) => mapDataDeletionDoc(doc.id, doc.data()))
+      .sort((a, b) => b.requestedAt.localeCompare(a.requestedAt));
+  }
+  const { rows } = await getPg().query(
+    `SELECT * FROM data_deletion_jobs WHERE user_id = $1 ORDER BY requested_at DESC`,
+    [userId]
+  );
+  return rows.map(mapDataDeletionRow);
+};
+
+export const listDataDeletionJobs = async (filters: {
+  state?: DataDeletionJobState;
+  userId?: string;
+  limit?: number;
+}): Promise<DataDeletionJobRecord[]> => {
+  await ensureIngestionRepositoryReady();
+  const limit = Math.min(Math.max(filters.limit ?? 50, 1), 200);
+  if (getCurrentDbProvider() === 'firebase') {
+    let query: FirebaseFirestore.Query = getFirebaseDb().collection('data_deletion_jobs');
+    if (filters.state) query = query.where('state', '==', filters.state);
+    if (filters.userId) query = query.where('userId', '==', filters.userId);
+    const snap = await query.get();
+    return snap.docs
+      .map((doc) => mapDataDeletionDoc(doc.id, doc.data()))
+      .sort((a, b) => b.requestedAt.localeCompare(a.requestedAt))
+      .slice(0, limit);
+  }
+  const where: string[] = [];
+  const params: any[] = [];
+  if (filters.state) {
+    params.push(filters.state);
+    where.push(`state = $${params.length}`);
+  }
+  if (filters.userId) {
+    params.push(filters.userId);
+    where.push(`user_id = $${params.length}`);
+  }
+  const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+  params.push(limit);
+  const { rows } = await getPg().query(
+    `SELECT * FROM data_deletion_jobs ${whereSql} ORDER BY requested_at DESC LIMIT $${params.length}`,
+    params
+  );
+  return rows.map(mapDataDeletionRow);
 };
 
 // ── Learned source parsers ──────────────────────────────────────────────────

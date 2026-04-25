@@ -6,10 +6,13 @@ import type { Server, Socket } from 'socket.io';
 import { CLIENT_EVENTS, SERVER_EVENTS, APP_ID, initialsForName } from './messaging';
 import {
   addTripMessage,
-  listTripMessages,
+  listTripMessagesPage,
   markMessagesRead,
   countUnreadMessages,
 } from '../db';
+
+const INITIAL_PAGE_SIZE = 50;
+const OLDER_PAGE_SIZE = 50;
 import { logError } from '../logger';
 import { userJoined, userLeft, heartbeat, presenceList } from './presenceManager';
 import { getUserDisplayName } from './userHelper';
@@ -42,14 +45,27 @@ export const registerChatHandlers = (io: Server, socket: Socket): void => {
     const presence = userJoined(tripId, user.id, displayName);
     io.to(`trip:${tripId}`).emit(SERVER_EVENTS.PRESENCE_UPDATE, presence);
 
-    // Send message history to this socket only
+    // Send the most recent page of messages to this socket only. Older
+    // messages are fetched on demand via LOAD_OLDER.
     try {
-      const history = await listTripMessages(tripId);
-      socket.emit(SERVER_EVENTS.MESSAGE_HISTORY, history);
+      const page = await listTripMessagesPage(tripId, { limit: INITIAL_PAGE_SIZE });
+      socket.emit(SERVER_EVENTS.MESSAGE_HISTORY, page.messages);
+      socket.emit(SERVER_EVENTS.MESSAGE_HISTORY_PAGE, {
+        tripId,
+        messages: page.messages,
+        hasMore: page.hasMore,
+        initial: true,
+      });
     } catch (err) {
-      logError('[chat] listTripMessages error', err);
+      logError('[chat] listTripMessagesPage error', err);
       socket.emit(SERVER_EVENTS.ERROR, 'Unable to load chat history right now.');
       socket.emit(SERVER_EVENTS.MESSAGE_HISTORY, []);
+      socket.emit(SERVER_EVENTS.MESSAGE_HISTORY_PAGE, {
+        tripId,
+        messages: [],
+        hasMore: false,
+        initial: true,
+      });
     }
 
     // Send current unread count
@@ -72,6 +88,41 @@ export const registerChatHandlers = (io: Server, socket: Socket): void => {
       io.to(`trip:${tripId}`).emit(SERVER_EVENTS.PRESENCE_UPDATE, list);
     });
   });
+
+  // -------------------------------------------------------------------------
+  // LOAD_OLDER
+  // -------------------------------------------------------------------------
+  socket.on(
+    CLIENT_EVENTS.LOAD_OLDER,
+    async (payload: { tripId: string; beforeId?: string; limit?: number }) => {
+      const { tripId, beforeId, limit } = payload ?? {};
+      if (!tripId) return;
+      // Only serve history for a room the socket has joined.
+      if (socket.data.tripId !== tripId) return;
+      try {
+        const page = await listTripMessagesPage(tripId, {
+          beforeId,
+          limit: Math.max(1, Math.min(limit ?? OLDER_PAGE_SIZE, 200)),
+        });
+        socket.emit(SERVER_EVENTS.MESSAGE_HISTORY_PAGE, {
+          tripId,
+          messages: page.messages,
+          hasMore: page.hasMore,
+          beforeId: beforeId ?? null,
+          initial: false,
+        });
+      } catch (err) {
+        logError('[chat] listTripMessagesPage older error', err);
+        socket.emit(SERVER_EVENTS.MESSAGE_HISTORY_PAGE, {
+          tripId,
+          messages: [],
+          hasMore: false,
+          beforeId: beforeId ?? null,
+          initial: false,
+        });
+      }
+    },
+  );
 
   // -------------------------------------------------------------------------
   // SEND_MESSAGE

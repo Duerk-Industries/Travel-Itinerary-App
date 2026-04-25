@@ -39,7 +39,6 @@ test.describe('Performance Thresholds', () => {
     await loginAsNewUser(page);
     const elapsed = Date.now() - t0;
 
-    console.log(`[perf] login → home: ${elapsed}ms (budget: ${THRESHOLDS.loginToHome}ms)`);
     expect(elapsed, `Login took ${elapsed}ms — budget ${THRESHOLDS.loginToHome}ms`)
       .toBeLessThan(THRESHOLDS.loginToHome);
   });
@@ -60,7 +59,6 @@ test.describe('Performance Thresholds', () => {
         .toBeVisible({ timeout: THRESHOLDS.tripLoad });
     });
 
-    console.log(`[perf] trip load: ${elapsed}ms (budget: ${THRESHOLDS.tripLoad}ms)`);
     expect(elapsed, `Trip load took ${elapsed}ms — budget ${THRESHOLDS.tripLoad}ms`)
       .toBeLessThan(THRESHOLDS.tripLoad);
   });
@@ -75,7 +73,6 @@ test.describe('Performance Thresholds', () => {
       await expect(page.getByText('Transfers')).toBeVisible({ timeout: THRESHOLDS.tabSwitch });
     });
 
-    console.log(`[perf] tab switch (Transfers): ${elapsed}ms (budget: ${THRESHOLDS.tabSwitch}ms)`);
     expect(elapsed, `Tab switch took ${elapsed}ms — budget ${THRESHOLDS.tabSwitch}ms`)
       .toBeLessThan(THRESHOLDS.tabSwitch);
   });
@@ -96,7 +93,6 @@ test.describe('Performance Thresholds', () => {
         await page.getByTestId(`home-nav-${tabKey}`).click();
         await expect(page.getByText(heading).first()).toBeVisible({ timeout: THRESHOLDS.tabSwitch });
       });
-      console.log(`[perf] tab switch (${heading}): ${elapsed}ms`);
       expect(elapsed, `${heading} tab took ${elapsed}ms — budget ${THRESHOLDS.tabSwitch}ms`)
         .toBeLessThan(THRESHOLDS.tabSwitch);
     }
@@ -118,7 +114,6 @@ test.describe('Performance Thresholds', () => {
         .toBeVisible({ timeout: THRESHOLDS.wizardStep });
     });
 
-    console.log(`[perf] wizard step: ${elapsed}ms (budget: ${THRESHOLDS.wizardStep}ms)`);
     expect(elapsed, `Wizard step took ${elapsed}ms — budget ${THRESHOLDS.wizardStep}ms`)
       .toBeLessThan(THRESHOLDS.wizardStep);
   });
@@ -137,11 +132,10 @@ test.describe('Performance Thresholds', () => {
 
     if (firstContentfulPaint && navigationStart) {
       const fcpMs = (firstContentfulPaint.value - navigationStart.value) * 1000;
-      console.log(`[perf] FCP: ${fcpMs.toFixed(0)}ms (budget: ${THRESHOLDS.fcp}ms)`);
       expect(fcpMs, `FCP was ${fcpMs.toFixed(0)}ms — budget ${THRESHOLDS.fcp}ms`)
         .toBeLessThan(THRESHOLDS.fcp);
     } else {
-      console.warn('[perf] FCP metric not available from CDP — skipping assertion');
+      test.skip(true, 'FCP metric not available from CDP');
     }
   });
 });

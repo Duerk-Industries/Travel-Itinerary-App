@@ -1,4 +1,4 @@
-import { loadSession, saveSession, clearSession } from '../utils/session';
+import { clearSession, loadLastActiveTripId, loadSession, saveSession } from '../utils/session';
 
 const createLocalStorageMock = () => {
   let store: Record<string, string> = {};
@@ -52,6 +52,13 @@ describe('session persistence', () => {
     expect(loadSession()).not.toBeNull();
     clearSession();
     expect(loadSession()).toBeNull();
+  });
+
+  test('last active trip remains available after logout for the same email', () => {
+    saveSession('token-2', 'Traveler', 'overview', 'traveler@example.com', 'trip-2');
+    clearSession();
+    expect(loadSession()).toBeNull();
+    expect(loadLastActiveTripId('traveler@example.com')).toBe('trip-2');
   });
 
   test('loadSession returns null when the entry has expired', () => {

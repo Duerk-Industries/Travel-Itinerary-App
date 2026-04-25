@@ -2,8 +2,9 @@ import { Router } from 'express';
 import bodyParser from 'body-parser';
 import { getEnvValue } from '../env';
 import { processImportJob } from '../ingestion/orchestrator';
-import { getRetryPolicyConfig, listDeadLetterImportJobs } from '../ingestion/shared/repository';
+import { getRetryPolicyConfig, listDeadLetterImportJobs, listFailedJobsReadyForRetry, requeueImportJob } from '../ingestion/shared/repository';
 import { requeueDeadLetterImportJob } from '../ingestion/orchestrator';
+import { getJobQueue } from '../ingestion/worker/jobQueue';
 import { logError, logInfo } from '../logger';
 
 const router = Router();
@@ -31,16 +32,55 @@ const calculateRetryDelayMs = (retryCount: number, baseDelaySeconds: number, max
   return (exponential + jitter) * 1000;
 };
 
-router.post('/jobs/:jobId/run', authenticateWorker, async (req, res) => {
-  try {
-    logInfo(`[ingestion][worker] starting job=${req.params.jobId}`);
-    const job = await processImportJob(req.params.jobId);
-    logInfo(`[ingestion][worker] finished job=${job.id} state=${job.state}`);
-    res.status(202).json({ accepted: true, jobId: job.id, state: job.state });
-  } catch (error) {
-    logError(`[ingestion][worker] failed job=${req.params.jobId}`, error);
-    res.status(500).json({ error: 'Worker failed to process import job.' });
+router.post('/jobs/:jobId/run', authenticateWorker, (req, res) => {
+  const jobId = String(req.params.jobId);
+  logInfo(`[ingestion][worker] accepted job=${jobId}`);
+  res.status(202).json({ accepted: true, jobId, mode: 'async-detached' });
+
+  setImmediate(() => {
+    void processImportJob(jobId)
+      .then((job) => {
+        logInfo(`[ingestion][worker] finished job=${job.id} state=${job.state}`);
+      })
+      .catch((error) => {
+        logError(`[ingestion][worker] failed job=${jobId}`, error);
+      });
+  });
+});
+
+/**
+ * Retry FAILED jobs whose `next_retry_at` has passed and whose `retry_count`
+ * is still under `maxAttempts`. Designed to be polled by an external scheduler
+ * (cron, Cloud Scheduler, etc.) as often as it likes — the endpoint is
+ * idempotent and returns 0 retried when nothing's ready. Complements the
+ * existing DEAD_LETTERED `/retries/:provider/run` endpoint which is intended
+ * for manual re-drive.
+ *
+ * Must be registered BEFORE the `/retries/:provider/run` route below so
+ * Express doesn't route `/retries/failed/run` to the `:provider` pattern.
+ */
+router.post('/retries/failed/run', authenticateWorker, async (req, res) => {
+  const policy = await getRetryPolicyConfig();
+  const limitRaw = req.body?.limit;
+  const limit = typeof limitRaw === 'number' && Number.isFinite(limitRaw) ? limitRaw : undefined;
+  const ready = await listFailedJobsReadyForRetry({
+    maxAttempts: policy.maxAttempts,
+    limit,
+  });
+  const retriedIds: string[] = [];
+  const queue = getJobQueue();
+  for (const job of ready) {
+    const requeued = await requeueImportJob(job.id);
+    if (!requeued) continue; // state-gate filtered a concurrent change out
+    try {
+      await queue.enqueue(job.id);
+      retriedIds.push(job.id);
+    } catch (err) {
+      logError(`[ingestion][worker] retry enqueue failed job=${job.id}`, err);
+    }
   }
+  logInfo(`[ingestion][worker] failed-retry tick — eligible=${ready.length}, retried=${retriedIds.length}`);
+  res.json({ eligible: ready.length, retried: retriedIds.length, retriedIds });
 });
 
 router.post('/retries/:provider/run', authenticateWorker, async (req, res) => {

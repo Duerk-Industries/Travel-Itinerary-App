@@ -1,5 +1,6 @@
 const sessionKey = 'stp.session';
 const sessionTokenKey = 'stp.session.token';
+const lastTripByEmailKey = 'stp.session.lastTripByEmail';
 const resolveSessionDurationMs = (): number => {
   const raw =
     process.env.EXPO_PUBLIC_SESSION_CACHE_TIMEOUT_MINUTES ??
@@ -13,6 +14,34 @@ const sessionDurationMs = resolveSessionDurationMs();
 
 const canAccessStorage = (): boolean =>
   typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
+
+const normalizeTripOwnerKey = (email?: string | null): string | null => {
+  const normalized = String(email ?? '').trim().toLowerCase();
+  return normalized || null;
+};
+
+const loadLastTripMap = (): Record<string, string> => {
+  if (!canAccessStorage()) return {};
+  try {
+    const raw = window.localStorage.getItem(lastTripByEmailKey);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+    return Object.entries(parsed).reduce<Record<string, string>>((acc, [key, value]) => {
+      if (typeof value === 'string' && value.trim()) {
+        acc[key] = value;
+      }
+      return acc;
+    }, {});
+  } catch {
+    return {};
+  }
+};
+
+const saveLastTripMap = (lastTrips: Record<string, string>): void => {
+  if (!canAccessStorage()) return;
+  window.localStorage.setItem(lastTripByEmailKey, JSON.stringify(lastTrips));
+};
 
 export type StoredSession = {
   token: string;
@@ -80,10 +109,30 @@ export const saveSession = (
   };
   window.localStorage.setItem(sessionKey, JSON.stringify(payload));
   window.localStorage.setItem(sessionTokenKey, token);
+  saveLastActiveTripId(tripId ?? null, email ?? undefined);
 };
 
 export const clearSession = (): void => {
   if (!canAccessStorage()) return;
   window.localStorage.removeItem(sessionKey);
   window.localStorage.removeItem(sessionTokenKey);
+};
+
+export const loadLastActiveTripId = (email?: string | null): string | null => {
+  const ownerKey = normalizeTripOwnerKey(email);
+  if (!ownerKey) return null;
+  const lastTrips = loadLastTripMap();
+  return lastTrips[ownerKey] ?? null;
+};
+
+export const saveLastActiveTripId = (tripId?: string | null, email?: string | null): void => {
+  const ownerKey = normalizeTripOwnerKey(email);
+  if (!ownerKey) return;
+  const lastTrips = loadLastTripMap();
+  if (tripId && tripId.trim()) {
+    lastTrips[ownerKey] = tripId;
+  } else {
+    delete lastTrips[ownerKey];
+  }
+  saveLastTripMap(lastTrips);
 };

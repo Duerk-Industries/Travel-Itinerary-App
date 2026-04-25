@@ -305,7 +305,7 @@ const extractViatorName = (text: string): string | null => {
 const extractViatorLocation = (text: string): string | null => {
   const topLineLocation = normalizeSpace(
     text.match(
-      /^\s*(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),?\s+[A-Za-z]+\s+\d{1,2},\s+20\d{2}(?:\s*\|\s*\d{1,2}:\d{2}(?:\s*[AP]M)?)?\s+([\s\S]{5,220}?)\s+\d+\s+(?:Adults?|Senior)\b/im
+      /^\s*(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),?\s+[A-Za-z]+\s+\d{1,2},\s+20\d{2}(?:\s*(?:\||at)\s*\d{1,2}:\d{2}(?:\s*[AP]M)?)?\s+((?!at\s+\d)[A-Z][\s\S]{4,220}?)\s+\d+\s+(?:Adults?|Senior)\b/im
     )?.[1]
   );
   if (topLineLocation && !/see ticket for location details/i.test(topLineLocation)) {
@@ -608,7 +608,7 @@ const extractBuiltInSourceResult = async (
       const rawArrivalLocation = normalizeSpace(text.match(/Where your activity ends\s+([\s\S]{0,180}?)\s+Important information\b/i)?.[1]) || null;
       const arrivalLocation =
         rawArrivalLocation && /[^\x00-\x7F]/.test(rawArrivalLocation)
-          ? normalizeSpace(text.match(/\b([A-Za-z][A-Za-z' -]+):\s+one-way transfer/i)?.[1]) || rawArrivalLocation
+          ? normalizeSpace(text.match(/\b([A-Za-z][A-Za-z' -]+):\s+one-way\s+transfer/i)?.[1]) || rawArrivalLocation
           : rawArrivalLocation;
       if (bookingReferenceNumber) {
         return directCandidateResult(doc, config, {
@@ -651,7 +651,7 @@ const extractBuiltInSourceResult = async (
     const deltaUpcoming = text.match(
       /([A-Za-z]+,\s+[A-Za-z]+\s+\d{1,2})\s+([A-Z]{3})\s+([A-Z]{3})\s+Confirmation Number\s+([A-Z0-9]{5,})/i
     );
-    const deltaRouteCodes = text.match(/\b([A-Z]{3})-([A-Z]{3})\b/);
+    const deltaRouteCodes = text.match(/(?<![A-Z])([A-Z]{3})-([A-Z]{3})(?![A-Z])/);
     if (confirmationNumber) {
       const departureDate =
         toDateOnlyLoose(deltaTripDetails?.[1] ?? null)
@@ -772,7 +772,9 @@ const extractBuiltInSourceResult = async (
     const departureTime = normalizeOutputTime(text.match(/Departure time\s*-\s*(\d{1,2}:\d{2})/i)?.[1] ?? null);
     const arrivalTime = normalizeOutputTime(text.match(/Arrival time\s*-\s*(\d{1,2}:\d{2})/i)?.[1] ?? null);
     const flightNumber = text.match(/\b(FR\s*\d{1,4})\b/i)?.[1]?.replace(/\s+/g, '') ?? null;
-    const { amount, currency } = parseTrailingCurrencyAmount(text.match(/Receipt:\s*[\s\S]{0,200}/i)?.[0] ?? text);
+    const receiptSegment = (text.match(/Receipt:\s*[\s\S]{0,200}/i)?.[0] ?? text)
+      .replace(/(ending in:?\s*)\d{3,4}(?=\d*\.\d{2}\b)/gi, '$1');
+    const { amount, currency } = parseTrailingCurrencyAmount(receiptSegment);
     const travelerNames = extractRyanairTravelerNames(text);
 
     if (confirmationNumber && routeMatch && departureDate) {
@@ -808,11 +810,11 @@ const extractBuiltInSourceResult = async (
   if (sourceKey === 'chase_travel') {
     if (effectiveItemType === 'hotel') {
       const confirmationNumber =
-        text.match(/Hotel confirmation:\s*([A-Z0-9]+)/i)?.[1]
-        ?? text.match(/Stay confirmation:\s*([A-Z0-9]+)/i)?.[1]
+        text.match(/Hotel confirmation:\s*(\d{6,})/i)?.[1]
+        ?? text.match(/Stay confirmation:\s*(\d{6,})/i)?.[1]
         ?? null;
       const name = normalizeSpace(
-        text.match(/\bNon-refundable\s+([\s\S]{1,120}?)\s+Standard/i)?.[1]
+        text.match(/Non-refundable\s+([\s\S]{1,120}?)\s+Standard/i)?.[1]
         ?? text.match(/\bHotel confirmation:\s*[A-Z0-9]+\s+[^\n]*?\s+([A-Z][A-Za-z0-9 '&.-]{3,80})\s+Standard/i)?.[1]
         ?? text.match(/\bStay confirmation:\s*[A-Z0-9]+\s+([A-Z][A-Za-z0-9 '&.-]{3,100}?)\s+(?:Deluxe|Superior|Classic|Standard|Check-in:)/i)?.[1]
       ) || null;
@@ -854,7 +856,7 @@ const extractBuiltInSourceResult = async (
         ?? text.match(/CONFIRMATION #:\s*([A-Z0-9]{5,})/i)?.[1]
         ?? null;
       const firstLeg = text.match(
-        /Departure flight[\s\S]{0,200}?Airline confirmation:\s*[A-Z0-9]{5,}\s+([A-Za-z ]+)\s+\(([A-Z]{3})\)\s+([A-Za-z ]+)\s+\(([A-Z]{3})\)\s+(\d{1,2}:\d{2}\s*[ap]m)\s+[A-Z]{3}\s+(\d{1,2}:\d{2}\s*[ap]m)\s+[A-Z]{3}[\s\S]{0,80}?([A-Z][A-Za-z ]+)\s+(DL\s*\d+)/i
+        /Departure flight[\s\S]{0,200}?Airline confirmation:\s*[A-Z0-9]{5,}\s*([A-Za-z ]+?)\s*\(([A-Z]{3})\)\s*([A-Za-z ]+?)\s*\(([A-Z]{3})\)\s+(\d{1,2}:\d{2}\s*[ap]m)\s+[A-Z]{3}\s+(\d{1,2}:\d{2}\s*[ap]m)\s+[A-Z]{3}[\s\S]{0,80}?([A-Z][A-Za-z ]+?)\s+(DL\s*\d+)/i
       );
       if (confirmationNumber && firstLeg) {
         return directCandidateResult(doc, config, {
@@ -894,8 +896,11 @@ const extractBuiltInSourceResult = async (
       normalizeOutputTime(text.match(/Booking confirmed in .* for 20\d{2}-\d{2}-\d{2} at (\d{1,2}:\d{2})/i)?.[1] ?? null)
       ?? normalizeOutputTime(text.match(/[A-Za-z]+\s+\d{1,2}\s+20\d{2},?\s+(\d{1,2}:\d{2})h/i)?.[1] ?? null);
     const name = normalizeSpace(text.match(/Your booking has been confirmed!\s+([\s\S]{1,120}?)\s+English/i)?.[1]) || null;
-    const address = normalizeSpace(text.match(/Address\s+([\s\S]{1,160}?)\s+Estación\b/i)?.[1]) || null;
-    const providerVendor = normalizeSpace(text.match(/^\s*([A-Z][A-Za-z0-9]+)\s*$/m)?.[1]) || 'GuruWalk';
+    const address =
+      normalizeSpace(text.match(/Address\s+([\s\S]{1,160}?)\s+Estación\b/i)?.[1])
+      || normalizeSpace(text.match(/^([A-Z][^\n@]*(?:CDMX|Ciudad de México|Ciudad de Mexico)[^\n]*)/m)?.[1])
+      || null;
+    const providerVendor = `GuruWalk (${normalizeSpace(text.match(/([A-Z][A-Za-z0-9]+)\s+Modify booking/i)?.[1]) || normalizeSpace(text.match(/([A-Z][A-Za-z0-9]+)\s+Experience offered by/i)?.[1]) || 'unknown'})`;
     if (confirmationNumber && name) {
       return directCandidateResult(doc, config, {
         itemType: effectiveItemType,
@@ -926,9 +931,9 @@ const extractBuiltInSourceResult = async (
   }
 
   if (sourceKey === 'klook') {
-    const bookingReferenceNumber = text.match(/Booking reference ID:\s*([A-Z0-9]{6,})\b/)?.[1] ?? null;
+    const bookingReferenceNumber = text.match(/Booking reference ID:\s*([A-Z0-9]{6,})(?=[A-Z][a-z]|\s|[^A-Za-z0-9]|$)/)?.[1] ?? null;
     if (effectiveItemType === 'car_rental') {
-      const name = normalizeSpace(text.match(/Your booking for\s+([\s\S]{1,140}?)\s+is confirmed/i)?.[1]) || null;
+      const name = normalizeSpace(text.match(/Your booking for\s+([\s\S]{1,140}?)\s+is\s+confirmed/i)?.[1]) || null;
       if (bookingReferenceNumber && name) {
         return directCandidateResult(doc, config, {
             itemType: 'car_rental',
@@ -954,7 +959,7 @@ const extractBuiltInSourceResult = async (
       }
     }
     if (effectiveItemType === 'tour_activity') {
-      const name = normalizeSpace(text.match(/Your booking for\s+([\s\S]{1,140}?)\s+is confirmed/i)?.[1]) || null;
+      const name = normalizeSpace(text.match(/Your booking for\s+([\s\S]{1,140}?)\s+is\s+confirmed/i)?.[1]) || null;
       if (bookingReferenceNumber && name) {
         return directCandidateResult(doc, config, {
             itemType: 'tour_activity',

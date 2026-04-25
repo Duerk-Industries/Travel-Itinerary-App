@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Linking, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { usePolling } from '../hooks/usePolling';
 
 type ReviewItem = {
   id: string;
@@ -126,6 +127,8 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
     originalFilename?: string | null;
   }>(null);
   const [signedDocumentUrl, setSignedDocumentUrl] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkAssignTripId, setBulkAssignTripId] = useState<string>('');
 
   const load = async () => {
     setLoading(true);
@@ -168,15 +171,42 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
     void load();
   }, []);
 
-  useEffect(() => {
-    if (!jobs.some((job) => ACTIVE_JOB_STATES.has(job.state))) {
-      return;
+  const jobsRef = useRef<ImportJob[]>(jobs);
+  jobsRef.current = jobs;
+
+  const hasActiveJobs = jobs.some((job) => ACTIVE_JOB_STATES.has(job.state));
+
+  const pollJobs = useCallback(async () => {
+    const jobsRes = await fetch(`${backendUrl}/api/ingestion/jobs`, { headers });
+    if (!jobsRes.ok) return { done: false };
+    const jobsData = await jobsRes.json().catch(() => ({}));
+    const nextJobs: ImportJob[] = (jobsData as any).jobs ?? [];
+
+    const prevJobs = jobsRef.current;
+    const anyTransitionedOut = prevJobs.some((prev) => {
+      const next = nextJobs.find((j) => j.id === prev.id);
+      return ACTIVE_JOB_STATES.has(prev.state) && (!next || !ACTIVE_JOB_STATES.has(next.state));
+    });
+
+    setJobs(nextJobs);
+
+    if (anyTransitionedOut) {
+      const itemsRes = await fetch(`${backendUrl}/api/ingestion/review-items`, { headers });
+      if (itemsRes.ok) {
+        const itemsData = await itemsRes.json().catch(() => ({}));
+        setItems((itemsData as any).items ?? []);
+      }
     }
-    const intervalId = setInterval(() => {
-      void load();
-    }, 3000);
-    return () => clearInterval(intervalId);
-  }, [jobs]);
+
+    return { done: !nextJobs.some((job) => ACTIVE_JOB_STATES.has(job.state)) };
+  }, [backendUrl, headers]);
+
+  usePolling({
+    enabled: hasActiveJobs,
+    intervalMs: 3000,
+    poll: pollJobs,
+    immediate: false,
+  });
 
   const filteredItems = useMemo(() => {
     const minConf = confidenceFilter ? Number(confidenceFilter) : null;
@@ -269,6 +299,69 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
       setSelectedItem(null);
       setSelectedDocumentSummary(null);
     }
+    await load();
+  };
+
+  const toggleSelected = (itemId: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(itemId)) next.delete(itemId);
+      else next.add(itemId);
+      return next;
+    });
+  };
+
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const reportBulkFailures = (failed: Array<{ id: string; reason: string }>, prefix: string) => {
+    if (!failed.length) return;
+    const summary = failed
+      .slice(0, 3)
+      .map((entry) => `${entry.id.slice(0, 8)}: ${entry.reason}`)
+      .join('; ');
+    const overflow = failed.length > 3 ? ` (+${failed.length - 3} more)` : '';
+    setError(`${prefix}: ${summary}${overflow}`);
+  };
+
+  const bulkDelete = async () => {
+    const ids = Array.from(selectedIds);
+    if (!ids.length) return;
+    const response = await fetch(`${backendUrl}/api/ingestion/review-items/bulk-delete`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids }),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok && response.status !== 207) {
+      setError((body as any).error ?? 'Bulk delete failed.');
+      return;
+    }
+    reportBulkFailures((body as any).failed ?? [], 'Some items could not be deleted');
+    clearSelection();
+    await load();
+  };
+
+  const bulkAssign = async () => {
+    const ids = Array.from(selectedIds);
+    if (!ids.length || !bulkAssignTripId) return;
+    const tripId = bulkAssignTripId;
+    const response = await fetch(`${backendUrl}/api/ingestion/review-items/bulk-assign`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids, tripId }),
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok && response.status !== 207) {
+      setError((body as any).error ?? 'Bulk assign failed.');
+      return;
+    }
+    reportBulkFailures((body as any).failed ?? [], 'Some items could not be assigned');
+    const assigned = ((body as any).assigned ?? []) as Array<{ id: string; tripId: string; itemType: string }>;
+    for (const entry of assigned) {
+      await onAssignmentApplied?.({ itemType: entry.itemType, tripId: entry.tripId });
+    }
+    clearSelection();
+    setBulkAssignTripId('');
     await load();
   };
 
@@ -456,50 +549,117 @@ const IngestionTab: React.FC<IngestionTabProps> = ({
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Queued Items</Text>
-        {filteredItems.length === 0 ? <Text style={styles.helperText}>No items are waiting in review.</Text> : null}
-        {filteredItems.map((item) => (
-          <TouchableOpacity key={item.id} style={styles.flightRow} onPress={() => {
-            const now = Date.now();
-            const last = lastTapRef.current;
-            if (last.id === item.id && now - last.time < 400) {
-              // Double tap — fetch signed URL and open the original document
-              lastTapRef.current = { id: '', time: 0 };
-              fetch(`${backendUrl}/api/ingestion/review-items/${item.id}`, { headers })
-                .then((r) => r.json())
-                .then((body: any) => {
-                  const url = body?.signedDocument;
-                  if (url) {
-                    if (Platform.OS === 'web' && typeof window !== 'undefined') window.open(url, '_blank');
-                    else Linking.openURL(url).catch(() => {});
+        {filteredItems.length === 0 ? (
+          <Text style={styles.helperText}>
+            {items.length === 0
+              ? 'No items have been imported yet. Use Manual Upload or Gmail Import to get started.'
+              : 'No items match the current filters. Clear a filter to see more.'}
+          </Text>
+        ) : null}
+        {selectedIds.size > 0 ? (
+          <View
+            style={styles.row}
+            accessibilityRole={Platform.OS === 'web' ? ('toolbar' as any) : undefined}
+            accessibilityLabel={`Bulk actions for ${selectedIds.size} selected item${selectedIds.size === 1 ? '' : 's'}`}
+          >
+            <Text style={styles.helperText}>{selectedIds.size} selected</Text>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={clearSelection}
+              accessibilityRole="button"
+              accessibilityLabel="Clear selection"
+            >
+              <Text style={styles.buttonText}>Clear</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.button, styles.tableActionButtonDanger]}
+              onPress={bulkDelete}
+              accessibilityRole="button"
+              accessibilityLabel={`Delete ${selectedIds.size} selected item${selectedIds.size === 1 ? '' : 's'}`}
+            >
+              <Text style={styles.dangerButtonText}>Delete Selected</Text>
+            </TouchableOpacity>
+            <TextInput
+              style={[styles.input, { flex: 1, minWidth: 180 }]}
+              value={bulkAssignTripId}
+              onChangeText={setBulkAssignTripId}
+              placeholder="Trip id for bulk assign"
+              accessibilityLabel="Trip id for bulk assign"
+            />
+            <TouchableOpacity
+              style={styles.button}
+              onPress={bulkAssign}
+              disabled={!bulkAssignTripId}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !bulkAssignTripId }}
+              accessibilityLabel={`Assign ${selectedIds.size} selected item${selectedIds.size === 1 ? '' : 's'} to trip`}
+            >
+              <Text style={styles.buttonText}>Assign Selected</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+        {filteredItems.map((item) => {
+          const checked = selectedIds.has(item.id);
+          return (
+            <View key={item.id} style={[styles.row, { alignItems: 'flex-start' }]}>
+              <TouchableOpacity
+                style={[styles.button, { paddingHorizontal: 10 }]}
+                onPress={() => toggleSelected(item.id)}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked }}
+                accessibilityLabel={`${checked ? 'Deselect' : 'Select'} ${item.itemType} from ${item.providerVendor || 'Unknown provider'}`}
+              >
+                <Text style={styles.buttonText}>{checked ? '☑' : '☐'}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.flightRow, { flex: 1 }]}
+                onPress={() => {
+                  const now = Date.now();
+                  const last = lastTapRef.current;
+                  if (last.id === item.id && now - last.time < 400) {
+                    lastTapRef.current = { id: '', time: 0 };
+                    fetch(`${backendUrl}/api/ingestion/review-items/${item.id}`, { headers })
+                      .then((r) => r.json())
+                      .then((body: any) => {
+                        const url = body?.signedDocument;
+                        if (url) {
+                          if (Platform.OS === 'web' && typeof window !== 'undefined') window.open(url, '_blank');
+                          else Linking.openURL(url).catch(() => {});
+                        }
+                      })
+                      .catch(() => {});
+                    return;
                   }
-                })
-                .catch(() => {});
-              return;
-            }
-            lastTapRef.current = { id: item.id, time: now };
-            beginEdit(item);
-          }}>
-            <Text style={styles.flightTitle}>
-              {item.itemType} • {item.providerVendor || 'Unknown provider'}
-            </Text>
-            <Text style={styles.helperText}>
-              {item.status} • confidence {item.confidenceScore.toFixed(2)} • {prettyDate(item.startDateTimeUtc)}
-            </Text>
-            {item.duplicateDisposition ? (
-              <Text style={styles.warningText}>
-                {item.duplicateDisposition === 'PREVIOUSLY_DELETED'
-                  ? 'Previously Deleted'
-                  : item.duplicateOfTripId
-                    ? 'Potential Duplicate in Trip'
-                    : 'Potential Duplicate'}
-              </Text>
-            ) : null}
-          </TouchableOpacity>
-        ))}
+                  lastTapRef.current = { id: item.id, time: now };
+                  beginEdit(item);
+                }}
+              >
+                <Text style={styles.flightTitle}>
+                  {item.itemType} • {item.providerVendor || 'Unknown provider'}
+                </Text>
+                <Text style={styles.helperText}>
+                  {item.status} • confidence {item.confidenceScore.toFixed(2)} • {prettyDate(item.startDateTimeUtc)}
+                </Text>
+                {item.duplicateDisposition ? (
+                  <Text style={styles.warningText}>
+                    {item.duplicateDisposition === 'PREVIOUSLY_DELETED'
+                      ? 'Previously Deleted'
+                      : item.duplicateOfTripId
+                        ? 'Potential Duplicate in Trip'
+                        : 'Potential Duplicate'}
+                  </Text>
+                ) : null}
+              </TouchableOpacity>
+            </View>
+          );
+        })}
       </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Recent Jobs</Text>
+        {jobs.length === 0 ? (
+          <Text style={styles.helperText}>No import jobs yet — upload a file or run Gmail import to see processing history here.</Text>
+        ) : null}
         {jobs.map((job) => (
           <View key={job.id} style={styles.flightRow}>
             <Text style={styles.flightTitle}>{job.originalFilename}</Text>

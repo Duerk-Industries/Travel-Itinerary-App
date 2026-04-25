@@ -13,6 +13,12 @@ type TextCompletionResult = {
   completionTokens: number;
 };
 
+type OpenAiCallerUsageContext = {
+  userId: string;
+  windowKey?: string | null;
+  metadata?: Record<string, unknown>;
+};
+
 const runOpenAiTextCompletion = async (params: {
   apiKey: string;
   caller: string;
@@ -20,6 +26,7 @@ const runOpenAiTextCompletion = async (params: {
   userPrompt: string;
   temperature?: number;
   maxTokens?: number;
+  usageContext?: OpenAiCallerUsageContext;
 }): Promise<TextCompletionResult> => {
   const data = await postOpenAiChatCompletion({
     caller: params.caller,
@@ -33,6 +40,7 @@ const runOpenAiTextCompletion = async (params: {
       temperature: typeof params.temperature === 'number' ? params.temperature : 0.2,
       max_tokens: typeof params.maxTokens === 'number' ? params.maxTokens : 900,
     },
+    usageContext: params.usageContext,
   });
 
   return {
@@ -45,6 +53,7 @@ const runOpenAiTextCompletion = async (params: {
 export const generateItineraryPlanViaOpenAi = async (params: {
   apiKey: string;
   prompt: string;
+  usageContext?: OpenAiCallerUsageContext;
 }): Promise<string | null> => {
   const result = await runOpenAiTextCompletion({
     apiKey: params.apiKey,
@@ -53,6 +62,7 @@ export const generateItineraryPlanViaOpenAi = async (params: {
     userPrompt: params.prompt,
     temperature: 0.7,
     maxTokens: 500,
+    usageContext: params.usageContext,
   });
   return result.text;
 };
@@ -68,6 +78,7 @@ export const runItineraryPromptStageViaOpenAi = async (params: {
   systemPrompt: string;
   userPrompt: string;
   maxTokens?: number;
+  usageContext?: OpenAiCallerUsageContext;
 }): Promise<TextCompletionResult> => {
   return runOpenAiTextCompletion({
     apiKey: params.apiKey,
@@ -76,6 +87,7 @@ export const runItineraryPromptStageViaOpenAi = async (params: {
     userPrompt: params.userPrompt,
     temperature: 0.2,
     maxTokens: params.maxTokens,
+    usageContext: params.usageContext,
   });
 };
 

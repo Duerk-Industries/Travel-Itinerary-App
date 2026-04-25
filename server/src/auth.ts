@@ -3,13 +3,13 @@ import { Request, Response, NextFunction } from 'express';
 import { findOrCreateUser, findOrCreateGoogleUser, getUserRole, ensureCurrentUserTier } from './db';
 import { isPasswordSetupRequired } from './db';
 import { User, UserRole } from './types';
-import { getEnvValue } from './env';
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import crypto from 'crypto';
 import { getSeededTierForEmail } from './services/entitlementService';
-
-const secret = getEnvValue('AUTH_SECRET', { defaultValue: 'development-secret' })!;
+import { getEnvValue } from './env';
+import { getAuthAudience, getAuthIssuer, getAuthSecret } from './authConfig';
+import { setRequestContextUserId } from './requestContext';
 
 export const initPassport = () => {
     const googleClientId = getEnvValue('GOOGLE_CLIENT_ID');
@@ -45,15 +45,26 @@ export interface TokenPayload {
 }
 
 export const createToken = (payload: TokenPayload): string => {
-  return jwt.sign(payload, secret, { expiresIn: '7d' });
+  return jwt.sign(payload, getAuthSecret(), {
+    expiresIn: '7d',
+    issuer: getAuthIssuer(),
+    audience: getAuthAudience(),
+  });
 };
 
 export const verifyToken = (token: string): TokenPayload => {
-  return jwt.verify(token, secret) as TokenPayload;
+  return jwt.verify(token, getAuthSecret(), {
+    issuer: getAuthIssuer(),
+    audience: getAuthAudience(),
+  }) as TokenPayload;
 };
 
 export const createWebUserToken = (payload: { userId: string; username: string }): string => {
-  return jwt.sign(payload, secret, { expiresIn: '7d' });
+  return jwt.sign(payload, getAuthSecret(), {
+    expiresIn: '7d',
+    issuer: getAuthIssuer(),
+    audience: getAuthAudience(),
+  });
 };
 
 type OAuthStatePayload = {
@@ -70,12 +81,12 @@ export const createOAuthState = (payload: { redirectUri?: string }): string => {
     redirectUri: payload.redirectUri,
     nonce,
   };
-  return jwt.sign(state, secret, { expiresIn: OAUTH_STATE_TTL, issuer: OAUTH_STATE_ISSUER });
+  return jwt.sign(state, getAuthSecret(), { expiresIn: OAUTH_STATE_TTL, issuer: OAUTH_STATE_ISSUER });
 };
 
 export const decodeOAuthState = (state: string): { redirectUri?: string } | null => {
   try {
-    const decoded = jwt.verify(state, secret, { issuer: OAUTH_STATE_ISSUER }) as OAuthStatePayload;
+    const decoded = jwt.verify(state, getAuthSecret(), { issuer: OAUTH_STATE_ISSUER }) as OAuthStatePayload;
     return { redirectUri: decoded.redirectUri };
   } catch {
     return null;
@@ -100,13 +111,14 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
   }
   const [, token] = authHeader.split(' ');
   try {
-    const decoded = jwt.verify(token, secret) as TokenPayload;
+    const decoded = verifyToken(token);
     const mustSetupPassword = await isPasswordSetupRequired(decoded.userId);
     if (mustSetupPassword && !isPasswordSetupAllowlistedRequest(req)) {
       res.status(403).json({ error: 'Password setup required before accessing this endpoint.' });
       return;
     }
     (req as Request & { user?: TokenPayload }).user = decoded;
+    setRequestContextUserId(decoded.userId);
     next();
   } catch (err) {
     res.status(401).json({ error: 'Invalid token' });

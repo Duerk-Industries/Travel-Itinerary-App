@@ -4,12 +4,25 @@
  * - Splits cost evenly across payers and applies rounding remainder to the first payer.
  * - Can optionally fall back to all members when payers are missing (legacy data).
  */
+const splitAmountIntoCents = (amount: number, parts: number): number[] => {
+  if (!parts) return [];
+  const cents = Math.round(amount * 100);
+  const base = cents < 0 ? Math.ceil(cents / parts) : Math.floor(cents / parts);
+  let remainder = cents - base * parts;
+
+  return Array.from({ length: parts }, () => {
+    const adjustment = remainder === 0 ? 0 : remainder > 0 ? 1 : -1;
+    remainder -= adjustment;
+    return (base + adjustment) / 100;
+  });
+};
+
 export const computePayerTotals = <T,>(
   items: T[],
   getCost: (item: T) => number,
   getPayers: (item: T) => string[] | undefined,
   fallbackPayers: string[],
- options?: { fallbackOnEmpty?: boolean }
+  options?: { fallbackOnEmpty?: boolean }
 ): Record<string, number> => {
   const totals: Record<string, number> = {};
   fallbackPayers.forEach((id) => {
@@ -25,15 +38,10 @@ export const computePayerTotals = <T,>(
     const effective = payers.length ? payers : shouldFallback ? fallbackPayers : [];
     if (!cost || !effective.length) return;
 
-    const share = cost / effective.length;
-    effective.forEach((id) => {
-      totals[id] = (totals[id] ?? 0) + share;
+    const shares = splitAmountIntoCents(cost, effective.length);
+    effective.forEach((id, index) => {
+      totals[id] = (totals[id] ?? 0) + (shares[index] ?? 0);
     });
-
-    const remainder = cost - share * effective.length;
-    if (Math.abs(remainder) > 1e-6 && effective[0]) {
-      totals[effective[0]] = (totals[effective[0]] ?? 0) + remainder;
-    }
   });
 
   return totals;

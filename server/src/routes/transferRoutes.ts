@@ -100,7 +100,7 @@ router.post('/parse', async (req, res) => {
   }
 
   try {
-    reserveApiUsageOrThrow({ provider: 'LLM_PARSER', caller: 'PARSE_FLIGHT_TEXT' });
+    await reserveApiUsageOrThrow({ provider: 'LLM_PARSER', caller: 'PARSE_FLIGHT_TEXT' });
   } catch (err) {
     res.status(429).json({ error: (err as Error).message });
     return;

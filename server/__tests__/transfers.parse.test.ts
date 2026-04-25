@@ -55,8 +55,8 @@ describe('POST /api/transfers/parse', () => {
     jest.restoreAllMocks();
   });
 
-  beforeEach(() => {
-    resetApiUsageSummaries();
+  beforeEach(async () => {
+    await resetApiUsageSummaries();
   });
 
   it('rejects unauthenticated requests', async () => {
@@ -105,7 +105,7 @@ describe('POST /api/transfers/parse', () => {
 
     expect(res.status).toBe(200);
     
-    const summary = require('../src/apis/usageLimiter').getApiUsageSummary() as Array<{
+    const summary = await require('../src/apis/usageLimiter').getApiUsageSummary() as Array<{
       provider: string;
       caller: string;
       used: number;

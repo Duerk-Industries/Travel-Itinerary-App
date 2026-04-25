@@ -1,4 +1,9 @@
-import { resolveAndValidateRedirectUri } from '../src/redirects';
+import {
+  appendAuthCodeToRedirect,
+  consumeRedirectTokenExchangeCode,
+  createRedirectTokenExchangeCode,
+  resolveAndValidateRedirectUri,
+} from '../src/redirects';
 
 describe('resolveAndValidateRedirectUri', () => {
   const originalAllowlist = process.env.AUTH_REDIRECT_URI_ALLOWLIST;
@@ -59,5 +64,25 @@ describe('resolveAndValidateRedirectUri', () => {
     const result = resolveAndValidateRedirectUri('http://localhost:4000/login', 'https://duerk.org');
     expect(result.error).toBeUndefined();
     expect(result.redirectUri).toBe('http://localhost:4000/login');
+  });
+});
+
+describe('redirect auth exchange', () => {
+  it('stores a short-lived auth code in the redirect URL instead of a token', () => {
+    const next = appendAuthCodeToRedirect('https://duerk.org/login?foo=bar', 'abc123');
+    expect(next).toBe('https://duerk.org/login?foo=bar&auth_code=abc123');
+  });
+
+  it('supports one-time auth code exchange', () => {
+    const code = createRedirectTokenExchangeCode({
+      token: 'signed-jwt',
+      requirePasswordSetup: true,
+    });
+
+    expect(consumeRedirectTokenExchangeCode(code)).toEqual({
+      token: 'signed-jwt',
+      requirePasswordSetup: true,
+    });
+    expect(consumeRedirectTokenExchangeCode(code)).toBeNull();
   });
 });

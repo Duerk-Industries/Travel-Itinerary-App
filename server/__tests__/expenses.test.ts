@@ -73,4 +73,35 @@ describe('Expenses API', () => {
       .set('Authorization', `Bearer ${token}`)
       .expect(204);
   });
+
+  it('returns structured DTO validation errors for invalid expense requests', async () => {
+    const invalidCreate = await request(app)
+      .post('/api/expenses')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        tripId,
+        expenseDate: '2025-02-01',
+        category: 'Breakfast',
+        payerIds: memberId,
+        forIds: [memberId],
+      })
+      .expect(400);
+
+    expect(invalidCreate.body).toEqual({
+      error: 'Request validation failed',
+      details: expect.arrayContaining([
+        expect.objectContaining({ path: 'payerIds', message: 'Expected an array of ids.' }),
+      ]),
+    });
+
+    const invalidList = await request(app)
+      .get('/api/expenses')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(400);
+
+    expect(invalidList.body).toEqual({
+      error: 'Request validation failed',
+      details: expect.arrayContaining([expect.objectContaining({ path: 'tripId' })]),
+    });
+  });
 });

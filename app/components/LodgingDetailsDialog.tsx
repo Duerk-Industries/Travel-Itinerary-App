@@ -1,10 +1,12 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { memo, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, ScrollView, Text, View, TouchableOpacity, useWindowDimensions, Image } from 'react-native';
 import { type Lodging, fetchPlaceDetailsApi, type PlaceDetailsPayload } from '../tabs/lodging';
 import { formatDateLong } from '../utils/formatDateLong';
 import { buildStaticMapUrl } from '../utils/googleMaps';
 import { LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from '../utils/itineraryStatus';
+import { useImageSource } from '../utils/imageSource';
 import type { AppTheme } from '../theme/theme';
+import DialogShell from './DialogShell';
 
 type DetailRow = {
   label: string;
@@ -38,7 +40,7 @@ type LodgingDetailsDialogProps = {
   testID?: string;
 };
 
-const LodgingDetailsDialog: React.FC<LodgingDetailsDialogProps> = ({
+const LodgingDetailsDialogComponent: React.FC<LodgingDetailsDialogProps> = ({
   visible,
   lodging,
   attendees = [],
@@ -86,11 +88,13 @@ const LodgingDetailsDialog: React.FC<LodgingDetailsDialogProps> = ({
     };
   }, [backendUrl, lodging?.placeId, requestHeaders, visible]);
 
-  if (!visible || !lodging) return null;
-
-  const mapImageUrl = lodging.address ? buildStaticMapUrl(lodging.address) : '';
   const photoUrl = placeDetails?.details?.photos?.[0]?.photoUri;
-  const imageUrl = lodging.imageUrl || photoUrl;
+  const imageUrl = lodging?.imageUrl || photoUrl;
+  const mapImageUrl = lodging?.address ? buildStaticMapUrl(lodging.address) : '';
+  const imageSource = useImageSource(imageUrl);
+  const mapImageSource = useImageSource(mapImageUrl);
+
+  if (!visible || !lodging) return null;
   const dateRange = `${lodging.checkInDate ? formatDateLong(lodging.checkInDate) : 'TBD'}${lodging.checkOutDate ? ` – ${formatDateLong(lodging.checkOutDate)}` : ''}`;
   const travelerIds =
     Array.isArray(lodging.travelerIds) && lodging.travelerIds.length
@@ -99,20 +103,6 @@ const LodgingDetailsDialog: React.FC<LodgingDetailsDialogProps> = ({
         ? lodging.paidBy
         : [];
 
-  useEffect(() => {
-    if (!visible || !lodging) return;
-    travelerIds.forEach((id) => {
-      const attendee = attendees.find((a) => a.id === id);
-      const firstName = attendee?.firstName ?? '';
-      const lastName = attendee?.lastName ?? '';
-      const displayName = `${firstName} ${lastName}`.trim();
-      const email = attendee?.email ?? attendee?.userEmail ?? '';
-      const pending = attendee?.status === 'pending';
-      console.debug(
-        `[overview][debug] traveler read (lodging details) id=${id} name="${displayName}" email=${email || 'n/a'} pending=${pending}`
-      );
-    });
-  }, [attendees, lodging, travelerIds, visible]);
   const resolveTravelerName = travelerName ?? payerName;
   const travelersLabel = travelerIds.length
     ? travelerIds
@@ -147,24 +137,36 @@ const LodgingDetailsDialog: React.FC<LodgingDetailsDialogProps> = ({
   }, [placeDetails]);
 
   return (
-    <View style={styles.modalOverlay} testID={testID}>
-      <View style={[styles.modalCard, detailStyles.detailCard, isCompact && { width: '100%', maxHeight: '95%' }]}>
+    <DialogShell
+      visible={visible}
+      title={`Lodging details: ${lodging.name || 'lodging'}`}
+      styles={styles}
+      onClose={onClose}
+      testID={testID}
+      cardStyle={[styles.modalCard, detailStyles.detailCard, isCompact && { width: '100%', maxHeight: '95%' }]}
+      showTitle={false}
+    >
         <ScrollView>
           <View style={detailStyles.imageWrap}>
             {imageUrl ? (
-              <Image source={{ uri: imageUrl }} style={detailStyles.image} resizeMode="cover" />
+              <Image source={imageSource} style={detailStyles.image} resizeMode="cover" />
             ) : (
               <View style={detailStyles.imageFallback}>
                 <Text style={styles.helperText}>No photo available</Text>
               </View>
             )}
-            <TouchableOpacity style={detailStyles.closeButton} onPress={onClose}>
+            <TouchableOpacity
+              style={detailStyles.closeButton}
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel="Close lodging details"
+            >
               <Text style={detailStyles.closeText}>✕</Text>
             </TouchableOpacity>
           </View>
           <View style={detailStyles.headerRow}>
             <View style={detailStyles.headerMeta}>
-              <Text style={detailStyles.title}>{lodging.name}</Text>
+              <Text style={detailStyles.title} accessibilityRole="header">{lodging.name}</Text>
               <Text style={[styles.helperText, { marginTop: 2 }]} numberOfLines={2}>
                 {lodging.address || 'Address not available'}
               </Text>
@@ -224,7 +226,7 @@ const LodgingDetailsDialog: React.FC<LodgingDetailsDialogProps> = ({
           </View>
           {mapImageUrl ? (
             <View style={detailStyles.mapCard}>
-              <Image style={detailStyles.mapImage} source={{ uri: mapImageUrl }} resizeMode="cover" />
+              <Image style={detailStyles.mapImage} source={mapImageSource} resizeMode="cover" />
               <View style={detailStyles.mapMeta}>
                 <Text style={detailStyles.summaryLabel}>Location preview</Text>
                 <Text style={detailStyles.summaryValue} numberOfLines={2}>
@@ -239,25 +241,41 @@ const LodgingDetailsDialog: React.FC<LodgingDetailsDialogProps> = ({
         </ScrollView>
         <View style={[styles.row, styles.detailActionsRow]}>
           <View style={detailStyles.actionGroup}>
-            <TouchableOpacity style={styles.button} onPress={onClose}>
+            <TouchableOpacity
+              style={styles.button}
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel="Close"
+            >
               <Text style={styles.buttonText}>Close</Text>
             </TouchableOpacity>
           </View>
           {!readOnly ? (
             <View style={detailStyles.actionGroup}>
-              <TouchableOpacity style={styles.button} onPress={() => onEdit(lodging)}>
+              <TouchableOpacity
+                style={styles.button}
+                onPress={() => onEdit(lodging)}
+                accessibilityRole="button"
+                accessibilityLabel={`Edit ${lodging.name || 'lodging'}`}
+              >
                 <Text style={styles.buttonText}>Edit</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={() => onDelete(lodging)}>
+              <TouchableOpacity
+                style={[styles.button, styles.dangerButton]}
+                onPress={() => onDelete(lodging)}
+                accessibilityRole="button"
+                accessibilityLabel={`Delete ${lodging.name || 'lodging'}`}
+              >
                 <Text style={styles.dangerButtonText}>Delete</Text>
               </TouchableOpacity>
             </View>
           ) : null}
         </View>
-      </View>
-    </View>
+    </DialogShell>
   );
 };
+
+const LodgingDetailsDialog = memo(LodgingDetailsDialogComponent);
 
 export default LodgingDetailsDialog;
 

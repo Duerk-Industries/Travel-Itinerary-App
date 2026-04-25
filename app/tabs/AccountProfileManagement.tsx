@@ -1,5 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import DropdownOptionButton from '../components/DropdownOptionButton';
+import ConfirmDialog from '../components/ConfirmDialog';
+import DialogShell from '../components/DialogShell';
+import DraftTextInput from '../components/DraftTextInput';
 import { type MapApp, isMapApp, mapAppOptions } from '../utils/mapLinks';
 import { appearanceOptions, isAppearancePreference, type AppearancePreference } from '../utils/appearancePreference';
 import { AccountProfile } from './account';
@@ -7,6 +11,83 @@ import { AccountProfile } from './account';
 type Setter<T> = React.Dispatch<React.SetStateAction<T>>;
 type Styles = ReturnType<typeof StyleSheet.create>;
 type Headers = Record<string, string>;
+type AddressForm = {
+  line1: string;
+  line2: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+};
+
+const emptyAddressForm = (): AddressForm => ({
+  line1: '',
+  line2: '',
+  city: '',
+  state: '',
+  postalCode: '',
+  country: '',
+});
+
+const fallbackAirportOptions = [
+  'Atlanta (ATL)',
+  'Boston (BOS)',
+  'Chicago (ORD)',
+  'Dallas-Fort Worth (DFW)',
+  'Denver (DEN)',
+  'Los Angeles (LAX)',
+  'New York (JFK)',
+  'Newark (EWR)',
+  'San Francisco (SFO)',
+  'Seattle (SEA)',
+];
+
+const parseStatePostal = (value: string): { state: string; postalCode: string } => {
+  const trimmed = value.trim();
+  if (!trimmed) return { state: '', postalCode: '' };
+  const match = trimmed.match(/^(.*?)(?:\s+([A-Za-z0-9-]{3,12}))?$/);
+  return {
+    state: match?.[1]?.trim() ?? '',
+    postalCode: match?.[2]?.trim() ?? '',
+  };
+};
+
+const parseHomeAddress = (value: string | null | undefined): AddressForm => {
+  const input = String(value ?? '').trim();
+  if (!input) return emptyAddressForm();
+  const parts = input.split(',').map((part) => part.trim()).filter(Boolean);
+  if (parts.length >= 5) {
+    const [line1 = '', line2 = '', city = '', statePostal = '', country = ''] = parts;
+    const { state, postalCode } = parseStatePostal(statePostal);
+    return { line1, line2, city, state, postalCode, country };
+  }
+  if (parts.length === 4) {
+    const [line1 = '', city = '', statePostal = '', country = ''] = parts;
+    const { state, postalCode } = parseStatePostal(statePostal);
+    return { line1, line2: '', city, state, postalCode, country };
+  }
+  if (parts.length === 3) {
+    const [line1 = '', city = '', statePostal = ''] = parts;
+    const { state, postalCode } = parseStatePostal(statePostal);
+    return { line1, line2: '', city, state, postalCode, country: '' };
+  }
+  if (parts.length === 2) {
+    const [line1 = '', city = ''] = parts;
+    return { line1, line2: '', city, state: '', postalCode: '', country: '' };
+  }
+  return { line1: parts[0] ?? '', line2: '', city: '', state: '', postalCode: '', country: '' };
+};
+
+const formatHomeAddress = (address: AddressForm): string =>
+  [
+    address.line1.trim(),
+    address.line2.trim(),
+    address.city.trim(),
+    [address.state.trim(), address.postalCode.trim()].filter(Boolean).join(' ').trim(),
+    address.country.trim(),
+  ]
+    .filter(Boolean)
+    .join(', ');
 
 interface AccountProfileManagementProps {
   backendUrl: string;
@@ -59,6 +140,8 @@ const AccountProfileManagement = ({
   });
   const [showPasswordEditor, setShowPasswordEditor] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showAddressEditor, setShowAddressEditor] = useState(false);
+  const [addressForm, setAddressForm] = useState<AddressForm>(() => parseHomeAddress(accountProfile.homeAddress));
   const [preferredAirportSuggestions, setPreferredAirportSuggestions] = useState<string[]>([]);
   const [showPreferredAirportSuggestions, setShowPreferredAirportSuggestions] = useState(false);
   const [multiEmailEnabled, setMultiEmailEnabled] = useState(false);
@@ -79,8 +162,16 @@ const AccountProfileManagement = ({
 
   const buildAirportSuggestions = (query: string): string[] => {
     const trimmed = query.trim();
-    if (!trimmed) return airportOptions.slice(0, 10);
-    return airportOptions.filter((opt) => opt.toLowerCase().includes(trimmed.toLowerCase())).slice(0, 10);
+    const sourceOptions = airportOptions.length ? airportOptions : fallbackAirportOptions;
+    if (!trimmed) return sourceOptions.slice(0, 10);
+    const lower = trimmed.toLowerCase();
+    return sourceOptions
+      .filter((opt) => {
+        const normalized = opt.toLowerCase();
+        const code = parsePreferredAirportCode(opt).toLowerCase();
+        return normalized.includes(lower) || code.startsWith(lower);
+      })
+      .slice(0, 10);
   };
 
   const handlePreferredAirportChange = (text: string) => {
@@ -88,19 +179,30 @@ const AccountProfileManagement = ({
     const next = buildAirportSuggestions(text);
     setPreferredAirportSuggestions(next);
     setShowPreferredAirportSuggestions(true);
-    if (text.trim()) {
-      try {
-        void onSearchAirports(text);
-      } catch {
-        // Ignore background airport lookup errors.
-      }
-    }
   };
 
   useEffect(() => {
     if (!showPreferredAirportSuggestions) return;
     setPreferredAirportSuggestions(buildAirportSuggestions(accountProfile.preferredAirport ?? ''));
   }, [airportOptions, accountProfile.preferredAirport, showPreferredAirportSuggestions]);
+
+  useEffect(() => {
+    if (!showPreferredAirportSuggestions) return;
+    const query = String(accountProfile.preferredAirport ?? '').trim();
+    if (query.length < 2) return;
+    const handle = setTimeout(() => {
+      void onSearchAirports(query);
+    }, 150);
+    return () => clearTimeout(handle);
+  }, [accountProfile.preferredAirport, onSearchAirports, showPreferredAirportSuggestions]);
+
+  useEffect(() => {
+    if (!showAddressEditor) {
+      setAddressForm(parseHomeAddress(accountProfile.homeAddress));
+    }
+  }, [accountProfile.homeAddress, showAddressEditor]);
+
+  const formattedHomeAddress = useMemo(() => formatHomeAddress(parseHomeAddress(accountProfile.homeAddress)), [accountProfile.homeAddress]);
 
   useEffect(() => {
     if (!userToken) return;
@@ -345,16 +447,18 @@ const AccountProfileManagement = ({
         </View>
       ) : null}
       <View style={styles.row}>
-        <TextInput style={[styles.input, { flex: 1 }]} placeholder="First name" autoComplete="given-name" textContentType="givenName" value={accountProfile.firstName} onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, firstName: text }))} />
-        <TextInput style={[styles.input, { flex: 1 }]} placeholder="Last name" autoComplete="family-name" textContentType="familyName" value={accountProfile.lastName} onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, lastName: text }))} />
+        <DraftTextInput style={[styles.input, { flex: 1 }]} placeholder="First name" autoComplete="given-name" textContentType="givenName" value={accountProfile.firstName} onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, firstName: text }))} commitOnBlur={false} />
+        <DraftTextInput style={[styles.input, { flex: 1 }]} placeholder="Last name" autoComplete="family-name" textContentType="familyName" value={accountProfile.lastName} onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, lastName: text }))} commitOnBlur={false} />
       </View>
-      <TextInput style={styles.input} placeholder="Email" autoCapitalize="none" autoComplete="email" textContentType="emailAddress" keyboardType="email-address" value={accountProfile.email} onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, email: text }))} />
-      <TextInput
-        style={styles.input}
-        placeholder="Home address (optional)"
-        value={accountProfile.homeAddress ?? ''}
-        onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, homeAddress: text }))}
-      />
+      <DraftTextInput style={styles.input} placeholder="Email" autoCapitalize="none" autoComplete="email" textContentType="emailAddress" keyboardType="email-address" value={accountProfile.email} onChangeText={(text: string) => setAccountProfile((p) => ({ ...p, email: text }))} commitOnBlur={false} />
+      <TouchableOpacity
+        style={[styles.input, { justifyContent: 'center' }]}
+        onPress={() => setShowAddressEditor(true)}
+      >
+        <Text style={formattedHomeAddress ? styles.cellText : styles.placeholderText}>
+          {formattedHomeAddress || 'Home address (optional)'}
+        </Text>
+      </TouchableOpacity>
       <View style={localStyles.airportFieldWrap}>
         <TextInput
           style={styles.input}
@@ -366,15 +470,18 @@ const AccountProfileManagement = ({
           }}
           onBlur={() => setTimeout(() => setShowPreferredAirportSuggestions(false), 120)}
           onChangeText={handlePreferredAirportChange}
+          autoComplete="off"
+          autoCorrect={false}
+          textContentType="none"
         />
         {showPreferredAirportSuggestions ? (
           <View style={[styles.dropdownList, localStyles.airportSuggestionList]}>
             {preferredAirportSuggestions.length ? (
               preferredAirportSuggestions.map((opt, idx) => (
-                <TouchableOpacity
+                <DropdownOptionButton
                   key={opt}
+                  styles={styles}
                   style={[
-                    styles.dropdownOption,
                     localStyles.airportSuggestionOption,
                     idx === preferredAirportSuggestions.length - 1 && { borderBottomWidth: 0 },
                   ]}
@@ -384,7 +491,7 @@ const AccountProfileManagement = ({
                   }}
                 >
                   <Text style={styles.cellText}>{opt}</Text>
-                </TouchableOpacity>
+                </DropdownOptionButton>
               ))
             ) : (
               <Text style={[styles.helperText, { paddingHorizontal: 12, paddingVertical: 10 }]}>
@@ -476,13 +583,14 @@ const AccountProfileManagement = ({
             </View>
           ))}
           <View style={styles.row}>
-            <TextInput
+            <DraftTextInput
               style={[styles.input, { flex: 1 }]}
               placeholder="Add email"
               autoCapitalize="none"
               keyboardType="email-address"
               value={newEmail}
               onChangeText={setNewEmail}
+              commitOnBlur={false}
             />
             <TouchableOpacity style={[styles.button, emailActionBusy && styles.buttonDisabled]} disabled={emailActionBusy} onPress={handleAddEmail}>
               <Text style={styles.buttonText}>Add</Text>
@@ -499,9 +607,9 @@ const AccountProfileManagement = ({
       ) : (
         <>
           <Text style={styles.modalLabel}>Change password</Text>
-          <TextInput style={styles.input} placeholder="Current password" secureTextEntry value={passwordForm.currentPassword} onChangeText={(text: string) => setPasswordForm(p => ({ ...p, currentPassword: text }))} />
-          <TextInput style={styles.input} placeholder="New password" secureTextEntry value={passwordForm.newPassword} onChangeText={(text: string) => setPasswordForm(p => ({ ...p, newPassword: text }))} />
-          <TextInput style={styles.input} placeholder="Confirm new password" secureTextEntry value={passwordForm.newPasswordConfirm} onChangeText={(text: string) => setPasswordForm(p => ({ ...p, newPasswordConfirm: text }))} />
+          <DraftTextInput style={styles.input} placeholder="Current password" secureTextEntry value={passwordForm.currentPassword} onChangeText={(text: string) => setPasswordForm(p => ({ ...p, currentPassword: text }))} commitOnBlur={false} />
+          <DraftTextInput style={styles.input} placeholder="New password" secureTextEntry value={passwordForm.newPassword} onChangeText={(text: string) => setPasswordForm(p => ({ ...p, newPassword: text }))} commitOnBlur={false} />
+          <DraftTextInput style={styles.input} placeholder="Confirm new password" secureTextEntry value={passwordForm.newPasswordConfirm} onChangeText={(text: string) => setPasswordForm(p => ({ ...p, newPasswordConfirm: text }))} commitOnBlur={false} />
           <View style={styles.row}>
             <TouchableOpacity
               style={[styles.button, styles.dangerButton, { flex: 1 }]}
@@ -523,21 +631,91 @@ const AccountProfileManagement = ({
       <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={() => setShowDeleteConfirm(true)}>
         <Text style={styles.dangerButtonText}>Delete Account</Text>
       </TouchableOpacity>
-      {showDeleteConfirm ? (
-        <View style={styles.modalOverlay}>
-          <View style={styles.confirmModal}>
-            <Text style={styles.sectionTitle}>Delete account?</Text>
-            <Text style={styles.helperText}>This cannot be undone. All solo trips and data will be removed.</Text>
-            <View style={styles.row}>
-              <TouchableOpacity style={[styles.button, { flex: 1 }]} onPress={() => setShowDeleteConfirm(false)}>
-                <Text style={styles.buttonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.button, styles.dangerButton, { flex: 1 }]} onPress={handleDeleteAccount}>
-                <Text style={styles.dangerButtonText}>Delete</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
+      <ConfirmDialog
+        visible={showDeleteConfirm}
+        title="Delete account?"
+        message="This cannot be undone. All solo trips and data will be removed."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        onConfirm={handleDeleteAccount}
+        onCancel={() => setShowDeleteConfirm(false)}
+        styles={styles}
+      />
+      {showAddressEditor ? (
+        <DialogShell
+          visible={showAddressEditor}
+          title="Home Address"
+          styles={styles}
+          onClose={() => setShowAddressEditor(false)}
+          useNativeModal
+        >
+              <DraftTextInput
+                style={styles.input}
+                placeholder="Address line 1"
+                value={addressForm.line1}
+                onChangeText={(text: string) => setAddressForm((prev) => ({ ...prev, line1: text }))}
+                commitOnBlur={false}
+              />
+              <DraftTextInput
+                style={styles.input}
+                placeholder="Address line 2"
+                value={addressForm.line2}
+                onChangeText={(text: string) => setAddressForm((prev) => ({ ...prev, line2: text }))}
+                commitOnBlur={false}
+              />
+              <View style={styles.row}>
+                <DraftTextInput
+                  style={[styles.input, { flex: 1 }]}
+                  placeholder="City"
+                  value={addressForm.city}
+                  onChangeText={(text: string) => setAddressForm((prev) => ({ ...prev, city: text }))}
+                  commitOnBlur={false}
+                />
+                <DraftTextInput
+                  style={[styles.input, { flex: 1 }]}
+                  placeholder="State / Province"
+                  value={addressForm.state}
+                  onChangeText={(text: string) => setAddressForm((prev) => ({ ...prev, state: text }))}
+                  commitOnBlur={false}
+                />
+              </View>
+              <View style={styles.row}>
+                <DraftTextInput
+                  style={[styles.input, { flex: 1 }]}
+                  placeholder="Postal code"
+                  value={addressForm.postalCode}
+                  onChangeText={(text: string) => setAddressForm((prev) => ({ ...prev, postalCode: text }))}
+                  commitOnBlur={false}
+                />
+                <DraftTextInput
+                  style={[styles.input, { flex: 1 }]}
+                  placeholder="Country"
+                  value={addressForm.country}
+                  onChangeText={(text: string) => setAddressForm((prev) => ({ ...prev, country: text }))}
+                  commitOnBlur={false}
+                />
+              </View>
+              <View style={styles.row}>
+                <TouchableOpacity
+                  style={[styles.button, styles.dangerButton, { flex: 1 }]}
+                  onPress={() => {
+                    setAddressForm(parseHomeAddress(accountProfile.homeAddress));
+                    setShowAddressEditor(false);
+                  }}
+                >
+                  <Text style={styles.dangerButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.button, { flex: 1 }]}
+                  onPress={() => {
+                    setAccountProfile((prev) => ({ ...prev, homeAddress: formatHomeAddress(addressForm) }));
+                    setShowAddressEditor(false);
+                  }}
+                >
+                  <Text style={styles.buttonText}>Save Address</Text>
+                </TouchableOpacity>
+              </View>
+        </DialogShell>
       ) : null}
     </View>
   );

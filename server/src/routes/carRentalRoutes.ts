@@ -18,6 +18,8 @@ import { applyVoteSummary } from '../services/itemVoteService';
 import { assertCanUseFeature } from '../services/entitlementService';
 import { EntitlementError } from '../errors';
 import { TokenPayload } from '../auth';
+import { readDto } from '../utils/dtoParse';
+import { createCarRentalDto, updateCarRentalDto, voteOrRatingDto } from './carRentalDtos';
 
 const router = Router();
 router.use(bodyParser.json());
@@ -61,24 +63,10 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const role = ((req as any).user as TokenPayload).role;
-  const {
-    tripId,
-    status: incomingStatus,
-    pickupLocation,
-    pickupDate,
-    dropoffLocation,
-    dropoffDate,
-    reference,
-    vendor,
-    prepaid,
-    cost,
-    model,
-    notes,
-    paidBy,
-    travelerIds,
-  } = req.body ?? {};
+  const dto = readDto(createCarRentalDto, req.body, res);
+  if (!dto) return;
 
-  const status = normalizeItineraryStatus(incomingStatus);
+  const status = normalizeItineraryStatus(dto.status);
   const relaxed = shouldRelaxRequiredFields(status);
   try {
     await assertCanUseFeature(userId, 'car_rentals', role);
@@ -89,46 +77,45 @@ router.post('/', async (req, res) => {
     }
     throw err;
   }
-  if (!tripId || (!relaxed && !String(pickupLocation ?? '').trim() && !String(vendor ?? '').trim() && !String(model ?? '').trim())) {
+  if (!relaxed && !dto.pickupLocation && !dto.vendor && !dto.model) {
     res.status(400).json({ error: 'Missing required fields' });
     return;
   }
 
-  const membership = await ensureUserInTrip(String(tripId), userId);
+  const membership = await ensureUserInTrip(dto.tripId, userId);
   if (!membership) {
     res.status(403).json({ error: 'You must be in the group for this trip' });
     return;
   }
 
+  // Preserve legacy fallback: when caller omits travelerIds, inherit paidBy.
+  const travelerIds = dto.travelerIds.length ? dto.travelerIds : dto.paidBy;
+
   const rental = await insertCarRental({
     userId,
-    tripId: String(tripId),
+    tripId: dto.tripId,
     status,
-    pickupLocation: String(pickupLocation ?? '').trim(),
-    pickupDate: String(pickupDate ?? '').trim(),
-    dropoffLocation: String(dropoffLocation ?? '').trim(),
-    dropoffDate: String(dropoffDate ?? '').trim(),
-    reference: String(reference ?? '').trim(),
-    vendor: String(vendor ?? '').trim(),
-    prepaid: String(prepaid ?? '').trim(),
-    cost: Number(cost) || 0,
-    model: String(model ?? '').trim(),
-    notes: String(notes ?? '').trim(),
-    paidBy: Array.isArray(paidBy) ? paidBy.map((id: any) => String(id)).filter(Boolean) : [],
-    travelerIds: Array.isArray(travelerIds)
-      ? travelerIds.map((id: any) => String(id)).filter(Boolean)
-      : Array.isArray(paidBy)
-        ? paidBy.map((id: any) => String(id)).filter(Boolean)
-        : [],
+    pickupLocation: dto.pickupLocation,
+    pickupDate: dto.pickupDate,
+    dropoffLocation: dto.dropoffLocation,
+    dropoffDate: dto.dropoffDate,
+    reference: dto.reference,
+    vendor: dto.vendor,
+    prepaid: dto.prepaid,
+    cost: dto.cost,
+    model: dto.model,
+    notes: dto.notes,
+    paidBy: dto.paidBy,
+    travelerIds,
   } as any);
 
   await upsertExpenseForSource({
     userId,
-    tripId: String(tripId),
+    tripId: dto.tripId,
     groupId: membership.groupId,
-    expenseDate: String(pickupDate ?? '').trim() || new Date().toISOString().slice(0, 10),
+    expenseDate: dto.pickupDate || new Date().toISOString().slice(0, 10),
     category: 'Car Rentals',
-    amount: Number(cost) || 0,
+    amount: dto.cost,
     currency: undefined,
     payerIds: Array.isArray((rental as any).paidBy) ? (rental as any).paidBy : [],
     forIds: Array.isArray((rental as any).travelerIds) ? (rental as any).travelerIds : [],
@@ -151,23 +138,26 @@ router.patch('/:id', async (req, res) => {
     }
     throw err;
   }
-  const updates = req.body ?? {};
+  const dto = readDto(updateCarRentalDto, req.body ?? {}, res);
+  if (!dto) return;
+
+  const coerceStringArray = (arr: Array<string | number> | null | undefined): string[] | undefined =>
+    Array.isArray(arr) ? arr.map((id) => String(id).trim()).filter(Boolean) : undefined;
+
   const updated = await updateCarRental(req.params.id, userId, {
-    status: typeof updates.status === 'undefined' ? undefined : normalizeItineraryStatus(updates.status),
-    pickupLocation: typeof updates.pickupLocation === 'undefined' ? undefined : String(updates.pickupLocation),
-    pickupDate: typeof updates.pickupDate === 'undefined' ? undefined : String(updates.pickupDate),
-    dropoffLocation: typeof updates.dropoffLocation === 'undefined' ? undefined : String(updates.dropoffLocation),
-    dropoffDate: typeof updates.dropoffDate === 'undefined' ? undefined : String(updates.dropoffDate),
-    reference: typeof updates.reference === 'undefined' ? undefined : String(updates.reference),
-    vendor: typeof updates.vendor === 'undefined' ? undefined : String(updates.vendor),
-    prepaid: typeof updates.prepaid === 'undefined' ? undefined : String(updates.prepaid),
-    cost: typeof updates.cost === 'undefined' ? undefined : Number(updates.cost) || 0,
-    model: typeof updates.model === 'undefined' ? undefined : String(updates.model),
-    notes: typeof updates.notes === 'undefined' ? undefined : String(updates.notes),
-    paidBy: Array.isArray(updates.paidBy) ? updates.paidBy.map((id: any) => String(id)).filter(Boolean) : undefined,
-    travelerIds: Array.isArray(updates.travelerIds)
-      ? updates.travelerIds.map((id: any) => String(id)).filter(Boolean)
-      : undefined,
+    status: dto.status == null ? undefined : normalizeItineraryStatus(String(dto.status)),
+    pickupLocation: dto.pickupLocation == null ? undefined : String(dto.pickupLocation),
+    pickupDate: dto.pickupDate == null ? undefined : String(dto.pickupDate),
+    dropoffLocation: dto.dropoffLocation == null ? undefined : String(dto.dropoffLocation),
+    dropoffDate: dto.dropoffDate == null ? undefined : String(dto.dropoffDate),
+    reference: dto.reference == null ? undefined : String(dto.reference),
+    vendor: dto.vendor == null ? undefined : String(dto.vendor),
+    prepaid: dto.prepaid == null ? undefined : String(dto.prepaid),
+    cost: dto.cost == null ? undefined : Number(dto.cost) || 0,
+    model: dto.model == null ? undefined : String(dto.model),
+    notes: dto.notes == null ? undefined : String(dto.notes),
+    paidBy: coerceStringArray(dto.paidBy ?? undefined),
+    travelerIds: coerceStringArray(dto.travelerIds ?? undefined),
   } as any);
 
   if (!updated) {
@@ -215,12 +205,9 @@ router.delete('/:id', async (req, res) => {
 
 router.post('/:id/vote', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const valueRaw = Number(req.body?.value);
-  const value = valueRaw === 1 ? 1 : valueRaw === -1 ? -1 : null;
-  if (value == null) {
-    res.status(400).json({ error: 'value must be 1 or -1' });
-    return;
-  }
+  const dto = readDto(voteOrRatingDto, req.body, res);
+  if (!dto) return;
+  const value = dto.value;
 
   const rental = await getCarRentalById(req.params.id);
   if (!rental) {
@@ -254,12 +241,9 @@ router.post('/:id/vote', async (req, res) => {
 
 router.post('/:id/rating', async (req, res) => {
   const userId = (req as any).user.userId as string;
-  const valueRaw = Number(req.body?.value);
-  const value = valueRaw === 1 ? 1 : valueRaw === -1 ? -1 : null;
-  if (value == null) {
-    res.status(400).json({ error: 'value must be 1 or -1' });
-    return;
-  }
+  const dto = readDto(voteOrRatingDto, req.body, res);
+  if (!dto) return;
+  const value = dto.value;
 
   const rental = await getCarRentalById(req.params.id);
   if (!rental) {

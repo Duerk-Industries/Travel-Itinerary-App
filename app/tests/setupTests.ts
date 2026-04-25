@@ -1,5 +1,4 @@
 const originalError = console.error.bind(console);
-const originalDebug = console.debug ? console.debug.bind(console) : undefined;
 
 if (!(global as any).fetch) {
   (global as any).fetch = jest.fn();
@@ -17,13 +16,3 @@ console.error = (...args: unknown[]) => {
   }
   originalError(...args);
 };
-
-if (originalDebug) {
-  console.debug = (...args: unknown[]) => {
-    const first = args[0];
-    if (typeof first === 'string' && first.includes('[overview][debug]')) {
-      return;
-    }
-    originalDebug(...args);
-  };
-}

@@ -188,8 +188,15 @@ export const listTripShareInvites = async (...args: Parameters<ReturnType<typeof
   adapter().listTripShareInvites(...args);
 export const createTripShareInvite = async (...args: Parameters<ReturnType<typeof adapter>['createTripShareInvite']>) =>
   adapter().createTripShareInvite(...args);
+export const listPendingTripShareInvitesForUser = async (
+  ...args: Parameters<ReturnType<typeof adapter>['listPendingTripShareInvitesForUser']>
+) => adapter().listPendingTripShareInvitesForUser(...args);
 export const acceptTripShareInvite = async (...args: Parameters<ReturnType<typeof adapter>['acceptTripShareInvite']>) =>
   adapter().acceptTripShareInvite(...args);
+export const acceptTripShareInviteById = async (...args: Parameters<ReturnType<typeof adapter>['acceptTripShareInviteById']>) =>
+  adapter().acceptTripShareInviteById(...args);
+export const rejectTripShareInvite = async (...args: Parameters<ReturnType<typeof adapter>['rejectTripShareInvite']>) =>
+  adapter().rejectTripShareInvite(...args);
 export const revokeTripShareInvite = async (...args: Parameters<ReturnType<typeof adapter>['revokeTripShareInvite']>) =>
   adapter().revokeTripShareInvite(...args);
 export const writeActivity = async (...args: Parameters<ReturnType<typeof adapter>['writeActivity']>) =>
@@ -261,6 +268,12 @@ export const deleteExpense = async (...args: Parameters<ReturnType<typeof adapte
   adapter().deleteExpense(...args);
 export const deleteExpenseForSource = async (...args: Parameters<ReturnType<typeof adapter>['deleteExpenseForSource']>) =>
   adapter().deleteExpenseForSource(...args);
+export const listTripPayments = async (...args: Parameters<ReturnType<typeof adapter>['listTripPayments']>) =>
+  adapter().listTripPayments(...args);
+export const insertTripPayment = async (...args: Parameters<ReturnType<typeof adapter>['insertTripPayment']>) =>
+  adapter().insertTripPayment(...args);
+export const deleteTripPayment = async (...args: Parameters<ReturnType<typeof adapter>['deleteTripPayment']>) =>
+  adapter().deleteTripPayment(...args);
 export const saveUserDemographics = async (...args: Parameters<ReturnType<typeof adapter>['saveUserDemographics']>) =>
   adapter().saveUserDemographics(...args);
 export const listItineraries = async (
@@ -363,6 +376,23 @@ export const incrementUsageCounter = async (...args: Parameters<ReturnType<typeo
   adapter().incrementUsageCounter(...args);
 export const appendUsageEvent = async (...args: Parameters<ReturnType<typeof adapter>['appendUsageEvent']>) =>
   adapter().appendUsageEvent(...args);
+export const getApiCostCounter = async (...args: Parameters<ReturnType<typeof adapter>['getApiCostCounter']>) =>
+  adapter().getApiCostCounter(...args);
+export const incrementApiCostCounter = async (...args: Parameters<ReturnType<typeof adapter>['incrementApiCostCounter']>) =>
+  adapter().incrementApiCostCounter(...args);
+export const getApiUsageCount = async (...args: Parameters<ReturnType<typeof adapter>['getApiUsageCount']>) =>
+  adapter().getApiUsageCount(...args);
+export const atomicIncrementApiUsageIfUnderLimit = async (
+  ...args: Parameters<ReturnType<typeof adapter>['atomicIncrementApiUsageIfUnderLimit']>
+) => adapter().atomicIncrementApiUsageIfUnderLimit(...args);
+export const listApiUsageCounters = async (...args: Parameters<ReturnType<typeof adapter>['listApiUsageCounters']>) =>
+  adapter().listApiUsageCounters(...args);
+export const resetApiUsageCounters = async (...args: Parameters<ReturnType<typeof adapter>['resetApiUsageCounters']>) =>
+  adapter().resetApiUsageCounters(...args);
+export const listApiCostCounters = async (...args: Parameters<ReturnType<typeof adapter>['listApiCostCounters']>) =>
+  adapter().listApiCostCounters(...args);
+export const resetApiCostCounters = async (...args: Parameters<ReturnType<typeof adapter>['resetApiCostCounters']>) =>
+  adapter().resetApiCostCounters(...args);
 export const atomicIncrementIfUnderLimit = async (...args: Parameters<ReturnType<typeof adapter>['atomicIncrementIfUnderLimit']>) =>
   adapter().atomicIncrementIfUnderLimit(...args);
 export const getGenerationIdempotency = async (
@@ -401,9 +431,13 @@ export const adminGetUserData = async (...args: Parameters<ReturnType<typeof ada
 
 export const listTripMessages = async (...args: Parameters<ReturnType<typeof adapter>['listTripMessages']>) =>
   adapter().listTripMessages(...args);
+export const listTripMessagesPage = async (...args: Parameters<ReturnType<typeof adapter>['listTripMessagesPage']>) =>
+  adapter().listTripMessagesPage(...args);
 export const addTripMessage = async (...args: Parameters<ReturnType<typeof adapter>['addTripMessage']>) =>
   adapter().addTripMessage(...args);
 export const markMessagesRead = async (...args: Parameters<ReturnType<typeof adapter>['markMessagesRead']>) =>
   adapter().markMessagesRead(...args);
 export const countUnreadMessages = async (...args: Parameters<ReturnType<typeof adapter>['countUnreadMessages']>) =>
   adapter().countUnreadMessages(...args);
+export const listUserAuthoredItems = async (...args: Parameters<ReturnType<typeof adapter>['listUserAuthoredItems']>) =>
+  adapter().listUserAuthoredItems(...args);

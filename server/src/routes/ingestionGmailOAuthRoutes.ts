@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getEnvValue } from '../env';
+import { getBackendUrl } from '../env';
 import { upsertProviderConnection } from '../ingestion/shared/repository';
 import { decodeGmailOAuthState } from '../ingestion/gmail/oauth';
 import { exchangeGmailCodeForTokens, fetchGmailProfile } from '../ingestion/intake/gmail';
@@ -8,7 +8,7 @@ import { logError } from '../logger';
 const router = Router();
 
 const buildRedirectUrl = (req: any, redirectUri: string | undefined, params: Record<string, string>): string => {
-  const fallbackBase = getEnvValue('WEB_URL', { defaultValue: `${req.protocol}://${req.get('host')}` })!;
+  const fallbackBase = getBackendUrl(`${req.protocol}://${req.get('host')}`)!;
   const url = new URL(redirectUri ?? '/app', fallbackBase);
   for (const [key, value] of Object.entries(params)) {
     url.searchParams.set(key, value);
