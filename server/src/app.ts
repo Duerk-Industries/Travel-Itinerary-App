@@ -33,7 +33,13 @@ import { getBackendUrl, getEnvValue, hasRunLocalFlag, isLocalEnv } from './env';
 // Load env vars from server/.env as the primary local source, with server/.secrets
 // still supported as a backwards-compatible fallback (plus repo root fallbacks).
 // .local_env files load only when RUN_LOCAL=1 is set inside that file.
-// Later files override earlier ones to make local overrides and secrets take precedence.
+//
+// Precedence (highest to lowest): shell env > .local_env > .env > .secrets.
+// Achieved by loading .local_env FIRST with `override: false`, so its keys
+// take precedence over the .env/.secrets values loaded afterward (which
+// also use `override: false` and so leave already-set keys alone). Shell
+// env vars are set before any of this runs and are preserved by
+// `override: false` throughout.
 const localEnvPaths = [
   path.resolve(__dirname, '../.local_env'),
   path.resolve(__dirname, '../../.local_env'),
@@ -46,16 +52,15 @@ const envPaths = [
   path.resolve(__dirname, '../../.secrets'),
 ];
 const loadedEnvPaths: string[] = [];
-const shouldOverride = false;
-for (const envPath of envPaths) {
-  if (fs.existsSync(envPath)) {
-    dotenv.config({ path: envPath, override: shouldOverride });
+for (const envPath of localEnvPaths) {
+  if (hasRunLocalFlag(envPath)) {
+    dotenv.config({ path: envPath, override: false });
     loadedEnvPaths.push(envPath);
   }
 }
-for (const envPath of localEnvPaths) {
-  if (hasRunLocalFlag(envPath)) {
-    dotenv.config({ path: envPath, override: shouldOverride });
+for (const envPath of envPaths) {
+  if (fs.existsSync(envPath)) {
+    dotenv.config({ path: envPath, override: false });
     loadedEnvPaths.push(envPath);
   }
 }
