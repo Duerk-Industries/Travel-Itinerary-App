@@ -396,6 +396,18 @@ export interface Itinerary {
   createdAt: string;
 }
 
+export type ItineraryDetailKind = 'activity' | 'place' | 'note' | 'checklist';
+
+export interface ItineraryChecklistItem {
+  id: string;
+  detailId: string;
+  position: number;
+  label: string;
+  checkedBy?: string | null;
+  checkedAt?: string | null;
+  createdAt: string;
+}
+
 export interface ItineraryDetail {
   id: string;
   itineraryId: string;
@@ -403,6 +415,24 @@ export interface ItineraryDetail {
   time?: string | null;
   activity: string;
   cost?: number | null;
+  kind?: ItineraryDetailKind;
+  placeId?: string | null;
+  noteBody?: string | null;
+  position?: number;
+  checklistItems?: ItineraryChecklistItem[];
+}
+
+export type ItineraryDetailReactionValue = 1 | -1;
+
+export interface ItineraryDetailReactionSummary {
+  score: number;
+  upCount: number;
+  downCount: number;
+  userValue: ItineraryDetailReactionValue | null;
+}
+
+export interface ItineraryDetailWithReactions extends ItineraryDetail {
+  reactions: ItineraryDetailReactionSummary;
 }
 
 export type ItineraryPromptPace = 'Relaxed' | 'Balanced' | 'Fast';

@@ -147,7 +147,7 @@ describe('HomeTab', () => {
         onSelectFollowedTrip={jest.fn()}
         onNavigate={jest.fn()}
         onFollowTrip={jest.fn(async () => null)}
-        hiddenPages={new Set(['itinerary', 'expenses', 'ingest', 'ledger', 'trips', 'create-trip', 'follow', 'following'])}
+        hiddenPages={new Set(['expenses', 'ingest', 'ledger', 'trips', 'create-trip', 'follow', 'following'])}
       />
     );
 

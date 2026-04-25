@@ -15,6 +15,8 @@ import {
   CarRental,
   Itinerary,
   ItineraryDetail,
+  ItineraryDetailKind,
+  ItineraryChecklistItem,
   PlaceDetailsCache,
   LocationRecord,
   AttractionCatalogEntry,
@@ -840,6 +842,11 @@ export const initDb = async (): Promise<void> => {
     );
   `);
 
+  // server/migrations/20260427_add_itinerary_detail_reactions.sql — auto-applied
+  // by the runtime migration runner below. The table FKs to itinerary_details so
+  // it must run after the inline create above; the migration runner handles that
+  // ordering on a fresh DB by virtue of file lexical order.
+
   await p.query(`
     CREATE TABLE IF NOT EXISTS expenses (
       id UUID PRIMARY KEY,
@@ -1101,6 +1108,8 @@ export const initDb = async (): Promise<void> => {
     await del('trip_messages');
     await del('trip_comments');
     await del('trip_activity');
+    await del('itinerary_detail_reactions');
+    await del('itinerary_checklist_items');
     await del('itinerary_details');
     await del('itineraries');
     await del('tours');
@@ -4491,6 +4500,84 @@ export const getItemVoteSummaries = async (
   return result;
 };
 
+export const getItineraryDetailContext = async (
+  detailId: string
+): Promise<{ tripId: string; itineraryId: string } | null> => {
+  const p = getPool();
+  const { rows } = await p.query<{ tripId: string; itineraryId: string }>(
+    `SELECT i.trip_id as "tripId", d.itinerary_id as "itineraryId"
+     FROM itinerary_details d
+     JOIN itineraries i ON i.id = d.itinerary_id
+     WHERE d.id = $1`,
+    [detailId]
+  );
+  return rows[0] ?? null;
+};
+
+export const castItineraryDetailReaction = async (
+  userId: string,
+  tripId: string,
+  detailId: string,
+  value: 1 | -1
+): Promise<void> => {
+  const p = getPool();
+  await p.query(
+    `
+      INSERT INTO itinerary_detail_reactions (id, trip_id, detail_id, user_id, value, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+      ON CONFLICT (detail_id, user_id)
+      DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()
+    `,
+    [randomUUID(), tripId, detailId, userId, value]
+  );
+};
+
+export const clearItineraryDetailReaction = async (
+  userId: string,
+  detailId: string
+): Promise<void> => {
+  const p = getPool();
+  await p.query(
+    `DELETE FROM itinerary_detail_reactions WHERE detail_id = $1 AND user_id = $2`,
+    [detailId, userId]
+  );
+};
+
+export const getItineraryDetailReactionSummaries = async (
+  userId: string,
+  detailIds: string[]
+): Promise<Record<string, { score: number; upCount: number; downCount: number; userValue: 1 | -1 | null }>> => {
+  const normalizedIds = Array.from(new Set((detailIds ?? []).map((id) => String(id).trim()).filter(Boolean)));
+  const result: Record<string, { score: number; upCount: number; downCount: number; userValue: 1 | -1 | null }> = {};
+  normalizedIds.forEach((id) => {
+    result[id] = { score: 0, upCount: 0, downCount: 0, userValue: null };
+  });
+  if (!normalizedIds.length) return result;
+  const p = getPool();
+  const { rows } = await p.query(
+    `
+      SELECT detail_id::text as "detailId",
+             COALESCE(SUM(value), 0)::int as "score",
+             COALESCE(SUM(CASE WHEN value = 1 THEN 1 ELSE 0 END), 0)::int as "upCount",
+             COALESCE(SUM(CASE WHEN value = -1 THEN 1 ELSE 0 END), 0)::int as "downCount",
+             MAX(CASE WHEN user_id = $1 THEN value ELSE NULL END)::int as "userValue"
+      FROM itinerary_detail_reactions
+      WHERE detail_id = ANY($2::uuid[])
+      GROUP BY detail_id
+    `,
+    [userId, normalizedIds]
+  );
+  rows.forEach((row: any) => {
+    result[row.detailId] = {
+      score: Number(row.score) || 0,
+      upCount: Number(row.upCount) || 0,
+      downCount: Number(row.downCount) || 0,
+      userValue: row.userValue === 1 || row.userValue === -1 ? row.userValue : null,
+    };
+  });
+  return result;
+};
+
 const resolveTripCurrency = async (tripId: string): Promise<string> => {
   const p = getPool();
   const { rows } = await p.query<{ currency: string | null }>(`SELECT currency FROM trips WHERE id = $1`, [tripId]);
@@ -7041,25 +7128,68 @@ export const listItineraryDetails = async (userId: string, itineraryId: string):
   if (!rows.length) throw new Error('Itinerary not found');
   const membership = await ensureUserCanReadTrip(rows[0].tripId, userId);
   if (!membership) throw new Error('Not authorized to view this itinerary');
-  const details = await p.query<ItineraryDetail>(
+  const details = await p.query<ItineraryDetail & { kind: string; placeId: string | null; noteBody: string | null; position: number }>(
     `SELECT id,
             itinerary_id as "itineraryId",
             day,
             time,
             activity,
-            cost
+            cost,
+            kind,
+            place_id as "placeId",
+            note_body as "noteBody",
+            position
      FROM itinerary_details
      WHERE itinerary_id = $1
-     ORDER BY day ASC, time ASC NULLS LAST, created_at ASC`,
+     ORDER BY day ASC,
+              CASE WHEN time IS NULL THEN 1 ELSE 0 END ASC,
+              time ASC,
+              position ASC,
+              created_at ASC`,
     [itineraryId]
   );
-  return details.rows;
+  if (!details.rows.length) return [];
+  const detailIds = details.rows.map((d) => d.id);
+  const childRes = await p.query<ItineraryChecklistItem>(
+    `SELECT id,
+            detail_id as "detailId",
+            position,
+            label,
+            checked_by as "checkedBy",
+            checked_at as "checkedAt",
+            created_at as "createdAt"
+     FROM itinerary_checklist_items
+     WHERE detail_id = ANY($1::uuid[])
+     ORDER BY position ASC, created_at ASC`,
+    [detailIds]
+  );
+  const childrenByDetail = new Map<string, ItineraryChecklistItem[]>();
+  for (const child of childRes.rows) {
+    const list = childrenByDetail.get(child.detailId) ?? [];
+    list.push(child);
+    childrenByDetail.set(child.detailId, list);
+  }
+  return details.rows.map((row) => ({
+    ...row,
+    kind: (row.kind as ItineraryDetailKind) ?? 'activity',
+    checklistItems: childrenByDetail.get(row.id) ?? [],
+  }));
 };
 
 export const addItineraryDetail = async (
   userId: string,
   itineraryId: string,
-  detail: { day: number; time?: string | null; activity: string; cost?: number | null }
+  detail: {
+    day: number;
+    time?: string | null;
+    activity: string;
+    cost?: number | null;
+    kind?: ItineraryDetailKind;
+    placeId?: string | null;
+    noteBody?: string | null;
+    position?: number;
+    checklistItems?: Array<{ label: string; position?: number }>;
+  }
 ): Promise<ItineraryDetail> => {
   const p = getPool();
   const { rows } = await p.query<{ tripId: string }>(
@@ -7069,12 +7199,52 @@ export const addItineraryDetail = async (
   if (!rows.length) throw new Error('Itinerary not found');
   const membership = await ensureUserInTrip(rows[0].tripId, userId);
   if (!membership) throw new Error('Not authorized to edit this itinerary');
-  const { rows: inserted } = await p.query<ItineraryDetail>(
-    `INSERT INTO itinerary_details (id, itinerary_id, day, time, activity, cost)
-     VALUES ($1, $2, $3, $4, $5, $6)
-     RETURNING id, itinerary_id as "itineraryId", day, time, activity, cost`,
-    [randomUUID(), itineraryId, Math.max(1, Math.round(detail.day)), detail.time ?? null, detail.activity.trim(), detail.cost ?? null]
+  const detailId = randomUUID();
+  const kind: ItineraryDetailKind = detail.kind ?? 'activity';
+  const { rows: inserted } = await p.query<ItineraryDetail & { kind: string; placeId: string | null; noteBody: string | null; position: number }>(
+    `INSERT INTO itinerary_details (id, itinerary_id, day, time, activity, cost, kind, place_id, note_body, position)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+     RETURNING id,
+               itinerary_id as "itineraryId",
+               day,
+               time,
+               activity,
+               cost,
+               kind,
+               place_id as "placeId",
+               note_body as "noteBody",
+               position`,
+    [
+      detailId,
+      itineraryId,
+      Math.max(1, Math.round(detail.day)),
+      detail.time ?? null,
+      detail.activity.trim(),
+      detail.cost ?? null,
+      kind,
+      detail.placeId ?? null,
+      detail.noteBody ?? null,
+      detail.position != null ? Math.round(detail.position) : 0,
+    ]
   );
+
+  let createdChildren: ItineraryChecklistItem[] = [];
+  if (kind === 'checklist' && Array.isArray(detail.checklistItems) && detail.checklistItems.length) {
+    for (let idx = 0; idx < detail.checklistItems.length; idx += 1) {
+      const child = detail.checklistItems[idx];
+      const label = String(child.label ?? '').trim();
+      if (!label) continue;
+      const position = child.position != null ? Math.round(child.position) : idx;
+      const { rows: inserted } = await p.query<ItineraryChecklistItem>(
+        `INSERT INTO itinerary_checklist_items (id, detail_id, position, label)
+         VALUES ($1, $2, $3, $4)
+         RETURNING id, detail_id as "detailId", position, label, checked_by as "checkedBy", checked_at as "checkedAt", created_at as "createdAt"`,
+        [randomUUID(), detailId, position, label]
+      );
+      createdChildren.push(inserted[0]);
+    }
+  }
+
   await writeActivity(
     rows[0].tripId,
     userId,
@@ -7087,9 +7257,14 @@ export const addItineraryDetail = async (
       day: inserted[0].day,
       time: inserted[0].time ?? null,
       cost: inserted[0].cost ?? null,
+      kind,
     }
   );
-  return inserted[0];
+  return {
+    ...inserted[0],
+    kind: (inserted[0].kind as ItineraryDetailKind) ?? 'activity',
+    checklistItems: createdChildren,
+  };
 };
 
 export const deleteItineraryDetail = async (userId: string, detailId: string): Promise<void> => {
@@ -7143,6 +7318,9 @@ export const updateItineraryDetail = async (
   const time = detail.time ?? null;
   const activity = detail.activity?.trim();
   const cost = detail.cost != null ? Number(detail.cost) : null;
+  const placeId = detail.placeId !== undefined ? detail.placeId : undefined;
+  const noteBody = detail.noteBody !== undefined ? detail.noteBody : undefined;
+  const position = detail.position !== undefined ? detail.position : undefined;
 
   if (!activity) throw new Error('Activity is required');
 
@@ -7151,10 +7329,31 @@ export const updateItineraryDetail = async (
      SET day = COALESCE($1, day),
          time = $2,
          activity = $3,
-         cost = $4
-     WHERE id = $5
-     RETURNING id, itinerary_id as "itineraryId", day, time, activity, cost`,
-    [day ?? null, time, activity, cost, detailId]
+         cost = $4,
+         place_id = COALESCE($5, place_id),
+         note_body = COALESCE($6, note_body),
+         position = COALESCE($7, position)
+     WHERE id = $8
+     RETURNING id,
+               itinerary_id as "itineraryId",
+               day,
+               time,
+               activity,
+               cost,
+               kind,
+               place_id as "placeId",
+               note_body as "noteBody",
+               position`,
+    [
+      day ?? null,
+      time,
+      activity,
+      cost,
+      placeId !== undefined ? placeId : null,
+      noteBody !== undefined ? noteBody : null,
+      position !== undefined ? Math.round(position) : null,
+      detailId,
+    ]
   );
   await writeActivity(
     rows[0].tripId,
@@ -7170,7 +7369,133 @@ export const updateItineraryDetail = async (
       cost: updated[0].cost ?? null,
     }
   );
+  return {
+    ...updated[0],
+    kind: (updated[0].kind as ItineraryDetailKind) ?? 'activity',
+  };
+};
+
+// ---------------------------------------------------------------------------
+// Checklist children for kind='checklist' itinerary details.
+// ---------------------------------------------------------------------------
+
+const loadChecklistItemContext = async (
+  itemId: string
+): Promise<{ tripId: string; detailId: string; itineraryId: string } | null> => {
+  const p = getPool();
+  const { rows } = await p.query<{ tripId: string; detailId: string; itineraryId: string }>(
+    `SELECT i.trip_id as "tripId", d.id as "detailId", d.itinerary_id as "itineraryId"
+     FROM itinerary_checklist_items c
+     JOIN itinerary_details d ON d.id = c.detail_id
+     JOIN itineraries i ON i.id = d.itinerary_id
+     WHERE c.id = $1`,
+    [itemId]
+  );
+  return rows[0] ?? null;
+};
+
+export const addItineraryChecklistItem = async (
+  userId: string,
+  detailId: string,
+  input: { label: string; position?: number }
+): Promise<ItineraryChecklistItem> => {
+  const p = getPool();
+  const { rows: ctx } = await p.query<{ tripId: string; kind: string }>(
+    `SELECT i.trip_id as "tripId", d.kind
+     FROM itinerary_details d
+     JOIN itineraries i ON i.id = d.itinerary_id
+     WHERE d.id = $1`,
+    [detailId]
+  );
+  if (!ctx.length) throw new Error('Itinerary detail not found');
+  if (ctx[0].kind !== 'checklist') throw new Error('Detail is not a checklist');
+  const membership = await ensureUserInTrip(ctx[0].tripId, userId);
+  if (!membership) throw new Error('Not authorized to edit this itinerary');
+  const label = String(input.label ?? '').trim();
+  if (!label) throw new Error('Label is required');
+
+  let position = input.position;
+  if (position == null) {
+    const { rows } = await p.query<{ next: number }>(
+      `SELECT COALESCE(MAX(position), -1) + 1 as next FROM itinerary_checklist_items WHERE detail_id = $1`,
+      [detailId]
+    );
+    position = rows[0]?.next ?? 0;
+  }
+
+  const { rows: inserted } = await p.query<ItineraryChecklistItem>(
+    `INSERT INTO itinerary_checklist_items (id, detail_id, position, label)
+     VALUES ($1, $2, $3, $4)
+     RETURNING id, detail_id as "detailId", position, label, checked_by as "checkedBy", checked_at as "checkedAt", created_at as "createdAt"`,
+    [randomUUID(), detailId, Math.round(position), label]
+  );
+  return inserted[0];
+};
+
+export const updateItineraryChecklistItem = async (
+  userId: string,
+  itemId: string,
+  patch: { label?: string; checked?: boolean; position?: number }
+): Promise<ItineraryChecklistItem> => {
+  const p = getPool();
+  const ctx = await loadChecklistItemContext(itemId);
+  if (!ctx) throw new Error('Checklist item not found');
+  const membership = await ensureUserInTrip(ctx.tripId, userId);
+  if (!membership) throw new Error('Not authorized to edit this itinerary');
+
+  const sets: string[] = [];
+  const params: unknown[] = [];
+  let paramIdx = 1;
+
+  if (patch.label !== undefined) {
+    const label = String(patch.label ?? '').trim();
+    if (!label) throw new Error('Label cannot be empty');
+    sets.push(`label = $${paramIdx++}`);
+    params.push(label);
+  }
+  if (patch.position !== undefined) {
+    sets.push(`position = $${paramIdx++}`);
+    params.push(Math.round(patch.position));
+  }
+  if (patch.checked !== undefined) {
+    if (patch.checked) {
+      sets.push(`checked_by = $${paramIdx++}`);
+      params.push(userId);
+      sets.push(`checked_at = NOW()`);
+    } else {
+      sets.push(`checked_by = NULL`);
+      sets.push(`checked_at = NULL`);
+    }
+  }
+  if (!sets.length) {
+    const { rows } = await p.query<ItineraryChecklistItem>(
+      `SELECT id, detail_id as "detailId", position, label, checked_by as "checkedBy", checked_at as "checkedAt", created_at as "createdAt"
+       FROM itinerary_checklist_items WHERE id = $1`,
+      [itemId]
+    );
+    return rows[0];
+  }
+  params.push(itemId);
+  const { rows: updated } = await p.query<ItineraryChecklistItem>(
+    `UPDATE itinerary_checklist_items
+     SET ${sets.join(', ')}
+     WHERE id = $${paramIdx}
+     RETURNING id, detail_id as "detailId", position, label, checked_by as "checkedBy", checked_at as "checkedAt", created_at as "createdAt"`,
+    params
+  );
   return updated[0];
+};
+
+export const deleteItineraryChecklistItem = async (
+  userId: string,
+  itemId: string
+): Promise<void> => {
+  const p = getPool();
+  const ctx = await loadChecklistItemContext(itemId);
+  if (!ctx) throw new Error('Checklist item not found');
+  const membership = await ensureUserInTrip(ctx.tripId, userId);
+  if (!membership) throw new Error('Not authorized to edit this itinerary');
+  await p.query(`DELETE FROM itinerary_checklist_items WHERE id = $1`, [itemId]);
 };
 
 

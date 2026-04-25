@@ -49,3 +49,9 @@ flags:
   flight_parser:
     enabled: true
     description: "Enable LLM-based flight parser from text/emails"
+  itinerary_reactions:
+    enabled: true
+    description: "Enable up/down vote reactions on itinerary detail rows"
+  itinerary_item_kinds:
+    enabled: true
+    description: "Enable typed itinerary detail rows (place/note/checklist) and the + menu UI"

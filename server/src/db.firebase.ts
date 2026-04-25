@@ -14,6 +14,8 @@ import {
   WebUser,
   Itinerary,
   ItineraryDetail,
+  ItineraryDetailKind,
+  ItineraryChecklistItem,
   Group,
   GroupMember,
   PlaceDetailsCache,
@@ -4051,6 +4053,95 @@ export const getItemVoteSummaries = async (
   return result;
 };
 
+export const getItineraryDetailContext = async (
+  detailId: string
+): Promise<{ tripId: string; itineraryId: string } | null> => {
+  const db = getDb();
+  const detail = await db.collection('itinerary_details').doc(detailId).get();
+  if (!detail.exists) return null;
+  const detailData = detail.data() as any;
+  const itineraryId = String(detailData?.itineraryId ?? '');
+  if (!itineraryId) return null;
+  const itinerary = await db.collection('itineraries').doc(itineraryId).get();
+  if (!itinerary.exists) return null;
+  const tripId = String((itinerary.data() as any)?.tripId ?? '');
+  if (!tripId) return null;
+  return { tripId, itineraryId };
+};
+
+export const castItineraryDetailReaction = async (
+  userId: string,
+  tripId: string,
+  detailId: string,
+  value: 1 | -1
+): Promise<void> => {
+  const db = getDb();
+  const existing = await db
+    .collection('itinerary_detail_reactions')
+    .where('detailId', '==', detailId)
+    .where('userId', '==', userId)
+    .limit(1)
+    .get();
+  const payload = { tripId, detailId, userId, value, updatedAt: nowIso() };
+  if (!existing.empty) {
+    await existing.docs[0].ref.update(payload);
+    return;
+  }
+  await db.collection('itinerary_detail_reactions').doc(randomUUID()).set({ ...payload, createdAt: nowIso() });
+};
+
+export const clearItineraryDetailReaction = async (
+  userId: string,
+  detailId: string
+): Promise<void> => {
+  const db = getDb();
+  const existing = await db
+    .collection('itinerary_detail_reactions')
+    .where('detailId', '==', detailId)
+    .where('userId', '==', userId)
+    .limit(1)
+    .get();
+  if (existing.empty) return;
+  await existing.docs[0].ref.delete();
+};
+
+export const getItineraryDetailReactionSummaries = async (
+  userId: string,
+  detailIds: string[]
+): Promise<Record<string, { score: number; upCount: number; downCount: number; userValue: 1 | -1 | null }>> => {
+  const normalized = Array.from(new Set((detailIds ?? []).map((id) => String(id).trim()).filter(Boolean)));
+  const result: Record<string, { score: number; upCount: number; downCount: number; userValue: 1 | -1 | null }> = {};
+  normalized.forEach((id) => {
+    result[id] = { score: 0, upCount: 0, downCount: 0, userValue: null };
+  });
+  if (!normalized.length) return result;
+  const db = getDb();
+  const chunk = <T>(items: T[], size = 10): T[][] => {
+    const chunks: T[][] = [];
+    for (let i = 0; i < items.length; i += size) chunks.push(items.slice(i, i + size));
+    return chunks;
+  };
+  for (const ids of chunk(normalized)) {
+    const snap = await db
+      .collection('itinerary_detail_reactions')
+      .where('detailId', 'in', ids)
+      .get();
+    snap.docs.forEach((doc) => {
+      const row = doc.data() as any;
+      const detailId = String(row.detailId ?? '');
+      if (!result[detailId]) return;
+      const value: 1 | -1 = row.value === -1 ? -1 : 1;
+      result[detailId].score += value;
+      if (value === 1) result[detailId].upCount += 1;
+      else result[detailId].downCount += 1;
+      if (String(row.userId) === String(userId)) {
+        result[detailId].userValue = value;
+      }
+    });
+  }
+  return result;
+};
+
 // Expenses
 export const listExpenses = async (userId: string, tripId?: string | null): Promise<any[]> => {
   if (!tripId) return [];
@@ -4447,14 +4538,49 @@ export const listItineraryDetails = async (userId: string, itineraryId: string):
   const itineraryData = itinerary.data() as any;
   const membership = await ensureUserCanReadTrip(String(itineraryData.tripId ?? ''), userId);
   if (!membership) throw new Error('Not authorized');
-  const details = await db.collection('itinerary_details').where('itineraryId', '==', itineraryId).get();
-  return details.docs.map((d) => d.data() as ItineraryDetail);
+  const detailDocs = await db.collection('itinerary_details').where('itineraryId', '==', itineraryId).get();
+  const details = detailDocs.docs.map((d) => d.data() as ItineraryDetail);
+  if (!details.length) return [];
+  const detailIds = details.map((d) => d.id);
+  const childrenByDetail = new Map<string, ItineraryChecklistItem[]>();
+  // Firestore 'in' operator caps at 10 ids per query.
+  for (let i = 0; i < detailIds.length; i += 10) {
+    const chunk = detailIds.slice(i, i + 10);
+    const childDocs = await db
+      .collection('itinerary_checklist_items')
+      .where('detailId', 'in', chunk)
+      .get();
+    childDocs.docs.forEach((doc) => {
+      const child = doc.data() as ItineraryChecklistItem;
+      const list = childrenByDetail.get(child.detailId) ?? [];
+      list.push(child);
+      childrenByDetail.set(child.detailId, list);
+    });
+  }
+  for (const list of childrenByDetail.values()) {
+    list.sort((a, b) => a.position - b.position);
+  }
+  return details.map((d) => ({
+    ...d,
+    kind: (d.kind as ItineraryDetailKind) ?? 'activity',
+    checklistItems: childrenByDetail.get(d.id) ?? [],
+  }));
 };
 
 export const addItineraryDetail = async (
   userId: string,
   itineraryId: string,
-  detail: { day: number; time?: string | null; activity: string; cost?: number | null }
+  detail: {
+    day: number;
+    time?: string | null;
+    activity: string;
+    cost?: number | null;
+    kind?: ItineraryDetailKind;
+    placeId?: string | null;
+    noteBody?: string | null;
+    position?: number;
+    checklistItems?: Array<{ label: string; position?: number }>;
+  }
 ): Promise<ItineraryDetail> => {
   const db = getDb();
   const itinerary = await db.collection('itineraries').doc(itineraryId).get();
@@ -4465,6 +4591,7 @@ export const addItineraryDetail = async (
   if (!membership) throw new Error('Not authorized to edit this itinerary');
 
   const id = randomUUID();
+  const kind: ItineraryDetailKind = detail.kind ?? 'activity';
   const payload: ItineraryDetail = {
     id,
     itineraryId,
@@ -4472,16 +4599,43 @@ export const addItineraryDetail = async (
     time: detail.time ?? null,
     activity: detail.activity.trim(),
     cost: detail.cost ?? null,
+    kind,
+    placeId: detail.placeId ?? null,
+    noteBody: detail.noteBody ?? null,
+    position: detail.position != null ? Math.round(detail.position) : 0,
   };
   await db.collection('itinerary_details').doc(id).set(payload);
+
+  let createdChildren: ItineraryChecklistItem[] = [];
+  if (kind === 'checklist' && Array.isArray(detail.checklistItems) && detail.checklistItems.length) {
+    for (let idx = 0; idx < detail.checklistItems.length; idx += 1) {
+      const child = detail.checklistItems[idx];
+      const label = String(child.label ?? '').trim();
+      if (!label) continue;
+      const childId = randomUUID();
+      const childPayload: ItineraryChecklistItem = {
+        id: childId,
+        detailId: id,
+        position: child.position != null ? Math.round(child.position) : idx,
+        label,
+        checkedBy: null,
+        checkedAt: null,
+        createdAt: nowIso(),
+      };
+      await db.collection('itinerary_checklist_items').doc(childId).set(childPayload);
+      createdChildren.push(childPayload);
+    }
+  }
+
   await writeActivity(tripId, userId, 'ITINERARY_ITEM_ADDED', 'Itinerary item added', payload.activity, {
     itineraryId,
     detailId: id,
     day: payload.day,
     time: payload.time ?? null,
     cost: payload.cost ?? null,
+    kind,
   });
-  return payload;
+  return { ...payload, checklistItems: createdChildren };
 };
 
 export const deleteItineraryDetail = async (userId: string, detailId: string): Promise<void> => {
@@ -4530,6 +4684,112 @@ export const updateItineraryDetail = async (
     });
   }
   return payload;
+};
+
+export const addItineraryChecklistItem = async (
+  userId: string,
+  detailId: string,
+  input: { label: string; position?: number }
+): Promise<ItineraryChecklistItem> => {
+  const db = getDb();
+  const detail = await db.collection('itinerary_details').doc(detailId).get();
+  if (!detail.exists) throw new Error('Itinerary detail not found');
+  const detailData = detail.data() as any;
+  if (detailData.kind !== 'checklist') throw new Error('Detail is not a checklist');
+  const itinerary = await db.collection('itineraries').doc(String(detailData.itineraryId)).get();
+  if (!itinerary.exists) throw new Error('Itinerary not found');
+  const tripId = String((itinerary.data() as any).tripId ?? '');
+  const membership = await ensureUserInTrip(tripId, userId);
+  if (!membership) throw new Error('Not authorized to edit this itinerary');
+  const label = String(input.label ?? '').trim();
+  if (!label) throw new Error('Label is required');
+
+  let position = input.position;
+  if (position == null) {
+    const existing = await db
+      .collection('itinerary_checklist_items')
+      .where('detailId', '==', detailId)
+      .get();
+    position = existing.docs.reduce(
+      (max, doc) => Math.max(max, Number((doc.data() as any).position ?? 0) + 1),
+      0
+    );
+  }
+
+  const id = randomUUID();
+  const payload: ItineraryChecklistItem = {
+    id,
+    detailId,
+    position: Math.round(position),
+    label,
+    checkedBy: null,
+    checkedAt: null,
+    createdAt: nowIso(),
+  };
+  await db.collection('itinerary_checklist_items').doc(id).set(payload);
+  return payload;
+};
+
+const loadChecklistItemContextFirebase = async (
+  itemId: string
+): Promise<{ tripId: string; detailId: string; itineraryId: string } | null> => {
+  const db = getDb();
+  const item = await db.collection('itinerary_checklist_items').doc(itemId).get();
+  if (!item.exists) return null;
+  const itemData = item.data() as any;
+  const detail = await db.collection('itinerary_details').doc(String(itemData.detailId ?? '')).get();
+  if (!detail.exists) return null;
+  const itineraryId = String((detail.data() as any).itineraryId ?? '');
+  const itinerary = await db.collection('itineraries').doc(itineraryId).get();
+  if (!itinerary.exists) return null;
+  const tripId = String((itinerary.data() as any).tripId ?? '');
+  if (!tripId) return null;
+  return { tripId, detailId: String(itemData.detailId), itineraryId };
+};
+
+export const updateItineraryChecklistItem = async (
+  userId: string,
+  itemId: string,
+  patch: { label?: string; checked?: boolean; position?: number }
+): Promise<ItineraryChecklistItem> => {
+  const db = getDb();
+  const ctx = await loadChecklistItemContextFirebase(itemId);
+  if (!ctx) throw new Error('Checklist item not found');
+  const membership = await ensureUserInTrip(ctx.tripId, userId);
+  if (!membership) throw new Error('Not authorized to edit this itinerary');
+  const updates: Record<string, unknown> = {};
+  if (patch.label !== undefined) {
+    const label = String(patch.label ?? '').trim();
+    if (!label) throw new Error('Label cannot be empty');
+    updates.label = label;
+  }
+  if (patch.position !== undefined) updates.position = Math.round(patch.position);
+  if (patch.checked !== undefined) {
+    if (patch.checked) {
+      updates.checkedBy = userId;
+      updates.checkedAt = nowIso();
+    } else {
+      updates.checkedBy = null;
+      updates.checkedAt = null;
+    }
+  }
+  if (Object.keys(updates).length) {
+    await db.collection('itinerary_checklist_items').doc(itemId).update(updates);
+  }
+  const updated = await db.collection('itinerary_checklist_items').doc(itemId).get();
+  return updated.data() as ItineraryChecklistItem;
+};
+
+export const deleteItineraryChecklistItem = async (
+  userId: string,
+  itemId: string
+): Promise<void> => {
+  const ctx = await loadChecklistItemContextFirebase(itemId);
+  if (!ctx) return;
+  const membership = await ensureUserInTrip(ctx.tripId, userId);
+  if (!membership) throw new Error('Not authorized to edit this itinerary');
+  const db = getDb();
+  await db.collection('itinerary_checklist_items').doc(itemId).delete();
 };
 
 export const getPlaceDetailsCache = async (placeId: string): Promise<PlaceDetailsCache | null> => {

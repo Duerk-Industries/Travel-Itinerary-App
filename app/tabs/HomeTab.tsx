@@ -137,7 +137,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
 
   const heroSubtitle = formatTripDuration(activeTrip);
   const heroTitle = activeTrip?.destination || activeTrip?.name || 'Select a trip';
-  const regularUserHiddenHomePages = new Set(['itinerary', 'trips', 'account', 'following']);
+  const regularUserHiddenHomePages = new Set(['trips', 'account', 'following']);
   const hasTripsToSelect = sortedTrips.length > 0 || followedTrips.length > 0;
 
   const navItems = [

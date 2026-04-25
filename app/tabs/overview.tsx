@@ -72,6 +72,11 @@ import { FlightEditingForm } from '../components/TransferEditingForm';
 import ConfirmDialog from '../components/ConfirmDialog';
 import LodgingDialog from '../components/LodgingDialog';
 import LodgingDetailsDialog from '../components/LodgingDetailsDialog';
+import ReactionBar, { type ReactionSummary, type ReactionValue } from '../components/ReactionBar';
+import AddItemPopover, { type AddItemKind } from '../components/AddItemPopover';
+import PlacePickerDialog, { type PlacePickerSubmit } from '../components/PlacePickerDialog';
+import NoteInputDialog, { type NoteSubmit } from '../components/NoteInputDialog';
+import ChecklistInputDialog, { type ChecklistSubmit } from '../components/ChecklistInputDialog';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from '../utils/itineraryStatus';
 import { useImageSourceGetter } from '../utils/imageSource';
@@ -138,12 +143,30 @@ type Tour = {
   reference: string;
 };
 
+type ItineraryDetailKind = 'activity' | 'place' | 'note' | 'checklist';
+
+type ChecklistChildRecord = {
+  id: string;
+  detailId: string;
+  position: number;
+  label: string;
+  checkedBy?: string | null;
+  checkedAt?: string | null;
+  createdAt: string;
+};
+
 type ItineraryDetail = {
   id: string;
   day: number;
   time?: string | null;
   activity: string;
   cost?: number | null;
+  kind?: ItineraryDetailKind;
+  placeId?: string | null;
+  noteBody?: string | null;
+  position?: number;
+  checklistItems?: ChecklistChildRecord[];
+  reactions?: ReactionSummary;
 };
 
 type OverviewTabProps = {
@@ -359,6 +382,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const [itineraryId, setItineraryId] = useState<string | null>(null);
   const [editingDetailId, setEditingDetailId] = useState<string | null>(null);
   const [detailDraft, setDetailDraft] = useState({ day: '1', time: '', activity: '', cost: '' });
+  const [addPopoverOpen, setAddPopoverOpen] = useState(false);
+  const [activeAddDialog, setActiveAddDialog] = useState<AddItemKind | null>(null);
+  const [addPopoverDay, setAddPopoverDay] = useState<number | null>(null);
   const [descriptionDraft, setDescriptionDraft] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [dateDraft, setDateDraft] = useState({
@@ -502,7 +528,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           setItineraryId(null);
           return;
         }
-        const latest = records.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+        // Use the most-recently-updated record per trip, falling back to createdAt
+        // when the server doesn't surface updatedAt yet. Per
+        // docs/implementation-plan-itinerary-collab.md §B2.
+        const recordTs = (r: any) =>
+          new Date((r?.updatedAt ?? r?.createdAt) ?? 0).getTime();
+        const latest = [...records].sort((a, b) => recordTs(b) - recordTs(a))[0];
         setItineraryId(latest.id ?? null);
         const detailsRes = await fetch(`${backendUrl}/api/itineraries/${latest.id}/details`, { headers });
         if (!detailsRes.ok) {
@@ -576,6 +607,221 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     setDetailDraft({ day: '1', time: '', activity: '', cost: '' });
     refreshItineraryDetails();
   };
+
+  // ---------------------------------------------------------------
+  // Phase 3: itinerary item kinds + reactions wired into Day Details.
+  // The Day Details "Notes & Checklists" section uses these helpers
+  // to add place / note / checklist / custom-activity rows, toggle
+  // checklist children, and apply up/down votes.
+  // ---------------------------------------------------------------
+  const ensureItineraryRecordForTrip = useCallback(
+    async (defaultDay: number): Promise<string | null> => {
+      if (itineraryId) return itineraryId;
+      if (!trip?.id) return null;
+      const days = computeTripDays(trip.startDate ?? null, trip.endDate ?? null) ?? defaultDay ?? 1;
+      const res = await fetch(`${backendUrl}/api/itineraries`, {
+        method: 'POST',
+        headers: jsonHeaders,
+        body: JSON.stringify({
+          tripId: trip.id,
+          destination: trip.destination ?? trip.name ?? 'Trip',
+          days: Math.max(1, days),
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || 'Could not create itinerary record');
+        return null;
+      }
+      const created = (await res.json()) as { id?: string };
+      const newId = created.id ?? null;
+      if (newId) setItineraryId(newId);
+      return newId;
+    },
+    [backendUrl, itineraryId, jsonHeaders, trip?.id, trip?.destination, trip?.name, trip?.startDate, trip?.endDate]
+  );
+
+  const postNewDetail = useCallback(
+    async (defaultDay: number, payload: Record<string, unknown>): Promise<boolean> => {
+      const targetItineraryId = await ensureItineraryRecordForTrip(defaultDay);
+      if (!targetItineraryId) return false;
+      const res = await fetch(`${backendUrl}/api/itineraries/${targetItineraryId}/details`, {
+        method: 'POST',
+        headers: jsonHeaders,
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || 'Could not add item');
+        return false;
+      }
+      const detailsRes = await fetch(`${backendUrl}/api/itineraries/${targetItineraryId}/details`, { headers });
+      if (detailsRes.ok) {
+        const details = await detailsRes.json();
+        setItineraryDetails(Array.isArray(details) ? details : []);
+      }
+      return true;
+    },
+    [backendUrl, ensureItineraryRecordForTrip, headers, jsonHeaders]
+  );
+
+  const closeAllAddDialogs = useCallback(() => {
+    setActiveAddDialog(null);
+    setAddPopoverOpen(false);
+  }, []);
+
+  const handlePopoverSelect = useCallback((kind: AddItemKind) => {
+    setActiveAddDialog(kind);
+    setAddPopoverOpen(false);
+  }, []);
+
+  const handleAddPlace = useCallback(
+    async (input: PlacePickerSubmit) => {
+      const ok = await postNewDetail(input.day, {
+        day: input.day,
+        time: input.time ?? null,
+        activity: input.name,
+        kind: 'place',
+      });
+      if (ok) closeAllAddDialogs();
+    },
+    [postNewDetail, closeAllAddDialogs]
+  );
+
+  const handleAddNote = useCallback(
+    async (input: NoteSubmit) => {
+      const ok = await postNewDetail(input.day, {
+        day: input.day,
+        activity: input.title,
+        kind: 'note',
+        noteBody: input.body,
+      });
+      if (ok) closeAllAddDialogs();
+    },
+    [postNewDetail, closeAllAddDialogs]
+  );
+
+  const handleAddChecklist = useCallback(
+    async (input: ChecklistSubmit) => {
+      const ok = await postNewDetail(input.day, {
+        day: input.day,
+        activity: input.title,
+        kind: 'checklist',
+        checklistItems: input.items,
+      });
+      if (ok) closeAllAddDialogs();
+    },
+    [postNewDetail, closeAllAddDialogs]
+  );
+
+  const handleAddCustomActivity = useCallback(
+    async (input: PlacePickerSubmit) => {
+      const ok = await postNewDetail(input.day, {
+        day: input.day,
+        time: input.time ?? null,
+        activity: input.name,
+        kind: 'activity',
+      });
+      if (ok) closeAllAddDialogs();
+    },
+    [postNewDetail, closeAllAddDialogs]
+  );
+
+  // Optimistic checklist child toggle.
+  const updateLocalChecklistItem = useCallback(
+    (detailId: string, itemId: string, patch: Partial<ChecklistChildRecord>) => {
+      setItineraryDetails((prev) =>
+        prev.map((d) =>
+          d.id === detailId
+            ? {
+                ...d,
+                checklistItems: (d.checklistItems ?? []).map((c) =>
+                  c.id === itemId ? { ...c, ...patch } : c
+                ),
+              }
+            : d
+        )
+      );
+    },
+    []
+  );
+
+  const toggleChecklistItem = useCallback(
+    async (detailId: string, item: ChecklistChildRecord) => {
+      const nextChecked = !item.checkedBy;
+      const previous = { checkedBy: item.checkedBy ?? null, checkedAt: item.checkedAt ?? null };
+      updateLocalChecklistItem(detailId, item.id, {
+        checkedBy: nextChecked ? 'me' : null,
+        checkedAt: nextChecked ? new Date().toISOString() : null,
+      });
+      try {
+        const res = await fetch(`${backendUrl}/api/itineraries/checklist-items/${item.id}`, {
+          method: 'PATCH',
+          headers: jsonHeaders,
+          body: JSON.stringify({ checked: nextChecked }),
+        });
+        if (!res.ok) throw new Error('Toggle failed');
+        const updated = (await res.json()) as ChecklistChildRecord;
+        updateLocalChecklistItem(detailId, item.id, {
+          checkedBy: updated.checkedBy ?? null,
+          checkedAt: updated.checkedAt ?? null,
+        });
+      } catch {
+        updateLocalChecklistItem(detailId, item.id, previous);
+      }
+    },
+    [backendUrl, jsonHeaders, updateLocalChecklistItem]
+  );
+
+  // Reaction handlers — local optimistic, drive the ReactionBar component.
+  const updateLocalReactionSummary = useCallback(
+    (detailId: string, summary: ReactionSummary) => {
+      setItineraryDetails((prev) =>
+        prev.map((d) => (d.id === detailId ? { ...d, reactions: summary } : d))
+      );
+    },
+    []
+  );
+
+  const castReactionForDetail = useCallback(
+    async (detailId: string, value: ReactionValue): Promise<ReactionSummary> => {
+      const res = await fetch(`${backendUrl}/api/itineraries/details/${detailId}/reactions`, {
+        method: 'POST',
+        headers: jsonHeaders,
+        body: JSON.stringify({ value }),
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(text || `Reaction failed (${res.status})`);
+      }
+      const summary = (await res.json()) as ReactionSummary;
+      updateLocalReactionSummary(detailId, summary);
+      return summary;
+    },
+    [backendUrl, jsonHeaders, updateLocalReactionSummary]
+  );
+
+  const clearReactionForDetail = useCallback(
+    async (detailId: string): Promise<ReactionSummary> => {
+      const res = await fetch(`${backendUrl}/api/itineraries/details/${detailId}/reactions`, {
+        method: 'DELETE',
+        headers,
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(text || `Reaction clear failed (${res.status})`);
+      }
+      const summary = (await res.json()) as ReactionSummary;
+      updateLocalReactionSummary(detailId, summary);
+      return summary;
+    },
+    [backendUrl, headers, updateLocalReactionSummary]
+  );
+
+  const emptyReactionSummary: ReactionSummary = useMemo(
+    () => ({ score: 0, upCount: 0, downCount: 0, userValue: null }),
+    []
+  );
 
   const earliestEventDate = useMemo(
     () =>
@@ -1949,6 +2195,79 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 </View>
               ) : null}
 
+              {/* Phase 3: per-day itinerary items (place / note / checklist / custom activity). */}
+              <View style={styles.dayInfoCard} testID="day-details-itinerary-items">
+                <Text style={styles.sectionTitle}>Notes & checklists</Text>
+                {(activeDayInfo.details ?? []).length === 0 ? (
+                  <Text style={styles.helperText}>No items yet for this day.</Text>
+                ) : (
+                  (activeDayInfo.details ?? []).map((d) => (
+                    <View key={d.id} style={[styles.dayInfoRow, { flexDirection: 'column', alignItems: 'flex-start', gap: 4 }]}>
+                      {d.kind === 'place' ? (
+                        <Text style={styles.dayInfoRoute}>{`📍 ${d.activity}`}</Text>
+                      ) : d.kind === 'note' ? (
+                        <View>
+                          <Text style={styles.dayInfoRoute}>{`📝 ${d.activity}`}</Text>
+                          {d.noteBody ? (
+                            <Text style={[styles.helperText, { fontStyle: 'italic' }]}>{d.noteBody}</Text>
+                          ) : null}
+                        </View>
+                      ) : d.kind === 'checklist' ? (
+                        <View style={{ width: '100%' }}>
+                          <Text style={styles.dayInfoRoute}>{`✅ ${d.activity}`}</Text>
+                          {(d.checklistItems ?? []).map((it) => {
+                            const checked = !!it.checkedBy;
+                            return (
+                              <TouchableOpacity
+                                key={it.id}
+                                testID={`overview-checklist-toggle-${it.id}`}
+                                accessibilityRole="checkbox"
+                                accessibilityState={{ checked }}
+                                onPress={() => toggleChecklistItem(d.id, it)}
+                                style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: 6 }}
+                              >
+                                <Text style={{ fontSize: 14 }}>{checked ? '☑' : '☐'}</Text>
+                                <Text
+                                  style={[
+                                    styles.helperText,
+                                    checked && { textDecorationLine: 'line-through', color: '#777' },
+                                  ]}
+                                >
+                                  {it.label}
+                                </Text>
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </View>
+                      ) : (
+                        <Text style={styles.dayInfoRoute}>{d.activity}</Text>
+                      )}
+                      <View style={{ marginTop: 4 }}>
+                        <ReactionBar
+                          detailId={d.id}
+                          summary={d.reactions ?? emptyReactionSummary}
+                          canReact
+                          onCast={castReactionForDetail}
+                          onClear={clearReactionForDetail}
+                        />
+                      </View>
+                    </View>
+                  ))
+                )}
+                <TouchableOpacity
+                  testID="day-details-add-item-button"
+                  accessibilityRole="button"
+                  accessibilityLabel="Add item to this day"
+                  style={[styles.dayInfoButton, { marginTop: 8 }]}
+                  onPress={() => {
+                    setAddPopoverDay(activeDayInfo?.index ?? 1);
+                    setAddPopoverOpen(true);
+                  }}
+                >
+                  <Text style={styles.dayInfoButtonText}>+ Add item</Text>
+                </TouchableOpacity>
+              </View>
+
               {nextDayCard ? (
                 <TouchableOpacity
                   testID="day-details-next"
@@ -2642,6 +2961,46 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             }
             setModalDateField(null);
           }}
+        />
+      ) : null}
+
+      {addPopoverOpen ? (
+        <AddItemPopover
+          visible
+          onSelect={handlePopoverSelect}
+          onClose={() => setAddPopoverOpen(false)}
+        />
+      ) : null}
+      {activeAddDialog === 'place' ? (
+        <PlacePickerDialog
+          visible
+          defaultDay={addPopoverDay ?? 1}
+          onSubmit={handleAddPlace}
+          onCancel={closeAllAddDialogs}
+        />
+      ) : null}
+      {activeAddDialog === 'note' ? (
+        <NoteInputDialog
+          visible
+          defaultDay={addPopoverDay ?? 1}
+          onSubmit={handleAddNote}
+          onCancel={closeAllAddDialogs}
+        />
+      ) : null}
+      {activeAddDialog === 'checklist' ? (
+        <ChecklistInputDialog
+          visible
+          defaultDay={addPopoverDay ?? 1}
+          onSubmit={handleAddChecklist}
+          onCancel={closeAllAddDialogs}
+        />
+      ) : null}
+      {activeAddDialog === 'activity' ? (
+        <PlacePickerDialog
+          visible
+          defaultDay={addPopoverDay ?? 1}
+          onSubmit={handleAddCustomActivity}
+          onCancel={closeAllAddDialogs}
         />
       ) : null}
     </View>

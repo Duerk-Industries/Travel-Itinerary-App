@@ -47,7 +47,6 @@ type TripDetailsTabProps = {
   styles: Record<string, any>;
   openShareSignal?: number;
   onSetActive: (tripId: string) => void;
-  onOpenItinerary: (tripId: string) => void;
   onUpdateCurrency: (tripId: string, currency: string) => void;
 };
 
@@ -59,7 +58,6 @@ const TripDetailsTab: React.FC<TripDetailsTabProps> = ({
   styles,
   openShareSignal,
   onSetActive,
-  onOpenItinerary,
   onUpdateCurrency,
 }) => {
   if (!trip) {

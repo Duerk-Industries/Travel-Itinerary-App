@@ -152,6 +152,18 @@ export const castItemVote = async (...args: Parameters<ReturnType<typeof adapter
   adapter().castItemVote(...args);
 export const getItemVoteSummaries = async (...args: Parameters<ReturnType<typeof adapter>['getItemVoteSummaries']>) =>
   adapter().getItemVoteSummaries(...args);
+export const getItineraryDetailContext = async (
+  ...args: Parameters<ReturnType<typeof adapter>['getItineraryDetailContext']>
+) => adapter().getItineraryDetailContext(...args);
+export const castItineraryDetailReaction = async (
+  ...args: Parameters<ReturnType<typeof adapter>['castItineraryDetailReaction']>
+) => adapter().castItineraryDetailReaction(...args);
+export const clearItineraryDetailReaction = async (
+  ...args: Parameters<ReturnType<typeof adapter>['clearItineraryDetailReaction']>
+) => adapter().clearItineraryDetailReaction(...args);
+export const getItineraryDetailReactionSummaries = async (
+  ...args: Parameters<ReturnType<typeof adapter>['getItineraryDetailReactionSummaries']>
+) => adapter().getItineraryDetailReactionSummaries(...args);
 export const shareFlight = async (...args: Parameters<ReturnType<typeof adapter>['shareFlight']>) =>
   adapter().shareFlight(...args);
 export const listGroupMembers = async (...args: Parameters<ReturnType<typeof adapter>['listGroupMembers']>) =>
@@ -293,6 +305,15 @@ export const deleteItineraryDetail = async (...args: Parameters<ReturnType<typeo
   adapter().deleteItineraryDetail(...args);
 export const updateItineraryDetail = async (...args: Parameters<ReturnType<typeof adapter>['updateItineraryDetail']>) =>
   adapter().updateItineraryDetail(...args);
+export const addItineraryChecklistItem = async (
+  ...args: Parameters<ReturnType<typeof adapter>['addItineraryChecklistItem']>
+) => adapter().addItineraryChecklistItem(...args);
+export const updateItineraryChecklistItem = async (
+  ...args: Parameters<ReturnType<typeof adapter>['updateItineraryChecklistItem']>
+) => adapter().updateItineraryChecklistItem(...args);
+export const deleteItineraryChecklistItem = async (
+  ...args: Parameters<ReturnType<typeof adapter>['deleteItineraryChecklistItem']>
+) => adapter().deleteItineraryChecklistItem(...args);
 export const getPlaceDetailsCache = async (
   placeId: string
 ): Promise<PlaceDetailsCache | null> => adapter().getPlaceDetailsCache(placeId);

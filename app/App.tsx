@@ -25,7 +25,6 @@ import { type Tour, ActivityTab, fetchActivitiesForTrip } from './tabs/activitie
 import { type Trait } from './tabs/traits';
 import { FollowTab, type FollowedTrip } from './tabs/follow';
 import FollowingTab from './tabs/following';
-import ItinerariesTab from './tabs/itineraries';
 import HomeTab from './tabs/HomeTab';
 import DailyExpensesTab from './tabs/dailyExpenses';
 import LedgerTab from './tabs/ledger';
@@ -152,7 +151,6 @@ type Page =
   | 'trips'
   | 'create-trip'
   | 'trip-details'
-  | 'itinerary'
   | 'cost'
   | 'account'
   | 'follow'
@@ -1634,14 +1632,6 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     await fetchTripPayments();
   }, [backendUrl, userToken, fetchTripPayments]);
 
-  // Fetch itineraries for the current user; ItinerariesTab also fetches within its own lifecycle,
-  // but this keeps the call from blowing up when invoked from shared effects.
-  const fetchItineraries = useCallback(async (token?: string) => {
-    const authToken = token ?? userToken;
-    if (!authToken) return;
-    await fetch(`${backendUrl}/api/itineraries`, { headers }).catch(() => undefined);
-  }, [backendUrl, headers, userToken]);
-
   // fetchInvites and fetchPendingTripShareInvites are now owned by useGroupInvites.
 
   // fetchFollowedTrips is now provided by useFollowedTrips.
@@ -1799,9 +1789,6 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         case 'cost':
           await Promise.all([fetchTrips(authToken), fetchExpenses(authToken), fetchTripPayments(authToken)]);
           break;
-        case 'itinerary':
-          await Promise.all([fetchTrips(authToken), fetchItineraries(authToken), fetchTraits(), fetchTraitProfile()]);
-          break;
         case 'ingest':
           await Promise.all([fetchTrips(authToken), fetchGroups()]);
           break;
@@ -1854,7 +1841,6 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     fetchFollowedTrips,
     fetchTraits,
     fetchTraitProfile,
-    fetchItineraries,
     loadFamilyRelationships,
     loadFellowTravelers,
     requirePasswordSetup
@@ -2014,7 +2000,6 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           sessionPage === 'trips' ||
           sessionPage === 'create-trip' ||
           sessionPage === 'trip-details' ||
-          sessionPage === 'itinerary' ||
           sessionPage === 'tours' ||
           sessionPage === 'expenses' ||
           sessionPage === 'ledger' ||
@@ -2332,7 +2317,6 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       'account',
       'follow',
       'following',
-      'itinerary',
       'ingest',
     ];
     return new Set(pages.filter((page) => shouldDisableTab(activePage, page, { isFollowedTrip: isFollowingMode })));
@@ -2377,10 +2361,6 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     fetchExpenses();
   }, [fetchExpenses, fetchTours]);
   const handleExternalEditHandled = useCallback(() => setExternalFlightEditId(null), []);
-  const handleOpenTripItinerary = useCallback((tripId: string) => {
-    setActiveTripId(tripId);
-    requestPageChange('itinerary');
-  }, [requestPageChange]);
   const handleUnfollowTrip = useCallback(
     async (tripId: string) => {
       const res = await fetch(`${backendUrl}/api/trips/${tripId}/follow`, {
@@ -2584,22 +2564,6 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   onFollowTrip={handleFollowTripByCode}
                   disabledPages={disabledPages}
                   hiddenPages={hiddenPages}
-                />
-              )
-            : null}
-
-          {activePage === 'itinerary'
-            ? renderSharedPageScroll(
-                <ItinerariesTab
-                  backendUrl={backendUrl}
-                  userToken={userToken}
-                  activeTripId={activeTripId}
-                  activeTrip={activeTrip}
-                  traits={traits}
-                  headers={headers}
-                  setActiveTripId={setActiveTripId}
-                  onAiItineraryQueued={onAiItineraryQueued}
-                  styles={styles}
                 />
               )
             : null}
@@ -3120,7 +3084,6 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               styles={styles}
               openShareSignal={openShareFromHeaderSignal}
               onSetActive={(tripId) => setActiveTripId(tripId)}
-              onOpenItinerary={handleOpenTripItinerary}
               onUpdateCurrency={updateTripCurrency}
             />
           )

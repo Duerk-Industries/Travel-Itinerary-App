@@ -43,7 +43,6 @@ describe('TripDetailsTab currency dropdown', () => {
         group={{ id: 'g1', name: 'Group', members: [], invites: [] }}
         styles={styles}
         onSetActive={() => {}}
-        onOpenItinerary={() => {}}
         onUpdateCurrency={onUpdateCurrency}
       />
     );

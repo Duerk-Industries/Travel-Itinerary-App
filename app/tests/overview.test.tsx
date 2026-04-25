@@ -325,6 +325,24 @@ describe('Overview UI (nested itinerary)', () => {
     expect(await findByTestId('day-details-next')).toBeTruthy();
   });
 
+  test('day details renders the Notes & Checklists section with the +Add item button', async () => {
+    const { findByTestId } = await renderOverview(<OverviewTab {...baseProps} />);
+    fireEvent.press(await findByTestId('overview-day-card-1'));
+    expect(await findByTestId('day-details-itinerary-items')).toBeTruthy();
+    expect(await findByTestId('day-details-add-item-button')).toBeTruthy();
+  });
+
+  test('+Add item button opens the four-option popover', async () => {
+    const { findByTestId } = await renderOverview(<OverviewTab {...baseProps} />);
+    fireEvent.press(await findByTestId('overview-day-card-1'));
+    fireEvent.press(await findByTestId('day-details-add-item-button'));
+    expect(await findByTestId('add-item-popover')).toBeTruthy();
+    expect(await findByTestId('add-item-option-place')).toBeTruthy();
+    expect(await findByTestId('add-item-option-note')).toBeTruthy();
+    expect(await findByTestId('add-item-option-checklist')).toBeTruthy();
+    expect(await findByTestId('add-item-option-activity')).toBeTruthy();
+  });
+
   test('shows traveler names when flights differ', async () => {
     const flights = [
       {
