@@ -1992,6 +1992,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   ]);
 
   useEffect(() => {
+    if (userToken) {
+      connectSocket(userToken);
+    }
+  }, [userToken]);
+
+  useEffect(() => {
     if (userToken && !requirePasswordSetup) {
       fetchTrips();
       fetchGroups();
