@@ -372,6 +372,28 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     initializeAppCheck();
   }, []);
 
+  // React DevTools (and a few dev-tooling libraries) emit `performance.mark`
+  // on every component render in development. Browsers keep those entries
+  // forever — Firefox in particular won't reclaim them, and after a long
+  // session the User Timing buffer (and the React fibers each mark
+  // references) can hold gigabytes. Periodically clear the buffer so the
+  // tab can stay open all day without ballooning memory.
+  useEffect(() => {
+    if (typeof performance === 'undefined' || typeof performance.clearMarks !== 'function') {
+      return;
+    }
+    const clearAll = () => {
+      try {
+        performance.clearMarks();
+        performance.clearMeasures();
+      } catch {
+        // browsers without User Timing — nothing to clear
+      }
+    };
+    const intervalId = setInterval(clearAll, 30_000);
+    return () => clearInterval(intervalId);
+  }, []);
+
   useEffect(() => {
     if (!isWebIOSSafari || typeof window === 'undefined') return;
     const updateViewport = () => {
