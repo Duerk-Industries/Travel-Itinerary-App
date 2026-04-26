@@ -16,7 +16,6 @@ export type PlacePickerDialogProps = {
 
 const PlacePickerDialog: React.FC<PlacePickerDialogProps> = ({ visible, defaultDay, onSubmit, onCancel }) => {
   const [name, setName] = useState('');
-  const [day, setDay] = useState<string>(defaultDay != null ? String(defaultDay) : '1');
   const [time, setTime] = useState('');
   const [error, setError] = useState('');
 
@@ -26,11 +25,7 @@ const PlacePickerDialog: React.FC<PlacePickerDialogProps> = ({ visible, defaultD
       setError('Place name is required');
       return;
     }
-    const dayNum = Number(day);
-    if (!Number.isFinite(dayNum) || dayNum < 1) {
-      setError('Day must be 1 or higher');
-      return;
-    }
+    const dayNum = defaultDay != null && Number.isFinite(defaultDay) && defaultDay >= 1 ? defaultDay : 1;
     onSubmit({ day: Math.round(dayNum), name: trimmedName, time: time.trim() || undefined });
     setName('');
     setTime('');
@@ -64,28 +59,14 @@ const PlacePickerDialog: React.FC<PlacePickerDialogProps> = ({ visible, defaultD
             onChangeText={setName}
             autoFocus
           />
-          <View style={styles.row}>
-            <View style={[styles.field, { flex: 1 }]}>
-              <Text style={styles.label}>Day</Text>
-              <TextInput
-                testID="place-dialog-day"
-                style={styles.input}
-                keyboardType="numeric"
-                value={day}
-                onChangeText={setDay}
-              />
-            </View>
-            <View style={[styles.field, { flex: 2 }]}>
-              <Text style={styles.label}>Time (optional)</Text>
-              <TextInput
-                testID="place-dialog-time"
-                style={styles.input}
-                value={time}
-                placeholder="e.g. 09:00"
-                onChangeText={setTime}
-              />
-            </View>
-          </View>
+          <Text style={styles.label}>Time (optional)</Text>
+          <TextInput
+            testID="place-dialog-time"
+            style={styles.input}
+            value={time}
+            placeholder="e.g. 09:00"
+            onChangeText={setTime}
+          />
           {error ? <Text style={styles.error}>{error}</Text> : null}
           <View style={styles.actions}>
             <Pressable testID="place-dialog-cancel" style={styles.btnGhost} onPress={handleCancel}>
@@ -110,8 +91,6 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: '#d1d5db', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 8,
     fontSize: 14, color: '#111827', backgroundColor: '#fff',
   },
-  row: { flexDirection: 'row', gap: 12, marginTop: 4 },
-  field: {},
   error: { color: '#dc2626', fontSize: 12, marginTop: 4 },
   actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 12 },
   btnGhost: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 6 },

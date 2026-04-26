@@ -21,7 +21,6 @@ const ChecklistInputDialog: React.FC<ChecklistInputDialogProps> = ({
   onCancel,
 }) => {
   const [title, setTitle] = useState('');
-  const [day, setDay] = useState<string>(defaultDay != null ? String(defaultDay) : '1');
   const [items, setItems] = useState<string[]>(['', '']);
   const [error, setError] = useState('');
 
@@ -39,11 +38,6 @@ const ChecklistInputDialog: React.FC<ChecklistInputDialogProps> = ({
       setError('Title is required');
       return;
     }
-    const dayNum = Number(day);
-    if (!Number.isFinite(dayNum) || dayNum < 1) {
-      setError('Day must be 1 or higher');
-      return;
-    }
     const cleaned = items
       .map((s) => s.trim())
       .filter(Boolean)
@@ -52,6 +46,7 @@ const ChecklistInputDialog: React.FC<ChecklistInputDialogProps> = ({
       setError('Add at least one checklist item');
       return;
     }
+    const dayNum = defaultDay != null && Number.isFinite(defaultDay) && defaultDay >= 1 ? defaultDay : 1;
     onSubmit({ day: Math.round(dayNum), title: t, items: cleaned });
     setTitle('');
     setItems(['', '']);
@@ -85,16 +80,6 @@ const ChecklistInputDialog: React.FC<ChecklistInputDialogProps> = ({
             placeholder="e.g. Packing list"
             autoFocus
           />
-          <View style={[styles.field, { maxWidth: 100 }]}>
-            <Text style={styles.label}>Day</Text>
-            <TextInput
-              testID="checklist-dialog-day"
-              style={styles.input}
-              keyboardType="numeric"
-              value={day}
-              onChangeText={setDay}
-            />
-          </View>
           <Text style={[styles.label, { marginTop: 8 }]}>Items</Text>
           <ScrollView style={styles.itemsScroll} keyboardShouldPersistTaps="handled">
             {items.map((value, idx) => (
@@ -148,7 +133,6 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: '#d1d5db', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 8,
     fontSize: 14, color: '#111827', backgroundColor: '#fff',
   },
-  field: {},
   itemsScroll: { maxHeight: 220 },
   itemRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
   removeBtn: {

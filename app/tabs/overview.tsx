@@ -823,6 +823,22 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     []
   );
 
+  const deleteDetail = useCallback(
+    async (detailId: string) => {
+      const res = await fetch(`${backendUrl}/api/itineraries/details/${detailId}`, {
+        method: 'DELETE',
+        headers,
+      });
+      if (!res.ok && res.status !== 204) {
+        const data = await res.json().catch(() => ({}));
+        alert((data as any)?.error || 'Could not delete item');
+        return;
+      }
+      setItineraryDetails((prev) => prev.filter((d) => d.id !== detailId));
+    },
+    [backendUrl, headers]
+  );
+
   const earliestEventDate = useMemo(
     () =>
       getEarliestTripEventDate([
@@ -2213,58 +2229,74 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 {(activeDayInfo.details ?? []).length === 0 ? (
                   <Text style={styles.helperText}>No items yet for this day.</Text>
                 ) : (
-                  (activeDayInfo.details ?? []).map((d) => (
-                    <View key={d.id} style={[styles.dayInfoRow, { flexDirection: 'column', alignItems: 'flex-start', gap: 4 }]}>
-                      {d.kind === 'place' ? (
-                        <Text style={styles.dayInfoRoute}>{`📍 ${d.activity}`}</Text>
-                      ) : d.kind === 'note' ? (
-                        <View>
-                          <Text style={styles.dayInfoRoute}>{`📝 ${d.activity}`}</Text>
-                          {d.noteBody ? (
-                            <Text style={[styles.helperText, { fontStyle: 'italic' }]}>{d.noteBody}</Text>
-                          ) : null}
+                  (activeDayInfo.details ?? []).map((d) => {
+                    const isActivity = !d.kind || d.kind === 'activity';
+                    return (
+                      <View key={d.id} style={[styles.dayInfoRow, { alignItems: 'flex-start', gap: 8 }]}>
+                        <View style={{ flex: 1, gap: 4 }}>
+                          {d.kind === 'place' ? (
+                            <Text style={styles.dayInfoRoute}>{`📍 ${d.activity}`}</Text>
+                          ) : d.kind === 'note' ? (
+                            <View>
+                              <Text style={styles.dayInfoRoute}>{`📝 ${d.activity}`}</Text>
+                              {d.noteBody ? (
+                                <Text style={[styles.helperText, { fontStyle: 'italic' }]}>{d.noteBody}</Text>
+                              ) : null}
+                            </View>
+                          ) : d.kind === 'checklist' ? (
+                            <View style={{ width: '100%' }}>
+                              <Text style={styles.dayInfoRoute}>{`✅ ${d.activity}`}</Text>
+                              {(d.checklistItems ?? []).map((it) => {
+                                const checked = !!it.checkedBy;
+                                return (
+                                  <TouchableOpacity
+                                    key={it.id}
+                                    testID={`overview-checklist-toggle-${it.id}`}
+                                    accessibilityRole="checkbox"
+                                    accessibilityState={{ checked }}
+                                    onPress={() => toggleChecklistItem(d.id, it)}
+                                    style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: 6 }}
+                                  >
+                                    <Text style={{ fontSize: 14 }}>{checked ? '☑' : '☐'}</Text>
+                                    <Text
+                                      style={[
+                                        styles.helperText,
+                                        checked && { textDecorationLine: 'line-through', color: '#777' },
+                                      ]}
+                                    >
+                                      {it.label}
+                                    </Text>
+                                  </TouchableOpacity>
+                                );
+                              })}
+                            </View>
+                          ) : (
+                            <Text style={styles.dayInfoRoute}>{d.activity}</Text>
+                          )}
                         </View>
-                      ) : d.kind === 'checklist' ? (
-                        <View style={{ width: '100%' }}>
-                          <Text style={styles.dayInfoRoute}>{`✅ ${d.activity}`}</Text>
-                          {(d.checklistItems ?? []).map((it) => {
-                            const checked = !!it.checkedBy;
-                            return (
-                              <TouchableOpacity
-                                key={it.id}
-                                testID={`overview-checklist-toggle-${it.id}`}
-                                accessibilityRole="checkbox"
-                                accessibilityState={{ checked }}
-                                onPress={() => toggleChecklistItem(d.id, it)}
-                                style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: 6 }}
-                              >
-                                <Text style={{ fontSize: 14 }}>{checked ? '☑' : '☐'}</Text>
-                                <Text
-                                  style={[
-                                    styles.helperText,
-                                    checked && { textDecorationLine: 'line-through', color: '#777' },
-                                  ]}
-                                >
-                                  {it.label}
-                                </Text>
-                              </TouchableOpacity>
-                            );
-                          })}
-                        </View>
-                      ) : (
-                        <Text style={styles.dayInfoRoute}>{d.activity}</Text>
-                      )}
-                      <View style={{ marginTop: 4 }}>
-                        <ReactionBar
-                          detailId={d.id}
-                          summary={d.reactions ?? emptyReactionSummary}
-                          canReact
-                          onCast={castReactionForDetail}
-                          onClear={clearReactionForDetail}
-                        />
+                        {isActivity ? (
+                          <View style={{ flexShrink: 0 }}>
+                            <ReactionBar
+                              detailId={d.id}
+                              summary={d.reactions ?? emptyReactionSummary}
+                              canReact
+                              onCast={castReactionForDetail}
+                              onClear={clearReactionForDetail}
+                            />
+                          </View>
+                        ) : null}
+                        <TouchableOpacity
+                          testID={`day-details-delete-${d.id}`}
+                          accessibilityRole="button"
+                          accessibilityLabel="Delete item"
+                          onPress={() => deleteDetail(d.id)}
+                          style={styles.detailDeleteButton}
+                        >
+                          <Text style={styles.detailDeleteButtonText}>×</Text>
+                        </TouchableOpacity>
                       </View>
-                    </View>
-                  ))
+                    );
+                  })
                 )}
                 <TouchableOpacity
                   testID="day-details-add-item-button"

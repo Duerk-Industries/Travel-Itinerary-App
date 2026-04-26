@@ -4214,6 +4214,21 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
+  detailDeleteButton: {
+    flexShrink: 0,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: theme.colors.error,
+  },
+  detailDeleteButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: theme.typography.weightBold,
+    lineHeight: 18,
+  },
   lodgingImage: {
     width: 80,
     height: 80,
