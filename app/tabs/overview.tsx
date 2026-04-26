@@ -2035,7 +2035,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         const showLodgingNames = new Set(lodgingParticipantKeys).size > 1;
 
         return (
-          <View style={[styles.card, responsiveCardStyle, { position: 'relative' }]}>
+          <View style={[styles.card, responsiveCardStyle, { position: 'relative', flex: 1, minHeight: 0 }]}>
             <TouchableOpacity testID="day-details-back" style={styles.dayDetailsBackButton} onPress={() => setSelectedDay(null)}>
               <Text style={styles.dayDetailsBackText}>← Back</Text>
             </TouchableOpacity>
@@ -2299,7 +2299,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       return (
         <ScrollView
           ref={scrollRef}
-          style={[styles.card, responsiveCardStyle]}
+          style={[styles.card, responsiveCardStyle, { flex: 1, minHeight: 0 }]}
           contentContainerStyle={{ gap: isPhoneLayout ? 10 : 12 }}
           onScroll={(e: any) => setScrollY(e.nativeEvent.contentOffset.y)}
           scrollEventThrottle={16}
@@ -2345,7 +2345,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     return (
       <ScrollView
         ref={scrollRef}
-        style={[styles.card, responsiveCardStyle]}
+        style={[styles.card, responsiveCardStyle, { flex: 1, minHeight: 0 }]}
         contentContainerStyle={{ gap: isPhoneLayout ? 10 : 12 }}
         onScroll={(e: any) => setScrollY(e.nativeEvent.contentOffset.y)}
         scrollEventThrottle={16}
