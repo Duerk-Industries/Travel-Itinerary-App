@@ -35,6 +35,9 @@ import {
   AuditAction,
   TripChatMessage,
   TripMessageRead,
+  PackingListItem,
+  PackingListTraveler,
+  TripPackingList,
 } from './types';
 import { logError, logInfo } from './logger';
 import { getEnvFlag, getEnvValue } from './env';
@@ -60,6 +63,22 @@ const formatDate = (value: any) => {
 const FOLLOW_CODE_LENGTH = 6;
 const FOLLOW_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const TRIP_SHARE_TOKEN_BYTES = 24;
+const DEFAULT_PACKING_LIST_ITEMS: Array<{ category: string; label: string }> = [
+  { category: 'Documents', label: 'Passport or government ID' },
+  { category: 'Documents', label: 'Travel confirmations' },
+  { category: 'Documents', label: 'Health insurance card' },
+  { category: 'Clothing', label: 'Daily outfits' },
+  { category: 'Clothing', label: 'Comfortable walking shoes' },
+  { category: 'Clothing', label: 'Sleepwear' },
+  { category: 'Clothing', label: 'Light jacket or sweater' },
+  { category: 'Toiletries', label: 'Toothbrush and toothpaste' },
+  { category: 'Toiletries', label: 'Deodorant' },
+  { category: 'Toiletries', label: 'Personal medications' },
+  { category: 'Electronics', label: 'Phone charger' },
+  { category: 'Electronics', label: 'Power adapter' },
+  { category: 'Travel Day', label: 'Reusable water bottle' },
+  { category: 'Travel Day', label: 'Snacks' },
+];
 
 const normalizeEmail = (value: string): string => value.trim().toLowerCase();
 const normalizeLoginIdentifier = (value: string): string => value.trim().toLowerCase();
@@ -164,6 +183,31 @@ const TRIP_ACTIVITY_TYPES: TripActivityType[] = [
   'NOTE_ADDED',
 ];
 
+const normalizePackingText = (value: string): string => value.trim().replace(/\s+/g, ' ');
+
+const normalizePackingKey = (category: string, label: string): string =>
+  `${normalizePackingText(category).toLowerCase()}::${normalizePackingText(label).toLowerCase()}`;
+
+const sanitizePackingItems = (items: Array<{ id?: string; category?: unknown; label?: unknown }>): Array<{ id?: string; category: string; label: string; position: number }> => {
+  const seen = new Set<string>();
+  const sanitized: Array<{ id?: string; category: string; label: string; position: number }> = [];
+  for (const item of Array.isArray(items) ? items : []) {
+    const category = typeof item.category === 'string' ? normalizePackingText(item.category) : '';
+    const label = typeof item.label === 'string' ? normalizePackingText(item.label) : '';
+    if (!category || !label) continue;
+    const key = normalizePackingKey(category, label);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    sanitized.push({
+      id: typeof item.id === 'string' && item.id.trim() ? item.id.trim() : undefined,
+      category,
+      label,
+      position: sanitized.length,
+    });
+  }
+  return sanitized;
+};
+
 export const setPoolFactory = (factory: PoolCtor): void => {
   PoolFactory = factory;
   // Reset to ensure new connections use the overridden Pool implementation.
@@ -229,6 +273,102 @@ export const closePool = async (): Promise<void> => {
   }
 };
 
+const seedUniversalPackingDefaults = async (p: QueryRunner): Promise<void> => {
+  const existing = await p.query(`SELECT COUNT(*)::int as count FROM universal_packing_list_items`);
+  if (Number(existing.rows[0]?.count ?? 0) > 0) return;
+  for (let index = 0; index < DEFAULT_PACKING_LIST_ITEMS.length; index += 1) {
+    const item = DEFAULT_PACKING_LIST_ITEMS[index];
+    await p.query(
+      `INSERT INTO universal_packing_list_items (id, category, label, position)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (category, label) DO NOTHING`,
+      [randomUUID(), item.category, item.label, index]
+    );
+  }
+};
+
+const ensurePackingListForUserWithRunner = async (p: QueryRunner, userId: string): Promise<void> => {
+  const existing = await p.query(`SELECT 1 FROM user_packing_list_items WHERE user_id = $1 LIMIT 1`, [userId]);
+  if (existing.rowCount) return;
+  await p.query(
+    `INSERT INTO user_packing_list_items (id, user_id, category, label, position)
+     SELECT uuid_generate_v4(), $1, category, label, position
+     FROM universal_packing_list_items
+     ORDER BY position, category, label`,
+    [userId]
+  );
+};
+
+const backfillUserPackingLists = async (p: QueryRunner): Promise<void> => {
+  const usersWithoutLists = await p.query<{ id: string }>(
+    `SELECT u.id
+     FROM users u
+     WHERE NOT EXISTS (
+       SELECT 1 FROM user_packing_list_items up WHERE up.user_id = u.id
+     )`
+  );
+  for (const user of usersWithoutLists.rows) {
+    await ensurePackingListForUserWithRunner(p, user.id);
+  }
+};
+
+const mergeUserPackingListIntoTripWithRunner = async (p: QueryRunner, tripId: string, userId: string): Promise<void> => {
+  await ensurePackingListForUserWithRunner(p, userId);
+  const existingRows = await p.query<{ category: string; label: string; position: number }>(
+    `SELECT category, label, position FROM trip_packing_list_items WHERE trip_id = $1`,
+    [tripId]
+  );
+  const existing = new Set(existingRows.rows.map((row) => normalizePackingKey(row.category, row.label)));
+  let nextPosition = existingRows.rows.reduce((max, row) => Math.max(max, Number(row.position ?? 0)), -1) + 1;
+  const userItems = await p.query<PackingListItem>(
+    `SELECT id, category, label, position FROM user_packing_list_items WHERE user_id = $1 ORDER BY position, category, label`,
+    [userId]
+  );
+  for (const item of userItems.rows) {
+    const key = normalizePackingKey(item.category, item.label);
+    if (existing.has(key)) continue;
+    existing.add(key);
+    await p.query(
+      `INSERT INTO trip_packing_list_items (id, trip_id, category, label, position, source_user_id)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (trip_id, category, label) DO NOTHING`,
+      [randomUUID(), tripId, normalizePackingText(item.category), normalizePackingText(item.label), nextPosition, userId]
+    );
+    nextPosition += 1;
+  }
+};
+
+const ensureTripPackingListWithRunner = async (p: QueryRunner, tripId: string): Promise<void> => {
+  const existing = await p.query(`SELECT 1 FROM trip_packing_list_items WHERE trip_id = $1 LIMIT 1`, [tripId]);
+  if (existing.rowCount) return;
+  const members = await p.query<{ userId: string }>(
+    `SELECT gm.user_id as "userId"
+     FROM trips t
+     JOIN group_members gm ON gm.group_id = t.group_id
+     WHERE t.id = $1 AND gm.user_id IS NOT NULL AND gm.removed_at IS NULL
+     ORDER BY gm.created_at`,
+    [tripId]
+  );
+  for (const member of members.rows) {
+    await mergeUserPackingListIntoTripWithRunner(p, tripId, member.userId);
+  }
+  const added = await p.query(`SELECT 1 FROM trip_packing_list_items WHERE trip_id = $1 LIMIT 1`, [tripId]);
+  if (added.rowCount) return;
+  await p.query(
+    `INSERT INTO trip_packing_list_items (id, trip_id, category, label, position)
+     SELECT uuid_generate_v4(), $1, category, label, position
+     FROM universal_packing_list_items
+     ORDER BY position, category, label`,
+    [tripId]
+  );
+};
+
+const mergeUserPackingListIntoGroupTripsWithRunner = async (p: QueryRunner, groupId: string, userId: string): Promise<void> => {
+  const trips = await p.query<{ id: string }>(`SELECT id FROM trips WHERE group_id = $1`, [groupId]);
+  for (const trip of trips.rows) {
+    await mergeUserPackingListIntoTripWithRunner(p, trip.id, userId);
+  }
+};
 
 // Initialize database schema, migrations, and seed airport data on startup.
 export const initDb = async (): Promise<void> => {
@@ -467,6 +607,56 @@ export const initDb = async (): Promise<void> => {
   await p.query(`UPDATE trips SET currency = 'USD' WHERE currency IS NULL;`);
   await p.query(`UPDATE trips SET covered_by = '{}'::jsonb WHERE covered_by IS NULL;`);
   await p.query(`UPDATE trips SET location_ids = '[]'::jsonb WHERE location_ids IS NULL;`);
+
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS universal_packing_list_items (
+      id UUID PRIMARY KEY,
+      category TEXT NOT NULL,
+      label TEXT NOT NULL,
+      position INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE (category, label)
+    );
+  `);
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS user_packing_list_items (
+      id UUID PRIMARY KEY,
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      category TEXT NOT NULL,
+      label TEXT NOT NULL,
+      position INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE (user_id, category, label)
+    );
+  `);
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS trip_packing_list_items (
+      id UUID PRIMARY KEY,
+      trip_id UUID NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+      category TEXT NOT NULL,
+      label TEXT NOT NULL,
+      position INTEGER NOT NULL DEFAULT 0,
+      source_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE (trip_id, category, label)
+    );
+  `);
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS trip_packing_item_checks (
+      item_id UUID NOT NULL REFERENCES trip_packing_list_items(id) ON DELETE CASCADE,
+      traveler_id UUID NOT NULL REFERENCES group_members(id) ON DELETE CASCADE,
+      packed BOOLEAN NOT NULL DEFAULT TRUE,
+      updated_at TIMESTAMP DEFAULT NOW(),
+      PRIMARY KEY (item_id, traveler_id)
+    );
+  `);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_user_packing_user ON user_packing_list_items(user_id, position);`);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_trip_packing_trip ON trip_packing_list_items(trip_id, position);`);
+  await seedUniversalPackingDefaults(p);
+  await backfillUserPackingLists(p);
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS follow_codes (
@@ -1334,6 +1524,7 @@ export const findOrCreateUser = async (
     [id, normalizedEmail, username, username, provider]
   );
   await upsertUserEmail(p, id, normalizedEmail, { isPrimary: true, isVerified: true, verifiedAt: new Date() });
+  await ensurePackingListForUserWithRunner(p, id);
   return { id, email: normalizedEmail, provider, emailVerified: true, role: 'user' };
 };
 
@@ -1384,6 +1575,7 @@ const ensureOwnerUserRow = async (db: Queryable, ownerId: string): Promise<void>
     [ownerId, email, username, username, 'email']
   );
   await upsertUserEmail(db, ownerId, email, { isPrimary: true, isVerified: true, verifiedAt: new Date() });
+  await ensurePackingListForUserWithRunner(db, ownerId);
 };
 
 export const ensureDefaultGroupForUser = async (userId: string, email: string): Promise<void> => {
@@ -1522,6 +1714,7 @@ export const createWebUser = async (
       isVerified: Boolean(user.emailVerified),
       verifiedAt: user.emailVerified ? new Date() : null,
     });
+    await ensurePackingListForUserWithRunner(p, user.id);
     return { id: user.id, email: normalizedEmail, firstName, lastName, emailVerified: user.emailVerified };
   }
 
@@ -1541,6 +1734,7 @@ export const createWebUser = async (
     [id, normalizedEmail, firstName, lastName, passwordHash, salt]
   );
   await upsertUserEmail(p, id, normalizedEmail, { isPrimary: true, isVerified: false });
+  await ensurePackingListForUserWithRunner(p, id);
 
   return { id, email: normalizedEmail, firstName, lastName, emailVerified: false };
 };
@@ -1559,6 +1753,7 @@ export const ensureWebPasswordAccountForOAuth = async (
   );
   if (existing.rows.length) {
     await upsertUserEmail(p, userId, normalizedEmail, { isPrimary: true, isVerified: true, verifiedAt: new Date() });
+    await ensurePackingListForUserWithRunner(p, userId);
     return { requiresPasswordSetup: Boolean(existing.rows[0].passwordSetupRequired) };
   }
 
@@ -1571,6 +1766,7 @@ export const ensureWebPasswordAccountForOAuth = async (
     [userId, normalizedEmail, firstName ?? '', lastName ?? '', passwordHash, salt]
   );
   await upsertUserEmail(p, userId, normalizedEmail, { isPrimary: true, isVerified: true, verifiedAt: new Date() });
+  await ensurePackingListForUserWithRunner(p, userId);
   return { requiresPasswordSetup: true };
 };
 
@@ -3126,6 +3322,9 @@ export const acceptTripShareInvite = async (
        WHERE id = $1`,
       [invite.id, userId]
     );
+    if (invite.role === 'member') {
+      await mergeUserPackingListIntoTripWithRunner(client, invite.tripId, userId);
+    }
 
     await client.query('COMMIT');
     return { tripId: invite.tripId, role: invite.role };
@@ -3283,6 +3482,9 @@ export const acceptTripShareInviteById = async (
        WHERE id = $1`,
       [invite.id, userId]
     );
+    if (invite.role === 'member') {
+      await mergeUserPackingListIntoTripWithRunner(client, invite.tripId, userId);
+    }
 
     await client.query('COMMIT');
     return { tripId: invite.tripId, role: invite.role };
@@ -5718,6 +5920,7 @@ export const createTrip = async (
       {},
     ]
   );
+  await ensureTripPackingListWithRunner(p, id);
   return rows[0];
 };
 
@@ -5986,6 +6189,7 @@ export const createTripWithGroupAndMembers = async (payload: {
       const inviteIds = invites.map((inv) => inv.id);
       await client.query(`UPDATE group_invites SET trip_id = $2 WHERE id = ANY($1::uuid[])`, [inviteIds, tripId]);
     }
+    await ensureTripPackingListWithRunner(client, tripId);
 
     await client.query('COMMIT');
     return { trip: rows[0], groupId, invites };
@@ -6410,6 +6614,7 @@ export const acceptGroupInvite = async (inviteId: string, userId: string, email?
        WHERE id = $1`,
       [inviteId, userId]
     );
+    await mergeUserPackingListIntoGroupTripsWithRunner(client, invite.groupId, userId);
     await client.query('COMMIT');
   } catch (err) {
     await client.query('ROLLBACK');
@@ -7976,6 +8181,187 @@ export const upsertPlaceLookupCache = async (entry: {
 };
 
 
+export const getUniversalPackingList = async (): Promise<PackingListItem[]> => {
+  const p = getPool();
+  const { rows } = await p.query<PackingListItem>(
+    `SELECT id, category, label, position, created_at as "createdAt", updated_at as "updatedAt"
+     FROM universal_packing_list_items
+     ORDER BY position, category, label`
+  );
+  return rows;
+};
+
+export const replaceUniversalPackingList = async (itemsInput: Array<{ id?: string; category?: unknown; label?: unknown }>): Promise<PackingListItem[]> => {
+  const p = getPool();
+  const items = sanitizePackingItems(itemsInput);
+  if (!items.length) throw new Error('At least one packing item is required');
+  const client = await p.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(`DELETE FROM universal_packing_list_items`);
+    for (const item of items) {
+      await client.query(
+        `INSERT INTO universal_packing_list_items (id, category, label, position)
+         VALUES ($1, $2, $3, $4)`,
+        [randomUUID(), item.category, item.label, item.position]
+      );
+    }
+    await backfillUserPackingLists(client);
+    await client.query('COMMIT');
+    return getUniversalPackingList();
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
+export const getUserPackingList = async (userId: string): Promise<PackingListItem[]> => {
+  const p = getPool();
+  await ensurePackingListForUserWithRunner(p, userId);
+  const { rows } = await p.query<PackingListItem>(
+    `SELECT id, category, label, position, created_at as "createdAt", updated_at as "updatedAt"
+     FROM user_packing_list_items
+     WHERE user_id = $1
+     ORDER BY position, category, label`,
+    [userId]
+  );
+  return rows;
+};
+
+export const replaceUserPackingList = async (userId: string, itemsInput: Array<{ id?: string; category?: unknown; label?: unknown }>): Promise<PackingListItem[]> => {
+  const p = getPool();
+  const items = sanitizePackingItems(itemsInput);
+  if (!items.length) throw new Error('At least one packing item is required');
+  const client = await p.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(`DELETE FROM user_packing_list_items WHERE user_id = $1`, [userId]);
+    for (const item of items) {
+      await client.query(
+        `INSERT INTO user_packing_list_items (id, user_id, category, label, position)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [randomUUID(), userId, item.category, item.label, item.position]
+      );
+    }
+    await client.query('COMMIT');
+    return getUserPackingList(userId);
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
+export const getTripPackingList = async (userId: string, tripId: string): Promise<{ items: TripPackingList[]; travelers: PackingListTraveler[] }> => {
+  const p = getPool();
+  await ensureUserCanReadTrip(tripId, userId);
+  await ensureTripPackingListWithRunner(p, tripId);
+  const travelersResult = await p.query<PackingListTraveler>(
+    `SELECT gm.id,
+            gm.user_id as "userId",
+            COALESCE(
+              NULLIF(TRIM(CONCAT(COALESCE(wu.first_name, gm.first_name, ''), ' ', COALESCE(wu.last_name, gm.last_name, ''))), ''),
+              gm.guest_name,
+              u.email,
+              gm.invite_email,
+              'Traveler'
+            ) as name,
+            COALESCE(u.email, gm.invite_email) as email
+     FROM trips t
+     JOIN group_members gm ON gm.group_id = t.group_id
+     LEFT JOIN users u ON u.id = gm.user_id
+     LEFT JOIN web_users wu ON wu.id = gm.user_id
+     WHERE t.id = $1 AND gm.removed_at IS NULL
+     ORDER BY gm.created_at, name`,
+    [tripId]
+  );
+  const itemsResult = await p.query<PackingListItem>(
+    `SELECT id, category, label, position, created_at as "createdAt", updated_at as "updatedAt"
+     FROM trip_packing_list_items
+     WHERE trip_id = $1
+     ORDER BY position, category, label`,
+    [tripId]
+  );
+  const checks = await p.query<{ itemId: string; travelerId: string }>(
+    `SELECT item_id as "itemId", traveler_id as "travelerId"
+     FROM trip_packing_item_checks
+     WHERE packed = TRUE AND item_id = ANY($1::uuid[])`,
+    [itemsResult.rows.map((item) => item.id)]
+  );
+  const checkedByItem = new Map<string, string[]>();
+  for (const check of checks.rows) {
+    checkedByItem.set(check.itemId, [...(checkedByItem.get(check.itemId) ?? []), check.travelerId]);
+  }
+  return {
+    travelers: travelersResult.rows,
+    items: itemsResult.rows.map((item) => ({ ...item, packedBy: checkedByItem.get(item.id) ?? [] })),
+  };
+};
+
+export const replaceTripPackingList = async (
+  userId: string,
+  tripId: string,
+  itemsInput: Array<{ id?: string; category?: unknown; label?: unknown }>
+): Promise<{ items: TripPackingList[]; travelers: PackingListTraveler[] }> => {
+  const p = getPool();
+  await ensureUserCanReadTrip(tripId, userId);
+  const items = sanitizePackingItems(itemsInput);
+  if (!items.length) throw new Error('At least one packing item is required');
+  const client = await p.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(`DELETE FROM trip_packing_list_items WHERE trip_id = $1`, [tripId]);
+    for (const item of items) {
+      await client.query(
+        `INSERT INTO trip_packing_list_items (id, trip_id, category, label, position)
+         VALUES ($1, $2, $3, $4, $5)`,
+        [randomUUID(), tripId, item.category, item.label, item.position]
+      );
+    }
+    await client.query('COMMIT');
+    return getTripPackingList(userId, tripId);
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
+export const setTripPackingItemPacked = async (
+  userId: string,
+  tripId: string,
+  itemId: string,
+  travelerId: string,
+  packed: boolean
+): Promise<void> => {
+  const p = getPool();
+  await ensureUserCanReadTrip(tripId, userId);
+  const valid = await p.query(
+    `SELECT 1
+     FROM trip_packing_list_items item
+     JOIN trips t ON t.id = item.trip_id
+     JOIN group_members gm ON gm.group_id = t.group_id
+     WHERE item.id = $1 AND item.trip_id = $2 AND gm.id = $3 AND gm.removed_at IS NULL
+     LIMIT 1`,
+    [itemId, tripId, travelerId]
+  );
+  if (!valid.rowCount) throw new Error('Packing item or traveler not found');
+  if (packed) {
+    await p.query(
+      `INSERT INTO trip_packing_item_checks (item_id, traveler_id, packed, updated_at)
+       VALUES ($1, $2, TRUE, NOW())
+       ON CONFLICT (item_id, traveler_id) DO UPDATE SET packed = TRUE, updated_at = NOW()`,
+      [itemId, travelerId]
+    );
+  } else {
+    await p.query(`DELETE FROM trip_packing_item_checks WHERE item_id = $1 AND traveler_id = $2`, [itemId, travelerId]);
+  }
+};
+
 // Backwards-compatible export; call poolClient() when you need the Pool instance.
 export const poolClient = (): Pool => getPool();
 
@@ -7996,6 +8382,7 @@ export const findOrCreateGoogleUser = async (profile: any): Promise<User> => {
             [email, photos?.[0]?.value, name?.givenName, name?.familyName, user.id]
         );
         await upsertUserEmail(p, user.id, email, { isPrimary: true, isVerified: true, verifiedAt: new Date() });
+        await ensurePackingListForUserWithRunner(p, user.id);
         return user;
     }
 
@@ -8014,6 +8401,7 @@ export const findOrCreateGoogleUser = async (profile: any): Promise<User> => {
             [id, photos?.[0]?.value, name?.givenName, name?.familyName, user.id]
         );
         await upsertUserEmail(p, user.id, email, { isPrimary: true, isVerified: true, verifiedAt: new Date() });
+        await ensurePackingListForUserWithRunner(p, user.id);
         return user;
     }
 
@@ -8025,6 +8413,7 @@ export const findOrCreateGoogleUser = async (profile: any): Promise<User> => {
         [newUserId, email, username, username, id, photos?.[0]?.value, name?.givenName, name?.familyName]
     );
     await upsertUserEmail(p, newUserId, email, { isPrimary: true, isVerified: true, verifiedAt: new Date() });
+    await ensurePackingListForUserWithRunner(p, newUserId);
 
     return { id: newUserId, email, provider: 'google', emailVerified: true, role: 'user' };
 };

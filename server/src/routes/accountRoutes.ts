@@ -37,6 +37,8 @@ import {
   createUserEmailVerification,
   setPrimaryUserEmail,
   removeUserEmail,
+  getUserPackingList,
+  replaceUserPackingList,
 } from '../db';
 import { sendShareEmailBestEffort, sendTripInviteEmailBestEffort, sendVerificationEmailBestEffort } from '../mailer';
 import { logError } from '../logger';
@@ -90,6 +92,26 @@ router.get('/', async (req, res) => {
     return;
   }
   res.json(profile);
+});
+
+router.get('/packing-list', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  try {
+    const items = await getUserPackingList(userId);
+    res.json({ items });
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
+router.put('/packing-list', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  try {
+    const items = await replaceUserPackingList(userId, Array.isArray(req.body?.items) ? req.body.items : []);
+    res.json({ items });
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
 });
 
 router.get('/export', async (req, res) => {

@@ -120,6 +120,7 @@ export type AuditAction =
   | 'TIER_LIMIT_UPDATED'
   | 'TIER_ENTITLEMENT_UPDATED'
   | 'FEATURE_FLAG_UPDATED'
+  | 'PACKING_DEFAULTS_UPDATED'
   | 'API_LIMITS_UPDATED'
   | 'RETENTION_TICK_RUN';
 
@@ -231,6 +232,26 @@ export interface Trip {
   currency?: string | null;
   coveredBy?: Record<string, string>;
   createdAt: string;
+}
+
+export interface PackingListItem {
+  id: string;
+  category: string;
+  label: string;
+  position: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface PackingListTraveler {
+  id: string;
+  userId?: string | null;
+  name: string;
+  email?: string | null;
+}
+
+export interface TripPackingList extends PackingListItem {
+  packedBy: string[];
 }
 
 export interface LocationRecord {

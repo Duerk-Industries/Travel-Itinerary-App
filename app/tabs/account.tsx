@@ -5,6 +5,7 @@ import { type AppearancePreference, isAppearancePreference } from '../utils/appe
 import FamilyRelationships from './FamilyRelationships';
 import AccountTraits from './AccountTraits';
 import AccountProfileManagement from './AccountProfileManagement';
+import PackingListTable from '../components/PackingListTable';
 import { type Trait } from './traits';
 
 type Setter<T> = React.Dispatch<React.SetStateAction<T>>;
@@ -253,6 +254,12 @@ const AccountTab: React.FC<AccountTabProps> = ({
         setShowRelationshipDropdown={setShowRelationshipDropdown}
         hideFamilySection
         styles={styles}
+      />
+      <PackingListTable
+        backendUrl={backendUrl}
+        headers={headers}
+        variant="user"
+        title="Default packing list"
       />
       <AccountTraits
         backendUrl={backendUrl}

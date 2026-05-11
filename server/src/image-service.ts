@@ -149,12 +149,15 @@ async function cacheImage(filepath: string, imageUrl: string): Promise<string> {
       responseType: 'stream',
     });
 
+    const contentTypeHeader = response.headers['content-type'];
+    const contentType = typeof contentTypeHeader === 'string' ? contentTypeHeader : undefined;
+
     await new Promise((resolve, reject) => {
       response.data
         .pipe(
           file.createWriteStream({
             metadata: {
-              contentType: response.headers['content-type'],
+              contentType,
             },
           })
         )

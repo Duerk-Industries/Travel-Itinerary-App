@@ -35,6 +35,9 @@ import {
   AuditLogEntry,
   AuditAction,
   TripChatMessage,
+  PackingListItem,
+  PackingListTraveler,
+  TripPackingList,
 } from './types';
 import { logError, logInfo } from './logger';
 import { getEnvFlag, getEnvValue, isLocalEnv } from './env';
@@ -52,11 +55,44 @@ const hashPassword = (password: string, salt: string) => scryptSync(password, sa
 const stripUndefined = <T extends Record<string, any>>(updates: T): Partial<T> =>
   Object.fromEntries(Object.entries(updates).filter(([, value]) => typeof value !== 'undefined')) as Partial<T>;
 const hashToken = (token: string): string => createHash('sha256').update(token).digest('hex');
+const normalizePackingText = (value: string): string => value.trim().replace(/\s+/g, ' ');
+const normalizePackingKey = (category: string, label: string): string =>
+  `${normalizePackingText(category).toLowerCase()}::${normalizePackingText(label).toLowerCase()}`;
+const sanitizePackingItems = (items: Array<{ id?: string; category?: unknown; label?: unknown }>): Array<{ id?: string; category: string; label: string; position: number }> => {
+  const seen = new Set<string>();
+  const sanitized: Array<{ id?: string; category: string; label: string; position: number }> = [];
+  for (const item of Array.isArray(items) ? items : []) {
+    const category = typeof item.category === 'string' ? normalizePackingText(item.category) : '';
+    const label = typeof item.label === 'string' ? normalizePackingText(item.label) : '';
+    if (!category || !label) continue;
+    const key = normalizePackingKey(category, label);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    sanitized.push({ id: typeof item.id === 'string' ? item.id : undefined, category, label, position: sanitized.length });
+  }
+  return sanitized;
+};
 const TRIP_SHARE_TOKEN_BYTES = 24;
 const generateTripShareToken = (): string => randomBytes(TRIP_SHARE_TOKEN_BYTES).toString('base64url');
 const FOLLOW_CODE_LENGTH = 6;
 const FOLLOW_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const ADMIN_ANALYTICS_VERSION = 1;
+const DEFAULT_PACKING_LIST_ITEMS: Array<{ category: string; label: string }> = [
+  { category: 'Documents', label: 'Passport or government ID' },
+  { category: 'Documents', label: 'Travel confirmations' },
+  { category: 'Documents', label: 'Health insurance card' },
+  { category: 'Clothing', label: 'Daily outfits' },
+  { category: 'Clothing', label: 'Comfortable walking shoes' },
+  { category: 'Clothing', label: 'Sleepwear' },
+  { category: 'Clothing', label: 'Light jacket or sweater' },
+  { category: 'Toiletries', label: 'Toothbrush and toothpaste' },
+  { category: 'Toiletries', label: 'Deodorant' },
+  { category: 'Toiletries', label: 'Personal medications' },
+  { category: 'Electronics', label: 'Phone charger' },
+  { category: 'Electronics', label: 'Power adapter' },
+  { category: 'Travel Day', label: 'Reusable water bottle' },
+  { category: 'Travel Day', label: 'Snacks' },
+];
 type TripAccessRole = 'owner' | 'member' | 'follower';
 type GroupAccessRole = 'owner' | 'member';
 type GroupAccessRecord = {
@@ -828,6 +864,8 @@ export const initDb = async (): Promise<void> => {
       logInfo(`[db.firebase] Seeded tier limit: ${tierKey}/${limitKey}`);
     }
   }
+  await seedUniversalPackingDefaults();
+  await backfillUserPackingLists();
 };
 
 export const closePool = async (): Promise<void> => {
@@ -840,6 +878,241 @@ export const closePool = async (): Promise<void> => {
 // Placeholder exports; implementations appended below.
 export const poolClient = (): any => {
   throw new Error('Direct SQL Pool is not available for Firebase provider');
+};
+
+const universalPackingCollection = () => getDb().collection('universal_packing_list_items');
+const userPackingCollection = (userId: string) => getDb().collection('user_packing_lists').doc(userId).collection('items');
+const tripPackingCollection = (tripId: string) => getDb().collection('trip_packing_lists').doc(tripId).collection('items');
+const tripPackingChecksCollection = (tripId: string) => getDb().collection('trip_packing_lists').doc(tripId).collection('checks');
+
+const seedUniversalPackingDefaults = async (): Promise<void> => {
+  const snap = await universalPackingCollection().limit(1).get();
+  if (!snap.empty) return;
+  const batch = getDb().batch();
+  DEFAULT_PACKING_LIST_ITEMS.forEach((item, index) => {
+    const ref = universalPackingCollection().doc();
+    batch.set(ref, { category: item.category, label: item.label, position: index, createdAt: nowIso(), updatedAt: nowIso() });
+  });
+  await batch.commit();
+};
+
+const ensurePackingListForUser = async (userId: string): Promise<void> => {
+  const userItems = await userPackingCollection(userId).limit(1).get();
+  if (!userItems.empty) return;
+  await seedUniversalPackingDefaults();
+  const defaults = await getUniversalPackingList();
+  const batch = getDb().batch();
+  defaults.forEach((item, index) => {
+    const ref = userPackingCollection(userId).doc();
+    batch.set(ref, { category: item.category, label: item.label, position: index, createdAt: nowIso(), updatedAt: nowIso() });
+  });
+  await batch.commit();
+};
+
+const backfillUserPackingLists = async (): Promise<void> => {
+  const users = await getDb().collection('users').get();
+  for (const user of users.docs) {
+    await ensurePackingListForUser(user.id);
+  }
+};
+
+const mergeUserPackingListIntoTrip = async (tripId: string, userId: string): Promise<void> => {
+  await ensurePackingListForUser(userId);
+  const [existingSnap, userItems] = await Promise.all([
+    tripPackingCollection(tripId).get(),
+    getUserPackingList(userId),
+  ]);
+  const existing = new Set(existingSnap.docs.map((doc) => {
+    const data = doc.data() as any;
+    return normalizePackingKey(data.category ?? '', data.label ?? '');
+  }));
+  let nextPosition = existingSnap.docs.reduce((max, doc) => Math.max(max, Number((doc.data() as any).position ?? 0)), -1) + 1;
+  const batch = getDb().batch();
+  for (const item of userItems) {
+    const key = normalizePackingKey(item.category, item.label);
+    if (existing.has(key)) continue;
+    existing.add(key);
+    const ref = tripPackingCollection(tripId).doc();
+    batch.set(ref, {
+      category: item.category,
+      label: item.label,
+      position: nextPosition,
+      sourceUserId: userId,
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
+    });
+    nextPosition += 1;
+  }
+  await batch.commit();
+};
+
+const ensureTripPackingList = async (tripId: string): Promise<void> => {
+  const existing = await tripPackingCollection(tripId).limit(1).get();
+  if (!existing.empty) return;
+  const trip = await getTripById(tripId);
+  if (!trip) return;
+  const members = await getDb().collection('group_members').where('groupId', '==', trip.groupId).where('removedAt', '==', null).get();
+  for (const member of members.docs) {
+    const userId = (member.data() as any).userId;
+    if (typeof userId === 'string' && userId) {
+      await mergeUserPackingListIntoTrip(tripId, userId);
+    }
+  }
+  const added = await tripPackingCollection(tripId).limit(1).get();
+  if (!added.empty) return;
+  const defaults = await getUniversalPackingList();
+  const batch = getDb().batch();
+  defaults.forEach((item, index) => {
+    batch.set(tripPackingCollection(tripId).doc(), {
+      category: item.category,
+      label: item.label,
+      position: index,
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
+    });
+  });
+  await batch.commit();
+};
+
+export const getUniversalPackingList = async (): Promise<PackingListItem[]> => {
+  await seedUniversalPackingDefaults();
+  const snap = await universalPackingCollection().orderBy('position').get();
+  return snap.docs.map((doc, index) => {
+    const data = doc.data() as any;
+    return {
+      id: doc.id,
+      category: data.category ?? '',
+      label: data.label ?? '',
+      position: Number(data.position ?? index),
+      createdAt: data.createdAt ?? null,
+      updatedAt: data.updatedAt ?? null,
+    };
+  });
+};
+
+export const replaceUniversalPackingList = async (itemsInput: Array<{ id?: string; category?: unknown; label?: unknown }>): Promise<PackingListItem[]> => {
+  const items = sanitizePackingItems(itemsInput);
+  if (!items.length) throw new Error('At least one packing item is required');
+  const db = getDb();
+  const existing = await universalPackingCollection().get();
+  let batch = db.batch();
+  existing.docs.forEach((doc) => batch.delete(doc.ref));
+  items.forEach((item) => batch.set(universalPackingCollection().doc(), {
+    category: item.category,
+    label: item.label,
+    position: item.position,
+    createdAt: nowIso(),
+    updatedAt: nowIso(),
+  }));
+  await batch.commit();
+  await backfillUserPackingLists();
+  return getUniversalPackingList();
+};
+
+export const getUserPackingList = async (userId: string): Promise<PackingListItem[]> => {
+  await ensurePackingListForUser(userId);
+  const snap = await userPackingCollection(userId).orderBy('position').get();
+  return snap.docs.map((doc, index) => {
+    const data = doc.data() as any;
+    return { id: doc.id, category: data.category ?? '', label: data.label ?? '', position: Number(data.position ?? index), createdAt: data.createdAt ?? null, updatedAt: data.updatedAt ?? null };
+  });
+};
+
+export const replaceUserPackingList = async (userId: string, itemsInput: Array<{ id?: string; category?: unknown; label?: unknown }>): Promise<PackingListItem[]> => {
+  const items = sanitizePackingItems(itemsInput);
+  if (!items.length) throw new Error('At least one packing item is required');
+  const db = getDb();
+  const existing = await userPackingCollection(userId).get();
+  const batch = db.batch();
+  existing.docs.forEach((doc) => batch.delete(doc.ref));
+  items.forEach((item) => batch.set(userPackingCollection(userId).doc(), {
+    category: item.category,
+    label: item.label,
+    position: item.position,
+    createdAt: nowIso(),
+    updatedAt: nowIso(),
+  }));
+  await batch.commit();
+  return getUserPackingList(userId);
+};
+
+export const getTripPackingList = async (userId: string, tripId: string): Promise<{ items: TripPackingList[]; travelers: PackingListTraveler[] }> => {
+  const access = await ensureUserCanReadTrip(tripId, userId);
+  if (!access) throw new Error('Not authorized to view this trip');
+  await ensureTripPackingList(tripId);
+  const members = await listGroupMembers(access.groupId, userId);
+  const travelers = members
+    .filter((member) => !member.removedAt)
+    .map((member) => ({
+      id: member.id,
+      userId: member.userId ?? null,
+      name: [member.firstName, member.lastName].filter(Boolean).join(' ') || member.guestName || member.email || 'Traveler',
+      email: member.email ?? null,
+    }));
+  const [itemSnap, checkSnap] = await Promise.all([
+    tripPackingCollection(tripId).orderBy('position').get(),
+    tripPackingChecksCollection(tripId).where('packed', '==', true).get(),
+  ]);
+  const packedBy = new Map<string, string[]>();
+  checkSnap.docs.forEach((doc) => {
+    const data = doc.data() as any;
+    const itemId = String(data.itemId ?? '');
+    const travelerId = String(data.travelerId ?? '');
+    if (!itemId || !travelerId) return;
+    packedBy.set(itemId, [...(packedBy.get(itemId) ?? []), travelerId]);
+  });
+  const items = itemSnap.docs.map((doc, index) => {
+    const data = doc.data() as any;
+    return {
+      id: doc.id,
+      category: data.category ?? '',
+      label: data.label ?? '',
+      position: Number(data.position ?? index),
+      createdAt: data.createdAt ?? null,
+      updatedAt: data.updatedAt ?? null,
+      packedBy: packedBy.get(doc.id) ?? [],
+    };
+  });
+  return { items, travelers };
+};
+
+export const replaceTripPackingList = async (userId: string, tripId: string, itemsInput: Array<{ id?: string; category?: unknown; label?: unknown }>): Promise<{ items: TripPackingList[]; travelers: PackingListTraveler[] }> => {
+  const access = await ensureUserCanReadTrip(tripId, userId);
+  if (!access) throw new Error('Not authorized to edit this trip');
+  const items = sanitizePackingItems(itemsInput);
+  if (!items.length) throw new Error('At least one packing item is required');
+  const existingItems = await tripPackingCollection(tripId).get();
+  const checks = await tripPackingChecksCollection(tripId).get();
+  const batch = getDb().batch();
+  existingItems.docs.forEach((doc) => batch.delete(doc.ref));
+  checks.docs.forEach((doc) => batch.delete(doc.ref));
+  items.forEach((item) => batch.set(tripPackingCollection(tripId).doc(), {
+    category: item.category,
+    label: item.label,
+    position: item.position,
+    createdAt: nowIso(),
+    updatedAt: nowIso(),
+  }));
+  await batch.commit();
+  return getTripPackingList(userId, tripId);
+};
+
+export const setTripPackingItemPacked = async (userId: string, tripId: string, itemId: string, travelerId: string, packed: boolean): Promise<void> => {
+  const access = await ensureUserCanReadTrip(tripId, userId);
+  if (!access) throw new Error('Not authorized to edit this trip');
+  const [item, member] = await Promise.all([
+    tripPackingCollection(tripId).doc(itemId).get(),
+    getDb().collection('group_members').doc(travelerId).get(),
+  ]);
+  if (!item.exists || !member.exists || (member.data() as any).groupId !== access.groupId || (member.data() as any).removedAt) {
+    throw new Error('Packing item or traveler not found');
+  }
+  const ref = tripPackingChecksCollection(tripId).doc(`${itemId}_${travelerId}`);
+  if (packed) {
+    await ref.set({ itemId, travelerId, packed: true, updatedAt: nowIso() }, { merge: true });
+  } else {
+    await ref.delete();
+  }
 };
 
 // Users
@@ -1966,6 +2239,7 @@ export const createTrip = async (
   };
   await db.collection('trips').doc(id).set(payload);
   await rebuildTripAccessForTrip(id);
+  await ensureTripPackingList(id);
   const activeUserIds = await listActiveGroupUserIds(groupId);
   await Promise.all(activeUserIds.map((memberUserId) => incrementAdminUserTripCount(memberUserId, 1, payload.createdAt)));
   return { id, ...payload } as any;
@@ -2380,6 +2654,8 @@ export const acceptGroupInvite = async (inviteId: string, userId: string, email?
   if (tripCount > 0) {
     await incrementAdminUserTripCount(userId, tripCount);
   }
+  const trips = await db.collection('trips').where('groupId', '==', data.groupId).get();
+  await Promise.all(trips.docs.map((trip) => mergeUserPackingListIntoTrip(trip.id, userId)));
 };
 
 export const rejectGroupInvite = async (inviteId: string, userId: string, email?: string): Promise<void> => {
@@ -2772,6 +3048,9 @@ export const acceptTripShareInvite = async (
     { merge: true }
   );
   await rebuildTripAccessForTrip(tripId);
+  if (role === 'member') {
+    await mergeUserPackingListIntoTrip(tripId, userId);
+  }
   return { tripId, role };
 };
 
@@ -2942,6 +3221,9 @@ export const acceptTripShareInviteById = async (
     { merge: true }
   );
   await rebuildTripAccessForTrip(tripId);
+  if (role === 'member') {
+    await mergeUserPackingListIntoTrip(tripId, userId);
+  }
   return { tripId, role };
 };
 

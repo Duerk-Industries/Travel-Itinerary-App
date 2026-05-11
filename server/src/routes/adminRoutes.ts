@@ -7,6 +7,7 @@ import {
   getUserRole, setUserRole, setUserTier, getCurrentUserTier,
   listAuditLog,
   adminSearchUsers, adminGetUser, adminGetUserData,
+  getUniversalPackingList, replaceUniversalPackingList,
 } from '../db';
 import { TokenPayload } from '../auth';
 import { logError } from '../logger';
@@ -116,6 +117,31 @@ router.patch('/features/:key/flag', async (req, res) => {
     res.json({ key, enabled, previousEnabled, auditId: audit.id });
   } catch (err) {
     res.status(500).json({ error: 'Failed to update feature flag' });
+  }
+});
+
+router.get('/packing-list-defaults', async (_req, res) => {
+  try {
+    const items = await getUniversalPackingList();
+    res.json({ items });
+  } catch (err) {
+    logError('[admin] failed to list packing defaults', err);
+    res.status(500).json({ error: 'Failed to list packing defaults' });
+  }
+});
+
+router.put('/packing-list-defaults', async (req, res) => {
+  try {
+    const items = await replaceUniversalPackingList(Array.isArray(req.body?.items) ? req.body.items : []);
+    await writeAuditLog({
+      actorUserId: getActorId(req),
+      action: 'PACKING_DEFAULTS_UPDATED',
+      afterState: { packingListDefaultsCount: items.length },
+      reason: typeof req.body?.reason === 'string' && req.body.reason.trim() ? req.body.reason.trim() : 'Updated universal packing list defaults',
+    });
+    res.json({ items });
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
   }
 });
 

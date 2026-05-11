@@ -112,6 +112,20 @@ export const getTripCovering = async (...args: Parameters<ReturnType<typeof adap
   adapter().getTripCovering(...args);
 export const updateTripCovering = async (...args: Parameters<ReturnType<typeof adapter>['updateTripCovering']>) =>
   adapter().updateTripCovering(...args);
+export const getTripPackingList = async (...args: Parameters<ReturnType<typeof adapter>['getTripPackingList']>) =>
+  adapter().getTripPackingList(...args);
+export const replaceTripPackingList = async (...args: Parameters<ReturnType<typeof adapter>['replaceTripPackingList']>) =>
+  adapter().replaceTripPackingList(...args);
+export const setTripPackingItemPacked = async (...args: Parameters<ReturnType<typeof adapter>['setTripPackingItemPacked']>) =>
+  adapter().setTripPackingItemPacked(...args);
+export const getUserPackingList = async (...args: Parameters<ReturnType<typeof adapter>['getUserPackingList']>) =>
+  adapter().getUserPackingList(...args);
+export const replaceUserPackingList = async (...args: Parameters<ReturnType<typeof adapter>['replaceUserPackingList']>) =>
+  adapter().replaceUserPackingList(...args);
+export const getUniversalPackingList = async (...args: Parameters<ReturnType<typeof adapter>['getUniversalPackingList']>) =>
+  adapter().getUniversalPackingList(...args);
+export const replaceUniversalPackingList = async (...args: Parameters<ReturnType<typeof adapter>['replaceUniversalPackingList']>) =>
+  adapter().replaceUniversalPackingList(...args);
 export const getFlightForUser = async (...args: Parameters<ReturnType<typeof adapter>['getFlightForUser']>) =>
   adapter().getFlightForUser(...args);
 export const listFlights = async (...args: Parameters<ReturnType<typeof adapter>['listFlights']>): Promise<Flight[]> =>
