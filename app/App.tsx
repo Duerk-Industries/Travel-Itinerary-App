@@ -4229,6 +4229,25 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     fontWeight: theme.typography.weightBold,
     lineHeight: 18,
   },
+  checklistCheckbox: {
+    width: 16,
+    height: 16,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: theme.mode === 'dark' ? '#FFFFFF' : theme.colors.text,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  checklistCheckboxChecked: {
+    backgroundColor: theme.mode === 'dark' ? '#FFFFFF' : theme.colors.text,
+  },
+  checklistCheckboxMark: {
+    color: theme.mode === 'dark' ? theme.colors.surface : '#FFFFFF',
+    fontSize: 12,
+    fontWeight: theme.typography.weightBold,
+    lineHeight: 14,
+  },
   lodgingImage: {
     width: 80,
     height: 80,

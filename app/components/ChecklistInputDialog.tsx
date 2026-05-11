@@ -65,7 +65,7 @@ const ChecklistInputDialog: React.FC<ChecklistInputDialogProps> = ({
       <Pressable style={styles.overlay} onPress={handleCancel} testID="checklist-dialog-overlay">
         <Pressable
           style={styles.dialog}
-          onPress={(e) => e.stopPropagation()}
+          onPress={(e: { stopPropagation: () => void }) => e.stopPropagation()}
           accessibilityRole="dialog"
           accessibilityLabel="Add a checklist"
           testID="checklist-dialog"
@@ -88,7 +88,7 @@ const ChecklistInputDialog: React.FC<ChecklistInputDialogProps> = ({
                   testID={`checklist-dialog-item-${idx}`}
                   style={[styles.input, { flex: 1 }]}
                   value={value}
-                  onChangeText={(v) => updateItem(idx, v)}
+                  onChangeText={(v: string) => updateItem(idx, v)}
                   placeholder={`Item ${idx + 1}`}
                 />
                 <Pressable
@@ -105,7 +105,7 @@ const ChecklistInputDialog: React.FC<ChecklistInputDialogProps> = ({
           <Pressable
             testID="checklist-dialog-add-item"
             onPress={addItem}
-            style={({ pressed }) => [styles.addBtn, pressed && styles.addBtnPressed]}
+            style={({ pressed }: { pressed: boolean }) => [styles.addBtn, pressed && styles.addBtnPressed]}
           >
             <Text style={styles.addBtnText}>+ Add another item</Text>
           </Pressable>

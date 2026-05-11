@@ -385,6 +385,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const [addPopoverOpen, setAddPopoverOpen] = useState(false);
   const [activeAddDialog, setActiveAddDialog] = useState<AddItemKind | null>(null);
   const [addPopoverDay, setAddPopoverDay] = useState<number | null>(null);
+  const [isEditingDayItems, setIsEditingDayItems] = useState(false);
   const [descriptionDraft, setDescriptionDraft] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [dateDraft, setDateDraft] = useState({
@@ -497,7 +498,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   useEffect(() => {
     setSelectedDay(null);
+    setIsEditingDayItems(false);
   }, [trip?.id]);
+
+  useEffect(() => {
+    setIsEditingDayItems(false);
+  }, [selectedDay]);
 
   useEffect(() => {
     if (!selectedDay) {
@@ -682,6 +688,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         time: input.time ?? null,
         activity: input.name,
         kind: 'place',
+        noteBody: input.notes ?? null,
       });
       if (ok) closeAllAddDialogs();
     },
@@ -1888,7 +1895,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   const buildDaySummary = (info?: { flights: Flight[]; lodgings: Lodging[]; tours: Tour[]; rentals: CarRental[]; details: ItineraryDetail[] }) => {
     if (!info) return 'Free day';
-    if (info.details.length) return info.details[0].activity;
+    const activityDetails = info.details.filter((d) => !d.kind || d.kind === 'activity');
+    if (activityDetails.length) return activityDetails[0].activity;
     if (info.tours.length) return info.tours[0].name || 'Activity day';
     if (info.flights.length) return 'Travel day';
     if (info.lodgings.length) return `Stay at ${info.lodgings[0].name || 'lodging'}`;
@@ -1898,8 +1906,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   const buildDayNarrative = (info?: { details: ItineraryDetail[]; flights: Flight[]; tours: Tour[]; lodgings: Lodging[]; rentals: CarRental[] }) => {
     if (!info) return ['No itinerary details yet.'];
-    if (info.details.length) {
-      return info.details.map((d) => (d.time ? `${d.time} · ${d.activity}` : d.activity));
+    const activityDetails = info.details.filter((d) => !d.kind || d.kind === 'activity');
+    if (activityDetails.length) {
+      return activityDetails.map((d) => (d.time ? `${d.time} · ${d.activity}` : d.activity));
     }
     if (info.flights.length) {
       return info.flights.map((f) => {
@@ -2225,7 +2234,18 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
               {/* Phase 3: per-day itinerary items (place / note / checklist / custom activity). */}
               <View style={styles.dayInfoCard} testID="day-details-itinerary-items">
-                <Text style={styles.sectionTitle}>Notes & checklists</Text>
+                <View style={[styles.sectionHeaderRow, { marginBottom: 0 }]}>
+                  <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>Locations, notes & checklists</Text>
+                  <TouchableOpacity
+                    testID={isEditingDayItems ? 'day-details-save-items-button' : 'day-details-edit-items-button'}
+                    accessibilityRole="button"
+                    accessibilityLabel={isEditingDayItems ? 'Save section edits' : 'Edit section'}
+                    style={[styles.dayInfoButton, { marginLeft: 'auto', paddingVertical: 6 }]}
+                    onPress={() => setIsEditingDayItems((prev) => !prev)}
+                  >
+                    <Text style={styles.dayInfoButtonText}>{isEditingDayItems ? 'Save' : 'Edit'}</Text>
+                  </TouchableOpacity>
+                </View>
                 {(activeDayInfo.details ?? []).length === 0 ? (
                   <Text style={styles.helperText}>No items yet for this day.</Text>
                 ) : (
@@ -2235,7 +2255,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                       <View key={d.id} style={[styles.dayInfoRow, { alignItems: 'flex-start', gap: 8 }]}>
                         <View style={{ flex: 1, gap: 4 }}>
                           {d.kind === 'place' ? (
-                            <Text style={styles.dayInfoRoute}>{`📍 ${d.activity}`}</Text>
+                            <View>
+                              <Text style={styles.dayInfoRoute}>{`📍 ${d.activity}`}</Text>
+                              {d.noteBody ? (
+                                <Text style={[styles.helperText, { fontStyle: 'italic' }]}>{d.noteBody}</Text>
+                              ) : null}
+                            </View>
                           ) : d.kind === 'note' ? (
                             <View>
                               <Text style={styles.dayInfoRoute}>{`📝 ${d.activity}`}</Text>
@@ -2257,7 +2282,14 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                                     onPress={() => toggleChecklistItem(d.id, it)}
                                     style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: 6 }}
                                   >
-                                    <Text style={{ fontSize: 14 }}>{checked ? '☑' : '☐'}</Text>
+                                    <View
+                                      style={[
+                                        styles.checklistCheckbox,
+                                        checked && styles.checklistCheckboxChecked,
+                                      ]}
+                                    >
+                                      {checked ? <Text style={styles.checklistCheckboxMark}>✓</Text> : null}
+                                    </View>
                                     <Text
                                       style={[
                                         styles.helperText,
@@ -2285,15 +2317,17 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                             />
                           </View>
                         ) : null}
-                        <TouchableOpacity
-                          testID={`day-details-delete-${d.id}`}
-                          accessibilityRole="button"
-                          accessibilityLabel="Delete item"
-                          onPress={() => deleteDetail(d.id)}
-                          style={styles.detailDeleteButton}
-                        >
-                          <Text style={styles.detailDeleteButtonText}>×</Text>
-                        </TouchableOpacity>
+                        {isEditingDayItems ? (
+                          <TouchableOpacity
+                            testID={`day-details-delete-${d.id}`}
+                            accessibilityRole="button"
+                            accessibilityLabel="Delete item"
+                            onPress={() => deleteDetail(d.id)}
+                            style={styles.detailDeleteButton}
+                          >
+                            <Text style={styles.detailDeleteButtonText}>×</Text>
+                          </TouchableOpacity>
+                        ) : null}
                       </View>
                     );
                   })

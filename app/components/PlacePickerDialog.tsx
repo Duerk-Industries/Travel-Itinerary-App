@@ -5,6 +5,7 @@ export type PlacePickerSubmit = {
   day: number;
   name: string;
   time?: string;
+  notes?: string;
 };
 
 export type PlacePickerDialogProps = {
@@ -17,6 +18,7 @@ export type PlacePickerDialogProps = {
 const PlacePickerDialog: React.FC<PlacePickerDialogProps> = ({ visible, defaultDay, onSubmit, onCancel }) => {
   const [name, setName] = useState('');
   const [time, setTime] = useState('');
+  const [notes, setNotes] = useState('');
   const [error, setError] = useState('');
 
   const handleSubmit = () => {
@@ -26,15 +28,22 @@ const PlacePickerDialog: React.FC<PlacePickerDialogProps> = ({ visible, defaultD
       return;
     }
     const dayNum = defaultDay != null && Number.isFinite(defaultDay) && defaultDay >= 1 ? defaultDay : 1;
-    onSubmit({ day: Math.round(dayNum), name: trimmedName, time: time.trim() || undefined });
+    onSubmit({
+      day: Math.round(dayNum),
+      name: trimmedName,
+      time: time.trim() || undefined,
+      notes: notes.trim() || undefined,
+    });
     setName('');
     setTime('');
+    setNotes('');
     setError('');
   };
 
   const handleCancel = () => {
     setName('');
     setTime('');
+    setNotes('');
     setError('');
     onCancel();
   };
@@ -44,7 +53,7 @@ const PlacePickerDialog: React.FC<PlacePickerDialogProps> = ({ visible, defaultD
       <Pressable style={styles.overlay} onPress={handleCancel} testID="place-dialog-overlay">
         <Pressable
           style={styles.dialog}
-          onPress={(e) => e.stopPropagation()}
+          onPress={(e: { stopPropagation: () => void }) => e.stopPropagation()}
           accessibilityRole="dialog"
           accessibilityLabel="Add a place"
           testID="place-dialog"
@@ -66,6 +75,16 @@ const PlacePickerDialog: React.FC<PlacePickerDialogProps> = ({ visible, defaultD
             value={time}
             placeholder="e.g. 09:00"
             onChangeText={setTime}
+          />
+          <Text style={styles.label}>Notes (optional)</Text>
+          <TextInput
+            testID="place-dialog-notes"
+            style={[styles.input, styles.textarea]}
+            value={notes}
+            placeholder="Add details for this location"
+            onChangeText={setNotes}
+            multiline
+            numberOfLines={4}
           />
           {error ? <Text style={styles.error}>{error}</Text> : null}
           <View style={styles.actions}>
@@ -91,6 +110,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: '#d1d5db', borderRadius: 6, paddingHorizontal: 10, paddingVertical: 8,
     fontSize: 14, color: '#111827', backgroundColor: '#fff',
   },
+  textarea: { minHeight: 88, textAlignVertical: 'top' },
   error: { color: '#dc2626', fontSize: 12, marginTop: 4 },
   actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 12 },
   btnGhost: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 6 },

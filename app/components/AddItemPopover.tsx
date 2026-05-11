@@ -27,7 +27,7 @@ const AddItemPopover: React.FC<AddItemPopoverProps> = ({ visible, onSelect, onCl
     <Pressable style={styles.overlay} onPress={onClose} testID="add-item-popover-overlay">
       <Pressable
         style={styles.menu}
-        onPress={(e) => e.stopPropagation()}
+        onPress={(e: { stopPropagation: () => void }) => e.stopPropagation()}
         accessibilityRole="menu"
         testID="add-item-popover"
       >
@@ -39,7 +39,7 @@ const AddItemPopover: React.FC<AddItemPopoverProps> = ({ visible, onSelect, onCl
             accessibilityRole="menuitem"
             accessibilityLabel={opt.label}
             onPress={() => onSelect(opt.kind)}
-            style={({ pressed }) => [styles.option, pressed && styles.optionPressed]}
+            style={({ pressed }: { pressed: boolean }) => [styles.option, pressed && styles.optionPressed]}
           >
             <Text style={styles.optionIcon}>{opt.icon}</Text>
             <View style={styles.optionTextWrap}>
@@ -50,7 +50,7 @@ const AddItemPopover: React.FC<AddItemPopoverProps> = ({ visible, onSelect, onCl
         ))}
         <Pressable
           testID="add-item-option-cancel"
-          style={({ pressed }) => [styles.cancel, pressed && styles.cancelPressed]}
+          style={({ pressed }: { pressed: boolean }) => [styles.cancel, pressed && styles.cancelPressed]}
           onPress={onClose}
         >
           <Text style={styles.cancelText}>Cancel</Text>
