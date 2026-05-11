@@ -131,6 +131,9 @@ describe('HomeTab', () => {
 
     fireEvent.press(getByTestId('home-nav-flights'));
     expect(onNavigate).toHaveBeenCalledWith('flights');
+
+    fireEvent.press(getByTestId('home-nav-packing'));
+    expect(onNavigate).toHaveBeenCalledWith('packing');
   });
 
   test('hides restricted pages for followed trips', () => {
@@ -154,6 +157,7 @@ describe('HomeTab', () => {
     expect(getByTestId('home-nav-overview')).toBeTruthy();
     expect(getByTestId('home-nav-flights')).toBeTruthy();
     expect(getByTestId('home-nav-lodging')).toBeTruthy();
+    expect(getByTestId('home-nav-packing')).toBeTruthy();
     expect(getByTestId('home-nav-tours')).toBeTruthy();
     expect(getByTestId('home-nav-car')).toBeTruthy();
     expect(getByTestId('home-nav-cost')).toBeTruthy();
@@ -187,6 +191,7 @@ describe('HomeTab', () => {
 
     expect(getByTestId('home-nav-overview')).toBeTruthy();
     expect(getByTestId('home-nav-flights')).toBeTruthy();
+    expect(getByTestId('home-nav-packing')).toBeTruthy();
     expect(getByTestId('home-create-trip-button')).toBeTruthy();
     expect(getByTestId('home-follow-trip-button')).toBeTruthy();
     expect(queryByTestId('home-nav-ledger')).toBeNull();

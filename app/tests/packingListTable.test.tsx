@@ -75,6 +75,7 @@ describe('PackingListTable', () => {
     expect(await findByText('Passport')).toBeTruthy();
     fireEvent.press(getByText('Edit'));
     fireEvent.press(getByTestId('user-packing-add-item'));
+    expect(getByTestId(/^user-packing-item-draft-/)).toBeTruthy();
     fireEvent.changeText(getByTestId(/^user-packing-item-draft-/), 'Phone charger');
     fireEvent.press(getByText('Save'));
 
@@ -87,5 +88,39 @@ describe('PackingListTable', () => {
         })
       );
     });
+  });
+
+  test('prints a trip packing list from the table', async () => {
+    jest.spyOn(global, 'fetch' as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        travelers: [{ id: 'traveler-1', name: 'Alex' }],
+        items: [{ id: 'item-1', category: 'Documents', label: 'Passport', position: 0, packedBy: ['traveler-1'] }],
+      }),
+    } as any);
+    const documentMock = { open: jest.fn(), write: jest.fn(), close: jest.fn() };
+    const printMock = jest.fn();
+    (globalThis as any).open = jest.fn(() => ({ document: documentMock, focus: jest.fn(), print: printMock }));
+
+    const { findByText, getByTestId } = render(
+      <PackingListTable
+        backendUrl="http://localhost"
+        headers={{ Authorization: 'Bearer token' }}
+        tripId="trip-1"
+        variant="trip"
+        title="Trip packing list"
+        allowPrint
+      />
+    );
+
+    expect(await findByText('Passport')).toBeTruthy();
+    fireEvent.press(getByTestId('trip-packing-print'));
+
+    expect(documentMock.write).toHaveBeenCalledWith(expect.stringContaining('Trip packing list'));
+    expect(documentMock.write).toHaveBeenCalledWith(expect.stringContaining('Passport'));
+    expect(documentMock.write).toHaveBeenCalledWith(expect.stringContaining('@page { size: letter landscape; margin: 0.4in; }'));
+    expect(documentMock.write).toHaveBeenCalledWith(expect.stringContaining('border: 1px solid #111827'));
+    expect(printMock).toHaveBeenCalled();
+    delete (globalThis as any).open;
   });
 });

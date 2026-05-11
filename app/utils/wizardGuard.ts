@@ -3,6 +3,7 @@ export type PageKey =
   | 'overview'
   | 'flights'
   | 'lodging'
+  | 'packing'
   | 'car'
   | 'tours'
   | 'expenses'

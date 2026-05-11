@@ -22,6 +22,8 @@ type Props = {
   tripId?: string | null;
   variant: 'trip' | 'user' | 'admin';
   title?: string;
+  allowPrint?: boolean;
+  printTitle?: string;
 };
 
 const endpointFor = (variant: Props['variant'], backendUrl: string, tripId?: string | null) => {
@@ -32,18 +34,83 @@ const endpointFor = (variant: Props['variant'], backendUrl: string, tripId?: str
 
 const createDraftItem = (position: number): PackingItem => ({
   id: `draft-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-  category: 'Miscellaneous',
+  category: 'New items',
   label: '',
   position,
   packedBy: [],
 });
 
-const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, variant, title }) => {
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+export const buildPrintablePackingListHtml = (
+  title: string,
+  items: PackingItem[],
+  travelers: Traveler[]
+) => {
+  const groups: Array<{ category: string; items: PackingItem[] }> = [];
+  for (const item of items) {
+    const last = groups[groups.length - 1];
+    if (last?.category === item.category) last.items.push(item);
+    else groups.push({ category: item.category, items: [item] });
+  }
+  const travelerHeaders = travelers.map((traveler) => `<th>${escapeHtml(traveler.name)}</th>`).join('');
+  const rows = groups
+    .map((group) => {
+      const categoryRow = `<tr class="category"><td colspan="${Math.max(1, travelers.length + 1)}">${escapeHtml(group.category)}</td></tr>`;
+      const itemRows = group.items
+        .map((item) => {
+          const checks = travelers
+            .map((traveler) => `<td class="check">${item.packedBy?.includes(traveler.id) ? '&#10003;' : ''}</td>`)
+            .join('');
+          return `<tr><td>${escapeHtml(item.label)}</td>${checks}</tr>`;
+        })
+        .join('');
+      return `${categoryRow}${itemRows}`;
+    })
+    .join('');
+  return `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>${escapeHtml(title)}</title>
+  <style>
+    @page { size: letter landscape; margin: 0.4in; }
+    * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body { font-family: Arial, sans-serif; color: #111827; margin: 0; font-size: 10px; }
+    h1 { font-size: 16px; margin: 0 0 10px; }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; border: 1.5px solid #111827; }
+    th, td { border: 1px solid #111827; padding: 4px 5px; text-align: left; vertical-align: middle; line-height: 1.2; }
+    th { background: #F3F4F6; font-size: 8px; text-transform: uppercase; overflow-wrap: anywhere; }
+    th:first-child, td:first-child { width: 34%; }
+    .category td { background: #E5E7EB; font-weight: 700; padding: 5px; }
+    .check { text-align: center; font-size: 12px; font-weight: 700; }
+    tr { break-inside: avoid; page-break-inside: avoid; }
+    @media screen { body { padding: 24px; } }
+  </style>
+</head>
+<body>
+  <h1>${escapeHtml(title)}</h1>
+  <table>
+    <thead><tr><th>Item</th>${travelerHeaders}</tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+</body>
+</html>`;
+};
+
+const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, variant, title, allowPrint = false, printTitle }) => {
   const colorScheme = useColorScheme();
   const theme = getAppTheme('auto', colorScheme);
   const [items, setItems] = useState<PackingItem[]>([]);
   const [travelers, setTravelers] = useState<Traveler[]>([]);
   const [draftItems, setDraftItems] = useState<PackingItem[]>([]);
+  const [pendingFocusId, setPendingFocusId] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -94,6 +161,12 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
     setDraftItems((prev) => prev.map((item) => (item.id === id ? { ...item, ...patch } : item)));
   };
 
+  const addDraftItem = () => {
+    const item = createDraftItem(0);
+    setPendingFocusId(item.id);
+    setDraftItems((prev) => [item, ...prev].map((entry, pos) => ({ ...entry, position: pos })));
+  };
+
   const moveDraft = (id: string, direction: -1 | 1) => {
     setDraftItems((prev) => {
       const index = prev.findIndex((item) => item.id === id);
@@ -129,6 +202,29 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
     } finally {
       setSaving(false);
     }
+  };
+
+  const printList = () => {
+    const printableTitle = printTitle ?? title ?? 'Packing list';
+    const html = buildPrintablePackingListHtml(printableTitle, items, travelers);
+    const webWindow = globalThis as typeof globalThis & {
+      open?: (url?: string, target?: string) => { document?: { open: () => void; write: (html: string) => void; close: () => void }; focus?: () => void; print?: () => void } | null;
+      print?: () => void;
+    };
+    const printWindow = webWindow.open?.('', '_blank');
+    if (printWindow?.document) {
+      printWindow.document.open();
+      printWindow.document.write(html);
+      printWindow.document.close();
+      printWindow.focus?.();
+      printWindow.print?.();
+      return;
+    }
+    if (typeof webWindow.print === 'function') {
+      webWindow.print();
+      return;
+    }
+    setError('Printing is available from a web browser.');
   };
 
   const togglePacked = async (item: PackingItem, traveler: Traveler) => {
@@ -174,9 +270,20 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
               </Pressable>
             </>
           ) : (
-            <Pressable style={[localStyles.button, { backgroundColor: theme.colors.surfaceMuted }]} onPress={() => { setDraftItems(items); setEditMode(true); }}>
-              <Text style={[localStyles.buttonText, { color: theme.colors.text }]}>Edit</Text>
-            </Pressable>
+            <>
+              {allowPrint && isTrip ? (
+                <Pressable
+                  style={[localStyles.button, { backgroundColor: theme.colors.surfaceMuted }]}
+                  onPress={printList}
+                  testID={`${variant}-packing-print`}
+                >
+                  <Text style={[localStyles.buttonText, { color: theme.colors.text }]}>Print</Text>
+                </Pressable>
+              ) : null}
+              <Pressable style={[localStyles.button, { backgroundColor: theme.colors.surfaceMuted }]} onPress={() => { setDraftItems(items); setEditMode(true); }}>
+                <Text style={[localStyles.buttonText, { color: theme.colors.text }]}>Edit</Text>
+              </Pressable>
+            </>
           )}
         </View>
       </View>
@@ -185,7 +292,7 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
       {editMode ? (
         <Pressable
           style={[localStyles.addButton, { borderColor: theme.colors.border }]}
-          onPress={() => setDraftItems((prev) => [...prev, createDraftItem(prev.length)])}
+          onPress={addDraftItem}
           testID={`${variant}-packing-add-item`}
         >
           <Text style={[localStyles.addButtonText, { color: theme.colors.link }]}>+ Add item</Text>
@@ -225,6 +332,10 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
                           onChangeText={(label: string) => updateDraft(item.id, { label })}
                           placeholder="Item"
                           placeholderTextColor={theme.colors.textMuted}
+                          autoFocus={item.id === pendingFocusId}
+                          onFocus={() => {
+                            if (item.id === pendingFocusId) setPendingFocusId(null);
+                          }}
                           testID={`${variant}-packing-item-${item.id}`}
                         />
                       </>

@@ -5,7 +5,6 @@ import { formatDateLong } from '../utils/formatDateLong';
 import { FollowedTrip } from './follow';
 import Skeleton from '../components/Skeleton';
 import { useImageSource } from '../utils/imageSource';
-import PackingListTable from '../components/PackingListTable';
 
 type Trip = {
   id: string;
@@ -145,6 +144,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
     { key: 'overview', label: 'Overview', icon: '🧭' },
     { key: 'flights', label: 'Transfers', icon: '✈️' },
     { key: 'lodging', label: 'Lodging', icon: '🏨' },
+    { key: 'packing', label: 'Packing', icon: '✓' },
     { key: 'tours', label: 'Activities', icon: '🎟️' },
     { key: 'expenses', label: 'Daily Expenses', icon: '🧾' },
     { key: 'car', label: 'Car Rentals', icon: '🚗' },
@@ -257,15 +257,6 @@ const HomeTab: React.FC<HomeTabProps> = ({
             </Pressable>
           ))}
         </View>
-        {activeTrip?.id ? (
-          <PackingListTable
-            backendUrl={backendUrl}
-            headers={headers}
-            tripId={activeTrip.id}
-            variant="trip"
-            title={`${activeTrip.name} packing list`}
-          />
-        ) : null}
       </ScrollView>
 
       {showTripPicker ? (

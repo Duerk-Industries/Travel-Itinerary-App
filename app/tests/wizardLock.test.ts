@@ -6,6 +6,7 @@ const pages: PageKey[] = [
   'overview',
   'flights',
   'lodging',
+  'packing',
   'car',
   'tours',
   'expenses',
@@ -53,7 +54,7 @@ describe('Trip wizard navigation lock', () => {
       expect(shouldAllowPageChange('home', page, { isFollowedTrip: true })).toBe(false);
       expect(shouldDisableTab('home', page, { isFollowedTrip: true })).toBe(true);
     });
-    ['overview', 'flights', 'lodging', 'car', 'tours', 'cost', 'account'].forEach((page) => {
+    ['overview', 'flights', 'lodging', 'packing', 'car', 'tours', 'cost', 'account'].forEach((page) => {
       expect(shouldAllowPageChange('home', page as PageKey, { isFollowedTrip: true })).toBe(true);
       expect(shouldDisableTab('home', page as PageKey, { isFollowedTrip: true })).toBe(false);
     });

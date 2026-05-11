@@ -71,6 +71,7 @@ import { useTripMembers } from './hooks/useTripMembers';
 import { useLayoutBreakpoints } from './hooks/useLayoutBreakpoints';
 import { useRetryableMutation } from './hooks/useRetryableMutation';
 import RetryableErrorBanner from './components/RetryableErrorBanner';
+import PackingListTable from './components/PackingListTable';
 import { requestJson } from './utils/apiClient';
 import { useGroupInvites } from './hooks/useGroupInvites';
 import { useFollowedTrips } from './hooks/useFollowedTrips';
@@ -144,6 +145,7 @@ type Page =
   | 'overview'
   | 'flights'
   | 'lodging'
+  | 'packing'
   | 'car'
   | 'tours'
   | 'expenses'
@@ -1805,6 +1807,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         case 'lodging':
           await Promise.all([fetchLodgings(authToken), fetchExpenses(authToken)]);
           break;
+        case 'packing':
+          await fetchTrips(authToken);
+          break;
         case 'car':
           await Promise.all([fetchCarRentals(authToken), fetchExpenses(authToken)]);
           break;
@@ -2030,6 +2035,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           sessionPage === 'overview' ||
           sessionPage === 'flights' ||
           sessionPage === 'lodging' ||
+          sessionPage === 'packing' ||
           sessionPage === 'trips' ||
           sessionPage === 'create-trip' ||
           sessionPage === 'trip-details' ||
@@ -2340,6 +2346,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       'overview',
       'flights',
       'lodging',
+      'packing',
       'car',
       'tours',
       'expenses',
@@ -2855,6 +2862,20 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               formatMemberName={formatMemberName}
               payerName={payerName}
               readOnly={isFollowingMode}
+            />
+          )
+        : null}
+
+      {activePage === 'packing'
+        ? renderSharedPageScroll(
+            <PackingListTable
+              backendUrl={backendUrl}
+              headers={headers}
+              tripId={(activeTripForHome ?? activeTrip)?.id ?? activeTripId}
+              variant="trip"
+              title={`${(activeTripForHome ?? activeTrip)?.name ?? 'Trip'} packing list`}
+              allowPrint
+              printTitle={`${(activeTripForHome ?? activeTrip)?.name ?? 'Trip'} packing list`}
             />
           )
         : null}
