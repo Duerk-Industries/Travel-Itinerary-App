@@ -290,23 +290,38 @@ const seedUniversalPackingDefaults = async (p: QueryRunner): Promise<void> => {
 const ensurePackingListForUserWithRunner = async (p: QueryRunner, userId: string): Promise<void> => {
   const existing = await p.query(`SELECT 1 FROM user_packing_list_items WHERE user_id = $1 LIMIT 1`, [userId]);
   if (existing.rowCount) return;
-  await p.query(
-    `INSERT INTO user_packing_list_items (id, user_id, category, label, position)
-     SELECT uuid_generate_v4(), $1, category, label, position
+  const defaults = await p.query<{ category: string; label: string; position: number }>(
+    `SELECT category, label, position
      FROM universal_packing_list_items
-     ORDER BY position, category, label`,
-    [userId]
+     ORDER BY position, category, label`
   );
+  for (const item of defaults.rows) {
+    await p.query(
+      `INSERT INTO user_packing_list_items (id, user_id, category, label, position)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (user_id, category, label) DO NOTHING`,
+      [randomUUID(), userId, item.category, item.label, Number(item.position ?? 0)]
+    );
+  }
 };
 
 const backfillUserPackingLists = async (p: QueryRunner): Promise<void> => {
-  const usersWithoutLists = await p.query<{ id: string }>(
-    `SELECT u.id
-     FROM users u
-     WHERE NOT EXISTS (
-       SELECT 1 FROM user_packing_list_items up WHERE up.user_id = u.id
-     )`
-  );
+  let usersWithoutLists;
+  try {
+    usersWithoutLists = await p.query<{ id: string }>(
+      `SELECT u.id
+       FROM users u
+       WHERE NOT EXISTS (
+         SELECT 1 FROM user_packing_list_items up WHERE up.user_id = u.id
+       )`
+    );
+  } catch (err) {
+    const message = String((err as Error)?.message ?? '');
+    if (/column "?u\.id"? does not exist|column "?id"? does not exist/i.test(message)) {
+      return;
+    }
+    throw err;
+  }
   for (const user of usersWithoutLists.rows) {
     await ensurePackingListForUserWithRunner(p, user.id);
   }

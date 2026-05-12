@@ -881,13 +881,42 @@ export const poolClient = (): any => {
 };
 
 const universalPackingCollection = () => getDb().collection('universal_packing_list_items');
-const userPackingCollection = (userId: string) => getDb().collection('user_packing_lists').doc(userId).collection('items');
-const tripPackingCollection = (tripId: string) => getDb().collection('trip_packing_lists').doc(tripId).collection('items');
-const tripPackingChecksCollection = (tripId: string) => getDb().collection('trip_packing_lists').doc(tripId).collection('checks');
+const nestedCollection = (root: string, docId: string, child: string) => {
+  const docRef = getDb().collection(root).doc(docId);
+  if (typeof (docRef as any).collection === 'function') {
+    return (docRef as any).collection(child);
+  }
+  return getDb().collection(`${root}/${docId}/${child}`);
+};
+const userPackingCollection = (userId: string) => nestedCollection('user_packing_lists', userId, 'items');
+const tripPackingCollection = (tripId: string) => nestedCollection('trip_packing_lists', tripId, 'items');
+const tripPackingChecksCollection = (tripId: string) => nestedCollection('trip_packing_lists', tripId, 'checks');
+type FirestoreDocLike = { id: string; ref?: any; data: () => any };
+type FirestoreSnapshotLike = { empty?: boolean; docs: FirestoreDocLike[] };
+const collectionSnapshot = async (collectionRef: any, limit?: number): Promise<FirestoreSnapshotLike> => {
+  if (limit && typeof collectionRef.limit === 'function') {
+    return collectionRef.limit(limit).get();
+  }
+  return collectionRef.get();
+};
+const collectionHasAny = async (collectionRef: any): Promise<boolean> => {
+  const snap = await collectionSnapshot(collectionRef, 1);
+  return !snap.empty && (!Array.isArray(snap.docs) || snap.docs.length > 0);
+};
+const orderedCollectionSnapshot = async (collectionRef: any, field: string): Promise<FirestoreSnapshotLike> => {
+  if (typeof collectionRef.orderBy === 'function') {
+    return collectionRef.orderBy(field).get();
+  }
+  const snap = await collectionRef.get();
+  if (!Array.isArray(snap.docs)) return snap;
+  return {
+    ...snap,
+    docs: [...snap.docs].sort((a, b) => Number((a.data() as any)?.[field] ?? 0) - Number((b.data() as any)?.[field] ?? 0)),
+  };
+};
 
 const seedUniversalPackingDefaults = async (): Promise<void> => {
-  const snap = await universalPackingCollection().limit(1).get();
-  if (!snap.empty) return;
+  if (await collectionHasAny(universalPackingCollection())) return;
   const batch = getDb().batch();
   DEFAULT_PACKING_LIST_ITEMS.forEach((item, index) => {
     const ref = universalPackingCollection().doc();
@@ -897,8 +926,7 @@ const seedUniversalPackingDefaults = async (): Promise<void> => {
 };
 
 const ensurePackingListForUser = async (userId: string): Promise<void> => {
-  const userItems = await userPackingCollection(userId).limit(1).get();
-  if (!userItems.empty) return;
+  if (await collectionHasAny(userPackingCollection(userId))) return;
   await seedUniversalPackingDefaults();
   const defaults = await getUniversalPackingList();
   const batch = getDb().batch();
@@ -922,11 +950,11 @@ const mergeUserPackingListIntoTrip = async (tripId: string, userId: string): Pro
     tripPackingCollection(tripId).get(),
     getUserPackingList(userId),
   ]);
-  const existing = new Set(existingSnap.docs.map((doc) => {
+  const existing = new Set(existingSnap.docs.map((doc: any) => {
     const data = doc.data() as any;
     return normalizePackingKey(data.category ?? '', data.label ?? '');
   }));
-  let nextPosition = existingSnap.docs.reduce((max, doc) => Math.max(max, Number((doc.data() as any).position ?? 0)), -1) + 1;
+  let nextPosition = existingSnap.docs.reduce((max: number, doc: any) => Math.max(max, Number((doc.data() as any).position ?? 0)), -1) + 1;
   const batch = getDb().batch();
   for (const item of userItems) {
     const key = normalizePackingKey(item.category, item.label);
@@ -947,8 +975,7 @@ const mergeUserPackingListIntoTrip = async (tripId: string, userId: string): Pro
 };
 
 const ensureTripPackingList = async (tripId: string): Promise<void> => {
-  const existing = await tripPackingCollection(tripId).limit(1).get();
-  if (!existing.empty) return;
+  if (await collectionHasAny(tripPackingCollection(tripId))) return;
   const trip = await getTripById(tripId);
   if (!trip) return;
   const members = await getDb().collection('group_members').where('groupId', '==', trip.groupId).where('removedAt', '==', null).get();
@@ -958,8 +985,7 @@ const ensureTripPackingList = async (tripId: string): Promise<void> => {
       await mergeUserPackingListIntoTrip(tripId, userId);
     }
   }
-  const added = await tripPackingCollection(tripId).limit(1).get();
-  if (!added.empty) return;
+  if (await collectionHasAny(tripPackingCollection(tripId))) return;
   const defaults = await getUniversalPackingList();
   const batch = getDb().batch();
   defaults.forEach((item, index) => {
@@ -976,7 +1002,7 @@ const ensureTripPackingList = async (tripId: string): Promise<void> => {
 
 export const getUniversalPackingList = async (): Promise<PackingListItem[]> => {
   await seedUniversalPackingDefaults();
-  const snap = await universalPackingCollection().orderBy('position').get();
+  const snap = await orderedCollectionSnapshot(universalPackingCollection(), 'position');
   return snap.docs.map((doc, index) => {
     const data = doc.data() as any;
     return {
@@ -996,7 +1022,7 @@ export const replaceUniversalPackingList = async (itemsInput: Array<{ id?: strin
   const db = getDb();
   const existing = await universalPackingCollection().get();
   let batch = db.batch();
-  existing.docs.forEach((doc) => batch.delete(doc.ref));
+  existing.docs.forEach((doc: any) => batch.delete(doc.ref));
   items.forEach((item) => batch.set(universalPackingCollection().doc(), {
     category: item.category,
     label: item.label,
@@ -1011,7 +1037,7 @@ export const replaceUniversalPackingList = async (itemsInput: Array<{ id?: strin
 
 export const getUserPackingList = async (userId: string): Promise<PackingListItem[]> => {
   await ensurePackingListForUser(userId);
-  const snap = await userPackingCollection(userId).orderBy('position').get();
+  const snap = await orderedCollectionSnapshot(userPackingCollection(userId), 'position');
   return snap.docs.map((doc, index) => {
     const data = doc.data() as any;
     return { id: doc.id, category: data.category ?? '', label: data.label ?? '', position: Number(data.position ?? index), createdAt: data.createdAt ?? null, updatedAt: data.updatedAt ?? null };
@@ -1024,7 +1050,7 @@ export const replaceUserPackingList = async (userId: string, itemsInput: Array<{
   const db = getDb();
   const existing = await userPackingCollection(userId).get();
   const batch = db.batch();
-  existing.docs.forEach((doc) => batch.delete(doc.ref));
+  existing.docs.forEach((doc: any) => batch.delete(doc.ref));
   items.forEach((item) => batch.set(userPackingCollection(userId).doc(), {
     category: item.category,
     label: item.label,
@@ -1048,13 +1074,13 @@ export const getTripPackingList = async (userId: string, tripId: string): Promis
       userId: member.userId ?? null,
       name: [member.firstName, member.lastName].filter(Boolean).join(' ') || member.guestName || member.email || 'Traveler',
       email: member.email ?? null,
-    }));
+  }));
   const [itemSnap, checkSnap] = await Promise.all([
-    tripPackingCollection(tripId).orderBy('position').get(),
+    orderedCollectionSnapshot(tripPackingCollection(tripId), 'position'),
     tripPackingChecksCollection(tripId).where('packed', '==', true).get(),
   ]);
   const packedBy = new Map<string, string[]>();
-  checkSnap.docs.forEach((doc) => {
+  checkSnap.docs.forEach((doc: any) => {
     const data = doc.data() as any;
     const itemId = String(data.itemId ?? '');
     const travelerId = String(data.travelerId ?? '');
@@ -1084,8 +1110,8 @@ export const replaceTripPackingList = async (userId: string, tripId: string, ite
   const existingItems = await tripPackingCollection(tripId).get();
   const checks = await tripPackingChecksCollection(tripId).get();
   const batch = getDb().batch();
-  existingItems.docs.forEach((doc) => batch.delete(doc.ref));
-  checks.docs.forEach((doc) => batch.delete(doc.ref));
+  existingItems.docs.forEach((doc: any) => batch.delete(doc.ref));
+  checks.docs.forEach((doc: any) => batch.delete(doc.ref));
   items.forEach((item) => batch.set(tripPackingCollection(tripId).doc(), {
     category: item.category,
     label: item.label,
@@ -1151,6 +1177,7 @@ export const ensureDefaultGroupForUser = async (userId: string, email: string): 
   await db.collection('group_members').doc(randomUUID()).set({
     groupId,
     userId,
+    email: normalizeEmail(email),
     addedBy: userId,
     createdAt: nowIso(),
     removedAt: null,
@@ -2634,6 +2661,7 @@ export const acceptGroupInvite = async (inviteId: string, userId: string, email?
     const docRef = memberSnap.docs[0].ref;
     await docRef.update({
       userId,
+      email: normalizeEmail(email ?? data.inviteeEmail ?? ''),
       inviteEmail: null,
       claimedAt: nowIso(),
       removedAt: null,
@@ -2642,6 +2670,7 @@ export const acceptGroupInvite = async (inviteId: string, userId: string, email?
     await db.collection('group_members').doc(randomUUID()).set({
       groupId: data.groupId,
       userId,
+      email: normalizeEmail(email ?? data.inviteeEmail ?? ''),
       addedBy: data.inviterId,
       claimedAt: nowIso(),
       createdAt: nowIso(),
@@ -6654,17 +6683,21 @@ export const listUserAuthoredItems = async (
   tripMessages: any[];
 }> => {
   const db = getDb();
-  const fetchCollection = async (name: string, field: string) => {
-    const snap = await db.collection(name).where(field, '==', userId).get();
-    return snap.docs.map((d: any) => ({ id: d.id, ...(d.data() as any) }));
+  const fetchCollection = async (name: string, fields: string[]) => {
+    const docsById = new Map<string, any>();
+    await Promise.all(fields.map(async (field) => {
+      const snap = await db.collection(name).where(field, '==', userId).get();
+      snap.docs.forEach((d: any) => docsById.set(d.id, { id: d.id, ...(d.data() as any) }));
+    }));
+    return Array.from(docsById.values());
   };
   const [flights, lodgings, tours, carRentals, expenses, tripMessages] = await Promise.all([
-    fetchCollection('flights', 'userId'),
-    fetchCollection('lodgings', 'userId'),
-    fetchCollection('tours', 'userId'),
-    fetchCollection('car_rentals', 'userId'),
-    fetchCollection('expenses', 'userId'),
-    fetchCollection('trip_messages', 'senderId'),
+    fetchCollection('flights', ['userId', 'user_id']),
+    fetchCollection('lodgings', ['userId', 'user_id']),
+    fetchCollection('tours', ['userId', 'user_id']),
+    fetchCollection('car_rentals', ['userId', 'user_id']),
+    fetchCollection('expenses', ['userId', 'user_id']),
+    fetchCollection('trip_messages', ['senderId', 'sender_id']),
   ]);
   return { flights, lodgings, tours, carRentals, expenses, tripMessages };
 };

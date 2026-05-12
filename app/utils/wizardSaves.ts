@@ -1,5 +1,6 @@
 import { TRANSFER_TYPES, buildFlightPayload, type Flight, type FlightEditDraft, type TransferType } from '../tabs/transfers';
 import { buildLodgingPayload, type Lodging, type LodgingDraft } from '../tabs/lodging';
+import { type CarRental, normalizeCarRentalFromApi } from '../tabs/carRentals';
 import { normalizeDateString } from './normalizeDateString';
 import { LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from './itineraryStatus';
 
@@ -16,6 +17,7 @@ export type WizardSaveResult = {
   ok: boolean;
   failures: string[];
   fatal?: string;
+  carRentals?: CarRental[];
 };
 
 const normalizeLookupKey = (value?: string | null): string => String(value ?? '').trim().toLowerCase();
@@ -239,6 +241,86 @@ export const saveWizardLodgings = async (params: {
     return { ok: failures.length === 0, failures };
   } catch {
     return { ok: false, failures: [], fatal: 'Trip created, but lodging could not be saved.' };
+  }
+};
+
+export const saveWizardCarRentals = async (params: {
+  backendUrl: string;
+  headers: Record<string, string>;
+  userToken: string | null;
+  groupId: string;
+  tripId: string;
+  wizardCarRentals: CarRental[];
+  wizardGroupMembers: WizardGroupMember[];
+}): Promise<WizardSaveResult> => {
+  const { backendUrl, headers, userToken, groupId, tripId, wizardCarRentals, wizardGroupMembers } = params;
+  if (!userToken || wizardCarRentals.length === 0) return { ok: true, failures: [], carRentals: [] };
+
+  try {
+    const res = await fetch(`${backendUrl}/api/groups/${groupId}/members`, {
+      headers: { Authorization: `Bearer ${userToken}` },
+    });
+    if (!res.ok) {
+      return { ok: false, failures: [], fatal: 'Trip created, but car rentals could not be saved.' };
+    }
+    const data = await res.json().catch(() => []);
+    const members = (Array.isArray(data) ? data : []).map((m: any) => ({
+      id: m.id,
+      email: m.email ?? m.userEmail ?? undefined,
+      guestName: m.guestName ?? m.guest_name ?? undefined,
+      firstName: m.firstName ?? m.first_name ?? undefined,
+      lastName: m.lastName ?? m.last_name ?? undefined,
+      status: m.status ?? undefined,
+    }));
+    const activeMembers = members.filter((m) => m.status !== 'removed');
+    const { memberByEmail, memberByGuest } = buildMemberLookups(members);
+    const wizardMembersById = new Map(wizardGroupMembers.map((m) => [m.id, m] as const));
+    const fallbackPayerId = activeMembers[0]?.id ?? members[0]?.id ?? null;
+    const fallbackTravelerIds = activeMembers.map((m) => m.id);
+    const failures: string[] = [];
+    const savedRentals: CarRental[] = [];
+
+    for (const rental of wizardCarRentals) {
+      const resolvedPaidBy = (Array.isArray(rental.paidBy) ? rental.paidBy : [])
+        .map((id) => resolveMemberId(wizardMembersById.get(String(id)), memberByEmail, memberByGuest))
+        .filter(Boolean) as string[];
+      const resolvedTravelerIds = (Array.isArray(rental.travelerIds) ? rental.travelerIds : [])
+        .map((id) => resolveMemberId(wizardMembersById.get(String(id)), memberByEmail, memberByGuest))
+        .filter(Boolean) as string[];
+      const paidBy = resolvedPaidBy.length ? resolvedPaidBy : fallbackPayerId ? [fallbackPayerId] : [];
+      const travelerIds = resolvedTravelerIds.length ? resolvedTravelerIds : paidBy.length ? paidBy : fallbackTravelerIds;
+
+      const saveRes = await fetch(`${backendUrl}/api/car-rentals`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...headers },
+        body: JSON.stringify({
+          status: normalizeItineraryStatus(rental.status, LEGACY_ITINERARY_STATUS),
+          tripId,
+          pickupLocation: rental.pickupLocation,
+          pickupDate: normalizeDateString(rental.pickupDate),
+          dropoffLocation: rental.dropoffLocation,
+          dropoffDate: normalizeDateString(rental.dropoffDate),
+          reference: rental.reference,
+          vendor: rental.vendor,
+          prepaid: rental.prepaid,
+          cost: Number(rental.cost) || 0,
+          model: rental.model,
+          notes: rental.notes,
+          paidBy,
+          travelerIds,
+        }),
+      });
+      const responseBody = await saveRes.json().catch(() => ({}));
+      if (!saveRes.ok) {
+        failures.push(responseBody.error || 'Failed to save car rental');
+        continue;
+      }
+      savedRentals.push(normalizeCarRentalFromApi(responseBody));
+    }
+
+    return { ok: failures.length === 0, failures, carRentals: savedRentals };
+  } catch {
+    return { ok: false, failures: [], fatal: 'Trip created, but car rentals could not be saved.' };
   }
 };
 

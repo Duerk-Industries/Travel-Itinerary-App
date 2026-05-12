@@ -57,7 +57,7 @@ describe('/api/itinerary/images', () => {
      });
   });
 
-  it('falls back to placeholder when service throws error', async () => {
+  it('falls back to placeholder when service returns no url', async () => {
     (imageService.getItineraryImage as jest.Mock).mockResolvedValue({
       url: '',
       cached: false,
@@ -67,7 +67,9 @@ describe('/api/itinerary/images', () => {
     
     const res = await request(app).get('/api/itinerary/images?location=fail').expect(200);
     
-    expect(res.body.url).toContain('images.unsplash.com/photo');
+    expect(res.body.url).toContain('data:image/svg+xml');
     expect(res.body.cached).toBe(false);
+    expect(res.body.provider).toBe('placeholder');
+    expect(res.body.fallbackUsed).toBe(true);
   });
 });

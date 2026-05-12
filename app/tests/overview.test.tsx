@@ -423,7 +423,7 @@ describe('Overview UI (nested itinerary)', () => {
     expect(await findByText(/Travelers: Bryan Duerk/i)).toBeTruthy();
   });
 
-  test('expands the overview range when events fall outside the saved trip dates', async () => {
+  test('keeps saved trip dates as the overview range when events fall outside them', async () => {
     const staleTripProps = {
       ...baseProps,
       trip: {
@@ -462,10 +462,10 @@ describe('Overview UI (nested itinerary)', () => {
     };
 
     const { findByTestId, findByText } = await renderOverview(<OverviewTab {...staleTripProps} />);
-    expect(await findByText(/Dates: .*November.*2025.*March.*2026/i)).toBeTruthy();
-    expect(await findByText('Trip length: 117 day(s)')).toBeTruthy();
+    expect(await findByText(/Dates: .*November.*2025.*November.*2025/i)).toBeTruthy();
+    expect(await findByText('Trip length: 8 day(s)')).toBeTruthy();
     expect(await findByTestId('overview-day-card-1')).toBeTruthy();
-    expect(await findByTestId('overview-day-card-117')).toBeTruthy();
+    expect(await findByTestId('overview-day-card-8')).toBeTruthy();
   });
 
   test('shows weather badges on overview cards when the trip starts within 7 days', async () => {
