@@ -26,7 +26,7 @@ import { type MapApp } from '../utils/mapLinks';
 import {
   formatMonthYear,
 } from '../utils/tripDates';
-import { dedupeMembersByIdentity, formatMemberDisplayName } from '../utils/memberDisplay';
+import { buildMemberDisplayLookup, dedupeMembersByIdentity, formatMemberDisplayName, formatTravelerListDisplay } from '../utils/memberDisplay';
 import { normalizeDateString } from '../utils/normalizeDateString';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import {
@@ -851,28 +851,23 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   );
 
   const memberNames = useMemo(() => {
-    const map = new Map<string, string>();
-    groupMembers.forEach((m) => map.set(m.id, formatMemberName(m)));
-    return map;
-  }, [groupMembers, formatMemberName]);
-
-  const travelerNames = useMemo(() => {
-    const map = new Map<string, string>();
-    groupMembers.forEach((member) => {
-      map.set(member.id, formatMemberName(member));
-    });
-    return map;
+    return buildMemberDisplayLookup(groupMembers);
   }, [groupMembers]);
 
-  const buildPassengerName = (ids: string[]) => ids.map((id) => memberNames.get(id)).filter(Boolean).join(', ');
+  const travelerNames = useMemo(() => {
+    return buildMemberDisplayLookup(groupMembers);
+  }, [groupMembers]);
+
+  const buildPassengerName = (ids: string[]) =>
+    ids.map((id) => memberNames.get(id) ?? memberNames.get(String(id).toLowerCase())).filter(Boolean).join(', ');
 
   const userMembers = useMemo(
     () => groupMembers.filter((m) => !m.guestName && m.status !== 'removed'),
     [groupMembers]
   );
 
-  const payerName = (id: string) => memberNames.get(id) ?? 'Unknown';
-  const travelerName = (id: string) => travelerNames.get(id) ?? payerName(id);
+  const payerName = (id: string) => memberNames.get(id) ?? memberNames.get(String(id).toLowerCase()) ?? 'Unknown';
+  const travelerName = (id: string) => travelerNames.get(id) ?? travelerNames.get(String(id).toLowerCase()) ?? payerName(id);
 
   const overviewTravelerIds = useMemo(
     () => groupMembers.map((m) => m.id).filter(Boolean),
@@ -1819,7 +1814,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   const formatTravelerNames = (ids: string[]) =>
     ids
-      .map((id) => memberNames.get(id))
+      .map((id) => memberNames.get(id) ?? memberNames.get(String(id).toLowerCase()))
       .filter(Boolean)
       .join(', ');
 
@@ -2035,8 +2030,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                     const arr = flight.arrival_location || flight.arrival_airport_code || 'ARR';
                     const passengers =
                       Array.isArray(flight.passenger_ids) && flight.passenger_ids.length
-                        ? formatTravelerNames(flight.passenger_ids)
-                        : flight.passenger_name || '';
+                        ? formatTravelerListDisplay(flight.passenger_ids, flight.passenger_name, groupMembers)
+                        : formatTravelerListDisplay([], flight.passenger_name, groupMembers);
                     return (
                       <View key={flight.id} style={styles.dayInfoRow}>
                         <Text style={styles.dayInfoRoute}>{`${dep} → ${arr}`}</Text>
@@ -2056,8 +2051,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                         const arr = flight.arrival_location || flight.arrival_airport_code || 'ARR';
                         const passengers =
                           Array.isArray(flight.passenger_ids) && flight.passenger_ids.length
-                            ? formatTravelerNames(flight.passenger_ids)
-                            : flight.passenger_name || '';
+                            ? formatTravelerListDisplay(flight.passenger_ids, flight.passenger_name, groupMembers)
+                            : formatTravelerListDisplay([], flight.passenger_name, groupMembers);
                         return {
                           title: flightsForDay.length > 1 ? `Transfer ${idx + 1} · ${dep} → ${arr}` : undefined,
                           subtitle: showFlightNames && passengers ? `Travelers: ${passengers}` : undefined,

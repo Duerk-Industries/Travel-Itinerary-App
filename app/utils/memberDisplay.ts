@@ -31,6 +31,44 @@ export const formatMemberDisplayName = (member: Pick<
   return 'Traveler';
 };
 
+export const buildMemberDisplayLookup = <T extends DisplayableMember>(members: T[]): Map<string, string> => {
+  const lookup = new Map<string, string>();
+  members.forEach((member) => {
+    const name = formatMemberDisplayName(member);
+    [member.id, member.userId, member.email, member.userEmail]
+      .map((value) => String(value ?? '').trim())
+      .filter(Boolean)
+      .forEach((value) => {
+        lookup.set(value, name);
+        lookup.set(value.toLowerCase(), name);
+      });
+  });
+  return lookup;
+};
+
+export const formatTravelerListDisplay = (
+  ids: string[] | null | undefined,
+  fallbackText: string | null | undefined,
+  members: DisplayableMember[]
+): string => {
+  const lookup = buildMemberDisplayLookup(members);
+  const resolvedIds = (ids ?? [])
+    .map((id) => lookup.get(String(id).trim()) ?? lookup.get(String(id).trim().toLowerCase()))
+    .filter(Boolean) as string[];
+  if (resolvedIds.length) {
+    return Array.from(new Set(resolvedIds)).join(', ');
+  }
+
+  return String(fallbackText ?? '')
+    .split(',')
+    .map((part) => {
+      const value = part.trim();
+      return lookup.get(value) ?? lookup.get(value.toLowerCase()) ?? value;
+    })
+    .filter(Boolean)
+    .join(', ');
+};
+
 export const dedupeMembersByIdentity = <T extends DisplayableMember>(members: T[]): T[] => {
   const byKey = new Map<string, T>();
   const score = (member: T): number => {

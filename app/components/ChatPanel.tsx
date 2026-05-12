@@ -38,6 +38,16 @@ interface Props {
 const PANEL_WIDTH = 360;
 const PANEL_HEIGHT = 480;
 
+const mergeMessagesById = (current: ChatMessage[], incoming: ChatMessage[], prepend = false): ChatMessage[] => {
+  const seen = new Set<string>();
+  const ordered = prepend ? [...incoming, ...current] : [...current, ...incoming];
+  return ordered.filter((message) => {
+    if (seen.has(message.id)) return false;
+    seen.add(message.id);
+    return true;
+  });
+};
+
 const ChatPanel: React.FC<Props> = ({
   socket,
   tripId,
@@ -119,7 +129,7 @@ const ChatPanel: React.FC<Props> = ({
     }) => {
       if (payload.tripId !== tripId) return;
       if (payload.initial) {
-        setMessages(payload.messages);
+        setMessages(mergeMessagesById([], payload.messages));
         setHasMore(payload.hasMore);
         setErrorMessage(null);
         setLoading(false);
@@ -138,14 +148,14 @@ const ChatPanel: React.FC<Props> = ({
         scheduleScrollToEnd(100, false);
       } else {
         // Older page: prepend without scrolling
-        setMessages((prev) => [...payload.messages, ...prev]);
+        setMessages((prev) => mergeMessagesById(prev, payload.messages, true));
         setHasMore(payload.hasMore);
         setLoadingOlder(false);
       }
     };
 
     const onNewMessage = (msg: ChatMessage) => {
-      setMessages((prev) => [...prev, msg]);
+      setMessages((prev) => mergeMessagesById(prev, [msg]));
       scheduleScrollToEnd(50, true);
       // Watermark-gated: only emit MARK_READ when the visible tail advances.
       markRead(msg.id);

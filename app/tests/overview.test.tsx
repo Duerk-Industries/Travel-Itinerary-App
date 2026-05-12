@@ -318,6 +318,64 @@ describe('Overview UI (nested itinerary)', () => {
     expect(await findByTestId('overview-day-card-1')).toBeTruthy();
   });
 
+  test('shows the return transfer on the final day details', async () => {
+    const trip = {
+      ...baseProps.trip,
+      startDate: '2026-05-15',
+      endDate: '2026-05-22',
+    };
+    const attendees = [
+      { id: 'member-1', firstName: 'Bryan', lastName: 'Duerk', email: 'bryan@example.com', status: 'active' as const },
+      { id: 'member-2', firstName: 'Vicky', lastName: 'Duerk', email: 'vduerk@gmail.com', status: 'active' as const },
+    ];
+    const flights = [
+      {
+        id: 'flight-out',
+        passenger_name: 'Bryan Duerk, vduerk@gmail.com',
+        passenger_ids: [],
+        trip_id: 'trip1',
+        departure_date: '2026-05-15',
+        departure_location: 'BOS',
+        departure_airport_code: 'BOS',
+        departure_time: '16:50',
+        arrival_date: '2026-05-15',
+        arrival_location: 'SFO',
+        arrival_airport_code: 'SFO',
+        arrival_time: '20:20',
+        cost: 0,
+        carrier: 'Flight',
+        flight_number: '',
+        booking_reference: '',
+      },
+      {
+        id: 'flight-return',
+        passenger_name: 'Bryan Duerk, vduerk@gmail.com',
+        passenger_ids: [],
+        trip_id: 'trip1',
+        departure_date: '2026-05-22',
+        departure_location: 'SFO',
+        departure_airport_code: 'SFO',
+        departure_time: '13:01',
+        arrival_date: '2026-05-22',
+        arrival_location: 'BOS',
+        arrival_airport_code: 'BOS',
+        arrival_time: '21:45',
+        cost: 0,
+        carrier: 'Flight',
+        flight_number: '',
+        booking_reference: '',
+      },
+    ];
+
+    const { findByTestId, findByText } = await renderOverview(
+      <OverviewTab {...baseProps} trip={trip as any} attendees={attendees} flights={flights as any} />
+    );
+
+    fireEvent.press(await findByTestId('overview-day-card-8'));
+    expect(await findByText('SFO → BOS')).toBeTruthy();
+    expect(await findByText('13:01 / 21:45')).toBeTruthy();
+  });
+
   test('opens flight details modal from day details', async () => {
     const flight = {
       id: 'flight-1',

@@ -51,6 +51,14 @@ const member: GroupMemberOption = {
   status: 'active',
 };
 
+const vicky: GroupMemberOption = {
+  id: 'member-2',
+  firstName: 'Vicky',
+  lastName: 'Duerk',
+  email: 'vduerk@gmail.com',
+  status: 'active',
+};
+
 const flight: Flight = {
   id: 'flight-1',
   trip_id: 'trip-1',
@@ -112,5 +120,38 @@ describe('FlightsTab read-only mode', () => {
     expect(queryByTestId('transfer-delete-flight-1')).toBeNull();
     expect(queryByTestId('flight-vote-up-flight-1')).toBeNull();
     expect(getAllByText('View only').length).toBeGreaterThan(0);
+  });
+
+  test('uses known member names when legacy passenger text contains an email', () => {
+    const emailFallbackFlight: Flight = {
+      ...flight,
+      passenger_name: 'Bryan Traveler, vduerk@gmail.com',
+      passenger_ids: [],
+    };
+
+    const { getByText, queryByText } = render(
+      <FlightsTab
+        backendUrl="http://localhost"
+        userToken={null}
+        activeTripId="trip-1"
+        flights={[emailFallbackFlight]}
+        setFlights={jest.fn() as any}
+        groupMembers={[member, vicky]}
+        defaultPayerId="member-1"
+        formatMemberName={(m) => `${m.firstName} ${m.lastName}`.trim()}
+        payerName={() => 'Bryan Traveler'}
+        headers={{}}
+        jsonHeaders={{}}
+        findActiveTrip={() => trip}
+        fetchGroupMembersForActiveTrip={jest.fn(() => Promise.resolve()) as any}
+        styles={styles}
+        airportOptions={[]}
+        onSearchAirports={jest.fn() as any}
+        readOnly
+      />
+    );
+
+    expect(getByText('Bryan Traveler, Vicky Duerk')).toBeTruthy();
+    expect(queryByText(/vduerk@gmail\.com/i)).toBeNull();
   });
 });
