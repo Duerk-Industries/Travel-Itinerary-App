@@ -24,9 +24,7 @@ import {
 } from '../utils/overviewBuilder';
 import { type MapApp } from '../utils/mapLinks';
 import {
-  adjustStartDateForEarliest,
   formatMonthYear,
-  getEarliestTripEventDate,
 } from '../utils/tripDates';
 import { dedupeMembersByIdentity, formatMemberDisplayName } from '../utils/memberDisplay';
 import { normalizeDateString } from '../utils/normalizeDateString';
@@ -443,7 +441,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const [editingLodgingId, setEditingLodgingId] = useState<string | null>(null);
   const [editingTourId, setEditingTourId] = useState<string | null>(null);
   const [editingRentalId, setEditingRentalId] = useState<string | null>(null);
-  const autoAdjustedRef = useRef<string | null>(null);
   const [dateField, setDateField] = useState<'start' | 'end' | null>(null);
   const [dateValue, setDateValue] = useState<Date>(new Date());
   const [timePickerTarget, setTimePickerTarget] = useState<'edit-dep' | 'edit-arr' | null>(null);
@@ -846,21 +843,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     [backendUrl, headers]
   );
 
-  const earliestEventDate = useMemo(
-    () =>
-      getEarliestTripEventDate([
-        ...flights.map((f) => f.departure_date),
-        ...lodgings.map((l) => l.checkInDate),
-        ...tours.map((t) => t.date),
-      ]),
-    [flights, lodgings, tours]
-  );
-
-  const effectiveRangeDates = useMemo(
-    () => adjustStartDateForEarliest({ startDate: trip?.startDate ?? null, endDate: trip?.endDate ?? null, earliestDate: earliestEventDate }),
-    [trip?.startDate, trip?.endDate, earliestEventDate]
-  );
-  
   const formatMemberName = (member: GroupMemberOption) => formatUserDisplayName(member);
   
   const groupMembers: GroupMemberOption[] = useMemo(
@@ -931,8 +913,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     _query: string
   ) => undefined;
 
-  const displayStartDate = effectiveRangeDates.startDate ?? trip?.startDate ?? null;
-  const displayEndDate = effectiveRangeDates.endDate ?? trip?.endDate ?? null;
+  const displayStartDate = trip?.startDate ?? null;
+  const displayEndDate = trip?.endDate ?? null;
   const eventDateBounds = useMemo(() => {
     const parseDateUtc = (value?: string | null): Date | null => {
       const text = String(value ?? '').trim();
@@ -962,20 +944,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     return { startDate: min, endDate: max };
   }, [flights, lodgings, tours, carRentals]);
 
-  const compareIsoDate = (left?: string | null, right?: string | null): number => {
-    const a = normalizeDateString(left ?? '');
-    const b = normalizeDateString(right ?? '');
-    if (!a && !b) return 0;
-    if (!a) return 1;
-    if (!b) return -1;
-    return a.localeCompare(b);
-  };
-  const overviewStartDate = displayStartDate && eventDateBounds?.startDate
-    ? (compareIsoDate(eventDateBounds.startDate, displayStartDate) < 0 ? eventDateBounds.startDate : displayStartDate)
-    : eventDateBounds?.startDate ?? displayStartDate;
-  const overviewEndDate = displayEndDate && eventDateBounds?.endDate
-    ? (compareIsoDate(eventDateBounds.endDate, displayEndDate) > 0 ? eventDateBounds.endDate : displayEndDate)
-    : eventDateBounds?.endDate ?? displayEndDate;
+  const overviewStartDate = displayStartDate ?? eventDateBounds?.startDate ?? null;
+  const overviewEndDate = displayEndDate ?? eventDateBounds?.endDate ?? null;
   const monthLabel = useMemo(
     () => formatMonthYear(trip?.startMonth ?? null, trip?.startYear ?? null),
     [trip?.startMonth, trip?.startYear]
@@ -991,7 +961,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const rows = useMemo<OverviewRow[]>(
     () =>
       buildOverviewRows({
-        tripStartDate: effectiveRangeDates.startDate ?? trip?.startDate ?? null,
+        tripStartDate: trip?.startDate ?? null,
         tripMonthLabel: monthLabel,
         itineraryDetails,
         flights,
@@ -999,7 +969,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         tours,
         rentals: carRentals,
       }),
-    [effectiveRangeDates.startDate, trip?.startDate, monthLabel, itineraryDetails, flights, lodgings, tours, carRentals]
+    [trip?.startDate, monthLabel, itineraryDetails, flights, lodgings, tours, carRentals]
   );
 
   const allDates = useMemo(() => {
@@ -1013,8 +983,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       return new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
     };
     const dates: string[] = [];
-    const start = overviewStartDate || effectiveRangeDates.startDate;
-    const end = overviewEndDate || effectiveRangeDates.endDate;
+    const start = overviewStartDate;
+    const end = overviewEndDate;
     if (start && end) {
       const s = parseDateUtc(start);
       const e = parseDateUtc(end);
@@ -1049,7 +1019,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       dates.push(new Date().toISOString().slice(0, 10));
     }
     return Array.from(new Set(dates));
-  }, [overviewStartDate, overviewEndDate, effectiveRangeDates.startDate, effectiveRangeDates.endDate, flights, lodgings, tours, carRentals]);
+  }, [overviewStartDate, overviewEndDate, flights, lodgings, tours, carRentals]);
 
   useEffect(() => {
     const buildDayCards = () => {
@@ -1234,28 +1204,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     fetchImages().catch(() => undefined);
   }, [backendUrl, headers, dayCards, dayImages, itineraryDetails, tours, tripLocationLabel, trip?.destination]);
 
-  useEffect(() => {
-    if (!trip?.id || !trip.startDate) return;
-    if (autoAdjustedRef.current === trip.id) return;
-    if (!effectiveRangeDates.startDate || effectiveRangeDates.startDate === trip.startDate) return;
-    const run = async () => {
-      const res = await fetch(`${backendUrl}/api/trips/${trip.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', ...headers },
-        body: JSON.stringify({
-          dateMode: 'range',
-          startDate: effectiveRangeDates.startDate,
-          endDate: effectiveRangeDates.endDate ?? null,
-        }),
-      });
-      if (res.ok) {
-        autoAdjustedRef.current = trip.id;
-        onRefreshTrips();
-      }
-    };
-    run().catch(() => undefined);
-  }, [backendUrl, headers, trip?.id, trip?.startDate, effectiveRangeDates.startDate, effectiveRangeDates.endDate, onRefreshTrips]);
-
   const openDatePicker = (field: 'start' | 'end') => {
     if (Platform.OS !== 'web' && NativeDateTimePicker) {
       const base = field === 'start' ? dateDraft.startDate : dateDraft.endDate;
@@ -1362,13 +1310,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       dateMode: dateDraft.mode,
     };
     if (dateDraft.mode === 'range') {
-      const adjusted = adjustStartDateForEarliest({
-        startDate: dateDraft.startDate || null,
-        endDate: dateDraft.endDate || null,
-        earliestDate: earliestEventDate,
-      });
-      payload.startDate = adjusted.startDate ?? null;
-      payload.endDate = adjusted.endDate ?? null;
+      payload.startDate = dateDraft.startDate || null;
+      payload.endDate = dateDraft.endDate || null;
     } else {
       payload.startMonth = Number(dateDraft.startMonth) || null;
       payload.startYear = Number(dateDraft.startYear) || null;
