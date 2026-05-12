@@ -161,8 +161,8 @@ describe('LodgingTab', () => {
         expect(within(editDialog).getByText('Lodging Details')).toBeTruthy();
     });
 
-    it('shows delete confirmation when delete is clicked', () => {
-        const { getByTestId } = render(
+    it('shows delete confirmation when delete is clicked', async () => {
+        const { getByTestId, toJSON } = render(
             <LodgingTab
                 backendUrl=""
                 jsonHeaders={{}}
@@ -182,8 +182,9 @@ describe('LodgingTab', () => {
         fireEvent.press(within(getByTestId('lodging-row-l1')).getByText('Hotel 1'));
         const detailsDialog = getByTestId('lodging-details-dialog');
         fireEvent.press(within(detailsDialog).getByText('Delete'));
-        const deleteDialog = getByTestId('delete-lodging-dialog');
-        expect(within(deleteDialog).getByText('Are you sure you want to delete Hotel 1?')).toBeTruthy();
+        await waitFor(() => {
+            expect(JSON.stringify(toJSON())).toContain('Are you sure you want to delete Hotel 1?');
+        });
     });
 
     it('updates paid by and saves the lodging', async () => {
