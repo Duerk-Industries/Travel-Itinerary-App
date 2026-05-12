@@ -4478,6 +4478,7 @@ export const insertExpense = async (expense: {
   forIds?: string[];
   sourceType?: string | null;
   sourceId?: string | null;
+  vendor?: string | null;
   notes?: string | null;
 }): Promise<any> => {
   const db = getDb();
@@ -4507,6 +4508,7 @@ export const insertExpense = async (expense: {
     forIds: Array.isArray(expense.forIds) ? expense.forIds : [],
     sourceType: expense.sourceType ?? null,
     sourceId: expense.sourceId ?? null,
+    vendor: expense.vendor ?? null,
     notes: expense.notes ?? null,
     createdAt: nowIso(),
   };
@@ -4529,6 +4531,7 @@ export const upsertExpenseForSource = async (expense: {
   forIds?: string[];
   sourceType: string;
   sourceId: string;
+  vendor?: string | null;
   notes?: string | null;
 }): Promise<any> => {
   const db = getDb();
@@ -4562,6 +4565,7 @@ export const upsertExpenseForSource = async (expense: {
     forIds: Array.isArray(expense.forIds) ? expense.forIds : [],
     sourceType: expense.sourceType,
     sourceId: expense.sourceId,
+    vendor: expense.vendor ?? null,
     notes: expense.notes ?? null,
     createdAt: nowIso(),
   };

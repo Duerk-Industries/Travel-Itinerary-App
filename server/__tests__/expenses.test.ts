@@ -55,11 +55,15 @@ describe('Expenses API', () => {
         exchangeRateDate: '2025-02-01',
         payerIds: [memberId],
         forIds: [memberId],
+        vendor: 'Flour Bakery',
+        notes: 'Receipt reviewed',
       })
       .expect(201);
     expect(created.body.amountInTripCurrency).toBe(12.5);
     expect(created.body.exchangeRateToTripCurrency).toBe(1);
     expect(created.body.exchangeRateDate).toBe('2025-02-01');
+    expect(created.body.vendor).toBe('Flour Bakery');
+    expect(created.body.notes).toBe('Receipt reviewed');
 
     const list = await request(app)
       .get(`/api/expenses?tripId=${tripId}`)
@@ -67,6 +71,15 @@ describe('Expenses API', () => {
       .expect(200);
     expect(Array.isArray(list.body)).toBe(true);
     expect(list.body.length).toBeGreaterThan(0);
+    expect(list.body).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: created.body.id,
+          vendor: 'Flour Bakery',
+          notes: 'Receipt reviewed',
+        }),
+      ])
+    );
 
     await request(app)
       .delete(`/api/expenses/${created.body.id}`)
@@ -103,5 +116,19 @@ describe('Expenses API', () => {
       error: 'Request validation failed',
       details: expect.arrayContaining([expect.objectContaining({ path: 'tripId' })]),
     });
+  });
+
+  it('rejects unsupported receipt upload types before parsing', async () => {
+    const res = await request(app)
+      .post('/api/expenses/receipt/parse')
+      .set('Authorization', `Bearer ${token}`)
+      .field('tripId', tripId)
+      .attach('image', Buffer.from('not an image'), {
+        filename: 'receipt.txt',
+        contentType: 'text/plain',
+      })
+      .expect(400);
+
+    expect(res.body).toEqual({ error: 'Unsupported receipt image type' });
   });
 });

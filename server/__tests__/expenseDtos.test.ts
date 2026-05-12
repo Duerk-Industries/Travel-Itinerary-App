@@ -14,6 +14,7 @@ describe('expense DTOs', () => {
       exchangeRateDate: ' 2026-04-23 ',
       payerIds: [123],
       forIds: ['member-1'],
+      vendor: '  Coffee Shop  ',
       notes: '  coffee  ',
     });
 
@@ -28,8 +29,35 @@ describe('expense DTOs', () => {
       exchangeRateDate: '2026-04-23',
       payerIds: ['123'],
       forIds: ['member-1'],
+      vendor: 'Coffee Shop',
       notes: 'coffee',
     });
+  });
+
+  it('rejects overlong optional text fields', () => {
+    expect(() =>
+      parseDto(createExpenseDto, {
+        tripId: 'trip-1',
+        expenseDate: '2026-04-23',
+        category: 'Breakfast',
+        amount: 12,
+        payerIds: ['member-1'],
+        forIds: ['member-1'],
+        vendor: 'x'.repeat(161),
+      })
+    ).toThrow('Request validation failed');
+
+    expect(() =>
+      parseDto(createExpenseDto, {
+        tripId: 'trip-1',
+        expenseDate: '2026-04-23',
+        category: 'Breakfast',
+        amount: 12,
+        payerIds: ['member-1'],
+        forIds: ['member-1'],
+        notes: 'x'.repeat(2001),
+      })
+    ).toThrow('Request validation failed');
   });
 
   it('rejects malformed list and create DTOs with field paths', () => {

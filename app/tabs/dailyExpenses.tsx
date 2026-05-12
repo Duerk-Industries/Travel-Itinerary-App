@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, Platform, ScrollView, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import ConfirmDialog from '../components/ConfirmDialog';
 import DialogShell from '../components/DialogShell';
@@ -39,9 +39,20 @@ type Expense = {
   amountInTripCurrency?: number | null;
   exchangeRateToTripCurrency?: number | null;
   exchangeRateDate?: string | null;
+  vendor?: string | null;
+  notes?: string | null;
   payerIds: string[];
   forIds: string[];
   createdAt: string;
+};
+
+type ParsedReceiptExpenseDraft = {
+  expenseDate?: string | null;
+  amount?: number | null;
+  currency?: string | null;
+  vendor?: string | null;
+  category?: string | null;
+  notes?: string | null;
 };
 
 type DailyExpensesTabProps = {
@@ -155,12 +166,17 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   const [draftCategory, setDraftCategory] = useState<CategoryOption>('Breakfast');
   const [draftCurrency, setDraftCurrency] = useState<string>('USD');
   const [draftAmount, setDraftAmount] = useState<string>('');
+  const [draftVendor, setDraftVendor] = useState<string>('');
+  const [draftNotes, setDraftNotes] = useState<string>('');
   const [draftForIds, setDraftForIds] = useState<string[]>([]);
   const [draftPayerIds, setDraftPayerIds] = useState<string[]>([]);
   const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [addExpenseVisible, setAddExpenseVisible] = useState(false);
+  const [receiptParsing, setReceiptParsing] = useState(false);
+  const [receiptError, setReceiptError] = useState<string | null>(null);
   const [detailTarget, setDetailTarget] = useState<{ date: string; category: CategoryOption } | null>(null);
   const [pendingDeleteExpense, setPendingDeleteExpense] = useState<Expense | null>(null);
+  const receiptFileInputRef = useRef<any>(null);
 
   const tripDates = useMemo(() => buildDateRange(trip), [trip]);
   const expenseItems = useMemo(
@@ -176,6 +192,9 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
     setDraftCategory('Breakfast');
     setDraftCurrency(trip.currency ?? 'USD');
     setDraftAmount('');
+    setDraftVendor('');
+    setDraftNotes('');
+    setReceiptError(null);
     setDraftForIds(activeMembers.map((m) => m.id));
     setDraftPayerIds(defaultPayerId ? [defaultPayerId] : []);
   }, [trip?.id, tripDates, activeMembers, defaultPayerId, trip?.currency]);
@@ -217,6 +236,66 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   const closeAddExpenseModal = () => {
     setAddExpenseVisible(false);
     setDatePickerVisible(false);
+  };
+
+  const handleReceiptPickerPress = () => {
+    setReceiptError(null);
+    if (Platform.OS === 'web') {
+      receiptFileInputRef.current?.click?.();
+      return;
+    }
+    alert('Receipt scanning is available in a mobile web browser.');
+  };
+
+  const applyParsedReceiptDraft = (parsed: ParsedReceiptExpenseDraft) => {
+    if (parsed.expenseDate && (!tripDates.length || tripDates.includes(parsed.expenseDate))) {
+      setDraftDate(parsed.expenseDate);
+    }
+    const parsedCategory = parsed.category && categoryOptions.includes(parsed.category as CategoryOption)
+      ? parsed.category as CategoryOption
+      : 'Other';
+    setDraftCategory(parsedCategory);
+    if (parsed.currency) setDraftCurrency(parsed.currency.toUpperCase());
+    if (typeof parsed.amount === 'number' && Number.isFinite(parsed.amount)) {
+      setDraftAmount(parsed.amount.toFixed(2));
+    }
+    setDraftVendor(parsed.vendor ?? '');
+    setDraftNotes(parsed.notes ?? '');
+    setAddExpenseVisible(true);
+  };
+
+  const handleReceiptFile = async (file: File | null | undefined) => {
+    if (!trip?.id || !file) return;
+    setReceiptParsing(true);
+    setReceiptError(null);
+    try {
+      const form = new FormData();
+      form.append('tripId', trip.id);
+      form.append('image', file);
+      const uploadHeaders = { ...headers };
+      delete uploadHeaders['Content-Type'];
+      delete uploadHeaders['content-type'];
+      const res = await fetch(`${backendUrl}/api/expenses/receipt/parse`, {
+        method: 'POST',
+        headers: uploadHeaders,
+        body: form,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const message = data.error || 'Unable to scan receipt';
+        setReceiptError(message);
+        alert(message);
+        return;
+      }
+      applyParsedReceiptDraft(data as ParsedReceiptExpenseDraft);
+    } catch (err) {
+      const message = (err as Error).message || 'Unable to scan receipt';
+      setReceiptError(message);
+      alert(message);
+    } finally {
+      setReceiptParsing(false);
+      if (receiptFileInputRef.current) receiptFileInputRef.current.value = '';
+    }
   };
 
   const saveExpense = async () => {
@@ -270,6 +349,8 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
       exchangeRateDate: exchangeRateDate ?? undefined,
       payerIds: draftPayerIds,
       forIds: draftForIds,
+      vendor: draftVendor || undefined,
+      notes: draftNotes || undefined,
     };
     try {
       const res = await fetch(`${backendUrl}/api/expenses`, {
@@ -284,6 +365,8 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
       }
       setExpenses((prev) => [data as Expense, ...prev.filter((e) => e.id !== data.id)]);
       setDraftAmount('');
+      setDraftVendor('');
+      setDraftNotes('');
       closeAddExpenseModal();
     } catch (err) {
       alert((err as Error).message || 'Unable to save expense');
@@ -339,7 +422,27 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
         >
           <Text style={styles.buttonText}>+ Add Expense</Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.button, styles.smallButton, receiptParsing && styles.buttonDisabled]}
+          onPress={handleReceiptPickerPress}
+          disabled={receiptParsing}
+          testID="expense-scan-receipt-button"
+        >
+          <Text style={styles.buttonText}>{receiptParsing ? 'Scanning...' : 'Scan Receipt'}</Text>
+        </TouchableOpacity>
       </View>
+      {Platform.OS === 'web' ? (
+        <input
+          ref={receiptFileInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={(event) => handleReceiptFile(event.target.files?.[0])}
+          style={{ display: 'none' }}
+          data-testid="expense-receipt-input"
+        />
+      ) : null}
+      {receiptError ? <Text style={styles.warningText}>{receiptError}</Text> : null}
       {addExpenseVisible ? (
         <DialogShell
           visible
@@ -413,6 +516,23 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                     keyboardType="numeric"
                     value={draftAmount}
                     onChangeText={(value: string) => setDraftAmount(sanitizeCostInput(value))}
+                    commitOnBlur={false}
+                  />
+                </View>
+                <View style={styles.expenseFieldRow}>
+                  <DraftTextInput
+                    style={[styles.input, styles.expenseFieldVendor]}
+                    placeholder="Vendor"
+                    value={draftVendor}
+                    onChangeText={setDraftVendor}
+                    commitOnBlur={false}
+                  />
+                  <DraftTextInput
+                    style={[styles.input, styles.expenseFieldNotes]}
+                    placeholder="Notes"
+                    value={draftNotes}
+                    onChangeText={setDraftNotes}
+                    multiline
                     commitOnBlur={false}
                   />
                 </View>
@@ -597,14 +717,20 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
               <ScrollView style={styles.detailModalScroll}>
                 <View style={[styles.table, { marginTop: 8 }]}>
                   <View style={[styles.tableRow, styles.tableHeader]}>
-                    {['For', 'Payers', 'Amount', 'Action'].map((header, index) => (
-                      <View key={header} style={[styles.cell, { minWidth: index === 2 ? 90 : 140, flex: 1 }, index === 3 && styles.lastCell]}>
+                    {['Vendor', 'Notes', 'For', 'Payers', 'Amount', 'Action'].map((header, index) => (
+                      <View key={header} style={[styles.cell, { minWidth: index === 4 ? 90 : 140, flex: 1 }, index === 5 && styles.lastCell]}>
                         <Text style={styles.headerText}>{header}</Text>
                       </View>
                     ))}
                   </View>
                   {detailItems.map((expense, index) => (
                     <View key={expense.id} style={[styles.tableRow, index === detailItems.length - 1 && styles.lastRow]}>
+                      <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                        <Text style={styles.cellText}>{expense.vendor || '-'}</Text>
+                      </View>
+                      <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                        <Text style={styles.cellText}>{expense.notes || '-'}</Text>
+                      </View>
                       <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
                         <Text style={styles.cellText}>
                           {expense.forIds.length

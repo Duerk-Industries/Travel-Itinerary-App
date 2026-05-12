@@ -129,6 +129,7 @@ interface Expense {
   forIds: string[];
   sourceType?: string | null;
   sourceId?: string | null;
+  vendor?: string | null;
   notes?: string | null;
   createdAt: string;
 }
@@ -4582,6 +4583,17 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     minWidth: 120,
     flexGrow: 0,
     flexBasis: 120,
+  },
+  expenseFieldVendor: {
+    minWidth: 180,
+    flexGrow: 1,
+    flexBasis: 180,
+  },
+  expenseFieldNotes: {
+    minWidth: 240,
+    flexGrow: 2,
+    flexBasis: 260,
+    minHeight: 42,
   },
   detailModalScroll: {
     maxHeight: 420,

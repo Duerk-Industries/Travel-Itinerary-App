@@ -1069,6 +1069,7 @@ export const initDb = async (): Promise<void> => {
       for_ids JSONB DEFAULT '[]'::jsonb,
       source_type TEXT,
       source_id TEXT,
+      vendor TEXT,
       notes TEXT,
       created_at TIMESTAMP DEFAULT NOW(),
       UNIQUE (source_type, source_id)
@@ -1078,6 +1079,8 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE expenses ADD COLUMN IF NOT EXISTS amount_in_trip_currency NUMERIC;`);
   await p.query(`ALTER TABLE expenses ADD COLUMN IF NOT EXISTS exchange_rate_to_trip_currency NUMERIC;`);
   await p.query(`ALTER TABLE expenses ADD COLUMN IF NOT EXISTS exchange_rate_date DATE;`);
+  await p.query(`ALTER TABLE expenses ADD COLUMN IF NOT EXISTS vendor TEXT;`);
+  await p.query(`ALTER TABLE expenses ADD COLUMN IF NOT EXISTS notes TEXT;`);
 
   await p.query(`
     CREATE TABLE IF NOT EXISTS trip_payments (
@@ -4820,6 +4823,7 @@ export const listExpenses = async (userId: string, tripId?: string | null): Prom
              COALESCE(e.for_ids, '[]'::jsonb) as "forIds",
              e.source_type as "sourceType",
              e.source_id as "sourceId",
+             e.vendor,
              e.notes,
              e.created_at as "createdAt"
       FROM expenses e
@@ -4874,6 +4878,7 @@ export const insertExpense = async (expense: {
   forIds?: string[];
   sourceType?: string | null;
   sourceId?: string | null;
+  vendor?: string | null;
   notes?: string | null;
 }): Promise<any> => {
   const p = getPool();
@@ -4890,9 +4895,9 @@ export const insertExpense = async (expense: {
     `
       INSERT INTO expenses (
         id, trip_id, group_id, user_id, expense_date, category, amount, currency, amount_in_trip_currency, exchange_rate_to_trip_currency, exchange_rate_date,
-        payer_ids, for_ids, source_type, source_id, notes
+        payer_ids, for_ids, source_type, source_id, vendor, notes
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::date, $12::jsonb, $13::jsonb, $14, $15, $16
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::date, $12::jsonb, $13::jsonb, $14, $15, $16, $17
       )
       RETURNING
         id,
@@ -4910,6 +4915,7 @@ export const insertExpense = async (expense: {
         COALESCE(for_ids, '[]'::jsonb) as "forIds",
         source_type as "sourceType",
         source_id as "sourceId",
+        vendor,
         notes,
         created_at as "createdAt"
     `,
@@ -4929,6 +4935,7 @@ export const insertExpense = async (expense: {
       JSON.stringify(expense.forIds ?? []),
       expense.sourceType ?? null,
       expense.sourceId ?? null,
+      expense.vendor ?? null,
       expense.notes ?? null,
     ]
   );
@@ -4955,6 +4962,7 @@ export const upsertExpenseForSource = async (expense: {
   forIds?: string[];
   sourceType: string;
   sourceId: string;
+  vendor?: string | null;
   notes?: string | null;
 }): Promise<any> => {
   const p = getPool();
@@ -4970,9 +4978,9 @@ export const upsertExpenseForSource = async (expense: {
     `
       INSERT INTO expenses (
         id, trip_id, group_id, user_id, expense_date, category, amount, currency, amount_in_trip_currency, exchange_rate_to_trip_currency, exchange_rate_date,
-        payer_ids, for_ids, source_type, source_id, notes
+        payer_ids, for_ids, source_type, source_id, vendor, notes
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::date, $12::jsonb, $13::jsonb, $14, $15, $16
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::date, $12::jsonb, $13::jsonb, $14, $15, $16, $17
       )
       ON CONFLICT (source_type, source_id)
       DO UPDATE SET
@@ -4988,6 +4996,7 @@ export const upsertExpenseForSource = async (expense: {
         exchange_rate_date = EXCLUDED.exchange_rate_date,
         payer_ids = EXCLUDED.payer_ids,
         for_ids = EXCLUDED.for_ids,
+        vendor = EXCLUDED.vendor,
         notes = EXCLUDED.notes
       RETURNING
         id,
@@ -5005,6 +5014,7 @@ export const upsertExpenseForSource = async (expense: {
         COALESCE(for_ids, '[]'::jsonb) as "forIds",
         source_type as "sourceType",
         source_id as "sourceId",
+        vendor,
         notes,
         created_at as "createdAt"
     `,
@@ -5024,6 +5034,7 @@ export const upsertExpenseForSource = async (expense: {
       JSON.stringify(expense.forIds ?? []),
       expense.sourceType,
       expense.sourceId,
+      expense.vendor ?? null,
       expense.notes ?? null,
     ]
   );
@@ -9750,7 +9761,7 @@ export const listUserAuthoredItems = async (
     ),
     p.query(
       `SELECT id, user_id as "userId", trip_id as "tripId", group_id as "groupId",
-              category, amount, currency, notes,
+              category, amount, currency, vendor, notes,
               expense_date as "expenseDate", created_at as "createdAt"
        FROM expenses
        WHERE user_id = $1

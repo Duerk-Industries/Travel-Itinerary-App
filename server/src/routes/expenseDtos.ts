@@ -22,6 +22,15 @@ const idList = z
   .default([])
   .transform((ids) => ids.map((id) => String(id)).filter(Boolean));
 
+const nullableTrimmedText = (label: string, maxLength: number) =>
+  z
+    .unknown()
+    .optional()
+    .transform((value) => (typeof value === 'string' ? value.trim() || null : null))
+    .refine((value) => value == null || value.length <= maxLength, {
+      message: `${label} must be ${maxLength} characters or fewer.`,
+    });
+
 export const listExpensesQueryDto = z.object({
   tripId: trimmedNonEmpty('tripId'),
 });
@@ -46,9 +55,7 @@ export const createExpenseDto = z.object({
     .transform((value) => (typeof value === 'string' ? value.trim() || null : null)),
   payerIds: idList,
   forIds: idList,
-  notes: z
-    .unknown()
-    .optional()
-    .transform((value) => (typeof value === 'string' ? value.trim() || null : null)),
+  vendor: nullableTrimmedText('vendor', 160),
+  notes: nullableTrimmedText('notes', 2000),
 });
 export type CreateExpenseDto = z.infer<typeof createExpenseDto>;
