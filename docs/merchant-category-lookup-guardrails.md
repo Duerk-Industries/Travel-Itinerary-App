@@ -44,9 +44,9 @@ Reasons:
 
 ### Feature Flag
 
-Default off until tested:
+Default off until tested via database feature flag:
 
-`MERCHANT_CATEGORY_LOOKUP_ENABLED=false`
+`merchant_category_lookup` (default: `false` via `server/config/feature-flags.yaml`)
 
 When disabled, return `null` and let receipt parsing default category normally.
 

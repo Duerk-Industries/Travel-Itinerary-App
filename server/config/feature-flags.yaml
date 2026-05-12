@@ -52,6 +52,6 @@ flags:
   itinerary_reactions:
     enabled: true
     description: "Enable up/down vote reactions on itinerary detail rows"
-  itinerary_item_kinds:
-    enabled: true
-    description: "Enable typed itinerary detail rows (place/note/checklist) and the + menu UI"
+  merchant_category_lookup:
+    enabled: false
+    description: "Use Nominatim to look up merchant categories from receipt OCR vendor names"

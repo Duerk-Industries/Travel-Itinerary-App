@@ -1,5 +1,6 @@
-import { getEnvFlag, getEnvValue } from '../env';
+import { getEnvValue } from '../env';
 import { logInfo } from '../logger';
+import { getFeatureFlag } from '../db';
 
 export type ExpenseCategory =
   | 'Breakfast'
@@ -83,7 +84,8 @@ const waitForRateLimit = async (): Promise<boolean> => {
 export const lookupMerchantCategory = async (
   input: MerchantCategoryLookupInput
 ): Promise<MerchantCategorySuggestion | null> => {
-  if (!getEnvFlag('MERCHANT_CATEGORY_LOOKUP_ENABLED', { defaultValue: false })) return null;
+  const flag = await getFeatureFlag('merchant_category_lookup');
+  if (!flag?.enabled) return null;
   const vendor = String(input.vendor ?? '').trim();
   if (!vendor) return null;
 

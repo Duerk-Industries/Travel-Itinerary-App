@@ -1,8 +1,13 @@
 import { parseReceiptText } from '../src/services/receiptExpenseParser';
+import { getFeatureFlag } from '../src/db';
+
+jest.mock('../src/db', () => ({
+  getFeatureFlag: jest.fn(),
+}));
 
 describe('receipt expense parser', () => {
   beforeEach(() => {
-    process.env.MERCHANT_CATEGORY_LOOKUP_ENABLED = 'false';
+    (getFeatureFlag as jest.Mock).mockResolvedValue({ enabled: false });
   });
 
   it('extracts a reviewable expense draft from receipt text', async () => {
