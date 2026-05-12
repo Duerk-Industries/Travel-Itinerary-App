@@ -33,6 +33,9 @@ export const resolveSocketServerUrl = (): string =>
     browserLocation: Platform.OS === 'web' && typeof window !== 'undefined' ? window.location : undefined,
   });
 
+export const resolveSocketTransports = (): Array<'polling' | 'websocket'> =>
+  Platform.OS === 'web' ? ['polling'] : ['websocket'];
+
 // ---------------------------------------------------------------------------
 // Singleton
 // ---------------------------------------------------------------------------
@@ -42,9 +45,9 @@ let _socket: Socket | null = null;
 export const getSocket = (): Socket => {
   if (!_socket) {
     _socket = io(resolveSocketServerUrl(), {
-      // Prefer websocket-only transport so the web client does not fall back to
-      // repeated long-polling requests while the app is otherwise idle.
-      transports: ['websocket'],
+      // Firebase Hosting rewrites reliably proxy HTTP long polling to Cloud Run,
+      // while websocket upgrades can be blocked before they reach Socket.IO.
+      transports: resolveSocketTransports(),
       autoConnect: false,
     });
   }

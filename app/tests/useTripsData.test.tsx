@@ -121,7 +121,7 @@ describe('useTripsData', () => {
     });
   });
 
-  it('does not treat followed-trip group member 403 as a logout', async () => {
+  it('does not fetch owner group members while viewing a followed trip', async () => {
     const fetchMock = global.fetch as jest.Mock;
     fetchMock.mockImplementationOnce(() =>
       createJsonResponse({ error: 'Not authorized to view group members' }, false, 403)
@@ -138,15 +138,43 @@ describe('useTripsData', () => {
       })
     );
 
-    await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledWith(
-        'https://wanderbunnies.test/api/groups/owners-group-1/members',
-        expect.objectContaining({ headers: expect.objectContaining({ Authorization: 'Bearer token-1' }) })
-      );
+    await act(async () => {
+      const members = await result.current.fetchGroupMembersForActiveTrip();
+      expect(members).toEqual([]);
     });
 
+    expect(fetchMock).not.toHaveBeenCalled();
     expect(result.current.unauthorizedCount).toBe(0);
     expect(result.current.groupMembers).toEqual([]);
+  });
+
+  it('does not log out when an active trip member roster returns 403', async () => {
+    const fetchMock = global.fetch as jest.Mock;
+    fetchMock
+      .mockImplementationOnce(() =>
+        createJsonResponse([
+          { id: 'trip-1', groupId: 'group-1', groupName: 'Shared Group', name: 'Shared Trip', createdAt: '2026-01-01' },
+        ])
+      )
+      .mockImplementationOnce(() =>
+        createJsonResponse({ error: 'Not authorized to view group members' }, false, 403)
+      );
+
+    const { result } = renderHook(() => useTripsDataHarness({ initialActiveTripId: 'trip-1' }));
+
+    await act(async () => {
+      await result.current.fetchTrips();
+    });
+    await act(async () => {
+      const members = await result.current.fetchGroupMembersForActiveTrip();
+      expect(members).toEqual([]);
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://wanderbunnies.test/api/groups/group-1/members',
+      expect.objectContaining({ headers: expect.objectContaining({ Authorization: 'Bearer token-1' }) })
+    );
+    expect(result.current.unauthorizedCount).toBe(0);
   });
 
   it('creates a trip and refreshes the trip list through the shared client flow', async () => {

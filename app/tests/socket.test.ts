@@ -3,7 +3,7 @@
  */
 
 import { Platform } from 'react-native';
-import { resolveSocketServerUrl } from '../utils/socket';
+import { resolveSocketServerUrl, resolveSocketTransports } from '../utils/socket';
 
 describe('socket URL resolution', () => {
   const originalOS = Platform.OS;
@@ -30,5 +30,15 @@ describe('socket URL resolution', () => {
     delete process.env.API_BASE;
 
     expect(resolveSocketServerUrl()).toBe('http://localhost:4000');
+  });
+
+  it('uses polling on web to avoid unsupported websocket upgrades through hosting', () => {
+    Platform.OS = 'web';
+    expect(resolveSocketTransports()).toEqual(['polling']);
+  });
+
+  it('keeps websocket transport for native clients', () => {
+    Platform.OS = 'ios';
+    expect(resolveSocketTransports()).toEqual(['websocket']);
   });
 });

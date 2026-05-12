@@ -1572,7 +1572,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
   const fetchExpenses = useCallback(async (token?: string) => {
     const authToken = token ?? userToken;
-    if (!activeTripId || !authToken) {
+    if (!activeTripId || !authToken || isFollowingMode) {
       setExpenses([]);
       return;
     }
@@ -1589,11 +1589,11 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     } catch {
       setExpenses([]);
     }
-  }, [activeTripId, backendUrl, userToken]);
+  }, [activeTripId, backendUrl, isFollowingMode, userToken]);
 
   const fetchTripPayments = useCallback(async (token?: string) => {
     const authToken = token ?? userToken;
-    if (!activeTripId || !authToken) {
+    if (!activeTripId || !authToken || isFollowingMode) {
       setTripPayments([]);
       return;
     }
@@ -1610,7 +1610,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     } catch {
       setTripPayments([]);
     }
-  }, [activeTripId, backendUrl, userToken]);
+  }, [activeTripId, backendUrl, isFollowingMode, userToken]);
 
   const addTripPayment = useCallback(async (draft: {
     payerId: string;
