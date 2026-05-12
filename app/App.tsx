@@ -793,11 +793,11 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setActiveTripId(tripId);
   }, []);
 
-  const handleSelectFollowedTrip = useCallback((tripId: string) => {
+  const handleSelectFollowedTrip = useCallback((tripId: string, page: Page = 'home') => {
     setActiveTripId(tripId);
     setSelectedFollowedTripId(tripId);
     setShowActiveTripDropdown(false);
-    requestPageChange('home');
+    requestPageChange(page);
   }, [requestPageChange]);
 
   const openAdminSection = useCallback((section: AdminSectionRoute = initialAdminSection) => {
@@ -3169,10 +3169,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   setFollowCodePayloads={setFollowCodePayloads}
                   styles={styles}
                   logout={logout}
-                  onOpenFollowedTrip={(tripId) => {
-                    setSelectedFollowedTripId(tripId);
-                    requestPageChange('following');
-                  }}
+                  onOpenFollowedTrip={(tripId) => handleSelectFollowedTrip(tripId, 'following')}
                 />
               )
             : null}
@@ -3186,7 +3183,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   styles={styles}
                   onRequireLogin={logout}
                   selectedTripId={selectedFollowedTripId}
-                  onSelectTrip={setSelectedFollowedTripId}
+                  onSelectTrip={(tripId) => {
+                    if (tripId) handleSelectFollowedTrip(tripId, 'following');
+                    else setSelectedFollowedTripId(null);
+                  }}
                   onUnfollowTrip={handleUnfollowTrip}
                 />
               )

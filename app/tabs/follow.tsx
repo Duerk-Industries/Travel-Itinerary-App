@@ -45,7 +45,7 @@ export const saveFollowPayloads = (payloads: Record<string, InvitePayload>) => {
 
 export const fetchFollowedTripsApi = async (backendUrl: string, headers: Record<string, string>): Promise<FollowedTrip[]> => {
   const res = await fetch(`${backendUrl}/api/trips/followed`, { headers });
-  if (res.status === 401 || res.status === 403) {
+  if (res.status === 401) {
     const err = new Error('Unauthorized');
     (err as any).code = 'UNAUTHORIZED';
     throw err;
@@ -133,7 +133,7 @@ export const FollowTab: React.FC<FollowTabProps> = ({
         body: JSON.stringify({ inviteCode: code }),
       });
       const data = await res.json().catch(() => ({}));
-      if (res.status === 401 || res.status === 403) {
+      if (res.status === 401) {
         logout();
         return;
       }
@@ -227,7 +227,7 @@ export const FollowTab: React.FC<FollowTabProps> = ({
           } catch {
             data = {};
           }
-          if (res.status === 401 || res.status === 403) {
+          if (res.status === 401) {
             logout();
             throw new Error('Unauthorized');
           }

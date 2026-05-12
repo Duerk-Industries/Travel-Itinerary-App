@@ -157,6 +157,26 @@ describe('useFollowedTrips', () => {
     expect(onUnauthorized).toHaveBeenCalledTimes(1);
   });
 
+  it('handleFollowTripByCode does not log out on 403 follow errors', async () => {
+    fetchMock.mockResolvedValue({
+      ok: false,
+      status: 403,
+      json: async () => ({ error: 'Not allowed to follow this trip' }),
+      text: async () => '{"error":"Not allowed to follow this trip"}',
+    });
+    const onUnauthorized = jest.fn();
+    const { result } = renderHook(() =>
+      useFollowedTrips({ backendUrl: BACKEND, userToken: 't', onUnauthorized })
+    );
+    let msg: string | null = null;
+    await act(async () => {
+      msg = await result.current.handleFollowTripByCode('X');
+    });
+    expect(msg).toBe('Not allowed to follow this trip');
+    expect(result.current.followError).toBe('Not allowed to follow this trip');
+    expect(onUnauthorized).not.toHaveBeenCalled();
+  });
+
   it('handleFollowTripByCode surfaces server error message and stores it in followError', async () => {
     fetchMock.mockResolvedValue({
       ok: false,

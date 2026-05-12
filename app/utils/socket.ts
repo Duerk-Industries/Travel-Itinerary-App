@@ -10,21 +10,28 @@ import { io, type Socket } from 'socket.io-client';
 import { Platform } from 'react-native';
 import { CLIENT_EVENTS, SERVER_EVENTS } from '../../packages/messaging/src/events';
 import type { ChatMessage, PresenceUser } from '../../packages/messaging/src/types';
+import { resolveBackendUrl } from './backendUrl';
 
 // ---------------------------------------------------------------------------
 // Config
 // ---------------------------------------------------------------------------
 
-const getServerUrl = (): string => {
-  if (Platform.OS === 'web') {
-    // Same origin in production; localhost in dev
-    return typeof window !== 'undefined' && window.location?.hostname !== 'localhost'
-      ? window.location.origin
-      : 'http://localhost:4000';
-  }
-  // Native: use explicit API base
-  return process.env.API_BASE ?? 'http://localhost:4000';
-};
+export const resolveSocketServerUrl = (): string =>
+  resolveBackendUrl({
+    envConfigured:
+      (typeof process !== 'undefined' &&
+        (process.env.EXPO_PUBLIC_BACKEND_URL ??
+          process.env.BACKEND_URL ??
+          process.env.WEB_URL ??
+          process.env.API_BASE_URL ??
+          process.env.API_BASE ??
+          process.env.REACT_APP_BACKEND_URL ??
+          process.env.REACT_NATIVE_APP_BACKEND_URL)) ||
+      '',
+    nodeEnv: typeof process !== 'undefined' ? process.env.NODE_ENV : undefined,
+    platformOs: Platform.OS,
+    browserLocation: Platform.OS === 'web' && typeof window !== 'undefined' ? window.location : undefined,
+  });
 
 // ---------------------------------------------------------------------------
 // Singleton
@@ -34,7 +41,7 @@ let _socket: Socket | null = null;
 
 export const getSocket = (): Socket => {
   if (!_socket) {
-    _socket = io(getServerUrl(), {
+    _socket = io(resolveSocketServerUrl(), {
       // Prefer websocket-only transport so the web client does not fall back to
       // repeated long-polling requests while the app is otherwise idle.
       transports: ['websocket'],
