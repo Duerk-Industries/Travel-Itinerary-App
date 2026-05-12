@@ -171,7 +171,10 @@ export const useTripsData = ({
       setGroupMembers(visibleMembers);
       return visibleMembers;
     } catch (error) {
-      if (error instanceof ApiClientError && isUnauthorizedStatus(error.status, requirePasswordSetup)) {
+      if (
+        error instanceof ApiClientError &&
+        (error.status === 401 || (error.status === 403 && !isFollowingMode && !requirePasswordSetup))
+      ) {
         onUnauthorized?.();
       } else if (error instanceof ApiClientError) {
         const message = String(error.message ?? `status ${error.status}`);

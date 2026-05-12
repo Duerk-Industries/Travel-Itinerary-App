@@ -12,6 +12,7 @@ jest.mock('../utils/session', () => ({
 }));
 
 type HarnessParams = {
+  initialActiveTripId?: string | null;
   selectedFollowedTripDetails?: any;
   userToken?: string | null;
 };
@@ -24,8 +25,12 @@ const createJsonResponse = (body: unknown, ok = true, status = 200) =>
     text: async () => JSON.stringify(body),
   } as Response);
 
-const useTripsDataHarness = ({ selectedFollowedTripDetails = null, userToken = 'token-1' }: HarnessParams = {}) => {
-  const [activeTripId, setActiveTripId] = useState<string | null>(null);
+const useTripsDataHarness = ({
+  initialActiveTripId = null,
+  selectedFollowedTripDetails = null,
+  userToken = 'token-1',
+}: HarnessParams = {}) => {
+  const [activeTripId, setActiveTripId] = useState<string | null>(initialActiveTripId);
   const [unauthorizedCount, setUnauthorizedCount] = useState(0);
   const handleUnauthorized = useCallback(() => {
     setUnauthorizedCount((count) => count + 1);
@@ -114,6 +119,34 @@ describe('useTripsData', () => {
         expect.objectContaining({ id: 'member-1', email: 'traveler@example.com', status: 'active' }),
       ]);
     });
+  });
+
+  it('does not treat followed-trip group member 403 as a logout', async () => {
+    const fetchMock = global.fetch as jest.Mock;
+    fetchMock.mockImplementationOnce(() =>
+      createJsonResponse({ error: 'Not authorized to view group members' }, false, 403)
+    );
+
+    const { result } = renderHook(() =>
+      useTripsDataHarness({
+        initialActiveTripId: 'owned-trip-1',
+        selectedFollowedTripDetails: {
+          id: 'followed-trip-1',
+          groupId: 'owners-group-1',
+          name: 'Shared Paris',
+        },
+      })
+    );
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        'https://wanderbunnies.test/api/groups/owners-group-1/members',
+        expect.objectContaining({ headers: expect.objectContaining({ Authorization: 'Bearer token-1' }) })
+      );
+    });
+
+    expect(result.current.unauthorizedCount).toBe(0);
+    expect(result.current.groupMembers).toEqual([]);
   });
 
   it('creates a trip and refreshes the trip list through the shared client flow', async () => {
