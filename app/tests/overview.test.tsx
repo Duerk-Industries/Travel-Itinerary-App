@@ -280,6 +280,17 @@ describe('Overview UI (nested itinerary)', () => {
     await findByTestId('overview-day-card-1');
   });
 
+  test('shows the trip description on the overview page', async () => {
+    const trip = {
+      ...baseProps.trip,
+      description: 'Hiking trip to Yosemite National Park',
+    };
+
+    const { findByText } = await renderOverview(<OverviewTab {...baseProps} trip={trip} />);
+
+    expect(await findByText('Hiking trip to Yosemite National Park')).toBeTruthy();
+  });
+
   test('keeps the full trip range even when events only exist on the first day', async () => {
     const flight = {
       id: 'flight-1',

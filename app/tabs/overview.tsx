@@ -2327,6 +2327,18 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           ) : null}
           {tripLength ? <Text style={styles.helperText}>Trip length: {tripLength} day(s)</Text> : null}
 
+          {trip.description ? (
+            <View>
+              {renderRichTextBlocks(trip.description, {
+                base: styles.bodyText,
+                bold: styles.headerText,
+                italic: styles.helperText,
+                link: styles.linkText ?? styles.buttonText,
+                listItem: styles.helperText,
+              })}
+            </View>
+          ) : null}
+
           {renderDayBar(null)}
 
           <View style={{ gap: 12 }}>

@@ -30,6 +30,8 @@ type HomeTabProps = {
   onSelectFollowedTrip: (tripId: string) => void;
   onNavigate: (page: string) => void;
   onFollowTrip: (inviteCode: string) => Promise<string | null>;
+  onOpenShareTrip?: () => void;
+  canOpenShareTrip?: boolean;
   disabledPages?: Set<string>;
   hiddenPages?: Set<string>;
 };
@@ -55,6 +57,8 @@ const HomeTab: React.FC<HomeTabProps> = ({
   onSelectFollowedTrip,
   onNavigate,
   onFollowTrip,
+  onOpenShareTrip = () => {},
+  canOpenShareTrip = true,
   disabledPages,
   hiddenPages,
 }) => {
@@ -211,6 +215,19 @@ const HomeTab: React.FC<HomeTabProps> = ({
                 <Text style={styles.buttonText}>Follow Trip</Text>
               </Pressable>
             ) : null}
+            {canOpenShareTrip ? (
+              <Pressable
+                testID="home-share-trip-button"
+                style={({ pressed }: { pressed: boolean }) => [
+                  styles.button,
+                  styles.smallButton,
+                  pressed && styles.homeNavButtonPressed,
+                ]}
+                onPress={onOpenShareTrip}
+              >
+                <Text style={styles.buttonText}>Share</Text>
+              </Pressable>
+            ) : null}
           </View>
         </View>
         <Pressable
@@ -235,6 +252,9 @@ const HomeTab: React.FC<HomeTabProps> = ({
           <View style={styles.homeHeroTextWrap}>
             {heroSubtitle ? <Text style={styles.homeHeroSubtitle}>{heroSubtitle}</Text> : null}
             <Text style={styles.homeHeroTitle}>{heroTitle}</Text>
+          </View>
+          <View style={styles.homeHeroChangeTripBadge} pointerEvents="none">
+            <Text style={styles.homeHeroChangeTripText}>Click to Change Trip</Text>
           </View>
         </Pressable>
 

@@ -495,8 +495,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [tripDropdownOpenId, setTripDropdownOpenId] = useState<string | null>(null);
   const [activeTripId, setActiveTripId] = useState<string | null>(null);
   // userEmail / userId / userRole are owned by useAuthSession (declared above).
-  const [showActiveTripDropdown, setShowActiveTripDropdown] = useState(false);
   const [openShareFromHeaderSignal, setOpenShareFromHeaderSignal] = useState(0);
+  const [openShareTripId, setOpenShareTripId] = useState<string | null>(null);
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
   const [lodgings, setLodgings] = useState<Lodging[]>([]);
   const [selectedLodging, setSelectedLodging] = useState<Lodging | null>(null);
@@ -768,12 +768,6 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     [selectedFollowedTrip]
   );
   const activeTripForHome = selectedFollowedTripDetails ?? followedTripFallback;
-  const activeTripSelectorLabel = useMemo(() => {
-    if (isFollowingMode && selectedFollowedTrip?.tripName) {
-      return `${selectedFollowedTrip.tripName} (Following)`;
-    }
-    return activeTrip?.name ?? 'Select';
-  }, [activeTrip?.name, isFollowingMode, selectedFollowedTrip?.tripName]);
 
   const isTripWizardOpen = activePage === 'create-trip';
   const requestPageChange = useCallback((page: Page, opts?: { skipHistory?: boolean }) => {
@@ -797,7 +791,6 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const handleSelectFollowedTrip = useCallback((tripId: string, page: Page = 'home') => {
     setActiveTripId(tripId);
     setSelectedFollowedTripId(tripId);
-    setShowActiveTripDropdown(false);
     requestPageChange(page);
   }, [requestPageChange]);
 
@@ -2385,6 +2378,14 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     [activeTrip, activeTripForHome]
   );
   const handleHomeNavigate = useCallback((page: string) => requestPageChange(page as Page), [requestPageChange]);
+  const handleOpenShareTrip = useCallback(() => {
+    const tripToShare = isFollowingMode ? null : activeTrip;
+    if (!tripToShare?.id) return;
+    setSelectedTripId(tripToShare.id);
+    setOpenShareTripId(tripToShare.id);
+    requestPageChange('trip-details');
+    setOpenShareFromHeaderSignal((prev) => prev + 1);
+  }, [activeTrip, isFollowingMode, requestPageChange]);
   const handleFlightsDataChanged = useCallback(() => {
     fetchFlights();
     fetchExpenses();
@@ -2490,76 +2491,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           </Text>
         </View>
         {userToken ? (
-          <View style={styles.topRightWrapper}>
-            {activeTripId ? (
-              <TouchableOpacity
-                style={[styles.button, styles.smallButton, styles.topBarActionButton]}
-                onPress={() => {
-                  setSelectedTripId(activeTripId);
-                  requestPageChange('trip-details');
-                  setOpenShareFromHeaderSignal((prev) => prev + 1);
-                }}
-              >
-                <Text style={styles.buttonText}>Share</Text>
-              </TouchableOpacity>
-            ) : null}
-            {trips.length || followedTrips.length ? (
-              <View style={{ alignItems: 'flex-end' }}>
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  disabled={isTripWizardOpen}
-                  style={[
-                    styles.input,
-                    styles.inlineInput,
-                    styles.dropdown,
-                    styles.activeTrip,
-                    styles.topBarTripControl,
-                    isNarrowLayout && styles.activeTripNarrow,
-                    isTripWizardOpen && styles.buttonDisabled,
-                  ]}
-                  onPress={() => setShowActiveTripDropdown((s) => !s)}
-                >
-                  <Text style={styles.cellText} numberOfLines={1} ellipsizeMode="tail">
-                    Active Trip: {activeTripSelectorLabel}
-                  </Text>
-                  {showActiveTripDropdown && (
-                    <View style={styles.dropdownList}>
-                      {trips.map((trip) => (
-                        <DropdownOptionButton
-                          key={trip.id}
-                          styles={styles}
-                          onPress={() => {
-                            handleSelectOwnedTrip(trip.id);
-                            setShowActiveTripDropdown(false);
-                          }}
-                        >
-                          <Text style={styles.cellText}>{trip.name}</Text>
-                        </DropdownOptionButton>
-                      ))}
-                      {followedTrips.length ? (
-                        <View>
-                          <Text style={styles.modalLabelSmall}>Followed Trips</Text>
-                          {followedTrips.map((trip) => (
-                            <DropdownOptionButton
-                              key={`followed-${trip.tripId}`}
-                              styles={styles}
-                              onPress={() => {
-                                handleSelectFollowedTrip(trip.tripId);
-                              }}
-                            >
-                              <Text style={styles.cellText}>{trip.tripName} (Following)</Text>
-                            </DropdownOptionButton>
-                          ))}
-                        </View>
-                      ) : null}
-                    </View>
-                  )}
-                </TouchableOpacity>
-                {activePage === 'overview' ? (
-                  <Text style={[styles.modalLabelSmall, { marginTop: 4, textAlign: 'right' }]}>Click to Change Trip</Text>
-                ) : null}
-              </View>
-            ) : null}
+          <View style={[styles.topRightWrapper, isNarrowLayout && styles.topRightWrapperNarrow]}>
             <View style={[styles.topRight, isNarrowLayout && styles.topRightNarrow]}>
               {!isPhoneLayout ? (
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -2613,6 +2545,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   onSelectFollowedTrip={handleSelectFollowedTrip}
                   onNavigate={handleHomeNavigate}
                   onFollowTrip={handleFollowTripByCode}
+                  onOpenShareTrip={handleOpenShareTrip}
+                  canOpenShareTrip={Boolean(activeTrip?.id && !isFollowingMode)}
                   disabledPages={disabledPages}
                   hiddenPages={hiddenPages}
                 />
@@ -3091,7 +3025,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                         requestPageChange('trip-details');
                       }}
                     >
-                      <Text style={styles.buttonText}>View</Text>
+                      <Text style={styles.buttonText}>Settings</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={() => deleteTrip(trip.id)}>
                       <Text style={styles.dangerButtonText}>Delete</Text>
@@ -3149,7 +3083,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               group={selectedTripGroup}
               styles={styles}
               openShareSignal={openShareFromHeaderSignal}
-              onSetActive={(tripId) => setActiveTripId(tripId)}
+              openShareTripId={openShareTripId}
+              onOpenShareHandled={() => setOpenShareTripId(null)}
               onUpdateCurrency={updateTripCurrency}
             />
           )
@@ -3440,12 +3375,16 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-start',
     width: '100%',
+    maxWidth: '100%',
+    overflow: 'hidden',
   },
   topBar: {
     width: '100%',
+    maxWidth: '100%',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 8,
     paddingHorizontal: 16,
     paddingVertical: 10,
     backgroundColor: theme.colors.surface,
@@ -3460,6 +3399,8 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    flexShrink: 1,
+    minWidth: 0,
   },
   topBarLeftNarrow: {
     flexWrap: 'wrap',
@@ -3499,17 +3440,24 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
   topRightWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    justifyContent: 'flex-end',
+    gap: 8,
+    flexShrink: 1,
+    minWidth: 0,
   },
   topRightWrapperNarrow: {
     width: '100%',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
+    flexWrap: 'wrap',
     gap: 8,
   },
   topRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
+    flexShrink: 1,
   },
   topRightNarrow: {
     marginLeft: 'auto',
@@ -3526,12 +3474,15 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
   contentViewport: {
     flex: 1,
     width: '100%',
+    maxWidth: '100%',
     minHeight: 0,
     position: 'relative',
+    overflow: 'hidden',
   },
   pageScroll: {
     flex: 1,
     width: '100%',
+    maxWidth: '100%',
     minHeight: 0,
   },
   pageScrollContent: {
@@ -3547,15 +3498,18 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
   pageViewport: {
     flex: 1,
     width: '100%',
+    maxWidth: '100%',
     minHeight: 0,
     padding: 16,
     alignItems: 'center',
+    overflow: 'hidden',
   },
   pageViewportInner: {
     flex: 1,
     width: '100%',
     minHeight: 0,
     maxWidth: 1200,
+    overflow: 'hidden',
   },
   card: {
     width: '100%',
@@ -3610,6 +3564,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     left: 20,
     right: 20,
     bottom: 20,
+    paddingRight: 150,
   },
   homeHeroSubtitle: {
     color: '#e5e7eb',
@@ -3618,6 +3573,20 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
   homeHeroTitle: {
     color: '#fff',
     fontSize: 32,
+    fontWeight: '700',
+  },
+  homeHeroChangeTripBadge: {
+    position: 'absolute',
+    right: 14,
+    bottom: 14,
+    backgroundColor: 'rgba(15, 23, 42, 0.78)',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  homeHeroChangeTripText: {
+    color: '#FFFFFF',
+    fontSize: 12,
     fontWeight: '700',
   },
   homeNavList: {

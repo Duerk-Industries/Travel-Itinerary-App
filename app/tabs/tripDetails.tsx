@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import DropdownOptionButton from '../components/DropdownOptionButton';
 import { formatDateLong } from '../utils/formatDateLong';
-import { renderRichTextBlocks } from '../utils/richText';
 import { formatMonthYear } from '../utils/tripDates';
 
 type Trip = {
@@ -46,7 +45,8 @@ type TripDetailsTabProps = {
   group: GroupView | null;
   styles: Record<string, any>;
   openShareSignal?: number;
-  onSetActive: (tripId: string) => void;
+  openShareTripId?: string | null;
+  onOpenShareHandled?: () => void;
   onUpdateCurrency: (tripId: string, currency: string) => void;
 };
 
@@ -57,23 +57,20 @@ const TripDetailsTab: React.FC<TripDetailsTabProps> = ({
   group,
   styles,
   openShareSignal,
-  onSetActive,
+  openShareTripId,
+  onOpenShareHandled,
   onUpdateCurrency,
 }) => {
   if (!trip) {
     return (
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Trip Details</Text>
+        <Text style={styles.sectionTitle}>Trip Settings</Text>
         <Text style={styles.helperText}>This trip is no longer available.</Text>
       </View>
     );
   }
 
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
-  const [comments, setComments] = useState<Array<{ id: string; body: string; createdAt: string; authorName?: string | null; authorEmail?: string | null }>>([]);
-  const [commentDraft, setCommentDraft] = useState('');
-  const [commentLoading, setCommentLoading] = useState(false);
-  const [commentError, setCommentError] = useState('');
   const currencyOptions = useMemo(
     () => ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY', 'INR', 'MXN'],
     []
@@ -105,7 +102,7 @@ const TripDetailsTab: React.FC<TripDetailsTabProps> = ({
   const [inviteRole, setInviteRole] = useState<'member' | 'follower'>('follower');
   const [inviteSubmitting, setInviteSubmitting] = useState(false);
   const [inviteFeedback, setInviteFeedback] = useState('');
-  const previousOpenShareSignalRef = useRef<number | undefined>(openShareSignal);
+  const previousOpenShareSignalRef = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     const ids = Array.isArray(trip?.locationIds) ? trip!.locationIds : [];
@@ -136,52 +133,6 @@ const TripDetailsTab: React.FC<TripDetailsTabProps> = ({
       active = false;
     };
   }, [backendUrl, headers, trip?.id, trip?.locationIds]);
-
-  useEffect(() => {
-    if (!backendUrl || !headers || !trip?.id) {
-      setComments([]);
-      return;
-    }
-    let active = true;
-    fetch(`${backendUrl}/api/trips/${trip.id}/comments`, { headers })
-      .then((res) => (res.ok ? res.json() : { comments: [] }))
-      .then((payload) => {
-        if (!active) return;
-        setComments(Array.isArray(payload?.comments) ? payload.comments : []);
-      })
-      .catch(() => {
-        if (active) setComments([]);
-      });
-    return () => {
-      active = false;
-    };
-  }, [backendUrl, headers, trip?.id]);
-
-  const postComment = async () => {
-    if (!backendUrl || !headers || !trip?.id) return;
-    const body = commentDraft.trim();
-    if (!body) return;
-    setCommentLoading(true);
-    setCommentError('');
-    try {
-      const res = await fetch(`${backendUrl}/api/trips/${trip.id}/comments`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...headers },
-        body: JSON.stringify({ body }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setCommentError(data.error || 'Unable to post comment');
-        return;
-      }
-      setComments((prev) => [...prev, data]);
-      setCommentDraft('');
-    } catch (err) {
-      setCommentError((err as Error).message || 'Unable to post comment');
-    } finally {
-      setCommentLoading(false);
-    }
-  };
 
   const shareLink = useMemo(() => {
     if (!followCode) return '';
@@ -262,9 +213,11 @@ const TripDetailsTab: React.FC<TripDetailsTabProps> = ({
   useEffect(() => {
     if (openShareSignal == null) return;
     if (previousOpenShareSignalRef.current === openShareSignal) return;
+    if (!openShareTripId || openShareTripId !== trip.id) return;
     previousOpenShareSignalRef.current = openShareSignal;
     openShareModal();
-  }, [openShareSignal]);
+    onOpenShareHandled?.();
+  }, [openShareSignal, openShareTripId, trip.id, onOpenShareHandled]);
 
   const copyShareLink = async () => {
     if (!shareLink) return;
@@ -348,7 +301,7 @@ const TripDetailsTab: React.FC<TripDetailsTabProps> = ({
   return (
     <ScrollView style={[styles.card, { flex: 1, minHeight: 0 }]} contentContainerStyle={{ gap: 12, flexGrow: 1 }}>
       <View style={styles.row}>
-        <Text style={styles.sectionTitle}>Trip Details</Text>
+        <Text style={styles.sectionTitle}>Trip Settings</Text>
       </View>
       <Text style={styles.flightTitle}>{trip.name}</Text>
       <Text style={styles.helperText}>Created: {formatDateLong(trip.createdAt)}</Text>
@@ -359,19 +312,6 @@ const TripDetailsTab: React.FC<TripDetailsTabProps> = ({
           Dates: {monthLabel} · {trip.durationDays} day(s)
         </Text>
       ) : null}
-      {trip.description ? (
-        <View style={{ marginTop: 8 }}>
-          {renderRichTextBlocks(trip.description, {
-            base: styles.bodyText,
-            bold: styles.headerText,
-            italic: styles.helperText,
-            link: styles.linkText ?? styles.buttonText,
-            listItem: styles.helperText,
-          })}
-        </View>
-      ) : (
-        <Text style={styles.helperText}>No description yet.</Text>
-      )}
 
       <View style={styles.divider} />
       <Text style={styles.headerText}>Currency</Text>
@@ -401,31 +341,6 @@ const TripDetailsTab: React.FC<TripDetailsTabProps> = ({
       </View>
 
       <View style={styles.divider} />
-      <Text style={styles.headerText}>Discussion ({comments.length})</Text>
-      {comments.length ? (
-        comments.map((comment) => (
-          <View key={comment.id} style={{ marginTop: 6 }}>
-            <Text style={[styles.bodyText, { fontWeight: '700' }]}>{comment.authorName || comment.authorEmail || 'Traveler'}</Text>
-            <Text style={styles.bodyText}>{comment.body}</Text>
-            <Text style={styles.helperText}>{comment.createdAt ? new Date(comment.createdAt).toLocaleString() : ''}</Text>
-          </View>
-        ))
-      ) : (
-        <Text style={styles.helperText}>No comments yet. Start the discussion.</Text>
-      )}
-      <TextInput
-        style={[styles.input, { marginTop: 8, minHeight: 70, textAlignVertical: 'top' }]}
-        placeholder="Write a comment..."
-        multiline
-        value={commentDraft}
-        onChangeText={setCommentDraft}
-      />
-      {commentError ? <Text style={styles.errorText}>{commentError}</Text> : null}
-      <TouchableOpacity style={[styles.button, { marginTop: 6 }]} onPress={postComment} disabled={commentLoading || !commentDraft.trim()}>
-        <Text style={styles.buttonText}>{commentLoading ? 'Posting...' : 'Post Comment'}</Text>
-      </TouchableOpacity>
-
-      <View style={styles.divider} />
       <Text style={styles.headerText}>Participants</Text>
       {members.length ? (
         members.map((m) => (
@@ -452,12 +367,6 @@ const TripDetailsTab: React.FC<TripDetailsTabProps> = ({
       <View style={styles.row}>
         <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={openShareModal}>
           <Text style={styles.buttonText}>Share</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.row}>
-        <TouchableOpacity style={[styles.button, { flex: 1 }]} onPress={() => onSetActive(trip.id)}>
-          <Text style={styles.buttonText}>Set Active Trip</Text>
         </TouchableOpacity>
       </View>
 
