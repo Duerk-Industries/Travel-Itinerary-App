@@ -129,6 +129,7 @@ const ChatPanel: React.FC<Props> = ({
     }) => {
       if (payload.tripId !== tripId) return;
       if (payload.initial) {
+        clearTimeout(historyTimeout);
         setMessages(mergeMessagesById([], payload.messages));
         setHasMore(payload.hasMore);
         setErrorMessage(null);
@@ -166,12 +167,14 @@ const ChatPanel: React.FC<Props> = ({
     };
 
     const onChatError = (message: string) => {
+      clearTimeout(historyTimeout);
       setMessages([]);
       setErrorMessage(message || 'Unable to load chat right now.');
       setLoading(false);
     };
 
     const onConnectError = () => {
+      clearTimeout(historyTimeout);
       setMessages([]);
       setErrorMessage('Unable to connect to chat right now.');
       setLoading(false);

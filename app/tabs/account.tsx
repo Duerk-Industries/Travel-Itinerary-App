@@ -19,6 +19,9 @@ export interface AccountProfile {
   preferredAirport: string;
   mapPreference?: MapApp;
   appearancePreference: AppearancePreference;
+  entitlements?: {
+    costTracking?: boolean;
+  };
 }
 
 export interface FellowTraveler {
@@ -81,6 +84,7 @@ export const fetchAccountProfile = async ({
       preferredAirport: data.preferredAirport ?? '',
       mapPreference: mapPreference ?? prev.mapPreference ?? 'google',
       appearancePreference: appearancePreference ?? prev.appearancePreference ?? 'auto',
+      entitlements: data.entitlements ?? prev.entitlements,
     }));
     setUserName(fullName);
     setUserEmail(data.email ?? null);

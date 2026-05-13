@@ -392,4 +392,40 @@ describe('ChatPanel', () => {
     expect(tree.root.findByProps({ testID: 'chat-error-state' })).toBeTruthy();
     expect(findText(tree.root, 'Unable to load chat history right now.').length).toBeGreaterThan(0);
   });
+
+  test('keeps rendered history after the fallback timeout elapses', () => {
+    const socket = createSocketMock();
+    let tree: any;
+
+    act(() => {
+      tree = renderer.create(<ChatPanel socket={socket} {...baseProps} />);
+    });
+
+    act(() => {
+      socket.trigger(SERVER_EVENTS.MESSAGE_HISTORY_PAGE, {
+        tripId: baseProps.tripId,
+        messages: [
+          {
+            id: 'm1',
+            tripId: baseProps.tripId,
+            senderId: 'user-2',
+            senderName: 'Alice',
+            senderInitials: 'AA',
+            body: 'hello from chat',
+            createdAt: '2026-04-23T12:00:00Z',
+            appId: 'WanderBunnies',
+          },
+        ],
+        hasMore: false,
+        initial: true,
+      });
+    });
+
+    act(() => {
+      jest.advanceTimersByTime(6000);
+    });
+
+    expect(tree.root.findByProps({ testID: 'chat-message-m1' })).toBeTruthy();
+    expect(tree.root.findAllByProps({ testID: 'chat-error-state' })).toHaveLength(0);
+  });
 });

@@ -562,6 +562,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     updateAppearancePreference,
     clearAccountProfile,
   } = useAccountProfile();
+  const costTrackingAllowed = accountProfile.entitlements?.costTracking !== false;
   const logoutRef = useRef<() => void>(() => undefined);
   const handleUnauthorized = useCallback(() => logoutRef.current(), []);
 
@@ -856,7 +857,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       alert(data.error || 'Unable to add car rental.');
       return;
     }
-    if (activeTripId && userToken) {
+    if (activeTripId && userToken && costTrackingAllowed) {
       const expRes = await fetch(`${backendUrl}/api/expenses?tripId=${activeTripId}`, {
         headers: { Authorization: `Bearer ${userToken}` },
       });
@@ -870,7 +871,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       setCarRentals(cars);
     }
     setCarDraft(createInitialCarRentalDraft());
-  }, [activeTripId, carDraft, defaultPayerId, memberIds, backendUrl, jsonHeaders, userToken, isFollowingMode]);
+  }, [activeTripId, carDraft, defaultPayerId, memberIds, backendUrl, jsonHeaders, userToken, isFollowingMode, costTrackingAllowed]);
 
   const addCarRentalFromOverview = useCallback(async (rental: CarRental) => {
     if (isFollowingMode) return;
@@ -893,7 +894,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       alert(data.error || 'Unable to add car rental.');
       return;
     }
-    if (activeTripId && userToken) {
+    if (activeTripId && userToken && costTrackingAllowed) {
       const expRes = await fetch(`${backendUrl}/api/expenses?tripId=${activeTripId}`, {
         headers: { Authorization: `Bearer ${userToken}` },
       });
@@ -906,7 +907,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       const cars = await fetchCarRentalsForTrip({ backendUrl, activeTripId, token: userToken });
       setCarRentals(cars);
     }
-  }, [activeTripId, backendUrl, jsonHeaders, userToken, isFollowingMode]);
+  }, [activeTripId, backendUrl, jsonHeaders, userToken, isFollowingMode, costTrackingAllowed]);
 
   const removeCarRental = useCallback(async (id: string) => {
     if (isFollowingMode) return;
@@ -916,7 +917,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       alert(data.error || 'Unable to delete car rental.');
       return;
     }
-    if (activeTripId && userToken) {
+    if (activeTripId && userToken && costTrackingAllowed) {
       const expRes = await fetch(`${backendUrl}/api/expenses?tripId=${activeTripId}`, {
         headers: { Authorization: `Bearer ${userToken}` },
       });
@@ -929,7 +930,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       const cars = await fetchCarRentalsForTrip({ backendUrl, activeTripId, token: userToken });
       setCarRentals(cars);
     }
-  }, [backendUrl, jsonHeaders, activeTripId, userToken, isFollowingMode]);
+  }, [backendUrl, jsonHeaders, activeTripId, userToken, isFollowingMode, costTrackingAllowed]);
 
   const voteOnCarRental = useCallback(async (id: string, value: 1 | -1) => {
     if (isFollowingMode) return;
@@ -1572,7 +1573,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
   const fetchExpenses = useCallback(async (token?: string) => {
     const authToken = token ?? userToken;
-    if (!activeTripId || !authToken || isFollowingMode) {
+    if (!activeTripId || !authToken || isFollowingMode || !costTrackingAllowed) {
       setExpenses([]);
       return;
     }
@@ -1589,11 +1590,11 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     } catch {
       setExpenses([]);
     }
-  }, [activeTripId, backendUrl, isFollowingMode, userToken]);
+  }, [activeTripId, backendUrl, costTrackingAllowed, isFollowingMode, userToken]);
 
   const fetchTripPayments = useCallback(async (token?: string) => {
     const authToken = token ?? userToken;
-    if (!activeTripId || !authToken || isFollowingMode) {
+    if (!activeTripId || !authToken || isFollowingMode || !costTrackingAllowed) {
       setTripPayments([]);
       return;
     }
@@ -1610,7 +1611,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     } catch {
       setTripPayments([]);
     }
-  }, [activeTripId, backendUrl, isFollowingMode, userToken]);
+  }, [activeTripId, backendUrl, costTrackingAllowed, isFollowingMode, userToken]);
 
   const addTripPayment = useCallback(async (draft: {
     payerId: string;
@@ -1619,6 +1620,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     amountCents: number;
   }) => {
     if (!activeTripId || !userToken) throw new Error('Not signed in');
+    if (!costTrackingAllowed) throw new Error('Payment tracking is a premium feature');
     const res = await fetch(`${backendUrl}/api/payments`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${userToken}` },
@@ -1641,10 +1643,11 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       throw new Error(message);
     }
     await fetchTripPayments();
-  }, [activeTripId, backendUrl, userToken, fetchTripPayments]);
+  }, [activeTripId, backendUrl, userToken, costTrackingAllowed, fetchTripPayments]);
 
   const deleteTripPayment = useCallback(async (paymentId: string) => {
     if (!userToken) throw new Error('Not signed in');
+    if (!costTrackingAllowed) throw new Error('Payment tracking is a premium feature');
     const res = await fetch(`${backendUrl}/api/payments/${paymentId}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${userToken}` },
@@ -1660,7 +1663,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       throw new Error(message);
     }
     await fetchTripPayments();
-  }, [backendUrl, userToken, fetchTripPayments]);
+  }, [backendUrl, userToken, costTrackingAllowed, fetchTripPayments]);
 
   // fetchInvites and fetchPendingTripShareInvites are now owned by useGroupInvites.
 
@@ -2645,6 +2648,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   setExpenses={setExpenses}
                   defaultPayerId={defaultPayerId}
                   styles={styles}
+                  costTrackingAllowed={costTrackingAllowed}
                 />
               )
             : null}

@@ -18,6 +18,9 @@ export type AccountProfile = {
   preferredAirport: string;
   appearancePreference: AppearancePreference;
   mapPreference?: MapApp;
+  entitlements?: {
+    costTracking?: boolean;
+  };
 };
 
 const EMPTY_PROFILE: AccountProfile = {

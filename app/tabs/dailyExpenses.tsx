@@ -65,6 +65,7 @@ type DailyExpensesTabProps = {
   setExpenses: React.Dispatch<React.SetStateAction<Expense[]>>;
   defaultPayerId: string | null;
   styles: Record<string, any>;
+  costTrackingAllowed?: boolean;
 };
 
 const categoryOptions = ['Breakfast', 'Lunch', 'Dinner', 'Other Food', 'Rides', 'Souvenirs', 'Other'] as const;
@@ -147,6 +148,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   setExpenses,
   defaultPayerId,
   styles,
+  costTrackingAllowed,
 }) => {
   const { width: viewportWidth } = useWindowDimensions();
   const isNarrowLayout = viewportWidth < 700;
@@ -265,6 +267,10 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   };
 
   const handleReceiptFile = async (file: File | null | undefined) => {
+    if (!costTrackingAllowed) {
+      alert('Expense tracking is a premium feature');
+      return;
+    }
     if (!trip?.id || !file) return;
     setReceiptParsing(true);
     setReceiptError(null);
@@ -299,6 +305,10 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   };
 
   const saveExpense = async () => {
+    if (!costTrackingAllowed) {
+      alert('Expense tracking is a premium feature');
+      return;
+    }
     if (!trip?.id) {
       alert('Select an active trip before adding expenses.');
       return;
@@ -374,6 +384,10 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   };
 
   const deleteExpense = async (expense: Expense) => {
+    if (!costTrackingAllowed) {
+      alert('Expense tracking is a premium feature');
+      return;
+    }
     try {
       const res = await fetch(`${backendUrl}/api/expenses/${expense.id}`, {
         method: 'DELETE',

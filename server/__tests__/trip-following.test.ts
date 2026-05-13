@@ -88,6 +88,9 @@ describe('Trip following (read-only)', () => {
     const followed = await request(app).get('/api/trips/followed').set('Authorization', `Bearer ${followerToken}`).expect(200);
     expect((followed.body as any[]).some((t: any) => t.tripId === tripId)).toBe(true);
 
+    const ownedTrips = await request(app).get('/api/trips').set('Authorization', `Bearer ${followerToken}`).expect(200);
+    expect((ownedTrips.body as any[]).some((t: any) => t.id === tripId)).toBe(false);
+
     const trip = await request(app).get(`/api/trips/${tripId}`).set('Authorization', `Bearer ${followerToken}`).expect(200);
     expect(trip.body.id).toBe(tripId);
     expect(trip.body.access).toBe('follower');

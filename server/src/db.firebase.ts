@@ -2193,7 +2193,7 @@ export const deleteGroup = async (ownerId: string, groupId: string): Promise<voi
 
 export const listTrips = async (userId: string): Promise<Array<Trip & { groupName: string }>> => {
   const db = getDb();
-  const tripIds = await listReadableTripIdsForUser(userId);
+  const tripIds = await listWritableTripIdsForUser(userId);
   if (!tripIds.length) return [];
   const chunk = <T>(items: T[], size = 10): T[][] => {
     const chunks: T[][] = [];
