@@ -562,7 +562,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     updateAppearancePreference,
     clearAccountProfile,
   } = useAccountProfile();
-  const costTrackingAllowed = accountProfile.entitlements?.costTracking !== false;
+  const costTrackingAllowed = accountProfile.entitlements?.costTracking === true;
   const logoutRef = useRef<() => void>(() => undefined);
   const handleUnauthorized = useCallback(() => logoutRef.current(), []);
 
@@ -1571,9 +1571,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setCarRentals(data);
   }, [activeTripId, backendUrl, userToken]);
 
-  const fetchExpenses = useCallback(async (token?: string) => {
+  const fetchExpenses = useCallback(async (token?: string, options?: { costTrackingAllowed?: boolean }) => {
     const authToken = token ?? userToken;
-    if (!activeTripId || !authToken || isFollowingMode || !costTrackingAllowed) {
+    const canUseCostTracking = options?.costTrackingAllowed ?? costTrackingAllowed;
+    if (!activeTripId || !authToken || isFollowingMode || !canUseCostTracking) {
       setExpenses([]);
       return;
     }
@@ -1592,9 +1593,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     }
   }, [activeTripId, backendUrl, costTrackingAllowed, isFollowingMode, userToken]);
 
-  const fetchTripPayments = useCallback(async (token?: string) => {
+  const fetchTripPayments = useCallback(async (token?: string, options?: { costTrackingAllowed?: boolean }) => {
     const authToken = token ?? userToken;
-    if (!activeTripId || !authToken || isFollowingMode || !costTrackingAllowed) {
+    const canUseCostTracking = options?.costTrackingAllowed ?? costTrackingAllowed;
+    if (!activeTripId || !authToken || isFollowingMode || !canUseCostTracking) {
       setTripPayments([]);
       return;
     }
@@ -1778,8 +1780,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     refreshInFlightRef.current = true;
     setIsRefreshing(true);
     try {
-      const ok = await loadAccountProfile(authToken);
-      if (!ok) return;
+      const account = await loadAccountProfile(authToken);
+      if (!account.ok) return;
+      const currentCostTrackingAllowed = account.entitlements?.costTracking === true;
       const currentPage = pageOverride ?? activePage;
       switch (currentPage) {
         case 'home':
@@ -1800,22 +1803,22 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             fetchLodgings(authToken),
             fetchTours(authToken),
             fetchCarRentals(authToken),
-            fetchExpenses(authToken),
-            fetchTripPayments(authToken),
+            fetchExpenses(authToken, { costTrackingAllowed: currentCostTrackingAllowed }),
+            fetchTripPayments(authToken, { costTrackingAllowed: currentCostTrackingAllowed }),
             fetchFollowedTrips(authToken),
           ]);
           break;
         case 'flights':
-          await Promise.all([fetchFlights(authToken), fetchExpenses(authToken)]);
+          await Promise.all([fetchFlights(authToken), fetchExpenses(authToken, { costTrackingAllowed: currentCostTrackingAllowed })]);
           break;
         case 'lodging':
-          await Promise.all([fetchLodgings(authToken), fetchExpenses(authToken)]);
+          await Promise.all([fetchLodgings(authToken), fetchExpenses(authToken, { costTrackingAllowed: currentCostTrackingAllowed })]);
           break;
         case 'packing':
           await fetchTrips(authToken);
           break;
         case 'car':
-          await Promise.all([fetchCarRentals(authToken), fetchExpenses(authToken)]);
+          await Promise.all([fetchCarRentals(authToken), fetchExpenses(authToken, { costTrackingAllowed: currentCostTrackingAllowed })]);
           break;
         case 'tours':
           await fetchTours(authToken);
@@ -1823,7 +1826,11 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         case 'expenses':
         case 'ledger':
         case 'cost':
-          await Promise.all([fetchTrips(authToken), fetchExpenses(authToken), fetchTripPayments(authToken)]);
+          await Promise.all([
+            fetchTrips(authToken),
+            fetchExpenses(authToken, { costTrackingAllowed: currentCostTrackingAllowed }),
+            fetchTripPayments(authToken, { costTrackingAllowed: currentCostTrackingAllowed }),
+          ]);
           break;
         case 'ingest':
           await Promise.all([fetchTrips(authToken), fetchGroups()]);

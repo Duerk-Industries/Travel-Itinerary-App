@@ -50,6 +50,11 @@ interface FetchAccountProfileParams {
   setUserEmail: Setter<string | null>;
 }
 
+export type FetchAccountProfileResult = {
+  ok: boolean;
+  entitlements?: AccountProfile['entitlements'];
+};
+
 export const fetchAccountProfile = async ({
   backendUrl,
   token,
@@ -59,17 +64,17 @@ export const fetchAccountProfile = async ({
   setAppearancePreference,
   setUserName,
   setUserEmail,
-}: FetchAccountProfileParams): Promise<boolean> => {
-  if (!token) return false;
+}: FetchAccountProfileParams): Promise<FetchAccountProfileResult> => {
+  if (!token) return { ok: false };
   try {
     const res = await fetch(`${backendUrl}/api/account`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (res.status === 401 || res.status === 403 || res.status === 404) {
       logout();
-      return false;
+      return { ok: false };
     }
-    if (!res.ok) return false;
+    if (!res.ok) return { ok: false };
     const data = await res.json();
     const fullName = `${data.firstName ?? ''} ${data.lastName ?? ''}`.trim() || data.email || 'Traveler';
     const mapPreference = isMapApp(data.mapPreference) ? data.mapPreference : undefined;
@@ -88,9 +93,9 @@ export const fetchAccountProfile = async ({
     }));
     setUserName(fullName);
     setUserEmail(data.email ?? null);
-    return true;
+    return { ok: true, entitlements: data.entitlements };
   } catch {
-    return false;
+    return { ok: false };
   }
 };
 
