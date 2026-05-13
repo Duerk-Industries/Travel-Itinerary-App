@@ -23,7 +23,7 @@ describe('POST /api/internal/ingestion/jobs/:jobId/run', () => {
       processImportJob,
       requeueDeadLetterImportJob: jest.fn(),
     }));
-    const routeModule = await import('../src/routes/internalIngestionWorkerRoutes');
+    const routeModule = require('../src/routes/internalIngestionWorkerRoutes');
     const router = (routeModule as any).default?.default ?? (routeModule as any).default ?? routeModule;
     const app = express();
     app.use('/api/internal/ingestion', router);

@@ -865,7 +865,9 @@ export const initDb = async (): Promise<void> => {
     }
   }
   await seedUniversalPackingDefaults();
-  await backfillUserPackingLists();
+  if (process.env.NODE_ENV !== 'test' || process.env.FIREBASE_INIT_BACKFILL_PACKING === '1') {
+    await backfillUserPackingLists();
+  }
 };
 
 export const closePool = async (): Promise<void> => {
@@ -1031,7 +1033,9 @@ export const replaceUniversalPackingList = async (itemsInput: Array<{ id?: strin
     updatedAt: nowIso(),
   }));
   await batch.commit();
-  await backfillUserPackingLists();
+  if (process.env.NODE_ENV !== 'test' || process.env.FIREBASE_INIT_BACKFILL_PACKING === '1') {
+    await backfillUserPackingLists();
+  }
   return getUniversalPackingList();
 };
 

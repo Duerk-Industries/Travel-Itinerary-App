@@ -57,6 +57,7 @@ describe('useTripsData', () => {
   });
 
   afterEach(() => {
+    jest.restoreAllMocks();
     jest.clearAllMocks();
   });
 
@@ -149,6 +150,7 @@ describe('useTripsData', () => {
   });
 
   it('does not log out when an active trip member roster returns 403', async () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
     const fetchMock = global.fetch as jest.Mock;
     fetchMock
       .mockImplementationOnce(() =>
@@ -175,6 +177,9 @@ describe('useTripsData', () => {
       expect.objectContaining({ headers: expect.objectContaining({ Authorization: 'Bearer token-1' }) })
     );
     expect(result.current.unauthorizedCount).toBe(0);
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[groups] suppressing repeated member fetch for group=group-1: Not authorized to view group members'
+    );
   });
 
   it('creates a trip and refreshes the trip list through the shared client flow', async () => {
