@@ -209,7 +209,14 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
       </View>
 
       <ScrollView style={{ flex: 1, minHeight: 0 }} contentContainerStyle={{ flexGrow: 1 }}>
-        <View style={[styles.table, styles.lodgingTable]}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator
+          style={styles.tableScroll}
+          contentContainerStyle={styles.tableScrollContent}
+          testID="lodging-table-horizontal-scroll"
+        >
+        <View style={[styles.table, styles.lodgingTable, { minWidth: 878 }]}>
           <View style={[styles.tableRow, styles.tableHeaderRow]}>
             <View style={[styles.tableHeaderCell, styles.lodgingTabNameCol]}>
               <Text style={styles.headerText}>Name</Text>
@@ -309,6 +316,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
             </View>
           ))}
         </View>
+        </ScrollView>
       </ScrollView>
 
       {showDetails && selectedLodging && (

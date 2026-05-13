@@ -19,6 +19,8 @@ const styles = {
     tableHeaderCell: {},
     tableRow: {},
     tableCell: {},
+    tableScroll: {},
+    tableScrollContent: {},
     modalOverlay: {},
     modalCard: {},
     input: {},
@@ -75,6 +77,7 @@ describe('LodgingTab', () => {
             />
         );
 
+        expect(getByTestId('lodging-table-horizontal-scroll').props.horizontal).toBe(true);
         const row1 = getByTestId('lodging-row-l1');
         expect(within(row1).getByText('Hotel 1')).toBeTruthy();
         expect(within(row1).getByText(formatShortDate('2025-01-01'))).toBeTruthy();
