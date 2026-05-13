@@ -94,6 +94,7 @@ describe('DailyExpensesTab', () => {
         setExpenses={() => {}}
         defaultPayerId="m1"
         styles={styles}
+        costTrackingAllowed
       />
     );
 
@@ -133,6 +134,7 @@ describe('DailyExpensesTab', () => {
           setExpenses={setExpenses}
           defaultPayerId="m1"
           styles={styles}
+          costTrackingAllowed
         />
       );
 

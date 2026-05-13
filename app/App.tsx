@@ -4058,6 +4058,12 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     padding: 12,
     gap: 4,
   },
+  dailyExpenseDayCard: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 8,
+    backgroundColor: theme.colors.surfaceMuted,
+  },
   divider: {
     height: 1,
     backgroundColor: theme.colors.border,

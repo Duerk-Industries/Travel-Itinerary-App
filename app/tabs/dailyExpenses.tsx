@@ -78,12 +78,8 @@ type CategoryOption = typeof categoryOptions[number];
 
 const dayCardStyles = {
   card: {
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 8,
     padding: 12,
     marginBottom: 8,
-    backgroundColor: '#ffffff',
   } as const,
   headerRow: {
     flexDirection: 'row' as const,
@@ -250,6 +246,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   };
 
   const applyParsedReceiptDraft = (parsed: ParsedReceiptExpenseDraft) => {
+    const parsedDateOutsideTrip = Boolean(parsed.expenseDate && tripDates.length && !tripDates.includes(parsed.expenseDate));
     if (parsed.expenseDate && (!tripDates.length || tripDates.includes(parsed.expenseDate))) {
       setDraftDate(parsed.expenseDate);
     }
@@ -262,7 +259,14 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
       setDraftAmount(parsed.amount.toFixed(2));
     }
     setDraftVendor(parsed.vendor ?? '');
-    setDraftNotes(parsed.notes ?? '');
+    setDraftNotes(
+      [
+        parsed.notes ?? '',
+        parsedDateOutsideTrip && parsed.expenseDate
+          ? `Receipt date ${formatDateLabel(parsed.expenseDate)} is outside this trip's dates.`
+          : '',
+      ].filter(Boolean).join(' ')
+    );
     setAddExpenseVisible(true);
   };
 
@@ -424,6 +428,19 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   }
 
   const formattedDraftDate = draftDate ? formatDateLabel(draftDate) : '';
+  const fullWidthExpenseField = isNarrowLayout ? { flexBasis: '100%', minWidth: '100%', maxWidth: '100%' } : null;
+  const narrowSelectField = isNarrowLayout ? { flexGrow: 1, flexShrink: 1, flexBasis: 150, minWidth: 132, maxWidth: '100%' } : null;
+  const narrowAmountField = isNarrowLayout ? { flexGrow: 1, flexShrink: 1, flexBasis: 120, minWidth: 120, maxWidth: '100%' } : null;
+  const categoryFieldStyle = [styles.expenseFieldCategory, narrowSelectField];
+  const currencyFieldStyle = [styles.expenseFieldCurrency, narrowSelectField];
+  const amountFieldStyle = [styles.input, styles.expenseFieldAmount, narrowAmountField];
+  const vendorFieldStyle = [styles.input, styles.expenseFieldVendor, fullWidthExpenseField];
+  const notesFieldStyle = [styles.input, styles.expenseFieldNotes, fullWidthExpenseField];
+  const webFieldBase = {
+    width: '100%',
+    maxWidth: '100%',
+    boxSizing: 'border-box',
+  };
 
   return (
     <View style={styles.card}>
@@ -477,7 +494,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
               </View>
               <ScrollView style={styles.expenseModalScroll} contentContainerStyle={{ gap: 8, overflow: 'visible', paddingBottom: 8 }}>
                 <View style={styles.expenseFieldRow}>
-                  <View style={styles.expenseFieldDate}>
+                  <View style={[styles.expenseFieldDate, fullWidthExpenseField]}>
                     {Platform.OS === 'web' ? (
                       <input
                         type="date"
@@ -512,7 +529,12 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                     options={categorySelectOptions}
                     placeholder="Category"
                     title="Expense category"
-                    style={styles.expenseFieldCategory}
+                    style={categoryFieldStyle}
+                    webStyle={toWebStyle(styles.input, {
+                      ...toWebStyle(styles.expenseFieldCategory),
+                      ...toWebStyle(narrowSelectField),
+                      ...webFieldBase,
+                    })}
                     onChange={(value) => setDraftCategory((value || 'Other') as CategoryOption)}
                   />
                   <SelectField
@@ -521,11 +543,16 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                     options={currencySelectOptions}
                     placeholder="Currency"
                     title="Expense currency"
-                    style={styles.expenseFieldCurrency}
+                    style={currencyFieldStyle}
+                    webStyle={toWebStyle(styles.input, {
+                      ...toWebStyle(styles.expenseFieldCurrency),
+                      ...toWebStyle(narrowSelectField),
+                      ...webFieldBase,
+                    })}
                     onChange={setDraftCurrency}
                   />
                   <DraftTextInput
-                    style={[styles.input, styles.expenseFieldAmount]}
+                    style={amountFieldStyle}
                     placeholder="Amount"
                     keyboardType="numeric"
                     value={draftAmount}
@@ -535,14 +562,14 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                 </View>
                 <View style={styles.expenseFieldRow}>
                   <DraftTextInput
-                    style={[styles.input, styles.expenseFieldVendor]}
+                    style={vendorFieldStyle}
                     placeholder="Vendor"
                     value={draftVendor}
                     onChangeText={setDraftVendor}
                     commitOnBlur={false}
                   />
                   <DraftTextInput
-                    style={[styles.input, styles.expenseFieldNotes]}
+                    style={notesFieldStyle}
                     placeholder="Notes"
                     value={draftNotes}
                     onChangeText={setDraftNotes}
@@ -622,7 +649,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
             );
             return (
               <View
-                style={dayCardStyles.card}
+                style={[styles.dailyExpenseDayCard ?? styles.flightRow, dayCardStyles.card]}
                 testID={`daily-expenses-card-${date}`}
               >
                 <View style={dayCardStyles.headerRow}>

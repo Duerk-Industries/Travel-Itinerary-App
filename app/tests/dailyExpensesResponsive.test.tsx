@@ -96,6 +96,7 @@ const styles = {
   detailModalScroll: {},
   tableActionButton: {},
   tableActionButtonDanger: {},
+  dailyExpenseDayCard: { backgroundColor: 'theme-card' },
 };
 
 const trip = {
@@ -162,6 +163,9 @@ describe('DailyExpensesTab responsive layout', () => {
     expect(queryByTestId('daily-expenses-table')).toBeNull();
 
     expect(getByTestId('daily-expenses-card-2025-02-01')).toBeTruthy();
+    expect(getByTestId('daily-expenses-card-2025-02-01').props.style).toEqual(
+      expect.arrayContaining([styles.dailyExpenseDayCard]),
+    );
     expect(getByTestId('daily-expenses-card-2025-02-02')).toBeTruthy();
 
     // Breakfast row should appear for day 1, and not for day 2 (which has no expenses)
