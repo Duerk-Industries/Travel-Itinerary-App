@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, Platform, ScrollView, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Platform, ScrollView, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import ConfirmDialog from '../components/ConfirmDialog';
 import DialogShell from '../components/DialogShell';
 import DraftTextInput from '../components/DraftTextInput';
@@ -146,7 +146,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   styles,
   costTrackingAllowed,
 }) => {
-  const { width: viewportWidth } = useWindowDimensions();
+  const { width: viewportWidth, height: viewportHeight } = useWindowDimensions();
   const isNarrowLayout = viewportWidth < 700;
   const activeMembers = useMemo(
     () => groupMembers.filter((m) => m.status !== 'removed'),
@@ -436,6 +436,12 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
   const amountFieldStyle = [styles.input, styles.expenseFieldAmount, narrowAmountField];
   const vendorFieldStyle = [styles.input, styles.expenseFieldVendor, fullWidthExpenseField];
   const notesFieldStyle = [styles.input, styles.expenseFieldNotes, fullWidthExpenseField];
+  const narrowCardsScrollStyle = isNarrowLayout
+    ? [
+        styles.dailyExpensesVerticalScroll,
+        { maxHeight: Math.max(360, viewportHeight - 220), flexGrow: 0 },
+      ]
+    : styles.dailyExpensesVerticalScroll;
   const webFieldBase = {
     width: '100%',
     maxWidth: '100%',
@@ -631,24 +637,22 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
 
       <View style={styles.divider} />
       {isNarrowLayout ? (
-        <FlatList<string>
+        <ScrollView
           testID="daily-expenses-cards"
-          data={tripDates}
-          keyExtractor={(date: string) => date}
-          // Nested inside App.tsx's outer ScrollView; disable our own scroll so the
-          // parent handles it, but keep row windowing so huge trips don't mount
-          // every day up-front.
-          scrollEnabled={false}
-          initialNumToRender={10}
-          windowSize={5}
-          removeClippedSubviews
-          renderItem={({ item: date }: { item: string }) => {
+          style={narrowCardsScrollStyle}
+          contentContainerStyle={[styles.dailyExpensesVerticalContent, { paddingBottom: 24 }]}
+          nestedScrollEnabled
+          showsVerticalScrollIndicator
+          keyboardShouldPersistTaps="handled"
+        >
+          {tripDates.map((date) => {
             const dayTotal = dailyTotalsByDay[date] ?? 0;
             const nonZeroCategories = categoryOptions.filter(
               (category) => (dailyTotals[date]?.[category] ?? 0) > 0,
             );
             return (
               <View
+                key={date}
                 style={[styles.dailyExpenseDayCard ?? styles.flightRow, dayCardStyles.card]}
                 testID={`daily-expenses-card-${date}`}
               >
@@ -684,8 +688,8 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
                 )}
               </View>
             );
-          }}
-        />
+          })}
+        </ScrollView>
       ) : (
         <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
           <View style={styles.table} testID="daily-expenses-table">

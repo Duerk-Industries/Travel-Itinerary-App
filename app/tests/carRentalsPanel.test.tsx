@@ -11,7 +11,11 @@ const styles: Record<string, any> = {
   card: {},
   sectionHeaderRow: {},
   sectionTitle: {},
+  confirmModal: {},
+  modalOverlay: {},
   table: {},
+  tableScroll: {},
+  tableScrollContent: {},
   tableRow: {},
   tableHeaderRow: {},
   tableHeaderCell: {},
@@ -52,6 +56,10 @@ const styles: Record<string, any> = {
   removeText: {},
   payerOptions: {},
   carAddButton: {},
+  carEditorDialog: {},
+  carEditorScroll: {},
+  carEditorContent: {},
+  tableFooter: {},
 };
 
 const baseMember = {
@@ -95,6 +103,7 @@ const baseProps = {
   payerName: (id: string) => (id === 'm1' ? 'Alice T.' : id),
   formatMemberName: (m: any) => `${m.firstName} ${m.lastName}`.trim(),
   onAddCarRental: jest.fn(),
+  onUpdateCarRental: jest.fn(),
   onRemoveCarRental: jest.fn(),
   onVoteCarRental: jest.fn(),
   onRateCarRental: jest.fn(),
@@ -113,8 +122,9 @@ describe('CarRentalsPanel', () => {
     expect(getByText('Car Rentals')).toBeTruthy();
     // No rows yet.
     expect(queryByTestId('car-rental-delete-car-1')).toBeNull();
-    // Form is visible by default (isFollowingMode=false).
+    // Add opens a separate editor dialog.
     expect(queryByTestId('car-rental-add')).toBeTruthy();
+    expect(queryByTestId('car-rental-editor-dialog')).toBeNull();
   });
 
   it('renders one row per car rental with a route label + vendor/model/reference sub-line', () => {
@@ -122,8 +132,10 @@ describe('CarRentalsPanel', () => {
     const { getByText, getByTestId } = render(
       <CarRentalsPanel {...baseProps} carRentals={[rental]} />,
     );
+    expect(getByTestId('car-rentals-table-scroll')).toBeTruthy();
     expect(getByText('LAX → SFO')).toBeTruthy();
     expect(getByText('Hertz • Prius • REF-123')).toBeTruthy();
+    expect(getByTestId('car-rental-edit-car-1')).toBeTruthy();
     expect(getByTestId('car-rental-delete-car-1')).toBeTruthy();
   });
 
@@ -137,10 +149,25 @@ describe('CarRentalsPanel', () => {
     expect(baseProps.onRemoveCarRental).toHaveBeenCalledWith('car-1');
   });
 
-  it('fires onAddCarRental when the Add button is pressed', () => {
-    const { getByTestId } = render(<CarRentalsPanel {...baseProps} />);
+  it('opens a separate add dialog and fires onAddCarRental when saved', () => {
+    const { getByTestId, getByText } = render(<CarRentalsPanel {...baseProps} />);
     fireEvent.press(getByTestId('car-rental-add'));
+    expect(getByTestId('car-rental-editor-dialog')).toBeTruthy();
+    expect(getByText('Add Car Rental')).toBeTruthy();
+    fireEvent.press(getByTestId('car-rental-save'));
     expect(baseProps.onAddCarRental).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens a separate edit dialog and fires onUpdateCarRental when saved', () => {
+    const rental = makeCarRental();
+    const { getByTestId, getByText } = render(
+      <CarRentalsPanel {...baseProps} carRentals={[rental]} />,
+    );
+    fireEvent.press(getByTestId('car-rental-edit-car-1'));
+    expect(getByTestId('car-rental-editor-dialog')).toBeTruthy();
+    expect(getByText('Edit Car Rental')).toBeTruthy();
+    fireEvent.press(getByTestId('car-rental-save'));
+    expect(baseProps.onUpdateCarRental).toHaveBeenCalledWith('car-1');
   });
 
   it('hides the Add form and replaces Delete buttons with "View only" when isFollowingMode is true', () => {
@@ -149,6 +176,7 @@ describe('CarRentalsPanel', () => {
       <CarRentalsPanel {...baseProps} carRentals={[rental]} isFollowingMode />,
     );
     expect(queryByTestId('car-rental-add')).toBeNull();
+    expect(queryByTestId('car-rental-edit-car-1')).toBeNull();
     expect(queryByTestId('car-rental-delete-car-1')).toBeNull();
     expect(getByText('View only')).toBeTruthy();
   });

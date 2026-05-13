@@ -943,6 +943,7 @@ export const initDb = async (): Promise<void> => {
       free_cancel_by DATE,
       booked_on TEXT,
       reference TEXT,
+      notes TEXT,
       paid_by JSONB DEFAULT '[]'::jsonb,
       traveler_ids JSONB DEFAULT '[]'::jsonb,
       created_at TIMESTAMP DEFAULT NOW()
@@ -953,6 +954,7 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE tours ADD COLUMN IF NOT EXISTS booked_on TEXT;`);
   await p.query(`ALTER TABLE tours ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'Booked';`);
   await p.query(`ALTER TABLE tours ADD COLUMN IF NOT EXISTS activity_type TEXT NOT NULL DEFAULT 'Tour';`);
+  await p.query(`ALTER TABLE tours ADD COLUMN IF NOT EXISTS notes TEXT;`);
   await p.query(`UPDATE tours SET activity_type = 'Tour' WHERE activity_type IS NULL OR COALESCE(activity_type, '') = '';`);
 
   await p.query(`
@@ -4235,6 +4237,7 @@ export const listActivities = async (userId: string, tripId?: string): Promise<A
       to_char(tu.free_cancel_by, 'YYYY-MM-DD') as "freeCancelBy",
       tu.booked_on as "bookedOn",
       tu.reference,
+      tu.notes,
       COALESCE(tu.paid_by, '[]'::jsonb) as "paidBy",
       COALESCE(tu.traveler_ids, '[]'::jsonb) as "travelerIds",
       tu.created_at as "createdAt"
@@ -4279,6 +4282,7 @@ export const getActivityById = async (id: string): Promise<Activity | null> => {
       to_char(tu.free_cancel_by, 'YYYY-MM-DD') as "freeCancelBy",
       tu.booked_on as "bookedOn",
       tu.reference,
+      tu.notes,
       COALESCE(tu.paid_by, '[]'::jsonb) as "paidBy",
       COALESCE(tu.traveler_ids, '[]'::jsonb) as "travelerIds",
       tu.created_at as "createdAt"
@@ -4305,9 +4309,9 @@ export const insertActivity = async (activity: Omit<Activity, 'id' | 'createdAt'
   const { rows } = await p.query<Activity>(
     `
     INSERT INTO tours (
-      id, user_id, trip_id, status, activity_type, date, name, start_location, start_time, duration, cost, free_cancel_by, booked_on, reference, paid_by, traveler_ids
+      id, user_id, trip_id, status, activity_type, date, name, start_location, start_time, duration, cost, free_cancel_by, booked_on, reference, notes, paid_by, traveler_ids
     ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
     )
     RETURNING
       id,
@@ -4324,6 +4328,7 @@ export const insertActivity = async (activity: Omit<Activity, 'id' | 'createdAt'
       to_char(free_cancel_by, 'YYYY-MM-DD') as "freeCancelBy",
       booked_on as "bookedOn",
       reference,
+      notes,
       COALESCE(paid_by, '[]'::jsonb) as "paidBy",
       COALESCE(traveler_ids, '[]'::jsonb) as "travelerIds",
       created_at as "createdAt"
@@ -4343,6 +4348,7 @@ export const insertActivity = async (activity: Omit<Activity, 'id' | 'createdAt'
       activity.freeCancelBy ?? null,
       activity.bookedOn,
       activity.reference,
+      activity.notes ?? '',
       paidBy,
       travelerIds,
     ]
@@ -4375,8 +4381,9 @@ export const updateActivity = async (id: string, userId: string, activity: Parti
       free_cancel_by = COALESCE($11, free_cancel_by),
       booked_on = COALESCE($12, booked_on),
       reference = COALESCE($13, reference),
-      paid_by = COALESCE($14::jsonb, paid_by),
-      traveler_ids = COALESCE($15::jsonb, traveler_ids)
+      notes = COALESCE($14, notes),
+      paid_by = COALESCE($15::jsonb, paid_by),
+      traveler_ids = COALESCE($16::jsonb, traveler_ids)
     WHERE id = $1 AND user_id = $2
     RETURNING
       id,
@@ -4393,6 +4400,7 @@ export const updateActivity = async (id: string, userId: string, activity: Parti
       to_char(free_cancel_by, 'YYYY-MM-DD') as "freeCancelBy",
       booked_on as "bookedOn",
       reference,
+      notes,
       COALESCE(paid_by, '[]'::jsonb) as "paidBy",
       COALESCE(traveler_ids, '[]'::jsonb) as "travelerIds",
       created_at as "createdAt"
@@ -4411,6 +4419,7 @@ export const updateActivity = async (id: string, userId: string, activity: Parti
       activity.freeCancelBy ?? null,
       activity.bookedOn ?? null,
       activity.reference ?? null,
+      activity.notes ?? null,
       paidBy ?? null,
       travelerIds ?? null,
     ]

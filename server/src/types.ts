@@ -375,6 +375,7 @@ export interface Activity {
   freeCancelBy?: string | null;
   bookedOn: string;
   reference: string;
+  notes?: string | null;
   paidBy: string[];
   travelerIds?: string[];
   createdAt: string;

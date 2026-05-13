@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 import { ActivityTab, type Tour } from '../tabs/activities';
 
 const styles = {
@@ -28,6 +28,12 @@ const styles = {
   cellText: {},
   flightTitle: {},
   helperText: {},
+  modalOverlay: {},
+  passengerOverlayBackdrop: {},
+  modalCard: {},
+  modalLabel: {},
+  modalRow: {},
+  linkText: {},
 };
 
 const tour: Tour = {
@@ -43,6 +49,7 @@ const tour: Tour = {
   freeCancelBy: '',
   bookedOn: '',
   reference: 'TOUR1',
+  notes: 'Meet at the fountain.',
   paidBy: ['member-1'],
   travelerIds: ['member-1'],
   netVotes: 0,
@@ -57,7 +64,7 @@ const groupMembers = [
 
 describe('ActivityTab read-only mode', () => {
   test('removes add, edit, and delete controls for followed trips', () => {
-    const { queryByTestId, getAllByText } = render(
+    const { getByTestId, getByText, queryByTestId } = render(
       <ActivityTab
         backendUrl="http://localhost"
         userToken={null}
@@ -81,6 +88,12 @@ describe('ActivityTab read-only mode', () => {
     expect(queryByTestId('activity-add')).toBeNull();
     expect(queryByTestId('activity-edit-tour-1')).toBeNull();
     expect(queryByTestId('activity-delete-tour-1')).toBeNull();
-    expect(getAllByText('View only').length).toBeGreaterThan(0);
+
+    fireEvent.press(getByTestId('activity-details-tour-1'));
+
+    expect(getByTestId('activity-details-modal')).toBeTruthy();
+    expect(getByText('View only')).toBeTruthy();
+    expect(queryByTestId('activity-details-edit-tour-1')).toBeNull();
+    expect(queryByTestId('activity-details-delete-tour-1')).toBeNull();
   });
 });

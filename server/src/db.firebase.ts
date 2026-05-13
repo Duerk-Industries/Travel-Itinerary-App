@@ -3805,6 +3805,7 @@ const normalizeActivityRecord = (data: any) => ({
   startTime: data.startTime ?? data.start_time,
   freeCancelBy: data.freeCancelBy ?? data.free_cancel_by ?? null,
   bookedOn: data.bookedOn ?? data.booked_on ?? '',
+  notes: data.notes ?? '',
   paidBy: Array.isArray(data.paidBy) ? data.paidBy : [],
   travelerIds: Array.isArray(data.travelerIds) ? data.travelerIds : [],
   activityType: (data.activityType ?? 'Tour') as Activity['activityType'],

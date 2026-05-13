@@ -1139,6 +1139,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           freeCancelBy: tour.freeCancelBy,
           bookedOn: tour.bookedOn,
           reference: tour.reference,
+          notes: (tour as any).notes ?? '',
           paidBy,
           travelerIds: [],
         };

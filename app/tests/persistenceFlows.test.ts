@@ -303,6 +303,7 @@ describe('Persistence flows for flights and lodging', () => {
       freeCancelBy: '',
       bookedOn: '',
       reference: '',
+      notes: 'Call ahead for accessibility.',
       paidBy: [],
       travelerIds: [],
     };
@@ -320,6 +321,7 @@ describe('Persistence flows for flights and lodging', () => {
     const payload = JSON.parse(call[1].body);
     expect(payload.tripId).toBe('trip-1');
     expect(payload.paidBy).toEqual(['member-1']);
+    expect(payload.notes).toBe('Call ahead for accessibility.');
   });
 
   test('tour delete uses DELETE /api/activities/:id', async () => {

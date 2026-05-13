@@ -814,30 +814,30 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setCarDraft((prev) => ({ ...prev, [field === 'pickup' ? 'pickupDate' : 'dropoffDate']: value }));
   }, []);
 
-  const addCarRental = useCallback(async () => {
-    if (isFollowingMode) return;
+  const saveCarRentalDraft = useCallback(async (rentalId?: string | null) => {
+    if (isFollowingMode) return false;
     if (!activeTripId) {
       alert('Select an active trip before adding a car rental.');
-      return;
+      return false;
     }
     const result = buildCarRentalFromDraft(carDraft, defaultPayerId, memberIds);
     if (result.error || !result.rental) {
       alert(result.error || 'Unable to add car rental.');
-      return;
+      return false;
     }
-    const res = await fetch(`${backendUrl}/api/car-rentals`, {
-      method: 'POST',
+    const payload = {
+      ...result.rental,
+      cost: Number(result.rental.cost) || 0,
+    };
+    const res = await fetch(rentalId ? `${backendUrl}/api/car-rentals/${rentalId}` : `${backendUrl}/api/car-rentals`, {
+      method: rentalId ? 'PATCH' : 'POST',
       headers: jsonHeaders,
-      body: JSON.stringify({
-        ...result.rental,
-        tripId: activeTripId,
-        cost: Number(result.rental.cost) || 0,
-      }),
+      body: JSON.stringify(rentalId ? payload : { ...payload, tripId: activeTripId }),
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      alert(data.error || 'Unable to add car rental.');
-      return;
+      alert(data.error || `Unable to ${rentalId ? 'update' : 'add'} car rental.`);
+      return false;
     }
     if (activeTripId && userToken && costTrackingAllowed) {
       const expRes = await fetch(`${backendUrl}/api/expenses?tripId=${activeTripId}`, {
@@ -853,7 +853,16 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       setCarRentals(cars);
     }
     setCarDraft(createInitialCarRentalDraft());
+    return true;
   }, [activeTripId, carDraft, defaultPayerId, memberIds, backendUrl, jsonHeaders, userToken, isFollowingMode, costTrackingAllowed]);
+
+  const addCarRental = useCallback(async () => {
+    return saveCarRentalDraft(null);
+  }, [saveCarRentalDraft]);
+
+  const updateCarRental = useCallback(async (id: string) => {
+    return saveCarRentalDraft(id);
+  }, [saveCarRentalDraft]);
 
   const addCarRentalFromOverview = useCallback(async (rental: CarRental) => {
     if (isFollowingMode) return;
@@ -2823,6 +2832,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           payerName={payerName}
           formatMemberName={formatMemberName}
           onAddCarRental={addCarRental}
+          onUpdateCarRental={updateCarRental}
           onRemoveCarRental={removeCarRental}
           onVoteCarRental={voteOnCarRental}
           onRateCarRental={rateOnCarRental}
@@ -4064,6 +4074,14 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     borderRadius: 8,
     backgroundColor: theme.colors.surfaceMuted,
   },
+  dailyExpensesVerticalScroll: {
+    width: '100%',
+    maxWidth: '100%',
+    minHeight: 0,
+  },
+  dailyExpensesVerticalContent: {
+    paddingBottom: 24,
+  },
   divider: {
     height: 1,
     backgroundColor: theme.colors.border,
@@ -4344,6 +4362,17 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     minHeight: 38,
     alignSelf: 'flex-end',
     marginLeft: 'auto',
+  },
+  carEditorDialog: {
+    width: 'min(720px, 94vw)' as any,
+    maxWidth: 720,
+  },
+  carEditorScroll: {
+    maxHeight: 520,
+  },
+  carEditorContent: {
+    gap: 10,
+    paddingBottom: 8,
   },
   inlineInput: {
     flex: 1,

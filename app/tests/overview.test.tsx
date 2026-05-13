@@ -84,10 +84,12 @@ describe('Overview helpers', () => {
       freeCancelBy: '2026-04-30',
       bookedOn: '2026-04-15',
       reference: 'HC-01',
+      notes: 'Sit on the upper deck.',
       paidBy: ['payer-1'],
     };
     const tourDraft = buildTourDraftFromRow(tour as any);
     expect(tourDraft.reference).toBe('HC-01');
+    expect(tourDraft.notes).toBe('Sit on the upper deck.');
     const rental = {
       id: 'car-1',
       pickupLocation: 'Airport',

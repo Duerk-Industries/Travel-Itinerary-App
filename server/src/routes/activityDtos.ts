@@ -42,6 +42,7 @@ export const createActivityDto = z.object({
   freeCancelBy: optionalString,
   bookedOn: optionalString,
   reference: optionalString,
+  notes: optionalString,
   paidBy: optionalIdArray,
   travelerIds: optionalIdArray,
 });
@@ -68,6 +69,7 @@ export const updateActivityDto = z.object({
   freeCancelBy: patchField(z.string()),
   bookedOn: patchField(z.string()),
   reference: patchField(z.string()),
+  notes: patchField(z.string()),
   paidBy: patchField(z.array(z.union([z.string(), z.number()]))),
   travelerIds: patchField(z.array(z.union([z.string(), z.number()]))),
 });

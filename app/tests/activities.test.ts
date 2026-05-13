@@ -76,6 +76,7 @@ describe('Tours', () => {
         freeCancelBy: '',
         bookedOn: '',
         reference: 'REF',
+        notes: 'Vegetarian options requested',
         paidBy: [],
         travelerIds: [],
       },
@@ -83,6 +84,7 @@ describe('Tours', () => {
     );
     expect(result.payload?.cost).toBe('120');
     expect(result.payload?.paidBy).toEqual(['payer-1']);
+    expect(result.payload?.notes).toBe('Vegetarian options requested');
   });
 
   test('buildActivityPayload allows blank name when status is Needed', () => {
@@ -99,6 +101,7 @@ describe('Tours', () => {
         freeCancelBy: '',
         bookedOn: '',
         reference: '',
+        notes: '',
         paidBy: [],
         travelerIds: [],
       },

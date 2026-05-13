@@ -82,6 +82,7 @@ export const buildTourDraftFromRow = (tour: Tour): TourDraft => ({
   freeCancelBy: tour.freeCancelBy,
   bookedOn: tour.bookedOn,
   reference: tour.reference,
+  notes: tour.notes ?? '',
   paidBy: tour.paidBy ?? [],
   travelerIds: (tour as any).travelerIds ?? [],
 });
