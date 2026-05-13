@@ -12,7 +12,6 @@ export type PageKey =
   | 'cost'
   | 'trips'
   | 'create-trip'
-  | 'trip-details'
   | 'account'
   | 'follow'
   | 'following'

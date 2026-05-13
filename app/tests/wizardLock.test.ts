@@ -13,7 +13,6 @@ const pages: PageKey[] = [
   'cost',
   'trips',
   'create-trip',
-  'trip-details',
   'account',
   'follow',
 ];

@@ -207,6 +207,7 @@ describe('HomeTab', () => {
 
   test('shows the change-trip cue on the hero and opens share from the home action', () => {
     const onOpenShareTrip = jest.fn();
+    const onNavigate = jest.fn();
     const { getByText, getByTestId } = render(
       <HomeTab
         backendUrl="http://localhost"
@@ -217,7 +218,7 @@ describe('HomeTab', () => {
         styles={styles}
         onSelectTrip={jest.fn()}
         onSelectFollowedTrip={jest.fn()}
-        onNavigate={jest.fn()}
+        onNavigate={onNavigate}
         onFollowTrip={jest.fn(async () => null)}
         onOpenShareTrip={onOpenShareTrip}
       />
@@ -226,6 +227,7 @@ describe('HomeTab', () => {
     expect(getByText('Click to Change Trip')).toBeTruthy();
     fireEvent.press(getByTestId('home-share-trip-button'));
     expect(onOpenShareTrip).toHaveBeenCalledTimes(1);
+    expect(onNavigate).not.toHaveBeenCalled();
   });
 
   test('shows a create-trip dialog when no trips are available', () => {

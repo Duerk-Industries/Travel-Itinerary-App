@@ -33,7 +33,7 @@ import OverviewTab from './tabs/overview';
 import CreateTripWizard from './tabs/createTripWizard';
 import { buildAllExpenses, calculateAllTotals, type UnifiedExpense, computePayerTotals } from './utils/costs';
 import { rollUpTotals, validateCoveringRules } from './utils/coveredBy';
-import TripDetailsTab from './tabs/tripDetails';
+import ShareTripModal from './components/ShareTripModal';
 import AccountTab, { fetchAccountProfile } from './tabs/account';
 import { CarRental, CarRentalDraft, buildCarRentalFromDraft, createInitialCarRentalDraft, fetchCarRentalsForTrip } from './tabs/carRentals';
 import {
@@ -154,7 +154,6 @@ type Page =
   | 'ingest'
   | 'trips'
   | 'create-trip'
-  | 'trip-details'
   | 'cost'
   | 'account'
   | 'follow'
@@ -495,9 +494,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [tripDropdownOpenId, setTripDropdownOpenId] = useState<string | null>(null);
   const [activeTripId, setActiveTripId] = useState<string | null>(null);
   // userEmail / userId / userRole are owned by useAuthSession (declared above).
-  const [openShareFromHeaderSignal, setOpenShareFromHeaderSignal] = useState(0);
-  const [openShareTripId, setOpenShareTripId] = useState<string | null>(null);
-  const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
+  const [shareTripModalOpen, setShareTripModalOpen] = useState(false);
+  const [overviewEditSignal, setOverviewEditSignal] = useState(0);
   const [lodgings, setLodgings] = useState<Lodging[]>([]);
   const [selectedLodging, setSelectedLodging] = useState<Lodging | null>(null);
   const [showLodgingDetails, setShowLodgingDetails] = useState(false);
@@ -733,19 +731,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   // updateMapPreference + updateAppearancePreference are now provided by useAccountProfile.
 
   const activeTrip = useMemo(() => trips.find((t) => t.id === activeTripId) ?? null, [trips, activeTripId]);
-  const tripById = useMemo(() => new Map(trips.map((trip) => [trip.id, trip] as const)), [trips]);
   const groupById = useMemo(() => new Map(groups.map((group) => [group.id, group] as const)), [groups]);
   const activeGroup = useMemo(
     () => (activeTrip?.groupId ? groupById.get(activeTrip.groupId) ?? null : null),
     [activeTrip?.groupId, groupById]
-  );
-  const selectedTrip = useMemo(
-    () => (selectedTripId ? tripById.get(selectedTripId) ?? null : null),
-    [selectedTripId, tripById]
-  );
-  const selectedTripGroup = useMemo(
-    () => (selectedTrip?.groupId ? groupById.get(selectedTrip.groupId) ?? null : null),
-    [selectedTrip?.groupId, groupById]
   );
   // followedTripById + selectedFollowedTrip were moved above useTripsData so
   // that useSelectedFollowedTripDetails can run before useTripsData consumes
@@ -1837,9 +1826,6 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         case 'following':
           await fetchFollowedTrips(authToken);
           break;
-        case 'trip-details':
-          await Promise.all([fetchTrips(authToken), fetchGroups()]);
-          break;
         case 'create-trip':
           await Promise.all([fetchGroups(), fetchTrips(authToken)]);
           break;
@@ -2042,7 +2028,6 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           sessionPage === 'packing' ||
           sessionPage === 'trips' ||
           sessionPage === 'create-trip' ||
-          sessionPage === 'trip-details' ||
           sessionPage === 'tours' ||
           sessionPage === 'expenses' ||
           sessionPage === 'ledger' ||
@@ -2381,11 +2366,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const handleOpenShareTrip = useCallback(() => {
     const tripToShare = isFollowingMode ? null : activeTrip;
     if (!tripToShare?.id) return;
-    setSelectedTripId(tripToShare.id);
-    setOpenShareTripId(tripToShare.id);
-    requestPageChange('trip-details');
-    setOpenShareFromHeaderSignal((prev) => prev + 1);
-  }, [activeTrip, isFollowingMode, requestPageChange]);
+    setShareTripModalOpen(true);
+  }, [activeTrip, isFollowingMode]);
   const handleFlightsDataChanged = useCallback(() => {
     fetchFlights();
     fetchExpenses();
@@ -3021,11 +3003,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                     <TouchableOpacity
                       style={[styles.button, styles.smallButton]}
                       onPress={() => {
-                        setSelectedTripId(trip.id);
-                        requestPageChange('trip-details');
+                        handleSelectOwnedTrip(trip.id);
+                        requestPageChange('overview');
+                        setOverviewEditSignal((prev) => prev + 1);
                       }}
                     >
-                      <Text style={styles.buttonText}>Settings</Text>
+                      <Text style={styles.buttonText}>Edit</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={() => deleteTrip(trip.id)}>
                       <Text style={styles.dangerButtonText}>Delete</Text>
@@ -3058,6 +3041,8 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                       ? asyncItineraryByTrip[activeTripId]?.error ?? 'generation failed'
                       : null
                   }
+                  editSignal={overviewEditSignal}
+                  onUpdateCurrency={updateTripCurrency}
                   onOpenAddress={openMaps}
                   onRefreshTrips={fetchTrips}
                   onRefreshGroups={fetchGroups}
@@ -3073,22 +3058,6 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                 />
               )
             : null}
-
-      {activePage === 'trip-details'
-        ? renderBoundedPage(
-            <TripDetailsTab
-              backendUrl={backendUrl}
-              headers={headers}
-              trip={selectedTrip}
-              group={selectedTripGroup}
-              styles={styles}
-              openShareSignal={openShareFromHeaderSignal}
-              openShareTripId={openShareTripId}
-              onOpenShareHandled={() => setOpenShareTripId(null)}
-              onUpdateCurrency={updateTripCurrency}
-            />
-          )
-        : null}
 
           {activePage === 'follow'
             ? renderSharedPageScroll(
@@ -3209,6 +3178,16 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           acceptPendingFollowCode={acceptPendingFollowCode}
           rejectPendingFollowCode={rejectPendingFollowCode}
           styles={styles}
+        />
+      ) : null}
+      {userToken ? (
+        <ShareTripModal
+          visible={shareTripModalOpen}
+          backendUrl={backendUrl}
+          headers={headers}
+          trip={activeTrip}
+          styles={styles}
+          onClose={() => setShareTripModalOpen(false)}
         />
       ) : null}
       {userToken && isTripWizardOpen ? (

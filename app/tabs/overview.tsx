@@ -111,6 +111,7 @@ type GroupView = {
   id: string;
   name: string;
   members: Array<{ id: string; userEmail?: string; email?: string; guestName?: string }>;
+  invites?: Array<{ id: string; inviteeEmail: string; status: string }>;
 };
 
 type Lodging = {
@@ -192,6 +193,8 @@ type OverviewTabProps = {
   mapApp: MapApp;
   aiItineraryPending?: boolean;
   aiItineraryFailedMessage?: string | null;
+  editSignal?: number;
+  onUpdateCurrency?: (tripId: string, currency: string) => void;
   onOpenAddress: (address: string) => void;
   onRefreshTrips: () => void;
   onRefreshGroups: () => void;
@@ -343,6 +346,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   mapApp,
   aiItineraryPending,
   aiItineraryFailedMessage,
+  editSignal,
+  onUpdateCurrency,
   onOpenAddress,
   onRefreshTrips,
   onRefreshGroups,
@@ -386,6 +391,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const [isEditingDayItems, setIsEditingDayItems] = useState(false);
   const [descriptionDraft, setDescriptionDraft] = useState('');
   const [isEditing, setIsEditing] = useState(false);
+  const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
   const [dateDraft, setDateDraft] = useState({
     mode: 'range' as 'range' | 'month',
     startDate: '',
@@ -492,6 +498,11 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     if (!trip) return;
     resetDrafts();
   }, [trip]);
+
+  useEffect(() => {
+    if (!editSignal) return;
+    setIsEditing(true);
+  }, [editSignal]);
 
   useEffect(() => {
     setSelectedDay(null);
@@ -952,6 +963,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     }
     return trip?.durationDays ?? null;
   }, [trip, overviewStartDate, overviewEndDate]);
+  const currencyOptions = useMemo(
+    () => ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY', 'INR', 'MXN'],
+    []
+  );
+  const currentCurrency = trip?.currency ?? 'USD';
+  const pendingInvites = group?.invites ?? [];
 
   const rows = useMemo<OverviewRow[]>(
     () =>
@@ -2399,6 +2416,37 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         ) : null}
         {tripLength ? <Text style={styles.helperText}>Trip length: {tripLength} day(s)</Text> : null}
 
+        {isEditing ? (
+          <>
+            <View style={styles.divider} />
+            <Text style={styles.headerText}>Currency</Text>
+            <View style={[styles.input, styles.dropdown, { marginTop: 6 }]}>
+              <TouchableOpacity style={styles.selectButtonRow} onPress={() => setShowCurrencyDropdown((prev) => !prev)}>
+                <Text style={styles.cellText}>{currentCurrency}</Text>
+                <Text style={styles.selectCaret}>▾</Text>
+              </TouchableOpacity>
+              {showCurrencyDropdown ? (
+                <View style={styles.dropdownList}>
+                  {currencyOptions.map((currency) => (
+                    <TouchableOpacity
+                      key={currency}
+                      style={styles.dropdownOption}
+                      onPress={() => {
+                        setShowCurrencyDropdown(false);
+                        if (trip?.id && currency !== currentCurrency) {
+                          onUpdateCurrency?.(trip.id, currency);
+                        }
+                      }}
+                    >
+                      <Text style={styles.cellText}>{currency}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ) : null}
+            </View>
+          </>
+        ) : null}
+
         <View style={[styles.row, { alignItems: 'flex-start' }]}>
           <Text style={styles.headerText}>Trip Dates</Text>
         </View>
@@ -2721,6 +2769,20 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             </View>
           ))}
         </View>
+        {isEditing ? (
+          <View style={{ marginTop: 10 }}>
+            <Text style={styles.headerText}>Pending Invites</Text>
+            {pendingInvites.length ? (
+              pendingInvites.map((invite) => (
+                <Text key={invite.id} style={styles.bodyText}>
+                  {invite.inviteeEmail} ({invite.status || 'Pending'})
+                </Text>
+              ))
+            ) : (
+              <Text style={styles.helperText}>No pending invites.</Text>
+            )}
+          </View>
+        ) : null}
 
         <View style={styles.divider} />
 

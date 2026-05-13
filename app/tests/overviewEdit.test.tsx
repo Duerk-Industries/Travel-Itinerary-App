@@ -173,6 +173,51 @@ describe('Overview edit controls', () => {
     expect(patchCalls.length).toBe(0);
   });
 
+  test('edit mode exposes currency and pending invites', async () => {
+    const onUpdateCurrency = jest.fn();
+    const group = {
+      id: 'group-1',
+      name: 'Group',
+      members: [],
+      invites: [{ id: 'invite-1', inviteeEmail: 'friend@example.com', status: 'pending' }],
+    };
+
+    let tree: any;
+    await act(async () => {
+      tree = renderer.create(
+        <OverviewTab
+          {...baseProps}
+          trip={{ ...baseTrip, currency: 'USD' } as any}
+          group={group}
+          onUpdateCurrency={onUpdateCurrency}
+        />
+      );
+    });
+    const root = tree!.root;
+
+    act(() => {
+      pressByText(root, 'Edit');
+    });
+    expect(findByText(root, 'Currency')).toBeTruthy();
+    expect(findByText(root, 'Pending Invites')).toBeTruthy();
+    expect(
+      root.findAll((node: any) => {
+        if (node.type !== 'Text') return false;
+        const children = Array.isArray(node.props.children) ? node.props.children : [node.props.children];
+        return children.join('') === 'friend@example.com (pending)';
+      }).length
+    ).toBe(1);
+
+    act(() => {
+      pressByText(root, 'USD');
+    });
+    act(() => {
+      pressByText(root, 'EUR');
+    });
+
+    expect(onUpdateCurrency).toHaveBeenCalledWith('trip-1', 'EUR');
+  });
+
   test('dedupes attendees and renders name with email once', async () => {
     const attendees: Array<{
       id: string;
