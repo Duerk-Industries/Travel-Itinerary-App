@@ -13,7 +13,7 @@ const OPTIONS: Array<{ kind: AddItemKind; icon: string; label: string; descripti
   { kind: 'place', icon: '📍', label: 'Add a place', description: 'A location, sight, or address' },
   { kind: 'note', icon: '📝', label: 'Add a note', description: 'Free-form text for the day' },
   { kind: 'checklist', icon: '✅', label: 'Add a checklist', description: 'A title with toggleable items' },
-  { kind: 'activity', icon: '🗓️', label: 'Add a custom activity', description: 'Time + activity + cost (legacy form)' },
+  { kind: 'activity', icon: '🗓️', label: 'Add a custom activity', description: 'Time + activity + cost' },
 ];
 
 const AddItemPopover: React.FC<AddItemPopoverProps> = ({ visible, onSelect, onClose }) => (

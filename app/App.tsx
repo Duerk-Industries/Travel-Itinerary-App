@@ -2564,6 +2564,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   nativeDateTimePicker={NativeDateTimePicker}
                   fetchTours={fetchTours}
                   readOnly={isFollowingMode}
+                  defaultActivityDate={activeTrip?.startDate ?? null}
                 />
               )
             : null}

@@ -519,6 +519,7 @@ const persistResult = async (params: {
       freeCancelBy: null,
       bookedOn: safeString(activity.bookedOn),
       reference: safeString(activity.reference),
+      notes: safeString(activity.notes),
       paidBy: defaultPayerId ? [defaultPayerId] : [],
       travelerIds: defaultTravelerIds,
     } as any);

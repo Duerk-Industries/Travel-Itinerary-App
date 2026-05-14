@@ -2138,6 +2138,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               nativeDateTimePicker={NativeDateTimePicker}
               fetchTours={async () => undefined}
               mode="wizard"
+              defaultActivityDate={dates.mode === 'range' ? dates.startDate : null}
             />
           </>
         );

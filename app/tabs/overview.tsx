@@ -438,7 +438,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const [showAddTour, setShowAddTour] = useState(false);
   const [showAddRental, setShowAddRental] = useState(false);
   const [lodgingDraft, setLodgingDraft] = useState<LodgingDraft>(createInitialLodgingState());
-  const [tourDraft, setTourDraft] = useState<TourDraft>(createInitialActivityState());
+  const [tourDraft, setTourDraft] = useState<TourDraft>(createInitialActivityState(trip?.startDate ?? null));
   const [rentalDraft, setRentalDraft] = useState<CarRentalDraft>(createInitialCarRentalDraft());
   const [editingFlightId, setEditingFlightId] = useState<string | null>(null);
   const [editingFlightDraft, setEditingFlightDraft] = useState<FlightEditDraft | null>(null);
@@ -684,10 +684,42 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     setAddPopoverOpen(false);
   }, []);
 
+  const getDateForDayIndex = useCallback(
+    (dayIndex?: number | null): string | null => {
+      const normalizedDay = Math.max(1, Math.round(Number(dayIndex ?? 1) || 1));
+      const cardDate = dayCards[normalizedDay - 1]?.date;
+      if (cardDate && /^\d{4}-\d{2}-\d{2}$/.test(cardDate)) return cardDate;
+      if (trip?.startDate && /^\d{4}-\d{2}-\d{2}$/.test(trip.startDate)) {
+        const start = new Date(`${trip.startDate}T00:00:00.000Z`);
+        if (!Number.isNaN(start.getTime())) {
+          start.setUTCDate(start.getUTCDate() + normalizedDay - 1);
+          return start.toISOString().slice(0, 10);
+        }
+      }
+      return trip?.startDate ?? null;
+    },
+    [dayCards, trip?.startDate]
+  );
+
+  const openCustomActivityDialog = useCallback(
+    (dayIndex?: number | null) => {
+      setEditingTourId(null);
+      setTourDraft(createInitialActivityState(getDateForDayIndex(dayIndex)));
+      setShowAddTour(true);
+    },
+    [getDateForDayIndex]
+  );
+
   const handlePopoverSelect = useCallback((kind: AddItemKind) => {
+    if (kind === 'activity') {
+      setAddPopoverOpen(false);
+      setActiveAddDialog(null);
+      openCustomActivityDialog(addPopoverDay ?? 1);
+      return;
+    }
     setActiveAddDialog(kind);
     setAddPopoverOpen(false);
-  }, []);
+  }, [addPopoverDay, openCustomActivityDialog]);
 
   const handleAddPlace = useCallback(
     async (input: PlacePickerSubmit) => {
@@ -723,19 +755,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         activity: input.title,
         kind: 'checklist',
         checklistItems: input.items,
-      });
-      if (ok) closeAllAddDialogs();
-    },
-    [postNewDetail, closeAllAddDialogs]
-  );
-
-  const handleAddCustomActivity = useCallback(
-    async (input: PlacePickerSubmit) => {
-      const ok = await postNewDetail(input.day, {
-        day: input.day,
-        time: input.time ?? null,
-        activity: input.name,
-        kind: 'activity',
       });
       if (ok) closeAllAddDialogs();
     },
@@ -1599,7 +1618,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const closeTourModal = () => {
     setShowAddTour(false);
     setEditingTourId(null);
-    setTourDraft(createInitialActivityState());
+    setTourDraft(createInitialActivityState(trip?.startDate ?? null));
   };
 
   const closeRentalModal = () => {
@@ -1677,7 +1696,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const openAddTour = () => {
     if (!isEditing) return;
     setEditingTourId(null);
-    setTourDraft(createInitialActivityState());
+    setTourDraft(createInitialActivityState(trip?.startDate ?? null));
     setShowAddTour(true);
   };
 
@@ -1872,15 +1891,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         return `Transfer from ${dep} to ${arr}.`;
       });
     }
-    if (info.tours.length) {
-      return info.tours.map((t) => `${t.name}${t.startTime ? ` at ${t.startTime}` : ''}`);
-    }
     if (info.lodgings.length) {
       return info.lodgings.map((l) => `Check-in at ${l.name}.`);
     }
     if (info.rentals.length) {
       return info.rentals.map((r) => `Pick up rental car from ${r.pickupLocation || r.vendor}.`);
     }
+    if (info.tours.length) return [];
     return ['No itinerary details yet.'];
   };
 
@@ -1992,7 +2009,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         const heroTitle = [startLocation, summary].filter(Boolean).join(' - ');
         const narrativeLines = buildDayNarrative(activeDayInfo);
         const flightsForDay = activeDayInfo.flights;
-        const toursForDay = activeDayInfo.tours;
+        const activityTimeKey = (tour: Tour) => {
+          const value = String(tour.startTime ?? '').trim();
+          return /^\d{1,2}:\d{2}$/.test(value) ? value.padStart(5, '0') : '99:99';
+        };
+        const toursForDay = [...activeDayInfo.tours].sort((a, b) => {
+          const byTime = activityTimeKey(a).localeCompare(activityTimeKey(b));
+          if (byTime !== 0) return byTime;
+          return String(a.name ?? '').localeCompare(String(b.name ?? ''), undefined, { sensitivity: 'base' });
+        });
         const lodgingsForDay = activeDayInfo.lodgings;
         const rentalsForDay = activeDayInfo.rentals;
 
@@ -2031,13 +2056,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               {tripLocationLabel ? <Text style={styles.helperText}>{tripLocationLabel}</Text> : null}
               {renderDayBar(selectedDay)}
               {renderHeroCard(activeDayCard, heroTitle, false, undefined, 'day-details-hero')}
-              <View style={styles.dayNarrativeBox}>
-                {narrativeLines.map((line, idx) => (
-                  <Text key={`${activeDayCard.date}-narrative-${idx}`} style={styles.bodyText}>
-                    {line}
-                  </Text>
-                ))}
-              </View>
+              {narrativeLines.length ? (
+                <View style={styles.dayNarrativeBox}>
+                  {narrativeLines.map((line, idx) => (
+                    <Text key={`${activeDayCard.date}-narrative-${idx}`} style={styles.bodyText}>
+                      {line}
+                    </Text>
+                  ))}
+                </View>
+              ) : null}
 
               {flightsForDay.length ? (
                 <View style={styles.dayInfoCard}>
@@ -2123,34 +2150,32 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                         : formatTravelerNames(allMemberIds);
                     return (
                       <View key={tour.id} style={styles.dayInfoRow}>
-                        <Text style={styles.dayInfoRoute}>{tour.name}</Text>
-                        <Text
-                          style={styles.helperText}
-                        >{`${tour.startTime || 'Time TBD'} · ${tour.startLocation || 'Location TBD'}`}</Text>
-                        {showTourNames && participants ? <Text style={styles.helperText}>Travelers: {participants}</Text> : null}
+                        <View style={styles.dayInfoText}>
+                          <TouchableOpacity
+                            testID={`day-details-activity-${tour.id}`}
+                            onPress={() => {
+                              setDetailModal({
+                                title: 'Activity Details',
+                                sections: [
+                                  {
+                                    subtitle: showTourNames && participants ? `Travelers: ${participants}` : undefined,
+                                    items: formatTourDetails(tour),
+                                  },
+                                ],
+                              });
+                            }}
+                          >
+                            <Text style={[styles.dayInfoRoute, styles.linkText]}>{tour.name}</Text>
+                          </TouchableOpacity>
+                          <Text
+                            style={styles.helperText}
+                          >{`${tour.startTime || 'Time TBD'} · ${tour.startLocation || 'Location TBD'}`}</Text>
+                          {tour.notes ? <Text style={styles.helperText}>{tour.notes}</Text> : null}
+                          {showTourNames && participants ? <Text style={styles.helperText}>Travelers: {participants}</Text> : null}
+                        </View>
                       </View>
                     );
                   })}
-                  <TouchableOpacity
-                    testID="day-details-tour-details"
-                    style={styles.dayInfoButton}
-                    onPress={() => {
-                      const sections: DetailSection[] = toursForDay.map((tour, idx) => {
-                        const participants =
-                          Array.isArray(tour.paidBy) && tour.paidBy.length
-                            ? formatTravelerNames(tour.paidBy)
-                            : formatTravelerNames(allMemberIds);
-                        return {
-                          title: toursForDay.length > 1 ? `Activity ${idx + 1}` : undefined,
-                          subtitle: showTourNames && participants ? `Travelers: ${participants}` : undefined,
-                          items: formatTourDetails(tour),
-                        };
-                      });
-                      setDetailModal({ title: 'Activity Details', sections });
-                    }}
-                  >
-                    <Text style={styles.dayInfoButtonText}>See tour details →</Text>
-                  </TouchableOpacity>
                 </View>
               ) : null}
 
@@ -3054,6 +3079,82 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         />
       ) : null}
 
+      {showAddTour ? (
+        <View style={styles.modalOverlay} testID="activity-form-modal">
+          <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={closeTourModal} />
+          <View style={[styles.modalCard, { marginTop: 0 }]}>
+            <Text style={styles.sectionTitle}>{editingTourId ? 'Edit Activity' : 'Add Activity'}</Text>
+            <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ paddingRight: 12 }}>
+              <Text style={styles.modalLabel}>Date</Text>
+              {Platform.OS === 'web' ? (
+                <TextInput
+                  style={styles.input}
+                  placeholder="YYYY-MM-DD"
+                  value={tourDraft.date}
+                  onChangeText={(text) => setTourDraft((prev) => ({ ...prev, date: text }))}
+                />
+              ) : (
+                <TouchableOpacity style={styles.input} onPress={() => openModalDatePicker('tourDate', tourDraft.date)}>
+                  <Text style={styles.cellText}>{tourDraft.date || 'YYYY-MM-DD'}</Text>
+                </TouchableOpacity>
+              )}
+              <Text style={styles.modalLabel}>Activity</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Activity name"
+                value={tourDraft.name}
+                onChangeText={(text) => setTourDraft((prev) => ({ ...prev, name: text }))}
+              />
+              <Text style={styles.modalLabel}>Start location</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Start location"
+                value={tourDraft.startLocation}
+                onChangeText={(text) => setTourDraft((prev) => ({ ...prev, startLocation: text }))}
+              />
+              <Text style={styles.modalLabel}>Start time</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="HH:MM"
+                value={tourDraft.startTime}
+                onChangeText={(text) => setTourDraft((prev) => ({ ...prev, startTime: text }))}
+              />
+              <Text style={styles.modalLabel}>Duration</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Duration"
+                value={tourDraft.duration}
+                onChangeText={(text) => setTourDraft((prev) => ({ ...prev, duration: text }))}
+              />
+              <Text style={styles.modalLabel}>Cost</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Cost"
+                keyboardType="numeric"
+                value={tourDraft.cost}
+                onChangeText={(text) => setTourDraft((prev) => ({ ...prev, cost: sanitizeCostInput(text) }))}
+              />
+              <Text style={styles.modalLabel}>Description</Text>
+              <TextInput
+                style={[styles.input, { minHeight: 96, textAlignVertical: 'top' }]}
+                placeholder="Description"
+                value={tourDraft.notes}
+                onChangeText={(text) => setTourDraft((prev) => ({ ...prev, notes: text }))}
+                multiline
+              />
+            </ScrollView>
+            <View style={[styles.tableFooter, { justifyContent: 'space-between' }]}>
+              <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={closeTourModal} testID="activity-cancel">
+                <Text style={styles.dangerButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.button} onPress={saveTour} testID="activity-save">
+                <Text style={styles.buttonText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      ) : null}
+
       {addPopoverOpen ? (
         <AddItemPopover
           visible
@@ -3082,14 +3183,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           visible
           defaultDay={addPopoverDay ?? 1}
           onSubmit={handleAddChecklist}
-          onCancel={closeAllAddDialogs}
-        />
-      ) : null}
-      {activeAddDialog === 'activity' ? (
-        <PlacePickerDialog
-          visible
-          defaultDay={addPopoverDay ?? 1}
-          onSubmit={handleAddCustomActivity}
           onCancel={closeAllAddDialogs}
         />
       ) : null}

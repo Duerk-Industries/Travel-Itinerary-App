@@ -58,7 +58,14 @@ describe('itineraryGeneration utils', () => {
       generatedItems: {
         transfers: [{ transferType: 'Train', departureDate: '2026-07-01', departureLocation: 'A', arrivalLocation: 'B' }],
         lodgings: [{ name: 'Suggested base', checkInDate: '2026-07-01', checkOutDate: '2026-07-03' }],
-        activities: [{ activityType: 'Tour', date: '2026-07-02', name: 'Guided old town walk' }],
+        activities: [
+          {
+            activityType: 'Tour',
+            date: '2026-07-02',
+            name: 'Guided old town walk',
+            notes: 'A guided overview of the historic core with context for first-time visitors.',
+          },
+        ],
         carRentals: [{ pickupLocation: 'A Station', pickupDate: '2026-07-01', dropoffLocation: 'B Station', dropoffDate: '2026-07-03' }],
       },
     });
@@ -84,6 +91,7 @@ describe('itineraryGeneration utils', () => {
     const activityPayload = JSON.parse(String(activityCall?.[1]?.body ?? '{}'));
     expect(activityPayload.status).toBe('Proposed');
     expect(activityPayload.tripId).toBe('trip-1');
+    expect(activityPayload.notes).toBe('A guided overview of the historic core with context for first-time visitors.');
 
     const carCall = fetchMock.mock.calls.find((call) => call[0] === 'http://localhost:4000/api/car-rentals');
     expect(carCall).toBeTruthy();

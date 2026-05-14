@@ -162,6 +162,7 @@ export type ItineraryGeneratedActivity = {
   freeCancelBy: string;
   bookedOn: string;
   reference: string;
+  notes: string;
 };
 
 export type ItineraryGeneratedCarRental = {
@@ -1307,6 +1308,16 @@ const pickActivityTypeForPreferences = (
   return best;
 };
 
+const buildGeneratedActivityDescription = (
+  day: PromptDay,
+  activityName: string,
+  activityType: ActivityType
+): string => {
+  const notes = Array.isArray(day.ln) ? day.ln.map(normalizeText).filter(Boolean) : [];
+  const context = notes.length ? ` Things to know: ${notes.join(' ')}` : '';
+  return `${activityName} is a ${activityType.toLowerCase()} based around ${day.b || 'this stop'}. It fits this day because it complements the planned pace and gives the group a concrete, destination-specific experience.${context}`.trim();
+};
+
 const mapItems = (itinerary: PromptItinerary, preferenceWeights: PromptWeights): ItineraryGeneratedItems => {
   const transfers: ItineraryGeneratedTransfer[] = itinerary.x.map((transfer) => ({
     status: 'Needed',
@@ -1350,6 +1361,7 @@ const mapItems = (itinerary: PromptItinerary, preferenceWeights: PromptWeights):
         freeCancelBy: '',
         bookedOn: '',
         reference: '',
+        notes: buildGeneratedActivityDescription(day, text, closest),
       };
     })
   );

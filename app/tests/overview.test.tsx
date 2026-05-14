@@ -432,6 +432,60 @@ describe('Overview UI (nested itinerary)', () => {
     expect(await findByTestId('day-details-add-item-button')).toBeTruthy();
   });
 
+  test('day details sorts activities by time, keeps them out of the narrative, and opens one activity detail', async () => {
+    const tours = [
+      {
+        id: 'tour-1',
+        date: '2026-01-29',
+        name: 'Second',
+        startLocation: 'Old Town',
+        startTime: '14:00',
+        duration: '2h',
+        cost: '40',
+        freeCancelBy: '',
+        bookedOn: '',
+        reference: 'SECOND-REF',
+        notes: 'Bring comfortable walking shoes.',
+        paidBy: [],
+        travelerIds: [],
+        status: 'Proposed',
+        activityType: 'Tour',
+      },
+      {
+        id: 'tour-2',
+        date: '2026-01-29',
+        name: 'Hike',
+        startLocation: 'Trailhead',
+        startTime: '09:00',
+        duration: '3h',
+        cost: '0',
+        freeCancelBy: '',
+        bookedOn: '',
+        reference: 'HIKE-REF',
+        notes: 'Test description',
+        paidBy: [],
+        travelerIds: [],
+        status: 'Proposed',
+        activityType: 'Hike',
+      },
+    ];
+    const { findByTestId, findByText, queryByText, toJSON } = await renderOverview(<OverviewTab {...baseProps} tours={tours as any} />);
+    fireEvent.press(await findByTestId('overview-day-card-1'));
+
+    const textOutput = JSON.stringify(toJSON());
+    expect(textOutput.indexOf('day-details-activity-tour-2')).toBeLessThan(textOutput.indexOf('day-details-activity-tour-1'));
+    expect(queryByText('Second at 14:00')).toBeNull();
+    expect(queryByText('Hike at 09:00')).toBeNull();
+    expect(await findByText('Bring comfortable walking shoes.')).toBeTruthy();
+    expect(await findByText('Test description')).toBeTruthy();
+    expect(queryByText('see details')).toBeNull();
+
+    fireEvent.press(await findByTestId('day-details-activity-tour-2'));
+    expect(await findByText('Activity Details')).toBeTruthy();
+    expect(await findByText('HIKE-REF')).toBeTruthy();
+    expect(queryByText('SECOND-REF')).toBeNull();
+  });
+
   test('+Add item button opens the four-option popover', async () => {
     const { findByTestId } = await renderOverview(<OverviewTab {...baseProps} />);
     fireEvent.press(await findByTestId('overview-day-card-1'));
@@ -441,6 +495,29 @@ describe('Overview UI (nested itinerary)', () => {
     expect(await findByTestId('add-item-option-note')).toBeTruthy();
     expect(await findByTestId('add-item-option-checklist')).toBeTruthy();
     expect(await findByTestId('add-item-option-activity')).toBeTruthy();
+  });
+
+  test('custom activity add item opens the activity dialog and saves a real activity', async () => {
+    const onTourDataChanged = jest.fn();
+    const { findByTestId, getByPlaceholderText } = await renderOverview(
+      <OverviewTab {...baseProps} onTourDataChanged={onTourDataChanged} />
+    );
+    fireEvent.press(await findByTestId('overview-day-card-1'));
+    fireEvent.press(await findByTestId('day-details-add-item-button'));
+    fireEvent.press(await findByTestId('add-item-option-activity'));
+
+    expect(await findByTestId('activity-form-modal')).toBeTruthy();
+    fireEvent.changeText(getByPlaceholderText('Activity name'), 'Custom walking tour');
+    fireEvent.changeText(getByPlaceholderText('Description'), 'A relaxed orientation walk.');
+    fireEvent.press(await findByTestId('activity-save'));
+
+    await waitFor(() => expect(onTourDataChanged).toHaveBeenCalled());
+    const activityCall = fetchMock.mock.calls.find((call) => call[0] === 'http://localhost:4000/api/activities');
+    expect(activityCall).toBeTruthy();
+    const payload = JSON.parse(String(activityCall?.[1]?.body ?? '{}'));
+    expect(payload.name).toBe('Custom walking tour');
+    expect(payload.date).toBe('2026-01-29');
+    expect(payload.notes).toBe('A relaxed orientation walk.');
   });
 
   test('shows traveler names when flights differ', async () => {

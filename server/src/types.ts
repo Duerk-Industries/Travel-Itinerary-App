@@ -521,6 +521,7 @@ export interface ItineraryGeneratedActivity {
   freeCancelBy: string;
   bookedOn: string;
   reference: string;
+  notes: string;
 }
 
 export interface ItineraryGeneratedCarRental {

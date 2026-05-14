@@ -8,7 +8,7 @@ import AddItemPopover, { type AddItemKind } from '../components/AddItemPopover';
 
 describe('AddItemPopover', () => {
   it('renders four options when visible', () => {
-    const { getByTestId } = render(
+    const { getByTestId, getByText, queryByText } = render(
       <AddItemPopover visible onSelect={() => {}} onClose={() => {}} />
     );
     expect(getByTestId('add-item-popover')).toBeTruthy();
@@ -16,6 +16,8 @@ describe('AddItemPopover', () => {
     expect(getByTestId('add-item-option-note')).toBeTruthy();
     expect(getByTestId('add-item-option-checklist')).toBeTruthy();
     expect(getByTestId('add-item-option-activity')).toBeTruthy();
+    expect(getByText('Time + activity + cost')).toBeTruthy();
+    expect(queryByText(/legacy form/i)).toBeNull();
   });
 
   it('fires onSelect with the chosen kind', () => {

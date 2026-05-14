@@ -100,7 +100,7 @@ const sampleTour: Tour = {
   userRating: 1,
 };
 
-const renderActivityHarness = (initialTours: Tour[] = []) => {
+const renderActivityHarness = (initialTours: Tour[] = [], defaultActivityDate?: string | null) => {
   const Harness = () => {
     const [tours, setTours] = useState<Tour[]>(initialTours);
     return (
@@ -121,6 +121,7 @@ const renderActivityHarness = (initialTours: Tour[] = []) => {
         nativeDateTimePicker={null}
         fetchTours={jest.fn()}
         mode="wizard"
+        defaultActivityDate={defaultActivityDate}
       />
     );
   };
@@ -149,6 +150,14 @@ describe('Activity dialog layout', () => {
     fetchSpy.mockRestore();
   });
 
+  it('defaults new activities to the trip first date when provided', () => {
+    const { getByTestId, getByText } = renderActivityHarness([], '2026-07-01');
+
+    fireEvent.press(getByTestId('activity-add'));
+
+    expect(getByText('Wed, Jul 1')).toBeTruthy();
+  });
+
   it('closes the activity dialog from the cancel action', () => {
     const { getByTestId, queryByTestId } = renderActivityHarness();
 
@@ -170,7 +179,7 @@ describe('Activity dialog layout', () => {
     expect(queryByText('Platform Booked On')).toBeNull();
     expect(queryByText('Free Cancel By')).toBeNull();
     expect(queryByText('Reference')).toBeNull();
-    expect(queryByText('Notes')).toBeNull();
+    expect(queryByText('Description')).toBeNull();
     expect(queryByText('Paid by')).toBeNull();
     expect(queryByText('Attendees')).toBeNull();
     expect(queryByText('Votes')).toBeNull();
@@ -183,7 +192,7 @@ describe('Activity dialog layout', () => {
     expect(getByText('Platform Booked On')).toBeTruthy();
     expect(getByText('Free Cancel By')).toBeTruthy();
     expect(getByText('Reference')).toBeTruthy();
-    expect(getByText('Notes')).toBeTruthy();
+    expect(getByText('Description')).toBeTruthy();
     expect(getByText('Paid by')).toBeTruthy();
     expect(getByText('Attendees')).toBeTruthy();
     expect(getByText('Votes')).toBeTruthy();
@@ -197,6 +206,6 @@ describe('Activity dialog layout', () => {
     expect(queryByTestId('activity-details-modal')).toBeNull();
     expect(getByTestId('activity-form-modal')).toBeTruthy();
     expect(getByText('Edit Activity')).toBeTruthy();
-    expect(getByText('Notes')).toBeTruthy();
+    expect(getByText('Description')).toBeTruthy();
   });
 });

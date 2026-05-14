@@ -100,11 +100,16 @@ export type GroupMemberOption = {
   removedAt?: string | null;
 };
 
-// Build a blank activity draft with today's date and zero cost.
-export const createInitialActivityState = (): TourDraft => ({
+const resolveInitialActivityDate = (preferredDate?: string | null): string => {
+  const trimmed = String(preferredDate ?? '').trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(trimmed) ? trimmed : new Date().toISOString().slice(0, 10);
+};
+
+// Build a blank activity draft with the trip's first date, when known, otherwise today.
+export const createInitialActivityState = (preferredDate?: string | null): TourDraft => ({
   status: DEFAULT_NEW_ITINERARY_STATUS,
   activityType: 'Tour',
-  date: new Date().toISOString().slice(0, 10),
+  date: resolveInitialActivityDate(preferredDate),
   name: '',
   startLocation: '',
   startTime: '',
@@ -227,6 +232,7 @@ type TourTabProps = {
   onDataChanged?: () => void;
   mode?: 'live' | 'wizard';
   readOnly?: boolean;
+  defaultActivityDate?: string | null;
 };
 
 export const ActivityTab: React.FC<TourTabProps> = ({
@@ -249,6 +255,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   onDataChanged,
   mode = 'live',
   readOnly = false,
+  defaultActivityDate = null,
 }) => {
   const [editingTour, setEditingTour] = useState<TourDraft | null>(null);
   const [editingTourId, setEditingTourId] = useState<string | null>(null);
@@ -296,7 +303,9 @@ export const ActivityTab: React.FC<TourTabProps> = ({
       alert('Select an active trip before adding an activity.');
       return;
     }
-    const base = tour ? { ...tour, travelerIds: tour.travelerIds ?? (tour as any).travelerIds ?? [] } : createInitialActivityState();
+    const base = tour
+      ? { ...tour, travelerIds: tour.travelerIds ?? (tour as any).travelerIds ?? [] }
+      : createInitialActivityState(defaultActivityDate);
     if (!base.travelerIds?.length) {
       base.travelerIds = activeMembers.map((m) => m.id);
     }
@@ -477,10 +486,10 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   );
 
   const renderDetailRow = (label: string, value: React.ReactNode) => (
-    <View style={styles.modalRow} key={label}>
-      <Text style={styles.modalLabel}>{label}</Text>
+    <View style={[styles.modalRow, { alignItems: 'flex-start' }]} key={label}>
+      <Text style={[styles.cellText, { minWidth: 140, flexShrink: 0, fontWeight: '600' }]}>{label}</Text>
       {typeof value === 'string' || typeof value === 'number' ? (
-        <Text style={styles.cellText}>{value || '-'}</Text>
+        <Text style={[styles.cellText, { flex: 1 }]}>{value || '-'}</Text>
       ) : (
         value
       )}
@@ -591,9 +600,6 @@ export const ActivityTab: React.FC<TourTabProps> = ({
             <View style={[styles.modalCard, { marginTop: 0 }]}>
               <View style={styles.sectionHeaderRow}>
                 <Text style={styles.sectionTitle}>Activity Details</Text>
-                <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => setSelectedTourId(null)}>
-                  <Text style={styles.buttonText}>Close</Text>
-                </TouchableOpacity>
               </View>
               <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ paddingRight: 12 }}>
                 {renderDetailRow('Date', formatDateLong(selectedTour.date))}
@@ -625,7 +631,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                 {renderDetailRow('Platform Booked On', selectedTour.bookedOn || '-')}
                 {renderDetailRow('Free Cancel By', selectedTour.freeCancelBy ? formatDateLong(selectedTour.freeCancelBy) : '-')}
                 {renderDetailRow('Reference', selectedTour.reference || '-')}
-                {renderDetailRow('Notes', selectedTour.notes || '-')}
+                {renderDetailRow('Description', selectedTour.notes || '-')}
                 {renderDetailRow('Paid by', formatPeopleList(selectedTour.paidBy))}
                 {renderDetailRow('Attendees', formatPeopleList(selectedTour.travelerIds))}
                 {renderDetailRow(
@@ -645,8 +651,12 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                   )
                 )}
                 <Text style={styles.modalLabel}>Actions</Text>
-                {!readOnly ? (
-                  <View style={styles.actionCell}>
+                <View style={styles.actionCell}>
+                  <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => setSelectedTourId(null)}>
+                    <Text style={styles.buttonText}>Close</Text>
+                  </TouchableOpacity>
+                  {!readOnly ? (
+                    <>
                     <TouchableOpacity
                       style={[styles.button, styles.smallButton]}
                       onPress={() => {
@@ -664,10 +674,11 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                     >
                       <Text style={styles.dangerButtonText}>Delete</Text>
                     </TouchableOpacity>
-                  </View>
-                ) : (
-                  <Text style={styles.cellText}>View only</Text>
-                )}
+                    </>
+                  ) : (
+                    <Text style={styles.cellText}>View only</Text>
+                  )}
+                </View>
               </ScrollView>
             </View>
           </View>
@@ -840,10 +851,10 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                   onChangeText={(text: string) => setEditingTour((p) => (p ? { ...p, reference: text } : p))}
                 />
               </View>
-              <Text style={styles.modalLabel}>Notes</Text>
+              <Text style={styles.modalLabel}>Description</Text>
               <TextInput
                 style={[styles.input, { minHeight: 96, textAlignVertical: 'top' }]}
-                placeholder="Notes"
+                placeholder="Description"
                 value={editingTour.notes}
                 onChangeText={(text: string) => setEditingTour((p) => (p ? { ...p, notes: text } : p))}
                 multiline
