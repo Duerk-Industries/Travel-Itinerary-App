@@ -152,7 +152,7 @@ const LodgingDetailsDialogComponent: React.FC<LodgingDetailsDialogProps> = ({
               <Image source={imageSource} style={detailStyles.image} resizeMode="cover" />
             ) : (
               <View style={detailStyles.imageFallback}>
-                <Text style={styles.helperText}>No photo available</Text>
+                <Text style={detailStyles.mutedText}>No photo available</Text>
               </View>
             )}
             <TouchableOpacity
@@ -167,7 +167,7 @@ const LodgingDetailsDialogComponent: React.FC<LodgingDetailsDialogProps> = ({
           <View style={detailStyles.headerRow}>
             <View style={detailStyles.headerMeta}>
               <Text style={detailStyles.title} accessibilityRole="header">{lodging.name}</Text>
-              <Text style={[styles.helperText, { marginTop: 2 }]} numberOfLines={2}>
+              <Text style={[detailStyles.mutedText, { marginTop: 2 }]} numberOfLines={2}>
                 {lodging.address || 'Address not available'}
               </Text>
             </View>
@@ -330,6 +330,10 @@ const buildDetailStyles = (theme?: AppTheme) => StyleSheet.create({
     fontSize: 22,
     fontWeight: '700',
     color: theme?.colors.text ?? '#0f172a',
+  },
+  mutedText: {
+    color: theme?.colors.textMuted ?? '#64748b',
+    fontSize: 13,
   },
   statusBadge: {
     borderRadius: 999,

@@ -15,7 +15,7 @@ import {
   buildTourDraftFromRow,
 } from '../utils/overviewEditing';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
-import { OverviewTab, buildDayWeatherLocation } from '../tabs/overview';
+import { OverviewTab, buildDayWeatherLocation, makeWeatherLocationGeofriendly } from '../tabs/overview';
 import React from 'react';
 
 describe('Overview helpers', () => {
@@ -36,6 +36,28 @@ describe('Overview helpers', () => {
     );
 
     expect(location).toBe('First Hotel Address');
+  });
+
+  test('makes street-address weather locations geocoder friendly', () => {
+    expect(makeWeatherLocationGeofriendly('3751 N Tracy Blvd Tracy CALIFORNIA 95304 US')).toBe(
+      'Tracy, CALIFORNIA, US'
+    );
+  });
+
+  test('uses a geocoder-friendly lodging address for day weather', () => {
+    const location = buildDayWeatherLocation(
+      {
+        lodgings: [
+          { name: 'Holiday Inn Express & Suites TRACY by IHG', address: '3751 N Tracy Blvd Tracy CALIFORNIA 95304 US' },
+        ] as any,
+        flights: [],
+        tours: [],
+        rentals: [],
+      },
+      'Yosemite National Park'
+    );
+
+    expect(location).toBe('Tracy, CALIFORNIA, US');
   });
 
   test('uses the first arrival airport for day weather when lodging is unavailable', () => {

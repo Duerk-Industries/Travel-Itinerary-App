@@ -270,13 +270,78 @@ type OverviewWeather = {
   resolvedLocation?: string | null;
 };
 
+const normalizeWeatherLocationText = (value?: string | null): string =>
+  String(value ?? '')
+    .replace(/\s+/g, ' ')
+    .replace(/\s*,\s*/g, ', ')
+    .trim();
+
+const usStatePattern =
+  '(?:AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|IA|ID|IL|IN|KS|KY|LA|MA|MD|ME|MI|MN|MO|MS|MT|NC|ND|NE|NH|NJ|NM|NV|NY|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VA|VT|WA|WI|WV|WY|Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New Hampshire|New Jersey|New Mexico|New York|North Carolina|North Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode Island|South Carolina|South Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington|West Virginia|Wisconsin|Wyoming)';
+
+const streetSuffixPattern =
+  /\b(?:aly|alley|ave|avenue|blvd|boulevard|cir|circle|ct|court|dr|drive|hwy|highway|ln|lane|pkwy|parkway|pl|place|rd|road|st|street|ter|terrace|trl|trail|way)\b/i;
+
+export const makeWeatherLocationGeofriendly = (
+  location?: string | null,
+  fallbackLocation?: string | null,
+  options: { stripLodgingWords?: boolean } = {}
+): string => {
+  const original = normalizeWeatherLocationText(location);
+  const fallback = normalizeWeatherLocationText(fallbackLocation);
+  if (!original) return fallback;
+
+  const commaParts = original.split(',').map((part) => part.trim()).filter(Boolean);
+  if (commaParts.length >= 3) {
+    const [last, secondLast] = [commaParts[commaParts.length - 1], commaParts[commaParts.length - 2]];
+    const city = commaParts[commaParts.length - 3];
+    const country = /^(?:us|usa|united states)$/i.test(last) ? 'US' : last;
+    const state = secondLast.replace(/\b\d{5}(?:-\d{4})?\b/g, '').trim();
+    if (city && state) return `${city}, ${state}, ${country}`.trim();
+  }
+
+  const stateMatch = original.match(new RegExp(`\\b(${usStatePattern})\\b`, 'i'));
+  if (stateMatch?.index != null) {
+    const beforeState = original.slice(0, stateMatch.index).trim();
+    const afterState = original.slice(stateMatch.index + stateMatch[0].length).trim();
+    const countryMatch = afterState.match(/\b(?:US|USA|United States)\b/i);
+    const country = countryMatch ? 'US' : '';
+    const state = stateMatch[0];
+    const beforeTokens = beforeState.split(/\s+/).filter(Boolean);
+    let suffixIndex = -1;
+    for (let idx = beforeTokens.length - 1; idx >= 0; idx -= 1) {
+      if (streetSuffixPattern.test(beforeTokens[idx])) {
+        suffixIndex = idx;
+        break;
+      }
+    }
+    const cityTokens = beforeTokens.slice(suffixIndex + 1).filter((token) => !/^\d/.test(token));
+    const city = cityTokens.join(' ').trim();
+    if (city) return [city, state, country].filter(Boolean).join(', ');
+  }
+
+  if (options.stripLodgingWords) {
+    const cleanedLodgingName = original
+      .replace(/\b(?:airbnb|hotel|inn|suites?|resort|lodging|accommodations?|by ihg|express)\b/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .replace(/\s+-\s+$/g, '')
+      .trim();
+    if (cleanedLodgingName && cleanedLodgingName !== original) return cleanedLodgingName;
+  }
+
+  return original || fallback;
+};
+
 export const buildDayWeatherLocation = (info?: DayLocationInfo | null, fallbackLocation?: string | null) => {
   const fallback = String(fallbackLocation ?? '').trim();
   if (!info) return fallback;
 
   const lodging = info.lodgings[0];
   if (lodging) {
-    return String(lodging.address ?? lodging.name ?? '').trim() || fallback;
+    const rawAddress = normalizeWeatherLocationText(lodging.address);
+    const address = rawAddress ? makeWeatherLocationGeofriendly(rawAddress, fallback) : '';
+    if (address) return address;
+    return makeWeatherLocationGeofriendly(lodging.name, fallback, { stripLodgingWords: true }) || fallback;
   }
 
   const arrivalFlight = info.flights.find((flight) =>

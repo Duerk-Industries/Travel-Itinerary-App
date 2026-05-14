@@ -9,6 +9,7 @@ import LodgingDetailsDialog from '../components/LodgingDetailsDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from '../utils/itineraryStatus';
 import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from '../utils/votes';
+import type { AppTheme } from '../theme/theme';
 
 type LodgingTabProps = {
   backendUrl: string;
@@ -23,6 +24,7 @@ type LodgingTabProps = {
   onOpenMap: (address: string) => void;
   formatMemberName: (member: any) => string; // This will be ignored, but kept for compatibility
   payerName: (id: string) => string;
+  theme?: AppTheme;
   readOnly?: boolean;
 };
 
@@ -52,6 +54,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
   onOpenMap,
   formatMemberName: _formatMemberName, // unused
   payerName: _payerName, // unused
+  theme,
   readOnly = false,
 }) => {
   const [selectedLodging, setSelectedLodging] = useState<Lodging | null>(null);
@@ -327,6 +330,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
           backendUrl={backendUrl}
           requestHeaders={requestHeaders}
           styles={styles}
+          theme={theme}
           payerName={payerName}
           travelerName={travelerName}
           readOnly={readOnly}

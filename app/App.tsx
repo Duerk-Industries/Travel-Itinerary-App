@@ -2796,6 +2796,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               groupMembers={groupMembers}
               defaultPayerId={defaultPayerId}
               styles={styles}
+              theme={theme}
               onRefreshLodgings={fetchLodgings}
               onOpenMap={openMaps}
               formatMemberName={formatMemberName}
