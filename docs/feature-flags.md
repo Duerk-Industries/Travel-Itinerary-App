@@ -39,6 +39,9 @@ For admin APIs, RBAC must always pass. For product features, the backend remains
 | `feature_ingest_gmail_import` | Phase 3 Gmail OAuth search/import |
 | `feature_ingest_admin_observability` | Admin ingestion metrics and dashboard widgets |
 | `feature_ingest_local_virus_scan_stub` | Local/test virus-scan no-op path |
+| `itinerary_reactions` | Up/down vote reactions on itinerary detail rows |
+| `itinerary_item_kinds` | Typed itinerary detail rows (place / note / checklist) and the + menu UI |
+| `merchant_category_lookup` | Merchant category lookup via Nominatim |
 
 ## Ingestion note
 

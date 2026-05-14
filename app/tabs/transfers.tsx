@@ -6,7 +6,7 @@ import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { normalizeDateString } from '../utils/normalizeDateString';
 import { FlightEditingForm } from '../components/TransferEditingForm';
 import { toWebStyle } from '../utils/webStyle';
-import { formatMemberDisplayName } from '../utils/memberDisplay';
+import { buildMemberDisplayLookup, formatTravelerListDisplay } from '../utils/memberDisplay';
 import { normalizeTimeInput } from '../utils/normalizeTimeInput';
 import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from '../utils/votes';
 import {
@@ -555,13 +555,8 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
 }) => {
   const isWizard = mode === 'wizard';
   const containerRef = useRef<React.ElementRef<typeof View> | null>(null);
-  const formatPassengerLabel = (member: GroupMemberOption): string => {
-    return formatMemberDisplayName(member);
-  };
   const memberNames = useMemo(() => {
-    const map = new Map<string, string>();
-    groupMembers.forEach((m) => map.set(m.id, formatPassengerLabel(m)));
-    return map;
+    return buildMemberDisplayLookup(groupMembers);
   }, [groupMembers]);
   const sortedFlights = useMemo(() => {
     const safeDate = (value?: string | null) => {
@@ -574,8 +569,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     };
     const passengerLabel = (flight: Flight): string => {
       const ids = Array.isArray(flight.passenger_ids) ? flight.passenger_ids : [];
-      const names = ids.map((id) => memberNames.get(id)).filter(Boolean) as string[];
-      return names.length ? names.join(', ') : String(flight.passenger_name ?? '');
+      return formatTravelerListDisplay(ids, flight.passenger_name, groupMembers);
     };
     return [...flights].sort((a, b) => {
       const byDate = safeDate(a.departure_date).localeCompare(safeDate(b.departure_date));
@@ -587,7 +581,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   }, [flights, memberNames]);
 
   const buildPassengerName = (ids: string[]) => {
-    const names = ids.map((id) => memberNames.get(id)).filter(Boolean) as string[];
+    const names = ids.map((id) => memberNames.get(id) ?? memberNames.get(String(id).toLowerCase())).filter(Boolean) as string[];
     return names.join(', ');
   };
 
@@ -1525,8 +1519,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
                   col.key === 'passenger_name'
                     ? (() => {
                         const ids = Array.isArray(item.passenger_ids) ? item.passenger_ids : [];
-                        const names = ids.map((id) => memberNames.get(id)).filter(Boolean) as string[];
-                        return names.length ? names.join(', ') : baseDisplay;
+                        return formatTravelerListDisplay(ids, baseDisplay, groupMembers) || baseDisplay;
                       })()
                     : col.key === 'cost'
                       ? `$${value}`

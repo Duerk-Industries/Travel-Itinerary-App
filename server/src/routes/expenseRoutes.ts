@@ -1,16 +1,22 @@
 import { Router } from 'express';
 import bodyParser from 'body-parser';
+import multer from 'multer';
 import { authenticate } from '../auth';
-import { deleteExpense, ensureUserInTrip, insertExpense, listExpenses, listGroupMembers } from '../db';
+import { deleteExpense, ensureUserInTrip, getTripById, insertExpense, listExpenses, listGroupMembers } from '../db';
 import { assertCanUseFeature } from '../services/entitlementService';
 import { EntitlementError } from '../errors';
 import { TokenPayload } from '../auth';
 import { readDto } from '../utils/dtoParse';
 import { createExpenseDto, listExpensesQueryDto } from './expenseDtos';
+import { parseReceiptImage } from '../services/receiptExpenseParser';
 
 const router = Router();
 router.use(bodyParser.json());
 router.use(authenticate);
+const receiptUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024, files: 1 },
+});
 
 const allowedCategories = new Set([
   'Breakfast',
@@ -25,6 +31,8 @@ const allowedCategories = new Set([
   'Activities',
   'Car Rentals',
 ]);
+
+const allowedReceiptMimeTypes = new Set(['image/jpeg', 'image/jpg', 'image/png', 'image/webp']);
 
 router.get('/', async (req, res) => {
   const userId = (req as any).user.userId as string;
@@ -96,9 +104,53 @@ router.post('/', async (req, res) => {
     exchangeRateDate: dto.exchangeRateDate,
     payerIds: dto.payerIds,
     forIds: dto.forIds,
+    vendor: dto.vendor,
     notes: dto.notes,
   });
   res.status(201).json(created);
+});
+
+router.post('/receipt/parse', receiptUpload.single('image'), async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const role = ((req as any).user as TokenPayload).role;
+  const tripId = String(req.body?.tripId ?? '').trim();
+  if (!tripId) {
+    res.status(400).json({ error: 'tripId is required' });
+    return;
+  }
+  try {
+    await assertCanUseFeature(userId, 'cost_tracking', role);
+  } catch (err) {
+    if (err instanceof EntitlementError) {
+      res.status(402).json({ error: err.message, code: err.code });
+      return;
+    }
+    throw err;
+  }
+  const membership = await ensureUserInTrip(tripId, userId);
+  if (!membership) {
+    res.status(403).json({ error: 'You must be in the group for this trip' });
+    return;
+  }
+  const file = req.file;
+  if (!file) {
+    res.status(400).json({ error: 'Receipt image is required' });
+    return;
+  }
+  if (!allowedReceiptMimeTypes.has(file.mimetype)) {
+    res.status(400).json({ error: 'Unsupported receipt image type' });
+    return;
+  }
+  try {
+    const trip = await getTripById(tripId);
+    const parsed = await parseReceiptImage(file.buffer, file.mimetype, {
+      fallbackCurrency: trip?.currency ?? null,
+      destination: trip?.destination ?? null,
+    });
+    res.json(parsed);
+  } catch {
+    res.status(422).json({ error: 'Unable to parse receipt image' });
+  }
 });
 
 router.delete('/:id', async (req, res) => {
@@ -115,6 +167,14 @@ router.delete('/:id', async (req, res) => {
     }
     res.status(400).json({ error: (err as Error).message });
   }
+});
+
+router.use((err: any, _req: any, res: any, next: any) => {
+  if (err instanceof multer.MulterError) {
+    res.status(400).json({ error: err.code === 'LIMIT_FILE_SIZE' ? 'Receipt image is too large' : err.message });
+    return;
+  }
+  next(err);
 });
 
 export default router;

@@ -177,6 +177,7 @@ describe('itinerary prompt plan service', () => {
     expect(result.generatedItems.activities.length).toBeGreaterThanOrEqual(2);
     expect(result.generatedItems.activities[0].status).toBe('Proposed');
     expect(result.generatedItems.activities[1].status).toBe('Proposed');
+    expect(result.generatedItems.activities[0].notes).toMatch(/what|fits this day|Things to know|concrete/i);
     expect(result.generatedItems.carRentals[0].status).toBe('Needed');
   });
 

@@ -1,15 +1,14 @@
 import jwt from 'jsonwebtoken';
+import { verifyToken } from '../src/auth';
+import { getAuthAudience, getAuthIssuer, getAuthSecret } from '../src/authConfig';
 
 describe('auth token verification', () => {
   afterEach(() => {
-    jest.resetModules();
     delete process.env.AUTH_ISSUER;
     delete process.env.AUTH_AUDIENCE;
   });
 
-  it('rejects a token signed with the wrong issuer', async () => {
-    const { getAuthAudience, getAuthSecret } = await import('../src/authConfig');
-    const { verifyToken } = await import('../src/auth');
+  it('rejects a token signed with the wrong issuer', () => {
     const token = jwt.sign(
       { userId: 'user-1', email: 'issuer@example.com', provider: 'email', role: 'user' },
       getAuthSecret(),
@@ -19,9 +18,7 @@ describe('auth token verification', () => {
     expect(() => verifyToken(token)).toThrow(/issuer/i);
   });
 
-  it('rejects a token signed with the wrong audience', async () => {
-    const { getAuthIssuer, getAuthSecret } = await import('../src/authConfig');
-    const { verifyToken } = await import('../src/auth');
+  it('rejects a token signed with the wrong audience', () => {
     const token = jwt.sign(
       { userId: 'user-1', email: 'aud@example.com', provider: 'email', role: 'user' },
       getAuthSecret(),

@@ -3,6 +3,7 @@ export type PageKey =
   | 'overview'
   | 'flights'
   | 'lodging'
+  | 'packing'
   | 'car'
   | 'tours'
   | 'expenses'
@@ -11,8 +12,6 @@ export type PageKey =
   | 'cost'
   | 'trips'
   | 'create-trip'
-  | 'trip-details'
-  | 'itinerary'
   | 'account'
   | 'follow'
   | 'following'
@@ -23,7 +22,6 @@ type PageGuardOptions = {
 };
 
 export const FOLLOWED_TRIP_HIDDEN_PAGES: PageKey[] = [
-  'itinerary',
   'expenses',
   'ingest',
   'ledger',

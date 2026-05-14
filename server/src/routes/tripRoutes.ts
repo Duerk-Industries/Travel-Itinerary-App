@@ -14,6 +14,7 @@ import {
   getTripById,
   getTripCovering,
   getTripFollowCode,
+  getTripPackingList,
   listFollowedTrips,
   listPendingTripShareInvitesForUser,
   listTripComments,
@@ -27,6 +28,8 @@ import {
   updateTripCovering,
   updateTripDetails,
   updateTripGroup,
+  replaceTripPackingList,
+  setTripPackingItemPacked,
   listTripMessages,
   acceptTripShareInviteById,
 } from '../db';
@@ -349,6 +352,46 @@ router.get('/participants/search', async (req, res) => {
   }
   const results = await searchTripContacts(userId, q);
   res.json(results);
+});
+
+router.get('/:id/packing-list', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  try {
+    const list = await getTripPackingList(userId, req.params.id);
+    res.json(list);
+  } catch (err) {
+    const message = (err as Error).message;
+    res.status(/not authorized/i.test(message) ? 403 : 400).json({ error: message });
+  }
+});
+
+router.put('/:id/packing-list', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  try {
+    const list = await replaceTripPackingList(userId, req.params.id, Array.isArray(req.body?.items) ? req.body.items : []);
+    res.json(list);
+  } catch (err) {
+    const message = (err as Error).message;
+    res.status(/not authorized/i.test(message) ? 403 : 400).json({ error: message });
+  }
+});
+
+router.patch('/:id/packing-list/checks', async (req, res) => {
+  const userId = (req as any).user.userId as string;
+  const itemId = String(req.body?.itemId ?? '').trim();
+  const travelerId = String(req.body?.travelerId ?? '').trim();
+  const packed = Boolean(req.body?.packed);
+  if (!itemId || !travelerId) {
+    res.status(400).json({ error: 'itemId and travelerId are required' });
+    return;
+  }
+  try {
+    await setTripPackingItemPacked(userId, req.params.id, itemId, travelerId, packed);
+    res.status(204).send();
+  } catch (err) {
+    const message = (err as Error).message;
+    res.status(/not authorized/i.test(message) ? 403 : 400).json({ error: message });
+  }
 });
 
 router.get('/:id', async (req, res) => {

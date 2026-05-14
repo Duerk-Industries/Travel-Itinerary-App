@@ -30,6 +30,8 @@ type HomeTabProps = {
   onSelectFollowedTrip: (tripId: string) => void;
   onNavigate: (page: string) => void;
   onFollowTrip: (inviteCode: string) => Promise<string | null>;
+  onOpenShareTrip?: () => void;
+  canOpenShareTrip?: boolean;
   disabledPages?: Set<string>;
   hiddenPages?: Set<string>;
 };
@@ -55,6 +57,8 @@ const HomeTab: React.FC<HomeTabProps> = ({
   onSelectFollowedTrip,
   onNavigate,
   onFollowTrip,
+  onOpenShareTrip = () => {},
+  canOpenShareTrip = true,
   disabledPages,
   hiddenPages,
 }) => {
@@ -87,10 +91,14 @@ const HomeTab: React.FC<HomeTabProps> = ({
     return active ? [active, ...noStart, ...withStart] : [...noStart, ...withStart];
   }, [trips, activeTripId]);
 
+  const heroFetchKey = activeTrip
+    ? `${activeTrip.id}:${activeTrip.destination ?? ''}:${activeTrip.name ?? ''}`
+    : null;
+
   useEffect(() => {
     let isMounted = true;
     const loadHero = async () => {
-      if (!activeTrip) {
+      if (!heroFetchKey || !activeTrip) {
         if (isMounted) {
           setHeroImage(null);
           setHeroLoading(false);
@@ -107,34 +115,40 @@ const HomeTab: React.FC<HomeTabProps> = ({
           { headers }
         );
         if (!res.ok) {
-          if (isMounted) setHeroImage(null);
+          if (isMounted) setHeroLoading(false);
           return;
         }
         const data = await res.json();
-        if (isMounted) setHeroImage(data?.url ?? null);
+        if (isMounted) {
+          setHeroImage(data?.url ?? null);
+          setHeroLoading(false);
+        }
       } catch {
-        if (isMounted) setHeroImage(null);
-      } finally {
-        if (isMounted) setHeroLoading(false);
+        if (isMounted) {
+          setHeroImage(null);
+          setHeroLoading(false);
+        }
       }
     };
     loadHero();
     return () => {
       isMounted = false;
     };
-  }, [activeTrip, backendUrl, headers]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [heroFetchKey, backendUrl]);
 
   const heroImageSource = useImageSource(heroImage);
 
   const heroSubtitle = formatTripDuration(activeTrip);
   const heroTitle = activeTrip?.destination || activeTrip?.name || 'Select a trip';
-  const regularUserHiddenHomePages = new Set(['itinerary', 'trips', 'account', 'following']);
+  const regularUserHiddenHomePages = new Set(['trips', 'account', 'following']);
   const hasTripsToSelect = sortedTrips.length > 0 || followedTrips.length > 0;
 
   const navItems = [
     { key: 'overview', label: 'Overview', icon: '🧭' },
     { key: 'flights', label: 'Transfers', icon: '✈️' },
     { key: 'lodging', label: 'Lodging', icon: '🏨' },
+    { key: 'packing', label: 'Packing', icon: '✓' },
     { key: 'tours', label: 'Activities', icon: '🎟️' },
     { key: 'expenses', label: 'Daily Expenses', icon: '🧾' },
     { key: 'car', label: 'Car Rentals', icon: '🚗' },
@@ -201,6 +215,19 @@ const HomeTab: React.FC<HomeTabProps> = ({
                 <Text style={styles.buttonText}>Follow Trip</Text>
               </Pressable>
             ) : null}
+            {canOpenShareTrip ? (
+              <Pressable
+                testID="home-share-trip-button"
+                style={({ pressed }: { pressed: boolean }) => [
+                  styles.button,
+                  styles.smallButton,
+                  pressed && styles.homeNavButtonPressed,
+                ]}
+                onPress={onOpenShareTrip}
+              >
+                <Text style={styles.buttonText}>Share</Text>
+              </Pressable>
+            ) : null}
           </View>
         </View>
         <Pressable
@@ -225,6 +252,9 @@ const HomeTab: React.FC<HomeTabProps> = ({
           <View style={styles.homeHeroTextWrap}>
             {heroSubtitle ? <Text style={styles.homeHeroSubtitle}>{heroSubtitle}</Text> : null}
             <Text style={styles.homeHeroTitle}>{heroTitle}</Text>
+          </View>
+          <View style={styles.homeHeroChangeTripBadge} pointerEvents="none">
+            <Text style={styles.homeHeroChangeTripText}>Click to Change Trip</Text>
           </View>
         </Pressable>
 

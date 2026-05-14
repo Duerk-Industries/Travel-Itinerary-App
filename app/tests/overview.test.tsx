@@ -84,10 +84,12 @@ describe('Overview helpers', () => {
       freeCancelBy: '2026-04-30',
       bookedOn: '2026-04-15',
       reference: 'HC-01',
+      notes: 'Sit on the upper deck.',
       paidBy: ['payer-1'],
     };
     const tourDraft = buildTourDraftFromRow(tour as any);
     expect(tourDraft.reference).toBe('HC-01');
+    expect(tourDraft.notes).toBe('Sit on the upper deck.');
     const rental = {
       id: 'car-1',
       pickupLocation: 'Airport',
@@ -280,6 +282,17 @@ describe('Overview UI (nested itinerary)', () => {
     await findByTestId('overview-day-card-1');
   });
 
+  test('shows the trip description on the overview page', async () => {
+    const trip = {
+      ...baseProps.trip,
+      description: 'Hiking trip to Yosemite National Park',
+    };
+
+    const { findByText } = await renderOverview(<OverviewTab {...baseProps} trip={trip} />);
+
+    expect(await findByText('Hiking trip to Yosemite National Park')).toBeTruthy();
+  });
+
   test('keeps the full trip range even when events only exist on the first day', async () => {
     const flight = {
       id: 'flight-1',
@@ -318,6 +331,64 @@ describe('Overview UI (nested itinerary)', () => {
     expect(await findByTestId('overview-day-card-1')).toBeTruthy();
   });
 
+  test('shows the return transfer on the final day details', async () => {
+    const trip = {
+      ...baseProps.trip,
+      startDate: '2026-05-15',
+      endDate: '2026-05-22',
+    };
+    const attendees = [
+      { id: 'member-1', firstName: 'Bryan', lastName: 'Duerk', email: 'bryan@example.com', status: 'active' as const },
+      { id: 'member-2', firstName: 'Vicky', lastName: 'Duerk', email: 'vduerk@gmail.com', status: 'active' as const },
+    ];
+    const flights = [
+      {
+        id: 'flight-out',
+        passenger_name: 'Bryan Duerk, vduerk@gmail.com',
+        passenger_ids: [],
+        trip_id: 'trip1',
+        departure_date: '2026-05-15',
+        departure_location: 'BOS',
+        departure_airport_code: 'BOS',
+        departure_time: '16:50',
+        arrival_date: '2026-05-15',
+        arrival_location: 'SFO',
+        arrival_airport_code: 'SFO',
+        arrival_time: '20:20',
+        cost: 0,
+        carrier: 'Flight',
+        flight_number: '',
+        booking_reference: '',
+      },
+      {
+        id: 'flight-return',
+        passenger_name: 'Bryan Duerk, vduerk@gmail.com',
+        passenger_ids: [],
+        trip_id: 'trip1',
+        departure_date: '2026-05-22',
+        departure_location: 'SFO',
+        departure_airport_code: 'SFO',
+        departure_time: '13:01',
+        arrival_date: '2026-05-22',
+        arrival_location: 'BOS',
+        arrival_airport_code: 'BOS',
+        arrival_time: '21:45',
+        cost: 0,
+        carrier: 'Flight',
+        flight_number: '',
+        booking_reference: '',
+      },
+    ];
+
+    const { findByTestId, findByText } = await renderOverview(
+      <OverviewTab {...baseProps} trip={trip as any} attendees={attendees} flights={flights as any} />
+    );
+
+    fireEvent.press(await findByTestId('overview-day-card-8'));
+    expect(await findByText('SFO → BOS')).toBeTruthy();
+    expect(await findByText('13:01 / 21:45')).toBeTruthy();
+  });
+
   test('opens flight details modal from day details', async () => {
     const flight = {
       id: 'flight-1',
@@ -352,6 +423,101 @@ describe('Overview UI (nested itinerary)', () => {
     const { findByTestId } = await renderOverview(<OverviewTab {...baseProps} />);
     fireEvent.press(await findByTestId('overview-day-card-1'));
     expect(await findByTestId('day-details-next')).toBeTruthy();
+  });
+
+  test('day details renders the Notes & Checklists section with the +Add item button', async () => {
+    const { findByTestId } = await renderOverview(<OverviewTab {...baseProps} />);
+    fireEvent.press(await findByTestId('overview-day-card-1'));
+    expect(await findByTestId('day-details-itinerary-items')).toBeTruthy();
+    expect(await findByTestId('day-details-add-item-button')).toBeTruthy();
+  });
+
+  test('day details sorts activities by time, keeps them out of the narrative, and opens one activity detail', async () => {
+    const tours = [
+      {
+        id: 'tour-1',
+        date: '2026-01-29',
+        name: 'Second',
+        startLocation: 'Old Town',
+        startTime: '14:00',
+        duration: '2h',
+        cost: '40',
+        freeCancelBy: '',
+        bookedOn: '',
+        reference: 'SECOND-REF',
+        notes: 'Bring comfortable walking shoes.',
+        paidBy: [],
+        travelerIds: [],
+        status: 'Proposed',
+        activityType: 'Tour',
+      },
+      {
+        id: 'tour-2',
+        date: '2026-01-29',
+        name: 'Hike',
+        startLocation: 'Trailhead',
+        startTime: '09:00',
+        duration: '3h',
+        cost: '0',
+        freeCancelBy: '',
+        bookedOn: '',
+        reference: 'HIKE-REF',
+        notes: 'Test description',
+        paidBy: [],
+        travelerIds: [],
+        status: 'Proposed',
+        activityType: 'Hike',
+      },
+    ];
+    const { findByTestId, findByText, queryByText, toJSON } = await renderOverview(<OverviewTab {...baseProps} tours={tours as any} />);
+    fireEvent.press(await findByTestId('overview-day-card-1'));
+
+    const textOutput = JSON.stringify(toJSON());
+    expect(textOutput.indexOf('day-details-activity-tour-2')).toBeLessThan(textOutput.indexOf('day-details-activity-tour-1'));
+    expect(queryByText('Second at 14:00')).toBeNull();
+    expect(queryByText('Hike at 09:00')).toBeNull();
+    expect(await findByText('Bring comfortable walking shoes.')).toBeTruthy();
+    expect(await findByText('Test description')).toBeTruthy();
+    expect(queryByText('see details')).toBeNull();
+
+    fireEvent.press(await findByTestId('day-details-activity-tour-2'));
+    expect(await findByText('Activity Details')).toBeTruthy();
+    expect(await findByText('HIKE-REF')).toBeTruthy();
+    expect(queryByText('SECOND-REF')).toBeNull();
+  });
+
+  test('+Add item button opens the four-option popover', async () => {
+    const { findByTestId } = await renderOverview(<OverviewTab {...baseProps} />);
+    fireEvent.press(await findByTestId('overview-day-card-1'));
+    fireEvent.press(await findByTestId('day-details-add-item-button'));
+    expect(await findByTestId('add-item-popover')).toBeTruthy();
+    expect(await findByTestId('add-item-option-place')).toBeTruthy();
+    expect(await findByTestId('add-item-option-note')).toBeTruthy();
+    expect(await findByTestId('add-item-option-checklist')).toBeTruthy();
+    expect(await findByTestId('add-item-option-activity')).toBeTruthy();
+  });
+
+  test('custom activity add item opens the activity dialog and saves a real activity', async () => {
+    const onTourDataChanged = jest.fn();
+    const { findByTestId, getByPlaceholderText } = await renderOverview(
+      <OverviewTab {...baseProps} onTourDataChanged={onTourDataChanged} />
+    );
+    fireEvent.press(await findByTestId('overview-day-card-1'));
+    fireEvent.press(await findByTestId('day-details-add-item-button'));
+    fireEvent.press(await findByTestId('add-item-option-activity'));
+
+    expect(await findByTestId('activity-form-modal')).toBeTruthy();
+    fireEvent.changeText(getByPlaceholderText('Activity name'), 'Custom walking tour');
+    fireEvent.changeText(getByPlaceholderText('Description'), 'A relaxed orientation walk.');
+    fireEvent.press(await findByTestId('activity-save'));
+
+    await waitFor(() => expect(onTourDataChanged).toHaveBeenCalled());
+    const activityCall = fetchMock.mock.calls.find((call) => call[0] === 'http://localhost:4000/api/activities');
+    expect(activityCall).toBeTruthy();
+    const payload = JSON.parse(String(activityCall?.[1]?.body ?? '{}'));
+    expect(payload.name).toBe('Custom walking tour');
+    expect(payload.date).toBe('2026-01-29');
+    expect(payload.notes).toBe('A relaxed orientation walk.');
   });
 
   test('shows traveler names when flights differ', async () => {
@@ -405,7 +571,7 @@ describe('Overview UI (nested itinerary)', () => {
     expect(await findByText(/Travelers: Bryan Duerk/i)).toBeTruthy();
   });
 
-  test('expands the overview range when events fall outside the saved trip dates', async () => {
+  test('keeps saved trip dates as the overview range when events fall outside them', async () => {
     const staleTripProps = {
       ...baseProps,
       trip: {
@@ -444,10 +610,10 @@ describe('Overview UI (nested itinerary)', () => {
     };
 
     const { findByTestId, findByText } = await renderOverview(<OverviewTab {...staleTripProps} />);
-    expect(await findByText(/Dates: .*November.*2025.*March.*2026/i)).toBeTruthy();
-    expect(await findByText('Trip length: 117 day(s)')).toBeTruthy();
+    expect(await findByText(/Dates: .*November.*2025.*November.*2025/i)).toBeTruthy();
+    expect(await findByText('Trip length: 8 day(s)')).toBeTruthy();
     expect(await findByTestId('overview-day-card-1')).toBeTruthy();
-    expect(await findByTestId('overview-day-card-117')).toBeTruthy();
+    expect(await findByTestId('overview-day-card-8')).toBeTruthy();
   });
 
   test('shows weather badges on overview cards when the trip starts within 7 days', async () => {

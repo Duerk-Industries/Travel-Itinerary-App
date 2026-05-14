@@ -120,6 +120,7 @@ export type AuditAction =
   | 'TIER_LIMIT_UPDATED'
   | 'TIER_ENTITLEMENT_UPDATED'
   | 'FEATURE_FLAG_UPDATED'
+  | 'PACKING_DEFAULTS_UPDATED'
   | 'API_LIMITS_UPDATED'
   | 'RETENTION_TICK_RUN';
 
@@ -231,6 +232,26 @@ export interface Trip {
   currency?: string | null;
   coveredBy?: Record<string, string>;
   createdAt: string;
+}
+
+export interface PackingListItem {
+  id: string;
+  category: string;
+  label: string;
+  position: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface PackingListTraveler {
+  id: string;
+  userId?: string | null;
+  name: string;
+  email?: string | null;
+}
+
+export interface TripPackingList extends PackingListItem {
+  packedBy: string[];
 }
 
 export interface LocationRecord {
@@ -354,6 +375,7 @@ export interface Activity {
   freeCancelBy?: string | null;
   bookedOn: string;
   reference: string;
+  notes?: string | null;
   paidBy: string[];
   travelerIds?: string[];
   createdAt: string;
@@ -396,6 +418,18 @@ export interface Itinerary {
   createdAt: string;
 }
 
+export type ItineraryDetailKind = 'activity' | 'place' | 'note' | 'checklist';
+
+export interface ItineraryChecklistItem {
+  id: string;
+  detailId: string;
+  position: number;
+  label: string;
+  checkedBy?: string | null;
+  checkedAt?: string | null;
+  createdAt: string;
+}
+
 export interface ItineraryDetail {
   id: string;
   itineraryId: string;
@@ -403,6 +437,24 @@ export interface ItineraryDetail {
   time?: string | null;
   activity: string;
   cost?: number | null;
+  kind?: ItineraryDetailKind;
+  placeId?: string | null;
+  noteBody?: string | null;
+  position?: number;
+  checklistItems?: ItineraryChecklistItem[];
+}
+
+export type ItineraryDetailReactionValue = 1 | -1;
+
+export interface ItineraryDetailReactionSummary {
+  score: number;
+  upCount: number;
+  downCount: number;
+  userValue: ItineraryDetailReactionValue | null;
+}
+
+export interface ItineraryDetailWithReactions extends ItineraryDetail {
+  reactions: ItineraryDetailReactionSummary;
 }
 
 export type ItineraryPromptPace = 'Relaxed' | 'Balanced' | 'Fast';
@@ -469,6 +521,7 @@ export interface ItineraryGeneratedActivity {
   freeCancelBy: string;
   bookedOn: string;
   reference: string;
+  notes: string;
 }
 
 export interface ItineraryGeneratedCarRental {

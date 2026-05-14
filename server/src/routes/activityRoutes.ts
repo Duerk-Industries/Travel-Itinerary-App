@@ -105,6 +105,7 @@ router.post('/', async (req, res) => {
     freeCancelBy: (dto.freeCancelBy ?? null) || null,
     bookedOn: dto.bookedOn ?? '',
     reference: dto.reference ?? '',
+    notes: dto.notes ?? '',
     paidBy: dto.paidBy,
     travelerIds: dto.travelerIds,
   });
@@ -161,6 +162,7 @@ router.put('/:id', async (req, res) => {
     freeCancelBy: dto.freeCancelBy ?? undefined,
     bookedOn: dto.bookedOn ?? undefined,
     reference: dto.reference ?? undefined,
+    notes: dto.notes ?? undefined,
     paidBy: normalizedPaidBy,
     travelerIds: normalizedTravelers,
   });
@@ -225,6 +227,7 @@ router.patch('/:id', async (req, res) => {
     freeCancelBy: dto.freeCancelBy ?? undefined,
     bookedOn: dto.bookedOn ?? undefined,
     reference: dto.reference ?? undefined,
+    notes: dto.notes ?? undefined,
     paidBy: normalizedPaidBy,
     travelerIds: normalizedTravelers,
   });

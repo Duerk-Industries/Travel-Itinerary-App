@@ -12,6 +12,7 @@ jest.mock('../utils/session', () => ({
 }));
 
 type HarnessParams = {
+  initialActiveTripId?: string | null;
   selectedFollowedTripDetails?: any;
   userToken?: string | null;
 };
@@ -24,8 +25,12 @@ const createJsonResponse = (body: unknown, ok = true, status = 200) =>
     text: async () => JSON.stringify(body),
   } as Response);
 
-const useTripsDataHarness = ({ selectedFollowedTripDetails = null, userToken = 'token-1' }: HarnessParams = {}) => {
-  const [activeTripId, setActiveTripId] = useState<string | null>(null);
+const useTripsDataHarness = ({
+  initialActiveTripId = null,
+  selectedFollowedTripDetails = null,
+  userToken = 'token-1',
+}: HarnessParams = {}) => {
+  const [activeTripId, setActiveTripId] = useState<string | null>(initialActiveTripId);
   const [unauthorizedCount, setUnauthorizedCount] = useState(0);
   const handleUnauthorized = useCallback(() => {
     setUnauthorizedCount((count) => count + 1);
@@ -52,6 +57,7 @@ describe('useTripsData', () => {
   });
 
   afterEach(() => {
+    jest.restoreAllMocks();
     jest.clearAllMocks();
   });
 
@@ -114,6 +120,66 @@ describe('useTripsData', () => {
         expect.objectContaining({ id: 'member-1', email: 'traveler@example.com', status: 'active' }),
       ]);
     });
+  });
+
+  it('does not fetch owner group members while viewing a followed trip', async () => {
+    const fetchMock = global.fetch as jest.Mock;
+    fetchMock.mockImplementationOnce(() =>
+      createJsonResponse({ error: 'Not authorized to view group members' }, false, 403)
+    );
+
+    const { result } = renderHook(() =>
+      useTripsDataHarness({
+        initialActiveTripId: 'owned-trip-1',
+        selectedFollowedTripDetails: {
+          id: 'followed-trip-1',
+          groupId: 'owners-group-1',
+          name: 'Shared Paris',
+        },
+      })
+    );
+
+    await act(async () => {
+      const members = await result.current.fetchGroupMembersForActiveTrip();
+      expect(members).toEqual([]);
+    });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(result.current.unauthorizedCount).toBe(0);
+    expect(result.current.groupMembers).toEqual([]);
+  });
+
+  it('does not log out when an active trip member roster returns 403', async () => {
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const fetchMock = global.fetch as jest.Mock;
+    fetchMock
+      .mockImplementationOnce(() =>
+        createJsonResponse([
+          { id: 'trip-1', groupId: 'group-1', groupName: 'Shared Group', name: 'Shared Trip', createdAt: '2026-01-01' },
+        ])
+      )
+      .mockImplementationOnce(() =>
+        createJsonResponse({ error: 'Not authorized to view group members' }, false, 403)
+      );
+
+    const { result } = renderHook(() => useTripsDataHarness({ initialActiveTripId: 'trip-1' }));
+
+    await act(async () => {
+      await result.current.fetchTrips();
+    });
+    await act(async () => {
+      const members = await result.current.fetchGroupMembersForActiveTrip();
+      expect(members).toEqual([]);
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://wanderbunnies.test/api/groups/group-1/members',
+      expect.objectContaining({ headers: expect.objectContaining({ Authorization: 'Bearer token-1' }) })
+    );
+    expect(result.current.unauthorizedCount).toBe(0);
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[groups] suppressing repeated member fetch for group=group-1: Not authorized to view group members'
+    );
   });
 
   it('creates a trip and refreshes the trip list through the shared client flow', async () => {

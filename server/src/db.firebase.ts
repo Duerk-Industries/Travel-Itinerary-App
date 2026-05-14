@@ -14,6 +14,8 @@ import {
   WebUser,
   Itinerary,
   ItineraryDetail,
+  ItineraryDetailKind,
+  ItineraryChecklistItem,
   Group,
   GroupMember,
   PlaceDetailsCache,
@@ -33,6 +35,9 @@ import {
   AuditLogEntry,
   AuditAction,
   TripChatMessage,
+  PackingListItem,
+  PackingListTraveler,
+  TripPackingList,
 } from './types';
 import { logError, logInfo } from './logger';
 import { getEnvFlag, getEnvValue, isLocalEnv } from './env';
@@ -50,11 +55,44 @@ const hashPassword = (password: string, salt: string) => scryptSync(password, sa
 const stripUndefined = <T extends Record<string, any>>(updates: T): Partial<T> =>
   Object.fromEntries(Object.entries(updates).filter(([, value]) => typeof value !== 'undefined')) as Partial<T>;
 const hashToken = (token: string): string => createHash('sha256').update(token).digest('hex');
+const normalizePackingText = (value: string): string => value.trim().replace(/\s+/g, ' ');
+const normalizePackingKey = (category: string, label: string): string =>
+  `${normalizePackingText(category).toLowerCase()}::${normalizePackingText(label).toLowerCase()}`;
+const sanitizePackingItems = (items: Array<{ id?: string; category?: unknown; label?: unknown }>): Array<{ id?: string; category: string; label: string; position: number }> => {
+  const seen = new Set<string>();
+  const sanitized: Array<{ id?: string; category: string; label: string; position: number }> = [];
+  for (const item of Array.isArray(items) ? items : []) {
+    const category = typeof item.category === 'string' ? normalizePackingText(item.category) : '';
+    const label = typeof item.label === 'string' ? normalizePackingText(item.label) : '';
+    if (!category || !label) continue;
+    const key = normalizePackingKey(category, label);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    sanitized.push({ id: typeof item.id === 'string' ? item.id : undefined, category, label, position: sanitized.length });
+  }
+  return sanitized;
+};
 const TRIP_SHARE_TOKEN_BYTES = 24;
 const generateTripShareToken = (): string => randomBytes(TRIP_SHARE_TOKEN_BYTES).toString('base64url');
 const FOLLOW_CODE_LENGTH = 6;
 const FOLLOW_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const ADMIN_ANALYTICS_VERSION = 1;
+const DEFAULT_PACKING_LIST_ITEMS: Array<{ category: string; label: string }> = [
+  { category: 'Documents', label: 'Passport or government ID' },
+  { category: 'Documents', label: 'Travel confirmations' },
+  { category: 'Documents', label: 'Health insurance card' },
+  { category: 'Clothing', label: 'Daily outfits' },
+  { category: 'Clothing', label: 'Comfortable walking shoes' },
+  { category: 'Clothing', label: 'Sleepwear' },
+  { category: 'Clothing', label: 'Light jacket or sweater' },
+  { category: 'Toiletries', label: 'Toothbrush and toothpaste' },
+  { category: 'Toiletries', label: 'Deodorant' },
+  { category: 'Toiletries', label: 'Personal medications' },
+  { category: 'Electronics', label: 'Phone charger' },
+  { category: 'Electronics', label: 'Power adapter' },
+  { category: 'Travel Day', label: 'Reusable water bottle' },
+  { category: 'Travel Day', label: 'Snacks' },
+];
 type TripAccessRole = 'owner' | 'member' | 'follower';
 type GroupAccessRole = 'owner' | 'member';
 type GroupAccessRecord = {
@@ -826,6 +864,10 @@ export const initDb = async (): Promise<void> => {
       logInfo(`[db.firebase] Seeded tier limit: ${tierKey}/${limitKey}`);
     }
   }
+  await seedUniversalPackingDefaults();
+  if (process.env.NODE_ENV !== 'test' || process.env.FIREBASE_INIT_BACKFILL_PACKING === '1') {
+    await backfillUserPackingLists();
+  }
 };
 
 export const closePool = async (): Promise<void> => {
@@ -838,6 +880,269 @@ export const closePool = async (): Promise<void> => {
 // Placeholder exports; implementations appended below.
 export const poolClient = (): any => {
   throw new Error('Direct SQL Pool is not available for Firebase provider');
+};
+
+const universalPackingCollection = () => getDb().collection('universal_packing_list_items');
+const nestedCollection = (root: string, docId: string, child: string) => {
+  const docRef = getDb().collection(root).doc(docId);
+  if (typeof (docRef as any).collection === 'function') {
+    return (docRef as any).collection(child);
+  }
+  return getDb().collection(`${root}/${docId}/${child}`);
+};
+const userPackingCollection = (userId: string) => nestedCollection('user_packing_lists', userId, 'items');
+const tripPackingCollection = (tripId: string) => nestedCollection('trip_packing_lists', tripId, 'items');
+const tripPackingChecksCollection = (tripId: string) => nestedCollection('trip_packing_lists', tripId, 'checks');
+type FirestoreDocLike = { id: string; ref?: any; data: () => any };
+type FirestoreSnapshotLike = { empty?: boolean; docs: FirestoreDocLike[] };
+const collectionSnapshot = async (collectionRef: any, limit?: number): Promise<FirestoreSnapshotLike> => {
+  if (limit && typeof collectionRef.limit === 'function') {
+    return collectionRef.limit(limit).get();
+  }
+  return collectionRef.get();
+};
+const collectionHasAny = async (collectionRef: any): Promise<boolean> => {
+  const snap = await collectionSnapshot(collectionRef, 1);
+  return !snap.empty && (!Array.isArray(snap.docs) || snap.docs.length > 0);
+};
+const orderedCollectionSnapshot = async (collectionRef: any, field: string): Promise<FirestoreSnapshotLike> => {
+  if (typeof collectionRef.orderBy === 'function') {
+    return collectionRef.orderBy(field).get();
+  }
+  const snap = await collectionRef.get();
+  if (!Array.isArray(snap.docs)) return snap;
+  return {
+    ...snap,
+    docs: [...snap.docs].sort((a, b) => Number((a.data() as any)?.[field] ?? 0) - Number((b.data() as any)?.[field] ?? 0)),
+  };
+};
+
+const seedUniversalPackingDefaults = async (): Promise<void> => {
+  if (await collectionHasAny(universalPackingCollection())) return;
+  const batch = getDb().batch();
+  DEFAULT_PACKING_LIST_ITEMS.forEach((item, index) => {
+    const ref = universalPackingCollection().doc();
+    batch.set(ref, { category: item.category, label: item.label, position: index, createdAt: nowIso(), updatedAt: nowIso() });
+  });
+  await batch.commit();
+};
+
+const ensurePackingListForUser = async (userId: string): Promise<void> => {
+  if (await collectionHasAny(userPackingCollection(userId))) return;
+  await seedUniversalPackingDefaults();
+  const defaults = await getUniversalPackingList();
+  const batch = getDb().batch();
+  defaults.forEach((item, index) => {
+    const ref = userPackingCollection(userId).doc();
+    batch.set(ref, { category: item.category, label: item.label, position: index, createdAt: nowIso(), updatedAt: nowIso() });
+  });
+  await batch.commit();
+};
+
+const backfillUserPackingLists = async (): Promise<void> => {
+  const users = await getDb().collection('users').get();
+  for (const user of users.docs) {
+    await ensurePackingListForUser(user.id);
+  }
+};
+
+const mergeUserPackingListIntoTrip = async (tripId: string, userId: string): Promise<void> => {
+  await ensurePackingListForUser(userId);
+  const [existingSnap, userItems] = await Promise.all([
+    tripPackingCollection(tripId).get(),
+    getUserPackingList(userId),
+  ]);
+  const existing = new Set(existingSnap.docs.map((doc: any) => {
+    const data = doc.data() as any;
+    return normalizePackingKey(data.category ?? '', data.label ?? '');
+  }));
+  let nextPosition = existingSnap.docs.reduce((max: number, doc: any) => Math.max(max, Number((doc.data() as any).position ?? 0)), -1) + 1;
+  const batch = getDb().batch();
+  for (const item of userItems) {
+    const key = normalizePackingKey(item.category, item.label);
+    if (existing.has(key)) continue;
+    existing.add(key);
+    const ref = tripPackingCollection(tripId).doc();
+    batch.set(ref, {
+      category: item.category,
+      label: item.label,
+      position: nextPosition,
+      sourceUserId: userId,
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
+    });
+    nextPosition += 1;
+  }
+  await batch.commit();
+};
+
+const ensureTripPackingList = async (tripId: string): Promise<void> => {
+  if (await collectionHasAny(tripPackingCollection(tripId))) return;
+  const trip = await getTripById(tripId);
+  if (!trip) return;
+  const members = await getDb().collection('group_members').where('groupId', '==', trip.groupId).where('removedAt', '==', null).get();
+  for (const member of members.docs) {
+    const userId = (member.data() as any).userId;
+    if (typeof userId === 'string' && userId) {
+      await mergeUserPackingListIntoTrip(tripId, userId);
+    }
+  }
+  if (await collectionHasAny(tripPackingCollection(tripId))) return;
+  const defaults = await getUniversalPackingList();
+  const batch = getDb().batch();
+  defaults.forEach((item, index) => {
+    batch.set(tripPackingCollection(tripId).doc(), {
+      category: item.category,
+      label: item.label,
+      position: index,
+      createdAt: nowIso(),
+      updatedAt: nowIso(),
+    });
+  });
+  await batch.commit();
+};
+
+export const getUniversalPackingList = async (): Promise<PackingListItem[]> => {
+  await seedUniversalPackingDefaults();
+  const snap = await orderedCollectionSnapshot(universalPackingCollection(), 'position');
+  return snap.docs.map((doc, index) => {
+    const data = doc.data() as any;
+    return {
+      id: doc.id,
+      category: data.category ?? '',
+      label: data.label ?? '',
+      position: Number(data.position ?? index),
+      createdAt: data.createdAt ?? null,
+      updatedAt: data.updatedAt ?? null,
+    };
+  });
+};
+
+export const replaceUniversalPackingList = async (itemsInput: Array<{ id?: string; category?: unknown; label?: unknown }>): Promise<PackingListItem[]> => {
+  const items = sanitizePackingItems(itemsInput);
+  if (!items.length) throw new Error('At least one packing item is required');
+  const db = getDb();
+  const existing = await universalPackingCollection().get();
+  let batch = db.batch();
+  existing.docs.forEach((doc: any) => batch.delete(doc.ref));
+  items.forEach((item) => batch.set(universalPackingCollection().doc(), {
+    category: item.category,
+    label: item.label,
+    position: item.position,
+    createdAt: nowIso(),
+    updatedAt: nowIso(),
+  }));
+  await batch.commit();
+  if (process.env.NODE_ENV !== 'test' || process.env.FIREBASE_INIT_BACKFILL_PACKING === '1') {
+    await backfillUserPackingLists();
+  }
+  return getUniversalPackingList();
+};
+
+export const getUserPackingList = async (userId: string): Promise<PackingListItem[]> => {
+  await ensurePackingListForUser(userId);
+  const snap = await orderedCollectionSnapshot(userPackingCollection(userId), 'position');
+  return snap.docs.map((doc, index) => {
+    const data = doc.data() as any;
+    return { id: doc.id, category: data.category ?? '', label: data.label ?? '', position: Number(data.position ?? index), createdAt: data.createdAt ?? null, updatedAt: data.updatedAt ?? null };
+  });
+};
+
+export const replaceUserPackingList = async (userId: string, itemsInput: Array<{ id?: string; category?: unknown; label?: unknown }>): Promise<PackingListItem[]> => {
+  const items = sanitizePackingItems(itemsInput);
+  if (!items.length) throw new Error('At least one packing item is required');
+  const db = getDb();
+  const existing = await userPackingCollection(userId).get();
+  const batch = db.batch();
+  existing.docs.forEach((doc: any) => batch.delete(doc.ref));
+  items.forEach((item) => batch.set(userPackingCollection(userId).doc(), {
+    category: item.category,
+    label: item.label,
+    position: item.position,
+    createdAt: nowIso(),
+    updatedAt: nowIso(),
+  }));
+  await batch.commit();
+  return getUserPackingList(userId);
+};
+
+export const getTripPackingList = async (userId: string, tripId: string): Promise<{ items: TripPackingList[]; travelers: PackingListTraveler[] }> => {
+  const access = await ensureUserCanReadTrip(tripId, userId);
+  if (!access) throw new Error('Not authorized to view this trip');
+  await ensureTripPackingList(tripId);
+  const members = await listGroupMembers(access.groupId, userId);
+  const travelers = members
+    .filter((member) => !member.removedAt)
+    .map((member) => ({
+      id: member.id,
+      userId: member.userId ?? null,
+      name: [member.firstName, member.lastName].filter(Boolean).join(' ') || member.guestName || member.email || 'Traveler',
+      email: member.email ?? null,
+  }));
+  const [itemSnap, checkSnap] = await Promise.all([
+    orderedCollectionSnapshot(tripPackingCollection(tripId), 'position'),
+    tripPackingChecksCollection(tripId).where('packed', '==', true).get(),
+  ]);
+  const packedBy = new Map<string, string[]>();
+  checkSnap.docs.forEach((doc: any) => {
+    const data = doc.data() as any;
+    const itemId = String(data.itemId ?? '');
+    const travelerId = String(data.travelerId ?? '');
+    if (!itemId || !travelerId) return;
+    packedBy.set(itemId, [...(packedBy.get(itemId) ?? []), travelerId]);
+  });
+  const items = itemSnap.docs.map((doc, index) => {
+    const data = doc.data() as any;
+    return {
+      id: doc.id,
+      category: data.category ?? '',
+      label: data.label ?? '',
+      position: Number(data.position ?? index),
+      createdAt: data.createdAt ?? null,
+      updatedAt: data.updatedAt ?? null,
+      packedBy: packedBy.get(doc.id) ?? [],
+    };
+  });
+  return { items, travelers };
+};
+
+export const replaceTripPackingList = async (userId: string, tripId: string, itemsInput: Array<{ id?: string; category?: unknown; label?: unknown }>): Promise<{ items: TripPackingList[]; travelers: PackingListTraveler[] }> => {
+  const access = await ensureUserCanReadTrip(tripId, userId);
+  if (!access) throw new Error('Not authorized to edit this trip');
+  const items = sanitizePackingItems(itemsInput);
+  if (!items.length) throw new Error('At least one packing item is required');
+  const existingItems = await tripPackingCollection(tripId).get();
+  const checks = await tripPackingChecksCollection(tripId).get();
+  const batch = getDb().batch();
+  existingItems.docs.forEach((doc: any) => batch.delete(doc.ref));
+  checks.docs.forEach((doc: any) => batch.delete(doc.ref));
+  items.forEach((item) => batch.set(tripPackingCollection(tripId).doc(), {
+    category: item.category,
+    label: item.label,
+    position: item.position,
+    createdAt: nowIso(),
+    updatedAt: nowIso(),
+  }));
+  await batch.commit();
+  return getTripPackingList(userId, tripId);
+};
+
+export const setTripPackingItemPacked = async (userId: string, tripId: string, itemId: string, travelerId: string, packed: boolean): Promise<void> => {
+  const access = await ensureUserCanReadTrip(tripId, userId);
+  if (!access) throw new Error('Not authorized to edit this trip');
+  const [item, member] = await Promise.all([
+    tripPackingCollection(tripId).doc(itemId).get(),
+    getDb().collection('group_members').doc(travelerId).get(),
+  ]);
+  if (!item.exists || !member.exists || (member.data() as any).groupId !== access.groupId || (member.data() as any).removedAt) {
+    throw new Error('Packing item or traveler not found');
+  }
+  const ref = tripPackingChecksCollection(tripId).doc(`${itemId}_${travelerId}`);
+  if (packed) {
+    await ref.set({ itemId, travelerId, packed: true, updatedAt: nowIso() }, { merge: true });
+  } else {
+    await ref.delete();
+  }
 };
 
 // Users
@@ -876,6 +1181,7 @@ export const ensureDefaultGroupForUser = async (userId: string, email: string): 
   await db.collection('group_members').doc(randomUUID()).set({
     groupId,
     userId,
+    email: normalizeEmail(email),
     addedBy: userId,
     createdAt: nowIso(),
     removedAt: null,
@@ -1891,7 +2197,7 @@ export const deleteGroup = async (ownerId: string, groupId: string): Promise<voi
 
 export const listTrips = async (userId: string): Promise<Array<Trip & { groupName: string }>> => {
   const db = getDb();
-  const tripIds = await listReadableTripIdsForUser(userId);
+  const tripIds = await listWritableTripIdsForUser(userId);
   if (!tripIds.length) return [];
   const chunk = <T>(items: T[], size = 10): T[][] => {
     const chunks: T[][] = [];
@@ -1964,6 +2270,7 @@ export const createTrip = async (
   };
   await db.collection('trips').doc(id).set(payload);
   await rebuildTripAccessForTrip(id);
+  await ensureTripPackingList(id);
   const activeUserIds = await listActiveGroupUserIds(groupId);
   await Promise.all(activeUserIds.map((memberUserId) => incrementAdminUserTripCount(memberUserId, 1, payload.createdAt)));
   return { id, ...payload } as any;
@@ -2358,6 +2665,7 @@ export const acceptGroupInvite = async (inviteId: string, userId: string, email?
     const docRef = memberSnap.docs[0].ref;
     await docRef.update({
       userId,
+      email: normalizeEmail(email ?? data.inviteeEmail ?? ''),
       inviteEmail: null,
       claimedAt: nowIso(),
       removedAt: null,
@@ -2366,6 +2674,7 @@ export const acceptGroupInvite = async (inviteId: string, userId: string, email?
     await db.collection('group_members').doc(randomUUID()).set({
       groupId: data.groupId,
       userId,
+      email: normalizeEmail(email ?? data.inviteeEmail ?? ''),
       addedBy: data.inviterId,
       claimedAt: nowIso(),
       createdAt: nowIso(),
@@ -2378,6 +2687,8 @@ export const acceptGroupInvite = async (inviteId: string, userId: string, email?
   if (tripCount > 0) {
     await incrementAdminUserTripCount(userId, tripCount);
   }
+  const trips = await db.collection('trips').where('groupId', '==', data.groupId).get();
+  await Promise.all(trips.docs.map((trip) => mergeUserPackingListIntoTrip(trip.id, userId)));
 };
 
 export const rejectGroupInvite = async (inviteId: string, userId: string, email?: string): Promise<void> => {
@@ -2770,6 +3081,9 @@ export const acceptTripShareInvite = async (
     { merge: true }
   );
   await rebuildTripAccessForTrip(tripId);
+  if (role === 'member') {
+    await mergeUserPackingListIntoTrip(tripId, userId);
+  }
   return { tripId, role };
 };
 
@@ -2940,6 +3254,9 @@ export const acceptTripShareInviteById = async (
     { merge: true }
   );
   await rebuildTripAccessForTrip(tripId);
+  if (role === 'member') {
+    await mergeUserPackingListIntoTrip(tripId, userId);
+  }
   return { tripId, role };
 };
 
@@ -3492,6 +3809,7 @@ const normalizeActivityRecord = (data: any) => ({
   startTime: data.startTime ?? data.start_time,
   freeCancelBy: data.freeCancelBy ?? data.free_cancel_by ?? null,
   bookedOn: data.bookedOn ?? data.booked_on ?? '',
+  notes: data.notes ?? '',
   paidBy: Array.isArray(data.paidBy) ? data.paidBy : [],
   travelerIds: Array.isArray(data.travelerIds) ? data.travelerIds : [],
   activityType: (data.activityType ?? 'Tour') as Activity['activityType'],
@@ -4051,6 +4369,95 @@ export const getItemVoteSummaries = async (
   return result;
 };
 
+export const getItineraryDetailContext = async (
+  detailId: string
+): Promise<{ tripId: string; itineraryId: string } | null> => {
+  const db = getDb();
+  const detail = await db.collection('itinerary_details').doc(detailId).get();
+  if (!detail.exists) return null;
+  const detailData = detail.data() as any;
+  const itineraryId = String(detailData?.itineraryId ?? '');
+  if (!itineraryId) return null;
+  const itinerary = await db.collection('itineraries').doc(itineraryId).get();
+  if (!itinerary.exists) return null;
+  const tripId = String((itinerary.data() as any)?.tripId ?? '');
+  if (!tripId) return null;
+  return { tripId, itineraryId };
+};
+
+export const castItineraryDetailReaction = async (
+  userId: string,
+  tripId: string,
+  detailId: string,
+  value: 1 | -1
+): Promise<void> => {
+  const db = getDb();
+  const existing = await db
+    .collection('itinerary_detail_reactions')
+    .where('detailId', '==', detailId)
+    .where('userId', '==', userId)
+    .limit(1)
+    .get();
+  const payload = { tripId, detailId, userId, value, updatedAt: nowIso() };
+  if (!existing.empty) {
+    await existing.docs[0].ref.update(payload);
+    return;
+  }
+  await db.collection('itinerary_detail_reactions').doc(randomUUID()).set({ ...payload, createdAt: nowIso() });
+};
+
+export const clearItineraryDetailReaction = async (
+  userId: string,
+  detailId: string
+): Promise<void> => {
+  const db = getDb();
+  const existing = await db
+    .collection('itinerary_detail_reactions')
+    .where('detailId', '==', detailId)
+    .where('userId', '==', userId)
+    .limit(1)
+    .get();
+  if (existing.empty) return;
+  await existing.docs[0].ref.delete();
+};
+
+export const getItineraryDetailReactionSummaries = async (
+  userId: string,
+  detailIds: string[]
+): Promise<Record<string, { score: number; upCount: number; downCount: number; userValue: 1 | -1 | null }>> => {
+  const normalized = Array.from(new Set((detailIds ?? []).map((id) => String(id).trim()).filter(Boolean)));
+  const result: Record<string, { score: number; upCount: number; downCount: number; userValue: 1 | -1 | null }> = {};
+  normalized.forEach((id) => {
+    result[id] = { score: 0, upCount: 0, downCount: 0, userValue: null };
+  });
+  if (!normalized.length) return result;
+  const db = getDb();
+  const chunk = <T>(items: T[], size = 10): T[][] => {
+    const chunks: T[][] = [];
+    for (let i = 0; i < items.length; i += size) chunks.push(items.slice(i, i + size));
+    return chunks;
+  };
+  for (const ids of chunk(normalized)) {
+    const snap = await db
+      .collection('itinerary_detail_reactions')
+      .where('detailId', 'in', ids)
+      .get();
+    snap.docs.forEach((doc) => {
+      const row = doc.data() as any;
+      const detailId = String(row.detailId ?? '');
+      if (!result[detailId]) return;
+      const value: 1 | -1 = row.value === -1 ? -1 : 1;
+      result[detailId].score += value;
+      if (value === 1) result[detailId].upCount += 1;
+      else result[detailId].downCount += 1;
+      if (String(row.userId) === String(userId)) {
+        result[detailId].userValue = value;
+      }
+    });
+  }
+  return result;
+};
+
 // Expenses
 export const listExpenses = async (userId: string, tripId?: string | null): Promise<any[]> => {
   if (!tripId) return [];
@@ -4076,6 +4483,7 @@ export const insertExpense = async (expense: {
   forIds?: string[];
   sourceType?: string | null;
   sourceId?: string | null;
+  vendor?: string | null;
   notes?: string | null;
 }): Promise<any> => {
   const db = getDb();
@@ -4105,6 +4513,7 @@ export const insertExpense = async (expense: {
     forIds: Array.isArray(expense.forIds) ? expense.forIds : [],
     sourceType: expense.sourceType ?? null,
     sourceId: expense.sourceId ?? null,
+    vendor: expense.vendor ?? null,
     notes: expense.notes ?? null,
     createdAt: nowIso(),
   };
@@ -4127,6 +4536,7 @@ export const upsertExpenseForSource = async (expense: {
   forIds?: string[];
   sourceType: string;
   sourceId: string;
+  vendor?: string | null;
   notes?: string | null;
 }): Promise<any> => {
   const db = getDb();
@@ -4160,6 +4570,7 @@ export const upsertExpenseForSource = async (expense: {
     forIds: Array.isArray(expense.forIds) ? expense.forIds : [],
     sourceType: expense.sourceType,
     sourceId: expense.sourceId,
+    vendor: expense.vendor ?? null,
     notes: expense.notes ?? null,
     createdAt: nowIso(),
   };
@@ -4447,14 +4858,49 @@ export const listItineraryDetails = async (userId: string, itineraryId: string):
   const itineraryData = itinerary.data() as any;
   const membership = await ensureUserCanReadTrip(String(itineraryData.tripId ?? ''), userId);
   if (!membership) throw new Error('Not authorized');
-  const details = await db.collection('itinerary_details').where('itineraryId', '==', itineraryId).get();
-  return details.docs.map((d) => d.data() as ItineraryDetail);
+  const detailDocs = await db.collection('itinerary_details').where('itineraryId', '==', itineraryId).get();
+  const details = detailDocs.docs.map((d) => d.data() as ItineraryDetail);
+  if (!details.length) return [];
+  const detailIds = details.map((d) => d.id);
+  const childrenByDetail = new Map<string, ItineraryChecklistItem[]>();
+  // Firestore 'in' operator caps at 10 ids per query.
+  for (let i = 0; i < detailIds.length; i += 10) {
+    const chunk = detailIds.slice(i, i + 10);
+    const childDocs = await db
+      .collection('itinerary_checklist_items')
+      .where('detailId', 'in', chunk)
+      .get();
+    childDocs.docs.forEach((doc) => {
+      const child = doc.data() as ItineraryChecklistItem;
+      const list = childrenByDetail.get(child.detailId) ?? [];
+      list.push(child);
+      childrenByDetail.set(child.detailId, list);
+    });
+  }
+  for (const list of childrenByDetail.values()) {
+    list.sort((a, b) => a.position - b.position);
+  }
+  return details.map((d) => ({
+    ...d,
+    kind: (d.kind as ItineraryDetailKind) ?? 'activity',
+    checklistItems: childrenByDetail.get(d.id) ?? [],
+  }));
 };
 
 export const addItineraryDetail = async (
   userId: string,
   itineraryId: string,
-  detail: { day: number; time?: string | null; activity: string; cost?: number | null }
+  detail: {
+    day: number;
+    time?: string | null;
+    activity: string;
+    cost?: number | null;
+    kind?: ItineraryDetailKind;
+    placeId?: string | null;
+    noteBody?: string | null;
+    position?: number;
+    checklistItems?: Array<{ label: string; position?: number }>;
+  }
 ): Promise<ItineraryDetail> => {
   const db = getDb();
   const itinerary = await db.collection('itineraries').doc(itineraryId).get();
@@ -4465,6 +4911,7 @@ export const addItineraryDetail = async (
   if (!membership) throw new Error('Not authorized to edit this itinerary');
 
   const id = randomUUID();
+  const kind: ItineraryDetailKind = detail.kind ?? 'activity';
   const payload: ItineraryDetail = {
     id,
     itineraryId,
@@ -4472,16 +4919,43 @@ export const addItineraryDetail = async (
     time: detail.time ?? null,
     activity: detail.activity.trim(),
     cost: detail.cost ?? null,
+    kind,
+    placeId: detail.placeId ?? null,
+    noteBody: detail.noteBody ?? null,
+    position: detail.position != null ? Math.round(detail.position) : 0,
   };
   await db.collection('itinerary_details').doc(id).set(payload);
+
+  let createdChildren: ItineraryChecklistItem[] = [];
+  if (kind === 'checklist' && Array.isArray(detail.checklistItems) && detail.checklistItems.length) {
+    for (let idx = 0; idx < detail.checklistItems.length; idx += 1) {
+      const child = detail.checklistItems[idx];
+      const label = String(child.label ?? '').trim();
+      if (!label) continue;
+      const childId = randomUUID();
+      const childPayload: ItineraryChecklistItem = {
+        id: childId,
+        detailId: id,
+        position: child.position != null ? Math.round(child.position) : idx,
+        label,
+        checkedBy: null,
+        checkedAt: null,
+        createdAt: nowIso(),
+      };
+      await db.collection('itinerary_checklist_items').doc(childId).set(childPayload);
+      createdChildren.push(childPayload);
+    }
+  }
+
   await writeActivity(tripId, userId, 'ITINERARY_ITEM_ADDED', 'Itinerary item added', payload.activity, {
     itineraryId,
     detailId: id,
     day: payload.day,
     time: payload.time ?? null,
     cost: payload.cost ?? null,
+    kind,
   });
-  return payload;
+  return { ...payload, checklistItems: createdChildren };
 };
 
 export const deleteItineraryDetail = async (userId: string, detailId: string): Promise<void> => {
@@ -4530,6 +5004,112 @@ export const updateItineraryDetail = async (
     });
   }
   return payload;
+};
+
+export const addItineraryChecklistItem = async (
+  userId: string,
+  detailId: string,
+  input: { label: string; position?: number }
+): Promise<ItineraryChecklistItem> => {
+  const db = getDb();
+  const detail = await db.collection('itinerary_details').doc(detailId).get();
+  if (!detail.exists) throw new Error('Itinerary detail not found');
+  const detailData = detail.data() as any;
+  if (detailData.kind !== 'checklist') throw new Error('Detail is not a checklist');
+  const itinerary = await db.collection('itineraries').doc(String(detailData.itineraryId)).get();
+  if (!itinerary.exists) throw new Error('Itinerary not found');
+  const tripId = String((itinerary.data() as any).tripId ?? '');
+  const membership = await ensureUserInTrip(tripId, userId);
+  if (!membership) throw new Error('Not authorized to edit this itinerary');
+  const label = String(input.label ?? '').trim();
+  if (!label) throw new Error('Label is required');
+
+  let position = input.position;
+  if (position == null) {
+    const existing = await db
+      .collection('itinerary_checklist_items')
+      .where('detailId', '==', detailId)
+      .get();
+    position = existing.docs.reduce(
+      (max, doc) => Math.max(max, Number((doc.data() as any).position ?? 0) + 1),
+      0
+    );
+  }
+
+  const id = randomUUID();
+  const payload: ItineraryChecklistItem = {
+    id,
+    detailId,
+    position: Math.round(position),
+    label,
+    checkedBy: null,
+    checkedAt: null,
+    createdAt: nowIso(),
+  };
+  await db.collection('itinerary_checklist_items').doc(id).set(payload);
+  return payload;
+};
+
+const loadChecklistItemContextFirebase = async (
+  itemId: string
+): Promise<{ tripId: string; detailId: string; itineraryId: string } | null> => {
+  const db = getDb();
+  const item = await db.collection('itinerary_checklist_items').doc(itemId).get();
+  if (!item.exists) return null;
+  const itemData = item.data() as any;
+  const detail = await db.collection('itinerary_details').doc(String(itemData.detailId ?? '')).get();
+  if (!detail.exists) return null;
+  const itineraryId = String((detail.data() as any).itineraryId ?? '');
+  const itinerary = await db.collection('itineraries').doc(itineraryId).get();
+  if (!itinerary.exists) return null;
+  const tripId = String((itinerary.data() as any).tripId ?? '');
+  if (!tripId) return null;
+  return { tripId, detailId: String(itemData.detailId), itineraryId };
+};
+
+export const updateItineraryChecklistItem = async (
+  userId: string,
+  itemId: string,
+  patch: { label?: string; checked?: boolean; position?: number }
+): Promise<ItineraryChecklistItem> => {
+  const db = getDb();
+  const ctx = await loadChecklistItemContextFirebase(itemId);
+  if (!ctx) throw new Error('Checklist item not found');
+  const membership = await ensureUserInTrip(ctx.tripId, userId);
+  if (!membership) throw new Error('Not authorized to edit this itinerary');
+  const updates: Record<string, unknown> = {};
+  if (patch.label !== undefined) {
+    const label = String(patch.label ?? '').trim();
+    if (!label) throw new Error('Label cannot be empty');
+    updates.label = label;
+  }
+  if (patch.position !== undefined) updates.position = Math.round(patch.position);
+  if (patch.checked !== undefined) {
+    if (patch.checked) {
+      updates.checkedBy = userId;
+      updates.checkedAt = nowIso();
+    } else {
+      updates.checkedBy = null;
+      updates.checkedAt = null;
+    }
+  }
+  if (Object.keys(updates).length) {
+    await db.collection('itinerary_checklist_items').doc(itemId).update(updates);
+  }
+  const updated = await db.collection('itinerary_checklist_items').doc(itemId).get();
+  return updated.data() as ItineraryChecklistItem;
+};
+
+export const deleteItineraryChecklistItem = async (
+  userId: string,
+  itemId: string
+): Promise<void> => {
+  const ctx = await loadChecklistItemContextFirebase(itemId);
+  if (!ctx) return;
+  const membership = await ensureUserInTrip(ctx.tripId, userId);
+  if (!membership) throw new Error('Not authorized to edit this itinerary');
+  const db = getDb();
+  await db.collection('itinerary_checklist_items').doc(itemId).delete();
 };
 
 export const getPlaceDetailsCache = async (placeId: string): Promise<PlaceDetailsCache | null> => {
@@ -6112,17 +6692,21 @@ export const listUserAuthoredItems = async (
   tripMessages: any[];
 }> => {
   const db = getDb();
-  const fetchCollection = async (name: string, field: string) => {
-    const snap = await db.collection(name).where(field, '==', userId).get();
-    return snap.docs.map((d: any) => ({ id: d.id, ...(d.data() as any) }));
+  const fetchCollection = async (name: string, fields: string[]) => {
+    const docsById = new Map<string, any>();
+    await Promise.all(fields.map(async (field) => {
+      const snap = await db.collection(name).where(field, '==', userId).get();
+      snap.docs.forEach((d: any) => docsById.set(d.id, { id: d.id, ...(d.data() as any) }));
+    }));
+    return Array.from(docsById.values());
   };
   const [flights, lodgings, tours, carRentals, expenses, tripMessages] = await Promise.all([
-    fetchCollection('flights', 'userId'),
-    fetchCollection('lodgings', 'userId'),
-    fetchCollection('tours', 'userId'),
-    fetchCollection('car_rentals', 'userId'),
-    fetchCollection('expenses', 'userId'),
-    fetchCollection('trip_messages', 'senderId'),
+    fetchCollection('flights', ['userId', 'user_id']),
+    fetchCollection('lodgings', ['userId', 'user_id']),
+    fetchCollection('tours', ['userId', 'user_id']),
+    fetchCollection('car_rentals', ['userId', 'user_id']),
+    fetchCollection('expenses', ['userId', 'user_id']),
+    fetchCollection('trip_messages', ['senderId', 'sender_id']),
   ]);
   return { flights, lodgings, tours, carRentals, expenses, tripMessages };
 };

@@ -68,6 +68,7 @@ export type Tour = {
   freeCancelBy: string;
   bookedOn: string;
   reference: string;
+  notes: string;
   paidBy: string[];
   travelerIds?: string[];
 };
@@ -84,6 +85,7 @@ export type TourDraft = {
   freeCancelBy: string;
   bookedOn: string;
   reference: string;
+  notes: string;
   paidBy: string[];
   travelerIds: string[];
 };
@@ -98,11 +100,16 @@ export type GroupMemberOption = {
   removedAt?: string | null;
 };
 
-// Build a blank activity draft with today's date and zero cost.
-export const createInitialActivityState = (): TourDraft => ({
+const resolveInitialActivityDate = (preferredDate?: string | null): string => {
+  const trimmed = String(preferredDate ?? '').trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(trimmed) ? trimmed : new Date().toISOString().slice(0, 10);
+};
+
+// Build a blank activity draft with the trip's first date, when known, otherwise today.
+export const createInitialActivityState = (preferredDate?: string | null): TourDraft => ({
   status: DEFAULT_NEW_ITINERARY_STATUS,
   activityType: 'Tour',
-  date: new Date().toISOString().slice(0, 10),
+  date: resolveInitialActivityDate(preferredDate),
   name: '',
   startLocation: '',
   startTime: '',
@@ -111,6 +118,7 @@ export const createInitialActivityState = (): TourDraft => ({
   freeCancelBy: new Date().toISOString().slice(0, 10),
   bookedOn: '',
   reference: '',
+  notes: '',
   paidBy: [],
   travelerIds: [],
 });
@@ -198,6 +206,7 @@ export const fetchActivitiesForTrip = async ({
     travelerIds: Array.isArray(t.travelerIds) ? t.travelerIds : [],
     bookedOn: t.bookedOn ?? '',
     freeCancelBy: t.freeCancelBy ?? '',
+    notes: t.notes ?? '',
   }));
 };
 
@@ -223,6 +232,7 @@ type TourTabProps = {
   onDataChanged?: () => void;
   mode?: 'live' | 'wizard';
   readOnly?: boolean;
+  defaultActivityDate?: string | null;
 };
 
 export const ActivityTab: React.FC<TourTabProps> = ({
@@ -245,9 +255,11 @@ export const ActivityTab: React.FC<TourTabProps> = ({
   onDataChanged,
   mode = 'live',
   readOnly = false,
+  defaultActivityDate = null,
 }) => {
   const [editingTour, setEditingTour] = useState<TourDraft | null>(null);
   const [editingTourId, setEditingTourId] = useState<string | null>(null);
+  const [selectedTourId, setSelectedTourId] = useState<string | null>(null);
   const [tourDateField, setTourDateField] = useState<'date' | 'bookedOn' | 'freeCancel' | 'startTime' | null>(null);
   const [tourDateValue, setTourDateValue] = useState<Date>(new Date());
   const DateTimePickerComponent = nativeDateTimePicker;
@@ -255,9 +267,19 @@ export const ActivityTab: React.FC<TourTabProps> = ({
     () => groupMembers.filter((m) => m.status !== 'removed' && !m.removedAt),
     [groupMembers]
   );
+  const memberLabelById = useMemo(() => {
+    const labels = new Map<string, string>();
+    activeMembers.forEach((member) => labels.set(member.id, formatMemberDisplayName(member)));
+    return labels;
+  }, [activeMembers]);
 
   const resolveTravelerLabel = (member: GroupMemberOption) => {
     return formatMemberDisplayName(member);
+  };
+
+  const formatPeopleList = (ids?: string[]) => {
+    if (!ids?.length) return '-';
+    return ids.map((id) => memberLabelById.get(id) ?? payerName(id) ?? id).join(', ');
   };
 
   const toggleBaseStyle = styles.toggleOption ?? {
@@ -281,7 +303,9 @@ export const ActivityTab: React.FC<TourTabProps> = ({
       alert('Select an active trip before adding an activity.');
       return;
     }
-    const base = tour ? { ...tour, travelerIds: tour.travelerIds ?? (tour as any).travelerIds ?? [] } : createInitialActivityState();
+    const base = tour
+      ? { ...tour, travelerIds: tour.travelerIds ?? (tour as any).travelerIds ?? [] }
+      : createInitialActivityState(defaultActivityDate);
     if (!base.travelerIds?.length) {
       base.travelerIds = activeMembers.map((m) => m.id);
     }
@@ -389,6 +413,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
 
   const removeTour = (id: string) => {
     if (readOnly) return;
+    setSelectedTourId((current) => (current === id ? null : current));
     if (mode === 'wizard') {
       setTours((prev) => prev.filter((t) => t.id !== id));
       return;
@@ -455,6 +480,21 @@ export const ActivityTab: React.FC<TourTabProps> = ({
       return String(a.name ?? '').localeCompare(String(b.name ?? ''), undefined, { sensitivity: 'base' });
     });
   }, [tours]);
+  const selectedTour = useMemo(
+    () => (selectedTourId ? tours.find((tour) => tour.id === selectedTourId) ?? null : null),
+    [selectedTourId, tours]
+  );
+
+  const renderDetailRow = (label: string, value: React.ReactNode) => (
+    <View style={[styles.modalRow, { alignItems: 'flex-start' }]} key={label}>
+      <Text style={[styles.cellText, { minWidth: 140, flexShrink: 0, fontWeight: '600' }]}>{label}</Text>
+      {typeof value === 'string' || typeof value === 'number' ? (
+        <Text style={[styles.cellText, { flex: 1 }]}>{value || '-'}</Text>
+      ) : (
+        value
+      )}
+    </View>
+  );
 
   return (
     <View style={styles.card}>
@@ -493,23 +533,15 @@ export const ActivityTab: React.FC<TourTabProps> = ({
       ) : null}
       <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
         <View style={styles.table}>
-          <View style={[styles.tableRow, styles.tableHeader]}>
+          <View style={[styles.tableRow, styles.tableHeader]} testID="activity-table-header">
             {[
               { label: 'Date', width: 140 },
-              { label: 'Status', width: 130 },
-              { label: 'Votes', width: 120 },
-              { label: 'Rating', width: 120 },
-              { label: 'Activity', width: 180 },
               { label: 'Type', width: 180 },
-              { label: 'Start Location', width: 180 },
+              { label: 'Activity', width: 220 },
               { label: 'Start Time', width: 120 },
               { label: 'Duration', width: 120 },
-              { label: 'Cost', width: 120 },
-              { label: 'Free Cancel By', width: 160 },
-              { label: 'Platform Booked On', width: 140 },
-              { label: 'Reference', width: 140 },
-              { label: 'Paid By', width: 180 },
-              { label: 'Actions', width: 160 },
+              { label: 'Status', width: 130 },
+              { label: 'Rating', width: 120 },
             ].map((col, idx, arr) => (
               <View key={col.label} style={[styles.cell, { minWidth: col.width, flex: 1 }, idx === arr.length - 1 && styles.lastCell]}>
                 <Text style={styles.headerText}>{col.label}</Text>
@@ -521,47 +553,13 @@ export const ActivityTab: React.FC<TourTabProps> = ({
               <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
                 <Text style={styles.cellText}>{formatDateLong(t.date)}</Text>
               </View>
-              <View style={[styles.cell, { minWidth: 130, flex: 1 }]}>
-                <Text style={styles.cellText}>{normalizeItineraryStatus(t.status, LEGACY_ITINERARY_STATUS)}</Text>
-              </View>
-              <View style={[styles.cell, styles.actionCell, { minWidth: 120, flex: 1 }]}>
-                {!readOnly && shouldShowVoteButtons(t.status, t.userVote) ? (
-                  <>
-                    <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => voteOnTour(t.id, 1)}>
-                      <Text style={styles.buttonText}>👍</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => voteOnTour(t.id, -1)}>
-                      <Text style={styles.buttonText}>👎</Text>
-                    </TouchableOpacity>
-                  </>
-                ) : (
-                  <Text style={styles.cellText}>{formatNetVotes(t.netVotes ?? 0)}</Text>
-                )}
-              </View>
-              <View style={[styles.cell, styles.actionCell, { minWidth: 120, flex: 1 }]}>
-                {!readOnly && shouldShowRatingButtons(t.status, t.userRating) ? (
-                  <>
-                    <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => rateTour(t.id, 1)}>
-                      <Text style={styles.buttonText}>👍</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => rateTour(t.id, -1)}>
-                      <Text style={styles.buttonText}>👎</Text>
-                    </TouchableOpacity>
-                  </>
-                ) : normalizeItineraryStatus(t.status, LEGACY_ITINERARY_STATUS) === 'Completed' ? (
-                  <Text style={styles.cellText}>{formatNetVotes(t.netRating ?? 0)}</Text>
-                ) : (
-                  <Text style={styles.cellText}>-</Text>
-                )}
-              </View>
-              <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
-                <Text style={styles.cellText}>{t.name || '-'}</Text>
-              </View>
               <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
                 <Text style={styles.cellText}>{t.activityType || 'Tour'}</Text>
               </View>
-              <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
-                <Text style={styles.cellText}>{t.startLocation || '-'}</Text>
+              <View style={[styles.cell, { minWidth: 220, flex: 1 }]}>
+                <TouchableOpacity onPress={() => setSelectedTourId(t.id)} testID={`activity-details-${t.id}`}>
+                  <Text style={[styles.cellText, styles.linkText]}>{t.name || '-'}</Text>
+                </TouchableOpacity>
               </View>
               <View style={[styles.cell, { minWidth: 120, flex: 1 }]}>
                 <Text style={styles.cellText}>{t.startTime || '-'}</Text>
@@ -569,33 +567,14 @@ export const ActivityTab: React.FC<TourTabProps> = ({
               <View style={[styles.cell, { minWidth: 120, flex: 1 }]}>
                 <Text style={styles.cellText}>{t.duration || '-'}</Text>
               </View>
-              <View style={[styles.cell, { minWidth: 120, flex: 1 }]}>
-                <Text style={styles.cellText}>{t.cost ? `$${t.cost}` : '-'}</Text>
+              <View style={[styles.cell, { minWidth: 130, flex: 1 }]}>
+                <Text style={styles.cellText}>{normalizeItineraryStatus(t.status, LEGACY_ITINERARY_STATUS)}</Text>
               </View>
-              <View style={[styles.cell, { minWidth: 160, flex: 1 }]}>
-                <Text style={styles.cellText}>{t.freeCancelBy ? formatDateLong(t.freeCancelBy) : '-'}</Text>
-              </View>
-              <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                <Text style={styles.cellText}>{t.bookedOn || '-'}</Text>
-              </View>
-              <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                <Text style={styles.cellText}>{t.reference || '-'}</Text>
-              </View>
-              <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
-                <Text style={styles.cellText}>{t.paidBy.length ? t.paidBy.map(payerName).join(', ') : '-'}</Text>
-              </View>
-              <View style={[styles.cell, styles.actionCell, styles.lastCell, { minWidth: 160, flex: 1 }]}>
-                {!readOnly ? (
-                  <>
-                    <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => openTourEditor(t)} testID={`activity-edit-${t.id}`}>
-                      <Text style={styles.buttonText}>Edit</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => removeTour(t.id)} testID={`activity-delete-${t.id}`}>
-                      <Text style={styles.dangerButtonText}>Delete</Text>
-                    </TouchableOpacity>
-                  </>
+              <View style={[styles.cell, styles.lastCell, { minWidth: 120, flex: 1 }]}>
+                {normalizeItineraryStatus(t.status, LEGACY_ITINERARY_STATUS) === 'Completed' ? (
+                  <Text style={styles.cellText}>{formatNetVotes(t.netRating ?? 0)}</Text>
                 ) : (
-                  <Text style={styles.cellText}>View only</Text>
+                  <Text style={styles.cellText}>-</Text>
                 )}
               </View>
             </View>
@@ -614,6 +593,97 @@ export const ActivityTab: React.FC<TourTabProps> = ({
           </View>
         ) : null}
       </View>
+      {selectedTour ? (
+        <Modal transparent visible={Boolean(selectedTour)} animationType="fade" onRequestClose={() => setSelectedTourId(null)}>
+          <View style={styles.modalOverlay} testID="activity-details-modal">
+            <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={() => setSelectedTourId(null)} />
+            <View style={[styles.modalCard, { marginTop: 0 }]}>
+              <View style={styles.sectionHeaderRow}>
+                <Text style={styles.sectionTitle}>Activity Details</Text>
+              </View>
+              <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ paddingRight: 12 }}>
+                {renderDetailRow('Date', formatDateLong(selectedTour.date))}
+                {renderDetailRow('Type', selectedTour.activityType || 'Tour')}
+                {renderDetailRow('Activity', selectedTour.name || '-')}
+                {renderDetailRow('Start Location', selectedTour.startLocation || '-')}
+                {renderDetailRow('Start Time', selectedTour.startTime || '-')}
+                {renderDetailRow('Duration', selectedTour.duration || '-')}
+                {renderDetailRow('Status', normalizeItineraryStatus(selectedTour.status, LEGACY_ITINERARY_STATUS))}
+                {renderDetailRow(
+                  'Rating',
+                  !readOnly && shouldShowRatingButtons(selectedTour.status, selectedTour.userRating) ? (
+                    <View style={styles.actionCell}>
+                      <Text style={styles.cellText}>{formatNetVotes(selectedTour.netRating ?? 0)}</Text>
+                      <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => rateTour(selectedTour.id, 1)}>
+                        <Text style={styles.buttonText}>👍</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => rateTour(selectedTour.id, -1)}>
+                        <Text style={styles.buttonText}>👎</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : normalizeItineraryStatus(selectedTour.status, LEGACY_ITINERARY_STATUS) === 'Completed' ? (
+                    formatNetVotes(selectedTour.netRating ?? 0)
+                  ) : (
+                    '-'
+                  )
+                )}
+                {renderDetailRow('Cost', selectedTour.cost ? `$${selectedTour.cost}` : '-')}
+                {renderDetailRow('Platform Booked On', selectedTour.bookedOn || '-')}
+                {renderDetailRow('Free Cancel By', selectedTour.freeCancelBy ? formatDateLong(selectedTour.freeCancelBy) : '-')}
+                {renderDetailRow('Reference', selectedTour.reference || '-')}
+                {renderDetailRow('Description', selectedTour.notes || '-')}
+                {renderDetailRow('Paid by', formatPeopleList(selectedTour.paidBy))}
+                {renderDetailRow('Attendees', formatPeopleList(selectedTour.travelerIds))}
+                {renderDetailRow(
+                  'Votes',
+                  !readOnly && shouldShowVoteButtons(selectedTour.status, selectedTour.userVote) ? (
+                    <View style={styles.actionCell}>
+                      <Text style={styles.cellText}>{formatNetVotes(selectedTour.netVotes ?? 0)}</Text>
+                      <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => voteOnTour(selectedTour.id, 1)}>
+                        <Text style={styles.buttonText}>👍</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[styles.button, styles.smallButton, styles.dangerButton]} onPress={() => voteOnTour(selectedTour.id, -1)}>
+                        <Text style={styles.buttonText}>👎</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    formatNetVotes(selectedTour.netVotes ?? 0)
+                  )
+                )}
+                <Text style={styles.modalLabel}>Actions</Text>
+                <View style={styles.actionCell}>
+                  <TouchableOpacity style={[styles.button, styles.smallButton]} onPress={() => setSelectedTourId(null)}>
+                    <Text style={styles.buttonText}>Close</Text>
+                  </TouchableOpacity>
+                  {!readOnly ? (
+                    <>
+                    <TouchableOpacity
+                      style={[styles.button, styles.smallButton]}
+                      onPress={() => {
+                        openTourEditor(selectedTour);
+                        setSelectedTourId(null);
+                      }}
+                      testID={`activity-details-edit-${selectedTour.id}`}
+                    >
+                      <Text style={styles.buttonText}>Edit</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.button, styles.smallButton, styles.dangerButton]}
+                      onPress={() => removeTour(selectedTour.id)}
+                      testID={`activity-details-delete-${selectedTour.id}`}
+                    >
+                      <Text style={styles.dangerButtonText}>Delete</Text>
+                    </TouchableOpacity>
+                    </>
+                  ) : (
+                    <Text style={styles.cellText}>View only</Text>
+                  )}
+                </View>
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+      ) : null}
       {!readOnly && editingTour ? (
         <Modal transparent visible={Boolean(editingTour)} animationType="fade" onRequestClose={closeTourEditor}>
           <View style={styles.modalOverlay} testID="activity-form-modal">
@@ -781,6 +851,14 @@ export const ActivityTab: React.FC<TourTabProps> = ({
                   onChangeText={(text: string) => setEditingTour((p) => (p ? { ...p, reference: text } : p))}
                 />
               </View>
+              <Text style={styles.modalLabel}>Description</Text>
+              <TextInput
+                style={[styles.input, { minHeight: 96, textAlignVertical: 'top' }]}
+                placeholder="Description"
+                value={editingTour.notes}
+                onChangeText={(text: string) => setEditingTour((p) => (p ? { ...p, notes: text } : p))}
+                multiline
+              />
               <Text style={styles.modalLabel}>Participants</Text>
               <View style={styles.payerChips}>
                 {activeMembers.map((m) => {

@@ -57,6 +57,7 @@ type GeneratedActivity = {
   freeCancelBy?: string;
   bookedOn?: string;
   reference?: string;
+  notes?: string;
 };
 
 type GeneratedCarRental = {
@@ -455,6 +456,7 @@ export const addGeneratedItemsToTrip = async (params: {
       freeCancelBy: safeString(activity.freeCancelBy) || null,
       bookedOn: safeString(activity.bookedOn),
       reference: safeString(activity.reference),
+      notes: safeString(activity.notes),
       paidBy: [] as string[],
       travelerIds: [] as string[],
     };

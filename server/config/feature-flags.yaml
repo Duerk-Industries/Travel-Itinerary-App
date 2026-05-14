@@ -49,3 +49,9 @@ flags:
   flight_parser:
     enabled: true
     description: "Enable LLM-based flight parser from text/emails"
+  itinerary_reactions:
+    enabled: true
+    description: "Enable up/down vote reactions on itinerary detail rows"
+  merchant_category_lookup:
+    enabled: false
+    description: "Use Nominatim to look up merchant categories from receipt OCR vendor names"

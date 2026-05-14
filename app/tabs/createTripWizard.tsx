@@ -19,7 +19,7 @@ import { type CarRental, type CarRentalDraft, buildCarRentalFromDraft, createIni
 import { computeDurationFromRange, formatMonthYear } from '../utils/tripDates';
 import { normalizeDateString } from '../utils/normalizeDateString';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
-import { saveWizardFlights, saveWizardLodgings } from '../utils/wizardSaves';
+import { saveWizardCarRentals, saveWizardFlights, saveWizardLodgings } from '../utils/wizardSaves';
 import { buildMapUrl, loadStoredMapPreference } from '../utils/mapLinks';
 import { toWebStyle } from '../utils/webStyle';
 import type { AppTheme } from '../theme/theme';
@@ -383,10 +383,21 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
         maxWidth: '100%',
         minWidth: 0,
         boxSizing: 'border-box',
+        colorScheme: theme?.mode === 'dark' ? 'dark' : 'light',
       }),
-    [styles]
+    [styles, theme?.mode]
   );
   const webDateInputStyleFlex = useMemo(() => ({ ...webDateInputStyle, flex: 1 }), [webDateInputStyle]);
+  const wizardCarInputStyle = useMemo(() => [styles.input, { marginBottom: 0, minHeight: 42 }], [styles]);
+  const wizardCarWebInputStyle = useMemo(
+    () => ({ ...webDateInputStyle, height: 42, minHeight: 42, marginBottom: 0 }),
+    [webDateInputStyle]
+  );
+  const wizardCarDateWrapStyle = useMemo(
+    () => [styles.dateInputWrap, { minWidth: 0, width: '100%', flex: 0, minHeight: 42 }],
+    [styles]
+  );
+  const wizardCarInputCellStyle = useMemo(() => [styles.cell, { justifyContent: 'flex-start' }], [styles]);
   const hasKnownInfo = useMemo(
     () => [knownInfo.flights, knownInfo.lodging, knownInfo.tours, knownInfo.cars].some((val) => val.trim().length > 0),
     [knownInfo]
@@ -535,8 +546,8 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     } else if (typeof node?.getBoundingClientRect === 'function') {
       const rect = node.getBoundingClientRect();
       setItineraryAirportAnchor({
-        x: rect.left + (typeof window !== 'undefined' ? window.scrollX : 0),
-        y: rect.top + (typeof window !== 'undefined' ? window.scrollY : 0),
+        x: rect.left,
+        y: rect.top,
         width: rect.width,
         height: rect.height,
       });
@@ -1047,6 +1058,28 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     }
   };
 
+  const saveWizardCarRentalsForTrip = async (tripId: string, groupId: string) => {
+    const result = await saveWizardCarRentals({
+      backendUrl,
+      headers,
+      userToken,
+      groupId,
+      tripId,
+      wizardCarRentals,
+      wizardGroupMembers,
+    });
+    if (result.fatal) {
+      setWizardError(result.fatal);
+      return;
+    }
+    if (result.carRentals?.length) {
+      onWizardCarRentals?.(result.carRentals);
+    }
+    if (result.failures.length) {
+      setWizardError(`Trip created, but ${result.failures.length} car rental${result.failures.length === 1 ? '' : 's'} failed to save.`);
+    }
+  };
+
   const saveWizardTours = async (tripId: string, groupId: string) => {
     if (!userToken || wizardTours.length === 0) return;
     try {
@@ -1106,6 +1139,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           freeCancelBy: tour.freeCancelBy,
           bookedOn: tour.bookedOn,
           reference: tour.reference,
+          notes: (tour as any).notes ?? '',
           paidBy,
           travelerIds: [],
         };
@@ -1191,9 +1225,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
         await saveWizardFlightsForTrip(tripId, groupId);
         await saveWizardLodgingsForTrip(tripId, groupId);
         await saveWizardTours(tripId, groupId);
-      }
-      if (wizardCarRentals.length) {
-        onWizardCarRentals?.(wizardCarRentals);
+        await saveWizardCarRentalsForTrip(tripId, groupId);
       }
 
       if (itineraryEnabled && (itineraryItems.length || generateItinerary)) {
@@ -1792,7 +1824,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     <Text style={[styles.traitChipText, wizardPromptTraits.ut.no && styles.traitChipTextSelected]}>Night Owl</Text>
                   </TouchableOpacity>
                 </View>
-                <View style={{ position: 'relative' }}>
+                <View style={{ position: 'relative', marginTop: 16 }}>
                   <TextInput
                     ref={itineraryAirportRef}
                     style={styles.input}
@@ -2106,6 +2138,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               nativeDateTimePicker={NativeDateTimePicker}
               fetchTours={async () => undefined}
               mode="wizard"
+              defaultActivityDate={dates.mode === 'range' ? dates.startDate : null}
             />
           </>
         );
@@ -2176,18 +2209,18 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     </View>
                   </View>
                 ))}
-                <View style={[styles.tableRow, styles.inputRow, styles.lastRow]}>
-                  <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                <View style={[styles.tableRow, styles.inputRow, styles.lastRow, { alignItems: 'stretch' }]}>
+                  <View style={[wizardCarInputCellStyle, { minWidth: 140, flex: 1 }]}>
                     <TextInput
-                      style={styles.input}
+                      style={wizardCarInputStyle}
                       placeholder="Pick up location"
                       title="Pick up location"
                       value={wizardCarDraft.pickupLocation}
                       onChangeText={(text: any) => setWizardCarDraft((p) => ({ ...p, pickupLocation: text }))}
                     />
                   </View>
-                  <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                    <View style={[styles.dateInputWrap, { minWidth: 0, width: '100%', flex: 0 }]}>
+                  <View style={[wizardCarInputCellStyle, { minWidth: 140, flex: 1 }]}>
+                    <View style={wizardCarDateWrapStyle}>
                       {Platform.OS === 'web' ? (
                         <input
                           ref={wizardCarPickupDateRef as any}
@@ -2195,11 +2228,11 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                           title="Pick up date"
                           value={wizardCarDraft.pickupDate}
                           onChange={(e) => setWizardCarDraft((p) => ({ ...p, pickupDate: e.target.value }))}
-                          style={webDateInputStyle}
+                          style={wizardCarWebInputStyle}
                         />
                       ) : (
                         <TouchableOpacity
-                          style={[styles.input, styles.dateTouchable]}
+                          style={[wizardCarInputStyle, styles.dateTouchable]}
                           onPress={() => openWizardCarDatePicker('pickup')}
                         >
                           <Text style={styles.cellText}>{wizardCarDraft.pickupDate || 'YYYY-MM-DD'}</Text>
@@ -2213,17 +2246,17 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                       </TouchableOpacity>
                     </View>
                   </View>
-                  <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                  <View style={[wizardCarInputCellStyle, { minWidth: 140, flex: 1 }]}>
                     <TextInput
-                      style={styles.input}
+                      style={wizardCarInputStyle}
                       placeholder="Drop off location"
                       title="Drop off location"
                       value={wizardCarDraft.dropoffLocation}
                       onChangeText={(text: any) => setWizardCarDraft((p) => ({ ...p, dropoffLocation: text }))}
                     />
                   </View>
-                  <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
-                    <View style={[styles.dateInputWrap, { minWidth: 0, width: '100%', flex: 0 }]}>
+                  <View style={[wizardCarInputCellStyle, { minWidth: 140, flex: 1 }]}>
+                    <View style={wizardCarDateWrapStyle}>
                       {Platform.OS === 'web' ? (
                         <input
                           ref={wizardCarDropoffDateRef as any}
@@ -2231,11 +2264,11 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                           title="Drop off date"
                           value={wizardCarDraft.dropoffDate}
                           onChange={(e) => setWizardCarDraft((p) => ({ ...p, dropoffDate: e.target.value }))}
-                          style={webDateInputStyle}
+                          style={wizardCarWebInputStyle}
                         />
                       ) : (
                         <TouchableOpacity
-                          style={[styles.input, styles.dateTouchable]}
+                          style={[wizardCarInputStyle, styles.dateTouchable]}
                           onPress={() => openWizardCarDatePicker('dropoff')}
                         >
                           <Text style={styles.cellText}>{wizardCarDraft.dropoffDate || 'YYYY-MM-DD'}</Text>
@@ -2249,7 +2282,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                       </TouchableOpacity>
                     </View>
                   </View>
-                  <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                  <View style={[wizardCarInputCellStyle, { minWidth: 140, flex: 1 }]}>
                     {Platform.OS === 'web' ? (
                       <select
                         value={normalizeItineraryStatus(wizardCarDraft.status, DEFAULT_NEW_ITINERARY_STATUS)}
@@ -2259,7 +2292,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                             status: normalizeItineraryStatus(e.target.value, DEFAULT_NEW_ITINERARY_STATUS),
                           }))
                         }
-                        style={toWebStyle(styles.input, { width: '100%', maxWidth: '100%', boxSizing: 'border-box' })}
+                        style={{ ...wizardCarWebInputStyle, width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}
                       >
                         {ITINERARY_STATUSES.map((opt) => (
                           <option key={`wizard-car-status-${opt}`} value={opt}>
@@ -2271,25 +2304,25 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                       <Text style={styles.cellText}>{normalizeItineraryStatus(wizardCarDraft.status, DEFAULT_NEW_ITINERARY_STATUS)}</Text>
                     )}
                   </View>
-                  <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                  <View style={[wizardCarInputCellStyle, { minWidth: 140, flex: 1 }]}>
                     <TextInput
-                      style={styles.input}
+                      style={wizardCarInputStyle}
                       placeholder="Reference"
                       title="Reference"
                       value={wizardCarDraft.reference}
                       onChangeText={(text: any) => setWizardCarDraft((p) => ({ ...p, reference: text }))}
                     />
                   </View>
-                  <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                  <View style={[wizardCarInputCellStyle, { minWidth: 140, flex: 1 }]}>
                     <TextInput
-                      style={styles.input}
+                      style={wizardCarInputStyle}
                       placeholder="Vendor"
                       title="Vendor"
                       value={wizardCarDraft.vendor}
                       onChangeText={(text: any) => setWizardCarDraft((p) => ({ ...p, vendor: text }))}
                     />
                   </View>
-                  <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
+                  <View style={[wizardCarInputCellStyle, { minWidth: 140, flex: 1 }]}>
                     <SelectField
                       styles={styles}
                       options={prepaidOptions}
@@ -2297,14 +2330,14 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                       placeholder="Select Yes/No"
                       title="Prepaid status"
                       style={{ width: '100%' }}
-                      webStyle={webDateInputStyle}
+                      webStyle={wizardCarWebInputStyle}
                       listStyle={{ position: 'relative', top: 0 }}
                       onChange={(value) => setWizardCarDraft((p) => ({ ...p, prepaid: value }))}
                     />
                   </View>
-                  <View style={[styles.cell, { minWidth: 120, flex: 1 }]}>
+                  <View style={[wizardCarInputCellStyle, { minWidth: 120, flex: 1 }]}>
                     <TextInput
-                      style={styles.input}
+                      style={wizardCarInputStyle}
                       placeholder="Cost"
                       title="Cost"
                       keyboardType="numeric"
@@ -2314,26 +2347,25 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                       }
                     />
                   </View>
-                  <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
+                  <View style={[wizardCarInputCellStyle, { minWidth: 180, flex: 1 }]}>
                     <TextInput
-                      style={styles.input}
+                      style={wizardCarInputStyle}
                       placeholder="Car model"
                       title="Car model"
                       value={wizardCarDraft.model}
                       onChangeText={(text: any) => setWizardCarDraft((p) => ({ ...p, model: text }))}
                     />
                   </View>
-                  <View style={[styles.cell, { minWidth: 220, flex: 1 }]}>
+                  <View style={[wizardCarInputCellStyle, { minWidth: 220, flex: 1 }]}>
                     <TextInput
-                      style={[styles.input, styles.cellTextWrap]}
+                      style={[wizardCarInputStyle, styles.cellTextWrap]}
                       placeholder="Notes"
                       title="Notes"
                       value={wizardCarDraft.notes}
                       onChangeText={(text: any) => setWizardCarDraft((p) => ({ ...p, notes: text }))}
-                      multiline
                     />
                   </View>
-                  <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
+                  <View style={[wizardCarInputCellStyle, { minWidth: 180, flex: 1 }]}>
                     <View style={styles.payerChips}>
                       {wizardCarDraft.travelerIds.map((id) => (
                         <View key={`wizard-car-traveler-${id}`} style={styles.payerChip}>
@@ -2358,7 +2390,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                         ))}
                     </View>
                   </View>
-                  <View style={[styles.cell, { minWidth: 180, flex: 1 }]}>
+                  <View style={[wizardCarInputCellStyle, { minWidth: 180, flex: 1 }]}>
                     <View style={styles.payerChips}>
                       {wizardCarDraft.paidBy.map((id) => (
                         <View key={id} style={styles.payerChip}>

@@ -18,6 +18,8 @@ describe('HomeTab', () => {
     homeHeroTextWrap: {},
     homeHeroSubtitle: {},
     homeHeroTitle: {},
+    homeHeroChangeTripBadge: {},
+    homeHeroChangeTripText: {},
     homeNavList: {},
     homeNavButton: {},
     homeNavButtonDisabled: {},
@@ -131,6 +133,9 @@ describe('HomeTab', () => {
 
     fireEvent.press(getByTestId('home-nav-flights'));
     expect(onNavigate).toHaveBeenCalledWith('flights');
+
+    fireEvent.press(getByTestId('home-nav-packing'));
+    expect(onNavigate).toHaveBeenCalledWith('packing');
   });
 
   test('hides restricted pages for followed trips', () => {
@@ -147,13 +152,14 @@ describe('HomeTab', () => {
         onSelectFollowedTrip={jest.fn()}
         onNavigate={jest.fn()}
         onFollowTrip={jest.fn(async () => null)}
-        hiddenPages={new Set(['itinerary', 'expenses', 'ingest', 'ledger', 'trips', 'create-trip', 'follow', 'following'])}
+        hiddenPages={new Set(['expenses', 'ingest', 'ledger', 'trips', 'create-trip', 'follow', 'following'])}
       />
     );
 
     expect(getByTestId('home-nav-overview')).toBeTruthy();
     expect(getByTestId('home-nav-flights')).toBeTruthy();
     expect(getByTestId('home-nav-lodging')).toBeTruthy();
+    expect(getByTestId('home-nav-packing')).toBeTruthy();
     expect(getByTestId('home-nav-tours')).toBeTruthy();
     expect(getByTestId('home-nav-car')).toBeTruthy();
     expect(getByTestId('home-nav-cost')).toBeTruthy();
@@ -187,14 +193,41 @@ describe('HomeTab', () => {
 
     expect(getByTestId('home-nav-overview')).toBeTruthy();
     expect(getByTestId('home-nav-flights')).toBeTruthy();
+    expect(getByTestId('home-nav-packing')).toBeTruthy();
     expect(getByTestId('home-create-trip-button')).toBeTruthy();
     expect(getByTestId('home-follow-trip-button')).toBeTruthy();
+    expect(getByTestId('home-share-trip-button')).toBeTruthy();
     expect(queryByTestId('home-nav-ledger')).toBeNull();
     expect(queryByTestId('home-nav-trips')).toBeNull();
     expect(queryByTestId('home-nav-account')).toBeNull();
     expect(queryByTestId('home-nav-following')).toBeNull();
     expect(queryByTestId('home-nav-follow')).toBeNull();
     expect(queryByTestId('home-nav-create-trip')).toBeNull();
+  });
+
+  test('shows the change-trip cue on the hero and opens share from the home action', () => {
+    const onOpenShareTrip = jest.fn();
+    const onNavigate = jest.fn();
+    const { getByText, getByTestId } = render(
+      <HomeTab
+        backendUrl="http://localhost"
+        headers={{}}
+        activeTripId="t2"
+        trips={trips}
+        followedTrips={followedTrips}
+        styles={styles}
+        onSelectTrip={jest.fn()}
+        onSelectFollowedTrip={jest.fn()}
+        onNavigate={onNavigate}
+        onFollowTrip={jest.fn(async () => null)}
+        onOpenShareTrip={onOpenShareTrip}
+      />
+    );
+
+    expect(getByText('Click to Change Trip')).toBeTruthy();
+    fireEvent.press(getByTestId('home-share-trip-button'));
+    expect(onOpenShareTrip).toHaveBeenCalledTimes(1);
+    expect(onNavigate).not.toHaveBeenCalled();
   });
 
   test('shows a create-trip dialog when no trips are available', () => {

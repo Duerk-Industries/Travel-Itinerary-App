@@ -91,10 +91,10 @@ const getRelativeTime = (value: string): string => {
 const getPrimaryText = (event: any): string => {
   if (event?.kind === 'group') {
     const count = Number(event?.count ?? event?.itemsTotal ?? 0);
-    const label = String(event?.type ?? '').replaceAll('_', ' ').toLowerCase();
+    const label = String(event?.type ?? '').replace(/_/g, ' ').toLowerCase();
     return `${count} ${label}`;
   }
-  return event?.title || String(event?.type ?? 'Update').replaceAll('_', ' ');
+  return event?.title || String(event?.type ?? 'Update').replace(/_/g, ' ');
 };
 
 const getSecondaryText = (event: any): string => {
@@ -151,7 +151,7 @@ const FollowingTab: React.FC<FollowingTabProps> = ({
           fetch(`${backendUrl}/api/trips/${selectedTripId}/activity?limit=30&group=true`, { headers }),
           fetch(`${backendUrl}/api/trips/${selectedTripId}/comments`, { headers }),
         ]);
-        if ([tripRes, flightsRes, lodgingsRes, toursRes, activityRes, commentsRes].some((res) => res.status === 401 || res.status === 403)) {
+        if ([tripRes, flightsRes, lodgingsRes, toursRes, activityRes, commentsRes].some((res) => res.status === 401)) {
           onRequireLogin();
           return;
         }
@@ -246,7 +246,7 @@ const FollowingTab: React.FC<FollowingTabProps> = ({
         headers: { 'Content-Type': 'application/json', ...headers },
         body: JSON.stringify({ body }),
       });
-      if (res.status === 401 || res.status === 403) {
+      if (res.status === 401) {
         onRequireLogin();
         return;
       }

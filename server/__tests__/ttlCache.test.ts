@@ -79,8 +79,10 @@ describe('TtlCache', () => {
     expect(fetcher).toHaveBeenCalledTimes(2);
   });
 
-  it('emits cache_hit / cache_miss metrics when metricName is configured', async () => {
+  it('records cache_hit / cache_miss metrics when metricName is configured', async () => {
     const { createTtlCache } = require('../src/utils/ttlCache');
+    const { getMetricCounterSnapshot, resetMetricCountersForTests } = require('../src/metrics');
+    resetMetricCountersForTests();
     const cache = createTtlCache<number>({
       defaultTtlMs: 60_000,
       metricName: 'test_cache',
@@ -90,10 +92,10 @@ describe('TtlCache', () => {
     await cache.getOrFetch('a', fetcher); // miss
     await cache.getOrFetch('a', fetcher); // hit
 
-    const logs = logSpy.mock.calls.map((call) => JSON.parse(call[0] as string));
-    const names = logs.map((l) => l.name);
-    expect(names).toContain('test_cache.cache_miss');
-    expect(names).toContain('test_cache.cache_hit');
+    const snapshot = getMetricCounterSnapshot();
+    expect(snapshot.counters['test_cache.cache_miss']).toBe(1);
+    expect(snapshot.counters['test_cache.cache_hit']).toBe(1);
+    expect(logSpy).not.toHaveBeenCalled();
   });
 
   it('clear() removes all entries', () => {

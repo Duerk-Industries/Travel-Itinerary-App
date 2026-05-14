@@ -78,9 +78,31 @@ const members = [
   { id: 'member-1', firstName: 'Bryan', lastName: 'Duerk', email: 'bryan@example.com', status: 'active' as const },
 ];
 
-const renderActivityHarness = () => {
+const sampleTour: Tour = {
+  id: 'tour-1',
+  status: 'Completed',
+  activityType: 'Tour',
+  date: '2026-09-02',
+  name: 'Museum Tour',
+  startLocation: 'Old Town',
+  startTime: '10:00',
+  duration: '2h',
+  cost: '40',
+  freeCancelBy: '2026-08-25',
+  bookedOn: 'Viator',
+  reference: 'TOUR1',
+  notes: 'Bring comfortable walking shoes.',
+  paidBy: ['member-1'],
+  travelerIds: ['member-1'],
+  netVotes: 2,
+  userVote: 1,
+  netRating: 3,
+  userRating: 1,
+};
+
+const renderActivityHarness = (initialTours: Tour[] = [], defaultActivityDate?: string | null) => {
   const Harness = () => {
-    const [tours, setTours] = useState<Tour[]>([]);
+    const [tours, setTours] = useState<Tour[]>(initialTours);
     return (
       <ActivityTab
         backendUrl="https://wanderbunnies.test"
@@ -99,6 +121,7 @@ const renderActivityHarness = () => {
         nativeDateTimePicker={null}
         fetchTours={jest.fn()}
         mode="wizard"
+        defaultActivityDate={defaultActivityDate}
       />
     );
   };
@@ -127,6 +150,14 @@ describe('Activity dialog layout', () => {
     fetchSpy.mockRestore();
   });
 
+  it('defaults new activities to the trip first date when provided', () => {
+    const { getByTestId, getByText } = renderActivityHarness([], '2026-07-01');
+
+    fireEvent.press(getByTestId('activity-add'));
+
+    expect(getByText('Wed, Jul 1')).toBeTruthy();
+  });
+
   it('closes the activity dialog from the cancel action', () => {
     const { getByTestId, queryByTestId } = renderActivityHarness();
 
@@ -135,5 +166,46 @@ describe('Activity dialog layout', () => {
 
     fireEvent.press(getByTestId('activity-cancel'));
     expect(queryByTestId('activity-form-modal')).toBeNull();
+  });
+
+  it('keeps the table compact and opens full activity details from the activity name', () => {
+    const { getByTestId, getByText, queryByTestId, queryByText } = renderActivityHarness([sampleTour]);
+
+    const headerLabels = React.Children.toArray(getByTestId('activity-table-header').props.children).map(
+      (cell: any) => cell.props.children.props.children
+    );
+    expect(headerLabels).toEqual(['Date', 'Type', 'Activity', 'Start Time', 'Duration', 'Status', 'Rating']);
+
+    expect(queryByText('Platform Booked On')).toBeNull();
+    expect(queryByText('Free Cancel By')).toBeNull();
+    expect(queryByText('Reference')).toBeNull();
+    expect(queryByText('Description')).toBeNull();
+    expect(queryByText('Paid by')).toBeNull();
+    expect(queryByText('Attendees')).toBeNull();
+    expect(queryByText('Votes')).toBeNull();
+    expect(queryByText('Actions')).toBeNull();
+    expect(queryByTestId('activity-edit-tour-1')).toBeNull();
+
+    fireEvent.press(getByTestId('activity-details-tour-1'));
+
+    expect(getByTestId('activity-details-modal')).toBeTruthy();
+    expect(getByText('Platform Booked On')).toBeTruthy();
+    expect(getByText('Free Cancel By')).toBeTruthy();
+    expect(getByText('Reference')).toBeTruthy();
+    expect(getByText('Description')).toBeTruthy();
+    expect(getByText('Paid by')).toBeTruthy();
+    expect(getByText('Attendees')).toBeTruthy();
+    expect(getByText('Votes')).toBeTruthy();
+    expect(getByText('Actions')).toBeTruthy();
+    expect(getByText('Viator')).toBeTruthy();
+    expect(getByText('TOUR1')).toBeTruthy();
+    expect(getByText('Bring comfortable walking shoes.')).toBeTruthy();
+
+    fireEvent.press(getByTestId('activity-details-edit-tour-1'));
+
+    expect(queryByTestId('activity-details-modal')).toBeNull();
+    expect(getByTestId('activity-form-modal')).toBeTruthy();
+    expect(getByText('Edit Activity')).toBeTruthy();
+    expect(getByText('Description')).toBeTruthy();
   });
 });

@@ -113,7 +113,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
         <Text style={styles.helperText}>
           Current Departure: {formatDateLong(flight.departureDate)} at {flight.departureTime || '?'}
         </Text>
-        <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ paddingRight: 12 }}>
+        <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ paddingRight: 12, paddingBottom: 8 }}>
           <Text style={styles.modalLabel}>Passengers</Text>
           <View style={styles.payerChips}>
             {groupMembers.map((m) => {
@@ -133,8 +133,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
               );
             })}
           </View>
-          <Text style={styles.modalLabel}>Departure</Text>
-          <Text style={styles.modalLabel}>Status</Text>
+          <Text style={[styles.modalLabel, { marginTop: 16 }]}>Status</Text>
           {Platform.OS === 'web' ? (
             <select
               value={normalizeItineraryStatus(flight.status, DEFAULT_NEW_ITINERARY_STATUS)}
@@ -163,7 +162,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
               })}
             </View>
           )}
-          <Text style={styles.modalLabel}>Type</Text>
+          <Text style={[styles.modalLabel, { marginTop: 16 }]}>Type</Text>
           {Platform.OS === 'web' ? (
             <select
               value={TRANSFER_TYPES.includes((flight as any).transferType as TransferType) ? (flight as any).transferType : 'Flight'}
@@ -203,7 +202,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
               })}
             </View>
           )}
-          <Text style={styles.modalLabel}>Departure</Text>
+          <Text style={[styles.modalLabel, { marginTop: 16 }]}>Departure</Text>
           <View style={rowStyle}>
             <View style={dateFieldStyle}>
               <Text style={styles.modalLabelSmall}>Date</Text>
@@ -281,7 +280,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
               />
             </View>
           </View>
-          <Text style={styles.modalLabel}>Arrival</Text>
+          <Text style={[styles.modalLabel, { marginTop: 16 }]}>Arrival</Text>
           <View style={rowStyle}>
             <View style={dateFieldStyle}>
               <Text style={styles.modalLabelSmall}>Date</Text>
@@ -346,7 +345,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
             </View>
           </View>
 
-          <Text style={styles.modalLabel}>Layover</Text>
+          <Text style={[styles.modalLabel, { marginTop: 16 }]}>Layover</Text>
           <View style={rowStyle}>
             <View style={locationFieldStyle}>
               <Text style={styles.modalLabelSmall}>Location</Text>
@@ -404,7 +403,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
               </View>
             </View>
           </View>
-          <Text style={styles.modalLabel}>Transfer</Text>
+          <Text style={[styles.modalLabel, { marginTop: 16 }]}>Transfer</Text>
           <View style={rowStyle}>
             <View style={locationFieldStyle}>
               <Text style={styles.modalLabelSmall}>Carrier</Text>
@@ -434,7 +433,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
               />
             </View>
           </View>
-          <Text style={styles.modalLabel}>Cost</Text>
+          <Text style={[styles.modalLabel, { marginTop: 16 }]}>Cost</Text>
           <TextInput
             style={styles.input}
             testID="flight-modal-cost"
@@ -444,7 +443,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
               setFlight((prev) => (prev ? { ...prev, cost: sanitizeCostInput(text) } : prev))
             }
           />
-          <Text style={styles.modalLabel}>Paid by</Text>
+          <Text style={[styles.modalLabel, { marginTop: 16 }]}>Paid by</Text>
           <View style={styles.payerChips}>
             {groupMembers.map((m) => {
               const selected = flight.paidBy.includes(m.id);
@@ -467,7 +466,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
             })}
           </View>
         </ScrollView>
-        <View style={styles.row}>
+        <View style={[styles.row, { marginTop: 16 }]}>
           <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={onClose}>
             <Text style={styles.dangerButtonText}>Cancel</Text>
           </TouchableOpacity>

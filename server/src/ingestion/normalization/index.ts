@@ -82,20 +82,25 @@ const extractPdfText = async (bytes: Buffer): Promise<string> => {
       isEvalSupported: false,
     });
     const pdf = await loadingTask.promise;
-    const pageTexts: string[] = [];
-    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
-      const page = await pdf.getPage(pageNumber);
-      const content = await page.getTextContent();
-      const tokens = (content.items ?? [])
-        .map((item: any) => String(item?.str ?? '').trim())
-        .filter(Boolean);
-      if (tokens.length) {
-        pageTexts.push(tokens.join(' '));
+    try {
+      const pageTexts: string[] = [];
+      for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+        const page = await pdf.getPage(pageNumber);
+        const content = await page.getTextContent();
+        const tokens = (content.items ?? [])
+          .map((item: any) => String(item?.str ?? '').trim())
+          .filter(Boolean);
+        if (tokens.length) {
+          pageTexts.push(tokens.join(' '));
+        }
       }
-    }
-    const pdfJsText = pageTexts.join('\n').trim();
-    if (looksTextLike(pdfJsText)) {
-      return pdfJsText;
+      const pdfJsText = pageTexts.join('\n').trim();
+      if (looksTextLike(pdfJsText)) {
+        return pdfJsText;
+      }
+    } finally {
+      await pdf.destroy?.();
+      loadingTask.destroy?.();
     }
   } catch {
     // Fall through to the secondary parser below.
@@ -174,6 +179,15 @@ const normalizeFromBytes = async (
     return { normalizedText: stripHtml(decoded), normalizedHtml: decoded, extractedTextSource: 'html', normalizationQuality: 'FULL_TEXT' };
   }
   if (payload.mimeType === 'application/pdf') {
+    const decodedLooksTextLike = looksTextLike(decoded);
+    if (decodedLooksTextLike && !decoded.trimStart().startsWith('%PDF-')) {
+      return {
+        normalizedText: decoded,
+        normalizedHtml: null,
+        extractedTextSource: 'pdf',
+        normalizationQuality: 'STRUCTURAL_EXTRACT',
+      };
+    }
     try {
       const pdfText = await extractPdfText(bytes);
       if (looksTextLike(pdfText)) {
@@ -187,7 +201,7 @@ const normalizeFromBytes = async (
     } catch (error) {
       logError(`[ingestion] pdf extraction failed import_job_id=${importJobId}`, error);
     }
-    if (looksTextLike(decoded)) {
+    if (decodedLooksTextLike) {
       return {
         normalizedText: decoded,
         normalizedHtml: null,

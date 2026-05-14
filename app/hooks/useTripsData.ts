@@ -72,6 +72,10 @@ export const useTripsData = ({
   const [groupMembers, setGroupMembers] = useState<GroupMemberOption[]>([]);
   const suppressedGroupMemberFetchesRef = useRef<Map<string, string>>(new Map());
 
+  const clearGroupMembers = useCallback(() => {
+    setGroupMembers((current) => (current.length ? [] : current));
+  }, []);
+
   const handleRequestError = useCallback(
     (error: unknown): string | undefined => {
       if (error instanceof ApiClientError) {
@@ -145,19 +149,24 @@ export const useTripsData = ({
 
   const fetchGroupMembersForActiveTrip = useCallback(async (): Promise<GroupMemberOption[]> => {
     if (!userToken || !activeTripId) {
-      setGroupMembers([]);
+      clearGroupMembers();
+      return [];
+    }
+
+    if (isFollowingMode) {
+      clearGroupMembers();
       return [];
     }
 
     const trip = isFollowingMode ? selectedFollowedTripDetails : trips.find((item) => item.id === activeTripId) ?? null;
     const groupId = trip?.groupId;
     if (!groupId) {
-      setGroupMembers([]);
+      clearGroupMembers();
       return [];
     }
 
     if (suppressedGroupMemberFetchesRef.current.has(groupId)) {
-      setGroupMembers([]);
+      clearGroupMembers();
       return [];
     }
 
@@ -171,19 +180,20 @@ export const useTripsData = ({
       setGroupMembers(visibleMembers);
       return visibleMembers;
     } catch (error) {
-      if (error instanceof ApiClientError && isUnauthorizedStatus(error.status, requirePasswordSetup)) {
+      if (error instanceof ApiClientError && error.status === 401) {
         onUnauthorized?.();
       } else if (error instanceof ApiClientError) {
         const message = String(error.message ?? `status ${error.status}`);
         suppressedGroupMemberFetchesRef.current.set(groupId, message);
         console.warn(`[groups] suppressing repeated member fetch for group=${groupId}: ${message}`);
       }
-      setGroupMembers([]);
+      clearGroupMembers();
       return [];
     }
   }, [
     activeTripId,
     backendUrl,
+    clearGroupMembers,
     isFollowingMode,
     onUnauthorized,
     requirePasswordSetup,

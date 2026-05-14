@@ -1,7 +1,7 @@
 import { createFlightForTrip, removeFlightApi, type FlightCreateDraft } from '../tabs/transfers';
 import { createLodgingForTrip, removeLodgingApi, saveLodgingApi, type LodgingDraft, type Lodging } from '../tabs/lodging';
 import { createActivityForTrip, removeActivityApi, type TourDraft } from '../tabs/activities';
-import { saveWizardFlights, saveWizardLodgings } from '../utils/wizardSaves';
+import { saveWizardCarRentals, saveWizardFlights, saveWizardLodgings } from '../utils/wizardSaves';
 
 describe('Persistence flows for flights and lodging', () => {
   const backendUrl = 'http://localhost:4000';
@@ -108,6 +108,72 @@ describe('Persistence flows for flights and lodging', () => {
     expect(lodgingPayload.tripId).toBe('trip-1');
     expect(lodgingPayload.paidBy).toEqual(['member-api-1']);
     expect(lodgingPayload.name).toBe('Test Hotel');
+  });
+
+  test('create trip wizard saves car rentals with resolved member ids', async () => {
+    const fetchMock = (global as any).fetch as jest.Mock;
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => [
+          { id: 'member-api-1', email: 'traveler@example.com', status: 'active' },
+        ],
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          id: 'car-api-1',
+          tripId: 'trip-1',
+          status: 'Booked',
+          pickupLocation: 'Airport',
+          pickupDate: '2026-05-01',
+          dropoffLocation: 'Airport',
+          dropoffDate: '2026-05-05',
+          vendor: 'Hertz',
+          cost: 250,
+          paidBy: ['member-api-1'],
+          travelerIds: ['member-api-1'],
+        }),
+      });
+
+    const result = await saveWizardCarRentals({
+      backendUrl,
+      headers,
+      userToken: 'token',
+      groupId: 'group-1',
+      tripId: 'trip-1',
+      wizardGroupMembers: [{ id: 'wizard-1', email: 'traveler@example.com', status: 'active' }],
+      wizardCarRentals: [
+        {
+          id: 'car-1',
+          tripId: '',
+          status: 'Booked',
+          pickupLocation: 'Airport',
+          pickupDate: '2026-05-01',
+          dropoffLocation: 'Airport',
+          dropoffDate: '2026-05-05',
+          reference: 'REF',
+          vendor: 'Hertz',
+          prepaid: 'Yes',
+          cost: '250',
+          model: 'SUV',
+          notes: '',
+          paidBy: ['wizard-1'],
+          travelerIds: ['wizard-1'],
+        },
+      ],
+    });
+
+    expect(result.ok).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const carCall = fetchMock.mock.calls[1];
+    expect(carCall[0]).toBe(`${backendUrl}/api/car-rentals`);
+    const carPayload = JSON.parse(carCall[1].body);
+    expect(carPayload.tripId).toBe('trip-1');
+    expect(carPayload.paidBy).toEqual(['member-api-1']);
+    expect(carPayload.travelerIds).toEqual(['member-api-1']);
+    expect(carPayload.cost).toBe(250);
+    expect(result.carRentals?.[0].id).toBe('car-api-1');
   });
 
   test('flight tab createFlightForTrip posts a flight', async () => {
@@ -237,6 +303,7 @@ describe('Persistence flows for flights and lodging', () => {
       freeCancelBy: '',
       bookedOn: '',
       reference: '',
+      notes: 'Call ahead for accessibility.',
       paidBy: [],
       travelerIds: [],
     };
@@ -254,6 +321,7 @@ describe('Persistence flows for flights and lodging', () => {
     const payload = JSON.parse(call[1].body);
     expect(payload.tripId).toBe('trip-1');
     expect(payload.paidBy).toEqual(['member-1']);
+    expect(payload.notes).toBe('Call ahead for accessibility.');
   });
 
   test('tour delete uses DELETE /api/activities/:id', async () => {

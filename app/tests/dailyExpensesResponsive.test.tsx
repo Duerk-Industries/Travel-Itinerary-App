@@ -96,6 +96,9 @@ const styles = {
   detailModalScroll: {},
   tableActionButton: {},
   tableActionButtonDanger: {},
+  dailyExpenseDayCard: { backgroundColor: 'theme-card' },
+  dailyExpensesVerticalScroll: { width: '100%' },
+  dailyExpensesVerticalContent: { paddingBottom: 24 },
 };
 
 const trip = {
@@ -160,8 +163,19 @@ describe('DailyExpensesTab responsive layout', () => {
     const { getByTestId, queryByTestId, queryByText } = renderTab();
     expect(getByTestId('daily-expenses-cards')).toBeTruthy();
     expect(queryByTestId('daily-expenses-table')).toBeNull();
+    expect(getByTestId('daily-expenses-cards').props.nestedScrollEnabled).toBe(true);
+    expect(getByTestId('daily-expenses-cards').props.showsVerticalScrollIndicator).toBe(true);
+    expect(getByTestId('daily-expenses-cards').props.style).toEqual(
+      expect.arrayContaining([
+        styles.dailyExpensesVerticalScroll,
+        expect.objectContaining({ maxHeight: 380, flexGrow: 0 }),
+      ]),
+    );
 
     expect(getByTestId('daily-expenses-card-2025-02-01')).toBeTruthy();
+    expect(getByTestId('daily-expenses-card-2025-02-01').props.style).toEqual(
+      expect.arrayContaining([styles.dailyExpenseDayCard]),
+    );
     expect(getByTestId('daily-expenses-card-2025-02-02')).toBeTruthy();
 
     // Breakfast row should appear for day 1, and not for day 2 (which has no expenses)
@@ -178,7 +192,7 @@ describe('DailyExpensesTab responsive layout', () => {
     expect(getByTestId('expense-detail-modal')).toBeTruthy();
   });
 
-  it('renders a day card per trip date in the virtualized list', () => {
+  it('renders a day card per trip date in the vertical scroll area', () => {
     mockWindowWidth = 480;
     const tripTwoWeeks = {
       ...trip,

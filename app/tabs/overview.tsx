@@ -24,11 +24,9 @@ import {
 } from '../utils/overviewBuilder';
 import { type MapApp } from '../utils/mapLinks';
 import {
-  adjustStartDateForEarliest,
   formatMonthYear,
-  getEarliestTripEventDate,
 } from '../utils/tripDates';
-import { dedupeMembersByIdentity, formatMemberDisplayName } from '../utils/memberDisplay';
+import { buildMemberDisplayLookup, dedupeMembersByIdentity, formatMemberDisplayName, formatTravelerListDisplay } from '../utils/memberDisplay';
 import { normalizeDateString } from '../utils/normalizeDateString';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import {
@@ -72,6 +70,11 @@ import { FlightEditingForm } from '../components/TransferEditingForm';
 import ConfirmDialog from '../components/ConfirmDialog';
 import LodgingDialog from '../components/LodgingDialog';
 import LodgingDetailsDialog from '../components/LodgingDetailsDialog';
+import ReactionBar, { type ReactionSummary, type ReactionValue } from '../components/ReactionBar';
+import AddItemPopover, { type AddItemKind } from '../components/AddItemPopover';
+import PlacePickerDialog, { type PlacePickerSubmit } from '../components/PlacePickerDialog';
+import NoteInputDialog, { type NoteSubmit } from '../components/NoteInputDialog';
+import ChecklistInputDialog, { type ChecklistSubmit } from '../components/ChecklistInputDialog';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from '../utils/itineraryStatus';
 import { useImageSourceGetter } from '../utils/imageSource';
@@ -108,6 +111,7 @@ type GroupView = {
   id: string;
   name: string;
   members: Array<{ id: string; userEmail?: string; email?: string; guestName?: string }>;
+  invites?: Array<{ id: string; inviteeEmail: string; status: string }>;
 };
 
 type Lodging = {
@@ -138,12 +142,30 @@ type Tour = {
   reference: string;
 };
 
+type ItineraryDetailKind = 'activity' | 'place' | 'note' | 'checklist';
+
+type ChecklistChildRecord = {
+  id: string;
+  detailId: string;
+  position: number;
+  label: string;
+  checkedBy?: string | null;
+  checkedAt?: string | null;
+  createdAt: string;
+};
+
 type ItineraryDetail = {
   id: string;
   day: number;
   time?: string | null;
   activity: string;
   cost?: number | null;
+  kind?: ItineraryDetailKind;
+  placeId?: string | null;
+  noteBody?: string | null;
+  position?: number;
+  checklistItems?: ChecklistChildRecord[];
+  reactions?: ReactionSummary;
 };
 
 type OverviewTabProps = {
@@ -171,6 +193,8 @@ type OverviewTabProps = {
   mapApp: MapApp;
   aiItineraryPending?: boolean;
   aiItineraryFailedMessage?: string | null;
+  editSignal?: number;
+  onUpdateCurrency?: (tripId: string, currency: string) => void;
   onOpenAddress: (address: string) => void;
   onRefreshTrips: () => void;
   onRefreshGroups: () => void;
@@ -322,6 +346,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   mapApp,
   aiItineraryPending,
   aiItineraryFailedMessage,
+  editSignal,
+  onUpdateCurrency,
   onOpenAddress,
   onRefreshTrips,
   onRefreshGroups,
@@ -359,8 +385,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const [itineraryId, setItineraryId] = useState<string | null>(null);
   const [editingDetailId, setEditingDetailId] = useState<string | null>(null);
   const [detailDraft, setDetailDraft] = useState({ day: '1', time: '', activity: '', cost: '' });
+  const [addPopoverOpen, setAddPopoverOpen] = useState(false);
+  const [activeAddDialog, setActiveAddDialog] = useState<AddItemKind | null>(null);
+  const [addPopoverDay, setAddPopoverDay] = useState<number | null>(null);
+  const [isEditingDayItems, setIsEditingDayItems] = useState(false);
   const [descriptionDraft, setDescriptionDraft] = useState('');
   const [isEditing, setIsEditing] = useState(false);
+  const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
   const [dateDraft, setDateDraft] = useState({
     mode: 'range' as 'range' | 'month',
     startDate: '',
@@ -407,7 +438,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const [showAddTour, setShowAddTour] = useState(false);
   const [showAddRental, setShowAddRental] = useState(false);
   const [lodgingDraft, setLodgingDraft] = useState<LodgingDraft>(createInitialLodgingState());
-  const [tourDraft, setTourDraft] = useState<TourDraft>(createInitialActivityState());
+  const [tourDraft, setTourDraft] = useState<TourDraft>(createInitialActivityState(trip?.startDate ?? null));
   const [rentalDraft, setRentalDraft] = useState<CarRentalDraft>(createInitialCarRentalDraft());
   const [editingFlightId, setEditingFlightId] = useState<string | null>(null);
   const [editingFlightDraft, setEditingFlightDraft] = useState<FlightEditDraft | null>(null);
@@ -416,7 +447,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const [editingLodgingId, setEditingLodgingId] = useState<string | null>(null);
   const [editingTourId, setEditingTourId] = useState<string | null>(null);
   const [editingRentalId, setEditingRentalId] = useState<string | null>(null);
-  const autoAdjustedRef = useRef<string | null>(null);
   const [dateField, setDateField] = useState<'start' | 'end' | null>(null);
   const [dateValue, setDateValue] = useState<Date>(new Date());
   const [timePickerTarget, setTimePickerTarget] = useState<'edit-dep' | 'edit-arr' | null>(null);
@@ -470,8 +500,18 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   }, [trip]);
 
   useEffect(() => {
+    if (!editSignal) return;
+    setIsEditing(true);
+  }, [editSignal]);
+
+  useEffect(() => {
     setSelectedDay(null);
+    setIsEditingDayItems(false);
   }, [trip?.id]);
+
+  useEffect(() => {
+    setIsEditingDayItems(false);
+  }, [selectedDay]);
 
   useEffect(() => {
     if (!selectedDay) {
@@ -502,7 +542,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           setItineraryId(null);
           return;
         }
-        const latest = records.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+        // Use the most-recently-updated record per trip, falling back to createdAt
+        // when the server doesn't surface updatedAt yet. Per
+        // docs/implementation-plan-itinerary-collab.md §B2.
+        const recordTs = (r: any) =>
+          new Date((r?.updatedAt ?? r?.createdAt) ?? 0).getTime();
+        const latest = [...records].sort((a, b) => recordTs(b) - recordTs(a))[0];
         setItineraryId(latest.id ?? null);
         const detailsRes = await fetch(`${backendUrl}/api/itineraries/${latest.id}/details`, { headers });
         if (!detailsRes.ok) {
@@ -577,21 +622,257 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     refreshItineraryDetails();
   };
 
-  const earliestEventDate = useMemo(
-    () =>
-      getEarliestTripEventDate([
-        ...flights.map((f) => f.departure_date),
-        ...lodgings.map((l) => l.checkInDate),
-        ...tours.map((t) => t.date),
-      ]),
-    [flights, lodgings, tours]
+  // ---------------------------------------------------------------
+  // Phase 3: itinerary item kinds + reactions wired into Day Details.
+  // The Day Details "Notes & Checklists" section uses these helpers
+  // to add place / note / checklist / custom-activity rows, toggle
+  // checklist children, and apply up/down votes.
+  // ---------------------------------------------------------------
+  const ensureItineraryRecordForTrip = useCallback(
+    async (defaultDay: number): Promise<string | null> => {
+      if (itineraryId) return itineraryId;
+      if (!trip?.id) return null;
+      const days = computeTripDays(trip.startDate ?? null, trip.endDate ?? null) ?? defaultDay ?? 1;
+      const res = await fetch(`${backendUrl}/api/itineraries`, {
+        method: 'POST',
+        headers: jsonHeaders,
+        body: JSON.stringify({
+          tripId: trip.id,
+          destination: trip.destination ?? trip.name ?? 'Trip',
+          days: Math.max(1, days),
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || 'Could not create itinerary record');
+        return null;
+      }
+      const created = (await res.json()) as { id?: string };
+      const newId = created.id ?? null;
+      if (newId) setItineraryId(newId);
+      return newId;
+    },
+    [backendUrl, itineraryId, jsonHeaders, trip?.id, trip?.destination, trip?.name, trip?.startDate, trip?.endDate]
   );
 
-  const effectiveRangeDates = useMemo(
-    () => adjustStartDateForEarliest({ startDate: trip?.startDate ?? null, endDate: trip?.endDate ?? null, earliestDate: earliestEventDate }),
-    [trip?.startDate, trip?.endDate, earliestEventDate]
+  const postNewDetail = useCallback(
+    async (defaultDay: number, payload: Record<string, unknown>): Promise<boolean> => {
+      const targetItineraryId = await ensureItineraryRecordForTrip(defaultDay);
+      if (!targetItineraryId) return false;
+      const res = await fetch(`${backendUrl}/api/itineraries/${targetItineraryId}/details`, {
+        method: 'POST',
+        headers: jsonHeaders,
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || 'Could not add item');
+        return false;
+      }
+      const detailsRes = await fetch(`${backendUrl}/api/itineraries/${targetItineraryId}/details`, { headers });
+      if (detailsRes.ok) {
+        const details = await detailsRes.json();
+        setItineraryDetails(Array.isArray(details) ? details : []);
+      }
+      return true;
+    },
+    [backendUrl, ensureItineraryRecordForTrip, headers, jsonHeaders]
   );
-  
+
+  const closeAllAddDialogs = useCallback(() => {
+    setActiveAddDialog(null);
+    setAddPopoverOpen(false);
+  }, []);
+
+  const getDateForDayIndex = useCallback(
+    (dayIndex?: number | null): string | null => {
+      const normalizedDay = Math.max(1, Math.round(Number(dayIndex ?? 1) || 1));
+      const cardDate = dayCards[normalizedDay - 1]?.date;
+      if (cardDate && /^\d{4}-\d{2}-\d{2}$/.test(cardDate)) return cardDate;
+      if (trip?.startDate && /^\d{4}-\d{2}-\d{2}$/.test(trip.startDate)) {
+        const start = new Date(`${trip.startDate}T00:00:00.000Z`);
+        if (!Number.isNaN(start.getTime())) {
+          start.setUTCDate(start.getUTCDate() + normalizedDay - 1);
+          return start.toISOString().slice(0, 10);
+        }
+      }
+      return trip?.startDate ?? null;
+    },
+    [dayCards, trip?.startDate]
+  );
+
+  const openCustomActivityDialog = useCallback(
+    (dayIndex?: number | null) => {
+      setEditingTourId(null);
+      setTourDraft(createInitialActivityState(getDateForDayIndex(dayIndex)));
+      setShowAddTour(true);
+    },
+    [getDateForDayIndex]
+  );
+
+  const handlePopoverSelect = useCallback((kind: AddItemKind) => {
+    if (kind === 'activity') {
+      setAddPopoverOpen(false);
+      setActiveAddDialog(null);
+      openCustomActivityDialog(addPopoverDay ?? 1);
+      return;
+    }
+    setActiveAddDialog(kind);
+    setAddPopoverOpen(false);
+  }, [addPopoverDay, openCustomActivityDialog]);
+
+  const handleAddPlace = useCallback(
+    async (input: PlacePickerSubmit) => {
+      const ok = await postNewDetail(input.day, {
+        day: input.day,
+        time: input.time ?? null,
+        activity: input.name,
+        kind: 'place',
+        noteBody: input.notes ?? null,
+      });
+      if (ok) closeAllAddDialogs();
+    },
+    [postNewDetail, closeAllAddDialogs]
+  );
+
+  const handleAddNote = useCallback(
+    async (input: NoteSubmit) => {
+      const ok = await postNewDetail(input.day, {
+        day: input.day,
+        activity: input.title,
+        kind: 'note',
+        noteBody: input.body,
+      });
+      if (ok) closeAllAddDialogs();
+    },
+    [postNewDetail, closeAllAddDialogs]
+  );
+
+  const handleAddChecklist = useCallback(
+    async (input: ChecklistSubmit) => {
+      const ok = await postNewDetail(input.day, {
+        day: input.day,
+        activity: input.title,
+        kind: 'checklist',
+        checklistItems: input.items,
+      });
+      if (ok) closeAllAddDialogs();
+    },
+    [postNewDetail, closeAllAddDialogs]
+  );
+
+  // Optimistic checklist child toggle.
+  const updateLocalChecklistItem = useCallback(
+    (detailId: string, itemId: string, patch: Partial<ChecklistChildRecord>) => {
+      setItineraryDetails((prev) =>
+        prev.map((d) =>
+          d.id === detailId
+            ? {
+                ...d,
+                checklistItems: (d.checklistItems ?? []).map((c) =>
+                  c.id === itemId ? { ...c, ...patch } : c
+                ),
+              }
+            : d
+        )
+      );
+    },
+    []
+  );
+
+  const toggleChecklistItem = useCallback(
+    async (detailId: string, item: ChecklistChildRecord) => {
+      const nextChecked = !item.checkedBy;
+      const previous = { checkedBy: item.checkedBy ?? null, checkedAt: item.checkedAt ?? null };
+      updateLocalChecklistItem(detailId, item.id, {
+        checkedBy: nextChecked ? 'me' : null,
+        checkedAt: nextChecked ? new Date().toISOString() : null,
+      });
+      try {
+        const res = await fetch(`${backendUrl}/api/itineraries/checklist-items/${item.id}`, {
+          method: 'PATCH',
+          headers: jsonHeaders,
+          body: JSON.stringify({ checked: nextChecked }),
+        });
+        if (!res.ok) throw new Error('Toggle failed');
+        const updated = (await res.json()) as ChecklistChildRecord;
+        updateLocalChecklistItem(detailId, item.id, {
+          checkedBy: updated.checkedBy ?? null,
+          checkedAt: updated.checkedAt ?? null,
+        });
+      } catch {
+        updateLocalChecklistItem(detailId, item.id, previous);
+      }
+    },
+    [backendUrl, jsonHeaders, updateLocalChecklistItem]
+  );
+
+  // Reaction handlers — local optimistic, drive the ReactionBar component.
+  const updateLocalReactionSummary = useCallback(
+    (detailId: string, summary: ReactionSummary) => {
+      setItineraryDetails((prev) =>
+        prev.map((d) => (d.id === detailId ? { ...d, reactions: summary } : d))
+      );
+    },
+    []
+  );
+
+  const castReactionForDetail = useCallback(
+    async (detailId: string, value: ReactionValue): Promise<ReactionSummary> => {
+      const res = await fetch(`${backendUrl}/api/itineraries/details/${detailId}/reactions`, {
+        method: 'POST',
+        headers: jsonHeaders,
+        body: JSON.stringify({ value }),
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(text || `Reaction failed (${res.status})`);
+      }
+      const summary = (await res.json()) as ReactionSummary;
+      updateLocalReactionSummary(detailId, summary);
+      return summary;
+    },
+    [backendUrl, jsonHeaders, updateLocalReactionSummary]
+  );
+
+  const clearReactionForDetail = useCallback(
+    async (detailId: string): Promise<ReactionSummary> => {
+      const res = await fetch(`${backendUrl}/api/itineraries/details/${detailId}/reactions`, {
+        method: 'DELETE',
+        headers,
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(text || `Reaction clear failed (${res.status})`);
+      }
+      const summary = (await res.json()) as ReactionSummary;
+      updateLocalReactionSummary(detailId, summary);
+      return summary;
+    },
+    [backendUrl, headers, updateLocalReactionSummary]
+  );
+
+  const emptyReactionSummary: ReactionSummary = useMemo(
+    () => ({ score: 0, upCount: 0, downCount: 0, userValue: null }),
+    []
+  );
+
+  const deleteDetail = useCallback(
+    async (detailId: string) => {
+      const res = await fetch(`${backendUrl}/api/itineraries/details/${detailId}`, {
+        method: 'DELETE',
+        headers,
+      });
+      if (!res.ok && res.status !== 204) {
+        const data = await res.json().catch(() => ({}));
+        alert((data as any)?.error || 'Could not delete item');
+        return;
+      }
+      setItineraryDetails((prev) => prev.filter((d) => d.id !== detailId));
+    },
+    [backendUrl, headers]
+  );
+
   const formatMemberName = (member: GroupMemberOption) => formatUserDisplayName(member);
   
   const groupMembers: GroupMemberOption[] = useMemo(
@@ -600,28 +881,23 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   );
 
   const memberNames = useMemo(() => {
-    const map = new Map<string, string>();
-    groupMembers.forEach((m) => map.set(m.id, formatMemberName(m)));
-    return map;
-  }, [groupMembers, formatMemberName]);
-
-  const travelerNames = useMemo(() => {
-    const map = new Map<string, string>();
-    groupMembers.forEach((member) => {
-      map.set(member.id, formatMemberName(member));
-    });
-    return map;
+    return buildMemberDisplayLookup(groupMembers);
   }, [groupMembers]);
 
-  const buildPassengerName = (ids: string[]) => ids.map((id) => memberNames.get(id)).filter(Boolean).join(', ');
+  const travelerNames = useMemo(() => {
+    return buildMemberDisplayLookup(groupMembers);
+  }, [groupMembers]);
+
+  const buildPassengerName = (ids: string[]) =>
+    ids.map((id) => memberNames.get(id) ?? memberNames.get(String(id).toLowerCase())).filter(Boolean).join(', ');
 
   const userMembers = useMemo(
     () => groupMembers.filter((m) => !m.guestName && m.status !== 'removed'),
     [groupMembers]
   );
 
-  const payerName = (id: string) => memberNames.get(id) ?? 'Unknown';
-  const travelerName = (id: string) => travelerNames.get(id) ?? payerName(id);
+  const payerName = (id: string) => memberNames.get(id) ?? memberNames.get(String(id).toLowerCase()) ?? 'Unknown';
+  const travelerName = (id: string) => travelerNames.get(id) ?? travelerNames.get(String(id).toLowerCase()) ?? payerName(id);
 
   const overviewTravelerIds = useMemo(
     () => groupMembers.map((m) => m.id).filter(Boolean),
@@ -662,8 +938,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     _query: string
   ) => undefined;
 
-  const displayStartDate = effectiveRangeDates.startDate ?? trip?.startDate ?? null;
-  const displayEndDate = effectiveRangeDates.endDate ?? trip?.endDate ?? null;
+  const displayStartDate = trip?.startDate ?? null;
+  const displayEndDate = trip?.endDate ?? null;
   const eventDateBounds = useMemo(() => {
     const parseDateUtc = (value?: string | null): Date | null => {
       const text = String(value ?? '').trim();
@@ -693,20 +969,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     return { startDate: min, endDate: max };
   }, [flights, lodgings, tours, carRentals]);
 
-  const compareIsoDate = (left?: string | null, right?: string | null): number => {
-    const a = normalizeDateString(left ?? '');
-    const b = normalizeDateString(right ?? '');
-    if (!a && !b) return 0;
-    if (!a) return 1;
-    if (!b) return -1;
-    return a.localeCompare(b);
-  };
-  const overviewStartDate = displayStartDate && eventDateBounds?.startDate
-    ? (compareIsoDate(eventDateBounds.startDate, displayStartDate) < 0 ? eventDateBounds.startDate : displayStartDate)
-    : eventDateBounds?.startDate ?? displayStartDate;
-  const overviewEndDate = displayEndDate && eventDateBounds?.endDate
-    ? (compareIsoDate(eventDateBounds.endDate, displayEndDate) > 0 ? eventDateBounds.endDate : displayEndDate)
-    : eventDateBounds?.endDate ?? displayEndDate;
+  const overviewStartDate = displayStartDate ?? eventDateBounds?.startDate ?? null;
+  const overviewEndDate = displayEndDate ?? eventDateBounds?.endDate ?? null;
   const monthLabel = useMemo(
     () => formatMonthYear(trip?.startMonth ?? null, trip?.startYear ?? null),
     [trip?.startMonth, trip?.startYear]
@@ -718,11 +982,17 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     }
     return trip?.durationDays ?? null;
   }, [trip, overviewStartDate, overviewEndDate]);
+  const currencyOptions = useMemo(
+    () => ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'CNY', 'INR', 'MXN'],
+    []
+  );
+  const currentCurrency = trip?.currency ?? 'USD';
+  const pendingInvites = group?.invites ?? [];
 
   const rows = useMemo<OverviewRow[]>(
     () =>
       buildOverviewRows({
-        tripStartDate: effectiveRangeDates.startDate ?? trip?.startDate ?? null,
+        tripStartDate: trip?.startDate ?? null,
         tripMonthLabel: monthLabel,
         itineraryDetails,
         flights,
@@ -730,7 +1000,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         tours,
         rentals: carRentals,
       }),
-    [effectiveRangeDates.startDate, trip?.startDate, monthLabel, itineraryDetails, flights, lodgings, tours, carRentals]
+    [trip?.startDate, monthLabel, itineraryDetails, flights, lodgings, tours, carRentals]
   );
 
   const allDates = useMemo(() => {
@@ -744,8 +1014,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       return new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
     };
     const dates: string[] = [];
-    const start = overviewStartDate || effectiveRangeDates.startDate;
-    const end = overviewEndDate || effectiveRangeDates.endDate;
+    const start = overviewStartDate;
+    const end = overviewEndDate;
     if (start && end) {
       const s = parseDateUtc(start);
       const e = parseDateUtc(end);
@@ -780,7 +1050,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       dates.push(new Date().toISOString().slice(0, 10));
     }
     return Array.from(new Set(dates));
-  }, [overviewStartDate, overviewEndDate, effectiveRangeDates.startDate, effectiveRangeDates.endDate, flights, lodgings, tours, carRentals]);
+  }, [overviewStartDate, overviewEndDate, flights, lodgings, tours, carRentals]);
 
   useEffect(() => {
     const buildDayCards = () => {
@@ -965,28 +1235,6 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     fetchImages().catch(() => undefined);
   }, [backendUrl, headers, dayCards, dayImages, itineraryDetails, tours, tripLocationLabel, trip?.destination]);
 
-  useEffect(() => {
-    if (!trip?.id || !trip.startDate) return;
-    if (autoAdjustedRef.current === trip.id) return;
-    if (!effectiveRangeDates.startDate || effectiveRangeDates.startDate === trip.startDate) return;
-    const run = async () => {
-      const res = await fetch(`${backendUrl}/api/trips/${trip.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', ...headers },
-        body: JSON.stringify({
-          dateMode: 'range',
-          startDate: effectiveRangeDates.startDate,
-          endDate: effectiveRangeDates.endDate ?? null,
-        }),
-      });
-      if (res.ok) {
-        autoAdjustedRef.current = trip.id;
-        onRefreshTrips();
-      }
-    };
-    run().catch(() => undefined);
-  }, [backendUrl, headers, trip?.id, trip?.startDate, effectiveRangeDates.startDate, effectiveRangeDates.endDate, onRefreshTrips]);
-
   const openDatePicker = (field: 'start' | 'end') => {
     if (Platform.OS !== 'web' && NativeDateTimePicker) {
       const base = field === 'start' ? dateDraft.startDate : dateDraft.endDate;
@@ -1093,13 +1341,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       dateMode: dateDraft.mode,
     };
     if (dateDraft.mode === 'range') {
-      const adjusted = adjustStartDateForEarliest({
-        startDate: dateDraft.startDate || null,
-        endDate: dateDraft.endDate || null,
-        earliestDate: earliestEventDate,
-      });
-      payload.startDate = adjusted.startDate ?? null;
-      payload.endDate = adjusted.endDate ?? null;
+      payload.startDate = dateDraft.startDate || null;
+      payload.endDate = dateDraft.endDate || null;
     } else {
       payload.startMonth = Number(dateDraft.startMonth) || null;
       payload.startYear = Number(dateDraft.startYear) || null;
@@ -1375,7 +1618,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const closeTourModal = () => {
     setShowAddTour(false);
     setEditingTourId(null);
-    setTourDraft(createInitialActivityState());
+    setTourDraft(createInitialActivityState(trip?.startDate ?? null));
   };
 
   const closeRentalModal = () => {
@@ -1453,7 +1696,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const openAddTour = () => {
     if (!isEditing) return;
     setEditingTourId(null);
-    setTourDraft(createInitialActivityState());
+    setTourDraft(createInitialActivityState(trip?.startDate ?? null));
     setShowAddTour(true);
   };
 
@@ -1607,7 +1850,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   const formatTravelerNames = (ids: string[]) =>
     ids
-      .map((id) => memberNames.get(id))
+      .map((id) => memberNames.get(id) ?? memberNames.get(String(id).toLowerCase()))
       .filter(Boolean)
       .join(', ');
 
@@ -1626,7 +1869,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   const buildDaySummary = (info?: { flights: Flight[]; lodgings: Lodging[]; tours: Tour[]; rentals: CarRental[]; details: ItineraryDetail[] }) => {
     if (!info) return 'Free day';
-    if (info.details.length) return info.details[0].activity;
+    const activityDetails = info.details.filter((d) => !d.kind || d.kind === 'activity');
+    if (activityDetails.length) return activityDetails[0].activity;
     if (info.tours.length) return info.tours[0].name || 'Activity day';
     if (info.flights.length) return 'Travel day';
     if (info.lodgings.length) return `Stay at ${info.lodgings[0].name || 'lodging'}`;
@@ -1636,8 +1880,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   const buildDayNarrative = (info?: { details: ItineraryDetail[]; flights: Flight[]; tours: Tour[]; lodgings: Lodging[]; rentals: CarRental[] }) => {
     if (!info) return ['No itinerary details yet.'];
-    if (info.details.length) {
-      return info.details.map((d) => (d.time ? `${d.time} · ${d.activity}` : d.activity));
+    const activityDetails = info.details.filter((d) => !d.kind || d.kind === 'activity');
+    if (activityDetails.length) {
+      return activityDetails.map((d) => (d.time ? `${d.time} · ${d.activity}` : d.activity));
     }
     if (info.flights.length) {
       return info.flights.map((f) => {
@@ -1646,15 +1891,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         return `Transfer from ${dep} to ${arr}.`;
       });
     }
-    if (info.tours.length) {
-      return info.tours.map((t) => `${t.name}${t.startTime ? ` at ${t.startTime}` : ''}`);
-    }
     if (info.lodgings.length) {
       return info.lodgings.map((l) => `Check-in at ${l.name}.`);
     }
     if (info.rentals.length) {
       return info.rentals.map((r) => `Pick up rental car from ${r.pickupLocation || r.vendor}.`);
     }
+    if (info.tours.length) return [];
     return ['No itinerary details yet.'];
   };
 
@@ -1766,7 +2009,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         const heroTitle = [startLocation, summary].filter(Boolean).join(' - ');
         const narrativeLines = buildDayNarrative(activeDayInfo);
         const flightsForDay = activeDayInfo.flights;
-        const toursForDay = activeDayInfo.tours;
+        const activityTimeKey = (tour: Tour) => {
+          const value = String(tour.startTime ?? '').trim();
+          return /^\d{1,2}:\d{2}$/.test(value) ? value.padStart(5, '0') : '99:99';
+        };
+        const toursForDay = [...activeDayInfo.tours].sort((a, b) => {
+          const byTime = activityTimeKey(a).localeCompare(activityTimeKey(b));
+          if (byTime !== 0) return byTime;
+          return String(a.name ?? '').localeCompare(String(b.name ?? ''), undefined, { sensitivity: 'base' });
+        });
         const lodgingsForDay = activeDayInfo.lodgings;
         const rentalsForDay = activeDayInfo.rentals;
 
@@ -1789,7 +2040,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         const showLodgingNames = new Set(lodgingParticipantKeys).size > 1;
 
         return (
-          <View style={[styles.card, responsiveCardStyle, { position: 'relative' }]}>
+          <View style={[styles.card, responsiveCardStyle, { position: 'relative', flex: 1, minHeight: 0 }]}>
             <TouchableOpacity testID="day-details-back" style={styles.dayDetailsBackButton} onPress={() => setSelectedDay(null)}>
               <Text style={styles.dayDetailsBackText}>← Back</Text>
             </TouchableOpacity>
@@ -1805,13 +2056,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               {tripLocationLabel ? <Text style={styles.helperText}>{tripLocationLabel}</Text> : null}
               {renderDayBar(selectedDay)}
               {renderHeroCard(activeDayCard, heroTitle, false, undefined, 'day-details-hero')}
-              <View style={styles.dayNarrativeBox}>
-                {narrativeLines.map((line, idx) => (
-                  <Text key={`${activeDayCard.date}-narrative-${idx}`} style={styles.bodyText}>
-                    {line}
-                  </Text>
-                ))}
-              </View>
+              {narrativeLines.length ? (
+                <View style={styles.dayNarrativeBox}>
+                  {narrativeLines.map((line, idx) => (
+                    <Text key={`${activeDayCard.date}-narrative-${idx}`} style={styles.bodyText}>
+                      {line}
+                    </Text>
+                  ))}
+                </View>
+              ) : null}
 
               {flightsForDay.length ? (
                 <View style={styles.dayInfoCard}>
@@ -1821,8 +2074,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                     const arr = flight.arrival_location || flight.arrival_airport_code || 'ARR';
                     const passengers =
                       Array.isArray(flight.passenger_ids) && flight.passenger_ids.length
-                        ? formatTravelerNames(flight.passenger_ids)
-                        : flight.passenger_name || '';
+                        ? formatTravelerListDisplay(flight.passenger_ids, flight.passenger_name, groupMembers)
+                        : formatTravelerListDisplay([], flight.passenger_name, groupMembers);
                     return (
                       <View key={flight.id} style={styles.dayInfoRow}>
                         <Text style={styles.dayInfoRoute}>{`${dep} → ${arr}`}</Text>
@@ -1842,8 +2095,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                         const arr = flight.arrival_location || flight.arrival_airport_code || 'ARR';
                         const passengers =
                           Array.isArray(flight.passenger_ids) && flight.passenger_ids.length
-                            ? formatTravelerNames(flight.passenger_ids)
-                            : flight.passenger_name || '';
+                            ? formatTravelerListDisplay(flight.passenger_ids, flight.passenger_name, groupMembers)
+                            : formatTravelerListDisplay([], flight.passenger_name, groupMembers);
                         return {
                           title: flightsForDay.length > 1 ? `Transfer ${idx + 1} · ${dep} → ${arr}` : undefined,
                           subtitle: showFlightNames && passengers ? `Travelers: ${passengers}` : undefined,
@@ -1897,34 +2150,32 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                         : formatTravelerNames(allMemberIds);
                     return (
                       <View key={tour.id} style={styles.dayInfoRow}>
-                        <Text style={styles.dayInfoRoute}>{tour.name}</Text>
-                        <Text
-                          style={styles.helperText}
-                        >{`${tour.startTime || 'Time TBD'} · ${tour.startLocation || 'Location TBD'}`}</Text>
-                        {showTourNames && participants ? <Text style={styles.helperText}>Travelers: {participants}</Text> : null}
+                        <View style={styles.dayInfoText}>
+                          <TouchableOpacity
+                            testID={`day-details-activity-${tour.id}`}
+                            onPress={() => {
+                              setDetailModal({
+                                title: 'Activity Details',
+                                sections: [
+                                  {
+                                    subtitle: showTourNames && participants ? `Travelers: ${participants}` : undefined,
+                                    items: formatTourDetails(tour),
+                                  },
+                                ],
+                              });
+                            }}
+                          >
+                            <Text style={[styles.dayInfoRoute, styles.linkText]}>{tour.name}</Text>
+                          </TouchableOpacity>
+                          <Text
+                            style={styles.helperText}
+                          >{`${tour.startTime || 'Time TBD'} · ${tour.startLocation || 'Location TBD'}`}</Text>
+                          {tour.notes ? <Text style={styles.helperText}>{tour.notes}</Text> : null}
+                          {showTourNames && participants ? <Text style={styles.helperText}>Travelers: {participants}</Text> : null}
+                        </View>
                       </View>
                     );
                   })}
-                  <TouchableOpacity
-                    testID="day-details-tour-details"
-                    style={styles.dayInfoButton}
-                    onPress={() => {
-                      const sections: DetailSection[] = toursForDay.map((tour, idx) => {
-                        const participants =
-                          Array.isArray(tour.paidBy) && tour.paidBy.length
-                            ? formatTravelerNames(tour.paidBy)
-                            : formatTravelerNames(allMemberIds);
-                        return {
-                          title: toursForDay.length > 1 ? `Activity ${idx + 1}` : undefined,
-                          subtitle: showTourNames && participants ? `Travelers: ${participants}` : undefined,
-                          items: formatTourDetails(tour),
-                        };
-                      });
-                      setDetailModal({ title: 'Activity Details', sections });
-                    }}
-                  >
-                    <Text style={styles.dayInfoButtonText}>See tour details →</Text>
-                  </TouchableOpacity>
                 </View>
               ) : null}
 
@@ -1961,6 +2212,120 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 </View>
               ) : null}
 
+              {/* Phase 3: per-day itinerary items (place / note / checklist / custom activity). */}
+              <View style={styles.dayInfoCard} testID="day-details-itinerary-items">
+                <View style={[styles.sectionHeaderRow, { marginBottom: 0 }]}>
+                  <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>Locations, notes & checklists</Text>
+                  <TouchableOpacity
+                    testID={isEditingDayItems ? 'day-details-save-items-button' : 'day-details-edit-items-button'}
+                    accessibilityRole="button"
+                    accessibilityLabel={isEditingDayItems ? 'Save section edits' : 'Edit section'}
+                    style={[styles.dayInfoButton, { marginLeft: 'auto', paddingVertical: 6 }]}
+                    onPress={() => setIsEditingDayItems((prev) => !prev)}
+                  >
+                    <Text style={styles.dayInfoButtonText}>{isEditingDayItems ? 'Save' : 'Edit'}</Text>
+                  </TouchableOpacity>
+                </View>
+                {(activeDayInfo.details ?? []).length === 0 ? (
+                  <Text style={styles.helperText}>No items yet for this day.</Text>
+                ) : (
+                  (activeDayInfo.details ?? []).map((d) => {
+                    const isActivity = !d.kind || d.kind === 'activity';
+                    return (
+                      <View key={d.id} style={[styles.dayInfoRow, { alignItems: 'flex-start', gap: 8 }]}>
+                        <View style={{ flex: 1, gap: 4 }}>
+                          {d.kind === 'place' ? (
+                            <View>
+                              <Text style={styles.dayInfoRoute}>{`📍 ${d.activity}`}</Text>
+                              {d.noteBody ? (
+                                <Text style={[styles.helperText, { fontStyle: 'italic' }]}>{d.noteBody}</Text>
+                              ) : null}
+                            </View>
+                          ) : d.kind === 'note' ? (
+                            <View>
+                              <Text style={styles.dayInfoRoute}>{`📝 ${d.activity}`}</Text>
+                              {d.noteBody ? (
+                                <Text style={[styles.helperText, { fontStyle: 'italic' }]}>{d.noteBody}</Text>
+                              ) : null}
+                            </View>
+                          ) : d.kind === 'checklist' ? (
+                            <View style={{ width: '100%' }}>
+                              <Text style={styles.dayInfoRoute}>{`✅ ${d.activity}`}</Text>
+                              {(d.checklistItems ?? []).map((it) => {
+                                const checked = !!it.checkedBy;
+                                return (
+                                  <TouchableOpacity
+                                    key={it.id}
+                                    testID={`overview-checklist-toggle-${it.id}`}
+                                    accessibilityRole="checkbox"
+                                    accessibilityState={{ checked }}
+                                    onPress={() => toggleChecklistItem(d.id, it)}
+                                    style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: 6 }}
+                                  >
+                                    <View
+                                      style={[
+                                        styles.checklistCheckbox,
+                                        checked && styles.checklistCheckboxChecked,
+                                      ]}
+                                    >
+                                      {checked ? <Text style={styles.checklistCheckboxMark}>✓</Text> : null}
+                                    </View>
+                                    <Text
+                                      style={[
+                                        styles.helperText,
+                                        checked && { textDecorationLine: 'line-through', color: '#777' },
+                                      ]}
+                                    >
+                                      {it.label}
+                                    </Text>
+                                  </TouchableOpacity>
+                                );
+                              })}
+                            </View>
+                          ) : (
+                            <Text style={styles.dayInfoRoute}>{d.activity}</Text>
+                          )}
+                        </View>
+                        {isActivity ? (
+                          <View style={{ flexShrink: 0 }}>
+                            <ReactionBar
+                              detailId={d.id}
+                              summary={d.reactions ?? emptyReactionSummary}
+                              canReact
+                              onCast={castReactionForDetail}
+                              onClear={clearReactionForDetail}
+                            />
+                          </View>
+                        ) : null}
+                        {isEditingDayItems ? (
+                          <TouchableOpacity
+                            testID={`day-details-delete-${d.id}`}
+                            accessibilityRole="button"
+                            accessibilityLabel="Delete item"
+                            onPress={() => deleteDetail(d.id)}
+                            style={styles.detailDeleteButton}
+                          >
+                            <Text style={styles.detailDeleteButtonText}>×</Text>
+                          </TouchableOpacity>
+                        ) : null}
+                      </View>
+                    );
+                  })
+                )}
+                <TouchableOpacity
+                  testID="day-details-add-item-button"
+                  accessibilityRole="button"
+                  accessibilityLabel="Add item to this day"
+                  style={[styles.dayInfoButton, { marginTop: 8 }]}
+                  onPress={() => {
+                    setAddPopoverDay(activeDayInfo?.index ?? 1);
+                    setAddPopoverOpen(true);
+                  }}
+                >
+                  <Text style={styles.dayInfoButtonText}>+ Add item</Text>
+                </TouchableOpacity>
+              </View>
+
               {nextDayCard ? (
                 <TouchableOpacity
                   testID="day-details-next"
@@ -1980,7 +2345,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       return (
         <ScrollView
           ref={scrollRef}
-          style={[styles.card, responsiveCardStyle]}
+          style={[styles.card, responsiveCardStyle, { flex: 1, minHeight: 0 }]}
           contentContainerStyle={{ gap: isPhoneLayout ? 10 : 12 }}
           onScroll={(e: any) => setScrollY(e.nativeEvent.contentOffset.y)}
           scrollEventThrottle={16}
@@ -2004,6 +2369,18 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           ) : null}
           {tripLength ? <Text style={styles.helperText}>Trip length: {tripLength} day(s)</Text> : null}
 
+          {trip.description ? (
+            <View>
+              {renderRichTextBlocks(trip.description, {
+                base: styles.bodyText,
+                bold: styles.headerText,
+                italic: styles.helperText,
+                link: styles.linkText ?? styles.buttonText,
+                listItem: styles.helperText,
+              })}
+            </View>
+          ) : null}
+
           {renderDayBar(null)}
 
           <View style={{ gap: 12 }}>
@@ -2026,7 +2403,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     return (
       <ScrollView
         ref={scrollRef}
-        style={[styles.card, responsiveCardStyle]}
+        style={[styles.card, responsiveCardStyle, { flex: 1, minHeight: 0 }]}
         contentContainerStyle={{ gap: isPhoneLayout ? 10 : 12 }}
         onScroll={(e: any) => setScrollY(e.nativeEvent.contentOffset.y)}
         scrollEventThrottle={16}
@@ -2063,6 +2440,37 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
           </Text>
         ) : null}
         {tripLength ? <Text style={styles.helperText}>Trip length: {tripLength} day(s)</Text> : null}
+
+        {isEditing ? (
+          <>
+            <View style={styles.divider} />
+            <Text style={styles.headerText}>Currency</Text>
+            <View style={[styles.input, styles.dropdown, { marginTop: 6 }]}>
+              <TouchableOpacity style={styles.selectButtonRow} onPress={() => setShowCurrencyDropdown((prev) => !prev)}>
+                <Text style={styles.cellText}>{currentCurrency}</Text>
+                <Text style={styles.selectCaret}>▾</Text>
+              </TouchableOpacity>
+              {showCurrencyDropdown ? (
+                <View style={styles.dropdownList}>
+                  {currencyOptions.map((currency) => (
+                    <TouchableOpacity
+                      key={currency}
+                      style={styles.dropdownOption}
+                      onPress={() => {
+                        setShowCurrencyDropdown(false);
+                        if (trip?.id && currency !== currentCurrency) {
+                          onUpdateCurrency?.(trip.id, currency);
+                        }
+                      }}
+                    >
+                      <Text style={styles.cellText}>{currency}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ) : null}
+            </View>
+          </>
+        ) : null}
 
         <View style={[styles.row, { alignItems: 'flex-start' }]}>
           <Text style={styles.headerText}>Trip Dates</Text>
@@ -2386,6 +2794,20 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             </View>
           ))}
         </View>
+        {isEditing ? (
+          <View style={{ marginTop: 10 }}>
+            <Text style={styles.headerText}>Pending Invites</Text>
+            {pendingInvites.length ? (
+              pendingInvites.map((invite) => (
+                <Text key={invite.id} style={styles.bodyText}>
+                  {invite.inviteeEmail} ({invite.status || 'Pending'})
+                </Text>
+              ))
+            ) : (
+              <Text style={styles.helperText}>No pending invites.</Text>
+            )}
+          </View>
+        ) : null}
 
         <View style={styles.divider} />
 
@@ -2654,6 +3076,114 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             }
             setModalDateField(null);
           }}
+        />
+      ) : null}
+
+      {showAddTour ? (
+        <View style={styles.modalOverlay} testID="activity-form-modal">
+          <TouchableOpacity style={styles.passengerOverlayBackdrop} onPress={closeTourModal} />
+          <View style={[styles.modalCard, { marginTop: 0 }]}>
+            <Text style={styles.sectionTitle}>{editingTourId ? 'Edit Activity' : 'Add Activity'}</Text>
+            <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ paddingRight: 12 }}>
+              <Text style={styles.modalLabel}>Date</Text>
+              {Platform.OS === 'web' ? (
+                <TextInput
+                  style={styles.input}
+                  placeholder="YYYY-MM-DD"
+                  value={tourDraft.date}
+                  onChangeText={(text) => setTourDraft((prev) => ({ ...prev, date: text }))}
+                />
+              ) : (
+                <TouchableOpacity style={styles.input} onPress={() => openModalDatePicker('tourDate', tourDraft.date)}>
+                  <Text style={styles.cellText}>{tourDraft.date || 'YYYY-MM-DD'}</Text>
+                </TouchableOpacity>
+              )}
+              <Text style={styles.modalLabel}>Activity</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Activity name"
+                value={tourDraft.name}
+                onChangeText={(text) => setTourDraft((prev) => ({ ...prev, name: text }))}
+              />
+              <Text style={styles.modalLabel}>Start location</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Start location"
+                value={tourDraft.startLocation}
+                onChangeText={(text) => setTourDraft((prev) => ({ ...prev, startLocation: text }))}
+              />
+              <Text style={styles.modalLabel}>Start time</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="HH:MM"
+                value={tourDraft.startTime}
+                onChangeText={(text) => setTourDraft((prev) => ({ ...prev, startTime: text }))}
+              />
+              <Text style={styles.modalLabel}>Duration</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Duration"
+                value={tourDraft.duration}
+                onChangeText={(text) => setTourDraft((prev) => ({ ...prev, duration: text }))}
+              />
+              <Text style={styles.modalLabel}>Cost</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Cost"
+                keyboardType="numeric"
+                value={tourDraft.cost}
+                onChangeText={(text) => setTourDraft((prev) => ({ ...prev, cost: sanitizeCostInput(text) }))}
+              />
+              <Text style={styles.modalLabel}>Description</Text>
+              <TextInput
+                style={[styles.input, { minHeight: 96, textAlignVertical: 'top' }]}
+                placeholder="Description"
+                value={tourDraft.notes}
+                onChangeText={(text) => setTourDraft((prev) => ({ ...prev, notes: text }))}
+                multiline
+              />
+            </ScrollView>
+            <View style={[styles.tableFooter, { justifyContent: 'space-between' }]}>
+              <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={closeTourModal} testID="activity-cancel">
+                <Text style={styles.dangerButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.button} onPress={saveTour} testID="activity-save">
+                <Text style={styles.buttonText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      ) : null}
+
+      {addPopoverOpen ? (
+        <AddItemPopover
+          visible
+          onSelect={handlePopoverSelect}
+          onClose={() => setAddPopoverOpen(false)}
+        />
+      ) : null}
+      {activeAddDialog === 'place' ? (
+        <PlacePickerDialog
+          visible
+          defaultDay={addPopoverDay ?? 1}
+          onSubmit={handleAddPlace}
+          onCancel={closeAllAddDialogs}
+        />
+      ) : null}
+      {activeAddDialog === 'note' ? (
+        <NoteInputDialog
+          visible
+          defaultDay={addPopoverDay ?? 1}
+          onSubmit={handleAddNote}
+          onCancel={closeAllAddDialogs}
+        />
+      ) : null}
+      {activeAddDialog === 'checklist' ? (
+        <ChecklistInputDialog
+          visible
+          defaultDay={addPopoverDay ?? 1}
+          onSubmit={handleAddChecklist}
+          onCancel={closeAllAddDialogs}
         />
       ) : null}
     </View>
