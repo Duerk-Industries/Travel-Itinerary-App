@@ -27,6 +27,7 @@ const defaultProps = {
     homeAddress: '',
     preferredAirport: '',
     appearancePreference: 'auto' as const,
+    temperatureUnit: 'fahrenheit' as const,
   },
   setAccountProfile: jest.fn(),
   familyRelationships: [],

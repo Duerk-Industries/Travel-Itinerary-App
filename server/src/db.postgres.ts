@@ -47,6 +47,7 @@ import fs from 'fs';
 import path from 'path';
 import { getReservedUsernames } from './config/authFlags';
 import { getApiLimitsConfig } from './config/apiLimits';
+import { DEFAULT_PACKING_LIST_ITEMS } from './config/defaultPackingList';
 
 
 type PoolCtor = typeof Pool;
@@ -63,23 +64,6 @@ const formatDate = (value: any) => {
 const FOLLOW_CODE_LENGTH = 6;
 const FOLLOW_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const TRIP_SHARE_TOKEN_BYTES = 24;
-const DEFAULT_PACKING_LIST_ITEMS: Array<{ category: string; label: string }> = [
-  { category: 'Documents', label: 'Passport or government ID' },
-  { category: 'Documents', label: 'Travel confirmations' },
-  { category: 'Documents', label: 'Health insurance card' },
-  { category: 'Clothing', label: 'Daily outfits' },
-  { category: 'Clothing', label: 'Comfortable walking shoes' },
-  { category: 'Clothing', label: 'Sleepwear' },
-  { category: 'Clothing', label: 'Light jacket or sweater' },
-  { category: 'Toiletries', label: 'Toothbrush and toothpaste' },
-  { category: 'Toiletries', label: 'Deodorant' },
-  { category: 'Toiletries', label: 'Personal medications' },
-  { category: 'Electronics', label: 'Phone charger' },
-  { category: 'Electronics', label: 'Power adapter' },
-  { category: 'Travel Day', label: 'Reusable water bottle' },
-  { category: 'Travel Day', label: 'Snacks' },
-];
-
 const normalizeEmail = (value: string): string => value.trim().toLowerCase();
 const normalizeLoginIdentifier = (value: string): string => value.trim().toLowerCase();
 const isEmailLikeIdentifier = (value: string): boolean => value.includes('@');
@@ -439,6 +423,7 @@ export const initDb = async (): Promise<void> => {
       preferred_airport TEXT,
       map_preference TEXT,
       appearance_preference TEXT,
+      temperature_unit TEXT,
       password_hash TEXT NOT NULL,
       salt TEXT NOT NULL,
       first_login_at TIMESTAMP,
@@ -456,6 +441,7 @@ export const initDb = async (): Promise<void> => {
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS preferred_airport TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS map_preference TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS appearance_preference TEXT;`);
+  await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS temperature_unit TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS password_hash TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS salt TEXT;`);
   await p.query(`ALTER TABLE web_users ADD COLUMN IF NOT EXISTS first_login_at TIMESTAMP;`);
@@ -2151,6 +2137,7 @@ export const getWebUserProfile = async (
   preferredAirport?: string | null;
   mapPreference?: 'google' | 'apple' | 'waze' | null;
   appearancePreference?: 'light' | 'dark' | 'auto' | null;
+  temperatureUnit?: 'fahrenheit' | 'celsius' | null;
 } | null> => {
   const p = getPool();
   const { rows } = await p.query<{
@@ -2162,8 +2149,9 @@ export const getWebUserProfile = async (
     preferred_airport: string | null;
     map_preference: string | null;
     appearance_preference: string | null;
+    temperature_unit: string | null;
   }>(
-    `SELECT id, email, first_name, last_name, home_address, preferred_airport, map_preference, appearance_preference FROM web_users WHERE id = $1 LIMIT 1`,
+    `SELECT id, email, first_name, last_name, home_address, preferred_airport, map_preference, appearance_preference, temperature_unit FROM web_users WHERE id = $1 LIMIT 1`,
     [userId]
   );
   if (rows.length) {
@@ -2177,6 +2165,7 @@ export const getWebUserProfile = async (
       preferredAirport: row.preferred_airport ?? null,
       mapPreference: row.map_preference === 'google' || row.map_preference === 'apple' || row.map_preference === 'waze' ? row.map_preference : null,
       appearancePreference: row.appearance_preference === 'light' || row.appearance_preference === 'dark' || row.appearance_preference === 'auto' ? row.appearance_preference : null,
+      temperatureUnit: row.temperature_unit === 'fahrenheit' || row.temperature_unit === 'celsius' ? row.temperature_unit : null,
     };
   }
 
@@ -2202,6 +2191,7 @@ export const updateWebUserProfile = async (
     preferredAirport?: string;
     mapPreference?: string;
     appearancePreference?: string;
+    temperatureUnit?: string;
   }
 ): Promise<{
   id: string;
@@ -2212,6 +2202,7 @@ export const updateWebUserProfile = async (
   preferredAirport?: string | null;
   mapPreference?: 'google' | 'apple' | 'waze' | null;
   appearancePreference?: 'light' | 'dark' | 'auto' | null;
+  temperatureUnit?: 'fahrenheit' | 'celsius' | null;
 }> => {
   const p = getPool();
   const client = await p.connect();
@@ -2253,6 +2244,10 @@ export const updateWebUserProfile = async (
       updates.appearancePreference === 'light' || updates.appearancePreference === 'dark' || updates.appearancePreference === 'auto'
         ? updates.appearancePreference
         : null;
+    const normalizedTemperatureUnit =
+      updates.temperatureUnit === 'fahrenheit' || updates.temperatureUnit === 'celsius'
+        ? updates.temperatureUnit
+        : null;
 
     const { rows } = await client.query(
       `
@@ -2263,7 +2258,8 @@ export const updateWebUserProfile = async (
         home_address = CASE WHEN $4::text IS NULL THEN home_address ELSE NULLIF($4::text, '') END,
         preferred_airport = CASE WHEN $5::text IS NULL THEN preferred_airport ELSE NULLIF($5::text, '') END,
         map_preference = CASE WHEN $6::text IS NULL THEN map_preference ELSE NULLIF($6::text, '') END,
-        appearance_preference = CASE WHEN $7::text IS NULL THEN appearance_preference ELSE NULLIF($7::text, '') END
+        appearance_preference = CASE WHEN $7::text IS NULL THEN appearance_preference ELSE NULLIF($7::text, '') END,
+        temperature_unit = CASE WHEN $8::text IS NULL THEN temperature_unit ELSE NULLIF($8::text, '') END
       WHERE id = $1
       RETURNING
         id,
@@ -2273,7 +2269,8 @@ export const updateWebUserProfile = async (
         home_address as "homeAddress",
         preferred_airport as "preferredAirport",
         map_preference as "mapPreference",
-        appearance_preference as "appearancePreference"
+        appearance_preference as "appearancePreference",
+        temperature_unit as "temperatureUnit"
     `,
       [
         userId,
@@ -2283,6 +2280,7 @@ export const updateWebUserProfile = async (
         typeof updates.preferredAirport === 'string' ? updates.preferredAirport.trim() : null,
         normalizedMapPreference,
         normalizedAppearancePreference,
+        normalizedTemperatureUnit,
       ]
     );
 

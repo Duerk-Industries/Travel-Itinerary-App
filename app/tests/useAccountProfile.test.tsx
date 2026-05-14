@@ -41,6 +41,7 @@ describe('useAccountProfile', () => {
       homeAddress: '',
       preferredAirport: '',
       appearancePreference: 'auto',
+      temperatureUnit: 'fahrenheit',
     });
   });
 
@@ -82,6 +83,7 @@ describe('useAccountProfile', () => {
         homeAddress: '',
         preferredAirport: 'LHR',
         appearancePreference: 'light',
+        temperatureUnit: 'celsius',
       });
     });
     expect(result.current.accountProfile.firstName).toBe('Ada');
@@ -98,6 +100,7 @@ describe('useAccountProfile', () => {
         homeAddress: '',
         preferredAirport: '',
         appearancePreference: 'auto',
+        temperatureUnit: 'fahrenheit',
       });
       result.current.updateMapPreference('waze');
     });

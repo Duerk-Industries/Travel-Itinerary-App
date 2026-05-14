@@ -1259,6 +1259,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       homeAddress: '',
       preferredAirport: '',
       appearancePreference: 'auto',
+      temperatureUnit: 'fahrenheit',
     });
     const previousSession = loadSession();
     const restoredTripId =
@@ -3046,6 +3047,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   defaultPayerId={defaultPayerId}
                   styles={styles}
                   mapApp={mapApp}
+                  temperatureUnit={accountProfile.temperatureUnit}
                   aiItineraryPending={Boolean(activeTripId && asyncItineraryByTrip[activeTripId]?.status === 'pending')}
                   aiItineraryFailedMessage={
                     activeTripId && asyncItineraryByTrip[activeTripId]?.status === 'failed'

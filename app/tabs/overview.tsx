@@ -78,6 +78,7 @@ import ChecklistInputDialog, { type ChecklistSubmit } from '../components/Checkl
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from '../utils/itineraryStatus';
 import { useImageSourceGetter } from '../utils/imageSource';
+import { formatTemperatureFromCelsius, normalizeTemperatureUnit, type TemperatureUnit } from '../utils/temperatureUnit';
 
 type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
 let NativeDateTimePicker: NativeDateTimePickerType | null = null;
@@ -191,6 +192,7 @@ type OverviewTabProps = {
   defaultPayerId: string | null;
   styles: Record<string, any>;
   mapApp: MapApp;
+  temperatureUnit?: TemperatureUnit;
   aiItineraryPending?: boolean;
   aiItineraryFailedMessage?: string | null;
   editSignal?: number;
@@ -268,46 +270,20 @@ type OverviewWeather = {
   resolvedLocation?: string | null;
 };
 
-const compareTimes = (left?: string | null, right?: string | null) => {
-  const toValue = (value?: string | null) => {
-    const match = String(value ?? '').match(/^(\d{1,2}):(\d{2})$/);
-    if (!match) return -1;
-    return Number(match[1]) * 60 + Number(match[2]);
-  };
-  return toValue(left) - toValue(right);
-};
-
 export const buildDayWeatherLocation = (info?: DayLocationInfo | null, fallbackLocation?: string | null) => {
   const fallback = String(fallbackLocation ?? '').trim();
   if (!info) return fallback;
 
-  const lodging = info.lodgings.find((item) => String(item.address ?? '').trim()) ?? info.lodgings[0];
+  const lodging = info.lodgings[0];
   if (lodging) {
     return String(lodging.address ?? lodging.name ?? '').trim() || fallback;
   }
 
-  const arrivalFlight = [...info.flights]
-    .filter((flight) => String(flight.arrival_location ?? flight.arrival_airport_code ?? '').trim())
-    .sort((a, b) => compareTimes(b.arrival_time, a.arrival_time))[0];
+  const arrivalFlight = info.flights.find((flight) =>
+    String(flight.arrival_airport_code ?? flight.arrival_location ?? '').trim()
+  );
   if (arrivalFlight) {
-    return String(arrivalFlight.arrival_location ?? arrivalFlight.arrival_airport_code ?? '').trim() || fallback;
-  }
-
-  const tour = info.tours.find((item) => String(item.startLocation ?? '').trim()) ?? info.tours[0];
-  if (tour) {
-    return String(tour.startLocation ?? tour.name ?? '').trim() || fallback;
-  }
-
-  const rental = info.rentals.find((item) => String(item.dropoffLocation ?? item.pickupLocation ?? '').trim()) ?? info.rentals[0];
-  if (rental) {
-    return String(rental.dropoffLocation ?? rental.pickupLocation ?? rental.vendor ?? '').trim() || fallback;
-  }
-
-  const departureFlight = [...info.flights]
-    .filter((flight) => String(flight.departure_location ?? flight.departure_airport_code ?? '').trim())
-    .sort((a, b) => compareTimes(a.departure_time, b.departure_time))[0];
-  if (departureFlight) {
-    return String(departureFlight.departure_location ?? departureFlight.departure_airport_code ?? '').trim() || fallback;
+    return String(arrivalFlight.arrival_airport_code ?? arrivalFlight.arrival_location ?? '').trim() || fallback;
   }
 
   return fallback;
@@ -344,6 +320,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   defaultPayerId,
   styles,
   mapApp,
+  temperatureUnit = 'fahrenheit',
   aiItineraryPending,
   aiItineraryFailedMessage,
   editSignal,
@@ -1948,7 +1925,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         const img = dayImages[card.date];
         const weather = dayWeather[card.date];
         const weatherLabel =
-          weather && weather.temperatureHighC != null ? `${weather.icon} ${weather.temperatureHighC}°C` : null;
+          weather && weather.temperatureHighC != null
+            ? `${weather.icon} ${formatTemperatureFromCelsius(weather.temperatureHighC, normalizeTemperatureUnit(temperatureUnit))}`
+            : null;
         return (
           <TouchableOpacity
             testID={testID}

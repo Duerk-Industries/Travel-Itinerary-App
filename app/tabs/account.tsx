@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme } from 'react-native';
 import { type MapApp, isMapApp } from '../utils/mapLinks';
 import { type AppearancePreference, isAppearancePreference } from '../utils/appearancePreference';
+import { type TemperatureUnit, normalizeTemperatureUnit } from '../utils/temperatureUnit';
 import FamilyRelationships from './FamilyRelationships';
 import AccountTraits from './AccountTraits';
 import AccountProfileManagement from './AccountProfileManagement';
@@ -19,6 +20,7 @@ export interface AccountProfile {
   preferredAirport: string;
   mapPreference?: MapApp;
   appearancePreference: AppearancePreference;
+  temperatureUnit: TemperatureUnit;
   entitlements?: {
     costTracking?: boolean;
   };
@@ -79,6 +81,7 @@ export const fetchAccountProfile = async ({
     const fullName = `${data.firstName ?? ''} ${data.lastName ?? ''}`.trim() || data.email || 'Traveler';
     const mapPreference = isMapApp(data.mapPreference) ? data.mapPreference : undefined;
     const appearancePreference = isAppearancePreference(data.appearancePreference) ? data.appearancePreference : undefined;
+    const temperatureUnit = normalizeTemperatureUnit(data.temperatureUnit);
     if (mapPreference && setMapPreference) setMapPreference(mapPreference);
     if (appearancePreference && setAppearancePreference) setAppearancePreference(appearancePreference);
     setAccountProfile((prev) => ({
@@ -89,6 +92,7 @@ export const fetchAccountProfile = async ({
       preferredAirport: data.preferredAirport ?? '',
       mapPreference: mapPreference ?? prev.mapPreference ?? 'google',
       appearancePreference: appearancePreference ?? prev.appearancePreference ?? 'auto',
+      temperatureUnit,
       entitlements: data.entitlements ?? prev.entitlements,
     }));
     setUserName(fullName);

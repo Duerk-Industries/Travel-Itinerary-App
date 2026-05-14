@@ -6,6 +6,7 @@ import DialogShell from '../components/DialogShell';
 import DraftTextInput from '../components/DraftTextInput';
 import { type MapApp, isMapApp, mapAppOptions } from '../utils/mapLinks';
 import { appearanceOptions, isAppearancePreference, type AppearancePreference } from '../utils/appearancePreference';
+import { normalizeTemperatureUnit, type TemperatureUnit } from '../utils/temperatureUnit';
 import { AccountProfile } from './account';
 
 type Setter<T> = React.Dispatch<React.SetStateAction<T>>;
@@ -88,6 +89,11 @@ const formatHomeAddress = (address: AddressForm): string =>
   ]
     .filter(Boolean)
     .join(', ');
+
+const temperatureUnitOptions: Array<{ key: TemperatureUnit; label: string }> = [
+  { key: 'fahrenheit', label: 'Fahrenheit' },
+  { key: 'celsius', label: 'Celsius' },
+];
 
 interface AccountProfileManagementProps {
   backendUrl: string;
@@ -270,6 +276,7 @@ const AccountProfileManagement = ({
     const nextAppearancePreference = isAppearancePreference(updatedUser.appearancePreference)
       ? updatedUser.appearancePreference
       : accountProfile.appearancePreference ?? appearancePreference;
+    const nextTemperatureUnit = normalizeTemperatureUnit(updatedUser.temperatureUnit, accountProfile.temperatureUnit ?? 'fahrenheit');
     onChangeMapApp(nextMapPreference);
     onChangeAppearancePreference(nextAppearancePreference);
     const fullName = `${updatedUser.firstName ?? ''} ${updatedUser.lastName ?? ''}`.trim() || 'Traveler';
@@ -287,6 +294,7 @@ const AccountProfileManagement = ({
       preferredAirport: updatedUser.preferredAirport ?? '',
       mapPreference: nextMapPreference,
       appearancePreference: nextAppearancePreference,
+      temperatureUnit: nextTemperatureUnit,
     });
     setAccountMessage('Profile updated');
   };
@@ -544,6 +552,30 @@ const AccountProfileManagement = ({
       </View>
       <Text style={styles.helperText}>
         Selected: {appearanceOptions.find((opt) => opt.key === appearancePreference)?.label ?? 'Auto'}
+      </Text>
+      <Text style={styles.modalLabel}>Temperature</Text>
+      <View style={[styles.row, { flexWrap: 'wrap' }]}>
+        {temperatureUnitOptions.map((opt) => {
+          const selected = normalizeTemperatureUnit(accountProfile.temperatureUnit) === opt.key;
+          return (
+            <TouchableOpacity
+              key={opt.key}
+              style={[
+                styles.mapOptionButton,
+                selected && styles.mapOptionActive,
+                { marginRight: 8, marginTop: 4 },
+              ]}
+              onPress={() => {
+                setAccountProfile((p) => ({ ...p, temperatureUnit: opt.key }));
+              }}
+            >
+              <Text style={[styles.mapOptionText, selected && styles.mapOptionActiveText]}>{opt.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+      <Text style={styles.helperText}>
+        Selected: {temperatureUnitOptions.find((opt) => opt.key === normalizeTemperatureUnit(accountProfile.temperatureUnit))?.label ?? 'Fahrenheit'}
       </Text>
       <TouchableOpacity style={styles.button} onPress={handleProfileUpdate}>
         <Text style={styles.buttonText}>Save Profile</Text>

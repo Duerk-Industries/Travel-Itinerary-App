@@ -43,6 +43,7 @@ import { logError, logInfo } from './logger';
 import { getEnvFlag, getEnvValue, isLocalEnv } from './env';
 import { normalizeItineraryStatus } from './utils/itineraryStatus';
 import { getApiLimitsConfig } from './config/apiLimits';
+import { DEFAULT_PACKING_LIST_ITEMS } from './config/defaultPackingList';
 
 let app: App | null = null;
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
@@ -77,22 +78,6 @@ const generateTripShareToken = (): string => randomBytes(TRIP_SHARE_TOKEN_BYTES)
 const FOLLOW_CODE_LENGTH = 6;
 const FOLLOW_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const ADMIN_ANALYTICS_VERSION = 1;
-const DEFAULT_PACKING_LIST_ITEMS: Array<{ category: string; label: string }> = [
-  { category: 'Documents', label: 'Passport or government ID' },
-  { category: 'Documents', label: 'Travel confirmations' },
-  { category: 'Documents', label: 'Health insurance card' },
-  { category: 'Clothing', label: 'Daily outfits' },
-  { category: 'Clothing', label: 'Comfortable walking shoes' },
-  { category: 'Clothing', label: 'Sleepwear' },
-  { category: 'Clothing', label: 'Light jacket or sweater' },
-  { category: 'Toiletries', label: 'Toothbrush and toothpaste' },
-  { category: 'Toiletries', label: 'Deodorant' },
-  { category: 'Toiletries', label: 'Personal medications' },
-  { category: 'Electronics', label: 'Phone charger' },
-  { category: 'Electronics', label: 'Power adapter' },
-  { category: 'Travel Day', label: 'Reusable water bottle' },
-  { category: 'Travel Day', label: 'Snacks' },
-];
 type TripAccessRole = 'owner' | 'member' | 'follower';
 type GroupAccessRole = 'owner' | 'member';
 type GroupAccessRecord = {
@@ -1601,6 +1586,7 @@ export const getWebUserProfile = async (userId: string): Promise<WebUser | null>
       preferredAirport: data.preferredAirport ?? null,
       mapPreference: data.mapPreference ?? null,
       appearancePreference: data.appearancePreference ?? null,
+      temperatureUnit: data.temperatureUnit ?? null,
     };
   }
 
@@ -1616,6 +1602,7 @@ export const getWebUserProfile = async (userId: string): Promise<WebUser | null>
       preferredAirport: data.preferredAirport ?? null,
       mapPreference: data.mapPreference ?? null,
       appearancePreference: data.appearancePreference ?? null,
+      temperatureUnit: data.temperatureUnit ?? null,
     };
   }
 
@@ -1650,6 +1637,12 @@ export const updateWebUserProfile = async (
         : typeof (payload as any).appearancePreference === 'undefined'
           ? undefined
           : null,
+    temperatureUnit:
+      (payload as any).temperatureUnit === 'fahrenheit' || (payload as any).temperatureUnit === 'celsius'
+        ? (payload as any).temperatureUnit
+        : typeof (payload as any).temperatureUnit === 'undefined'
+          ? undefined
+          : null,
   });
   await db.collection('web_users').doc(userId).update(updates);
   const updated = await db.collection('web_users').doc(userId).get();
@@ -1663,6 +1656,7 @@ export const updateWebUserProfile = async (
     preferredAirport: data.preferredAirport ?? null,
     mapPreference: data.mapPreference ?? null,
     appearancePreference: data.appearancePreference ?? null,
+    temperatureUnit: data.temperatureUnit ?? null,
   };
 };
 

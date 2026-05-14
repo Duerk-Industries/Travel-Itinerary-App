@@ -1,25 +1,11 @@
 import request from 'supertest';
 import { app } from '../src/app';
 import { closePool, initDb, getUserPackingList, replaceUserPackingList, getTripPackingList, replaceUniversalPackingList } from '../src/db';
+import { DEFAULT_PACKING_LIST_ITEMS } from '../src/config/defaultPackingList';
 import { cleanupTestUsersByEmail, makeAdminUser, registerAndLoginWebUser, seedTiersForTest } from './helpers';
 
 describe('packing lists', () => {
-  const defaultItems = [
-    { category: 'Documents', label: 'Passport or government ID' },
-    { category: 'Documents', label: 'Travel confirmations' },
-    { category: 'Documents', label: 'Health insurance card' },
-    { category: 'Clothing', label: 'Daily outfits' },
-    { category: 'Clothing', label: 'Comfortable walking shoes' },
-    { category: 'Clothing', label: 'Sleepwear' },
-    { category: 'Clothing', label: 'Light jacket or sweater' },
-    { category: 'Toiletries', label: 'Toothbrush and toothpaste' },
-    { category: 'Toiletries', label: 'Deodorant' },
-    { category: 'Toiletries', label: 'Personal medications' },
-    { category: 'Electronics', label: 'Phone charger' },
-    { category: 'Electronics', label: 'Power adapter' },
-    { category: 'Travel Day', label: 'Reusable water bottle' },
-    { category: 'Travel Day', label: 'Snacks' },
-  ];
+  const defaultItems = DEFAULT_PACKING_LIST_ITEMS;
   const owner = { email: 'packing-owner@example.com', firstName: 'Packing', lastName: 'Owner', password: 'testtest' };
   const traveler = { email: 'packing-traveler@example.com', firstName: 'Packing', lastName: 'Traveler', password: 'testtest' };
   const admin = { email: 'packing-admin@example.com', firstName: 'Packing', lastName: 'Admin', password: 'testtest' };
@@ -59,9 +45,11 @@ describe('packing lists', () => {
   it('creates a default packing list for existing and newly created users', async () => {
     const ownerList = await getUserPackingList(ownerId);
     const travelerList = await getUserPackingList(travelerId);
-    expect(ownerList.length).toBeGreaterThan(5);
-    expect(ownerList.map((item) => item.label)).toContain('Passport or government ID');
-    expect(travelerList.map((item) => item.label)).toContain('Phone charger');
+    expect(ownerList).toHaveLength(defaultItems.length);
+    expect(travelerList).toHaveLength(defaultItems.length);
+    expect(ownerList.map((item) => item.label)).toContain('undies');
+    expect(ownerList.map((item) => item.label)).toContain('laundry net for delicates');
+    expect(travelerList.map((item) => item.label)).toContain('cell phone charger');
   });
 
   it('adds a trip packing list and merges traveler defaults into the trip list', async () => {
@@ -83,7 +71,7 @@ describe('packing lists', () => {
 
     const tripId = created.body.trip.id as string;
     let tripList = await getTripPackingList(ownerId, tripId);
-    expect(tripList.items.map((item) => item.label)).toContain('Passport or government ID');
+    expect(tripList.items.map((item) => item.label)).toContain('undies');
     expect(tripList.items.map((item) => item.label)).not.toContain('Prescription sunglasses');
 
     const pending = await request(app)
@@ -117,11 +105,12 @@ describe('packing lists', () => {
       .expect(200);
 
     const ownerList = await getUserPackingList(ownerId);
-    expect(ownerList.map((item) => item.label)).toContain('Phone charger');
+    expect(ownerList.map((item) => item.label)).toContain('cell phone charger');
     const defaults = await request(app)
       .get('/api/admin/packing-list-defaults')
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(200);
     expect(defaults.body.items.map((item: any) => item.label)).toContain('Noise-canceling headphones');
   });
+
 });

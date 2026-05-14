@@ -147,6 +147,7 @@ export interface WebUser {
   preferredAirport?: string | null;
   mapPreference?: 'google' | 'apple' | 'waze' | null;
   appearancePreference?: 'light' | 'dark' | 'auto' | null;
+  temperatureUnit?: 'fahrenheit' | 'celsius' | null;
   emailVerified?: boolean;
   firstLoginAt?: string | null;
   lastLoginAt?: string | null;

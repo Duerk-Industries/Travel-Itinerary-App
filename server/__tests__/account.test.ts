@@ -187,6 +187,7 @@ describe('Password validation', () => {
         preferredAirport: 'AUS',
         mapPreference: 'apple',
         appearancePreference: 'dark',
+        temperatureUnit: 'celsius',
       })
       .expect(200);
 
@@ -194,6 +195,7 @@ describe('Password validation', () => {
     expect(updateRes.body.user.preferredAirport).toBe('AUS');
     expect(updateRes.body.user.mapPreference).toBe('apple');
     expect(updateRes.body.user.appearancePreference).toBe('dark');
+    expect(updateRes.body.user.temperatureUnit).toBe('celsius');
 
     const profileRes = await request(app)
       .get('/api/account')
@@ -204,6 +206,7 @@ describe('Password validation', () => {
     expect(profileRes.body.preferredAirport).toBe('AUS');
     expect(profileRes.body.mapPreference).toBe('apple');
     expect(profileRes.body.appearancePreference).toBe('dark');
+    expect(profileRes.body.temperatureUnit).toBe('celsius');
 
     const clearRes = await request(app)
       .patch('/api/account/profile')
