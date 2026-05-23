@@ -47,6 +47,7 @@
     "accounts:seed": "tsx scripts/create-test-accounts.ts",
     "ingestion:debug-pdf": "tsx scripts/debug-ingestion-pdf.ts",
     "ingestion:corpus:build": "tsx scripts/build_ingestion_training_corpus.ts",
+    "cost-model": "npm --prefix server run cost-model -- --config server/config/cost-model.yaml --output dist/cost-model.csv",
     "destinations:generate": "tsx scripts/generate_destinations_csv.ts",
     "transport-hubs:generate": "tsx scripts/generate_destination_transport_hubs_csv.ts",
     "attractions:generate": "tsx server/scripts/generate_curated_attractions.ts",
