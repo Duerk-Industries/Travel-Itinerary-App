@@ -24,6 +24,11 @@ export const AppState = {
   currentState: 'active',
   addEventListener: jest.fn(() => ({ remove: jest.fn() })),
 };
+export const Linking = {
+  addEventListener: jest.fn(() => ({ remove: jest.fn() })),
+  createURL: jest.fn((path: string) => `travelitineraryplanner://${path}`),
+  openURL: jest.fn(async () => undefined),
+};
 export const StyleSheet = {
   create: <T extends Record<string, any>>(styles: T) => styles,
   flatten: (style: any) => style,
@@ -54,6 +59,7 @@ export default {
   ActivityIndicator,
   AsyncStorage,
   AppState,
+  Linking,
   StyleSheet,
   useWindowDimensions,
   useColorScheme,

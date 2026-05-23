@@ -2,7 +2,7 @@
  * @jest-environment node
  */
 
-import { describe, expect, test } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 import {
   buildOverviewRows,
   formatFlightSummary,
@@ -308,7 +308,7 @@ describe('Overview UI (nested itinerary)', () => {
     openLodgingDetails: jest.fn(),
   };
     
-    let fetchMock: jest.SpyInstance;
+    let fetchMock: any;
     const originalFetch = global.fetch;  const renderOverview = async (element: React.ReactElement) => {
     const utils = render(element);
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
@@ -570,7 +570,7 @@ describe('Overview UI (nested itinerary)', () => {
     fireEvent.press(await findByTestId('activity-save'));
 
     await waitFor(() => expect(onTourDataChanged).toHaveBeenCalled());
-    const activityCall = fetchMock.mock.calls.find((call) => call[0] === 'http://localhost:4000/api/activities');
+    const activityCall = fetchMock.mock.calls.find((call: any[]) => call[0] === 'http://localhost:4000/api/activities');
     expect(activityCall).toBeTruthy();
     const payload = JSON.parse(String(activityCall?.[1]?.body ?? '{}'));
     expect(payload.name).toBe('Custom walking tour');

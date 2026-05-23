@@ -355,6 +355,32 @@ type AppShellProps = {
   onOpenAdminSection?: (section: AdminSectionRoute) => void;
 };
 
+class RootErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { error: Error | null }
+> {
+  state: { error: Error | null } = { error: null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error('Root app render failed', error, info.componentStack);
+  }
+
+  render() {
+    if (!this.state.error) return this.props.children;
+
+    return (
+      <SafeAreaView style={rootErrorStyles.container}>
+        <Text style={rootErrorStyles.title}>WanderBunnies could not start</Text>
+        <Text style={rootErrorStyles.message}>{this.state.error.message || String(this.state.error)}</Text>
+      </SafeAreaView>
+    );
+  }
+}
+
 const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', onOpenAdminSection }) => {
   const { viewportWidth, isNarrowLayout, isPhoneLayout } = useLayoutBreakpoints();
   const systemColorScheme = useColorScheme();
@@ -1347,7 +1373,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       }
     };
 
-    const subscription = Linking.addEventListener('url', handleDeepLink);
+    const subscription =
+      typeof Linking?.addEventListener === 'function'
+        ? Linking.addEventListener('url', handleDeepLink)
+        : null;
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       // Use params captured at module load time (before React Navigation could strip them),
       // falling back to the current URL for deep links that arrive later.
@@ -1419,7 +1448,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       }
     }
     return () => {
-      subscription.remove();
+      subscription?.remove?.();
     };
   }, [handleAuthSuccess]);
 
@@ -3354,14 +3383,49 @@ const App: React.FC = () => {
   }, []);
 
   return (
-    <AppShell
-      initialAdminSection="overview"
-      onOpenAdminSection={openAdminSection}
-    />
+    <RootErrorBoundary>
+      <AppShell
+        initialAdminSection="overview"
+        onOpenAdminSection={openAdminSection}
+      />
+    </RootErrorBoundary>
   );
 };
 
-const buildStyles = (theme: AppTheme) => StyleSheet.create({
+const rootErrorStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#102438',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  title: {
+    color: '#ffffff',
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: 12,
+  },
+  message: {
+    color: '#dce8f2',
+    fontSize: 15,
+    lineHeight: 22,
+  },
+});
+
+const stripIosFontWeights = <T extends Record<string, any>>(styles: T): T => {
+  if (Platform.OS !== 'ios') return styles;
+  return Object.fromEntries(
+    Object.entries(styles).map(([key, value]) => {
+      if (!value || typeof value !== 'object' || Array.isArray(value) || !('fontWeight' in value)) {
+        return [key, value];
+      }
+      const { fontWeight: _fontWeight, ...rest } = value;
+      return [key, rest];
+    })
+  ) as T;
+};
+
+const buildStyles = (theme: AppTheme) => StyleSheet.create(stripIosFontWeights({
   container: {
     flex: 1,
     backgroundColor: theme.colors.backgroundAlt,
@@ -4866,6 +4930,6 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create({
     flexWrap: 'wrap',
     gap: 4,
   },
-});
+}));
 
 export default App;

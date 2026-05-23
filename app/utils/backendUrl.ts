@@ -89,7 +89,7 @@ export const resolveBackendUrl = ({
     return browserOrigin;
   }
 
-  if (nodeEnv === 'development') {
+  if (nodeEnv === 'development' && platformOs === 'web') {
     if (configuredBackend) {
       return normalizeBackendUrl(configuredBackend, 'http');
     }

@@ -42,7 +42,7 @@ config.resolver = {
     projectNodeModules,
     workspaceNodeModules,
   ],
-  disableHierarchicalLookup: true,
+  disableHierarchicalLookup: false,
 };
 
 const installHookMapPath = path.join(__dirname, 'installHook.js.map');

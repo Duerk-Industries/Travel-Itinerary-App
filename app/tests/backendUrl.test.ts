@@ -57,6 +57,15 @@ describe('resolveBackendUrl', () => {
     ).toBe('http://localhost:4000');
   });
 
+  it('does not fall back to localhost for native preview builds without config', () => {
+    expect(
+      resolveBackendUrl({
+        nodeEnv: 'development',
+        platformOs: 'ios',
+      })
+    ).toBe('https://duerk.org');
+  });
+
   it('uses the configured production backend when the browser is on the deployed host', () => {
     expect(
       resolveBackendUrl({

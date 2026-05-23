@@ -2,10 +2,10 @@ import path from 'path';
 import dotenv from 'dotenv';
 import { ExpoConfig } from 'expo/config';
 
-dotenv.config({ path: path.join(__dirname, '.env') });
 dotenv.config({ path: path.join(__dirname, '..', '.env'), override: true });
 dotenv.config({ path: path.join(__dirname, '..', 'server', '.env'), override: true });
 dotenv.config({ path: path.join(__dirname, '..', 'server', '.local_env'), override: true });
+dotenv.config({ path: path.join(__dirname, '.env'), override: true });
 
 if (!process.env.EXPO_PUBLIC_BACKEND_URL) {
   // Avoid `process.env.X = undefined`, which Node coerces to the string "undefined".
@@ -25,6 +25,7 @@ const config: ExpoConfig = {
   owner: 'duerk-industries',
   icon: './assets/wanderbunnies-app-icon.png',
   platforms: ['ios', 'android', 'web'],
+  newArchEnabled: false,
   web: {
     bundler: 'metro',
     favicon: './assets/wanderbunnies-app-icon.png',
@@ -55,6 +56,7 @@ const config: ExpoConfig = {
     // Android appId must avoid hyphens; use a dot/alpha-only identifier.
     package: 'com.duerkindustries.travelitineraryplanner'
   },
+  plugins: ['expo-web-browser'],
   extra: {
     backendUrl:
       process.env.EXPO_PUBLIC_BACKEND_URL ??

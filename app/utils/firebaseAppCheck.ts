@@ -1,6 +1,8 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
+declare const __DEV__: boolean;
+
 let appCheckInitialization: Promise<void> | null = null;
 let appCheckInitialized = false;
 
@@ -75,36 +77,11 @@ const initializeAppCheckOnce = async () => {
     } catch {
       appCheckInitialized = false;
     }
-
   } else {
-    // --- NATIVE IMPLEMENTATION (Play Integrity / DeviceCheck) ---
-    try {
-      // Dynamically import native module
-      const { firebase } = require('@react-native-firebase/app-check');
-      
-      const appCheck = firebase.appCheck();
-      const provider = appCheck.newReactNativeFirebaseAppCheckProvider();
-
-      provider.configure({
-        android: {
-          provider: 'playIntegrity',
-          debug: __DEV__, // Uses debug token in development
-        },
-        apple: {
-          provider: 'appAttestWithDeviceCheckFallback',
-          debug: __DEV__, // Uses debug token in development
-        },
-      });
-
-      await appCheck.initializeAppCheck({
-        provider: provider,
-        isTokenAutoRefreshEnabled: true,
-      });
-
-      appCheckInitialized = true;
-      getAppCheckGlobals()[APP_CHECK_INITIALIZED_KEY] = true;
-    } catch {
-      appCheckInitialized = false;
-    }
+    // Native App Check is intentionally disabled for the Expo build. The app's
+    // backend APIs remain usable on iOS/Android without pulling RNFirebase pods
+    // into the native project.
+    appCheckInitialized = true;
+    getAppCheckGlobals()[APP_CHECK_INITIALIZED_KEY] = true;
   }
 };

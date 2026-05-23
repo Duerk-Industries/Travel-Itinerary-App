@@ -12,13 +12,16 @@
     "cSpell.words": [
         "100",
         "Cooldown",
+        "dropoff",
         "Firestore",
+        "Geofriendly",
         "HMAC",
         "lookback",
         "Ryanair",
         "sitelinks",
         "Tesseract",
-        "testtest"
+        "testtest",
+        "Trailhead"
     ],
     "diffEditor.codeLens": true,
     "geminicodeassist.codeGenerationPaneViewEnabled": true,
