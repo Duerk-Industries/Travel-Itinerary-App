@@ -9,6 +9,7 @@ import {
   listTripMessagesPage,
   markMessagesRead,
   countUnreadMessages,
+  ensureUserInTrip,
 } from '../db';
 
 const INITIAL_PAGE_SIZE = 50;
@@ -25,6 +26,20 @@ export const registerChatHandlers = (io: Server, socket: Socket): void => {
   // -------------------------------------------------------------------------
   socket.on(CLIENT_EVENTS.JOIN_TRIP, async (tripId: string) => {
     if (!tripId) return;
+
+    // Authorize: the authenticated socket user must actually belong to the
+    // trip's group. Without this check, any logged-in user could join an
+    // arbitrary trip's room and read chat history / presence / unread state.
+    let membership: { groupId: string } | null = null;
+    try {
+      membership = await ensureUserInTrip(tripId, user.id);
+    } catch (err) {
+      logError('[chat] ensureUserInTrip failed', err);
+    }
+    if (!membership) {
+      socket.emit(SERVER_EVENTS.ERROR, 'Not authorized to join this trip.');
+      return;
+    }
 
     // Leave previous trip room if any
     if (socket.data.tripId && socket.data.tripId !== tripId) {
@@ -133,6 +148,20 @@ export const registerChatHandlers = (io: Server, socket: Socket): void => {
       const { tripId, body } = payload ?? {};
       if (!tripId || !body?.trim()) return;
 
+      // Defense-in-depth: re-check trip membership at write time so a stale
+      // socket.data.tripId (or a future regression in JOIN_TRIP) can't
+      // produce unauthorized writes.
+      try {
+        const membership = await ensureUserInTrip(tripId, user.id);
+        if (!membership) {
+          socket.emit(SERVER_EVENTS.ERROR, 'Not authorized to post in this trip.');
+          return;
+        }
+      } catch (err) {
+        logError('[chat] ensureUserInTrip failed (send)', err);
+        return;
+      }
+
       const displayName = await getUserDisplayName(user.id, user.email);
       const initials = initialsForName(displayName);
 
@@ -163,6 +192,15 @@ export const registerChatHandlers = (io: Server, socket: Socket): void => {
     async (payload: { tripId: string; messageId: string }) => {
       const { tripId, messageId } = payload ?? {};
       if (!tripId || !messageId) return;
+
+      // Same defense-in-depth as SEND_MESSAGE: don't trust socket.data.
+      try {
+        const membership = await ensureUserInTrip(tripId, user.id);
+        if (!membership) return;
+      } catch (err) {
+        logError('[chat] ensureUserInTrip failed (mark-read)', err);
+        return;
+      }
 
       try {
         await markMessagesRead(tripId, user.id, messageId);

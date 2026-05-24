@@ -53,7 +53,9 @@
     "attractions:generate": "tsx server/scripts/generate_curated_attractions.ts",
     "attractions:backfill-geo": "tsx server/scripts/backfill_attractions_geography.ts",
     "catalog:generate": "npm run destinations:generate && npm run attractions:generate && npm run transport-hubs:generate",
-    "icons:android": "node scripts/generate-android-adaptive-icons.mjs"
+    "icons:android": "node scripts/generate-android-adaptive-icons.mjs",
+    "e2e:maestro": "maestro test .maestro/launch-smoke.yaml",
+    "e2e:maestro:all": "maestro test .maestro"
   },
   "overrides": {
     "glob": "13.0.5",

@@ -59,4 +59,38 @@ describe('socket module load safety', () => {
       expect(typeof (appRootModule as { default?: unknown }).default).toBe('function');
     });
   });
+
+  it('AppRoot throws a useful diagnostic when its App dependency is undefined', () => {
+    // Simulates the Hermes-side failure mode we just fixed: a transitive
+    // import in App.tsx threw during module evaluation, leaving the default
+    // export as undefined. AppRoot's own guard should produce a clear error
+    // so we know exactly what failed instead of a generic "cannot render
+    // undefined" at runtime.
+    jest.isolateModules(() => {
+      jest.doMock('../App', () => ({ __esModule: true, default: undefined }), { virtual: false });
+      expect(() => require('../AppRoot')).toThrow(/App module did not export a React component/);
+    });
+  });
+
+  it('Metro engine.io-client alias targets exist for the platforms we ship', () => {
+    // Reads the alias map straight from metro.config.cjs and asserts the
+    // browser-variant files Metro will redirect to actually exist in the
+    // installed engine.io-client. If a future engine.io-client release renames
+    // those files, this fails before the iOS bundle silently breaks.
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const cfg = fs.readFileSync(
+      path.resolve(__dirname, '..', '..', 'metro.config.cjs'),
+      'utf8',
+    );
+    expect(cfg).toMatch(/engine\.io-client/);
+    expect(cfg).toMatch(/resolveRequest/);
+    for (const browserForm of [
+      './transports/polling-xhr.js',
+      './transports/websocket.js',
+      './globals.js',
+    ]) {
+      expect(cfg).toContain(browserForm);
+    }
+  });
 });

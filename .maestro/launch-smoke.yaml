@@ -1,0 +1,34 @@
+# Maestro smoke test for the iOS / Android release bundle.
+#
+# Purpose: catch the exact regression that just bit us — a transitive import
+# (socket.io-client, in our case) failing on Hermes and causing the entire
+# App.tsx graph to fail to evaluate, presenting as the "WanderBunnies could
+# not start" failure screen instead of the login form.
+#
+# Pass condition: launch the installed app, and within 30s we see the auth
+# form's testID ("auth-form") AND we do NOT see the startup failure text.
+#
+# Run locally (requires the app installed on the device/simulator):
+#   maestro test .maestro/launch-smoke.yaml
+#
+# See .maestro/README.md for setup details.
+
+appId:
+  ios: com.duerkindustries.travelitineraryplanner
+  android: com.duerkindustries.travelitineraryplanner
+---
+- launchApp:
+    clearState: true
+    stopApp: true
+
+# If the JS bundle failed to evaluate, our defensive wrapper in AppEntry.js
+# renders this exact string. Failing on its presence catches the entire class
+# of bug where a top-level import throws on Hermes.
+- assertNotVisible: "WanderBunnies could not start"
+
+# The auth form is the first interactive UI the app shows when no session is
+# stored. Its testID is stable and asserts JS evaluated all the way through
+# App.tsx (every top-level import resolved).
+- assertVisible:
+    id: "auth-form"
+    timeout: 30000
