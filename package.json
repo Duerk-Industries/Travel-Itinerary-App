@@ -2,7 +2,6 @@
   "name": "shared-trip-planner",
   "private": true,
   "version": "0.1.0",
-  "type": "module",
   "main": "app/AppEntry.js",
   "workspaces": [
     "server",
@@ -37,7 +36,7 @@
     "test:server": "npm --prefix server test",
     "locations:update": "tsx scripts/update-location-jsons.ts",
     "locations:upload": "tsx scripts/update-location-jsons.ts",
-    "emulators:start": "node scripts/select-latest-firebase-export.js && firebase emulators:start --import=./.firebase-data --export-on-exit=./.firebase-data",
+    "emulators:start": "node scripts/select-latest-firebase-export.mjs && firebase emulators:start --import=./.firebase-data --export-on-exit=./.firebase-data",
     "images:migrate-cache": "tsx scripts/migrate-image-cache-to-storage.ts",
     "firestore:group-access:backfill": "tsx scripts/backfill-group-access.ts",
     "firestore:trip-access:backfill": "tsx scripts/backfill-trip-access.ts",

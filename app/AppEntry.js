@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { registerRootComponent } from 'expo';
 import { Platform, SafeAreaView, StyleSheet, Text } from 'react-native';
-import * as AppRootModule from './AppRoot';
 
 let startupError = null;
 const startupErrorListeners = new Set();
@@ -95,12 +94,17 @@ const Root = () => {
 
   if (error) return <StartupFailure error={error} />;
 
-  const AppRoot = resolveComponentExport(AppRootModule);
-  if (!AppRoot) {
-    const error = new Error(`AppRoot module did not export a React component (${describeModuleShape(AppRootModule)}).`);
-    publishStartupError(error);
-    console.log('App root failed to load', getErrorMessage(error));
-    return <StartupFailure error={error} />;
+  let AppRoot;
+  try {
+    const appRootModule = require('./AppRoot');
+    AppRoot = resolveComponentExport(appRootModule);
+    if (!AppRoot) {
+      throw new Error(`AppRoot module did not export a React component (${describeModuleShape(appRootModule)}).`);
+    }
+  } catch (loadError) {
+    publishStartupError(loadError);
+    console.log('App root failed to load', getErrorMessage(loadError));
+    return <StartupFailure error={loadError} />;
   }
 
   return (
