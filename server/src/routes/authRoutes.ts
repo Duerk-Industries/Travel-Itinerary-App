@@ -20,6 +20,7 @@ import { sendVerificationEmailBestEffort } from '../mailer';
 import { getAuthFlag } from '../config/authFlags';
 import { ensureAdminBootstrap, getSeededTierForEmail } from '../services/entitlementService';
 import { ensureCurrentUserTier } from '../db';
+import { authLoginRateLimit } from '../services/httpRateLimitService';
 
 // Auth routes for device-based auth tokens (non-web).
 const router = Router();
@@ -118,7 +119,7 @@ router.post('/oauth', async (req, res) => {
   res.json(result);
 });
 
-router.post('/login', async (req, res) => {
+router.post('/login', authLoginRateLimit, async (req, res) => {
   const { identifier, email, password } = req.body ?? {};
   const loginIdentifier = String(identifier ?? email ?? '').trim().toLowerCase();
   if (!loginIdentifier || !password) {

@@ -48,6 +48,7 @@ import { EntitlementError } from '../errors';
 import { TokenPayload } from '../auth';
 import { deleteUserIngestionData } from '../ingestion/shared/repository';
 import { buildUserDataExport } from '../services/userDataExport';
+import { accountPasswordRateLimit } from '../services/httpRateLimitService';
 
 // Account management (profile, password, deletion) for authenticated web users.
 const router = Router();
@@ -316,7 +317,7 @@ router.delete('/emails/:email', async (req, res) => {
   }
 });
 
-router.patch('/password', async (req, res) => {
+router.patch('/password', accountPasswordRateLimit, async (req, res) => {
   const userId = (req as any).user.userId as string;
   const { currentPassword, newPassword, newPasswordConfirm } = req.body ?? {};
   if (!newPassword || !newPasswordConfirm) {

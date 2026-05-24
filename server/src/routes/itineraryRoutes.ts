@@ -18,6 +18,7 @@ import {
 } from '../services/entitlementService';
 import { EntitlementError } from '../errors';
 import { TokenPayload } from '../auth';
+import { reserveItineraryGenerationRateLimit } from '../services/httpRateLimitService';
 
 // Returns a UTC monthly window key, e.g. "2026-03"
 const getMonthWindowKey = (): string => {
@@ -32,32 +33,6 @@ const getMonthWindowKey = (): string => {
 // itinerary that landed on the fallback).
 const PLACEHOLDER_IMAGE =
   "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 800'><rect width='1200' height='800' fill='%23e5e7eb'/><text x='50%25' y='50%25' font-family='system-ui,sans-serif' font-size='40' fill='%239ca3af' text-anchor='middle' dominant-baseline='middle'>Image unavailable</text></svg>";
-
-const generationRateLimitState = new Map<string, { count: number; startedAt: number }>();
-const RATE_LIMIT_WINDOW_MS = Number(process.env.ITINERARY_RATE_LIMIT_WINDOW_MS ?? 10 * 60 * 1000);
-const RATE_LIMIT_MAX = Number(process.env.ITINERARY_RATE_LIMIT_MAX ?? 10);
-
-const reserveGenerationRequestRateLimit = (userId: string, ip: string | null): void => {
-  const now = Date.now();
-  for (const key of [`user:${userId}`, ip ? `ip:${ip}` : null].filter(Boolean) as string[]) {
-    const current = generationRateLimitState.get(key);
-    if (!current || now - current.startedAt >= RATE_LIMIT_WINDOW_MS) {
-      generationRateLimitState.set(key, { count: 1, startedAt: now });
-      continue;
-    }
-    if (current.count >= RATE_LIMIT_MAX) {
-      throw new ApiLimitExceededError({
-        provider: 'ITINERARY',
-        caller: key,
-        scope: 'caller',
-        limit: RATE_LIMIT_MAX,
-        used: current.count,
-      });
-    }
-    current.count += 1;
-    generationRateLimitState.set(key, current);
-  }
-};
 
 const resolveIdempotencyKey = (req: any, userId: string, tripId: string): string => {
   const fromHeader = String(req.headers['idempotency-key'] ?? '').trim();
@@ -269,7 +244,7 @@ router.post('/', async (req, res) => {
   const idempotencyKey = resolveIdempotencyKey(req, userId, tripId);
   try {
     await assertCanUseFeature(userId, 'ai_itinerary_generation', role);
-    reserveGenerationRequestRateLimit(userId, req.ip ?? null);
+    await reserveItineraryGenerationRateLimit(userId, req.ip ?? null);
     const reservation = await reserveGenerationUsage({
       userId,
       tripId,
@@ -345,7 +320,8 @@ router.post('/', async (req, res) => {
       res.status(402).json({ error: err.message, code: err.code });
       return;
     }
-    if (err instanceof ApiLimitExceededError) {
+    if (err instanceof ApiLimitExceededError || err?.name === 'HttpRateLimitExceededError') {
+      if (err?.retryAfterSeconds) res.setHeader('Retry-After', String(err.retryAfterSeconds));
       res.status(429).json({ error: err.message });
       return;
     }
@@ -443,7 +419,7 @@ router.post('/async', async (req, res) => {
   const idempotencyKey = resolveIdempotencyKey(req, userId, tripId);
   try {
     await assertCanUseFeature(userId, 'ai_itinerary_generation', role);
-    reserveGenerationRequestRateLimit(userId, req.ip ?? null);
+    await reserveItineraryGenerationRateLimit(userId, req.ip ?? null);
     const reservation = await reserveGenerationUsage({
       userId,
       tripId,
@@ -464,8 +440,9 @@ router.post('/async', async (req, res) => {
       res.status(402).json({ error: err.message, code: err.code });
       return;
     }
-    if (err instanceof ApiLimitExceededError) {
-      res.status(429).json({ error: err.message });
+    if (err instanceof ApiLimitExceededError || (err as any)?.name === 'HttpRateLimitExceededError') {
+      if ((err as any)?.retryAfterSeconds) res.setHeader('Retry-After', String((err as any).retryAfterSeconds));
+      res.status(429).json({ error: (err as Error).message });
       return;
     }
     throw err;
