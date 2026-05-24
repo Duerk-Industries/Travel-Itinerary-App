@@ -194,9 +194,11 @@ const adminSectionByScreen: Record<Exclude<keyof RootStackParamList, 'Main'>, Ad
   AdminAuditLog: 'audit-log',
 };
 
+// IMPORTANT: this scheme MUST match `expo.scheme` in app.json, otherwise
+// React Navigation builds deep-link URLs that don't open the installed app.
 const linking: LinkingOptions<RootStackParamList> = {
   prefixes: [
-    'wanderbunnies://',
+    'travelitineraryplanner://',
     ...(Platform.OS === 'web' && typeof window !== 'undefined' ? [window.location.origin] : []),
   ],
   config: {

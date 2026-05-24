@@ -35,7 +35,12 @@
     },
     "android": {
       "package": "com.duerkindustries.travelitineraryplanner",
-      "versionCode": 1
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./app/assets/wanderbunnies-android-foreground.png",
+        "backgroundColor": "#0b3c79",
+        "monochromeImage": "./app/assets/wanderbunnies-android-monochrome.png"
+      }
     },
     "plugins": ["expo-web-browser"],
     "extra": {

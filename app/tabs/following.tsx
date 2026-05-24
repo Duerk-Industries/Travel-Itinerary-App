@@ -58,7 +58,27 @@ const EVENT_ICON: Record<string, string> = {
   NOTE_ADDED: '📝',
 };
 
-const RELATIVE_TIME = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
+// Intl.RelativeTimeFormat is available in Hermes on RN 0.71+ but older runtimes
+// or future regressions could throw at construction. Build lazily and fall back
+// to a minimal hand-rolled formatter so this module never fails to load.
+type RelativeFormatter = { format: (value: number, unit: Intl.RelativeTimeFormatUnit) => string };
+let _relativeTime: RelativeFormatter | null = null;
+const buildFallbackRelativeFormatter = (): RelativeFormatter => ({
+  format: (value, unit) => {
+    const abs = Math.abs(value);
+    const suffix = value < 0 ? ' ago' : ' from now';
+    return `${abs} ${unit}${abs === 1 ? '' : 's'}${suffix}`;
+  },
+});
+const getRelativeFormatter = (): RelativeFormatter => {
+  if (_relativeTime) return _relativeTime;
+  try {
+    _relativeTime = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
+  } catch {
+    _relativeTime = buildFallbackRelativeFormatter();
+  }
+  return _relativeTime;
+};
 
 const getEventTimestamp = (event: any): string => {
   if (event?.kind === 'group') return String(event?.endAt ?? event?.startAt ?? '');
@@ -83,9 +103,10 @@ const getRelativeTime = (value: string): string => {
   const minute = 60 * 1000;
   const hour = 60 * minute;
   const day = 24 * hour;
-  if (abs < hour) return RELATIVE_TIME.format(Math.round(diffMs / minute), 'minute');
-  if (abs < day) return RELATIVE_TIME.format(Math.round(diffMs / hour), 'hour');
-  return RELATIVE_TIME.format(Math.round(diffMs / day), 'day');
+  const fmt = getRelativeFormatter();
+  if (abs < hour) return fmt.format(Math.round(diffMs / minute), 'minute');
+  if (abs < day) return fmt.format(Math.round(diffMs / hour), 'hour');
+  return fmt.format(Math.round(diffMs / day), 'day');
 };
 
 const getPrimaryText = (event: any): string => {

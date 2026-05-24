@@ -52,7 +52,8 @@
     "transport-hubs:generate": "tsx scripts/generate_destination_transport_hubs_csv.ts",
     "attractions:generate": "tsx server/scripts/generate_curated_attractions.ts",
     "attractions:backfill-geo": "tsx server/scripts/backfill_attractions_geography.ts",
-    "catalog:generate": "npm run destinations:generate && npm run attractions:generate && npm run transport-hubs:generate"
+    "catalog:generate": "npm run destinations:generate && npm run attractions:generate && npm run transport-hubs:generate",
+    "icons:android": "node scripts/generate-android-adaptive-icons.mjs"
   },
   "overrides": {
     "glob": "13.0.5",
@@ -97,6 +98,7 @@
     "react-native-dotenv": "^3.4.11",
     "react-refresh": "^0.18.0",
     "react-test-renderer": "19.1.0",
+    "sharp": "^0.34.5",
     "ts-jest": "^29.4.6",
     "ts-node": "^10.9.2"
   },

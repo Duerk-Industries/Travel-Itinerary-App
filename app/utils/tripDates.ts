@@ -1,6 +1,25 @@
 export type TripDateMode = 'range' | 'month';
 const DAY_MS = 24 * 60 * 60 * 1000;
-const monthYearFormatter = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' });
+// Lazy + defensive: any failure in the Intl constructor on a constrained
+// runtime falls back to a manual formatter so this module can't fail to load.
+type DateFormatter = { format: (date: Date) => string };
+let _monthYearFormatter: DateFormatter | null = null;
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+const buildFallbackMonthYearFormatter = (): DateFormatter => ({
+  format: (date) => `${MONTH_NAMES[date.getMonth()]} ${date.getFullYear()}`,
+});
+const getMonthYearFormatter = (): DateFormatter => {
+  if (_monthYearFormatter) return _monthYearFormatter;
+  try {
+    _monthYearFormatter = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' });
+  } catch {
+    _monthYearFormatter = buildFallbackMonthYearFormatter();
+  }
+  return _monthYearFormatter;
+};
 
 export const parseDate = (value?: string | null): Date | null => {
   if (!value) return null;
@@ -27,7 +46,7 @@ export const formatMonthYear = (month?: number | null, year?: number | null): st
   if (!month || !year) return null;
   const date = new Date(year, month - 1, 1);
   if (Number.isNaN(date.valueOf())) return null;
-  return monthYearFormatter.format(date);
+  return getMonthYearFormatter().format(date);
 };
 
 export const adjustStartDateForEarliest = (params: {
