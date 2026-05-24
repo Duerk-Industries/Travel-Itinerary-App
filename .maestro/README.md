@@ -28,10 +28,11 @@ bug that caused our recent iOS launch failure).
    - From EAS: download the latest preview `.ipa` / `.apk` from the EAS
      dashboard and install it.
 
-## Running the smoke test
+## Running the smoke tests
 
 ```sh
 maestro test .maestro/launch-smoke.yaml
+maestro test .maestro
 ```
 
 Pass condition: the app launches, the startup failure screen is not visible,
@@ -50,9 +51,16 @@ class:
 - Any regression that prevents the auth form from rendering at all
   (broken navigation, suspense fallback stuck forever, etc.).
 
-It deliberately does **not** exercise auth, navigation, or feature flows —
-those belong in either Playwright (web) or future Maestro flows once we
-have CI infrastructure for emulator runs.
+The expanded smoke suite also checks backend-independent native behavior:
+
+- `auth-form-native-smoke.yaml` verifies controlled inputs, keyboard text, and
+  Login/Create mode switching in the installed native bundle.
+- `deep-link-launch-smoke.yaml` verifies the registered native URL scheme can
+  launch the installed app and still render the logged-out UI.
+
+It deliberately does **not** exercise authenticated trip/navigation feature
+flows yet — those belong in Playwright for web today, and in future Maestro
+flows once we have a seeded native test backend and CI emulator infrastructure.
 
 ## Adding more flows
 
@@ -70,7 +78,7 @@ job should:
 1. Build the app for the target platform (or fetch from EAS).
 2. Boot the simulator/emulator.
 3. Install the build.
-4. Run `maestro test .maestro/launch-smoke.yaml`.
+4. Run `maestro test .maestro`.
 
 The CI workflow at `.github/workflows/ci.yml` deliberately stops at static
 checks + unit tests + `expo-doctor` for now to keep PR feedback fast.

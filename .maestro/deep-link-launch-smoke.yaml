@@ -1,0 +1,21 @@
+# URL-scheme smoke for the installed iOS / Android bundle.
+#
+# This catches native scheme/config drift: the OS must be able to route
+# travelitineraryplanner:// links to this app, and the app must still render
+# its normal logged-out UI after being launched by a deep link.
+
+appId:
+  ios: com.duerkindustries.travelitineraryplanner
+  android: com.duerkindustries.travelitineraryplanner
+---
+- launchApp:
+    clearState: true
+    stopApp: true
+
+- stopApp
+- openLink: "travelitineraryplanner://"
+
+- assertNotVisible: "WanderBunnies could not start"
+- assertVisible:
+    id: "auth-form"
+    timeout: 30000
