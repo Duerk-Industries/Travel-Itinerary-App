@@ -13,6 +13,25 @@ const pdfjsDistPath = fs.existsSync(path.join(projectNodeModules, 'pdfjs-dist'))
 const config = getDefaultConfig(__dirname);
 const { resolver } = config;
 
+// See metro.config.cjs (workspace root) for the same alias map and rationale.
+const engineIoNodeStubs = {
+  './transports/polling-xhr.node.js': './transports/polling-xhr.js',
+  './transports/websocket.node.js': './transports/websocket.js',
+  './globals.node.js': './globals.js',
+};
+
+const aliasEngineIoNodeFiles = (context, moduleName, platform) => {
+  if (
+    platform !== 'web' &&
+    engineIoNodeStubs[moduleName] &&
+    context.originModulePath &&
+    context.originModulePath.includes('engine.io-client')
+  ) {
+    return context.resolveRequest(context, engineIoNodeStubs[moduleName], platform);
+  }
+  return context.resolveRequest(context, moduleName, platform);
+};
+
 // Add support for svgs
 config.transformer = {
   ...config.transformer,
@@ -43,6 +62,7 @@ config.resolver = {
     workspaceNodeModules,
   ],
   disableHierarchicalLookup: false,
+  resolveRequest: aliasEngineIoNodeFiles,
 };
 
 const installHookMapPath = path.join(__dirname, 'installHook.js.map');

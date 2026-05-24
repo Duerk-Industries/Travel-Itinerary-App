@@ -13,7 +13,7 @@ module.exports = {
   testPathIgnorePatterns: ['/node_modules/', '/e2e/'],
 
   transform: {
-    '^.+\\.(ts|tsx)$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.jest.json' }],
+    '^.+\\.(ts|tsx|js|jsx)$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.jest.json' }],
   },
 
   moduleNameMapper: {
@@ -21,6 +21,7 @@ module.exports = {
     '^@react-native-community/datetimepicker$': '<rootDir>/tests/__mocks__/@react-native-community/datetimepicker.ts',
     '^@react-navigation/native$': '<rootDir>/tests/__mocks__/@react-navigation/native.ts',
     '^@react-navigation/native-stack$': '<rootDir>/tests/__mocks__/@react-navigation/native-stack.ts',
+    '^socket\\.io-client$': '<rootDir>/tests/__mocks__/socket.io-client.ts',
   },
 
   // A setup file that runs before each test.

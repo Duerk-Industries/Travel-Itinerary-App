@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { registerRootComponent } from 'expo';
-import { Platform, SafeAreaView, StyleSheet, Text } from 'react-native';
+import { Platform, SafeAreaView, StyleSheet, Text, StatusBar } from 'react-native';
 
 let startupError = null;
 const startupErrorListeners = new Set();
@@ -27,14 +27,23 @@ const getErrorMessage = (error) => {
   }
 };
 
+let appHasMounted = false;
+
 const globalErrorUtils = globalThis.ErrorUtils;
+const originalGlobalHandler = globalErrorUtils && typeof globalErrorUtils.getGlobalHandler === 'function' 
+  ? globalErrorUtils.getGlobalHandler() 
+  : null;
+
 if (globalErrorUtils && typeof globalErrorUtils.setGlobalHandler === 'function') {
   globalErrorUtils.setGlobalHandler((error, isFatal) => {
-    publishStartupError(error);
-    // Do not forward to React Native's native exception reporter here. The
-    // preview build crash log shows NativeExceptionsManager crashing while
-    // trying to report the original JavaScript exception.
-    console.log('Captured JS startup error', getErrorMessage(error), isFatal ? '(fatal)' : '');
+    if (!appHasMounted) {
+      publishStartupError(error);
+      console.log('Captured JS startup error', getErrorMessage(error), isFatal ? '(fatal)' : '');
+    } else if (originalGlobalHandler) {
+      originalGlobalHandler(error, isFatal);
+    } else {
+      console.error('Unhandled JS error:', getErrorMessage(error));
+    }
   });
 }
 
@@ -46,23 +55,36 @@ const StartupFailure = ({ error }) => (
 );
 
 const describeModuleShape = (moduleValue) => {
-  if (moduleValue == null) return String(moduleValue);
-  if (typeof moduleValue !== 'object') return typeof moduleValue;
+  const t = typeof moduleValue;
+  if (moduleValue === null) return 'null';
+  if (moduleValue === undefined) return 'undefined';
+  if (t === 'function') return `function name=${moduleValue.name || '(anon)'}`;
+  if (t !== 'object') return `${t}:${String(moduleValue)}`;
   try {
-    return `object keys: ${Object.keys(moduleValue).join(', ') || '(none)'}`;
-  } catch {
-    return 'object keys unavailable';
+    const keys = Object.keys(moduleValue);
+    const defaultDesc = 'default' in moduleValue
+      ? ` default=${typeof moduleValue.default}`
+      : '';
+    return `object keys=[${keys.join(',') || 'none'}]${defaultDesc}`;
+  } catch (e) {
+    return `object inspect-error:${e && e.message}`;
   }
+};
+
+const isReactComponent = (value) => {
+  if (typeof value === 'function') return true;
+  if (value && typeof value === 'object' && typeof value.$$typeof === 'symbol') return true;
+  return false;
 };
 
 const resolveComponentExport = (moduleValue) => {
   let current = moduleValue;
   for (let depth = 0; depth < 5; depth += 1) {
-    if (typeof current === 'function') return current;
+    if (isReactComponent(current)) return current;
     if (!current || typeof current !== 'object' || !('default' in current)) break;
     current = current.default;
   }
-  return typeof current === 'function' ? current : null;
+  return isReactComponent(current) ? current : null;
 };
 
 class EntryErrorBoundary extends React.Component {
@@ -86,6 +108,7 @@ const Root = () => {
   const [error, setError] = useState(startupError);
 
   useEffect(() => {
+    appHasMounted = true;
     startupErrorListeners.add(setError);
     return () => {
       startupErrorListeners.delete(setError);
@@ -120,11 +143,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#102438',
     justifyContent: 'center',
     padding: 24,
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 24,
   },
   title: {
     color: '#ffffff',
     fontSize: 22,
-    fontWeight: Platform.OS === 'ios' ? undefined : '700',
+    fontWeight: '700',
     marginBottom: 12,
   },
   message: {

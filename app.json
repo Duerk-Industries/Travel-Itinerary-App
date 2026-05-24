@@ -18,6 +18,7 @@
     },
     "ios": {
       "supportsTablet": true,
+      "buildNumber": "1",
       "bundleIdentifier": "com.duerkindustries.travelitineraryplanner",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
@@ -33,7 +34,8 @@
       }
     },
     "android": {
-      "package": "com.duerkindustries.travelitineraryplanner"
+      "package": "com.duerkindustries.travelitineraryplanner",
+      "versionCode": 1
     },
     "plugins": ["expo-web-browser"],
     "extra": {

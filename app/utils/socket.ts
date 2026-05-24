@@ -54,18 +54,33 @@ export const getSocket = (): Socket => {
   return _socket;
 };
 
+const logSocketFailure = (action: string, err: unknown): void => {
+  // Real-time features are non-critical to app startup. Log and continue so a
+  // transport hiccup never takes down the whole app.
+  // eslint-disable-next-line no-console
+  console.warn(`[socket] ${action} failed`, err);
+};
+
 /** Connect the socket with the current JWT. Call after login. */
 export const connectSocket = (token: string): void => {
-  const socket = getSocket();
-  socket.auth = { token };
-  if (!socket.connected) socket.connect();
+  try {
+    const socket = getSocket();
+    socket.auth = { token };
+    if (!socket.connected) socket.connect();
+  } catch (err) {
+    logSocketFailure('connect', err);
+  }
 };
 
 /** Disconnect and destroy the socket instance. Call on logout. */
 export const disconnectSocket = (): void => {
-  if (_socket) {
-    _socket.disconnect();
-    _socket = null;
+  try {
+    if (_socket) {
+      _socket.disconnect();
+      _socket = null;
+    }
+  } catch (err) {
+    logSocketFailure('disconnect', err);
   }
 };
 

@@ -75,7 +75,19 @@ import AddItemPopover, { type AddItemKind } from '../components/AddItemPopover';
 import PlacePickerDialog, { type PlacePickerSubmit } from '../components/PlacePickerDialog';
 import NoteInputDialog, { type NoteSubmit } from '../components/NoteInputDialog';
 import ChecklistInputDialog, { type ChecklistSubmit } from '../components/ChecklistInputDialog';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+// AsyncStorage is loaded lazily (see getAsyncStorage below) so the day-card
+// cache import doesn't add @react-native-async-storage/async-storage to the
+// module-evaluation graph of every tab that ends up importing this file.
+type AsyncStorageModule = typeof import('@react-native-async-storage/async-storage').default;
+let _asyncStoragePromise: Promise<AsyncStorageModule | null> | null = null;
+const getAsyncStorage = (): Promise<AsyncStorageModule | null> => {
+  if (!_asyncStoragePromise) {
+    _asyncStoragePromise = import('@react-native-async-storage/async-storage')
+      .then((mod) => mod.default ?? (mod as unknown as AsyncStorageModule))
+      .catch(() => null);
+  }
+  return _asyncStoragePromise;
+};
 import { LEGACY_ITINERARY_STATUS, normalizeItineraryStatus } from '../utils/itineraryStatus';
 import { useImageSourceGetter } from '../utils/imageSource';
 import { formatTemperatureFromCelsius, normalizeTemperatureUnit, type TemperatureUnit } from '../utils/temperatureUnit';
@@ -1131,7 +1143,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   useEffect(() => {
     const cache = async () => {
       if (!trip?.id || !dayCards.length) return;
-      await AsyncStorage.setItem(`overview.cache.${trip.id}`, JSON.stringify(dayCards));
+      const storage = await getAsyncStorage();
+      if (!storage) return;
+      await storage.setItem(`overview.cache.${trip.id}`, JSON.stringify(dayCards));
     };
     cache().catch(() => undefined);
   }, [dayCards, trip?.id]);
@@ -1141,7 +1155,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       if (!trip?.id) return;
       if (dayCards.length) return;
       try {
-        const raw = await AsyncStorage.getItem(`overview.cache.${trip.id}`);
+        const storage = await getAsyncStorage();
+        if (!storage) return;
+        const raw = await storage.getItem(`overview.cache.${trip.id}`);
         if (raw) {
           const parsed = JSON.parse(raw) as DayCard[];
           if (Array.isArray(parsed) && parsed.length) {
