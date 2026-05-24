@@ -1,7 +1,11 @@
-import React from 'react';
-import App from './App';
+const React = require('react');
+const AppModule = require('./App');
 
-const AppRoot = () => <App />;
+const App = AppModule && AppModule.default ? AppModule.default : AppModule;
 
-export default AppRoot;
+function AppRoot() {
+  return React.createElement(App);
+}
 
+module.exports = AppRoot;
+module.exports.default = AppRoot;
