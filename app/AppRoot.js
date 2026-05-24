@@ -5,6 +5,14 @@ const React = require('react');
 const AppModule = require('./App');
 const App = (AppModule && AppModule.default) ? AppModule.default : AppModule;
 
+const isRenderableComponent = (value) =>
+  typeof value === 'function' || (value && typeof value === 'object' && value.$$typeof);
+
+if (!isRenderableComponent(App)) {
+  const keys = AppModule && typeof AppModule === 'object' ? Object.keys(AppModule).join(', ') : 'none';
+  throw new Error(`App module did not export a React component. Received ${typeof App}; keys: ${keys}`);
+}
+
 function AppRoot() {
   return React.createElement(App);
 }

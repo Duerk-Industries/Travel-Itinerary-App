@@ -28,6 +28,11 @@ const findEngineIoClientRoot = (): string | null => {
 
 describe('Metro engine.io-client alias map', () => {
   const engineRoot = findEngineIoClientRoot();
+  const workspaceRoot = path.resolve(__dirname, '..', '..');
+  const metroConfigSources = [
+    path.join(workspaceRoot, 'metro.config.cjs'),
+    path.join(workspaceRoot, 'app', 'metro.config.js'),
+  ];
 
   it('locates engine.io-client in node_modules', () => {
     expect(engineRoot).not.toBeNull();
@@ -62,6 +67,14 @@ describe('Metro engine.io-client alias map', () => {
       const hasMatch = Object.prototype.hasOwnProperty.call(browserMap, esmKey)
         || Object.prototype.hasOwnProperty.call(browserMap, cjsKey);
       expect(hasMatch).toBe(true);
+    }
+  });
+
+  it.each(metroConfigSources)('declares every alias in %s', (configPath) => {
+    const source = fs.readFileSync(configPath, 'utf8');
+    for (const [nodeForm, browserForm] of Object.entries(engineIoNodeStubs)) {
+      expect(source).toContain(nodeForm);
+      expect(source).toContain(browserForm);
     }
   });
 });

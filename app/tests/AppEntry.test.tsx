@@ -29,23 +29,31 @@ jest.mock('../AppRoot', () => {
 }, { virtual: true });
 
 describe('AppEntry', () => {
-  let originalErrorUtils;
-  let getGlobalHandlerMock;
-  let setGlobalHandlerMock;
+  type ErrorUtilsShape = {
+    getGlobalHandler: jest.Mock;
+    setGlobalHandler: jest.Mock;
+  };
+
+  let originalErrorUtils: unknown;
+  let getGlobalHandlerMock: jest.Mock;
+  let setGlobalHandlerMock: jest.Mock;
+  const globalWithErrorUtils = globalThis as typeof globalThis & {
+    ErrorUtils?: ErrorUtilsShape;
+  };
 
   beforeEach(() => {
     jest.resetModules();
     getGlobalHandlerMock = jest.fn(() => jest.fn());
     setGlobalHandlerMock = jest.fn();
-    originalErrorUtils = globalThis.ErrorUtils;
-    globalThis.ErrorUtils = {
+    originalErrorUtils = globalWithErrorUtils.ErrorUtils;
+    globalWithErrorUtils.ErrorUtils = {
       getGlobalHandler: getGlobalHandlerMock,
       setGlobalHandler: setGlobalHandlerMock,
     };
   });
 
   afterEach(() => {
-    globalThis.ErrorUtils = originalErrorUtils;
+    globalWithErrorUtils.ErrorUtils = originalErrorUtils as ErrorUtilsShape | undefined;
   });
 
   it('registers the root component and sets global error handler', () => {

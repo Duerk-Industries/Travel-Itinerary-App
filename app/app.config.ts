@@ -38,6 +38,7 @@ const config: ExpoConfig = {
   ios: {
     supportsTablet: true,
     bundleIdentifier: 'com.duerkindustries.travelitineraryplanner',
+    buildNumber: '1',
     infoPlist: {
       "ITSAppUsesNonExemptEncryption": false,
       // Allow plain HTTP calls to the local backend while developing.
@@ -54,7 +55,8 @@ const config: ExpoConfig = {
   },
   android: {
     // Android appId must avoid hyphens; use a dot/alpha-only identifier.
-    package: 'com.duerkindustries.travelitineraryplanner'
+    package: 'com.duerkindustries.travelitineraryplanner',
+    versionCode: 1,
   },
   plugins: ['expo-web-browser'],
   extra: {

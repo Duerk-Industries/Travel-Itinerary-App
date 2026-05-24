@@ -17,4 +17,11 @@ describe('WanderBunnies branding config', () => {
   test('sets web favicon from app icon asset', () => {
     expect(config.web?.favicon).toBe('./assets/wanderbunnies-app-icon.png');
   });
+
+  test('sets native app identifiers and version fields for EAS builds', () => {
+    expect(config.ios?.bundleIdentifier).toBe('com.duerkindustries.travelitineraryplanner');
+    expect(config.ios?.buildNumber).toBe('1');
+    expect(config.android?.package).toBe('com.duerkindustries.travelitineraryplanner');
+    expect(config.android?.versionCode).toBe(1);
+  });
 });
