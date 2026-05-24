@@ -57,6 +57,11 @@ const config: ExpoConfig = {
     // Android appId must avoid hyphens; use a dot/alpha-only identifier.
     package: 'com.duerkindustries.travelitineraryplanner',
     versionCode: 1,
+    adaptiveIcon: {
+      foregroundImage: './assets/wanderbunnies-android-foreground.png',
+      backgroundColor: '#0b3c79',
+      monochromeImage: './assets/wanderbunnies-android-monochrome.png',
+    },
   },
   plugins: ['expo-web-browser'],
   extra: {

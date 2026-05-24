@@ -24,4 +24,10 @@ describe('WanderBunnies branding config', () => {
     expect(config.android?.package).toBe('com.duerkindustries.travelitineraryplanner');
     expect(config.android?.versionCode).toBe(1);
   });
+
+  test('sets Android adaptive icon assets in dynamic config', () => {
+    expect(config.android?.adaptiveIcon?.foregroundImage).toBe('./assets/wanderbunnies-android-foreground.png');
+    expect(config.android?.adaptiveIcon?.backgroundColor).toBe('#0b3c79');
+    expect(config.android?.adaptiveIcon?.monochromeImage).toBe('./assets/wanderbunnies-android-monochrome.png');
+  });
 });
