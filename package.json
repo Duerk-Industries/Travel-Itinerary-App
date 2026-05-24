@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "main": "app/AppEntry.js",
   "workspaces": [
     "server",
     "app",

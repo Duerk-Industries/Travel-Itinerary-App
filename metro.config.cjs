@@ -1,9 +1,6 @@
-// Metro config to normalize dev-server request URLs on Windows-style paths.
-// This keeps source map URLs clean for web devtools.
-const { getDefaultConfig } = require('expo/metro-config');
+// Root EAS builds should use the same Metro behavior as the app workspace.
+const config = require('./app/metro.config.js');
 const exclusionList = require('metro-config/private/defaults/exclusionList').default;
-
-const config = getDefaultConfig(__dirname);
 
 // Prevent Metro from scanning Firebase Functions dependencies. Those installs can
 // contain symlink/bin layouts that fail lstat on Windows-hosted runs.

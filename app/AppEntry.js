@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { registerRootComponent } from 'expo';
 import { Platform, SafeAreaView, StyleSheet, Text } from 'react-native';
+import * as AppRootModule from './AppRoot';
 
 let startupError = null;
 const startupErrorListeners = new Set();
@@ -45,6 +46,26 @@ const StartupFailure = ({ error }) => (
   </SafeAreaView>
 );
 
+const describeModuleShape = (moduleValue) => {
+  if (moduleValue == null) return String(moduleValue);
+  if (typeof moduleValue !== 'object') return typeof moduleValue;
+  try {
+    return `object keys: ${Object.keys(moduleValue).join(', ') || '(none)'}`;
+  } catch {
+    return 'object keys unavailable';
+  }
+};
+
+const resolveComponentExport = (moduleValue) => {
+  let current = moduleValue;
+  for (let depth = 0; depth < 5; depth += 1) {
+    if (typeof current === 'function') return current;
+    if (!current || typeof current !== 'object' || !('default' in current)) break;
+    current = current.default;
+  }
+  return typeof current === 'function' ? current : null;
+};
+
 class EntryErrorBoundary extends React.Component {
   state = { error: null };
 
@@ -74,10 +95,9 @@ const Root = () => {
 
   if (error) return <StartupFailure error={error} />;
 
-  let AppRoot;
-  try {
-    AppRoot = require('./AppRoot').default;
-  } catch (error) {
+  const AppRoot = resolveComponentExport(AppRootModule);
+  if (!AppRoot) {
+    const error = new Error(`AppRoot module did not export a React component (${describeModuleShape(AppRootModule)}).`);
     publishStartupError(error);
     console.log('App root failed to load', getErrorMessage(error));
     return <StartupFailure error={error} />;

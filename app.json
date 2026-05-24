@@ -1,34 +1,48 @@
 {
   "expo": {
-    "scheme": "travel-itinerary",
+    "name": "WanderBunnies",
+    "slug": "travel-itinerary-planner",
+    "scheme": "travelitineraryplanner",
+    "owner": "duerk-industries",
+    "icon": "./app/assets/wanderbunnies-app-icon.png",
+    "platforms": ["ios", "android", "web"],
+    "newArchEnabled": false,
+    "web": {
+      "bundler": "metro",
+      "favicon": "./app/assets/wanderbunnies-app-icon.png"
+    },
+    "splash": {
+      "image": "./app/assets/wanderbunnies-splash-screen.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0b3c79"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.duerkindustries.travelitineraryplanner",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true,
+          "NSExceptionDomains": {
+            "localhost": {
+              "NSIncludesSubdomains": true,
+              "NSExceptionAllowsInsecureHTTPLoads": true
+            }
+          }
+        }
+      }
+    },
+    "android": {
+      "package": "com.duerkindustries.travelitineraryplanner"
+    },
+    "plugins": ["expo-web-browser"],
     "extra": {
       "backendUrl": "https://duerk.org",
-      "firebaseApiKey": "AIzaSyXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-      "firebaseAuthDomain": "your-project-id.firebaseapp.com",
-      "firebaseProjectId": "your-project-id",
-      "firebaseStorageBucket": "your-project-id.appspot.com",
-      "firebaseMessagingSenderId": "your-sender-id",
-      "firebaseAppId": "your-app-id",
-      "recaptchaSiteKey": "your-recaptcha-site-key",
+      "refreshIntervalMs": 60000,
+      "sessionCacheTimeoutMinutes": 720,
       "eas": {
         "projectId": "06966c0b-d878-4346-850c-090c762f1916"
       }
-    },
-    "owner": "duerk-industries",
-    "slug": "travel-itinerary-planner",
-    "android": {
-      "package": "org.duerk.travelitineraryapp"
-    },
-    "ios": {
-      "bundleIdentifier": "org.duerk.travelitineraryapp",
-      "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
-      }
-    },
-    "plugins": [
-      "@react-native-firebase/app",
-      "@react-native-firebase/app-check",
-      "@react-native-firebase/auth"
-    ]
+    }
   }
 }
