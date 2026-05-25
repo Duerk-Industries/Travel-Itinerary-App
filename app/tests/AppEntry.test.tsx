@@ -21,7 +21,8 @@ jest.mock('react-native', () => {
 });
 
 jest.mock('react-native-safe-area-context', () => ({
-  SafeAreaView: ({ children }: any) => <div>{children}</div>,
+  SafeAreaView: ({ children }: any) => <div data-testid="safe-area-view">{children}</div>,
+  SafeAreaProvider: ({ children }: any) => <div data-testid="safe-area-provider">{children}</div>,
 }));
 
 // We can test resolveComponentExport behavior by mocking the require call
@@ -67,5 +68,21 @@ describe('AppEntry', () => {
     const { registerRootComponent } = require('expo');
     expect(registerRootComponent).toHaveBeenCalled();
     expect(setGlobalHandlerMock).toHaveBeenCalled();
+  });
+
+  it('renders StartupFailure with SafeAreaProvider if an error is caught', () => {
+    require('../AppEntry');
+    const { registerRootComponent } = require('expo');
+    const Root = registerRootComponent.mock.calls[0][0];
+
+    // simulate global error
+    const errorHandler = setGlobalHandlerMock.mock.calls[0][0];
+    errorHandler(new Error('Fatal boom'), true);
+
+    const { getByTestId, getByText } = render(<Root />);
+    expect(getByTestId('safe-area-provider')).toBeTruthy();
+    expect(getByTestId('safe-area-view')).toBeTruthy();
+    expect(getByText('WanderBunnies could not start')).toBeTruthy();
+    expect(getByText('Fatal boom')).toBeTruthy();
   });
 });

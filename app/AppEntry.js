@@ -4,7 +4,7 @@ import '@expo/metro-runtime';
 import React, { useEffect, useState } from 'react';
 import { registerRootComponent } from 'expo';
 import { Platform, StyleSheet, Text, StatusBar, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
 
 let startupError = null;
 const startupErrorListeners = new Set();
@@ -54,12 +54,14 @@ if (globalErrorUtils && typeof globalErrorUtils.setGlobalHandler === 'function')
 }
 
 const StartupFailure = ({ error }) => (
-  <SafeAreaView style={styles.safeArea}>
-    <View style={styles.container}>
-      <Text style={styles.title}>WanderBunnies could not start</Text>
-      <Text style={styles.message}>{getErrorMessage(error)}</Text>
-    </View>
-  </SafeAreaView>
+  <SafeAreaProvider>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <Text style={styles.title}>WanderBunnies could not start</Text>
+        <Text style={styles.message}>{getErrorMessage(error)}</Text>
+      </View>
+    </SafeAreaView>
+  </SafeAreaProvider>
 );
 
 const describeModuleShape = (moduleValue) => {

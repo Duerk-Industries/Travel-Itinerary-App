@@ -16,6 +16,12 @@ describe('socket URL resolution', () => {
 
   it('uses the configured API backend for native sockets', () => {
     Platform.OS = 'ios';
+    delete process.env.EXPO_PUBLIC_BACKEND_URL;
+    delete process.env.BACKEND_URL;
+    delete process.env.WEB_URL;
+    delete process.env.API_BASE_URL;
+    delete process.env.REACT_APP_BACKEND_URL;
+    delete process.env.REACT_NATIVE_APP_BACKEND_URL;
     process.env.API_BASE = 'http://api.example.test:4000';
 
     expect(resolveSocketServerUrl()).toBe('http://api.example.test:4000');
