@@ -18,9 +18,13 @@ const config = createSharedMetroConfig({
   // Metro accepts an array of RegExp directly for `resolver.blockList`; this
   // avoids depending on metro-config's private exclusionList helper (which
   // lives under `metro-config/private/` and is unstable across Metro
-  // versions). We still exclude functions/node_modules so the Cloud
-  // Functions package doesn't get pulled into the app bundle.
-  blockedPaths: [/functions[\\/]node_modules[\\/].*/],
+  // versions). We broadly exclude backend directories (server, functions)
+  // and emulator data to keep the app bundle clean and the crawler fast.
+  blockedPaths: [
+    /server[\\/].*/,
+    /functions[\\/].*/,
+    /\.firebase-data[\\/].*/,
+  ],
 });
 
 // EAS builds may receive bundler URLs that contain Windows-style backslashes

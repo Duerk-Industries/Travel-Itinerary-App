@@ -15,7 +15,11 @@ const config = createSharedMetroConfig({
   primaryNodeModules: projectNodeModules,
   secondaryNodeModules: workspaceNodeModules,
   watchFolders: [workspaceRoot],
-  blockedPaths: [/functions[\\/]node_modules[\\/].*/],
+  blockedPaths: [
+    /server[\\/].*/,
+    /functions[\\/].*/,
+    /\.firebase-data[\\/].*/,
+  ],
 });
 
 // Local-dev only: serve the React DevTools installHook source map when the
