@@ -47,4 +47,30 @@ describe('socket URL resolution', () => {
     Platform.OS = 'ios';
     expect(resolveSocketTransports()).toEqual(['websocket']);
   });
+
+  it('remaps a loopback socket URL to 10.0.2.2 on the Android emulator', () => {
+    Platform.OS = 'android';
+    delete process.env.BACKEND_URL;
+    delete process.env.WEB_URL;
+    delete process.env.API_BASE_URL;
+    delete process.env.API_BASE;
+    delete process.env.REACT_APP_BACKEND_URL;
+    delete process.env.REACT_NATIVE_APP_BACKEND_URL;
+    process.env.EXPO_PUBLIC_BACKEND_URL = 'http://localhost:4000';
+
+    expect(resolveSocketServerUrl()).toBe('http://10.0.2.2:4000');
+  });
+
+  it('keeps a loopback socket URL on the iOS simulator (host network is shared)', () => {
+    Platform.OS = 'ios';
+    delete process.env.BACKEND_URL;
+    delete process.env.WEB_URL;
+    delete process.env.API_BASE_URL;
+    delete process.env.API_BASE;
+    delete process.env.REACT_APP_BACKEND_URL;
+    delete process.env.REACT_NATIVE_APP_BACKEND_URL;
+    process.env.EXPO_PUBLIC_BACKEND_URL = 'http://localhost:4000';
+
+    expect(resolveSocketServerUrl()).toBe('http://localhost:4000');
+  });
 });
