@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, Text, View, useWindowDimensions, TouchableOpacity } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, Text, View, useWindowDimensions, TouchableOpacity } from 'react-native';
 import type { LodgingDraft } from '../tabs/lodging';
 import LodgingForm from './LodgingForm'; // Assuming we extract the form fields into this component
 import DialogShell from './DialogShell';
@@ -48,9 +48,18 @@ const LodgingDialog: React.FC<LodgingDialogProps> = (props) => {
       overlayStyle={{ justifyContent: 'center' }}
       cardStyle={[props.styles.modalCard, { marginTop: 0 }, isCompact && { width: '100%', maxHeight: '90%' }]}
     >
-          <ScrollView style={{ maxHeight: isCompact ? 520 : 440 }} contentContainerStyle={{ paddingRight: 12 }}>
-            <LodgingForm {...props} isCompact={isCompact} />
-          </ScrollView>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={{ flexShrink: 1 }}
+          >
+            <ScrollView
+              style={{ maxHeight: isCompact ? 520 : 440 }}
+              contentContainerStyle={{ paddingRight: 12 }}
+              keyboardShouldPersistTaps="handled"
+            >
+              <LodgingForm {...props} isCompact={isCompact} />
+            </ScrollView>
+          </KeyboardAvoidingView>
           <View style={props.styles.row}>
             <TouchableOpacity
               style={[props.styles.button, props.styles.dangerButton]}

@@ -23,6 +23,7 @@
     "@react-navigation/native-stack": "^7.14.5",
     "caniuse-lite": "^1.0.30001770",
     "expo": "~54.0.34",
+    "expo-clipboard": "~8.0.8",
     "expo-constants": "~18.0.10",
     "expo-web-browser": "~15.0.11",
     "firebase": "^12.13.0",

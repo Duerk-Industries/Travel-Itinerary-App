@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { formatDateLong } from '../utils/formatDateLong';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import type { FlightEditDraft, GroupMemberOption, TransferType } from '../tabs/transfers';
@@ -113,7 +113,15 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
         <Text style={styles.helperText}>
           Current Departure: {formatDateLong(flight.departureDate)} at {flight.departureTime || '?'}
         </Text>
-        <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ paddingRight: 12, paddingBottom: 8 }}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ flexShrink: 1 }}
+        >
+        <ScrollView
+          style={{ maxHeight: 420 }}
+          contentContainerStyle={{ paddingRight: 12, paddingBottom: 8 }}
+          keyboardShouldPersistTaps="handled"
+        >
           <Text style={styles.modalLabel}>Passengers</Text>
           <View style={styles.payerChips}>
             {groupMembers.map((m) => {
@@ -466,6 +474,7 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
             })}
           </View>
         </ScrollView>
+        </KeyboardAvoidingView>
         <View style={[styles.row, { marginTop: 16 }]}>
           <TouchableOpacity style={[styles.button, styles.dangerButton]} onPress={onClose}>
             <Text style={styles.dangerButtonText}>Cancel</Text>

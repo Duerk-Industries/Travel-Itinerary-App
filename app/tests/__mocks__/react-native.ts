@@ -13,6 +13,7 @@ export const FlatList = 'FlatList';
 export const SectionList = 'SectionList';
 export const Switch = 'Switch';
 export const Modal = 'Modal';
+export const KeyboardAvoidingView = 'KeyboardAvoidingView';
 export const SafeAreaView = 'SafeAreaView';
 export const ActivityIndicator = 'ActivityIndicator';
 export const AsyncStorage = {
@@ -55,6 +56,7 @@ export default {
   SectionList,
   Switch,
   Modal,
+  KeyboardAvoidingView,
   SafeAreaView,
   ActivityIndicator,
   AsyncStorage,
