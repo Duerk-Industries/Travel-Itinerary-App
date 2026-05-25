@@ -105,6 +105,8 @@ import { connectSocket, disconnectSocket } from './utils/socket';
 import { exportCsv } from './utils/csvExport';
 import type { PresenceUser } from '../packages/messaging/src/types';
 
+WebBrowser.maybeCompleteAuthSession();
+
 const TOP_BANNER_ICON = require('./assets/wanderbunnies-reference.png');
 type SafeAreaViewCompatProps = React.ComponentProps<typeof View>;
 const SafeAreaView = NativeSafeAreaView as unknown as React.ComponentType<SafeAreaViewCompatProps>;

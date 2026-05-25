@@ -25,6 +25,26 @@ describe('app.config.ts', () => {
     expect(config.android?.versionCode).toBeDefined();
   });
 
+  it('does not opt out of React Native New Architecture', () => {
+    const config = loadConfig();
+    expect(config.newArchEnabled).not.toBe(false);
+  });
+
+  it('declares automatic userInterfaceStyle so iOS/Android honor dark mode', () => {
+    const config = loadConfig();
+    expect(config.userInterfaceStyle).toBe('automatic');
+  });
+
+  it('opts in to Android edge-to-edge so SDK 54 / Android 15 system bars do not overlap content', () => {
+    const config = loadConfig();
+    expect((config.android as any)?.edgeToEdgeEnabled).toBe(true);
+  });
+
+  it('keeps the Android soft keyboard in pan mode so inputs scroll above the keyboard', () => {
+    const config = loadConfig();
+    expect((config.android as any)?.softwareKeyboardLayoutMode).toBe('pan');
+  });
+
   describe('iOS ATS', () => {
     const originalNodeEnv = process.env.NODE_ENV;
     afterEach(() => {

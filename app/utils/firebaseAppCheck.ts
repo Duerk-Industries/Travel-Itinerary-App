@@ -28,11 +28,9 @@ const initializeAppCheckOnce = async () => {
       const { initializeApp, getApp, getApps } = await import('firebase/app');
       const { initializeAppCheck: initAppCheck, ReCaptchaV3Provider } = await import('firebase/app-check');
 
-      const extra =
-        Constants.expoConfig?.extra ||
-        (Constants as any)?.manifest?.extra ||
-        (Constants as any)?.manifest2?.extra ||
-        {};
+      // Constants.manifest and manifest2 were removed in expo-constants 14+
+      // (SDK 49). expoConfig is the only supported surface in SDK 54.
+      const extra = Constants.expoConfig?.extra ?? {};
 
       // Load configuration from environment variables (local .env) or Expo config
       const apiKey = process.env.EXPO_PUBLIC_FIREBASE_API_KEY || process.env.FIREBASE_API_KEY || extra.firebaseApiKey;

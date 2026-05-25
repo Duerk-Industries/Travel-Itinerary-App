@@ -16,9 +16,25 @@ describe('static app.json native config', () => {
     expect(expo.version).toBe(appPackage.version);
   });
 
+  it('does not disable React Native New Architecture', () => {
+    expect(expo.newArchEnabled).not.toBe(false);
+  });
+
   it('does not ship a blanket iOS ATS arbitrary-loads exception', () => {
     const ats = expo.ios?.infoPlist?.NSAppTransportSecurity;
     expect(ats?.NSAllowsArbitraryLoads).toBeUndefined();
     expect(ats?.NSExceptionDomains?.localhost?.NSExceptionAllowsInsecureHTTPLoads).toBe(true);
+  });
+
+  it('declares automatic userInterfaceStyle so the OS dark-mode setting is respected', () => {
+    expect(expo.userInterfaceStyle).toBe('automatic');
+  });
+
+  it('opts in to Android edge-to-edge for SDK 54 / Android 15 readiness', () => {
+    expect(expo.android?.edgeToEdgeEnabled).toBe(true);
+  });
+
+  it('keeps the Android soft keyboard in pan mode', () => {
+    expect(expo.android?.softwareKeyboardLayoutMode).toBe('pan');
   });
 });

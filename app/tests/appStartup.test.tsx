@@ -19,6 +19,7 @@ jest.mock('expo-constants', () => ({
 }));
 
 jest.mock('expo-web-browser', () => ({
+  maybeCompleteAuthSession: jest.fn(),
   openAuthSessionAsync: jest.fn(async () => ({ type: 'cancel' })),
 }));
 
@@ -42,6 +43,10 @@ const WebBrowser = require('expo-web-browser');
 describe('App startup', () => {
   beforeEach(() => {
     process.env.NODE_ENV = 'test';
+  });
+
+  it('completes pending browser auth sessions when the app module loads', () => {
+    expect(WebBrowser.maybeCompleteAuthSession).toHaveBeenCalledTimes(1);
   });
 
   it('renders the signed-out native shell without crashing', () => {

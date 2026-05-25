@@ -26,7 +26,7 @@ const config: ExpoConfig = {
   owner: 'duerk-industries',
   icon: './assets/wanderbunnies-app-icon.png',
   platforms: ['ios', 'android', 'web'],
-  newArchEnabled: false,
+  userInterfaceStyle: 'automatic',
   web: {
     bundler: 'metro',
     favicon: './assets/wanderbunnies-app-icon.png',
@@ -64,6 +64,10 @@ const config: ExpoConfig = {
     // Android appId must avoid hyphens; use a dot/alpha-only identifier.
     package: 'com.duerkindustries.travelitineraryplanner',
     versionCode: 1,
+    // Android 15 (API 35) targets edge-to-edge by default; opt in explicitly so
+    // the system bars don't overlap our SafeAreaView-wrapped content.
+    edgeToEdgeEnabled: true,
+    softwareKeyboardLayoutMode: 'pan',
     adaptiveIcon: {
       foregroundImage: './assets/wanderbunnies-android-foreground.png',
       backgroundColor: '#0b3c79',

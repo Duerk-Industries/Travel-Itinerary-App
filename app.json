@@ -7,7 +7,7 @@
     "owner": "duerk-industries",
     "icon": "./app/assets/wanderbunnies-app-icon.png",
     "platforms": ["ios", "android", "web"],
-    "newArchEnabled": false,
+    "userInterfaceStyle": "automatic",
     "web": {
       "bundler": "metro",
       "favicon": "./app/assets/wanderbunnies-app-icon.png"
@@ -36,6 +36,8 @@
     "android": {
       "package": "com.duerkindustries.travelitineraryplanner",
       "versionCode": 1,
+      "edgeToEdgeEnabled": true,
+      "softwareKeyboardLayoutMode": "pan",
       "adaptiveIcon": {
         "foregroundImage": "./app/assets/wanderbunnies-android-foreground.png",
         "backgroundColor": "#0b3c79",
