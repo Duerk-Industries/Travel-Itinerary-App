@@ -73,14 +73,15 @@ describe('socket module load safety', () => {
   });
 
   it('Metro engine.io-client alias targets exist for the platforms we ship', () => {
-    // Reads the alias map straight from metro.config.cjs and asserts the
+    // Reads the alias map straight from metro.shared.cjs (which both
+    // metro.config.cjs and app/metro.config.js consume) and asserts the
     // browser-variant files Metro will redirect to actually exist in the
     // installed engine.io-client. If a future engine.io-client release renames
     // those files, this fails before the iOS bundle silently breaks.
     const fs = require('node:fs');
     const path = require('node:path');
     const cfg = fs.readFileSync(
-      path.resolve(__dirname, '..', '..', 'metro.config.cjs'),
+      path.resolve(__dirname, '..', '..', 'metro.shared.cjs'),
       'utf8',
     );
     expect(cfg).toMatch(/engine\.io-client/);

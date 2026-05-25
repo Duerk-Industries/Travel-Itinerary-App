@@ -1,9 +1,10 @@
 /**
- * Verifies the Metro resolver alias map declared in metro.config.cjs (and
- * mirrored in app/metro.config.js). The alias replaces engine.io-client's
- * `*.node.js` transport files with their browser-safe equivalents so that
- * Hermes (iOS/Android) does not try to evaluate Node-only modules like
- * `xmlhttprequest-ssl` or `ws/index.js` at App.tsx import time.
+ * Verifies the Metro resolver alias map declared in metro.shared.cjs (used
+ * by both metro.config.cjs and app/metro.config.js). The alias replaces
+ * engine.io-client's `*.node.js` transport files with their browser-safe
+ * equivalents so that Hermes (iOS/Android) does not try to evaluate
+ * Node-only modules like `xmlhttprequest-ssl` or `ws/index.js` at App.tsx
+ * import time.
  *
  * We can't drive Metro from a unit test, but we can lock in the alias map
  * itself and the contract: every entry must point to a file that actually
@@ -12,11 +13,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const engineIoNodeStubs: Record<string, string> = {
-  './transports/polling-xhr.node.js': './transports/polling-xhr.js',
-  './transports/websocket.node.js': './transports/websocket.js',
-  './globals.node.js': './globals.js',
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { ENGINE_IO_NODE_STUBS } = require(path.resolve(__dirname, '..', '..', 'metro.shared.cjs')) as {
+  ENGINE_IO_NODE_STUBS: Record<string, string>;
 };
+const engineIoNodeStubs = ENGINE_IO_NODE_STUBS;
 
 const findEngineIoClientRoot = (): string | null => {
   const candidates = [
@@ -29,10 +30,11 @@ const findEngineIoClientRoot = (): string | null => {
 describe('Metro engine.io-client alias map', () => {
   const engineRoot = findEngineIoClientRoot();
   const workspaceRoot = path.resolve(__dirname, '..', '..');
-  const metroConfigSources = [
-    path.join(workspaceRoot, 'metro.config.cjs'),
-    path.join(workspaceRoot, 'app', 'metro.config.js'),
-  ];
+  // The alias map now lives in metro.shared.cjs (consumed by both the
+  // root EAS config and the app-local dev config). Locking the literals
+  // in source here means a stray refactor that drops an alias entry will
+  // fail this test before it can reach a deploy.
+  const metroConfigSources = [path.join(workspaceRoot, 'metro.shared.cjs')];
 
   it('locates engine.io-client in node_modules', () => {
     expect(engineRoot).not.toBeNull();

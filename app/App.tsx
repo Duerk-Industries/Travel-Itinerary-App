@@ -55,7 +55,6 @@ import {
 import { getAppTheme, type AppTheme } from './theme/theme';
 import { FOLLOWED_TRIP_HIDDEN_PAGES, shouldAllowPageChange, shouldDisableTab } from './utils/wizardGuard';
 import * as WebBrowser from 'expo-web-browser';
-import { Buffer } from 'buffer';
 import {
   clearSessionAsync,
   loadLastActiveTripId,
