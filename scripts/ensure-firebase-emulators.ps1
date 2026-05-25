@@ -26,6 +26,20 @@ function Test-PortOpen {
   }
 }
 
+function Get-LastCommandExitCode {
+  param([bool]$CommandSucceeded)
+
+  if ($CommandSucceeded) {
+    return 0
+  }
+
+  $lastExitCodeVariable = Get-Variable -Name LASTEXITCODE -Scope Global -ErrorAction SilentlyContinue
+  if ($null -ne $lastExitCodeVariable -and $null -ne $lastExitCodeVariable.Value) {
+    return [int]$lastExitCodeVariable.Value
+  }
+  return 1
+}
+
 $OpenPort = $null
 foreach ($port in $Ports) {
   if (Test-PortOpen -Port $port) {
@@ -40,23 +54,27 @@ if ($null -ne $OpenPort) {
 }
 
 $LocalFirebase = Join-Path $RootDir "node_modules/.bin/firebase"
-$SelectScript = Join-Path $RootDir "scripts/select-latest-firebase-export.js"
+$SelectScript = Join-Path $RootDir "scripts/select-latest-firebase-export.mjs"
 if (Test-Path $SelectScript) {
   node $SelectScript
+  $selectExitCode = Get-LastCommandExitCode -CommandSucceeded $?
+  if ($selectExitCode -ne 0) {
+    exit $selectExitCode
+  }
 }
 
 if (Test-Path $LocalFirebase) {
   Write-Host "Firebase emulators not detected. Starting..."
   & $LocalFirebase emulators:start --import=./.firebase-data --export-on-exit=./.firebase-data
-  exit $LASTEXITCODE
+  exit (Get-LastCommandExitCode -CommandSucceeded $?)
 } elseif (Get-Command firebase -ErrorAction SilentlyContinue) {
   Write-Host "Firebase emulators not detected. Starting..."
   & firebase emulators:start --import=./.firebase-data --export-on-exit=./.firebase-data
-  exit $LASTEXITCODE
+  exit (Get-LastCommandExitCode -CommandSucceeded $?)
 } elseif (Get-Command npx -ErrorAction SilentlyContinue) {
   Write-Host "Firebase emulators not detected. Starting..."
   & npx --yes firebase-tools emulators:start --import=./.firebase-data --export-on-exit=./.firebase-data
-  exit $LASTEXITCODE
+  exit (Get-LastCommandExitCode -CommandSucceeded $?)
 } else {
   Write-Error "firebase CLI not found. Install firebase-tools or ensure npx is available."
   exit 1
