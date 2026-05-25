@@ -351,15 +351,36 @@ const extractTokenFromUrl = (rawUrl: string) => {
   return { token: null, authCode: null, authError: null, url: null, source: null, isConfirm: false, isSecondaryConfirm: false, requirePasswordSetup: false } as const;
 };
 
+const decodeBase64UrlUtf8 = (value: string): string | null => {
+  try {
+    const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+    const BufferCtor = (globalThis as any).Buffer;
+    if (typeof BufferCtor?.from === 'function') {
+      return BufferCtor.from(padded, 'base64').toString('utf8');
+    }
+    if (typeof globalThis.atob !== 'function') return null;
+    const binary = globalThis.atob(padded);
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    const TextDecoderCtor = (globalThis as any).TextDecoder;
+    if (typeof TextDecoderCtor === 'function') {
+      return new TextDecoderCtor('utf-8').decode(bytes);
+    }
+    const escaped = Array.from(bytes, (byte) => `%${byte.toString(16).padStart(2, '0')}`).join('');
+    return decodeURIComponent(escaped);
+  } catch {
+    return null;
+  }
+};
+
 const decodeTokenClaims = (
   token: string
 ): { firstName?: string; lastName?: string; email?: string; provider?: string; role?: string } | null => {
   try {
     const payload = token.split('.')[1];
     if (!payload) return null;
-    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
-    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
-    return JSON.parse(Buffer.from(padded, 'base64').toString());
+    const decoded = decodeBase64UrlUtf8(payload);
+    return decoded ? JSON.parse(decoded) : null;
   } catch {
     return null;
   }
@@ -1254,9 +1275,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     try {
       const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUrl);
       if (result.type === 'success' && result.url) {
-        const { token, requirePasswordSetup } = extractTokenFromUrl(result.url);
+        const { token, authCode, requirePasswordSetup } = extractTokenFromUrl(result.url);
         if (token) {
           handleAuthSuccess(token, undefined, { requirePasswordSetup });
+          return;
+        }
+        if (authCode) {
+          await exchangeAuthCode(authCode);
         }
       }
     } catch (err) {
@@ -1314,9 +1339,27 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     [activeTripId]
   );
 
+  const exchangeAuthCode = useCallback(
+    async (authCode: string) => {
+      const exchangeRes = await fetch(`${backendUrl}/api/auth/exchange`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: authCode }),
+      });
+      const exchangeData = await exchangeRes.json().catch(() => ({}));
+      if (!exchangeRes.ok || !exchangeData?.token) {
+        throw new Error(exchangeData?.error || 'Sign-in could not be completed.');
+      }
+      handleAuthSuccess(String(exchangeData.token), undefined, {
+        requirePasswordSetup: Boolean(exchangeData.requirePasswordSetup),
+      });
+    },
+    [handleAuthSuccess]
+  );
+
   useEffect(() => {
     const handleDeepLink = (event: { url: string }) => {
-      const { token, authError, isConfirm, isSecondaryConfirm, requirePasswordSetup } = extractTokenFromUrl(event.url);
+      const { token, authCode, authError, isConfirm, isSecondaryConfirm, requirePasswordSetup } = extractTokenFromUrl(event.url);
       if (token && isConfirm) {
         confirmEmailToken(token, event.url);
         return;
@@ -1327,6 +1370,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       }
       if (token) {
         handleAuthSuccess(token, undefined, { requirePasswordSetup });
+        return;
+      }
+      if (authCode) {
+        void exchangeAuthCode(authCode).catch((error) => {
+          setAuthErrorMessage((error as Error).message || 'Sign-in could not be completed.');
+        });
         return;
       }
       if (authError) {
@@ -1412,18 +1461,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       } else if (authCode) {
         void (async () => {
           try {
-            const exchangeRes = await fetch(`${backendUrl}/api/auth/exchange`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ code: authCode }),
-            });
-            const exchangeData = await exchangeRes.json().catch(() => ({}));
-            if (!exchangeRes.ok || !exchangeData?.token) {
-              throw new Error(exchangeData?.error || 'Sign-in could not be completed.');
-            }
-            handleAuthSuccess(String(exchangeData.token), undefined, {
-              requirePasswordSetup: Boolean(exchangeData.requirePasswordSetup),
-            });
+            await exchangeAuthCode(authCode);
           } catch (error) {
             setAuthErrorMessage((error as Error).message || 'Sign-in could not be completed.');
           } finally {
@@ -1450,7 +1488,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     return () => {
       subscription?.remove?.();
     };
-  }, [handleAuthSuccess]);
+  }, [exchangeAuthCode, handleAuthSuccess]);
 
   const completeInitialPasswordSetup = async () => {
     const result = await submitInitialPasswordSetup();

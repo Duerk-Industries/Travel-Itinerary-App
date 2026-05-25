@@ -39,10 +39,27 @@ delete process.env.REACT_NATIVE_APP_BACKEND_URL;
 const App = require('../App').default;
 const ExpoLinking = require('expo-linking');
 const WebBrowser = require('expo-web-browser');
+const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+
+const makeJwt = (payload: Record<string, unknown>) => {
+  const encoded = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  return `test.${encoded}.sig`;
+};
 
 describe('App startup', () => {
+  let fetchSpy: jest.SpyInstance | null = null;
+
   beforeEach(() => {
     process.env.NODE_ENV = 'test';
+    fetchSpy?.mockRestore();
+    fetchSpy = null;
+    WebBrowser.openAuthSessionAsync.mockResolvedValue({ type: 'cancel' });
+    AsyncStorage.setItem.mockClear();
+  });
+
+  afterEach(() => {
+    fetchSpy?.mockRestore();
+    fetchSpy = null;
   });
 
   it('completes pending browser auth sessions when the app module loads', () => {
@@ -65,5 +82,46 @@ describe('App startup', () => {
         'travelitineraryplanner://login',
       );
     });
+  });
+
+  it('exchanges native Google OAuth auth codes before applying the session', async () => {
+    const token = makeJwt({
+      email: 'traveler@example.com',
+      firstName: 'Tara',
+      lastName: 'Traveler',
+      role: 'user',
+      userId: 'u1',
+    });
+    fetchSpy = jest.spyOn(global, 'fetch' as any).mockResolvedValue({
+      ok: true,
+      json: async () => ({ token, requirePasswordSetup: true }),
+    } as any);
+    WebBrowser.openAuthSessionAsync.mockResolvedValueOnce({
+      type: 'success',
+      url: 'travelitineraryplanner://login?auth_code=native-code',
+    });
+
+    const { getByTestId } = render(<App />);
+    const originalBuffer = (globalThis as any).Buffer;
+    try {
+      (globalThis as any).Buffer = undefined;
+      fireEvent.press(getByTestId('auth-form-google'));
+
+      await waitFor(() => {
+        expect(fetchSpy).toHaveBeenCalledWith('https://duerk.org/api/auth/exchange', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: 'native-code' }),
+        });
+      });
+      await waitFor(() => {
+        expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+          'stp.session',
+          expect.stringContaining('"name":"Tara Traveler"')
+        );
+      });
+    } finally {
+      (globalThis as any).Buffer = originalBuffer;
+    }
   });
 });
