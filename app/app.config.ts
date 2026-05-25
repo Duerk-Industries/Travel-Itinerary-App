@@ -36,24 +36,30 @@ const config: ExpoConfig = {
     resizeMode: 'contain',
     backgroundColor: '#0b3c79',
   },
-  ios: {
-    supportsTablet: true,
-    bundleIdentifier: 'com.duerkindustries.travelitineraryplanner',
-    buildNumber: '1',
-    infoPlist: {
-      "ITSAppUsesNonExemptEncryption": false,
-      // Allow plain HTTP calls to the local backend while developing.
-      NSAppTransportSecurity: {
-        NSAllowsArbitraryLoads: true,
-        NSExceptionDomains: {
-          localhost: {
-            NSIncludesSubdomains: true,
-            NSExceptionAllowsInsecureHTTPLoads: true,
+  ios: (() => {
+    // Only dev builds get the blanket NSAllowsArbitraryLoads escape hatch (so
+    // a physical device can reach any LAN dev host). Production builds get a
+    // narrow loopback exception so HTTP to localhost still works in simulator
+    // dev clients without opening up plaintext to everything else.
+    const isProduction = process.env.NODE_ENV === 'production';
+    return {
+      supportsTablet: true,
+      bundleIdentifier: 'com.duerkindustries.travelitineraryplanner',
+      buildNumber: '1',
+      infoPlist: {
+        ITSAppUsesNonExemptEncryption: false,
+        NSAppTransportSecurity: {
+          ...(isProduction ? {} : { NSAllowsArbitraryLoads: true }),
+          NSExceptionDomains: {
+            localhost: {
+              NSIncludesSubdomains: true,
+              NSExceptionAllowsInsecureHTTPLoads: true,
+            },
           },
         },
       },
-    }
-  },
+    };
+  })(),
   android: {
     // Android appId must avoid hyphens; use a dot/alpha-only identifier.
     package: 'com.duerkindustries.travelitineraryplanner',

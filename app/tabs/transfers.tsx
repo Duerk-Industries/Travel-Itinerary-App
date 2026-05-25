@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Modal } from 'react-native';
+import { Alert, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Modal } from 'react-native';
 import DropdownOptionButton from '../components/DropdownOptionButton';
 import { formatDateLong } from '../utils/formatDateLong';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
@@ -1056,15 +1056,15 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       (editingFlight.departureTime && !isValidTime(editingFlight.departureTime)) ||
       (editingFlight.arrivalTime && !isValidTime(editingFlight.arrivalTime))
     ) {
-      alert('Enter valid departure and arrival times (HH:MM).');
+      Alert.alert('Enter valid departure and arrival times (HH:MM).');
       return;
     }
     if (!relaxed && !editingFlight.passengerIds.length) {
-      alert('Select at least one passenger');
+      Alert.alert('Select at least one passenger');
       return;
     }
     if (editingFlightId === 'new' && !activeTripId && !isWizard) {
-      alert('Select an active trip before adding a transfer.');
+      Alert.alert('Select an active trip before adding a transfer.');
       return;
     }
     if (isWizard) {
@@ -1088,7 +1088,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
         defaultPayerId
       );
       if (error || !payload) {
-        alert(error || 'Unable to add flight');
+        Alert.alert(error || 'Unable to add flight');
         return;
       }
       res = await fetch(`${backendUrl}/api/transfers`, {
@@ -1110,7 +1110,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     }
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      alert(data.error || 'Unable to update flight');
+      Alert.alert(data.error || 'Unable to update flight');
       return;
     }
     closeFlightDetails();
@@ -1122,12 +1122,12 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     if (readOnly) return false;
     if (!userToken) return false;
     if (!activeTripId) {
-      alert('Select an active trip before adding a transfer.');
+      Alert.alert('Select an active trip before adding a transfer.');
       return false;
     }
 
     if (!shouldRelaxRequiredFields(newFlight.status) && !newFlight.passengerIds.length) {
-      alert('Select at least one passenger');
+      Alert.alert('Select at least one passenger');
       return false;
     }
     const payload = buildFlightPayload(
@@ -1145,7 +1145,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
 
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      alert(data.error || 'Unable to save flight');
+      Alert.alert(data.error || 'Unable to save flight');
       return false;
     }
 
@@ -1163,7 +1163,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     if (!userToken) return;
     const result = await removeFlightApi(backendUrl, headers, id);
     if (!result.ok) {
-      alert(result.error || 'Unable to delete flight');
+      Alert.alert(result.error || 'Unable to delete flight');
       return;
     }
     onDataChanged ? onDataChanged() : fetchFlights();
@@ -1183,7 +1183,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       }
       onDataChanged ? onDataChanged() : fetchFlights();
     } catch (err: any) {
-      alert(err?.message || 'Unable to submit vote');
+      Alert.alert(err?.message || 'Unable to submit vote');
     }
   };
 
@@ -1201,7 +1201,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       }
       onDataChanged ? onDataChanged() : await fetchFlights();
     } catch (err: any) {
-      alert(err?.message || 'Unable to submit rating');
+      Alert.alert(err?.message || 'Unable to submit rating');
     }
   };
 
@@ -1225,12 +1225,12 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
     if (readOnly) return;
     if (!userToken) return;
     if (!activeTripId && !isWizard) {
-      alert('Select an active trip before adding a transfer.');
+      Alert.alert('Select an active trip before adding a transfer.');
       return;
     }
     const textToParse = pasteText.trim();
     if (!textToParse) {
-      alert('Please paste some text first.');
+      Alert.alert('Please paste some text first.');
       return;
     }
 
@@ -1292,7 +1292,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
       setShowPasteModal(false);
       setPasteText('');
     } catch (err: any) {
-      alert(err.message || 'Unable to parse text');
+      Alert.alert(err.message || 'Unable to parse text');
     } finally {
       setIsParsing(false);
     }
@@ -1301,7 +1301,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
   const handleAddPress = () => {
     if (readOnly) return;
     if (!activeTripId && !isWizard) {
-      alert('Select an active trip before adding a transfer.');
+      Alert.alert('Select an active trip before adding a transfer.');
       return;
     }
     setEditingFlightId('new');

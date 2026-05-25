@@ -24,4 +24,30 @@ describe('app.config.ts', () => {
     expect(config.ios?.buildNumber).toBeDefined();
     expect(config.android?.versionCode).toBeDefined();
   });
+
+  describe('iOS ATS', () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    afterEach(() => {
+      process.env.NODE_ENV = originalNodeEnv;
+      jest.resetModules();
+    });
+
+    it('keeps a narrow localhost exception in production (no blanket NSAllowsArbitraryLoads)', () => {
+      process.env.NODE_ENV = 'production';
+      jest.resetModules();
+      const config = loadConfig();
+      const ats = (config.ios?.infoPlist as any)?.NSAppTransportSecurity;
+      expect(ats).toBeDefined();
+      expect(ats.NSAllowsArbitraryLoads).toBeUndefined();
+      expect(ats.NSExceptionDomains?.localhost?.NSExceptionAllowsInsecureHTTPLoads).toBe(true);
+    });
+
+    it('allows arbitrary loads in development for LAN dev hosts', () => {
+      process.env.NODE_ENV = 'development';
+      jest.resetModules();
+      const config = loadConfig();
+      const ats = (config.ios?.infoPlist as any)?.NSAppTransportSecurity;
+      expect(ats.NSAllowsArbitraryLoads).toBe(true);
+    });
+  });
 });

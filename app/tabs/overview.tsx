@@ -1,7 +1,6 @@
 // @ts-nocheck
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Linking,
+import { Alert, Linking,
   Platform,
   ScrollView,
   StyleSheet,
@@ -11,8 +10,7 @@ import {
   View,
   Image,
   type LayoutChangeEvent,
-  useWindowDimensions,
-} from 'react-native';
+  useWindowDimensions, } from 'react-native';
 import { computeTripDays, validateTripDates } from '../utils/createTripWizard';
 import { renderRichTextBlocks } from '../utils/richText';
 import {
@@ -647,7 +645,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const saveItineraryDetail = async () => {
     if (!itineraryId) return;
     if (!detailDraft.activity.trim()) {
-      alert('Activity is required.');
+      Alert.alert('Activity is required.');
       return;
     }
     const payload = {
@@ -698,7 +696,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        alert(data.error || 'Could not create itinerary record');
+        Alert.alert(data.error || 'Could not create itinerary record');
         return null;
       }
       const created = (await res.json()) as { id?: string };
@@ -720,7 +718,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        alert(data.error || 'Could not add item');
+        Alert.alert(data.error || 'Could not add item');
         return false;
       }
       const detailsRes = await fetch(`${backendUrl}/api/itineraries/${targetItineraryId}/details`, { headers });
@@ -919,7 +917,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       });
       if (!res.ok && res.status !== 204) {
         const data = await res.json().catch(() => ({}));
-        alert((data as any)?.error || 'Could not delete item');
+        Alert.alert((data as any)?.error || 'Could not delete item');
         return;
       }
       setItineraryDetails((prev) => prev.filter((d) => d.id !== detailId));
@@ -1391,7 +1389,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       durationDays: dateDraft.durationDays,
     });
     if (validationError) {
-      alert(validationError);
+      Alert.alert(validationError);
       return;
     }
     const payload: any = {
@@ -1413,13 +1411,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      alert(data.error || 'Unable to update trip');
+      Alert.alert(data.error || 'Unable to update trip');
       return;
     }
     if (pendingRemovalIds.length && trip?.id) {
       const removalGroupId = group?.id ?? trip.groupId;
       if (!removalGroupId) {
-        alert('Unable to remove member: missing group id');
+        Alert.alert('Unable to remove member: missing group id');
         return;
       }
       for (const memberId of pendingRemovalIds) {
@@ -1429,7 +1427,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         });
         if (!removeRes.ok) {
           const removeData = await removeRes.json().catch(() => ({}));
-          alert(removeData.error || 'Unable to remove member');
+          Alert.alert(removeData.error || 'Unable to remove member');
           return;
         }
       }
@@ -1465,7 +1463,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     const last = travelerDraft.lastName.trim();
     const email = travelerDraft.email.trim();
     if (!first || !last) {
-      alert('Enter first and last name');
+      Alert.alert('Enter first and last name');
       return;
     }
     const guestName = `${first} ${last}`.trim();
@@ -1477,7 +1475,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      alert(data.error || 'Unable to add member');
+      Alert.alert(data.error || 'Unable to add member');
       return;
     }
     onRefreshGroupMembers();
@@ -1489,11 +1487,11 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const saveFlightDetails = async () => {
     if (!editingFlightId || !editingFlightDraft) return;
     if (!trip?.id) {
-      alert('Select an active trip before editing a flight.');
+      Alert.alert('Select an active trip before editing a flight.');
       return;
     }
     if (!editingFlightDraft.passengerIds.length) {
-      alert('Select at least one passenger');
+      Alert.alert('Select at least one passenger');
       return;
     }
     const payload = buildFlightPayload(
@@ -1509,7 +1507,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        alert(data.error || 'Unable to save flight');
+        Alert.alert(data.error || 'Unable to save flight');
         return;
       }
       closeFlightEditor();
@@ -1524,7 +1522,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      alert(data.error || 'Unable to update flight');
+      Alert.alert(data.error || 'Unable to update flight');
       return;
     }
     closeFlightEditor();
@@ -1575,18 +1573,18 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
   const saveLodging = async () => {
     if (!trip?.id) {
-      alert('Select an active trip before saving lodging.');
+      Alert.alert('Select an active trip before saving lodging.');
       return;
     }
     const { payload, error } = buildLodgingPayload(lodgingDraft, trip.id, defaultPayerId);
     if (error || !payload) {
-      alert(error || 'Unable to save lodging');
+      Alert.alert(error || 'Unable to save lodging');
       return;
     }
     if (editingLodgingId) {
       const result = await saveLodgingApi(backendUrl, jsonHeaders, payload, editingLodgingId);
       if (!result.ok) {
-        alert(result.error || 'Unable to save lodging');
+        Alert.alert(result.error || 'Unable to save lodging');
         return;
       }
       closeLodgingModal();
@@ -1601,7 +1599,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       defaultPayerId,
     });
     if (!result.ok) {
-      alert(result.error || 'Unable to save lodging');
+      Alert.alert(result.error || 'Unable to save lodging');
       return;
     }
     closeLodgingModal();
@@ -1612,7 +1610,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     if (editingTourId) {
       const { payload, error } = buildActivityPayload(tourDraft, defaultPayerId);
       if (error || !payload) {
-        alert(error || 'Unable to save activity');
+        Alert.alert(error || 'Unable to save activity');
         return;
       }
       const res = await fetch(`${backendUrl}/api/activities/${editingTourId}`, {
@@ -1622,7 +1620,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        alert(data.error || 'Unable to save activity');
+        Alert.alert(data.error || 'Unable to save activity');
         return;
       }
       closeTourModal();
@@ -1637,7 +1635,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       defaultPayerId,
     });
     if (!result.ok) {
-      alert(result.error || 'Unable to save activity');
+      Alert.alert(result.error || 'Unable to save activity');
       return;
     }
     closeTourModal();
@@ -1652,7 +1650,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     }
     const result = buildCarRentalFromDraft(rentalDraft, defaultPayerId);
     if (!result.rental || result.error) {
-      alert(result.error || 'Unable to save rental car');
+      Alert.alert(result.error || 'Unable to save rental car');
       return;
     }
     onAddCarRental(result.rental);

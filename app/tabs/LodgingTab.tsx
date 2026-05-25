@@ -1,7 +1,7 @@
 
 // @ts-nocheck
 import React, { useMemo, useState } from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { type Lodging, type LodgingDraft, buildLodgingPayload, createLodgingDraftForTrip, saveLodgingApi, removeLodgingApi } from './lodging';
 import { formatUserDisplayName } from './overview';
 import LodgingDialog from '../components/LodgingDialog';
@@ -69,7 +69,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
   const openAddDialog = () => {
     if (readOnly) return;
     if (!activeTripId) {
-      alert('Please select a trip first.');
+      Alert.alert('Please select a trip first.');
       return;
     }
     const draft = createLodgingDraftForTrip({
@@ -119,7 +119,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
 
     const { payload, error } = buildLodgingPayload(lodgingDraft, activeTripId, defaultPayerId);
     if (error || !payload) {
-      alert(error || 'Failed to save lodging.');
+      Alert.alert(error || 'Failed to save lodging.');
       return;
     }
 
@@ -128,7 +128,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
       onRefreshLodgings?.();
       closeEditor();
     } else {
-      alert(result.error || 'Failed to save lodging.');
+      Alert.alert(result.error || 'Failed to save lodging.');
     }
   };
 
@@ -141,7 +141,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
       setLodgingToDelete(null);
       closeDetails();
     } else {
-      alert(result.error || 'Failed to delete lodging.');
+      Alert.alert(result.error || 'Failed to delete lodging.');
     }
   };
 
@@ -154,7 +154,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      alert(data.error || 'Unable to submit vote');
+      Alert.alert(data.error || 'Unable to submit vote');
       return;
     }
     onRefreshLodgings?.();
@@ -169,7 +169,7 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      alert(data.error || 'Unable to submit rating');
+      Alert.alert(data.error || 'Unable to submit rating');
       return;
     }
     onRefreshLodgings?.();

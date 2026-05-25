@@ -11,7 +11,7 @@
  * then UI sections render conditionally based on the active page.
  */
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AppState, Image, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme } from 'react-native';
+import { Alert, AppState, Image, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme } from 'react-native';
 import { SafeAreaView as NativeSafeAreaView } from 'react-native-safe-area-context';
 import { NavigationContainer, createNavigationContainerRef, type LinkingOptions } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -101,6 +101,7 @@ import PresenceAvatarsContainer from './components/PresenceAvatarsContainer';
 import LazyTabFallback from './components/LazyTabFallback';
 import ChatOverlay from './components/ChatOverlay';
 import { connectSocket, disconnectSocket } from './utils/socket';
+import { exportCsv } from './utils/csvExport';
 import type { PresenceUser } from '../packages/messaging/src/types';
 
 const TOP_BANNER_ICON = require('./assets/wanderbunnies-reference.png');
@@ -854,12 +855,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const saveCarRentalDraft = useCallback(async (rentalId?: string | null) => {
     if (isFollowingMode) return false;
     if (!activeTripId) {
-      alert('Select an active trip before adding a car rental.');
+      Alert.alert('Select an active trip before adding a car rental.');
       return false;
     }
     const result = buildCarRentalFromDraft(carDraft, defaultPayerId, memberIds);
     if (result.error || !result.rental) {
-      alert(result.error || 'Unable to add car rental.');
+      Alert.alert(result.error || 'Unable to add car rental.');
       return false;
     }
     const payload = {
@@ -873,7 +874,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      alert(data.error || `Unable to ${rentalId ? 'update' : 'add'} car rental.`);
+      Alert.alert(data.error || `Unable to ${rentalId ? 'update' : 'add'} car rental.`);
       return false;
     }
     if (activeTripId && userToken && costTrackingAllowed) {
@@ -904,7 +905,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const addCarRentalFromOverview = useCallback(async (rental: CarRental) => {
     if (isFollowingMode) return;
     if (!activeTripId) {
-      alert('Select an active trip before adding a car rental.');
+      Alert.alert('Select an active trip before adding a car rental.');
       return;
     }
     const res = await fetch(`${backendUrl}/api/car-rentals`, {
@@ -919,7 +920,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      alert(data.error || 'Unable to add car rental.');
+      Alert.alert(data.error || 'Unable to add car rental.');
       return;
     }
     if (activeTripId && userToken && costTrackingAllowed) {
@@ -942,7 +943,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     const res = await fetch(`${backendUrl}/api/car-rentals/${id}`, { method: 'DELETE', headers: jsonHeaders });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      alert(data.error || 'Unable to delete car rental.');
+      Alert.alert(data.error || 'Unable to delete car rental.');
       return;
     }
     if (activeTripId && userToken && costTrackingAllowed) {
@@ -969,7 +970,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      alert(data.error || 'Unable to submit vote');
+      Alert.alert(data.error || 'Unable to submit vote');
       return;
     }
     if (activeTripId && userToken) {
@@ -987,7 +988,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      alert(data.error || 'Unable to submit rating');
+      Alert.alert(data.error || 'Unable to submit rating');
       return;
     }
     if (activeTripId && userToken) {
@@ -1028,7 +1029,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   // Covered-by is naturally idempotent (PUT replaces the entire map), so it's
   // a safe candidate for retry-on-failure. Wrapped in useRetryableMutation so
   // transient network failures can be retried via the red banner instead of
-  // an alert() that forces the user to re-open the ledger.
+  // an Alert.alert() that forces the user to re-open the ledger.
   const coveredByMutation = useRetryableMutation<
     { tripId: string; rules: Record<string, string> },
     void
@@ -1042,22 +1043,22 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
   const saveCoveredBy = useCallback(async () => {
     if (!activeTrip?.id) {
-      alert('An active trip is required.');
+      Alert.alert('An active trip is required.');
       return;
     }
 
     const validation = validateCoveringRules(coveredBy);
     if (!validation.ok) {
-      alert(validation.error);
+      Alert.alert(validation.error);
       return;
     }
 
     const result = await coveredByMutation.run({ tripId: activeTrip.id, rules: coveredBy });
     if (result !== null) {
-      alert('Covering rules saved.');
+      Alert.alert('Covering rules saved.');
     }
     // Failure surfaces through <RetryableErrorBanner> rendered in the ledger
-    // branch below — no alert() so the user can retry in place.
+    // branch below — no Alert.alert() so the user can retry in place.
   }, [activeTrip?.id, coveredBy, coveredByMutation]);
 
   const coveredTravelerIds = useMemo(() => new Set(Object.keys(coveredBy)), [coveredBy]);
@@ -1166,17 +1167,11 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   };
 
   const downloadCsv = (csvContent: string, fileName: string) => {
-    if (Platform.OS !== 'web' || typeof window === 'undefined') {
-      alert('CSV export is only available on web.');
-      return;
-    }
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = fileName;
-    link.click();
-    URL.revokeObjectURL(link.href);
+    void exportCsv(csvContent, fileName).then((result) => {
+      if (result === 'unavailable' || result === 'failed') {
+        Alert.alert('CSV export', 'Could not export the CSV from this device.');
+      }
+    });
   };
 
   const logout = useCallback(() => {
@@ -1352,9 +1347,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         const data = await res.json().catch(() => ({}));
         const message = res.ok ? (data.message ?? 'Email confirmed. You can now log in.') : (data.error ?? 'Email confirmation failed.');
         setEmailConfirmationMessage(message);
-        alert(message);
+        Alert.alert(message);
       } catch {
-        alert('Email confirmation failed.');
+        Alert.alert('Email confirmation failed.');
       } finally {
         if (Platform.OS === 'web' && typeof window !== 'undefined') {
           const url = new URL(rawUrl);
@@ -1370,9 +1365,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         const data = await res.json().catch(() => ({}));
         const message = res.ok ? (data.message ?? 'Email confirmed.') : (data.error ?? 'Email confirmation failed.');
         setEmailConfirmationMessage(message);
-        alert(message);
+        Alert.alert(message);
       } catch {
-        alert('Email confirmation failed.');
+        Alert.alert('Email confirmation failed.');
       } finally {
         if (Platform.OS === 'web' && typeof window !== 'undefined') {
           const url = new URL(rawUrl);
@@ -1464,10 +1459,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const completeInitialPasswordSetup = async () => {
     const result = await submitInitialPasswordSetup();
     if (!result.ok) {
-      alert(result.error);
+      Alert.alert(result.error);
       return;
     }
-    alert('Password set. You can now sign in with email/password too.');
+    Alert.alert('Password set. You can now sign in with email/password too.');
   };
 
   const loginWithPassword = async () => {
@@ -1502,24 +1497,24 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const resendConfirmationEmail = async () => {
     const result = await submitResendConfirmation(authForm.email);
     if (!result.ok) {
-      alert(result.error);
+      Alert.alert(result.error);
       return;
     }
-    alert(result.message);
+    Alert.alert(result.message);
   };
 
   const register = async () => {
     setAuthErrorMessage(null);
     if (!authForm.firstName.trim() || !authForm.lastName.trim()) {
-      alert('First name and last name are required');
+      Alert.alert('First name and last name are required');
       return;
     }
     if (!authForm.email.trim()) {
-      alert('Email is required');
+      Alert.alert('Email is required');
       return;
     }
     if (authForm.password !== authForm.passwordConfirm) {
-      alert('Passwords do not match');
+      Alert.alert('Passwords do not match');
       return;
     }
     try {
@@ -1536,21 +1531,21 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        alert(data.error || 'Registration failed');
+        Alert.alert(data.error || 'Registration failed');
         return;
       }
       if (data?.verificationRequired) {
-        alert(data.message || 'Check your email to confirm your account.');
+        Alert.alert(data.message || 'Check your email to confirm your account.');
         setAuthMode('login');
         return;
       }
       if (!data?.user || typeof data.token !== 'string') {
-        alert(data.error || 'Registration failed');
+        Alert.alert(data.error || 'Registration failed');
         return;
       }
       handleAuthSuccess(data.token, Boolean(data.firstLogin));
     } catch (err) {
-      alert((err as Error).message || 'Registration failed');
+      Alert.alert((err as Error).message || 'Registration failed');
     }
   };
 
@@ -1733,7 +1728,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const acceptInvite = async (invite: GroupInvite) => {
     const result = await acceptInviteRequest(invite);
     if (!result.ok) {
-      alert(result.error || 'Unable to accept invite');
+      Alert.alert(result.error || 'Unable to accept invite');
       return;
     }
     if (result.nextTripId) {
@@ -1752,7 +1747,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const rejectInvite = async (invite: GroupInvite) => {
     const result = await rejectInviteRequest(invite);
     if (!result.ok) {
-      alert(result.error || 'Unable to reject invite');
+      Alert.alert(result.error || 'Unable to reject invite');
       return;
     }
     fetchGroups();
@@ -1762,7 +1757,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const acceptPendingTripShareInvite = async (invite: PendingTripShareInvite) => {
     const result = await acceptPendingTripShareInviteRequest(invite);
     if (!result.ok) {
-      alert(result.error || 'Unable to accept invite');
+      Alert.alert(result.error || 'Unable to accept invite');
       return;
     }
     if (result.nextTripId) {
@@ -1782,7 +1777,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const rejectPendingTripShareInvite = async (invite: PendingTripShareInvite) => {
     const result = await rejectPendingTripShareInviteRequest(invite);
     if (!result.ok) {
-      alert(result.error || 'Unable to reject invite');
+      Alert.alert(result.error || 'Unable to reject invite');
       return;
     }
     fetchGroups();
@@ -2171,11 +2166,11 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     const relationshipId = groupAddRelationship[groupId] ?? '';
 
     if (type === 'user' && !email.trim()) {
-      alert('Enter an email to add a user');
+      Alert.alert('Enter an email to add a user');
       return;
     }
     if (type === 'relationship' && !relationshipId) {
-      alert('Select a relationship');
+      Alert.alert('Select a relationship');
       return;
     }
 
@@ -2189,7 +2184,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     } else {
       const rel = familyRelationships.find((r) => r.id === relationshipId);
       if (!rel) {
-        alert('Select a relationship');
+        Alert.alert('Select a relationship');
         return;
       }
       const relEmail = rel.relative?.email?.trim();
@@ -2201,7 +2196,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
     const result = await addGroupMemberRequest(groupId, payload);
     if (!result.ok) {
-      alert(result.error || 'Unable to add member');
+      Alert.alert(result.error || 'Unable to add member');
       return;
     }
     setGroupAddEmail((prev) => ({ ...prev, [groupId]: '' }));
@@ -2212,7 +2207,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const removeMemberFromGroup = async (groupId: string, memberId: string) => {
     const result = await removeGroupMemberRequest(groupId, memberId);
     if (!result.ok) {
-      alert(result.error || 'Unable to remove member');
+      Alert.alert(result.error || 'Unable to remove member');
       return;
     }
   };
@@ -2220,7 +2215,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const cancelInvite = async (inviteId: string) => {
     const result = await cancelGroupInviteRequest(inviteId);
     if (!result.ok) {
-      alert(result.error || 'Unable to cancel invite');
+      Alert.alert(result.error || 'Unable to cancel invite');
       return;
     }
   };
@@ -2228,7 +2223,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const createTrip = async () => {
     const result = await submitCreateTripWizard();
     if (!result.ok) {
-      alert(result.error || 'Unable to create trip');
+      Alert.alert(result.error || 'Unable to create trip');
     }
   };
 
@@ -2260,7 +2255,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      alert(data.error || 'Unable to delete trip');
+      Alert.alert(data.error || 'Unable to delete trip');
       return;
     }
     fetchTrips();
@@ -2269,7 +2264,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   // PATCH /api/trips/:id/group is naturally idempotent (replaces the trip's
   // group with a fixed value). Wrapping in useRetryableMutation so a
   // transient network failure surfaces through the red banner below instead
-  // of an alert() — the user can retry without re-opening the dropdown.
+  // of an Alert.alert() — the user can retry without re-opening the dropdown.
   const tripGroupMutation = useRetryableMutation<
     { tripId: string; groupId: string },
     unknown
@@ -2286,7 +2281,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     const result = await tripGroupMutation.run({ tripId, groupId });
     if (result === null) {
       // Failure is surfaced by <RetryableErrorBanner> in the top bar area —
-      // no alert() so the user can retry in place.
+      // no Alert.alert() so the user can retry in place.
       return;
     }
     setTripDropdownOpenId(null);
@@ -2321,7 +2316,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     const res = await fetch(`${backendUrl}/api/groups/${groupId}`, { method: 'DELETE', headers });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      alert(data.error || 'Unable to delete group');
+      Alert.alert(data.error || 'Unable to delete group');
       return;
     }
     fetchGroups();
@@ -2341,7 +2336,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     });
     if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        alert(data.error || 'Unable to delete lodging');
+        Alert.alert(data.error || 'Unable to delete lodging');
         return;
     }
     fetchLodgings();
@@ -2459,7 +2454,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       }
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        alert(data.error || 'Unable to unfollow trip');
+        Alert.alert(data.error || 'Unable to unfollow trip');
         return;
       }
       setFollowedTrips((prev) => prev.filter((trip) => trip.tripId !== tripId));
@@ -4496,7 +4491,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     elevation: 24,
     overflow: 'hidden',
     maxHeight: 280,
-    boxShadow: '0 10px 24px rgba(0,0,0,0.18)',
+    ...(Platform.OS === 'web' ? { boxShadow: '0 10px 24px rgba(0,0,0,0.18)' } : null),
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.18,
@@ -4596,7 +4591,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     borderRadius: 10,
     zIndex: 13000,
     elevation: 32,
-    boxShadow: '0 10px 24px rgba(0,0,0,0.18)',
+    ...(Platform.OS === 'web' ? { boxShadow: '0 10px 24px rgba(0,0,0,0.18)' } : null),
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.18,
@@ -4720,7 +4715,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     zIndex: 14000,
     elevation: 40, // keep above other inputs on native
     overflow: 'hidden',
-    boxShadow: '0 10px 24px rgba(0,0,0,0.18)',
+    ...(Platform.OS === 'web' ? { boxShadow: '0 10px 24px rgba(0,0,0,0.18)' } : null),
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.18,
@@ -4787,7 +4782,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     padding: 8,
     maxHeight: 360,
     zIndex: 41000,
-    boxShadow: '0 10px 24px rgba(0,0,0,0.18)',
+    ...(Platform.OS === 'web' ? { boxShadow: '0 10px 24px rgba(0,0,0,0.18)' } : null),
     elevation: 60,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 8 },
@@ -4899,7 +4894,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     borderRadius: 10,
     width: '100%',
     maxWidth: 420,
-    boxShadow: '0 4px 10px rgba(0,0,0,0.25)',
+    ...(Platform.OS === 'web' ? { boxShadow: '0 4px 10px rgba(0,0,0,0.25)' } : null),
     borderWidth: 1,
     borderColor: theme.colors.border,
   },

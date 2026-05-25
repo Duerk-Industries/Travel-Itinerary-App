@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import DropdownOptionButton from '../components/DropdownOptionButton';
 import ConfirmDialog from '../components/ConfirmDialog';
 import DialogShell from '../components/DialogShell';
@@ -266,7 +266,7 @@ const AccountProfileManagement = ({
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      alert(data.error || 'Unable to update profile');
+      Alert.alert(data.error || 'Unable to update profile');
       return;
     }
     const updatedUser = data.user ?? accountProfile;
@@ -302,7 +302,7 @@ const AccountProfileManagement = ({
   const handlePasswordChange = async () => {
     if (!userToken) return;
     if (passwordForm.newPassword !== passwordForm.newPasswordConfirm) {
-      alert('New passwords do not match');
+      Alert.alert('New passwords do not match');
       return;
     }
     setAccountMessage(null);
@@ -313,7 +313,7 @@ const AccountProfileManagement = ({
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      alert(data.error || 'Unable to update password');
+      Alert.alert(data.error || 'Unable to update password');
       return;
     }
     setAccountMessage('Password updated');
@@ -326,7 +326,7 @@ const AccountProfileManagement = ({
     const res = await fetch(`${backendUrl}/api/account`, { method: 'DELETE', headers });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      alert(data.error || 'Unable to delete account');
+      Alert.alert(data.error || 'Unable to delete account');
       return;
     }
     setShowDeleteConfirm(false);
@@ -344,7 +344,7 @@ const AccountProfileManagement = ({
   const handleAddEmail = async () => {
     const candidate = newEmail.trim().toLowerCase();
     if (!candidate) {
-      alert('Enter an email address.');
+      Alert.alert('Enter an email address.');
       return;
     }
     try {
@@ -356,14 +356,14 @@ const AccountProfileManagement = ({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        alert(data.error || 'Unable to add email.');
+        Alert.alert(data.error || 'Unable to add email.');
         return;
       }
       setNewEmail('');
       await refreshAccountEmails();
-      alert('Email added. Check your inbox for the verification link.');
+      Alert.alert('Email added. Check your inbox for the verification link.');
     } catch (err) {
-      alert((err as Error).message || 'Unable to add email.');
+      Alert.alert((err as Error).message || 'Unable to add email.');
     } finally {
       setEmailActionBusy(false);
     }
@@ -378,12 +378,12 @@ const AccountProfileManagement = ({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        alert(data.error || 'Unable to resend verification.');
+        Alert.alert(data.error || 'Unable to resend verification.');
         return;
       }
-      alert('Verification email sent.');
+      Alert.alert('Verification email sent.');
     } catch (err) {
-      alert((err as Error).message || 'Unable to resend verification.');
+      Alert.alert((err as Error).message || 'Unable to resend verification.');
     } finally {
       setEmailActionBusy(false);
     }
@@ -399,7 +399,7 @@ const AccountProfileManagement = ({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        alert(data.error || 'Unable to set primary email.');
+        Alert.alert(data.error || 'Unable to set primary email.');
         return;
       }
       if (typeof data.token === 'string') {
@@ -415,7 +415,7 @@ const AccountProfileManagement = ({
         await refreshAccountEmails();
       }
     } catch (err) {
-      alert((err as Error).message || 'Unable to set primary email.');
+      Alert.alert((err as Error).message || 'Unable to set primary email.');
     } finally {
       setEmailActionBusy(false);
     }
@@ -430,7 +430,7 @@ const AccountProfileManagement = ({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        alert(data.error || 'Unable to delete email.');
+        Alert.alert(data.error || 'Unable to delete email.');
         return;
       }
       if (Array.isArray(data.emails)) {
@@ -439,7 +439,7 @@ const AccountProfileManagement = ({
         await refreshAccountEmails();
       }
     } catch (err) {
-      alert((err as Error).message || 'Unable to delete email.');
+      Alert.alert((err as Error).message || 'Unable to delete email.');
     } finally {
       setEmailActionBusy(false);
     }
