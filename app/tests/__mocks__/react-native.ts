@@ -27,7 +27,6 @@ export const AppState = {
 };
 export const Linking = {
   addEventListener: jest.fn(() => ({ remove: jest.fn() })),
-  createURL: jest.fn((path: string) => `travelitineraryplanner://${path}`),
   openURL: jest.fn(async () => undefined),
 };
 export const StyleSheet = {

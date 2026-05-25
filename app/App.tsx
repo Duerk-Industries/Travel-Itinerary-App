@@ -16,6 +16,7 @@ import { SafeAreaView as NativeSafeAreaView } from 'react-native-safe-area-conte
 import { NavigationContainer, createNavigationContainerRef, type LinkingOptions } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Constants from 'expo-constants';
+import * as ExpoLinking from 'expo-linking';
 import { formatDateLong } from './utils/formatDateLong';
 import { normalizeDateString } from './utils/normalizeDateString';
 import { sanitizeCostInput } from './utils/sanitizeCost';
@@ -1233,18 +1234,11 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       });
     }
 
-    if (typeof Linking?.createURL !== 'function') {
-      // This should not happen in a standard Expo/React Native environment.
-      console.error('Linking.createURL is not available. OAuth redirect will likely fail.');
-      // Fallback to a URL that is unlikely to work for a native app redirect.
-      return `${backendUrl}/login`;
-    }
-
     const scheme =
       Constants.expoConfig?.scheme ||
       (Constants as any)?.manifest2?.extra?.expoClient?.scheme ||
       undefined;
-    return Linking.createURL('login', scheme ? { scheme } : undefined);
+    return ExpoLinking.createURL('login', scheme ? { scheme } : undefined);
   };
 
   const loginWithGoogle = async () => {

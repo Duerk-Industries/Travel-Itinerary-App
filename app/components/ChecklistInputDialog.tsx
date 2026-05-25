@@ -66,7 +66,7 @@ const ChecklistInputDialog: React.FC<ChecklistInputDialogProps> = ({
         <Pressable
           style={styles.dialog}
           onPress={(e: { stopPropagation: () => void }) => e.stopPropagation()}
-          accessibilityRole="dialog"
+          accessibilityRole={'dialog' as any}
           accessibilityLabel="Add a checklist"
           testID="checklist-dialog"
         >

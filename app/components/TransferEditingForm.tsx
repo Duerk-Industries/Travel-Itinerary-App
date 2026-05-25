@@ -35,9 +35,9 @@ export type FlightEditingFormProps = {
   onAirportEnter: (target: Exclude<AirportTarget, null>, value: string) => void;
   setFlight: React.Dispatch<React.SetStateAction<FlightEditDraft | null>>;
   setPassengerIds: (ids: string[]) => void;
-  modalDepLocationRef: React.RefObject<React.ElementRef<typeof TextInput>>;
-  modalArrLocationRef: React.RefObject<React.ElementRef<typeof TextInput>>;
-  modalLayoverLocationRef: React.RefObject<React.ElementRef<typeof TextInput>>;
+  modalDepLocationRef: React.RefObject<React.ElementRef<typeof TextInput> | null>;
+  modalArrLocationRef: React.RefObject<React.ElementRef<typeof TextInput> | null>;
+  modalLayoverLocationRef: React.RefObject<React.ElementRef<typeof TextInput> | null>;
   onClose: () => void;
   onSave: () => void;
 };

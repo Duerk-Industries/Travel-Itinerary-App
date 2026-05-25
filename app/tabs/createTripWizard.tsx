@@ -1343,7 +1343,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             <TextInput
               style={styles.input}
               placeholder="Trip name"
-              title="Trip name"
+              accessibilityLabel="Trip name"
               value={details.name}
               onChangeText={(text: string) => setDetails((prev) => ({ ...prev, name: text }))}
             />
@@ -1381,7 +1381,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               ref={descriptionRef}
               style={[styles.input, { minHeight: 120 }]}
               placeholder="Description (optional)"
-              title="Description"
+              accessibilityLabel="Description"
               multiline
               value={details.description}
               onChangeText={(text: string) => setDetails((prev) => ({ ...prev, description: text }))}
@@ -1551,7 +1551,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               <TextInput
                 style={styles.input}
                 placeholder="Search past travelers"
-                title="Search participants"
+                accessibilityLabel="Search participants"
                 value={participantSearch}
                 onChangeText={setParticipantSearch}
               />
@@ -1584,7 +1584,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               <TextInput
                 style={[styles.input, { flex: 1 }]}
                 placeholder="First name"
-                title="First name"
+                accessibilityLabel="First name"
                 autoComplete="given-name"
                 textContentType="givenName"
                 value={participantDraft.firstName}
@@ -1593,7 +1593,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               <TextInput
                 style={[styles.input, { flex: 1 }]}
                 placeholder="Last name"
-                title="Last name"
+                accessibilityLabel="Last name"
                 autoComplete="family-name"
                 textContentType="familyName"
                 value={participantDraft.lastName}
@@ -1603,7 +1603,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
             <TextInput
               style={styles.input}
               placeholder="Email (optional)"
-              title="Email"
+              accessibilityLabel="Email"
               autoCapitalize="none"
               autoComplete="email"
               textContentType="emailAddress"
@@ -1684,7 +1684,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     dates.mode === 'range' && computedDays ? styles.disabledInput : null,
                     ]}
                     placeholder="Trip days (optional if dates are set)"
-                    title="Trip days"
+                    accessibilityLabel="Trip days"
                     keyboardType="numeric"
                     value={itineraryDays}
                     onChangeText={(text: string) => {
@@ -1829,7 +1829,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     ref={itineraryAirportRef}
                     style={styles.input}
                     placeholder="Departure airport (optional)"
-                    title="Departure airport"
+                    accessibilityLabel="Departure airport"
                     value={itineraryDepartureAirport}
                     onFocus={showItineraryAirportDropdown}
                     onChangeText={(text: string) => {
@@ -1858,7 +1858,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                   <TextInput
                     style={styles.input}
                     placeholder="Trip days (optional if dates are set)"
-                    title="Trip days"
+                    accessibilityLabel="Trip days"
                     keyboardType="numeric"
                     value={itineraryDays}
                     onChangeText={setItineraryDays}
@@ -1868,7 +1868,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                   <TextInput
                     style={styles.input}
                     placeholder="Trip days (optional if dates are set)"
-                    title="Trip days"
+                    accessibilityLabel="Trip days"
                     keyboardType="numeric"
                     value={itineraryDays}
                     onChangeText={setItineraryDays}
@@ -1897,7 +1897,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                         <TouchableOpacity
                           style={[styles.button, styles.smallButton]}
                           onPress={() => setManualDay(day)}
-                          title={`Add item to ${formatManualDayLabel(day)}`}
+                          accessibilityLabel={`Add item to ${formatManualDayLabel(day)}`}
                         >
                           <Text style={styles.buttonText}>Add item</Text>
                         </TouchableOpacity>
@@ -1911,14 +1911,14 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     <TextInput
                       style={styles.input}
                       placeholder="Time (optional)"
-                      title="Time"
+                      accessibilityLabel="Time"
                       value={manualDraft.time}
                       onChangeText={(text: any) => setManualDraft((prev) => ({ ...prev, time: text }))}
                     />
                     <TextInput
                       style={styles.input}
                       placeholder="Activity description"
-                      title="Activity description"
+                      accessibilityLabel="Activity description"
                       value={manualDraft.activity}
                       onChangeText={(text: any) => setManualDraft((prev) => ({ ...prev, activity: text }))}
                     />
@@ -2214,7 +2214,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     <TextInput
                       style={wizardCarInputStyle}
                       placeholder="Pick up location"
-                      title="Pick up location"
+                      accessibilityLabel="Pick up location"
                       value={wizardCarDraft.pickupLocation}
                       onChangeText={(text: any) => setWizardCarDraft((p) => ({ ...p, pickupLocation: text }))}
                     />
@@ -2250,7 +2250,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     <TextInput
                       style={wizardCarInputStyle}
                       placeholder="Drop off location"
-                      title="Drop off location"
+                      accessibilityLabel="Drop off location"
                       value={wizardCarDraft.dropoffLocation}
                       onChangeText={(text: any) => setWizardCarDraft((p) => ({ ...p, dropoffLocation: text }))}
                     />
@@ -2308,7 +2308,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     <TextInput
                       style={wizardCarInputStyle}
                       placeholder="Reference"
-                      title="Reference"
+                      accessibilityLabel="Reference"
                       value={wizardCarDraft.reference}
                       onChangeText={(text: any) => setWizardCarDraft((p) => ({ ...p, reference: text }))}
                     />
@@ -2317,7 +2317,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     <TextInput
                       style={wizardCarInputStyle}
                       placeholder="Vendor"
-                      title="Vendor"
+                      accessibilityLabel="Vendor"
                       value={wizardCarDraft.vendor}
                       onChangeText={(text: any) => setWizardCarDraft((p) => ({ ...p, vendor: text }))}
                     />
@@ -2339,7 +2339,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     <TextInput
                       style={wizardCarInputStyle}
                       placeholder="Cost"
-                      title="Cost"
+                      accessibilityLabel="Cost"
                       keyboardType="numeric"
                       value={wizardCarDraft.cost}
                       onChangeText={(text: string) =>
@@ -2351,7 +2351,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     <TextInput
                       style={wizardCarInputStyle}
                       placeholder="Car model"
-                      title="Car model"
+                      accessibilityLabel="Car model"
                       value={wizardCarDraft.model}
                       onChangeText={(text: any) => setWizardCarDraft((p) => ({ ...p, model: text }))}
                     />
@@ -2360,7 +2360,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                     <TextInput
                       style={[wizardCarInputStyle, styles.cellTextWrap]}
                       placeholder="Notes"
-                      title="Notes"
+                      accessibilityLabel="Notes"
                       value={wizardCarDraft.notes}
                       onChangeText={(text: any) => setWizardCarDraft((p) => ({ ...p, notes: text }))}
                     />
@@ -2691,7 +2691,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               <TextInput
                 style={styles.input}
                 placeholder="Lodging name"
-                title="Lodging name"
+                accessibilityLabel="Lodging name"
                 value={editingWizardLodging.name}
                 onChangeText={(text: any) => setEditingWizardLodging((prev) => (prev ? { ...prev, name: text } : prev))}
               />
@@ -2759,7 +2759,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               <TextInput
                 style={styles.input}
                 placeholder="Number of rooms"
-                title="Rooms"
+                accessibilityLabel="Rooms"
                 keyboardType="numeric"
                 value={editingWizardLodging.rooms}
                 onChangeText={(text: any) => setEditingWizardLodging((prev) => (prev ? { ...prev, rooms: text } : prev))}
@@ -2768,7 +2768,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               {Platform.OS === 'web' ? (
                 <input
                   type="date"
-                  title="Refund by date"
+                  aria-label="Refund by date"
                   value={editingWizardLodging.refundBy}
                   onChange={(e) => setEditingWizardLodging((prev) => (prev ? { ...prev, refundBy: e.target.value } : prev))}
                   style={webDateInputStyle}
@@ -2778,7 +2778,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                   style={styles.input}
                   value={editingWizardLodging.refundBy}
                   placeholder="YYYY-MM-DD"
-                  title="Refund by date"
+                  accessibilityLabel="Refund by date"
                   onChangeText={(text: string) =>
                     setEditingWizardLodging((prev) => (prev ? { ...prev, refundBy: normalizeDateString(text) } : prev))
                   }
@@ -2788,7 +2788,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               <TextInput
                 style={styles.input}
                 placeholder="Total cost"
-                title="Total cost"
+                accessibilityLabel="Total cost"
                 value={editingWizardLodging.totalCost}
                 keyboardType="numeric"
                 onChangeText={(text: any) => setEditingWizardLodging((prev) => (prev ? { ...prev, totalCost: text } : prev))}
@@ -2840,7 +2840,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
               <TextInput
                 style={styles.input}
                 placeholder="Address"
-                title="Address"
+                accessibilityLabel="Address"
                 value={editingWizardLodging.address}
                 onChangeText={(text: any) => setEditingWizardLodging((prev) => (prev ? { ...prev, address: text } : prev))}
               />

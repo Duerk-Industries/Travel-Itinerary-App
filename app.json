@@ -2,6 +2,7 @@
   "expo": {
     "name": "WanderBunnies",
     "slug": "travel-itinerary-planner",
+    "version": "0.1.0",
     "scheme": "travelitineraryplanner",
     "owner": "duerk-industries",
     "icon": "./app/assets/wanderbunnies-app-icon.png",
@@ -23,7 +24,6 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSAppTransportSecurity": {
-          "NSAllowsArbitraryLoads": true,
           "NSExceptionDomains": {
             "localhost": {
               "NSIncludesSubdomains": true,

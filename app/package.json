@@ -26,6 +26,7 @@
     "expo-clipboard": "~8.0.8",
     "expo-constants": "~18.0.10",
     "expo-file-system": "~19.0.22",
+    "expo-linking": "~8.0.12",
     "expo-sharing": "~14.0.8",
     "expo-web-browser": "~15.0.11",
     "firebase": "^12.13.0",
