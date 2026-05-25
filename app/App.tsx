@@ -864,7 +864,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       window.open(url, '_blank');
     } else {
-      Linking.openURL(url);
+      // Linking.openURL rejects on native if no installed app handles the scheme;
+      // surface the error to the user instead of crashing with an unhandled rejection.
+      Linking.openURL(url).catch((err) => Alert.alert('Could not open map', err?.message ?? String(err)));
     }
   }, [mapApp]);
 

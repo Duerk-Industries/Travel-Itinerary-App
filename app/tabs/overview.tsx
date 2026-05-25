@@ -1787,7 +1787,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       window.open(url, '_blank');
     } else {
-      Linking.openURL(url);
+      Linking.openURL(url).catch((err) => Alert.alert('Could not open link', err?.message ?? String(err)));
     }
   };
 

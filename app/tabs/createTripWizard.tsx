@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Linking, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Alert, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import type { Trait } from './traits';
 import { FlightsTab, type Flight, type GroupMemberOption, type Trip } from './transfers';
 import {
@@ -876,7 +876,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       window.open(url, '_blank');
     } else {
-      Linking.openURL(url);
+      Linking.openURL(url).catch((err) => Alert.alert('Could not open map', err?.message ?? String(err)));
     }
   };
 

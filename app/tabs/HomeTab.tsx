@@ -280,7 +280,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
       </ScrollView>
 
       {showTripPicker ? (
-        <Modal transparent animationType="fade" visible>
+        <Modal transparent animationType="fade" visible onRequestClose={() => setShowTripPicker(false)}>
           <View style={styles.homeModalOverlay} testID="home-trip-modal">
             <View style={styles.homeModalCard}>
               <View style={styles.homeModalHeader}>
@@ -350,7 +350,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
       ) : null}
 
       {showNoTripsDialog ? (
-        <Modal transparent animationType="fade" visible>
+        <Modal transparent animationType="fade" visible onRequestClose={() => setShowNoTripsDialog(false)}>
           <View style={styles.homeModalOverlay} testID="home-no-trips-dialog">
             <View style={styles.homeModalCard}>
               <View style={styles.homeModalHeader}>
@@ -391,7 +391,7 @@ const HomeTab: React.FC<HomeTabProps> = ({
       ) : null}
 
       {showFollowDialog ? (
-        <Modal transparent animationType="fade" visible>
+        <Modal transparent animationType="fade" visible onRequestClose={() => setShowFollowDialog(false)}>
           <View style={styles.homeModalOverlay} testID="home-follow-dialog">
             <View style={styles.homeModalCard}>
               <View style={styles.homeModalHeader}>
