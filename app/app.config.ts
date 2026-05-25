@@ -21,6 +21,7 @@ if (!process.env.EXPO_PUBLIC_BACKEND_URL) {
 const config: ExpoConfig = {
   name: 'WanderBunnies',
   slug: 'travel-itinerary-planner',
+  version: '0.1.0',
   scheme: 'travelitineraryplanner',
   owner: 'duerk-industries',
   icon: './assets/wanderbunnies-app-icon.png',

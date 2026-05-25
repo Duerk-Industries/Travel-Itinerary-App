@@ -98,6 +98,52 @@ describe('resolveBackendUrl', () => {
     ).toBe('http://127.0.0.1:4000');
   });
 
+  it('remaps a loopback backend to 10.0.2.2 on the Android emulator', () => {
+    expect(
+      resolveBackendUrl({
+        appConfigured: 'http://localhost:4000',
+        platformOs: 'android',
+      })
+    ).toBe('http://10.0.2.2:4000');
+  });
+
+  it('remaps a 127.0.0.1 backend to 10.0.2.2 on the Android emulator', () => {
+    expect(
+      resolveBackendUrl({
+        appConfigured: 'http://127.0.0.1:4000',
+        platformOs: 'android',
+      })
+    ).toBe('http://10.0.2.2:4000');
+  });
+
+  it('preserves an explicit env override over the Android emulator remap', () => {
+    expect(
+      resolveBackendUrl({
+        appConfigured: 'http://localhost:4000',
+        envConfigured: 'http://192.168.1.50:4000',
+        platformOs: 'android',
+      })
+    ).toBe('http://192.168.1.50:4000');
+  });
+
+  it('leaves loopback as localhost on the iOS simulator (host network is shared)', () => {
+    expect(
+      resolveBackendUrl({
+        appConfigured: 'http://localhost:4000',
+        platformOs: 'ios',
+      })
+    ).toBe('http://localhost:4000');
+  });
+
+  it('does not remap non-loopback hosts on Android', () => {
+    expect(
+      resolveBackendUrl({
+        appConfigured: 'https://duerk.org',
+        platformOs: 'android',
+      })
+    ).toBe('https://duerk.org');
+  });
+
   it('falls back to the browser origin when env values are the literal string "undefined"', () => {
     expect(
       resolveBackendUrl({

@@ -96,5 +96,19 @@ export const resolveBackendUrl = ({
     return 'http://localhost:4000';
   }
 
+  // Native: if a loopback backend was configured (typical local dev setup
+  // where app.config.ts injects http://localhost:4000), remap to 10.0.2.2
+  // on the Android emulator so it can actually reach the host machine.
+  // iOS simulator shares the host's network and can use loopback directly.
+  if (configuredBackend && (platformOs === 'android' || platformOs === 'ios')) {
+    const parsedConfigured = tryParseUrl(configuredBackend, 'http');
+    if (parsedConfigured && isLoopbackHostname(parsedConfigured.hostname)) {
+      if (platformOs === 'android') {
+        parsedConfigured.hostname = '10.0.2.2';
+      }
+      return stripTrailingSlash(parsedConfigured.toString());
+    }
+  }
+
   return normalizeBackendUrl(configuredBackend ?? 'https://duerk.org', 'https');
 };
