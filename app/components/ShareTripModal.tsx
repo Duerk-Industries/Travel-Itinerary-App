@@ -1,5 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import { Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import Constants from 'expo-constants';
+import { buildFollowShareLink } from '../utils/shareLinks';
 
 type Trip = {
   id: string;
@@ -46,11 +48,12 @@ const ShareTripModal: React.FC<ShareTripModalProps> = ({
 
   const shareLink = useMemo(() => {
     if (!followCode) return '';
-    if (typeof window !== 'undefined') {
-      const origin = window.location.origin || '';
-      return `${origin}/app?followCode=${encodeURIComponent(followCode)}`;
-    }
-    return followCode;
+    const webOrigin = typeof window !== 'undefined' ? window.location.origin || '' : '';
+    return buildFollowShareLink(followCode, {
+      platformOs: Platform.OS,
+      webOrigin,
+      scheme: Constants.expoConfig?.scheme,
+    });
   }, [followCode]);
 
   const loadShareData = async () => {
