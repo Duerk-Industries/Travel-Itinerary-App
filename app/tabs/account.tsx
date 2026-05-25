@@ -158,7 +158,7 @@ interface AccountTabProps {
   onChangeMapApp: (pref: MapApp) => void;
   appearancePreference: AppearancePreference;
   onChangeAppearancePreference: (pref: AppearancePreference) => void;
-  saveSession: (token: string, name: string, page?: string, email?: string | null) => void;
+  saveSession: (token: string, name: string, page?: string, email?: string | null) => void | Promise<void>;
   headers: Headers;
   jsonHeaders: Headers;
   airportOptions: string[];

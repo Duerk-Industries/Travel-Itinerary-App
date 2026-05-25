@@ -108,7 +108,7 @@ interface AccountProfileManagementProps {
   onChangeMapApp: (pref: MapApp) => void;
   appearancePreference: AppearancePreference;
   onChangeAppearancePreference: (pref: AppearancePreference) => void;
-  saveSession: (token: string, name: string, page?: string, email?: string | null) => void;
+  saveSession: (token: string, name: string, page?: string, email?: string | null) => void | Promise<void>;
   headers: Headers;
   jsonHeaders: Headers;
   airportOptions: string[];
@@ -282,7 +282,7 @@ const AccountProfileManagement = ({
     const fullName = `${updatedUser.firstName ?? ''} ${updatedUser.lastName ?? ''}`.trim() || 'Traveler';
     if (data.token) {
       setUserToken(data.token);
-      saveSession(data.token, fullName, activePage, updatedUser.email ?? accountProfile.email);
+      void saveSession(data.token, fullName, activePage, updatedUser.email ?? accountProfile.email);
     }
     setUserName(fullName);
     setUserEmail(updatedUser.email ?? null);
@@ -405,7 +405,7 @@ const AccountProfileManagement = ({
       if (typeof data.token === 'string') {
         const fullName = `${accountProfile.firstName ?? ''} ${accountProfile.lastName ?? ''}`.trim() || 'Traveler';
         setUserToken(data.token);
-        saveSession(data.token, fullName, activePage, email);
+        void saveSession(data.token, fullName, activePage, email);
       }
       setAccountProfile((prev) => ({ ...prev, email }));
       setUserEmail(email);

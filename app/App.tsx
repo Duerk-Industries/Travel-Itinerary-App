@@ -11,7 +11,8 @@
  * then UI sections render conditionally based on the active page.
  */
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AppState, Image, Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme } from 'react-native';
+import { AppState, Image, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme } from 'react-native';
+import { SafeAreaView as NativeSafeAreaView } from 'react-native-safe-area-context';
 import { NavigationContainer, createNavigationContainerRef, type LinkingOptions } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Constants from 'expo-constants';
@@ -54,7 +55,13 @@ import { getAppTheme, type AppTheme } from './theme/theme';
 import { FOLLOWED_TRIP_HIDDEN_PAGES, shouldAllowPageChange, shouldDisableTab } from './utils/wizardGuard';
 import * as WebBrowser from 'expo-web-browser';
 import { Buffer } from 'buffer';
-import { loadLastActiveTripId, loadSession, saveLastActiveTripId, saveSession, clearSession } from './utils/session';
+import {
+  clearSessionAsync,
+  loadLastActiveTripId,
+  loadSessionAsync,
+  saveLastActiveTripIdAsync,
+  saveSessionAsync,
+} from './utils/session';
 import LodgingDetailsDialog from './components/LodgingDetailsDialog';
 import ConfirmDialog from './components/ConfirmDialog';
 import PendingInvitesModal from './components/PendingInvitesModal';
@@ -97,6 +104,8 @@ import { connectSocket, disconnectSocket } from './utils/socket';
 import type { PresenceUser } from '../packages/messaging/src/types';
 
 const TOP_BANNER_ICON = require('./assets/wanderbunnies-reference.png');
+type SafeAreaViewCompatProps = React.ComponentProps<typeof View>;
+const SafeAreaView = NativeSafeAreaView as unknown as React.ComponentType<SafeAreaViewCompatProps>;
 
 type NativeDateTimePickerType = typeof import('@react-native-community/datetimepicker').default;
 let NativeDateTimePicker: NativeDateTimePickerType | null = null;
@@ -1198,7 +1207,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     disconnectSocket();
     // PresenceProvider and ChatProvider reset their state automatically when
     // userToken or activeTripId becomes null after clearSession().
-    clearSession();
+    void clearSessionAsync();
   }, [clearSessionState, clearTripsData]);
   logoutRef.current = logout;
 
@@ -1289,9 +1298,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       appearancePreference: 'auto',
       temperatureUnit: 'fahrenheit',
     });
-    const previousSession = loadSession();
     const restoredTripId =
-      previousSession?.tripId ??
       loadLastActiveTripId(decoded?.email ?? null) ??
       activeTripId ??
       null;
@@ -1311,7 +1318,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     }
     setPageForwardHistory([]);
     setPageHistory([]);
-    saveSession(token, name, firstLogin ? 'home' : 'overview', decoded?.email, restoredTripId, [], decodedRole);
+    void saveSessionAsync(token, name, firstLogin ? 'home' : 'overview', decoded?.email, restoredTripId, [], decodedRole);
     },
     [activeTripId]
   );
@@ -2002,7 +2009,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     if (pendingInviteModalOpen || invites.length || pendingTripShareInvites.length || pendingFollowCode) return;
     setDeferFirstLoginRedirect(false);
     setActivePage('account');
-    saveSession(userToken, userName ?? 'Traveler', 'account', userEmail ?? undefined, activeTripId ?? null, pageHistory, userRole);
+    void saveSessionAsync(userToken, userName ?? 'Traveler', 'account', userEmail ?? undefined, activeTripId ?? null, pageHistory, userRole);
   }, [
     activeTripId,
     deferFirstLoginRedirect,
@@ -2035,8 +2042,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
   useEffect(() => {
     if (userToken) return;
-    const session = loadSession();
-    if (session) {
+    let cancelled = false;
+    void loadSessionAsync().then((session) => {
+      if (cancelled || !session) return;
       const decoded = decodeTokenClaims(session.token);
       const restoredRole: 'user' | 'admin' =
         session.role === 'admin' || decoded?.role === 'admin' ? 'admin' : 'user';
@@ -2083,8 +2091,11 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           setActivePage('home');
         }
       }
-    }
-  }, [userToken]);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [userToken, applySession]);
 
   // useFollowedTrips owns localStorage persistence for follow codes/payloads and
   // pendingFollowCode. This effect only handles the URL-query-param capture
@@ -2363,12 +2374,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
   useEffect(() => {
     if (!userToken) return;
-    saveSession(userToken, userName ?? 'Traveler', activePage, userEmail, activeTripId, pageHistory, userRole);
+    void saveSessionAsync(userToken, userName ?? 'Traveler', activePage, userEmail, activeTripId, pageHistory, userRole);
   }, [userToken, userName, userEmail, activePage, activeTripId, pageHistory, userRole]);
 
   useEffect(() => {
     if (!userEmail) return;
-    saveLastActiveTripId(activeTripId, userEmail);
+    void saveLastActiveTripIdAsync(activeTripId, userEmail);
   }, [activeTripId, userEmail]);
 
   const disabledPages = useMemo(() => {
@@ -2793,7 +2804,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                   onChangeMapApp={updateMapPreference}
                   appearancePreference={appearancePreference}
                   onChangeAppearancePreference={updateAppearancePreference}
-                  saveSession={saveSession}
+                  saveSession={saveSessionAsync}
                   headers={headers}
                   jsonHeaders={jsonHeaders}
                   airportOptions={flightAirportOptions}
@@ -3414,8 +3425,8 @@ const rootErrorStyles = StyleSheet.create({
   },
 });
 
-const stripIosFontWeights = <T extends Record<string, any>>(styles: T): T => {
-  if (Platform.OS !== 'ios') return styles;
+const stripAndroidFontWeights = <T extends Record<string, any>>(styles: T): T => {
+  if (Platform.OS !== 'android') return styles;
   return Object.fromEntries(
     Object.entries(styles).map(([key, value]) => {
       if (!value || typeof value !== 'object' || Array.isArray(value) || !('fontWeight' in value)) {
@@ -3427,7 +3438,7 @@ const stripIosFontWeights = <T extends Record<string, any>>(styles: T): T => {
   ) as T;
 };
 
-const buildStyles = (theme: AppTheme) => StyleSheet.create(stripIosFontWeights({
+const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeights({
   container: {
     flex: 1,
     backgroundColor: theme.colors.backgroundAlt,

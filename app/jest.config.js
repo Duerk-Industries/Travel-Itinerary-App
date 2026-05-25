@@ -18,10 +18,13 @@ module.exports = {
 
   moduleNameMapper: {
     '^canvas$': '<rootDir>/tests/__mocks__/canvas.ts',
+    '^@react-native-async-storage/async-storage$': '<rootDir>/tests/__mocks__/@react-native-async-storage/async-storage.ts',
     '^@react-native-community/datetimepicker$': '<rootDir>/tests/__mocks__/@react-native-community/datetimepicker.ts',
     '^@react-navigation/native$': '<rootDir>/tests/__mocks__/@react-navigation/native.ts',
     '^@react-navigation/native-stack$': '<rootDir>/tests/__mocks__/@react-navigation/native-stack.ts',
+    '^react-native-safe-area-context$': '<rootDir>/tests/__mocks__/react-native-safe-area-context.ts',
     '^socket\\.io-client$': '<rootDir>/tests/__mocks__/socket.io-client.ts',
+    '^@expo/metro-runtime$': '<rootDir>/tests/__mocks__/@expo/metro-runtime.ts',
   },
 
   // A setup file that runs before each test.

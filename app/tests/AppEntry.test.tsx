@@ -14,11 +14,15 @@ jest.mock('react-native', () => {
   return {
     Platform: { OS: 'android' },
     StatusBar: { currentHeight: 42 },
-    SafeAreaView: ({ children }: any) => <div>{children}</div>,
+    View: ({ children }: any) => <div>{children}</div>,
     StyleSheet: { create: (s: any) => s },
     Text: ({ children }: any) => <span>{children}</span>,
   };
 });
+
+jest.mock('react-native-safe-area-context', () => ({
+  SafeAreaView: ({ children }: any) => <div>{children}</div>,
+}));
 
 // We can test resolveComponentExport behavior by mocking the require call
 jest.mock('../AppRoot', () => {
@@ -50,10 +54,12 @@ describe('AppEntry', () => {
       getGlobalHandler: getGlobalHandlerMock,
       setGlobalHandler: setGlobalHandlerMock,
     };
+    delete (globalThis as any).__wanderBunniesAppMounted;
   });
 
   afterEach(() => {
     globalWithErrorUtils.ErrorUtils = originalErrorUtils as ErrorUtilsShape | undefined;
+    delete (globalThis as any).__wanderBunniesAppMounted;
   });
 
   it('registers the root component and sets global error handler', () => {

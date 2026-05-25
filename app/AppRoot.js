@@ -5,6 +5,18 @@ const React = require('react');
 const AppModule = require('./App');
 const App = (AppModule && AppModule.default) ? AppModule.default : AppModule;
 
+// `react-native-safe-area-context` is required transitively by
+// `@react-navigation/native`. Without `<SafeAreaProvider>` as an ancestor,
+// `SafeAreaView` (from this package) and `useSafeAreaInsets()` return zero
+// insets on iOS, causing the auth form / nav bar to render under the notch
+// or dynamic island on iPhone X+ devices. Web and Android usually mask the
+// issue because there's no notch insets to honour.
+const SafeAreaContextModule = require('react-native-safe-area-context');
+const SafeAreaProvider =
+  SafeAreaContextModule && SafeAreaContextModule.SafeAreaProvider
+    ? SafeAreaContextModule.SafeAreaProvider
+    : null;
+
 const isRenderableComponent = (value) =>
   typeof value === 'function' || (value && typeof value === 'object' && value.$$typeof);
 
@@ -14,7 +26,9 @@ if (!isRenderableComponent(App)) {
 }
 
 function AppRoot() {
-  return React.createElement(App);
+  const appElement = React.createElement(App);
+  if (!SafeAreaProvider) return appElement;
+  return React.createElement(SafeAreaProvider, null, appElement);
 }
 
 exports.default = AppRoot;

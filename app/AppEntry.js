@@ -1,6 +1,10 @@
+// Required by Expo SDK 50+ for web HMR / fast refresh and async route support.
+// Safe to import on every platform; the native runtime no-ops.
+import '@expo/metro-runtime';
 import React, { useEffect, useState } from 'react';
 import { registerRootComponent } from 'expo';
-import { Platform, SafeAreaView, StyleSheet, Text, StatusBar } from 'react-native';
+import { Platform, StyleSheet, Text, StatusBar, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 let startupError = null;
 const startupErrorListeners = new Set();
@@ -27,30 +31,34 @@ const getErrorMessage = (error) => {
   }
 };
 
-let appHasMounted = false;
-
 const globalErrorUtils = globalThis.ErrorUtils;
-const originalGlobalHandler = globalErrorUtils && typeof globalErrorUtils.getGlobalHandler === 'function' 
-  ? globalErrorUtils.getGlobalHandler() 
-  : null;
 
 if (globalErrorUtils && typeof globalErrorUtils.setGlobalHandler === 'function') {
-  globalErrorUtils.setGlobalHandler((error, isFatal) => {
-    if (!appHasMounted) {
-      publishStartupError(error);
-      console.log('Captured JS startup error', getErrorMessage(error), isFatal ? '(fatal)' : '');
-    } else if (originalGlobalHandler) {
-      originalGlobalHandler(error, isFatal);
-    } else {
-      console.error('Unhandled JS error:', getErrorMessage(error));
-    }
-  });
+  if (!globalErrorUtils.__hasWanderBunniesHandler) {
+    const originalGlobalHandler = typeof globalErrorUtils.getGlobalHandler === 'function' 
+      ? globalErrorUtils.getGlobalHandler() 
+      : null;
+
+    globalErrorUtils.setGlobalHandler((error, isFatal) => {
+      if (!globalThis.__wanderBunniesAppMounted) {
+        publishStartupError(error);
+        console.log('Captured JS startup error', getErrorMessage(error), isFatal ? '(fatal)' : '');
+      } else if (originalGlobalHandler) {
+        originalGlobalHandler(error, isFatal);
+      } else {
+        console.error('Unhandled JS error:', getErrorMessage(error));
+      }
+    });
+    globalErrorUtils.__hasWanderBunniesHandler = true;
+  }
 }
 
 const StartupFailure = ({ error }) => (
-  <SafeAreaView style={styles.container}>
-    <Text style={styles.title}>WanderBunnies could not start</Text>
-    <Text style={styles.message}>{getErrorMessage(error)}</Text>
+  <SafeAreaView style={styles.safeArea}>
+    <View style={styles.container}>
+      <Text style={styles.title}>WanderBunnies could not start</Text>
+      <Text style={styles.message}>{getErrorMessage(error)}</Text>
+    </View>
   </SafeAreaView>
 );
 
@@ -108,7 +116,7 @@ const Root = () => {
   const [error, setError] = useState(startupError);
 
   useEffect(() => {
-    appHasMounted = true;
+    globalThis.__wanderBunniesAppMounted = true;
     startupErrorListeners.add(setError);
     return () => {
       startupErrorListeners.delete(setError);
@@ -138,12 +146,15 @@ const Root = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: '#102438',
+  },
+  container: {
+    flex: 1,
     justifyContent: 'center',
     padding: 24,
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 24,
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 24 : 24,
   },
   title: {
     color: '#ffffff',
