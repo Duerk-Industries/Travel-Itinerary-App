@@ -1,12 +1,12 @@
 import fs from 'fs';
 import path from 'path';
-import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.js';
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { createWorker } from 'tesseract.js';
 import { parseFlightText } from '../utils/parsers/transferParser';
 
 const resolvePdfWorker = () => {
-  const pdfMain = require.resolve('pdfjs-dist/legacy/build/pdf.js');
-  const workerPath = path.join(path.dirname(pdfMain), 'pdf.worker.min.js');
+  const pdfMain = require.resolve('pdfjs-dist/legacy/build/pdf.mjs');
+  const workerPath = path.join(path.dirname(pdfMain), 'pdf.worker.min.mjs');
   (pdfjsLib as any).GlobalWorkerOptions.workerSrc = workerPath;
 };
 

@@ -74,7 +74,23 @@ const config: ExpoConfig = {
       monochromeImage: './assets/wanderbunnies-android-monochrome.png',
     },
   },
-  plugins: ['expo-web-browser'],
+  plugins: [
+    'expo-web-browser',
+    // Sentry's Expo plugin:
+    //  - injects a Debug ID into native bundles during EAS build,
+    //  - uploads source maps when SENTRY_AUTH_TOKEN / SENTRY_ORG /
+    //    SENTRY_PROJECT are present in the build environment.
+    // Without those env vars, the plugin is a no-op — safe to merge before
+    // a Sentry account is provisioned.
+    [
+      '@sentry/react-native/expo',
+      {
+        organization: process.env.SENTRY_ORG,
+        project: process.env.SENTRY_PROJECT,
+        url: process.env.SENTRY_URL ?? 'https://sentry.io/',
+      },
+    ],
+  ],
   extra: {
     backendUrl:
       process.env.EXPO_PUBLIC_BACKEND_URL ??
