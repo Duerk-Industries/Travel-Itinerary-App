@@ -157,7 +157,7 @@ This command compiles the web app and places the static files into the `dist/` d
 ### Step 2: Configure the Backend Environment
 Your backend's configuration is managed through environment variables and secrets.
 
-*   **`server/.env`**: Primary local source for both non-sensitive configuration and secrets. A `GCLOUD_PROJECT_ID` entry is required.
+*   **`server/.env`**: Primary local source for both non-sensitive configuration and secrets. `GCLOUD_PROJECT_ID` is required, and Cloud Run deploys also require a non-default `AUTH_SECRET` unless you map `AUTH_SECRET` from Secret Manager via `server/.secrets` or `SECRETS`.
 *   **`server/.secrets`**: Optional fallback file for backwards compatibility. It is still read by loaders and deploy scripts, but is no longer the primary local source.
 
 Run the following script to upload these variables and secrets to your Cloud Run service. It will create secrets in Google Secret Manager if they don't exist and then securely map them to your service.

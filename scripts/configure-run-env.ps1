@@ -154,13 +154,25 @@ $secretMap = @{}
 $envPairs = @()
 $envKeys = @()
 $projectId = ''
+$sawGoogleApplicationCredentials = $false
+$authSecretFromEnv = $null
 foreach ($pair in (Parse-DotEnv $EnvFile)) {
+  if ($pair.Key -eq 'GOOGLE_APPLICATION_CREDENTIALS') {
+    $sawGoogleApplicationCredentials = $true
+  }
+  if ($pair.Key -eq 'AUTH_SECRET') {
+    $authSecretFromEnv = $pair.Value
+  }
   if (Should-IgnoreKey $pair.Key $IgnoreKeys) { continue }
   if ($pair.Key -in @('GCLOUD_PROJECT_ID', 'GOOGLE_CLOUD_PROJECT')) {
     $projectId = $pair.Value
   }
   $value = $pair.Value -replace ',', '\,'
   $envPairs += "$($pair.Key)=$value"
+}
+
+if ($sawGoogleApplicationCredentials) {
+  Write-Warning "GOOGLE_APPLICATION_CREDENTIALS is present in $EnvFile. Cloud Run should use ADC via its runtime service account; this key is ignored for deploy."
 }
 
 if ($Secrets) {
@@ -185,6 +197,13 @@ if ($SecretsFile -and (Test-Path -LiteralPath $SecretsFile)) {
     # Name-only mapping: secret values are not read/uploaded by this script.
     $secretMap[$key] = ('{0}:latest' -f $key)
   }
+}
+
+$hasAuthSecretMapping = $secretMap.ContainsKey('AUTH_SECRET')
+$hasSafeAuthSecretEnv = -not [string]::IsNullOrWhiteSpace($authSecretFromEnv) -and $authSecretFromEnv.Trim() -ne 'development-secret'
+if (-not $hasAuthSecretMapping -and -not $hasSafeAuthSecretEnv) {
+  Write-Error "AUTH_SECRET is required for Cloud Run configuration. Add AUTH_SECRET to server/.secrets and create a matching Secret Manager secret, or set a non-default AUTH_SECRET in the deploy env file."
+  exit 1
 }
 
 $hasSecretOverrides = $secretMap.Count -gt 0

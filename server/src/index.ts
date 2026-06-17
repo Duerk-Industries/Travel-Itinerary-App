@@ -1,3 +1,5 @@
+// Must be first: initializes Sentry before http/express are instrumented.
+import './instrument';
 import { Server } from 'http';
 import { app, envLoadedFrom } from './app';
 import { initDb, refreshAirportsDaily } from './db';

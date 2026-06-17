@@ -1,9 +1,14 @@
 # Sentry error reporting & source maps
 
-WanderBunnies wires `@sentry/react-native` into the Expo app so that
-production crashes (native and web) report to Sentry with symbolicated
-stack traces. Everything is gated on environment variables, so the
-codebase ships safely whether or not a Sentry project is provisioned.
+WanderBunnies wires `@sentry/react-native` into the Expo app **and**
+`@sentry/node` into the Express backend so that production crashes (native,
+web, and server) report to Sentry with symbolicated stack traces. Everything
+is gated on environment variables, so the codebase ships safely whether or not
+a Sentry project is provisioned.
+
+The frontend and backend both report to the same Sentry project
+(`duerk-industries / wanderbunnies-app`). Events are separated by SDK/platform
+inside Sentry, so a single DSN is sufficient.
 
 ## What gets reported
 
@@ -87,6 +92,36 @@ EXPO_PUBLIC_SENTRY_DSN=https://… npm --prefix app run web
 
 …and trigger an error in the UI. It should appear in the configured
 project within a few seconds.
+
+## Backend (server)
+
+The Express backend reports via `@sentry/node`, whose v10 SDK is built on
+OpenTelemetry — so traces and errors export directly to Sentry over the DSN. An
+external OTLP pipeline (Sentry's OTLP endpoint) is an alternative we don't need
+because the SDK exports on its own.
+
+Wiring:
+
+- `server/src/instrument.ts` — calls `Sentry.init()` and is imported as the
+  **very first** module in `server/src/index.ts`, before `http`/`express` are
+  used, so auto-instrumentation can patch them. No-op when `SENTRY_DSN` is
+  unset.
+- `server/src/app.ts` — registers `Sentry.setupExpressErrorHandler(app)` after
+  all routes but before the custom error handler, so unhandled request errors
+  are captured. The custom handler below it still formats the client response.
+
+### Backend environment variables
+
+| Variable                    | Effect                                                                         |
+| --------------------------- | ------------------------------------------------------------------------------ |
+| `SENTRY_DSN`                | Enables backend `Sentry.init`. **Without it the backend integration is off.**  |
+| `SENTRY_ENVIRONMENT`        | Environment tag. Falls back to `NODE_ENV`, then `production`.                   |
+| `SENTRY_TRACES_SAMPLE_RATE` | Fraction of requests traced (0..1). Defaults to `0.1`.                          |
+| `SENTRY_RELEASE`            | Optional release tag for grouping events by deploy.                            |
+
+Read these through the standard server config: locally they live in
+`server/.env`; in production set them as Cloud Run env vars on the service. The
+`_FILE` suffix convention works too (e.g. `SENTRY_DSN_FILE=/run/secrets/...`).
 
 ## Files
 

@@ -140,6 +140,8 @@ display_env_pair() {
 env_pairs=()
 project_id=""
 declare -A secret_map=()
+auth_secret_from_env=""
+saw_google_application_credentials=0
 
 while IFS= read -r line || [[ -n "$line" ]]; do
   line="${line%%$'
@@ -155,8 +157,14 @@ while IFS= read -r line || [[ -n "$line" ]]; do
   [[ "$line" != *"="* ]] && continue
   key="$(trim "${line%%=*} ")"
   value="$(trim "${line#*=}")"
+  if [[ "$key" == "GOOGLE_APPLICATION_CREDENTIALS" ]]; then
+    saw_google_application_credentials=1
+  fi
   if [[ "$value" =~ ^".*"$ || "$value" =~ ^'.*'$ ]]; then
     value="${value:1:${#value}-2}"
+  fi
+  if [[ "$key" == "AUTH_SECRET" ]]; then
+    auth_secret_from_env="$value"
   fi
   if should_ignore_key "$key"; then
     continue
@@ -167,6 +175,10 @@ while IFS= read -r line || [[ -n "$line" ]]; do
   value="${value//,/\\,}"
   env_pairs+=("${key}=${value}")
 done < "$ENV_FILE"
+
+if [[ "$saw_google_application_credentials" -eq 1 ]]; then
+  echo "WARNING: GOOGLE_APPLICATION_CREDENTIALS is present in ${ENV_FILE}. Cloud Run should use ADC via its runtime service account; this key is ignored for deploy." >&2
+fi
 
 if [[ -z "$project_id" && -n "$SECRETS_FILE" && -f "$SECRETS_FILE" ]]; then
   while IFS= read -r line || [[ -n "$line" ]]; do
@@ -228,6 +240,19 @@ if [[ -n "${SECRETS_FILE}" && -f "${SECRETS_FILE}" ]]; then
       secret_map["$key"]="$key:latest"
     fi
   done < "$SECRETS_FILE"
+fi
+has_auth_secret_mapping=0
+if [[ -n "${secret_map[AUTH_SECRET]:-}" ]]; then
+  has_auth_secret_mapping=1
+fi
+trimmed_auth_secret="$(trim "$auth_secret_from_env")"
+has_safe_auth_secret_env=0
+if [[ -n "$trimmed_auth_secret" && "$trimmed_auth_secret" != "development-secret" ]]; then
+  has_safe_auth_secret_env=1
+fi
+if [[ "$has_auth_secret_mapping" -eq 0 && "$has_safe_auth_secret_env" -eq 0 ]]; then
+  echo "AUTH_SECRET is required for Cloud Run configuration. Add AUTH_SECRET to server/.secrets and create a matching Secret Manager secret, or set a non-default AUTH_SECRET in the deploy env file." >&2
+  exit 1
 fi
 if [[ "${#secret_map[@]}" -gt 0 ]]; then
   filtered_env_pairs=()

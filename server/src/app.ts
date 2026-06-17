@@ -4,6 +4,7 @@ import fs from 'fs';
 import dotenv from 'dotenv';
 import express from 'express';
 import cors from 'cors';
+import * as Sentry from '@sentry/node';
 import './expressAsyncPatch';
 import authRoutes from './routes/authRoutes';
 import transferRoutes from './routes/transferRoutes';
@@ -375,6 +376,12 @@ if (hasWebApp) {
     res.sendFile(webIndexPath);
   });
 }
+
+// Sentry's error handler must run after all controllers/routes but before any
+// other error-handling middleware, so it sees unhandled errors first. It's a
+// no-op when Sentry wasn't initialized (no SENTRY_DSN), and it does not send a
+// response — the custom handler below still formats the client reply.
+Sentry.setupExpressErrorHandler(app);
 
 app.use((err: any, req: express.Request, res: express.Response, _next: express.NextFunction) => {
   const status = Number(err?.statusCode ?? err?.status ?? 500);

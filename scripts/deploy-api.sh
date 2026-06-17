@@ -158,6 +158,7 @@ cleanup_legacy_secrets() {
 env_pairs=()
 declare -A secret_map=()
 saw_google_application_credentials=0
+auth_secret_from_env=""
 if [[ -n "$ENV_FILE" ]]; then
   if [[ "$(basename "$ENV_FILE")" == ".local_env" ]]; then
     echo "Refusing to read .local_env for Cloud Run env vars." >&2
@@ -185,6 +186,9 @@ if [[ -n "$ENV_FILE" ]]; then
     fi
     if [[ "$value" =~ ^".*"$ || "$value" =~ ^'.*'$ ]]; then
       value="${value:1:${#value}-2}"
+    fi
+    if [[ "$key" == "AUTH_SECRET" ]]; then
+      auth_secret_from_env="$value"
     fi
     if should_ignore_key "$key"; then
       continue
@@ -230,6 +234,19 @@ if [[ -n "$SECRETS_FILE" && -f "$SECRETS_FILE" ]]; then
     fi
     secret_map["$key"]="${key}:latest"
   done < "$SECRETS_FILE"
+fi
+has_auth_secret_mapping=0
+if [[ -n "${secret_map[AUTH_SECRET]:-}" ]]; then
+  has_auth_secret_mapping=1
+fi
+trimmed_auth_secret="$(trim "$auth_secret_from_env")"
+has_safe_auth_secret_env=0
+if [[ -n "$trimmed_auth_secret" && "$trimmed_auth_secret" != "development-secret" ]]; then
+  has_safe_auth_secret_env=1
+fi
+if [[ "$has_auth_secret_mapping" -eq 0 && "$has_safe_auth_secret_env" -eq 0 ]]; then
+  echo "AUTH_SECRET is required for Cloud Run deploy. Add AUTH_SECRET to server/.secrets and create a matching Secret Manager secret, or set a non-default AUTH_SECRET in the deploy env file." >&2
+  exit 1
 fi
 if [[ "${#secret_map[@]}" -gt 0 ]]; then
   filtered_env_pairs=()
