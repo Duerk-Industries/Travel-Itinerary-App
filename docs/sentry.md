@@ -44,7 +44,8 @@ Disabled on purpose:
 ### Native (EAS)
 
 The `@sentry/react-native/expo` config plugin (registered in
-`app/app.config.ts` and `app.json`) hooks into EAS's `expo prebuild` /
+`app/app.config.ts`, the single source of truth for the Expo config) hooks
+into EAS's `expo prebuild` /
 `xcodebuild` / `gradle` flow. When `SENTRY_AUTH_TOKEN` + `SENTRY_ORG` +
 `SENTRY_PROJECT` are present in the EAS Build environment, the plugin
 invokes `sentry-cli` to upload native source maps after the bundle is
@@ -130,7 +131,7 @@ Read these through the standard server config: locally they live in
   `wrapApp()`.
 - `metro.shared.cjs` — wraps the Metro config with `withSentryConfig`
   so Debug IDs end up in every bundle.
-- `app/app.config.ts` / `app.json` — registers the Expo config plugin
+- `app/app.config.ts` — registers the Expo config plugin
   that triggers source-map upload.
 
 ## Disabling Sentry for a build

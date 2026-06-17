@@ -47,8 +47,16 @@ describe('app.config.ts', () => {
 
   describe('iOS ATS', () => {
     const originalNodeEnv = process.env.NODE_ENV;
+    const originalEasBuild = process.env.EAS_BUILD;
+    const originalEasProfile = process.env.EAS_BUILD_PROFILE;
+    const restore = (key: string, value: string | undefined) => {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    };
     afterEach(() => {
-      process.env.NODE_ENV = originalNodeEnv;
+      restore('NODE_ENV', originalNodeEnv);
+      restore('EAS_BUILD', originalEasBuild);
+      restore('EAS_BUILD_PROFILE', originalEasProfile);
       jest.resetModules();
     });
 
@@ -64,6 +72,39 @@ describe('app.config.ts', () => {
 
     it('allows arbitrary loads in development for LAN dev hosts', () => {
       process.env.NODE_ENV = 'development';
+      jest.resetModules();
+      const config = loadConfig();
+      const ats = (config.ios?.infoPlist as any)?.NSAppTransportSecurity;
+      expect(ats.NSAllowsArbitraryLoads).toBe(true);
+    });
+
+    it('does NOT leak arbitrary loads into an EAS production build when NODE_ENV is unset', () => {
+      // Reproduces the real eas build environment: NODE_ENV is undefined during
+      // config resolution, but EAS_BUILD / EAS_BUILD_PROFILE are set.
+      restore('NODE_ENV', undefined);
+      process.env.EAS_BUILD = 'true';
+      process.env.EAS_BUILD_PROFILE = 'production';
+      jest.resetModules();
+      const config = loadConfig();
+      const ats = (config.ios?.infoPlist as any)?.NSAppTransportSecurity;
+      expect(ats.NSAllowsArbitraryLoads).toBeUndefined();
+      expect(ats.NSExceptionDomains?.localhost?.NSExceptionAllowsInsecureHTTPLoads).toBe(true);
+    });
+
+    it('does NOT leak arbitrary loads into an EAS preview build', () => {
+      restore('NODE_ENV', undefined);
+      process.env.EAS_BUILD = 'true';
+      process.env.EAS_BUILD_PROFILE = 'preview';
+      jest.resetModules();
+      const config = loadConfig();
+      const ats = (config.ios?.infoPlist as any)?.NSAppTransportSecurity;
+      expect(ats.NSAllowsArbitraryLoads).toBeUndefined();
+    });
+
+    it('still allows arbitrary loads for the EAS development dev-client profile (LAN host)', () => {
+      restore('NODE_ENV', undefined);
+      process.env.EAS_BUILD = 'true';
+      process.env.EAS_BUILD_PROFILE = 'development';
       jest.resetModules();
       const config = loadConfig();
       const ats = (config.ios?.infoPlist as any)?.NSAppTransportSecurity;

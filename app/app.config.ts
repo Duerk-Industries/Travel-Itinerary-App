@@ -41,7 +41,19 @@ const config: ExpoConfig = {
     // a physical device can reach any LAN dev host). Production builds get a
     // narrow loopback exception so HTTP to localhost still works in simulator
     // dev clients without opening up plaintext to everything else.
-    const isProduction = process.env.NODE_ENV === 'production';
+    //
+    // NODE_ENV alone is NOT reliable here: during `eas build`, this config is
+    // evaluated in the prebuild/resolve phase where NODE_ENV is typically
+    // undefined, which would otherwise leak NSAllowsArbitraryLoads:true into a
+    // store build and trigger App Store review rejection. So we also key off
+    // EAS_BUILD/EAS_BUILD_PROFILE: any EAS build that isn't the `development`
+    // dev-client profile is treated as production (narrow localhost-only ATS).
+    const easProfile = process.env.EAS_BUILD_PROFILE;
+    const isEasBuild = process.env.EAS_BUILD === 'true' || process.env.EAS_BUILD === '1';
+    const isDevLikeBuild =
+      easProfile === 'development' ||
+      (!isEasBuild && process.env.NODE_ENV !== 'production');
+    const isProduction = !isDevLikeBuild;
     return {
       supportsTablet: true,
       bundleIdentifier: 'com.duerkindustries.travelitineraryplanner',

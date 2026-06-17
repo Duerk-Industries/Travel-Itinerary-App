@@ -40,7 +40,7 @@ jobs:
       - name: expo-doctor
         run: npx --prefix app expo-doctor
         # expo-doctor's exit code is the source of truth for project health;
-        # any regression here (engine.io aliases removed, app.json drift, etc.)
+        # any regression here (engine.io aliases removed, dependency drift, etc.)
         # blocks the PR.
 
   server:

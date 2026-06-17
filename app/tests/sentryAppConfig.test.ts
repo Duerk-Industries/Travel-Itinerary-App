@@ -1,15 +1,12 @@
 /**
  * @jest-environment node
  *
- * Locks in that the Sentry Expo config plugin is registered in both the
- * dynamic app.config.ts and the static app.json. The plugin is what
- * triggers source-map upload during EAS native builds and `expo export`,
- * so dropping it silently would mean production crashes lose
+ * Locks in that the Sentry Expo config plugin is registered in the dynamic
+ * app/app.config.ts (the single source of truth for the Expo config). The
+ * plugin is what triggers source-map upload during EAS native builds and
+ * `expo export`, so dropping it silently would mean production crashes lose
  * symbolication on the very next deploy.
  */
-import fs from 'node:fs';
-import path from 'node:path';
-
 const SENTRY_PLUGIN = '@sentry/react-native/expo';
 
 describe('Sentry Expo config plugin', () => {
@@ -19,18 +16,6 @@ describe('Sentry Expo config plugin', () => {
     const mod = require('../app.config');
     const config = mod.default ?? mod;
     const plugins = (config.plugins ?? []) as Array<string | [string, unknown]>;
-    const present = plugins.some((entry) =>
-      Array.isArray(entry) ? entry[0] === SENTRY_PLUGIN : entry === SENTRY_PLUGIN,
-    );
-    expect(present).toBe(true);
-  });
-
-  it('is registered in the static app.json plugins array', () => {
-    const workspaceRoot = path.resolve(__dirname, '..', '..');
-    const appJson = JSON.parse(
-      fs.readFileSync(path.join(workspaceRoot, 'app.json'), 'utf8'),
-    );
-    const plugins = (appJson.expo?.plugins ?? []) as Array<string | [string, unknown]>;
     const present = plugins.some((entry) =>
       Array.isArray(entry) ? entry[0] === SENTRY_PLUGIN : entry === SENTRY_PLUGIN,
     );
