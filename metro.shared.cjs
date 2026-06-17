@@ -103,7 +103,7 @@ const createSharedMetroConfig = ({
   // gated by SENTRY_AUTH_TOKEN, SENTRY_ORG, SENTRY_PROJECT being present in
   // the build environment. None of that runs in dev unless you set it up.
   const withSentryConfig = loadSentryWithMetroConfig();
-  if (withSentryConfig) {
+  if (withSentryConfig && process.env.EXPO_NO_SENTRY_METRO !== '1') {
     return withSentryConfig(config, {
       // We don't ship session replay; opt out to keep the web bundle smaller.
       includeWebReplay: false,

@@ -10,6 +10,7 @@ const workspaceRoot = path.resolve(projectRoot, '..');
 const projectNodeModules = path.join(projectRoot, 'node_modules');
 const workspaceNodeModules = path.join(workspaceRoot, 'node_modules');
 const workspacePackages = path.join(workspaceRoot, 'packages');
+const escapedWorkspaceRoot = workspaceRoot.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const config = createSharedMetroConfig({
   projectRoot,
@@ -22,9 +23,9 @@ const config = createSharedMetroConfig({
   // not the crawl, so HMR latency suffered.
   watchFolders: [workspacePackages],
   blockedPaths: [
-    /server[\\/].*/,
-    /functions[\\/].*/,
-    /\.firebase-data[\\/].*/,
+    new RegExp(`${escapedWorkspaceRoot}[\\\\/]server[\\\\/].*`),
+    new RegExp(`${escapedWorkspaceRoot}[\\\\/]functions[\\\\/].*`),
+    new RegExp(`${escapedWorkspaceRoot}[\\\\/]\\.firebase-data[\\\\/].*`),
   ],
 });
 

@@ -9,6 +9,7 @@ const projectRoot = __dirname;
 const appRoot = path.join(projectRoot, 'app');
 const projectNodeModules = path.join(projectRoot, 'node_modules');
 const appNodeModules = path.join(appRoot, 'node_modules');
+const escapedProjectRoot = projectRoot.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const config = createSharedMetroConfig({
   projectRoot,
@@ -21,9 +22,9 @@ const config = createSharedMetroConfig({
   // versions). We broadly exclude backend directories (server, functions)
   // and emulator data to keep the app bundle clean and the crawler fast.
   blockedPaths: [
-    /server[\\/].*/,
-    /functions[\\/].*/,
-    /\.firebase-data[\\/].*/,
+    new RegExp(`${escapedProjectRoot}[\\\\/]server[\\\\/].*`),
+    new RegExp(`${escapedProjectRoot}[\\\\/]functions[\\\\/].*`),
+    new RegExp(`${escapedProjectRoot}[\\\\/]\\.firebase-data[\\\\/].*`),
   ],
 });
 

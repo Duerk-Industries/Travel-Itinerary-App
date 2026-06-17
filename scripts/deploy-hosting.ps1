@@ -39,7 +39,7 @@ foreach ($src in $expoMap.Keys) {
 Write-Host "Building web bundle..."
 Push-Location (Join-Path $PSScriptRoot "..\\app")
 try {
-  & npx expo export --platform web --output-dir ../dist
+  & npm run export:web -- --output-dir ../dist
 } finally {
   Pop-Location
 }
