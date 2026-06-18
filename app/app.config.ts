@@ -18,6 +18,12 @@ if (!process.env.EXPO_PUBLIC_BACKEND_URL) {
   }
 }
 
+// True when this config is evaluated inside an EAS Build (cloud or `--local`).
+// EAS sets EAS_BUILD=true. A built artifact runs on a real device/simulator, so
+// it must NEVER fall back to a localhost backend — only local `expo start`
+// (where NODE_ENV=development and EAS_BUILD is unset) wants the loopback default.
+const isEasBuild = process.env.EAS_BUILD === 'true' || process.env.EAS_BUILD === '1';
+
 const config: ExpoConfig = {
   name: 'WanderBunnies',
   slug: 'travel-itinerary-planner',
@@ -49,7 +55,6 @@ const config: ExpoConfig = {
     // EAS_BUILD/EAS_BUILD_PROFILE: any EAS build that isn't the `development`
     // dev-client profile is treated as production (narrow localhost-only ATS).
     const easProfile = process.env.EAS_BUILD_PROFILE;
-    const isEasBuild = process.env.EAS_BUILD === 'true' || process.env.EAS_BUILD === '1';
     const isDevLikeBuild =
       easProfile === 'development' ||
       (!isEasBuild && process.env.NODE_ENV !== 'production');
@@ -111,7 +116,11 @@ const config: ExpoConfig = {
       process.env.API_BASE_URL ??
       process.env.REACT_APP_BACKEND_URL ??
       process.env.REACT_NATIVE_APP_BACKEND_URL ??
-      (process.env.NODE_ENV === 'development' ? 'http://localhost:4000' : 'https://duerk.org'),
+      // Localhost only for local `expo start` dev; any EAS build defaults to the
+      // hosted backend so a device build can never bake in an unreachable loopback.
+      (process.env.NODE_ENV === 'development' && !isEasBuild
+        ? 'http://localhost:4000'
+        : 'https://duerk.org'),
     refreshIntervalMs: Number(process.env.REFRESH_INTERVAL_MS) || 60000,
     sessionCacheTimeoutMinutes: Number(process.env.SESSION_CACHE_TIMEOUT_MINUTES) || 720,
     eas: {

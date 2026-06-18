@@ -1,10 +1,81 @@
+# EAS upload ignore list.
+#
+# IMPORTANT: when a .easignore exists, EAS uses it INSTEAD of .gitignore when
+# deciding what to upload. So this file must be SELF-SUFFICIENT — it repeats the
+# heavy/secret paths .gitignore covers and adds build-only data the native app
+# bundle never needs.
+#
+# KEEP (do not add patterns that match these): app/ source + assets,
+# packages/* (workspace deps the app imports via Metro), root config
+# (package.json, package-lock.json, metro.config.cjs, metro.shared.cjs,
+# app/app.config.ts, app/eas.json), and every workspace's package.json
+# (server/, packages/*) so `npm install` can resolve the workspace graph.
+
+# --- dependencies / VCS / editor cruft ---
 node_modules
-npm-debug.log*
-dist
+.git
+.vscode
+.idea
+*.iml
+.DS_Store
+desktop.ini
+
+# --- secrets & env (never upload) ---
 .env
+.local_env
+.secrets
+*.env.example
 server/.env
-app/.expo
+server/.local_env
+server/.secrets
+server/.env.example
+server/config/firebase-service-account-key.json
+
+# --- logs & build / test output (any workspace) ---
+logs
+*.log*
+dist
+build
+coverage
 .expo
+.gradle
+.firebase
+.firebase-data
+firebase-data
+firebase-export-*
+firestore-debug.log
+test-results
+playwright-report
+
+# --- backend: server/ is a workspace, so keep package.json + src but drop the
+#     bulk (server/logs alone was ~350 MB). ---
+server/logs
+server/data
+server/public
+server/__tests__
+server/eng.traineddata
+*.traineddata
+
+# --- non-workspace, root-only dirs the app build never needs ---
+/functions/
+/scripts/
+/docs/
+/test_inputs/
+/training_data/
+/tests/
+/public/
+/gradle/
+/.github/
+/.maestro/
+
+# --- app/: keep source + assets, drop test/build/cache output ---
+app/.expo
+app/dist
+app/coverage
+app/logs
+app/e2e
+app/tests
+app/.maestro
 app/android/.gradle
 app/android/.idea
 app/android/local.properties

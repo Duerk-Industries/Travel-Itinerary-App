@@ -111,4 +111,74 @@ describe('app.config.ts', () => {
       expect(ats.NSAllowsArbitraryLoads).toBe(true);
     });
   });
+
+  describe('backend URL default (extra.backendUrl)', () => {
+    const BACKEND_KEYS = [
+      'EXPO_PUBLIC_BACKEND_URL',
+      'BACKEND_URL',
+      'WEB_URL',
+      'API_BASE_URL',
+      'REACT_APP_BACKEND_URL',
+      'REACT_NATIVE_APP_BACKEND_URL',
+      'NODE_ENV',
+      'EAS_BUILD',
+    ];
+    const saved: Record<string, string | undefined> = {};
+
+    beforeEach(() => {
+      BACKEND_KEYS.forEach((k) => {
+        saved[k] = process.env[k];
+        delete process.env[k];
+      });
+      jest.resetModules();
+      // Neutralize the .env files app.config.ts loads (app/.env supplies a
+      // real EXPO_PUBLIC_BACKEND_URL) so the fallback branch is exercised.
+      jest.doMock('dotenv', () => ({
+        __esModule: true,
+        default: { config: () => ({ parsed: {} }) },
+        config: () => ({ parsed: {} }),
+      }));
+    });
+
+    afterEach(() => {
+      jest.dontMock('dotenv');
+      BACKEND_KEYS.forEach((k) => {
+        if (saved[k] === undefined) delete process.env[k];
+        else process.env[k] = saved[k];
+      });
+      jest.resetModules();
+    });
+
+    const loadBackendUrl = (): string => {
+      let value = '';
+      jest.isolateModules(() => {
+        const mod = require('../app.config');
+        value = (mod.default ?? mod).extra.backendUrl;
+      });
+      return value;
+    };
+
+    it('never defaults to localhost inside an EAS build, even when NODE_ENV=development', () => {
+      process.env.NODE_ENV = 'development';
+      process.env.EAS_BUILD = 'true';
+      expect(loadBackendUrl()).toBe('https://duerk.org');
+    });
+
+    it('uses localhost only for local expo start dev (NODE_ENV=development, no EAS_BUILD)', () => {
+      process.env.NODE_ENV = 'development';
+      expect(loadBackendUrl()).toBe('http://localhost:4000');
+    });
+
+    it('defaults to the hosted backend for a local production export', () => {
+      process.env.NODE_ENV = 'production';
+      expect(loadBackendUrl()).toBe('https://duerk.org');
+    });
+
+    it('honors an explicit EXPO_PUBLIC_BACKEND_URL over the default', () => {
+      process.env.NODE_ENV = 'development';
+      process.env.EAS_BUILD = 'true';
+      process.env.EXPO_PUBLIC_BACKEND_URL = 'https://staging.example.com';
+      expect(loadBackendUrl()).toBe('https://staging.example.com');
+    });
+  });
 });
