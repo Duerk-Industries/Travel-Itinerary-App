@@ -1,5 +1,6 @@
 import { getEnvFlag, getEnvValue } from '../env';
 import { logError } from '../logger';
+import type { BillingPlanKey } from '../types';
 
 // Pinned Stripe API version — update deliberately, not by drift.
 export const STRIPE_API_VERSION = '2025-02-24.acacia' as const;
@@ -42,6 +43,31 @@ export const getStripeCheckoutCancelUrl = (): string | undefined =>
 
 export const getStripePortalReturnUrl = (): string | undefined =>
   getEnvValue('STRIPE_PORTAL_RETURN_URL');
+
+// Price IDs are set when Stripe Prices are created in the Dashboard.
+// These are the active launch Prices; when a new Price is published (Phase 6 admin UI),
+// the env vars (or DB billing_plan_config rows) are updated.
+export const getStripePremiumMonthlyPriceId = (): string | undefined =>
+  getEnvValue('STRIPE_PREMIUM_MONTHLY_PRICE_ID');
+
+export const getStripePremiumAnnualPriceId = (): string | undefined =>
+  getEnvValue('STRIPE_PREMIUM_ANNUAL_PRICE_ID');
+
+export const SUPPORTED_PLAN_KEYS: BillingPlanKey[] = ['premium_monthly', 'premium_annual'];
+
+export const resolvePriceId = (planKey: BillingPlanKey): string => {
+  const priceId =
+    planKey === 'premium_monthly'
+      ? getStripePremiumMonthlyPriceId()
+      : getStripePremiumAnnualPriceId();
+  if (!priceId) {
+    throw new Error(
+      `[stripe] No active Price ID configured for plan: ${planKey}. ` +
+        `Set STRIPE_PREMIUM_MONTHLY_PRICE_ID or STRIPE_PREMIUM_ANNUAL_PRICE_ID.`,
+    );
+  }
+  return priceId;
+};
 
 // ---------------------------------------------------------------------------
 // Startup validation
