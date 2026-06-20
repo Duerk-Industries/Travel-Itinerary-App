@@ -1,6 +1,15 @@
 import request from 'supertest';
 import { app } from '../src/app';
-import { initDb, closePool } from '../src/db';
+import {
+  initDb,
+  closePool,
+  upsertBillingPlanConfig,
+  upsertBillingSubscription,
+  getBillingSubscriptionByStripeId,
+  revokeBillingSubscriptionAccess,
+  claimStripeWebhookEvent,
+  markStripeWebhookEventFailed,
+} from '../src/db';
 import { setStripeClientForTesting } from '../src/billing/stripeClient';
 import { cleanupTestUsersByEmail, registerAndLoginWebUser } from './helpers';
 
@@ -45,6 +54,12 @@ const makeFakeStripe = (overrides: Record<string, any> = {}) => ({
       items: { data: [{ price: { id: 'price_test_monthly' } }] },
     }),
     cancel: jest.fn().mockResolvedValue({}),
+  },
+  invoices: {
+    retrieve: jest.fn().mockResolvedValue({ id: 'in_test', subscription: 'sub_test' }),
+  },
+  charges: {
+    retrieve: jest.fn().mockResolvedValue({ id: 'ch_test', invoice: 'in_test' }),
   },
   webhooks: {
     constructEvent: jest.fn(),
@@ -133,7 +148,7 @@ describe('Billing routes', () => {
     it('requires authentication', async () => {
       await request(app)
         .post('/api/billing/checkout-session')
-        .send({ planKey: 'premium_monthly', idempotencyKey: 'test-key' })
+        .send({ planKey: 'premium_monthly', idempotencyKey: 'test-key', clientPlatform: 'web' })
         .expect(401);
     });
 
@@ -141,7 +156,7 @@ describe('Billing routes', () => {
       await request(app)
         .post('/api/billing/checkout-session')
         .set('Authorization', `Bearer ${token}`)
-        .send({ planKey: 'hacker_free', idempotencyKey: 'test-key-1' })
+        .send({ planKey: 'hacker_free', idempotencyKey: 'test-key-1', clientPlatform: 'web' })
         .expect(400);
     });
 
@@ -149,7 +164,15 @@ describe('Billing routes', () => {
       await request(app)
         .post('/api/billing/checkout-session')
         .set('Authorization', `Bearer ${token}`)
-        .send({ planKey: 'premium_monthly' })
+        .send({ planKey: 'premium_monthly', clientPlatform: 'web' })
+        .expect(400);
+    });
+
+    it('rejects native checkout requests', async () => {
+      await request(app)
+        .post('/api/billing/checkout-session')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ planKey: 'premium_monthly', idempotencyKey: 'native-test', clientPlatform: 'ios' })
         .expect(400);
     });
 
@@ -157,7 +180,7 @@ describe('Billing routes', () => {
       const res = await request(app)
         .post('/api/billing/checkout-session')
         .set('Authorization', `Bearer ${token}`)
-        .send({ planKey: 'premium_monthly', idempotencyKey: `test-key-${TS}` })
+        .send({ planKey: 'premium_monthly', idempotencyKey: `test-key-${TS}`, clientPlatform: 'web' })
         .expect(201);
 
       expect(res.body.url).toBe('https://checkout.stripe.com/pay/cs_test_fake');
@@ -170,6 +193,31 @@ describe('Billing routes', () => {
       expect(call.subscription_data.trial_period_days).toBe(14);
       expect(call.automatic_tax.enabled).toBe(true);
       expect(call.allow_promotion_codes).toBe(true);
+    });
+
+    it('uses admin-configured price, trial, tax, and promotion settings', async () => {
+      await upsertBillingPlanConfig({
+        planKey: 'premium_annual',
+        activeStripePriceId: 'price_admin_annual',
+        unitAmountCents: 4200,
+        trialDays: 7,
+        automaticTaxEnabled: false,
+        promotionCodesEnabled: false,
+        livemode: false,
+        updatedBy: userId,
+      });
+
+      await request(app)
+        .post('/api/billing/checkout-session')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ planKey: 'premium_annual', idempotencyKey: `admin-config-${TS}`, clientPlatform: 'web' })
+        .expect(201);
+
+      const call = fakeStripe.checkout.sessions.create.mock.calls.at(-1)[0];
+      expect(call.line_items[0].price).toBe('price_admin_annual');
+      expect(call.subscription_data.trial_period_days).toBe(7);
+      expect(call.automatic_tax.enabled).toBe(false);
+      expect(call.allow_promotion_codes).toBe(false);
     });
 
     it('returns 409 if user already has an active subscription', async () => {
@@ -200,6 +248,79 @@ describe('Billing routes', () => {
           .expect(404);
       } finally {
         await cleanupTestUsersByEmail([freshEmail]);
+      }
+    });
+  });
+
+  describe('billing persistence safety', () => {
+    it('preserves explicit revocation across later subscription snapshots', async () => {
+      const base = {
+        stripeSubscriptionId: `sub_revoked_${TS}`,
+        userId,
+        scopeOwnerId: userId,
+        stripeCustomerId: 'cus_test_fake',
+        stripePriceId: 'price_test_monthly',
+        planKey: 'premium_monthly' as const,
+        status: 'active' as const,
+        livemode: false,
+        cancelAtPeriodEnd: false,
+      };
+      await upsertBillingSubscription(base);
+      await revokeBillingSubscriptionAccess(base.stripeSubscriptionId, 'full_refund', {
+        refundedAt: new Date(),
+      });
+      await upsertBillingSubscription({ ...base, currentPeriodEnd: new Date(Date.now() + 86_400_000) });
+
+      const stored = await getBillingSubscriptionByStripeId(base.stripeSubscriptionId);
+      expect(stored?.accessRevocationReason).toBe('full_refund');
+      expect(stored?.accessRevokedAt).toBeTruthy();
+      expect(stored?.refundedAt).toBeTruthy();
+    });
+
+    it('allows Stripe to retry an event after handler failure', async () => {
+      const eventId = `evt_retry_${TS}`;
+      const event = {
+        stripeEventId: eventId,
+        eventType: 'invoice.paid',
+        livemode: false,
+      };
+      await expect(claimStripeWebhookEvent(event)).resolves.toBe(true);
+      await expect(claimStripeWebhookEvent(event)).resolves.toBe(false);
+      await markStripeWebhookEventFailed(eventId, 'transient failure');
+      await expect(claimStripeWebhookEvent(event)).resolves.toBe(true);
+    });
+
+    it('revokes Premium after a verified full-refund webhook', async () => {
+      process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test';
+      const eventId = `evt_refund_${TS}`;
+      fakeStripe.webhooks.constructEvent.mockReturnValue({
+        id: eventId,
+        type: 'charge.refunded',
+        created: Math.floor(Date.now() / 1000),
+        livemode: false,
+        data: {
+          object: {
+            id: 'ch_full_refund',
+            invoice: 'in_test',
+            amount: 500,
+            amount_refunded: 500,
+          },
+        },
+      });
+
+      try {
+        await request(app)
+          .post('/api/billing/webhooks/stripe')
+          .set('Content-Type', 'application/json')
+          .set('Stripe-Signature', 'test_signature')
+          .send(Buffer.from('{}'))
+          .expect(200);
+
+        const stored = await getBillingSubscriptionByStripeId('sub_test');
+        expect(stored?.accessRevocationReason).toBe('full_refund');
+        expect(stored?.refundedAt).toBeTruthy();
+      } finally {
+        delete process.env.STRIPE_WEBHOOK_SECRET;
       }
     });
   });

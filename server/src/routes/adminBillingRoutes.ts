@@ -64,6 +64,10 @@ router.get('/config', async (_req, res) => {
 router.patch('/config/:planKey', async (req, res) => {
   const planKey = req.params.planKey as BillingPlanKey;
   const actorId = ((req as any).user as TokenPayload).userId;
+  if (planKey !== 'premium_monthly' && planKey !== 'premium_annual') {
+    res.status(400).json({ error: 'planKey must be premium_monthly or premium_annual.' });
+    return;
+  }
 
   const dto = readDto(patchBillingConfigDto, req.body, res);
   if (!dto) return;
@@ -80,7 +84,7 @@ router.patch('/config/:planKey', async (req, res) => {
     await writeAuditLog({
       actorUserId: actorId,
       targetUserId: null,
-      action: 'USER_TIER_CHANGED',
+      action: 'BILLING_CONFIG_UPDATED',
       beforeState: before ? { trialDays: before.trialDays, pastDueGraceDays: before.pastDueGraceDays } : null,
       afterState: { trialDays: updated.trialDays, pastDueGraceDays: updated.pastDueGraceDays, planKey },
       reason: `Admin updated billing config for ${planKey}`,
@@ -172,7 +176,7 @@ router.post('/plans/:planKey/price', async (req, res) => {
     await writeAuditLog({
       actorUserId: actorId,
       targetUserId: null,
-      action: 'USER_TIER_CHANGED',
+      action: 'BILLING_PRICE_PUBLISHED',
       beforeState: null,
       afterState: { planKey, stripePriceId: stripePrice.id, unitAmountCents: dto.unitAmountCents },
       reason: `Admin published new Stripe Price for ${planKey}`,

@@ -7,6 +7,8 @@ import {
   upsertBillingSubscription,
   getCurrentUserTier,
   ensureCurrentUserTier,
+  getBillingPlanConfig,
+  listBillingPlanConfigs,
 } from '../db';
 import { BillingCustomer, BillingPlanKey, BillingSubscription, TierKey, UserRole } from '../types';
 import { logInfo, logError } from '../logger';
@@ -23,7 +25,6 @@ import {
 } from '../config/stripeBilling';
 import { getStripeClient, normalizeStripeError } from './stripeClient';
 import {
-  computeBillingEntitlementDecision,
   isSubscriptionPremiumEligible,
 } from './subscriptionEntitlementService';
 import type {
@@ -82,22 +83,18 @@ export const getOrCreateBillingCustomer = async (
 // Plan catalog
 // ---------------------------------------------------------------------------
 
-export const listAvailablePlans = (): PlanInfo[] => [
-  {
-    planKey: 'premium_monthly',
-    amountCents: PLAN_DEFAULTS.premiumMonthlyAmountCents,
-    currency: 'usd',
-    interval: 'month',
-    trialDays: PLAN_DEFAULTS.trialDays,
-  },
-  {
-    planKey: 'premium_annual',
-    amountCents: PLAN_DEFAULTS.premiumAnnualAmountCents,
-    currency: 'usd',
-    interval: 'year',
-    trialDays: PLAN_DEFAULTS.trialDays,
-  },
-];
+export const listAvailablePlans = async (): Promise<PlanInfo[]> => {
+  const configs = await listBillingPlanConfigs();
+  return configs
+    .filter((config) => config.isCheckoutEnabled)
+    .map((config) => ({
+      planKey: config.planKey,
+      amountCents: config.unitAmountCents,
+      currency: config.currency,
+      interval: config.interval,
+      trialDays: config.trialDays,
+    }));
+};
 
 // ---------------------------------------------------------------------------
 // Checkout
@@ -118,7 +115,7 @@ export const createCheckoutSession = async (params: {
 
   // Prevent duplicate active subscriptions.
   const existing = await listActiveBillingSubscriptionsForUser(userId);
-  const alreadyActive = existing.some(isSubscriptionPremiumEligible);
+  const alreadyActive = existing.some((subscription) => isSubscriptionPremiumEligible(subscription));
   if (alreadyActive) {
     incrementMetric('billing.checkout_blocked_already_subscribed');
     return {
@@ -127,7 +124,14 @@ export const createCheckoutSession = async (params: {
     };
   }
 
-  const priceId = resolvePriceId(planKey);
+  const planConfig = await getBillingPlanConfig(planKey);
+  if (planConfig && !planConfig.isCheckoutEnabled) {
+    throw new Error(`Checkout is disabled for plan: ${planKey}`);
+  }
+  if (planConfig?.livemode != null && planConfig.livemode !== livemode) {
+    throw new Error(`The active billing configuration for ${planKey} belongs to the wrong Stripe mode`);
+  }
+  const priceId = planConfig?.activeStripePriceId ?? resolvePriceId(planKey);
   const successUrl = getStripeCheckoutSuccessUrl();
   const cancelUrl = getStripeCheckoutCancelUrl();
 
@@ -147,14 +151,14 @@ export const createCheckoutSession = async (params: {
         client_reference_id: userId,
         line_items: [{ price: priceId, quantity: 1 }],
         subscription_data: {
-          trial_period_days: PLAN_DEFAULTS.trialDays,
+          trial_period_days: planConfig?.trialDays ?? PLAN_DEFAULTS.trialDays,
           metadata: { userId, planKey },
         },
         metadata: { userId, planKey },
         success_url: successUrl,
         cancel_url: cancelUrl,
-        automatic_tax: { enabled: PLAN_DEFAULTS.automaticTaxEnabled },
-        allow_promotion_codes: PLAN_DEFAULTS.promotionCodesEnabled,
+        automatic_tax: { enabled: planConfig?.automaticTaxEnabled ?? PLAN_DEFAULTS.automaticTaxEnabled },
+        allow_promotion_codes: planConfig?.promotionCodesEnabled ?? PLAN_DEFAULTS.promotionCodesEnabled,
         payment_method_collection: 'always',
       },
       { idempotencyKey },
@@ -187,16 +191,15 @@ export const createCheckoutSession = async (params: {
 
 export const createPortalSession = async (params: {
   userId: string;
-  returnUrl?: string;
 }): Promise<{ url: string }> => {
-  const { userId, returnUrl } = params;
+  const { userId } = params;
 
   const customer = await getBillingCustomerByUserId(userId);
   if (!customer) {
     throw new Error('No billing account found. Complete a subscription first.');
   }
 
-  const resolvedReturnUrl = returnUrl ?? getStripePortalReturnUrl();
+  const resolvedReturnUrl = getStripePortalReturnUrl();
   if (!resolvedReturnUrl) {
     throw new Error('[billing] STRIPE_PORTAL_RETURN_URL must be configured');
   }
@@ -247,20 +250,23 @@ export const getBillingStatus = async (
   role: UserRole,
 ): Promise<BillingStatusDto> => {
   await ensureCurrentUserTier(userId, 'free');
-  const [currentTier, subscriptions] = await Promise.all([
+  const [currentTier, subscriptions, planConfigs] = await Promise.all([
     getCurrentUserTier(userId),
     listActiveBillingSubscriptionsForUser(userId),
+    listBillingPlanConfigs(),
   ]);
 
   const effectiveTier = (currentTier?.tierKey ?? 'free') as TierKey;
-  const decision = computeBillingEntitlementDecision(subscriptions);
-
+  const graceDaysByPlan = Object.fromEntries(planConfigs.map((config) => [config.planKey, config.pastDueGraceDays]));
   // Find the most relevant subscription to surface status from
   const primarySub: BillingSubscription | undefined =
-    subscriptions.find(isSubscriptionPremiumEligible) ?? subscriptions[0];
+    subscriptions.find((sub) => isSubscriptionPremiumEligible(sub, graceDaysByPlan[sub.planKey])) ?? subscriptions[0];
 
   const isBillingManaged = currentTier?.source === 'billing';
-  const checkoutAvailable = isStripeBillingEnabled() && !subscriptions.some(isSubscriptionPremiumEligible);
+  const checkoutAvailable =
+    isStripeBillingEnabled() &&
+    planConfigs.some((config) => config.isCheckoutEnabled) &&
+    !subscriptions.some((sub) => isSubscriptionPremiumEligible(sub, graceDaysByPlan[sub.planKey]));
   const portalAvailable = isStripeBillingEnabled() && subscriptions.length > 0;
 
   if (!primarySub) {
@@ -281,7 +287,7 @@ export const getBillingStatus = async (
   const inGracePeriod =
     primarySub.status === 'past_due' &&
     Boolean(primarySub.pastDueSince) &&
-    isSubscriptionPremiumEligible(primarySub);
+    isSubscriptionPremiumEligible(primarySub, graceDaysByPlan[primarySub.planKey]);
 
   return {
     effectiveTier,

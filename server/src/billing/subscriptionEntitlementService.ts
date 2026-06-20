@@ -4,6 +4,7 @@ import {
   setUserTier,
   writeAuditLog,
   listActiveBillingSubscriptionsForUser,
+  listBillingPlanConfigs,
 } from '../db';
 import { BillingSubscription, BillingSubscriptionStatus, TierKey } from '../types';
 import { logInfo, logError } from '../logger';
@@ -20,13 +21,16 @@ const PREMIUM_ELIGIBLE_STATUSES: BillingSubscriptionStatus[] = ['trialing', 'act
  * `access_revoked_at` (set by refund/dispute logic) always overrides status.
  * `past_due` subscriptions are eligible only within the configured grace period.
  */
-export const isSubscriptionPremiumEligible = (sub: BillingSubscription): boolean => {
+export const isSubscriptionPremiumEligible = (
+  sub: BillingSubscription,
+  pastDueGraceDays: number = PLAN_DEFAULTS.pastDueGraceDays,
+): boolean => {
   if (sub.accessRevokedAt) return false;
   if (!PREMIUM_ELIGIBLE_STATUSES.includes(sub.status)) return false;
 
   if (sub.status === 'past_due') {
     if (!sub.pastDueSince) return true;
-    const gracePeriodMs = PLAN_DEFAULTS.pastDueGraceDays * 24 * 60 * 60 * 1000;
+    const gracePeriodMs = pastDueGraceDays * 24 * 60 * 60 * 1000;
     return Date.now() - new Date(sub.pastDueSince).getTime() < gracePeriodMs;
   }
 
@@ -45,8 +49,11 @@ export interface BillingEntitlementDecision {
  */
 export const computeBillingEntitlementDecision = (
   subscriptions: BillingSubscription[],
+  graceDaysByPlan: Partial<Record<BillingSubscription['planKey'], number>> = {},
 ): BillingEntitlementDecision => {
-  const eligible = subscriptions.find(isSubscriptionPremiumEligible);
+  const eligible = subscriptions.find((sub) =>
+    isSubscriptionPremiumEligible(sub, graceDaysByPlan[sub.planKey]),
+  );
   if (eligible) {
     return {
       shouldHavePremium: true,
@@ -117,7 +124,9 @@ export const reconcileUserTierFromBilling = async (
   }
 
   // 3. Determine desired tier from billing state.
-  const decision = computeBillingEntitlementDecision(subscriptions);
+  const configs = await listBillingPlanConfigs();
+  const graceDaysByPlan = Object.fromEntries(configs.map((config) => [config.planKey, config.pastDueGraceDays]));
+  const decision = computeBillingEntitlementDecision(subscriptions, graceDaysByPlan);
   const desiredTier: TierKey = decision.shouldHavePremium ? 'premium' : 'free';
   const currentTierKey = (currentTier?.tierKey ?? 'free') as TierKey;
 

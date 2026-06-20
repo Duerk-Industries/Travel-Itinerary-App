@@ -43,6 +43,37 @@ const userIdFromSubscription = async (sub: Stripe.Subscription): Promise<string 
   return bc?.userId ?? null;
 };
 
+const subscriptionIdFromCharge = async (
+  stripe: Stripe,
+  charge: Stripe.Charge,
+): Promise<string | null> => {
+  const invoiceId = typeof charge.invoice === 'string' ? charge.invoice : charge.invoice?.id;
+  if (!invoiceId) return null;
+  const invoice = await stripe.invoices.retrieve(invoiceId);
+  return typeof invoice.subscription === 'string'
+    ? invoice.subscription
+    : invoice.subscription?.id ?? null;
+};
+
+const applyAccessOverride = async (
+  stripe: Stripe,
+  subscriptionId: string,
+  stripeEventId: string,
+  reason: string,
+  action: () => Promise<void>,
+): Promise<void> => {
+  await handleSubscriptionSnapshot(stripe, subscriptionId, Math.floor(Date.now() / 1000), stripeEventId);
+  await action();
+  const subscription = await getBillingSubscriptionByStripeId(subscriptionId);
+  if (subscription) {
+    await reconcileUserTierFromBillingById(subscription.userId, {
+      reason,
+      stripeSubscriptionId: subscriptionId,
+      stripeEventId,
+    });
+  }
+};
+
 // ---------------------------------------------------------------------------
 // Event handlers
 // ---------------------------------------------------------------------------
@@ -137,7 +168,7 @@ const handleInvoicePaymentFailed = async (
 };
 
 const handleChargeRefunded = async (
-  _stripe: Stripe,
+  stripe: Stripe,
   event: Stripe.Event,
 ): Promise<void> => {
   const charge = event.data.object as Stripe.Charge;
@@ -156,36 +187,74 @@ const handleChargeRefunded = async (
     return;
   }
 
-  // Find subscription via invoice metadata — best effort; if not found, log and skip.
-  logInfo(`[billing][webhook] Full refund on charge, attempting to revoke access chargeId=${charge.id} invoiceId=${invoiceId}`);
+  const subscriptionId = await subscriptionIdFromCharge(stripe, charge);
+  if (!subscriptionId) {
+    logError('[billing][webhook] Full refund could not be mapped to a subscription', {
+      chargeId: charge.id,
+      invoiceId,
+    });
+    incrementMetric('billing.webhook.full_refund_subscription_not_found');
+    return;
+  }
+  await applyAccessOverride(
+    stripe,
+    subscriptionId,
+    event.id,
+    'Premium revoked after a full refund',
+    () => revokeBillingSubscriptionAccess(subscriptionId, 'full_refund', { refundedAt: new Date(event.created * 1000) }),
+  );
+  logInfo(`[billing][webhook] Full refund revoked access chargeId=${charge.id} subscriptionId=${subscriptionId}`);
   incrementMetric('billing.webhook.full_refund_received');
-  // Actual subscription lookup from invoice is done via stripeClient if needed.
-  // For now, emit the metric and log so operators can reconcile manually if the
-  // subscription_id cannot be resolved here. A reconciliation job will catch
-  // any remaining access.
 };
 
 const handleDisputeCreated = async (
-  _stripe: Stripe,
+  stripe: Stripe,
   event: Stripe.Event,
 ): Promise<void> => {
   const dispute = event.data.object as Stripe.Dispute;
   const chargeId = typeof dispute.charge === 'string' ? dispute.charge : dispute.charge?.id;
-  logInfo(`[billing][webhook] Dispute created — flagging for manual review disputeId=${dispute.id} chargeId=${chargeId}`);
+  if (!chargeId) return;
+  const charge = await stripe.charges.retrieve(chargeId);
+  const subscriptionId = await subscriptionIdFromCharge(stripe, charge);
+  if (!subscriptionId) {
+    logError('[billing][webhook] Dispute could not be mapped to a subscription', {
+      disputeId: dispute.id,
+      chargeId,
+    });
+    incrementMetric('billing.webhook.dispute_subscription_not_found');
+    return;
+  }
+  await applyAccessOverride(
+    stripe,
+    subscriptionId,
+    event.id,
+    'Premium revoked while a payment dispute is open',
+    () => revokeBillingSubscriptionAccess(subscriptionId, 'dispute_open', { disputeId: dispute.id }),
+  );
+  logInfo(`[billing][webhook] Dispute created and access revoked disputeId=${dispute.id} subscriptionId=${subscriptionId}`);
   incrementMetric('billing.webhook.dispute_created');
-  // Operator alert: manual review required. A future phase will wire
-  // charge→invoice→subscription lookup and call revokeBillingSubscriptionAccess.
 };
 
 const handleDisputeClosed = async (
-  _stripe: Stripe,
+  stripe: Stripe,
   event: Stripe.Event,
 ): Promise<void> => {
   const dispute = event.data.object as Stripe.Dispute;
+  const chargeId = typeof dispute.charge === 'string' ? dispute.charge : dispute.charge?.id;
   logInfo(`[billing][webhook] Dispute closed disputeId=${dispute.id} status=${dispute.status}`);
   incrementMetric('billing.webhook.dispute_closed');
-  // Won disputes restore access (see reconciliation service).
-  // Lost disputes keep access revoked — operator must confirm.
+  if (dispute.status !== 'won' || !chargeId) return;
+  const charge = await stripe.charges.retrieve(chargeId);
+  const subscriptionId = await subscriptionIdFromCharge(stripe, charge);
+  if (!subscriptionId) return;
+  await applyAccessOverride(
+    stripe,
+    subscriptionId,
+    event.id,
+    'Premium restored after payment dispute was won',
+    () => restoreBillingSubscriptionAccess(subscriptionId),
+  );
+  incrementMetric('billing.webhook.dispute_won_access_restored');
 };
 
 // ---------------------------------------------------------------------------
@@ -193,12 +262,6 @@ const handleDisputeClosed = async (
 // ---------------------------------------------------------------------------
 
 type EventHandler = (stripe: Stripe, event: Stripe.Event) => Promise<void>;
-
-const SUBSCRIPTION_SNAPSHOT_EVENTS = new Set([
-  'customer.subscription.created',
-  'customer.subscription.updated',
-  'customer.subscription.deleted',
-]);
 
 const buildDispatchTable = (stripe: Stripe): Record<string, EventHandler> => ({
   'checkout.session.completed': handleCheckoutSessionCompleted,

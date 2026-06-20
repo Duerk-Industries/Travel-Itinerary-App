@@ -9983,11 +9983,11 @@ export const upsertBillingSubscription = async (data: {
        trial_end                = EXCLUDED.trial_end,
        ended_at                 = EXCLUDED.ended_at,
        latest_invoice_id        = EXCLUDED.latest_invoice_id,
-       past_due_since           = EXCLUDED.past_due_since,
-       access_revoked_at        = EXCLUDED.access_revoked_at,
-       access_revocation_reason = EXCLUDED.access_revocation_reason,
-       dispute_id               = EXCLUDED.dispute_id,
-       refunded_at              = EXCLUDED.refunded_at,
+       past_due_since           = COALESCE(EXCLUDED.past_due_since, billing_subscriptions.past_due_since),
+       access_revoked_at        = COALESCE(EXCLUDED.access_revoked_at, billing_subscriptions.access_revoked_at),
+       access_revocation_reason = COALESCE(EXCLUDED.access_revocation_reason, billing_subscriptions.access_revocation_reason),
+       dispute_id               = COALESCE(EXCLUDED.dispute_id, billing_subscriptions.dispute_id),
+       refunded_at              = COALESCE(EXCLUDED.refunded_at, billing_subscriptions.refunded_at),
        last_stripe_event_created = EXCLUDED.last_stripe_event_created,
        last_synced_at           = NOW(),
        updated_at               = NOW()
@@ -10009,13 +10009,18 @@ export const upsertBillingSubscription = async (data: {
 export const revokeBillingSubscriptionAccess = async (
   stripeSubscriptionId: string,
   reason: string,
+  details?: { disputeId?: string | null; refundedAt?: Date | null },
 ): Promise<void> => {
   const p = getPool();
   await p.query(
     `UPDATE billing_subscriptions
-     SET access_revoked_at = NOW(), access_revocation_reason = $2, updated_at = NOW()
-     WHERE stripe_subscription_id = $1 AND access_revoked_at IS NULL`,
-    [stripeSubscriptionId, reason],
+     SET access_revoked_at = COALESCE(access_revoked_at, NOW()),
+         access_revocation_reason = $2,
+         dispute_id = COALESCE($3, dispute_id),
+         refunded_at = COALESCE($4, refunded_at),
+         updated_at = NOW()
+     WHERE stripe_subscription_id = $1`,
+    [stripeSubscriptionId, reason, details?.disputeId ?? null, details?.refundedAt ?? null],
   );
 };
 
@@ -10085,7 +10090,14 @@ export const claimStripeWebhookEvent = async (data: {
     `INSERT INTO stripe_webhook_events
        (id, stripe_event_id, event_type, stripe_object_id, livemode, event_created, processing_status)
      VALUES ($1, $2, $3, $4, $5, $6, 'pending')
-     ON CONFLICT (stripe_event_id) DO NOTHING`,
+     ON CONFLICT (stripe_event_id) DO UPDATE SET
+       processing_status = 'pending',
+       last_error = NULL
+     WHERE stripe_webhook_events.processing_status = 'failed'
+        OR (
+          stripe_webhook_events.processing_status = 'pending'
+          AND stripe_webhook_events.received_at < NOW() - INTERVAL '5 minutes'
+        )`,
     [id, data.stripeEventId, data.eventType, data.stripeObjectId ?? null, data.livemode, data.eventCreated ?? null],
   );
   return (result.rowCount ?? 0) > 0;

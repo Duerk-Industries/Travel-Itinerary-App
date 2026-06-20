@@ -10,7 +10,7 @@ import { logInfo, logError } from '../logger';
 import { incrementMetric } from '../metrics';
 import { getStripeClient, normalizeStripeError } from './stripeClient';
 import { mapStripeSubscriptionToUpsert } from './billingService';
-import { reconcileUserTierFromBilling } from './subscriptionEntitlementService';
+import { reconcileUserTierFromBillingById } from './subscriptionEntitlementService';
 import { isStripeBillingEnabled } from '../config/stripeBilling';
 
 export interface ReconciliationSummary {
@@ -33,7 +33,7 @@ const planKeyFromMetadata = (metadata: Record<string, string> | null): BillingPl
 export const reconcileSubscription = async (
   local: BillingSubscription,
   stripe: Stripe,
-): Promise<{ repaired: boolean; tierChanged: boolean }> => {
+): Promise<{ repaired: boolean; tierChanged: boolean; orphaned: boolean }> => {
   let stripeSub: Stripe.Subscription;
   try {
     stripeSub = await stripe.subscriptions.retrieve(local.stripeSubscriptionId, {
@@ -44,7 +44,7 @@ export const reconcileSubscription = async (
     if (normalized.statusCode === 404) {
       logInfo(`[billing][reconcile] Subscription not found in Stripe — marking orphaned sub=${local.stripeSubscriptionId} userId=${local.userId}`);
       incrementMetric('billing.reconcile.orphaned');
-      return { repaired: false, tierChanged: false };
+      return { repaired: false, tierChanged: false, orphaned: true };
     }
     logError('[billing][reconcile] Failed to retrieve subscription from Stripe', {
       stripeSubscriptionId: local.stripeSubscriptionId,
@@ -69,16 +69,12 @@ export const reconcileSubscription = async (
     logInfo(`[billing][reconcile] Subscription repaired sub=${local.stripeSubscriptionId} userId=${local.userId} status=${before?.status}->${after?.status}`);
   }
 
-  const reconcileResult = await reconcileUserTierFromBilling(
-    local.userId,
-    after ? [after] : [],
-    {
-      reason: 'Scheduled reconciliation',
-      stripeSubscriptionId: local.stripeSubscriptionId,
-    },
-  );
+  const reconcileResult = await reconcileUserTierFromBillingById(local.userId, {
+    reason: 'Scheduled reconciliation',
+    stripeSubscriptionId: local.stripeSubscriptionId,
+  });
 
-  return { repaired, tierChanged: reconcileResult.changed };
+  return { repaired, tierChanged: reconcileResult.changed, orphaned: false };
 };
 
 /**
@@ -113,9 +109,10 @@ export const runReconciliationBatch = async (
   for (const sub of stale) {
     summary.processed++;
     try {
-      const { repaired, tierChanged } = await reconcileSubscription(sub, stripe);
+      const { repaired, tierChanged, orphaned } = await reconcileSubscription(sub, stripe);
       if (repaired) summary.repaired++;
       if (tierChanged) summary.tierChanged++;
+      if (orphaned) summary.orphaned++;
     } catch (err) {
       summary.errors++;
       logError('[billing][reconcile] Error reconciling subscription', {
@@ -132,7 +129,7 @@ export const runReconciliationBatch = async (
   await writeAuditLog({
     actorUserId: null,
     targetUserId: null,
-    action: 'USER_TIER_CHANGED',
+    action: 'BILLING_RECONCILIATION_RUN',
     beforeState: null,
     afterState: { reconcileSummary: summary },
     reason: `Scheduled reconciliation batch: ${summary.repaired} repaired, ${summary.tierChanged} tier changes`,

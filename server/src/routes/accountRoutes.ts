@@ -483,7 +483,7 @@ router.delete('/', async (req, res) => {
       reason: 'User initiated account deletion',
     });
     // Cancel active Stripe subscriptions before wiping local records.
-    await cancelAllSubscriptionsForUser(userId).catch(() => undefined);
+    await cancelAllSubscriptionsForUser(userId);
     await deleteUserIngestionData(userId).catch(() => undefined);
     if (process.env.USE_IN_MEMORY_DB === '1') {
       const p = require('../db').poolClient();

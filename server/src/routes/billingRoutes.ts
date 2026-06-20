@@ -38,10 +38,10 @@ router.get('/status', async (req, res) => {
 });
 
 /** GET /api/billing/plans */
-router.get('/plans', (_req, res) => {
+router.get('/plans', async (_req, res) => {
   if (!billingEnabled(res)) return;
   try {
-    const plans = listAvailablePlans();
+    const plans = await listAvailablePlans();
     res.json({ plans });
   } catch (err) {
     logError('[billing] GET /plans failed', { error: (err as Error)?.message });
@@ -90,7 +90,7 @@ router.post('/portal-session', async (req, res) => {
   if (!dto) return;
 
   try {
-    const result = await createPortalSession({ userId, returnUrl: dto.returnUrl });
+    const result = await createPortalSession({ userId });
     res.status(201).json(result);
   } catch (err) {
     const msg = (err as Error)?.message ?? '';

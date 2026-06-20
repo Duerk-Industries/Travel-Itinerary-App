@@ -1,15 +1,15 @@
 # WanderBunnies Stripe Premium Subscription Checklist
 
-Last reviewed: June 19, 2026
+Last reviewed: June 20, 2026
 
 ## Important Before Launch
 
-- [ ] Decide where Stripe purchases are allowed.
+- [x] Stripe purchases are web-only at launch.
   - Web subscriptions can use Stripe Checkout normally.
   - iOS digital subscriptions may use external Stripe Checkout for eligible storefronts, including the United States, but App Store rules and storefront detection still apply.
   - Google Play generally requires Play Billing for in-app digital subscriptions unless WanderBunnies enrolls in an applicable alternative-billing or external-links program.
-- [ ] Decide whether Premium is monthly only or monthly plus annual.
-- [ ] Decide the launch price, currency, trial policy, cancellation policy, and refund policy.
+- [x] Offer monthly and annual Premium.
+- [x] Launch at USD $5/month and $35/year with a 14-day payment-method-required trial, period-end cancellation, and immediate revocation for full refunds.
 - [ ] Confirm the legal business name, support email, website, privacy policy, and terms URL.
 - [ ] Do not use live mode until Stripe test mode has completed the full subscription lifecycle checklist below.
 
@@ -97,7 +97,7 @@ Complete this once in test mode, then recreate or promote the equivalent configu
 - [ ] Enable subscription cancellation.
 - [ ] Prefer cancellation at the end of the current billing period unless the refund policy requires immediate cancellation.
 - [ ] Collect cancellation reasons.
-- [ ] Decide whether customers can switch between monthly and annual Prices.
+- [x] Customers may switch between monthly and annual Prices.
 - [ ] If plan switching is enabled:
   - [ ] Add only approved WanderBunnies Premium Prices.
   - [ ] Choose and test proration behavior.
@@ -154,7 +154,7 @@ These items are application requirements, not Stripe Dashboard settings.
   - [ ] `canceled`
   - [ ] `incomplete`
   - [ ] `incomplete_expired`
-- [ ] Decide the grace period for `past_due`.
+- [x] Keep Premium for exactly 30 elapsed days from the first unresolved failed invoice.
 - [ ] Downgrade to `free` when access should end.
 - [ ] Preserve the existing admin and seeded-tier behavior intentionally; Stripe synchronization must not accidentally downgrade administrators or manually granted accounts.
 - [ ] Add a reconciliation job that periodically compares local subscription state with Stripe.
@@ -193,7 +193,7 @@ These items are application requirements, not Stripe Dashboard settings.
 - [ ] Configure dispute notifications.
 - [ ] Document who handles disputes and what subscription access does during a dispute.
 - [ ] Create and publish a refund policy.
-- [ ] Decide whether a full refund immediately revokes Premium or preserves access through the paid period.
+- [x] A full refund immediately revokes Stripe-managed Premium; partial refunds do not.
 - [ ] Test refunds from the Dashboard and verify the local entitlement result.
 
 ## API Keys And Secrets
@@ -246,19 +246,26 @@ These items are application requirements, not Stripe Dashboard settings.
 - [ ] Confirm Checkout, webhook delivery, Premium entitlement, portal access, cancellation, and refund behavior.
 - [ ] Add alerts for webhook failures, payment failures, disputes, and entitlement synchronization errors.
 
-## Current WanderBunnies Gap
+## Current WanderBunnies Status
 
-As of June 19, 2026, the repository has Premium entitlement enforcement but no Stripe integration. Before Stripe Dashboard settings can control Premium, WanderBunnies still needs:
+As of June 20, 2026, the repository includes the Stripe server dependency, Checkout and Portal endpoints, raw-body verified webhooks, Postgres and Firestore billing persistence, entitlement reconciliation, subscription status UI, web-only purchase controls, admin billing configuration, and automated billing tests.
 
-- [ ] Stripe server dependency and configuration
-- [ ] Checkout Session endpoint
-- [ ] Customer Portal Session endpoint
-- [ ] Raw-body webhook endpoint
-- [ ] Stripe customer/subscription persistence
-- [ ] Verified webhook-to-`premium` tier synchronization
-- [ ] Subscription status UI
-- [ ] Mobile-storefront/payment-policy handling
-- [ ] Integration and webhook tests
+Remaining launch items:
+
+- [ ] Complete Stripe Dashboard test and live configuration in this checklist.
+- [ ] Configure and verify Customer Portal asymmetric plan-switch behavior.
+- [ ] Run the full sandbox lifecycle, including refunds, disputes, failed payments, and webhook retries.
+- [ ] Add operational alerts and finish the support/runbook documentation.
+- [ ] Run one authorized live low-cost end-to-end subscription before general availability.
+
+Optional real Stripe test-mode smoke test:
+
+```powershell
+$env:STRIPE_SANDBOX_TESTS='1'
+$env:STRIPE_SECRET_KEY='sk_test_...'
+$env:STRIPE_PREMIUM_MONTHLY_PRICE_ID='price_...'
+npm --prefix server test -- --runInBand __tests__/stripe-sandbox.test.ts
+```
 
 ## References
 

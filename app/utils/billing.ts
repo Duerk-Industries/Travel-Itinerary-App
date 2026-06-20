@@ -67,7 +67,7 @@ export const createCheckoutSession = async (
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ planKey, idempotencyKey }),
+      body: JSON.stringify({ planKey, idempotencyKey, clientPlatform: Platform.OS }),
     });
     if (!res.ok) return null;
     return await res.json();

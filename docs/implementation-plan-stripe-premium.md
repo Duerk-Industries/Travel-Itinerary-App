@@ -1,6 +1,22 @@
 # Stripe Premium Integration Implementation Plan
 
-Last reviewed: June 19, 2026
+Last reviewed: June 20, 2026
+
+## Implementation Status
+
+The core integration is implemented. The June 20, 2026 code review closed these gaps:
+
+- Firestore now implements the same billing persistence contract as Postgres.
+- Checkout reads active Price, trial, tax, promotion, and availability settings from `billing_plan_config`.
+- The Admin panel includes billing configuration and immutable Price publication.
+- Full refunds and opened disputes revoke Stripe-managed Premium; won disputes restore it.
+- Explicit refund/dispute revocations survive later subscription snapshot events.
+- Failed webhook events can be claimed again when Stripe retries delivery.
+- Account deletion stops if active Stripe subscriptions cannot be cancelled.
+- Initial Checkout requests are explicitly restricted to the web client.
+- Unit/integration coverage includes Firestore billing persistence and an opt-in real Stripe test-mode Checkout test.
+
+Remaining launch work is primarily Stripe Dashboard configuration and full lifecycle acceptance testing.
 
 ## Objective
 
@@ -128,7 +144,7 @@ Rules:
 - The Product ID and safe URLs can be normal environment variables.
 - Startup must fail clearly when billing is enabled but required settings are missing.
 - Test and live keys/IDs must never be mixed. Validate that key and Price ID modes agree where practical.
-- **Phase 1 only:** trial days (14), past-due grace days (30), automatic tax (enabled), and promotion codes (enabled) are hardcoded as typed constants in `server/src/config/stripeBilling.ts`. They move to the `billing_plan_config` database table in Phase 6 when the admin UI is built. Do not add the DB table or admin routes in Phase 1.
+- Defaults remain typed constants, but runtime Checkout and entitlement decisions read the current values from `billing_plan_config`.
 
 ### Stripe client wrapper
 
@@ -914,7 +930,7 @@ Modified app files:
 - `app/tabs/AccountProfileManagement.tsx`
 - account profile/status types
 - deep-link and app-foreground handling
-- optional admin billing views
+- admin billing views
 
 ### Admin UI
 
@@ -928,8 +944,8 @@ Add a Billing configuration section to `AdminTab`:
 - promotion-code toggle, enabled
 - Checkout-enabled toggle
 - active Stripe Product and Price IDs
-- explicit `Publish new Price` confirmation
-- historical Price list
+- explicit `Publish new Price` confirmation (remaining UI hardening)
+- historical Price list (available through the admin API; UI display remains)
 - warning that existing subscriptions do not automatically move to new Prices
 - sandbox/live environment badge
 
