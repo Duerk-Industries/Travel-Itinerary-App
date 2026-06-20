@@ -38,6 +38,13 @@ import {
   PackingListItem,
   PackingListTraveler,
   TripPackingList,
+  BillingCustomer,
+  BillingSubscription,
+  StripeWebhookEvent,
+  BillingPlanKey,
+  BillingSubscriptionStatus,
+  BillingSubscriptionScope,
+  WebhookProcessingStatus,
 } from './types';
 import { logError, logInfo } from './logger';
 import { getEnvFlag, getEnvValue } from './env';
@@ -1328,6 +1335,9 @@ export const initDb = async (): Promise<void> => {
     await del('user_emails');
     await del('web_users');
     await del('users');
+    await del('stripe_webhook_events');
+    await del('billing_subscriptions');
+    await del('billing_customers');
   }
 
   // Seed tiers (individual parameterized inserts to avoid pg-mem uuid evaluation issues)
@@ -9791,4 +9801,324 @@ export const listUserAuthoredItems = async (
     expenses: expenses.rows,
     tripMessages: tripMessages.rows,
   };
+};
+
+// ---------------------------------------------------------------------------
+// Stripe Billing
+// ---------------------------------------------------------------------------
+
+const rowToBillingCustomer = (row: any): BillingCustomer => ({
+  id: row.id,
+  userId: row.user_id,
+  stripeCustomerId: row.stripe_customer_id,
+  emailSnapshot: row.email_snapshot ?? null,
+  livemode: row.livemode,
+  createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at),
+  updatedAt: row.updated_at instanceof Date ? row.updated_at.toISOString() : String(row.updated_at),
+});
+
+const rowToBillingSubscription = (row: any): BillingSubscription => ({
+  id: row.id,
+  stripeSubscriptionId: row.stripe_subscription_id,
+  userId: row.user_id,
+  subscriptionScope: row.subscription_scope as BillingSubscriptionScope,
+  scopeOwnerId: row.scope_owner_id,
+  stripeCustomerId: row.stripe_customer_id,
+  stripePriceId: row.stripe_price_id,
+  planKey: row.plan_key as BillingPlanKey,
+  status: row.status as BillingSubscriptionStatus,
+  livemode: row.livemode,
+  cancelAtPeriodEnd: row.cancel_at_period_end,
+  cancelAt: row.cancel_at ? new Date(row.cancel_at).toISOString() : null,
+  currentPeriodStart: row.current_period_start ? new Date(row.current_period_start).toISOString() : null,
+  currentPeriodEnd: row.current_period_end ? new Date(row.current_period_end).toISOString() : null,
+  trialEnd: row.trial_end ? new Date(row.trial_end).toISOString() : null,
+  endedAt: row.ended_at ? new Date(row.ended_at).toISOString() : null,
+  latestInvoiceId: row.latest_invoice_id ?? null,
+  pastDueSince: row.past_due_since ? new Date(row.past_due_since).toISOString() : null,
+  accessRevokedAt: row.access_revoked_at ? new Date(row.access_revoked_at).toISOString() : null,
+  accessRevocationReason: row.access_revocation_reason ?? null,
+  disputeId: row.dispute_id ?? null,
+  refundedAt: row.refunded_at ? new Date(row.refunded_at).toISOString() : null,
+  lastStripeEventCreated: row.last_stripe_event_created != null ? Number(row.last_stripe_event_created) : null,
+  lastSyncedAt: row.last_synced_at ? new Date(row.last_synced_at).toISOString() : null,
+  createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at),
+  updatedAt: row.updated_at instanceof Date ? row.updated_at.toISOString() : String(row.updated_at),
+});
+
+const rowToWebhookEvent = (row: any): StripeWebhookEvent => ({
+  id: row.id,
+  stripeEventId: row.stripe_event_id,
+  eventType: row.event_type,
+  stripeObjectId: row.stripe_object_id ?? null,
+  livemode: row.livemode,
+  eventCreated: row.event_created != null ? Number(row.event_created) : null,
+  processingStatus: row.processing_status as WebhookProcessingStatus,
+  attemptCount: row.attempt_count,
+  lastError: row.last_error ?? null,
+  receivedAt: row.received_at instanceof Date ? row.received_at.toISOString() : String(row.received_at),
+  processedAt: row.processed_at ? new Date(row.processed_at).toISOString() : null,
+});
+
+export const getBillingCustomerByUserId = async (userId: string): Promise<BillingCustomer | null> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `SELECT id, user_id, stripe_customer_id, email_snapshot, livemode, created_at, updated_at
+     FROM billing_customers WHERE user_id = $1 LIMIT 1`,
+    [userId],
+  );
+  return rows[0] ? rowToBillingCustomer(rows[0]) : null;
+};
+
+export const getBillingCustomerByStripeId = async (stripeCustomerId: string): Promise<BillingCustomer | null> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `SELECT id, user_id, stripe_customer_id, email_snapshot, livemode, created_at, updated_at
+     FROM billing_customers WHERE stripe_customer_id = $1 LIMIT 1`,
+    [stripeCustomerId],
+  );
+  return rows[0] ? rowToBillingCustomer(rows[0]) : null;
+};
+
+export const upsertBillingCustomer = async (data: {
+  userId: string;
+  stripeCustomerId: string;
+  emailSnapshot?: string | null;
+  livemode: boolean;
+}): Promise<BillingCustomer> => {
+  const p = getPool();
+  const id = randomUUID();
+  const { rows } = await p.query(
+    `INSERT INTO billing_customers (id, user_id, stripe_customer_id, email_snapshot, livemode)
+     VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT (user_id) DO UPDATE SET
+       stripe_customer_id = EXCLUDED.stripe_customer_id,
+       email_snapshot = COALESCE(EXCLUDED.email_snapshot, billing_customers.email_snapshot),
+       updated_at = NOW()
+     RETURNING id, user_id, stripe_customer_id, email_snapshot, livemode, created_at, updated_at`,
+    [id, data.userId, data.stripeCustomerId, data.emailSnapshot ?? null, data.livemode],
+  );
+  return rowToBillingCustomer(rows[0]);
+};
+
+export const getBillingSubscriptionByStripeId = async (
+  stripeSubscriptionId: string,
+): Promise<BillingSubscription | null> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `SELECT * FROM billing_subscriptions WHERE stripe_subscription_id = $1 LIMIT 1`,
+    [stripeSubscriptionId],
+  );
+  return rows[0] ? rowToBillingSubscription(rows[0]) : null;
+};
+
+export const listActiveBillingSubscriptionsForUser = async (
+  userId: string,
+): Promise<BillingSubscription[]> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `SELECT * FROM billing_subscriptions
+     WHERE user_id = $1
+       AND status NOT IN ('canceled', 'incomplete_expired')
+     ORDER BY created_at DESC`,
+    [userId],
+  );
+  return rows.map(rowToBillingSubscription);
+};
+
+export const upsertBillingSubscription = async (data: {
+  stripeSubscriptionId: string;
+  userId: string;
+  subscriptionScope?: BillingSubscriptionScope;
+  scopeOwnerId: string;
+  stripeCustomerId: string;
+  stripePriceId: string;
+  planKey: BillingPlanKey;
+  status: BillingSubscriptionStatus;
+  livemode: boolean;
+  cancelAtPeriodEnd: boolean;
+  cancelAt?: Date | null;
+  currentPeriodStart?: Date | null;
+  currentPeriodEnd?: Date | null;
+  trialEnd?: Date | null;
+  endedAt?: Date | null;
+  latestInvoiceId?: string | null;
+  pastDueSince?: Date | null;
+  accessRevokedAt?: Date | null;
+  accessRevocationReason?: string | null;
+  disputeId?: string | null;
+  refundedAt?: Date | null;
+  lastStripeEventCreated?: number | null;
+}): Promise<BillingSubscription> => {
+  const p = getPool();
+  const id = randomUUID();
+  const scope = data.subscriptionScope ?? 'individual';
+  const { rows } = await p.query(
+    `INSERT INTO billing_subscriptions (
+       id, stripe_subscription_id, user_id, subscription_scope, scope_owner_id,
+       stripe_customer_id, stripe_price_id, plan_key, status, livemode,
+       cancel_at_period_end, cancel_at, current_period_start, current_period_end,
+       trial_end, ended_at, latest_invoice_id, past_due_since,
+       access_revoked_at, access_revocation_reason, dispute_id, refunded_at,
+       last_stripe_event_created, last_synced_at
+     ) VALUES (
+       $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+       $11, $12, $13, $14, $15, $16, $17, $18,
+       $19, $20, $21, $22, $23, NOW()
+     )
+     ON CONFLICT (stripe_subscription_id) DO UPDATE SET
+       user_id                  = EXCLUDED.user_id,
+       subscription_scope       = EXCLUDED.subscription_scope,
+       scope_owner_id           = EXCLUDED.scope_owner_id,
+       stripe_customer_id       = EXCLUDED.stripe_customer_id,
+       stripe_price_id          = EXCLUDED.stripe_price_id,
+       plan_key                 = EXCLUDED.plan_key,
+       status                   = EXCLUDED.status,
+       cancel_at_period_end     = EXCLUDED.cancel_at_period_end,
+       cancel_at                = EXCLUDED.cancel_at,
+       current_period_start     = EXCLUDED.current_period_start,
+       current_period_end       = EXCLUDED.current_period_end,
+       trial_end                = EXCLUDED.trial_end,
+       ended_at                 = EXCLUDED.ended_at,
+       latest_invoice_id        = EXCLUDED.latest_invoice_id,
+       past_due_since           = EXCLUDED.past_due_since,
+       access_revoked_at        = EXCLUDED.access_revoked_at,
+       access_revocation_reason = EXCLUDED.access_revocation_reason,
+       dispute_id               = EXCLUDED.dispute_id,
+       refunded_at              = EXCLUDED.refunded_at,
+       last_stripe_event_created = EXCLUDED.last_stripe_event_created,
+       last_synced_at           = NOW(),
+       updated_at               = NOW()
+     RETURNING *`,
+    [
+      id, data.stripeSubscriptionId, data.userId, scope, data.scopeOwnerId,
+      data.stripeCustomerId, data.stripePriceId, data.planKey, data.status, data.livemode,
+      data.cancelAtPeriodEnd, data.cancelAt ?? null, data.currentPeriodStart ?? null,
+      data.currentPeriodEnd ?? null, data.trialEnd ?? null, data.endedAt ?? null,
+      data.latestInvoiceId ?? null, data.pastDueSince ?? null,
+      data.accessRevokedAt ?? null, data.accessRevocationReason ?? null,
+      data.disputeId ?? null, data.refundedAt ?? null,
+      data.lastStripeEventCreated ?? null,
+    ],
+  );
+  return rowToBillingSubscription(rows[0]);
+};
+
+export const revokeBillingSubscriptionAccess = async (
+  stripeSubscriptionId: string,
+  reason: string,
+): Promise<void> => {
+  const p = getPool();
+  await p.query(
+    `UPDATE billing_subscriptions
+     SET access_revoked_at = NOW(), access_revocation_reason = $2, updated_at = NOW()
+     WHERE stripe_subscription_id = $1 AND access_revoked_at IS NULL`,
+    [stripeSubscriptionId, reason],
+  );
+};
+
+export const restoreBillingSubscriptionAccess = async (
+  stripeSubscriptionId: string,
+): Promise<void> => {
+  const p = getPool();
+  await p.query(
+    `UPDATE billing_subscriptions
+     SET access_revoked_at = NULL, access_revocation_reason = NULL, dispute_id = NULL, updated_at = NOW()
+     WHERE stripe_subscription_id = $1`,
+    [stripeSubscriptionId],
+  );
+};
+
+export const setPastDueSince = async (
+  stripeSubscriptionId: string,
+  since: Date,
+): Promise<void> => {
+  const p = getPool();
+  await p.query(
+    `UPDATE billing_subscriptions
+     SET past_due_since = $2, updated_at = NOW()
+     WHERE stripe_subscription_id = $1 AND past_due_since IS NULL`,
+    [stripeSubscriptionId, since],
+  );
+};
+
+export const clearPastDueSince = async (stripeSubscriptionId: string): Promise<void> => {
+  const p = getPool();
+  await p.query(
+    `UPDATE billing_subscriptions
+     SET past_due_since = NULL, updated_at = NOW()
+     WHERE stripe_subscription_id = $1`,
+    [stripeSubscriptionId],
+  );
+};
+
+export const listStaleSubscriptionsForReconciliation = async (
+  olderThanMinutes: number,
+  limit: number,
+): Promise<BillingSubscription[]> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `SELECT * FROM billing_subscriptions
+     WHERE status NOT IN ('canceled', 'incomplete_expired')
+       AND (last_synced_at IS NULL OR last_synced_at < NOW() - ($1 * INTERVAL '1 minute'))
+     ORDER BY last_synced_at ASC NULLS FIRST
+     LIMIT $2`,
+    [olderThanMinutes, limit],
+  );
+  return rows.map(rowToBillingSubscription);
+};
+
+// Returns true if the event was newly claimed (i.e. not previously seen).
+// Returns false if a row with this stripe_event_id already exists.
+export const claimStripeWebhookEvent = async (data: {
+  stripeEventId: string;
+  eventType: string;
+  stripeObjectId?: string | null;
+  livemode: boolean;
+  eventCreated?: number | null;
+}): Promise<boolean> => {
+  const p = getPool();
+  const id = randomUUID();
+  const result = await p.query(
+    `INSERT INTO stripe_webhook_events
+       (id, stripe_event_id, event_type, stripe_object_id, livemode, event_created, processing_status)
+     VALUES ($1, $2, $3, $4, $5, $6, 'pending')
+     ON CONFLICT (stripe_event_id) DO NOTHING`,
+    [id, data.stripeEventId, data.eventType, data.stripeObjectId ?? null, data.livemode, data.eventCreated ?? null],
+  );
+  return (result.rowCount ?? 0) > 0;
+};
+
+export const markStripeWebhookEventProcessed = async (stripeEventId: string): Promise<void> => {
+  const p = getPool();
+  await p.query(
+    `UPDATE stripe_webhook_events
+     SET processing_status = 'processed', processed_at = NOW()
+     WHERE stripe_event_id = $1`,
+    [stripeEventId],
+  );
+};
+
+export const markStripeWebhookEventFailed = async (
+  stripeEventId: string,
+  error: string,
+): Promise<void> => {
+  const p = getPool();
+  await p.query(
+    `UPDATE stripe_webhook_events
+     SET processing_status = 'failed',
+         last_error = $2,
+         attempt_count = attempt_count + 1
+     WHERE stripe_event_id = $1`,
+    [stripeEventId, error],
+  );
+};
+
+export const getStripeWebhookEvent = async (stripeEventId: string): Promise<StripeWebhookEvent | null> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `SELECT * FROM stripe_webhook_events WHERE stripe_event_id = $1 LIMIT 1`,
+    [stripeEventId],
+  );
+  return rows[0] ? rowToWebhookEvent(rows[0]) : null;
 };

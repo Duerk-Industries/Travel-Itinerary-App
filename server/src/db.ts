@@ -476,3 +476,35 @@ export const countUnreadMessages = async (...args: Parameters<ReturnType<typeof 
   adapter().countUnreadMessages(...args);
 export const listUserAuthoredItems = async (...args: Parameters<ReturnType<typeof adapter>['listUserAuthoredItems']>) =>
   adapter().listUserAuthoredItems(...args);
+
+// ---- Stripe Billing facade exports ----
+export const getBillingCustomerByUserId = async (...args: Parameters<ReturnType<typeof adapter>['getBillingCustomerByUserId']>) =>
+  adapter().getBillingCustomerByUserId(...args);
+export const getBillingCustomerByStripeId = async (...args: Parameters<ReturnType<typeof adapter>['getBillingCustomerByStripeId']>) =>
+  adapter().getBillingCustomerByStripeId(...args);
+export const upsertBillingCustomer = async (...args: Parameters<ReturnType<typeof adapter>['upsertBillingCustomer']>) =>
+  adapter().upsertBillingCustomer(...args);
+export const getBillingSubscriptionByStripeId = async (...args: Parameters<ReturnType<typeof adapter>['getBillingSubscriptionByStripeId']>) =>
+  adapter().getBillingSubscriptionByStripeId(...args);
+export const listActiveBillingSubscriptionsForUser = async (...args: Parameters<ReturnType<typeof adapter>['listActiveBillingSubscriptionsForUser']>) =>
+  adapter().listActiveBillingSubscriptionsForUser(...args);
+export const upsertBillingSubscription = async (...args: Parameters<ReturnType<typeof adapter>['upsertBillingSubscription']>) =>
+  adapter().upsertBillingSubscription(...args);
+export const revokeBillingSubscriptionAccess = async (...args: Parameters<ReturnType<typeof adapter>['revokeBillingSubscriptionAccess']>) =>
+  adapter().revokeBillingSubscriptionAccess(...args);
+export const restoreBillingSubscriptionAccess = async (...args: Parameters<ReturnType<typeof adapter>['restoreBillingSubscriptionAccess']>) =>
+  adapter().restoreBillingSubscriptionAccess(...args);
+export const setPastDueSince = async (...args: Parameters<ReturnType<typeof adapter>['setPastDueSince']>) =>
+  adapter().setPastDueSince(...args);
+export const clearPastDueSince = async (...args: Parameters<ReturnType<typeof adapter>['clearPastDueSince']>) =>
+  adapter().clearPastDueSince(...args);
+export const listStaleSubscriptionsForReconciliation = async (...args: Parameters<ReturnType<typeof adapter>['listStaleSubscriptionsForReconciliation']>) =>
+  adapter().listStaleSubscriptionsForReconciliation(...args);
+export const claimStripeWebhookEvent = async (...args: Parameters<ReturnType<typeof adapter>['claimStripeWebhookEvent']>) =>
+  adapter().claimStripeWebhookEvent(...args);
+export const markStripeWebhookEventProcessed = async (...args: Parameters<ReturnType<typeof adapter>['markStripeWebhookEventProcessed']>) =>
+  adapter().markStripeWebhookEventProcessed(...args);
+export const markStripeWebhookEventFailed = async (...args: Parameters<ReturnType<typeof adapter>['markStripeWebhookEventFailed']>) =>
+  adapter().markStripeWebhookEventFailed(...args);
+export const getStripeWebhookEvent = async (...args: Parameters<ReturnType<typeof adapter>['getStripeWebhookEvent']>) =>
+  adapter().getStripeWebhookEvent(...args);
