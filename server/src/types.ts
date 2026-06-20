@@ -767,3 +767,37 @@ export interface StripeWebhookEvent {
   receivedAt: string;
   processedAt: string | null;
 }
+
+export interface BillingPlanConfig {
+  id: string;
+  planKey: BillingPlanKey;
+  stripeProductId: string | null;
+  activeStripePriceId: string | null;
+  unitAmountCents: number;
+  currency: string;
+  interval: 'month' | 'year';
+  trialDays: number;
+  pastDueGraceDays: number;
+  automaticTaxEnabled: boolean;
+  promotionCodesEnabled: boolean;
+  isCheckoutEnabled: boolean;
+  livemode: boolean | null;
+  version: number;
+  updatedBy: string | null;
+  updatedAt: string;
+}
+
+export interface BillingPriceHistory {
+  id: string;
+  stripePriceId: string;
+  planKey: BillingPlanKey;
+  stripeProductId: string | null;
+  unitAmountCents: number;
+  currency: string;
+  interval: 'month' | 'year';
+  livemode: boolean;
+  activeForNewCheckout: boolean;
+  createdBy: string | null;
+  createdAt: string;
+  retiredAt: string | null;
+}

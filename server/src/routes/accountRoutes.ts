@@ -48,6 +48,7 @@ import { EntitlementError } from '../errors';
 import { TokenPayload } from '../auth';
 import { deleteUserIngestionData } from '../ingestion/shared/repository';
 import { buildUserDataExport } from '../services/userDataExport';
+import { cancelAllSubscriptionsForUser, syncEmailToStripeCustomer } from '../billing/accountBillingLifecycle';
 import { accountPasswordRateLimit } from '../services/httpRateLimitService';
 
 // Account management (profile, password, deletion) for authenticated web users.
@@ -270,6 +271,8 @@ router.patch('/emails/primary', async (req, res) => {
       afterState: { primaryEmail: email },
       reason: 'User changed primary email',
     });
+    // Best-effort sync to Stripe Customer — non-fatal on failure.
+    syncEmailToStripeCustomer(userId, email).catch(() => undefined);
     res.json({ emails, token });
   } catch (err: any) {
     if (err?.code === 'EMAIL_NOT_VERIFIED') {
@@ -479,6 +482,8 @@ router.delete('/', async (req, res) => {
       action: 'ACCOUNT_DELETED',
       reason: 'User initiated account deletion',
     });
+    // Cancel active Stripe subscriptions before wiping local records.
+    await cancelAllSubscriptionsForUser(userId).catch(() => undefined);
     await deleteUserIngestionData(userId).catch(() => undefined);
     if (process.env.USE_IN_MEMORY_DB === '1') {
       const p = require('../db').poolClient();

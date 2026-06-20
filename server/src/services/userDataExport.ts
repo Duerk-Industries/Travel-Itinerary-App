@@ -18,6 +18,8 @@ import {
   listGroupsForUser,
   listTrips,
   listUserAuthoredItems,
+  getBillingCustomerByUserId,
+  listActiveBillingSubscriptionsForUser,
 } from '../db';
 
 export const EXPORT_SCHEMA_VERSION = 1;
@@ -36,6 +38,16 @@ export interface UserDataExport {
   groups: Awaited<ReturnType<typeof listGroupsForUser>>;
   trips: Awaited<ReturnType<typeof listTrips>>;
   authoredItems: Awaited<ReturnType<typeof listUserAuthoredItems>>;
+  billing: {
+    stripeCustomerId: string | null;
+    subscriptions: Array<{
+      subscriptionId: string;
+      planKey: string;
+      status: string;
+      currentPeriodEnd: string | null;
+      cancelAtPeriodEnd: boolean;
+    }>;
+  };
 }
 
 export const buildUserDataExport = async (userId: string): Promise<UserDataExport> => {
@@ -48,6 +60,8 @@ export const buildUserDataExport = async (userId: string): Promise<UserDataExpor
     groups,
     trips,
     authoredItems,
+    billingCustomer,
+    billingSubscriptions,
   ] = await Promise.all([
     getWebUserProfile(userId),
     listUserEmails(userId).catch(() => []),
@@ -64,6 +78,8 @@ export const buildUserDataExport = async (userId: string): Promise<UserDataExpor
       expenses: [],
       tripMessages: [],
     })),
+    getBillingCustomerByUserId(userId).catch(() => null),
+    listActiveBillingSubscriptionsForUser(userId).catch(() => []),
   ]);
 
   return {
@@ -76,5 +92,15 @@ export const buildUserDataExport = async (userId: string): Promise<UserDataExpor
     groups,
     trips,
     authoredItems,
+    billing: {
+      stripeCustomerId: billingCustomer?.stripeCustomerId ?? null,
+      subscriptions: billingSubscriptions.map((s) => ({
+        subscriptionId: s.stripeSubscriptionId,
+        planKey: s.planKey,
+        status: s.status,
+        currentPeriodEnd: s.currentPeriodEnd,
+        cancelAtPeriodEnd: s.cancelAtPeriodEnd,
+      })),
+    },
   };
 };

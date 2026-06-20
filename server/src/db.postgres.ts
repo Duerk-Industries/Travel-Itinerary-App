@@ -45,6 +45,8 @@ import {
   BillingSubscriptionStatus,
   BillingSubscriptionScope,
   WebhookProcessingStatus,
+  BillingPlanConfig,
+  BillingPriceHistory,
 } from './types';
 import { logError, logInfo } from './logger';
 import { getEnvFlag, getEnvValue } from './env';
@@ -10121,4 +10123,171 @@ export const getStripeWebhookEvent = async (stripeEventId: string): Promise<Stri
     [stripeEventId],
   );
   return rows[0] ? rowToWebhookEvent(rows[0]) : null;
+};
+
+// ---------------------------------------------------------------------------
+// Billing plan config
+// ---------------------------------------------------------------------------
+
+const rowToBillingPlanConfig = (row: any): BillingPlanConfig => ({
+  id: row.id,
+  planKey: row.plan_key as BillingPlanKey,
+  stripeProductId: row.stripe_product_id ?? null,
+  activeStripePriceId: row.active_stripe_price_id ?? null,
+  unitAmountCents: row.unit_amount_cents,
+  currency: row.currency,
+  interval: row.interval as 'month' | 'year',
+  trialDays: row.trial_days,
+  pastDueGraceDays: row.past_due_grace_days,
+  automaticTaxEnabled: row.automatic_tax_enabled,
+  promotionCodesEnabled: row.promotion_codes_enabled,
+  isCheckoutEnabled: row.is_checkout_enabled,
+  livemode: row.livemode ?? null,
+  version: row.version,
+  updatedBy: row.updated_by ?? null,
+  updatedAt: row.updated_at?.toISOString?.() ?? row.updated_at,
+});
+
+export const listBillingPlanConfigs = async (): Promise<BillingPlanConfig[]> => {
+  const p = getPool();
+  const { rows } = await p.query(`SELECT * FROM billing_plan_config ORDER BY plan_key`);
+  return rows.map(rowToBillingPlanConfig);
+};
+
+export const getBillingPlanConfig = async (planKey: BillingPlanKey): Promise<BillingPlanConfig | null> => {
+  const p = getPool();
+  const { rows } = await p.query(`SELECT * FROM billing_plan_config WHERE plan_key = $1 LIMIT 1`, [planKey]);
+  return rows[0] ? rowToBillingPlanConfig(rows[0]) : null;
+};
+
+export const upsertBillingPlanConfig = async (
+  data: Partial<Omit<BillingPlanConfig, 'id' | 'planKey'>> & { planKey: BillingPlanKey; updatedBy?: string | null },
+): Promise<BillingPlanConfig> => {
+  const p = getPool();
+  const existing = await getBillingPlanConfig(data.planKey);
+
+  if (!existing) {
+    const id = randomUUID();
+    const { rows } = await p.query(
+      `INSERT INTO billing_plan_config
+         (id, plan_key, stripe_product_id, active_stripe_price_id, unit_amount_cents, currency,
+          interval, trial_days, past_due_grace_days, automatic_tax_enabled, promotion_codes_enabled,
+          is_checkout_enabled, livemode, updated_by, updated_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,NOW())
+       RETURNING *`,
+      [
+        id, data.planKey,
+        data.stripeProductId ?? null, data.activeStripePriceId ?? null,
+        data.unitAmountCents ?? 0, data.currency ?? 'usd',
+        data.interval ?? 'month', data.trialDays ?? 14, data.pastDueGraceDays ?? 30,
+        data.automaticTaxEnabled ?? true, data.promotionCodesEnabled ?? true,
+        data.isCheckoutEnabled ?? true, data.livemode ?? null,
+        data.updatedBy ?? null,
+      ],
+    );
+    return rowToBillingPlanConfig(rows[0]);
+  }
+
+  const { rows } = await p.query(
+    `UPDATE billing_plan_config SET
+       stripe_product_id = COALESCE($2, stripe_product_id),
+       active_stripe_price_id = COALESCE($3, active_stripe_price_id),
+       unit_amount_cents = COALESCE($4, unit_amount_cents),
+       currency = COALESCE($5, currency),
+       interval = COALESCE($6, interval),
+       trial_days = COALESCE($7, trial_days),
+       past_due_grace_days = COALESCE($8, past_due_grace_days),
+       automatic_tax_enabled = COALESCE($9, automatic_tax_enabled),
+       promotion_codes_enabled = COALESCE($10, promotion_codes_enabled),
+       is_checkout_enabled = COALESCE($11, is_checkout_enabled),
+       livemode = COALESCE($12, livemode),
+       updated_by = $13,
+       version = version + 1,
+       updated_at = NOW()
+     WHERE plan_key = $1
+     RETURNING *`,
+    [
+      data.planKey,
+      data.stripeProductId, data.activeStripePriceId,
+      data.unitAmountCents, data.currency, data.interval,
+      data.trialDays, data.pastDueGraceDays,
+      data.automaticTaxEnabled, data.promotionCodesEnabled,
+      data.isCheckoutEnabled, data.livemode,
+      data.updatedBy ?? null,
+    ],
+  );
+  return rowToBillingPlanConfig(rows[0]);
+};
+
+// ---------------------------------------------------------------------------
+// Billing price history
+// ---------------------------------------------------------------------------
+
+const rowToBillingPriceHistory = (row: any): BillingPriceHistory => ({
+  id: row.id,
+  stripePriceId: row.stripe_price_id,
+  planKey: row.plan_key as BillingPlanKey,
+  stripeProductId: row.stripe_product_id ?? null,
+  unitAmountCents: row.unit_amount_cents,
+  currency: row.currency,
+  interval: row.interval as 'month' | 'year',
+  livemode: row.livemode,
+  activeForNewCheckout: row.active_for_new_checkout,
+  createdBy: row.created_by ?? null,
+  createdAt: row.created_at?.toISOString?.() ?? row.created_at,
+  retiredAt: row.retired_at?.toISOString?.() ?? row.retired_at ?? null,
+});
+
+export const listBillingPriceHistory = async (planKey?: BillingPlanKey): Promise<BillingPriceHistory[]> => {
+  const p = getPool();
+  if (planKey) {
+    const { rows } = await p.query(
+      `SELECT * FROM billing_price_history WHERE plan_key = $1 ORDER BY created_at DESC`,
+      [planKey],
+    );
+    return rows.map(rowToBillingPriceHistory);
+  }
+  const { rows } = await p.query(`SELECT * FROM billing_price_history ORDER BY created_at DESC`);
+  return rows.map(rowToBillingPriceHistory);
+};
+
+export const insertBillingPriceHistory = async (data: {
+  stripePriceId: string;
+  planKey: BillingPlanKey;
+  stripeProductId: string | null;
+  unitAmountCents: number;
+  currency: string;
+  interval: 'month' | 'year';
+  livemode: boolean;
+  activeForNewCheckout: boolean;
+  createdBy: string | null;
+}): Promise<BillingPriceHistory> => {
+  const p = getPool();
+  const id = randomUUID();
+  const { rows } = await p.query(
+    `INSERT INTO billing_price_history
+       (id, stripe_price_id, plan_key, stripe_product_id, unit_amount_cents, currency,
+        interval, livemode, active_for_new_checkout, created_by)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+     RETURNING *`,
+    [
+      id, data.stripePriceId, data.planKey, data.stripeProductId,
+      data.unitAmountCents, data.currency, data.interval, data.livemode,
+      data.activeForNewCheckout, data.createdBy,
+    ],
+  );
+  return rowToBillingPriceHistory(rows[0]);
+};
+
+export const deactivateOldPricesForPlan = async (
+  planKey: BillingPlanKey,
+  keepActivePriceId: string,
+): Promise<void> => {
+  const p = getPool();
+  await p.query(
+    `UPDATE billing_price_history
+     SET active_for_new_checkout = FALSE, retired_at = NOW()
+     WHERE plan_key = $1 AND stripe_price_id != $2 AND active_for_new_checkout = TRUE`,
+    [planKey, keepActivePriceId],
+  );
 };

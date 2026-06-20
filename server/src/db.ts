@@ -508,3 +508,19 @@ export const markStripeWebhookEventFailed = async (...args: Parameters<ReturnTyp
   adapter().markStripeWebhookEventFailed(...args);
 export const getStripeWebhookEvent = async (...args: Parameters<ReturnType<typeof adapter>['getStripeWebhookEvent']>) =>
   adapter().getStripeWebhookEvent(...args);
+
+// ---- Billing plan config ----
+export const listBillingPlanConfigs = async (...args: Parameters<ReturnType<typeof adapter>['listBillingPlanConfigs']>) =>
+  adapter().listBillingPlanConfigs(...args);
+export const getBillingPlanConfig = async (...args: Parameters<ReturnType<typeof adapter>['getBillingPlanConfig']>) =>
+  adapter().getBillingPlanConfig(...args);
+export const upsertBillingPlanConfig = async (...args: Parameters<ReturnType<typeof adapter>['upsertBillingPlanConfig']>) =>
+  adapter().upsertBillingPlanConfig(...args);
+
+// ---- Billing price history ----
+export const listBillingPriceHistory = async (...args: Parameters<ReturnType<typeof adapter>['listBillingPriceHistory']>) =>
+  adapter().listBillingPriceHistory(...args);
+export const insertBillingPriceHistory = async (...args: Parameters<ReturnType<typeof adapter>['insertBillingPriceHistory']>) =>
+  adapter().insertBillingPriceHistory(...args);
+export const deactivateOldPricesForPlan = async (...args: Parameters<ReturnType<typeof adapter>['deactivateOldPricesForPlan']>) =>
+  adapter().deactivateOldPricesForPlan(...args);
