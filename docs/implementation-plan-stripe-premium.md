@@ -84,6 +84,15 @@ Recommended launch architecture:
     - The initial schema supports family coverage.
     - A later product decision will define eligible relationships, maximum covered users, and whether covered family members require separate Stripe Customers.
 
+## Prerequisites
+
+Before any Stripe code is written, rename the existing trip-ledger payment route file to eliminate a naming collision that would confuse LLM sessions throughout the build:
+
+- Rename `server/src/routes/paymentRoutes.ts` → `server/src/routes/ledgerPaymentRoutes.ts`
+- Update the import and mount in `server/src/app.ts` (`/api/payments` path and route behaviour are unchanged)
+
+This is a trivial mechanical rename but it must happen before Phase 1 so that searches for "payment routes" during Stripe work do not surface the wrong file.
+
 ## Phase 1: Billing Domain And Configuration
 
 ### Dependencies
@@ -117,9 +126,9 @@ Rules:
 
 - Secret and webhook keys must come from Secret Manager in production.
 - The Product ID and safe URLs can be normal environment variables.
-- Active Price IDs, amounts, trial duration, grace duration, tax, and promotion settings belong in the database-managed billing configuration after initial bootstrap.
 - Startup must fail clearly when billing is enabled but required settings are missing.
 - Test and live keys/IDs must never be mixed. Validate that key and Price ID modes agree where practical.
+- **Phase 1 only:** trial days (14), past-due grace days (30), automatic tax (enabled), and promotion codes (enabled) are hardcoded as typed constants in `server/src/config/stripeBilling.ts`. They move to the `billing_plan_config` database table in Phase 6 when the admin UI is built. Do not add the DB table or admin routes in Phase 1.
 
 ### Stripe client wrapper
 
@@ -130,8 +139,8 @@ Create:
 Responsibilities:
 
 - Construct one lazy Stripe client.
-- Pin the API version intentionally.
-- Expose a test seam for a fake Stripe client.
+- Pin the API version intentionally (use the version the installed SDK accepts — stripe@17.7.0 requires `'2025-02-24.acacia'`; update deliberately when upgrading the package, never let it drift).
+- Expose a test seam via `setStripeClientForTesting(client)` — do **not** use `jest.mock('stripe')` directly, as that breaks module isolation.
 - Prevent Stripe initialization when billing is disabled.
 - Centralize Stripe error normalization and safe logging.
 
@@ -220,18 +229,9 @@ Initial values:
 
 Historical Price records are required because Stripe Prices are immutable and existing subscriptions or delayed events can continue referencing retired Prices.
 
-#### `billing_subscription_members`
+#### `billing_subscription_members` (deferred)
 
-Future-family plumbing:
-
-- `stripe_subscription_id`
-- `covered_user_id`
-- `relationship` (`owner` initially; future `family_member`)
-- `effective_from`
-- `effective_to`
-- unique active membership per subscription/user
-
-For individual launch subscriptions, create one owner membership. This lets entitlement resolution later expand to family members without changing the Stripe subscription model.
+> **Skip for launch.** The `subscription_scope` and `scope_owner_id` columns in `billing_subscriptions` already provide the forward-compatibility hook for family plans. `billing_subscription_members` adds ~150 lines of wiring that won't be exercised until a concrete family product decision is made. Add it then, not now.
 
 #### `stripe_webhook_events`
 
@@ -254,7 +254,7 @@ Add matching operations to:
 
 - `server/src/db.postgres.ts`
 - `server/src/db.firebase.ts`
-- `server/src/db.memory.ts`
+- `server/src/db.memory.ts` — the memory adapter spreads all postgres exports (`...postgresAdapter`), so only add overrides for functions that use SQL syntax pg-mem cannot handle (e.g. `NOT EXISTS` subqueries, `ANY($1::uuid[])` casts). Implement the majority of billing functions in postgres; they are inherited automatically.
 - `server/src/db.ts`
 - `server/src/types.ts`
 
@@ -299,6 +299,8 @@ This must be the only billing code allowed to change a user's tier.
 3. Permanent seeded/manual grants remain authoritative if that policy is confirmed.
 4. Eligible Stripe subscription grants `premium`.
 5. Otherwise the user is `free`.
+
+Before implementing this service, read the full `server/src/services/entitlementService.ts` — specifically `setUserTier`, `getCurrentUserTier`, and `getSeededTierForEmail`. The new `reconcileUserTierFromBilling` function must compose with these rather than bypass them, or it will silently overwrite admin and seeded grants.
 
 Because `user_tiers` currently allows one active row and closes the old row in `setUserTier`, add a method that can inspect the current tier source before applying a billing transition.
 
@@ -467,6 +469,10 @@ The webhook endpoint must:
 7. Upsert the local subscription snapshot.
 8. Reconcile the user's tier.
 9. Mark the event processed or failed.
+
+**Implementation note:** use a `Record<string, (event: Stripe.Event) => Promise<void>>` dispatch table rather than a `switch` statement. `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, and `invoice.paid` all call a shared `handleSubscriptionSnapshot` helper — wire them to the same handler entry. This keeps the webhook route under ~80 lines.
+
+**Mount note:** follow the existing pattern in `server/src/routes/ingestionWebhookRoutes.ts` (Mailgun), which is mounted before `express.json()` in `app.ts`. The Stripe webhook route must be mounted the same way.
 
 ### Initial event set
 
@@ -847,10 +853,26 @@ Suggested rollout:
 - refund/cancellation support procedure
 - Price migration procedure
 
+## Suggested Implementation Order (LLM Sessions)
+
+| Session | Scope | Key constraint to include in prompt |
+|---|---|---|
+| 0 | Rename `paymentRoutes.ts` → `ledgerPaymentRoutes.ts`; update `app.ts` | Mechanical rename only — no behaviour change |
+| 1 | `stripe` dep; `stripeBilling.ts`; `stripeClient.ts`; `.env.example` | Hardcode trial/grace constants; `setStripeClientForTesting` seam |
+| 2 | DB migrations + postgres adapter + types | Integer cents only; no floats |
+| 3 | Memory adapter overrides only | Spread from postgres; only override pg-mem-incompatible SQL |
+| 4 | `billingService.ts` (checkout + portal session creation) | Resolve plan key server-side; never trust client Price ID |
+| 5 | `billingRoutes.ts` + mount in `app.ts` | Follow `ledgerPaymentRoutes.ts` pattern for auth middleware |
+| 6 | `stripeWebhookRoutes.ts` | Mount before `express.json()`; dispatch table; follow `ingestionWebhookRoutes.ts` |
+| 7 | `subscriptionEntitlementService.ts` | Read full `entitlementService.ts` first; admin/seeded grants are never overwritten |
+| 8 | Client: `useBillingStatus.ts` + `PremiumSubscriptionPanel.tsx` | Web-only purchase UI; native shows status only |
+| 9 | Tests | Use `setStripeClientForTesting`; add billing test files to `legacyMemoryTestFiles` in `server/jest.projects.js` |
+
 ## Suggested File Map
 
 New server files:
 
+- `server/src/routes/ledgerPaymentRoutes.ts` (renamed from `paymentRoutes.ts`)
 - `server/src/config/stripeBilling.ts`
 - `server/src/billing/stripeClient.ts`
 - `server/src/billing/billingDtos.ts`

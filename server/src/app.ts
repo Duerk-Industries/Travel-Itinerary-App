@@ -19,7 +19,7 @@ import carRentalRoutes from './routes/carRentalRoutes';
 import accountRoutes, { groupsRouter } from './routes/accountRoutes';
 import placeRoutes from './routes/placeRoutes';
 import expenseRoutes from './routes/expenseRoutes';
-import paymentRoutes from './routes/paymentRoutes';
+import paymentRoutes from './routes/ledgerPaymentRoutes';
 import adminRoutes from './routes/adminRoutes';
 import ingestionRoutes from './routes/ingestionRoutes';
 import ingestionAdminRoutes from './routes/ingestionAdminRoutes';
