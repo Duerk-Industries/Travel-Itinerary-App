@@ -51,5 +51,11 @@
     "jest.rootPath": ".",
     "java.jdt.ls.vmargs": "-XX:+UseParallelGC -XX:GCTimeRatio=4 -XX:AdaptiveSizePolicyWeight=90 -Dsun.zip.disableMemoryMapping=true -Xmx4G -Xms100m -Xlog:disable",
     "geminicodeassist.outlines.automaticOutlineGeneration": true,
-    "chatgpt.openOnStartup": true
+    "chatgpt.openOnStartup": true,
+    "chat.editor.claude.preferAgentHost": true,
+    "chat.useClaudeMdFile": true,
+    "claudeCode.allowDangerouslySkipPermissions": true,
+    "claudeCode.environmentVariables": [
+        
+    ]
 }
