@@ -1759,6 +1759,7 @@ export const deleteWebUserAndCleanup = async (userId: string): Promise<void> => 
     tripFollowers,
     tripRemovals,
     userEmails,
+    billingSubscriptions,
   ] = await Promise.all([
     db.collection('group_members').where('userId', '==', userId).get(),
     db.collection('group_invites').where('inviteeUserId', '==', userId).get(),
@@ -1767,6 +1768,7 @@ export const deleteWebUserAndCleanup = async (userId: string): Promise<void> => 
     db.collection('trip_followers').where('followerUserId', '==', userId).get(),
     db.collection('trip_removals').where('userId', '==', userId).get(),
     db.collection('user_emails').where('userId', '==', userId).get(),
+    db.collection('billing_subscriptions').where('userId', '==', userId).get(),
   ]);
   const refs = [
     db.collection('users').doc(userId),
@@ -1778,6 +1780,8 @@ export const deleteWebUserAndCleanup = async (userId: string): Promise<void> => 
     ...tripFollowers.docs.map((doc) => doc.ref),
     ...tripRemovals.docs.map((doc) => doc.ref),
     ...userEmails.docs.map((doc) => doc.ref),
+    db.collection('billing_customers').doc(userId),
+    ...billingSubscriptions.docs.map((doc) => doc.ref),
   ];
   await deleteDocRefsInBatches(refs);
 };
@@ -6786,7 +6790,7 @@ export const upsertBillingCustomer = async (data: {
     const customer: BillingCustomer = {
       id: previous?.id ?? randomUUID(),
       userId: data.userId,
-      stripeCustomerId: data.stripeCustomerId,
+      stripeCustomerId: previous?.stripeCustomerId ?? data.stripeCustomerId,
       emailSnapshot: data.emailSnapshot ?? previous?.emailSnapshot ?? null,
       livemode: data.livemode,
       createdAt: previous?.createdAt ?? timestamp,

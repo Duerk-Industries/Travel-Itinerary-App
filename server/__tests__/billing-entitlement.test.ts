@@ -55,6 +55,10 @@ describe('isSubscriptionPremiumEligible', () => {
     expect(isSubscriptionPremiumEligible(makeSub({ status: 'unpaid' }))).toBe(false);
   });
 
+  it.each(['paused', 'incomplete_expired'] as const)('revokes access for %s subscription', (status) => {
+    expect(isSubscriptionPremiumEligible(makeSub({ status }))).toBe(false);
+  });
+
   it('grants access for past_due within 30-day grace period', () => {
     const recentlyPastDue = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString();
     expect(
@@ -67,6 +71,13 @@ describe('isSubscriptionPremiumEligible', () => {
     expect(
       isSubscriptionPremiumEligible(makeSub({ status: 'past_due', pastDueSince: longPastDue })),
     ).toBe(false);
+  });
+
+  it('uses a plan-specific grace period', () => {
+    const pastDueForEightDays = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString();
+    const sub = makeSub({ status: 'past_due', pastDueSince: pastDueForEightDays });
+    expect(isSubscriptionPremiumEligible(sub, 7)).toBe(false);
+    expect(isSubscriptionPremiumEligible(sub, 14)).toBe(true);
   });
 
   it('grants access for past_due with no pastDueSince (clock not started yet)', () => {
@@ -124,6 +135,15 @@ describe('computeBillingEntitlementDecision', () => {
       makeSub({ status: 'past_due', pastDueSince: recentPastDue }),
     ]);
     expect(result.shouldHavePremium).toBe(true);
+  });
+
+  it('uses configured grace days for each plan', () => {
+    const pastDueForEightDays = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString();
+    const result = computeBillingEntitlementDecision(
+      [makeSub({ status: 'past_due', pastDueSince: pastDueForEightDays })],
+      { premium_monthly: 7 },
+    );
+    expect(result.shouldHavePremium).toBe(false);
   });
 
   it('treats full refund (access_revoked_at set) as ineligible even for active status', () => {

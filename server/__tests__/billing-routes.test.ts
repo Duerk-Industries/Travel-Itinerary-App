@@ -9,6 +9,7 @@ import {
   revokeBillingSubscriptionAccess,
   claimStripeWebhookEvent,
   markStripeWebhookEventFailed,
+  upsertBillingCustomer,
 } from '../src/db';
 import { setStripeClientForTesting } from '../src/billing/stripeClient';
 import { cleanupTestUsersByEmail, registerAndLoginWebUser } from './helpers';
@@ -142,6 +143,27 @@ describe('Billing routes', () => {
       expect(monthly.amountCents).toBe(500);
       expect(monthly.trialDays).toBe(14);
     });
+
+    it('does not advertise plans disabled by an administrator', async () => {
+      await upsertBillingPlanConfig({
+        planKey: 'premium_annual',
+        isCheckoutEnabled: false,
+        updatedBy: userId,
+      });
+      try {
+        const res = await request(app)
+          .get('/api/billing/plans')
+          .set('Authorization', `Bearer ${token}`)
+          .expect(200);
+        expect(res.body.plans.some((plan: any) => plan.planKey === 'premium_annual')).toBe(false);
+      } finally {
+        await upsertBillingPlanConfig({
+          planKey: 'premium_annual',
+          isCheckoutEnabled: true,
+          updatedBy: userId,
+        });
+      }
+    });
   });
 
   describe('POST /api/billing/checkout-session', () => {
@@ -221,11 +243,65 @@ describe('Billing routes', () => {
     });
 
     it('returns 409 if user already has an active subscription', async () => {
-      // Calls a second time — first call already created a billing customer and subscription
-      // in the local DB. Now re-mock the subscription retrieve to return active.
-      // Actually the first checkout creates the customer but not a subscription locally.
-      // Skip this check as it requires webhook processing to create the sub first.
-      // We test the already-subscribed logic in the unit test instead.
+      const subscribedEmail = `billing-subscribed+${TS}@example.com`;
+      const subscribed = await registerAndLoginWebUser({
+        firstName: 'Already',
+        lastName: 'Subscribed',
+        email: subscribedEmail,
+        password: PASSWORD,
+      });
+      await upsertBillingSubscription({
+        stripeSubscriptionId: `sub_already_${TS}`,
+        userId: subscribed.userId,
+        scopeOwnerId: subscribed.userId,
+        stripeCustomerId: `cus_already_${TS}`,
+        stripePriceId: 'price_test_monthly',
+        planKey: 'premium_monthly',
+        status: 'active',
+        livemode: false,
+        cancelAtPeriodEnd: false,
+      });
+      const callsBefore = fakeStripe.checkout.sessions.create.mock.calls.length;
+      try {
+        const res = await request(app)
+          .post('/api/billing/checkout-session')
+          .set('Authorization', `Bearer ${subscribed.token}`)
+          .send({
+            planKey: 'premium_monthly',
+            idempotencyKey: `already-${TS}`,
+            clientPlatform: 'web',
+          })
+          .expect(409);
+        expect(res.body.alreadySubscribed).toBe(true);
+        expect(fakeStripe.checkout.sessions.create).toHaveBeenCalledTimes(callsBefore);
+      } finally {
+        await cleanupTestUsersByEmail([subscribedEmail]);
+      }
+    });
+
+    it('returns 500 when the selected plan is disabled', async () => {
+      await upsertBillingPlanConfig({
+        planKey: 'premium_monthly',
+        isCheckoutEnabled: false,
+        updatedBy: userId,
+      });
+      try {
+        await request(app)
+          .post('/api/billing/checkout-session')
+          .set('Authorization', `Bearer ${token}`)
+          .send({
+            planKey: 'premium_monthly',
+            idempotencyKey: `disabled-${TS}`,
+            clientPlatform: 'web',
+          })
+          .expect(500);
+      } finally {
+        await upsertBillingPlanConfig({
+          planKey: 'premium_monthly',
+          isCheckoutEnabled: true,
+          updatedBy: userId,
+        });
+      }
     });
   });
 
@@ -249,6 +325,36 @@ describe('Billing routes', () => {
       } finally {
         await cleanupTestUsersByEmail([freshEmail]);
       }
+    });
+
+    it('creates a portal session for only the authenticated user customer', async () => {
+      await upsertBillingCustomer({
+        userId,
+        stripeCustomerId: 'cus_test_fake',
+        emailSnapshot: EMAIL,
+        livemode: false,
+      });
+      const res = await request(app)
+        .post('/api/billing/portal-session')
+        .set('Authorization', `Bearer ${token}`)
+        .send({})
+        .expect(201);
+
+      expect(res.body.url).toBe('https://billing.stripe.com/session/test');
+      expect(fakeStripe.billingPortal.sessions.create).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          customer: 'cus_test_fake',
+          return_url: 'http://localhost:19006/account',
+        }),
+      );
+    });
+
+    it('rejects a client-supplied portal return URL', async () => {
+      await request(app)
+        .post('/api/billing/portal-session')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ returnUrl: 'https://attacker.example/redirect' })
+        .expect(400);
     });
   });
 

@@ -9894,7 +9894,6 @@ export const upsertBillingCustomer = async (data: {
     `INSERT INTO billing_customers (id, user_id, stripe_customer_id, email_snapshot, livemode)
      VALUES ($1, $2, $3, $4, $5)
      ON CONFLICT (user_id) DO UPDATE SET
-       stripe_customer_id = EXCLUDED.stripe_customer_id,
        email_snapshot = COALESCE(EXCLUDED.email_snapshot, billing_customers.email_snapshot),
        updated_at = NOW()
      RETURNING id, user_id, stripe_customer_id, email_snapshot, livemode, created_at, updated_at`,

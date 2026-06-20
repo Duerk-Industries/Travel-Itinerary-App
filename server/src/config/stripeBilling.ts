@@ -47,6 +47,12 @@ export const getStripePortalReturnUrl = (): string | undefined =>
 // Price IDs are set when Stripe Prices are created in the Dashboard.
 // These are the active launch Prices; when a new Price is published (Phase 6 admin UI),
 // the env vars (or DB billing_plan_config rows) are updated.
+/** True when the configured secret key is a live-mode key (not a test key). */
+export const isStripeLiveMode = (): boolean => {
+  const key = getStripeSecretKey();
+  return key != null && !key.startsWith('sk_test_');
+};
+
 export const getStripePremiumMonthlyPriceId = (): string | undefined =>
   getEnvValue('STRIPE_PREMIUM_MONTHLY_PRICE_ID');
 

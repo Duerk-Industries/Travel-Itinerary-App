@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authenticate, TokenPayload } from '../auth';
 import { readDto } from '../utils/dtoParse';
-import { isStripeBillingEnabled } from '../config/stripeBilling';
+import { isStripeBillingEnabled, isStripeLiveMode } from '../config/stripeBilling';
 import {
   createCheckoutSession,
   createPortalSession,
@@ -63,7 +63,7 @@ router.post('/checkout-session', async (req, res) => {
       email,
       planKey: dto.planKey,
       idempotencyKey: dto.idempotencyKey,
-      livemode: !process.env.STRIPE_SECRET_KEY?.startsWith('sk_test_'),
+      livemode: isStripeLiveMode(),
     });
 
     if ('alreadySubscribed' in result) {
