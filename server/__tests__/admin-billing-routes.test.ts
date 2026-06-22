@@ -64,6 +64,11 @@ describe('Admin billing routes', () => {
   });
 
   afterAll(async () => {
+    await request(app)
+      .patch('/api/admin/billing/config/premium_monthly')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ trialDays: 14, pastDueGraceDays: 30, promotionCodesEnabled: true })
+      .catch(() => undefined);
     setStripeClientForTesting(null);
     delete process.env.STRIPE_BILLING_ENABLED;
     delete process.env.STRIPE_SECRET_KEY;

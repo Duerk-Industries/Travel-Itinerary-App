@@ -1,6 +1,6 @@
 -- billing_plan_config: admin-editable per-plan settings (Phase 6)
 CREATE TABLE IF NOT EXISTS billing_plan_config (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   plan_key TEXT NOT NULL UNIQUE,
   stripe_product_id TEXT,
   active_stripe_price_id TEXT,
@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS billing_plan_config (
 
 -- billing_price_history: immutable log of Stripe Prices created via admin UI
 CREATE TABLE IF NOT EXISTS billing_price_history (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   stripe_price_id TEXT NOT NULL UNIQUE,
   plan_key TEXT NOT NULL,
   stripe_product_id TEXT,
@@ -41,8 +41,10 @@ CREATE INDEX IF NOT EXISTS idx_billing_price_history_active
 
 -- Seed default plan config rows.
 -- These match PLAN_DEFAULTS in stripeBilling.ts; the DB rows win at runtime.
-INSERT INTO billing_plan_config (plan_key, unit_amount_cents, currency, interval, trial_days, past_due_grace_days)
-VALUES
-  ('premium_monthly', 500,  'usd', 'month', 14, 30),
-  ('premium_annual',  3500, 'usd', 'year',  14, 30)
+INSERT INTO billing_plan_config (id, plan_key, unit_amount_cents, currency, interval, trial_days, past_due_grace_days)
+VALUES ('00000000-0000-4000-8000-000000000001', 'premium_monthly', 500, 'usd', 'month', 14, 30)
+ON CONFLICT (plan_key) DO NOTHING;
+
+INSERT INTO billing_plan_config (id, plan_key, unit_amount_cents, currency, interval, trial_days, past_due_grace_days)
+VALUES ('00000000-0000-4000-8000-000000000002', 'premium_annual', 3500, 'usd', 'year', 14, 30)
 ON CONFLICT (plan_key) DO NOTHING;

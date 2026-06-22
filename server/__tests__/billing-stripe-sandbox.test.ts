@@ -249,13 +249,14 @@ describeIfSandbox('Stripe sandbox — real test-mode API', () => {
   // =========================================================================
 
   describe('webhook simulation — subscription lifecycle', () => {
-    const stripe = makeStripe();
+    let stripe: Stripe;
     let stripeCustomerId: string;
     let sub: Stripe.Subscription;
     let seq = 0;
     const nextId = (tag: string) => `evt_test_${tag}_${Date.now()}_${++seq}`;
 
     beforeAll(async () => {
+      stripe = makeStripe();
       // Create a Stripe customer with our local userId in metadata so that
       // userIdFromSubscription can resolve it without a billing_customers row.
       const customer = await stripe.customers.create({
@@ -397,7 +398,7 @@ describeIfSandbox('Stripe sandbox — real test-mode API', () => {
   // =========================================================================
 
   describe('webhook simulation — full refund revocation', () => {
-    const stripe = makeStripe();
+    let stripe: Stripe;
     const REFUND_EMAIL = `${BASE_SUFFIX}-refund@example.com`;
 
     let refundUserId: string;
@@ -408,6 +409,7 @@ describeIfSandbox('Stripe sandbox — real test-mode API', () => {
     const nextId = (tag: string) => `evt_test_${tag}_${Date.now()}_${++seq}`;
 
     beforeAll(async () => {
+      stripe = makeStripe();
       // Create a separate local user so tier changes don't interfere with
       // the lifecycle suite's user.
       const refundUser = await registerAndLoginWebUser({

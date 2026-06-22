@@ -261,10 +261,10 @@ Remaining launch items:
 Optional real Stripe test-mode smoke test:
 
 ```powershell
-$env:STRIPE_SANDBOX_TESTS='1'
+$env:STRIPE_SANDBOX_TEST='1'
 $env:STRIPE_SECRET_KEY='sk_test_...'
 $env:STRIPE_PREMIUM_MONTHLY_PRICE_ID='price_...'
-npm --prefix server test -- --runInBand __tests__/stripe-sandbox.test.ts
+npm --prefix server test -- --runInBand __tests__/billing-stripe-sandbox.test.ts
 ```
 
 ## References

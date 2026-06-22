@@ -84,6 +84,30 @@ describe('Billing routes', () => {
     process.env.STRIPE_PORTAL_RETURN_URL = 'http://localhost:19006/account';
 
     await initDb();
+    await upsertBillingPlanConfig({
+      planKey: 'premium_monthly',
+      activeStripePriceId: 'price_test_monthly',
+      unitAmountCents: 500,
+      trialDays: 14,
+      pastDueGraceDays: 30,
+      automaticTaxEnabled: true,
+      promotionCodesEnabled: true,
+      isCheckoutEnabled: true,
+      livemode: false,
+      updatedBy: null,
+    });
+    await upsertBillingPlanConfig({
+      planKey: 'premium_annual',
+      activeStripePriceId: 'price_test_annual',
+      unitAmountCents: 3500,
+      trialDays: 14,
+      pastDueGraceDays: 30,
+      automaticTaxEnabled: true,
+      promotionCodesEnabled: true,
+      isCheckoutEnabled: true,
+      livemode: false,
+      updatedBy: null,
+    });
     const user = await registerAndLoginWebUser({ firstName: 'Billing', lastName: 'Test', email: EMAIL, password: PASSWORD });
     token = user.token;
     userId = user.userId;

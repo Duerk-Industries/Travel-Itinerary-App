@@ -1,14 +1,27 @@
 import { z } from 'zod';
 
 const optionalTrimmedString = z
-  .union([z.string(), z.null(), z.undefined()])
-  .transform((value) => (value == null ? '' : String(value).trim()));
+  .preprocess(
+    (value) => (value == null ? '' : value),
+    z.string(),
+  )
+  .transform((value) => value.trim());
 
 const optionalIdArray = z
-  .union([z.array(z.union([z.string(), z.number()])), z.null(), z.undefined()])
+  .preprocess(
+    (items) => (Array.isArray(items) ? items : []),
+    z.array(z.union([z.string(), z.number()])),
+  )
   .transform((items) =>
-    Array.isArray(items) ? items.map((id) => String(id).trim()).filter(Boolean) : [],
+    items.map((id) => String(id).trim()).filter(Boolean),
   );
+
+const optionalCost = z
+  .preprocess(
+    (value) => (value == null ? 0 : value),
+    z.union([z.string(), z.number()]),
+  )
+  .transform((value) => Number(value) || 0);
 
 const trimmedNonEmpty = (label: string) =>
   z
@@ -31,8 +44,7 @@ export const createCarRentalDto = z.object({
   reference: optionalTrimmedString,
   vendor: optionalTrimmedString,
   prepaid: optionalTrimmedString,
-  /** Numeric coerce happens in the handler so "12.5" from form inputs still works. */
-  cost: z.union([z.string(), z.number(), z.null(), z.undefined()]).transform((v) => (v == null ? 0 : Number(v) || 0)),
+  cost: optionalCost,
   model: optionalTrimmedString,
   notes: optionalTrimmedString,
   paidBy: optionalIdArray,
