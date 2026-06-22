@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import HorizontalTableScroll from '../components/HorizontalTableScroll';
 import type { Trait } from './traits';
 import { FlightsTab, type Flight, type GroupMemberOption, type Trip } from './transfers';
 import {
@@ -1982,7 +1983,10 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                 <Text style={styles.buttonText}>+</Text>
               </TouchableOpacity>
             </View>
-            <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
+            <HorizontalTableScroll
+              style={styles.tableScroll}
+              contentContainerStyle={styles.tableScrollContent}
+            >
               <View style={styles.table}>
                 <View style={[styles.tableRow, styles.tableHeader]}>
                   <View style={[styles.cell, styles.lodgingNameCol]}>
@@ -2082,7 +2086,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                   </View>
                 ))}
               </View>
-            </ScrollView>
+            </HorizontalTableScroll>
             {editingWizardLodging ? (
               <LodgingDialog
                 visible={!!editingWizardLodging}
@@ -2147,7 +2151,10 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
           <>
             <Text style={styles.sectionTitle}>Rental Cars</Text>
             <Text style={styles.helperText}>Optional. Add rental cars using the full car rentals interface.</Text>
-            <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
+            <HorizontalTableScroll
+              style={styles.tableScroll}
+              contentContainerStyle={styles.tableScrollContent}
+            >
               <View style={styles.table}>
                 <View style={[styles.tableRow, styles.tableHeader]}>
                 {['Pick Up Location', 'Pick Up Date', 'Drop Off Location', 'Drop Off Date', 'Status', 'Reference', 'Vendor', 'Prepaid?', 'Cost', 'Car Model', 'Notes', 'For', 'Paid By', 'Actions'].map((label, idx, arr) => (
@@ -2422,7 +2429,7 @@ const CreateTripWizard: React.FC<CreateTripWizardProps> = ({
                   </View>
                 </View>
               </View>
-            </ScrollView>
+            </HorizontalTableScroll>
           </>
         );
       case 8:

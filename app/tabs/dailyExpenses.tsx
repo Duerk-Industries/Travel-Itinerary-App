@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Platform, ScrollView, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import HorizontalTableScroll from '../components/HorizontalTableScroll';
 import ConfirmDialog from '../components/ConfirmDialog';
 import DialogShell from '../components/DialogShell';
 import DraftTextInput from '../components/DraftTextInput';
@@ -691,7 +692,10 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
           })}
         </ScrollView>
       ) : (
-        <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
+        <HorizontalTableScroll
+          style={styles.tableScroll}
+          contentContainerStyle={styles.tableScrollContent}
+        >
           <View style={styles.table} testID="daily-expenses-table">
             <View style={[styles.tableRow, styles.tableHeader]}>
               {['Date', ...categoryOptions, 'Total'].map((header, index) => (
@@ -726,7 +730,7 @@ const DailyExpensesTab: React.FC<DailyExpensesTabProps> = ({
               </View>
             ))}
           </View>
-        </ScrollView>
+        </HorizontalTableScroll>
       )}
 
       {Platform.OS !== 'web' && datePickerVisible && NativeDateTimePicker ? (

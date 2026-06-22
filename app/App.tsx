@@ -100,7 +100,9 @@ const AdminTab = lazy(() => import('./tabs/AdminTab'));
 import PresenceAvatarsContainer from './components/PresenceAvatarsContainer';
 import LazyTabFallback from './components/LazyTabFallback';
 import ChatOverlay from './components/ChatOverlay';
+import HorizontalTableScroll from './components/HorizontalTableScroll';
 import { connectSocket, disconnectSocket } from './utils/socket';
+import { horizontalTableLayout } from './utils/horizontalTableLayout';
 import { exportCsv } from './utils/csvExport';
 import type { PresenceUser } from '../packages/messaging/src/types';
 
@@ -2759,7 +2761,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                 </View>
               </View>
               <Text style={styles.helperText}>Combined totals by category and user.</Text>
-              <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
+              <HorizontalTableScroll
+                style={styles.tableScroll}
+                contentContainerStyle={styles.tableScrollContent}
+              >
                 <View style={styles.table}>
                   <View style={[styles.tableRow, styles.tableHeader]}>
                     <View style={[styles.cell, { minWidth: 140, flex: 1 }]}>
@@ -2809,7 +2814,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                     </View>
                   </View>
                 </View>
-              </ScrollView>
+              </HorizontalTableScroll>
             </View>
           ) : null}
 
@@ -4028,7 +4033,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     borderBottomWidth: 0,
   },
   table: {
-    width: '100%',
+    ...horizontalTableLayout.table,
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: 6,
@@ -4760,10 +4765,10 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     position: 'relative',
   },
   tableScroll: {
-    overflow: 'visible',
+    ...horizontalTableLayout.scroll,
   },
   tableScrollContent: {
-    overflow: 'visible',
+    ...horizontalTableLayout.content,
   },  rangeContainer: {
     gap: 6,
     marginBottom: 8,

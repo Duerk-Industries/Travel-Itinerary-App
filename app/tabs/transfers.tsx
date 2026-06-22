@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Modal } from 'react-native';
+import HorizontalTableScroll from '../components/HorizontalTableScroll';
 import DropdownOptionButton from '../components/DropdownOptionButton';
 import { formatDateLong } from '../utils/formatDateLong';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
@@ -1389,7 +1390,10 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
           </View>
         ) : null}
       </View>
-      <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
+      <HorizontalTableScroll
+        style={styles.tableScroll}
+        contentContainerStyle={styles.tableScrollContent}
+      >
         <View style={styles.table}>
           <View style={[styles.tableRow, styles.tableHeader]}>
             {columns.map((col, idx) => (
@@ -1814,7 +1818,7 @@ export const FlightsTab: React.FC<FlightsTabProps> = ({
             </View>
           ) : null}
         </View>
-      </ScrollView>
+      </HorizontalTableScroll>
       <View style={styles.totalRow}>
         <Text style={styles.flightTitle}>Total flight cost: ${flightsTotal.toFixed(2)}</Text>
       </View>

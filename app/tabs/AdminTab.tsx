@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme } from 'react-native';
+import HorizontalTableScroll from '../components/HorizontalTableScroll';
 import { getAppTheme, type AppTheme } from '../theme/theme';
 import { usePersistedState } from '../hooks/usePersistedState';
 import PackingListTable from '../components/PackingListTable';
@@ -1100,7 +1101,7 @@ const TiersSection: React.FC<{
             },
           ]}
         >
-          <ScrollView horizontal showsHorizontalScrollIndicator>
+          <HorizontalTableScroll>
             <View>
               <View
                 style={[
@@ -1263,7 +1264,7 @@ const TiersSection: React.FC<{
                 ))}
               </ScrollView>
             </View>
-          </ScrollView>
+          </HorizontalTableScroll>
         </View>
       ) : null}
 

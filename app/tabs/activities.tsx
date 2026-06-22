@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Alert, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import HorizontalTableScroll from '../components/HorizontalTableScroll';
 import { formatDateLong } from '../utils/formatDateLong';
 import { sanitizeCostInput } from '../utils/sanitizeCost';
 import { toWebStyle } from '../utils/webStyle';
@@ -531,7 +532,10 @@ export const ActivityTab: React.FC<TourTabProps> = ({
           }}
         />
       ) : null}
-      <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
+      <HorizontalTableScroll
+        style={styles.tableScroll}
+        contentContainerStyle={styles.tableScrollContent}
+      >
         <View style={styles.table}>
           <View style={[styles.tableRow, styles.tableHeader]} testID="activity-table-header">
             {[
@@ -580,7 +584,7 @@ export const ActivityTab: React.FC<TourTabProps> = ({
             </View>
           ))}
         </View>
-      </ScrollView>
+      </HorizontalTableScroll>
       <View style={{ marginTop: 8 }}>
             <Text style={styles.flightTitle}>Total activity cost: ${toursTotal.toFixed(2)}</Text>
         {payerTotalsList.length ? (

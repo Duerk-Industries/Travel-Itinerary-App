@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { ScrollView, Text, View, TouchableOpacity, useWindowDimensions } from 'react-native';
+import HorizontalTableScroll from '../components/HorizontalTableScroll';
 import ExpenseCovering from './ExpenseCovering';
 import PaymentDialog from '../components/PaymentDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -88,7 +89,10 @@ const renderLedgerTable = ({
   formatMoney,
   styles,
 }: LedgerRenderParams) => (
-  <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
+  <HorizontalTableScroll
+    style={styles.tableScroll}
+    contentContainerStyle={styles.tableScrollContent}
+  >
     <View style={styles.table} testID="ledger-table">
       <View style={[styles.tableRow, styles.tableHeader]}>
         {['Person', 'Paid', 'Used', 'Total'].map((header, idx, arr) => (
@@ -148,7 +152,7 @@ const renderLedgerTable = ({
         </View>
       ) : null}
     </View>
-  </ScrollView>
+  </HorizontalTableScroll>
 );
 
 const ledgerCardStyles = {
@@ -436,7 +440,10 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
     }
 
     return (
-      <ScrollView horizontal style={styles.tableScroll} contentContainerStyle={styles.tableScrollContent}>
+      <HorizontalTableScroll
+        style={styles.tableScroll}
+        contentContainerStyle={styles.tableScrollContent}
+      >
         <View style={styles.table} testID="settlement-matrix">
           <View style={[styles.tableRow, styles.tableHeader]}>
             <View style={[styles.cell, { minWidth: 160, flex: 1 }]}>
@@ -497,7 +504,7 @@ const LedgerTab: React.FC<LedgerTabProps> = ({
             </View>
           </View>
         </View>
-      </ScrollView>
+      </HorizontalTableScroll>
     );
   };
 
