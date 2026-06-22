@@ -38,6 +38,9 @@ const patchBillingConfigDto = z.object({
 const publishPriceDto = z.object({
   unitAmountCents: z.number().int().min(1).max(1_000_000),
   currency: z.string().length(3).default('usd'),
+  // Stripe requires tax_behavior to be set on Prices when using Stripe Tax.
+  // 'exclusive' = tax is added on top of the unit amount (most common for B2C SaaS).
+  taxBehavior: z.enum(['exclusive', 'inclusive', 'unspecified']).default('exclusive'),
 });
 
 // ---------------------------------------------------------------------------
@@ -142,12 +145,20 @@ router.post('/plans/:planKey/price', async (req, res) => {
     planKey === 'premium_annual' ? 'year' : 'month';
 
   try {
+    const lookupKey =
+      planKey === 'premium_annual' ? 'wanderbunnies_premium_annual' : 'wanderbunnies_premium_monthly';
+
     const stripe = getStripeClient();
     const stripePrice = await stripe.prices.create({
       product: stripeProductId,
       unit_amount: dto.unitAmountCents,
       currency: dto.currency,
       recurring: { interval },
+      tax_behavior: dto.taxBehavior,
+      // transfer_lookup_key moves the lookup key from the previous active Price
+      // to this one so Stripe Dashboard queries by key stay accurate.
+      lookup_key: lookupKey,
+      transfer_lookup_key: true,
       metadata: { planKey, createdBy: actorId },
     });
 

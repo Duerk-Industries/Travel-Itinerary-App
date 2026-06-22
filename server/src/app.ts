@@ -29,6 +29,7 @@ import stripeWebhookRoutes from './routes/stripeWebhookRoutes';
 import billingRoutes from './routes/billingRoutes';
 import ingestionGmailOAuthRoutes from './routes/ingestionGmailOAuthRoutes';
 import internalIngestionWorkerRoutes from './routes/internalIngestionWorkerRoutes';
+import internalBillingRoutes from './routes/internalBillingRoutes';
 import prometheusRoutes from './routes/prometheusRoutes';
 
 import { loadEnv } from './env_loader';
@@ -363,6 +364,7 @@ app.use('/api/expenses', expenseRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/billing', billingRoutes);
 app.use('/api/internal/ingestion', internalIngestionWorkerRoutes);
+app.use('/api/internal/billing', internalBillingRoutes);
 app.use('/api/ingestion/gmail', ingestionGmailOAuthRoutes);
 app.use('/api/ingestion', ingestionRoutes);
 app.use('/api/admin', authenticate, requireAdmin, adminRoutes);

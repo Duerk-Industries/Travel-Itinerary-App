@@ -205,8 +205,14 @@ export const createCheckoutSession = async (params: {
         success_url: successUrl,
         cancel_url: cancelUrl,
         automatic_tax: { enabled: planConfig?.automaticTaxEnabled ?? PLAN_DEFAULTS.automaticTaxEnabled },
+        // Required so automatic tax always has a billing address to calculate from,
+        // including wallet payments (Apple Pay, Google Pay) that may not supply one.
+        billing_address_collection: 'required',
         allow_promotion_codes: planConfig?.promotionCodesEnabled ?? PLAN_DEFAULTS.promotionCodesEnabled,
         payment_method_collection: 'always',
+        // Persist billing address and name back to the Stripe Customer so
+        // automatic tax has a customer location for future renewal invoices.
+        customer_update: { address: 'auto', name: 'auto' },
       },
       { idempotencyKey },
     );

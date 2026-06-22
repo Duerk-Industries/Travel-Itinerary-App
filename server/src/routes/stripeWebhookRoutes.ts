@@ -373,7 +373,12 @@ const buildDispatchTable = (stripe: Stripe): Record<string, EventHandler> => ({
   'invoice.payment_failed': handleInvoicePaymentFailed,
   'invoice.payment_action_required': handleInvoicePaymentActionRequired,
   'charge.refunded': handleChargeRefunded,
+  // refund.updated covers status transitions including cancellations/reversals.
+  // refund.failed fires specifically when Stripe cannot process the refund (e.g.
+  // bank rejects it). Both re-evaluate the charge's net refunded amount so that
+  // a failed or reversed full refund restores Premium access.
   'refund.updated': handleRefundUpdated,
+  'refund.failed': handleRefundUpdated,
   'charge.dispute.created': handleDisputeCreated,
   'charge.dispute.closed': handleDisputeClosed,
 });

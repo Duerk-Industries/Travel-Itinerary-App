@@ -137,6 +137,9 @@ describe('Admin billing routes', () => {
       unit_amount: 3900,
       currency: 'usd',
       recurring: { interval: 'year' },
+      tax_behavior: 'exclusive',
+      lookup_key: 'wanderbunnies_premium_annual',
+      transfer_lookup_key: true,
       metadata: { planKey: 'premium_annual', createdBy: adminId },
     });
     expect(res.body.stripePriceId).toBe(`price_admin_${TS}`);

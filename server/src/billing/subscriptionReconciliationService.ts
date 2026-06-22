@@ -142,7 +142,14 @@ export const runReconciliationBatch = async (
 };
 
 // ---------------------------------------------------------------------------
-// In-process scheduler
+// In-process scheduler (best-effort fast path)
+//
+// DURABILITY NOTE: setInterval and setTimeout do not survive Cloud Run instance
+// restarts. Use Cloud Scheduler calling POST /api/internal/billing/reconcile
+// every 30 minutes as the durable, authoritative source of grace-period
+// enforcement. The in-process scheduler below is a same-instance fast path
+// that fires more precisely on instances that stay alive, but it is NOT relied
+// on as the sole mechanism for downgrading past-due users.
 // ---------------------------------------------------------------------------
 
 const RECONCILE_INTERVAL_MS_DEFAULT = 24 * 60 * 60 * 1000; // 24 hours
@@ -198,9 +205,10 @@ export const scheduleNextBillingGraceExpiry = async (): Promise<void> => {
 };
 
 /**
- * Starts the background reconciliation scheduler. Safe to call at startup —
- * no-ops in test environments and when billing is disabled. The interval can
- * be overridden with BILLING_RECONCILE_INTERVAL_MS (minimum 60 seconds).
+ * Starts the best-effort in-process reconciliation scheduler. This supplements
+ * Cloud Scheduler but is NOT the durable source. Cloud Run may restart idle
+ * instances at any time, resetting these timers. Configure Cloud Scheduler to
+ * call POST /api/internal/billing/reconcile every 30 minutes for durability.
  */
 export const startBillingReconciliationScheduler = (): boolean => {
   if (schedulerHandle) return false;
