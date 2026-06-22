@@ -114,6 +114,10 @@ export const createCheckoutSession = async (params: {
   }
 
   // Prevent duplicate active subscriptions.
+  // Note: there is a small TOCTOU window where two concurrent requests with different
+  // idempotency keys could both pass this check before either checkout session completes.
+  // The webhook-based upsert is idempotent, so the worst outcome is two Stripe sessions
+  // being created; only the first webhook to land will activate a subscription.
   const existing = await listActiveBillingSubscriptionsForUser(userId);
   const alreadyActive = existing.some((subscription) => isSubscriptionPremiumEligible(subscription));
   if (alreadyActive) {

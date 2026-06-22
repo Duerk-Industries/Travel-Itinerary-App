@@ -109,4 +109,13 @@ export const assertStripeBillingConfig = (): void => {
   if (!isTestKey && !isLiveKey) {
     logError('[stripe] STRIPE_SECRET_KEY does not begin with sk_test_ or sk_live_ — verify configuration');
   }
+
+  // Price IDs can come from env vars (launch) or billing_plan_config (admin-published).
+  // Warn if neither env var is set so the first checkout attempt doesn't silently fail.
+  if (!getStripePremiumMonthlyPriceId()) {
+    logError('[stripe] STRIPE_PREMIUM_MONTHLY_PRICE_ID is not set — checkout will fail until a price is published via the admin UI or this env var is configured');
+  }
+  if (!getStripePremiumAnnualPriceId()) {
+    logError('[stripe] STRIPE_PREMIUM_ANNUAL_PRICE_ID is not set — checkout will fail until a price is published via the admin UI or this env var is configured');
+  }
 };

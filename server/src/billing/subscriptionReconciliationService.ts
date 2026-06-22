@@ -8,6 +8,8 @@ import {
 import { BillingSubscription, BillingPlanKey } from '../types';
 import { logInfo, logError } from '../logger';
 import { incrementMetric } from '../metrics';
+import { getEnvFlag, getEnvValue } from '../env';
+import { isStripeBillingEnabled } from '../config/stripeBilling';
 import { getStripeClient, normalizeStripeError } from './stripeClient';
 import { mapStripeSubscriptionToUpsert } from './billingService';
 import { reconcileUserTierFromBillingById } from './subscriptionEntitlementService';
@@ -136,4 +138,53 @@ export const runReconciliationBatch = async (
   });
 
   return summary;
+};
+
+// ---------------------------------------------------------------------------
+// In-process scheduler
+// ---------------------------------------------------------------------------
+
+const RECONCILE_INTERVAL_MS_DEFAULT = 24 * 60 * 60 * 1000; // 24 hours
+
+let schedulerHandle: ReturnType<typeof setInterval> | null = null;
+
+/**
+ * Starts the background reconciliation scheduler. Safe to call at startup —
+ * no-ops in test environments and when billing is disabled. The interval can
+ * be overridden with BILLING_RECONCILE_INTERVAL_MS (minimum 60 seconds).
+ */
+export const startBillingReconciliationScheduler = (): boolean => {
+  if (schedulerHandle) return false;
+  if (process.env.NODE_ENV === 'test') return false;
+  if (!isStripeBillingEnabled()) {
+    logInfo('[billing][reconcile] scheduler not started — billing is disabled');
+    return false;
+  }
+  if (!getEnvFlag('BILLING_RECONCILE_ENABLED', { defaultValue: true })) {
+    logInfo('[billing][reconcile] scheduler disabled by BILLING_RECONCILE_ENABLED=false');
+    return false;
+  }
+
+  const rawInterval = getEnvValue('BILLING_RECONCILE_INTERVAL_MS');
+  const intervalMs =
+    rawInterval && Number.isFinite(Number(rawInterval))
+      ? Math.max(60_000, Number(rawInterval))
+      : RECONCILE_INTERVAL_MS_DEFAULT;
+
+  logInfo(`[billing][reconcile] starting scheduler (interval=${intervalMs}ms)`);
+
+  schedulerHandle = setInterval(() => {
+    runReconciliationBatch().catch((err) =>
+      logError('[billing][reconcile] scheduled batch error', err),
+    );
+  }, intervalMs);
+  schedulerHandle.unref();
+  return true;
+};
+
+export const stopBillingReconciliationScheduler = (): void => {
+  if (schedulerHandle) {
+    clearInterval(schedulerHandle);
+    schedulerHandle = null;
+  }
 };

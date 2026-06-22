@@ -24,7 +24,12 @@ const billingEnabled = (res: any): boolean => {
   return true;
 };
 
-/** GET /api/billing/status */
+/**
+ * GET /api/billing/status
+ * Intentionally does not guard on billingEnabled — the frontend always needs
+ * to know the current tier and subscription state, even when billing is
+ * disabled (e.g. admin-granted tiers, seeded access).
+ */
 router.get('/status', async (req, res) => {
   const { userId, role } = (req as any).user as TokenPayload;
   try {

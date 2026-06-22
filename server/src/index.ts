@@ -17,6 +17,7 @@ import { startGmailPollingScheduler } from './services/gmailPollingService';
 import { startRetentionScheduler } from './services/retentionService';
 import { startIngestionMetricsScheduler } from './services/ingestionMetricsService';
 import { startFailedRetryScheduler } from './services/failedRetryScheduler';
+import { startBillingReconciliationScheduler } from './billing/subscriptionReconciliationService';
 import { installShutdownHandlers } from './shutdown';
 
 const defaultPort = Number(process.env.PORT) || 4000;
@@ -115,6 +116,7 @@ export const startServer = async (portOverride?: number): Promise<Server> => {
   startRetentionScheduler();
   startIngestionMetricsScheduler();
   startFailedRetryScheduler();
+  startBillingReconciliationScheduler();
 
   if (process.env.NODE_ENV !== 'test') {
     installShutdownHandlers(server);

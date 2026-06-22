@@ -132,6 +132,25 @@ const handleInvoicePaymentFailed = async (
   await handleSubscriptionSnapshot(stripe, subscriptionId, event.created, event.id);
 };
 
+/**
+ * Handles invoice.payment_action_required (SCA/3DS challenge required).
+ * We snapshot the subscription state but do NOT start the past-due clock —
+ * the customer still has a chance to authenticate and complete the payment.
+ * If they succeed, invoice.paid fires and clears past_due_since.
+ * If they don't, Stripe will eventually emit invoice.payment_failed.
+ */
+const handleInvoicePaymentActionRequired = async (
+  stripe: Stripe,
+  event: Stripe.Event,
+): Promise<void> => {
+  const invoice = event.data.object as Stripe.Invoice;
+  const subscriptionId =
+    typeof invoice.subscription === 'string' ? invoice.subscription : invoice.subscription?.id;
+  if (!subscriptionId) return;
+
+  await handleSubscriptionSnapshot(stripe, subscriptionId, event.created, event.id);
+};
+
 /** Resolve an invoice ID → subscription ID, retrieving the invoice if needed. */
 const subscriptionIdFromInvoiceId = async (
   stripe: Stripe,
@@ -311,7 +330,7 @@ const buildDispatchTable = (stripe: Stripe): Record<string, EventHandler> => ({
   },
   'invoice.paid': handleInvoicePaid,
   'invoice.payment_failed': handleInvoicePaymentFailed,
-  'invoice.payment_action_required': handleInvoicePaymentFailed,
+  'invoice.payment_action_required': handleInvoicePaymentActionRequired,
   'charge.refunded': handleChargeRefunded,
   'charge.dispute.created': handleDisputeCreated,
   'charge.dispute.closed': handleDisputeClosed,
