@@ -26,15 +26,13 @@ export const isSubscriptionPremiumEligible = (
   pastDueGraceDays: number = PLAN_DEFAULTS.pastDueGraceDays,
 ): boolean => {
   if (sub.accessRevokedAt) return false;
-  if (!PREMIUM_ELIGIBLE_STATUSES.includes(sub.status)) return false;
 
-  if (sub.status === 'past_due') {
-    if (!sub.pastDueSince) return true;
+  if (sub.pastDueSince) {
     const gracePeriodMs = pastDueGraceDays * 24 * 60 * 60 * 1000;
     return Date.now() - new Date(sub.pastDueSince).getTime() < gracePeriodMs;
   }
 
-  return true;
+  return PREMIUM_ELIGIBLE_STATUSES.includes(sub.status);
 };
 
 export interface BillingEntitlementDecision {

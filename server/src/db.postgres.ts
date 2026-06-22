@@ -1338,6 +1338,7 @@ export const initDb = async (): Promise<void> => {
     await del('web_users');
     await del('users');
     await del('stripe_webhook_events');
+    await del('billing_checkout_claims');
     await del('billing_subscriptions');
     await del('billing_customers');
   }
@@ -9920,11 +9921,72 @@ export const listActiveBillingSubscriptionsForUser = async (
   const { rows } = await p.query(
     `SELECT * FROM billing_subscriptions
      WHERE user_id = $1
-       AND status NOT IN ('canceled', 'incomplete_expired')
+       AND (status NOT IN ('canceled', 'incomplete_expired') OR past_due_since IS NOT NULL)
      ORDER BY created_at DESC`,
     [userId],
   );
   return rows.map(rowToBillingSubscription);
+};
+
+export const claimBillingCheckout = async (data: {
+  userId: string;
+  claimToken: string;
+  planKey: BillingPlanKey;
+  expiresAt: Date;
+}): Promise<{ claimed: boolean; checkoutUrl: string | null }> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `INSERT INTO billing_checkout_claims
+       (user_id, claim_token, plan_key, expires_at, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, NOW(), NOW())
+     ON CONFLICT (user_id) DO UPDATE SET
+       claim_token = EXCLUDED.claim_token,
+       plan_key = EXCLUDED.plan_key,
+       stripe_checkout_session_id = NULL,
+       checkout_url = NULL,
+       expires_at = EXCLUDED.expires_at,
+       updated_at = NOW()
+     WHERE billing_checkout_claims.expires_at <= NOW()
+     RETURNING claim_token, checkout_url`,
+    [data.userId, data.claimToken, data.planKey, data.expiresAt],
+  );
+  if (rows[0]?.claim_token === data.claimToken) {
+    return { claimed: true, checkoutUrl: rows[0].checkout_url ?? null };
+  }
+  const existing = await p.query(
+    `SELECT checkout_url FROM billing_checkout_claims WHERE user_id = $1 LIMIT 1`,
+    [data.userId],
+  );
+  return { claimed: false, checkoutUrl: existing.rows[0]?.checkout_url ?? null };
+};
+
+export const completeBillingCheckoutClaim = async (data: {
+  userId: string;
+  claimToken: string;
+  stripeCheckoutSessionId: string;
+  checkoutUrl: string;
+  expiresAt: Date;
+}): Promise<void> => {
+  const p = getPool();
+  await p.query(
+    `UPDATE billing_checkout_claims
+     SET stripe_checkout_session_id = $3, checkout_url = $4, expires_at = $5, updated_at = NOW()
+     WHERE user_id = $1 AND claim_token = $2`,
+    [data.userId, data.claimToken, data.stripeCheckoutSessionId, data.checkoutUrl, data.expiresAt],
+  );
+};
+
+export const releaseBillingCheckoutClaim = async (userId: string, claimToken: string): Promise<void> => {
+  const p = getPool();
+  await p.query(
+    `DELETE FROM billing_checkout_claims WHERE user_id = $1 AND claim_token = $2`,
+    [userId, claimToken],
+  );
+};
+
+export const clearBillingCheckoutClaim = async (userId: string): Promise<void> => {
+  const p = getPool();
+  await p.query(`DELETE FROM billing_checkout_claims WHERE user_id = $1`, [userId]);
 };
 
 export const upsertBillingSubscription = async (data: {
@@ -10029,7 +10091,8 @@ export const restoreBillingSubscriptionAccess = async (
   const p = getPool();
   await p.query(
     `UPDATE billing_subscriptions
-     SET access_revoked_at = NULL, access_revocation_reason = NULL, dispute_id = NULL, updated_at = NOW()
+     SET access_revoked_at = NULL, access_revocation_reason = NULL, dispute_id = NULL,
+         refunded_at = NULL, updated_at = NOW()
      WHERE stripe_subscription_id = $1`,
     [stripeSubscriptionId],
   );
@@ -10070,6 +10133,16 @@ export const listStaleSubscriptionsForReconciliation = async (
      ORDER BY last_synced_at ASC NULLS FIRST
      LIMIT $2`,
     [olderThanMinutes, limit],
+  );
+  return rows.map(rowToBillingSubscription);
+};
+
+export const listPastDueBillingSubscriptions = async (): Promise<BillingSubscription[]> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `SELECT * FROM billing_subscriptions
+     WHERE past_due_since IS NOT NULL
+     ORDER BY past_due_since ASC`,
   );
   return rows.map(rowToBillingSubscription);
 };

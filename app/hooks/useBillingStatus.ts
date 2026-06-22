@@ -68,5 +68,15 @@ export const useBillingStatus = ({
     }
   }, [backendUrl, token]);
 
+  useEffect(() => {
+    if (!token || typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('billing') !== 'success') return;
+    triggerPostCheckoutRefresh().finally(() => {
+      url.searchParams.delete('billing');
+      window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+    });
+  }, [token, triggerPostCheckoutRefresh]);
+
   return { billingStatus, loading, error, refresh: load, triggerPostCheckoutRefresh };
 };

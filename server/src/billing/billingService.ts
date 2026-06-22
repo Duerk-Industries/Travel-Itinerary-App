@@ -9,6 +9,10 @@ import {
   ensureCurrentUserTier,
   getBillingPlanConfig,
   listBillingPlanConfigs,
+  listBillingPriceHistory,
+  claimBillingCheckout,
+  completeBillingCheckoutClaim,
+  releaseBillingCheckoutClaim,
 } from '../db';
 import { BillingCustomer, BillingPlanKey, BillingSubscription, TierKey, UserRole } from '../types';
 import { logInfo, logError } from '../logger';
@@ -21,6 +25,8 @@ import {
   getStripeCheckoutCancelUrl,
   getStripePortalReturnUrl,
   getStripePortalConfigurationId,
+  getStripePremiumMonthlyPriceId,
+  getStripePremiumAnnualPriceId,
   isStripeBillingEnabled,
 } from '../config/stripeBilling';
 import { getStripeClient, normalizeStripeError } from './stripeClient';
@@ -96,6 +102,27 @@ export const listAvailablePlans = async (): Promise<PlanInfo[]> => {
     }));
 };
 
+export const resolvePlanKeyForPriceId = async (
+  stripePriceId: string,
+  metadataPlanKey?: string | null,
+): Promise<BillingPlanKey> => {
+  if (stripePriceId === getStripePremiumMonthlyPriceId()) return 'premium_monthly';
+  if (stripePriceId === getStripePremiumAnnualPriceId()) return 'premium_annual';
+
+  const configs = await listBillingPlanConfigs();
+  const configured = configs.find((config) => config.activeStripePriceId === stripePriceId);
+  if (configured) return configured.planKey;
+
+  const history = await listBillingPriceHistory();
+  const historical = history.find((price) => price.stripePriceId === stripePriceId);
+  if (historical) return historical.planKey;
+
+  if (metadataPlanKey === 'premium_monthly' || metadataPlanKey === 'premium_annual') {
+    return metadataPlanKey;
+  }
+  throw new Error(`[billing] Cannot resolve plan for Stripe Price ${stripePriceId}`);
+};
+
 // ---------------------------------------------------------------------------
 // Checkout
 // ---------------------------------------------------------------------------
@@ -108,6 +135,8 @@ export const createCheckoutSession = async (params: {
   livemode: boolean;
 }): Promise<CreateCheckoutSessionResult> => {
   const { userId, email, planKey, idempotencyKey, livemode } = params;
+  const claimToken = `${idempotencyKey}:${Date.now()}`;
+  const claimExpiresAt = new Date(Date.now() + 30 * 60 * 1000);
 
   if (!SUPPORTED_PLAN_KEYS.includes(planKey)) {
     throw new Error(`Unsupported plan key: ${planKey}`);
@@ -143,6 +172,20 @@ export const createCheckoutSession = async (params: {
     throw new Error('[billing] STRIPE_CHECKOUT_SUCCESS_URL and STRIPE_CHECKOUT_CANCEL_URL must be configured');
   }
 
+  const claim = await claimBillingCheckout({
+    userId,
+    claimToken,
+    planKey,
+    expiresAt: claimExpiresAt,
+  });
+  if (!claim.claimed) {
+    if (claim.checkoutUrl) return { url: claim.checkoutUrl };
+    return {
+      alreadySubscribed: true,
+      message: 'A Premium checkout is already being created. Wait a moment and try again.',
+    };
+  }
+
   const customer = await getOrCreateBillingCustomer(userId, email, livemode);
   const stripe = getStripeClient();
 
@@ -169,7 +212,18 @@ export const createCheckoutSession = async (params: {
     );
     incrementMetric('billing.checkout_session_created', { planKey });
     logInfo(`[billing] Checkout session created for user ${userId}, plan ${planKey}`);
+    if (!session.url) {
+      throw new Error('[billing] Stripe returned a Checkout session without a URL');
+    }
+    await completeBillingCheckoutClaim({
+      userId,
+      claimToken,
+      stripeCheckoutSessionId: session.id,
+      checkoutUrl: session.url,
+      expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+    });
   } catch (err) {
+    await releaseBillingCheckoutClaim(userId, claimToken).catch(() => undefined);
     const normalized = normalizeStripeError(err);
     logError('[billing] Failed to create Checkout session', {
       userId,
@@ -182,11 +236,7 @@ export const createCheckoutSession = async (params: {
     throw err;
   }
 
-  if (!session.url) {
-    throw new Error('[billing] Stripe returned a Checkout session without a URL');
-  }
-
-  return { url: session.url };
+  return { url: session.url! };
 };
 
 // ---------------------------------------------------------------------------
@@ -339,3 +389,23 @@ export const mapStripeSubscriptionToUpsert = (
   latestInvoiceId: typeof sub.latest_invoice === 'string' ? sub.latest_invoice : (sub.latest_invoice?.id ?? null),
   lastStripeEventCreated: eventCreated ?? null,
 });
+
+export const syncUserSubscriptionsFromStripe = async (userId: string): Promise<void> => {
+  const customer = await getBillingCustomerByUserId(userId);
+  if (!customer) return;
+
+  const stripe = getStripeClient();
+  const subscriptions = await stripe.subscriptions.list({
+    customer: customer.stripeCustomerId,
+    status: 'all',
+    limit: 100,
+  });
+  for (const subscription of subscriptions.data) {
+    const priceId = subscription.items.data[0]?.price.id;
+    if (!priceId) continue;
+    const planKey = await resolvePlanKeyForPriceId(priceId, subscription.metadata?.planKey);
+    await upsertBillingSubscription(
+      mapStripeSubscriptionToUpsert(subscription, userId, planKey),
+    );
+  }
+};

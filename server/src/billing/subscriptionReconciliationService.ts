@@ -4,16 +4,18 @@ import {
   upsertBillingSubscription,
   getBillingSubscriptionByStripeId,
   writeAuditLog,
+  listPastDueBillingSubscriptions,
+  listBillingPlanConfigs,
 } from '../db';
-import { BillingSubscription, BillingPlanKey } from '../types';
+import { BillingSubscription } from '../types';
 import { logInfo, logError } from '../logger';
 import { incrementMetric } from '../metrics';
 import { getEnvFlag, getEnvValue } from '../env';
 import { isStripeBillingEnabled } from '../config/stripeBilling';
 import { getStripeClient, normalizeStripeError } from './stripeClient';
 import { mapStripeSubscriptionToUpsert } from './billingService';
+import { resolvePlanKeyForPriceId } from './billingService';
 import { reconcileUserTierFromBillingById } from './subscriptionEntitlementService';
-import { isStripeBillingEnabled } from '../config/stripeBilling';
 
 export interface ReconciliationSummary {
   processed: number;
@@ -22,9 +24,6 @@ export interface ReconciliationSummary {
   errors: number;
   orphaned: number;
 }
-
-const planKeyFromMetadata = (metadata: Record<string, string> | null): BillingPlanKey =>
-  (metadata?.planKey as BillingPlanKey | undefined) ?? 'premium_monthly';
 
 /**
  * Reconcile a single subscription by re-fetching it from Stripe and applying
@@ -56,7 +55,9 @@ export const reconcileSubscription = async (
     throw err;
   }
 
-  const planKey = planKeyFromMetadata(stripeSub.metadata);
+  const priceId = stripeSub.items.data[0]?.price.id;
+  if (!priceId) throw new Error(`Stripe subscription ${stripeSub.id} has no Price`);
+  const planKey = await resolvePlanKeyForPriceId(priceId, stripeSub.metadata?.planKey);
   const upsertParams = mapStripeSubscriptionToUpsert(stripeSub, local.userId, planKey);
 
   const before = await getBillingSubscriptionByStripeId(local.stripeSubscriptionId);
@@ -147,6 +148,54 @@ export const runReconciliationBatch = async (
 const RECONCILE_INTERVAL_MS_DEFAULT = 24 * 60 * 60 * 1000; // 24 hours
 
 let schedulerHandle: ReturnType<typeof setInterval> | null = null;
+let graceExpiryHandle: ReturnType<typeof setTimeout> | null = null;
+
+export const scheduleNextBillingGraceExpiry = async (): Promise<void> => {
+  if (graceExpiryHandle) {
+    clearTimeout(graceExpiryHandle);
+    graceExpiryHandle = null;
+  }
+  if (!isStripeBillingEnabled()) return;
+
+  const [subscriptions, configs] = await Promise.all([
+    listPastDueBillingSubscriptions(),
+    listBillingPlanConfigs(),
+  ]);
+  const graceDaysByPlan = Object.fromEntries(
+    configs.map((config) => [config.planKey, config.pastDueGraceDays]),
+  );
+  const expiries = subscriptions
+    .filter((subscription) => subscription.pastDueSince)
+    .map((subscription) => ({
+      userId: subscription.userId,
+      expiresAt:
+        new Date(subscription.pastDueSince!).getTime() +
+        (graceDaysByPlan[subscription.planKey] ?? 30) * 24 * 60 * 60 * 1000,
+    }))
+    .sort((a, b) => a.expiresAt - b.expiresAt);
+  if (expiries.length === 0) return;
+
+  const nextExpiry = expiries[0].expiresAt;
+  const delay = Math.max(0, Math.min(nextExpiry - Date.now(), 2_147_000_000));
+  graceExpiryHandle = setTimeout(async () => {
+    graceExpiryHandle = null;
+    const dueUserIds = [...new Set(
+      expiries.filter((expiry) => expiry.expiresAt <= Date.now() + 1000).map((expiry) => expiry.userId),
+    )];
+    for (const userId of dueUserIds) {
+      await reconcileUserTierFromBillingById(userId, {
+        reason: 'Past-due grace period expired',
+      }).catch((err) =>
+        logError('[billing][grace] Failed to reconcile expired grace period', {
+          userId,
+          error: (err as Error)?.message,
+        }),
+      );
+    }
+    await scheduleNextBillingGraceExpiry();
+  }, delay);
+  graceExpiryHandle.unref();
+};
 
 /**
  * Starts the background reconciliation scheduler. Safe to call at startup —
@@ -179,6 +228,9 @@ export const startBillingReconciliationScheduler = (): boolean => {
     );
   }, intervalMs);
   schedulerHandle.unref();
+  scheduleNextBillingGraceExpiry().catch((err) =>
+    logError('[billing][grace] Failed to schedule grace expiry', err),
+  );
   return true;
 };
 
@@ -186,5 +238,9 @@ export const stopBillingReconciliationScheduler = (): void => {
   if (schedulerHandle) {
     clearInterval(schedulerHandle);
     schedulerHandle = null;
+  }
+  if (graceExpiryHandle) {
+    clearTimeout(graceExpiryHandle);
+    graceExpiryHandle = null;
   }
 };

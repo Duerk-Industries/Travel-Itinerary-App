@@ -488,6 +488,14 @@ export const getBillingSubscriptionByStripeId = async (...args: Parameters<Retur
   adapter().getBillingSubscriptionByStripeId(...args);
 export const listActiveBillingSubscriptionsForUser = async (...args: Parameters<ReturnType<typeof adapter>['listActiveBillingSubscriptionsForUser']>) =>
   adapter().listActiveBillingSubscriptionsForUser(...args);
+export const claimBillingCheckout = async (...args: Parameters<ReturnType<typeof adapter>['claimBillingCheckout']>) =>
+  adapter().claimBillingCheckout(...args);
+export const completeBillingCheckoutClaim = async (...args: Parameters<ReturnType<typeof adapter>['completeBillingCheckoutClaim']>) =>
+  adapter().completeBillingCheckoutClaim(...args);
+export const releaseBillingCheckoutClaim = async (...args: Parameters<ReturnType<typeof adapter>['releaseBillingCheckoutClaim']>) =>
+  adapter().releaseBillingCheckoutClaim(...args);
+export const clearBillingCheckoutClaim = async (...args: Parameters<ReturnType<typeof adapter>['clearBillingCheckoutClaim']>) =>
+  adapter().clearBillingCheckoutClaim(...args);
 export const upsertBillingSubscription = async (...args: Parameters<ReturnType<typeof adapter>['upsertBillingSubscription']>) =>
   adapter().upsertBillingSubscription(...args);
 export const revokeBillingSubscriptionAccess = async (...args: Parameters<ReturnType<typeof adapter>['revokeBillingSubscriptionAccess']>) =>
@@ -500,6 +508,8 @@ export const clearPastDueSince = async (...args: Parameters<ReturnType<typeof ad
   adapter().clearPastDueSince(...args);
 export const listStaleSubscriptionsForReconciliation = async (...args: Parameters<ReturnType<typeof adapter>['listStaleSubscriptionsForReconciliation']>) =>
   adapter().listStaleSubscriptionsForReconciliation(...args);
+export const listPastDueBillingSubscriptions = async (...args: Parameters<ReturnType<typeof adapter>['listPastDueBillingSubscriptions']>) =>
+  adapter().listPastDueBillingSubscriptions(...args);
 export const claimStripeWebhookEvent = async (...args: Parameters<ReturnType<typeof adapter>['claimStripeWebhookEvent']>) =>
   adapter().claimStripeWebhookEvent(...args);
 export const markStripeWebhookEventProcessed = async (...args: Parameters<ReturnType<typeof adapter>['markStripeWebhookEventProcessed']>) =>

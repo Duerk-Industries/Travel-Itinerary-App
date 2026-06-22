@@ -6812,8 +6812,73 @@ export const listActiveBillingSubscriptionsForUser = async (userId: string): Pro
   const snap = await getDb().collection('billing_subscriptions').where('userId', '==', userId).get();
   return snap.docs
     .map((doc) => doc.data() as BillingSubscription)
-    .filter((sub) => sub.status !== 'canceled' && sub.status !== 'incomplete_expired')
+    .filter((sub) =>
+      (sub.status !== 'canceled' && sub.status !== 'incomplete_expired') || Boolean(sub.pastDueSince),
+    )
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+};
+
+export const claimBillingCheckout = async (data: {
+  userId: string;
+  claimToken: string;
+  planKey: BillingPlanKey;
+  expiresAt: Date;
+}): Promise<{ claimed: boolean; checkoutUrl: string | null }> => {
+  const ref = getDb().collection('billing_checkout_claims').doc(data.userId);
+  return getDb().runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(ref);
+    const existing = snapshot.exists ? snapshot.data() as any : null;
+    const existingExpiry = existing?.expiresAt ? new Date(existing.expiresAt).getTime() : 0;
+    if (existing && existingExpiry > Date.now()) {
+      return { claimed: false, checkoutUrl: existing.checkoutUrl ?? null };
+    }
+    const now = new Date().toISOString();
+    transaction.set(ref, {
+      userId: data.userId,
+      claimToken: data.claimToken,
+      planKey: data.planKey,
+      stripeCheckoutSessionId: null,
+      checkoutUrl: null,
+      expiresAt: data.expiresAt.toISOString(),
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    });
+    return { claimed: true, checkoutUrl: null };
+  });
+};
+
+export const completeBillingCheckoutClaim = async (data: {
+  userId: string;
+  claimToken: string;
+  stripeCheckoutSessionId: string;
+  checkoutUrl: string;
+  expiresAt: Date;
+}): Promise<void> => {
+  const ref = getDb().collection('billing_checkout_claims').doc(data.userId);
+  await getDb().runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(ref);
+    if (!snapshot.exists || (snapshot.data() as any).claimToken !== data.claimToken) return;
+    transaction.update(ref, {
+      stripeCheckoutSessionId: data.stripeCheckoutSessionId,
+      checkoutUrl: data.checkoutUrl,
+      expiresAt: data.expiresAt.toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+  });
+};
+
+export const releaseBillingCheckoutClaim = async (userId: string, claimToken: string): Promise<void> => {
+  const ref = getDb().collection('billing_checkout_claims').doc(userId);
+  await getDb().runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(ref);
+    if (snapshot.exists && (snapshot.data() as any).claimToken === claimToken) {
+      transaction.delete(ref);
+    }
+  });
+};
+
+export const clearBillingCheckoutClaim = async (userId: string): Promise<void> => {
+  await getDb().collection('billing_checkout_claims').doc(userId).delete();
 };
 
 export const upsertBillingSubscription = async (data: {
@@ -6899,6 +6964,7 @@ export const restoreBillingSubscriptionAccess = async (stripeSubscriptionId: str
     accessRevokedAt: null,
     accessRevocationReason: null,
     disputeId: null,
+    refundedAt: null,
     updatedAt: nowIso(),
   }, { merge: true });
 };
@@ -6932,6 +6998,14 @@ export const listStaleSubscriptionsForReconciliation = async (
       (!sub.lastSyncedAt || new Date(sub.lastSyncedAt).getTime() < cutoff))
     .sort((a, b) => (a.lastSyncedAt ?? '').localeCompare(b.lastSyncedAt ?? ''))
     .slice(0, limit);
+};
+
+export const listPastDueBillingSubscriptions = async (): Promise<BillingSubscription[]> => {
+  const snapshot = await getDb().collection('billing_subscriptions').get();
+  return snapshot.docs
+    .map((doc) => doc.data() as BillingSubscription)
+    .filter((subscription) => Boolean(subscription.pastDueSince))
+    .sort((a, b) => (a.pastDueSince ?? '').localeCompare(b.pastDueSince ?? ''));
 };
 
 export const claimStripeWebhookEvent = async (data: {

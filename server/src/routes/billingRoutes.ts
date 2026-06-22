@@ -7,6 +7,7 @@ import {
   createPortalSession,
   getBillingStatus,
   listAvailablePlans,
+  syncUserSubscriptionsFromStripe,
 } from '../billing/billingService';
 import { reconcileUserTierFromBillingById } from '../billing/subscriptionEntitlementService';
 import { createCheckoutSessionDto, createPortalSessionDto } from '../billing/billingDtos';
@@ -116,6 +117,9 @@ router.post('/portal-session', async (req, res) => {
 router.post('/refresh', async (req, res) => {
   const { userId } = (req as any).user as TokenPayload;
   try {
+    if (isStripeBillingEnabled()) {
+      await syncUserSubscriptionsFromStripe(userId);
+    }
     const result = await reconcileUserTierFromBillingById(userId, {
       reason: 'Client-triggered refresh after checkout return',
     });

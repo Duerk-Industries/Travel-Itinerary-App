@@ -14,6 +14,11 @@ The core integration is implemented. The June 20, 2026 code review closed these 
 - Failed webhook events can be claimed again when Stripe retries delivery.
 - Account deletion stops if active Stripe subscriptions cannot be cancelled.
 - Initial Checkout requests are explicitly restricted to the web client.
+- Concurrent Checkout creation is protected by a durable per-user claim in Postgres and Firestore.
+- Portal plan changes resolve from the current Stripe Price rather than stale subscription metadata.
+- Post-Checkout refresh retrieves current Stripe subscriptions before reconciling entitlements.
+- Past-due grace expiration is scheduled from the exact configured deadline.
+- Failed or reversed full refunds restore access when the Charge is no longer fully refunded.
 - Unit/integration coverage includes Firestore billing persistence and an opt-in real Stripe test-mode Checkout test.
 
 Remaining launch work is primarily Stripe Dashboard configuration and full lifecycle acceptance testing.

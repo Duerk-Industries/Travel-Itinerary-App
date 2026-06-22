@@ -19,6 +19,7 @@ import { startIngestionMetricsScheduler } from './services/ingestionMetricsServi
 import { startFailedRetryScheduler } from './services/failedRetryScheduler';
 import { startBillingReconciliationScheduler } from './billing/subscriptionReconciliationService';
 import { installShutdownHandlers } from './shutdown';
+import { assertStripeBillingConfig } from './config/stripeBilling';
 
 const defaultPort = Number(process.env.PORT) || 4000;
 const isCloudRunRuntime = Boolean(process.env.K_SERVICE);
@@ -65,6 +66,7 @@ export const startServer = async (portOverride?: number): Promise<Server> => {
   if (envLoadedFrom) {
     logInfo(`[startup] env loaded from: ${envLoadedFrom}`);
   }
+  assertStripeBillingConfig();
   const portToUse = portOverride ?? defaultPort;
   const server = await new Promise<Server>((resolve, reject) => {
     const listeningServer = app.listen(portToUse, '0.0.0.0', () => {

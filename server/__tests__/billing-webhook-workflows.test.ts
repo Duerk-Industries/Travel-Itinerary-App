@@ -7,6 +7,7 @@ import {
   getStripeWebhookEvent,
   initDb,
   upsertBillingCustomer,
+  upsertBillingPlanConfig,
 } from '../src/db';
 import { setStripeClientForTesting } from '../src/billing/stripeClient';
 import { cleanupTestUsersByEmail, registerAndLoginWebUser } from './helpers';
@@ -122,6 +123,21 @@ describe('Stripe webhook workflows', () => {
     expect((await getCurrentUserTier(userId))?.tierKey).toBe('premium');
   });
 
+  it('resolves a portal plan switch from the current Price instead of stale metadata', async () => {
+    await upsertBillingPlanConfig({
+      planKey: 'premium_annual',
+      activeStripePriceId: 'price_test_annual',
+      unitAmountCents: 3500,
+      livemode: false,
+      updatedBy: null,
+    });
+    subscription.items.data[0].price.id = 'price_test_annual';
+    subscription.metadata.planKey = 'premium_monthly';
+    await deliver(event('customer.subscription.updated', { id: SUBSCRIPTION_ID })).expect(200);
+    expect((await getBillingSubscriptionByStripeId(SUBSCRIPTION_ID))?.planKey).toBe('premium_annual');
+    subscription.items.data[0].price.id = 'price_test_monthly';
+  });
+
   it('starts the past-due clock once and clears it after payment', async () => {
     subscription.status = 'past_due';
     await deliver(event('invoice.payment_failed', {
@@ -153,6 +169,30 @@ describe('Stripe webhook workflows', () => {
       amount_refunded: 200,
     })).expect(200);
 
+    expect((await getBillingSubscriptionByStripeId(SUBSCRIPTION_ID))?.accessRevokedAt).toBeNull();
+    expect((await getCurrentUserTier(userId))?.tierKey).toBe('premium');
+  });
+
+  it('restores access when a previously full refund fails', async () => {
+    await deliver(event('charge.refunded', {
+      id: 'ch_full_then_failed',
+      invoice: 'in_workflow',
+      amount: 500,
+      amount_refunded: 500,
+    })).expect(200);
+    expect((await getCurrentUserTier(userId))?.tierKey).toBe('free');
+
+    fakeStripe.charges.retrieve.mockResolvedValueOnce({
+      id: 'ch_full_then_failed',
+      invoice: 'in_workflow',
+      amount: 500,
+      amount_refunded: 0,
+    });
+    await deliver(event('refund.updated', {
+      id: 're_failed',
+      charge: 'ch_full_then_failed',
+      status: 'failed',
+    })).expect(200);
     expect((await getBillingSubscriptionByStripeId(SUBSCRIPTION_ID))?.accessRevokedAt).toBeNull();
     expect((await getCurrentUserTier(userId))?.tierKey).toBe('premium');
   });

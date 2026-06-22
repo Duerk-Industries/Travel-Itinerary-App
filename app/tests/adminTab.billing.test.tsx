@@ -81,4 +81,38 @@ describe('AdminTab billing section', () => {
       );
     });
   });
+
+  test('publishes the initial Stripe Price even when the seeded amount is unchanged', async () => {
+    const unpublishedPlan = { ...plan, activeStripePriceId: null };
+    const fetchMock = jest.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith('/api/admin/billing/config') && !init?.method) {
+        return { ok: true, json: async () => ({ billingEnabled: true, plans: [unpublishedPlan] }) } as Response;
+      }
+      if (url.endsWith('/api/admin/billing/config/premium_monthly') && init?.method === 'PATCH') {
+        return { ok: true, json: async () => unpublishedPlan } as Response;
+      }
+      if (url.endsWith('/api/admin/billing/plans/premium_monthly/price') && init?.method === 'POST') {
+        return { ok: true, json: async () => ({ stripePriceId: 'price_initial' }) } as Response;
+      }
+      throw new Error(`Unhandled fetch: ${url}`);
+    });
+    (global as any).fetch = fetchMock;
+
+    const { findByText, getByTestId } = render(
+      <AdminTab backendUrl={backendUrl} headers={headers} initialSection="billing" />
+    );
+    await findByText('Active Price: Not published (test)');
+    fireEvent.press(getByTestId('admin-billing-save-premium_monthly'));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        `${backendUrl}/api/admin/billing/plans/premium_monthly/price`,
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ unitAmountCents: 500, currency: 'usd' }),
+        }),
+      );
+    });
+  });
 });

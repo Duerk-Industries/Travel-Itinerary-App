@@ -47,6 +47,13 @@ describe('isSubscriptionPremiumEligible', () => {
     expect(isSubscriptionPremiumEligible(makeSub({ status: 'canceled' }))).toBe(false);
   });
 
+  it('keeps access until the grace deadline even if Stripe cancels during dunning', () => {
+    const recentlyPastDue = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString();
+    expect(
+      isSubscriptionPremiumEligible(makeSub({ status: 'canceled', pastDueSince: recentlyPastDue })),
+    ).toBe(true);
+  });
+
   it('revokes access for incomplete subscription', () => {
     expect(isSubscriptionPremiumEligible(makeSub({ status: 'incomplete' }))).toBe(false);
   });

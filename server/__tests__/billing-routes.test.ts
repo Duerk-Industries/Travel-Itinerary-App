@@ -39,6 +39,7 @@ const makeFakeStripe = (overrides: Record<string, any> = {}) => ({
     },
   },
   subscriptions: {
+    list: jest.fn().mockResolvedValue({ data: [] }),
     retrieve: jest.fn().mockResolvedValue({
       id: 'sub_test',
       status: 'active',
@@ -79,9 +80,9 @@ describe('Billing routes', () => {
     process.env.STRIPE_SECRET_KEY = 'sk_test_fake';
     process.env.STRIPE_PREMIUM_MONTHLY_PRICE_ID = 'price_test_monthly';
     process.env.STRIPE_PREMIUM_ANNUAL_PRICE_ID = 'price_test_annual';
-    process.env.STRIPE_CHECKOUT_SUCCESS_URL = 'http://localhost:19006/billing/success';
-    process.env.STRIPE_CHECKOUT_CANCEL_URL = 'http://localhost:19006/billing/cancel';
-    process.env.STRIPE_PORTAL_RETURN_URL = 'http://localhost:19006/account';
+    process.env.STRIPE_CHECKOUT_SUCCESS_URL = 'http://localhost:19006/?billing=success';
+    process.env.STRIPE_CHECKOUT_CANCEL_URL = 'http://localhost:19006/?billing=cancel';
+    process.env.STRIPE_PORTAL_RETURN_URL = 'http://localhost:19006/';
 
     await initDb();
     await upsertBillingPlanConfig({
@@ -242,6 +243,13 @@ describe('Billing routes', () => {
     });
 
     it('uses admin-configured price, trial, tax, and promotion settings', async () => {
+      const configuredEmail = `billing-configured+${TS}@example.com`;
+      const configured = await registerAndLoginWebUser({
+        firstName: 'Configured',
+        lastName: 'Billing',
+        email: configuredEmail,
+        password: PASSWORD,
+      });
       await upsertBillingPlanConfig({
         planKey: 'premium_annual',
         activeStripePriceId: 'price_admin_annual',
@@ -253,17 +261,21 @@ describe('Billing routes', () => {
         updatedBy: userId,
       });
 
-      await request(app)
-        .post('/api/billing/checkout-session')
-        .set('Authorization', `Bearer ${token}`)
-        .send({ planKey: 'premium_annual', idempotencyKey: `admin-config-${TS}`, clientPlatform: 'web' })
-        .expect(201);
+      try {
+        await request(app)
+          .post('/api/billing/checkout-session')
+          .set('Authorization', `Bearer ${configured.token}`)
+          .send({ planKey: 'premium_annual', idempotencyKey: `admin-config-${TS}`, clientPlatform: 'web' })
+          .expect(201);
 
-      const call = fakeStripe.checkout.sessions.create.mock.calls.at(-1)[0];
-      expect(call.line_items[0].price).toBe('price_admin_annual');
-      expect(call.subscription_data.trial_period_days).toBe(7);
-      expect(call.automatic_tax.enabled).toBe(false);
-      expect(call.allow_promotion_codes).toBe(false);
+        const call = fakeStripe.checkout.sessions.create.mock.calls.at(-1)[0];
+        expect(call.line_items[0].price).toBe('price_admin_annual');
+        expect(call.subscription_data.trial_period_days).toBe(7);
+        expect(call.automatic_tax.enabled).toBe(false);
+        expect(call.allow_promotion_codes).toBe(false);
+      } finally {
+        await cleanupTestUsersByEmail([configuredEmail]);
+      }
     });
 
     it('returns 409 if user already has an active subscription', async () => {
@@ -300,6 +312,43 @@ describe('Billing routes', () => {
         expect(fakeStripe.checkout.sessions.create).toHaveBeenCalledTimes(callsBefore);
       } finally {
         await cleanupTestUsersByEmail([subscribedEmail]);
+      }
+    });
+
+    it('creates only one Stripe session for concurrent checkout requests', async () => {
+      const concurrentEmail = `billing-concurrent+${TS}@example.com`;
+      const concurrent = await registerAndLoginWebUser({
+        firstName: 'Concurrent',
+        lastName: 'Checkout',
+        email: concurrentEmail,
+        password: PASSWORD,
+      });
+      const originalCreate = fakeStripe.checkout.sessions.create;
+      const delayedCreate = jest.fn(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 30));
+        return {
+          id: `cs_concurrent_${TS}`,
+          url: `https://checkout.stripe.com/pay/cs_concurrent_${TS}`,
+        };
+      });
+      fakeStripe.checkout.sessions.create = delayedCreate;
+      try {
+        const requests = ['a', 'b'].map((suffix) =>
+          request(app)
+            .post('/api/billing/checkout-session')
+            .set('Authorization', `Bearer ${concurrent.token}`)
+            .send({
+              planKey: 'premium_monthly',
+              idempotencyKey: `concurrent-${suffix}-${TS}`,
+              clientPlatform: 'web',
+            }),
+        );
+        const responses = await Promise.all(requests);
+        expect(responses.map((response) => response.status).sort()).toEqual([201, 409]);
+        expect(delayedCreate).toHaveBeenCalledTimes(1);
+      } finally {
+        fakeStripe.checkout.sessions.create = originalCreate;
+        await cleanupTestUsersByEmail([concurrentEmail]);
       }
     });
 
@@ -368,7 +417,7 @@ describe('Billing routes', () => {
       expect(fakeStripe.billingPortal.sessions.create).toHaveBeenLastCalledWith(
         expect.objectContaining({
           customer: 'cus_test_fake',
-          return_url: 'http://localhost:19006/account',
+          return_url: 'http://localhost:19006/',
         }),
       );
     });
@@ -379,6 +428,56 @@ describe('Billing routes', () => {
         .set('Authorization', `Bearer ${token}`)
         .send({ returnUrl: 'https://attacker.example/redirect' })
         .expect(400);
+    });
+  });
+
+  describe('POST /api/billing/refresh', () => {
+    it('retrieves current Stripe subscriptions before reconciling entitlement', async () => {
+      const refreshEmail = `billing-refresh+${TS}@example.com`;
+      const refreshUser = await registerAndLoginWebUser({
+        firstName: 'Refresh',
+        lastName: 'Billing',
+        email: refreshEmail,
+        password: PASSWORD,
+      });
+      await upsertBillingCustomer({
+        userId: refreshUser.userId,
+        stripeCustomerId: `cus_refresh_${TS}`,
+        emailSnapshot: refreshEmail,
+        livemode: false,
+      });
+      fakeStripe.subscriptions.list.mockResolvedValueOnce({
+        data: [{
+          id: `sub_refresh_${TS}`,
+          status: 'active',
+          livemode: false,
+          customer: `cus_refresh_${TS}`,
+          cancel_at_period_end: false,
+          cancel_at: null,
+          current_period_start: Math.floor(Date.now() / 1000),
+          current_period_end: Math.floor(Date.now() / 1000) + 30 * 24 * 3600,
+          trial_end: null,
+          ended_at: null,
+          latest_invoice: null,
+          metadata: { userId: refreshUser.userId, planKey: 'premium_monthly' },
+          items: { data: [{ price: { id: 'price_test_monthly' } }] },
+        }],
+      });
+      try {
+        const response = await request(app)
+          .post('/api/billing/refresh')
+          .set('Authorization', `Bearer ${refreshUser.token}`)
+          .send({})
+          .expect(200);
+        expect(fakeStripe.subscriptions.list).toHaveBeenCalledWith({
+          customer: `cus_refresh_${TS}`,
+          status: 'all',
+          limit: 100,
+        });
+        expect(response.body.status.effectiveTier).toBe('premium');
+      } finally {
+        await cleanupTestUsersByEmail([refreshEmail]);
+      }
     });
   });
 

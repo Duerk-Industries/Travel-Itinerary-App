@@ -2427,7 +2427,7 @@ const BillingSection: React.FC<{ backendUrl: string; headers: Record<string, str
           isCheckoutEnabled: form.isCheckoutEnabled,
         }),
       });
-      if (Number(form.unitAmountCents) !== plan.unitAmountCents) {
+      if (!plan.activeStripePriceId || Number(form.unitAmountCents) !== plan.unitAmountCents) {
         await apiFetch(backendUrl, headers, `/billing/plans/${plan.planKey}/price`, {
           method: 'POST',
           headers: { ...headers, 'Content-Type': 'application/json' },

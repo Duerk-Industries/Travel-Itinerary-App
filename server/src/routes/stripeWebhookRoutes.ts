@@ -13,12 +13,14 @@ import {
   revokeBillingSubscriptionAccess,
   restoreBillingSubscriptionAccess,
   getBillingSubscriptionByStripeId,
+  clearBillingCheckoutClaim,
 } from '../db';
-import { mapStripeSubscriptionToUpsert } from '../billing/billingService';
+import { mapStripeSubscriptionToUpsert, resolvePlanKeyForPriceId } from '../billing/billingService';
 import { reconcileUserTierFromBillingById } from '../billing/subscriptionEntitlementService';
 import { logInfo, logError } from '../logger';
 import { incrementMetric } from '../metrics';
 import { BillingPlanKey } from '../types';
+import { scheduleNextBillingGraceExpiry } from '../billing/subscriptionReconciliationService';
 
 const router = Router();
 
@@ -69,7 +71,9 @@ const handleSubscriptionSnapshot = async (
     return;
   }
 
-  const planKey = planKeyFromMetadata(sub.metadata) ?? 'premium_monthly';
+  const priceId = sub.items.data[0]?.price.id;
+  if (!priceId) throw new Error(`Stripe subscription ${sub.id} has no Price`);
+  const planKey = await resolvePlanKeyForPriceId(priceId, planKeyFromMetadata(sub.metadata));
   const upsertParams = mapStripeSubscriptionToUpsert(sub, userId, planKey, eventCreated);
   await upsertBillingSubscription(upsertParams);
 
@@ -99,6 +103,10 @@ const handleCheckoutSessionCompleted = async (
   }
 
   await handleSubscriptionSnapshot(stripe, subscriptionId, event.created, event.id);
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+  const userId = await userIdFromSubscription(subscription);
+  if (userId) await clearBillingCheckoutClaim(userId);
+  await scheduleNextBillingGraceExpiry();
 };
 
 const handleInvoicePaid = async (
@@ -112,6 +120,7 @@ const handleInvoicePaid = async (
 
   await clearPastDueSince(subscriptionId);
   await handleSubscriptionSnapshot(stripe, subscriptionId, event.created, event.id);
+  await scheduleNextBillingGraceExpiry();
 };
 
 const handleInvoicePaymentFailed = async (
@@ -130,6 +139,7 @@ const handleInvoicePaymentFailed = async (
   }
 
   await handleSubscriptionSnapshot(stripe, subscriptionId, event.created, event.id);
+  await scheduleNextBillingGraceExpiry();
 };
 
 /**
@@ -166,6 +176,14 @@ const handleChargeRefunded = async (
   event: Stripe.Event,
 ): Promise<void> => {
   const charge = event.data.object as Stripe.Charge;
+  await reconcileChargeRefundState(stripe, charge, event);
+};
+
+const reconcileChargeRefundState = async (
+  stripe: Stripe,
+  charge: Stripe.Charge,
+  event: Stripe.Event,
+): Promise<void> => {
   const invoiceId = typeof charge.invoice === 'string' ? charge.invoice : charge.invoice?.id;
   if (!invoiceId) return;
 
@@ -176,6 +194,18 @@ const handleChargeRefunded = async (
   if (!isFull) {
     logInfo(`[billing][webhook] Partial refund recorded — no automatic entitlement change chargeId=${charge.id} invoiceId=${invoiceId} refunded=${refundedAmount}/${chargeAmount}`);
     incrementMetric('billing.webhook.partial_refund');
+    const subscriptionId = await subscriptionIdFromInvoiceId(stripe, invoiceId);
+    if (!subscriptionId) return;
+    const local = await getBillingSubscriptionByStripeId(subscriptionId);
+    if (local?.accessRevocationReason === 'full_refund') {
+      await restoreBillingSubscriptionAccess(subscriptionId);
+      await reconcileUserTierFromBillingById(local.userId, {
+        reason: 'Full refund failed or was reversed — Premium access restored',
+        stripeSubscriptionId: subscriptionId,
+        stripeEventId: event.id,
+      });
+      incrementMetric('billing.webhook.refund_access_restored');
+    }
     return;
   }
 
@@ -218,6 +248,17 @@ const handleChargeRefunded = async (
     stripeEventId: event.id,
   });
   incrementMetric('billing.webhook.full_refund_access_revoked');
+};
+
+const handleRefundUpdated = async (
+  stripe: Stripe,
+  event: Stripe.Event,
+): Promise<void> => {
+  const refund = event.data.object as Stripe.Refund;
+  const chargeId = typeof refund.charge === 'string' ? refund.charge : refund.charge?.id;
+  if (!chargeId) return;
+  const charge = await stripe.charges.retrieve(chargeId);
+  await reconcileChargeRefundState(stripe, charge, event);
 };
 
 /** Shared helper: resolve dispute → charge → invoice → subscription chain. */
@@ -332,6 +373,7 @@ const buildDispatchTable = (stripe: Stripe): Record<string, EventHandler> => ({
   'invoice.payment_failed': handleInvoicePaymentFailed,
   'invoice.payment_action_required': handleInvoicePaymentActionRequired,
   'charge.refunded': handleChargeRefunded,
+  'refund.updated': handleRefundUpdated,
   'charge.dispute.created': handleDisputeCreated,
   'charge.dispute.closed': handleDisputeClosed,
 });
