@@ -4379,6 +4379,8 @@ export const getItineraryDetailContext = async (
   return { tripId, itineraryId };
 };
 
+const getReactionDocId = (detailId: string, userId: string): string => `${detailId}_${userId}`;
+
 export const castItineraryDetailReaction = async (
   userId: string,
   tripId: string,
@@ -4386,18 +4388,14 @@ export const castItineraryDetailReaction = async (
   value: 1 | -1
 ): Promise<void> => {
   const db = getDb();
-  const existing = await db
-    .collection('itinerary_detail_reactions')
-    .where('detailId', '==', detailId)
-    .where('userId', '==', userId)
-    .limit(1)
-    .get();
+  const ref = db.collection('itinerary_detail_reactions').doc(getReactionDocId(detailId, userId));
+  const existing = await ref.get();
   const payload = { tripId, detailId, userId, value, updatedAt: nowIso() };
-  if (!existing.empty) {
-    await existing.docs[0].ref.update(payload);
+  if (existing.exists) {
+    await ref.update(payload);
     return;
   }
-  await db.collection('itinerary_detail_reactions').doc(randomUUID()).set({ ...payload, createdAt: nowIso() });
+  await ref.set({ ...payload, createdAt: nowIso() });
 };
 
 export const clearItineraryDetailReaction = async (
@@ -4405,14 +4403,7 @@ export const clearItineraryDetailReaction = async (
   detailId: string
 ): Promise<void> => {
   const db = getDb();
-  const existing = await db
-    .collection('itinerary_detail_reactions')
-    .where('detailId', '==', detailId)
-    .where('userId', '==', userId)
-    .limit(1)
-    .get();
-  if (existing.empty) return;
-  await existing.docs[0].ref.delete();
+  await db.collection('itinerary_detail_reactions').doc(getReactionDocId(detailId, userId)).delete();
 };
 
 export const getItineraryDetailReactionSummaries = async (

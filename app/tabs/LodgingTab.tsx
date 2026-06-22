@@ -211,13 +211,22 @@ const LodgingTab: React.FC<LodgingTabProps> = ({
         ) : null}
       </View>
 
-      <ScrollView style={{ flex: 1, minHeight: 0 }} contentContainerStyle={{ flexGrow: 1 }}>
+      <ScrollView
+        style={{ flex: 1, minHeight: 0 }}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 16 }}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        nestedScrollEnabled
+        contentInsetAdjustmentBehavior="automatic"
+      >
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator
           style={styles.tableScroll}
           contentContainerStyle={styles.tableScrollContent}
           testID="lodging-table-horizontal-scroll"
+          nestedScrollEnabled
+          directionalLockEnabled
         >
         <View style={[styles.table, styles.lodgingTable, { minWidth: 878 }]}>
           <View style={[styles.tableRow, styles.tableHeaderRow]}>

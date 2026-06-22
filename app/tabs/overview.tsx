@@ -414,6 +414,8 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   const { width: viewportWidth } = useWindowDimensions();
   const isPhoneLayout = viewportWidth < 700;
   const isTabletLayout = viewportWidth >= 700 && viewportWidth < 1100;
+  const dayHeroHeight = Math.max(190, Math.min(300, viewportWidth * (isPhoneLayout ? 0.52 : 0.3)));
+  const lodgingThumbnailSize = isPhoneLayout ? 64 : isTabletLayout ? 72 : 80;
   const stripResizeMode = useCallback((style: any) => {
     const flattened = StyleSheet.flatten(style);
     if (!flattened || typeof flattened !== 'object' || !('resizeMode' in flattened)) {
@@ -1248,48 +1250,54 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   }, [backendUrl, headers, dayCards, overviewStartDate, overviewEndDate, trip?.destination, trip?.id, tripLocationLabel]);
 
   useEffect(() => {
+    let active = true;
+    const fetchOneImage = async (card: DayCard): Promise<[string, string] | null> => {
+      const dayNumber = Math.max(1, dayCards.findIndex((candidate) => candidate.date === card.date) + 1);
+      const activities = itineraryDetails
+        .filter((detail) => detail.day === dayNumber)
+        .map((detail) => detail.activity)
+        .filter(Boolean);
+      const tourNames = tours
+        .filter((tour) => tour.date === card.date)
+        .map((tour) => tour.name)
+        .filter(Boolean);
+      const contextParts = [...activities, ...tourNames].filter(Boolean);
+      const context = contextParts.join(' | ').slice(0, 200);
+      try {
+        const baseLocation = card.location || tripLocationLabel || trip?.destination || 'travel';
+        const query = [
+          `location=${encodeURIComponent(baseLocation)}`,
+          `day=${encodeURIComponent(card.date)}`,
+          context ? `context=${encodeURIComponent(context)}` : '',
+        ]
+          .filter(Boolean)
+          .join('&');
+        const res = await fetch(`${backendUrl}/api/itinerary/images?${query}`, { headers });
+        const data = await res.json().catch(() => ({}));
+        return data?.url ? [card.date, data.url] : null;
+      } catch {
+        return null;
+      }
+    };
     const fetchImages = async () => {
       if (!dayCards.length) return;
       const missingCards = dayCards.filter((card) => !dayImages[card.date]);
       if (!missingCards.length) return;
+      const results = await Promise.all(missingCards.map(fetchOneImage));
+      if (!active) return;
       const next: Record<string, string> = {};
-      for (let idx = 0; idx < missingCards.length; idx += 1) {
-        const card = missingCards[idx];
-        const dayNumber = Math.max(1, dayCards.findIndex((candidate) => candidate.date === card.date) + 1);
-        const activities = itineraryDetails
-          .filter((detail) => detail.day === dayNumber)
-          .map((detail) => detail.activity)
-          .filter(Boolean);
-        const tourNames = tours
-          .filter((tour) => tour.date === card.date)
-          .map((tour) => tour.name)
-          .filter(Boolean);
-        const contextParts = [...activities, ...tourNames].filter(Boolean);
-        const context = contextParts.join(' | ').slice(0, 200);
-        try {
-          const baseLocation = card.location || tripLocationLabel || trip?.destination || 'travel';
-          const query = [
-            `location=${encodeURIComponent(baseLocation)}`,
-            `day=${encodeURIComponent(card.date)}`,
-            context ? `context=${encodeURIComponent(context)}` : '',
-          ]
-            .filter(Boolean)
-            .join('&');
-          const res = await fetch(`${backendUrl}/api/itinerary/images?${query}`, { headers });
-          const data = await res.json().catch(() => ({}));
-          if (data?.url) {
-            next[card.date] = data.url;
-          }
-        } catch {
-          // ignore
-        }
-      }
+      results.forEach((entry) => {
+        if (entry) next[entry[0]] = entry[1];
+      });
       if (Object.keys(next).length) {
         setDayImages((prev) => ({ ...prev, ...next }));
       }
     };
     fetchImages().catch(() => undefined);
-  }, [backendUrl, headers, dayCards, dayImages, itineraryDetails, tours, tripLocationLabel, trip?.destination]);
+    return () => {
+      active = false;
+    };
+  }, [backendUrl, headers, dayCards, itineraryDetails, tours, tripLocationLabel, trip?.destination]);
 
   const openDatePicker = (field: 'start' | 'end') => {
     if (Platform.OS !== 'web' && NativeDateTimePicker) {
@@ -2012,7 +2020,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             testID={testID}
             style={[
               styles.dayHeroCard,
-              isPhoneLayout ? { height: 150 } : isTabletLayout ? { height: 170 } : null,
+              { height: dayHeroHeight },
             ]}
             onPress={onPress}
             disabled={!onPress}
@@ -2046,9 +2054,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               <Text
                 style={[
                   styles.dayHeroTitle,
-                  isPhoneLayout ? { fontSize: 18 } : isTabletLayout ? { fontSize: 20 } : null,
+                  isPhoneLayout ? { fontSize: 18, lineHeight: 23 } : isTabletLayout ? { fontSize: 20 } : null,
                 ]}
-                numberOfLines={2}
+                numberOfLines={isPhoneLayout ? 4 : 3}
                 ellipsizeMode="tail"
               >
                 {title}
@@ -2105,9 +2113,17 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
             <ScrollView
               ref={scrollRef}
               style={{ flex: 1, minHeight: 0 }}
-              contentContainerStyle={{ gap: isPhoneLayout ? 12 : 16, paddingTop: isPhoneLayout ? 48 : 56 }}
+              contentContainerStyle={{
+                gap: isPhoneLayout ? 12 : 16,
+                paddingTop: isPhoneLayout ? 48 : 56,
+                paddingBottom: 24,
+              }}
               onScroll={(e: any) => setScrollY(e.nativeEvent.contentOffset.y)}
               scrollEventThrottle={16}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+              nestedScrollEnabled
+              contentInsetAdjustmentBehavior="automatic"
             >
               <Text style={styles.sectionTitle}>My itinerary</Text>
               <Text style={styles.flightTitle}>{trip.name}</Text>
@@ -2253,9 +2269,18 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                         onPress={() => openLodgingDetails(lodging)}
                       >
                         {lodging.imageUrl ? (
-                          <Image style={lodgingImageStyle} source={getImageSource(lodging.imageUrl)} resizeMode="cover" />
+                          <Image
+                            style={[lodgingImageStyle, { width: lodgingThumbnailSize, height: lodgingThumbnailSize }]}
+                            source={getImageSource(lodging.imageUrl)}
+                            resizeMode="cover"
+                          />
                         ) : (
-                          <View style={styles.lodgingImageFallback} />
+                          <View
+                            style={[
+                              styles.lodgingImageFallback,
+                              { width: lodgingThumbnailSize, height: lodgingThumbnailSize },
+                            ]}
+                          />
                         )}
                         <View style={styles.dayInfoText}>
                           <Text style={styles.dayInfoRoute}>{lodging.name}</Text>
@@ -2404,9 +2429,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
         <ScrollView
           ref={scrollRef}
           style={[styles.card, responsiveCardStyle, { flex: 1, minHeight: 0 }]}
-          contentContainerStyle={{ gap: isPhoneLayout ? 10 : 12 }}
+          contentContainerStyle={{ gap: isPhoneLayout ? 10 : 12, paddingBottom: 24 }}
           onScroll={(e: any) => setScrollY(e.nativeEvent.contentOffset.y)}
           scrollEventThrottle={16}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          nestedScrollEnabled
+          contentInsetAdjustmentBehavior="automatic"
         >
           <View style={[styles.row, isPhoneLayout ? { rowGap: 8 } : null]}>
             <Text style={styles.sectionTitle}>Overview</Text>
@@ -2462,9 +2491,13 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       <ScrollView
         ref={scrollRef}
         style={[styles.card, responsiveCardStyle, { flex: 1, minHeight: 0 }]}
-        contentContainerStyle={{ gap: isPhoneLayout ? 10 : 12 }}
+        contentContainerStyle={{ gap: isPhoneLayout ? 10 : 12, paddingBottom: 24 }}
         onScroll={(e: any) => setScrollY(e.nativeEvent.contentOffset.y)}
         scrollEventThrottle={16}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        nestedScrollEnabled
+        contentInsetAdjustmentBehavior="automatic"
       >
         <View style={[styles.row, isPhoneLayout ? { rowGap: 8 } : null]}>
           <Text style={styles.sectionTitle}>Overview</Text>

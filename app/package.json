@@ -25,6 +25,7 @@
     "expo": "~54.0.34",
     "expo-clipboard": "~8.0.8",
     "expo-constants": "~18.0.10",
+    "expo-dev-client": "~6.0.21",
     "expo-file-system": "~19.0.22",
     "expo-linking": "~8.0.12",
     "expo-sharing": "~14.0.8",

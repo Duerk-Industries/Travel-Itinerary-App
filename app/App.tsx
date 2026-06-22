@@ -434,6 +434,32 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     initializeAppCheck();
   }, []);
 
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    const html = document.documentElement;
+    const body = document.body;
+    const root = document.getElementById('root');
+    const previous = {
+      htmlHeight: html.style.height,
+      bodyHeight: body.style.height,
+      bodyMargin: body.style.margin,
+      bodyOverflow: body.style.overflow,
+      rootHeight: root?.style.height ?? '',
+    };
+    html.style.height = '100%';
+    body.style.height = '100%';
+    body.style.margin = '0';
+    body.style.overflow = 'hidden';
+    if (root) root.style.height = '100%';
+    return () => {
+      html.style.height = previous.htmlHeight;
+      body.style.height = previous.bodyHeight;
+      body.style.margin = previous.bodyMargin;
+      body.style.overflow = previous.bodyOverflow;
+      if (root) root.style.height = previous.rootHeight;
+    };
+  }, []);
+
   // React DevTools (and a few dev-tooling libraries) emit `performance.mark`
   // on every component render in development. Browsers keep those entries
   // forever — Firefox in particular won't reclaim them, and after a long
@@ -480,7 +506,9 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         ? ({
             paddingTop: 'env(safe-area-inset-top, 0px)',
             paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-            minHeight: webViewportHeight ? `${webViewportHeight}px` : '100dvh',
+            height: webViewportHeight ? `${webViewportHeight}px` : '100dvh',
+            minHeight: 0,
+            maxHeight: webViewportHeight ? `${webViewportHeight}px` : '100dvh',
           } as any)
         : null,
     [isWebIOSSafari, webViewportHeight]
@@ -1276,17 +1304,26 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     try {
       const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUrl);
       if (result.type === 'success' && result.url) {
-        const { token, authCode, requirePasswordSetup } = extractTokenFromUrl(result.url);
+        const { token, authCode, authError, requirePasswordSetup } = extractTokenFromUrl(result.url);
         if (token) {
           handleAuthSuccess(token, undefined, { requirePasswordSetup });
           return;
         }
         if (authCode) {
           await exchangeAuthCode(authCode);
+          return;
         }
+        if (authError) {
+          setAuthErrorMessage(mapAuthErrorToMessage(authError));
+          return;
+        }
+        setAuthErrorMessage('Google sign-in returned without login credentials. Please try again.');
+      } else if (result.type !== 'cancel' && result.type !== 'dismiss') {
+        setAuthErrorMessage('Google sign-in could not be completed. Please try again.');
       }
     } catch (err) {
-      console.log('Auth session cancelled or failed', err);
+      console.log('Auth session failed', err);
+      setAuthErrorMessage((err as Error)?.message || 'Google sign-in could not be completed. Please try again.');
     }
   };
 
@@ -2503,6 +2540,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
       style={styles.pageScroll}
       contentContainerStyle={[styles.pageScrollContent, iosSafariContentInsetStyle]}
       keyboardShouldPersistTaps="handled"
+      keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+      nestedScrollEnabled
+      contentInsetAdjustmentBehavior="automatic"
+      showsVerticalScrollIndicator
     >
       <View style={styles.pageScrollInner}>{content}</View>
     </ScrollView>
@@ -3195,21 +3236,29 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
 
         </View>
       ) : (
-        <AuthForm
-          authMode={authMode}
-          setAuthMode={setAuthMode}
-          authForm={authForm}
-          setAuthForm={setAuthForm}
-          showResendConfirmation={showResendConfirmation}
-          setShowResendConfirmation={setShowResendConfirmation}
-          resendConfirmationLoading={resendConfirmationLoading}
-          resendConfirmationEmail={resendConfirmationEmail}
-          authErrorMessage={authErrorMessage}
-          loginWithPassword={loginWithPassword}
-          register={register}
-          loginWithGoogle={loginWithGoogle}
-          styles={styles}
-        />
+        <ScrollView
+          style={styles.signedOutScroll}
+          contentContainerStyle={[styles.signedOutScrollContent, iosSafariContentInsetStyle]}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+          contentInsetAdjustmentBehavior="automatic"
+        >
+          <AuthForm
+            authMode={authMode}
+            setAuthMode={setAuthMode}
+            authForm={authForm}
+            setAuthForm={setAuthForm}
+            showResendConfirmation={showResendConfirmation}
+            setShowResendConfirmation={setShowResendConfirmation}
+            resendConfirmationLoading={resendConfirmationLoading}
+            resendConfirmationEmail={resendConfirmationEmail}
+            authErrorMessage={authErrorMessage}
+            loginWithPassword={loginWithPassword}
+            register={register}
+            loginWithGoogle={loginWithGoogle}
+            styles={styles}
+          />
+        </ScrollView>
       )}
       {userToken && requirePasswordSetup ? (
         <View style={styles.wizardOverlay}>
@@ -3578,6 +3627,17 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     minHeight: 0,
     position: 'relative',
     overflow: 'hidden',
+  },
+  signedOutScroll: {
+    flex: 1,
+    width: '100%',
+    minHeight: 0,
+  },
+  signedOutScrollContent: {
+    flexGrow: 1,
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 24,
   },
   pageScroll: {
     flex: 1,

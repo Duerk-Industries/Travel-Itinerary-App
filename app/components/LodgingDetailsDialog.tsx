@@ -59,6 +59,8 @@ const LodgingDetailsDialogComponent: React.FC<LodgingDetailsDialogProps> = ({
 }) => {
   const { width } = useWindowDimensions();
   const isCompact = width < 520;
+  const imageHeight = Math.max(170, Math.min(260, width * 0.52));
+  const mapHeight = Math.max(150, Math.min(220, width * 0.45));
   const detailStyles = useMemo(() => buildDetailStyles(theme), [theme]);
 
   const [placeDetails, setPlaceDetails] = useState<PlaceDetailsPayload | null>(null);
@@ -146,8 +148,15 @@ const LodgingDetailsDialogComponent: React.FC<LodgingDetailsDialogProps> = ({
       cardStyle={[styles.modalCard, detailStyles.detailCard, isCompact && { width: '100%', maxHeight: '95%' }]}
       showTitle={false}
     >
-        <ScrollView>
-          <View style={detailStyles.imageWrap}>
+        <ScrollView
+          style={{ flexShrink: 1, minHeight: 0 }}
+          contentContainerStyle={{ paddingBottom: 8 }}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          nestedScrollEnabled
+          contentInsetAdjustmentBehavior="automatic"
+        >
+          <View style={[detailStyles.imageWrap, { height: imageHeight }]}>
             {imageUrl ? (
               <Image source={imageSource} style={detailStyles.image} resizeMode="cover" />
             ) : (
@@ -226,7 +235,7 @@ const LodgingDetailsDialogComponent: React.FC<LodgingDetailsDialogProps> = ({
           </View>
           {mapImageUrl ? (
             <View style={detailStyles.mapCard}>
-              <Image style={detailStyles.mapImage} source={mapImageSource} resizeMode="cover" />
+              <Image style={[detailStyles.mapImage, { height: mapHeight }]} source={mapImageSource} resizeMode="cover" />
               <View style={detailStyles.mapMeta}>
                 <Text style={detailStyles.summaryLabel}>Location preview</Text>
                 <Text style={detailStyles.summaryValue} numberOfLines={2}>

@@ -50,6 +50,20 @@ describe('resolveAndValidateRedirectUri', () => {
     expect(result.redirectUri).toBe('travel-itinerary://login');
   });
 
+  it('accepts the production app login redirect without extra deployment configuration', () => {
+    process.env.AUTH_REDIRECT_URI_ALLOWLIST = 'https://duerk.org';
+    const result = resolveAndValidateRedirectUri('travelitineraryplanner://login', 'https://duerk.org');
+    expect(result.error).toBeUndefined();
+    expect(result.redirectUri).toBe('travelitineraryplanner://login');
+  });
+
+  it('does not allow a different native route that merely shares the login prefix', () => {
+    process.env.AUTH_REDIRECT_URI_ALLOWLIST = 'travelitineraryplanner://login';
+    const result = resolveAndValidateRedirectUri('travelitineraryplanner://login-evil', 'https://duerk.org');
+    expect(result.redirectUri).toBeUndefined();
+    expect(result.error).toBe('redirect_uri is not allowed.');
+  });
+
   it('allows relative redirects resolved against webUrl', () => {
     process.env.AUTH_REDIRECT_URI_ALLOWLIST = 'https://duerk.org';
     const result = resolveAndValidateRedirectUri('/login', 'https://duerk.org');

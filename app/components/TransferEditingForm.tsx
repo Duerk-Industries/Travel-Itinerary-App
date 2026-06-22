@@ -121,6 +121,9 @@ export const FlightEditingForm: React.FC<FlightEditingFormProps> = ({
           style={{ maxHeight: 420 }}
           contentContainerStyle={{ paddingRight: 12, paddingBottom: 8 }}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          nestedScrollEnabled
+          contentInsetAdjustmentBehavior="automatic"
         >
           <Text style={styles.modalLabel}>Passengers</Text>
           <View style={styles.payerChips}>
