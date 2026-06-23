@@ -52,6 +52,23 @@ describe('resolveAndValidateRedirectUri', () => {
     expect(result.redirectUri).toBe('travel-itinerary://login');
   });
 
+  // Regression: the native app's deep-link scheme is `travelitineraryplanner` (app/app.config.ts),
+  // so the production allowlist must include `travelitineraryplanner://` or native Google sign-in is
+  // rejected with HTTP 400 before reaching Google (works on web, fails in the app).
+  it('accepts the production native app scheme used by the Expo build', () => {
+    process.env.AUTH_REDIRECT_URI_ALLOWLIST = 'https://duerk.org;http://localhost:8081;travelitineraryplanner://';
+    const result = resolveAndValidateRedirectUri('travelitineraryplanner://login', 'https://duerk.org');
+    expect(result.error).toBeUndefined();
+    expect(result.redirectUri).toBe('travelitineraryplanner://login');
+  });
+
+  it('rejects the native app scheme when it is missing from the allowlist', () => {
+    process.env.AUTH_REDIRECT_URI_ALLOWLIST = 'https://duerk.org;http://localhost:8081';
+    const result = resolveAndValidateRedirectUri('travelitineraryplanner://login', 'https://duerk.org');
+    expect(result.redirectUri).toBeUndefined();
+    expect(result.error).toBe('redirect_uri is not allowed.');
+  });
+
   it('allows relative redirects resolved against webUrl', () => {
     process.env.AUTH_REDIRECT_URI_ALLOWLIST = 'https://duerk.org';
     const result = resolveAndValidateRedirectUri('/login', 'https://duerk.org');
