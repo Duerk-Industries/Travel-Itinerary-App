@@ -4718,8 +4718,11 @@ export const getItemVoteSummaries = async (
   normalizedIds.forEach((id) => {
     result[id] = { netVotes: 0, userVote: null };
   });
+  const requestedIdByKey = new Map(normalizedIds.map((id) => [id.toLowerCase(), id]));
   rows.forEach((row: any) => {
-    result[row.itemId] = {
+    const itemId = String(row.itemId);
+    const resultKey = requestedIdByKey.get(itemId.toLowerCase()) ?? itemId;
+    result[resultKey] = {
       netVotes: Number(row.netVotes) || 0,
       userVote: row.userVote === 1 || row.userVote === -1 ? row.userVote : null,
     };

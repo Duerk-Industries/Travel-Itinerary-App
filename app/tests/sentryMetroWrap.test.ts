@@ -10,7 +10,18 @@
  * symbolication on Sentry's side becomes brittle / silently broken.
  */
 describe('Sentry Metro integration', () => {
+  const originalNoSentryMetro = process.env.EXPO_NO_SENTRY_METRO;
+
+  afterEach(() => {
+    if (originalNoSentryMetro === undefined) {
+      delete process.env.EXPO_NO_SENTRY_METRO;
+    } else {
+      process.env.EXPO_NO_SENTRY_METRO = originalNoSentryMetro;
+    }
+  });
+
   it('wraps the shared config when @sentry/react-native/metro is installed', () => {
+    delete process.env.EXPO_NO_SENTRY_METRO;
     const calls: unknown[] = [];
     const fakeWrap = jest.fn((cfg: unknown, opts: unknown) => {
       calls.push({ cfg, opts });
@@ -39,7 +50,29 @@ describe('Sentry Metro integration', () => {
     });
   });
 
+  it('skips the Sentry Metro wrapper when explicitly disabled', () => {
+    process.env.EXPO_NO_SENTRY_METRO = '1';
+    const fakeWrap = jest.fn((cfg: unknown) => ({ ...(cfg as object), __sentryWrapped: true }));
+    jest.resetModules();
+    jest.doMock('@sentry/react-native/metro', () => ({ withSentryConfig: fakeWrap }));
+
+    const { createSharedMetroConfig } = require('../../metro.shared.cjs');
+    const path = require('node:path');
+    const projectRoot = path.resolve(__dirname, '..');
+    const result = createSharedMetroConfig({
+      projectRoot,
+      primaryNodeModules: path.join(projectRoot, 'node_modules'),
+      secondaryNodeModules: path.join(projectRoot, '..', 'node_modules'),
+      watchFolders: [],
+      blockedPaths: [],
+    });
+
+    expect(fakeWrap).not.toHaveBeenCalled();
+    expect((result as { __sentryWrapped?: boolean }).__sentryWrapped).toBeUndefined();
+  });
+
   it('falls back to the bare config when @sentry/react-native/metro is missing', () => {
+    delete process.env.EXPO_NO_SENTRY_METRO;
     jest.resetModules();
     jest.doMock('@sentry/react-native/metro', () => {
       throw new Error('not installed');

@@ -28,7 +28,10 @@ const fullCmd = portArgs.length ? `${cmd} ${portArgs.join(' ')}` : cmd;
 
 const child = spawn(fullCmd, {
   stdio: 'inherit',
-  env: process.env,
+  env: {
+    ...process.env,
+    EXPO_NO_SENTRY_METRO: '1',
+  },
   shell: true,
 });
 
