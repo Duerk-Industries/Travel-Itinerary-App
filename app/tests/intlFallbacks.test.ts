@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 /**
  * Verifies that modules touching `Intl` build their formatters lazily and
  * survive a runtime where the Intl constructor throws. Before these

@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 describe('ingestion repository firebase writes', () => {
   beforeEach(() => {
     jest.resetModules();

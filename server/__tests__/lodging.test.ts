@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 // c:\Git\Tristan\Travel-Itinerary-App\server\__tests__\lodging.test.ts
 
 import request from 'supertest';

@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import jwt from 'jsonwebtoken';
 import { verifyToken } from '../src/auth';
 import { getAuthAudience, getAuthIssuer, getAuthSecret } from '../src/authConfig';

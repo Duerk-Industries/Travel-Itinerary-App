@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import { getEnvValue } from '../src/env';
 
 describe('getEnvValue', () => {

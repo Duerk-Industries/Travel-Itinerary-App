@@ -1,6 +1,8 @@
 /**
  * @jest-environment jsdom
  */
+/// <reference types="jest" />
+/// <reference types="node" />
 
 jest.mock('react-native', () => ({
   Platform: { OS: 'web' },

@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import { autocompletePlaces, getPlaceDetailsFromGoogle } from '../src/services/placeService';
 
 describe('placeService', () => {

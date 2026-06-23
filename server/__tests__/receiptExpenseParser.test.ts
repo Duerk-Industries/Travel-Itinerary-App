@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import { parseReceiptText } from '../src/services/receiptExpenseParser';
 import { getFeatureFlag } from '../src/db';
 

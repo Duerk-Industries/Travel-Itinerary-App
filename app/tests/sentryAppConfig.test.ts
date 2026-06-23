@@ -7,6 +7,8 @@
  * `expo export`, so dropping it silently would mean production crashes lose
  * symbolication on the very next deploy.
  */
+/// <reference types="jest" />
+/// <reference types="node" />
 const SENTRY_PLUGIN = '@sentry/react-native/expo';
 
 describe('Sentry Expo config plugin', () => {

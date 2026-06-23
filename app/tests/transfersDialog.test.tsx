@@ -1,6 +1,8 @@
 /**
  * @jest-environment node
  */
+/// <reference types="jest" />
+/// <reference types="node" />
 
 import React, { useState } from 'react';
 import renderer, { act } from 'react-test-renderer';

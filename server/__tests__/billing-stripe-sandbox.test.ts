@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 /**
  * Opt-in Stripe test-mode integration tests.
  *

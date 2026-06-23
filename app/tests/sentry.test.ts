@@ -9,6 +9,8 @@
  *  - With a DSN: Sentry.init is called once with the expected shape and
  *    wrapApp delegates to Sentry.wrap.
  */
+/// <reference types="jest" />
+/// <reference types="node" />
 
 const SENTRY_MODULE = '@sentry/react-native';
 

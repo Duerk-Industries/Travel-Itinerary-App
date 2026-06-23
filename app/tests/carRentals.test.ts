@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { describe, expect, test } from '@jest/globals';
 import { buildCarRentalFromDraft, createInitialCarRentalDraft } from '../tabs/carRentals';
 

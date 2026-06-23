@@ -1,6 +1,8 @@
 /**
  * @jest-environment node
  */
+/// <reference types="jest" />
+/// <reference types="node" />
 
 import React, { useState } from 'react';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';

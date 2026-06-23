@@ -1,6 +1,8 @@
 /**
  * @jest-environment node
  */
+/// <reference types="jest" />
+/// <reference types="node" />
 
 import React, { Suspense, lazy } from 'react';
 import { render } from '@testing-library/react-native';

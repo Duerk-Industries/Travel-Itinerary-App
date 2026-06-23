@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import { sanitizeParsedItemCandidate } from '../src/ingestion/extraction/fieldSanitizer';
 
 describe('ingestion field sanitizer', () => {

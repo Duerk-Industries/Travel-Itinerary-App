@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import { horizontalTableLayout } from '../utils/horizontalTableLayout';
 
 describe('horizontal table layout', () => {

@@ -1,6 +1,7 @@
 /**
  * @jest-environment jsdom
  */
+/// <reference types="node" />
 
 import { jest } from '@jest/globals';
 

@@ -11,6 +11,8 @@
  * linking config matches `scheme` from app/app.config.ts (the single source of
  * truth for the Expo config).
  */
+/// <reference types="jest" />
+/// <reference types="node" />
 import fs from 'node:fs';
 import path from 'node:path';
 

@@ -15,6 +15,8 @@
  * 'react-native' before 'browser', this test fails and points at the
  * file to fix.
  */
+/// <reference types="jest" />
+/// <reference types="node" />
 import fs from 'node:fs';
 import path from 'node:path';
 

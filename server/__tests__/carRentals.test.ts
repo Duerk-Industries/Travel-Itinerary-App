@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 type CarRental = {
   id: string;
   pickupLocation: string;

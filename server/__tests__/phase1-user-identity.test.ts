@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import { closePool, createWebUser, findUserByEmail, getUserById, listUserEmails, addUserEmail, markAccountEmailVerified, initDb } from '../src/db';
 import { cleanupTestUsersByEmail } from './helpers';
 

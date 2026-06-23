@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import request from 'supertest';
 import express from 'express';
 import groupsRouter from '../groups';

@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 /**
  * Unit test for the Postgres idempotency adapter functions.
  * Validates that duplicate inserts under the same key don't create duplicate

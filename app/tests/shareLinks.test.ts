@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import { buildFollowShareLink } from '../utils/shareLinks';
 
 describe('buildFollowShareLink', () => {

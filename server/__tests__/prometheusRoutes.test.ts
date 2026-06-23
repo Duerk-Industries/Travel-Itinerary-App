@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import request from 'supertest';
 import { app } from '../src/app';
 import { incrementMetric, resetMetricCountersForTests } from '../src/metrics';

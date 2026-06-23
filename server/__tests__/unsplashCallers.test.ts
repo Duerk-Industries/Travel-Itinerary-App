@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 jest.mock('../src/apis/unsplashApi', () => ({
   searchUnsplashPhotos: jest.fn(),
   getUnsplashRandomPhoto: jest.fn(),

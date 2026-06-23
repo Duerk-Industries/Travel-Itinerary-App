@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { describe, expect, test } from '@jest/globals';
 import { balanceCategoryTotals, computePayerTotals } from '../tabs/costReport';
 import { rollUpTotals } from '../utils/coveredBy';

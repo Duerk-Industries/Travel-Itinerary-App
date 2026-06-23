@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { LocationSelector, type LocationOption } from '../components/LocationSelector';

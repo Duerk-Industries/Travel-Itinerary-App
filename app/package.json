@@ -5,6 +5,9 @@
   "private": true,
   "scripts": {
     "test": "jest -c jest.config.js",
+    "test:single": "jest -c jest.config.js",
+    "test:shard": "jest -c jest.config.js --runInBand",
+    "test:sharded": "node ../scripts/run-jest-shards.mjs --prefix . --script test:single --shards 4 -- --runInBand",
     "lint": "npm run typecheck",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "eas": "npx --yes eas-cli@20.2.0",

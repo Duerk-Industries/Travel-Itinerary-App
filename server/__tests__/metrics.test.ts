@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 describe('metrics', () => {
   const originalLogFormat = process.env.LOG_FORMAT;
   const originalNodeEnv = process.env.NODE_ENV;

@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { describe, expect, test, jest, beforeEach } from '@jest/globals';
 import { getEnvValue } from '../src/env';
 

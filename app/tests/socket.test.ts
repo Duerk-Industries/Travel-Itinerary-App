@@ -1,6 +1,8 @@
 /**
  * @jest-environment jsdom
  */
+/// <reference types="jest" />
+/// <reference types="node" />
 
 import { Platform } from 'react-native';
 import { resolveSocketServerUrl, resolveSocketTransports } from '../utils/socket';

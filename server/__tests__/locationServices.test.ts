@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import { clearLocationCache, searchCountryStateOptions } from '../src/services/locationServices';
 
 describe('locationServices', () => {

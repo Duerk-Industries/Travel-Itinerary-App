@@ -13,6 +13,9 @@
     "migrate": "tsx scripts/migrate.ts",
     "cost-model": "tsx scripts/cost-model.ts",
     "test": "node --experimental-vm-modules ../node_modules/jest/bin/jest.js --config jest.projects.js",
+    "test:single": "node --experimental-vm-modules ../node_modules/jest/bin/jest.js --config jest.projects.js",
+    "test:shard": "node --experimental-vm-modules ../node_modules/jest/bin/jest.js --config jest.projects.js --runInBand",
+    "test:sharded": "node ../scripts/run-jest-shards.mjs --prefix . --script test:single --shards 12 -- --runInBand",
     "typecheck": "tsc --noEmit -p ."
   },
   "overrides": {

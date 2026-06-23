@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import { normalizeMimeType } from '../src/ingestion/shared/parserSelection';
 
 describe('ingestion parser selection', () => {

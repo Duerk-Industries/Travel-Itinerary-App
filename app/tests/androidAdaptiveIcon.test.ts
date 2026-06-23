@@ -10,6 +10,8 @@
  * pipelines run `cd app && expo …`/`eas …`), so asset paths it declares are
  * resolved relative to the app/ directory.
  */
+/// <reference types="jest" />
+/// <reference types="node" />
 import fs from 'node:fs';
 import path from 'node:path';
 

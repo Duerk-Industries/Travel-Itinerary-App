@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import { dedupeAttractionsCatalogLines } from '../src/services/attractionsCatalogDedup';
 
 describe('generate curated attractions final dedupe', () => {

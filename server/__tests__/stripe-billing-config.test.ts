@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import { assertStripeBillingConfig } from '../src/config/stripeBilling';
 
 describe('Stripe billing startup configuration', () => {

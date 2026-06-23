@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import { rollUpTotals, detectCycle } from '../utils/coveredBy';
 
 describe('Covered-By Logic', () => {

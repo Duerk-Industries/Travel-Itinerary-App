@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import express from 'express';
 import request from 'supertest';
 

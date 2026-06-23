@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 /**
  * Regression test: AppRoot must wrap its child component in
  * `<SafeAreaProvider>`. Without that ancestor, `react-native-safe-area-context`

@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import { loadBundledAirportDataset, searchBundledAirportDataset } from '../src/services/airportCatalog';
 
 describe('bundled airport catalog fallback', () => {

@@ -9,6 +9,8 @@
  * This test loads both configs, then asserts the parts of the resolver
  * that matter for bundling correctness are equivalent.
  */
+/// <reference types="jest" />
+/// <reference types="node" />
 import fs from 'node:fs';
 import path from 'node:path';
 

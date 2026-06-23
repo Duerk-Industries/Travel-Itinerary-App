@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import axios from 'axios';
 import fs from 'fs';
 import {

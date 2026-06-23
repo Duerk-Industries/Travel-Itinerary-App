@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import { computePlaceMatchLikelihood } from '../src/image-service';
 
 describe('computePlaceMatchLikelihood', () => {

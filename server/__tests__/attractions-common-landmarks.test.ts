@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import fs from 'fs';
 import path from 'path';
 import { parseAttractionCatalogCsv } from '../src/services/attractionsCatalogService';

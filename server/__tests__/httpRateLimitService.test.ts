@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import { closePool, initDb, resetApiUsageCounters, resetDbAdapter } from '../src/db';
 import {
   HttpRateLimitExceededError,

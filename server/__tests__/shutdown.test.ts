@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 jest.mock('../src/db', () => ({
   closePool: jest.fn().mockResolvedValue(undefined),
 }));

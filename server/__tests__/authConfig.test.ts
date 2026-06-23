@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import {
   assertSafeAuthSecretConfig,
   DEFAULT_AUTH_SECRET,

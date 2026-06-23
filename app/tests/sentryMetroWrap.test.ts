@@ -9,6 +9,8 @@
  * Without this wrap, EAS Build still produces an uploadable bundle but
  * symbolication on Sentry's side becomes brittle / silently broken.
  */
+/// <reference types="jest" />
+/// <reference types="node" />
 describe('Sentry Metro integration', () => {
   it('wraps the shared config when @sentry/react-native/metro is installed', () => {
     const calls: unknown[] = [];

@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import React from 'react';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { MustSeeAttractionSelector, type AttractionOption } from '../components/MustSeeAttractionSelector';

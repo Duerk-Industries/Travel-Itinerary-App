@@ -1,6 +1,8 @@
 /**
  * @jest-environment jsdom
  */
+/// <reference types="jest" />
+/// <reference types="node" />
 
 import { renderHook, waitFor } from '@testing-library/react-native';
 import { useBillingStatus } from '../hooks/useBillingStatus';

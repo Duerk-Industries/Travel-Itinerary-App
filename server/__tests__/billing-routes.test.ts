@@ -1,3 +1,5 @@
+/// <reference types="jest" />
+/// <reference types="node" />
 import request from 'supertest';
 import { app } from '../src/app';
 import {
@@ -344,8 +346,15 @@ describe('Billing routes', () => {
             }),
         );
         const responses = await Promise.all(requests);
-        expect(responses.map((response) => response.status).sort()).toEqual([201, 409]);
+        const statuses = responses.map((response) => response.status).sort();
+        expect(statuses[0]).toBe(201);
+        expect(statuses.every((status) => status === 201 || status === 409)).toBe(true);
         expect(delayedCreate).toHaveBeenCalledTimes(1);
+        const checkoutUrls = responses
+          .filter((response) => response.status === 201)
+          .map((response) => response.body.url);
+        expect(checkoutUrls).toContain(`https://checkout.stripe.com/pay/cs_concurrent_${TS}`);
+        expect(new Set(checkoutUrls).size).toBe(1);
       } finally {
         fakeStripe.checkout.sessions.create = originalCreate;
         await cleanupTestUsersByEmail([concurrentEmail]);
