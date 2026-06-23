@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Image, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Image, Modal, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { computeTripDays } from '../utils/createTripWizard';
 import { formatDateLong } from '../utils/formatDateLong';
 import { FollowedTrip } from './follow';
@@ -62,6 +62,8 @@ const HomeTab: React.FC<HomeTabProps> = ({
   disabledPages,
   hiddenPages,
 }) => {
+  const { width: viewportWidth } = useWindowDimensions();
+  const isPhoneLayout = viewportWidth < 680;
   const [heroImage, setHeroImage] = useState<string | null>(null);
   const [heroLoading, setHeroLoading] = useState<boolean>(false);
   const [showTripPicker, setShowTripPicker] = useState(false);
@@ -249,9 +251,19 @@ const HomeTab: React.FC<HomeTabProps> = ({
             <View style={styles.homeHeroFallback} />
           )}
           <View style={styles.homeHeroOverlay} />
-          <View style={styles.homeHeroTextWrap}>
-            {heroSubtitle ? <Text style={styles.homeHeroSubtitle}>{heroSubtitle}</Text> : null}
-            <Text style={styles.homeHeroTitle}>{heroTitle}</Text>
+          <View style={[styles.homeHeroTextWrap, isPhoneLayout && { paddingRight: 110 }]}>
+            {heroSubtitle ? (
+              <Text style={styles.homeHeroSubtitle} numberOfLines={1} ellipsizeMode="tail">
+                {heroSubtitle}
+              </Text>
+            ) : null}
+            <Text
+              style={[styles.homeHeroTitle, isPhoneLayout && { fontSize: 24 }]}
+              numberOfLines={2}
+              ellipsizeMode="tail"
+            >
+              {heroTitle}
+            </Text>
           </View>
           <View style={styles.homeHeroChangeTripBadge} pointerEvents="none">
             <Text style={styles.homeHeroChangeTripText}>Click to Change Trip</Text>

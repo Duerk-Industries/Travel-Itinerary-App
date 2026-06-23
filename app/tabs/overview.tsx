@@ -2839,7 +2839,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 member.status === 'pending' && styles.attendeeChipPending,
               ]}
             >
-              <Text style={styles.attendeeText}>{attendeeLabel(member)}</Text>
+              <Text style={styles.attendeeText} numberOfLines={1} ellipsizeMode="tail">{attendeeLabel(member)}</Text>
               {isEditing ? (
                 <TouchableOpacity
                   style={styles.attendeeRemoveButton}

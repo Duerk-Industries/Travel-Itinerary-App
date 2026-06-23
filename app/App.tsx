@@ -3012,7 +3012,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                     <Text style={styles.helperText}>Pending invites:</Text>
                     {inviteEmails.map((email) => (
                       <View key={email} style={[styles.memberPill, { paddingHorizontal: 8, paddingVertical: 2 }]}>
-                        <Text style={styles.cellText}>{email}</Text>
+                        <Text style={[styles.cellText, { flexShrink: 1 }]} numberOfLines={1} ellipsizeMode="middle">{email}</Text>
                       </View>
                     ))}
                   </View>
@@ -4144,6 +4144,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     paddingVertical: 4,
     paddingHorizontal: 10,
     gap: 6,
+    maxWidth: '100%',
   },
   attendeeChipRemoving: {
     backgroundColor: theme.mode === 'dark' ? '#5A2630' : '#F8D7DA',
@@ -4154,6 +4155,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
   attendeeText: {
     fontWeight: theme.typography.weightSemibold,
     color: theme.colors.text,
+    flexShrink: 1,
   },
   attendeeRemoveButton: {
     marginLeft: 4,
@@ -4408,6 +4410,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     alignItems: 'center',
     gap: 8,
     paddingVertical: 4,
+    maxWidth: '100%',
   },
   pendingBlock: {
     gap: 4,
