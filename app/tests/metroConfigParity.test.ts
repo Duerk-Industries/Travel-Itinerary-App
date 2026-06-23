@@ -88,21 +88,23 @@ describe('Metro config parity (root EAS config vs. app local config)', () => {
     );
   });
 
-  it('both configs reject pdfjs-dist on native platforms (web-only library)', () => {
-    // On web, the resolveRequest returns a sourceFile pointing at pdfjs-dist.
-    // On native, it falls through to the default resolver — pdfjs-dist is
-    // listed in extraNodeModules as a fallback for typecheck/scripts, but
-    // any native bundle that actually imports it should fail loudly rather
-    // than ship Node-shaped code.
-    const fakeWebContext: any = {
+  it('neither config special-cases pdfjs-dist (dead alias removed)', () => {
+    // The only places that import pdfjs-dist do so via deep subpath
+    // (`pdfjs-dist/legacy/build/pdf.mjs` from transferParsing.web.ts; or
+    // node-only debug scripts that never go through Metro). A bare-specifier
+    // alias for `pdfjs-dist` would never match either pattern, so an earlier
+    // attempt to "guard pdfjs-dist to web-only" was dead code that also
+    // caused Metro to fail at config-load if pdfjs-dist wasn't installed.
+    // This test locks in that the alias stays out.
+    const fakeContext: any = {
       originModulePath: '/fake/app/utils/transferParsing.web.ts',
-      resolveRequest: jest.fn(),
+      resolveRequest: jest.fn(() => ({ type: 'sourceFile', filePath: '/fallback' })),
     };
-    const webResult = rootConfig.resolver.resolveRequest(fakeWebContext, 'pdfjs-dist', 'web');
-    expect(webResult).toMatchObject({ type: 'sourceFile' });
-    expect(webResult.filePath).toMatch(/pdfjs-dist/);
-    // Default resolver should NOT have been invoked on the web shortcut path.
-    expect(fakeWebContext.resolveRequest).not.toHaveBeenCalled();
+    rootConfig.resolver.resolveRequest(fakeContext, 'pdfjs-dist', 'web');
+    // Falls through to the default resolver instead of short-circuiting.
+    expect(fakeContext.resolveRequest).toHaveBeenCalledWith(fakeContext, 'pdfjs-dist', 'web');
+    expect(rootConfig.resolver.extraNodeModules?.['pdfjs-dist']).toBeUndefined();
+    expect(appConfig.resolver.extraNodeModules?.['pdfjs-dist']).toBeUndefined();
   });
 
   it('both configs share the same blockList shape (no metro-private API)', () => {
@@ -132,6 +134,30 @@ describe('Metro config parity (root EAS config vs. app local config)', () => {
       'http://127.0.0.1:8081/node_modules/expo/AppEntry.bundle',
     );
     expect(rootConfig.server.rewriteRequestUrl('/assets//..//icons%5Cicon.png')).toBe('/assets/icons/icon.png');
+  });
+
+  it('app local config watches packages/ so workspace types stay hot-reloadable', () => {
+    // app/ imports TS source directly from ../../packages/messaging and
+    // ../../packages/domain. If watchFolders ever loses coverage of that
+    // directory, edits to those packages will silently stop triggering HMR
+    // in `expo start`. We assert at least one entry in the resolved
+    // watchFolders ends with 'packages' (Windows + POSIX safe).
+    const watchFolders: string[] = appConfig.watchFolders ?? [];
+    const watchesPackages = watchFolders.some((p) => /[\\/]packages$/.test(p));
+    expect(watchesPackages).toBe(true);
+  });
+
+  it('app local config does NOT watch the full workspaceRoot (HMR perf guard)', () => {
+    // Watching the whole workspaceRoot causes Metro to crawl server/,
+    // functions/, .firebase-data/ and root scripts/ on every file event,
+    // even though blockList prevents them from resolving. Regression guard
+    // for the narrowing we did in app/metro.config.js.
+    const watchFolders: string[] = appConfig.watchFolders ?? [];
+    const workspaceRoot = path.resolve(__dirname, '..', '..');
+    const watchesWorkspaceRoot = watchFolders.some(
+      (p) => path.resolve(p) === workspaceRoot,
+    );
+    expect(watchesWorkspaceRoot).toBe(false);
   });
 
   it('runtime app sources do not import Node core modules or shims directly', () => {

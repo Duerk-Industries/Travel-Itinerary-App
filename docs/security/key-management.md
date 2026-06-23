@@ -28,6 +28,7 @@
 3. `server/.secrets` (optional fallback / backwards compatibility)
    - Still supported by loaders and deploy scripts, but no longer the primary local source.
    - You can keep it empty or use it as a fallback during migration.
+   - For Cloud Run, adding `AUTH_SECRET=AUTH_SECRET` here is the preferred Secret Manager mapping pattern when you do not want to upload the raw value from `server/.env`.
 
 ## Rotation/update steps
 

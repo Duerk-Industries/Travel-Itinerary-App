@@ -20,4 +20,4 @@ jobs:
           eas build --platform ios --profile production --non-interactive
           eas build --platform android --profile production --non-interactive
           # Replace Hosting content with Expo web export on main
-          npx expo export:web --output-dir ../public
+          npm run export:web -- --output-dir ../public

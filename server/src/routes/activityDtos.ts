@@ -12,9 +12,12 @@ const trimmedNonEmpty = (label: string) =>
     .refine((value) => value.length > 0, { message: `${label} is required.` });
 
 const optionalIdArray = z
-  .union([z.array(z.union([z.string(), z.number()])), z.null(), z.undefined()])
+  .preprocess(
+    (items) => (Array.isArray(items) ? items : []),
+    z.array(z.union([z.string(), z.number()])),
+  )
   .transform((items) =>
-    Array.isArray(items) ? items.map((id) => String(id).trim()).filter(Boolean) : [],
+    items.map((id) => String(id).trim()).filter(Boolean),
   );
 
 const patchField = <S extends z.ZodTypeAny>(schema: S) =>

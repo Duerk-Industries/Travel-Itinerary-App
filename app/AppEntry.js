@@ -5,6 +5,11 @@ import React, { useEffect, useState } from 'react';
 import { registerRootComponent } from 'expo';
 import { Platform, StyleSheet, Text, StatusBar, View } from 'react-native';
 import { SafeAreaView, SafeAreaProvider } from 'react-native-safe-area-context';
+import { initSentry, wrapApp } from './utils/sentry';
+
+// Initialize Sentry as early as possible so startup-time crashes still get
+// reported. No-op when EXPO_PUBLIC_SENTRY_DSN is unset.
+initSentry();
 
 let startupError = null;
 const startupErrorListeners = new Set();
@@ -171,4 +176,6 @@ const styles = StyleSheet.create({
   },
 });
 
-registerRootComponent(Root);
+// wrapApp returns Root unchanged when Sentry isn't initialized, so this is
+// safe even on a fresh checkout with no DSN configured.
+registerRootComponent(wrapApp(Root));

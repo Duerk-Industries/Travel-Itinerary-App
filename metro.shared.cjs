@@ -12,9 +12,22 @@
  * pdfjs-dist physically lives) is passed in by the caller; the resolver
  * shape itself is shared.
  */
-const fs = require('fs');
-const path = require('path');
 const { getDefaultConfig } = require('expo/metro-config');
+
+/**
+ * Loads @sentry/react-native's Metro wrapper if the package is installed.
+ * Kept lazy so a missing install (e.g. a fresh checkout before `npm
+ * install`) doesn't break Metro startup — Sentry's wrapper only adds Debug
+ * ID injection and stack-frame collapsing, both of which are no-ops at
+ * runtime when SENTRY_AUTH_TOKEN / EXPO_PUBLIC_SENTRY_DSN aren't set.
+ */
+const loadSentryWithMetroConfig = () => {
+  try {
+    return require('@sentry/react-native/metro').withSentryConfig;
+  } catch {
+    return null;
+  }
+};
 
 /**
  * engine.io-client's package.json declares a `browser` field map that
@@ -30,13 +43,6 @@ const ENGINE_IO_NODE_STUBS = {
   './transports/polling-xhr.node.js': './transports/polling-xhr.js',
   './transports/websocket.node.js': './transports/websocket.js',
   './globals.node.js': './globals.js',
-};
-
-const resolvePdfjsDist = (preferred, fallback) => {
-  if (fs.existsSync(path.join(preferred, 'pdfjs-dist'))) {
-    return path.join(preferred, 'pdfjs-dist');
-  }
-  return path.join(fallback, 'pdfjs-dist');
 };
 
 /**
@@ -58,13 +64,6 @@ const createSharedMetroConfig = ({
   const config = getDefaultConfig(projectRoot);
   const { resolver } = config;
 
-  const pdfjsDistPath = resolvePdfjsDist(primaryNodeModules, secondaryNodeModules);
-
-  // Combined resolveRequest: handles the engine.io-client native aliasing AND
-  // the web-only pdfjs-dist alias. pdfjs-dist depends on Node/canvas APIs and
-  // is only imported from .web.ts files; explicitly resolving it for web (and
-  // failing fast on native) prevents accidental native imports from silently
-  // bundling Node-shaped code.
   const customResolveRequest = (context, moduleName, platform) => {
     if (
       platform !== 'web' &&
@@ -73,9 +72,6 @@ const createSharedMetroConfig = ({
       context.originModulePath.includes('engine.io-client')
     ) {
       return context.resolveRequest(context, ENGINE_IO_NODE_STUBS[moduleName], platform);
-    }
-    if (moduleName === 'pdfjs-dist' && platform === 'web') {
-      return { type: 'sourceFile', filePath: require.resolve('pdfjs-dist') };
     }
     return context.resolveRequest(context, moduleName, platform);
   };
@@ -88,13 +84,6 @@ const createSharedMetroConfig = ({
     // single static order broke web by pulling
     // react-native-safe-area-context's native `src/index.tsx` into the web
     // bundle, producing "Unimplemented component: <RNCSafeAreaProvider>".
-    extraNodeModules: {
-      ...(resolver.extraNodeModules || {}),
-      // Kept as a defensive fallback for tooling that resolves at config
-      // time (typecheck, scripts). Runtime resolution on native is gated by
-      // customResolveRequest above.
-      'pdfjs-dist': pdfjsDistPath,
-    },
     nodeModulesPaths: [primaryNodeModules, secondaryNodeModules],
     disableHierarchicalLookup: false,
     ...(blockedPaths.length > 0 ? { blockList: blockedPaths } : {}),
@@ -105,6 +94,24 @@ const createSharedMetroConfig = ({
     new Set([...(config.watchFolders || []), projectRoot, ...watchFolders]),
   );
 
+  // Wrap with Sentry last so it observes the fully-built resolver/transformer
+  // shape. The wrapper:
+  //  - injects a Debug ID into each bundle + source map (so uploaded source
+  //    maps match the running JS even when the release is unset),
+  //  - collapses Sentry's own frames from LogBox stack traces.
+  // Source-map UPLOAD happens later, during EAS build / `expo export` —
+  // gated by SENTRY_AUTH_TOKEN, SENTRY_ORG, SENTRY_PROJECT being present in
+  // the build environment. None of that runs in dev unless you set it up.
+  const withSentryConfig = loadSentryWithMetroConfig();
+  if (withSentryConfig && process.env.EXPO_NO_SENTRY_METRO !== '1') {
+    return withSentryConfig(config, {
+      // We don't ship session replay; opt out to keep the web bundle smaller.
+      includeWebReplay: false,
+      // Don't annotate every React component — extra babel work for no
+      // diagnostic win unless we wire up Sentry's Performance product.
+      annotateReactComponents: false,
+    });
+  }
   return config;
 };
 

@@ -8,7 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 echo "Building web bundle..."
-(cd "$REPO_ROOT/app" && npx expo export --platform web --output-dir ../dist)
+(cd "$REPO_ROOT/app" && npm run export:web -- --output-dir ../dist)
 
 echo "Deploying frontend to Firebase Hosting..."
 (cd "$REPO_ROOT" && firebase deploy --only hosting)
