@@ -16,9 +16,6 @@ describe('Sentry Metro integration', () => {
       calls.push({ cfg, opts });
       return { ...(cfg as object), __sentryWrapped: true };
     });
-    jest.resetModules();
-    jest.doMock('@sentry/react-native/metro', () => ({ withSentryConfig: fakeWrap }));
-
     const { createSharedMetroConfig } = require('../../metro.shared.cjs');
     const path = require('node:path');
     const projectRoot = path.resolve(__dirname, '..');
@@ -28,6 +25,7 @@ describe('Sentry Metro integration', () => {
       secondaryNodeModules: path.join(projectRoot, '..', 'node_modules'),
       watchFolders: [],
       blockedPaths: [],
+      sentryWithMetroConfig: fakeWrap,
     });
 
     expect(fakeWrap).toHaveBeenCalledTimes(1);
@@ -40,11 +38,6 @@ describe('Sentry Metro integration', () => {
   });
 
   it('falls back to the bare config when @sentry/react-native/metro is missing', () => {
-    jest.resetModules();
-    jest.doMock('@sentry/react-native/metro', () => {
-      throw new Error('not installed');
-    });
-
     const { createSharedMetroConfig } = require('../../metro.shared.cjs');
     const path = require('node:path');
     const projectRoot = path.resolve(__dirname, '..');
@@ -54,6 +47,7 @@ describe('Sentry Metro integration', () => {
       secondaryNodeModules: path.join(projectRoot, '..', 'node_modules'),
       watchFolders: [],
       blockedPaths: [],
+      sentryWithMetroConfig: null,
     });
 
     // Should still be a valid Metro config — resolver hook installed,

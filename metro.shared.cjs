@@ -52,6 +52,7 @@ const ENGINE_IO_NODE_STUBS = {
  * @param {string} opts.secondaryNodeModules Fallback node_modules directory.
  * @param {string[]} opts.watchFolders      Extra folders to watch (e.g. workspace siblings).
  * @param {RegExp[]} [opts.blockedPaths]    Absolute-path regexes Metro should ignore.
+ * @param {Function|null} [opts.sentryWithMetroConfig] Test/override seam for the optional Sentry wrapper.
  * @returns {import('metro-config').ConfigT}
  */
 const createSharedMetroConfig = ({
@@ -60,6 +61,7 @@ const createSharedMetroConfig = ({
   secondaryNodeModules,
   watchFolders = [],
   blockedPaths = [],
+  sentryWithMetroConfig,
 }) => {
   const config = getDefaultConfig(projectRoot);
   const { resolver } = config;
@@ -102,7 +104,10 @@ const createSharedMetroConfig = ({
   // Source-map UPLOAD happens later, during EAS build / `expo export` —
   // gated by SENTRY_AUTH_TOKEN, SENTRY_ORG, SENTRY_PROJECT being present in
   // the build environment. None of that runs in dev unless you set it up.
-  const withSentryConfig = loadSentryWithMetroConfig();
+  const withSentryConfig =
+    sentryWithMetroConfig === undefined
+      ? loadSentryWithMetroConfig()
+      : sentryWithMetroConfig;
   if (withSentryConfig && process.env.EXPO_NO_SENTRY_METRO !== '1') {
     return withSentryConfig(config, {
       // We don't ship session replay; opt out to keep the web bundle smaller.

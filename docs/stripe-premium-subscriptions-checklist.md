@@ -79,7 +79,14 @@ All paths below are in the Stripe Dashboard. Toggle between sandbox and live usi
 
 7. Open **Settings → Branding**.
 8. Upload the WanderBunnies logo/icon (PNG, minimum 128 × 128 px recommended).
-9. Set **Brand color** and **Accent color** to the WanderBunnies palette.
+9. Set the Stripe-hosted page colors from the WanderBunnies design system:
+   - **Brand color:** Deep Blue — `#152944`
+   - **Accent color:** Sunset — `#F59E0B`
+
+Deep Blue is the primary navigation and trust color. Sunset is the primary
+call-to-action color used for buttons and other emphasized actions. Burnt Gold
+`#D97706` remains the in-app Premium-tier color, but it is not the general
+Stripe Checkout accent color.
 
 **Payouts:**
 
