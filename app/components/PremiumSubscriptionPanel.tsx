@@ -294,11 +294,14 @@ const makeStyles = (theme: ReturnType<typeof getAppTheme>) =>
     },
     planRow: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
       gap: 10,
       marginBottom: 14,
     },
     planCard: {
       flex: 1,
+      minWidth: 180,
+      maxWidth: '100%',
       borderWidth: 2,
       borderColor: theme.colors.border,
       borderRadius: 10,

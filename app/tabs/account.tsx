@@ -336,16 +336,16 @@ const AccountTab: React.FC<AccountTabProps> = ({
 };
 
 const localStyles = StyleSheet.create({
-  packingLauncher: { borderWidth: 1, borderRadius: 8, padding: 14, marginVertical: 12, gap: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  packingLauncher: { borderWidth: 1, borderRadius: 8, padding: 14, marginVertical: 12, gap: 12, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' },
   packingLauncherText: { flex: 1, gap: 4 },
-  packingTitle: { fontSize: 18, fontWeight: '700' },
+  packingTitle: { fontSize: 18, fontWeight: '700', flexShrink: 1 },
   packingMeta: { fontSize: 13 },
-  packingButton: { alignSelf: 'center' },
+  packingButton: { alignSelf: 'center', maxWidth: '100%' },
   modalOverlay: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 16 },
   modalCard: { width: '100%', maxWidth: 980, maxHeight: '88%', borderWidth: 1, borderRadius: 8, padding: 16 },
-  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12 },
-  modalTitle: { fontSize: 20, fontWeight: '700' },
-  closeButton: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  modalHeader: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12 },
+  modalTitle: { fontSize: 20, fontWeight: '700', flexShrink: 1 },
+  closeButton: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   closeText: { fontSize: 18, fontWeight: '700' },
   modalBody: { maxHeight: 680 },
   modalBodyContent: { paddingBottom: 8 },

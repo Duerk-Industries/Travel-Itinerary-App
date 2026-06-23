@@ -186,8 +186,20 @@ const HomeTab: React.FC<HomeTabProps> = ({
         showsVerticalScrollIndicator={false}
       >
         <View style={[styles.row, { alignItems: 'center', justifyContent: 'space-between', gap: 8 }]}>
-          <Text style={styles.homeTitle}>Your trip</Text>
-          <View style={[styles.row, { alignItems: 'center', gap: 8 }]}>
+          <Text style={[styles.homeTitle, { flexShrink: 1, minWidth: 0 }]}>Your trip</Text>
+          <View
+            style={[
+              styles.row,
+              {
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                gap: 8,
+                flex: 1,
+                minWidth: 0,
+                marginBottom: 0,
+              },
+            ]}
+          >
             {!hiddenPages?.has('create-trip') ? (
               <Pressable
                 testID="home-create-trip-button"
@@ -251,22 +263,43 @@ const HomeTab: React.FC<HomeTabProps> = ({
             <View style={styles.homeHeroFallback} />
           )}
           <View style={styles.homeHeroOverlay} />
-          <View style={[styles.homeHeroTextWrap, isPhoneLayout && { paddingRight: 110 }]}>
+          <View
+            style={[
+              styles.homeHeroTextWrap,
+              isPhoneLayout && {
+                left: 16,
+                right: 16,
+                bottom: 56,
+                paddingRight: 0,
+              },
+            ]}
+          >
             {heroSubtitle ? (
-              <Text style={styles.homeHeroSubtitle} numberOfLines={1} ellipsizeMode="tail">
+              <Text style={styles.homeHeroSubtitle} numberOfLines={isPhoneLayout ? 2 : 1} ellipsizeMode="tail">
                 {heroSubtitle}
               </Text>
             ) : null}
             <Text
               style={[styles.homeHeroTitle, isPhoneLayout && { fontSize: 24 }]}
-              numberOfLines={2}
+              numberOfLines={isPhoneLayout ? 3 : 2}
               ellipsizeMode="tail"
             >
               {heroTitle}
             </Text>
           </View>
-          <View style={styles.homeHeroChangeTripBadge} pointerEvents="none">
-            <Text style={styles.homeHeroChangeTripText}>Click to Change Trip</Text>
+          <View
+            style={[
+              styles.homeHeroChangeTripBadge,
+              isPhoneLayout && {
+                left: 12,
+                right: 12,
+                bottom: 12,
+                borderRadius: 12,
+              },
+            ]}
+            pointerEvents="none"
+          >
+            <Text style={[styles.homeHeroChangeTripText, isPhoneLayout && { textAlign: 'center' }]}>Click to Change Trip</Text>
           </View>
         </Pressable>
 

@@ -2552,7 +2552,11 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             </TouchableOpacity>
           ) : null}
           <Image source={TOP_BANNER_ICON} style={styles.brandIcon} accessibilityLabel="WanderBunnies logo" />
-          <Text style={[styles.title, isPhoneLayout && styles.titleNarrow]} numberOfLines={1} ellipsizeMode="tail">
+          <Text
+            style={[styles.title, isPhoneLayout && styles.titleNarrow]}
+            numberOfLines={isPhoneLayout ? 2 : 1}
+            ellipsizeMode="tail"
+          >
             WanderBunnies
           </Text>
         </View>
@@ -3489,6 +3493,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 8,
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -3638,7 +3643,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     position: 'relative',
     borderRadius: 20,
     overflow: 'hidden',
-    height: 180,
+    minHeight: 180,
     backgroundColor: theme.colors.surfaceMuted,
   },
   homeHeroCardPressed: {
@@ -3670,15 +3675,18 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     right: 20,
     bottom: 20,
     paddingRight: 150,
+    maxWidth: '100%',
   },
   homeHeroSubtitle: {
     color: '#e5e7eb',
     fontSize: 16,
+    lineHeight: 20,
   },
   homeHeroTitle: {
     color: '#fff',
     fontSize: 32,
     fontWeight: '700',
+    lineHeight: 38,
   },
   homeHeroChangeTripBadge: {
     position: 'absolute',
@@ -3688,6 +3696,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 6,
+    maxWidth: '90%',
   },
   homeHeroChangeTripText: {
     color: '#FFFFFF',
@@ -3753,12 +3762,15 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    flexWrap: 'wrap',
     marginBottom: 12,
+    gap: 8,
   },
   homeModalTitle: {
     fontSize: 20,
     fontWeight: '600',
     color: theme.colors.text,
+    flexShrink: 1,
   },
   homeModalClose: {
     width: 32,
@@ -3782,6 +3794,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
   homeModalRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 12,
     paddingVertical: 12,
     borderBottomWidth: 1,
@@ -3795,6 +3808,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
   },
   homeModalRowText: {
     flex: 1,
+    minWidth: 0,
   },
   homeModalRowTitle: {
     fontSize: 16,
@@ -3814,10 +3828,13 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     fontSize: theme.typography.h2,
     fontWeight: theme.typography.weightBold,
     color: theme.colors.text,
+    flex: 1,
     flexShrink: 1,
+    minWidth: 0,
   },
   titleNarrow: {
     fontSize: 18,
+    lineHeight: 22,
   },
   auth: {
     width: '100%',
@@ -3912,10 +3929,12 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     backgroundColor: theme.colors.surfaceMuted,
     borderWidth: 1,
     borderColor: theme.colors.border,
+    maxWidth: '100%',
   },
   userNameButtonText: {
     color: theme.colors.text,
     fontWeight: theme.typography.weightSemibold,
+    flexShrink: 1,
   },
   smallButton: {
     paddingHorizontal: 10,
