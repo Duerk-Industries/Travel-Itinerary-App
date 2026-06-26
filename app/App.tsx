@@ -174,7 +174,7 @@ type Page =
   | 'following'
   | 'admin';
 
-type AdminSectionRoute = 'overview' | 'users' | 'tiers' | 'features' | 'user-data' | 'audit-log' | 'ingestion' | 'api-limits';
+type AdminSectionRoute = 'overview' | 'users' | 'tiers' | 'features' | 'user-data' | 'audit-log' | 'ingestion' | 'api-limits' | 'billing';
 
 type RootStackParamList = {
   Main: undefined;
@@ -184,6 +184,7 @@ type RootStackParamList = {
   AdminFeatures: undefined;
   AdminUserData: undefined;
   AdminAuditLog: undefined;
+  AdminBilling: undefined;
 };
 
 const RootStack = createNativeStackNavigator<RootStackParamList>();
@@ -196,6 +197,7 @@ const adminScreenBySection: Partial<Record<AdminSectionRoute, keyof RootStackPar
   features: 'AdminFeatures',
   'user-data': 'AdminUserData',
   'audit-log': 'AdminAuditLog',
+  billing: 'AdminBilling',
   // 'ingestion' and 'api-limits' are handled internally by AdminTab, no separate screen needed
 };
 
@@ -206,6 +208,7 @@ const adminSectionByScreen: Record<Exclude<keyof RootStackParamList, 'Main'>, Ad
   AdminFeatures: 'features',
   AdminUserData: 'user-data',
   AdminAuditLog: 'audit-log',
+  AdminBilling: 'billing',
 };
 
 // IMPORTANT: this scheme MUST match `expo.scheme` in app.json, otherwise
@@ -224,6 +227,7 @@ const linking: LinkingOptions<RootStackParamList> = {
       AdminFeatures: 'admin/features',
       AdminUserData: 'admin/user-data',
       AdminAuditLog: 'admin/audit-log',
+      AdminBilling: 'admin/billing',
     },
   },
 };
@@ -3419,6 +3423,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
             options={{ title: 'Admin Audit Log' }}
           >
             {() => renderAdminScreen('audit-log')}
+          </RootStack.Screen>
+          <RootStack.Screen
+            name="AdminBilling"
+            options={{ title: 'Admin Billing' }}
+          >
+            {() => renderAdminScreen('billing')}
           </RootStack.Screen>
         </RootStack.Group>
       </RootStack.Navigator>

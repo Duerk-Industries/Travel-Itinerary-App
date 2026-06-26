@@ -40,7 +40,7 @@
     "test:server:shard": "npm --prefix server run test:shard --",
     "locations:update": "tsx scripts/update-location-jsons.ts",
     "locations:upload": "tsx scripts/update-location-jsons.ts",
-    "emulators:start": "node scripts/select-latest-firebase-export.mjs && firebase emulators:start --import=./.firebase-data --export-on-exit=./.firebase-data",
+    "emulators:start": "node scripts/select-latest-firebase-export.mjs && npx --yes firebase-tools emulators:start --import=./.firebase-data --export-on-exit=./.firebase-data",
     "images:migrate-cache": "tsx scripts/migrate-image-cache-to-storage.ts",
     "firestore:group-access:backfill": "tsx scripts/backfill-group-access.ts",
     "firestore:trip-access:backfill": "tsx scripts/backfill-trip-access.ts",
@@ -70,13 +70,6 @@
     "js-yaml": "4.2.0",
     "@google-cloud/storage": {
       "uuid": "^11.1.1"
-    },
-    "firebase-tools": {
-      "tar": "7.5.16",
-      "uuid": "^11.1.1",
-      "universal-analytics": {
-        "uuid": "^14.0.0"
-      }
     },
     "gaxios": {
       "uuid": "^11.1.1"
@@ -122,7 +115,6 @@
     "expo-web-browser": "~15.0.11",
     "firebase": "^12.13.0",
     "firebase-admin": "^13.10.0",
-    "firebase-tools": "14.23.0",
     "openai": "^6.22.0",
     "p-limit": "^7.3.0",
     "passport-google-oauth20": "^2.0.0",
