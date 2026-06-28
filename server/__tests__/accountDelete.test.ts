@@ -9,6 +9,8 @@ import {
   listGroupsForUser,
   getBillingCustomerByUserId,
   getBillingSubscriptionByStripeId,
+  getBillingTrialUsageByEmail,
+  markBillingTrialUsed,
   upsertBillingCustomer,
   upsertBillingSubscription,
 } from '../src/db';
@@ -149,6 +151,36 @@ describe('DELETE /api/account', () => {
     expect(cancel).toHaveBeenCalledWith(subscriptionId);
     expect(await getBillingCustomerByUserId(userId)).toBeNull();
     expect(await getBillingSubscriptionByStripeId(subscriptionId)).toBeNull();
+  });
+
+  it('preserves premium trial usage when an account is deleted', async () => {
+    const trialEmail = `account-delete-trial-${Date.now()}@example.com`;
+    const { token, userId } = await registerAndLoginWebUser({
+      firstName: 'Delete',
+      lastName: 'Trial',
+      email: trialEmail,
+      password: PASSWORD,
+    });
+
+    await markBillingTrialUsed({
+      emailNormalized: trialEmail.toLowerCase(),
+      userId,
+      stripeCustomerId: `cus_delete_trial_${Date.now()}`,
+      stripeSubscriptionId: `sub_delete_trial_${Date.now()}`,
+      trialUsedAt: new Date(Date.now() - 86_400_000),
+    });
+
+    await request(app)
+      .delete('/api/account')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(204);
+
+    expect(await findUserByEmail(trialEmail)).toBeFalsy();
+    const usage = await getBillingTrialUsageByEmail(trialEmail.toLowerCase());
+    expect(usage).toMatchObject({
+      emailNormalized: trialEmail.toLowerCase(),
+    });
+    expect(usage?.trialUsedAt).toBeTruthy();
   });
 
   it('does not delete the account when Stripe cancellation fails', async () => {
