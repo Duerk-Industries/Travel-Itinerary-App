@@ -4,8 +4,8 @@ import type { BillingPlanKey } from '../types';
 
 // Stripe API version — read from env so it can be changed without a code deploy.
 // Must match the version pinned on the Dashboard webhook destination.
-// Defaults to '2025-02-24.acacia'; set STRIPE_API_VERSION in server/.env to override.
-export const STRIPE_API_VERSION = getEnvValue('STRIPE_API_VERSION') ?? '2025-02-24.acacia';
+// Defaults to the current dahlia API version recommended for this integration.
+export const STRIPE_API_VERSION = getEnvValue('STRIPE_API_VERSION') ?? '2026-06-24.dahlia';
 
 // Phase 1: plan constants are hardcoded here.
 // They move to the billing_plan_config DB table when the admin UI is built (Phase 6).
@@ -45,6 +45,12 @@ export const getStripeCheckoutCancelUrl = (): string | undefined =>
 
 export const getStripePortalReturnUrl = (): string | undefined =>
   getEnvValue('STRIPE_PORTAL_RETURN_URL');
+
+export const isStripeTaxConfigurationRequired = (): boolean =>
+  getEnvFlag('STRIPE_REQUIRE_TAX_CONFIGURATION', { defaultValue: false });
+
+export const isStripeTaxConfigurationConfirmed = (): boolean =>
+  getEnvFlag('STRIPE_TAX_CONFIGURED', { defaultValue: false });
 
 // Price IDs are set when Stripe Prices are created in the Dashboard.
 // These are the active launch Prices; when a new Price is published (Phase 6 admin UI),
@@ -100,6 +106,12 @@ export const assertStripeBillingConfig = (): void => {
 
   if (missing.length > 0) {
     const msg = `[stripe] STRIPE_BILLING_ENABLED=true but required env vars are missing: ${missing.join(', ')}`;
+    logError(msg);
+    throw new Error(msg);
+  }
+
+  if (PLAN_DEFAULTS.automaticTaxEnabled && isStripeTaxConfigurationRequired() && !isStripeTaxConfigurationConfirmed()) {
+    const msg = '[stripe] Stripe Tax is required but STRIPE_TAX_CONFIGURED=true is not set. Configure Stripe Tax origin address, tax code, and tax registrations in the Stripe Dashboard before enabling automatic tax.';
     logError(msg);
     throw new Error(msg);
   }

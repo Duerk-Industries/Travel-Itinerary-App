@@ -39,6 +39,7 @@ import {
   PackingListTraveler,
   TripPackingList,
   BillingCustomer,
+  BillingTrialUsage,
   BillingSubscription,
   StripeWebhookEvent,
   BillingPlanKey,
@@ -1341,6 +1342,7 @@ export const initDb = async (): Promise<void> => {
     await del('billing_checkout_claims');
     await del('billing_subscriptions');
     await del('billing_customers');
+    await del('billing_trial_usage');
   }
 
   // Seed tiers (individual parameterized inserts to avoid pg-mem uuid evaluation issues)
@@ -9820,6 +9822,17 @@ const rowToBillingCustomer = (row: any): BillingCustomer => ({
   updatedAt: row.updated_at instanceof Date ? row.updated_at.toISOString() : String(row.updated_at),
 });
 
+const rowToBillingTrialUsage = (row: any): BillingTrialUsage => ({
+  id: row.id,
+  emailNormalized: row.email_normalized,
+  userId: row.user_id ?? null,
+  stripeCustomerId: row.stripe_customer_id ?? null,
+  stripeSubscriptionId: row.stripe_subscription_id ?? null,
+  trialUsedAt: row.trial_used_at instanceof Date ? row.trial_used_at.toISOString() : String(row.trial_used_at),
+  createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at),
+  updatedAt: row.updated_at instanceof Date ? row.updated_at.toISOString() : String(row.updated_at),
+});
+
 const rowToBillingSubscription = (row: any): BillingSubscription => ({
   id: row.id,
   stripeSubscriptionId: row.stripe_subscription_id,
@@ -9901,6 +9914,48 @@ export const upsertBillingCustomer = async (data: {
     [id, data.userId, data.stripeCustomerId, data.emailSnapshot ?? null, data.livemode],
   );
   return rowToBillingCustomer(rows[0]);
+};
+
+export const getBillingTrialUsageByEmail = async (
+  emailNormalized: string,
+): Promise<BillingTrialUsage | null> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `SELECT * FROM billing_trial_usage WHERE email_normalized = $1 LIMIT 1`,
+    [emailNormalized],
+  );
+  return rows[0] ? rowToBillingTrialUsage(rows[0]) : null;
+};
+
+export const markBillingTrialUsed = async (data: {
+  emailNormalized: string;
+  userId?: string | null;
+  stripeCustomerId?: string | null;
+  stripeSubscriptionId?: string | null;
+  trialUsedAt?: Date | null;
+}): Promise<BillingTrialUsage> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `INSERT INTO billing_trial_usage
+       (id, email_normalized, user_id, stripe_customer_id, stripe_subscription_id, trial_used_at, created_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, COALESCE($6, NOW()), NOW(), NOW())
+     ON CONFLICT (email_normalized) DO UPDATE SET
+       user_id = COALESCE(billing_trial_usage.user_id, EXCLUDED.user_id),
+       stripe_customer_id = COALESCE(billing_trial_usage.stripe_customer_id, EXCLUDED.stripe_customer_id),
+       stripe_subscription_id = COALESCE(billing_trial_usage.stripe_subscription_id, EXCLUDED.stripe_subscription_id),
+       trial_used_at = LEAST(billing_trial_usage.trial_used_at, EXCLUDED.trial_used_at),
+       updated_at = NOW()
+     RETURNING *`,
+    [
+      randomUUID(),
+      data.emailNormalized,
+      data.userId ?? null,
+      data.stripeCustomerId ?? null,
+      data.stripeSubscriptionId ?? null,
+      data.trialUsedAt ?? null,
+    ],
+  );
+  return rowToBillingTrialUsage(rows[0]);
 };
 
 export const getBillingSubscriptionByStripeId = async (

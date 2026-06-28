@@ -8,7 +8,7 @@ This runbook matches the implemented billing flow:
 - Stripe Customer Portal for payment methods, invoices, cancellation, and plan switching
 - server-verified snapshot webhooks
 - monthly and annual Prices under one Product
-- 14-day payment-method-required trial
+- one-time 14-day payment-method-required trial for eligible Premium customers
 - Stripe Tax and promotion codes controlled from the WanderBunnies Admin Billing page
 - 30 elapsed days of Premium access after the first unresolved failed invoice
 - immediate revocation for a full refund or opened dispute
@@ -58,11 +58,12 @@ For Postgres, apply migrations in order:
 npm --prefix server run migrate
 ```
 
-Confirm these three migrations are recorded in the migrations table:
+Confirm these four migrations are recorded in the migrations table:
 
 - `20260620_add_stripe_billing.sql` — billing_customers, billing_subscriptions, stripe_webhook_events
 - `20260620_add_billing_plan_config.sql` — billing_plan_config, billing_price_history
 - `20260622_add_billing_checkout_claims.sql` — billing_checkout_claims
+- `20260628_add_billing_trial_usage.sql` — durable one-time Premium trial eligibility tracking
 
 Firestore requires no schema migration; billing collections are created on first write.
 
@@ -201,6 +202,7 @@ Never edit a Price's amount after creating it. Archive old Prices rather than re
 5. Confirm each Price's **Tax behavior** is set (Exclusive or Inclusive) consistently with the business policy.
 6. Under **Tax registrations**, click **Add registration**. Add only jurisdictions where the business is legally registered to collect tax.
 7. In **WanderBunnies Admin → Billing**, confirm the **Stripe Tax** toggle is enabled for both plans.
+8. After the Dashboard setup is complete, set `STRIPE_REQUIRE_TAX_CONFIGURATION=true` and `STRIPE_TAX_CONFIGURED=true` in the deployed environment. The server refuses to start when Tax confirmation is required but not acknowledged.
 
 Checkout sessions are created with `automatic_tax.enabled = true`. Stripe calculates tax based on the customer's billing address. Test at minimum:
 
@@ -360,7 +362,7 @@ Log in and forward events to the local server:
 stripe login
 
 stripe listen `
-  --events checkout.session.completed,customer.subscription.created,customer.subscription.updated,customer.subscription.deleted,invoice.paid,invoice.payment_failed,invoice.payment_action_required,charge.refunded,refund.updated,refund.failed,charge.dispute.created,charge.dispute.closed `
+  --events checkout.session.completed,customer.subscription.created,customer.subscription.updated,customer.subscription.deleted,customer.subscription.trial_will_end,invoice.paid,invoice.payment_failed,invoice.payment_action_required,charge.refunded,refund.updated,refund.failed,charge.dispute.created,charge.dispute.closed `
   --forward-to http://localhost:4000/api/billing/webhooks/stripe
 ```
 
@@ -386,6 +388,7 @@ checkout.session.completed
 customer.subscription.created
 customer.subscription.updated
 customer.subscription.deleted
+customer.subscription.trial_will_end
 invoice.paid
 invoice.payment_failed
 invoice.payment_action_required
@@ -412,23 +415,23 @@ The webhook API version controls the shape of event payloads Stripe delivers to 
 
 1. On the webhook endpoint detail page, find the **API version** row (near the top, alongside the endpoint URL and signing secret).
 2. Click the version label or the **Update version** link next to it.
-3. In the dropdown, select the version that matches `STRIPE_API_VERSION` in `server/src/config/stripeBilling.ts` (currently `2025-02-24.acacia`).
+3. In the dropdown, select the version that matches `STRIPE_API_VERSION` in `server/src/config/stripeBilling.ts` (currently `2026-06-24.dahlia`).
 4. Click **Update**.
 
 If you do not see an **API version** row or **Update version** link on the detail page, your Stripe Dashboard may be rendering the newer Workbench event-destination UI. In that case:
 
 1. On the destination detail page, click the **⋮** (more options) menu or **Edit destination**.
 2. Look for an **Advanced** section or **API version** field.
-3. Set it to `2025-02-24.acacia` and save.
+3. Set it to `2026-06-24.dahlia` and save.
 
 **Alternative — upgrade the server to match your account version instead:**
 
-If you cannot pin the webhook in the Dashboard (e.g. your Stripe plan does not support it), you can instead upgrade the server's pinned version to match your account default (`2026-05-27.dahlia`). This changes every API request the server makes to use dahlia-shaped responses. Review the [Stripe API changelog](https://docs.stripe.com/changelog) for breaking changes between `acacia` and `dahlia` before doing this.
+If you cannot pin the webhook in the Dashboard (e.g. your Stripe plan does not support it), you can instead upgrade the server's pinned version to match your account default. This changes every API request the server makes to use that version's response shapes. Review the [Stripe API changelog](https://docs.stripe.com/changelog) for breaking changes before doing this.
 
 To upgrade the server version, edit `server/src/config/stripeBilling.ts`:
 
 ```typescript
-export const STRIPE_API_VERSION = '2026-05-27.dahlia' as const;
+export const STRIPE_API_VERSION = getEnvValue('STRIPE_API_VERSION') ?? '2026-06-24.dahlia';
 ```
 
 Then update the TypeScript types by upgrading the `stripe` npm package:
@@ -467,10 +470,13 @@ Add these values to `server/.env`:
 ```text
 STRIPE_BILLING_ENABLED=true
 STRIPE_SECRET_KEY=sk_test_...               # from Stripe Dashboard (test mode)
+STRIPE_API_VERSION=2026-06-24.dahlia
 STRIPE_WEBHOOK_SECRET=whsec_...             # from stripe listen output (changes each session)
 STRIPE_PREMIUM_PRODUCT_ID=prod_...          # test-mode product ID
 STRIPE_PREMIUM_MONTHLY_PRICE_ID=price_...   # omit if using Admin UI to publish prices
 STRIPE_PREMIUM_ANNUAL_PRICE_ID=price_...    # omit if using Admin UI to publish prices
+STRIPE_REQUIRE_TAX_CONFIGURATION=false
+STRIPE_TAX_CONFIGURED=false                 # set true only after Dashboard Tax setup is complete
 STRIPE_CHECKOUT_SUCCESS_URL=http://localhost:19006/?billing=success
 STRIPE_CHECKOUT_CANCEL_URL=http://localhost:19006/?billing=cancel
 STRIPE_PORTAL_RETURN_URL=http://localhost:19006/
@@ -503,10 +509,13 @@ For **GCP Testing**, `server/.env` should contain test-mode Stripe keys:
 ```text
 STRIPE_BILLING_ENABLED=true
 STRIPE_SECRET_KEY=sk_test_...
+STRIPE_API_VERSION=2026-06-24.dahlia
 STRIPE_WEBHOOK_SECRET=whsec_...              # from the test-mode Dashboard webhook destination
 STRIPE_PREMIUM_PRODUCT_ID=prod_...           # test-mode product
 STRIPE_PREMIUM_MONTHLY_PRICE_ID=price_...    # omit if using Admin UI
 STRIPE_PREMIUM_ANNUAL_PRICE_ID=price_...     # omit if using Admin UI
+STRIPE_REQUIRE_TAX_CONFIGURATION=true
+STRIPE_TAX_CONFIGURED=true
 STRIPE_CHECKOUT_SUCCESS_URL=https://YOUR-TEST-DOMAIN/?billing=success
 STRIPE_CHECKOUT_CANCEL_URL=https://YOUR-TEST-DOMAIN/?billing=cancel
 STRIPE_PORTAL_RETURN_URL=https://YOUR-TEST-DOMAIN/
@@ -520,10 +529,13 @@ For **GCP Production**, `server/.env` should contain live-mode Stripe keys:
 ```text
 STRIPE_BILLING_ENABLED=true
 STRIPE_SECRET_KEY=sk_live_...
+STRIPE_API_VERSION=2026-06-24.dahlia
 STRIPE_WEBHOOK_SECRET=whsec_...              # from the live-mode Dashboard webhook destination
 STRIPE_PREMIUM_PRODUCT_ID=prod_...           # live-mode product
 STRIPE_PREMIUM_MONTHLY_PRICE_ID=price_...    # omit if using Admin UI
 STRIPE_PREMIUM_ANNUAL_PRICE_ID=price_...     # omit if using Admin UI
+STRIPE_REQUIRE_TAX_CONFIGURATION=true
+STRIPE_TAX_CONFIGURED=true
 STRIPE_CHECKOUT_SUCCESS_URL=https://YOUR-WEB-DOMAIN/?billing=success
 STRIPE_CHECKOUT_CANCEL_URL=https://YOUR-WEB-DOMAIN/?billing=cancel
 STRIPE_PORTAL_RETURN_URL=https://YOUR-WEB-DOMAIN/
@@ -616,6 +628,7 @@ Set sandbox variables in the current shell, then run the opt-in integration test
 ```powershell
 $env:STRIPE_SANDBOX_TEST             = '1'
 $env:STRIPE_SECRET_KEY               = 'sk_test_...'
+$env:STRIPE_API_VERSION              = '2026-06-24.dahlia'
 $env:STRIPE_WEBHOOK_SECRET           = 'whsec_...'
 $env:STRIPE_PREMIUM_PRODUCT_ID       = 'prod_...'
 $env:STRIPE_PREMIUM_MONTHLY_PRICE_ID = 'price_...'
@@ -756,6 +769,9 @@ stripe trigger customer.subscription.updated --api-key sk_test_...
 # Simulate a subscription cancellation
 stripe trigger customer.subscription.deleted --api-key sk_test_...
 
+# Simulate a trial-ending-soon reminder event
+stripe trigger customer.subscription.trial_will_end --api-key sk_test_...
+
 # Simulate a successful invoice payment
 stripe trigger invoice.paid --api-key sk_test_...
 
@@ -805,6 +821,8 @@ Use any future expiry (e.g. `12/34`) and any 3-digit CVC.
 - [ ] Completing Checkout redirects to `/?billing=success`. The app calls `POST /api/billing/refresh`; the user's tier updates to `premium` without a page reload.
 - [ ] Refreshing the page or logging out and back in retains Premium.
 - [ ] A native (iOS/Android) user does not see the Stripe upgrade button — only their current plan status and benefits.
+- [ ] A user whose normalized email already has a row in `billing_trial_usage` can still check out, but the new Checkout Session has no free trial.
+- [ ] Deleting and recreating an app account with the same email does not grant another free trial.
 
 **Duplicate prevention:**
 
@@ -843,7 +861,13 @@ Use any future expiry (e.g. `12/34`) and any 3-digit CVC.
 
 **Trial plan switching:**
 
-- [ ] Switching plans in the Portal while on a trial ends the trial immediately and charges the customer at the new plan's rate. This is expected Stripe behavior — confirm the customer is charged and has Premium access on the new plan.
+- [ ] Switching plans in the Portal while on a trial preserves the remaining trial when the Portal's **Keep trial when changing plan** toggle is enabled.
+- [ ] If the Portal trial-preservation toggle is disabled in a Stripe environment, switching plans ends the trial immediately and charges the customer at the new plan's rate. Treat that as a Stripe Dashboard configuration issue, not an app-code issue.
+
+**Trial reminders:**
+
+- [ ] `customer.subscription.trial_will_end` deliveries return HTTP 200 and leave the subscription tier as `premium`.
+- [ ] If product requirements add reminder emails or in-app notices later, verify the reminder side effect from this event before launch.
 
 **Webhook reliability:**
 

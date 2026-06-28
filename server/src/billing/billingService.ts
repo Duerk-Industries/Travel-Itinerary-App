@@ -10,6 +10,8 @@ import {
   getBillingPlanConfig,
   listBillingPlanConfigs,
   listBillingPriceHistory,
+  getBillingTrialUsageByEmail,
+  markBillingTrialUsed,
   claimBillingCheckout,
   completeBillingCheckoutClaim,
   releaseBillingCheckoutClaim,
@@ -42,6 +44,8 @@ import type {
 // ---------------------------------------------------------------------------
 // Customer management
 // ---------------------------------------------------------------------------
+
+export const normalizeBillingTrialEmail = (email: string): string => email.trim().toLowerCase();
 
 /**
  * Returns an existing Stripe Customer for this user, or creates one and
@@ -180,6 +184,10 @@ export const createCheckoutSession = async (params: {
     throw new Error(`The active billing configuration for ${planKey} belongs to the wrong Stripe mode`);
   }
   const priceId = planConfig?.activeStripePriceId ?? resolvePriceId(planKey);
+  const emailNormalized = normalizeBillingTrialEmail(email);
+  const trialUsage = await getBillingTrialUsageByEmail(emailNormalized);
+  const configuredTrialDays = planConfig?.trialDays ?? PLAN_DEFAULTS.trialDays;
+  const trialDays = configuredTrialDays > 0 && !trialUsage ? configuredTrialDays : 0;
   const successUrl = assertValidStripeRedirectUrl('STRIPE_CHECKOUT_SUCCESS_URL', getStripeCheckoutSuccessUrl());
   const cancelUrl = assertValidStripeRedirectUrl('STRIPE_CHECKOUT_CANCEL_URL', getStripeCheckoutCancelUrl());
 
@@ -209,7 +217,7 @@ export const createCheckoutSession = async (params: {
         client_reference_id: userId,
         line_items: [{ price: priceId, quantity: 1 }],
         subscription_data: {
-          trial_period_days: planConfig?.trialDays ?? PLAN_DEFAULTS.trialDays,
+          ...(trialDays > 0 ? { trial_period_days: trialDays } : {}),
           metadata: { userId, planKey },
         },
         metadata: { userId, planKey },
@@ -231,6 +239,15 @@ export const createCheckoutSession = async (params: {
     logInfo(`[billing] Checkout session created for user ${userId}, plan ${planKey}`);
     if (!session.url) {
       throw new Error('[billing] Stripe returned a Checkout session without a URL');
+    }
+    if (trialDays > 0) {
+      await markBillingTrialUsed({
+        emailNormalized,
+        userId,
+        stripeCustomerId: customer.stripeCustomerId,
+        trialUsedAt: new Date(),
+      });
+      incrementMetric('billing.trial_used');
     }
     await completeBillingCheckoutClaim({
       userId,

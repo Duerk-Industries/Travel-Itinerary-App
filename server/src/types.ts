@@ -728,6 +728,17 @@ export interface BillingCustomer {
   updatedAt: string;
 }
 
+export interface BillingTrialUsage {
+  id: string;
+  emailNormalized: string;
+  userId: string | null;
+  stripeCustomerId: string | null;
+  stripeSubscriptionId: string | null;
+  trialUsedAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface BillingSubscription {
   id: string;
   stripeSubscriptionId: string;

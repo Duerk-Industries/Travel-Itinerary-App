@@ -160,7 +160,7 @@ Create:
 Responsibilities:
 
 - Construct one lazy Stripe client.
-- Pin the API version intentionally (use the version the installed SDK accepts — stripe@17.7.0 requires `'2025-02-24.acacia'`; update deliberately when upgrading the package, never let it drift).
+- Pin the API version intentionally (the server currently defaults to `'2026-06-24.dahlia'`; update deliberately when upgrading the package, never let it drift).
 - Expose a test seam via `setStripeClientForTesting(client)` — do **not** use `jest.mock('stripe')` directly, as that breaks module isolation.
 - Prevent Stripe initialization when billing is disabled.
 - Centralize Stripe error normalization and safe logging.

@@ -66,13 +66,18 @@ describe('billing subscription reconciliation', () => {
           customer: common.stripeCustomerId,
           cancel_at_period_end: false,
           cancel_at: null,
-          current_period_start: Math.floor(Date.now() / 1000) - 100,
-          current_period_end: Math.floor(Date.now() / 1000),
           trial_end: null,
           ended_at: Math.floor(Date.now() / 1000),
           latest_invoice: null,
           metadata: { userId, planKey: 'premium_monthly' },
-          items: { data: [{ price: { id: common.stripePriceId } }] },
+          // current_period_start/end belong on items.data[0] in Stripe API v2026-06-24.dahlia
+          items: {
+            data: [{
+              price: { id: common.stripePriceId },
+              current_period_start: Math.floor(Date.now() / 1000) - 100,
+              current_period_end: Math.floor(Date.now() / 1000),
+            }],
+          },
         }),
       },
     };

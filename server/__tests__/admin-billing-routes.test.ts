@@ -187,6 +187,15 @@ describe('Admin billing routes', () => {
     });
   });
 
+  it('returns billing price history to an administrator', async () => {
+    const res = await request(app)
+      .get('/api/admin/billing/prices')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    expect(Array.isArray(res.body.prices)).toBe(true);
+  });
+
   it('validates price publishing errors with detailed bodies', async () => {
     const invalidPlan = await request(app)
       .post('/api/admin/billing/plans/not-a-plan/price')
@@ -251,5 +260,36 @@ describe('Admin billing routes', () => {
       .expect(200);
     expect(res.body.result).toMatchObject({ to: 'premium' });
     expect(res.body.subscriptions).toHaveLength(1);
+  });
+
+  it('returns 503 when admin reconciliation batch is requested while billing is disabled', async () => {
+    const saved = process.env.STRIPE_BILLING_ENABLED;
+    process.env.STRIPE_BILLING_ENABLED = 'false';
+    try {
+      const res = await request(app)
+        .post('/api/admin/billing/reconcile-batch')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({})
+        .expect(503);
+      expect(res.body.error).toBe('Billing is not enabled.');
+    } finally {
+      process.env.STRIPE_BILLING_ENABLED = saved;
+    }
+  });
+
+  it('runs an admin reconciliation batch and returns a numeric summary', async () => {
+    const res = await request(app)
+      .post('/api/admin/billing/reconcile-batch')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ olderThanMinutes: 60, limit: 5 })
+      .expect(200);
+
+    expect(res.body).toMatchObject({
+      processed: expect.any(Number),
+      repaired: expect.any(Number),
+      tierChanged: expect.any(Number),
+      errors: expect.any(Number),
+      orphaned: expect.any(Number),
+    });
   });
 });

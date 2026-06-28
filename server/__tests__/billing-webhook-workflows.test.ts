@@ -3,8 +3,10 @@
 import request from 'supertest';
 import { app } from '../src/app';
 import {
+  claimBillingCheckout,
   closePool,
   getBillingSubscriptionByStripeId,
+  getBillingTrialUsageByEmail,
   getCurrentUserTier,
   getStripeWebhookEvent,
   initDb,
@@ -19,20 +21,26 @@ const EMAIL = `billing-webhooks+${TS}@example.com`;
 const PASSWORD = 'BillingWebhook1!';
 const SUBSCRIPTION_ID = `sub_workflow_${TS}`;
 
-const subscription = {
+const subscription: any = {
   id: SUBSCRIPTION_ID,
   status: 'active',
   livemode: false,
   customer: `cus_workflow_${TS}`,
   cancel_at_period_end: false,
   cancel_at: null,
-  current_period_start: Math.floor(Date.now() / 1000),
-  current_period_end: Math.floor(Date.now() / 1000) + 30 * 24 * 3600,
   trial_end: null,
   ended_at: null,
   latest_invoice: 'in_workflow',
   metadata: { userId: '', planKey: 'premium_monthly' },
-  items: { data: [{ price: { id: 'price_test_monthly' } }] },
+  // current_period_start/end belong on items.data[0] in Stripe API v2026-06-24.dahlia —
+  // mapStripeSubscriptionToUpsert reads sub.items.data[0]?.current_period_{start,end}.
+  items: {
+    data: [{
+      price: { id: 'price_test_monthly' },
+      current_period_start: Math.floor(Date.now() / 1000),
+      current_period_end: Math.floor(Date.now() / 1000) + 30 * 24 * 3600,
+    }],
+  },
 };
 
 describe('Stripe webhook workflows', () => {
@@ -109,6 +117,62 @@ describe('Stripe webhook workflows', () => {
     await closePool();
   });
 
+  it('checkout.session.completed with a trialing subscription → stored as trialing and tier = premium', async () => {
+    // Simulate the typical new-user path: checkout creates a trial subscription.
+    subscription.status = 'trialing';
+    subscription.trial_end = Math.floor(Date.now() / 1000) + 14 * 24 * 3600; // 14 days from now
+
+    await deliver(event('checkout.session.completed', {
+      id: 'cs_workflow_trial',
+      mode: 'subscription',
+      subscription: SUBSCRIPTION_ID,
+    })).expect(200);
+
+    const stored = await getBillingSubscriptionByStripeId(SUBSCRIPTION_ID);
+    if (!stored) throw new Error(`Expected subscription ${SUBSCRIPTION_ID} in DB after checkout.session.completed (trialing)`);
+    expect(stored.status).toBe('trialing');
+    expect(stored.trialEnd).toBeTruthy();
+    expect((await getCurrentUserTier(userId))?.tierKey).toBe('premium');
+    expect(await getBillingTrialUsageByEmail(EMAIL.toLowerCase())).toMatchObject({
+      emailNormalized: EMAIL.toLowerCase(),
+      userId,
+      stripeCustomerId: subscription.customer,
+      stripeSubscriptionId: SUBSCRIPTION_ID,
+    });
+  });
+
+  it('customer.subscription.trial_will_end → acknowledged and subscription remains premium', async () => {
+    subscription.status = 'trialing';
+    subscription.trial_end = Math.floor(Date.now() / 1000) + 3 * 24 * 3600;
+
+    const res = await deliver(event('customer.subscription.trial_will_end', { id: SUBSCRIPTION_ID })).expect(200);
+
+    expect(res.body.received).toBe(true);
+    expect(res.body.handled).toBeUndefined();
+    expect((await getBillingSubscriptionByStripeId(SUBSCRIPTION_ID))?.status).toBe('trialing');
+    expect((await getCurrentUserTier(userId))?.tierKey).toBe('premium');
+  });
+
+  it('trial converts to active (customer.subscription.updated) → status=active, trialEnd preserved, tier stays premium', async () => {
+    // Trial period ended; Stripe transitions the subscription to active and charges the card.
+    // The webhook fires a customer.subscription.updated event.
+    subscription.status = 'active';
+    // trial_end is now in the past — Stripe still sends it in the payload for record-keeping.
+    subscription.trial_end = Math.floor(Date.now() / 1000) - 60;
+
+    await deliver(event('customer.subscription.updated', { id: SUBSCRIPTION_ID })).expect(200);
+
+    const stored = await getBillingSubscriptionByStripeId(SUBSCRIPTION_ID);
+    if (!stored) throw new Error(`Expected subscription ${SUBSCRIPTION_ID} in DB after trial-to-active update`);
+    expect(stored.status).toBe('active');
+    // trialEnd must be stored so the UI can show "your trial ended on <date>".
+    expect(stored.trialEnd).toBeTruthy();
+    expect((await getCurrentUserTier(userId))?.tierKey).toBe('premium');
+
+    // Reset trial_end so subsequent tests start from a clean active state.
+    subscription.trial_end = null;
+  });
+
   it('grants Premium from checkout.session.completed', async () => {
     await deliver(event('checkout.session.completed', {
       id: 'cs_workflow',
@@ -118,6 +182,50 @@ describe('Stripe webhook workflows', () => {
 
     expect((await getBillingSubscriptionByStripeId(SUBSCRIPTION_ID))?.status).toBe('active');
     expect((await getCurrentUserTier(userId))?.tierKey).toBe('premium');
+  });
+
+  it('checkout.session.completed clears the billing checkout claim so the user can start a new checkout', async () => {
+    // Simulate the state right before a checkout completes: a pending claim exists in
+    // billing_checkout_claims, created by POST /api/billing/checkout-session.
+    const firstClaim = await claimBillingCheckout({
+      userId,
+      claimToken: `claim_wf_${TS}`,
+      planKey: 'premium_monthly',
+      expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+    });
+    if (!firstClaim.claimed) {
+      throw new Error(
+        `Test setup failed: could not create checkout claim for userId=${userId}. ` +
+        `A non-expired claim already exists (checkoutUrl=${firstClaim.checkoutUrl ?? 'null'}). ` +
+        `An earlier test may have left a stale claim in the DB.`,
+      );
+    }
+
+    await deliver(event('checkout.session.completed', {
+      id: `cs_workflow_claim_${TS}`,
+      mode: 'subscription',
+      subscription: SUBSCRIPTION_ID,
+    })).expect(200);
+
+    // Verify the claim was deleted: a new claimBillingCheckout call should succeed
+    // (INSERT wins because no unexpired row is blocking it).
+    // If clearBillingCheckoutClaim was NOT called by the handler, the unexpired row
+    // blocks this INSERT and claimed=false — the user would get 409 "checkout already
+    // being created" on their next checkout attempt instead of a fresh session URL.
+    const afterWebhook = await claimBillingCheckout({
+      userId,
+      claimToken: `claim_wf_after_${TS}`,
+      planKey: 'premium_monthly',
+      expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+    });
+    if (!afterWebhook.claimed) {
+      throw new Error(
+        `Expected clearBillingCheckoutClaim(userId) to have been called inside ` +
+        `handleCheckoutSessionCompleted, but the original checkout claim is still present. ` +
+        `The user's next checkout attempt would return 409 instead of a new session URL. ` +
+        `Lingering claim checkoutUrl=${afterWebhook.checkoutUrl ?? 'null'}.`,
+      );
+    }
   });
 
   it('records scheduled cancellation while retaining Premium', async () => {

@@ -15,8 +15,9 @@ import {
   restoreBillingSubscriptionAccess,
   getBillingSubscriptionByStripeId,
   clearBillingCheckoutClaim,
+  markBillingTrialUsed,
 } from '../db';
-import { mapStripeSubscriptionToUpsert, resolvePlanKeyForPriceId } from '../billing/billingService';
+import { mapStripeSubscriptionToUpsert, normalizeBillingTrialEmail, resolvePlanKeyForPriceId } from '../billing/billingService';
 import { reconcileUserTierFromBillingById } from '../billing/subscriptionEntitlementService';
 import { logInfo, logError } from '../logger';
 import { incrementMetric } from '../metrics';
@@ -77,6 +78,19 @@ const handleSubscriptionSnapshot = async (
   const planKey = await resolvePlanKeyForPriceId(priceId, planKeyFromMetadata(sub.metadata));
   const upsertParams = mapStripeSubscriptionToUpsert(sub, userId, planKey, eventCreated);
   await upsertBillingSubscription(upsertParams);
+  if (sub.trial_end) {
+    const customerId = typeof sub.customer === 'string' ? sub.customer : sub.customer.id;
+    const billingCustomer = await getBillingCustomerByStripeId(customerId);
+    if (billingCustomer?.emailSnapshot) {
+      await markBillingTrialUsed({
+        emailNormalized: normalizeBillingTrialEmail(billingCustomer.emailSnapshot),
+        userId,
+        stripeCustomerId: customerId,
+        stripeSubscriptionId: subscriptionId,
+        trialUsedAt: new Date((sub.trial_start ?? eventCreated) * 1000),
+      });
+    }
+  }
 
   await reconcileUserTierFromBillingById(userId, {
     reason: 'Stripe subscription event',
@@ -376,6 +390,11 @@ const buildDispatchTable = (stripe: Stripe): Record<string, EventHandler> => ({
   'customer.subscription.updated': async (_s, e) => {
     const sub = e.data.object as Stripe.Subscription;
     await handleSubscriptionSnapshot(stripe, sub.id, e.created, e.id);
+  },
+  'customer.subscription.trial_will_end': async (_s, e) => {
+    const sub = e.data.object as Stripe.Subscription;
+    await handleSubscriptionSnapshot(stripe, sub.id, e.created, e.id);
+    incrementMetric('billing.webhook.trial_will_end');
   },
   'customer.subscription.deleted': async (_s, e) => {
     const sub = e.data.object as Stripe.Subscription;

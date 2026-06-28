@@ -39,6 +39,7 @@ import {
   PackingListTraveler,
   TripPackingList,
   BillingCustomer,
+  BillingTrialUsage,
   BillingSubscription,
   BillingSubscriptionScope,
   BillingSubscriptionStatus,
@@ -6804,6 +6805,41 @@ export const upsertBillingCustomer = async (data: {
     };
     tx.set(ref, customer);
     return customer;
+  });
+};
+
+export const getBillingTrialUsageByEmail = async (
+  emailNormalized: string,
+): Promise<BillingTrialUsage | null> => {
+  const doc = await getDb().collection('billing_trial_usage').doc(emailNormalized).get();
+  return doc.exists ? (doc.data() as BillingTrialUsage) : null;
+};
+
+export const markBillingTrialUsed = async (data: {
+  emailNormalized: string;
+  userId?: string | null;
+  stripeCustomerId?: string | null;
+  stripeSubscriptionId?: string | null;
+  trialUsedAt?: Date | null;
+}): Promise<BillingTrialUsage> => {
+  const ref = getDb().collection('billing_trial_usage').doc(data.emailNormalized);
+  return getDb().runTransaction(async (tx) => {
+    const snapshot = await tx.get(ref);
+    const previous = snapshot.exists ? snapshot.data() as BillingTrialUsage : null;
+    const timestamp = nowIso();
+    const trialUsedAt = data.trialUsedAt ? data.trialUsedAt.toISOString() : timestamp;
+    const usage: BillingTrialUsage = {
+      id: previous?.id ?? randomUUID(),
+      emailNormalized: data.emailNormalized,
+      userId: previous?.userId ?? data.userId ?? null,
+      stripeCustomerId: previous?.stripeCustomerId ?? data.stripeCustomerId ?? null,
+      stripeSubscriptionId: previous?.stripeSubscriptionId ?? data.stripeSubscriptionId ?? null,
+      trialUsedAt: previous?.trialUsedAt ?? trialUsedAt,
+      createdAt: previous?.createdAt ?? timestamp,
+      updatedAt: timestamp,
+    };
+    tx.set(ref, usage);
+    return usage;
   });
 };
 

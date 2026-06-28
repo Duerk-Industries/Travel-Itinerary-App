@@ -38,8 +38,9 @@
  *         status (trialing: plan/isBillingManaged/currentPeriodEnd/inGracePeriod/accessRevoked,
  *           cancelAtPeriodEnd, free + portalAvailable=false after deletion)
  *   Webhooks: billing disabled → 503, invalid/missing signature → 400, unknown event → 200 handled=false,
+ *             checkout.session.completed with mode=payment (ignored, no subscription processing),
  *             customer.subscription.created/updated/deleted,
- *             checkout.session.completed,
+ *             checkout.session.completed (subscription mode),
  *             invoice.payment_action_required (no past-due clock),
  *             invoice.payment_failed (first sets pastDueSince, second is idempotent), invoice.paid,
  *             duplicate event idempotency,
@@ -390,10 +391,17 @@ describeIfSandbox('Stripe sandbox — real test-mode API', () => {
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
 
+    // Verify every BillingStatusDto field for the no-subscription baseline.
     expect(res.body.effectiveTier).toBe('free');
+    expect(res.body.isBillingManaged).toBe(false);
+    expect(res.body.plan).toBeNull();
+    expect(res.body.subscriptionStatus).toBeNull();
+    expect(res.body.currentPeriodEnd).toBeNull();
+    expect(res.body.cancelAtPeriodEnd).toBe(false);
+    expect(res.body.inGracePeriod).toBe(false);
+    expect(res.body.accessRevoked).toBe(false);
     expect(res.body.checkoutAvailable).toBe(true);
     expect(res.body.portalAvailable).toBe(false);
-    expect(res.body.subscriptionStatus).toBeNull();
   });
 
   it('GET /api/billing/plans returns configured plans with correct amounts', async () => {
@@ -599,6 +607,22 @@ describeIfSandbox('Stripe sandbox — real test-mode API', () => {
     expect(res.body.handled).toBe(false);
   });
 
+  it('webhook checkout.session.completed with mode=payment → acknowledged without subscription processing', async () => {
+    // The handler guards `if (session.mode !== 'subscription') return` before attempting
+    // subscription sync. A one-time payment checkout must not trigger subscription logic.
+    const stripe = makeStripe();
+    const syntheticSession = {
+      id: `cs_test_payment_mode_${Date.now()}`,
+      object: 'checkout.session',
+      mode: 'payment',
+      subscription: null,
+      metadata: {},
+    };
+    const res = await deliverWebhook(stripe, 'checkout.session.completed', syntheticSession);
+    expectStatus(res, 200);
+    expect(res.body.received).toBe(true);
+  });
+
   // =========================================================================
   // Webhook simulation — subscription lifecycle
   //
@@ -742,6 +766,7 @@ describeIfSandbox('Stripe sandbox — real test-mode API', () => {
 
       const res = await deliverWebhook(stripe, 'customer.subscription.updated', updated, nextId('sub_updated'));
       expectStatus(res, 200);
+      expect(res.body.received).toBe(true);
 
       const stored = await getBillingSubscriptionByStripeId(sub.id);
       if (!stored) throw new Error(`Expected subscription ${sub.id} to be in DB after customer.subscription.updated`);
@@ -779,6 +804,7 @@ describeIfSandbox('Stripe sandbox — real test-mode API', () => {
         nextId('inv_action_required'),
       );
       expectStatus(res, 200);
+      expect(res.body.received).toBe(true);
 
       // pastDueSince must remain null — action_required ≠ payment_failed.
       const stored = await getBillingSubscriptionByStripeId(sub.id);
@@ -796,6 +822,7 @@ describeIfSandbox('Stripe sandbox — real test-mode API', () => {
 
       const res = await deliverWebhook(stripe, 'invoice.payment_failed', syntheticInvoice, nextId('inv_failed'));
       expectStatus(res, 200);
+      expect(res.body.received).toBe(true);
 
       const stored = await getBillingSubscriptionByStripeId(sub.id);
       if (!stored) throw new Error(`Expected subscription ${sub.id} to be in DB after invoice.payment_failed`);
@@ -819,6 +846,7 @@ describeIfSandbox('Stripe sandbox — real test-mode API', () => {
 
       const res = await deliverWebhook(stripe, 'invoice.payment_failed', syntheticInvoice, nextId('inv_failed2'));
       expectStatus(res, 200);
+      expect(res.body.received).toBe(true);
 
       const stored2 = await getBillingSubscriptionByStripeId(sub.id);
       if (!stored2) throw new Error(`Expected subscription ${sub.id} to be in DB after second invoice.payment_failed`);
@@ -837,6 +865,7 @@ describeIfSandbox('Stripe sandbox — real test-mode API', () => {
 
       const res = await deliverWebhook(stripe, 'invoice.paid', syntheticInvoice, nextId('inv_paid'));
       expectStatus(res, 200);
+      expect(res.body.received).toBe(true);
 
       const stored = await getBillingSubscriptionByStripeId(sub.id);
       if (!stored) throw new Error(`Expected subscription ${sub.id} to be in DB after invoice.paid`);
@@ -852,6 +881,7 @@ describeIfSandbox('Stripe sandbox — real test-mode API', () => {
 
       const r1 = await deliverWebhook(stripe, 'customer.subscription.updated', freshSub, sharedEventId);
       expectStatus(r1, 200);
+      expect(r1.body.received).toBe(true);
       expect(r1.body.duplicate).toBeFalsy();
 
       // Re-deliver the exact same signed event with the same ID.
@@ -866,6 +896,7 @@ describeIfSandbox('Stripe sandbox — real test-mode API', () => {
 
       const res = await deliverWebhook(stripe, 'customer.subscription.deleted', canceled, nextId('sub_deleted'));
       expectStatus(res, 200);
+      expect(res.body.received).toBe(true);
 
       const stored = await getBillingSubscriptionByStripeId(sub.id);
       if (!stored) throw new Error(`Expected subscription ${sub.id} to remain in DB after customer.subscription.deleted`);
@@ -963,6 +994,7 @@ describeIfSandbox('Stripe sandbox — real test-mode API', () => {
 
       const res = await deliverWebhook(stripe, 'customer.subscription.created', freshSub, nextId('sub_created'));
       expectStatus(res, 200);
+      expect(res.body.received).toBe(true);
 
       const stored = await getBillingSubscriptionByStripeId(disputeSub.id);
       if (!stored) {
@@ -996,6 +1028,7 @@ describeIfSandbox('Stripe sandbox — real test-mode API', () => {
         nextId('dispute_created'),
       );
       expectStatus(res, 200);
+      expect(res.body.received).toBe(true);
 
       const stored = await getBillingSubscriptionByStripeId(disputeSub.id);
       if (!stored) {
@@ -1030,6 +1063,7 @@ describeIfSandbox('Stripe sandbox — real test-mode API', () => {
         nextId('dispute_lost'),
       );
       expectStatus(res, 200);
+      expect(res.body.received).toBe(true);
 
       // Lost dispute keeps revocation in place — accessRevocationReason must not be cleared.
       const stored = await getBillingSubscriptionByStripeId(disputeSub.id);
@@ -1062,6 +1096,7 @@ describeIfSandbox('Stripe sandbox — real test-mode API', () => {
         nextId('dispute_won'),
       );
       expectStatus(res, 200);
+      expect(res.body.received).toBe(true);
 
       const stored = await getBillingSubscriptionByStripeId(disputeSub.id);
       if (!stored) {
@@ -1079,8 +1114,18 @@ describeIfSandbox('Stripe sandbox — real test-mode API', () => {
         .set('Authorization', `Bearer ${disputeToken}`)
         .expect(200);
 
+      // After dispute.closed (won): accessRevokedAt cleared, tier restored to premium.
+      // Subscription is still active so all billing status fields should reflect normal state.
       expect(res.body.effectiveTier).toBe('premium');
+      expect(res.body.isBillingManaged).toBe(true);
+      expect(res.body.plan).toBe('monthly');
+      expect(res.body.subscriptionStatus).toBe('active');
+      expect(res.body.inGracePeriod).toBe(false);
+      expect(res.body.cancelAtPeriodEnd).toBe(false);
       expect(res.body.accessRevoked).toBe(false);
+      expect(res.body.portalAvailable).toBe(true);
+      // checkoutAvailable=false because an eligible subscription exists.
+      expect(res.body.checkoutAvailable).toBe(false);
     });
   });
 
@@ -1158,6 +1203,7 @@ describeIfSandbox('Stripe sandbox — real test-mode API', () => {
 
       const res = await deliverWebhook(stripe, 'customer.subscription.created', freshSub, nextId('sub_created'));
       expectStatus(res, 200);
+      expect(res.body.received).toBe(true);
 
       const stored = await getBillingSubscriptionByStripeId(refundSub.id);
       if (!stored) {
@@ -1187,6 +1233,7 @@ describeIfSandbox('Stripe sandbox — real test-mode API', () => {
         nextId('partial_refund'),
       );
       expectStatus(res, 200);
+      expect(res.body.received).toBe(true);
 
       // Partial refund must not revoke access.
       const stored = await getBillingSubscriptionByStripeId(refundSub.id);
@@ -1210,6 +1257,7 @@ describeIfSandbox('Stripe sandbox — real test-mode API', () => {
 
       const res = await deliverWebhook(stripe, 'refund.updated', syntheticRefund, nextId('refund_updated'));
       expectStatus(res, 200);
+      expect(res.body.received).toBe(true);
 
       const stored = await getBillingSubscriptionByStripeId(refundSub.id);
       if (!stored) throw new Error(`Expected subscription ${refundSub.id} to be in DB after refund.updated`);
@@ -1228,6 +1276,7 @@ describeIfSandbox('Stripe sandbox — real test-mode API', () => {
 
       const res = await deliverWebhook(stripe, 'refund.failed', syntheticRefund, nextId('refund_failed'));
       expectStatus(res, 200);
+      expect(res.body.received).toBe(true);
 
       const stored = await getBillingSubscriptionByStripeId(refundSub.id);
       if (!stored) throw new Error(`Expected subscription ${refundSub.id} to be in DB after refund.failed`);
@@ -1248,6 +1297,7 @@ describeIfSandbox('Stripe sandbox — real test-mode API', () => {
 
       const res = await deliverWebhook(stripe, 'charge.refunded', fullyRefundedCharge, nextId('full_refund'));
       expectStatus(res, 200);
+      expect(res.body.received).toBe(true);
 
       const stored = await getBillingSubscriptionByStripeId(refundSub.id);
       if (!stored) throw new Error(`Expected subscription ${refundSub.id} to be in DB after full refund`);
@@ -1265,8 +1315,21 @@ describeIfSandbox('Stripe sandbox — real test-mode API', () => {
         .set('Authorization', `Bearer ${refundToken}`)
         .expect(200);
 
+      // The subscription is still 'active' in Stripe (not cancelled) but access is revoked.
+      // listActiveBillingSubscriptionsForUser includes it because status ≠ 'canceled'.
+      // primarySub = subscriptions[0] (no eligible sub); billing status surfaces its fields.
+      // isBillingManaged=true because reconcileUserTierFromBilling set source='billing' to 'free'.
       expect(res.body.effectiveTier).toBe('free');
+      expect(res.body.isBillingManaged).toBe(true);
+      expect(res.body.plan).toBe('monthly');
+      expect(res.body.subscriptionStatus).toBe('active');
+      expect(res.body.inGracePeriod).toBe(false);
+      expect(res.body.cancelAtPeriodEnd).toBe(false);
       expect(res.body.accessRevoked).toBe(true);
+      // portalAvailable because the revoked subscription is still returned by active list.
+      expect(res.body.portalAvailable).toBe(true);
+      // checkoutAvailable because no eligible sub remains after revocation.
+      expect(res.body.checkoutAvailable).toBe(true);
     });
   });
 });

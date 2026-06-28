@@ -484,6 +484,10 @@ export const getBillingCustomerByStripeId = async (...args: Parameters<ReturnTyp
   adapter().getBillingCustomerByStripeId(...args);
 export const upsertBillingCustomer = async (...args: Parameters<ReturnType<typeof adapter>['upsertBillingCustomer']>) =>
   adapter().upsertBillingCustomer(...args);
+export const getBillingTrialUsageByEmail = async (...args: Parameters<ReturnType<typeof adapter>['getBillingTrialUsageByEmail']>) =>
+  adapter().getBillingTrialUsageByEmail(...args);
+export const markBillingTrialUsed = async (...args: Parameters<ReturnType<typeof adapter>['markBillingTrialUsed']>) =>
+  adapter().markBillingTrialUsed(...args);
 export const getBillingSubscriptionByStripeId = async (...args: Parameters<ReturnType<typeof adapter>['getBillingSubscriptionByStripeId']>) =>
   adapter().getBillingSubscriptionByStripeId(...args);
 export const listActiveBillingSubscriptionsForUser = async (...args: Parameters<ReturnType<typeof adapter>['listActiveBillingSubscriptionsForUser']>) =>
