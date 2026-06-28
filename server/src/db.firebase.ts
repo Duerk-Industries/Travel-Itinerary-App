@@ -900,7 +900,10 @@ export const initDb = async (): Promise<void> => {
     }
   }
   await seedUniversalPackingDefaults();
-  if (process.env.NODE_ENV !== 'test' || process.env.FIREBASE_INIT_BACKFILL_PACKING === '1') {
+  if (
+    process.env.FIREBASE_INIT_BACKFILL_PACKING !== '0' &&
+    (process.env.NODE_ENV !== 'test' || process.env.FIREBASE_INIT_BACKFILL_PACKING === '1')
+  ) {
     await backfillUserPackingLists();
   }
 };
@@ -1068,7 +1071,10 @@ export const replaceUniversalPackingList = async (itemsInput: Array<{ id?: strin
     updatedAt: nowIso(),
   }));
   await batch.commit();
-  if (process.env.NODE_ENV !== 'test' || process.env.FIREBASE_INIT_BACKFILL_PACKING === '1') {
+  if (
+    process.env.FIREBASE_INIT_BACKFILL_PACKING !== '0' &&
+    (process.env.NODE_ENV !== 'test' || process.env.FIREBASE_INIT_BACKFILL_PACKING === '1')
+  ) {
     await backfillUserPackingLists();
   }
   return getUniversalPackingList();
@@ -7075,14 +7081,15 @@ export const upsertBillingPlanConfig = async (
   data: Partial<Omit<BillingPlanConfig, 'id' | 'planKey'>> & { planKey: BillingPlanKey; updatedBy?: string | null },
 ): Promise<BillingPlanConfig> => {
   const ref = getDb().collection('billing_plan_config').doc(data.planKey);
+  const has = (key: keyof typeof data): boolean => Object.prototype.hasOwnProperty.call(data, key);
   return getDb().runTransaction(async (tx) => {
     const doc = await tx.get(ref);
     const previous = doc.exists ? doc.data() as BillingPlanConfig : null;
     const config: BillingPlanConfig = {
       id: previous?.id ?? data.planKey,
       planKey: data.planKey,
-      stripeProductId: data.stripeProductId ?? previous?.stripeProductId ?? null,
-      activeStripePriceId: data.activeStripePriceId ?? previous?.activeStripePriceId ?? null,
+      stripeProductId: has('stripeProductId') ? data.stripeProductId ?? null : previous?.stripeProductId ?? null,
+      activeStripePriceId: has('activeStripePriceId') ? data.activeStripePriceId ?? null : previous?.activeStripePriceId ?? null,
       unitAmountCents: data.unitAmountCents ?? previous?.unitAmountCents ?? 0,
       currency: data.currency ?? previous?.currency ?? 'usd',
       interval: data.interval ?? previous?.interval ?? 'month',
@@ -7091,7 +7098,7 @@ export const upsertBillingPlanConfig = async (
       automaticTaxEnabled: data.automaticTaxEnabled ?? previous?.automaticTaxEnabled ?? true,
       promotionCodesEnabled: data.promotionCodesEnabled ?? previous?.promotionCodesEnabled ?? true,
       isCheckoutEnabled: data.isCheckoutEnabled ?? previous?.isCheckoutEnabled ?? true,
-      livemode: data.livemode ?? previous?.livemode ?? null,
+      livemode: has('livemode') ? data.livemode ?? null : previous?.livemode ?? null,
       version: previous ? previous.version + 1 : 1,
       updatedBy: data.updatedBy ?? null,
       updatedAt: nowIso(),

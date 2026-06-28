@@ -85,10 +85,13 @@ describe('Stripe webhook workflows', () => {
     fakeStripe = {
       subscriptions: { retrieve: retrieveSubscription },
       invoices: {
-        retrieve: jest.fn().mockResolvedValue({ id: 'in_workflow', subscription: SUBSCRIPTION_ID }),
+        retrieve: jest.fn().mockResolvedValue({
+          id: 'in_workflow',
+          parent: { subscription_details: { subscription: SUBSCRIPTION_ID } },
+        }),
       },
       charges: {
-        retrieve: jest.fn().mockResolvedValue({ id: 'ch_workflow', invoice: 'in_workflow' }),
+        retrieve: jest.fn().mockResolvedValue({ id: 'ch_workflow', customer: subscription.customer }),
       },
       webhooks: {
         constructEvent: jest.fn().mockImplementation(() => currentEvent),
@@ -144,21 +147,21 @@ describe('Stripe webhook workflows', () => {
     subscription.status = 'past_due';
     await deliver(event('invoice.payment_failed', {
       id: 'in_failed',
-      subscription: SUBSCRIPTION_ID,
+      parent: { subscription_details: { subscription: SUBSCRIPTION_ID } },
     })).expect(200);
     const firstPastDue = (await getBillingSubscriptionByStripeId(SUBSCRIPTION_ID))?.pastDueSince;
     expect(firstPastDue).toBeTruthy();
 
     await deliver(event('invoice.payment_action_required', {
       id: 'in_action',
-      subscription: SUBSCRIPTION_ID,
+      parent: { subscription_details: { subscription: SUBSCRIPTION_ID } },
     })).expect(200);
     expect((await getBillingSubscriptionByStripeId(SUBSCRIPTION_ID))?.pastDueSince).toBe(firstPastDue);
 
     subscription.status = 'active';
     await deliver(event('invoice.paid', {
       id: 'in_paid',
-      subscription: SUBSCRIPTION_ID,
+      parent: { subscription_details: { subscription: SUBSCRIPTION_ID } },
     })).expect(200);
     expect((await getBillingSubscriptionByStripeId(SUBSCRIPTION_ID))?.pastDueSince).toBeNull();
   });
@@ -166,7 +169,7 @@ describe('Stripe webhook workflows', () => {
   it('does not revoke Premium for a partial refund', async () => {
     await deliver(event('charge.refunded', {
       id: 'ch_partial',
-      invoice: 'in_workflow',
+      customer: subscription.customer,
       amount: 500,
       amount_refunded: 200,
     })).expect(200);
@@ -178,7 +181,7 @@ describe('Stripe webhook workflows', () => {
   it('restores access when a previously full refund fails', async () => {
     await deliver(event('charge.refunded', {
       id: 'ch_full_then_failed',
-      invoice: 'in_workflow',
+      customer: subscription.customer,
       amount: 500,
       amount_refunded: 500,
     })).expect(200);
@@ -186,7 +189,7 @@ describe('Stripe webhook workflows', () => {
 
     fakeStripe.charges.retrieve.mockResolvedValueOnce({
       id: 'ch_full_then_failed',
-      invoice: 'in_workflow',
+      customer: subscription.customer,
       amount: 500,
       amount_refunded: 0,
     });
@@ -238,7 +241,11 @@ describe('Stripe webhook workflows', () => {
     const retryEvent = event('customer.subscription.updated', { id: SUBSCRIPTION_ID });
     retrieveSubscription.mockRejectedValueOnce(new Error('temporary Stripe failure'));
 
-    await deliver(retryEvent).expect(500);
+    const failed = await deliver(retryEvent).expect(500);
+    expect(failed.body).toMatchObject({
+      error: 'Webhook processing failed.',
+      details: 'temporary Stripe failure',
+    });
     expect((await getStripeWebhookEvent(retryEvent.id))?.processingStatus).toBe('failed');
 
     await deliver(retryEvent).expect(200);

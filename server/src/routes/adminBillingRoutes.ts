@@ -55,8 +55,12 @@ router.get('/config', async (_req, res) => {
       plans: configs,
     });
   } catch (err) {
-    logError('[admin-billing] GET /config failed', { error: (err as Error)?.message });
-    res.status(500).json({ error: 'Failed to retrieve billing config.' });
+    const message = (err as Error)?.message ?? 'unknown';
+    logError('[admin-billing] GET /config failed', { error: message });
+    res.status(500).json({
+      error: 'Failed to retrieve billing config.',
+      ...(process.env.NODE_ENV === 'test' ? { details: message } : {}),
+    });
   }
 });
 
@@ -94,8 +98,12 @@ router.patch('/config/:planKey', async (req, res) => {
     });
     res.json(updated);
   } catch (err) {
-    logError('[admin-billing] PATCH /config failed', { planKey, error: (err as Error)?.message });
-    res.status(500).json({ error: 'Failed to update billing config.' });
+    const message = (err as Error)?.message ?? 'unknown';
+    logError('[admin-billing] PATCH /config failed', { planKey, error: message });
+    res.status(500).json({
+      error: 'Failed to update billing config.',
+      ...(process.env.NODE_ENV === 'test' ? { details: message } : {}),
+    });
   }
 });
 
@@ -108,8 +116,12 @@ router.get('/prices', async (_req, res) => {
     const history = await listBillingPriceHistory();
     res.json({ prices: history });
   } catch (err) {
-    logError('[admin-billing] GET /prices failed', { error: (err as Error)?.message });
-    res.status(500).json({ error: 'Failed to retrieve price history.' });
+    const message = (err as Error)?.message ?? 'unknown';
+    logError('[admin-billing] GET /prices failed', { error: message });
+    res.status(500).json({
+      error: 'Failed to retrieve price history.',
+      ...(process.env.NODE_ENV === 'test' ? { details: message } : {}),
+    });
   }
 });
 
@@ -197,11 +209,15 @@ router.post('/plans/:planKey/price', async (req, res) => {
 
     res.status(201).json({ stripePriceId: stripePrice.id, priceRecord });
   } catch (err) {
+    const message = (err as Error)?.message ?? 'unknown';
     logError('[admin-billing] POST /plans/:planKey/price failed', {
       planKey,
-      error: (err as Error)?.message,
+      error: message,
     });
-    res.status(500).json({ error: 'Failed to publish new price.' });
+    res.status(500).json({
+      error: 'Failed to publish new price.',
+      ...(process.env.NODE_ENV === 'test' ? { details: message } : {}),
+    });
   }
 });
 
@@ -221,11 +237,15 @@ router.post('/reconcile/:userId', async (req, res) => {
     const subscriptions = await listActiveBillingSubscriptionsForUser(targetUserId);
     res.json({ result, subscriptions });
   } catch (err) {
+    const message = (err as Error)?.message ?? 'unknown';
     logError('[admin-billing] POST /reconcile failed', {
       targetUserId,
-      error: (err as Error)?.message,
+      error: message,
     });
-    res.status(500).json({ error: 'Failed to reconcile user billing.' });
+    res.status(500).json({
+      error: 'Failed to reconcile user billing.',
+      ...(process.env.NODE_ENV === 'test' ? { details: message } : {}),
+    });
   }
 });
 
@@ -247,8 +267,12 @@ router.post('/reconcile-batch', async (req, res) => {
     );
     res.json(summary);
   } catch (err) {
-    logError('[admin-billing] POST /reconcile-batch failed', { error: (err as Error)?.message });
-    res.status(500).json({ error: 'Reconciliation batch failed.' });
+    const message = (err as Error)?.message ?? 'unknown';
+    logError('[admin-billing] POST /reconcile-batch failed', { error: message });
+    res.status(500).json({
+      error: 'Reconciliation batch failed.',
+      ...(process.env.NODE_ENV === 'test' ? { details: message } : {}),
+    });
   }
 });
 

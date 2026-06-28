@@ -7,8 +7,10 @@ import {
   getBillingPlanConfig,
   initDb,
   listBillingPriceHistory,
+  upsertBillingPlanConfig,
   upsertBillingSubscription,
 } from '../src/db';
+import type { BillingPlanConfig } from '../src/types';
 import { setStripeClientForTesting } from '../src/billing/stripeClient';
 import {
   cleanupTestUsersByEmail,
@@ -27,12 +29,17 @@ describe('Admin billing routes', () => {
   let userToken: string;
   let userId: string;
   let fakeStripe: any;
+  let originalMonthlyConfig: BillingPlanConfig | null;
+  let originalAnnualConfig: BillingPlanConfig | null;
 
   beforeAll(async () => {
+    process.env.NODE_ENV = 'test';
     process.env.STRIPE_BILLING_ENABLED = 'true';
     process.env.STRIPE_SECRET_KEY = 'sk_test_fake';
     process.env.STRIPE_PREMIUM_PRODUCT_ID = 'prod_test_premium';
     await initDb();
+    originalMonthlyConfig = await getBillingPlanConfig('premium_monthly');
+    originalAnnualConfig = await getBillingPlanConfig('premium_annual');
 
     const admin = await makeAdminUser({
       firstName: 'Admin',
@@ -66,11 +73,12 @@ describe('Admin billing routes', () => {
   });
 
   afterAll(async () => {
-    await request(app)
-      .patch('/api/admin/billing/config/premium_monthly')
-      .set('Authorization', `Bearer ${adminToken}`)
-      .send({ trialDays: 14, pastDueGraceDays: 30, promotionCodesEnabled: true })
-      .catch(() => undefined);
+    if (originalMonthlyConfig) {
+      await upsertBillingPlanConfig({ ...originalMonthlyConfig, planKey: 'premium_monthly', updatedBy: null }).catch(() => undefined);
+    }
+    if (originalAnnualConfig) {
+      await upsertBillingPlanConfig({ ...originalAnnualConfig, planKey: 'premium_annual', updatedBy: null }).catch(() => undefined);
+    }
     setStripeClientForTesting(null);
     delete process.env.STRIPE_BILLING_ENABLED;
     delete process.env.STRIPE_SECRET_KEY;
@@ -80,11 +88,14 @@ describe('Admin billing routes', () => {
   });
 
   it('requires authentication and an admin role', async () => {
-    await request(app).get('/api/admin/billing/config').expect(401);
     await request(app)
+      .get('/api/admin/billing/config')
+      .expect(401);
+    const forbidden = await request(app)
       .get('/api/admin/billing/config')
       .set('Authorization', `Bearer ${userToken}`)
       .expect(403);
+    expect(forbidden.body.error).toBe('Admin access required');
   });
 
   it('returns billing configuration to an administrator', async () => {
@@ -102,16 +113,32 @@ describe('Admin billing routes', () => {
   });
 
   it('validates config updates and persists allowed fields', async () => {
-    await request(app)
+    const invalidPlan = await request(app)
       .patch('/api/admin/billing/config/not-a-plan')
       .set('Authorization', `Bearer ${adminToken}`)
       .send({ trialDays: 10 })
       .expect(400);
-    await request(app)
+    expect(invalidPlan.body.error).toBe('planKey must be premium_monthly or premium_annual.');
+
+    const emptyUpdate = await request(app)
       .patch('/api/admin/billing/config/premium_monthly')
       .set('Authorization', `Bearer ${adminToken}`)
       .send({})
       .expect(400);
+    expect(emptyUpdate.body.error).toBe('No fields provided to update.');
+
+    const invalidPayload = await request(app)
+      .patch('/api/admin/billing/config/premium_monthly')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ trialDays: -1 })
+      .expect(400);
+    expect(invalidPayload.body.error).toBe('Request validation failed');
+    expect(invalidPayload.body.details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ path: 'trialDays' }),
+      ]),
+    );
+
     await request(app)
       .patch('/api/admin/billing/config/premium_monthly')
       .set('Authorization', `Bearer ${adminToken}`)
@@ -157,6 +184,51 @@ describe('Admin billing routes', () => {
     expect(await getBillingPlanConfig('premium_annual')).toMatchObject({
       activeStripePriceId: `price_admin_${TS}`,
       unitAmountCents: 3900,
+    });
+  });
+
+  it('validates price publishing errors with detailed bodies', async () => {
+    const invalidPlan = await request(app)
+      .post('/api/admin/billing/plans/not-a-plan/price')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ unitAmountCents: 3900, currency: 'usd' })
+      .expect(400);
+    expect(invalidPlan.body.error).toBe('planKey must be premium_monthly or premium_annual.');
+
+    const invalidPayload = await request(app)
+      .post('/api/admin/billing/plans/premium_monthly/price')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ unitAmountCents: 0, currency: 'usd' })
+      .expect(400);
+    expect(invalidPayload.body.error).toBe('Request validation failed');
+    expect(invalidPayload.body.details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ path: 'unitAmountCents' }),
+      ]),
+    );
+
+    const originalProductId = process.env.STRIPE_PREMIUM_PRODUCT_ID;
+    delete process.env.STRIPE_PREMIUM_PRODUCT_ID;
+    try {
+      const missingProduct = await request(app)
+        .post('/api/admin/billing/plans/premium_monthly/price')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ unitAmountCents: 500, currency: 'usd' })
+        .expect(503);
+      expect(missingProduct.body.error).toBe('STRIPE_PREMIUM_PRODUCT_ID is not configured.');
+    } finally {
+      process.env.STRIPE_PREMIUM_PRODUCT_ID = originalProductId;
+    }
+
+    fakeStripe.prices.create.mockRejectedValueOnce(new Error('Stripe price create unavailable'));
+    const stripeFailure = await request(app)
+      .post('/api/admin/billing/plans/premium_monthly/price')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ unitAmountCents: 500, currency: 'usd' })
+      .expect(500);
+    expect(stripeFailure.body).toMatchObject({
+      error: 'Failed to publish new price.',
+      details: 'Stripe price create unavailable',
     });
   });
 

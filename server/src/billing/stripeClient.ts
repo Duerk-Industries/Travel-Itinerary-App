@@ -28,7 +28,8 @@ export const getStripeClient = (): Stripe => {
   }
 
   stripeInstance = new Stripe(secretKey, {
-    apiVersion: STRIPE_API_VERSION,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    apiVersion: STRIPE_API_VERSION as any,
     typescript: true,
   });
 

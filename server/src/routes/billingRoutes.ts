@@ -78,12 +78,24 @@ router.post('/checkout-session', async (req, res) => {
     }
     res.status(201).json(result);
   } catch (err) {
+    const message = (err as Error)?.message ?? 'Failed to create checkout session.';
+    const status =
+      message.includes('Checkout is disabled') ||
+      message.includes('wrong Stripe mode') ||
+      message.includes('No active Price ID configured') ||
+      message.includes('STRIPE_CHECKOUT_SUCCESS_URL') ||
+      message.includes('STRIPE_CHECKOUT_CANCEL_URL')
+        ? 400
+        : 500;
     logError('[billing] POST /checkout-session failed', {
       userId,
       planKey: dto.planKey,
-      error: (err as Error)?.message,
+      error: message,
     });
-    res.status(500).json({ error: 'Failed to create checkout session.' });
+    res.status(status).json({
+      error: 'Failed to create checkout session.',
+      ...(process.env.NODE_ENV === 'test' ? { details: message } : {}),
+    });
   }
 });
 
@@ -104,8 +116,18 @@ router.post('/portal-session', async (req, res) => {
       res.status(404).json({ error: msg });
       return;
     }
+    if (msg.includes('STRIPE_PORTAL_RETURN_URL')) {
+      res.status(400).json({
+        error: 'Failed to create portal session.',
+        ...(process.env.NODE_ENV === 'test' ? { details: msg } : {}),
+      });
+      return;
+    }
     logError('[billing] POST /portal-session failed', { userId, error: msg });
-    res.status(500).json({ error: 'Failed to create portal session.' });
+    res.status(500).json({
+      error: 'Failed to create portal session.',
+      ...(process.env.NODE_ENV === 'test' ? { details: msg } : {}),
+    });
   }
 });
 
@@ -126,8 +148,12 @@ router.post('/refresh', async (req, res) => {
     const status = await getBillingStatus(userId, ((req as any).user as TokenPayload).role);
     res.json({ reconciled: result, status });
   } catch (err) {
-    logError('[billing] POST /refresh failed', { userId, error: (err as Error)?.message });
-    res.status(500).json({ error: 'Failed to refresh billing status.' });
+    const message = (err as Error)?.message ?? 'unknown';
+    logError('[billing] POST /refresh failed', { userId, error: message });
+    res.status(500).json({
+      error: 'Failed to refresh billing status.',
+      ...(process.env.NODE_ENV === 'test' ? { details: message } : {}),
+    });
   }
 });
 

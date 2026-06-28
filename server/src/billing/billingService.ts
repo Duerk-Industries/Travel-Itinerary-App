@@ -127,6 +127,21 @@ export const resolvePlanKeyForPriceId = async (
 // Checkout
 // ---------------------------------------------------------------------------
 
+const assertValidStripeRedirectUrl = (name: string, value: string | undefined): string => {
+  if (!value) {
+    throw new Error(`[billing] ${name} must be configured`);
+  }
+  try {
+    const parsed = new URL(value);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      throw new Error('URL must use http or https');
+    }
+  } catch (err) {
+    throw new Error(`[billing] ${name} must be an absolute http(s) URL: ${(err as Error).message}`);
+  }
+  return value;
+};
+
 export const createCheckoutSession = async (params: {
   userId: string;
   email: string;
@@ -165,12 +180,8 @@ export const createCheckoutSession = async (params: {
     throw new Error(`The active billing configuration for ${planKey} belongs to the wrong Stripe mode`);
   }
   const priceId = planConfig?.activeStripePriceId ?? resolvePriceId(planKey);
-  const successUrl = getStripeCheckoutSuccessUrl();
-  const cancelUrl = getStripeCheckoutCancelUrl();
-
-  if (!successUrl || !cancelUrl) {
-    throw new Error('[billing] STRIPE_CHECKOUT_SUCCESS_URL and STRIPE_CHECKOUT_CANCEL_URL must be configured');
-  }
+  const successUrl = assertValidStripeRedirectUrl('STRIPE_CHECKOUT_SUCCESS_URL', getStripeCheckoutSuccessUrl());
+  const cancelUrl = assertValidStripeRedirectUrl('STRIPE_CHECKOUT_CANCEL_URL', getStripeCheckoutCancelUrl());
 
   const claim = await claimBillingCheckout({
     userId,
@@ -259,10 +270,7 @@ export const createPortalSession = async (params: {
     throw new Error('No billing account found. Complete a subscription first.');
   }
 
-  const resolvedReturnUrl = getStripePortalReturnUrl();
-  if (!resolvedReturnUrl) {
-    throw new Error('[billing] STRIPE_PORTAL_RETURN_URL must be configured');
-  }
+  const resolvedReturnUrl = assertValidStripeRedirectUrl('STRIPE_PORTAL_RETURN_URL', getStripePortalReturnUrl());
 
   const stripe = getStripeClient();
   const portalConfigId = getStripePortalConfigurationId();
@@ -388,8 +396,8 @@ export const mapStripeSubscriptionToUpsert = (
   livemode: sub.livemode,
   cancelAtPeriodEnd: sub.cancel_at_period_end,
   cancelAt: sub.cancel_at ? new Date(sub.cancel_at * 1000) : null,
-  currentPeriodStart: sub.current_period_start ? new Date(sub.current_period_start * 1000) : null,
-  currentPeriodEnd: sub.current_period_end ? new Date(sub.current_period_end * 1000) : null,
+  currentPeriodStart: sub.items.data[0]?.current_period_start ? new Date(sub.items.data[0].current_period_start * 1000) : null,
+  currentPeriodEnd: sub.items.data[0]?.current_period_end ? new Date(sub.items.data[0].current_period_end * 1000) : null,
   trialEnd: sub.trial_end ? new Date(sub.trial_end * 1000) : null,
   endedAt: sub.ended_at ? new Date(sub.ended_at * 1000) : null,
   latestInvoiceId: typeof sub.latest_invoice === 'string' ? sub.latest_invoice : (sub.latest_invoice?.id ?? null),

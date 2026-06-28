@@ -25,7 +25,15 @@ describe('Stripe billing startup configuration', () => {
   it('fails fast when billing is enabled without required settings', () => {
     process.env.STRIPE_BILLING_ENABLED = 'true';
     for (const key of keys.slice(1)) delete process.env[key];
-    expect(() => assertStripeBillingConfig()).toThrow(/required env vars are missing/);
+    expect(() => assertStripeBillingConfig()).toThrow(
+      /STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PREMIUM_PRODUCT_ID, STRIPE_CHECKOUT_SUCCESS_URL, STRIPE_CHECKOUT_CANCEL_URL, STRIPE_PORTAL_RETURN_URL/,
+    );
+  });
+
+  it('does not require Stripe settings when billing is disabled', () => {
+    process.env.STRIPE_BILLING_ENABLED = 'false';
+    for (const key of keys.slice(1)) delete process.env[key];
+    expect(() => assertStripeBillingConfig()).not.toThrow();
   });
 
   it('accepts a complete test-mode configuration', () => {

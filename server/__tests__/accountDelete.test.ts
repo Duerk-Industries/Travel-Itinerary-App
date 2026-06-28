@@ -162,8 +162,9 @@ describe('DELETE /api/account', () => {
       email: EMAIL,
       password: PASSWORD,
     });
+    const subscriptionId = `sub_delete_fail_${Date.now()}`;
     await upsertBillingSubscription({
-      stripeSubscriptionId: `sub_delete_fail_${Date.now()}`,
+      stripeSubscriptionId: subscriptionId,
       userId,
       scopeOwnerId: userId,
       stripeCustomerId: `cus_delete_fail_${Date.now()}`,
@@ -174,11 +175,12 @@ describe('DELETE /api/account', () => {
       cancelAtPeriodEnd: false,
     });
 
-    await request(app)
+    const res = await request(app)
       .delete('/api/account')
       .set('Authorization', `Bearer ${token}`)
       .expect(400);
 
+    expect(res.body.error).toBe(`Unable to cancel Stripe subscriptions: ${subscriptionId}`);
     expect((await findUserByEmail(EMAIL))?.id).toBe(userId);
   });
 });

@@ -1,9 +1,11 @@
 import { getEnvFlag, getEnvValue } from '../env';
-import { logError } from '../logger';
+import { logError, logInfo } from '../logger';
 import type { BillingPlanKey } from '../types';
 
-// Pinned Stripe API version — update deliberately, not by drift.
-export const STRIPE_API_VERSION = '2025-02-24.acacia' as const;
+// Stripe API version — read from env so it can be changed without a code deploy.
+// Must match the version pinned on the Dashboard webhook destination.
+// Defaults to '2025-02-24.acacia'; set STRIPE_API_VERSION in server/.env to override.
+export const STRIPE_API_VERSION = getEnvValue('STRIPE_API_VERSION') ?? '2025-02-24.acacia';
 
 // Phase 1: plan constants are hardcoded here.
 // They move to the billing_plan_config DB table when the admin UI is built (Phase 6).
@@ -110,12 +112,37 @@ export const assertStripeBillingConfig = (): void => {
     logError('[stripe] STRIPE_SECRET_KEY does not begin with sk_test_ or sk_live_ — verify configuration');
   }
 
-  // Price IDs can come from env vars (launch) or billing_plan_config (admin-published).
-  // Warn if neither env var is set so the first checkout attempt doesn't silently fail.
-  if (!getStripePremiumMonthlyPriceId()) {
-    logError('[stripe] STRIPE_PREMIUM_MONTHLY_PRICE_ID is not set — checkout will fail until a price is published via the admin UI or this env var is configured');
-  }
-  if (!getStripePremiumAnnualPriceId()) {
-    logError('[stripe] STRIPE_PREMIUM_ANNUAL_PRICE_ID is not set — checkout will fail until a price is published via the admin UI or this env var is configured');
+};
+
+/**
+ * Call after initDb(). Checks each plan's price against both the env var and
+ * billing_plan_config, logging info when the env var is absent but a DB price
+ * exists, and only erroring when neither source has a price configured.
+ */
+/**
+ * Call after initDb(). Checks each plan's price against both the env var and
+ * billing_plan_config, logging info when the env var is absent but a DB price
+ * exists, and only erroring when neither source has a price configured.
+ */
+export const warnIfStripePricesUnconfigured = async (
+  getBillingPlanConfig: (planKey: BillingPlanKey) => Promise<{ activeStripePriceId?: string | null } | null>,
+): Promise<void> => {
+  if (!isStripeBillingEnabled()) return;
+
+  const plans: Array<{ key: BillingPlanKey; envGetter: () => string | undefined; envVar: string }> = [
+    { key: 'premium_monthly', envGetter: getStripePremiumMonthlyPriceId, envVar: 'STRIPE_PREMIUM_MONTHLY_PRICE_ID' },
+    { key: 'premium_annual',  envGetter: getStripePremiumAnnualPriceId,  envVar: 'STRIPE_PREMIUM_ANNUAL_PRICE_ID'  },
+  ];
+
+  for (const { key, envGetter, envVar } of plans) {
+    const fromEnv = envGetter();
+    if (fromEnv) continue; // env var is set — no warning needed
+
+    const config = await getBillingPlanConfig(key);
+    if (config?.activeStripePriceId) {
+      logInfo(`[stripe] ${envVar} is not set — using active price from Admin UI (${config.activeStripePriceId})`);
+    } else {
+      logError(`[stripe] ${envVar} is not set and no active price exists in billing_plan_config — checkout will fail until a price is published via the Admin UI or this env var is configured`);
+    }
   }
 };

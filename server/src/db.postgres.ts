@@ -10249,6 +10249,7 @@ export const upsertBillingPlanConfig = async (
 ): Promise<BillingPlanConfig> => {
   const p = getPool();
   const existing = await getBillingPlanConfig(data.planKey);
+  const has = (key: keyof typeof data): boolean => Object.prototype.hasOwnProperty.call(data, key);
 
   if (!existing) {
     const id = randomUUID();
@@ -10261,11 +10262,12 @@ export const upsertBillingPlanConfig = async (
        RETURNING *`,
       [
         id, data.planKey,
-        data.stripeProductId ?? null, data.activeStripePriceId ?? null,
+        has('stripeProductId') ? data.stripeProductId ?? null : null,
+        has('activeStripePriceId') ? data.activeStripePriceId ?? null : null,
         data.unitAmountCents ?? 0, data.currency ?? 'usd',
         data.interval ?? 'month', data.trialDays ?? 14, data.pastDueGraceDays ?? 30,
         data.automaticTaxEnabled ?? true, data.promotionCodesEnabled ?? true,
-        data.isCheckoutEnabled ?? true, data.livemode ?? null,
+        data.isCheckoutEnabled ?? true, has('livemode') ? data.livemode ?? null : null,
         data.updatedBy ?? null,
       ],
     );
@@ -10274,29 +10276,31 @@ export const upsertBillingPlanConfig = async (
 
   const { rows } = await p.query(
     `UPDATE billing_plan_config SET
-       stripe_product_id = COALESCE($2, stripe_product_id),
-       active_stripe_price_id = COALESCE($3, active_stripe_price_id),
-       unit_amount_cents = COALESCE($4, unit_amount_cents),
-       currency = COALESCE($5, currency),
-       interval = COALESCE($6, interval),
-       trial_days = COALESCE($7, trial_days),
-       past_due_grace_days = COALESCE($8, past_due_grace_days),
-       automatic_tax_enabled = COALESCE($9, automatic_tax_enabled),
-       promotion_codes_enabled = COALESCE($10, promotion_codes_enabled),
-       is_checkout_enabled = COALESCE($11, is_checkout_enabled),
-       livemode = COALESCE($12, livemode),
-       updated_by = $13,
+       stripe_product_id = CASE WHEN $2 THEN $3 ELSE stripe_product_id END,
+       active_stripe_price_id = CASE WHEN $4 THEN $5 ELSE active_stripe_price_id END,
+       unit_amount_cents = COALESCE($6, unit_amount_cents),
+       currency = COALESCE($7, currency),
+       interval = COALESCE($8, interval),
+       trial_days = COALESCE($9, trial_days),
+       past_due_grace_days = COALESCE($10, past_due_grace_days),
+       automatic_tax_enabled = COALESCE($11, automatic_tax_enabled),
+       promotion_codes_enabled = COALESCE($12, promotion_codes_enabled),
+       is_checkout_enabled = COALESCE($13, is_checkout_enabled),
+       livemode = CASE WHEN $14 THEN $15 ELSE livemode END,
+       updated_by = $16,
        version = version + 1,
        updated_at = NOW()
      WHERE plan_key = $1
      RETURNING *`,
     [
       data.planKey,
-      data.stripeProductId, data.activeStripePriceId,
+      has('stripeProductId'), data.stripeProductId ?? null,
+      has('activeStripePriceId'), data.activeStripePriceId ?? null,
       data.unitAmountCents, data.currency, data.interval,
       data.trialDays, data.pastDueGraceDays,
       data.automaticTaxEnabled, data.promotionCodesEnabled,
-      data.isCheckoutEnabled, data.livemode,
+      data.isCheckoutEnabled,
+      has('livemode'), data.livemode ?? null,
       data.updatedBy ?? null,
     ],
   );

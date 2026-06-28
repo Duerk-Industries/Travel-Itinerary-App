@@ -1,6 +1,6 @@
 # WanderBunnies Stripe Premium Launch Runbook
 
-Last reviewed: June 22, 2026
+Last reviewed: June 28, 2026
 
 This runbook matches the implemented billing flow:
 
@@ -13,6 +13,18 @@ This runbook matches the implemented billing flow:
 - 30 elapsed days of Premium access after the first unresolved failed invoice
 - immediate revocation for a full refund or opened dispute
 - restoration when a refund is reversed (before the refund settles) or a dispute is won
+
+---
+
+## Environment Overview
+
+This runbook covers three environments. Each has its own `.env` file — **all secrets live in `.env` only**. There is no Google Secret Manager and no `.secrets` file.
+
+| Environment | Stripe mode | `.env` file | Webhook source |
+|---|---|---|---|
+| **Localhost** | Test (`sk_test_…`) | `server/.env` | `stripe listen` CLI |
+| **GCP Testing** | Test (`sk_test_…`) | `server/.env` (deployed as env vars) | Cloud Run URL, test webhook destination |
+| **GCP Production** | Live (`sk_live_…`) | `server/.env` (deployed as env vars) | Cloud Run URL, live webhook destination |
 
 Complete every sandbox step before repeating it in live mode.
 
@@ -120,7 +132,7 @@ Stripe Checkout accent color.
 5. Click **Save product**.
 6. On the Product detail page, copy the `prod_...` ID shown under the product name.
 
-Set that value as:
+Set that value in `server/.env`:
 
 ```text
 STRIPE_PREMIUM_PRODUCT_ID=prod_...
@@ -264,13 +276,15 @@ The result:
 
 ### Return URL
 
-Set the **Default return URL** to:
+Set the **Default return URL** to match the environment:
 
-```text
-https://YOUR-WEB-DOMAIN/
-```
+| Environment | Return URL |
+|---|---|
+| Localhost | `http://localhost:19006/` |
+| GCP Testing | `https://YOUR-TEST-DOMAIN/` |
+| GCP Production | `https://YOUR-WEB-DOMAIN/` |
 
-This URL must match `STRIPE_PORTAL_RETURN_URL`.
+This URL must match `STRIPE_PORTAL_RETURN_URL` in `server/.env`.
 
 ### Portal Configuration ID
 
@@ -321,56 +335,19 @@ Open **Settings → Branding** (or the branding section within the invoice email
 
 ## 10. Create The Webhook Event Destination
 
-Deploy the API to a public HTTPS URL before registering the destination. The endpoint must be live and return a valid response before Stripe can verify it.
+The webhook endpoint and signing secret differ by environment. Each environment needs its own Dashboard-registered destination.
 
-**Endpoint URL:**
+**Endpoint URL pattern:**
 
 ```text
 https://YOUR-API-DOMAIN/api/billing/webhooks/stripe
 ```
 
-### Dashboard setup
+### 10a. Localhost — Stripe CLI listener
 
-1. Open **Workbench → Webhooks** (or **Developers → Webhooks**).
-2. Click **Create an event destination**.
-3. Under **Listen to**, select **Events from your account** (not Connect events).
-4. Under **Event delivery**, select **Webhook endpoint**.
-5. Enter the endpoint URL above.
-6. Under **Select events**, click **Select events manually** and enable exactly:
+> **Applies to:** Localhost testing only
 
-```
-checkout.session.completed
-customer.subscription.created
-customer.subscription.updated
-customer.subscription.deleted
-invoice.paid
-invoice.payment_failed
-invoice.payment_action_required
-charge.refunded
-refund.updated
-refund.failed
-charge.dispute.created
-charge.dispute.closed
-```
-
-7. Under **API version**, pin to `2025-02-24.acacia` (the version the server's Stripe SDK is pinned to).
-8. Click **Add endpoint** (or **Create destination**).
-9. On the webhook detail page, click **Reveal signing secret**.
-10. Copy the `whsec_...` value.
-
-Store it as:
-
-```text
-STRIPE_WEBHOOK_SECRET=whsec_...
-```
-
-In production, add it to Secret Manager (see section 12). Do **not** commit it to source control.
-
-Create independent sandbox and live destinations. The signing secret is different for each; never use a sandbox secret in live mode.
-
-### Local development with Stripe CLI
-
-Install the Stripe CLI (if not installed):
+Install the Stripe CLI if not already installed:
 
 ```powershell
 winget install Stripe.StripeCLI
@@ -389,6 +366,79 @@ stripe listen `
 
 The CLI prints a temporary `whsec_...` value — copy it into `server/.env` as `STRIPE_WEBHOOK_SECRET`. This value differs from the Dashboard endpoint secret and is valid only while `stripe listen` is running.
 
+### 10b. GCP Testing and GCP Production — Dashboard webhook destination
+
+> **Applies to:** GCP Testing (test mode keys) and GCP Production (live mode keys)
+
+Deploy the API to a public HTTPS URL before registering the destination. The endpoint must be live and return a valid response before Stripe can verify it.
+
+Create one destination for GCP Testing (test mode) and a separate destination for GCP Production (live mode):
+
+1. Open **Workbench → Webhooks** (or **Developers → Webhooks**). Make sure you are in the correct Stripe mode (**Test** for GCP Testing, **Live** for GCP Production).
+2. Click **Create an event destination**.
+3. Under **Listen to**, select **Events from your account** (not Connect events).
+4. Under **Event delivery**, select **Webhook endpoint**.
+5. Enter the endpoint URL for the target environment.
+6. Under **Select events**, click **Select events manually** and enable exactly:
+
+```
+checkout.session.completed
+customer.subscription.created
+customer.subscription.updated
+customer.subscription.deleted
+invoice.paid
+invoice.payment_failed
+invoice.payment_action_required
+charge.refunded
+refund.updated
+refund.failed
+charge.dispute.created
+charge.dispute.closed
+```
+
+7. Click **Add endpoint** (or **Create destination**).
+8. On the webhook detail page, click **Reveal signing secret**.
+9. Copy the `whsec_...` value.
+
+Store it in `server/.env` as `STRIPE_WEBHOOK_SECRET=whsec_...` for the environment being configured.
+
+> The signing secret is different for the test destination and the live destination. Never use a test-mode secret in live mode or vice versa.
+
+### Pinning the webhook API version
+
+The webhook API version controls the shape of event payloads Stripe delivers to your endpoint. If left unpinned, Stripe uses your account's default version. The server code is pinned to a specific version in `server/src/config/stripeBilling.ts` — the webhook destination should match.
+
+**The API version field does not appear during the creation wizard in the current Stripe Dashboard.** Set it after creation:
+
+1. On the webhook endpoint detail page, find the **API version** row (near the top, alongside the endpoint URL and signing secret).
+2. Click the version label or the **Update version** link next to it.
+3. In the dropdown, select the version that matches `STRIPE_API_VERSION` in `server/src/config/stripeBilling.ts` (currently `2025-02-24.acacia`).
+4. Click **Update**.
+
+If you do not see an **API version** row or **Update version** link on the detail page, your Stripe Dashboard may be rendering the newer Workbench event-destination UI. In that case:
+
+1. On the destination detail page, click the **⋮** (more options) menu or **Edit destination**.
+2. Look for an **Advanced** section or **API version** field.
+3. Set it to `2025-02-24.acacia` and save.
+
+**Alternative — upgrade the server to match your account version instead:**
+
+If you cannot pin the webhook in the Dashboard (e.g. your Stripe plan does not support it), you can instead upgrade the server's pinned version to match your account default (`2026-05-27.dahlia`). This changes every API request the server makes to use dahlia-shaped responses. Review the [Stripe API changelog](https://docs.stripe.com/changelog) for breaking changes between `acacia` and `dahlia` before doing this.
+
+To upgrade the server version, edit `server/src/config/stripeBilling.ts`:
+
+```typescript
+export const STRIPE_API_VERSION = '2026-05-27.dahlia' as const;
+```
+
+Then update the TypeScript types by upgrading the `stripe` npm package:
+
+```powershell
+npm --prefix server install stripe@latest
+```
+
+Re-run the billing test suite after upgrading to catch any payload-shape regressions.
+
 ### Verifying delivery
 
 After any test action, open **Workbench → Webhooks → [your endpoint] → Event deliveries**. Each row shows the event type, the HTTP status code returned by the server, and the response body. A `200` with `{"received":true}` indicates successful processing. A `500` triggers Stripe's automatic retry schedule.
@@ -402,7 +452,9 @@ stripe events resend evt_...
 
 ---
 
-## 11. Configure Local Environment
+## 11. Configure Localhost Environment
+
+> **Applies to:** Localhost testing only
 
 Copy the example file:
 
@@ -414,16 +466,17 @@ Add these values to `server/.env`:
 
 ```text
 STRIPE_BILLING_ENABLED=true
-STRIPE_SECRET_KEY=sk_test_...
-STRIPE_WEBHOOK_SECRET=whsec_...          # from stripe listen output
-STRIPE_PREMIUM_PRODUCT_ID=prod_...
-STRIPE_PREMIUM_MONTHLY_PRICE_ID=price_...
-STRIPE_PREMIUM_ANNUAL_PRICE_ID=price_...
+STRIPE_SECRET_KEY=sk_test_...               # from Stripe Dashboard (test mode)
+STRIPE_WEBHOOK_SECRET=whsec_...             # from stripe listen output (changes each session)
+STRIPE_PREMIUM_PRODUCT_ID=prod_...          # test-mode product ID
+STRIPE_PREMIUM_MONTHLY_PRICE_ID=price_...   # omit if using Admin UI to publish prices
+STRIPE_PREMIUM_ANNUAL_PRICE_ID=price_...    # omit if using Admin UI to publish prices
 STRIPE_CHECKOUT_SUCCESS_URL=http://localhost:19006/?billing=success
 STRIPE_CHECKOUT_CANCEL_URL=http://localhost:19006/?billing=cancel
 STRIPE_PORTAL_RETURN_URL=http://localhost:19006/
 BILLING_RECONCILE_ENABLED=true
 BILLING_RECONCILE_INTERVAL_MS=86400000
+BILLING_SCHEDULER_SECRET=any-local-dev-secret
 ```
 
 Start the API and web client in separate terminals:
@@ -437,7 +490,57 @@ On startup, the server logs a startup-failure error and exits if `STRIPE_BILLING
 
 ---
 
-## 12. Configure Google Secret Manager And Cloud Run
+## 12. Configure GCP Cloud Run
+
+> **Applies to:** GCP Testing and GCP Production
+>
+> All secrets are passed as plain environment variables from `server/.env`. There is no Google Secret Manager and no `.secrets` file in this workflow.
+
+### 12a. Set up the environment file
+
+For **GCP Testing**, `server/.env` should contain test-mode Stripe keys:
+
+```text
+STRIPE_BILLING_ENABLED=true
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...              # from the test-mode Dashboard webhook destination
+STRIPE_PREMIUM_PRODUCT_ID=prod_...           # test-mode product
+STRIPE_PREMIUM_MONTHLY_PRICE_ID=price_...    # omit if using Admin UI
+STRIPE_PREMIUM_ANNUAL_PRICE_ID=price_...     # omit if using Admin UI
+STRIPE_CHECKOUT_SUCCESS_URL=https://YOUR-TEST-DOMAIN/?billing=success
+STRIPE_CHECKOUT_CANCEL_URL=https://YOUR-TEST-DOMAIN/?billing=cancel
+STRIPE_PORTAL_RETURN_URL=https://YOUR-TEST-DOMAIN/
+BILLING_RECONCILE_ENABLED=true
+BILLING_RECONCILE_INTERVAL_MS=86400000
+BILLING_SCHEDULER_SECRET=<random-string>
+```
+
+For **GCP Production**, `server/.env` should contain live-mode Stripe keys:
+
+```text
+STRIPE_BILLING_ENABLED=true
+STRIPE_SECRET_KEY=sk_live_...
+STRIPE_WEBHOOK_SECRET=whsec_...              # from the live-mode Dashboard webhook destination
+STRIPE_PREMIUM_PRODUCT_ID=prod_...           # live-mode product
+STRIPE_PREMIUM_MONTHLY_PRICE_ID=price_...    # omit if using Admin UI
+STRIPE_PREMIUM_ANNUAL_PRICE_ID=price_...     # omit if using Admin UI
+STRIPE_CHECKOUT_SUCCESS_URL=https://YOUR-WEB-DOMAIN/?billing=success
+STRIPE_CHECKOUT_CANCEL_URL=https://YOUR-WEB-DOMAIN/?billing=cancel
+STRIPE_PORTAL_RETURN_URL=https://YOUR-WEB-DOMAIN/
+BILLING_RECONCILE_ENABLED=true
+BILLING_RECONCILE_INTERVAL_MS=86400000
+BILLING_SCHEDULER_SECRET=<random-string>
+```
+
+Generate a strong `BILLING_SCHEDULER_SECRET`:
+
+```powershell
+-join ((65..90) + (97..122) + (48..57) | Get-Random -Count 40 | ForEach-Object { [char]$_ })
+```
+
+> **Do not commit `server/.env` to source control.** It is listed in `.gitignore`. These files contain live secret keys; treat them with the same care as passwords.
+
+### 12b. Deploy to Cloud Run
 
 ```powershell
 $ProjectId = 'YOUR_GCP_PROJECT_ID'
@@ -446,76 +549,18 @@ $Service   = 'travel-itinerary-app'
 gcloud config set project $ProjectId
 ```
 
-Create the secrets without placing values in shell history:
-
-```powershell
-$StripeKey = Read-Host 'Stripe secret key (sk_test_... or sk_live_...)' -AsSecureString
-$StripeKeyPlain = [System.Net.NetworkCredential]::new('', $StripeKey).Password
-$StripeKeyPlain | gcloud secrets create STRIPE_SECRET_KEY --data-file=- 2>$null
-if ($LASTEXITCODE -ne 0) {
-  $StripeKeyPlain | gcloud secrets versions add STRIPE_SECRET_KEY --data-file=-
-}
-
-$WebhookSecret = Read-Host 'Stripe webhook signing secret (whsec_...)' -AsSecureString
-$WebhookSecretPlain = [System.Net.NetworkCredential]::new('', $WebhookSecret).Password
-$WebhookSecretPlain | gcloud secrets create STRIPE_WEBHOOK_SECRET --data-file=- 2>$null
-if ($LASTEXITCODE -ne 0) {
-  $WebhookSecretPlain | gcloud secrets versions add STRIPE_WEBHOOK_SECRET --data-file=-
-}
-
-Remove-Variable StripeKeyPlain,WebhookSecretPlain
-[System.Runtime.InteropServices.Marshal]::ZeroFreeCoTaskMemUnicode(
-  [System.Runtime.InteropServices.Marshal]::SecureStringToCoTaskMemUnicode($StripeKey))
-[System.Runtime.InteropServices.Marshal]::ZeroFreeCoTaskMemUnicode(
-  [System.Runtime.InteropServices.Marshal]::SecureStringToCoTaskMemUnicode($WebhookSecret))
-```
-
-Grant the Cloud Run service account access:
-
-```powershell
-$RuntimeSA = gcloud run services describe $Service `
-  --region $Region `
-  --format='value(spec.template.spec.serviceAccountName)'
-
-foreach ($SecretName in 'STRIPE_SECRET_KEY','STRIPE_WEBHOOK_SECRET') {
-  gcloud secrets add-iam-policy-binding $SecretName `
-    --member "serviceAccount:$RuntimeSA" `
-    --role roles/secretmanager.secretAccessor
-}
-```
-
-Add secret bindings to `server/.secrets` (read by the deploy script):
-
-```text
-STRIPE_SECRET_KEY=STRIPE_SECRET_KEY
-STRIPE_WEBHOOK_SECRET=STRIPE_WEBHOOK_SECRET
-```
-
-Add non-secret configuration to `server/.env` (deployed as plain env vars):
-
-```text
-STRIPE_BILLING_ENABLED=true
-STRIPE_PREMIUM_PRODUCT_ID=prod_...
-STRIPE_PREMIUM_MONTHLY_PRICE_ID=price_...
-STRIPE_PREMIUM_ANNUAL_PRICE_ID=price_...
-STRIPE_CHECKOUT_SUCCESS_URL=https://YOUR-WEB-DOMAIN/?billing=success
-STRIPE_CHECKOUT_CANCEL_URL=https://YOUR-WEB-DOMAIN/?billing=cancel
-STRIPE_PORTAL_RETURN_URL=https://YOUR-WEB-DOMAIN/
-BILLING_RECONCILE_ENABLED=true
-BILLING_RECONCILE_INTERVAL_MS=86400000
-```
-
-Deploy:
+Deploy, reading all configuration (including secrets) from `server/.env`:
 
 ```powershell
 $env:ENV_FILE     = 'server/.env'
-$env:SECRETS_FILE = 'server/.secrets'
 $env:SERVICE_NAME = $Service
 $env:REGION       = $Region
 .\scripts\deploy-api.ps1
 ```
 
-Verify the bound environment without printing secret values:
+The deploy script reads `server/.env` and passes every variable as a plain `--set-env-vars` entry to Cloud Run. Secret values travel as environment variables — they are not visible in Cloud Run logs or in the deployment YAML beyond the initial `gcloud run deploy` call.
+
+Verify the bound environment (values are shown in plain text here — do not share this output):
 
 ```powershell
 gcloud run services describe $Service `
@@ -523,43 +568,16 @@ gcloud run services describe $Service `
   --format='yaml(spec.template.spec.containers[0].env)'
 ```
 
-Secret-bearing rows will show `secretKeyRef` objects rather than plain values.
-
-### Configure Cloud Scheduler for durable grace-period enforcement
+### 12c. Configure Cloud Scheduler for durable grace-period enforcement
 
 The in-process scheduler inside Cloud Run uses `setInterval`/`setTimeout` and is reset every time Cloud Run starts a new instance. For durable grace-period enforcement (so that past-due users are downgraded even after instance recycling), set up a Cloud Scheduler job that calls the internal reconciliation endpoint every 30 minutes.
 
-Generate a shared secret and store it in Secret Manager:
+The `BILLING_SCHEDULER_SECRET` you set in `server/.env` (section 12a) is already deployed to Cloud Run as a plain env var. Use that same value when creating the scheduler job:
 
 ```powershell
-$SchedulerSecret = [System.Web.Security.Membership]::GeneratePassword(40, 10)
-$SchedulerSecret | gcloud secrets create BILLING_SCHEDULER_SECRET --data-file=- 2>$null
-if ($LASTEXITCODE -ne 0) {
-  $SchedulerSecret | gcloud secrets versions add BILLING_SCHEDULER_SECRET --data-file=-
-}
-Remove-Variable SchedulerSecret
-```
-
-Grant the Cloud Run service account access to this secret (same pattern as above):
-
-```powershell
-gcloud secrets add-iam-policy-binding BILLING_SCHEDULER_SECRET `
-  --member "serviceAccount:$RuntimeSA" `
-  --role roles/secretmanager.secretAccessor
-```
-
-Add it to `server/.secrets`:
-
-```text
-BILLING_SCHEDULER_SECRET=BILLING_SCHEDULER_SECRET
-```
-
-Create the Cloud Scheduler job:
-
-```powershell
-# Replace YOUR-API-DOMAIN with the Cloud Run service URL (no trailing slash)
-$ApiDomain = 'https://YOUR-API-DOMAIN'
-$SchedulerSecretValue = gcloud secrets versions access latest --secret BILLING_SCHEDULER_SECRET
+# Replace with the value you put in server/.env
+$SchedulerSecretValue = 'the-same-value-you-set-in-env'
+$ApiDomain = 'https://duerk.org'
 
 gcloud scheduler jobs create http billing-reconcile `
   --schedule="*/30 * * * *" `
@@ -572,8 +590,6 @@ gcloud scheduler jobs create http billing-reconcile `
 
 Remove-Variable SchedulerSecretValue
 ```
-
-> **Note:** The `--headers` flag stores the secret value as a plaintext scheduler job parameter. If your security policy requires keeping secrets out of scheduler job definitions, use `--oidc-service-account-email` plus IAM-restricted Cloud Run access as additional layers. For most deployments, the shared-secret approach is sufficient when Cloud Run is not restricted to IAM callers.
 
 Verify the job was created:
 
@@ -592,6 +608,8 @@ gcloud scheduler jobs run billing-reconcile --location $Region
 ---
 
 ## 13. Run The Real Stripe Sandbox Smoke Test
+
+> **Applies to:** Localhost and GCP Testing (test mode keys only)
 
 Set sandbox variables in the current shell, then run the opt-in integration test:
 
@@ -618,6 +636,8 @@ Remove-Item Env:STRIPE_SANDBOX_TEST,Env:STRIPE_SECRET_KEY,Env:STRIPE_WEBHOOK_SEC
 ---
 
 ## 14. Simulate Time-Based Scenarios With Stripe Test Clocks
+
+> **Applies to:** Localhost and GCP Testing (test mode only)
 
 Test Clocks let you advance time for a specific Stripe Customer without waiting for real days to pass. Use them to verify trial end, billing cycle renewal, and the 30-day past-due grace period.
 
@@ -722,7 +742,9 @@ stripe test_helpers test_clocks delete $ClockId --api-key sk_test_...
 
 ## 15. Trigger Individual Webhook Events With Stripe CLI
 
-Use these commands during development to test specific handlers without going through Checkout. Run with `stripe listen` active in another terminal.
+> **Applies to:** Localhost (requires `stripe listen` running in another terminal)
+
+Use these commands during development to test specific handlers without going through Checkout.
 
 ```powershell
 # Simulate a new subscription being created
@@ -762,7 +784,9 @@ Note: `stripe trigger` creates synthetic Stripe objects with auto-generated IDs.
 
 ## 16. Manual Sandbox Acceptance Checklist
 
-Start `stripe listen` (section 10) and both servers (section 11) before running these scenarios.
+> **Applies to:** Localhost and GCP Testing
+
+Start `stripe listen` (section 10a, localhost only) and both servers (section 11) before running these scenarios. For GCP Testing, use the Dashboard webhook destination (section 10b) and deploy the test configuration (section 12).
 
 Use test cards:
 
@@ -837,6 +861,8 @@ Use any future expiry (e.g. `12/34`) and any 3-digit CVC.
 
 ## 17. Repeat In Live Mode
 
+> **Applies to:** GCP Production only
+
 Stripe sandbox and live objects are separate. Repeat every Dashboard step for live mode:
 
 1. Verify business/public details and branding (section 2).
@@ -847,8 +873,8 @@ Stripe sandbox and live objects are separate. Repeat every Dashboard step for li
 6. Configure promotion codes (section 7).
 7. Configure the Customer Portal (section 8).
 8. Configure billing emails and revenue recovery (section 9).
-9. Create a live webhook destination and copy the live signing secret (section 10).
-10. Add live Secret Manager values and update Cloud Run configuration (section 12).
+9. Create a live webhook destination and copy the live signing secret (section 10b).
+10. Update `server/.env` with live-mode values and redeploy to the production Cloud Run service (section 12).
 
 **Before enabling general availability:**
 

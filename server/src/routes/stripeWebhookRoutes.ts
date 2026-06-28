@@ -8,6 +8,7 @@ import {
   markStripeWebhookEventProcessed,
   upsertBillingSubscription,
   getBillingCustomerByStripeId,
+  listActiveBillingSubscriptionsForUser,
   setPastDueSince,
   clearPastDueSince,
   revokeBillingSubscriptionAccess,
@@ -109,13 +110,19 @@ const handleCheckoutSessionCompleted = async (
   await scheduleNextBillingGraceExpiry();
 };
 
+/** Extract subscription ID from a dahlia Invoice via its parent field. */
+const subscriptionIdFromInvoice = (invoice: Stripe.Invoice): string | null => {
+  const sub = invoice.parent?.subscription_details?.subscription;
+  if (!sub) return null;
+  return typeof sub === 'string' ? sub : sub.id;
+};
+
 const handleInvoicePaid = async (
   stripe: Stripe,
   event: Stripe.Event,
 ): Promise<void> => {
   const invoice = event.data.object as Stripe.Invoice;
-  const subscriptionId =
-    typeof invoice.subscription === 'string' ? invoice.subscription : invoice.subscription?.id;
+  const subscriptionId = subscriptionIdFromInvoice(invoice);
   if (!subscriptionId) return;
 
   await clearPastDueSince(subscriptionId);
@@ -128,8 +135,7 @@ const handleInvoicePaymentFailed = async (
   event: Stripe.Event,
 ): Promise<void> => {
   const invoice = event.data.object as Stripe.Invoice;
-  const subscriptionId =
-    typeof invoice.subscription === 'string' ? invoice.subscription : invoice.subscription?.id;
+  const subscriptionId = subscriptionIdFromInvoice(invoice);
   if (!subscriptionId) return;
 
   const existing = await getBillingSubscriptionByStripeId(subscriptionId);
@@ -154,21 +160,19 @@ const handleInvoicePaymentActionRequired = async (
   event: Stripe.Event,
 ): Promise<void> => {
   const invoice = event.data.object as Stripe.Invoice;
-  const subscriptionId =
-    typeof invoice.subscription === 'string' ? invoice.subscription : invoice.subscription?.id;
+  const subscriptionId = subscriptionIdFromInvoice(invoice);
   if (!subscriptionId) return;
 
   await handleSubscriptionSnapshot(stripe, subscriptionId, event.created, event.id);
 };
 
-/** Resolve an invoice ID → subscription ID, retrieving the invoice if needed. */
+/** Resolve an invoice ID → subscription ID by retrieving the invoice. */
 const subscriptionIdFromInvoiceId = async (
   stripe: Stripe,
   invoiceId: string,
 ): Promise<string | null> => {
   const invoice = await stripe.invoices.retrieve(invoiceId);
-  const sub = invoice.subscription;
-  return typeof sub === 'string' ? sub : (sub?.id ?? null);
+  return subscriptionIdFromInvoice(invoice);
 };
 
 const handleChargeRefunded = async (
@@ -184,17 +188,14 @@ const reconcileChargeRefundState = async (
   charge: Stripe.Charge,
   event: Stripe.Event,
 ): Promise<void> => {
-  const invoiceId = typeof charge.invoice === 'string' ? charge.invoice : charge.invoice?.id;
-  if (!invoiceId) return;
-
   const refundedAmount = charge.amount_refunded ?? 0;
   const chargeAmount = charge.amount ?? 0;
   const isFull = chargeAmount > 0 && refundedAmount >= chargeAmount;
 
   if (!isFull) {
-    logInfo(`[billing][webhook] Partial refund recorded — no automatic entitlement change chargeId=${charge.id} invoiceId=${invoiceId} refunded=${refundedAmount}/${chargeAmount}`);
+    logInfo(`[billing][webhook] Partial refund recorded — no automatic entitlement change chargeId=${charge.id} refunded=${refundedAmount}/${chargeAmount}`);
     incrementMetric('billing.webhook.partial_refund');
-    const subscriptionId = await subscriptionIdFromInvoiceId(stripe, invoiceId);
+    const subscriptionId = await subscriptionIdFromCharge(charge);
     if (!subscriptionId) return;
     const local = await getBillingSubscriptionByStripeId(subscriptionId);
     if (local?.accessRevocationReason === 'full_refund') {
@@ -210,13 +211,13 @@ const reconcileChargeRefundState = async (
   }
 
   incrementMetric('billing.webhook.full_refund_received');
-  logInfo(`[billing][webhook] Full refund on charge, revoking Premium access chargeId=${charge.id} invoiceId=${invoiceId}`);
+  logInfo(`[billing][webhook] Full refund on charge, revoking Premium access chargeId=${charge.id}`);
 
   let subscriptionId: string | null = null;
   try {
-    subscriptionId = await subscriptionIdFromInvoiceId(stripe, invoiceId);
+    subscriptionId = await subscriptionIdFromCharge(charge);
   } catch (err) {
-    logError('[billing][webhook] Failed to retrieve invoice for full-refund revocation', err);
+    logError('[billing][webhook] Failed to resolve subscription for full-refund revocation', err);
     return;
   }
 
@@ -261,15 +262,26 @@ const handleRefundUpdated = async (
   await reconcileChargeRefundState(stripe, charge, event);
 };
 
-/** Shared helper: resolve dispute → charge → invoice → subscription chain. */
+/**
+ * Resolve charge → active subscription ID.
+ * In dahlia, Charge.invoice was removed; we traverse via the customer instead.
+ */
+const subscriptionIdFromCharge = async (charge: Stripe.Charge): Promise<string | null> => {
+  const stripeCustomerId = typeof charge.customer === 'string' ? charge.customer : charge.customer?.id;
+  if (!stripeCustomerId) return null;
+  const billingCustomer = await getBillingCustomerByStripeId(stripeCustomerId);
+  if (!billingCustomer) return null;
+  const subs = await listActiveBillingSubscriptionsForUser(billingCustomer.userId);
+  return subs[0]?.stripeSubscriptionId ?? null;
+};
+
+/** Shared helper: resolve dispute → charge → subscription chain. */
 const subscriptionIdFromDisputeCharge = async (
   stripe: Stripe,
   chargeId: string,
 ): Promise<string | null> => {
   const charge = await stripe.charges.retrieve(chargeId);
-  const invoiceId = typeof charge.invoice === 'string' ? charge.invoice : charge.invoice?.id;
-  if (!invoiceId) return null;
-  return subscriptionIdFromInvoiceId(stripe, invoiceId);
+  return subscriptionIdFromCharge(charge);
 };
 
 const handleDisputeCreated = async (
@@ -462,7 +474,10 @@ router.post('/stripe', async (req, res) => {
     logError('[billing][webhook] Handler failed', err);
     await markStripeWebhookEventFailed(event.id, message);
     incrementMetric('billing.webhook.handler_failed', { eventType: event.type });
-    res.status(500).json({ error: 'Webhook processing failed.' });
+    res.status(500).json({
+      error: 'Webhook processing failed.',
+      ...(process.env.NODE_ENV === 'test' ? { details: message } : {}),
+    });
   }
 });
 

@@ -4,6 +4,7 @@ import request from 'supertest';
 import { app } from '../src/app';
 import {
   initDb,
+  getBillingPlanConfig,
   closePool,
   upsertBillingPlanConfig,
   upsertBillingSubscription,
@@ -60,7 +61,10 @@ const makeFakeStripe = (overrides: Record<string, any> = {}) => ({
     cancel: jest.fn().mockResolvedValue({}),
   },
   invoices: {
-    retrieve: jest.fn().mockResolvedValue({ id: 'in_test', subscription: 'sub_test' }),
+    retrieve: jest.fn().mockResolvedValue({
+      id: 'in_test',
+      parent: { subscription_details: { subscription: 'sub_test' } },
+    }),
   },
   charges: {
     retrieve: jest.fn().mockResolvedValue({ id: 'ch_test', invoice: 'in_test' }),
@@ -202,27 +206,45 @@ describe('Billing routes', () => {
     });
 
     it('rejects invalid plan key', async () => {
-      await request(app)
+      const res = await request(app)
         .post('/api/billing/checkout-session')
         .set('Authorization', `Bearer ${token}`)
         .send({ planKey: 'hacker_free', idempotencyKey: 'test-key-1', clientPlatform: 'web' })
         .expect(400);
+      expect(res.body.error).toBe('Request validation failed');
+      expect(res.body.details).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ path: 'planKey' }),
+        ]),
+      );
     });
 
     it('rejects missing idempotency key', async () => {
-      await request(app)
+      const res = await request(app)
         .post('/api/billing/checkout-session')
         .set('Authorization', `Bearer ${token}`)
         .send({ planKey: 'premium_monthly', clientPlatform: 'web' })
         .expect(400);
+      expect(res.body.error).toBe('Request validation failed');
+      expect(res.body.details).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ path: 'idempotencyKey' }),
+        ]),
+      );
     });
 
     it('rejects native checkout requests', async () => {
-      await request(app)
+      const res = await request(app)
         .post('/api/billing/checkout-session')
         .set('Authorization', `Bearer ${token}`)
         .send({ planKey: 'premium_monthly', idempotencyKey: 'native-test', clientPlatform: 'ios' })
         .expect(400);
+      expect(res.body.error).toBe('Request validation failed');
+      expect(res.body.details).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ path: 'clientPlatform' }),
+        ]),
+      );
     });
 
     it('creates a checkout session and returns a URL', async () => {
@@ -238,10 +260,18 @@ describe('Billing routes', () => {
       // Must never have client-supplied amount or Price ID
       expect(call.line_items[0].price).toBe('price_test_monthly');
       expect(call.mode).toBe('subscription');
+      expect(call.payment_method_types).toBeUndefined();
       expect(call.client_reference_id).toBe(userId);
+      expect(call.metadata).toEqual({ userId, planKey: 'premium_monthly' });
+      expect(call.subscription_data.metadata).toEqual({ userId, planKey: 'premium_monthly' });
       expect(call.subscription_data.trial_period_days).toBe(14);
+      expect(call.success_url).toBe('http://localhost:19006/?billing=success');
+      expect(call.cancel_url).toBe('http://localhost:19006/?billing=cancel');
       expect(call.automatic_tax.enabled).toBe(true);
+      expect(call.billing_address_collection).toBe('required');
       expect(call.allow_promotion_codes).toBe(true);
+      expect(call.customer_update).toEqual({ address: 'auto', name: 'auto' });
+      expect(fakeStripe.checkout.sessions.create.mock.calls[0][1]).toEqual({ idempotencyKey: `test-key-${TS}` });
     });
 
     it('uses admin-configured price, trial, tax, and promotion settings', async () => {
@@ -361,14 +391,14 @@ describe('Billing routes', () => {
       }
     });
 
-    it('returns 500 when the selected plan is disabled', async () => {
+    it('returns 400 with details when the selected plan is disabled', async () => {
       await upsertBillingPlanConfig({
         planKey: 'premium_monthly',
         isCheckoutEnabled: false,
         updatedBy: userId,
       });
       try {
-        await request(app)
+        const res = await request(app)
           .post('/api/billing/checkout-session')
           .set('Authorization', `Bearer ${token}`)
           .send({
@@ -376,13 +406,142 @@ describe('Billing routes', () => {
             idempotencyKey: `disabled-${TS}`,
             clientPlatform: 'web',
           })
-          .expect(500);
+          .expect(400);
+        expect(res.body).toMatchObject({
+          error: 'Failed to create checkout session.',
+          details: 'Checkout is disabled for plan: premium_monthly',
+        });
       } finally {
         await upsertBillingPlanConfig({
           planKey: 'premium_monthly',
           isCheckoutEnabled: true,
           updatedBy: userId,
         });
+      }
+    });
+
+    it('returns 400 with details when checkout redirect URLs are invalid for Stripe', async () => {
+      const originalSuccessUrl = process.env.STRIPE_CHECKOUT_SUCCESS_URL;
+      process.env.STRIPE_CHECKOUT_SUCCESS_URL = 'not-a-url';
+      try {
+        const res = await request(app)
+          .post('/api/billing/checkout-session')
+          .set('Authorization', `Bearer ${token}`)
+          .send({
+            planKey: 'premium_monthly',
+            idempotencyKey: `bad-url-${TS}`,
+            clientPlatform: 'web',
+          })
+          .expect(400);
+        expect(res.body).toMatchObject({
+          error: 'Failed to create checkout session.',
+        });
+        expect(res.body.details).toContain('STRIPE_CHECKOUT_SUCCESS_URL must be an absolute http(s) URL');
+      } finally {
+        process.env.STRIPE_CHECKOUT_SUCCESS_URL = originalSuccessUrl;
+      }
+    });
+
+    it('returns 400 with details when the configured Price belongs to the wrong Stripe mode', async () => {
+      const originalConfig = await getBillingPlanConfig('premium_monthly');
+      await upsertBillingPlanConfig({
+        planKey: 'premium_monthly',
+        activeStripePriceId: 'price_live_mode_mismatch',
+        isCheckoutEnabled: true,
+        livemode: true,
+        updatedBy: userId,
+      });
+      try {
+        const res = await request(app)
+          .post('/api/billing/checkout-session')
+          .set('Authorization', `Bearer ${token}`)
+          .send({
+            planKey: 'premium_monthly',
+            idempotencyKey: `wrong-mode-${TS}`,
+            clientPlatform: 'web',
+          })
+          .expect(400);
+
+        expect(res.body).toMatchObject({
+          error: 'Failed to create checkout session.',
+          details: 'The active billing configuration for premium_monthly belongs to the wrong Stripe mode',
+        });
+      } finally {
+        await upsertBillingPlanConfig({
+          ...(originalConfig ?? {}),
+          planKey: 'premium_monthly',
+          activeStripePriceId: originalConfig?.activeStripePriceId ?? 'price_test_monthly',
+          livemode: originalConfig?.livemode ?? false,
+          updatedBy: userId,
+        });
+      }
+    });
+
+    it('returns 400 with details when no active Stripe Price ID is configured', async () => {
+      const originalConfig = await getBillingPlanConfig('premium_monthly');
+      const originalEnvPrice = process.env.STRIPE_PREMIUM_MONTHLY_PRICE_ID;
+      delete process.env.STRIPE_PREMIUM_MONTHLY_PRICE_ID;
+      await upsertBillingPlanConfig({
+        planKey: 'premium_monthly',
+        activeStripePriceId: null,
+        isCheckoutEnabled: true,
+        livemode: false,
+        updatedBy: userId,
+      });
+      try {
+        const res = await request(app)
+          .post('/api/billing/checkout-session')
+          .set('Authorization', `Bearer ${token}`)
+          .send({
+            planKey: 'premium_monthly',
+            idempotencyKey: `missing-price-${TS}`,
+            clientPlatform: 'web',
+          })
+          .expect(400);
+
+        expect(res.body).toMatchObject({
+          error: 'Failed to create checkout session.',
+        });
+        expect(res.body.details).toContain('No active Price ID configured for plan: premium_monthly');
+      } finally {
+        if (originalEnvPrice == null) delete process.env.STRIPE_PREMIUM_MONTHLY_PRICE_ID;
+        else process.env.STRIPE_PREMIUM_MONTHLY_PRICE_ID = originalEnvPrice;
+        await upsertBillingPlanConfig({
+          ...(originalConfig ?? {}),
+          planKey: 'premium_monthly',
+          activeStripePriceId: originalConfig?.activeStripePriceId ?? 'price_test_monthly',
+          livemode: originalConfig?.livemode ?? false,
+          updatedBy: userId,
+        });
+      }
+    });
+
+    it('returns 500 with Stripe failure details when Checkout session creation fails', async () => {
+      const failureEmail = `billing-checkout-fail+${TS}@example.com`;
+      const failureUser = await registerAndLoginWebUser({
+        firstName: 'Checkout',
+        lastName: 'Failure',
+        email: failureEmail,
+        password: PASSWORD,
+      });
+      fakeStripe.checkout.sessions.create.mockRejectedValueOnce(new Error('Stripe checkout unavailable'));
+      try {
+        const res = await request(app)
+          .post('/api/billing/checkout-session')
+          .set('Authorization', `Bearer ${failureUser.token}`)
+          .send({
+            planKey: 'premium_monthly',
+            idempotencyKey: `stripe-failure-${TS}`,
+            clientPlatform: 'web',
+          })
+          .expect(500);
+
+        expect(res.body).toMatchObject({
+          error: 'Failed to create checkout session.',
+          details: 'Stripe checkout unavailable',
+        });
+      } finally {
+        await cleanupTestUsersByEmail([failureEmail]);
       }
     });
   });
@@ -432,11 +591,62 @@ describe('Billing routes', () => {
     });
 
     it('rejects a client-supplied portal return URL', async () => {
-      await request(app)
+      const res = await request(app)
         .post('/api/billing/portal-session')
         .set('Authorization', `Bearer ${token}`)
         .send({ returnUrl: 'https://attacker.example/redirect' })
         .expect(400);
+      expect(res.body.error).toBe('Request validation failed');
+      expect(res.body.details).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ path: '(root)' }),
+        ]),
+      );
+    });
+
+    it('returns 400 with details when the configured portal return URL is invalid', async () => {
+      const originalReturnUrl = process.env.STRIPE_PORTAL_RETURN_URL;
+      process.env.STRIPE_PORTAL_RETURN_URL = 'not-a-url';
+      await upsertBillingCustomer({
+        userId,
+        stripeCustomerId: 'cus_test_fake',
+        emailSnapshot: EMAIL,
+        livemode: false,
+      });
+      try {
+        const res = await request(app)
+          .post('/api/billing/portal-session')
+          .set('Authorization', `Bearer ${token}`)
+          .send({})
+          .expect(400);
+        expect(res.body).toMatchObject({
+          error: 'Failed to create portal session.',
+        });
+        expect(res.body.details).toContain('STRIPE_PORTAL_RETURN_URL must be an absolute http(s) URL');
+      } finally {
+        process.env.STRIPE_PORTAL_RETURN_URL = originalReturnUrl;
+      }
+    });
+
+    it('returns 500 with Stripe failure details when Portal session creation fails', async () => {
+      await upsertBillingCustomer({
+        userId,
+        stripeCustomerId: 'cus_test_fake',
+        emailSnapshot: EMAIL,
+        livemode: false,
+      });
+      fakeStripe.billingPortal.sessions.create.mockRejectedValueOnce(new Error('Stripe portal unavailable'));
+
+      const res = await request(app)
+        .post('/api/billing/portal-session')
+        .set('Authorization', `Bearer ${token}`)
+        .send({})
+        .expect(500);
+
+      expect(res.body).toMatchObject({
+        error: 'Failed to create portal session.',
+        details: 'Stripe portal unavailable',
+      });
     });
   });
 
@@ -488,6 +698,37 @@ describe('Billing routes', () => {
         await cleanupTestUsersByEmail([refreshEmail]);
       }
     });
+
+    it('returns 500 with details when Stripe subscription refresh fails', async () => {
+      const refreshEmail = `billing-refresh-fail+${TS}@example.com`;
+      const refreshUser = await registerAndLoginWebUser({
+        firstName: 'Refresh',
+        lastName: 'Failure',
+        email: refreshEmail,
+        password: PASSWORD,
+      });
+      await upsertBillingCustomer({
+        userId: refreshUser.userId,
+        stripeCustomerId: `cus_refresh_fail_${TS}`,
+        emailSnapshot: refreshEmail,
+        livemode: false,
+      });
+      fakeStripe.subscriptions.list.mockRejectedValueOnce(new Error('Stripe subscription list unavailable'));
+      try {
+        const res = await request(app)
+          .post('/api/billing/refresh')
+          .set('Authorization', `Bearer ${refreshUser.token}`)
+          .send({})
+          .expect(500);
+
+        expect(res.body).toMatchObject({
+          error: 'Failed to refresh billing status.',
+          details: 'Stripe subscription list unavailable',
+        });
+      } finally {
+        await cleanupTestUsersByEmail([refreshEmail]);
+      }
+    });
   });
 
   describe('billing persistence safety', () => {
@@ -531,6 +772,23 @@ describe('Billing routes', () => {
     it('revokes Premium after a verified full-refund webhook', async () => {
       process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test';
       const eventId = `evt_refund_${TS}`;
+      await upsertBillingCustomer({
+        userId,
+        stripeCustomerId: 'cus_test_fake',
+        emailSnapshot: EMAIL,
+        livemode: false,
+      });
+      await upsertBillingSubscription({
+        stripeSubscriptionId: 'sub_test',
+        userId,
+        scopeOwnerId: userId,
+        stripeCustomerId: 'cus_test_fake',
+        stripePriceId: 'price_test_monthly',
+        planKey: 'premium_monthly',
+        status: 'active',
+        livemode: false,
+        cancelAtPeriodEnd: false,
+      });
       fakeStripe.webhooks.constructEvent.mockReturnValue({
         id: eventId,
         type: 'charge.refunded',
@@ -539,7 +797,7 @@ describe('Billing routes', () => {
         data: {
           object: {
             id: 'ch_full_refund',
-            invoice: 'in_test',
+            customer: 'cus_test_fake',
             amount: 500,
             amount_refunded: 500,
           },
@@ -565,14 +823,15 @@ describe('Billing routes', () => {
 });
 
 describe('Stripe webhook route', () => {
-  it('returns 400 when billing is disabled', async () => {
+  it('returns 503 when billing is disabled', async () => {
     const saved = process.env.STRIPE_BILLING_ENABLED;
     process.env.STRIPE_BILLING_ENABLED = 'false';
     try {
-      await request(app)
+      const res = await request(app)
         .post('/api/billing/webhooks/stripe')
         .send({})
         .expect(503);
+      expect(res.body.error).toBe('Billing is not enabled.');
     } finally {
       process.env.STRIPE_BILLING_ENABLED = saved;
     }
@@ -582,11 +841,12 @@ describe('Stripe webhook route', () => {
     process.env.STRIPE_BILLING_ENABLED = 'true';
     process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test';
     try {
-      await request(app)
+      const res = await request(app)
         .post('/api/billing/webhooks/stripe')
         .set('Content-Type', 'application/json')
         .send(Buffer.from('{}'))
         .expect(400);
+      expect(res.body.error).toBe('Missing Stripe-Signature header.');
     } finally {
       delete process.env.STRIPE_WEBHOOK_SECRET;
     }
@@ -607,12 +867,13 @@ describe('Stripe webhook route', () => {
     setStripeClientForTesting(fakeStripeLocal as any);
 
     try {
-      await request(app)
+      const res = await request(app)
         .post('/api/billing/webhooks/stripe')
         .set('Content-Type', 'application/json')
         .set('Stripe-Signature', badSig)
         .send(Buffer.from('{}'))
         .expect(400);
+      expect(res.body.error).toBe('Webhook signature verification failed.');
     } finally {
       delete process.env.STRIPE_WEBHOOK_SECRET;
       setStripeClientForTesting(null);

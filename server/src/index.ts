@@ -19,7 +19,8 @@ import { startIngestionMetricsScheduler } from './services/ingestionMetricsServi
 import { startFailedRetryScheduler } from './services/failedRetryScheduler';
 import { startBillingReconciliationScheduler } from './billing/subscriptionReconciliationService';
 import { installShutdownHandlers } from './shutdown';
-import { assertStripeBillingConfig } from './config/stripeBilling';
+import { assertStripeBillingConfig, warnIfStripePricesUnconfigured } from './config/stripeBilling';
+import { getBillingPlanConfig } from './db';
 
 const defaultPort = Number(process.env.PORT) || 4000;
 const isCloudRunRuntime = Boolean(process.env.K_SERVICE);
@@ -83,6 +84,7 @@ export const startServer = async (portOverride?: number): Promise<Server> => {
     await initDb();
     await seedEntitlementDefaults();
     await applyStartupFeatureFlagOverrides();
+    await warnIfStripePricesUnconfigured(getBillingPlanConfig);
   } catch (err) {
     logError('[startup] initialization failed after binding port', err);
     server.close(() => process.exit(1));
