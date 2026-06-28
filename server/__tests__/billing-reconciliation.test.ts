@@ -1,5 +1,6 @@
 /// <reference types="jest" />
 /// <reference types="node" />
+import Stripe from 'stripe';
 import {
   closePool,
   getCurrentUserTier,
@@ -30,6 +31,46 @@ describe('billing subscription reconciliation', () => {
   afterAll(async () => {
     await cleanupTestUsersByEmail([EMAIL]);
     await closePool();
+  });
+
+  it('returns orphaned=true without throwing when Stripe returns 404 for a locally-tracked subscription', async () => {
+    // reconcileSubscription calls normalizeStripeError which checks err instanceof
+    // Stripe.errors.StripeError before reading statusCode.  A plain Error with a
+    // statusCode property does NOT pass that check — normalizeStripeError returns
+    // statusCode:undefined, the 404 branch is missed, and the error is re-thrown.
+    // This test therefore uses an actual Stripe SDK error instance.
+    const orphanId = `sub_reconcile_orphan_${TS}`;
+    const orphanLocal = await upsertBillingSubscription({
+      stripeSubscriptionId: orphanId,
+      userId,
+      scopeOwnerId: userId,
+      stripeCustomerId: `cus_reconcile_orphan_${TS}`,
+      stripePriceId: 'price_test_monthly',
+      planKey: 'premium_monthly',
+      status: 'active',
+      livemode: false,
+      cancelAtPeriodEnd: false,
+    });
+    await reconcileUserTierFromBillingById(userId, { reason: 'test setup — orphan' });
+    expect((await getCurrentUserTier(userId))?.tierKey).toBe('premium');
+
+    // Create a real Stripe SDK 404 error so normalizeStripeError recognises it.
+    const notFoundError = Object.create(Stripe.errors.StripeInvalidRequestError.prototype);
+    Object.assign(notFoundError, {
+      message: `No such subscription: '${orphanId}'`,
+      type: 'StripeInvalidRequestError',
+      statusCode: 404,
+      code: 'resource_missing',
+    });
+    const stripe = { subscriptions: { retrieve: jest.fn().mockRejectedValue(notFoundError) } };
+
+    const result = await reconcileSubscription(orphanLocal, stripe as any);
+
+    expect(result).toMatchObject({ repaired: false, tierChanged: false, orphaned: true });
+    // Tier must be unchanged: the subscription row still exists locally
+    // with status='active', so the user keeps premium until a repair event
+    // explicitly marks it canceled or removes access.
+    expect((await getCurrentUserTier(userId))?.tierKey).toBe('premium');
   });
 
   it('does not downgrade a user when the repaired subscription is canceled but another is active', async () => {

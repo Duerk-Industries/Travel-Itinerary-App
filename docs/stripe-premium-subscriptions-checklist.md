@@ -22,9 +22,9 @@ This runbook covers three environments. Each has its own `.env` file — **all s
 
 | Environment | Stripe mode | `.env` file | Webhook source |
 |---|---|---|---|
-| **Localhost** | Test (`sk_test_…`) | `server/.env` | `stripe listen` CLI |
-| **GCP Testing** | Test (`sk_test_…`) | `server/.env` (deployed as env vars) | Cloud Run URL, test webhook destination |
-| **GCP Production** | Live (`sk_live_…`) | `server/.env` (deployed as env vars) | Cloud Run URL, live webhook destination |
+| **Localhost** | Test (`sk_test_…` or `rk_test_…`) | `server/.env` | `stripe listen` CLI |
+| **GCP Testing** | Test (`sk_test_…` or `rk_test_…`) | `server/.env` (deployed as env vars) | Cloud Run URL, test webhook destination |
+| **GCP Production** | Live (`rk_live_…` preferred, `sk_live_…` accepted) | `server/.env` (deployed as env vars) | Cloud Run URL, live webhook destination |
 
 Complete every sandbox step before repeating it in live mode.
 
@@ -469,7 +469,7 @@ Add these values to `server/.env`:
 
 ```text
 STRIPE_BILLING_ENABLED=true
-STRIPE_SECRET_KEY=sk_test_...               # from Stripe Dashboard (test mode)
+STRIPE_SECRET_KEY=sk_test_...               # test mode; rk_test_... is also supported
 STRIPE_API_VERSION=2026-06-24.dahlia
 STRIPE_WEBHOOK_SECRET=whsec_...             # from stripe listen output (changes each session)
 STRIPE_PREMIUM_PRODUCT_ID=prod_...          # test-mode product ID
@@ -508,7 +508,7 @@ For **GCP Testing**, `server/.env` should contain test-mode Stripe keys:
 
 ```text
 STRIPE_BILLING_ENABLED=true
-STRIPE_SECRET_KEY=sk_test_...
+STRIPE_SECRET_KEY=sk_test_...               # test mode; rk_test_... is also supported
 STRIPE_API_VERSION=2026-06-24.dahlia
 STRIPE_WEBHOOK_SECRET=whsec_...              # from the test-mode Dashboard webhook destination
 STRIPE_PREMIUM_PRODUCT_ID=prod_...           # test-mode product
@@ -528,7 +528,7 @@ For **GCP Production**, `server/.env` should contain live-mode Stripe keys:
 
 ```text
 STRIPE_BILLING_ENABLED=true
-STRIPE_SECRET_KEY=sk_live_...
+STRIPE_SECRET_KEY=rk_live_...               # restricted live key preferred; sk_live_... is accepted
 STRIPE_API_VERSION=2026-06-24.dahlia
 STRIPE_WEBHOOK_SECRET=whsec_...              # from the live-mode Dashboard webhook destination
 STRIPE_PREMIUM_PRODUCT_ID=prod_...           # live-mode product

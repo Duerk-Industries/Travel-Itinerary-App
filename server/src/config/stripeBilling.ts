@@ -55,10 +55,16 @@ export const isStripeTaxConfigurationConfirmed = (): boolean =>
 // Price IDs are set when Stripe Prices are created in the Dashboard.
 // These are the active launch Prices; when a new Price is published (Phase 6 admin UI),
 // the env vars (or DB billing_plan_config rows) are updated.
-/** True when the configured secret key is a live-mode key (not a test key). */
+const isStripeTestModeKey = (key: string): boolean =>
+  key.startsWith('sk_test_') || key.startsWith('rk_test_');
+
+const isStripeLiveModeKey = (key: string): boolean =>
+  key.startsWith('sk_live_') || key.startsWith('rk_live_');
+
+/** True when the configured Stripe API key is a live-mode key (not a test key). */
 export const isStripeLiveMode = (): boolean => {
   const key = getStripeSecretKey();
-  return key != null && !key.startsWith('sk_test_');
+  return key != null && isStripeLiveModeKey(key);
 };
 
 export const getStripePremiumMonthlyPriceId = (): string | undefined =>
@@ -118,10 +124,10 @@ export const assertStripeBillingConfig = (): void => {
 
   // Warn when test and live keys are mismatched so a developer catches it early.
   const secretKey = getStripeSecretKey()!;
-  const isTestKey = secretKey.startsWith('sk_test_');
-  const isLiveKey = secretKey.startsWith('sk_live_');
+  const isTestKey = isStripeTestModeKey(secretKey);
+  const isLiveKey = isStripeLiveModeKey(secretKey);
   if (!isTestKey && !isLiveKey) {
-    logError('[stripe] STRIPE_SECRET_KEY does not begin with sk_test_ or sk_live_ — verify configuration');
+    logError('[stripe] STRIPE_SECRET_KEY does not begin with sk_test_, sk_live_, rk_test_, or rk_live_ — verify configuration');
   }
 
 };

@@ -6,6 +6,7 @@ import {
   initDb,
   getBillingPlanConfig,
   closePool,
+  claimBillingCheckout,
   upsertBillingPlanConfig,
   upsertBillingSubscription,
   getBillingSubscriptionByStripeId,
@@ -396,6 +397,7 @@ describe('Billing routes', () => {
 
     it('uses admin-configured price, trial, tax, and promotion settings', async () => {
       const configuredEmail = `billing-configured+${TS}@example.com`;
+      const originalConfig = await getBillingPlanConfig('premium_annual');
       const configured = await registerAndLoginWebUser({
         firstName: 'Configured',
         lastName: 'Billing',
@@ -426,6 +428,21 @@ describe('Billing routes', () => {
         expect(call.automatic_tax.enabled).toBe(false);
         expect(call.allow_promotion_codes).toBe(false);
       } finally {
+        await upsertBillingPlanConfig({
+          ...(originalConfig ?? {}),
+          planKey: 'premium_annual',
+          activeStripePriceId: originalConfig?.activeStripePriceId ?? 'price_test_annual',
+          unitAmountCents: originalConfig?.unitAmountCents ?? 3500,
+          currency: originalConfig?.currency ?? 'usd',
+          interval: originalConfig?.interval ?? 'year',
+          trialDays: originalConfig?.trialDays ?? 14,
+          pastDueGraceDays: originalConfig?.pastDueGraceDays ?? 30,
+          automaticTaxEnabled: originalConfig?.automaticTaxEnabled ?? true,
+          promotionCodesEnabled: originalConfig?.promotionCodesEnabled ?? true,
+          isCheckoutEnabled: originalConfig?.isCheckoutEnabled ?? true,
+          livemode: originalConfig?.livemode ?? false,
+          updatedBy: userId,
+        });
         await cleanupTestUsersByEmail([configuredEmail]);
       }
     });
@@ -551,28 +568,19 @@ describe('Billing routes', () => {
       // When the first checkout is still in-flight (claim created, Stripe not yet responded),
       // a concurrent request from the same user finds the claim with checkoutUrl=null and
       // returns 409 with a message explaining the user should wait and retry.
-      // The concurrent test (above) exercises this path; this test pins the exact message.
       const inFlightEmail = `billing-inflight+${TS}@example.com`;
       const inFlightUser = await registerAndLoginWebUser({
         firstName: 'InFlight', lastName: 'Checkout', email: inFlightEmail, password: PASSWORD,
       });
-      const originalCreate = fakeStripe.checkout.sessions.create;
-      // Block Stripe response indefinitely to leave the claim with checkoutUrl=null.
-      let unblock: (() => void) | null = null;
-      const blocked = jest.fn(() => new Promise<never>((_, reject) => {
-        unblock = () => reject(new Error('test teardown'));
-      }));
-      fakeStripe.checkout.sessions.create = blocked;
 
-      let firstRequest: Promise<any>;
       try {
-        firstRequest = request(app)
-          .post('/api/billing/checkout-session')
-          .set('Authorization', `Bearer ${inFlightUser.token}`)
-          .send({ planKey: 'premium_monthly', idempotencyKey: `inflight-first-${TS}`, clientPlatform: 'web' });
-
-        // Give the first request time to claim the slot before the second request arrives.
-        await new Promise((resolve) => setTimeout(resolve, 20));
+        const claim = await claimBillingCheckout({
+          userId: inFlightUser.userId,
+          claimToken: `inflight-claim-${TS}`,
+          planKey: 'premium_monthly',
+          expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+        });
+        expect(claim).toEqual({ claimed: true, checkoutUrl: null });
 
         const second = await request(app)
           .post('/api/billing/checkout-session')
@@ -583,9 +591,6 @@ describe('Billing routes', () => {
         expect(second.body.alreadySubscribed).toBe(true);
         expect(second.body.message).toBe('A Premium checkout is already being created. Wait a moment and try again.');
       } finally {
-        fakeStripe.checkout.sessions.create = originalCreate;
-        unblock?.();
-        await firstRequest!.catch(() => undefined);
         await cleanupTestUsersByEmail([inFlightEmail]);
       }
     });
@@ -1331,6 +1336,83 @@ describe('Billing routes', () => {
       } finally {
         delete process.env.STRIPE_WEBHOOK_SECRET;
         await cleanupTestUsersByEmail([cycleEmail]);
+      }
+    });
+
+    it('invoice.payment_action_required syncs the subscription snapshot but does NOT start the past-due clock', async () => {
+      // payment_action_required fires when Stripe needs SCA/3DS authentication.
+      // Unlike payment_failed, the customer still has a chance to complete the payment,
+      // so we must NOT set pastDueSince — that would incorrectly start the grace-period
+      // countdown before they have failed to pay.
+      // If payment_failed eventually fires instead, THAT sets pastDueSince.
+      process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test';
+      const actionEmail = `billing-action-required+${TS}@example.com`;
+      const actionUser = await registerAndLoginWebUser({
+        firstName: 'Action', lastName: 'Required', email: actionEmail, password: PASSWORD,
+      });
+      const actionSubId = `sub_action_required_${TS}`;
+
+      await upsertBillingSubscription({
+        stripeSubscriptionId: actionSubId, userId: actionUser.userId, scopeOwnerId: actionUser.userId,
+        stripeCustomerId: `cus_action_${TS}`, stripePriceId: 'price_test_monthly',
+        planKey: 'premium_monthly', status: 'active', livemode: false, cancelAtPeriodEnd: false,
+      });
+
+      const mockSub = {
+        id: actionSubId,
+        status: 'past_due',
+        livemode: false,
+        customer: `cus_action_${TS}`,
+        cancel_at_period_end: false,
+        cancel_at: null,
+        trial_end: null,
+        ended_at: null,
+        latest_invoice: null,
+        metadata: { userId: actionUser.userId, planKey: 'premium_monthly' },
+        items: {
+          data: [{
+            price: { id: 'price_test_monthly' },
+            current_period_start: Math.floor(Date.now() / 1000),
+            current_period_end: Math.floor(Date.now() / 1000) + 30 * 24 * 3600,
+          }],
+        },
+      };
+
+      fakeStripe.subscriptions.retrieve.mockResolvedValueOnce(mockSub);
+      fakeStripe.webhooks.constructEvent.mockReturnValueOnce({
+        id: `evt_action_req_${TS}`,
+        type: 'invoice.payment_action_required',
+        created: Math.floor(Date.now() / 1000),
+        livemode: false,
+        data: {
+          object: {
+            id: `in_action_req_${TS}`,
+            object: 'invoice',
+            parent: { subscription_details: { subscription: actionSubId } },
+          },
+        },
+      });
+
+      try {
+        const res = await request(app)
+          .post('/api/billing/webhooks/stripe')
+          .set('Content-Type', 'application/json')
+          .set('Stripe-Signature', 'test_sig')
+          .send(Buffer.from('{}'))
+          .expect(200);
+        expect(res.body.received).toBe(true);
+
+        const stored = await getBillingSubscriptionByStripeId(actionSubId);
+        if (!stored) throw new Error(`Expected subscription ${actionSubId} in DB after invoice.payment_action_required`);
+        // Subscription snapshot was applied — status updated from active to past_due.
+        expect(stored.status).toBe('past_due');
+        // pastDueSince must NOT be set: handleInvoicePaymentActionRequired intentionally
+        // omits the setPastDueSince call that handleInvoicePaymentFailed performs.
+        // Setting it here would start the grace-period countdown prematurely.
+        expect(stored.pastDueSince).toBeNull();
+      } finally {
+        delete process.env.STRIPE_WEBHOOK_SECRET;
+        await cleanupTestUsersByEmail([actionEmail]);
       }
     });
 

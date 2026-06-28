@@ -280,8 +280,8 @@ describeIfSandbox('Stripe sandbox — real test-mode API', () => {
     for (const key of alwaysRequired) {
       if (!process.env[key]) throw new Error(`Sandbox test requires ${key} to be set`);
     }
-    if (!process.env.STRIPE_SECRET_KEY!.startsWith('sk_test_')) {
-      throw new Error('Sandbox tests must use a test-mode key (sk_test_...)');
+    if (!process.env.STRIPE_SECRET_KEY!.startsWith('sk_test_') && !process.env.STRIPE_SECRET_KEY!.startsWith('rk_test_')) {
+      throw new Error('Sandbox tests must use a test-mode key (sk_test_... or rk_test_...)');
     }
 
     process.env.STRIPE_BILLING_ENABLED = 'true';

@@ -1,6 +1,6 @@
 /// <reference types="jest" />
 /// <reference types="node" />
-import { STRIPE_API_VERSION, assertStripeBillingConfig } from '../src/config/stripeBilling';
+import { STRIPE_API_VERSION, assertStripeBillingConfig, isStripeLiveMode } from '../src/config/stripeBilling';
 
 describe('Stripe billing startup configuration', () => {
   const keys = [
@@ -47,6 +47,22 @@ describe('Stripe billing startup configuration', () => {
     process.env.STRIPE_CHECKOUT_CANCEL_URL = 'https://example.com/?billing=cancel';
     process.env.STRIPE_PORTAL_RETURN_URL = 'https://example.com/';
     expect(() => assertStripeBillingConfig()).not.toThrow();
+  });
+
+  it('accepts restricted Stripe API keys and classifies their mode correctly', () => {
+    process.env.STRIPE_BILLING_ENABLED = 'true';
+    process.env.STRIPE_SECRET_KEY = 'rk_test_example';
+    process.env.STRIPE_WEBHOOK_SECRET = 'whsec_example';
+    process.env.STRIPE_PREMIUM_PRODUCT_ID = 'prod_example';
+    process.env.STRIPE_CHECKOUT_SUCCESS_URL = 'https://example.com/?billing=success';
+    process.env.STRIPE_CHECKOUT_CANCEL_URL = 'https://example.com/?billing=cancel';
+    process.env.STRIPE_PORTAL_RETURN_URL = 'https://example.com/';
+
+    expect(() => assertStripeBillingConfig()).not.toThrow();
+    expect(isStripeLiveMode()).toBe(false);
+
+    process.env.STRIPE_SECRET_KEY = 'rk_live_example';
+    expect(isStripeLiveMode()).toBe(true);
   });
 
   it('defaults to the current Stripe dahlia API version', () => {
