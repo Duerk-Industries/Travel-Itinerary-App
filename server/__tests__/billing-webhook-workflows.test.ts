@@ -46,6 +46,7 @@ const subscription: any = {
 
 describe('Stripe webhook workflows', () => {
   let userId: string;
+  let token: string;
   let currentEvent: any;
   let retrieveSubscription: jest.Mock;
   let fakeStripe: any;
@@ -82,6 +83,7 @@ describe('Stripe webhook workflows', () => {
       password: PASSWORD,
     });
     userId = user.userId;
+    token = user.token;
     subscription.metadata.userId = userId;
     await upsertBillingCustomer({
       userId,
@@ -146,7 +148,8 @@ describe('Stripe webhook workflows', () => {
     subscription.status = 'trialing';
     subscription.trial_end = Math.floor(Date.now() / 1000) + 3 * 24 * 3600;
 
-    const res = await deliver(event('customer.subscription.trial_will_end', { id: SUBSCRIPTION_ID })).expect(200);
+    const trialEndingEvent = event('customer.subscription.trial_will_end', { id: SUBSCRIPTION_ID });
+    const res = await deliver(trialEndingEvent).expect(200);
 
     expect(res.body.received).toBe(true);
     expect(res.body.handled).toBeUndefined();
@@ -158,6 +161,22 @@ describe('Stripe webhook workflows', () => {
         expect.objectContaining({
           type: 'premium_trial_will_end',
           stripeSubscriptionId: SUBSCRIPTION_ID,
+          title: 'Premium trial ending soon',
+        }),
+      ]),
+    );
+    const duplicate = await deliver(trialEndingEvent).expect(200);
+    expect(duplicate.body.duplicate).toBe(true);
+    expect((await listBillingNotificationsForUser(userId)).filter((n) => n.type === 'premium_trial_will_end')).toHaveLength(1);
+
+    const status = await request(app)
+      .get('/api/billing/status')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+    expect(status.body.notifications).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'premium_trial_will_end',
           title: 'Premium trial ending soon',
         }),
       ]),
