@@ -1723,6 +1723,133 @@ describe('Billing routes', () => {
         await cleanupTestUsersByEmail([rfEmail]);
       }
     });
+
+    it('checkout.session.completed with no subscription ID → 200, no subscription written to DB', async () => {
+      // The handler returns early and logs an error when checkout.session.completed fires
+      // with mode=subscription but Stripe omits the subscription field.  The event should
+      // still return 200 (so Stripe does not retry indefinitely), and nothing should be
+      // written to billing_subscriptions.
+      process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test';
+      const noSubEventId = `evt_cs_nosub_${TS}`;
+      const phantomSubId = `sub_phantom_${TS}`;
+      fakeStripe.webhooks.constructEvent.mockReturnValueOnce({
+        id: noSubEventId,
+        type: 'checkout.session.completed',
+        created: Math.floor(Date.now() / 1000),
+        livemode: false,
+        data: {
+          object: {
+            id: `cs_nosub_${TS}`,
+            mode: 'subscription',
+            subscription: null, // ← missing/null subscription field
+          },
+        },
+      });
+
+      try {
+        const res = await request(app)
+          .post('/api/billing/webhooks/stripe')
+          .set('Content-Type', 'application/json')
+          .set('Stripe-Signature', 'test_sig')
+          .send(Buffer.from('{}'))
+          .expect(200);
+        expect(res.body.received).toBe(true);
+        // The handler must have returned early — no subscription row written.
+        const notStored = await getBillingSubscriptionByStripeId(phantomSubId);
+        expect(notStored).toBeNull();
+      } finally {
+        delete process.env.STRIPE_WEBHOOK_SECRET;
+      }
+    });
+
+    it('customer.subscription.paused downgrades to free; customer.subscription.resumed restores Premium', async () => {
+      // Stripe fires paused/resumed when a subscription is paused from the Portal (a
+      // Stripe-side feature, not Cancel At Period End).  Both delegate to
+      // handleSubscriptionSnapshot so the local tier reflects the live Stripe state.
+      process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test';
+      const pauseEmail = `billing-pause-route+${TS}@example.com`;
+      const pauseUser = await registerAndLoginWebUser({
+        firstName: 'Pause', lastName: 'Route', email: pauseEmail, password: PASSWORD,
+      });
+      const pauseSubId = `sub_pause_${TS}`;
+      const pauseCustId = `cus_pause_${TS}`;
+
+      await upsertBillingCustomer({
+        userId: pauseUser.userId, stripeCustomerId: pauseCustId,
+        emailSnapshot: pauseEmail, livemode: false,
+      });
+      // Seed an active subscription so reconciliation starts from premium.
+      await upsertBillingSubscription({
+        stripeSubscriptionId: pauseSubId, userId: pauseUser.userId,
+        scopeOwnerId: pauseUser.userId, stripeCustomerId: pauseCustId,
+        stripePriceId: 'price_test_monthly', planKey: 'premium_monthly',
+        status: 'active', livemode: false, cancelAtPeriodEnd: false,
+      });
+
+      const makeSub = (status: string) => ({
+        id: pauseSubId, status, livemode: false,
+        customer: pauseCustId, cancel_at_period_end: false,
+        cancel_at: null, trial_end: null, ended_at: null, latest_invoice: null,
+        metadata: { userId: pauseUser.userId, planKey: 'premium_monthly' },
+        items: {
+          data: [{
+            price: { id: 'price_test_monthly' },
+            current_period_start: Math.floor(Date.now() / 1000),
+            current_period_end: Math.floor(Date.now() / 1000) + 30 * 24 * 3600,
+          }],
+        },
+      });
+
+      const deliverWebhook = (type: string, subStatus: string, eventId: string) => {
+        const sub = makeSub(subStatus);
+        fakeStripe.subscriptions.retrieve.mockResolvedValueOnce(sub);
+        fakeStripe.webhooks.constructEvent.mockReturnValueOnce({
+          id: eventId, type,
+          created: Math.floor(Date.now() / 1000),
+          livemode: false,
+          data: { object: sub },
+        });
+        return request(app)
+          .post('/api/billing/webhooks/stripe')
+          .set('Content-Type', 'application/json')
+          .set('Stripe-Signature', 'test_sig')
+          .send(Buffer.from('{}'));
+      };
+
+      try {
+        // Pause → subscription status=paused, tier drops to free.
+        await deliverWebhook(
+          'customer.subscription.paused', 'paused', `evt_paused_${TS}`,
+        ).expect(200);
+
+        const paused = await getBillingSubscriptionByStripeId(pauseSubId);
+        if (!paused) throw new Error(`Expected subscription ${pauseSubId} in DB after customer.subscription.paused`);
+        expect(paused.status).toBe('paused');
+
+        const pausedStatus = await request(app)
+          .get('/api/billing/status')
+          .set('Authorization', `Bearer ${pauseUser.token}`)
+          .expect(200);
+        expect(pausedStatus.body.effectiveTier).toBe('free');
+
+        // Resume → subscription status=active, tier restored to premium.
+        await deliverWebhook(
+          'customer.subscription.resumed', 'active', `evt_resumed_${TS}`,
+        ).expect(200);
+
+        const resumed = await getBillingSubscriptionByStripeId(pauseSubId);
+        expect(resumed?.status).toBe('active');
+
+        const resumedStatus = await request(app)
+          .get('/api/billing/status')
+          .set('Authorization', `Bearer ${pauseUser.token}`)
+          .expect(200);
+        expect(resumedStatus.body.effectiveTier).toBe('premium');
+      } finally {
+        delete process.env.STRIPE_WEBHOOK_SECRET;
+        await cleanupTestUsersByEmail([pauseEmail]);
+      }
+    });
   });
 });
 
