@@ -10,6 +10,7 @@ import {
   getBillingPlanConfig,
   listBillingPlanConfigs,
   listBillingPriceHistory,
+  getUserById,
   getBillingTrialUsageByEmail,
   markBillingTrialUsed,
   claimBillingCheckout,
@@ -326,6 +327,14 @@ const planKeyToInterval = (planKey: BillingPlanKey | string | null): 'monthly' |
   return null;
 };
 
+const isTrialEndingSoon = (subscription: BillingSubscription): boolean => {
+  if (subscription.status !== 'trialing' || !subscription.trialEnd) return false;
+  const trialEndMs = new Date(subscription.trialEnd).getTime();
+  if (!Number.isFinite(trialEndMs)) return false;
+  const threeDaysMs = 3 * 24 * 60 * 60 * 1000;
+  return trialEndMs > Date.now() && trialEndMs <= Date.now() + threeDaysMs;
+};
+
 /**
  * Returns a normalized billing status for the authenticated user.
  * Used by GET /api/billing/status.
@@ -335,11 +344,15 @@ export const getBillingStatus = async (
   role: UserRole,
 ): Promise<BillingStatusDto> => {
   await ensureCurrentUserTier(userId, 'free');
-  const [currentTier, subscriptions, planConfigs] = await Promise.all([
+  const [currentTier, subscriptions, planConfigs, user] = await Promise.all([
     getCurrentUserTier(userId),
     listActiveBillingSubscriptionsForUser(userId),
     listBillingPlanConfigs(),
+    getUserById(userId),
   ]);
+  const emailNormalized = user?.email ? normalizeBillingTrialEmail(user.email) : null;
+  const trialUsage = emailNormalized ? await getBillingTrialUsageByEmail(emailNormalized) : null;
+  const trialEligible = Boolean(emailNormalized && !trialUsage);
 
   const effectiveTier = (currentTier?.tierKey ?? 'free') as TierKey;
   const graceDaysByPlan = Object.fromEntries(planConfigs.map((config) => [config.planKey, config.pastDueGraceDays]));
@@ -361,6 +374,9 @@ export const getBillingStatus = async (
       plan: null,
       subscriptionStatus: null,
       currentPeriodEnd: null,
+      trialEnd: null,
+      trialEligible,
+      trialEndingSoon: false,
       cancelAtPeriodEnd: false,
       inGracePeriod: false,
       accessRevoked: false,
@@ -380,6 +396,9 @@ export const getBillingStatus = async (
     plan: planKeyToInterval(primarySub.planKey),
     subscriptionStatus: primarySub.status,
     currentPeriodEnd: primarySub.currentPeriodEnd,
+    trialEnd: primarySub.trialEnd,
+    trialEligible,
+    trialEndingSoon: isTrialEndingSoon(primarySub),
     cancelAtPeriodEnd: primarySub.cancelAtPeriodEnd,
     inGracePeriod,
     accessRevoked: Boolean(primarySub.accessRevokedAt),

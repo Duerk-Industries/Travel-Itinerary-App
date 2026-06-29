@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useColorScheme } from 'react-native';
 import { type MapApp, isMapApp } from '../utils/mapLinks';
 import { type AppearancePreference, isAppearancePreference } from '../utils/appearancePreference';
@@ -7,6 +7,9 @@ import FamilyRelationships from './FamilyRelationships';
 import AccountTraits from './AccountTraits';
 import AccountProfileManagement from './AccountProfileManagement';
 import PackingListTable from '../components/PackingListTable';
+import PremiumSubscriptionPanel from '../components/PremiumSubscriptionPanel';
+import { useBillingStatus } from '../hooks/useBillingStatus';
+import { fetchBillingPlans, type PlanInfo } from '../utils/billing';
 import { getAppTheme } from '../theme/theme';
 import { type Trait } from './traits';
 
@@ -235,6 +238,29 @@ const AccountTab: React.FC<AccountTabProps> = ({
   const colorScheme = useColorScheme();
   const theme = getAppTheme(appearancePreference, colorScheme);
   const [showPackingList, setShowPackingList] = useState(false);
+  const [billingPlans, setBillingPlans] = useState<PlanInfo[]>([]);
+  const {
+    billingStatus,
+    checkoutSuccessMessage,
+    clearCheckoutSuccessMessage,
+    refresh: refreshBillingStatus,
+  } = useBillingStatus({ backendUrl, token: userToken });
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadBillingPlans = async () => {
+      if (!userToken) {
+        setBillingPlans([]);
+        return;
+      }
+      const plans = await fetchBillingPlans(backendUrl, userToken);
+      if (!cancelled) setBillingPlans(plans);
+    };
+    loadBillingPlans();
+    return () => {
+      cancelled = true;
+    };
+  }, [backendUrl, userToken]);
 
   return (
     <View>
@@ -258,6 +284,17 @@ const AccountTab: React.FC<AccountTabProps> = ({
         onSearchAirports={onSearchAirports}
         logout={logout}
         styles={styles}
+      />
+      <PremiumSubscriptionPanel
+        backendUrl={backendUrl}
+        token={userToken}
+        billingStatus={billingStatus}
+        plans={billingPlans}
+        onRefresh={refreshBillingStatus}
+        checkoutSuccessMessage={checkoutSuccessMessage}
+        onDismissCheckoutSuccess={clearCheckoutSuccessMessage}
+        appearancePreference={appearancePreference}
+        systemColorScheme={colorScheme}
       />
       <FamilyRelationships
         backendUrl={backendUrl}

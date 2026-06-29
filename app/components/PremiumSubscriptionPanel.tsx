@@ -25,6 +25,8 @@ interface Props {
   billingStatus: BillingStatusResponse | null;
   plans: PlanInfo[];
   onRefresh: () => Promise<void>;
+  checkoutSuccessMessage?: string | null;
+  onDismissCheckoutSuccess?: () => void;
   appearancePreference?: string;
   systemColorScheme?: 'light' | 'dark' | null;
 }
@@ -38,6 +40,8 @@ export const PremiumSubscriptionPanel: React.FC<Props> = ({
   billingStatus,
   plans,
   onRefresh,
+  checkoutSuccessMessage = null,
+  onDismissCheckoutSuccess,
   appearancePreference = 'auto',
   systemColorScheme,
 }) => {
@@ -106,6 +110,9 @@ export const PremiumSubscriptionPanel: React.FC<Props> = ({
     subscriptionStatus,
     plan,
     currentPeriodEnd,
+    trialEnd,
+    trialEligible,
+    trialEndingSoon,
     cancelAtPeriodEnd,
     inGracePeriod,
     accessRevoked,
@@ -119,10 +126,39 @@ export const PremiumSubscriptionPanel: React.FC<Props> = ({
   const periodEndLabel = currentPeriodEnd
     ? new Date(currentPeriodEnd).toLocaleDateString(undefined, { dateStyle: 'medium' })
     : null;
+  const trialEndLabel = trialEnd
+    ? new Date(trialEnd).toLocaleDateString(undefined, { dateStyle: 'medium' })
+    : periodEndLabel;
+  const selectedPlanConfig = plans.find((p) => p.planKey === selectedPlan);
+  const selectedPlanHasTrial = Boolean(selectedPlanConfig && selectedPlanConfig.trialDays > 0 && trialEligible);
+  const checkoutCtaLabel = selectedPlanHasTrial ? 'Start free trial' : 'Subscribe to Premium';
+  const renderTrialLabel = (planInfo: PlanInfo) => {
+    if (planInfo.trialDays <= 0) return null;
+    return (
+      <Text style={styles.planTrial}>
+        {trialEligible ? `${planInfo.trialDays}-day free trial` : 'Trial already used'}
+      </Text>
+    );
+  };
 
   return (
     <View style={styles.container}>
       <Text style={styles.sectionTitle}>Premium</Text>
+
+      {checkoutSuccessMessage && (
+        <View style={styles.successBanner}>
+          <Text style={styles.successText}>{checkoutSuccessMessage}</Text>
+          {onDismissCheckoutSuccess && (
+            <TouchableOpacity
+              onPress={onDismissCheckoutSuccess}
+              accessibilityRole="button"
+              accessibilityLabel="Dismiss billing confirmation"
+            >
+              <Text style={styles.dismissText}>Dismiss</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
 
       {/* Active subscription status */}
       {isPremium && (
@@ -133,7 +169,11 @@ export const PremiumSubscriptionPanel: React.FC<Props> = ({
             </Text>
           </View>
           {subscriptionStatus === 'trialing' && (
-            <Text style={styles.statusNote}>Free trial active</Text>
+            <Text style={[styles.statusNote, trialEndingSoon && styles.warning]}>
+              {trialEndingSoon && trialEndLabel
+                ? `Trial ends ${trialEndLabel}`
+                : 'Free trial active'}
+            </Text>
           )}
           {inGracePeriod && (
             <Text style={[styles.statusNote, styles.warning]}>Payment issue — grace period active</Text>
@@ -156,7 +196,9 @@ export const PremiumSubscriptionPanel: React.FC<Props> = ({
       {!isPremium && canCheckout && (
         <View>
           <Text style={styles.pitch}>
-            Unlock AI itineraries, email import, cost tracking, and more.
+            {trialEligible
+              ? 'Unlock AI itineraries, email import, cost tracking, and more with a free trial.'
+              : 'Unlock AI itineraries, email import, cost tracking, and more.'}
           </Text>
 
           {/* Plan selector */}
@@ -173,9 +215,7 @@ export const PremiumSubscriptionPanel: React.FC<Props> = ({
                   <Text style={styles.planPrice}>
                     {formatCents(monthlyPlan.amountCents, monthlyPlan.currency)}/mo
                   </Text>
-                  {monthlyPlan.trialDays > 0 && (
-                    <Text style={styles.planTrial}>{monthlyPlan.trialDays}-day free trial</Text>
-                  )}
+                  {renderTrialLabel(monthlyPlan)}
                 </TouchableOpacity>
               )}
               {annualPlan && (
@@ -189,9 +229,7 @@ export const PremiumSubscriptionPanel: React.FC<Props> = ({
                   <Text style={styles.planPrice}>
                     {formatCents(annualPlan.amountCents, annualPlan.currency)}/yr
                   </Text>
-                  {annualPlan.trialDays > 0 && (
-                    <Text style={styles.planTrial}>{annualPlan.trialDays}-day free trial</Text>
-                  )}
+                  {renderTrialLabel(annualPlan)}
                 </TouchableOpacity>
               )}
             </View>
@@ -202,12 +240,12 @@ export const PremiumSubscriptionPanel: React.FC<Props> = ({
             onPress={handleUpgrade}
             disabled={actionLoading}
             accessibilityRole="button"
-            accessibilityLabel="Upgrade to Premium"
+            accessibilityLabel={checkoutCtaLabel}
           >
             {actionLoading ? (
               <ActivityIndicator color="#fff" size="small" />
             ) : (
-              <Text style={styles.ctaText}>Upgrade to Premium</Text>
+              <Text style={styles.ctaText}>{checkoutCtaLabel}</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -279,6 +317,24 @@ const makeStyles = (theme: ReturnType<typeof getAppTheme>) =>
     statusNote: {
       fontSize: theme.typography.small,
       color: theme.colors.textMuted,
+    },
+    successBanner: {
+      borderWidth: 1,
+      borderColor: theme.colors.success,
+      backgroundColor: theme.colors.surfaceMuted,
+      borderRadius: 8,
+      padding: 10,
+      marginBottom: 12,
+      gap: 8,
+    },
+    successText: {
+      fontSize: theme.typography.small,
+      color: theme.colors.text,
+    },
+    dismissText: {
+      fontSize: theme.typography.small,
+      color: theme.colors.link,
+      fontWeight: theme.typography.weightSemibold,
     },
     warning: {
       color: theme.colors.warning,

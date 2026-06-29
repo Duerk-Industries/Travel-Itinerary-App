@@ -19,6 +19,9 @@ const status = {
   plan: 'monthly',
   subscriptionStatus: 'active',
   currentPeriodEnd: null,
+  trialEnd: null,
+  trialEligible: false,
+  trialEndingSoon: false,
   cancelAtPeriodEnd: false,
   inGracePeriod: false,
   accessRevoked: false,
@@ -44,7 +47,32 @@ describe('useBillingStatus Checkout return', () => {
     await waitFor(() => {
       expect(refreshBillingStatus).toHaveBeenCalledWith('https://api.example.test', 'token');
       expect(result.current.billingStatus?.effectiveTier).toBe('premium');
+      expect(result.current.checkoutSuccessMessage).toBe('Premium subscription is active.');
       expect(window.location.search).toBe('');
+    });
+  });
+
+  it('uses trial-specific confirmation copy after Checkout starts a trial', async () => {
+    (refreshBillingStatus as jest.Mock).mockResolvedValue({
+      ...status,
+      subscriptionStatus: 'trialing',
+    });
+
+    const { result } = renderHook(() =>
+      useBillingStatus({
+        backendUrl: 'https://api.example.test',
+        token: 'token',
+      }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.checkoutSuccessMessage).toBe('Premium trial is active.');
+    });
+
+    result.current.clearCheckoutSuccessMessage();
+
+    await waitFor(() => {
+      expect(result.current.checkoutSuccessMessage).toBeNull();
     });
   });
 });

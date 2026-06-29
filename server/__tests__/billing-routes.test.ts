@@ -166,11 +166,130 @@ describe('Billing routes', () => {
       expect(res.body.plan).toBeNull();
       expect(res.body.subscriptionStatus).toBeNull();
       expect(res.body.currentPeriodEnd).toBeNull();
+      expect(res.body.trialEnd).toBeNull();
+      expect(res.body.trialEligible).toBe(true);
+      expect(res.body.trialEndingSoon).toBe(false);
       expect(res.body.cancelAtPeriodEnd).toBe(false);
       expect(res.body.inGracePeriod).toBe(false);
       expect(res.body.accessRevoked).toBe(false);
       expect(res.body.checkoutAvailable).toBe(true);
       expect(res.body.portalAvailable).toBe(false);
+    });
+
+    it('reports trial ineligibility after the durable email has used a Premium trial', async () => {
+      const trialUsedEmail = `billing-trial-used+${TS}@example.com`;
+      const user = await registerAndLoginWebUser({
+        firstName: 'Trial',
+        lastName: 'Used',
+        email: trialUsedEmail,
+        password: PASSWORD,
+      });
+      try {
+        await markBillingTrialUsed({
+          emailNormalized: trialUsedEmail,
+          userId: user.userId,
+          stripeCustomerId: 'cus_trial_used',
+          trialUsedAt: new Date(),
+        });
+
+        const res = await request(app)
+          .get('/api/billing/status')
+          .set('Authorization', `Bearer ${user.token}`)
+          .expect(200);
+
+        expect(res.body.trialEligible).toBe(false);
+        expect(res.body.checkoutAvailable).toBe(true);
+      } finally {
+        await cleanupTestUsersByEmail([trialUsedEmail]);
+      }
+    });
+
+    it('reports trialEndingSoon=true and trialEligible=false when a trial enters the three-day reminder window', async () => {
+      // trialEndingSoon = true when status=trialing and trialEnd is within 3 days.
+      // trialEligible = false because the trial is in use (billing_trial_usage record exists).
+      const trialEndingEmail = `billing-trial-ending+${TS}@example.com`;
+      const user = await registerAndLoginWebUser({
+        firstName: 'Trial',
+        lastName: 'Ending',
+        email: trialEndingEmail,
+        password: PASSWORD,
+      });
+      const trialEnd = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000); // 2 days — inside window
+      try {
+        await upsertBillingSubscription({
+          stripeSubscriptionId: `sub_trial_ending_${TS}`,
+          userId: user.userId,
+          scopeOwnerId: user.userId,
+          stripeCustomerId: 'cus_trial_ending',
+          stripePriceId: 'price_test_monthly',
+          planKey: 'premium_monthly',
+          status: 'trialing',
+          livemode: false,
+          cancelAtPeriodEnd: false,
+          currentPeriodEnd: trialEnd,
+          trialEnd,
+        });
+        // In production, markBillingTrialUsed is called by createCheckoutSession and
+        // handleSubscriptionSnapshot when the trial starts.  Seed it so the test
+        // reflects the realistic state: a mid-trial user has already used their trial.
+        await markBillingTrialUsed({
+          emailNormalized: trialEndingEmail.toLowerCase(),
+          userId: user.userId,
+          stripeCustomerId: 'cus_trial_ending',
+          trialUsedAt: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000), // started 12 days ago
+        });
+
+        const res = await request(app)
+          .get('/api/billing/status')
+          .set('Authorization', `Bearer ${user.token}`)
+          .expect(200);
+
+        expect(res.body.subscriptionStatus).toBe('trialing');
+        expect(res.body.trialEnd).toBeTruthy();
+        expect(res.body.trialEligible).toBe(false); // trial in use
+        expect(res.body.trialEndingSoon).toBe(true);
+        expect(res.body.portalAvailable).toBe(true);
+      } finally {
+        await cleanupTestUsersByEmail([trialEndingEmail]);
+      }
+    });
+
+    it('reports trialEndingSoon=false when a trial has more than three days remaining', async () => {
+      // Verify the boundary: trialEndingSoon is false when the trial end is still far away.
+      const earlyTrialEmail = `billing-trial-early+${TS}@example.com`;
+      const user = await registerAndLoginWebUser({
+        firstName: 'Trial',
+        lastName: 'Early',
+        email: earlyTrialEmail,
+        password: PASSWORD,
+      });
+      const trialEnd = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000); // 10 days — outside window
+      try {
+        await upsertBillingSubscription({
+          stripeSubscriptionId: `sub_trial_early_${TS}`,
+          userId: user.userId,
+          scopeOwnerId: user.userId,
+          stripeCustomerId: 'cus_trial_early',
+          stripePriceId: 'price_test_monthly',
+          planKey: 'premium_monthly',
+          status: 'trialing',
+          livemode: false,
+          cancelAtPeriodEnd: false,
+          currentPeriodEnd: trialEnd,
+          trialEnd,
+        });
+
+        const res = await request(app)
+          .get('/api/billing/status')
+          .set('Authorization', `Bearer ${user.token}`)
+          .expect(200);
+
+        expect(res.body.subscriptionStatus).toBe('trialing');
+        expect(res.body.trialEnd).toBeTruthy();
+        expect(res.body.trialEndingSoon).toBe(false);
+      } finally {
+        await cleanupTestUsersByEmail([earlyTrialEmail]);
+      }
     });
 
     it('returns 200 when billing is disabled — status route intentionally bypasses the billing guard', async () => {

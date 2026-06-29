@@ -12,6 +12,8 @@ interface UseBillingStatusResult {
   billingStatus: BillingStatusResponse | null;
   loading: boolean;
   error: boolean;
+  checkoutSuccessMessage: string | null;
+  clearCheckoutSuccessMessage: () => void;
   refresh: () => Promise<void>;
   triggerPostCheckoutRefresh: () => Promise<void>;
 }
@@ -24,6 +26,7 @@ export const useBillingStatus = ({
   const [billingStatus, setBillingStatus] = useState<BillingStatusResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
+  const [checkoutSuccessMessage, setCheckoutSuccessMessage] = useState<string | null>(null);
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
 
   const load = useCallback(async () => {
@@ -62,7 +65,16 @@ export const useBillingStatus = ({
     setLoading(true);
     try {
       const status = await refreshBillingStatus(backendUrl, token);
-      if (status) setBillingStatus(status);
+      if (status) {
+        setBillingStatus(status);
+        setCheckoutSuccessMessage(
+          status.subscriptionStatus === 'trialing'
+            ? 'Premium trial is active.'
+            : 'Premium subscription is active.',
+        );
+      } else {
+        setCheckoutSuccessMessage('Checkout completed. Billing status is syncing.');
+      }
     } finally {
       setLoading(false);
     }
@@ -78,5 +90,17 @@ export const useBillingStatus = ({
     });
   }, [token, triggerPostCheckoutRefresh]);
 
-  return { billingStatus, loading, error, refresh: load, triggerPostCheckoutRefresh };
+  const clearCheckoutSuccessMessage = useCallback(() => {
+    setCheckoutSuccessMessage(null);
+  }, []);
+
+  return {
+    billingStatus,
+    loading,
+    error,
+    checkoutSuccessMessage,
+    clearCheckoutSuccessMessage,
+    refresh: load,
+    triggerPostCheckoutRefresh,
+  };
 };

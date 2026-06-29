@@ -397,6 +397,9 @@ describeIfSandbox('Stripe sandbox — real test-mode API', () => {
     expect(res.body.plan).toBeNull();
     expect(res.body.subscriptionStatus).toBeNull();
     expect(res.body.currentPeriodEnd).toBeNull();
+    expect(res.body.trialEnd).toBeNull();
+    expect(res.body.trialEligible).toBe(true);   // new user — no prior trial usage in billing_trial_usage
+    expect(res.body.trialEndingSoon).toBe(false); // no subscription, no trial period to count down
     expect(res.body.cancelAtPeriodEnd).toBe(false);
     expect(res.body.inGracePeriod).toBe(false);
     expect(res.body.accessRevoked).toBe(false);
@@ -704,6 +707,12 @@ describeIfSandbox('Stripe sandbox — real test-mode API', () => {
       expect(res.body.plan).toBe('monthly');
       expect(res.body.isBillingManaged).toBe(true);
       expect(typeof res.body.currentPeriodEnd).toBe('string');
+      // handleSubscriptionSnapshot marks trial usage when sub.trial_end is set,
+      // so trialEligible must be false after the subscription.created webhook.
+      expect(typeof res.body.trialEnd).toBe('string');
+      expect(res.body.trialEligible).toBe(false);
+      // 14-day trial just started — well outside the 3-day trialEndingSoon window.
+      expect(res.body.trialEndingSoon).toBe(false);
       expect(res.body.checkoutAvailable).toBe(false);
       expect(res.body.portalAvailable).toBe(true);
       expect(res.body.cancelAtPeriodEnd).toBe(false);

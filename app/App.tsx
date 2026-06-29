@@ -65,6 +65,7 @@ import {
 import LodgingDetailsDialog from './components/LodgingDetailsDialog';
 import ConfirmDialog from './components/ConfirmDialog';
 import PendingInvitesModal from './components/PendingInvitesModal';
+import PremiumTrialWelcomeDialog from './components/PremiumTrialWelcomeDialog';
 import DropdownOptionButton from './components/DropdownOptionButton';
 import CarRentalsPanel from './components/CarRentalsPanel';
 import AuthForm from './components/AuthForm';
@@ -525,6 +526,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [flights, setFlights] = useState<Flight[]>([]);
   const [externalFlightEditId, setExternalFlightEditId] = useState<string | null>(null);
   const [pendingInviteModalOpen, setPendingInviteModalOpen] = useState(false);
+  const [premiumTrialWelcomeVisible, setPremiumTrialWelcomeVisible] = useState(false);
   const {
     deferFirstLoginRedirect,
     showResendConfirmation,
@@ -1328,6 +1330,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setActiveTripId(restoredTripId);
     const firstLogin = Boolean(firstLoginOverride);
     setIsFirstLogin(firstLogin);
+    setPremiumTrialWelcomeVisible(firstLogin);
     const mustSetPassword = Boolean(options?.requirePasswordSetup);
     setRequirePasswordSetup(mustSetPassword);
     if (mustSetPassword) {
@@ -1345,6 +1348,19 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     },
     [activeTripId]
   );
+
+  const dismissPremiumTrialWelcome = useCallback(() => {
+    setPremiumTrialWelcomeVisible(false);
+  }, []);
+
+  const openPremiumPlansFromWelcome = useCallback(() => {
+    setPremiumTrialWelcomeVisible(false);
+    setDeferFirstLoginRedirect(false);
+    setActivePage('account');
+    if (userToken) {
+      void saveSessionAsync(userToken, userName ?? 'Traveler', 'account', userEmail ?? undefined, activeTripId ?? null, pageHistory, userRole);
+    }
+  }, [activeTripId, pageHistory, setDeferFirstLoginRedirect, userEmail, userName, userRole, userToken]);
 
   const exchangeAuthCode = useCallback(
     async (authCode: string) => {
@@ -3263,6 +3279,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           </View>
         </View>
       ) : null}
+      <PremiumTrialWelcomeDialog
+        visible={Boolean(userToken && premiumTrialWelcomeVisible)}
+        styles={styles}
+        onViewPlans={openPremiumPlansFromWelcome}
+        onDismiss={dismissPremiumTrialWelcome}
+      />
       {userToken ? (
         <PendingInvitesModal
           visible={pendingInviteModalOpen}
@@ -3922,6 +3944,15 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
   },
   buttonText: {
     color: '#0B1726',
+    fontWeight: theme.typography.weightBold,
+  },
+  secondaryButton: {
+    backgroundColor: theme.colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  secondaryButtonText: {
+    color: theme.colors.text,
     fontWeight: theme.typography.weightBold,
   },
   topBarActionButton: {
@@ -4969,6 +5000,11 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     ...(Platform.OS === 'web' ? { boxShadow: '0 4px 10px rgba(0,0,0,0.25)' } : null),
     borderWidth: 1,
     borderColor: theme.colors.border,
+  },
+  premiumTrialFeatureList: {
+    marginTop: 4,
+    marginBottom: 12,
+    gap: 2,
   },
   payerChips: {
     flexDirection: 'row',

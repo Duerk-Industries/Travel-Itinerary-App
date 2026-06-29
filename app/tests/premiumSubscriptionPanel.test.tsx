@@ -52,6 +52,9 @@ const baseStatus = {
   plan: null,
   subscriptionStatus: null,
   currentPeriodEnd: null,
+  trialEnd: null,
+  trialEligible: true,
+  trialEndingSoon: false,
   cancelAtPeriodEnd: false,
   inGracePeriod: false,
   accessRevoked: false,
@@ -87,7 +90,7 @@ describe('PremiumSubscriptionPanel', () => {
     );
 
     fireEvent.press(getByText('Annual'));
-    fireEvent.press(getByLabelText('Upgrade to Premium'));
+    fireEvent.press(getByLabelText('Start free trial'));
 
     await waitFor(() => {
       expect(createCheckoutSession).toHaveBeenCalledWith(
@@ -111,8 +114,24 @@ describe('PremiumSubscriptionPanel', () => {
         onRefresh={jest.fn()}
       />,
     );
-    expect(queryByLabelText('Upgrade to Premium')).toBeNull();
+    expect(queryByLabelText('Start free trial')).toBeNull();
     expect(getByText('Visit wanderbunnies.com on a web browser to upgrade to Premium.')).toBeTruthy();
+  });
+
+  it('shows subscribe copy when the Premium trial was already used', () => {
+    const { getAllByText, getByLabelText, queryByText } = render(
+      <PremiumSubscriptionPanel
+        backendUrl="https://wanderbunnies.test"
+        token="token"
+        billingStatus={{ ...baseStatus, trialEligible: false }}
+        plans={plans}
+        onRefresh={jest.fn()}
+      />,
+    );
+
+    expect(getAllByText('Trial already used')).toHaveLength(2);
+    expect(getByLabelText('Subscribe to Premium')).toBeTruthy();
+    expect(queryByText('14-day free trial')).toBeNull();
   });
 
   it('shows grace-period and cancellation state for Premium users', () => {
@@ -138,6 +157,50 @@ describe('PremiumSubscriptionPanel', () => {
     expect(getByText('Annual')).toBeTruthy();
     expect(getByText('Payment issue — grace period active')).toBeTruthy();
     expect(getByText(/Cancels/)).toBeTruthy();
+  });
+
+  it('shows trial-ending notice for active trials', () => {
+    const { getByText } = render(
+      <PremiumSubscriptionPanel
+        backendUrl="https://wanderbunnies.test"
+        token="token"
+        billingStatus={{
+          ...baseStatus,
+          effectiveTier: 'premium',
+          isBillingManaged: true,
+          plan: 'monthly',
+          subscriptionStatus: 'trialing',
+          currentPeriodEnd: '2026-07-01T00:00:00.000Z',
+          trialEnd: '2026-07-01T00:00:00.000Z',
+          trialEligible: false,
+          trialEndingSoon: true,
+          portalAvailable: true,
+        }}
+        plans={plans}
+        onRefresh={jest.fn()}
+      />,
+    );
+
+    expect(getByText(/Trial ends/)).toBeTruthy();
+  });
+
+  it('shows and dismisses Checkout confirmation', () => {
+    const onDismiss = jest.fn();
+    const { getByText, getByLabelText } = render(
+      <PremiumSubscriptionPanel
+        backendUrl="https://wanderbunnies.test"
+        token="token"
+        billingStatus={{ ...baseStatus, effectiveTier: 'premium', portalAvailable: true }}
+        plans={plans}
+        onRefresh={jest.fn()}
+        checkoutSuccessMessage="Premium trial is active."
+        onDismissCheckoutSuccess={onDismiss}
+      />,
+    );
+
+    expect(getByText('Premium trial is active.')).toBeTruthy();
+    fireEvent.press(getByLabelText('Dismiss billing confirmation'));
+    expect(onDismiss).toHaveBeenCalled();
   });
 
   it('opens the Customer Portal for the authenticated subscription', async () => {

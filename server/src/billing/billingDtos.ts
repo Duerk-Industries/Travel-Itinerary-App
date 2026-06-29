@@ -45,6 +45,9 @@ export interface BillingStatusDto {
   plan: 'monthly' | 'annual' | null;
   subscriptionStatus: BillingSubscriptionStatus | null;
   currentPeriodEnd: string | null;
+  trialEnd: string | null;
+  trialEligible: boolean;
+  trialEndingSoon: boolean;
   cancelAtPeriodEnd: boolean;
   inGracePeriod: boolean;
   accessRevoked: boolean;

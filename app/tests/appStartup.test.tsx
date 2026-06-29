@@ -126,4 +126,61 @@ describe('App startup', () => {
       (globalThis as any).Buffer = originalBuffer;
     }
   });
+
+  it('does not show the Premium trial welcome dialog when an existing user signs in', async () => {
+    const token = makeJwt({
+      email: 'existing@example.com',
+      firstName: 'Existing',
+      lastName: 'User',
+      role: 'user',
+      userId: 'existing-1',
+    });
+    fetchSpy = jest.spyOn(global, 'fetch' as any).mockResolvedValue({
+      ok: true,
+      json: async () => ({ token, firstLogin: false }),
+    } as any);
+
+    const { getByPlaceholderText, getByTestId, queryByTestId } = render(<App />);
+    fireEvent.changeText(getByPlaceholderText('Email or Username'), 'existing@example.com');
+    fireEvent.changeText(getByPlaceholderText('Password'), 'Password1!');
+    fireEvent.press(getByTestId('auth-form-submit'));
+
+    // Allow auth flow to complete — dialog must NOT appear for a returning user.
+    await waitFor(() => {
+      expect(queryByTestId('premium-trial-welcome-dialog')).toBeNull();
+    });
+  });
+
+  it('shows the Premium trial welcome dialog after creating an account', async () => {
+    const token = makeJwt({
+      email: 'newtraveler@example.com',
+      firstName: 'New',
+      lastName: 'Traveler',
+      role: 'user',
+      userId: 'new-user-1',
+    });
+    fetchSpy = jest.spyOn(global, 'fetch' as any).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        message: 'Account created',
+        token,
+        user: { id: 'new-user-1', email: 'newtraveler@example.com' },
+        firstLogin: true,
+      }),
+    } as any);
+
+    const { getByTestId, getByPlaceholderText, findByTestId, getByText } = render(<App />);
+
+    fireEvent.press(getByTestId('auth-form-mode-register'));
+    fireEvent.changeText(getByPlaceholderText('First name'), 'New');
+    fireEvent.changeText(getByPlaceholderText('Last name'), 'Traveler');
+    fireEvent.changeText(getByPlaceholderText('Email or Username'), 'newtraveler@example.com');
+    fireEvent.changeText(getByPlaceholderText('Password'), 'Password1!');
+    fireEvent.changeText(getByPlaceholderText('Confirm password'), 'Password1!');
+    fireEvent.press(getByTestId('auth-form-submit'));
+
+    expect(await findByTestId('premium-trial-welcome-dialog')).toBeTruthy();
+    expect(getByText('Try Premium free')).toBeTruthy();
+    expect(getByText('• AI itinerary generation')).toBeTruthy();
+  });
 });

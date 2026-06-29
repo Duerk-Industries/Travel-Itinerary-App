@@ -8,6 +8,9 @@ export interface BillingStatusResponse {
   plan: 'monthly' | 'annual' | null;
   subscriptionStatus: string | null;
   currentPeriodEnd: string | null;
+  trialEnd: string | null;
+  trialEligible: boolean;
+  trialEndingSoon: boolean;
   cancelAtPeriodEnd: boolean;
   inGracePeriod: boolean;
   accessRevoked: boolean;
