@@ -66,6 +66,7 @@ import LodgingDetailsDialog from './components/LodgingDetailsDialog';
 import ConfirmDialog from './components/ConfirmDialog';
 import PendingInvitesModal from './components/PendingInvitesModal';
 import PremiumTrialWelcomeDialog from './components/PremiumTrialWelcomeDialog';
+import { arePremiumTrialsEnabled } from './config/premiumTrials';
 import DropdownOptionButton from './components/DropdownOptionButton';
 import CarRentalsPanel from './components/CarRentalsPanel';
 import AuthForm from './components/AuthForm';
@@ -1330,7 +1331,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     setActiveTripId(restoredTripId);
     const firstLogin = Boolean(firstLoginOverride);
     setIsFirstLogin(firstLogin);
-    setPremiumTrialWelcomeVisible(firstLogin);
+    setPremiumTrialWelcomeVisible(firstLogin && arePremiumTrialsEnabled());
     const mustSetPassword = Boolean(options?.requirePasswordSetup);
     setRequirePasswordSetup(mustSetPassword);
     if (mustSetPassword) {
@@ -3280,7 +3281,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         </View>
       ) : null}
       <PremiumTrialWelcomeDialog
-        visible={Boolean(userToken && premiumTrialWelcomeVisible)}
+        visible={Boolean(userToken && premiumTrialWelcomeVisible && arePremiumTrialsEnabled())}
         styles={styles}
         onViewPlans={openPremiumPlansFromWelcome}
         onDismiss={dismissPremiumTrialWelcome}

@@ -157,6 +157,12 @@ export const isFeatureEnabled = async (key: string): Promise<boolean> => {
   return enabled;
 };
 
+export const clearFeatureFlagCacheForTesting = (): void => {
+  if (process.env.NODE_ENV === 'test') {
+    flagCache.clear();
+  }
+};
+
 // ---------------------------------------------------------------------------
 // Tier resolution
 // ---------------------------------------------------------------------------

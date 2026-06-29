@@ -8,6 +8,7 @@ import {
   Platform,
 } from 'react-native';
 import { getAppTheme } from '../theme/theme';
+import { arePremiumTrialsEnabled } from '../config/premiumTrials';
 import {
   createCheckoutSession,
   createPortalSession,
@@ -122,6 +123,7 @@ export const PremiumSubscriptionPanel: React.FC<Props> = ({
 
   const isPremium = effectiveTier === 'premium' || effectiveTier === 'pro';
   const canCheckout = checkoutAvailable && isCheckoutAllowedOnPlatform();
+  const premiumTrialsEnabled = arePremiumTrialsEnabled();
 
   const periodEndLabel = currentPeriodEnd
     ? new Date(currentPeriodEnd).toLocaleDateString(undefined, { dateStyle: 'medium' })
@@ -130,10 +132,10 @@ export const PremiumSubscriptionPanel: React.FC<Props> = ({
     ? new Date(trialEnd).toLocaleDateString(undefined, { dateStyle: 'medium' })
     : periodEndLabel;
   const selectedPlanConfig = plans.find((p) => p.planKey === selectedPlan);
-  const selectedPlanHasTrial = Boolean(selectedPlanConfig && selectedPlanConfig.trialDays > 0 && trialEligible);
+  const selectedPlanHasTrial = Boolean(premiumTrialsEnabled && selectedPlanConfig && selectedPlanConfig.trialDays > 0 && trialEligible);
   const checkoutCtaLabel = selectedPlanHasTrial ? 'Start free trial' : 'Subscribe to Premium';
   const renderTrialLabel = (planInfo: PlanInfo) => {
-    if (planInfo.trialDays <= 0) return null;
+    if (!premiumTrialsEnabled || planInfo.trialDays <= 0) return null;
     return (
       <Text style={styles.planTrial}>
         {trialEligible ? `${planInfo.trialDays}-day free trial` : 'Trial already used'}
@@ -168,7 +170,7 @@ export const PremiumSubscriptionPanel: React.FC<Props> = ({
               {effectiveTier === 'pro' ? 'Pro' : plan === 'annual' ? 'Annual' : 'Monthly'}
             </Text>
           </View>
-          {subscriptionStatus === 'trialing' && (
+          {premiumTrialsEnabled && subscriptionStatus === 'trialing' && (
             <Text style={[styles.statusNote, trialEndingSoon && styles.warning]}>
               {trialEndingSoon && trialEndLabel
                 ? `Trial ends ${trialEndLabel}`
@@ -196,7 +198,7 @@ export const PremiumSubscriptionPanel: React.FC<Props> = ({
       {!isPremium && canCheckout && (
         <View>
           <Text style={styles.pitch}>
-            {trialEligible
+            {premiumTrialsEnabled && trialEligible
               ? 'Unlock AI itineraries, email import, cost tracking, and more with a free trial.'
               : 'Unlock AI itineraries, email import, cost tracking, and more.'}
           </Text>

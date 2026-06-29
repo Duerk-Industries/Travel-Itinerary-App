@@ -2,6 +2,7 @@ import { Router } from 'express';
 import Stripe from 'stripe';
 import { getStripeClient } from '../billing/stripeClient';
 import { getStripeWebhookSecret, isStripeBillingEnabled } from '../config/stripeBilling';
+import { PREMIUM_TRIALS_FEATURE_FLAG } from '../config/premiumTrials';
 import {
   claimStripeWebhookEvent,
   markStripeWebhookEventFailed,
@@ -21,6 +22,7 @@ import { mapStripeSubscriptionToUpsert, normalizeBillingTrialEmail, resolvePlanK
 import { reconcileUserTierFromBillingById } from '../billing/subscriptionEntitlementService';
 import { logInfo, logError } from '../logger';
 import { incrementMetric } from '../metrics';
+import { isFeatureEnabled } from '../services/entitlementService';
 import { BillingPlanKey } from '../types';
 import { scheduleNextBillingGraceExpiry } from '../billing/subscriptionReconciliationService';
 
@@ -78,7 +80,7 @@ const handleSubscriptionSnapshot = async (
   const planKey = await resolvePlanKeyForPriceId(priceId, planKeyFromMetadata(sub.metadata));
   const upsertParams = mapStripeSubscriptionToUpsert(sub, userId, planKey, eventCreated);
   await upsertBillingSubscription(upsertParams);
-  if (sub.trial_end) {
+  if (sub.trial_end && await isFeatureEnabled(PREMIUM_TRIALS_FEATURE_FLAG)) {
     const customerId = typeof sub.customer === 'string' ? sub.customer : sub.customer.id;
     const billingCustomer = await getBillingCustomerByStripeId(customerId);
     if (billingCustomer?.emailSnapshot) {

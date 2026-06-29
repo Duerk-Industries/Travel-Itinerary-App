@@ -32,6 +32,8 @@ import {
   getStripePremiumAnnualPriceId,
   isStripeBillingEnabled,
 } from '../config/stripeBilling';
+import { PREMIUM_TRIALS_FEATURE_FLAG } from '../config/premiumTrials';
+import { isFeatureEnabled } from '../services/entitlementService';
 import { getStripeClient, normalizeStripeError } from './stripeClient';
 import {
   isSubscriptionPremiumEligible,
@@ -95,6 +97,7 @@ export const getOrCreateBillingCustomer = async (
 // ---------------------------------------------------------------------------
 
 export const listAvailablePlans = async (): Promise<PlanInfo[]> => {
+  const premiumTrialsEnabled = await isFeatureEnabled(PREMIUM_TRIALS_FEATURE_FLAG);
   const configs = await listBillingPlanConfigs();
   return configs
     .filter((config) => config.isCheckoutEnabled)
@@ -103,7 +106,7 @@ export const listAvailablePlans = async (): Promise<PlanInfo[]> => {
       amountCents: config.unitAmountCents,
       currency: config.currency,
       interval: config.interval,
-      trialDays: config.trialDays,
+      trialDays: premiumTrialsEnabled ? config.trialDays : 0,
     }));
 };
 
@@ -186,9 +189,10 @@ export const createCheckoutSession = async (params: {
   }
   const priceId = planConfig?.activeStripePriceId ?? resolvePriceId(planKey);
   const emailNormalized = normalizeBillingTrialEmail(email);
-  const trialUsage = await getBillingTrialUsageByEmail(emailNormalized);
+  const premiumTrialsEnabled = await isFeatureEnabled(PREMIUM_TRIALS_FEATURE_FLAG);
+  const trialUsage = premiumTrialsEnabled ? await getBillingTrialUsageByEmail(emailNormalized) : null;
   const configuredTrialDays = planConfig?.trialDays ?? PLAN_DEFAULTS.trialDays;
-  const trialDays = configuredTrialDays > 0 && !trialUsage ? configuredTrialDays : 0;
+  const trialDays = premiumTrialsEnabled && configuredTrialDays > 0 && !trialUsage ? configuredTrialDays : 0;
   const successUrl = assertValidStripeRedirectUrl('STRIPE_CHECKOUT_SUCCESS_URL', getStripeCheckoutSuccessUrl());
   const cancelUrl = assertValidStripeRedirectUrl('STRIPE_CHECKOUT_CANCEL_URL', getStripeCheckoutCancelUrl());
 
@@ -218,7 +222,7 @@ export const createCheckoutSession = async (params: {
         client_reference_id: userId,
         line_items: [{ price: priceId, quantity: 1 }],
         subscription_data: {
-          ...(trialDays > 0 ? { trial_period_days: trialDays } : {}),
+          trial_period_days: trialDays,
           metadata: { userId, planKey },
         },
         metadata: { userId, planKey },
@@ -344,15 +348,16 @@ export const getBillingStatus = async (
   role: UserRole,
 ): Promise<BillingStatusDto> => {
   await ensureCurrentUserTier(userId, 'free');
-  const [currentTier, subscriptions, planConfigs, user] = await Promise.all([
+  const [currentTier, subscriptions, planConfigs, user, premiumTrialsEnabled] = await Promise.all([
     getCurrentUserTier(userId),
     listActiveBillingSubscriptionsForUser(userId),
     listBillingPlanConfigs(),
     getUserById(userId),
+    isFeatureEnabled(PREMIUM_TRIALS_FEATURE_FLAG),
   ]);
   const emailNormalized = user?.email ? normalizeBillingTrialEmail(user.email) : null;
-  const trialUsage = emailNormalized ? await getBillingTrialUsageByEmail(emailNormalized) : null;
-  const trialEligible = Boolean(emailNormalized && !trialUsage);
+  const trialUsage = premiumTrialsEnabled && emailNormalized ? await getBillingTrialUsageByEmail(emailNormalized) : null;
+  const trialEligible = Boolean(premiumTrialsEnabled && emailNormalized && !trialUsage);
 
   const effectiveTier = (currentTier?.tierKey ?? 'free') as TierKey;
   const graceDaysByPlan = Object.fromEntries(planConfigs.map((config) => [config.planKey, config.pastDueGraceDays]));
@@ -396,9 +401,9 @@ export const getBillingStatus = async (
     plan: planKeyToInterval(primarySub.planKey),
     subscriptionStatus: primarySub.status,
     currentPeriodEnd: primarySub.currentPeriodEnd,
-    trialEnd: primarySub.trialEnd,
+    trialEnd: premiumTrialsEnabled ? primarySub.trialEnd : null,
     trialEligible,
-    trialEndingSoon: isTrialEndingSoon(primarySub),
+    trialEndingSoon: premiumTrialsEnabled && isTrialEndingSoon(primarySub),
     cancelAtPeriodEnd: primarySub.cancelAtPeriodEnd,
     inGracePeriod,
     accessRevoked: Boolean(primarySub.accessRevokedAt),

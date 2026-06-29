@@ -16,8 +16,11 @@ import {
   upsertBillingCustomer,
   getBillingTrialUsageByEmail,
   markBillingTrialUsed,
+  setFeatureFlag,
 } from '../src/db';
 import { setStripeClientForTesting } from '../src/billing/stripeClient';
+import { PREMIUM_TRIALS_FEATURE_FLAG } from '../src/config/premiumTrials';
+import { clearFeatureFlagCacheForTesting } from '../src/services/entitlementService';
 import { cleanupTestUsersByEmail, registerAndLoginWebUser } from './helpers';
 
 const TS = Date.now();
@@ -100,6 +103,8 @@ describe('Billing routes', () => {
     process.env.STRIPE_PORTAL_RETURN_URL = 'http://localhost:19006/';
 
     await initDb();
+    await setFeatureFlag(PREMIUM_TRIALS_FEATURE_FLAG, true, null);
+    clearFeatureFlagCacheForTesting();
     await upsertBillingPlanConfig({
       planKey: 'premium_monthly',
       activeStripePriceId: 'price_test_monthly',
@@ -174,6 +179,48 @@ describe('Billing routes', () => {
       expect(res.body.accessRevoked).toBe(false);
       expect(res.body.checkoutAvailable).toBe(true);
       expect(res.body.portalAvailable).toBe(false);
+    });
+
+    it('hides trial eligibility and trial countdown when the Premium trials flag is disabled', async () => {
+      await setFeatureFlag(PREMIUM_TRIALS_FEATURE_FLAG, false, null);
+      clearFeatureFlagCacheForTesting();
+      const disabledEmail = `billing-trial-flag-off+${TS}@example.com`;
+      const user = await registerAndLoginWebUser({
+        firstName: 'Trial',
+        lastName: 'Disabled',
+        email: disabledEmail,
+        password: PASSWORD,
+      });
+      const trialEnd = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
+      try {
+        await upsertBillingSubscription({
+          stripeSubscriptionId: `sub_trial_flag_off_${TS}`,
+          userId: user.userId,
+          scopeOwnerId: user.userId,
+          stripeCustomerId: 'cus_trial_flag_off',
+          stripePriceId: 'price_test_monthly',
+          planKey: 'premium_monthly',
+          status: 'trialing',
+          livemode: false,
+          cancelAtPeriodEnd: false,
+          currentPeriodEnd: trialEnd,
+          trialEnd,
+        });
+
+        const res = await request(app)
+          .get('/api/billing/status')
+          .set('Authorization', `Bearer ${user.token}`)
+          .expect(200);
+
+        expect(res.body.subscriptionStatus).toBe('trialing');
+        expect(res.body.trialEnd).toBeNull();
+        expect(res.body.trialEligible).toBe(false);
+        expect(res.body.trialEndingSoon).toBe(false);
+      } finally {
+        await cleanupTestUsersByEmail([disabledEmail]);
+        await setFeatureFlag(PREMIUM_TRIALS_FEATURE_FLAG, true, null);
+        clearFeatureFlagCacheForTesting();
+      }
     });
 
     it('reports trial ineligibility after the durable email has used a Premium trial', async () => {
@@ -508,9 +555,36 @@ describe('Billing routes', () => {
           .expect(201);
 
         const call = fakeStripe.checkout.sessions.create.mock.calls.at(-1)[0];
-        expect(call.subscription_data.trial_period_days).toBeUndefined();
+        expect(call.subscription_data.trial_period_days).toBe(0);
       } finally {
         await cleanupTestUsersByEmail([usedEmail]);
+      }
+    });
+
+    it('passes trial_period_days=0 and does not record trial usage when the Premium trials flag is disabled', async () => {
+      await setFeatureFlag(PREMIUM_TRIALS_FEATURE_FLAG, false, null);
+      clearFeatureFlagCacheForTesting();
+      const disabledEmail = `billing-checkout-trial-off+${TS}@example.com`;
+      const disabled = await registerAndLoginWebUser({
+        firstName: 'Trial',
+        lastName: 'Off',
+        email: disabledEmail,
+        password: PASSWORD,
+      });
+      try {
+        await request(app)
+          .post('/api/billing/checkout-session')
+          .set('Authorization', `Bearer ${disabled.token}`)
+          .send({ planKey: 'premium_monthly', idempotencyKey: `trial-off-${TS}`, clientPlatform: 'web' })
+          .expect(201);
+
+        const call = fakeStripe.checkout.sessions.create.mock.calls.at(-1)[0];
+        expect(call.subscription_data.trial_period_days).toBe(0);
+        await expect(getBillingTrialUsageByEmail(disabledEmail.toLowerCase())).resolves.toBeNull();
+      } finally {
+        await cleanupTestUsersByEmail([disabledEmail]);
+        await setFeatureFlag(PREMIUM_TRIALS_FEATURE_FLAG, true, null);
+        clearFeatureFlagCacheForTesting();
       }
     });
 

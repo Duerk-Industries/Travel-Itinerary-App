@@ -49,10 +49,12 @@ const makeJwt = (payload: Record<string, unknown>) => {
 };
 
 describe('App startup', () => {
+  const originalPremiumTrialsFlag = process.env.EXPO_PUBLIC_PREMIUM_TRIALS_ENABLED;
   let fetchSpy: jest.SpyInstance | null = null;
 
   beforeEach(() => {
     process.env.NODE_ENV = 'test';
+    process.env.EXPO_PUBLIC_PREMIUM_TRIALS_ENABLED = 'true';
     fetchSpy?.mockRestore();
     fetchSpy = null;
     WebBrowser.openAuthSessionAsync.mockResolvedValue({ type: 'cancel' });
@@ -62,6 +64,11 @@ describe('App startup', () => {
   afterEach(() => {
     fetchSpy?.mockRestore();
     fetchSpy = null;
+    if (originalPremiumTrialsFlag == null) {
+      delete process.env.EXPO_PUBLIC_PREMIUM_TRIALS_ENABLED;
+    } else {
+      process.env.EXPO_PUBLIC_PREMIUM_TRIALS_ENABLED = originalPremiumTrialsFlag;
+    }
   });
 
   it('completes pending browser auth sessions when the app module loads', () => {
@@ -182,5 +189,39 @@ describe('App startup', () => {
     expect(await findByTestId('premium-trial-welcome-dialog')).toBeTruthy();
     expect(getByText('Try Premium free')).toBeTruthy();
     expect(getByText('• AI itinerary generation')).toBeTruthy();
+  });
+
+  it('does not show the Premium trial welcome dialog when the Premium trials flag is disabled', async () => {
+    process.env.EXPO_PUBLIC_PREMIUM_TRIALS_ENABLED = 'false';
+    const token = makeJwt({
+      email: 'flagoff@example.com',
+      firstName: 'Flag',
+      lastName: 'Off',
+      role: 'user',
+      userId: 'flag-off-1',
+    });
+    fetchSpy = jest.spyOn(global, 'fetch' as any).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        message: 'Account created',
+        token,
+        user: { id: 'flag-off-1', email: 'flagoff@example.com' },
+        firstLogin: true,
+      }),
+    } as any);
+
+    const { getByTestId, getByPlaceholderText, queryByTestId } = render(<App />);
+
+    fireEvent.press(getByTestId('auth-form-mode-register'));
+    fireEvent.changeText(getByPlaceholderText('First name'), 'Flag');
+    fireEvent.changeText(getByPlaceholderText('Last name'), 'Off');
+    fireEvent.changeText(getByPlaceholderText('Email or Username'), 'flagoff@example.com');
+    fireEvent.changeText(getByPlaceholderText('Password'), 'Password1!');
+    fireEvent.changeText(getByPlaceholderText('Confirm password'), 'Password1!');
+    fireEvent.press(getByTestId('auth-form-submit'));
+
+    await waitFor(() => {
+      expect(queryByTestId('premium-trial-welcome-dialog')).toBeNull();
+    });
   });
 });

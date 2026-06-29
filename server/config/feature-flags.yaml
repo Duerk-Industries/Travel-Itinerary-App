@@ -64,3 +64,6 @@ flags:
   stripe_customer_portal:
     enabled: false
     description: "Enable Stripe Customer Portal for subscription management (cancellation, payment update, plan switch)"
+  premium_trials:
+    enabled: true
+    description: "Enable Premium free trial offers, trial eligibility tracking, and trial-ending reminders"

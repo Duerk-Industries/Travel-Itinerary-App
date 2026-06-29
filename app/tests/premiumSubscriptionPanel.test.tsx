@@ -38,6 +38,15 @@ jest.mock('react-native', () => ({
   },
 }));
 
+jest.mock('expo-constants', () => ({
+  __esModule: true,
+  default: {
+    expoConfig: {
+      extra: {},
+    },
+  },
+}));
+
 jest.mock('../utils/billing', () => ({
   createCheckoutSession: jest.fn(),
   createPortalSession: jest.fn(),
@@ -68,10 +77,21 @@ const plans = [
 ];
 
 describe('PremiumSubscriptionPanel', () => {
+  const originalPremiumTrialsFlag = process.env.EXPO_PUBLIC_PREMIUM_TRIALS_ENABLED;
+
   beforeEach(() => {
     jest.clearAllMocks();
+    process.env.EXPO_PUBLIC_PREMIUM_TRIALS_ENABLED = 'true';
     (isCheckoutAllowedOnPlatform as jest.Mock).mockReturnValue(true);
     (openBillingUrl as jest.Mock).mockResolvedValue(true);
+  });
+
+  afterEach(() => {
+    if (originalPremiumTrialsFlag == null) {
+      delete process.env.EXPO_PUBLIC_PREMIUM_TRIALS_ENABLED;
+    } else {
+      process.env.EXPO_PUBLIC_PREMIUM_TRIALS_ENABLED = originalPremiumTrialsFlag;
+    }
   });
 
   it('starts the selected annual web checkout and opens Stripe', async () => {
@@ -132,6 +152,23 @@ describe('PremiumSubscriptionPanel', () => {
     expect(getAllByText('Trial already used')).toHaveLength(2);
     expect(getByLabelText('Subscribe to Premium')).toBeTruthy();
     expect(queryByText('14-day free trial')).toBeNull();
+  });
+
+  it('hides trial copy when the Premium trials flag is disabled', () => {
+    process.env.EXPO_PUBLIC_PREMIUM_TRIALS_ENABLED = 'false';
+    const { getByLabelText, queryByText } = render(
+      <PremiumSubscriptionPanel
+        backendUrl="https://wanderbunnies.test"
+        token="token"
+        billingStatus={baseStatus}
+        plans={plans}
+        onRefresh={jest.fn()}
+      />,
+    );
+
+    expect(getByLabelText('Subscribe to Premium')).toBeTruthy();
+    expect(queryByText('14-day free trial')).toBeNull();
+    expect(queryByText('Trial already used')).toBeNull();
   });
 
   it('shows grace-period and cancellation state for Premium users', () => {

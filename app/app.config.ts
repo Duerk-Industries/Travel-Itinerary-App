@@ -123,6 +123,7 @@ const config: ExpoConfig = {
         : 'https://duerk.org'),
     refreshIntervalMs: Number(process.env.REFRESH_INTERVAL_MS) || 60000,
     sessionCacheTimeoutMinutes: Number(process.env.SESSION_CACHE_TIMEOUT_MINUTES) || 720,
+    premiumTrialsEnabled: String(process.env.EXPO_PUBLIC_PREMIUM_TRIALS_ENABLED ?? 'true').toLowerCase() !== 'false',
     eas: {
         projectId: "06966c0b-d878-4346-850c-090c762f1916"
     }
