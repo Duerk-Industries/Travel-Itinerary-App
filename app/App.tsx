@@ -64,6 +64,7 @@ import {
 } from './utils/session';
 import LodgingDetailsDialog from './components/LodgingDetailsDialog';
 import ConfirmDialog from './components/ConfirmDialog';
+import PermissionDeniedModal from './components/PermissionDeniedModal';
 import PendingInvitesModal from './components/PendingInvitesModal';
 import DropdownOptionButton from './components/DropdownOptionButton';
 import CarRentalsPanel from './components/CarRentalsPanel';
@@ -72,6 +73,11 @@ import { toWebStyle } from './utils/webStyle';
 import { formatNetVotes, shouldShowRatingButtons, shouldShowVoteButtons } from './utils/votes';
 import { resolveBackendUrl as resolveConfiguredBackendUrl } from './utils/backendUrl';
 import { buildWebOAuthRedirectUrl } from './utils/oauthRedirect';
+import { installPermissionDeniedInterceptor } from './utils/permissionDeniedInterceptor';
+
+// Installed once at module load so every fetch in the app — regardless of
+// which tab/hook issues it — surfaces a permission-denied modal on a 403.
+installPermissionDeniedInterceptor();
 import { type AsyncItineraryTracker, useAsyncItineraryPolling } from './hooks/useAsyncItineraryPolling';
 import { useTripsData } from './hooks/useTripsData';
 import { useTripMembers } from './hooks/useTripMembers';
@@ -571,7 +577,6 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   } = useAuthFlowState({ backendUrl, userToken });
   const [selectedFollowedTripId, setSelectedFollowedTripId] = useState<string | null>(null);
   // selectedFollowedTripDetails is now owned by useSelectedFollowedTripDetails (declared below once selectedFollowedTrip is derived).
-  const isFollowingMode = Boolean(selectedFollowedTripId);
   const [groupName, setGroupName] = useState('');
   const [groupUserEmails, setGroupUserEmails] = useState('');
   const [groupGuestNames, setGroupGuestNames] = useState('');
@@ -695,6 +700,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const followedTripById = useMemo(
     () => new Map(followedTrips.map((trip) => [trip.tripId, trip] as const)),
     [followedTrips]
+  );
+  // True when the active trip is one the user only follows (read-only access), not a
+  // group trip they're a member of. Derived from followedTripById (not just
+  // selectedFollowedTripId) so it stays correct even if activeTripId is restored
+  // directly from a saved session without going through the "Following" tab flow.
+  const isFollowingMode = Boolean(
+    selectedFollowedTripId || (activeTripId && followedTripById.has(activeTripId))
   );
   const selectedFollowedTrip = useMemo(
     () => (selectedFollowedTripId ? followedTripById.get(selectedFollowedTripId) ?? null : null),
@@ -3348,6 +3360,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
           </View>
         </View>
       ) : null}
+      <PermissionDeniedModal styles={styles} />
       {lodgingToDelete ? (
         <ConfirmDialog
           visible={true}

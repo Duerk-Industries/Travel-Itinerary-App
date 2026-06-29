@@ -3071,6 +3071,10 @@ export const listFollowedTrips = async (
      JOIN users u ON u.id = g.owner_id
      LEFT JOIN web_users wu ON wu.id = g.owner_id
      WHERE tf.follower_user_id = $1
+       AND NOT EXISTS (
+         SELECT 1 FROM group_members gm
+         WHERE gm.group_id = t.group_id AND gm.user_id = $1 AND gm.removed_at IS NULL
+       )
      ORDER BY tf.created_at DESC`,
     [userId]
   );

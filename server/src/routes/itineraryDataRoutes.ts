@@ -34,6 +34,11 @@ const router = Router();
 router.use(bodyParser.json());
 router.use(authenticate);
 
+// db.ts authorization failures surface as plain Errors with this message —
+// map them to 403 so the frontend's permission-denied handling can find them,
+// rather than the generic 400 used for validation failures.
+const statusForDbError = (message: string): number => (/not authorized/i.test(message) ? 403 : 400);
+
 router.get('/', async (req, res) => {
   const userId = (req as any).user.userId as string;
   const items = await listItineraries(userId);
@@ -54,7 +59,7 @@ router.post('/', async (req, res) => {
     if (err.code === 'ITINERARY_EXISTS') {
       res.status(409).json({ error: err.message });
     } else {
-      res.status(400).json({ error: (err as Error).message });
+      res.status(statusForDbError(err.message)).json({ error: (err as Error).message });
     }
   }
 });
@@ -65,7 +70,8 @@ router.delete('/:id', async (req, res) => {
     await deleteItineraryRecord(userId, req.params.id);
     res.status(204).send();
   } catch (err) {
-    res.status(400).json({ error: (err as Error).message });
+    const message = (err as Error).message;
+    res.status(statusForDbError(message)).json({ error: message });
   }
 });
 
@@ -89,7 +95,7 @@ router.put('/:id', async (req, res) => {
     if (err.code === 'ITINERARY_EXISTS') {
       res.status(409).json({ error: err.message });
     } else {
-      res.status(400).json({ error: (err as Error).message });
+      res.status(statusForDbError(err.message)).json({ error: (err as Error).message });
     }
   }
 });
@@ -101,7 +107,8 @@ router.get('/:id/details', async (req, res) => {
     const withReactions = await attachReactionsToDetails(userId, details);
     res.json(withReactions);
   } catch (err) {
-    res.status(400).json({ error: (err as Error).message });
+    const message = (err as Error).message;
+    res.status(statusForDbError(message)).json({ error: message });
   }
 });
 
@@ -179,7 +186,8 @@ router.post('/:id/details', async (req, res) => {
     });
     res.status(201).json(created);
   } catch (err) {
-    res.status(400).json({ error: (err as Error).message });
+    const message = (err as Error).message;
+    res.status(statusForDbError(message)).json({ error: message });
   }
 });
 
@@ -189,7 +197,8 @@ router.delete('/details/:detailId', async (req, res) => {
     await deleteItineraryDetail(userId, req.params.detailId);
     res.status(204).send();
   } catch (err) {
-    res.status(400).json({ error: (err as Error).message });
+    const message = (err as Error).message;
+    res.status(statusForDbError(message)).json({ error: message });
   }
 });
 
@@ -213,7 +222,8 @@ router.put('/details/:detailId', async (req, res) => {
     });
     res.json(updated);
   } catch (err) {
-    res.status(400).json({ error: (err as Error).message });
+    const message = (err as Error).message;
+    res.status(statusForDbError(message)).json({ error: message });
   }
 });
 
@@ -242,7 +252,8 @@ router.post('/details/:detailId/checklist-items', async (req, res) => {
     const created = await addItineraryChecklistItem(userId, req.params.detailId, { label, position });
     res.status(201).json(created);
   } catch (err) {
-    res.status(400).json({ error: (err as Error).message });
+    const message = (err as Error).message;
+    res.status(statusForDbError(message)).json({ error: message });
   }
 });
 
@@ -275,7 +286,8 @@ router.patch('/checklist-items/:itemId', async (req, res) => {
     const updated = await updateItineraryChecklistItem(userId, req.params.itemId, patch);
     res.json(updated);
   } catch (err) {
-    res.status(400).json({ error: (err as Error).message });
+    const message = (err as Error).message;
+    res.status(statusForDbError(message)).json({ error: message });
   }
 });
 
@@ -289,7 +301,8 @@ router.delete('/checklist-items/:itemId', async (req, res) => {
     await deleteItineraryChecklistItem(userId, req.params.itemId);
     res.status(204).send();
   } catch (err) {
-    res.status(400).json({ error: (err as Error).message });
+    const message = (err as Error).message;
+    res.status(statusForDbError(message)).json({ error: message });
   }
 });
 

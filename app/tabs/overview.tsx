@@ -22,6 +22,7 @@ import {
 } from '../utils/overviewBuilder';
 import { type MapApp } from '../utils/mapLinks';
 import {
+  computeEndDateFromDuration,
   formatMonthYear,
 } from '../utils/tripDates';
 import { buildMemberDisplayLookup, dedupeMembersByIdentity, formatMemberDisplayName, formatTravelerListDisplay } from '../utils/memberDisplay';
@@ -1023,8 +1024,22 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     return { startDate: min, endDate: max };
   }, [flights, lodgings, tours, carRentals]);
 
-  const overviewStartDate = displayStartDate ?? eventDateBounds?.startDate ?? null;
-  const overviewEndDate = displayEndDate ?? eventDateBounds?.endDate ?? null;
+  // Trips created via the wizard's "Flexible Timeline" mode (month + duration,
+  // no exact dates) never get a startDate/endDate — synthesize a range from
+  // startMonth/startYear/durationDays so the day-by-day view doesn't collapse
+  // to a single fallback "today" entry.
+  const monthDurationDates = useMemo(() => {
+    const month = trip?.startMonth ?? null;
+    const year = trip?.startYear ?? null;
+    const days = trip?.durationDays ?? null;
+    if (!month || !year || !days) return null;
+    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+    const endDate = computeEndDateFromDuration(startDate, days);
+    return endDate ? { startDate, endDate } : null;
+  }, [trip?.startMonth, trip?.startYear, trip?.durationDays]);
+
+  const overviewStartDate = displayStartDate ?? monthDurationDates?.startDate ?? eventDateBounds?.startDate ?? null;
+  const overviewEndDate = displayEndDate ?? monthDurationDates?.endDate ?? eventDateBounds?.endDate ?? null;
   const monthLabel = useMemo(
     () => formatMonthYear(trip?.startMonth ?? null, trip?.startYear ?? null),
     [trip?.startMonth, trip?.startYear]
@@ -2333,7 +2348,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                             </View>
                           ) : d.kind === 'checklist' ? (
                             <View style={{ width: '100%' }}>
-                              <Text style={styles.dayInfoRoute}>{`✅ ${d.activity}`}</Text>
+                              <Text style={[styles.dayInfoRoute, { marginBottom: 4 }]}>{`📋 ${d.activity}`}</Text>
                               {(d.checklistItems ?? []).map((it) => {
                                 const checked = !!it.checkedBy;
                                 return (

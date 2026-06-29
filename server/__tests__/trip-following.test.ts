@@ -112,6 +112,43 @@ describe('Trip following (read-only)', () => {
     expect((followed.body as any[]).some((t: any) => t.tripId === tripId)).toBe(false);
   });
 
+  it('excludes a trip from the followed list once the follower becomes a full group member', async () => {
+    // Re-follow (the previous test unfollowed) so there's a trip_followers row to go stale.
+    await request(app)
+      .post('/api/trips/follow')
+      .set('Authorization', `Bearer ${followerToken}`)
+      .send({ inviteCode })
+      .expect((res) => {
+        if (res.status !== 200 && res.status !== 201) {
+          throw new Error(`Expected follow status 200/201, got ${res.status}: ${JSON.stringify(res.body)}`);
+        }
+      });
+
+    const groups = await request(app).get('/api/groups').set('Authorization', `Bearer ${ownerToken}`).expect(200);
+    const groupId = groups.body[0]?.id as string;
+
+    const addMember = await request(app)
+      .post(`/api/groups/${groupId}/members`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ email: follower.email })
+      .expect(201);
+    const inviteId = addMember.body.inviteId as string;
+    expect(inviteId).toBeTruthy();
+
+    await request(app)
+      .post(`/api/groups/invites/${inviteId}/accept`)
+      .set('Authorization', `Bearer ${followerToken}`)
+      .expect(204);
+
+    // The follower is now a full group member with a leftover trip_followers row —
+    // the trip must no longer be reported as "followed" (it's a real member trip).
+    const followed = await request(app).get('/api/trips/followed').set('Authorization', `Bearer ${followerToken}`).expect(200);
+    expect((followed.body as any[]).some((t: any) => t.tripId === tripId)).toBe(false);
+
+    const ownedTrips = await request(app).get('/api/trips').set('Authorization', `Bearer ${followerToken}`).expect(200);
+    expect((ownedTrips.body as any[]).some((t: any) => t.id === tripId)).toBe(true);
+  });
+
   it('allows followers and members to discuss via trip comments', async () => {
     await request(app)
       .post('/api/trips/follow')

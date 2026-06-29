@@ -3367,6 +3367,13 @@ export const listFollowedTrips = async (
     const tripDoc = await db.collection('trips').doc(tripId).get();
     if (!tripDoc.exists) continue;
     const trip = tripDoc.data() as any;
+    const activeMembership = await db
+      .collection('group_members')
+      .where('groupId', '==', trip.groupId)
+      .where('userId', '==', userId)
+      .where('removedAt', '==', null)
+      .get();
+    if (!activeMembership.empty) continue;
     const groupDoc = await db.collection('groups').doc(trip.groupId).get();
     const ownerId = groupDoc.exists ? (groupDoc.data() as any).ownerId : null;
     let inviterName: string | null = null;
@@ -6003,6 +6010,19 @@ export const getGenerationIdempotency = async (key: string) => {
   const doc = await db.collection('generation_idempotency').doc(key).get();
   if (!doc.exists) return null;
   const data = doc.data()!;
+  // responseBody is stored as a JSON string (see completeGenerationIdempotency) because
+  // Firestore rejects arrays nested directly inside arrays ("invalid nested entity"),
+  // which AI-generated itinerary plans can contain.
+  let responseBody: Record<string, unknown> | null = null;
+  if (typeof data.responseBody === 'string') {
+    try {
+      responseBody = JSON.parse(data.responseBody);
+    } catch {
+      responseBody = null;
+    }
+  } else if (data.responseBody && typeof data.responseBody === 'object') {
+    responseBody = data.responseBody;
+  }
   return {
     key: doc.id,
     userId: data.userId,
@@ -6011,7 +6031,7 @@ export const getGenerationIdempotency = async (key: string) => {
     windowKey: data.windowKey ?? null,
     status: data.status ?? 'pending',
     resultRef: data.resultRef ?? null,
-    responseBody: data.responseBody ?? null,
+    responseBody,
     errorMessage: data.errorMessage ?? null,
     createdAt: data.createdAt ?? nowIso(),
     expiresAt: data.expiresAt ?? nowIso(),
@@ -6054,10 +6074,13 @@ export const reserveGenerationIdempotency = async (params: {
 
 export const completeGenerationIdempotency = async (key: string, responseBody: Record<string, unknown>, resultRef?: string | null): Promise<void> => {
   const db = getDb();
+  // Stored as a JSON string, not a native Firestore map/array — AI-generated plans can
+  // contain arrays nested directly inside arrays, which Firestore rejects outright
+  // ("Property responseBody contains an invalid nested entity").
   await db.collection('generation_idempotency').doc(key).set({
     status: 'completed',
     resultRef: resultRef ?? null,
-    responseBody,
+    responseBody: JSON.stringify(responseBody),
     errorMessage: null,
   }, { merge: true });
 };
