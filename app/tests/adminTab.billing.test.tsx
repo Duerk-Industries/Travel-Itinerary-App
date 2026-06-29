@@ -44,9 +44,9 @@ const plan = {
   currency: 'usd',
   interval: 'month',
   trialDays: 14,
-  pastDueGraceDays: 30,
+  pastDueGraceDays: 14,
   automaticTaxEnabled: true,
-  promotionCodesEnabled: true,
+  promotionCodesEnabled: false,
   isCheckoutEnabled: true,
   livemode: false,
 };

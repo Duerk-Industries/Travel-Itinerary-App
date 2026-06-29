@@ -488,6 +488,12 @@ export const getBillingTrialUsageByEmail = async (...args: Parameters<ReturnType
   adapter().getBillingTrialUsageByEmail(...args);
 export const markBillingTrialUsed = async (...args: Parameters<ReturnType<typeof adapter>['markBillingTrialUsed']>) =>
   adapter().markBillingTrialUsed(...args);
+export const claimBillingNotification = async (...args: Parameters<ReturnType<typeof adapter>['claimBillingNotification']>) =>
+  adapter().claimBillingNotification(...args);
+export const markBillingNotificationEmailSent = async (...args: Parameters<ReturnType<typeof adapter>['markBillingNotificationEmailSent']>) =>
+  adapter().markBillingNotificationEmailSent(...args);
+export const listBillingNotificationsForUser = async (...args: Parameters<ReturnType<typeof adapter>['listBillingNotificationsForUser']>) =>
+  adapter().listBillingNotificationsForUser(...args);
 export const getBillingSubscriptionByStripeId = async (...args: Parameters<ReturnType<typeof adapter>['getBillingSubscriptionByStripeId']>) =>
   adapter().getBillingSubscriptionByStripeId(...args);
 export const listActiveBillingSubscriptionsForUser = async (...args: Parameters<ReturnType<typeof adapter>['listActiveBillingSubscriptionsForUser']>) =>

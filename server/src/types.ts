@@ -739,6 +739,22 @@ export interface BillingTrialUsage {
   updatedAt: string;
 }
 
+export type BillingNotificationType = 'premium_trial_will_end';
+
+export interface BillingNotification {
+  id: string;
+  userId: string;
+  type: BillingNotificationType;
+  notificationKey: string;
+  title: string;
+  message: string;
+  stripeSubscriptionId: string | null;
+  stripeEventId: string | null;
+  emailSentAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface BillingSubscription {
   id: string;
   stripeSubscriptionId: string;

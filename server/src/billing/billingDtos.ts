@@ -53,4 +53,12 @@ export interface BillingStatusDto {
   accessRevoked: boolean;
   checkoutAvailable: boolean;
   portalAvailable: boolean;
+  notifications: Array<{
+    id: string;
+    type: string;
+    title: string;
+    message: string;
+    createdAt: string;
+    emailSentAt: string | null;
+  }>;
 }

@@ -10,6 +10,7 @@ import {
   getBillingPlanConfig,
   listBillingPlanConfigs,
   listBillingPriceHistory,
+  listBillingNotificationsForUser,
   getUserById,
   getBillingTrialUsageByEmail,
   markBillingTrialUsed,
@@ -348,12 +349,13 @@ export const getBillingStatus = async (
   role: UserRole,
 ): Promise<BillingStatusDto> => {
   await ensureCurrentUserTier(userId, 'free');
-  const [currentTier, subscriptions, planConfigs, user, premiumTrialsEnabled] = await Promise.all([
+  const [currentTier, subscriptions, planConfigs, user, premiumTrialsEnabled, notifications] = await Promise.all([
     getCurrentUserTier(userId),
     listActiveBillingSubscriptionsForUser(userId),
     listBillingPlanConfigs(),
     getUserById(userId),
     isFeatureEnabled(PREMIUM_TRIALS_FEATURE_FLAG),
+    listBillingNotificationsForUser(userId, 5),
   ]);
   const emailNormalized = user?.email ? normalizeBillingTrialEmail(user.email) : null;
   const trialUsage = premiumTrialsEnabled && emailNormalized ? await getBillingTrialUsageByEmail(emailNormalized) : null;
@@ -387,6 +389,14 @@ export const getBillingStatus = async (
       accessRevoked: false,
       checkoutAvailable,
       portalAvailable,
+      notifications: notifications.map((notification) => ({
+        id: notification.id,
+        type: notification.type,
+        title: notification.title,
+        message: notification.message,
+        createdAt: notification.createdAt,
+        emailSentAt: notification.emailSentAt,
+      })),
     };
   }
 
@@ -409,6 +419,14 @@ export const getBillingStatus = async (
     accessRevoked: Boolean(primarySub.accessRevokedAt),
     checkoutAvailable,
     portalAvailable,
+    notifications: notifications.map((notification) => ({
+      id: notification.id,
+      type: notification.type,
+      title: notification.title,
+      message: notification.message,
+      createdAt: notification.createdAt,
+      emailSentAt: notification.emailSentAt,
+    })),
   };
 };
 

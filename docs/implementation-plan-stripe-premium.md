@@ -56,7 +56,7 @@ Recommended launch architecture:
 
 4. **Failed-payment grace period**
    - Premium remains active for one month after the first transition to `past_due`.
-   - Proposed implementation definition: 30 days from the first failed invoice that begins the unresolved delinquency period.
+   - Proposed implementation definition: 14 days from the first failed invoice that begins the unresolved delinquency period.
    - A successful invoice resets the delinquency timestamp.
 
 5. **Cancellation**
@@ -230,7 +230,7 @@ Initial values:
 
 - `premium_monthly`: 500 cents, monthly, 14 trial days
 - `premium_annual`: 3500 cents, yearly, 14 trial days
-- past-due grace: 30 days
+- past-due grace: 14 days
 - automatic tax: enabled
 - promotion codes: enabled
 
@@ -349,7 +349,7 @@ Proposed initial mapping:
 |---|---|
 | `trialing` | Yes, only if trials are enabled |
 | `active` | Yes |
-| `past_due` | Yes for 30 days from `past_due_since`, then no |
+| `past_due` | Yes for 14 days from `past_due_since`, then no |
 | `incomplete` | No |
 | `incomplete_expired` | No |
 | `unpaid` | No |
@@ -414,7 +414,7 @@ Behavior:
   - `subscription_data.trial_period_days` from the active admin billing configuration (initially 14)
   - payment method collection before trial start
   - `automatic_tax.enabled = true`
-  - `allow_promotion_codes = true`
+  - `allow_promotion_codes` from the active admin billing configuration (disabled for launch)
 - Return only the hosted Session URL and safe metadata.
 
 Never trust:
@@ -747,13 +747,13 @@ Add Sentry context using IDs and event type only, never sensitive payload conten
 - initial monthly amount is 500 cents
 - initial annual amount is 3500 cents
 - initial trial length is 14 days
-- initial past-due grace is 30 days
+- initial past-due grace is 14 days
 - admin Price publication creates a new immutable Stripe Price
 - old Prices remain recognized but are unavailable for new Checkout
 - trial/config changes apply only to new subscriptions
 - Stripe status to Premium decision
-- `past_due` retains Premium before day 30
-- unresolved `past_due` loses Premium at day 30
+- `past_due` retains Premium through day 14
+- unresolved `past_due` loses Premium after day 14
 - successful payment clears `past_due_since`
 - refund revokes Stripe-managed Premium immediately
 - partial refund does not revoke Premium
@@ -971,7 +971,7 @@ Deployment/config files:
 - Initial catalog values are `$5/month`, `$35/year`, and a 14-day trial.
 - Pricing changes create new Stripe Prices and preserve historical mappings.
 - Verified webhooks grant, retain, and revoke Premium correctly.
-- `past_due` retains Premium for 30 days and then revokes it if unresolved.
+- `past_due` retains Premium for 14 days and then revokes it if unresolved.
 - Full refunds and opened disputes immediately revoke Stripe-managed Premium.
 - Partial refunds do not automatically revoke Premium.
 - Won disputes automatically restore Premium when the current subscription state is otherwise eligible.

@@ -12,6 +12,7 @@ import {
   createPortalSession,
   isCheckoutAllowedOnPlatform,
   openBillingUrl,
+  type BillingStatusResponse,
 } from '../utils/billing';
 
 jest.mock('react-native', () => ({
@@ -55,7 +56,7 @@ jest.mock('../utils/billing', () => ({
   formatCents: (cents: number) => `$${cents / 100}`,
 }));
 
-const baseStatus = {
+const baseStatus: BillingStatusResponse = {
   effectiveTier: 'free',
   isBillingManaged: false,
   plan: null,
@@ -69,7 +70,8 @@ const baseStatus = {
   accessRevoked: false,
   checkoutAvailable: true,
   portalAvailable: false,
-} as const;
+  notifications: [],
+};
 
 const plans = [
   { planKey: 'premium_monthly' as const, amountCents: 500, currency: 'usd', interval: 'month' as const, trialDays: 14 },
@@ -135,7 +137,7 @@ describe('PremiumSubscriptionPanel', () => {
       />,
     );
     expect(queryByLabelText('Start free trial')).toBeNull();
-    expect(getByText('Visit wanderbunnies.com on a web browser to upgrade to Premium.')).toBeTruthy();
+    expect(getByText('Visit wanderbunnies.com on a web browser to subscribe or manage Premium.')).toBeTruthy();
   });
 
   it('shows subscribe copy when the Premium trial was already used', () => {
@@ -219,6 +221,33 @@ describe('PremiumSubscriptionPanel', () => {
     );
 
     expect(getByText(/Trial ends/)).toBeTruthy();
+  });
+
+  it('shows billing notification history', () => {
+    const { getByText } = render(
+      <PremiumSubscriptionPanel
+        backendUrl="https://wanderbunnies.test"
+        token="token"
+        billingStatus={{
+          ...baseStatus,
+          effectiveTier: 'premium',
+          portalAvailable: true,
+          notifications: [{
+            id: 'bn_1',
+            type: 'premium_trial_will_end',
+            title: 'Premium trial ending soon',
+            message: 'Your Premium trial ends on Jul 1, 2026. Manage your subscription from Account > Premium.',
+            createdAt: '2026-06-28T00:00:00.000Z',
+            emailSentAt: null,
+          }],
+        }}
+        plans={plans}
+        onRefresh={jest.fn()}
+      />,
+    );
+
+    expect(getByText('Premium trial ending soon')).toBeTruthy();
+    expect(getByText(/Your Premium trial ends/)).toBeTruthy();
   });
 
   it('shows and dismisses Checkout confirmation', () => {

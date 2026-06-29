@@ -39,6 +39,7 @@ import {
   PackingListTraveler,
   TripPackingList,
   BillingCustomer,
+  BillingNotification,
   BillingTrialUsage,
   BillingSubscription,
   BillingSubscriptionScope,
@@ -868,9 +869,9 @@ export const initDb = async (): Promise<void> => {
       currency: 'usd',
       interval: 'month',
       trialDays: 14,
-      pastDueGraceDays: 30,
+      pastDueGraceDays: 14,
       automaticTaxEnabled: true,
-      promotionCodesEnabled: true,
+      promotionCodesEnabled: false,
       isCheckoutEnabled: true,
       livemode: process.env.STRIPE_SECRET_KEY ? !process.env.STRIPE_SECRET_KEY.startsWith('sk_test_') : null,
       version: 1,
@@ -884,9 +885,9 @@ export const initDb = async (): Promise<void> => {
       currency: 'usd',
       interval: 'year',
       trialDays: 14,
-      pastDueGraceDays: 30,
+      pastDueGraceDays: 14,
       automaticTaxEnabled: true,
-      promotionCodesEnabled: true,
+      promotionCodesEnabled: false,
       isCheckoutEnabled: true,
       livemode: process.env.STRIPE_SECRET_KEY ? !process.env.STRIPE_SECRET_KEY.startsWith('sk_test_') : null,
       version: 1,
@@ -6843,6 +6844,66 @@ export const markBillingTrialUsed = async (data: {
   });
 };
 
+export const claimBillingNotification = async (data: {
+  userId: string;
+  type: BillingNotification['type'];
+  notificationKey: string;
+  title: string;
+  message: string;
+  stripeSubscriptionId?: string | null;
+  stripeEventId?: string | null;
+}): Promise<{ notification: BillingNotification; created: boolean }> => {
+  const ref = getDb().collection('billing_notifications').doc(data.notificationKey);
+  return getDb().runTransaction(async (tx) => {
+    const snapshot = await tx.get(ref);
+    const previous = snapshot.exists ? snapshot.data() as BillingNotification : null;
+    if (previous) return { notification: previous, created: false };
+    const timestamp = nowIso();
+    const notification: BillingNotification = {
+      id: randomUUID(),
+      userId: data.userId,
+      type: data.type,
+      notificationKey: data.notificationKey,
+      title: data.title,
+      message: data.message,
+      stripeSubscriptionId: data.stripeSubscriptionId ?? null,
+      stripeEventId: data.stripeEventId ?? null,
+      emailSentAt: null,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
+    tx.set(ref, notification);
+    return { notification, created: true };
+  });
+};
+
+export const markBillingNotificationEmailSent = async (
+  notificationId: string,
+  sentAt: Date = new Date(),
+): Promise<void> => {
+  const snap = await getDb()
+    .collection('billing_notifications')
+    .where('id', '==', notificationId)
+    .limit(1)
+    .get();
+  if (snap.empty) return;
+  await snap.docs[0].ref.set({ emailSentAt: sentAt.toISOString(), updatedAt: nowIso() }, { merge: true });
+};
+
+export const listBillingNotificationsForUser = async (
+  userId: string,
+  limit = 10,
+): Promise<BillingNotification[]> => {
+  const snap = await getDb()
+    .collection('billing_notifications')
+    .where('userId', '==', userId)
+    .get();
+  return snap.docs
+    .map((doc) => doc.data() as BillingNotification)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .slice(0, limit);
+};
+
 export const getBillingSubscriptionByStripeId = async (
   stripeSubscriptionId: string,
 ): Promise<BillingSubscription | null> => {
@@ -7130,9 +7191,9 @@ export const upsertBillingPlanConfig = async (
       currency: data.currency ?? previous?.currency ?? 'usd',
       interval: data.interval ?? previous?.interval ?? 'month',
       trialDays: data.trialDays ?? previous?.trialDays ?? 14,
-      pastDueGraceDays: data.pastDueGraceDays ?? previous?.pastDueGraceDays ?? 30,
+      pastDueGraceDays: data.pastDueGraceDays ?? previous?.pastDueGraceDays ?? 14,
       automaticTaxEnabled: data.automaticTaxEnabled ?? previous?.automaticTaxEnabled ?? true,
-      promotionCodesEnabled: data.promotionCodesEnabled ?? previous?.promotionCodesEnabled ?? true,
+      promotionCodesEnabled: data.promotionCodesEnabled ?? previous?.promotionCodesEnabled ?? false,
       isCheckoutEnabled: data.isCheckoutEnabled ?? previous?.isCheckoutEnabled ?? true,
       livemode: has('livemode') ? data.livemode ?? null : previous?.livemode ?? null,
       version: previous ? previous.version + 1 : 1,

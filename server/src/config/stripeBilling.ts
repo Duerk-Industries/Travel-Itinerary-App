@@ -13,9 +13,9 @@ export const PLAN_DEFAULTS = {
   premiumMonthlyAmountCents: 500,
   premiumAnnualAmountCents: 3500,
   trialDays: 14,
-  pastDueGraceDays: 30,
+  pastDueGraceDays: 14,
   automaticTaxEnabled: true,
-  promotionCodesEnabled: true,
+  promotionCodesEnabled: false,
 } as const;
 
 // ---------------------------------------------------------------------------

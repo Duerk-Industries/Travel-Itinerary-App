@@ -236,7 +236,7 @@ No Stripe publishable key is needed for the current hosted Checkout integration.
 5. Set code-level limits: max redemptions, expiration date, first-time-customer restriction.
 6. In **WanderBunnies Admin → Billing**, confirm the **Promotion codes** toggle is enabled for each plan.
 
-The Checkout Session is created with `allow_promotion_codes = true`, which surfaces Stripe's coupon-entry field. Only codes with valid Stripe-managed restrictions are accepted.
+The Checkout Session reads `allow_promotion_codes` from Admin → Billing. Leave promotion codes disabled for launch unless a specific Stripe-managed promotion is approved later.
 
 Do not create unrestricted production promotion codes to test Checkout — use sandbox codes first.
 
@@ -310,8 +310,8 @@ Open **Settings → Billing → Subscriptions and emails** (or **Settings → Bi
 
 1. Enable **Smart Retries**. Leave Stripe's ML-based retry schedule in place.
 2. Under **Failed payments**, set the final action after all retries fail to **Cancel subscription**.
-   - Rationale: `customer.subscription.deleted` fires, the server receives it via webhook, and the user's tier is downgraded after the grace window. Choosing **Mark as unpaid** instead results in `unpaid` status with no `deleted` event — this is handled by `isSubscriptionPremiumEligible` (unpaid = no Premium) but requires explicit confirmation that the 30-day grace behavior is still correct.
-3. Confirm the final-action timing is **not** earlier than 30 days from the first failed invoice. The server's grace period starts at the first `invoice.payment_failed` and lasts exactly 30 days regardless of Stripe's retry schedule.
+   - Rationale: `customer.subscription.deleted` fires, the server receives it via webhook, and the user's tier is downgraded after the grace window. Choosing **Mark as unpaid** instead results in `unpaid` status with no `deleted` event — this is handled by `isSubscriptionPremiumEligible` (unpaid = no Premium) but requires explicit confirmation that the 14-day grace behavior is still correct.
+3. Confirm the final-action timing is **not** earlier than 14 days from the first failed invoice. The server's grace period starts at the first `invoice.payment_failed` and lasts exactly 14 days regardless of Stripe's retry schedule.
 
 ### Email notifications
 
@@ -362,7 +362,7 @@ Log in and forward events to the local server:
 stripe login
 
 stripe listen `
-  --events checkout.session.completed,customer.subscription.created,customer.subscription.updated,customer.subscription.deleted,customer.subscription.trial_will_end,invoice.paid,invoice.payment_failed,invoice.payment_action_required,charge.refunded,refund.updated,refund.failed,charge.dispute.created,charge.dispute.closed `
+  --events checkout.session.completed,customer.subscription.created,customer.subscription.updated,customer.subscription.paused,customer.subscription.resumed,customer.subscription.pending_update_applied,customer.subscription.pending_update_expired,customer.subscription.deleted,customer.subscription.trial_will_end,invoice.paid,invoice.payment_succeeded,invoice.payment_failed,invoice.payment_action_required,charge.refunded,refund.updated,refund.failed,charge.dispute.created,charge.dispute.closed `
   --forward-to http://localhost:4000/api/billing/webhooks/stripe
 ```
 
@@ -387,9 +387,14 @@ Create one destination for GCP Testing (test mode) and a separate destination fo
 checkout.session.completed
 customer.subscription.created
 customer.subscription.updated
+customer.subscription.paused
+customer.subscription.resumed
+customer.subscription.pending_update_applied
+customer.subscription.pending_update_expired
 customer.subscription.deleted
 customer.subscription.trial_will_end
 invoice.paid
+invoice.payment_succeeded
 invoice.payment_failed
 invoice.payment_action_required
 charge.refunded
@@ -652,7 +657,7 @@ Remove-Item Env:STRIPE_SANDBOX_TEST,Env:STRIPE_SECRET_KEY,Env:STRIPE_WEBHOOK_SEC
 
 > **Applies to:** Localhost and GCP Testing (test mode only)
 
-Test Clocks let you advance time for a specific Stripe Customer without waiting for real days to pass. Use them to verify trial end, billing cycle renewal, and the 30-day past-due grace period.
+Test Clocks let you advance time for a specific Stripe Customer without waiting for real days to pass. Use them to verify trial end, billing cycle renewal, and the 14-day past-due grace period.
 
 > **Important:** The normal WanderBunnies Checkout flow creates a Stripe Customer on the fly (via `stripe.customers.create`) and attaches it to a new Checkout Session. Stripe does **not** allow the app to attach that Customer to a Test Clock via Checkout — the Customer must be created via the Stripe API with `test_clock` set before any subscription is created. This means the Test Clock workflow **cannot use the normal app Checkout UI**. Instead, create the customer and subscription via the Stripe CLI or API, then insert the customer/subscription mapping into the app's database manually (see below) or trigger the `checkout.session.completed` event with a custom payload.
 
@@ -731,12 +736,12 @@ stripe test_helpers test_clocks advance `
   --api-key sk_test_...
 ```
 
-**Simulate a failed payment and the 30-day grace window:**
+**Simulate a failed payment and the 14-day grace window:**
 
 1. Attach Stripe test card `4000 0000 0000 0341` (always fails) to the test customer before advancing.
 2. Advance to renewal. `invoice.payment_failed` fires; the server sets `past_due_since = now`.
-3. Advance to day 29 (`$Renewal + (29 * 86400)`). User should still have Premium.
-4. Advance to day 31 (`$Renewal + (31 * 86400)`). The grace expiry timer fires; user should be downgraded to `free`.
+3. Advance to day 13 (`$Renewal + (13 * 86400)`). User should still have Premium.
+4. Advance to day 15 (`$Renewal + (15 * 86400)`). The grace expiry timer fires; user should be downgraded to `free`.
 5. Fix the card (update to `4242 4242 4242 4242`). Trigger a payment retry:
 
 ```powershell
@@ -821,6 +826,7 @@ Use any future expiry (e.g. `12/34`) and any 3-digit CVC.
 - [ ] Completing Checkout redirects to `/?billing=success`. The app calls `POST /api/billing/refresh`; the user's tier updates to `premium` without a page reload.
 - [ ] Refreshing the page or logging out and back in retains Premium.
 - [ ] A native (iOS/Android) user does not see the Stripe upgrade button — only their current plan status and benefits.
+- [ ] Promotion codes are not shown in Checkout for launch unless explicitly enabled later in Admin → Billing.
 - [ ] A user whose normalized email already has a row in `billing_trial_usage` can still check out, but the new Checkout Session has no free trial.
 - [ ] Deleting and recreating an app account with the same email does not grant another free trial.
 
@@ -841,8 +847,8 @@ Use any future expiry (e.g. `12/34`) and any 3-digit CVC.
 **Payment failure and grace period:**
 
 - [ ] Attaching the `4000 0000 0000 0341` card and advancing time to a renewal starts the past-due clock (`past_due_since` is set). Premium is retained.
-- [ ] At day 29 from `past_due_since`, the user still has Premium.
-- [ ] At day 31, the grace-expiry timer fires and the user is downgraded to `free`.
+- [ ] At day 13 from `past_due_since`, the user still has Premium.
+- [ ] At day 15, the grace-expiry timer fires and the user is downgraded to `free`.
 - [ ] Paying the outstanding invoice (fixing the card, then retrying) clears `past_due_since` and restores Premium.
 - [ ] `invoice.payment_action_required` (3DS card `4000 0025 0000 3155`) does **not** start the past-due clock. If the customer completes authentication and `invoice.paid` fires, the clock is never set.
 
@@ -867,7 +873,8 @@ Use any future expiry (e.g. `12/34`) and any 3-digit CVC.
 **Trial reminders:**
 
 - [ ] `customer.subscription.trial_will_end` deliveries return HTTP 200 and leave the subscription tier as `premium`.
-- [ ] If product requirements add reminder emails or in-app notices later, verify the reminder side effect from this event before launch.
+- [ ] `customer.subscription.trial_will_end` creates a Billing notification in Account → Premium.
+- [ ] If SMTP is configured, `customer.subscription.trial_will_end` sends one trial-ending email. Replaying the same event does not send a duplicate email.
 
 **Webhook reliability:**
 

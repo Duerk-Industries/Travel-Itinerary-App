@@ -39,6 +39,7 @@ import {
   PackingListTraveler,
   TripPackingList,
   BillingCustomer,
+  BillingNotification,
   BillingTrialUsage,
   BillingSubscription,
   StripeWebhookEvent,
@@ -1185,6 +1186,23 @@ export const initDb = async (): Promise<void> => {
   `);
 
   await p.query(`
+    CREATE TABLE IF NOT EXISTS billing_notifications (
+      id                     UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      user_id                UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      type                   TEXT NOT NULL,
+      notification_key       TEXT NOT NULL UNIQUE,
+      title                  TEXT NOT NULL,
+      message                TEXT NOT NULL,
+      stripe_subscription_id TEXT,
+      stripe_event_id        TEXT,
+      email_sent_at          TIMESTAMP,
+      created_at             TIMESTAMP NOT NULL DEFAULT NOW(),
+      updated_at             TIMESTAMP NOT NULL DEFAULT NOW()
+    );
+  `);
+  await p.query(`CREATE INDEX IF NOT EXISTS idx_billing_notifications_user_created ON billing_notifications(user_id, created_at DESC);`);
+
+  await p.query(`
     CREATE TABLE IF NOT EXISTS usage_counters (
       id         UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -1342,6 +1360,7 @@ export const initDb = async (): Promise<void> => {
     await del('billing_checkout_claims');
     await del('billing_subscriptions');
     await del('billing_customers');
+    await del('billing_notifications');
     await del('billing_trial_usage');
   }
 
@@ -9833,6 +9852,20 @@ const rowToBillingTrialUsage = (row: any): BillingTrialUsage => ({
   updatedAt: row.updated_at instanceof Date ? row.updated_at.toISOString() : String(row.updated_at),
 });
 
+const rowToBillingNotification = (row: any): BillingNotification => ({
+  id: row.id,
+  userId: row.user_id,
+  type: row.type,
+  notificationKey: row.notification_key,
+  title: row.title,
+  message: row.message,
+  stripeSubscriptionId: row.stripe_subscription_id ?? null,
+  stripeEventId: row.stripe_event_id ?? null,
+  emailSentAt: row.email_sent_at ? new Date(row.email_sent_at).toISOString() : null,
+  createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at),
+  updatedAt: row.updated_at instanceof Date ? row.updated_at.toISOString() : String(row.updated_at),
+});
+
 const rowToBillingSubscription = (row: any): BillingSubscription => ({
   id: row.id,
   stripeSubscriptionId: row.stripe_subscription_id,
@@ -9956,6 +9989,66 @@ export const markBillingTrialUsed = async (data: {
     ],
   );
   return rowToBillingTrialUsage(rows[0]);
+};
+
+export const claimBillingNotification = async (data: {
+  userId: string;
+  type: BillingNotification['type'];
+  notificationKey: string;
+  title: string;
+  message: string;
+  stripeSubscriptionId?: string | null;
+  stripeEventId?: string | null;
+}): Promise<{ notification: BillingNotification; created: boolean }> => {
+  const p = getPool();
+  const inserted = await p.query(
+    `INSERT INTO billing_notifications
+       (id, user_id, type, notification_key, title, message, stripe_subscription_id, stripe_event_id, created_at, updated_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW(),NOW())
+     ON CONFLICT (notification_key) DO NOTHING
+     RETURNING *`,
+    [
+      randomUUID(),
+      data.userId,
+      data.type,
+      data.notificationKey,
+      data.title,
+      data.message,
+      data.stripeSubscriptionId ?? null,
+      data.stripeEventId ?? null,
+    ],
+  );
+  if (inserted.rows[0]) {
+    return { notification: rowToBillingNotification(inserted.rows[0]), created: true };
+  }
+  const { rows } = await p.query(
+    `SELECT * FROM billing_notifications WHERE notification_key = $1 LIMIT 1`,
+    [data.notificationKey],
+  );
+  return { notification: rowToBillingNotification(rows[0]), created: false };
+};
+
+export const markBillingNotificationEmailSent = async (
+  notificationId: string,
+  sentAt: Date = new Date(),
+): Promise<void> => {
+  const p = getPool();
+  await p.query(
+    `UPDATE billing_notifications SET email_sent_at = $2, updated_at = NOW() WHERE id = $1`,
+    [notificationId, sentAt],
+  );
+};
+
+export const listBillingNotificationsForUser = async (
+  userId: string,
+  limit = 10,
+): Promise<BillingNotification[]> => {
+  const p = getPool();
+  const { rows } = await p.query(
+    `SELECT * FROM billing_notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2`,
+    [userId, limit],
+  );
+  return rows.map(rowToBillingNotification);
 };
 
 export const getBillingSubscriptionByStripeId = async (
@@ -10320,8 +10413,8 @@ export const upsertBillingPlanConfig = async (
         has('stripeProductId') ? data.stripeProductId ?? null : null,
         has('activeStripePriceId') ? data.activeStripePriceId ?? null : null,
         data.unitAmountCents ?? 0, data.currency ?? 'usd',
-        data.interval ?? 'month', data.trialDays ?? 14, data.pastDueGraceDays ?? 30,
-        data.automaticTaxEnabled ?? true, data.promotionCodesEnabled ?? true,
+        data.interval ?? 'month', data.trialDays ?? 14, data.pastDueGraceDays ?? 14,
+        data.automaticTaxEnabled ?? true, data.promotionCodesEnabled ?? false,
         data.isCheckoutEnabled ?? true, has('livemode') ? data.livemode ?? null : null,
         data.updatedBy ?? null,
       ],

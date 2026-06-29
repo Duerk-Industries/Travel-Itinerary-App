@@ -16,6 +16,8 @@ import {
   restoreBillingSubscriptionAccess,
   getBillingSubscriptionByStripeId,
   clearBillingCheckoutClaim,
+  claimBillingNotification,
+  markBillingNotificationEmailSent,
   markBillingTrialUsed,
 } from '../db';
 import { mapStripeSubscriptionToUpsert, normalizeBillingTrialEmail, resolvePlanKeyForPriceId } from '../billing/billingService';
@@ -25,6 +27,7 @@ import { incrementMetric } from '../metrics';
 import { isFeatureEnabled } from '../services/entitlementService';
 import { BillingPlanKey } from '../types';
 import { scheduleNextBillingGraceExpiry } from '../billing/subscriptionReconciliationService';
+import { sendBillingTrialEndingEmailBestEffort } from '../mailer';
 
 const router = Router();
 
@@ -180,6 +183,45 @@ const handleInvoicePaymentActionRequired = async (
   if (!subscriptionId) return;
 
   await handleSubscriptionSnapshot(stripe, subscriptionId, event.created, event.id);
+};
+
+const handleTrialWillEndNotification = async (
+  stripe: Stripe,
+  event: Stripe.Event,
+): Promise<void> => {
+  const subFromEvent = event.data.object as Stripe.Subscription;
+  await handleSubscriptionSnapshot(stripe, subFromEvent.id, event.created, event.id);
+  incrementMetric('billing.webhook.trial_will_end');
+
+  if (!(await isFeatureEnabled(PREMIUM_TRIALS_FEATURE_FLAG))) return;
+
+  const sub = await stripe.subscriptions.retrieve(subFromEvent.id);
+  if (!sub.trial_end) return;
+  const userId = await userIdFromSubscription(sub);
+  if (!userId) return;
+  const customerId = typeof sub.customer === 'string' ? sub.customer : sub.customer.id;
+  const billingCustomer = await getBillingCustomerByStripeId(customerId);
+  const email = billingCustomer?.emailSnapshot?.trim();
+  const trialEnd = new Date(sub.trial_end * 1000);
+  const trialEndLabel = trialEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const { notification, created } = await claimBillingNotification({
+    userId,
+    type: 'premium_trial_will_end',
+    notificationKey: `premium_trial_will_end:${userId}:${sub.id}`,
+    title: 'Premium trial ending soon',
+    message: `Your Premium trial ends on ${trialEndLabel}. Manage your subscription from Account > Premium.`,
+    stripeSubscriptionId: sub.id,
+    stripeEventId: event.id,
+  });
+
+  if (!created || !email) return;
+  const result = await sendBillingTrialEndingEmailBestEffort(email, trialEnd);
+  if (result.sent) {
+    await markBillingNotificationEmailSent(notification.id);
+    incrementMetric('billing.trial_will_end_email_sent');
+  } else {
+    incrementMetric('billing.trial_will_end_email_skipped');
+  }
 };
 
 /** Resolve an invoice ID → subscription ID by retrieving the invoice. */
@@ -393,16 +435,29 @@ const buildDispatchTable = (stripe: Stripe): Record<string, EventHandler> => ({
     const sub = e.data.object as Stripe.Subscription;
     await handleSubscriptionSnapshot(stripe, sub.id, e.created, e.id);
   },
-  'customer.subscription.trial_will_end': async (_s, e) => {
+  'customer.subscription.paused': async (_s, e) => {
     const sub = e.data.object as Stripe.Subscription;
     await handleSubscriptionSnapshot(stripe, sub.id, e.created, e.id);
-    incrementMetric('billing.webhook.trial_will_end');
   },
+  'customer.subscription.resumed': async (_s, e) => {
+    const sub = e.data.object as Stripe.Subscription;
+    await handleSubscriptionSnapshot(stripe, sub.id, e.created, e.id);
+  },
+  'customer.subscription.pending_update_applied': async (_s, e) => {
+    const sub = e.data.object as Stripe.Subscription;
+    await handleSubscriptionSnapshot(stripe, sub.id, e.created, e.id);
+  },
+  'customer.subscription.pending_update_expired': async (_s, e) => {
+    const sub = e.data.object as Stripe.Subscription;
+    await handleSubscriptionSnapshot(stripe, sub.id, e.created, e.id);
+  },
+  'customer.subscription.trial_will_end': handleTrialWillEndNotification,
   'customer.subscription.deleted': async (_s, e) => {
     const sub = e.data.object as Stripe.Subscription;
     await handleSubscriptionSnapshot(stripe, sub.id, e.created, e.id);
   },
   'invoice.paid': handleInvoicePaid,
+  'invoice.payment_succeeded': handleInvoicePaid,
   'invoice.payment_failed': handleInvoicePaymentFailed,
   'invoice.payment_action_required': handleInvoicePaymentActionRequired,
   'charge.refunded': handleChargeRefunded,

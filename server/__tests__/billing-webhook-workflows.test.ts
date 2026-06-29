@@ -6,6 +6,7 @@ import {
   claimBillingCheckout,
   closePool,
   getBillingSubscriptionByStripeId,
+  listBillingNotificationsForUser,
   getBillingTrialUsageByEmail,
   getCurrentUserTier,
   getStripeWebhookEvent,
@@ -151,6 +152,16 @@ describe('Stripe webhook workflows', () => {
     expect(res.body.handled).toBeUndefined();
     expect((await getBillingSubscriptionByStripeId(SUBSCRIPTION_ID))?.status).toBe('trialing');
     expect((await getCurrentUserTier(userId))?.tierKey).toBe('premium');
+    const notifications = await listBillingNotificationsForUser(userId);
+    expect(notifications).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'premium_trial_will_end',
+          stripeSubscriptionId: SUBSCRIPTION_ID,
+          title: 'Premium trial ending soon',
+        }),
+      ]),
+    );
   });
 
   it('trial converts to active (customer.subscription.updated) → status=active, trialEnd preserved, tier stays premium', async () => {
@@ -236,6 +247,42 @@ describe('Stripe webhook workflows', () => {
     expect((await getCurrentUserTier(userId))?.tierKey).toBe('premium');
   });
 
+  it('customer.subscription.paused downgrades and resumed restores Premium from live Stripe state', async () => {
+    subscription.cancel_at_period_end = false;
+    subscription.status = 'paused';
+    await deliver(event('customer.subscription.paused', { id: SUBSCRIPTION_ID })).expect(200);
+
+    expect((await getBillingSubscriptionByStripeId(SUBSCRIPTION_ID))?.status).toBe('paused');
+    expect((await getCurrentUserTier(userId))?.tierKey).toBe('free');
+
+    subscription.status = 'active';
+    await deliver(event('customer.subscription.resumed', { id: SUBSCRIPTION_ID })).expect(200);
+
+    expect((await getBillingSubscriptionByStripeId(SUBSCRIPTION_ID))?.status).toBe('active');
+    expect((await getCurrentUserTier(userId))?.tierKey).toBe('premium');
+  });
+
+  it('subscription pending-update events sync the current plan from Stripe', async () => {
+    await upsertBillingPlanConfig({
+      planKey: 'premium_annual',
+      activeStripePriceId: 'price_test_annual',
+      unitAmountCents: 3500,
+      livemode: false,
+      updatedBy: null,
+    });
+    subscription.status = 'active';
+    subscription.items.data[0].price.id = 'price_test_annual';
+
+    await deliver(event('customer.subscription.pending_update_applied', { id: SUBSCRIPTION_ID })).expect(200);
+
+    expect((await getBillingSubscriptionByStripeId(SUBSCRIPTION_ID))?.planKey).toBe('premium_annual');
+
+    subscription.items.data[0].price.id = 'price_test_monthly';
+    await deliver(event('customer.subscription.pending_update_expired', { id: SUBSCRIPTION_ID })).expect(200);
+
+    expect((await getBillingSubscriptionByStripeId(SUBSCRIPTION_ID))?.planKey).toBe('premium_monthly');
+  });
+
   it('resolves a portal plan switch from the current Price instead of stale metadata', async () => {
     await upsertBillingPlanConfig({
       planKey: 'premium_annual',
@@ -267,7 +314,7 @@ describe('Stripe webhook workflows', () => {
     expect((await getBillingSubscriptionByStripeId(SUBSCRIPTION_ID))?.pastDueSince).toBe(firstPastDue);
 
     subscription.status = 'active';
-    await deliver(event('invoice.paid', {
+    await deliver(event('invoice.payment_succeeded', {
       id: 'in_paid',
       parent: { subscription_details: { subscription: SUBSCRIPTION_ID } },
     })).expect(200);

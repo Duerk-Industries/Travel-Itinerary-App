@@ -142,6 +142,7 @@ export const PremiumSubscriptionPanel: React.FC<Props> = ({
       </Text>
     );
   };
+  const billingNotifications = billingStatus.notifications ?? [];
 
   return (
     <View style={styles.container}>
@@ -191,6 +192,17 @@ export const PremiumSubscriptionPanel: React.FC<Props> = ({
           {!cancelAtPeriodEnd && periodEndLabel && !inGracePeriod && (
             <Text style={styles.statusNote}>Renews {periodEndLabel}</Text>
           )}
+        </View>
+      )}
+
+      {billingNotifications.length > 0 && (
+        <View style={styles.notificationList}>
+          {billingNotifications.map((notification) => (
+            <View key={notification.id} style={styles.notificationItem}>
+              <Text style={styles.notificationTitle}>{notification.title}</Text>
+              <Text style={styles.notificationMessage}>{notification.message}</Text>
+            </View>
+          ))}
         </View>
       )}
 
@@ -256,7 +268,7 @@ export const PremiumSubscriptionPanel: React.FC<Props> = ({
       {/* Native: show status but no Stripe purchase button */}
       {!isPremium && !isCheckoutAllowedOnPlatform() && (
         <Text style={styles.statusNote}>
-          Visit wanderbunnies.com on a web browser to upgrade to Premium.
+          Visit wanderbunnies.com on a web browser to subscribe or manage Premium.
         </Text>
       )}
 
@@ -317,6 +329,27 @@ const makeStyles = (theme: ReturnType<typeof getAppTheme>) =>
       fontWeight: theme.typography.weightSemibold,
     },
     statusNote: {
+      fontSize: theme.typography.small,
+      color: theme.colors.textMuted,
+    },
+    notificationList: {
+      gap: 8,
+      marginBottom: 12,
+    },
+    notificationItem: {
+      borderWidth: 1,
+      borderColor: theme.colors.warning,
+      backgroundColor: theme.colors.surfaceMuted,
+      borderRadius: 8,
+      padding: 10,
+      gap: 4,
+    },
+    notificationTitle: {
+      fontSize: theme.typography.small,
+      color: theme.colors.text,
+      fontWeight: theme.typography.weightSemibold,
+    },
+    notificationMessage: {
       fontSize: theme.typography.small,
       color: theme.colors.textMuted,
     },

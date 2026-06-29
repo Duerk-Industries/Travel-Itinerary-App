@@ -112,9 +112,9 @@ describe('Billing routes', () => {
       currency: 'usd',
       interval: 'month',
       trialDays: 14,
-      pastDueGraceDays: 30,
+      pastDueGraceDays: 14,
       automaticTaxEnabled: true,
-      promotionCodesEnabled: true,
+      promotionCodesEnabled: false,
       isCheckoutEnabled: true,
       livemode: false,
       updatedBy: null,
@@ -126,9 +126,9 @@ describe('Billing routes', () => {
       currency: 'usd',
       interval: 'year',
       trialDays: 14,
-      pastDueGraceDays: 30,
+      pastDueGraceDays: 14,
       automaticTaxEnabled: true,
-      promotionCodesEnabled: true,
+      promotionCodesEnabled: false,
       isCheckoutEnabled: true,
       livemode: false,
       updatedBy: null,
@@ -179,6 +179,7 @@ describe('Billing routes', () => {
       expect(res.body.accessRevoked).toBe(false);
       expect(res.body.checkoutAvailable).toBe(true);
       expect(res.body.portalAvailable).toBe(false);
+      expect(res.body.notifications).toEqual([]);
     });
 
     it('hides trial eligibility and trial countdown when the Premium trials flag is disabled', async () => {
@@ -507,7 +508,7 @@ describe('Billing routes', () => {
       expect(call.cancel_url).toBe('http://localhost:19006/?billing=cancel');
       expect(call.automatic_tax.enabled).toBe(true);
       expect(call.billing_address_collection).toBe('required');
-      expect(call.allow_promotion_codes).toBe(true);
+      expect(call.allow_promotion_codes).toBe(false);
       expect(call.customer_update).toEqual({ address: 'auto', name: 'auto' });
       expect(fakeStripe.checkout.sessions.create.mock.calls[0][1]).toEqual({ idempotencyKey: `test-key-${TS}` });
       const trialUsage = await getBillingTrialUsageByEmail(EMAIL.toLowerCase());
@@ -629,9 +630,9 @@ describe('Billing routes', () => {
           currency: originalConfig?.currency ?? 'usd',
           interval: originalConfig?.interval ?? 'year',
           trialDays: originalConfig?.trialDays ?? 14,
-          pastDueGraceDays: originalConfig?.pastDueGraceDays ?? 30,
+          pastDueGraceDays: originalConfig?.pastDueGraceDays ?? 14,
           automaticTaxEnabled: originalConfig?.automaticTaxEnabled ?? true,
-          promotionCodesEnabled: originalConfig?.promotionCodesEnabled ?? true,
+          promotionCodesEnabled: originalConfig?.promotionCodesEnabled ?? false,
           isCheckoutEnabled: originalConfig?.isCheckoutEnabled ?? true,
           livemode: originalConfig?.livemode ?? false,
           updatedBy: userId,

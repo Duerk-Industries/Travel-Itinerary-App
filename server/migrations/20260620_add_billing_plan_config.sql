@@ -8,9 +8,9 @@ CREATE TABLE IF NOT EXISTS billing_plan_config (
   currency TEXT NOT NULL DEFAULT 'usd',
   interval TEXT NOT NULL DEFAULT 'month',
   trial_days INTEGER NOT NULL DEFAULT 14,
-  past_due_grace_days INTEGER NOT NULL DEFAULT 30,
+  past_due_grace_days INTEGER NOT NULL DEFAULT 14,
   automatic_tax_enabled BOOLEAN NOT NULL DEFAULT TRUE,
-  promotion_codes_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  promotion_codes_enabled BOOLEAN NOT NULL DEFAULT FALSE,
   is_checkout_enabled BOOLEAN NOT NULL DEFAULT TRUE,
   livemode BOOLEAN,
   version INTEGER NOT NULL DEFAULT 1,
@@ -42,9 +42,9 @@ CREATE INDEX IF NOT EXISTS idx_billing_price_history_active
 -- Seed default plan config rows.
 -- These match PLAN_DEFAULTS in stripeBilling.ts; the DB rows win at runtime.
 INSERT INTO billing_plan_config (id, plan_key, unit_amount_cents, currency, interval, trial_days, past_due_grace_days)
-VALUES ('00000000-0000-4000-8000-000000000001', 'premium_monthly', 500, 'usd', 'month', 14, 30)
+VALUES ('00000000-0000-4000-8000-000000000001', 'premium_monthly', 500, 'usd', 'month', 14, 14)
 ON CONFLICT (plan_key) DO NOTHING;
 
 INSERT INTO billing_plan_config (id, plan_key, unit_amount_cents, currency, interval, trial_days, past_due_grace_days)
-VALUES ('00000000-0000-4000-8000-000000000002', 'premium_annual', 3500, 'usd', 'year', 14, 30)
+VALUES ('00000000-0000-4000-8000-000000000002', 'premium_annual', 3500, 'usd', 'year', 14, 14)
 ON CONFLICT (plan_key) DO NOTHING;

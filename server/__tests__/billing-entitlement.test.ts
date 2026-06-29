@@ -68,15 +68,15 @@ describe('isSubscriptionPremiumEligible', () => {
     expect(isSubscriptionPremiumEligible(makeSub({ status }))).toBe(false);
   });
 
-  it('grants access for past_due within 30-day grace period', () => {
+  it('grants access for past_due within 14-day grace period', () => {
     const recentlyPastDue = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString();
     expect(
       isSubscriptionPremiumEligible(makeSub({ status: 'past_due', pastDueSince: recentlyPastDue })),
     ).toBe(true);
   });
 
-  it('revokes access for past_due after 30-day grace period', () => {
-    const longPastDue = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000).toISOString();
+  it('revokes access for past_due after 14-day grace period', () => {
+    const longPastDue = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString();
     expect(
       isSubscriptionPremiumEligible(makeSub({ status: 'past_due', pastDueSince: longPastDue })),
     ).toBe(false);
