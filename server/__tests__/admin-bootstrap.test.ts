@@ -71,6 +71,17 @@ describe('Admin bootstrap', () => {
     expect(role).toBe('admin');
   });
 
+  it('JWT issued by shared OAuth login includes role: admin for tristan.duerk@gmail.com', async () => {
+    const res = await request(app)
+      .post('/api/auth/oauth')
+      .send({ email: BOOTSTRAP_EMAIL_2, provider: 'google' })
+      .expect(200);
+
+    const payload = JSON.parse(Buffer.from(res.body.token.split('.')[1], 'base64url').toString());
+    expect(payload.role).toBe('admin');
+    expect(await getUserRole(payload.userId)).toBe('admin');
+  });
+
   it('match is case-insensitive (uppercase email)', async () => {
     // Use a fresh user with uppercased email to test case-insensitive match
     // Re-registering the same email (already exists) — just log in with stored creds

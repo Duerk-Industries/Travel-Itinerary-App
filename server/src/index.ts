@@ -9,6 +9,7 @@ import { doesApiLimitsConfigExist, getResolvedApiLimitsConfigPath } from './conf
 import { doesAuthFlagsConfigExist, getResolvedAuthFlagsConfigPath } from './config/authFlags';
 import { doesFeatureFlagsConfigExist, getResolvedFeatureFlagsConfigPath } from './config/featureFlags';
 import { applyStartupFeatureFlagOverrides, seedEntitlementDefaults } from './services/entitlementService';
+import { seedDefaultTestAccountsIfEnabled } from './services/testAccountSeedService';
 import { syncAttractionsCatalogFromCsvToDbOnStartup } from './services/attractionsCatalogService';
 import { prewarmAutocompleteCache } from './services/destinationAttractionAutocompleteService';
 import { logMissingApiPricingConfigurationWarnings } from './apis/providerBudgeting';
@@ -80,6 +81,7 @@ export const startServer = async (portOverride?: number): Promise<Server> => {
     await initDb();
     await seedEntitlementDefaults();
     await applyStartupFeatureFlagOverrides();
+    await seedDefaultTestAccountsIfEnabled();
   } catch (err) {
     logError('[startup] initialization failed after binding port', err);
     server.close(() => process.exit(1));

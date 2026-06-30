@@ -670,6 +670,7 @@ const runJob = async (jobId: string, input: QueueInput): Promise<void> => {
       tripStartMonth: input.tripStartMonth,
       tripStartYear: input.tripStartYear,
       tripIdSeed: input.tripId,
+      usageWindowKey: input.usageWindowKey,
     });
 
     const itineraryId = await ensureItineraryId({

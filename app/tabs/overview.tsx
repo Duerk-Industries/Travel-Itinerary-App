@@ -1947,18 +1947,19 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   };
 
   const buildDaySummary = (info?: { flights: Flight[]; lodgings: Lodging[]; tours: Tour[]; rentals: CarRental[]; details: ItineraryDetail[] }) => {
-    if (!info) return 'Free day';
+    if (!info) return itineraryLoading ? 'Loading itinerary...' : 'Free day';
     const activityDetails = info.details.filter((d) => !d.kind || d.kind === 'activity');
     if (activityDetails.length) return activityDetails[0].activity;
     if (info.tours.length) return info.tours[0].name || 'Activity day';
     if (info.flights.length) return 'Travel day';
     if (info.lodgings.length) return `Stay at ${info.lodgings[0].name || 'lodging'}`;
     if (info.rentals.length) return 'Drive day';
+    if (itineraryLoading) return 'Loading itinerary...';
     return 'Free day';
   };
 
   const buildDayNarrative = (info?: { details: ItineraryDetail[]; flights: Flight[]; tours: Tour[]; lodgings: Lodging[]; rentals: CarRental[] }) => {
-    if (!info) return ['No itinerary details yet.'];
+    if (!info) return [itineraryLoading ? 'Loading itinerary...' : 'No itinerary details yet.'];
     const activityDetails = info.details.filter((d) => !d.kind || d.kind === 'activity');
     if (activityDetails.length) {
       return activityDetails.map((d) => (d.time ? `${d.time} · ${d.activity}` : d.activity));
@@ -1977,7 +1978,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       return info.rentals.map((r) => `Pick up rental car from ${r.pickupLocation || r.vendor}.`);
     }
     if (info.tours.length) return [];
-    return ['No itinerary details yet.'];
+    return [itineraryLoading ? 'Loading itinerary...' : 'No itinerary details yet.'];
   };
 
   const renderDayBar = (activeDate: string | null) => (
@@ -2325,7 +2326,9 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                   </TouchableOpacity>
                 </View>
                 {(activeDayInfo.details ?? []).length === 0 ? (
-                  <Text style={styles.helperText}>No items yet for this day.</Text>
+                  <Text style={styles.helperText}>
+                    {itineraryLoading ? 'Loading itinerary...' : 'No items yet for this day.'}
+                  </Text>
                 ) : (
                   (activeDayInfo.details ?? []).map((d) => {
                     const isActivity = !d.kind || d.kind === 'activity';
