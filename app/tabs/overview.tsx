@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Linking,
+import { ActivityIndicator, Alert, Linking,
   Platform,
   ScrollView,
   StyleSheet,
@@ -207,6 +207,7 @@ type OverviewTabProps = {
   aiItineraryPending?: boolean;
   aiItineraryFailedMessage?: string | null;
   editSignal?: number;
+  goToDay1Signal?: number;
   onUpdateCurrency?: (tripId: string, currency: string) => void;
   onOpenAddress: (address: string) => void;
   onRefreshTrips: () => void;
@@ -400,6 +401,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   aiItineraryPending,
   aiItineraryFailedMessage,
   editSignal,
+  goToDay1Signal,
   onUpdateCurrency,
   onOpenAddress,
   onRefreshTrips,
@@ -1154,6 +1156,25 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     };
     buildDayCards();
   }, [allDates, flights, lodgings, tours, carRentals, tripLocationLabel, trip?.destination]);
+
+  // Lets App.tsx command "jump to Day 1" (e.g. when an AI itinerary finishes generating)
+  // without lifting selectedDay state up. Mirrors the editSignal nonce-prop pattern.
+  // dayCards is built asynchronously above, so the request is "armed" on signal change
+  // and applied once dayCards actually has data, rather than racing it.
+  const lastGoToDay1Signal = useRef(goToDay1Signal);
+  const [pendingGoToDay1, setPendingGoToDay1] = useState(false);
+  useEffect(() => {
+    if (goToDay1Signal !== undefined && goToDay1Signal !== lastGoToDay1Signal.current) {
+      lastGoToDay1Signal.current = goToDay1Signal;
+      setPendingGoToDay1(true);
+    }
+  }, [goToDay1Signal]);
+  useEffect(() => {
+    if (pendingGoToDay1 && dayCards.length) {
+      setSelectedDay(dayCards[0].date);
+      setPendingGoToDay1(false);
+    }
+  }, [pendingGoToDay1, dayCards]);
 
   useEffect(() => {
     const cache = async () => {
@@ -3099,8 +3120,14 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   return (
     <View style={{ flex: 1, minHeight: 0 }}>
       {trip && aiItineraryPending ? (
-        <View style={[styles.card, { borderColor: '#93c5fd', borderWidth: 1, marginBottom: 10 }]}>
-          <Text style={styles.sectionTitle}>AI Itinerary In Progress</Text>
+        <View
+          style={[styles.card, { borderColor: '#93c5fd', borderWidth: 1, marginBottom: 10 }]}
+          testID="ai-itinerary-pending-banner"
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <ActivityIndicator size="small" color="#2563eb" testID="ai-itinerary-pending-spinner" />
+            <Text style={styles.sectionTitle}>AI Itinerary In Progress</Text>
+          </View>
           <Text style={styles.helperText}>Your AI trip plan is being generated and will appear here automatically.</Text>
         </View>
       ) : null}

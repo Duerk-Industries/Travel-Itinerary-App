@@ -57,8 +57,10 @@ import { FOLLOWED_TRIP_HIDDEN_PAGES, shouldAllowPageChange, shouldDisableTab } f
 import * as WebBrowser from 'expo-web-browser';
 import {
   clearSessionAsync,
+  loadAsyncItineraryByTripAsync,
   loadLastActiveTripId,
   loadSessionAsync,
+  saveAsyncItineraryByTripAsync,
   saveLastActiveTripIdAsync,
   saveSessionAsync,
 } from './utils/session';
@@ -590,6 +592,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   // userEmail / userId / userRole are owned by useAuthSession (declared above).
   const [shareTripModalOpen, setShareTripModalOpen] = useState(false);
   const [overviewEditSignal, setOverviewEditSignal] = useState(0);
+  const [goToDay1Signal, setGoToDay1Signal] = useState(0);
   const [lodgings, setLodgings] = useState<Lodging[]>([]);
   const [selectedLodging, setSelectedLodging] = useState<Lodging | null>(null);
   const [showLodgingDetails, setShowLodgingDetails] = useState(false);
@@ -768,6 +771,30 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [showRelationshipDropdown, setShowRelationshipDropdown] = useState(false);
   const [asyncItineraryByTrip, setAsyncItineraryByTrip] = useState<Record<string, AsyncItineraryTracker>>({});
 
+  // Restore any in-flight/just-finished AI itinerary jobs on login/refresh so the
+  // "generating..." banner (and polling) survives a page reload instead of vanishing.
+  useEffect(() => {
+    if (!userEmail) return;
+    let cancelled = false;
+    void loadAsyncItineraryByTripAsync(userEmail).then((stored) => {
+      if (cancelled) return;
+      const entries = Object.entries(stored).filter(
+        (entry): entry is [string, AsyncItineraryTracker] =>
+          Boolean(entry[1]) && typeof entry[1] === 'object' && typeof (entry[1] as any).jobId === 'string' && typeof (entry[1] as any).status === 'string'
+      );
+      if (!entries.length) return;
+      setAsyncItineraryByTrip((prev) => ({ ...Object.fromEntries(entries), ...prev }));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [userEmail]);
+
+  useEffect(() => {
+    if (!userEmail) return;
+    void saveAsyncItineraryByTripAsync(asyncItineraryByTrip, userEmail);
+  }, [asyncItineraryByTrip, userEmail]);
+
   const headers = useMemo<Record<string, string>>(
     () => (userToken ? { Authorization: `Bearer ${userToken}` } : ({} as Record<string, string>)),
     [userToken]
@@ -872,6 +899,27 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
     }
     setActivePage(page);
   }, [activePage, isFollowingMode]);
+
+  // One-shot: when an AI itinerary job finishes, notify the user, jump them to that
+  // trip's Overview on Day 1, and clear the tracker so this doesn't refire. Clearing
+  // the tracker (rather than just flipping a "seen" flag) is what makes this safe to
+  // run on every render — once handled, the entry is gone from asyncItineraryByTrip.
+  useEffect(() => {
+    const completedEntry = Object.entries(asyncItineraryByTrip).find(([, tracker]) => tracker.status === 'completed');
+    if (!completedEntry) return;
+    const [tripId] = completedEntry;
+    const tripName = trips.find((t) => t.id === tripId)?.name ?? 'Your trip';
+    Alert.alert('Itinerary Ready', `Your AI-generated itinerary for ${tripName} is ready!`);
+    setActiveTripId(tripId);
+    requestPageChange('overview');
+    setGoToDay1Signal((prev) => prev + 1);
+    setAsyncItineraryByTrip((prev) => {
+      if (!prev[tripId]) return prev;
+      const next = { ...prev };
+      delete next[tripId];
+      return next;
+    });
+  }, [asyncItineraryByTrip, trips, requestPageChange]);
 
   const handleSelectOwnedTrip = useCallback((tripId: string) => {
     setSelectedFollowedTripId(null);
@@ -3181,6 +3229,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
                       : null
                   }
                   editSignal={overviewEditSignal}
+                  goToDay1Signal={goToDay1Signal}
                   onUpdateCurrency={updateTripCurrency}
                   onOpenAddress={openMaps}
                   onRefreshTrips={fetchTrips}
