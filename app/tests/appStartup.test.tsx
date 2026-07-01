@@ -191,6 +191,89 @@ describe('App startup', () => {
     expect(getByText('• AI itinerary generation')).toBeTruthy();
   });
 
+  it('opens plan comparison from the new-account welcome dialog and Maybe later routes to Account', async () => {
+    const token = makeJwt({
+      email: 'plancompare@example.com',
+      firstName: 'Plan',
+      lastName: 'Compare',
+      role: 'user',
+      userId: 'plan-compare-1',
+    });
+    fetchSpy = jest.spyOn(global, 'fetch' as any).mockImplementation(async (...args: unknown[]) => {
+      const url = String(args[0]);
+      if (url.endsWith('/api/web-auth/register')) {
+        return {
+          ok: true,
+          json: async () => ({
+            message: 'Account created',
+            token,
+            user: { id: 'plan-compare-1', email: 'plancompare@example.com' },
+            firstLogin: true,
+          }),
+        } as any;
+      }
+      if (url.endsWith('/api/billing/plans')) {
+        return {
+          ok: true,
+          json: async () => ({
+            plans: [
+              { planKey: 'premium_monthly', amountCents: 500, currency: 'usd', interval: 'month', trialDays: 14 },
+              { planKey: 'premium_annual', amountCents: 3500, currency: 'usd', interval: 'year', trialDays: 14 },
+            ],
+          }),
+        } as any;
+      }
+      if (url.endsWith('/api/billing/status')) {
+        return {
+          ok: true,
+          json: async () => ({
+            effectiveTier: 'free',
+            isBillingManaged: false,
+            plan: null,
+            subscriptionStatus: null,
+            currentPeriodEnd: null,
+            trialEnd: null,
+            trialEligible: true,
+            trialEndingSoon: false,
+            cancelAtPeriodEnd: false,
+            inGracePeriod: false,
+            accessRevoked: false,
+            checkoutAvailable: true,
+            portalAvailable: false,
+            notifications: [],
+          }),
+        } as any;
+      }
+      return { ok: true, json: async () => ({}) } as any;
+    });
+
+    const { getByTestId, getByPlaceholderText, findByTestId, findByText, queryByTestId } = render(<App />);
+
+    fireEvent.press(getByTestId('auth-form-mode-register'));
+    fireEvent.changeText(getByPlaceholderText('First name'), 'Plan');
+    fireEvent.changeText(getByPlaceholderText('Last name'), 'Compare');
+    fireEvent.changeText(getByPlaceholderText('Email or Username'), 'plancompare@example.com');
+    fireEvent.changeText(getByPlaceholderText('Password'), 'Password1!');
+    fireEvent.changeText(getByPlaceholderText('Confirm password'), 'Password1!');
+    fireEvent.press(getByTestId('auth-form-submit'));
+
+    expect(await findByTestId('premium-trial-welcome-dialog')).toBeTruthy();
+    fireEvent.press(getByTestId('premium-trial-view-plans'));
+
+    expect(await findByTestId('premium-plan-comparison-dialog')).toBeTruthy();
+    expect(await findByText('$35/yr (42% off monthly)')).toBeTruthy();
+
+    fireEvent.press(getByTestId('premium-plan-maybe-later'));
+
+    await waitFor(() => {
+      expect(queryByTestId('premium-plan-comparison-dialog')).toBeNull();
+      expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+        'stp.session',
+        expect.stringContaining('"page":"account"'),
+      );
+    });
+  });
+
   it('does not show the Premium trial welcome dialog when the Premium trials flag is disabled', async () => {
     process.env.EXPO_PUBLIC_PREMIUM_TRIALS_ENABLED = 'false';
     const token = makeJwt({

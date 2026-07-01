@@ -15,6 +15,8 @@ import { isStripeBillingEnabled } from '../config/stripeBilling';
  * rotate application tokens.
  *
  * Cloud Scheduler setup (per environment):
+ *   # Use a valid Cloud Scheduler location, such as us-east4. Cloud Run may be
+ *   # deployed in us-east5, but Cloud Scheduler does not support us-east5.
  *   gcloud scheduler jobs create http billing-reconcile \
  *     --schedule "every 30 minutes" \
  *     --uri "https://YOUR-API-DOMAIN/api/internal/billing/reconcile" \

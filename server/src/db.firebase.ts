@@ -2,6 +2,8 @@
 import { initializeApp, cert, deleteApp, getApps, App } from 'firebase-admin/app';
 import { getFirestore, Firestore, FieldPath, FieldValue } from 'firebase-admin/firestore';
 import { createHash, randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
+import fs from 'fs';
+import path from 'path';
 import {
   Flight,
   Lodging,
@@ -56,6 +58,16 @@ import { getApiLimitsConfig } from './config/apiLimits';
 import { DEFAULT_PACKING_LIST_ITEMS } from './config/defaultPackingList';
 
 let app: App | null = null;
+
+const clearMissingGoogleApplicationCredentials = (): void => {
+  const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  if (!credentialsPath) return;
+  const resolvedPath = path.resolve(credentialsPath);
+  if (fs.existsSync(resolvedPath)) return;
+  logInfo(`Ignoring missing GOOGLE_APPLICATION_CREDENTIALS file: ${credentialsPath}`);
+  delete process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  delete process.env.GOOGLE_APPLICATION_CREDENTIALS_FILE;
+};
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
 const normalizeLoginIdentifier = (value: string): string => value.trim().toLowerCase();
 const isEmailLikeIdentifier = (value: string): boolean => value.includes('@');
@@ -735,6 +747,7 @@ export const getDb = (): Firestore => {
         });
       } else {
         logInfo('Initializing Firebase with default Application Default Credentials (ADC).');
+        clearMissingGoogleApplicationCredentials();
         // Default to ADC on Cloud Run / local gcloud auth
         app = initializeApp({ projectId });
       }

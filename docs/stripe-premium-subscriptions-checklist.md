@@ -1,6 +1,6 @@
 # WanderBunnies Stripe Premium Launch Runbook
 
-Last reviewed: June 28, 2026
+Last reviewed: June 30, 2026
 
 This runbook matches the implemented billing flow:
 
@@ -30,29 +30,48 @@ Complete every sandbox step before repeating it in live mode.
 
 ---
 
-## 1. Apply And Verify The Application
+## How To Use This Runbook
+
+Use this runbook in this order:
+
+1. Run **Section 1 — Automated Launch Gate**. This is the primary pass/fail gate for repo tests, billing config, Stripe Price wiring, optional sandbox smoke tests, optional Test Clock scenarios, and optional Cloud Scheduler checks.
+2. Complete **Sections 2-10 — Manual Setup And Dashboard Verification**. These are human checks in Stripe Dashboard, GCP, and the app UI that cannot be fully automated.
+3. Use **Appendices A-E** only when you need the underlying commands, troubleshooting, or a targeted manual workflow.
+4. Finish **Section 11 — Manual Sandbox Acceptance Checklist**, then repeat the necessary Dashboard/deploy steps in **Section 12 — Live Mode Cutover**.
+
+The goal is to keep day-to-day launch validation script-first, with manual work limited to product, compliance, dashboard, and visual checks.
+
+---
+
+## 1. Automated Launch Gate
 
 From the repository root in PowerShell:
 
 ```powershell
-npm --prefix server run typecheck
-npm --prefix app run typecheck
-npm --prefix server test -- --runInBand `
-  __tests__/billing-routes.test.ts `
-  __tests__/billing-webhook-workflows.test.ts `
-  __tests__/billing-reconciliation.test.ts `
-  __tests__/admin-billing-routes.test.ts `
-  __tests__/billing-entitlement.test.ts `
-  __tests__/billing-entitlement-users.test.ts `
-  __tests__/stripe-billing-config.test.ts
-npm --prefix app test -- --runInBand `
-  tests/adminTab.billing.test.tsx `
-  tests/premiumSubscriptionPanel.test.tsx `
-  tests/billing.utils.test.ts `
-  tests/useBillingStatus.test.tsx
+.\scripts\stripe-launch-validation.ps1 `
+  -SkipCloudScheduler
 ```
 
-For Postgres, apply migrations in order:
+`-StripeApiKey` is optional when `STRIPE_SECRET_KEY` is already set in `server/.env`. Pass `-StripeApiKey $StripeApiKey` to override it for a specific run. The script defaults launch-tool database commands to Firebase when `DB_PROVIDER` is omitted; set `DB_PROVIDER=postgres` and `DATABASE_URL=...` in `server/.env` to validate against Postgres.
+
+For a fuller sandbox pass, add the opt-in checks you want to run:
+
+```powershell
+.\scripts\stripe-launch-validation.ps1 `
+  -StripeApiKey $StripeApiKey `
+  -UserId $UserId `
+  -Email $Email `
+  -RunSandboxSmoke `
+  -RunTestClock `
+  -RunFailedPaymentFlow `
+  -RunCloudScheduler
+```
+
+The launch validation script automates repo tests, billing env checks, active plan/Price checks, optional Stripe sandbox smoke testing, optional Test Clock flow, optional Cloud Scheduler trigger, and writes `stripe-launch-validation-report.json`. It also records manual verification items for Stripe Dashboard and customer-facing UI checks that cannot be fully automated.
+
+If the automated gate fails, use the appendices for targeted reruns and troubleshooting.
+
+For Postgres, apply migrations in order before running the automated gate. The validation script verifies the resulting config but does not run migrations:
 
 ```powershell
 npm --prefix server run migrate
@@ -65,11 +84,11 @@ Confirm these four migrations are recorded in the migrations table:
 - `20260622_add_billing_checkout_claims.sql` — billing_checkout_claims
 - `20260628_add_billing_trial_usage.sql` — durable one-time Premium trial eligibility tracking
 
-Firestore requires no schema migration; billing collections are created on first write.
+Firestore is the default backend for this launch tooling and requires no schema migration; billing collections are created on first write.
 
 ---
 
-## 2. Activate And Secure The Stripe Account
+## 2. Manual Setup — Activate And Secure The Stripe Account
 
 All paths below are in the Stripe Dashboard. Toggle between sandbox and live using the **Test mode** control in the top-left corner.
 
@@ -118,7 +137,7 @@ Stripe Checkout accent color.
 
 ---
 
-## 3. Create The Premium Product
+## 3. Manual Setup — Create The Premium Product
 
 **Do this in sandbox/test mode first.**
 
@@ -143,7 +162,7 @@ Both monthly and annual Prices must remain under this same Product. The Customer
 
 ---
 
-## 4. Create Or Publish Monthly And Annual Prices
+## 4. Manual Setup — Create Or Publish Monthly And Annual Prices
 
 ### Option A — WanderBunnies Admin UI (preferred for production)
 
@@ -193,7 +212,7 @@ Never edit a Price's amount after creating it. Archive old Prices rather than re
 
 ---
 
-## 5. Configure Stripe Tax
+## 5. Manual Setup — Configure Stripe Tax
 
 1. Open **Settings → Tax**.
 2. Under **Tax settings**, set the business origin address (country, state/province, postal code).
@@ -213,7 +232,7 @@ Checkout sessions are created with `automatic_tax.enabled = true`. Stripe calcul
 
 ---
 
-## 6. Configure Payment Methods
+## 6. Manual Setup — Configure Payment Methods
 
 1. Open **Settings → Payment methods** (may appear under **Settings → Payment method types** in some accounts).
 2. Under **Card**, toggle on **Card**.
@@ -227,7 +246,7 @@ No Stripe publishable key is needed for the current hosted Checkout integration.
 
 ---
 
-## 7. Configure Promotion Codes
+## 7. Manual Setup — Configure Promotion Codes
 
 1. Open **Product catalog → Coupons** and click **Create coupon**.
 2. Set the discount (percent-off or amount-off), duration, and redemption limits.
@@ -242,7 +261,7 @@ Do not create unrestricted production promotion codes to test Checkout — use s
 
 ---
 
-## 8. Configure The Customer Portal
+## 8. Manual Setup — Configure The Customer Portal
 
 Open **Settings → Billing → Customer portal** in sandbox mode. Click **Activate portal** if it is not yet active.
 
@@ -261,7 +280,7 @@ Under **Features**, enable these toggles:
 Under **Subscriptions**:
 
 1. **Cancel subscriptions:** enable. Choose **At the end of the billing period** (not immediately). Enable cancellation-reason collection.
-2. **Pause subscription collection:** leave **off** (paused state is not tested in the application).
+2. **Pause subscription collection:** leave **off**. Users should not be able to self-service pause via the Portal. Note: the server does handle `customer.subscription.paused` and `customer.subscription.resumed` webhook events (they sync the subscription snapshot and reconcile the tier), so if Stripe sends a pause event for any reason, entitlement is updated correctly. Leaving this toggle off simply prevents customers from initiating a pause themselves.
 3. **Switch plans:** enable. Click **Add product**. Select **WanderBunnies Premium**. Select both the monthly and annual Prices. Click **Done**.
    - Under the plan-switch product, set **Proration behavior** to **Always prorate** (for immediate monthly → annual switches).
    - Enable **Schedule subscription changes** (allows annual → monthly changes to be deferred to period end).
@@ -302,7 +321,7 @@ STRIPE_CUSTOMER_PORTAL_CONFIGURATION_ID=bpc_...
 
 ---
 
-## 9. Configure Billing Emails And Revenue Recovery
+## 9. Manual Setup — Configure Billing Emails And Revenue Recovery
 
 Open **Settings → Billing → Subscriptions and emails** (or **Settings → Billing → Revenue recovery** in newer Dashboard layouts).
 
@@ -335,7 +354,7 @@ Open **Settings → Branding** (or the branding section within the invoice email
 
 ---
 
-## 10. Create The Webhook Event Destination
+## 10. Manual Setup — Create The Webhook Event Destination
 
 The webhook endpoint and signing secret differ by environment. Each environment needs its own Dashboard-registered destination.
 
@@ -460,9 +479,32 @@ stripe events resend evt_...
 
 ---
 
-## 11. Configure Localhost Environment
+## Appendix A — Localhost Environment And Manual Test Commands
 
 > **Applies to:** Localhost testing only
+
+Manual repo checks equivalent to the automated launch gate:
+
+```powershell
+npm --prefix server run typecheck
+npm --prefix app run typecheck
+npm --prefix server test -- --runInBand `
+  __tests__/billing-routes.test.ts `
+  __tests__/billing-webhook-workflows.test.ts `
+  __tests__/billing-reconciliation.test.ts `
+  __tests__/admin-billing-routes.test.ts `
+  __tests__/billing-entitlement.test.ts `
+  __tests__/billing-entitlement-users.test.ts `
+  __tests__/stripe-billing-config.test.ts
+npm --prefix app test -- --runInBand `
+  tests/adminTab.billing.test.tsx `
+  tests/premiumSubscriptionPanel.test.tsx `
+  tests/premiumPlanComparisonDialog.test.tsx `
+  tests/premiumTrialWelcomeDialog.test.tsx `
+  tests/appStartup.test.tsx `
+  tests/billing.utils.test.ts `
+  tests/useBillingStatus.test.tsx
+```
 
 Copy the example file:
 
@@ -473,6 +515,7 @@ Copy-Item server/.env.example server/.env
 Add these values to `server/.env`:
 
 ```text
+DB_PROVIDER=firebase                        # launch tooling defaults to firebase; use postgres only with DATABASE_URL
 STRIPE_BILLING_ENABLED=true
 STRIPE_SECRET_KEY=sk_test_...               # test mode; rk_test_... is also supported
 STRIPE_API_VERSION=2026-06-24.dahlia
@@ -485,6 +528,7 @@ STRIPE_TAX_CONFIGURED=false                 # set true only after Dashboard Tax 
 STRIPE_CHECKOUT_SUCCESS_URL=http://localhost:19006/?billing=success
 STRIPE_CHECKOUT_CANCEL_URL=http://localhost:19006/?billing=cancel
 STRIPE_PORTAL_RETURN_URL=http://localhost:19006/
+AUTH_REDIRECT_URI_ALLOWLIST=travelitineraryplanner://  # required for native iOS/Android Google OAuth
 BILLING_RECONCILE_ENABLED=true
 BILLING_RECONCILE_INTERVAL_MS=86400000
 BILLING_SCHEDULER_SECRET=any-local-dev-secret
@@ -501,17 +545,19 @@ On startup, the server logs a startup-failure error and exits if `STRIPE_BILLING
 
 ---
 
-## 12. Configure GCP Cloud Run
+## Appendix B — GCP Cloud Run And Cloud Scheduler Commands
 
 > **Applies to:** GCP Testing and GCP Production
 >
 > All secrets are passed as plain environment variables from `server/.env`. There is no Google Secret Manager and no `.secrets` file in this workflow.
 
-### 12a. Set up the environment file
+### B1. Set up the environment file
 
 For **GCP Testing**, `server/.env` should contain test-mode Stripe keys:
 
 ```text
+# DB_PROVIDER is intentionally omitted for Firebase on Cloud Run.
+# Set DB_PROVIDER=postgres and DATABASE_URL=... only if deploying against a Postgres backend.
 STRIPE_BILLING_ENABLED=true
 STRIPE_SECRET_KEY=sk_test_...               # test mode; rk_test_... is also supported
 STRIPE_API_VERSION=2026-06-24.dahlia
@@ -524,6 +570,7 @@ STRIPE_TAX_CONFIGURED=true
 STRIPE_CHECKOUT_SUCCESS_URL=https://YOUR-TEST-DOMAIN/?billing=success
 STRIPE_CHECKOUT_CANCEL_URL=https://YOUR-TEST-DOMAIN/?billing=cancel
 STRIPE_PORTAL_RETURN_URL=https://YOUR-TEST-DOMAIN/
+AUTH_REDIRECT_URI_ALLOWLIST=travelitineraryplanner://  # required for native iOS/Android Google OAuth
 BILLING_RECONCILE_ENABLED=true
 BILLING_RECONCILE_INTERVAL_MS=86400000
 BILLING_SCHEDULER_SECRET=<random-string>
@@ -532,6 +579,8 @@ BILLING_SCHEDULER_SECRET=<random-string>
 For **GCP Production**, `server/.env` should contain live-mode Stripe keys:
 
 ```text
+# DB_PROVIDER is intentionally omitted for Firebase on Cloud Run.
+# Set DB_PROVIDER=postgres and DATABASE_URL=... only if deploying against a Postgres backend.
 STRIPE_BILLING_ENABLED=true
 STRIPE_SECRET_KEY=rk_live_...               # restricted live key preferred; sk_live_... is accepted
 STRIPE_API_VERSION=2026-06-24.dahlia
@@ -544,6 +593,7 @@ STRIPE_TAX_CONFIGURED=true
 STRIPE_CHECKOUT_SUCCESS_URL=https://YOUR-WEB-DOMAIN/?billing=success
 STRIPE_CHECKOUT_CANCEL_URL=https://YOUR-WEB-DOMAIN/?billing=cancel
 STRIPE_PORTAL_RETURN_URL=https://YOUR-WEB-DOMAIN/
+AUTH_REDIRECT_URI_ALLOWLIST=travelitineraryplanner://  # required for native iOS/Android Google OAuth
 BILLING_RECONCILE_ENABLED=true
 BILLING_RECONCILE_INTERVAL_MS=86400000
 BILLING_SCHEDULER_SECRET=<random-string>
@@ -557,11 +607,11 @@ Generate a strong `BILLING_SCHEDULER_SECRET`:
 
 > **Do not commit `server/.env` to source control.** It is listed in `.gitignore`. These files contain live secret keys; treat them with the same care as passwords.
 
-### 12b. Deploy to Cloud Run
+### B2. Deploy to Cloud Run
 
 ```powershell
 $ProjectId = 'YOUR_GCP_PROJECT_ID'
-$Region    = 'us-east5'
+$RunRegion = 'us-east5'
 $Service   = 'travel-itinerary-app'
 gcloud config set project $ProjectId
 ```
@@ -571,7 +621,7 @@ Deploy, reading all configuration (including secrets) from `server/.env`:
 ```powershell
 $env:ENV_FILE     = 'server/.env'
 $env:SERVICE_NAME = $Service
-$env:REGION       = $Region
+$env:REGION       = $RunRegion
 .\scripts\deploy-api.ps1
 ```
 
@@ -581,20 +631,21 @@ Verify the bound environment (values are shown in plain text here — do not sha
 
 ```powershell
 gcloud run services describe $Service `
-  --region $Region `
+  --region $RunRegion `
   --format='yaml(spec.template.spec.containers[0].env)'
 ```
 
-### 12c. Configure Cloud Scheduler for durable grace-period enforcement
+### B3. Configure Cloud Scheduler for durable grace-period enforcement
 
 The in-process scheduler inside Cloud Run uses `setInterval`/`setTimeout` and is reset every time Cloud Run starts a new instance. For durable grace-period enforcement (so that past-due users are downgraded even after instance recycling), set up a Cloud Scheduler job that calls the internal reconciliation endpoint every 30 minutes.
 
-The `BILLING_SCHEDULER_SECRET` you set in `server/.env` (section 12a) is already deployed to Cloud Run as a plain env var. Use that same value when creating the scheduler job:
+The `BILLING_SCHEDULER_SECRET` you set in `server/.env` (Appendix B1) is already deployed to Cloud Run as a plain env var. Use that same value when creating the scheduler job:
 
 ```powershell
 # Replace with the value you put in server/.env
 $SchedulerSecretValue = 'the-same-value-you-set-in-env'
 $ApiDomain = 'https://duerk.org'
+$SchedulerRegion = 'us-east4' # Cloud Scheduler supports us-east4; it does not support us-east5.
 
 gcloud scheduler jobs create http billing-reconcile `
   --schedule="*/30 * * * *" `
@@ -603,7 +654,7 @@ gcloud scheduler jobs create http billing-reconcile `
   --headers="Content-Type=application/json,X-Billing-Scheduler-Secret=$SchedulerSecretValue" `
   --message-body='{}' `
   --time-zone=UTC `
-  --location=$Region
+  --location=$SchedulerRegion
 
 Remove-Variable SchedulerSecretValue
 ```
@@ -611,20 +662,20 @@ Remove-Variable SchedulerSecretValue
 Verify the job was created:
 
 ```powershell
-gcloud scheduler jobs describe billing-reconcile --location $Region
+gcloud scheduler jobs describe billing-reconcile --location $SchedulerRegion
 ```
 
 To manually trigger a reconciliation run:
 
 ```powershell
-gcloud scheduler jobs run billing-reconcile --location $Region
+gcloud scheduler jobs run billing-reconcile --location $SchedulerRegion
 ```
 
 > **Separate sandbox and production environments:** `billing_plan_config` stores one active Stripe Price per plan key. It cannot hold both test and live Prices simultaneously. Always use separate databases (and separate Cloud Run deployments) for sandbox and production. Never point a production database at a Stripe test-mode key, or vice versa.
 
 ---
 
-## 13. Run The Real Stripe Sandbox Smoke Test
+## Appendix C — Real Stripe Sandbox Smoke Test
 
 > **Applies to:** Localhost and GCP Testing (test mode keys only)
 
@@ -653,13 +704,48 @@ Remove-Item Env:STRIPE_SANDBOX_TEST,Env:STRIPE_SECRET_KEY,Env:STRIPE_WEBHOOK_SEC
 
 ---
 
-## 14. Simulate Time-Based Scenarios With Stripe Test Clocks
+## Appendix D — Stripe Test Clock Scenarios
 
 > **Applies to:** Localhost and GCP Testing (test mode only)
 
 Test Clocks let you advance time for a specific Stripe Customer without waiting for real days to pass. Use them to verify trial end, billing cycle renewal, and the 14-day past-due grace period.
 
 > **Important:** The normal WanderBunnies Checkout flow creates a Stripe Customer on the fly (via `stripe.customers.create`) and attaches it to a new Checkout Session. Stripe does **not** allow the app to attach that Customer to a Test Clock via Checkout — the Customer must be created via the Stripe API with `test_clock` set before any subscription is created. This means the Test Clock workflow **cannot use the normal app Checkout UI**. Instead, create the customer and subscription via the Stripe CLI or API, then insert the customer/subscription mapping into the app's database manually (see below) or trigger the `checkout.session.completed` event with a custom payload.
+
+### Option A — Run the PowerShell helper
+
+From the repo root:
+
+```powershell
+.\scripts\stripe-test-clock-workflow.ps1 `
+  -StripeApiKey $StripeApiKey `
+  -UserId $UserId `
+  -Email $Email `
+  -PublishMissingPrice
+```
+
+To also run the failed-payment renewal, day-13/day-15 grace checks, and invoice retry:
+
+```powershell
+.\scripts\stripe-test-clock-workflow.ps1 `
+  -StripeApiKey $StripeApiKey `
+  -UserId $UserId `
+  -Email $Email `
+  -PublishMissingPrice `
+  -RunFailedPaymentFlow
+```
+
+The helper:
+
+- reads the active Admin-published monthly Price from `npm run billing:list-plans`
+- optionally publishes the missing monthly Price with `-PublishMissingPrice`
+- creates the Test Clock, customer, successful default card, subscription, and app billing-customer link
+- waits for the Test Clock to become `ready` between advances
+- uses the successful card for trial-end payment, then optionally sets a failing card for the renewal/grace checkpoints before setting a successful card again and retrying the latest invoice
+
+The helper uses the same backend selection as the launch validation script: Firebase when `DB_PROVIDER` is omitted, or Postgres when `DB_PROVIDER=postgres` and `DATABASE_URL` are set in `server/.env`.
+
+### Option B — Manual CLI steps
 
 Install `jq` if needed:
 
@@ -670,6 +756,13 @@ winget install jqlang.jq
 **Create a test clock and a customer attached to it:**
 
 ```powershell
+# Use your full test-mode secret/restricted key. Do not leave this as the
+# literal placeholder value `sk_test_...`.
+$StripeApiKey = 'sk_test_REPLACE_WITH_YOUR_FULL_TEST_KEY'
+if ($StripeApiKey.Length -lt 12 -or $StripeApiKey -notmatch '^(sk|rk)_test_') {
+  throw 'Set $StripeApiKey to a full Stripe test-mode API key, e.g. sk_test_... or rk_test_...'
+}
+
 # Record the current Unix timestamp
 $Now = [int][double]::Parse((Get-Date -UFormat '%s'))
 
@@ -677,51 +770,147 @@ $Now = [int][double]::Parse((Get-Date -UFormat '%s'))
 $Clock = stripe test_helpers test_clocks create `
   --frozen-time $Now `
   --name 'WanderBunnies acceptance' `
-  --api-key sk_test_... | ConvertFrom-Json
+  --api-key $StripeApiKey | ConvertFrom-Json
 $ClockId = $Clock.id
 Write-Host "Clock: $ClockId"
 
+function Wait-StripeTestClockReady {
+  param(
+    [Parameter(Mandatory = $true)][string]$ClockId,
+    [Parameter(Mandatory = $true)][string]$StripeApiKey
+  )
+
+  do {
+    $CurrentClock = stripe test_helpers test_clocks retrieve `
+      $ClockId `
+      --api-key $StripeApiKey | ConvertFrom-Json
+
+    if ($CurrentClock.status -eq 'ready') {
+      Write-Host "Clock ready: $ClockId"
+      return
+    }
+    if ($CurrentClock.status -eq 'internal_failure') {
+      throw "Stripe Test Clock failed internally: $ClockId"
+    }
+
+    Write-Host "Clock status is $($CurrentClock.status); waiting..."
+    Start-Sleep -Seconds 10
+  } while ($true)
+}
+```
+
+Choose the local app user you want to attach to the Stripe Test Clock.
+
+**Firebase / Firestore variant:**
+
+```powershell
+# Requires gcloud auth application-default login and FIRESTORE_DATABASE_ID in server/.env
+npm run list-users -- --email jobs.duerk@gmail.com
+```
+
+Use the printed `User ID` as `$UserId`.
+
+**Postgres variant:**
+
+```powershell
+$Email = 'jobs.duerk@gmail.com'
+psql $env:DATABASE_URL -c "SELECT id, email, provider, created_at FROM users WHERE lower(email) = lower('$Email');"
+```
+
+Use the returned `id` as `$UserId`.
+
+If prices were published through **WanderBunnies Admin → Billing**, read the active Price ID from the configured app backend:
+
+```powershell
+npm run billing:list-plans
+```
+
+Use the `activeStripePriceId` for `premium_monthly` as `$MonthlyPriceId`. If `activeStripePriceId` is `null`, the Admin page has saved local amount/trial settings but has not published a Stripe Price into this backend yet. Open **Admin → Billing**, publish/save the Premium Monthly price in the same environment, then rerun `npm run billing:list-plans`.
+
+For either backend, set the values you will reuse in the Stripe and app mapping commands:
+
+```powershell
+$Email = 'jobs.duerk@gmail.com'
+$UserId = 'your-local-test-user-id'
+$MonthlyPriceId = 'price_...' # Use the active Premium Monthly test-mode Price ID.
+
 # Create a Stripe customer attached to the clock.
-# Replace 'your-local-test-user-id' with the UUID of a real user in your local DB.
 $Customer = stripe customers create `
-  --email 'testuser@example.com' `
-  --metadata[userId]='your-local-test-user-id' `
-  --test-clock $ClockId `
-  --api-key sk_test_... | ConvertFrom-Json
+  -d "email=$Email" `
+  -d "metadata[userId]=$UserId" `
+  -d "test_clock=$ClockId" `
+  --api-key $StripeApiKey | ConvertFrom-Json
 Write-Host "Customer: $($Customer.id)"
 ```
 
-After creating the customer, insert the mapping into your local database so the app links that Stripe Customer ID to the user:
+After creating the customer, link the Stripe Customer ID to the app user.
+
+**Firebase / Firestore and Postgres shared command (preferred):**
+
+```powershell
+npm run billing:link-customer -- `
+  --user-id $UserId `
+  --stripe-customer-id $($Customer.id) `
+  --email $Email `
+  --livemode false `
+  --confirm-test-clock-link `
+  --allow-replace-test-customer
+```
+
+This command uses `DB_PROVIDER` from `server/.env` and defaults to Firebase when `DB_PROVIDER` is omitted. For Firebase, it writes `billing_customers/{userId}` with `stripeCustomerId`, `emailSnapshot`, and `livemode`. For Postgres, it upserts the same mapping in `billing_customers`. It requires `--confirm-test-clock-link` because it writes to the configured backend. `--allow-replace-test-customer` allows repeat Test Clock runs to replace an existing non-live customer link for the same app user; it is rejected for live mappings. Omit that flag if you want the command to fail instead of relinking an already-linked test user.
+
+**Postgres manual SQL variant:**
 
 ```sql
 -- Run against your local Postgres DB
 INSERT INTO billing_customers (user_id, stripe_customer_id, email_snapshot, livemode)
-VALUES ('your-local-test-user-id', 'cus_test_...', 'testuser@example.com', false)
+VALUES ('your-local-test-user-id', 'cus_test_...', 'jobs.duerk@gmail.com', false)
 ON CONFLICT (user_id) DO UPDATE SET stripe_customer_id = EXCLUDED.stripe_customer_id;
+```
+
+**Firebase manual console variant:**
+
+In Firestore, create or update document `billing_customers/{UserId}`:
+
+```json
+{
+  "id": "any-generated-uuid",
+  "userId": "your-local-test-user-id",
+  "stripeCustomerId": "cus_test_...",
+  "emailSnapshot": "jobs.duerk@gmail.com",
+  "livemode": false,
+  "createdAt": "2026-06-30T00:00:00.000Z",
+  "updatedAt": "2026-06-30T00:00:00.000Z"
+}
 ```
 
 Now create a subscription via the Stripe API (not through the app Checkout UI):
 
 ```powershell
 stripe subscriptions create `
-  --customer $($Customer.id) `
-  --items[0][price]='price_test_...' `
-  --trial-period-days 14 `
-  --metadata[userId]='your-local-test-user-id' `
-  --metadata[planKey]='premium_monthly' `
-  --api-key sk_test_...
+  -d "customer=$($Customer.id)" `
+  -d "items[0][price]=$MonthlyPriceId" `
+  -d "trial_period_days=14" `
+  -d "metadata[userId]=$UserId" `
+  -d "metadata[planKey]=premium_monthly" `
+  --api-key $StripeApiKey
 ```
 
-Stripe fires `customer.subscription.created`, which the webhook handler picks up and writes the subscription to the local DB.
+Stripe fires `customer.subscription.created`, which the webhook handler picks up and writes the subscription to the configured backend:
+
+- **Firebase / Firestore:** `billing_subscriptions/{stripeSubscriptionId}` and tier state in Firestore.
+- **Postgres:** `billing_subscriptions` and `user_tiers`.
 
 **Advance through the trial (14 days):**
 
 ```powershell
 $TrialEnd = $Now + (14 * 86400) + 3600   # 14 days + 1 hour
 stripe test_helpers test_clocks advance `
-  --test-clock $ClockId `
+  $ClockId `
   --frozen-time $TrialEnd `
-  --api-key sk_test_...
+  --api-key $StripeApiKey
+
+Wait-StripeTestClockReady -ClockId $ClockId -StripeApiKey $StripeApiKey
 ```
 
 Stripe processes the trial-end invoice, fires `invoice.paid` (if the card succeeds), and transitions the subscription to `active`. Check the WanderBunnies Admin → Billing page to confirm the user's tier moved to `premium`.
@@ -731,9 +920,11 @@ Stripe processes the trial-end invoice, fires `invoice.paid` (if the card succee
 ```powershell
 $Renewal = $TrialEnd + (30 * 86400) + 3600   # ~1 month later
 stripe test_helpers test_clocks advance `
-  --test-clock $ClockId `
+  $ClockId `
   --frozen-time $Renewal `
-  --api-key sk_test_...
+  --api-key $StripeApiKey
+
+Wait-StripeTestClockReady -ClockId $ClockId -StripeApiKey $StripeApiKey
 ```
 
 **Simulate a failed payment and the 14-day grace window:**
@@ -745,7 +936,21 @@ stripe test_helpers test_clocks advance `
 5. Fix the card (update to `4242 4242 4242 4242`). Trigger a payment retry:
 
 ```powershell
-stripe invoices pay inv_... --api-key sk_test_...
+# If you saved the subscription create response:
+# $Subscription = stripe subscriptions create ... | ConvertFrom-Json
+$Subscription = stripe subscriptions retrieve `
+  $Subscription.id `
+  --api-key $StripeApiKey | ConvertFrom-Json
+$InvoiceId = if ($Subscription.latest_invoice -is [string]) {
+  $Subscription.latest_invoice
+} else {
+  $Subscription.latest_invoice.id
+}
+
+# If you did not save $Subscription, list recent invoices for this customer:
+# $InvoiceId = (stripe invoices list -d "customer=$($Customer.id)" --limit 1 --api-key $StripeApiKey | ConvertFrom-Json).data[0].id
+
+stripe invoices pay $InvoiceId --api-key $StripeApiKey
 ```
 
 `invoice.paid` fires; the server clears `past_due_since` and re-grants Premium.
@@ -753,61 +958,69 @@ stripe invoices pay inv_... --api-key sk_test_...
 **Delete the test clock when finished:**
 
 ```powershell
-stripe test_helpers test_clocks delete $ClockId --api-key sk_test_...
+stripe test_helpers test_clocks delete $ClockId --api-key $StripeApiKey
 ```
 
 ---
 
-## 15. Trigger Individual Webhook Events With Stripe CLI
+## Appendix E — Individual Webhook Event Commands
 
 > **Applies to:** Localhost (requires `stripe listen` running in another terminal)
 
 Use these commands during development to test specific handlers without going through Checkout.
 
 ```powershell
+# Reuse the same full test-mode key from the Test Clock section.
+$StripeApiKey = 'sk_test_REPLACE_WITH_YOUR_FULL_TEST_KEY'
+if ($StripeApiKey.Length -lt 12 -or $StripeApiKey -notmatch '^(sk|rk)_test_') {
+  throw 'Set $StripeApiKey to a full Stripe test-mode API key, e.g. sk_test_... or rk_test_...'
+}
+
 # Simulate a new subscription being created
-stripe trigger customer.subscription.created --api-key sk_test_...
+stripe trigger customer.subscription.created --api-key $StripeApiKey
 
 # Simulate a subscription update (e.g. plan switch)
-stripe trigger customer.subscription.updated --api-key sk_test_...
+stripe trigger customer.subscription.updated --api-key $StripeApiKey
 
 # Simulate a subscription cancellation
-stripe trigger customer.subscription.deleted --api-key sk_test_...
+stripe trigger customer.subscription.deleted --api-key $StripeApiKey
 
 # Simulate a trial-ending-soon reminder event
-stripe trigger customer.subscription.trial_will_end --api-key sk_test_...
+stripe trigger customer.subscription.trial_will_end --api-key $StripeApiKey
 
 # Simulate a successful invoice payment
-stripe trigger invoice.paid --api-key sk_test_...
+stripe trigger invoice.paid --api-key $StripeApiKey
 
 # Simulate a failed invoice payment
-stripe trigger invoice.payment_failed --api-key sk_test_...
+stripe trigger invoice.payment_failed --api-key $StripeApiKey
 
 # Simulate a 3DS/SCA authentication required scenario
-stripe trigger invoice.payment_action_required --api-key sk_test_...
+stripe trigger invoice.payment_action_required --api-key $StripeApiKey
 
 # Simulate a full charge refund
-stripe trigger charge.refunded --api-key sk_test_...
+stripe trigger charge.refunded --api-key $StripeApiKey
 
 # Simulate a dispute being opened
-stripe trigger charge.dispute.created --api-key sk_test_...
+stripe trigger charge.dispute.created --api-key $StripeApiKey
 
 # Simulate a dispute being won
-stripe trigger charge.dispute.closed --api-key sk_test_...
+stripe trigger charge.dispute.closed --api-key $StripeApiKey
 
 # Resend a specific real event by ID (useful after fixing a handler bug)
-stripe events resend evt_... --api-key sk_test_...
+stripe events resend evt_... --api-key $StripeApiKey
 ```
 
-Note: `stripe trigger` creates synthetic Stripe objects with auto-generated IDs. The `userId` field in subscription metadata will be absent, so `userIdFromSubscription` falls back to looking up by `stripe_customer_id`. If the synthetic customer ID has no local `billing_customers` row, the handler logs `billing.webhook.user_not_found` and skips processing — this is expected behavior for synthetic events.
+Note: `stripe trigger` creates synthetic Stripe objects with auto-generated IDs. The `userId` field in subscription metadata will be absent, so `userIdFromSubscription` falls back to looking up by `stripe_customer_id`. If the synthetic customer ID has no matching billing customer record in the configured backend (`billing_customers/{userId}` in Firestore or `billing_customers` in Postgres), the handler logs `billing.webhook.user_not_found` and skips processing — this is expected behavior for synthetic events.
 
 ---
 
-## 16. Manual Sandbox Acceptance Checklist
+## 11. Manual Sandbox Acceptance Checklist
 
 > **Applies to:** Localhost and GCP Testing
 
-Start `stripe listen` (section 10a, localhost only) and both servers (section 11) before running these scenarios. For GCP Testing, use the Dashboard webhook destination (section 10b) and deploy the test configuration (section 12).
+Start `stripe listen` (section 10a, localhost only) and both servers (Appendix A) before running these scenarios. For GCP Testing, use the Dashboard webhook destination (section 10b) and deploy the test configuration (Appendix B).
+
+This checklist is for human-visible acceptance and Dashboard evidence. Run Section 1 first; if `stripe-launch-validation-report.json` already passed a repo test, config check, sandbox smoke test, Test Clock step, or Cloud Scheduler check, use this section only for the customer-facing behavior and Dashboard confirmations that the script cannot observe directly.
 
 Use test cards:
 
@@ -886,11 +1099,11 @@ Use any future expiry (e.g. `12/34`) and any 3-digit CVC.
 
 - [ ] Triggering `POST /api/admin/billing/reconcile/:userId` for a test user returns the correct `result` and current `subscriptions`.
 - [ ] Triggering `POST /api/admin/billing/reconcile-batch` processes stale subscriptions without errors.
-- [ ] Triggering the Cloud Scheduler job (`gcloud scheduler jobs run billing-reconcile --location $Region`) completes successfully and returns `{"ok":true}` (check Cloud Run logs).
+- [ ] Triggering the Cloud Scheduler job (`gcloud scheduler jobs run billing-reconcile --location $SchedulerRegion`) completes successfully and returns `{"ok":true}` (check Cloud Run logs).
 
 ---
 
-## 17. Repeat In Live Mode
+## 12. Live Mode Cutover
 
 > **Applies to:** GCP Production only
 
@@ -905,7 +1118,7 @@ Stripe sandbox and live objects are separate. Repeat every Dashboard step for li
 7. Configure the Customer Portal (section 8).
 8. Configure billing emails and revenue recovery (section 9).
 9. Create a live webhook destination and copy the live signing secret (section 10b).
-10. Update `server/.env` with live-mode values and redeploy to the production Cloud Run service (section 12).
+10. Update `server/.env` with live-mode values and redeploy to the production Cloud Run service (Appendix B).
 
 **Before enabling general availability:**
 

@@ -66,6 +66,7 @@ import LodgingDetailsDialog from './components/LodgingDetailsDialog';
 import ConfirmDialog from './components/ConfirmDialog';
 import PendingInvitesModal from './components/PendingInvitesModal';
 import PremiumTrialWelcomeDialog from './components/PremiumTrialWelcomeDialog';
+import PremiumPlanComparisonDialog from './components/PremiumPlanComparisonDialog';
 import { arePremiumTrialsEnabled } from './config/premiumTrials';
 import DropdownOptionButton from './components/DropdownOptionButton';
 import CarRentalsPanel from './components/CarRentalsPanel';
@@ -528,6 +529,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const [externalFlightEditId, setExternalFlightEditId] = useState<string | null>(null);
   const [pendingInviteModalOpen, setPendingInviteModalOpen] = useState(false);
   const [premiumTrialWelcomeVisible, setPremiumTrialWelcomeVisible] = useState(false);
+  const [premiumPlanComparisonVisible, setPremiumPlanComparisonVisible] = useState(false);
   const {
     deferFirstLoginRedirect,
     showResendConfirmation,
@@ -1355,6 +1357,12 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   }, []);
 
   const openPremiumPlansFromWelcome = useCallback(() => {
+    setPremiumTrialWelcomeVisible(false);
+    setPremiumPlanComparisonVisible(true);
+  }, []);
+
+  const dismissPremiumPlanComparison = useCallback(() => {
+    setPremiumPlanComparisonVisible(false);
     setPremiumTrialWelcomeVisible(false);
     setDeferFirstLoginRedirect(false);
     setActivePage('account');
@@ -3286,6 +3294,13 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
         onViewPlans={openPremiumPlansFromWelcome}
         onDismiss={dismissPremiumTrialWelcome}
       />
+      <PremiumPlanComparisonDialog
+        visible={Boolean(userToken && premiumPlanComparisonVisible && arePremiumTrialsEnabled())}
+        backendUrl={backendUrl}
+        token={userToken}
+        styles={styles}
+        onMaybeLater={dismissPremiumPlanComparison}
+      />
       {userToken ? (
         <PendingInvitesModal
           visible={pendingInviteModalOpen}
@@ -5006,6 +5021,89 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     marginTop: 4,
     marginBottom: 12,
     gap: 2,
+  },
+  planComparisonModal: {
+    maxWidth: 560,
+  },
+  planComparisonGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 12,
+    marginBottom: 12,
+  },
+  planComparisonTier: {
+    flex: 1,
+    minWidth: 210,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 8,
+    padding: 12,
+    backgroundColor: theme.colors.surfaceMuted,
+  },
+  planComparisonTierPremium: {
+    borderColor: theme.colors.premium,
+    backgroundColor: theme.colors.surface,
+  },
+  planComparisonTierTitle: {
+    color: theme.colors.text,
+    fontSize: theme.typography.body,
+    fontWeight: theme.typography.weightSemibold,
+    marginBottom: 6,
+  },
+  planComparisonFeatureList: {
+    gap: 4,
+  },
+  planComparisonFeature: {
+    color: theme.colors.textMuted,
+    fontSize: theme.typography.small,
+    lineHeight: 20,
+  },
+  planComparisonOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 10,
+  },
+  planComparisonOption: {
+    flex: 1,
+    minWidth: 210,
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    backgroundColor: theme.colors.premium,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 84,
+  },
+  planComparisonOptionTitle: {
+    color: '#fff',
+    fontSize: theme.typography.small,
+    fontWeight: theme.typography.weightSemibold,
+    marginBottom: 3,
+  },
+  planComparisonOptionPrice: {
+    color: '#fff',
+    fontSize: theme.typography.body,
+    fontWeight: theme.typography.weightBold,
+    textAlign: 'center',
+  },
+  planComparisonOptionTrial: {
+    color: '#fff',
+    fontSize: theme.typography.caption,
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  planComparisonMaybeLater: {
+    alignSelf: 'center',
+    minWidth: 180,
+    marginTop: 4,
+  },
+  errorText: {
+    color: theme.colors.error,
+    fontSize: theme.typography.small,
+    marginTop: 6,
+    marginBottom: 6,
   },
   payerChips: {
     flexDirection: 'row',
