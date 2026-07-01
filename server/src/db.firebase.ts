@@ -3296,6 +3296,20 @@ export const followTripByCode = async (
   const tripId = String(codeData.tripId ?? '').trim();
   if (!tripId) throw new Error('Invalid or expired follow code');
 
+  // Block members from following their own trip — they already have full access.
+  const tripForGroup = await db.collection('trips').doc(tripId).get();
+  const groupId = tripForGroup.exists ? String((tripForGroup.data() as any).groupId ?? '') : '';
+  if (groupId) {
+    const memberSnap = await db
+      .collection('group_members')
+      .where('groupId', '==', groupId)
+      .where('userId', '==', userId)
+      .where('removedAt', '==', null)
+      .limit(1)
+      .get();
+    if (!memberSnap.empty) throw new Error('You are already a member of this trip and cannot follow it.');
+  }
+
   const existing = await db
     .collection('trip_followers')
     .where('tripId', '==', tripId)

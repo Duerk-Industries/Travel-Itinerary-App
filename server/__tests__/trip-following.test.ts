@@ -106,6 +106,15 @@ describe('Trip following (read-only)', () => {
       .expect(403);
   });
 
+  it('blocks trip owners/members from following their own trip', async () => {
+    const res = await request(app)
+      .post('/api/trips/follow')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ inviteCode });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/already a member/i);
+  });
+
   it('supports unfollow', async () => {
     await request(app).delete(`/api/trips/${tripId}/follow`).set('Authorization', `Bearer ${followerToken}`).expect(204);
     const followed = await request(app).get('/api/trips/followed').set('Authorization', `Bearer ${followerToken}`).expect(200);
@@ -150,15 +159,8 @@ describe('Trip following (read-only)', () => {
   });
 
   it('allows followers and members to discuss via trip comments', async () => {
-    await request(app)
-      .post('/api/trips/follow')
-      .set('Authorization', `Bearer ${followerToken}`)
-      .send({ inviteCode })
-      .expect((res) => {
-        if (res.status !== 200 && res.status !== 201) {
-          throw new Error(`Expected follow status 200/201, got ${res.status}: ${JSON.stringify(res.body)}`);
-        }
-      });
+    // The follower is now a full group member (from the previous test), so following
+    // is correctly blocked. Members can still post comments via ensureUserCanReadTrip.
 
     const post = await request(app)
       .post(`/api/trips/${tripId}/comments`)

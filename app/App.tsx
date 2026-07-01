@@ -1920,7 +1920,10 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
   const acceptPendingFollowCode = async () => {
     if (!pendingFollowCode) return;
     const error = await handleFollowTripByCode(pendingFollowCode);
-    if (!error) {
+    if (error) {
+      Alert.alert('Unable to Follow Trip', error);
+      setPendingFollowCode(null);
+    } else {
       setPendingFollowCode(null);
     }
   };
@@ -5015,6 +5018,7 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     width: '100%',
     maxWidth: 1200,
     maxHeight: '90%',
+    flex: 1,
     alignSelf: 'center',
   },
   pendingInviteModal: {

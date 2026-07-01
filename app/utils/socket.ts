@@ -34,7 +34,12 @@ export const resolveSocketServerUrl = (): string =>
   });
 
 export const resolveSocketTransports = (): Array<'polling' | 'websocket'> =>
-  Platform.OS === 'web' ? ['polling'] : ['websocket'];
+  // Prefer WebSocket on all platforms: Firebase Hosting's CDN buffers HTTP
+  // responses before forwarding, which silently breaks Socket.IO's long-poll
+  // GET (events never arrive until the request completes). WebSocket upgrades
+  // bypass CDN buffering and are supported by Firebase → Cloud Run rewrites.
+  // Polling is kept as a fallback for environments that block WebSocket.
+  Platform.OS === 'web' ? ['websocket', 'polling'] : ['websocket'];
 
 // ---------------------------------------------------------------------------
 // Singleton
