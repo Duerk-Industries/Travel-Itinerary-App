@@ -29,27 +29,6 @@ const loadSentryWithMetroConfig = () => {
   }
 };
 
-/**
- * Loads @sentry/react-native's Metro wrapper if the package is installed.
- * Kept lazy so a missing install (e.g. a fresh checkout before `npm
-<<<<<<< HEAD
- * install`) doesn't break Metro startup — Sentry's wrapper only adds Debug
- * ID injection and stack-frame collapsing, both of which are no-ops at
- * runtime when SENTRY_AUTH_TOKEN / EXPO_PUBLIC_SENTRY_DSN aren't set.
-=======
- * install`) doesn't break Metro startup.
->>>>>>> origin/UI-Fixing
- */
-const loadSentryWithMetroConfig = () => {
-  try {
-    return require('@sentry/react-native/metro').withSentryConfig;
-  } catch {
-    return null;
-  }
-};
-
-<<<<<<< HEAD
-=======
 const shouldUseSentryMetro = () => {
   if (process.env.EXPO_NO_SENTRY_METRO === '1') return false;
   if (process.env.SENTRY_ENABLE_METRO === '1') return true;
@@ -62,7 +41,6 @@ const shouldUseSentryMetro = () => {
   return !isEasBuild;
 };
 
->>>>>>> origin/UI-Fixing
 /**
  * engine.io-client's package.json declares a `browser` field map that
  * substitutes its `*.node.js` transport files with browser equivalents.
@@ -142,7 +120,7 @@ const createSharedMetroConfig = ({
     sentryWithMetroConfig === undefined
       ? loadSentryWithMetroConfig()
       : sentryWithMetroConfig;
-  if (withSentryConfig && process.env.EXPO_NO_SENTRY_METRO !== '1') {
+  if (withSentryConfig && shouldUseSentryMetro()) {
     return withSentryConfig(config, {
       // We don't ship session replay; opt out to keep the web bundle smaller.
       includeWebReplay: false,
@@ -157,4 +135,5 @@ const createSharedMetroConfig = ({
 module.exports = {
   createSharedMetroConfig,
   ENGINE_IO_NODE_STUBS,
+  shouldUseSentryMetro,
 };

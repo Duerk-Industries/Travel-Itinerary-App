@@ -40,9 +40,9 @@ describe('socket URL resolution', () => {
     expect(resolveSocketServerUrl()).toBe('http://localhost:4000');
   });
 
-  it('uses polling on web to avoid unsupported websocket upgrades through hosting', () => {
+  it('prefers websocket with a polling fallback on web to avoid Firebase Hosting CDN buffering', () => {
     Platform.OS = 'web';
-    expect(resolveSocketTransports()).toEqual(['polling']);
+    expect(resolveSocketTransports()).toEqual(['websocket', 'polling']);
   });
 
   it('keeps websocket transport for native clients', () => {

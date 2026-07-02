@@ -5,6 +5,7 @@ import { app } from '../src/app';
 import { closePool, initDb, getUsageCounter } from '../src/db';
 import { registerAndLoginWebUser, seedTiersForTest, cleanupTestUsersByEmail } from './helpers';
 import * as itineraryPromptPlanService from '../src/services/itineraryPromptPlanService';
+import { __testing as asyncItineraryTesting } from '../src/services/itineraryAsyncService';
 
 const TS = Date.now();
 
@@ -217,6 +218,13 @@ describe('AI itinerary limits and idempotency', () => {
         usageWindowKey: getMonthWindowKey(),
       })
     );
+
+    for (let attempt = 0; attempt < 40; attempt += 1) {
+      const job = asyncItineraryTesting.jobs.get(res.body.jobId);
+      if (job?.status === 'completed' || job?.status === 'failed') break;
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+    expect(asyncItineraryTesting.jobs.get(res.body.jobId)?.status).toBe('completed');
 
     await cleanupTestUsersByEmail([asyncEmail]);
   });

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Image, Modal, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions, useWindowDimensions } from 'react-native';
+import { Image, Modal, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { computeTripDays } from '../utils/createTripWizard';
 import { formatDateLong } from '../utils/formatDateLong';
 import { FollowedTrip } from './follow';
