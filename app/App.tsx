@@ -52,7 +52,7 @@ import {
   loadStoredAppearancePreference,
   persistAppearancePreference,
 } from './utils/appearancePreference';
-import { getAppTheme, type AppTheme } from './theme/theme';
+import { getAppTheme, hitSlop, type AppTheme } from './theme/theme';
 import { FOLLOWED_TRIP_HIDDEN_PAGES, shouldAllowPageChange, shouldDisableTab } from './utils/wizardGuard';
 import * as WebBrowser from 'expo-web-browser';
 import {
@@ -2556,6 +2556,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               style={styles.homeButton}
               onPress={() => requestPageChange('home')}
               accessibilityLabel="Home"
+              hitSlop={hitSlop.small}
             >
               <Text style={styles.homeButtonText}>⌂</Text>
             </TouchableOpacity>
@@ -2566,6 +2567,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               onPress={goBack}
               disabled={pageHistory.length === 0}
               accessibilityLabel="Back"
+              hitSlop={hitSlop.small}
             >
               <Text style={styles.backButtonText}>{'<'}</Text>
             </TouchableOpacity>
@@ -2576,6 +2578,7 @@ const AppShell: React.FC<AppShellProps> = ({ initialAdminSection = 'overview', o
               onPress={goForward}
               disabled={pageForwardHistory.length === 0}
               accessibilityLabel="Forward"
+              hitSlop={hitSlop.small}
             >
               <Text style={styles.backButtonText}>{'>'}</Text>
             </TouchableOpacity>
@@ -3994,8 +3997,8 @@ const buildStyles = (theme: AppTheme) => StyleSheet.create(stripAndroidFontWeigh
     flexShrink: 1,
   },
   smallButton: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
   },
   dangerButton: {
     backgroundColor: theme.colors.error,

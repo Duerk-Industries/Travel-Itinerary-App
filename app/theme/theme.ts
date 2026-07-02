@@ -36,7 +36,35 @@ export type AppTheme = {
     weightSemibold: '600';
     weightBold: '700';
   };
+  spacing: {
+    xs: number;
+    sm: number;
+    md: number;
+    lg: number;
+    xl: number;
+    xxl: number;
+  };
 };
+
+// Shared spacing scale (mode-independent) — use these instead of ad-hoc pixel
+// values so padding/margin/gap stay consistent across tabs and dialogs.
+const spacing: AppTheme['spacing'] = {
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 24,
+  xxl: 32,
+};
+
+// Minimum recommended tap target sizes (iOS HIG: 44pt, Material: 48dp) and a
+// hitSlop preset to compensate when a control is visually smaller than that
+// without growing its footprint in dense layouts (e.g. icon button rows).
+export const MIN_TOUCH_TARGET = 44;
+export const hitSlop = {
+  small: { top: 8, bottom: 8, left: 8, right: 8 },
+  medium: { top: 10, bottom: 10, left: 10, right: 10 },
+} as const;
 
 const lightTheme: AppTheme = {
   mode: 'light',
@@ -74,6 +102,7 @@ const lightTheme: AppTheme = {
     weightSemibold: '600',
     weightBold: '700',
   },
+  spacing,
 };
 
 const darkTheme: AppTheme = {
@@ -100,6 +129,7 @@ const darkTheme: AppTheme = {
     onSurface: '#E6ECEF',
   },
   typography: lightTheme.typography,
+  spacing: lightTheme.spacing,
 };
 
 export const getAppTheme = (

@@ -2362,6 +2362,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                             accessibilityLabel="Delete item"
                             onPress={() => deleteDetail(d.id)}
                             style={styles.detailDeleteButton}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                           >
                             <Text style={styles.detailDeleteButtonText}>×</Text>
                           </TouchableOpacity>

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View, useColorScheme } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useColorScheme } from 'react-native';
 import HorizontalTableScroll from './HorizontalTableScroll';
 import { getAppTheme } from '../theme/theme';
 
@@ -272,7 +272,7 @@ const PackingListTable: React.FC<Props> = ({ backendUrl, headers, tripId, varian
             </>
           ) : (
             <>
-              {allowPrint && isTrip ? (
+              {allowPrint && isTrip && Platform.OS === 'web' ? (
                 <Pressable
                   style={[localStyles.button, { backgroundColor: theme.colors.surfaceMuted }]}
                   onPress={printList}
