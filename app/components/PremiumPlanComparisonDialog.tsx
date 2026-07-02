@@ -10,6 +10,7 @@ import {
   type BillingPlanKey,
   type PlanInfo,
 } from '../utils/billing';
+import { createIdempotencyKey } from '../utils/idempotencyKey';
 
 type PremiumPlanComparisonDialogProps = {
   visible: boolean;
@@ -37,7 +38,7 @@ const planLabel = (planKey: BillingPlanKey) =>
   planKey === 'premium_annual' ? 'Premium Annual' : 'Premium Monthly';
 
 const generateIdempotencyKey = (planKey: BillingPlanKey) =>
-  `welcome_${planKey}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  createIdempotencyKey(`welcome_${planKey}`);
 
 const getAnnualDiscountPercent = (monthlyPlan?: PlanInfo, annualPlan?: PlanInfo): number | null => {
   if (!monthlyPlan || !annualPlan || monthlyPlan.amountCents <= 0 || annualPlan.amountCents <= 0) {

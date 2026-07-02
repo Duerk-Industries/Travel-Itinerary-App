@@ -11,6 +11,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+        env:
+          # patch-package's postinstall is part of the install; allow it.
+          HUSKY: 0
+
       - uses: expo/expo-github-action@v8
         with:
           eas-version: latest

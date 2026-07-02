@@ -15,11 +15,6 @@
     "build:ios:local": "npx --yes eas-cli@20.2.0 build --platform ios --profile production --local",
     "submit:ios": "npx --yes eas-cli@20.2.0 submit --platform ios --profile production",
     "export:web": "node ./scripts/export-web.js",
-    "eas": "npx --yes eas-cli@20.2.0",
-    "build:ios": "npx --yes eas-cli@20.2.0 build --platform ios --profile production",
-    "build:ios:local": "npx --yes eas-cli@20.2.0 build --platform ios --profile production --local",
-    "submit:ios": "npx --yes eas-cli@20.2.0 submit --platform ios --profile production",
-    "export:web": "node ./scripts/export-web.js",
     "web": "node ./scripts/start-web.js"
   },
   "overrides": {

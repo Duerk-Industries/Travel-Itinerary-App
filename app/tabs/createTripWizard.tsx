@@ -64,14 +64,7 @@ import { LocationSelector, type LocationOption } from '../components/LocationSel
 import { MustSeeAttractionSelector, type AttractionOption } from '../components/MustSeeAttractionSelector';
 import SelectField, { type SelectFieldOption } from '../components/SelectField';
 import ConfirmDialog from '../components/ConfirmDialog';
-  
-const createIdempotencyKey = (prefix: string): string => {
-  const cryptoApi = globalThis.crypto as { randomUUID?: () => string } | undefined;
-  if (typeof cryptoApi?.randomUUID === 'function') {
-    return `${prefix}-${cryptoApi.randomUUID()}`;
-  }
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-};
+import { createIdempotencyKey } from '../utils/idempotencyKey';
 
 type Suggestion = {
   id: string;

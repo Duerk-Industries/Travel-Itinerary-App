@@ -19,6 +19,7 @@ import {
   type PlanInfo,
   type BillingPlanKey,
 } from '../utils/billing';
+import { createIdempotencyKey } from '../utils/idempotencyKey';
 
 interface Props {
   backendUrl: string;
@@ -32,8 +33,7 @@ interface Props {
   systemColorScheme?: 'light' | 'dark' | null;
 }
 
-const generateIdempotencyKey = () =>
-  `ck_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+const generateIdempotencyKey = () => createIdempotencyKey('ck');
 
 export const PremiumSubscriptionPanel: React.FC<Props> = ({
   backendUrl,
